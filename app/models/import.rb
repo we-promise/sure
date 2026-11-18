@@ -243,11 +243,15 @@ class Import < ApplicationRecord
     end
   end
 
+  # Claimed under the row lock, as a PDF import's reread is, so the two can't both start.
   def publish_later
     raise MaxRowCountExceededError if row_count_exceeded?
-    raise "Import is not publishable" unless publishable?
 
-    update! status: :importing
+    with_lock do
+      raise "Import is not publishable" unless publishable? && !importing?
+
+      update! status: :importing
+    end
 
     ImportJob.perform_later(self)
   end

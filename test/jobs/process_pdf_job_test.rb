@@ -200,6 +200,28 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "failed", @import.reload.status
   end
 
+  test "a reread clears the previous reading when it starts, and only while it holds the claim" do
+    import = imports(:pdf_with_rows)
+    ProcessPdfJob.any_instance.stubs(:process)
+
+    ProcessPdfJob.perform_now(import, reread: true)
+    assert_equal 2, import.reload.rows_count, "not claimed: the previous reading stays"
+
+    import.update!(status: :importing)
+    ProcessPdfJob.perform_now(import, reread: true)
+    assert_equal 0, import.reload.rows_count
+    assert_not import.ai_processed?
+  end
+
+  test "a provider's own error message never reaches the import's error or the log" do
+    error = Ai::Error::Refused.new("400: account 12345678 is invalid")
+
+    message = ProcessPdfJob.new.send(:sanitize_error_message, error)
+
+    assert_not_includes message, "12345678"
+    assert_includes message, "Refused"
+  end
+
   private
 
     def attach_pdf!(import)

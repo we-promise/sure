@@ -273,6 +273,19 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "read goes past a cover page that says nothing, until a batch says it's a statement" do
+    units = [ Ai::PdfReading::Unit.text("COVER", page: 1), Ai::PdfReading::Unit.text("TRANSACTIONS", page: 2) ]
+    stub_ai(:extract_pdf) do |request|
+      request.input.include?("COVER") ? { document_type: "other", summary: nil, extracted_data: nil } : { document_type: "bank_statement", summary: "YourBank", extracted_data: nil }
+    end
+    reader = reading(@bac)
+    reader.stubs(:units_for).returns([ units, "COVER\nTRANSACTIONS" ])
+
+    with_reading_routes(text_model.with(batch_size: 1)) do
+      assert_equal "bank_statement", reader.read.value[:document_type]
+    end
+  end
+
   private
     def reading(content) = Ai::PdfReading.new(content:, family: @family, filename: "statement.pdf")
 

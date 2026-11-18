@@ -1,0 +1,12 @@
+<%# locals: (import:) %>
+<%# A kept extraction that failed its checks, and which ones. %>
+<% if import.extraction_flagged? %>
+  <%= render DS::Alert.new(variant: :warning, title: t("imports.pdf_import.review_flag.title")) do %>
+    <p><%= t("imports.pdf_import.review_flag.description", way: t("imports.pdf_import.read_as.options.#{import.read_with}", default: import.read_with.to_s)) %></p>
+    <ul class="list-disc pl-5 space-y-1">
+      <% import.failed_checks.each do |check| %>
+        <li><%= t("imports.pdf_import.review_flag.checks.#{check}") %></li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>

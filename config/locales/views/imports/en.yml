@@ -658,6 +658,7 @@ en:
           reconciles: The opening balance plus every transaction doesn't make the closing balance.
           amounts_in_source: Some amounts don't appear in the statement's text.
           dates_anchored: Many dates don't match the dates printed next to their amounts.
+          complete: Some pages couldn't be read, so transactions may be missing.
         confirm_title: Publish transactions that failed their checks?
         confirm_body: Some rows may be wrong or missing. Review them first, or read the statement again another way.
         confirm_button: Publish anyway

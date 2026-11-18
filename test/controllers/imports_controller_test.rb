@@ -290,6 +290,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     use_ai_routes
     import = imports(:pdf_with_rows)
     PdfImport.any_instance.stubs(:pdf_uploaded?).returns(true)
+    PdfImport.any_instance.stubs(:pdf_reading).returns(stub(ways: { text: nil }))
 
     assert_enqueued_with(job: ProcessPdfJob) do
       post reread_import_url(import), params: { import: { read_as: "text" } }
@@ -297,7 +298,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to import_url(import)
     assert_equal "text", import.reload.read_as
-    assert_equal 0, import.rows_count
+    assert import.importing?, "claimed until the job reads it again"
   end
 
   test "reading again needs extract_pdf" do

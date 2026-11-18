@@ -57,18 +57,20 @@ class PdfImportReadingTest < ActiveSupport::TestCase
     assert_empty @import.failed_checks
   end
 
-  test "reading again another way clears the unpublished rows and queues the job" do
+  test "reading again another way queues the job, which clears the unpublished rows when it starts" do
     @import.update!(read_with: "text", extraction_checks: { "passed" => false }, extracted_data: { "transactions" => [] })
     @import.stubs(:pdf_uploaded?).returns(true)
+    @import.stubs(:pdf_reading).returns(stub(ways: { images: nil }))
 
-    assert_enqueued_with(job: ProcessPdfJob) { assert @import.reread!("images") }
+    assert_enqueued_with(job: ProcessPdfJob, args: [ @import, { reread: true } ]) { assert @import.reread!("images") }
 
     @import.reload
     assert_equal "images", @import.read_as
-    assert_equal 0, @import.rows.count
+    assert_equal "importing", @import.status
+    @import.clear_reading!
+    assert_equal 0, @import.reload.rows.count
     assert_nil @import.ai_summary
     assert_nil @import.extraction_checks
-    assert_equal "importing", @import.status
   end
 
   test "reading again is refused once anything is published" do

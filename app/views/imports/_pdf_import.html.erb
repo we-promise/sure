@@ -13,16 +13,7 @@
         <p class="text-sm text-secondary"><%= t("imports.pdf_import.ready_for_review_description", count: import.rows_count) %></p>
       </div>
 
-      <% if import.extraction_flagged? %>
-        <%= render DS::Alert.new(variant: :warning, title: t("imports.pdf_import.review_flag.title")) do %>
-          <p><%= t("imports.pdf_import.review_flag.description", way: t("imports.pdf_import.read_as.options.#{import.read_with}", default: import.read_with.to_s)) %></p>
-          <ul class="list-disc pl-5 space-y-1">
-            <% import.failed_checks.each do |check| %>
-              <li><%= t("imports.pdf_import.review_flag.checks.#{check}") %></li>
-            <% end %>
-          </ul>
-        <% end %>
-      <% end %>
+      <%= render "imports/pdf_review_flag", import: %>
 
       <div class="bg-container border border-primary rounded-xl p-4 space-y-4">
         <% if import.account_statement.present? %>
@@ -157,6 +148,8 @@
         <%= icon "check", class: "text-success" %>
       </div>
 
+      <%= render "imports/pdf_review_flag", import: %>
+
       <div class="text-center space-y-2">
         <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.complete_title") %></h1>
         <%# A statement whose every line was already on file creates nothing, and
@@ -208,6 +201,8 @@
               full_width: true
             ) %>
       </div>
+
+      <%= render "imports/pdf_reread", import: %>
 
     <% else %>
       <div class="text-center space-y-2">

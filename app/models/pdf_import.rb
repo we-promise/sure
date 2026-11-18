@@ -221,8 +221,9 @@ class PdfImport < Import
     statement_backed? || pdf_file.attached?
   end
 
+  # ReadPdf has answered: every reading stores a document type, and the summary is optional prose.
   def ai_processed?
-    ai_summary.present?
+    document_type.present?
   end
 
   def process_with_ai_later
@@ -274,22 +275,48 @@ class PdfImport < Import
 
   def extraction_flagged? = extraction_checks.present? && extraction_checks["passed"] == false
 
-  # "Read again as…": a badly read statement, read another way without changing the config.
-  # Only before anything is published.
+  # "Read again as…" is offered before anything is published: while the rows wait for review,
+  # after a failure, or when a flagged reading finished without rows.
+  def rereadable?
+    imported_count.zero? && (pending? || failed? || (complete? && extraction_flagged?))
+  end
+
+  # "Read again as…": a badly read statement, read another way without changing the config. The
+  # import is claimed under its row lock, as publishing claims it, and the previous reading stays
+  # until ProcessPdfJob starts (#clear_reading!), so a job that can't be queued loses nothing.
   def reread!(read_as)
     read_as = read_as.to_s
     raise ArgumentError, "unknown way #{read_as}" unless READ_AS.include?(read_as)
+    return false unless pdf_uploaded?
+    return false if read_as != "auto" && pdf_reading.ways[read_as.to_sym]   # this file can't be read that way
 
+    previous = nil
+    claimed = with_lock do
+      next false unless rereadable?
+
+      previous = status
+      update!(read_as:, status: :importing)
+    end
+    return false unless claimed
+
+    queued = begin
+      ProcessPdfJob.perform_later(self, reread: true)
+    rescue StandardError => e
+      Rails.logger.error("Failed to enqueue PDF reread for import #{id}: #{e.class.name}")
+      false
+    end
+    with_lock { update!(status: previous) } unless queued
+    queued.present?
+  end
+
+  # When a reread's job starts: the previous reading goes, rows and all.
+  def clear_reading!
     with_lock do
-      return false unless (pending? || failed?) && imported_count.zero?
-
       rows.delete_all
       self.class.reset_counters(id, :rows)
-      update!(read_as:, ai_summary: nil, document_type: nil, extracted_data: nil, extraction_checks: nil, read_with: nil,
-              read_model: nil, error: nil, status: :pending)
+      update!(ai_summary: nil, document_type: nil, extracted_data: nil, extraction_checks: nil, read_with: nil, read_model: nil,
+              error: nil)
     end
-    reload
-    process_with_ai_later
   end
 
   # One reader per record, so a job's ReadPdf and extraction share one download and text layer.
@@ -300,7 +327,7 @@ class PdfImport < Import
   end
 
   def statement_with_transactions?
-    document_type.in?(%w[bank_statement credit_card_statement])
+    document_type.in?(Ai::PdfReading::STATEMENT_TYPES)
   end
 
   def has_extracted_transactions?

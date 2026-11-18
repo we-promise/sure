@@ -22,6 +22,10 @@ class Ai::PdfReading
   # Characters per text unit: a page longer than this is split, so a small local model's window
   # (2,048 tokens by default) still takes one unit (#808).
   MIN_CHUNK_CHARS = 2_000
+  # Batches ReadPdf may read to find a statement past a generic cover page.
+  CLASSIFY_BATCHES = 3
+  # The document types whose transactions are extracted.
+  STATEMENT_TYPES = %w[bank_statement credit_card_statement].freeze
   # Characters per text unit for a model whose window isn't known.
   UNKNOWN_WINDOW_CHUNK_CHARS = 3_000
 
@@ -94,15 +98,30 @@ class Ai::PdfReading
     best || raise_unavailable(attempts)
   end
 
-  # What the document is (ReadPdf), from the first way that answers.
+  # What the document is (ReadPdf), from the first way that answers. A batch at a time: the first
+  # is usually enough, but a cover page can say nothing, so later batches are read, up to
+  # CLASSIFY_BATCHES, until one says it's a statement. Otherwise the first batch's answer stands.
   def read(read_as: :auto, cancelled: nil)
     attempts = []
     each_way(read_as, attempts:) do |way, units, _source|
-      result = Ai::Generations::ReadPdf.new(units:, content:, filename:, family:, user:).call(batches: 1, plan:, cancelled:)
-      result.value!
+      first = nil
+      usage = nil
+      CLASSIFY_BATCHES.times do
+        result = Ai::Generations::ReadPdf.new(units:, content:, filename:, family:, user:).call(batches: 1, plan:, cancelled:)
+        result.value!
+        first ||= result
+        usage = [ usage, result.usage ].compact.reduce(:+)
+        if STATEMENT_TYPES.include?(result.value[:document_type])
+          first = result
+          break
+        end
+        break if result.remaining.empty?
+
+        units = result.remaining
+      end
 
       attempts << { way: }
-      return Outcome.new(value: result.value, way:, model: result.route&.model&.name, checks: nil, usage: result.usage, attempts:)
+      return Outcome.new(value: first.value, way:, model: first.route&.model&.name, checks: nil, usage:, attempts:)
     end
     raise_unavailable(attempts)
   end

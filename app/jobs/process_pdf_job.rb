@@ -9,8 +9,15 @@ class ProcessPdfJob < ApplicationJob
     Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}, error_class=#{err.class.name})")
   end
 
-  def perform(pdf_import)
+  # reread: "Read again as…" claimed the import; the previous reading is cleared here, not before
+  # the job was queued.
+  def perform(pdf_import, reread: false)
     return unless pdf_import.is_a?(PdfImport)
+    if reread
+      return unless pdf_import.importing?
+
+      pdf_import.clear_reading!
+    end
     return reset_processing_claim(pdf_import) unless pdf_import.pdf_uploaded?
     return if pdf_import.status.in?(%w[complete failed])
     return reset_processing_claim(pdf_import) if pdf_import.ai_processed? && (!pdf_import.statement_with_transactions? || pdf_import.rows_count > 0)
@@ -59,13 +66,22 @@ class ProcessPdfJob < ApplicationJob
       raise
     end
 
+    # Provider errors about the account, not the document: their message is the useful part (a
+    # spent balance, a wrong key) and quotes nothing from the statement.
+    ACCOUNT_ERRORS = [ Ai::Error::NoCredit, Ai::Error::Unauthorized, Ai::Error::RateLimited, Ai::Error::ModelMissing ].freeze
+
     # What the import page shows: why no model could read it (the router's reason or the way's),
-    # the provider's own message (scrubbed of keys by Ai::Error), a rendering failure's concrete
-    # reason (#3275), or the error class.
+    # the provider's message for an account error, a rendering failure's concrete reason (#3275),
+    # or the error class. Any other provider message can quote the statement back (an account
+    # number), which the key scrubber doesn't catch, so it's never shown or logged.
     def sanitize_error_message(error)
       case error
       when Ai::Error::Unavailable then PdfImport.unavailable_message(error.reason)
-      when Ai::Error::Base, Pdf::PageImages::Error, RuntimeError, ArgumentError
+      when *ACCOUNT_ERRORS
+        I18n.t("imports.pdf_import.processing_failed_with_message", message: error.message.truncate(500))
+      when Ai::Error::Base
+        I18n.t("imports.pdf_import.processing_failed_generic", error: error.class.name.demodulize)
+      when Pdf::PageImages::Error, RuntimeError, ArgumentError
         I18n.t("imports.pdf_import.processing_failed_with_message",
                message: error.message.truncate(500))
       else
@@ -116,7 +132,7 @@ class ProcessPdfJob < ApplicationJob
     end
 
     def statement_with_transactions?(document_type)
-      document_type.in?(%w[bank_statement credit_card_statement])
+      document_type.in?(Ai::PdfReading::STATEMENT_TYPES)
     end
 
     def reset_processing_claim(pdf_import)
