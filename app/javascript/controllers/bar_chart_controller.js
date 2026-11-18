@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
+import SettledResize from "utils/settled_resize";
 
 // Grouped bar chart used by the dashboard "money flow" widget — each month
 // shows an expense bar (red) and an income bar (green) side by side.
@@ -10,6 +11,8 @@ import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 
 // Breathing room between neighbouring month labels before they read as touching.
 const LABEL_GAP_PX = 8;
+const MARGIN = { top: 16, right: 4, bottom: 24, left: 4 };
+const BAND_PADDING = 0.3;
 
 export default class extends Controller {
   static values = {
@@ -19,24 +22,32 @@ export default class extends Controller {
     expenseLabel: { type: String, default: "Expenses" },
   };
 
-  _resizeObserver = null;
+  _settledResize = null;
 
   connect() {
     this._install();
     document.addEventListener("turbo:load", this._reinstall);
-    this._resizeObserver = new ResizeObserver(() => this._reinstall());
-    this._resizeObserver.observe(this.element);
+    // The month labels step down (full, short, every other) as the chart
+    // narrows: a resize across one of those steps redraws then, rather than
+    // stretch labels that no longer fit, or stay cut back, until the end.
+    this._settledResize = new SettledResize(this.element, this._reinstall, {
+      layoutChanges: (from, to) =>
+        this._labelFit(from.width) !== this._labelFit(to.width),
+      margins: { left: MARGIN.left, right: MARGIN.right },
+    });
+    this._settledResize.start();
   }
 
   disconnect() {
     this._teardown();
     document.removeEventListener("turbo:load", this._reinstall);
-    this._resizeObserver?.disconnect();
+    this._settledResize?.stop();
   }
 
   _reinstall = () => {
     this._teardown();
     this._install();
+    this._settledResize?.drew();
   };
 
   _teardown() {
@@ -50,7 +61,7 @@ export default class extends Controller {
 
     if (width < 50 || height < 50 || data.length === 0) return;
 
-    const margin = { top: 16, right: 4, bottom: 24, left: 4 };
+    const margin = MARGIN;
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -72,7 +83,7 @@ export default class extends Controller {
       .scaleBand()
       .domain(data.map((d) => d.label))
       .range([0, innerWidth])
-      .padding(0.3);
+      .padding(BAND_PADDING);
 
     const x1 = d3.scaleBand().domain(series).range([0, x0.bandwidth()]).padding(0.15);
 
@@ -143,15 +154,21 @@ export default class extends Controller {
   // then the abbreviated month, then every other tick. Measuring beats guessing
   // at a character width, which varies by locale, font and zoom.
   _fitAxisLabels(labels, data, step) {
+    this._labelWidths = null;
     if (labels.empty()) return;
 
+    // Both widths, so _labelFit can tell the step at any other chart width.
     const widest = () => d3.max(labels.nodes(), (node) => node.getComputedTextLength()) || 0;
-    const fits = () => widest() <= step - LABEL_GAP_PX;
-
-    if (fits()) return;
-
+    const full = widest();
     labels.text((_d, i) => data[i].short_label ?? data[i].label);
-    if (fits()) return;
+    this._labelWidths = { full, short: widest(), count: data.length };
+
+    const fit = this._labelFit(this.element.clientWidth, step);
+    if (fit === "full") {
+      labels.text((_d, i) => data[i].label);
+      return;
+    }
+    if (fit === "short") return;
 
     // Still too wide (a very narrow column): thin out rather than overlap.
     // The parity is taken from the highlighted month rather than fixed at even,
@@ -162,6 +179,26 @@ export default class extends Controller {
     const highlightedIndex = data.findIndex((d) => d.highlighted);
     const keepParity = highlightedIndex >= 0 ? highlightedIndex % 2 : 0;
     labels.style("display", (_d, i) => (i % 2 === keepParity ? null : "none"));
+  }
+
+  // Which labels fit a chart this wide: "full", "short" or "alternate" (every
+  // other short label). Null before the labels were measured.
+  _labelFit(width, step = null) {
+    const widths = this._labelWidths;
+    if (!widths) return null;
+
+    const bandStep =
+      step ??
+      d3
+        .scaleBand()
+        .domain(d3.range(widths.count))
+        .range([0, width - MARGIN.left - MARGIN.right])
+        .padding(BAND_PADDING)
+        .step();
+    const room = bandStep - LABEL_GAP_PX;
+    if (widths.full <= room) return "full";
+    if (widths.short <= room) return "short";
+    return "alternate";
   }
 
   _tooltipTemplate(month, key) {

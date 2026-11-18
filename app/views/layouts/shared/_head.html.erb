@@ -8,12 +8,61 @@
 
   <%= combobox_style_tag %>
 
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+
+  <%# Applies the sidebar widths the user dragged to before the first paint;
+      sidebar_resize_controller only runs once the page's JavaScript has
+      loaded, so the sidebars drew at their default width and then jumped.
+      It computes what the controller settles on when it connects: the bounds
+      of utils/sidebar_resize.js, each sidebar clamped against the other one's
+      width when that one is open (the left first, then the right, repeated
+      until neither moves). It sits after the viewport tag, so innerWidth is
+      the device's, not a default layout width. Without storage (blocked,
+      private mode) each side takes its default, as the controller does.
+      A Turbo visit that leaves this script unchanged doesn't run it again,
+      while the window may have been resized on a page without the sidebars
+      (settings), so it also runs before each Turbo render. %>
+  <script nonce="<%= content_security_policy_nonce %>">
+    (function () {
+      var apply = function () {
+        <%# The layout renders the right sidebar only while the assistant is enabled. %>
+        var open = { left: <%= Current.user&.show_sidebar? ? "true" : "false" %>, right: <%= Current.user&.show_ai_sidebar? && Current.family&.assistant_enabled? ? "true" : "false" %> };
+        var defaults = { left: 320, right: 400 }, absMax = { left: 480, right: 560 };
+        var room = window.innerWidth - 84 - 400;
+        var requested = {};
+        ["left", "right"].forEach(function (side) {
+          var stored = NaN;
+          try {
+            stored = parseInt(localStorage.getItem("sure.sidebarWidth." + side), 10);
+          } catch (e) {}
+          requested[side] = isFinite(stored) ? stored : defaults[side];
+        });
+        var clamp = function (side, otherWidth) {
+          var max = Math.max(240, Math.min(absMax[side], room - otherWidth));
+          return Math.round(Math.min(Math.max(requested[side], 240), max));
+        };
+        var width = { left: clamp("left", 0), right: clamp("right", 0) };
+        for (var i = 0; i < 3; i++) {
+          width.left = clamp("left", open.right ? width.right : 0);
+          width.right = clamp("right", open.left ? width.left : 0);
+        }
+        ["left", "right"].forEach(function (side) {
+          document.documentElement.style.setProperty("--" + side + "-sidebar-width", width[side] + "px");
+        });
+      };
+      apply();
+      <%# One listener at a time: a changed script (new preferences) replaces it. %>
+      if (document.addEventListener) {
+        document.removeEventListener("turbo:before-render", window.sureSidebarWidthsBeforeRender);
+        window.sureSidebarWidthsBeforeRender = apply;
+        document.addEventListener("turbo:before-render", apply);
+      }
+    })();
+  </script>
   <%= javascript_importmap_tags %>
   <%= render "layouts/dark_mode_check" %>
   <%= render "layouts/privacy_mode_check" %>
   <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
-
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
