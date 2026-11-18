@@ -515,13 +515,11 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
   test "monthly breakdown month names link to that month's report with the selected tags" do
     tag = @family.tags.create!(name: "Breakdown tag")
-    end_month = Date.current.beginning_of_month
-    start_month = end_month - 2.months
 
-    get reports_path(period_type: :custom, start_date: start_month, end_date: end_month.end_of_month, filter_tag_ids: [ tag.id ])
+    get reports_path(period_type: :custom, start_date: Date.new(2024, 1, 15), end_date: Date.new(2024, 3, 12), filter_tag_ids: [ tag.id ])
 
     assert_response :ok
-    [ start_month, end_month ].each do |month|
+    [ Date.new(2024, 1, 1), Date.new(2024, 2, 1), Date.new(2024, 3, 1) ].each do |month|
       href = reports_path(period_type: :monthly, start_date: month, end_date: month.end_of_month, filter_tag_ids: [ tag.id ])
       assert_select "[data-section-key=trends_insights] a[href=?][data-turbo-frame=_top]", href, text: month.strftime("%b %Y")
     end
