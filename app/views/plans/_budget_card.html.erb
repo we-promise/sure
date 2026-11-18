@@ -13,7 +13,7 @@
     <% if budget.initialized? %>
       <% if budget.available_to_spend.negative? %>
         <%= render DS::Pill.new(label: t("reports.budget_performance.status.over"), tone: :error, marker: false, icon: "alert-circle") %>
-      <% elsif budget.percent_of_budget_spent >= 90 %>
+      <% elsif budget.near_limit? %>
         <%= render DS::Pill.new(label: t("reports.budget_performance.status.warning"), tone: :warning, marker: false, icon: "alert-triangle") %>
       <% else %>
         <%= render DS::Pill.new(label: t("reports.budget_performance.status.good"), tone: :success, marker: false, icon: "check-circle") %>

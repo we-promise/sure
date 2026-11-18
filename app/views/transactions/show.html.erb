@@ -65,7 +65,6 @@
                 "data-auto-submit-form-target": "auto" %>
           <%= f.date_field :date,
                 label: t(".date_label"),
-                max: Date.current,
                 disabled: @entry.linked? || split_locked || edit_locked,
                 "data-auto-submit-form-target": "auto" %>
           <% unless @entry.transaction.transfer? %>
@@ -133,7 +132,7 @@
               <%= render DS::MerchantSelect.new(
                     form: ef,
                     method: :merchant_id,
-                    merchants: Current.family.available_merchants_for(Current.user).alphabetically,
+                    merchants: Current.family.available_merchants_for(Current.user).with_attached_logo.alphabetically,
                     selected_id: ef.object.merchant_id,
                     include_blank: t(".none"),
                     label: t(".merchant_label"),
@@ -205,7 +204,7 @@
       <% dialog.with_section(title: t("splits.show.title"), open: true) do %>
         <div class="px-3 py-2 space-y-2">
           <p class="text-xs text-secondary"><%= t("splits.show.description") %></p>
-          <% @entry.child_entries.includes(:entryable).each do |child| %>
+          <% @entry.child_entries.in_split_order.includes(:entryable).each do |child| %>
             <div class="flex items-center justify-between p-2 rounded-lg border border-primary">
               <div>
                 <p class="text-sm font-medium text-primary"><%= child.name %></p>

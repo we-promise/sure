@@ -18,7 +18,7 @@ module Family::AiPromptable
   # it swaps a small local model's terse rules for a prompt written for GPT-4.
   # Mirrors how Provider::Registry picks the endpoint.
   def self.custom_openai_provider?
-    (ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base).present?
+    Provider::Openai.custom_endpoint?(ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base)
   end
 
   # Each key's stock text, lazily. Constructing a provider class with
@@ -29,7 +29,9 @@ module Family::AiPromptable
     categorizer_openai: -> { Provider::Openai::AutoCategorizer.new(nil, custom_provider: custom_openai_provider?).instructions },
     categorizer_anthropic: -> { Provider::Anthropic::AutoCategorizer.new(nil, model: "").instructions },
     merchant_openai: -> { Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: [], custom_provider: custom_openai_provider?).instructions },
-    merchant_anthropic: -> { Provider::Anthropic::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions }
+    merchant_anthropic: -> { Provider::Anthropic::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions },
+    # The visible first chat message of "Dig in with AI", not instructions.
+    insight_dig_in: -> { I18n.t("insights.dig_in.prompt") }
   }.freeze
 
   KEYS = DEFAULTS.keys.freeze

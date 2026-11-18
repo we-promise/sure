@@ -736,6 +736,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get chatListDeleteFailed => 'Det gick inte att radera chattarna';
 
   @override
+  String get chatListIncomplete =>
+      'Vissa chattar kan saknas. Listan lästes inte in helt.';
+
+  @override
   String get chatListError => 'Det gick inte att läsa in chattar';
 
   @override
@@ -1041,4 +1045,220 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get chatConversationStartFailed =>
       'Det gick inte att starta konversationen. Försök igen.';
+
+  @override
+  String get moreBudgets => 'Budgetar';
+
+  @override
+  String get moreBudgetsSubtitle =>
+      'Budgeterat mot faktiskt utfall per kategori';
+
+  @override
+  String get budgetsTitle => 'Budgetar';
+
+  @override
+  String get budgetsPreviousMonth => 'Föregående månad';
+
+  @override
+  String get budgetsNextMonth => 'Nästa månad';
+
+  @override
+  String get budgetsBudgeted => 'Budgeterat';
+
+  @override
+  String get budgetsActual => 'Utfall';
+
+  @override
+  String get budgetsRemaining => 'Kvar';
+
+  @override
+  String get budgetsIncome => 'Inkomster';
+
+  @override
+  String budgetsExpectedIncome(String amount) {
+    return 'Förväntat $amount';
+  }
+
+  @override
+  String budgetsOfAmount(String amount) {
+    return 'av $amount';
+  }
+
+  @override
+  String budgetsAmountLeft(String amount) {
+    return '$amount kvar';
+  }
+
+  @override
+  String budgetsOverBy(String amount) {
+    return '$amount över';
+  }
+
+  @override
+  String budgetsRolledOver(String amount) {
+    return '+$amount överfört';
+  }
+
+  @override
+  String get budgetsSharedBudget => 'Delad budget';
+
+  @override
+  String get budgetsNoLimit => 'Ingen budget';
+
+  @override
+  String get budgetsCategoriesTitle => 'Kategorier';
+
+  @override
+  String budgetsFilterOverBudget(int count) {
+    return 'Över budget ($count)';
+  }
+
+  @override
+  String get budgetsOverBudget => 'Över budget';
+
+  @override
+  String get budgetsNearLimit => 'Nära gränsen';
+
+  @override
+  String budgetsBudgetNumber(int number) {
+    return 'Budget $number';
+  }
+
+  @override
+  String budgetsNoBudgetTitle(String month) {
+    return 'Ingen budget för $month';
+  }
+
+  @override
+  String get budgetsNoBudgetMessage =>
+      'Budgetar skapas i Sure på webben. Öppna Budgetar där för att skapa en för den här månaden.';
+
+  @override
+  String get budgetsNotSetUpMessage =>
+      'Inga utgiftsgränser är satta för den här månaden än. Ställ in dem i Sure på webben.';
+
+  @override
+  String get budgetsNoCategories =>
+      'Inga budgeterade kategorier eller utgifter den här månaden.';
+
+  @override
+  String get budgetsOfflineTitle => 'Du är offline';
+
+  @override
+  String get budgetsOfflineMessage =>
+      'Anslut till internet för att läsa in den här månadens budget.';
+
+  @override
+  String get budgetsOfflineCached =>
+      'Offline. Visar siffrorna som lästes in tidigare.';
+
+  @override
+  String get budgetsRefreshFailed =>
+      'Kunde inte uppdatera. Visar siffrorna som lästes in tidigare.';
+
+  @override
+  String get budgetsLoadFailed => 'Kunde inte läsa in budgetar';
+
+  @override
+  String get budgetsSessionExpired => 'Din session har gått ut. Logga in igen.';
+
+  @override
+  String budgetCategoryTransactionsEmpty(String month) {
+    return 'Inga transaktioner i den här kategorin för $month.';
+  }
+
+  @override
+  String get budgetCategoryTransactionsLoadMore => 'Visa fler';
+
+  @override
+  String get budgetCategoryTransactionsLoadFailed =>
+      'Kunde inte läsa in transaktioner';
+
+  @override
+  String get moreCashFlow => 'Kassaflöde';
+
+  @override
+  String get moreCashFlowSubtitle =>
+      'Inkomster, utgifter och sparande per kategori';
+
+  @override
+  String get cashFlowTitle => 'Kassaflöde';
+
+  @override
+  String get cashFlowPeriodCurrentMonth => 'Den här månaden';
+
+  @override
+  String get cashFlowPeriodLastMonth => 'Förra månaden';
+
+  @override
+  String get cashFlowPeriodLast30Days => 'Senaste 30 dagarna';
+
+  @override
+  String get cashFlowPeriodLast90Days => 'Senaste 90 dagarna';
+
+  @override
+  String get cashFlowPeriodCurrentYear => 'Hittills i år';
+
+  @override
+  String get cashFlowPeriodLast365Days => 'Senaste 365 dagarna';
+
+  @override
+  String get cashFlowIncome => 'Inkomster';
+
+  @override
+  String get cashFlowExpenses => 'Utgifter';
+
+  @override
+  String get cashFlowNetSavings => 'Nettosparande';
+
+  @override
+  String cashFlowSavingsRate(String rate) {
+    return 'Sparkvot: $rate';
+  }
+
+  @override
+  String get cashFlowExpensesByCategory => 'Utgifter per kategori';
+
+  @override
+  String get cashFlowIncomeByCategory => 'Inkomster per kategori';
+
+  @override
+  String cashFlowShareOfExpenses(String percent) {
+    return '$percent av utgifterna';
+  }
+
+  @override
+  String cashFlowShareOfIncome(String percent) {
+    return '$percent av inkomsterna';
+  }
+
+  @override
+  String get cashFlowEmpty => 'Inga inkomster eller utgifter under perioden';
+
+  @override
+  String get cashFlowEmptySubtitle =>
+      'Prova en annan period eller dra för att uppdatera.';
+
+  @override
+  String get cashFlowNoExpenses => 'Inga utgifter under perioden';
+
+  @override
+  String get cashFlowNoIncome => 'Inga inkomster under perioden';
+
+  @override
+  String get cashFlowLoadFailed => 'Kunde inte läsa in kassaflödet';
+
+  @override
+  String get cashFlowOffline =>
+      'Du är offline. Kassaflödet beräknas av din Sure-server och kräver en anslutning.';
+
+  @override
+  String get cashFlowOutdated => 'Inaktuell';
+
+  @override
+  String get cashFlowTransactionsEmpty => 'Inga transaktioner under perioden';
+
+  @override
+  String get cashFlowTransactionsLoadFailed =>
+      'Kunde inte läsa in transaktioner';
 }

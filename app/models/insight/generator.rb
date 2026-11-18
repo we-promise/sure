@@ -1,11 +1,9 @@
 # Base class for insight generators. Subclasses compute a financial signal in
 # pure Ruby and return GeneratedInsight records — numbers only, no prose. The
 # prose (`body`) is written later by Insight::BodyWriter, and only when the
-# insight is new or its numbers changed, so nightly re-runs don't re-invoke
-# the LLM for unchanged insights.
+# insight is new or its numbers changed.
 class Insight::Generator
-  # `facts` doubles as the i18n interpolation args for the template fallback
-  # and as the grounding data handed to the LLM writer. `metadata` is what the
+  # `facts` are the i18n interpolation args for the body template. `metadata` is what the
   # job compares between runs to decide whether an insight changed — keep its
   # values JSON-primitive (floats, strings, ISO dates) so comparisons are stable.
   GeneratedInsight = Data.define(
@@ -46,12 +44,66 @@ class Insight::Generator
   private
     attr_reader :family
 
-    def income_statement
-      @income_statement ||= IncomeStatement.new(family)
+    # The feed is one list shared by the whole family, so every figure in it is
+    # computed only from accounts each active member may open. Without this a
+    # member's private account would feed totals that everyone reads.
+    #
+    # The ids are read once per run, so every figure and the digest describe
+    # the same account set even if access changes while the generator runs.
+    def shared_accounts
+      @shared_accounts ||= family.accounts.where(id: shared_account_ids)
     end
 
-    def balance_sheet
-      @balance_sheet ||= BalanceSheet.new(family)
+    def shared_account_ids
+      @shared_account_ids ||= family.accounts.accessible_by_all_active_members.order(:id).pluck(:id)
+    end
+
+    # The account scope is passed explicitly: IncomeStatement falls back to
+    # `Current.user`, which is nil in the nightly job and would mean "every
+    # account in the family". Status, report and tax filters stay its own.
+    def income_statement
+      @income_statement ||= IncomeStatement.new(family, accounts: shared_accounts)
+    end
+
+    # Totals have no single account that Insight.about_shared_accounts could
+    # recheck on read, so an aggregate insight carries the account set it was
+    # computed from. Once access changes the feed hides it, and the next run
+    # writes the new digest and rewrites the body (see
+    # GenerateInsightsJob#upsert_insights), so prose written from the old set
+    # does not outlive it.
+    #
+    # Hashed from the captured ids rather than the account rows, so an account
+    # deleted after the figures were computed still counts. The ids are
+    # aliased as accounts.id so the shared expression applies unchanged.
+    def shared_accounts_digest
+      @shared_accounts_digest ||= Account.connection.select_value(Account.sanitize_sql_array([
+        "SELECT #{Account::ID_SET_DIGEST_SQL} FROM unnest(?::uuid[]) AS accounts(id)",
+        "{#{shared_account_ids.join(",")}}"
+      ]))
+    end
+
+    # Recurring series follow the same rule, matching
+    # RecurringTransaction.accessible_by: a series without an account (legacy
+    # rows) belongs to nobody in particular and stays in.
+    def shared_recurring_transactions
+      RecurringTransaction.where(account_id: nil)
+                          .or(RecurringTransaction.where(account_id: shared_accounts.select(:id)))
+    end
+
+    # The household budget: the feed is shared by the whole family, so one
+    # member's personal budget can't speak for it. Its spending is read from
+    # the accounts every member may see; left alone, the budget would fall
+    # back to `Current.user` (nil here) and count every account.
+    def current_budget
+      return @current_budget if defined?(@current_budget)
+
+      @current_budget = family.budgets
+        .where(user_id: nil)
+        .includes(budget_categories: :category)
+        .where("start_date <= ? AND end_date >= ?", Date.current, Date.current)
+        .first
+      @current_budget&.income_statement_accounts = shared_accounts
+      @current_budget
     end
 
     def build_insight(insight_type:, priority:, title:, template_key:, facts:, dedup_key:, metadata:, period: nil)
@@ -86,8 +138,14 @@ class Insight::Generator
 
     # Formats a number for display facts with a true minus sign (U+2212) —
     # the app types negatives with a minus, not a hyphen. Keep raw numerics
-    # in `metadata`; this is for interpolation into template/LLM prose only.
+    # in `metadata`; this is for interpolation into template prose only.
     def signed_number(value)
       value.negative? ? "−#{value.abs}" : value.to_s
+    end
+
+    # A display fact rounded to one decimal with the locale's separator, so
+    # Spanish copy reads "35,0" rather than "35.0".
+    def decimal_fact(value)
+      ActiveSupport::NumberHelper.number_to_rounded(round(value, 1), precision: 1)
     end
 end

@@ -1,0 +1,73 @@
+---
+es:
+  settings:
+    preferences:
+      show:
+        country: País
+        currency: Moneda
+        date_format: Formato de fecha
+        general_subtitle: Configura tus preferencias
+        general_title: General
+        transactions_title: Transacciones
+        transactions_subtitle: Configura cómo se comportan las transacciones
+        manual_reconciliation: Conciliación manual
+        manual_reconciliation_hint: Muestra los controles de conciliación en las cuentas introducidas a mano. Las cuentas con sincronización bancaria usan en su lugar la conciliación con extractos.
+        default_period: Periodo Predeterminado
+        default_account_order: Orden Predeterminado de Cuentas
+        default_account_order_hint: Con Manual, arrastra las cuentas en la barra lateral para ordenarlas.
+        language: Idioma
+        language_auto: Idioma del navegador
+        page_title: Preferencias
+        timezone: Zona horaria
+        month_start_day: El mes de presupuesto comienza el
+        month_start_day_hint: Establece cuándo empieza tu mes financiero (ej. el día de cobro)
+        month_start_day_warning: Tus presupuestos y cálculos del mes en curso utilizarán este día personalizado en lugar del día 1 de cada mes.
+        investment_contributions_as_spending: Contar la inversión como gasto
+        investment_contributions_as_spending_hint: El dinero que pasa a cuentas de inversión cuenta como gasto en los presupuestos, los informes y el gráfico de flujo de caja. Desactívalo para mostrarlo como invertido.
+        personal_budgets: Presupuestos personales
+        personal_budgets_hint: Activa presupuestos individuales para cada miembro de la familia.
+        household_budget_enabled: Presupuesto familiar
+        household_budget_enabled_hint: Mantén un presupuesto familiar compartido junto a los personales. Desactívalo para usar solo presupuestos personales.
+        budget_sharing_title: Compartir presupuesto
+        budget_sharing_subtitle: Permite que otros miembros vean o editen tu presupuesto personal
+        budget_sharing_no_members: No hay otros miembros en tu %{moniker} con quien compartirlo
+        budget_sharing_permission_label: Acceso de %{name}
+        budget_sharing_permissions:
+          none: Sin acceso
+          read_only: Solo ver
+          read_write: Puede editar
+        translations_notice: Ten en cuenta que todavía estamos trabajando en las traducciones a varios idiomas.
+        rule_suggestions: Sugerencias de reglas
+        rule_suggestions_hint: Ofrecer crear una regla después de cambiar la categoría de una transacción
+        budget_title: Presupuesto
+        budget_subtitle: Configura cómo se comportan tus presupuestos
+        currencies_title: Divisas de %{moniker}
+        currencies_subtitle: Elige qué divisas aparecen en los campos de dinero de tu %{moniker}
+        base_currency_label: Divisa base
+        base_currency_badge: Divisa base
+        additional_currencies_label: Divisas adicionales
+        no_additional_currencies: Ninguna seleccionada
+        currencies_more: +%{count} más
+        manage_currencies: Gestionar divisas
+        manage_currencies_subtitle: Deselecciona las divisas que nunca uses o reduce la lista a unas pocas.
+        select_all_currencies: Seleccionar todas
+        select_base_only: Solo divisa base
+        currency_search_placeholder: Buscar divisas
+        no_matching_currencies: No se han encontrado divisas
+        selected_currencies_count:
+          one: '%{count} seleccionada'
+          other: '%{count} seleccionadas'
+        save_currencies: Guardar divisas
+        sharing_title: Compartición de %{moniker}
+        sharing_subtitle: Controla cómo se comparten las cuentas en tu %{moniker}
+        sharing_default_label: Compartición predeterminada para cuentas nuevas
+        sharing_shared: Compartir con todos los miembros
+        sharing_private: Mantener privadas por defecto
+        preview:
+          title: Habilitar funciones experimentales
+          description: Activa las funciones en desarrollo etiquetadas como experimentales o canary.
+        theme_dark: Oscuro
+        theme_light: Claro
+        theme_subtitle: Elige un tema preferido para la aplicación
+        theme_system: Sistema
+        theme_title: Tema

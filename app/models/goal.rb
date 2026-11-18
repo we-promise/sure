@@ -34,9 +34,12 @@ class Goal < ApplicationRecord
   validates :name, presence: true, length: { maximum: 255 }
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
-  # before_save (not before_validation) so it only mutates on persistence, not
-  # on every valid? call — a goal can be inspected without its basis flipping.
-  before_save :default_progress_basis_for_investment
+  # What progress counts: "balance" is what the linked accounts are worth
+  # today, "contributions" only what was put in (market gains and losses
+  # taken out). The user chooses; nothing re-bases a goal behind their back
+  # (#3964).
+  PROGRESS_BASES = %w[balance contributions].freeze
+  validates :progress_basis, inclusion: { in: PROGRESS_BASES }
   # A reserve measured in months is derived, not typed: computing it only in
   # the monthly job would leave a brand-new one wrong until the 1st, so the
   # feature's first impression would be its least convincing moment. Fired on
@@ -64,11 +67,11 @@ class Goal < ApplicationRecord
 
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_fundable
-  validate :linked_accounts_must_match_goal_currency
   validate :linked_accounts_must_belong_to_family
   validate :currency_locked_once_linked
   validate :restore_must_not_recreate_whole_account_conflict
   validate :kind_locked_while_released
+  validate :progress_basis_locked_once_completed
   validate :kind_locked_once_consumed
   validate :target_must_cover_what_was_consumed
   # A reserve has no deadline. Normalising here rather than rejecting: the form
@@ -76,6 +79,11 @@ class Goal < ApplicationRecord
   # or a crafted request — refusing would show an error about a field the user
   # cannot see.
   before_validation :clear_target_date_for_maintained
+
+  # Warm conversion rates before taking account-claim locks. Completing a goal
+  # freezes its balance, so an unavailable rate must refuse the write rather
+  # than permanently snapshot a partial subtotal.
+  before_validation :prepare_completion_conversion, if: -> { state_changed? && completed? }
 
   # Autosave validates each link separately, so each would otherwise take its
   # own account lock in association order. Two goals saving links on the same
@@ -94,11 +102,16 @@ class Goal < ApplicationRecord
   # they belong to are the same fact. Still inside the save transaction, so a
   # later failure takes both back.
   after_save :apply_state_change_side_effects, if: :saved_change_to_state?
+  # The basis decides what current_balance counts, so the balance-derived memos
+  # filled before the save describe the old basis. Cleared the way a state
+  # transition clears them, or the instance the controller renders keeps
+  # reporting the figure the user just switched away from.
+  after_save :reset_state_dependent_caches!, if: :saved_change_to_progress_basis?
 
   monetize :target_amount
 
   # Account types that can back a goal (see linked_accounts_must_be_fundable).
-  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment].freeze
+  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment Crypto].freeze
 
   # States in which a goal has let go of the money it was holding, and so
   # drops out of the shared pool. `completed` belongs here: reaching a goal
@@ -155,7 +168,10 @@ class Goal < ApplicationRecord
   # falls back to 4 for anything unranked, so omitting these two would bury a
   # drained emergency fund at the very bottom of the list — the exact opposite
   # of what it means.
-  ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, depleted: 0, on_track: 1, no_target_date: 2, funded: 3 }.freeze
+  #
+  # `pace_unknown` shares rank 2 with `no_target_date`: neither has a pace to
+  # compare against, so neither is ahead of or behind anything.
+  ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, depleted: 0, on_track: 1, no_target_date: 2, pace_unknown: 2, funded: 3 }.freeze
 
   scope :alphabetically, -> { order(Arel.sql("LOWER(name) ASC")) }
   scope :active_first, lambda {
@@ -243,12 +259,18 @@ class Goal < ApplicationRecord
 
   attr_writer :pooled_allocations
 
+  # Every account linked to one of the family's goals: the list the family-wide
+  # readers below start from. inject_backing_math! reads it once and hands it to
+  # each of them.
+  def self.linked_account_ids_for(family)
+    GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+  end
+
   # Family-wide map of cumulative market gain/loss per account_id (sum of
   # balances.net_market_flows). Injected on index alongside pooled_allocations
   # so contributions-basis goals don't fire one Balance aggregate per account
   # per goal (N+1).
-  def self.market_flows_for(family)
-    account_ids = GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+  def self.market_flows_for(family, account_ids: linked_account_ids_for(family))
     return {} if account_ids.empty?
 
     Balance.where(account_id: account_ids).group(:account_id).sum(:net_market_flows)
@@ -257,13 +279,13 @@ class Goal < ApplicationRecord
   attr_writer :market_flows
 
   # Family-wide map of each linked account's net inflow over the trailing
-  # 90 days (account_id => net Entry#amount sum) — the same aggregate #pace
-  # computes per goal. Injected alongside pooled_allocations/market_flows so
-  # sorting/rendering N goals (active_display_sort calls goal.status, which
-  # reaches #pace for any goal with a target_date) fires one grouped query
-  # instead of one Entry.sum per goal.
-  def self.pace_for(family)
-    account_ids = GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+  # 90 days, per entry currency (account_id => { currency => net Entry#amount
+  # sum }) — the same aggregate #pace computes per goal. Injected alongside
+  # pooled_allocations/market_flows so sorting/rendering N goals
+  # (active_display_sort calls goal.status, which reaches #pace for any goal
+  # with a target_date) fires one grouped query instead of one Entry.sum per
+  # goal.
+  def self.pace_for(family, account_ids: linked_account_ids_for(family))
     return {} if account_ids.empty?
 
     Entry
@@ -271,11 +293,110 @@ class Goal < ApplicationRecord
       .where(account_id: account_ids, date: 90.days.ago.to_date..Date.current)
       .where(excluded: false)
       .merge(Transaction.excluding_pending)
-      .group(:account_id)
+      .group(:account_id, :currency)
       .sum(:amount)
+      .each_with_object({}) do |((account_id, currency), amount), totals|
+        (totals[account_id] ||= {})[currency] = amount
+      end
   end
 
   attr_writer :pooled_pace
+
+  BALANCE_PACE_DAYS = 365
+  BALANCE_PACE_VALUATION_KINDS = %w[reconciliation current_anchor].freeze
+
+  # Accounts are tracked by transactions or by balance updates. An account with
+  # no counted transaction in the pace window (see pace_for) is measured from
+  # its balance instead, provided someone has actually recorded a value for it
+  # in the last year:
+  #
+  #   { balance: { account_id => { start: year-old end_balance, market_flows: window sum,
+  #                                excluded_flows: window sum of excluded entry amounts } },
+  #     dormant: [account_id, ...] }
+  #
+  # `balance` holds accounts with a reconciliation or current-anchor valuation
+  # in the trailing year AND a balance row a year back to measure from. History
+  # shorter than a year is not measured: there is no year-old row, and reading
+  # its absence as zero would call the whole balance growth. Stored balances
+  # include excluded entries, which pace_for leaves out, so their sum over the
+  # window is carried too and taken back out of the change. `dormant` holds
+  # accounts with counted transactions, just none lately: their pace is a
+  # measured zero. Excluded and pending ones do not count there either, as
+  # they do not in pace_for.
+  # Any linked account in neither map (an opening balance and nothing since, a
+  # recent valuation on under a year of history, or updates all older than a
+  # year) has no measurable pace.
+  #
+  # A fixed number of family-wide queries, none per goal, for the same N+1 reason as
+  # pace_for. `transaction_pace` is pace_for's result, so accounts it already
+  # covers are not read again.
+  def self.balance_pace_for(family, transaction_pace = pace_for(family), account_ids: linked_account_ids_for(family))
+    account_ids -= transaction_pace.keys
+    return { balance: {}, dormant: [] } if account_ids.empty?
+
+    cutoff = Date.current - BALANCE_PACE_DAYS
+
+    valued_ids = Entry
+      .joins("INNER JOIN valuations ON valuations.id = entries.entryable_id AND entries.entryable_type = 'Valuation'")
+      .where(account_id: account_ids, date: cutoff..Date.current)
+      .where(valuations: { kind: BALANCE_PACE_VALUATION_KINDS })
+      .distinct
+      .pluck(:account_id)
+
+    balance = {}
+    if valued_ids.any?
+      in_account_currency = Balance.joins(:account).where(account_id: valued_ids).where("balances.currency = accounts.currency")
+
+      starts = in_account_currency
+        .where("balances.date <= ?", cutoff)
+        .select("DISTINCT ON (balances.account_id) balances.account_id, balances.end_balance")
+        .order("balances.account_id, balances.date DESC")
+        .to_h { |row| [ row.account_id, row.end_balance ] }
+
+      flows = in_account_currency
+        .where("balances.date > ?", cutoff)
+        .group(:account_id)
+        .sum(:net_market_flows)
+
+      # Read the way Balance::SyncCache builds the balance: split parents left
+      # out (their children count instead), each amount converted to the
+      # account's currency, and an entry with no rate skipped, as it was there.
+      excluded_flows = Hash.new(0.to_d)
+      Entry
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(account_id: starts.keys, date: (cutoff + 1)..Date.current, excluded: true)
+        .merge(Transaction.excluding_pending)
+        .excluding_split_parents
+        .includes(:account, :entryable)
+        .each do |entry|
+          excluded_flows[entry.account_id] += entry.amount_money.exchange_to(
+            entry.account.currency, date: entry.date, custom_rate: entry.entryable.exchange_rate
+          ).amount.to_d
+        rescue Money::ConversionError
+          next
+        end
+
+      starts.each do |account_id, start|
+        balance[account_id] = {
+          start: start.to_d,
+          market_flows: (flows[account_id] || 0).to_d,
+          excluded_flows: excluded_flows[account_id]
+        }
+      end
+    end
+
+    dormant = Entry
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(account_id: account_ids - valued_ids)
+      .where("entries.excluded IS NOT TRUE")
+      .merge(Transaction.excluding_pending)
+      .distinct
+      .pluck(:account_id)
+
+    { balance: balance, dormant: dormant }
+  end
+
+  attr_writer :pooled_balance_pace
 
   # Goals loaded ready to render: association preloads for the card/row
   # partials plus the family-wide pooled-allocations + market-flows injection
@@ -294,12 +415,17 @@ class Goal < ApplicationRecord
   # pace_for).
   def self.inject_backing_math!(goals, family)
     pooled = pooled_allocations_for(family)
-    flows = market_flows_for(family)
-    pace_map = pace_for(family)
+    account_ids = linked_account_ids_for(family)
+    flows = market_flows_for(family, account_ids: account_ids)
+    pace_map = pace_for(family, account_ids: account_ids)
+    balance_pace_map = balance_pace_for(family, pace_map, account_ids: account_ids)
+    converter = CurrencyConverter.new
     goals.each do |goal|
+      goal.currency_converter = converter
       goal.pooled_allocations = pooled
       goal.market_flows = flows
       goal.pooled_pace = pace_map
+      goal.pooled_balance_pace = balance_pace_map
     end
   end
 
@@ -376,14 +502,9 @@ class Goal < ApplicationRecord
     end
   end
 
-  # Balance is this goal's backing across its linked depository accounts that
-  # match the goal's currency. Each linked account contributes either its
-  # earmarked slice (goal_accounts.allocated_amount) or — when unallocated —
-  # the whole balance left after other goals' earmarks (see
-  # #backing_balance_for). The model validates the currency invariant at write
-  # time, but the defensive filter + telemetry here guards against drift from
-  # direct DB writes, account-currency edits outside goal validation, or
-  # future code that bypasses the validation chain.
+  # Allocate in each account's native currency first, then convert the goal's
+  # share. Goals with different currencies can share fixed earmarks without
+  # interpreting one goal's dollars as another goal's euros.
   def current_balance
     # A closed goal reports what it reached, not what its accounts hold now.
     # The guard is `present?`, never `completed?`: `archive` accepts a goal
@@ -392,14 +513,7 @@ class Goal < ApplicationRecord
     # shapes coexist in the database.
     return completed_amount.to_d if completed_amount.present?
 
-    @current_balance ||= begin
-      matching = linked_accounts.select { |a| a.currency == currency }
-      if matching.size != linked_accounts.size
-        Rails.logger.warn("Goal##{id} linked-account currency drift: #{linked_accounts.size - matching.size} of #{linked_accounts.size} mismatched (expected #{currency})")
-        Sentry.capture_message("Goal linked-account currency drift", level: :warning, extra: { goal_id: id, expected_currency: currency }) if defined?(Sentry)
-      end
-      matching.sum { |account| account_amount_for(account) }
-    end
+    @current_balance ||= linked_accounts.sum { |account| account_backing(account).amount }
   end
 
   def current_balance_money
@@ -416,11 +530,11 @@ class Goal < ApplicationRecord
   # Goes through the same `backing_share_for` as everything else, so a
   # whole-account link is counted for the remainder it actually claims rather
   # than the zero its nil allocation would suggest.
-  def backing_within(account_ids)
+  def backing_within(account_ids, currency: self.currency)
     ids = Array(account_ids).to_set
     linked_accounts
-      .select { |account| account.currency == currency && ids.include?(account.id) }
-      .sum { |account| account_amount_for(account) }
+      .select { |account| ids.include?(account.id) }
+      .sum { |account| convert_money(Money.new(account_amount_for(account), account.currency), to: currency).amount }
   end
 
   # Whether this reader can record a spend against this goal. Two doors lead to
@@ -431,12 +545,63 @@ class Goal < ApplicationRecord
     one_off? && active? && backing_within(account_ids).to_d.positive?
   end
 
+  # A missing rate counts as zero and is recorded for the warning.
   def account_backing(account)
-    Money.new(account_amount_for(account), currency)
+    convert_money(account_native_backing(account))
+  end
+
+  def account_native_backing(account)
+    Money.new(account_amount_for(account), account.currency)
+  end
+
+  attr_writer :currency_converter
+
+  # Strict conversion is used for writes, so an unavailable rate cannot record
+  # a pledge match or release an incorrectly sized earmark.
+  def convert_money!(money, to: currency, date: Date.current)
+    currency_converter.convert(money, to: to, date: date)
+  end
+
+  # Read surfaces show the known subtotal with an explicit missing-rate warning.
+  # Never relabel a foreign amount as goal currency or assume a 1:1 rate.
+  def convert_money(money, to: currency, date: Date.current)
+    convert_money!(money, to: to, date: date)
+  rescue Money::ConversionError => e
+    # Logged once a day per family and pair: reads run on every page view, and
+    # a family without a rate provider would otherwise log on each one.
+    if missing_exchange_rate_currencies.add?(e.from_currency) &&
+       Rails.cache.write([ "goal_fx_missing", family_id, e.from_currency, e.to_currency ], true, expires_in: 1.day, unless_exist: true)
+      DebugLogEntry.capture(
+        category: "goal_currency_conversion", level: "warn", source: "Goal",
+        message: "Goal amount could not be converted", family: family,
+        metadata: { goal_id: id, from: e.from_currency, to: e.to_currency, date: e.date }
+      )
+    end
+    Money.new(0, to)
+  end
+
+  def missing_exchange_rate_currencies
+    @missing_exchange_rate_currencies ||= Set.new
+  end
+
+  # Runs the backing, pace and market-value conversions up front, so the
+  # warning can render above those figures instead of after them.
+  def currency_conversion_incomplete?
+    current_balance
+    pace
+    market_value_money
+    missing_exchange_rate_currencies.any?
   end
 
   def contributions_basis?
     progress_basis == "contributions"
+  end
+
+  # Whether the basis is frozen with a completion snapshot (see
+  # progress_basis_locked_once_completed). The form reads it to stop offering
+  # a choice the model would refuse.
+  def progress_basis_locked?
+    persisted? && !completed_amount_in_database.nil?
   end
 
   def one_off?
@@ -533,7 +698,9 @@ class Goal < ApplicationRecord
   # progress basis — the "what it's worth today" figure shown next to
   # contributions on an investment-backed goal.
   def market_value_money
-    amount = linked_accounts.select { |a| a.currency == currency }.sum { |a| backing_share_for(a, a.balance.to_d) }
+    amount = linked_accounts.sum do |account|
+      convert_money(Money.new(backing_share_for(account, account.balance.to_d), account.currency)).amount
+    end
     Money.new(amount, currency)
   end
 
@@ -571,6 +738,11 @@ class Goal < ApplicationRecord
     raise ConsumptionRefused.new(:maintained) if maintained?
 
     link = consumption_link_for(account)
+    # The submitted amount and consumed_amount are in goal currency; earmarks
+    # remain in account currency. Reuse the forward rate instead of requiring
+    # a separately cached inverse rate.
+    rate = convert_money!(Money.new(1, link.account.currency), date: transaction&.entry&.date || Date.current).amount
+    native_amount = amount / rate
 
     # The GOAL is locked, not just the link. `consumed_amount` lives here, and
     # two concurrent requests locking only their own links would both read the
@@ -589,11 +761,11 @@ class Goal < ApplicationRecord
         # held while `consumed_amount` took the full figure, so the two sides
         # silently disagreed: money counted as spent that was never released,
         # and still reserved against every sibling goal on the account.
-        if amount > link.allocated_amount.to_d
+        if native_amount > link.allocated_amount.to_d
           raise ConsumptionRefused.new(:exceeds_earmark)
         end
 
-        link.update!(allocated_amount: link.allocated_amount.to_d - amount)
+        link.update!(allocated_amount: link.allocated_amount.to_d - native_amount)
       else
         # A whole-account link has no slice to shrink, so `consumed_amount`
         # would be added to a backing that has not moved: the goal reads 6,000
@@ -611,15 +783,15 @@ class Goal < ApplicationRecord
         # twice reports 4,000 of a 5,000 goal that is whole. Capping at what
         # is left to reach is the same answer in both orders, with nothing to
         # infer.
-        backed = backing_within([ link.account_id ]).to_d
+        backed = account_amount_for(link.account).to_d
 
         # Same refusal a fixed earmark gives, for the same reason: the link
         # cannot have supplied money it never backed. `still_needed` cannot go
         # negative — the target check above has already refused that.
-        raise ConsumptionRefused.new(:exceeds_earmark) if amount > backed
+        raise ConsumptionRefused.new(:exceeds_earmark) if native_amount > backed
 
         still_needed = target_amount.to_d - consumed_amount.to_d - amount
-        link.update!(allocated_amount: [ backed, still_needed ].min)
+        link.update!(allocated_amount: [ backed, still_needed / rate ].min)
       end
 
       update!(consumed_amount: consumed_amount.to_d + amount)
@@ -631,6 +803,8 @@ class Goal < ApplicationRecord
     reload
     reset_state_dependent_caches!
     self
+  rescue Money::ConversionError
+    raise ConsumptionRefused.new(:missing_exchange_rate)
   end
 
   def remaining_amount_money
@@ -710,6 +884,13 @@ class Goal < ApplicationRecord
   # goes up, status flips off "behind". Excludes user-flagged-excluded
   # entries. Entry amount sign convention in Sure: inflow is negative.
   #
+  # An account with no counted transaction in that window is measured from its
+  # balance instead: the change over the last year, divided by twelve (see
+  # Goal.balance_pace_for). Excluded transactions in that year are taken back
+  # out, as they are here. On the contributions basis the year's market movement is
+  # taken out, so pace measures the same thing progress does. An account with
+  # no evidence either way contributes 0 here, and makes pace_measurable? false.
+  #
   # NOTE: pace is whole-account inflow by design in this phase, even for an
   # earmarked goal whose current_balance is only a slice — so runway/status
   # mix a whole-account numerator with an earmark-scoped balance. Earmark-aware
@@ -720,8 +901,35 @@ class Goal < ApplicationRecord
     @pace = if linked_accounts.empty?
       0
     else
-      net = linked_accounts.sum { |account| pooled_pace.fetch(account.id, 0).to_d }
-      (-net.to_d / 3).round(2)
+      # Today's rate, not each entry's: pace is an estimate, and a rate per
+      # entry date could reach the provider up to 90 times per currency on
+      # every render.
+      net = linked_accounts.sum do |account|
+        pooled_pace.fetch(account.id, {}).sum do |entry_currency, amount|
+          convert_money(Money.new(amount, entry_currency.presence || account.currency)).amount
+        end
+      end
+      # Balance-measured pace is in the account's currency; convert it the
+      # same way, at today's rate.
+      from_balances = linked_accounts.sum do |account|
+        native = account_balance_pace(account)
+        native.nil? ? 0.to_d : convert_money(Money.new(native, account.currency)).amount
+      end
+      (-net.to_d / 3 + from_balances).round(2)
+    end
+  end
+
+  # False when any linked account has no evidence of how its balance moves: no
+  # recent transactions, no transactions ever, and no balance updates over a
+  # year of history to measure from. All or nothing, because a goal with part
+  # of its money unmeasured cannot honestly be called on track or behind.
+  def pace_measurable?
+    return @pace_measurable if defined?(@pace_measurable)
+
+    @pace_measurable = linked_accounts.all? do |account|
+      pooled_pace.key?(account.id) ||
+        pooled_balance_pace[:balance].key?(account.id) ||
+        pooled_balance_pace[:dormant].include?(account.id)
     end
   end
 
@@ -729,9 +937,11 @@ class Goal < ApplicationRecord
     @pace_money ||= Money.new(pace, currency)
   end
 
-  # Months of cash on hand at current pace (open-ended goals).
+  # Months of cash on hand at current pace (open-ended goals). None while part
+  # of the money is unmeasured: the pace would cover only the measured part.
   def months_of_runway
     return nil if target_date.present?
+    return nil unless pace_measurable?
     return nil if pace.zero? || pace.negative?
 
     (current_balance.to_d / pace.to_d).round(1)
@@ -767,7 +977,9 @@ class Goal < ApplicationRecord
     # instead of dropping off a cliff for earmarked goals. Assumes the earmark
     # ratio held over the window (an approximation); exact for unallocated
     # goals, where ratio == 1 and the series is unchanged.
-    whole_total = linked_accounts.select { |a| a.currency == currency }.sum { |a| a.balance.to_d }
+    whole_total = linked_accounts.sum do |account|
+      convert_money(Money.new(account.balance.to_d, account.currency)).amount
+    end
     # 0 when the linked-account total is non-positive: current_balance is forced
     # to 0 there, so the saved series must end at 0 too (no stray non-zero tail).
     #
@@ -794,13 +1006,15 @@ class Goal < ApplicationRecord
       target_amount_short_label: short_money(target_amt, currency),
       currency_symbol: Money.new(0, currency).currency.symbol,
       current_amount: current_balance.to_f,
-      avg_monthly: pace.to_f,
+      # nil, not 0, when there is no pace to measure: the chart then draws no
+      # projection line rather than a flat one.
+      avg_monthly: (pace.to_f if pace_measurable?),
       required_monthly: monthly_target_amount&.to_f,
       currency: currency,
       status: status.to_s,
       projection_end_value: proj_end.to_f,
       projection_end_label: Money.new(proj_end, currency).format(precision: 0),
-      projection_shortfall_label: (target_amt > proj_end ? Money.new(target_amt - proj_end, currency).format(precision: 0) : nil)
+      projection_shortfall_label: (pace_measurable? && target_amt > proj_end ? Money.new(target_amt - proj_end, currency).format(precision: 0) : nil)
     }
   end
 
@@ -808,7 +1022,7 @@ class Goal < ApplicationRecord
   # the JS calculation so the server can pre-format the chart annotation
   # without re-rendering after each Stimulus draw.
   def projection_end_amount
-    return current_balance.to_d if target_date.nil?
+    return current_balance.to_d if target_date.nil? || !pace_measurable?
     months = ((target_date - Date.current).to_f / 30.44).clamp(0.0, Float::INFINITY)
     projected = current_balance.to_d + (pace.to_d * months)
     [ current_balance.to_d, projected ].max
@@ -832,6 +1046,7 @@ class Goal < ApplicationRecord
   # :on_track        → has target_date and pace >= required monthly
   # :behind          → has target_date and pace < required monthly
   # :no_target_date  → open-ended
+  # :pace_unknown    → has target_date, but no measurable pace to compare
   def status
     return @status if defined?(@status)
 
@@ -843,6 +1058,8 @@ class Goal < ApplicationRecord
       :reached
     elsif target_date.nil?
       :no_target_date
+    elsif !pace_measurable?
+      :pace_unknown
     elsif monthly_target_amount.to_d <= pace.to_d
       :on_track
     else
@@ -894,7 +1111,7 @@ class Goal < ApplicationRecord
   end
 
   # "I just transferred" when any linked account resolves pledges via a transfer
-  # (synced accounts AND investment accounts, per default_pledge_kind); "I just
+  # (synced accounts AND investment/crypto accounts, per default_pledge_kind); "I just
   # saved" only for manual cash accounts. Keyed off default_pledge_kind so the
   # copy matches the kind actually saved — a manual brokerage uses transfer, not
   # manual_save, so it must not show the "update your manual balance" path.
@@ -962,6 +1179,8 @@ class Goal < ApplicationRecord
       end
     when :no_target_date
       I18n.t("goals.show.status_callout.no_target_date")
+    when :pace_unknown
+      I18n.t("goals.show.status_callout.pace_unknown")
     when :depleted
       # A drained reserve had no callout at all: the one status that most
       # deserves a line of explanation was the one that said nothing.
@@ -1026,6 +1245,9 @@ class Goal < ApplicationRecord
         I18n.t("goals.show.projection.reached")
       elsif target_date.nil?
         I18n.t("goals.show.projection.no_target_date")
+      elsif !pace_measurable?
+        # Ahead of `behind`: an unmeasured pace is not a pace of zero.
+        I18n.t("goals.show.projection.pace_unknown")
       elsif monthly_target_amount && pace.to_d < monthly_target_amount.to_d
         I18n.t("goals.show.projection.behind")
       elsif pace.positive?
@@ -1109,6 +1331,10 @@ class Goal < ApplicationRecord
       goal_accounts.find { |ga| ga.account_id == account.id }&.allocated_amount
     end
 
+    def currency_converter
+      @currency_converter ||= CurrencyConverter.new
+    end
+
     # Family-wide map of non-archived goal earmarks. Injected once per request
     # by the controller on index (one query for the whole page); falls back to
     # a single query for the standalone (show) case.
@@ -1124,6 +1350,29 @@ class Goal < ApplicationRecord
       @pooled_pace ||= self.class.pace_for(family)
     end
 
+    def pooled_balance_pace
+      @pooled_balance_pace ||= self.class.balance_pace_for(family, pooled_pace)
+    end
+
+    # Monthly pace of one account measured from its balance, in the account's
+    # currency, or nil when the account is not on the balance path.
+    def account_balance_pace(account)
+      evidence = pooled_balance_pace[:balance][account.id]
+      return nil if evidence.nil?
+
+      # An entry's amount is negative for an inflow, so adding the excluded sum
+      # takes those flows back out of the change.
+      change = account.balance.to_d - evidence[:start] + evidence[:excluded_flows]
+      change -= evidence[:market_flows] if contributions_basis?
+      change / 12
+    end
+
+    def prepare_completion_conversion
+      linked_accounts.each { |account| convert_money!(account_native_backing(account)) }
+    rescue Money::ConversionError
+      errors.add(:base, :missing_exchange_rate)
+    end
+
     def apply_state_change_side_effects
       previous_state, next_state = saved_change_to_state
 
@@ -1137,7 +1386,8 @@ class Goal < ApplicationRecord
         # nothing, but its amount would still be recomputed from the live
         # balance — so spending the money would walk the finished goal back
         # down and rewrite its own history.
-        update_columns(completed_amount: current_balance, completed_at: Time.current)
+        closing_balance = linked_accounts.sum { |account| convert_money!(account_native_backing(account)).amount }
+        update_columns(completed_amount: closing_balance, completed_at: Time.current)
       elsif previous_state.in?(RELEASED_STATES) && !next_state.in?(RELEASED_STATES)
         thaw_completed_amount!
       end
@@ -1244,7 +1494,7 @@ class Goal < ApplicationRecord
         @remaining_amount @remaining_amount_money
         @progress_percent @monthly_target_amount
         @progress_amount_money @consumed_amount_money
-        @pace @pace_money @status @pooled_allocations
+        @pace @pace_money @pace_measurable @status @pooled_allocations @missing_exchange_rate_currencies
       ].each do |ivar|
         remove_instance_variable(ivar) if instance_variable_defined?(ivar)
       end
@@ -1274,8 +1524,12 @@ class Goal < ApplicationRecord
       Balance::ChartSeriesBuilder.new(
         account_ids: linked_accounts.map(&:id),
         currency: currency,
-        period: Period.last_90_days
+        period: Period.last_90_days,
+        strict_currency_conversion: true
       ).balance_series.values
+    rescue Money::ConversionError => e
+      missing_exchange_rate_currencies << e.from_currency
+      []
     rescue StandardError => e
       # Degrade gracefully (chart drops to target-line-only) but surface
       # the failure; silent fallbacks here masked real Builder bugs.
@@ -1292,32 +1546,11 @@ class Goal < ApplicationRecord
 
     def linked_accounts_must_be_fundable
       offending = goal_accounts.reject(&:marked_for_destruction?).reject do |sga|
-        sga.account&.depository? || sga.account&.investment?
+        FUNDABLE_ACCOUNT_TYPES.include?(sga.account&.accountable_type)
       end
       return if offending.empty?
 
       errors.add(:linked_accounts, :must_be_fundable)
-    end
-
-    # Goals funded by an investment account default to the contributions basis
-    # (so a market swing doesn't move them); depository-only goals stay on the
-    # balance basis. Only auto-set when the basis is still the default.
-    def default_progress_basis_for_investment
-      return unless goal_accounts.any? { |ga| ga.account&.investment? }
-      return unless progress_basis.blank? || progress_basis == "balance"
-
-      self.progress_basis = "contributions"
-    end
-
-    def linked_accounts_must_match_goal_currency
-      return if currency.blank?
-
-      mismatched = goal_accounts.reject(&:marked_for_destruction?).reject do |sga|
-        sga.account.nil? || sga.account.currency == currency
-      end
-      return if mismatched.empty?
-
-      errors.add(:linked_accounts, :currency_mismatch)
     end
 
     def linked_accounts_must_belong_to_family
@@ -1368,6 +1601,19 @@ class Goal < ApplicationRecord
       return unless state_in_database.in?(RELEASED_STATES)
 
       errors.add(:kind, :locked_while_released)
+    end
+
+    # A completed goal reports `completed_amount`, frozen on the basis it had
+    # when it closed. Switching basis afterwards would label that figure with
+    # the other basis, so the switch waits for a reopen or restore; both thaw
+    # the snapshot. The persisted snapshot, for the reason kind_locked_while_released
+    # reads the persisted state: a write that also sets `state: "active"` skips
+    # the transition that clears it. An archived goal that never completed has
+    # no snapshot and reports the live figure, so its basis stays editable.
+    def progress_basis_locked_once_completed
+      return unless progress_basis_locked? && will_save_change_to_progress_basis?
+
+      errors.add(:progress_basis, :locked_once_completed)
     end
 
     def clear_target_date_for_maintained

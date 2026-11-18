@@ -64,6 +64,61 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal expected, builder.balance_series.map { |v| v.value.amount }
   end
 
+  test "strict currency conversion refuses a missing rate instead of assuming one" do
+    account = accounts(:depository)
+    account.balances.destroy_all
+    create_balance(account: account, date: Date.current, balance: 100)
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ], currency: "EUR",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      strict_currency_conversion: true
+    )
+
+    error = assert_raises(Money::ConversionError) { builder.balance_series }
+    assert_equal "USD", error.from_currency
+    assert_equal "EUR", error.to_currency
+  end
+
+  test "strict currency conversion keeps history when a foreign balance is zero without a usable rate" do
+    foreign = accounts(:depository)
+    native = accounts(:credit_card)
+    foreign.balances.destroy_all
+    native.balances.destroy_all
+    native.update!(currency: "EUR")
+    create_balance(account: foreign, date: Date.current, balance: 0)
+    create_balance(account: native, date: Date.current, balance: 50)
+
+    # Zero and negative rates are rejected at write time, so absent is the only unusable rate.
+    ExchangeRate.where(from_currency: "USD", to_currency: "EUR").delete_all
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ foreign.id, native.id ], currency: "EUR",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      strict_currency_conversion: true
+    )
+
+    series = builder.balance_series
+    assert_equal 1, series.size
+    assert_equal(-50, series.first.value.amount)
+    assert_equal(-50, series.first.trend.previous.amount)
+  end
+
+  test "strict currency conversion uses historical rates without changing native balances" do
+    account = accounts(:depository)
+    account.balances.destroy_all
+    create_balance(account: account, date: 1.day.ago.to_date, balance: 100)
+    create_balance(account: account, date: Date.current, balance: 100)
+    ExchangeRate.create!(date: 1.day.ago.to_date, from_currency: "USD", to_currency: "EUR", rate: 2)
+    ExchangeRate.create!(date: Date.current, from_currency: "USD", to_currency: "EUR", rate: 3)
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ], currency: "EUR",
+      period: Period.custom(start_date: 1.day.ago.to_date, end_date: Date.current),
+      strict_currency_conversion: true
+    )
+
+    assert_equal [ 200, 300 ], builder.balance_series.map { |value| value.value.amount }
+    assert_equal [ 100, 100 ], account.balances.order(:date).pluck(:end_balance)
+  end
+
   test "combines asset and liability accounts properly" do
     asset_account = accounts(:depository)
     liability_account = accounts(:credit_card)
@@ -201,6 +256,27 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     series = builder.balance_series
     # EUR balances converted to USD at 1.1 rate (LOCF for today)
     assert_equal [ 1100, 1320 ], series.map { |v| v.value.amount }
+  end
+
+  # The series is the sum of every account's converted balance. An account in
+  # a currency with no rate on any date drops out of it rather than counting
+  # at 1 (#3640).
+  test "an account in a currency with no rate at all is left out of the series" do
+    family = families(:dylan_family)
+    usd = family.accounts.create!(name: "USD", balance: 100, currency: "USD", accountable: Depository.new)
+    krw = family.accounts.create!(name: "KRW", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+    [ usd, krw ].each { |account| account.balances.destroy_all }
+    create_balance(account: usd, date: Date.current, balance: 100)
+    create_balance(account: krw, date: Date.current, balance: 1_000_000)
+
+    series = Balance::ChartSeriesBuilder.new(
+      account_ids: [ usd.id, krw.id ],
+      currency: "USD",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      interval: "1 day"
+    ).balance_series
+
+    assert_equal [ 100 ], series.map { |v| v.value.amount }
   end
 
   test "linked account with orphaned currency balances shows correct values after cleanup" do
@@ -398,6 +474,25 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal [ 1000 ], builder.gains_series.map { |v| v.value.amount }
   end
 
+  # A zero the trades worked out (a lot the user says cost nothing) is a cost,
+  # unlike a provider's zero, which stands for unknown.
+  test "gains series counts a calculated zero cost basis" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+
+    create_holding(account: account, security: securities(:aapl), date: Date.current, qty: 10, price: 100, cost_basis: 0)
+    account.holdings.update_all(cost_basis_source: "calculated")
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    assert_equal [ 1000 ], builder.gains_series.map { |v| v.value.amount }
+  end
+
   test "gains series converts holding gains to target currency with locf rates" do
     family = families(:dylan_family)
     account = family.accounts.create!(
@@ -454,6 +549,61 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     ]
 
     assert_equal expected, builder.gains_series.map { |v| v.value.amount }
+  end
+
+  # A later row the materializer cleared as unknown (a transfer in: no cost,
+  # no source, not a provider's row) stops a calculated zero carrying, so the
+  # position's value is not all counted as gain.
+  test "gains series does not carry a calculated zero basis onto a later unknown one" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    security = securities(:aapl)
+
+    create_holding(account: account, security: security, date: 2.days.ago.to_date, qty: 10, price: 100, cost_basis: 0)
+      .update_columns(cost_basis_source: "calculated")
+    create_holding(account: account, security: security, date: 1.day.ago.to_date, qty: 15, price: 100, cost_basis: nil)
+    create_holding(account: account, security: security, date: Date.current, qty: 15, price: 110, cost_basis: nil)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: 2.days.ago.to_date, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    expected = [
+      1000, # 1000 - 0: a free acquisition's whole value is gain
+      0, # unknown basis, counted as no gain rather than 1500
+      0 # unknown basis, not 1650
+    ]
+
+    assert_equal expected, builder.gains_series.map { |v| v.value.amount }
+  end
+
+  # The materializer leaves a provider's row alone, so a provider row with no
+  # cost after a free acquisition is not an unknown basis: the zero carries.
+  test "gains series carries a calculated zero basis onto a provider row without a cost" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    security = securities(:aapl)
+    item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: account, provider: item.coinstats_accounts.create!(name: "Provider", currency: "USD"))
+
+    create_holding(account: account, security: security, date: 2.days.ago.to_date, qty: 10, price: 100, cost_basis: 0)
+      .update_columns(cost_basis_source: "calculated")
+    create_holding(account: account, security: security, date: 1.day.ago.to_date, qty: 10, price: 100, cost_basis: 0)
+      .update_columns(cost_basis_source: "calculated")
+    create_holding(account: account, security: security, date: Date.current, qty: 10, price: 110, cost_basis: nil)
+      .update_columns(account_provider_id: provider.id)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: 2.days.ago.to_date, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    assert_equal [ 1000, 1000, 1100 ], builder.gains_series.map { |v| v.value.amount }
   end
 
   test "gains series values carry trend vs previous point" do

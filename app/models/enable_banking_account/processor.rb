@@ -16,16 +16,30 @@ class EnableBankingAccount::Processor
 
     Rails.logger.info "EnableBankingAccount::Processor - Processing enable_banking_account #{enable_banking_account.id} (uid #{enable_banking_account.uid})"
 
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     begin
-      process_account!
+      anchor_balance = process_account!
+      transactions_ok = process_transactions
+
+      if anchor_balance
+        result = enable_banking_account.current_account.set_current_balance(
+          anchor_balance,
+          date: date,
+          reuse_explained_anchor: transactions_ok
+        )
+        raise ProcessingError.new("Failed to set current balance: #{result.error}") unless result.success?
+
+        enable_banking_account.update!(balance_verified: enable_banking_account.balance_evidence_verified?)
+      end
     rescue StandardError => e
       Rails.logger.error "EnableBankingAccount::Processor - Failed to process account #{enable_banking_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
       report_exception(e, "account")
+      enable_banking_account.update_column(:balance_verified, false) if enable_banking_account.persisted?
       raise
     end
-
-    process_transactions
   end
 
   private
@@ -81,17 +95,10 @@ class EnableBankingAccount::Processor
           account.update!(currency: currency)
         else
           account.update!(currency: currency, cash_balance: balance)
-
-          # Use set_current_balance to create a current_anchor valuation entry.
-          # This enables Balance::ReverseCalculator, which works backward from the
-          # bank-reported balance — eliminating spurious cash adjustment spikes.
-          result = account.set_current_balance(balance)
-          raise ProcessingError, "Failed to set current balance: #{result.error}" unless result.success?
         end
       end
 
-      # TODO: pass explicit window_start_date to sync_later to avoid full history recalculation on every sync
-      # Currently relies on set_current_balance's implicit sync trigger; window params would require refactor
+      balance unless skip_balance_update
     end
 
     # Interprets the reported credit card balance based on the
@@ -166,9 +173,10 @@ class EnableBankingAccount::Processor
     end
 
     def process_transactions
-      EnableBankingAccount::Transactions::Processor.new(enable_banking_account).process
+      EnableBankingAccount::Transactions::Processor.new(enable_banking_account).process[:success]
     rescue => e
       report_exception(e, "transactions")
+      false
     end
 
     def report_exception(error, context)

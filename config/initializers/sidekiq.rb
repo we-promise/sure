@@ -1,4 +1,5 @@
 require "sidekiq/web"
+require Rails.root.join("lib/job_usage_tracking")
 
 # Optional second authentication layer for /sidekiq. The route itself only
 # exists for signed-in super admins (see SuperAdminConstraint in routes.rb);
@@ -62,6 +63,15 @@ end
 
 Sidekiq.configure_server do |config|
   config.redis = redis_config
+  config.server_middleware do |chain|
+    chain.add JobUsageTracking
+  end
+
+  # At startup: app classes aren't loadable yet when this file runs.
+  config.on(:startup) do
+    config[:fetch_class] = ChatReservation::Fetch
+    config[:labels] << BackgroundJobHealth::ONE_AI_THREAD_LABEL if BackgroundJobHealth.one_ai_thread_worker?(config)
+  end
 
   # Initialize auto-sync scheduler when Sidekiq server starts
   config.on(:startup) do
@@ -70,6 +80,15 @@ Sidekiq.configure_server do |config|
   rescue => e
     Rails.logger.error("[AutoSyncScheduler] Failed to initialize: #{e.message}")
   end
+
+  # Initialize market data (security price) import scheduler when Sidekiq server starts
+  config.on(:startup) do
+    MarketDataScheduler.sync!
+    Rails.logger.info("[MarketDataScheduler] Initialized import_market_data cron job")
+  rescue => e
+    Rails.logger.error("[MarketDataScheduler] Failed to initialize: #{e.message}")
+    MarketDataScheduler.capture_sync_failure(e, source: "Sidekiq startup")
+  end
 end
 
 Sidekiq.configure_client do |config|
@@ -77,6 +96,10 @@ Sidekiq.configure_client do |config|
 end
 
 Sidekiq::Cron.configure do |config|
-  # 10 min "catch-up" window in case worker process is re-deploying when cron tick occurs
-  config.reschedule_grace_period = 600
+  # How late (in seconds) a missed cron tick may still be enqueued. The 10 min
+  # default covers a worker re-deploying when the tick occurs; hosts that sleep
+  # (laptops, NAS) can raise SIDEKIQ_CRON_GRACE_PERIOD_SECONDS so the most recent
+  # missed run still happens once on wake.
+  grace_period = Integer(ENV.fetch("SIDEKIQ_CRON_GRACE_PERIOD_SECONDS", "600"), exception: false)
+  config.reschedule_grace_period = grace_period&.positive? ? grace_period : 600
 end

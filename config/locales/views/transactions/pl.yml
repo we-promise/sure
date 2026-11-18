@@ -173,6 +173,7 @@ pl:
       date: Data
       description: Opis
       description_placeholder: Opisz transakcję
+      description_placeholder_optional: "Pozostaw puste, aby użyć nazwy kategorii/kontrahenta, lub najpierw wybierz jedno z nich"
       details: Szczegóły
       expense: Wydatek
       income: Przychód

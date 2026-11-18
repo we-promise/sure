@@ -9,17 +9,11 @@
         from the drawer), and read-only shares can't change tags at all. %>
     <%= render "tags/summary", transaction: transaction, variant: variant, editable: false %>
   <% else %>
-    <%= render DS::Popover.new(variant: "button", aria_label: t(".label")) do |popover| %>
+    <%# The dropdown frame is created when the popover opens (DS::Popover
+        frame_src) rather than rendered for every row. %>
+    <%= render DS::Popover.new(variant: "button", aria_label: t(".label"), frame_id: "tag_dropdown", frame_src: tag_dropdown_path(entry_id: entry.id)) do |popover| %>
       <% popover.with_button(class: "flex w-full min-w-0 items-center") do %>
         <%= render "tags/summary", transaction: transaction, variant: variant %>
-      <% end %>
-
-      <% popover.with_custom_content do %>
-        <%= turbo_frame_tag "tag_dropdown", src: tag_dropdown_path(entry_id: entry.id), loading: :lazy do %>
-          <div class="p-6 flex items-center justify-center">
-            <p class="text-sm text-secondary animate-pulse"><%= t(".loading") %></p>
-          </div>
-        <% end %>
       <% end %>
     <% end %>
   <% end %>

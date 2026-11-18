@@ -5,7 +5,7 @@
      targets inside its own element. Scoped to the selector, dateFieldTargets
      came back empty and picking "Reserve to maintain" never hid the date. %>
 <div data-controller="goal-form goal-kind"
-     data-goal-form-currency-value="<%= Current.family.primary_currency_code %>"
+     data-goal-form-currency-value="<%= goal.currency.presence || Current.family.primary_currency_code %>"
      data-goal-form-require-account-value="<%= !goal.persisted? %>"
      data-goal-form-suggested-with-date-value="<%= t("goals.form.suggested_with_date") %>"
      data-goal-form-suggested-no-date-value="<%= t("goals.form.suggested_no_date") %>"
@@ -27,15 +27,10 @@
         not have. %>
     <div class="grid grid-cols-2 gap-2">
       <% Goal::KINDS.each do |kind| %>
-        <label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
-          <%= f.radio_button :kind, kind,
-                             class: "radio mt-0.5 shrink-0",
-                             data: { goal_kind_target: "radio", action: "change->goal-kind#refresh" } %>
-          <span class="min-w-0">
-            <span class="block text-sm font-medium text-primary"><%= t("goals.form.kinds.#{kind}.label") %></span>
-            <span class="block text-xs text-secondary"><%= t("goals.form.kinds.#{kind}.hint") %></span>
-          </span>
-        </label>
+        <%= render "goals/radio_card", form: f, attribute: :kind, value: kind,
+                   label: t("goals.form.kinds.#{kind}.label"),
+                   hint: t("goals.form.kinds.#{kind}.hint"),
+                   radio_options: { data: { goal_kind_target: "radio", action: "change->goal-kind#refresh" } } %>
       <% end %>
     </div>
 
@@ -113,13 +108,17 @@
         <span class="block text-sm font-medium text-primary"><%= t("goals.form.fields.funding_accounts") %></span>
         <p class="text-xs text-secondary mt-0.5"><%= t("goals.form.fields.funding_accounts_hint") %></p>
         <p class="text-xs text-subdued mt-0.5"><%= t("goals.form.fields.earmark_hint") %></p>
+        <% goal_currency = goal.currency.presence || Current.family.primary_currency_code %>
+        <% if (linkable_accounts.map(&:currency) | [ goal_currency ]).size > 1 %>
+          <p class="text-xs text-secondary mt-0.5"><%= t("goals.form.fields.currency_conversion_hint", currency: goal_currency) %></p>
+        <% end %>
       </div>
       <%# Its own controller, not goal-form: that one is already at 10 targets
           against the 7 the project guidelines suggest, and this needs none of
           its state. Three targets here. %>
       <div class="bg-container-inset rounded-lg p-1"
            data-controller="goal-earmark"
-           data-goal-earmark-currency-value="<%= goal.currency.presence || Current.family.primary_currency_code %>"
+           data-goal-earmark-currency-value="<%= goal_currency %>"
            <%# The APPLICATION locale, not the browser's. `Intl.NumberFormat`
                with `undefined` lets the browser pick, so a French user on an
                English-locale browser read separators and symbol placement that
@@ -130,7 +129,8 @@
            data-goal-earmark-whole-balance-value="<%= t("goals.form.earmark.whole_balance") %>"
            data-goal-earmark-whole-balance-alone-value="<%= t("goals.form.earmark.whole_balance_alone") %>"
            data-goal-earmark-prorata-value="<%= t("goals.form.earmark.prorata") %>"
-           data-goal-earmark-headroom-value="<%= t("goals.form.earmark.headroom") %>">
+           data-goal-earmark-headroom-value="<%= t("goals.form.earmark.headroom") %>"
+           data-goal-earmark-converted-value="<%= t("goals.form.earmark.converted") %>">
         <% linked_allocation_by_account = goal.goal_accounts.index_by(&:account_id) %>
         <% grouped = linkable_accounts.group_by { |a| a.subtype.to_s.presence || "other" } %>
         <% grouped.each_with_index do |(subtype, accts), group_idx| %>
@@ -140,6 +140,8 @@
               <% linked_ga = linked_allocation_by_account[account.id] %>
               <div class="px-3 py-2.5 hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>"
                    data-balance="<%= account.balance.to_d %>"
+                   data-currency="<%= account.currency %>"
+                   data-rate="<%= earmark_conversion_rate(goal, account, goal_currency) %>"
                    data-earmarked-by-others="<%= earmarked_by_other_goals(account, pooled: pooled_allocations, current_goal: goal) %>"
                    data-whole-account-claimed="<%= whole_account_claimed_by_other_goals?(account, pooled: pooled_allocations, current_goal: goal) %>">
               <div class="flex items-center gap-3">
@@ -193,6 +195,35 @@
         <p class="mt-1.5 text-xs text-destructive"><%= error.message %></p>
       <% end %>
     </div>
+
+    <%# What progress counts. Only differs for an account that moves with the
+        market, but a plain-cash goal reads the same either way, so the choice
+        is always offered rather than revealed by the accounts ticked above.
+        A completed goal's basis is frozen with its snapshot, so there the
+        choice is shown disabled; disabled radios are not submitted, so an
+        ordinary edit still saves. Checked against the stored basis, so a
+        refused switch re-renders showing the basis that was kept; an unknown
+        basis falls back to it too, rather than leaving both radios blank. %>
+    <% basis_locked = goal.progress_basis_locked? %>
+    <% shown_basis = (basis_locked || Goal::PROGRESS_BASES.exclude?(goal.progress_basis)) ? goal.progress_basis_in_database : goal.progress_basis %>
+    <fieldset>
+      <legend class="block text-sm font-medium text-primary"><%= t("goals.form.fields.progress_basis") %></legend>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1.5">
+        <% Goal::PROGRESS_BASES.each do |basis| %>
+          <%= render "goals/radio_card", form: f, attribute: :progress_basis, value: basis,
+                     label: t("goals.form.progress_bases.#{basis}.label"),
+                     hint: t("goals.form.progress_bases.#{basis}.hint"),
+                     radio_options: { checked: basis == shown_basis },
+                     disabled: basis_locked %>
+        <% end %>
+      </div>
+      <% if basis_locked %>
+        <p class="mt-1.5 text-xs text-secondary"><%= t("goals.form.progress_basis_locked") %></p>
+      <% end %>
+      <% goal.errors.messages_for(:progress_basis).each do |message| %>
+        <p class="mt-1.5 text-xs text-destructive"><%= message %></p>
+      <% end %>
+    </fieldset>
 
     <%= f.text_area :notes,
                     label: t("goals.form.fields.notes"),

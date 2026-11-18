@@ -93,6 +93,55 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "updates the statement cycle" do
+    patch credit_card_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          statement_close_day: 25,
+          due_day: 5
+        }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_equal 25, @account.reload.credit_card.statement_close_day
+    assert_equal 5, @account.credit_card.due_day
+  end
+
+  test "clearing the statement cycle stores blanks as no cycle" do
+    @account.credit_card.update!(statement_close_day: 25, due_day: 5)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          statement_close_day: "",
+          due_day: ""
+        }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil @account.reload.credit_card.statement_close_day
+    assert_nil @account.credit_card.due_day
+  end
+
+  test "a statement cycle day outside the month is rejected" do
+    patch credit_card_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          statement_close_day: 45,
+          due_day: 5
+        }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil @account.reload.credit_card.statement_close_day
+  end
+
   test "updates enable banking balance interpretation flag when linked" do
     enable_banking_account = create_linked_enable_banking_account
 

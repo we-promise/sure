@@ -1,0 +1,23 @@
+---
+en:
+  rule_groups:
+    new:
+      title: New rule group
+    edit:
+      title: Rename group "%{name}"
+    form:
+      name_label: Name
+      name_placeholder: e.g. Groceries
+      hint: Groups only arrange the rules list. Rules still run from top to bottom.
+    create:
+      success: Group created
+    update:
+      success: Group renamed
+    destroy:
+      success: Group deleted. Its rules stay in place without a group.
+    activation:
+      activated: All rules in "%{name}" are on
+      deactivated: All rules in "%{name}" are off
+      partially_switched:
+        one: 1 rule could not be switched. Open it to see why.
+        other: "%{count} rules could not be switched. Open them to see why."

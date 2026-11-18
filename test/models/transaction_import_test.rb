@@ -7,6 +7,111 @@ class TransactionImportTest < ActiveSupport::TestCase
     @subject = @import = imports(:transaction)
   end
 
+  test "presets the export settings for a Sure transactions.csv export" do
+    @import.amount_type_strategy = "custom_column"
+    @import.raw_file_str = "\uFEFF#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",").upcase},counterparty_iban\n2024-05-15,Checking,42.5,Grocery,,,,USD,\n"
+
+    @import.preset_for_uploaded_csv
+
+    assert_equal "signed_amount", @import.amount_type_strategy
+    assert_equal "inflows_negative", @import.signage_convention
+    assert_equal "%Y-%m-%d", @import.date_format
+    assert_equal "1,234.56", @import.number_format
+  end
+
+  test "does not treat the transaction import template as a Sure export" do
+    @import.raw_file_str = @import.csv_template.to_csv
+
+    @import.preset_for_uploaded_csv
+
+    assert_equal "inflows_positive", @import.signage_convention
+  end
+
+  test "keeps a chosen sign convention when one non-Sure CSV replaces another" do
+    @import.update!(raw_file_str: "date,amount,payee\n2024-05-14,-10,Coffee\n", signage_convention: "inflows_negative")
+    @import.raw_file_str = "date,amount,name\n2024-05-15,-42.5,Grocery\n"
+
+    @import.preset_for_uploaded_csv
+
+    assert_equal "inflows_negative", @import.signage_convention
+  end
+
+  test "restores the default sign convention when a Sure export is replaced by another CSV" do
+    @import.update!(raw_file_str: "#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",")}\n2024-05-15,Checking,42.5,Grocery,,,,USD\n")
+    @import.update!(TransactionImport::SURE_EXPORT_SETTINGS)
+    @import.family.update!(date_format: "%d.%m.%Y")
+    @import.assign_attributes(raw_file_str: "date;amount;name\n2024-05-15;-42,5;Grocery\n", col_sep: ";")
+
+    @import.preset_for_uploaded_csv
+
+    assert_equal "signed_amount", @import.amount_type_strategy
+    assert_equal "inflows_positive", @import.signage_convention
+    assert_equal "%d.%m.%Y", @import.date_format
+  end
+
+  test "keeps the Sure export sign convention when a template from another import is applied" do
+    template = imports(:transaction).dup
+    template.update!(status: "complete", signage_convention: "inflows_positive", date_format: "%m/%d/%Y", rows_to_skip: 2, date_col_label: "Buchungstag", amount_col_label: "Betrag")
+    @import = families(:dylan_family).imports.create!(type: "TransactionImport", raw_file_str: "#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",")}\n2024-05-15,Checking,42.5,Grocery,,,,USD\n")
+
+    @import.apply_template!(template)
+
+    assert_equal "inflows_negative", @import.reload.signage_convention
+    assert_equal "%Y-%m-%d", @import.date_format
+    assert_equal 0, @import.rows_to_skip
+    assert_equal "date", @import.date_col_label
+    assert_equal "amount", @import.amount_col_label
+  end
+
+  test "recognises a Sure export after leading blank lines" do
+    @import.raw_file_str = "\n\n#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",")}\n2024-05-15,Checking,42.5,Grocery,,,,USD\n"
+
+    @import.preset_for_uploaded_csv
+
+    assert_equal "inflows_negative", @import.signage_convention
+  end
+
+  test "maps template labels to the export's own header spelling" do
+    template = imports(:transaction).dup
+    template.update!(status: "complete", date_col_label: "Buchungstag")
+    headers = Family::DataExporter::TRANSACTIONS_CSV_HEADERS.map(&:capitalize)
+    @import = families(:dylan_family).imports.create!(type: "TransactionImport", raw_file_str: "\uFEFF#{headers.join(",")}\n2024-05-15,Checking,42.5,Grocery,,,,USD\n")
+
+    @import.apply_template!(template)
+
+    assert_equal "\uFEFFDate", @import.reload.date_col_label
+    assert_equal "Amount", @import.amount_col_label
+    assert_equal "2024-05-15", @import.csv_rows.first[@import.date_col_label]
+  end
+
+  test "recognises a Sure export whose extra header holds a quoted line break" do
+    @import.raw_file_str = "#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",")},\"counterparty\nIBAN\"\n2024-05-15,Checking,42.5,Grocery,,,,USD,\n"
+
+    @import.preset_for_uploaded_csv
+
+    assert_equal "inflows_negative", @import.signage_convention
+  end
+
+  test "maps template labels from the export's header even when rows were skipped before" do
+    template = imports(:transaction).dup
+    template.update!(status: "complete")
+    @import = families(:dylan_family).imports.create!(type: "TransactionImport", rows_to_skip: 1,
+      raw_file_str: "#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.map(&:capitalize).join(",")}\n2024-05-15,Checking,42.5,Grocery,,,,USD\n")
+
+    @import.apply_template!(template)
+
+    assert_equal 0, @import.reload.rows_to_skip
+    assert_equal "Date", @import.date_col_label
+    assert_equal "Account_name", @import.account_col_label
+  end
+
+  test "ignores blank and unparseable CSV headers when presetting the sign convention" do
+    @import.raw_file_str = "\"date,\"amount\n"
+
+    assert_nothing_raised { @import.preset_for_uploaded_csv }
+    assert_equal "inflows_positive", @import.signage_convention
+  end
+
   test "uploaded? if raw_file_str is present" do
     @import.expects(:raw_file_str).returns("test").once
     assert @import.uploaded?
@@ -226,8 +331,42 @@ class TransactionImportTest < ActiveSupport::TestCase
       end
     end
 
-    # The existing entry should now be linked to the import
-    assert_equal @import.id, existing_entry.reload.import_id
+    # The existing entry is updated but stays owned by whoever created it
+    assert_nil existing_entry.reload.import_id
+    assert existing_entry.import_locked?
+  end
+
+  test "revert keeps a pre-existing entry the import matched as a duplicate" do
+    account = accounts(:depository)
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Coffee Shop",
+      entryable: Transaction.new
+    )
+
+    @import.update!(
+      account: account,
+      raw_file_str: "date,name,amount\n01/01/2024,Coffee Shop,100\n01/02/2024,Bakery,20\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+    @import.reload
+    @import.publish
+    assert @import.reload.complete?
+
+    assert_difference -> { Entry.count } => -1 do
+      @import.revert
+    end
+
+    assert Entry.exists?(existing_entry.id), "revert must not destroy an entry the import did not create"
+    assert_not account.entries.exists?(name: "Bakery")
   end
 
   test "creates new transaction when name differs even if date and amount match" do
@@ -320,8 +459,8 @@ class TransactionImportTest < ActiveSupport::TestCase
       name: "Vending Machine"
     ).count
 
-    # The existing entry should be linked to the import
-    assert_equal @import.id, existing_entry.reload.import_id
+    # The existing entry stays owned by whoever created it
+    assert_nil existing_entry.reload.import_id
   end
 
   test "imports all identical transactions from CSV when none exist in database" do
