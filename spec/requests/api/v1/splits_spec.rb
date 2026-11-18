@@ -19,7 +19,8 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
     family.users.create!(
       email: 'api-split-user@example.com',
       password: 'password123',
-      password_confirmation: 'password123'
+      password_confirmation: 'password123',
+      email_verified_at: Time.current
     )
   end
 

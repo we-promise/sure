@@ -7,7 +7,8 @@ RSpec.describe "API V1 Push Subscriptions", type: :request do
 
   let(:family) { Family.create!(name: "API Family") }
   let(:user) do
-    family.users.create!(email: "push-api@example.com", password: "password123", ai_enabled: true)
+    family.users.create!(email: "push-api@example.com", password: "password123", ai_enabled: true,
+      email_verified_at: Time.current)
   end
   let(:api_key) do
     key = ApiKey.generate_secure_key

@@ -3051,6 +3051,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.string "default_account_order", default: "name_asc"
     t.string "default_period", default: "last_30_days", null: false
     t.string "email"
+    t.datetime "email_verified_at"
     t.uuid "family_id", null: false
     t.string "first_name"
     t.text "goals", default: [], array: true

@@ -139,11 +139,30 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     end
 
     created_user = User.find_by(email: invitation.email)
+    assert created_user.email_verified?
     assert_equal "guest", created_user.role
     assert created_user.ui_layout_intro?
     assert_not created_user.show_sidebar?
     assert_not created_user.show_ai_sidebar?
     assert created_user.ai_enabled?
+  end
+
+
+  test "password signup without an invitation starts unverified and sends confirmation" do
+    email = "verify-signup@example.com"
+
+    assert_enqueued_emails 1 do
+      post registration_url, params: {
+        user: {
+          email: email,
+          password: "Password1!",
+          password_confirmation: "Password1!"
+        }
+      }
+    end
+
+    assert_redirected_to root_path
+    assert_not User.find_by!(email: email).email_verified?
   end
 
   test "creating account from invitation shares existing family accounts when family shares by default" do

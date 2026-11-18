@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Api::V1::MessagesController < Api::V1::BaseController
+  skip_before_action :ensure_verified_for_financial_data
   before_action :require_ai_enabled
   before_action :ensure_write_scope, only: [ :create, :retry ]
   before_action :set_chat

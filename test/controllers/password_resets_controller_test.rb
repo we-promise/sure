@@ -38,6 +38,16 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     assert SecurityAuditLog.exists?(user: @user, event_type: "password_changed")
   end
 
+  test "successful password reset verifies the account email" do
+    @user.update!(email_verified_at: nil)
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" } }
+
+    assert_redirected_to new_session_url
+    assert @user.reload.email_verified?
+  end
+
   test "update with an invalid password does not write an audit log" do
     assert_no_difference "SecurityAuditLog.count" do
       patch password_reset_path(token: @user.generate_token_for(:password_reset)),

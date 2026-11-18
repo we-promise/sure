@@ -3,6 +3,7 @@
 # Test controller for API V1 Base Controller functionality
 # This controller is only used for testing the base controller behavior
 class Api::V1::TestController < Api::V1::BaseController
+  skip_before_action :ensure_verified_for_financial_data
   before_action :capture_request_date
 
   def index

@@ -5,6 +5,21 @@ class OidcIdentity < ApplicationRecord
   validates :uid, presence: true, uniqueness: { scope: :provider }
   validates :user_id, presence: true
 
+  # Providers whose sign-in proves the user controls the email address.
+  # Keep in sync with AddEmailVerifiedAtToUsers#backfill_sql.
+  EMAIL_TRUSTED_PROVIDERS = %w[google_oauth2 apple].freeze
+  GOOGLE_OIDC_ISSUERS = %w[https://accounts.google.com accounts.google.com].freeze
+
+  def self.email_trusted?(provider:, issuer: nil)
+    provider = provider.to_s
+    EMAIL_TRUSTED_PROVIDERS.include?(provider) ||
+      (provider == "openid_connect" && GOOGLE_OIDC_ISSUERS.include?(issuer.to_s))
+  end
+
+  def email_trusted?
+    self.class.email_trusted?(provider: provider, issuer: issuer)
+  end
+
   # Update the last authenticated timestamp
   def record_authentication!
     update!(last_authenticated_at: Time.current)

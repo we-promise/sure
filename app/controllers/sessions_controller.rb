@@ -278,6 +278,10 @@ class SessionsController < ApplicationController
 
       oidc_identity.record_authentication!
       oidc_identity.sync_user_attributes!(auth)
+      # A trusted provider proving the account's own email verifies an
+      # unverified account (dropping any password/MFA a first registrant may
+      # hold). An identity linked with a different email proves nothing here.
+      user.claim_by_trusted_provider!(email: auth.info&.email) if provider_email_trusted?(auth)
 
       # Log successful SSO login
       SsoAuditLog.log_login!(user: user, provider: auth.provider, request: request)
@@ -347,7 +351,8 @@ class SessionsController < ApplicationController
         email: auth.info&.email,
         name: auth.info&.name,
         first_name: auth.info&.first_name,
-        last_name: auth.info&.last_name
+        last_name: auth.info&.last_name,
+        issuer: auth_issuer(auth)
       }
       redirect_to link_oidc_account_path
     end
@@ -456,7 +461,8 @@ class SessionsController < ApplicationController
           user_first_name: user.first_name,
           user_last_name: user.last_name,
           user_ui_layout: user.ui_layout,
-          user_ai_enabled: user.ai_enabled?
+          user_ai_enabled: user.ai_enabled?,
+          user_email_verified: user.email_verified?
         ),
         expires_in: 5.minutes
       )
@@ -518,6 +524,19 @@ class SessionsController < ApplicationController
         allow_account_creation: allow_creation,
         has_pending_invitation: has_pending_invitation
       )
+    end
+
+    def auth_issuer(auth)
+      raw_info = auth.extra&.raw_info
+      raw_info&.iss || raw_info&.[]("iss")
+    end
+
+    # Whether this sign-in proves the user controls auth.info.email.
+    def provider_email_trusted?(auth)
+      raw_info = auth.extra&.raw_info
+      return false if raw_info.respond_to?(:[]) && raw_info["email_verified"].to_s == "false"
+
+      OidcIdentity.email_trusted?(provider: auth.provider, issuer: auth_issuer(auth))
     end
 
     def mobile_sso_redirect(params = {})

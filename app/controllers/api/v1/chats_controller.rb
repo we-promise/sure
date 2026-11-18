@@ -2,6 +2,8 @@
 
 class Api::V1::ChatsController < Api::V1::BaseController
   include Pagy::Backend
+  # The assistant stays available before email verification.
+  skip_before_action :ensure_verified_for_financial_data
   before_action :require_ai_enabled
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]

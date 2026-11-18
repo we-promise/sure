@@ -6,11 +6,14 @@ module Api
       skip_before_action :authenticate_request!
       skip_before_action :check_api_key_rate_limit
       skip_before_action :log_api_access
-      before_action :authenticate_request!, only: :enable_ai
-      before_action :ensure_write_scope, only: :enable_ai
-      before_action :check_api_key_rate_limit, only: :enable_ai
-      before_action :log_api_access, only: :enable_ai
+      skip_before_action :ensure_verified_for_financial_data
+      before_action :authenticate_request!, only: %i[enable_ai resend_email_verification]
+      before_action :ensure_write_scope, only: %i[enable_ai resend_email_verification]
+      before_action :check_api_key_rate_limit, only: %i[enable_ai resend_email_verification]
+      before_action :log_api_access, only: %i[enable_ai resend_email_verification]
       rescue_from SsoIdentityBlock::BlockedIdentity, with: :render_removed_identity
+
+      EMAIL_VERIFICATION_RESENDS_PER_HOUR = 3
 
       def signup
         # RegistrationsController refuses to register a user while the instance
@@ -80,7 +83,15 @@ module Api
           return
         end
 
-        render json: token_response.merge(user: mobile_user_payload(user)), status: :created if token_response
+        return unless token_response
+
+        if Rails.application.config.app_mode.self_hosted? && !Setting.require_email_confirmation
+          user.mark_email_verified!
+        else
+          user.send_email_verification
+        end
+
+        render json: token_response.merge(user: user.mobile_payload), status: :created
       end
 
       def login
@@ -209,7 +220,8 @@ module Api
             first_name: cached[:user_first_name],
             last_name: cached[:user_last_name],
             ui_layout: cached[:user_ui_layout],
-            ai_enabled: cached[:user_ai_enabled]
+            ai_enabled: cached[:user_ai_enabled],
+            email_verified: cached[:user_email_verified]
           }
         }
       end
@@ -241,6 +253,13 @@ module Api
 
         device_info = cached[:device_info]
         device_info = device_info.symbolize_keys if device_info.respond_to?(:symbolize_keys)
+
+        # The password proves the account, the provider proves its own email.
+        # Only when that is the account's email does this verify it.
+        if OidcIdentity.email_trusted?(provider: cached[:provider], issuer: cached[:issuer]) &&
+            cached[:email].to_s.casecmp?(user.email)
+          user.mark_email_verified!
+        end
 
         # Identity creation, the audit record, and the actual token mint all
         # run in one transaction so a rejected request can't leave a linked
@@ -341,6 +360,11 @@ module Api
             user.family.auto_share_existing_accounts_with(user) if invitation.present?
 
             identity = OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+            if identity.email_trusted?
+              user.mark_email_verified!
+            else
+              user.send_email_verification
+            end
             true
           end
         rescue ActiveRecord::RecordInvalid => e
@@ -381,6 +405,22 @@ module Api
         else
           render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
         end
+      end
+
+      def resend_email_verification
+        user = current_resource_owner
+
+        if user.email_verified?
+          return render json: { message: "Your email is already verified.", user: user.mobile_payload }
+        end
+
+        sent = Rails.cache.increment("email_verification_resend:#{user.id}", 1, expires_in: 1.hour).to_i
+        if sent > EMAIL_VERIFICATION_RESENDS_PER_HOUR
+          return render json: { error: "Too many verification emails. Please try again in an hour." }, status: :too_many_requests
+        end
+
+        user.send_email_verification
+        render json: { message: "Verification email sent.", user: user.mobile_payload }
       end
 
       def refresh
@@ -496,17 +536,6 @@ module Api
 
         def sso_exchange_params
           params.require(:code)
-        end
-
-        def mobile_user_payload(user)
-          {
-            id: user.id,
-            email: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            ui_layout: user.ui_layout,
-            ai_enabled: user.ai_enabled?
-          }
         end
 
         # A concurrent purge between the initial check and this fast-path

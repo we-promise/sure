@@ -2,8 +2,8 @@ EmailConfirmation#confirmation_email
 
 <%= t(".greeting") %>
 
-<%= t(".body") %>
+<%= @body %>
 
-<%= t(".cta") %>: <%= @confirmation_url %>
+<%= @cta %>: <%= @confirmation_url %>
 
 <%= t(".expiry_notice", hours: 24) %>

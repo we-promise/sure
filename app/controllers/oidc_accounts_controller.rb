@@ -37,10 +37,14 @@ class OidcAccountsController < ApplicationController
 
     if user&.active?
       linked = user.transaction do
-        OidcIdentity.create_from_omniauth(
+        identity = OidcIdentity.create_from_omniauth(
           build_auth_hash(@pending_auth),
           user
         )
+
+        if identity.email_trusted? && @pending_auth["email"].to_s.casecmp?(user.email)
+          user.mark_email_verified!
+        end
 
         SsoAuditLog.log_link!(
           user: user,
@@ -194,6 +198,12 @@ class OidcAccountsController < ApplicationController
         )
       end
 
+      if identity&.email_trusted?
+        @user.mark_email_verified!
+      else
+        @user.send_email_verification
+      end
+
       # Clear pending auth from session
       session.delete(:pending_oidc_auth)
 
@@ -225,7 +235,8 @@ class OidcAccountsController < ApplicationController
       OpenStruct.new(
         provider: pending_auth["provider"],
         uid: pending_auth["uid"],
-        info: OpenStruct.new(pending_auth.slice("email", "name", "first_name", "last_name"))
+        info: OpenStruct.new(pending_auth.slice("email", "name", "first_name", "last_name")),
+        extra: OpenStruct.new(raw_info: OpenStruct.new(iss: pending_auth["issuer"]))
       )
     end
 end

@@ -1,9 +1,15 @@
 # frozen_string_literal: true
 
 class Api::V1::UsersController < Api::V1::BaseController
-  before_action :ensure_read_scope, only: :reset_status
-  before_action :ensure_write_scope, except: :reset_status
+  skip_before_action :ensure_verified_for_financial_data, only: %i[me destroy]
+  before_action :ensure_read_scope, only: %i[reset_status me]
+  before_action :ensure_write_scope, except: %i[reset_status me]
   before_action :ensure_admin, only: %i[reset reset_status]
+
+  # GET /api/v1/users/me — lets the app refresh verification state without a new sign-in.
+  def me
+    render json: { user: current_resource_owner.mobile_payload }
+  end
 
   def reset
     family = current_resource_owner.family

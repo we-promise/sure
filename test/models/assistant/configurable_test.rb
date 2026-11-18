@@ -19,6 +19,19 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
     assert_includes config[:instructions], "stage of life"
   end
 
+  test "unverified users keep chat without financial tools or account context" do
+    chat = chats(:one)
+    chat.user.update!(email_verified_at: nil)
+    account_name = chat.user.accessible_accounts.visible.first.name
+    category_name = chat.user.family.categories.first.name
+
+    config = Assistant.config_for(chat)
+
+    assert_empty config[:functions]
+    assert_not_includes config[:instructions], account_name
+    assert_not_includes config[:instructions], category_name
+  end
+
   test "instructions start with the byte-stable static block and end with session context" do
     chat = chats(:one)
 

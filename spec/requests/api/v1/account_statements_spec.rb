@@ -11,6 +11,7 @@ RSpec.describe 'API V1 Account Statements', type: :request do
       email: 'api-user@example.com',
       password: 'password123',
       password_confirmation: 'password123',
+      email_verified_at: Time.current,
       role: 'admin'
     )
   end
@@ -30,6 +31,7 @@ RSpec.describe 'API V1 Account Statements', type: :request do
       email: 'api-guest@example.com',
       password: 'password123',
       password_confirmation: 'password123',
+      email_verified_at: Time.current,
       role: 'guest'
     )
   end
@@ -170,6 +172,7 @@ RSpec.describe 'API V1 Account Statements', type: :request do
             email: 'api-member@example.com',
             password: 'password123',
             password_confirmation: 'password123',
+            email_verified_at: Time.current,
             role: 'member'
           )
         end

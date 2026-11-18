@@ -37,6 +37,16 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "me returns verification state before verification" do
+    @user.update!(email_verified_at: nil)
+
+    get "/api/v1/users/me", headers: api_headers(@read_only_api_key)
+
+    assert_response :ok
+    assert_equal false, response.parsed_body.dig("user", "email_verified")
+    assert_equal @user.email, response.parsed_body.dig("user", "email")
+  end
+
   # -- Scope enforcement -----------------------------------------------------
 
   test "reset requires write scope" do

@@ -186,7 +186,8 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
 
   test "a read-only share cannot split, even with a read_write key" do
     other = User.create!(family: @family, email: "viewer-#{SecureRandom.hex(4)}@example.com",
-                         password: "password123", password_confirmation: "password123", role: "member")
+                         password: "password123", password_confirmation: "password123", role: "member",
+                         email_verified_at: Time.current)
     @account.update!(owner: @user)
     AccountShare.create!(account: @account, user: other, permission: "read_only")
     other.api_keys.active.destroy_all

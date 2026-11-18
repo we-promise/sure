@@ -61,6 +61,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     new_user = User.find(response_data["user"]["id"])
     assert_equal new_user.ui_layout, response_data["user"]["ui_layout"]
     assert_equal new_user.ai_enabled?, response_data["user"]["ai_enabled"]
+    assert_equal false, response_data["user"]["email_verified"]
+    assert_not new_user.email_verified?
 
     # OAuth token assertions
     assert response_data["access_token"].present?
@@ -75,6 +77,24 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal @device_info[:device_id], device.device_id
     assert_equal @device_info[:device_name], device.device_name
     assert_equal @device_info[:device_type], device.device_type
+  end
+
+  test "resends verification email for an authenticated unverified user" do
+    user = users(:family_member)
+    user.update!(email_verified_at: nil)
+    key = ApiKey.create!(
+      user: user,
+      name: "Verification resend",
+      scopes: [ "read_write" ],
+      display_key: "resend_#{SecureRandom.hex(8)}"
+    )
+
+    assert_enqueued_email_with EmailConfirmationMailer, :confirmation_email, params: { user: user } do
+      post "/api/v1/auth/resend_email_verification", headers: { "X-Api-Key" => key.display_key }
+    end
+
+    assert_response :success
+    assert_equal false, response.parsed_body.dig("user", "email_verified")
   end
 
   # RegistrationsController refuses to register when the instance is closed.

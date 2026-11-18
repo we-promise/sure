@@ -58,6 +58,8 @@ class PasswordResetsController < ApplicationController
       ActiveRecord::Base.transaction do
         next false unless @user.update(password_params)
 
+        @user.verify_after_password_reset!
+
         SecurityAuditLog.log_password_changed!(user: @user, request: request)
         # The user is signed out on this path, so every session goes
         # (CWE-613). User#revoke_oauth_access has already revoked every OAuth

@@ -3,6 +3,20 @@
 require 'swagger_helper'
 
 RSpec.describe 'API V1 Auth', type: :request do
+  let(:family) { Family.create!(name: 'Auth API Family') }
+  let(:user) do
+    family.users.create!(
+      email: "auth-api-#{SecureRandom.hex(4)}@example.com",
+      password: 'Password1!',
+      email_verified_at: Time.current
+    )
+  end
+  let(:api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(user: user, name: 'Auth API Docs Key', key: key, scopes: %w[read_write], source: 'web')
+  end
+  let(:'X-Api-Key') { api_key.plain_key }
+
   path '/api/v1/auth/signup' do
     post 'Sign up a new user' do
       tags 'Auth'
@@ -55,7 +69,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string },
                      last_name: { type: :string },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     email_verified: { type: :boolean }
                    }
                  }
                }
@@ -121,7 +136,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string },
                      last_name: { type: :string },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     email_verified: { type: :boolean }
                    }
                  }
                }
@@ -198,7 +214,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string },
                      last_name: { type: :string },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     email_verified: { type: :boolean }
                    }
                  }
                }
@@ -288,7 +305,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string },
                      last_name: { type: :string },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     email_verified: { type: :boolean }
                    }
                  }
                }
@@ -381,7 +399,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string },
                      last_name: { type: :string },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     email_verified: { type: :boolean }
                    }
                  }
                }
@@ -434,7 +453,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string, nullable: true },
                      last_name: { type: :string, nullable: true },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     email_verified: { type: :boolean }
                    }
                  }
                }
@@ -443,11 +463,53 @@ RSpec.describe 'API V1 Auth', type: :request do
 
       response '401', 'unauthorized' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { 'invalid-key' }
         run_test!
       end
 
       response '403', 'insufficient scope' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/auth/resend_email_verification' do
+    post 'Resend the current user email verification message' do
+      tags 'Auth'
+      produces 'application/json'
+      security [ { apiKeyAuth: [] } ]
+
+      response '200', 'verification state returned and email queued when needed' do
+        schema type: :object,
+               properties: {
+                 message: { type: :string },
+                 user: {
+                   type: :object,
+                   properties: {
+                     id: { type: :string, format: :uuid },
+                     email: { type: :string },
+                     email_verified: { type: :boolean }
+                   }
+                 }
+               }
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { 'invalid-key' }
+        run_test!
+      end
+
+      response '429', 'resend limit exceeded' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        before do
+          user.update!(email_verified_at: nil)
+          Rails.cache.write("email_verification_resend:#{user.id}", 3, expires_in: 1.hour)
+        end
+
         run_test!
       end
     end

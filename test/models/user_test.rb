@@ -20,6 +20,36 @@ class UserTest < ActiveSupport::TestCase
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end
 
+  test "mark_email_verified records proof and invalidates the old confirmation token" do
+    @user.update!(email_verified_at: nil)
+    token = @user.generate_token_for(:email_confirmation)
+
+    @user.mark_email_verified!
+
+    assert @user.email_verified?
+    assert_nil User.find_by_token_for(:email_confirmation, token)
+  end
+
+  test "trusted provider claim requires the account email" do
+    @user.update!(email_verified_at: nil)
+
+    assert_not @user.claim_by_trusted_provider!(email: "someone-else@example.com")
+    assert_not @user.reload.email_verified?
+  end
+
+  test "trusted provider claim verifies the owner and removes pre-verification access" do
+    @user.update!(email_verified_at: nil)
+    api_key = @user.api_keys.create!(name: "Pre-verification", scopes: [ "read_write" ], display_key: "claim_#{SecureRandom.hex(8)}")
+
+    assert @user.claim_by_trusted_provider!(email: @user.email.upcase)
+
+    @user.reload
+    assert @user.email_verified?
+    assert_nil @user.password_digest
+    assert api_key.reload.revoked_at.present?
+    assert_empty @user.sessions
+  end
+
   test "find_by_email_with_legacy_fallback matches encrypted and legacy plaintext email rows" do
     assert_equal @user, User.find_by_email_with_legacy_fallback(" #{@user.email.upcase} ")
 

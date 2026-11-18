@@ -57,6 +57,13 @@ class OidcIdentityTest < ActiveSupport::TestCase
     end
   end
 
+  test "recognizes only providers that prove email ownership" do
+    assert OidcIdentity.email_trusted?(provider: "google_oauth2")
+    assert OidcIdentity.email_trusted?(provider: "apple")
+    assert OidcIdentity.email_trusted?(provider: "openid_connect", issuer: "https://accounts.google.com")
+    assert_not OidcIdentity.email_trusted?(provider: "openid_connect", issuer: "https://idp.example")
+  end
+
   test "sync_user_attributes! preserves user-edited first and last name" do
     # Regression for #1103: every SSO login used to overwrite user.first_name
     # with the IdP value, clobbering edits the user made inside Sure.

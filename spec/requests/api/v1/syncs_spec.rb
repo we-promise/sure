@@ -16,7 +16,8 @@ RSpec.describe "Api::V1::Syncs", type: :request do
     family.users.create!(
       email: "sync-api-user@example.com",
       password: "password123",
-      password_confirmation: "password123"
+      password_confirmation: "password123",
+      email_verified_at: Time.current
     )
   end
 

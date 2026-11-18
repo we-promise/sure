@@ -5,6 +5,9 @@ en:
       body: You recently requested to change your email address. Click the button
         below to confirm this change.
       cta: Confirm email change
+      verify_body: Confirm your email address to unlock access to your financial data.
+      verify_cta: Verify email address
+      verify_subject: Please verify your email address
       expiry_notice: This link will expire in %{hours} hours.
       greeting: Hello!
       subject: '%{product_name}: Confirm your email change'

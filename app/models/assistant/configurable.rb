@@ -65,7 +65,7 @@ module Assistant::Configurable
       else
         {
           instructions: default_instructions(preferred_currency, preferred_date_format, user: chat.user),
-          functions: default_functions(chat.user)
+          functions: chat.user.email_verified? ? default_functions(chat.user) : []
         }
       end
     end
@@ -130,7 +130,7 @@ module Assistant::Configurable
       CATEGORY_NAMES_LIMIT = 60
 
       def accounts_context(user)
-        return "" if user.nil?
+        return "" unless user&.email_verified?
 
         accounts = user.accessible_accounts.visible.to_a
         return "" if accounts.empty?
@@ -159,7 +159,7 @@ module Assistant::Configurable
       end
 
       def categories_context(user)
-        return "" if user.nil?
+        return "" unless user&.email_verified?
 
         names = user.family.categories.pluck(:name)
         return "" if names.empty?
