@@ -186,7 +186,13 @@
         variant: "destructive",
         href: user_path(@user),
         method: :delete,
-        confirm: CustomConfirm.for_resource_deletion(t(".account"), high_severity: true)
+        confirm: CustomConfirm.new(
+          title: t(".confirm_delete.title"),
+          body: t(".confirm_delete.body"),
+          btn_text: t(".delete_account"),
+          destructive: true,
+          high_severity: true
+        )
       ) %>
     </div>
   </div>

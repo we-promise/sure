@@ -13,18 +13,20 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "account deletion confirmation keeps the localized account wording" do
+  test "account deletion confirmation uses the localized account warning" do
     sign_in @admin
 
-    { "en" => "your account", "ru" => "аккаунт" }.each do |locale, resource|
+    %w[en ru].each do |locale|
       @admin.update!(locale: locale)
       get settings_profile_path
       assert_response :success
 
       assert_select "form[action=?] button[data-turbo-confirm]", user_path(@admin) do |buttons|
         confirmation = JSON.parse(buttons.first["data-turbo-confirm"])
-        assert_equal I18n.t("shared.custom_confirm.resource_deletion_title", locale: locale, resource: resource), confirmation.fetch("title")
-        assert_equal I18n.t("shared.custom_confirm.resource_deletion_body", locale: locale, resource: resource), confirmation.fetch("body")
+        assert_equal I18n.t("settings.profiles.show.confirm_delete.title", locale: locale), confirmation.fetch("title")
+        assert_equal I18n.t("settings.profiles.show.confirm_delete.body", locale: locale), confirmation.fetch("body")
+        assert_equal I18n.t("settings.profiles.show.delete_account", locale: locale), confirmation.fetch("confirmText")
+        assert_equal "destructive", confirmation.fetch("variant")
       end
     end
   end
