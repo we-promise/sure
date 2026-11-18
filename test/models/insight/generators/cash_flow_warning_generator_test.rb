@@ -50,6 +50,10 @@ class Insight::Generators::CashFlowWarningGeneratorTest < ActiveSupport::TestCas
     brokerage = @family.accounts.create!(
       name: "Brokerage", balance: 10_000, currency: "USD", accountable: Investment.new(subtype: "brokerage")
     )
+    # The feed only reads accounts every member can see.
+    [ cd, brokerage ].each do |account|
+      AccountShare.create!(account: account, user: users(:family_member), permission: "full_control", include_in_finances: true)
+    end
 
     cash_accounts = Insight::Generators::CashFlowWarningGenerator.new(@family).send(:cash_accounts)
 
