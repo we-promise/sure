@@ -433,7 +433,7 @@ RSpec.configure do |config|
           },
           AccountDetail: {
             type: :object,
-            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status created_at updated_at],
+            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency amount_format classification account_type status created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
@@ -442,6 +442,7 @@ RSpec.configure do |config|
               cash_balance: { type: :string },
               cash_balance_cents: { type: :integer, description: 'Signed cash balance in minor currency units' },
               currency: { type: :string },
+              amount_format: { '$ref' => '#/components/schemas/AmountFormat' },
               classification: { type: :string },
               account_type: { type: :string, nullable: true },
               subtype: { type: :string, nullable: true },
@@ -2085,6 +2086,32 @@ RSpec.configure do |config|
             required: %w[message],
             properties: {
               message: { type: :string }
+            }
+          },
+          AmountFormat: {
+            type: :object,
+            required: %w[key grouping delimiter separator symbol_position symbol_spacing],
+            description: 'Resolved number formatting rules for amounts in the user\'s family currency. Account responses include an amount_format resolved for that account\'s currency; prefer the account-level rules when rendering an account. Clients should use these rules instead of inferring grouping from their own locale or country.',
+            properties: {
+              key: { type: :string, enum: %w[language international indian european] },
+              grouping: { type: :string, enum: %w[standard indian] },
+              delimiter: { type: :string, description: 'Exact thousands delimiter character.' },
+              separator: { type: :string, description: 'Exact decimal separator character.' },
+              symbol_position: { type: :string, enum: %w[before after] },
+              symbol_spacing: { type: :string, description: 'Exact spacing character between the currency symbol and the amount, or an empty string.' }
+            }
+          },
+          CurrentUserResponse: {
+            type: :object,
+            required: %w[id email first_name last_name ui_layout ai_enabled amount_format],
+            properties: {
+              id: { type: :string, format: :uuid },
+              email: { type: :string },
+              first_name: { type: :string, nullable: true },
+              last_name: { type: :string, nullable: true },
+              ui_layout: { type: :string },
+              ai_enabled: { type: :boolean },
+              amount_format: { '$ref' => '#/components/schemas/AmountFormat' }
             }
           },
           ResetInitiatedResponse: {

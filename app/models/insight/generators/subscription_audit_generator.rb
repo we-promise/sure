@@ -15,7 +15,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
     overdue_occurrences.map do |occurrence|
       recurring = occurrence.recurring_transaction
       name = recurring.merchant&.name.presence || recurring.name
-      amount = Money.new(occurrence.resolved_expected_amount, occurrence.currency).format
+      amount = Money.new(occurrence.resolved_expected_amount, occurrence.currency).format(**family_format_options)
       days_overdue = (Date.current - occurrence.due_on).to_i
 
       build_insight(

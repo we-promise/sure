@@ -80,7 +80,7 @@ module Api
           return
         end
 
-        render json: token_response.merge(user: mobile_user_payload(user)), status: :created if token_response
+        render json: token_response.merge(user: user_payload(user)), status: :created if token_response
       end
 
       def login
@@ -145,7 +145,7 @@ module Api
             return
           end
 
-          render json: token_response.merge(user: mobile_user_payload(user))
+          render json: token_response.merge(user: user_payload(user))
         else
           render json: { error: "Invalid email or password" }, status: :unauthorized
         end
@@ -197,20 +197,19 @@ module Api
           return
         end
 
+        user = User.find_by(id: cached[:user_id])
+        unless user
+          render json: { error: "invalid_or_expired_code", message: "Authorization code is invalid or expired" }, status: :unauthorized
+          return
+        end
+
         render json: {
           access_token: cached[:access_token],
           refresh_token: cached[:refresh_token],
           token_type: cached[:token_type],
           expires_in: cached[:expires_in],
           created_at: cached[:created_at],
-          user: {
-            id: cached[:user_id],
-            email: cached[:user_email],
-            first_name: cached[:user_first_name],
-            last_name: cached[:user_last_name],
-            ui_layout: cached[:user_ui_layout],
-            ai_enabled: cached[:user_ai_enabled]
-          }
+          user: user_payload(user)
         }
       end
 
@@ -276,7 +275,7 @@ module Api
           return
         end
 
-        render json: token_response.merge(user: mobile_user_payload(user))
+        render json: token_response.merge(user: user_payload(user))
       end
 
       def sso_create_account
@@ -377,7 +376,7 @@ module Api
         end
 
         if user.update(ai_enabled: true)
-          render json: { user: mobile_user_payload(user) }
+          render json: { user: user_payload(user) }
         else
           render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
         end
@@ -498,17 +497,6 @@ module Api
           params.require(:code)
         end
 
-        def mobile_user_payload(user)
-          {
-            id: user.id,
-            email: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            ui_layout: user.ui_layout,
-            ai_enabled: user.ai_enabled?
-          }
-        end
-
         # A concurrent purge between the initial check and this fast-path
         # re-check raises RecordNotFound on reload; treat it the same as
         # inactive instead of letting it fall through to BaseController's
@@ -599,7 +587,7 @@ module Api
             return
           end
 
-          render json: token_response.merge(user: mobile_user_payload(user))
+          render json: token_response.merge(user: user_payload(user))
         end
 
         def ensure_write_scope

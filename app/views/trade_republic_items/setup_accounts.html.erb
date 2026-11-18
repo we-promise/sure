@@ -79,7 +79,7 @@
                         <%= t(
                           ".available_accounts.account_summary",
                           account_type: { "cash" => t(".available_accounts.account_type_cash"), "crypto" => t(".available_accounts.account_type_crypto") }.fetch(tr_account.kind, t(".available_accounts.account_type_investment")),
-                          balance: number_to_currency(tr_account.current_balance || 0, unit: Money::Currency.new(tr_account.currency.presence || Current.family.currency).symbol)
+                          balance: format_money(tr_account.current_balance || 0, currency: tr_account.currency.presence || Current.family.currency)
                         ) %>
                       </p>
                       <% if tr_account.trade_republic_account_id.present? %>
@@ -120,7 +120,7 @@
                   <p class="text-xs text-primary mb-1"><%= tr_account.name %></p>
                   <div class="flex items-center gap-2">
                     <%= link_form.select :account_id,
-                          options_for_select(linkable_accounts.map { |a| [ t(".link_existing.manual_account_option", name: a.name, balance: number_to_currency(a.balance, unit: Money::Currency.new(a.currency.presence || Current.family.currency).symbol)), a.id ] }),
+                          options_for_select(linkable_accounts.map { |a| [ t(".link_existing.manual_account_option", name: a.name, balance: format_money(a.balance, currency: a.currency.presence || Current.family.currency)), a.id ] }),
                           { prompt: t(".link_existing.select_prompt") },
                           { class: "bg-container border border-primary rounded px-2 py-1 text-sm text-primary flex-1 min-w-0", required: true } %>
                     <%= render DS::Button.new(

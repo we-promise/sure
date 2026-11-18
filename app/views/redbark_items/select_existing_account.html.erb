@@ -44,7 +44,7 @@
                 <h4 class="font-medium text-primary"><%= redbark_account.name %></h4>
                 <p class="text-sm text-secondary">
                   <%= t("redbark_items.select_existing_account.balance_label") %>
-                  <%= number_to_currency(redbark_account.current_balance || 0, unit: Money::Currency.new(redbark_account.currency || "USD").symbol) %>
+                  <%= format_money(redbark_account.current_balance || 0, currency: redbark_account.currency || "USD") %>
                 </p>
               </div>
               <%= render DS::Button.new(

@@ -75,4 +75,25 @@ class RuleNotificationMailerTest < ActionMailer::TestCase
       RuleNotificationMailer.digest(rule: rule, transactions: [ txn ]).deliver_now
     end
   end
+
+  test "digest formats amounts with the recipient's locale and amount format" do
+    family = Family.create!(name: "Formatting family", currency: "EUR", locale: "en")
+    admin = User.create!(
+      family: family,
+      email: "formatting-admin@example.com",
+      password: "password123",
+      role: :admin,
+      locale: "de",
+      amount_format: "indian"
+    )
+    account = family.accounts.create!(name: "Mailer test", balance: 100, currency: "EUR", accountable: Depository.new)
+    txn = create_transaction(date: Date.current, account: account, amount: 1_234_567.89, name: "Coffee").transaction
+    rule = Rule.new(family: family, resource_type: "transaction", name: "Coffee rule")
+
+    mail = RuleNotificationMailer.digest(rule: rule, transactions: [ txn ])
+
+    assert_equal [ admin.email ], mail.to
+    assert_includes mail.text_part.body.encoded, "12,34,567.89"
+    assert_includes mail.html_part.body.encoded, "12,34,567.89"
+  end
 end

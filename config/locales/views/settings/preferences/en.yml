@@ -8,6 +8,12 @@ en:
         country: Country
         currency: Currency
         date_format: Date format
+        amount_format: Number format
+        amount_format_hint: Language follows your selected language and currency. The other options override the number grouping only.
+        amount_format_language: Language
+        amount_format_international: International (1,234,567.89)
+        amount_format_indian: Indian (12,34,567.89)
+        amount_format_european: European (1.234.567,89)
         general_subtitle: Configure your preferences
         general_title: General
         transactions_title: Transactions

@@ -950,6 +950,22 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       "dormant accounts with real balances should not be marked as closed")
   end
 
+  test "setup_accounts renders a balance for a currency outside the supported list" do
+    @simplefin_item.simplefin_accounts.create!(
+      name: "Custom Asset",
+      account_id: "custom_currency_1",
+      currency: "XBT",
+      account_type: "crypto",
+      current_balance: 1.5,
+      raw_transactions_payload: []
+    )
+
+    get setup_accounts_simplefin_item_url(@simplefin_item)
+
+    assert_response :success
+    assert_match(/1\.50 XBT/, response.body)
+  end
+
   # Stale account detection and handling tests
 
   test "setup_accounts detects stale accounts not in upstream API" do

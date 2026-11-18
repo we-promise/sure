@@ -218,6 +218,31 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "•••12", mask_last4("12")
   end
 
+  test "#format_money returns nil for nil input" do
+    assert_nil format_money(nil)
+  end
+
+  test "#format_money defaults to the default currency" do
+    assert_equal "$1,234.56", format_money(1234.56, locale: :en)
+  end
+
+  test "#format_money formats with an explicit currency" do
+    assert_equal "1.234,56 €", format_money(1234.56, currency: "EUR", locale: :de)
+    assert_equal "₹12,34,567.89", format_money(1234567.89, currency: "INR", locale: :en, amount_format: "indian")
+  end
+
+  test "#format_money passes precision through" do
+    assert_equal "1.235 €", format_money(1234.56, currency: "EUR", locale: :de, precision: 0)
+  end
+
+  test "#format_money works with a Money instance" do
+    assert_equal "1.234,56 €", format_money(Money.new(1234.56, :eur), locale: :de)
+  end
+
+  test "#format_money falls back to the raw code for an unknown currency" do
+    assert_equal "1,234.56 XBT", format_money(1234.56, currency: "XBT", locale: :en)
+  end
+
   # `group-open:` matches any open ancestor `.group`, so a chevron inside a
   # closed disclosure nested in an open one would show as open.
   test "#disclosure_chevron follows its own details element" do

@@ -83,7 +83,7 @@
                         <%= t(
                           ".available_accounts.account_summary",
                           account_type: t(".available_accounts.account_type_investment"),
-                          balance: number_to_currency(ibkr_account.current_balance || 0, unit: Money::Currency.new(ibkr_account.currency || "USD").symbol)
+                          balance: format_money(ibkr_account.current_balance || 0, currency: ibkr_account.currency || "USD")
                         ) %>
                       </p>
                       <% if ibkr_account.ibkr_account_id.present? %>
@@ -123,7 +123,7 @@
                   <p class="text-xs text-primary mb-1"><%= ibkr_account.name %></p>
                   <div class="flex items-center gap-2">
                     <%= link_form.select :account_id,
-                          options_for_select(@linkable_accounts.map { |account| [t(".link_existing.manual_account_option", name: account.name, balance: number_to_currency(account.balance, unit: Money::Currency.new(account.currency || "USD").symbol)), account.id] }),
+                          options_for_select(@linkable_accounts.map { |account| [t(".link_existing.manual_account_option", name: account.name, balance: format_money(account.balance, currency: account.currency || "USD")), account.id] }),
                           { prompt: t(".link_existing.select_prompt") },
                           class: "bg-container border border-primary rounded px-2 py-1 text-sm text-primary flex-1 min-w-0" %>
                     <%= render DS::Button.new(
