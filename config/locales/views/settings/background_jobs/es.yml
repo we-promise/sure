@@ -1,0 +1,46 @@
+---
+es:
+  settings:
+    background_jobs:
+      show:
+        page_title: Tareas en segundo plano
+        title: Estado de los workers
+        subtitle: 'Estado de Sidekiq en tiempo real: procesos worker, tamaño de las colas y conjuntos de reintentos y fallidas.'
+        redis_unreachable: El estado de Sidekiq no está disponible (no se puede acceder a Redis). No se sabe si siguen vivas, así que las acciones están desactivadas.
+        operations_title: Operaciones en curso
+        operations_subtitle: Sincronizaciones, importaciones y exportaciones de todas las familias que aún no han llegado a un estado final. Las operaciones inactivas durante más de 30 minutos sin ninguna tarea visible se dan por perdidas y se pueden marcar como tales.
+        empty: No hay operaciones en curso.
+        missing_value: "-"
+        stats:
+          workers: Workers
+          busy: Ocupados
+          enqueued: En cola
+          retries: Reintentos
+          scheduled: Programadas
+          dead: Fallidas
+          queue_label: "%{name}: %{size} · %{latency} s de latencia"
+        table:
+          type: Operación
+          family: Familia
+          status: Estado
+          last_activity: Última actividad
+          liveness: Actividad
+          action: Acción
+      operation:
+        ago: hace %{time}
+        sync_label: Sincronización · %{type}
+        running: En ejecución
+        queued: En cola
+        recent: Reciente
+        unknown: Desconocido
+        stuck: Atascada; se da por perdida
+        confirm: "¿Marcar esta operación como perdida? El registro pasa a un estado final para que se pueda reintentar. Los datos subyacentes no se tocan."
+        missing_value: "-"
+        actions:
+          mark_stale: Marcar como obsoleta
+          mark_failed: Marcar como fallida
+          release_claim: Liberar bloqueo
+      cancel:
+        cancelled: "%{type} marcada como perdida."
+        not_cancellable: 'Ahora mismo no se puede modificar esta operación: puede que su tarea siga en cola o en ejecución. Vuelve a intentarlo cuando lleve 30 minutos inactiva.'
+        cancelled_error: 'Marcada como fallida por un administrador: la tarea en segundo plano se dio por perdida.'
