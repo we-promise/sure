@@ -409,6 +409,50 @@ class EnableBankingItem::ImporterPendingBalanceTest < ActiveSupport::TestCase
   # balance is stored as the bank reports it, so history is low by the payment
   # while it is pending, as on main. Its unknown pending total keeps the anchor
   # from becoming a waypoint, so history is right once the payment books.
+  test "with the pending request rejected history is off while a payment is pending and right once it books" do
+    @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+    salary = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+    lunch = booked_tx("lunch_1", "33.00", date: "2026-08-24")
+    rejected = Provider::EnableBanking::EnableBankingError.new("unsupported", :validation_error)
+    sync = lambda do |booked|
+      @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
+      @importer.stubs(:include_pending?).returns(true)
+      @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ booked, false ])
+      @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG")).raises(rejected)
+      # ITAV already deducts the card payment of 36.01 pending at the 08-25 sync.
+      stub_balances(balance("ITAV", "80.99"))
+      sync_balance
+      EnableBankingAccount::Processor.new(@enable_banking_account.reload).process
+      Balance::Materializer.new(Account.find(@account.id), strategy: :reverse).materialize_balances
+      %w[2026-08-23 2026-08-24 2026-08-25].index_with { |date| @account.balances.find_by(date: Date.parse(date))&.end_balance&.to_s("F") }
+    end
+
+    travel_to Time.zone.local(2026, 8, 25, 9) do
+      assert_equal({ "2026-08-23" => "113.99", "2026-08-24" => "80.99", "2026-08-25" => "80.99" }, sync.call([ salary, lunch ]))
+      assert_nil @enable_banking_account.reload.pending_total
+    end
+
+    travel_to Time.zone.local(2026, 8, 26, 9) do
+      # Booked the next day, so a waypoint left at 80.99 on 08-25 would show.
+      card = booked_tx("card_1", "36.01", date: "2026-08-26")
+      assert_equal({ "2026-08-23" => "150.0", "2026-08-24" => "117.0", "2026-08-25" => "117.0" }, sync.call([ salary, lunch, card ]))
+    end
+    assert_empty @account.valuations.reconciliation
+  end
+
+  test "an available balance with a rejected pending request is not vouched for as the next anchor" do
+    stub_transactions(booked: [], pending: [])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG"))
+      .raises(Provider::EnableBanking::EnableBankingError.new("unsupported", :validation_error))
+    stub_balances(balance("ITAV", "64.53"))
+
+    sync_balance
+    EnableBankingAccount::Processor.new(@enable_banking_account.reload).process
+
+    assert_not @enable_banking_account.reload.balance_evidence_verified?
+    assert_not @enable_banking_account.balance_verified?, "the next sync's tiebreak must not start from this anchor"
+  end
+
   test "a rejected pending request leaves a booked balance's pending total at zero" do
     @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [], false ])
     @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG"))
@@ -482,10 +526,320 @@ class EnableBankingItem::ImporterPendingBalanceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("64.53"), @enable_banking_account.reload.current_balance
   end
 
+  test "history before a pending payment does not move when the balance includes it" do
+    travel_to Date.new(2026, 8, 25) do
+      @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+      opening = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+      lunch = booked_tx("lunch_1", "33.00", date: "2026-08-24")
+      stub_transactions(booked: [ opening, lunch ], pending: [ pending_tx("card_1", "36.01", date: "2026-08-25") ])
+      # 150.00 - 33.00 posted, minus 36.01 still pending.
+      stub_balances(balance("ITAV", "80.99"))
+
+      sync_balance
+      EnableBankingAccount::Processor.new(@enable_banking_account.reload).process
+      Balance::Materializer.new(@account.reload, strategy: :reverse).materialize_balances
+
+      assert_equal BigDecimal("117.00"), @account.balances.find_by(date: Date.new(2026, 8, 24)).end_balance
+      assert_equal BigDecimal("150.00"), @account.balances.find_by(date: Date.new(2026, 8, 23)).end_balance
+    end
+  end
+
+  test "history stays right when a pending payment books dated on the day it was pending" do
+    assert_history_across_settlement(booked_on: Date.new(2026, 8, 25), expected: {
+      Date.new(2026, 8, 23) => "150.00",
+      Date.new(2026, 8, 24) => "117.00",
+      Date.new(2026, 8, 25) => "80.99",
+      Date.new(2026, 8, 26) => "80.99"
+    })
+  end
+
   # Account::CurrentBalanceManager's ledger check keeps the pending entry out:
   # its booked row updates it in place, so it keeps the created_at it had before
   # the anchor was written, on the anchor's day.
+  test "with the explained-anchor check on history stays right when a pending payment books dated on the day it was pending" do
+    Rails.configuration.x.balance.stubs(:reuse_explained_anchor).returns(true)
+
+    assert_history_across_settlement(booked_on: Date.new(2026, 8, 25), expected: {
+      Date.new(2026, 8, 23) => "150.00",
+      Date.new(2026, 8, 24) => "117.00",
+      Date.new(2026, 8, 25) => "80.99",
+      Date.new(2026, 8, 26) => "80.99"
+    })
+  end
+
+  test "history stays right when a pending payment books dated the next day" do
+    assert_history_across_settlement(booked_on: Date.new(2026, 8, 26), expected: {
+      Date.new(2026, 8, 23) => "150.00",
+      Date.new(2026, 8, 24) => "117.00",
+      Date.new(2026, 8, 25) => "117.00",
+      Date.new(2026, 8, 26) => "80.99"
+    })
+  end
+
+  test "a later sync whose transaction fetch fails keeps the posted-only anchor" do
+    @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+    salary = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+    lunch = booked_tx("lunch_1", "33.00", date: "2026-08-24")
+
+    travel_to Time.zone.local(2026, 8, 25, 9) do
+      sync_and_process(booked: [ salary, lunch ], pending: [ pending_tx("card_1", "36.01", date: "2026-08-25") ], itav: "80.99")
+    end
+
+    travel_to Time.zone.local(2026, 8, 25, 18) do
+      # Transactions are rate limited, the balance still comes back.
+      @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
+      @importer.stubs(:include_pending?).returns(true)
+      @importer.stubs(:fetch_paginated_transactions).raises(Provider::EnableBanking::EnableBankingError.new("slow down", :rate_limited))
+      stub_balances(balance("ITAV", "80.99"))
+      @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+      assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
+      EnableBankingAccount::Processor.new(@enable_banking_account.reload).process
+
+      assert_equal BigDecimal("117.00"), Account.find(@account.id).current_anchor_balance
+    end
+
+    travel_to Time.zone.local(2026, 8, 26, 9) do
+      card = booked_tx("card_1", "36.01", date: "2026-08-26")
+      sync_and_process(booked: [ salary, lunch, card ], pending: [], itav: "80.99")
+      Balance::Materializer.new(Account.find(@account.id), strategy: :reverse).materialize_balances
+    end
+
+    expected = {
+      Date.new(2026, 8, 23) => BigDecimal("150.00"),
+      Date.new(2026, 8, 24) => BigDecimal("117.00"),
+      Date.new(2026, 8, 25) => BigDecimal("117.00"),
+      Date.new(2026, 8, 26) => BigDecimal("80.99")
+    }
+    assert_equal expected, expected.keys.index_with { |date| @account.balances.find_by(date: date)&.end_balance }
+    assert_empty @account.valuations.reconciliation
+  end
+
+  test "an anchor written before the adjustment was recorded is not kept as a waypoint" do
+    @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+    salary = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+    lunch = booked_tx("lunch_1", "33.00", date: "2026-08-24")
+
+    travel_to Time.zone.local(2026, 8, 25, 9) do
+      sync_and_process(booked: [ salary, lunch ], pending: [ pending_tx("card_1", "36.01", date: "2026-08-25") ], itav: "80.99")
+      # As written before the upgrade: the bank's figure, nothing recorded.
+      @account.valuations.current_anchor.first.entry.update!(amount: 80.99)
+      @enable_banking_account.update_columns(pending_total: nil, anchor_pending_total: nil)
+    end
+
+    travel_to Time.zone.local(2026, 8, 26, 9) do
+      card = booked_tx("card_1", "36.01", date: "2026-08-26")
+      sync_and_process(booked: [ salary, lunch, card ], pending: [], itav: "80.99")
+      Balance::Materializer.new(Account.find(@account.id), strategy: :reverse).materialize_balances
+    end
+
+    expected = {
+      Date.new(2026, 8, 23) => BigDecimal("150.00"),
+      Date.new(2026, 8, 24) => BigDecimal("117.00"),
+      Date.new(2026, 8, 25) => BigDecimal("117.00"),
+      Date.new(2026, 8, 26) => BigDecimal("80.99")
+    }
+    assert_equal expected, expected.keys.index_with { |date| @account.balances.find_by(date: date)&.end_balance }
+    assert_empty @account.valuations.reconciliation
+  end
+
+  test "an anchor from a booked balance records no adjustment and still becomes a waypoint" do
+    @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+    salary = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+
+    [ Time.zone.local(2026, 8, 25, 9), Time.zone.local(2026, 8, 26, 9) ].each do |time|
+      travel_to time do
+        @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
+        @importer.stubs(:include_pending?).returns(true)
+        stub_transactions(booked: [ salary ], pending: [])
+        stub_balances(balance("CLBD", "150.00"))
+        sync_balance
+        EnableBankingAccount::Processor.new(@enable_banking_account.reload).process
+      end
+    end
+
+    assert_equal BigDecimal("0"), @enable_banking_account.reload.anchor_pending_total
+    assert @account.valuations.reconciliation.joins(:entry).exists?(entries: { date: Date.new(2026, 8, 25) })
+  end
+
+  test "an anchor stored with pending sync off is not kept as a waypoint once it is turned on" do
+    @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+    salary = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+    lunch = booked_tx("lunch_1", "33.00", date: "2026-08-24")
+
+    travel_to Time.zone.local(2026, 8, 25, 9) do
+      sync_and_process(booked: [ salary, lunch ], pending: [ pending_tx("card_1", "36.01", date: "2026-08-25") ], itav: "80.99", include_pending: false)
+      assert_nil @enable_banking_account.reload.anchor_pending_total
+    end
+
+    travel_to Time.zone.local(2026, 8, 26, 9) do
+      card = booked_tx("card_1", "36.01", date: "2026-08-26")
+      sync_and_process(booked: [ salary, lunch, card ], pending: [], itav: "80.99")
+      Balance::Materializer.new(Account.find(@account.id), strategy: :reverse).materialize_balances
+    end
+
+    expected = {
+      Date.new(2026, 8, 23) => BigDecimal("150.00"),
+      Date.new(2026, 8, 24) => BigDecimal("117.00"),
+      Date.new(2026, 8, 25) => BigDecimal("117.00"),
+      Date.new(2026, 8, 26) => BigDecimal("80.99")
+    }
+    assert_equal expected, expected.keys.index_with { |date| @account.balances.find_by(date: date)&.end_balance }
+    assert_empty @account.valuations.reconciliation
+  end
+
+  test "an expected balance whose pending items cancel out is not kept as a waypoint" do
+    @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+    salary = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+    lunch = booked_tx("lunch_1", "33.00", date: "2026-08-24")
+    refund = pending_tx("refund_1", "10.00", indicator: "CRDT", date: "2026-08-25")
+
+    travel_to Time.zone.local(2026, 8, 25, 9) do
+      @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
+      @importer.stubs(:include_pending?).returns(true)
+      stub_transactions(booked: [ salary, lunch ], pending: [ pending_tx("card_1", "10.00", date: "2026-08-25"), refund ])
+      stub_balances(balance("XPCD", "117.00"))
+      sync_balance
+      EnableBankingAccount::Processor.new(@enable_banking_account.reload).process
+      assert_equal BigDecimal("20.00"), @enable_banking_account.reload.anchor_pending_total
+    end
+
+    travel_to Time.zone.local(2026, 8, 26, 9) do
+      @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
+      @importer.stubs(:include_pending?).returns(true)
+      card = booked_tx("card_1", "10.00", date: "2026-08-25")
+      stub_transactions(booked: [ salary, lunch, card ], pending: [ refund ])
+      stub_balances(balance("XPCD", "117.00"))
+      sync_balance
+      EnableBankingAccount::Processor.new(@enable_banking_account.reload).process
+      Balance::Materializer.new(Account.find(@account.id), strategy: :reverse).materialize_balances
+    end
+
+    expected = {
+      Date.new(2026, 8, 23) => BigDecimal("150.00"),
+      Date.new(2026, 8, 24) => BigDecimal("117.00"),
+      Date.new(2026, 8, 25) => BigDecimal("107.00"),
+      Date.new(2026, 8, 26) => BigDecimal("107.00")
+    }
+    assert_equal expected, expected.keys.index_with { |date| @account.balances.find_by(date: date)&.end_balance }
+    assert_empty @account.valuations.reconciliation
+  end
+
+  test "an available-balance anchor with only pending incoming money is not kept as a waypoint" do
+    @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+    salary = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+    lunch = booked_tx("lunch_1", "33.00", date: "2026-08-24")
+
+    travel_to Time.zone.local(2026, 8, 25, 9) do
+      # ITAV leaves the pending refund out, so nothing is added back.
+      sync_and_process(booked: [ salary, lunch ], pending: [ pending_tx("refund_1", "20.00", indicator: "CRDT", date: "2026-08-25") ], itav: "117.00")
+      assert_equal BigDecimal("117.00"), Account.find(@account.id).current_anchor_balance
+    end
+
+    travel_to Time.zone.local(2026, 8, 26, 9) do
+      refund = booked_tx("refund_1", "20.00", date: "2026-08-25", indicator: "CRDT")
+      sync_and_process(booked: [ salary, lunch, refund ], pending: [], itav: "137.00")
+      Balance::Materializer.new(Account.find(@account.id), strategy: :reverse).materialize_balances
+    end
+
+    expected = {
+      Date.new(2026, 8, 23) => BigDecimal("150.00"),
+      Date.new(2026, 8, 24) => BigDecimal("117.00"),
+      Date.new(2026, 8, 25) => BigDecimal("137.00"),
+      Date.new(2026, 8, 26) => BigDecimal("137.00")
+    }
+    assert_equal expected, expected.keys.index_with { |date| @account.balances.find_by(date: date)&.end_balance }
+    assert_empty @account.valuations.reconciliation
+  end
+
+  test "a booked-balance anchor still becomes a waypoint when the next balance is adjusted" do
+    @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+    salary = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+
+    travel_to Time.zone.local(2026, 8, 25, 9) do
+      @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
+      @importer.stubs(:include_pending?).returns(true)
+      stub_transactions(booked: [ salary ], pending: [])
+      stub_balances(balance("CLBD", "150.00"))
+      sync_balance
+      EnableBankingAccount::Processor.new(@enable_banking_account.reload).process
+    end
+
+    travel_to Time.zone.local(2026, 8, 26, 9) do
+      sync_and_process(booked: [ salary ], pending: [ pending_tx("card_1", "10.00", date: "2026-08-26") ], itav: "140.00")
+    end
+
+    waypoint = @account.valuations.reconciliation.joins(:entry).find_by(entries: { date: Date.new(2026, 8, 25) })
+    assert waypoint, "a booked balance is a posted-only figure, so it stays a waypoint"
+    assert_equal BigDecimal("150.00"), waypoint.entry.amount
+  end
+
+  test "a liability anchor records no adjustment and still becomes a waypoint" do
+    @account.update!(accountable: CreditCard.create!)
+    @enable_banking_account.reload
+
+    [ Time.zone.local(2026, 8, 25, 9), Time.zone.local(2026, 8, 26, 9) ].each do |time|
+      travel_to time do
+        sync_and_process(booked: [], pending: [ pending_tx("card_1", "10.00") ], itav: "64.53")
+      end
+    end
+
+    assert_equal BigDecimal("0"), @enable_banking_account.reload.anchor_pending_total
+    assert @account.valuations.reconciliation.joins(:entry).exists?(entries: { date: Date.new(2026, 8, 25) })
+  end
+
+  test "an anchor without pending added back still becomes a waypoint the next day" do
+    @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+    salary = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+
+    travel_to Time.zone.local(2026, 8, 25, 9) do
+      sync_and_process(booked: [ salary ], pending: [], itav: "150.00")
+    end
+
+    travel_to Time.zone.local(2026, 8, 26, 9) do
+      sync_and_process(booked: [ salary ], pending: [], itav: "150.00")
+    end
+
+    waypoint = @account.valuations.reconciliation.joins(:entry).find_by(entries: { date: Date.new(2026, 8, 25) })
+    assert waypoint, "a booked-only anchor keeps its waypoint"
+    assert_equal BigDecimal("150.00"), waypoint.entry.amount
+  end
+
   private
+
+    # Salary 150 on 08-20 and lunch 33 on 08-24. A card payment of 36.01 is
+    # pending at the 08-25 sync (ITAV 80.99 already deducts it) and booked by the
+    # 08-26 sync, dated booked_on.
+    def assert_history_across_settlement(booked_on:, expected:)
+      @enable_banking_item.update!(sync_start_date: Date.new(2026, 8, 1))
+      salary = booked_tx("salary_1", "150.00", date: "2026-08-20", indicator: "CRDT")
+      lunch = booked_tx("lunch_1", "33.00", date: "2026-08-24")
+
+      travel_to Time.zone.local(2026, 8, 25, 9) do
+        sync_and_process(booked: [ salary, lunch ], pending: [ pending_tx("card_1", "36.01", date: "2026-08-25") ], itav: "80.99")
+        assert_equal BigDecimal("117.00"), Account.find(@account.id).current_anchor_balance
+      end
+
+      travel_to Time.zone.local(2026, 8, 26, 9) do
+        card = booked_tx("card_1", "36.01", date: booked_on.to_s)
+        sync_and_process(booked: [ salary, lunch, card ], pending: [], itav: "80.99")
+        # A fresh record: Account memoizes its current anchor.
+        Balance::Materializer.new(Account.find(@account.id), strategy: :reverse).materialize_balances
+      end
+
+      actual = expected.keys.index_with { |date| @account.balances.find_by(date: date)&.end_balance }
+      assert_equal expected.transform_values { |amount| BigDecimal(amount) }, actual
+      assert_empty @account.valuations.reconciliation, "a pending-adjusted anchor must not become a waypoint"
+    end
+
+    # One sync: a fresh importer, as each sync builds its own.
+    def sync_and_process(booked:, pending:, itav:, include_pending: true)
+      @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
+      @importer.stubs(:include_pending?).returns(include_pending)
+      stub_transactions(booked: booked, pending: pending)
+      stub_balances(balance("ITAV", itav))
+      sync_balance
+      EnableBankingAccount::Processor.new(@enable_banking_account.reload).process
+    end
 
     def create_anchor(amount, date)
       @account.entries.create!(
