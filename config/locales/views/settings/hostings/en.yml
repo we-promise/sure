@@ -80,7 +80,7 @@ en:
         type_builtin: Builtin (direct LLM)
         type_external: External (remote agent)
         type_mcp_only: None in app (connect your own agent via MCP)
-        mcp_only_help: The in-app assistant is off for everyone in this household. Bills AI shortcuts and AI-written insight text also stop. MCP and background categorization stay available; connect external agents in Settings > MCP.
+        mcp_only_help: The in-app assistant is off for everyone in this household. Bills AI shortcuts and Dig in with AI on insights also stop. MCP and background categorization stay available; connect external agents in Settings > MCP.
         external_status: External assistant endpoint
         external_configured: Configured
         external_not_configured: Not configured. Enter the URL and token below, or set EXTERNAL_ASSISTANT_URL and EXTERNAL_ASSISTANT_TOKEN environment variables.
@@ -252,6 +252,12 @@ en:
         env_configured_message: Successfully configured through the CHIMNIE_API_KEY environment variable.
         label: API Key
         placeholder: Enter your Chimnie API key here
+      terrascoutx_settings:
+        title: TerraScoutX
+        description: Enter your TerraScoutX API key to look up US property details and values when adding a property. The value is the county assessor's appraised value from the latest tax roll TerraScoutX holds, not an automated market estimate, so it lags the market and can sit well below it in states that cap assessments, such as California. Coverage varies by county. Keys are free and limited to 2,000 API requests per month, shared between property lookups and daily valuation refreshes. If your key allows more, raise the cap with the TERRASCOUTX_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the TERRASCOUTX_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your TerraScoutX API key here
         usage: "%{used} of %{limit} monthly requests used"
       tiingo_settings:
         title: Tiingo

@@ -4,6 +4,9 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
   include SqlQueryCapture
 
+  TAGGED_MONTH = Date.new(2021, 3, 1)
+  BIGGEST_MONTH = Date.new(2020, 6, 1)
+
   setup do
     sign_in @user = users(:family_admin)
     @family = @user.family
@@ -852,6 +855,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/130,000/, @response.body)
   end
 
+  # Card authorisations post as 0.00; with no sign they are neither income nor expense.
+  test "the breakdown and export leave out zero-amount transactions" do
+    category = @family.categories.create!(name: "Zero Auth Streaming", color: "#111111")
+    create_transaction(account: accounts(:depository), name: "Card check", amount: 0, category: category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+    assert_select "tr[data-category='category-#{category.id}']", count: 0
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly,
+                                         start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    assert_response :ok
+    assert_no_match(/Zero Auth Streaming/, @response.body)
+  end
+
   test "the export leaves out an expense in a currency with no rate" do
     category = @family.categories.create!(name: "Won Export Rent", color: "#111111")
     krw = @family.accounts.create!(owner: @user, name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
@@ -1026,6 +1044,39 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
   end
 
+  # The category column of the reports export is a user-supplied name, and this
+  # is the export the app points at Google Sheets.
+  test "transactions export escapes formula-triggering category names" do
+    malicious = "=SUM(A1)"
+    malicious_income = "@income"
+    account = @family.accounts.first
+
+    # One expense and one income, so both sections of the export are covered.
+    { malicious => 42.00, malicious_income => -500.00 }.each do |name, amount|
+      account.entries.create!(
+        name: "Payee",
+        date: Date.current.beginning_of_month + 3.days,
+        amount: amount,
+        currency: "USD",
+        entryable: Transaction.new(category: @family.categories.create!(name: name, color: "#123456"), kind: "standard")
+      )
+    end
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :monthly,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month
+    )
+
+    assert_response :ok
+    rows = CSV.parse(@response.body)
+    [ malicious, malicious_income ].each do |name|
+      assert rows.any? { |r| r.first == "'#{name}" }, "the #{name} category cell must be escaped"
+      assert_not rows.any? { |r| r.first == name }, "a raw #{name} must not lead a row"
+    end
+  end
+
   # The card was gated on `investment_accounts`, which is visible accounts
   # only (draft and active), while its realised-gains half is measured over
   # every account included in reports, disabled ones too. A family whose only
@@ -1188,7 +1239,293 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?]", settings_api_keys_path, count: 0
   end
 
+  test "google sheets instructions give an export URL with the selected tags" do
+    tag = @family.tags.create!(name: "Sheets tag")
+
+    get google_sheets_instructions_reports_url(period_type: :monthly, filter_tag_ids: [ tag.id ])
+
+    assert_response :success
+    assert_includes CGI.unescapeHTML(@response.body), export_transactions_reports_url(period_type: :monthly, filter_tag_ids: [ tag.id ], format: :csv)
+  end
+
+  test "the tag filter limits the summary, trends and breakdown to transactions with any of the tags" do
+    travel, work = seed_tagged_month
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ travel.id, work.id ])
+
+    assert_response :ok
+    # $30 travel + $50 work + $20 carrying both, counted once; the $1,000
+    # "Other" expense and the untagged $500 salary are left out.
+    assert_equal "$10.00", summary_value(I18n.t("reports.summary.total_income"))
+    assert_equal "$100.00", summary_value(I18n.t("reports.summary.total_expenses"))
+    assert_select "[data-section-key=trends_insights] tbody tr", count: 1 do
+      assert_select "td", text: "$10.00"
+      assert_select "td", text: "$100.00"
+    end
+    breakdown = css_select("[data-section-key=transactions_breakdown]").text.squish
+    assert_includes breakdown, "#{I18n.t("reports.transactions_breakdown.table.income")}: $10.00"
+    assert_includes breakdown, "#{I18n.t("reports.transactions_breakdown.table.expense")}: $100.00"
+  end
+
+  test "without a tag filter every transaction is counted" do
+    seed_tagged_month
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month)
+
+    assert_response :ok
+    assert_equal "$510.00", summary_value(I18n.t("reports.summary.total_income"))
+    assert_equal "$1,100.00", summary_value(I18n.t("reports.summary.total_expenses"))
+  end
+
+  test "the tag filter leaves trades out of the breakdown" do
+    tag = @family.tags.create!(name: "Filtered tag")
+    create_transaction(account: accounts(:depository), name: "Tagged spend", amount: 42, tags: [ tag ])
+    create_trade(securities(:aapl), account: accounts(:investment), qty: 1, date: Date.current, price: 100)
+
+    get reports_path(period_type: :monthly, filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    assert_select "[data-section-key=transactions_breakdown] tr[data-category]", count: 1
+    assert_select "tr[data-category='category-uncategorized']", text: /\$42\.00/
+    assert_select "tr[data-category='category-other_investments']", count: 0
+  end
+
+  test "tag ids that are not the family's are ignored" do
+    seed_tagged_month
+    foreign_tag = families(:empty).tags.create!(name: "Someone else's")
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ foreign_tag.id, "not-a-uuid" ])
+
+    assert_response :ok
+    assert_equal "$1,100.00", summary_value(I18n.t("reports.summary.total_expenses"))
+    assert_select "button", text: I18n.t("reports.index.tag_filter.all")
+    assert_select "input[name='filter_tag_ids[]'][checked]", count: 0
+  end
+
+  test "the tag filter lists the family's tags and checks the selected ones" do
+    travel, work, other = seed_tagged_month
+
+    get reports_path(period_type: :monthly, filter_tag_ids: [ travel.id, work.id ])
+
+    assert_response :ok
+    assert_select "button", text: I18n.t("reports.index.tag_filter.selected", count: 2)
+    assert_select "input[name='filter_tag_ids[]'][value=?][checked]", travel.id
+    assert_select "input[name='filter_tag_ids[]'][value=?][checked]", work.id
+    assert_select "input[name='filter_tag_ids[]'][value=?]:not([checked])", other.id
+  end
+
+  test "period controls keep the tag filter" do
+    travel, = seed_tagged_month
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ travel.id ])
+
+    assert_response :ok
+    report_links = css_select("a[href^='/reports?']").map { |link| link["href"] }
+    assert_operator report_links.size, :>, 5
+    report_links.each { |href| assert_includes CGI.unescape(href), "filter_tag_ids[]=#{travel.id}", href }
+
+    get reports_path(period_type: :custom, filter_tag_ids: [ travel.id ])
+
+    assert_select "form[action='#{reports_path}'] input[type=date][name=start_date]" do |inputs|
+      form = inputs.first.ancestors("form").first
+      assert form.at_css("input[type=hidden][name='filter_tag_ids[]'][value='#{travel.id}']"), "custom range form drops the tag filter"
+    end
+  end
+
+  test "breakdown rows link to transactions filtered by category and the selected tags" do
+    tag = @family.tags.create!(name: "Linked tag")
+    category = @family.categories.create!(name: "Tagged groceries", color: "#ABCDEF")
+    create_transaction(account: accounts(:depository), name: "Groceries", amount: 42, category: category, tags: [ tag ])
+    start_date = Date.current.beginning_of_month
+    end_date = Date.current.end_of_month
+
+    get reports_path(period_type: :monthly, start_date: start_date, end_date: end_date, filter_tag_ids: [ tag.id ])
+
+    href = transactions_path(q: { categories: [ category.name ], start_date: start_date, end_date: end_date, tags: [ tag.name ] })
+    assert_select "tr[data-category='category-#{category.id}'] a[href=?]", href
+  end
+
+  test "export transactions keeps only the selected tags" do
+    tag = @family.tags.create!(name: "Export tag")
+    tagged = @family.categories.create!(name: "Export Tagged Spend", color: "#111111")
+    untagged = @family.categories.create!(name: "Export Untagged Spend", color: "#222222")
+    create_transaction(account: accounts(:depository), name: "Tagged", amount: 10, category: tagged, tags: [ tag ])
+    create_transaction(account: accounts(:depository), name: "Untagged", amount: 20, category: untagged)
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly, start_date: Date.current.beginning_of_month,
+                                         end_date: Date.current.end_of_month, filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    assert_match(/Export Tagged Spend/, @response.body)
+    assert_no_match(/Export Untagged Spend/, @response.body)
+  end
+
+  test "biggest expenses lists the period's largest expenses first and marks one-time ones" do
+    category = @family.categories.create!(name: "Big Repairs", color: "#222222")
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+    create_transaction(name: "Garage invoice", amount: 1_200, date: BIGGEST_MONTH + 2, category: category, kind: "one_time")
+    create_transaction(name: "Coffee", amount: 4, date: BIGGEST_MONTH + 3)
+    create_transaction(name: "Salary", amount: -3_000, date: BIGGEST_MONTH + 4)
+    create_transaction(name: "Hidden refund", amount: 2_000, date: BIGGEST_MONTH + 5).update!(excluded: true)
+    create_transaction(name: "Move to savings", amount: 2_500, date: BIGGEST_MONTH + 6, kind: "funds_movement")
+    create_transaction(name: "Card payoff", amount: 2_600, date: BIGGEST_MONTH + 7, kind: "cc_payment")
+
+    get biggest_expenses_reports_path
+
+    assert_response :ok
+    assert_equal [ "Garage invoice", "Rent", "Coffee" ], biggest_expense_names
+    assert_select "[data-section-key=biggest_expenses] tbody tr:first-child", text: /One-time/
+    assert_select "[data-section-key=biggest_expenses] tbody tr:first-child", text: /Big Repairs/
+    assert_select "[data-section-key=biggest_expenses] tbody tr:nth-child(2)", text: /One-time/, count: 0
+  end
+
+  test "biggest expenses leaves out trades" do
+    security = securities(:aapl)
+    create_trade(security, account: accounts(:investment), qty: 100, date: BIGGEST_MONTH + 1, price: 500)
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+
+    get biggest_expenses_reports_path
+
+    assert_equal [ "Rent" ], biggest_expense_names
+  end
+
+  test "biggest expenses follows the count investing as spending setting" do
+    create_transaction(name: "Brokerage deposit", amount: 1_000, date: BIGGEST_MONTH + 1, kind: "investment_contribution")
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+
+    @family.update!(investment_contributions_as_spending: true)
+    get biggest_expenses_reports_path
+    assert_equal [ "Brokerage deposit", "Rent" ], biggest_expense_names
+
+    @family.update!(investment_contributions_as_spending: false)
+    get biggest_expenses_reports_path
+    assert_equal [ "Rent" ], biggest_expense_names
+  end
+
+  # Some importers store loan payments and contributions as negative amounts;
+  # the income statement counts them as expenses either way.
+  test "biggest expenses keeps negative loan payments and contributions as expenses" do
+    @family.update!(investment_contributions_as_spending: true)
+    create_transaction(name: "Imported contribution", amount: -1_500, date: BIGGEST_MONTH + 1, kind: "investment_contribution")
+    create_transaction(name: "Imported loan payment", amount: -700, date: BIGGEST_MONTH + 1, kind: "loan_payment")
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+    create_transaction(name: "Refund", amount: -2_000, date: BIGGEST_MONTH + 1)
+
+    get biggest_expenses_reports_path
+
+    assert_equal [ "Imported contribution", "Rent", "Imported loan payment" ], biggest_expense_names
+    assert_select "[data-section-key=biggest_expenses] tbody tr:first-child", text: /\$1,500\.00/
+  end
+
+  test "biggest expenses ranks a foreign-currency expense by its converted amount" do
+    eur = @family.accounts.create!(owner: @user, name: "Paris", balance: 0, currency: "EUR", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: BIGGEST_MONTH + 2, rate: 2)
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+    create_transaction(account: eur, name: "Paris hotel", amount: 600, currency: "EUR", date: BIGGEST_MONTH + 2)
+
+    get biggest_expenses_reports_path
+
+    assert_equal [ "Paris hotel", "Rent" ], biggest_expense_names
+    assert_select "[data-section-key=biggest_expenses] tbody tr:first-child", text: /\$1,200\.00/
+  end
+
+  test "biggest expenses shows as many rows as the user chose" do
+    12.times { |i| create_transaction(name: "Expense #{i}", amount: 100 + i, date: BIGGEST_MONTH + 1) }
+
+    get biggest_expenses_reports_path
+    assert_equal 10, biggest_expense_names.size
+    assert_select "[data-section-key=biggest_expenses] summary [aria-pressed=true]", text: "10"
+
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_biggest_expenses_limit" => 5))
+    get biggest_expenses_reports_path
+    assert_equal (7..11).map { |i| "Expense #{i}" }.reverse, biggest_expense_names
+  end
+
+  test "biggest expenses applies the tag filter" do
+    tag = @family.tags.create!(name: "Holiday")
+    create_transaction(name: "Flight", amount: 400, date: BIGGEST_MONTH + 1, tags: [ tag ])
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+
+    get biggest_expenses_reports_path(filter_tag_ids: [ tag.id ])
+
+    assert_equal [ "Flight" ], biggest_expense_names
+  end
+
+  test "biggest expenses is hidden when the period has no expenses" do
+    create_transaction(name: "Salary", amount: -3_000, date: BIGGEST_MONTH + 1)
+
+    get biggest_expenses_reports_path
+
+    assert_response :ok
+    assert_select "[data-section-key=biggest_expenses]", count: 0
+  end
+
+  test "the printed report lists the biggest expenses" do
+    create_transaction(name: "Garage invoice", amount: 1_200, date: BIGGEST_MONTH + 2, kind: "one_time")
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+
+    get print_reports_path(period_type: :custom, start_date: BIGGEST_MONTH, end_date: BIGGEST_MONTH.end_of_month)
+
+    assert_response :ok
+    section = css_select("section").find { |node| node.text.include?(I18n.t("reports.print.biggest_expenses.title")) }
+    assert section, "the biggest expenses section is printed"
+    rows = section.css("tbody tr").map(&:text)
+    assert_match(/Garage invoice\s+One-time/, rows.first)
+    assert_match(/Rent/, rows.second)
+  end
+
+  test "the reports preferences endpoint stores an offered biggest expenses limit only" do
+    patch update_preferences_reports_path, params: { preferences: { reports_biggest_expenses_limit: 25 } }, as: :json
+    assert_response :ok
+    assert_equal 25, @user.reload.reports_biggest_expenses_limit
+
+    patch update_preferences_reports_path, params: { preferences: { reports_biggest_expenses_limit: 7 } }, as: :json
+    assert_response :ok
+    assert_equal 25, @user.reload.preferences["reports_biggest_expenses_limit"]
+
+    patch update_preferences_reports_path, params: { preferences: { reports_biggest_expenses_limit: "abc" } }, as: :json
+    assert_response :ok
+    assert_equal 25, @user.reload.preferences["reports_biggest_expenses_limit"]
+  end
+
   private
+    def biggest_expenses_reports_path(**params)
+      reports_path(period_type: :custom, start_date: BIGGEST_MONTH, end_date: BIGGEST_MONTH.end_of_month, **params)
+    end
+
+    def biggest_expense_names
+      css_select("[data-section-key=biggest_expenses] tbody tr td:first-child a").map { |node| node.text.strip }
+    end
+
+    # Travel, Work and Other tags on a month of their own, away from the
+    # fixture transactions, with expenses of $30 (travel), $50 (work), $20
+    # (both) and $1,000 (other), and income of $10 (travel) and $500 (none).
+    def seed_tagged_month
+      travel = @family.tags.create!(name: "Travel")
+      work = @family.tags.create!(name: "Work")
+      other = @family.tags.create!(name: "Other")
+      account = accounts(:depository)
+      date = TAGGED_MONTH + 9.days
+
+      create_transaction(account: account, date: date, name: "Hotel", amount: 30, tags: [ travel ])
+      create_transaction(account: account, date: date, name: "Laptop stand", amount: 50, tags: [ work ])
+      create_transaction(account: account, date: date, name: "Airport lunch", amount: 20, tags: [ travel, work ])
+      create_transaction(account: account, date: date, name: "Rent", amount: 1000, tags: [ other ])
+      create_transaction(account: account, date: date, name: "Refund", amount: -10, tags: [ travel ])
+      create_transaction(account: account, date: date, name: "Salary", amount: -500)
+
+      [ travel, work, other ]
+    end
+
+    # The figure on the summary card headed by label.
+    def summary_value(label)
+      heading = css_select("h3").find { |node| node.text.strip == label }
+      heading.ancestors("div.bg-container").first.at_css("p.text-2xl").text.strip
+    end
+
     # Takes every fixture investment account out of the card's scope, so an
     # account the test creates is the family's only one; otherwise the
     # fixtures satisfy the visible-accounts gate on their own.

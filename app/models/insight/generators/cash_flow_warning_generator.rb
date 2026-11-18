@@ -65,7 +65,8 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         # bucket of the low point are material; display values live in `facts`.
         metadata: {
           negative: low_point.negative?,
-          projected_low_bucket: (round(low_point, 0).to_i / 250) * 250
+          projected_low_bucket: (round(low_point, 0).to_i / 250) * 250,
+          accounts_digest: shared_accounts_digest
         },
         period: Period.custom(start_date: Date.current, end_date: Date.current + HORIZON_DAYS),
         dedup_key: "cash_flow_warning:#{month_token}"
@@ -75,7 +76,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
 
   private
     def cash_accounts
-      family.accounts.visible.where(accountable_type: "Depository", currency: family.currency)
+      shared_accounts.visible.where(accountable_type: "Depository", currency: family.currency)
     end
 
     # Projected occurrences of known recurring transactions within the horizon.
@@ -103,6 +104,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         .open_status
         .joins(:recurring_transaction)
         .where(recurring_transactions: { status: :active, destination_account_id: nil })
+        .merge(shared_recurring_transactions)
         .where("recurring_transactions.amount > 0")
         .where(currency: family.currency)
         .where(due_on: Date.current..(Date.current + HORIZON_DAYS))
@@ -112,11 +114,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
       # remaining_amount reads the confirmed-allocation sum, and this runs
       # nightly for every family: one grouped query instead of one SUM per
       # occurrence in the horizon.
-      sums = RecurringAllocation.confirmed
-                                .where(recurring_occurrence_id: occurrences.map(&:id))
-                                .group(:recurring_occurrence_id)
-                                .sum(:allocated_amount)
-      occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+      RecurringOccurrence.preload_confirmed_allocated(occurrences)
 
       occurrences.map { |occurrence| Obligation.new(date: occurrence.due_on, amount: occurrence.remaining_amount) }
     end

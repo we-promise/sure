@@ -25,6 +25,22 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
                "a recurring one-cent transfer is income by sign and a paycheck by nothing"
   end
 
+  test "recurring transfers between own depository accounts are not bills; debt transfers are" do
+    create_series(name: "Paycheck", amount: -2000, due: Date.current + 3, income: true)
+    expense = create_series(name: "Rent", amount: 500, due: Date.current + 5)
+    to_loan = create_series(name: "Mortgage payment", amount: 300, due: Date.current + 6)
+    to_loan.update!(destination_account: accounts(:loan))
+    to_savings = create_series(name: "To savings", amount: 700, due: Date.current + 7)
+    to_savings.update!(destination_account: accounts(:connected))
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 2)
+    series_ids = plan.flat_map(&:items).map { |item| item.occurrence.recurring_transaction_id }.uniq
+
+    assert_includes series_ids, expense.id
+    assert_includes series_ids, to_loan.id
+    assert_not_includes series_ids, to_savings.id
+  end
+
   test "periods slice by paycheck and apportion bills to their due dates" do
     first_payday = Date.current + 3
     create_series(name: "Paycheck", amount: -1840, due: first_payday, preset: "weekly", income: true)
