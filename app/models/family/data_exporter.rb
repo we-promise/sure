@@ -61,8 +61,30 @@ class Family::DataExporter
       TEXT
     end
 
-    def generate_accounts_csv
+    # Wraps a CSV writer so every row emitted is escaped against formula
+    # injection. Wrapping the writer rather than each call site means a column
+    # added later cannot go out unescaped by accident, which is exactly how the
+    # ticker and subtype columns were missed before.
+    class SanitizedCsv
+      def initialize(csv)
+        @csv = csv
+      end
+
+      def <<(row)
+        @csv << CsvSanitizer.sanitize_row(row)
+      end
+    end
+
+    private_constant :SanitizedCsv
+
+    def generate_sanitized_csv
       CSV.generate do |csv|
+        yield SanitizedCsv.new(csv)
+      end
+    end
+
+    def generate_accounts_csv
+      generate_sanitized_csv do |csv|
         csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ]
 
         # Only export accounts belonging to this family
@@ -81,7 +103,7 @@ class Family::DataExporter
     end
 
     def generate_transactions_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << TRANSACTIONS_CSV_HEADERS
 
         # Only export transactions from accounts belonging to this family
@@ -108,7 +130,7 @@ class Family::DataExporter
     end
 
     def generate_trades_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency" ]
 
         # Only export trades from accounts belonging to this family
@@ -129,7 +151,7 @@ class Family::DataExporter
     end
 
     def generate_categories_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << [ "name", "color", "parent_category", "lucide_icon" ]
 
         # Only export categories belonging to this family
@@ -145,7 +167,7 @@ class Family::DataExporter
     end
 
     def generate_merchants_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         # Headers match MerchantImport's expected columns so the export round-trips
         csv << [ "name", "color", "website_url" ]
 
@@ -161,7 +183,7 @@ class Family::DataExporter
     end
 
     def generate_rules_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << [ "name", "resource_type", "active", "effective_date", "conditions", "actions", "group" ]
 
         # Only export rules belonging to this family, in run order so an
@@ -248,13 +270,20 @@ class Family::DataExporter
 
       # Export accounts with full accountable data
       @family.accounts.includes(:accountable).find_each do |account|
+        data = account.as_json(
+          include: {
+            accountable: {}
+          }
+        )
+        # A property's address lives in its own table, so it is not part of
+        # the accountable's columns.
+        if account.accountable.is_a?(Property) && (address = account.accountable.address)
+          data["accountable"]["address"] = address.as_json(only: Family::DataImporter::PROPERTY_ADDRESS_ATTRIBUTES)
+        end
+
         lines << {
           type: "Account",
-          data: account.as_json(
-            include: {
-              accountable: {}
-            }
-          )
+          data: data
         }.to_json
       end
 
@@ -590,7 +619,7 @@ class Family::DataExporter
       if parent_entry.association(:child_entries).loaded?
         parent_entry.child_entries.sort_by { |entry| [ entry.created_at, entry.id ] }
       else
-        parent_entry.child_entries.order(:created_at, :id).to_a
+        parent_entry.child_entries.in_split_order.to_a
       end
     end
 

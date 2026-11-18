@@ -1,9 +1,11 @@
 class PlaidAccount::Investments::HoldingsProcessor
   # `as_of` is the sync's date. Every holding in the snapshot is dated by it,
-  # as the balance anchor is (PlaidAccount::Processor#balance_date).
-  def initialize(plaid_account, security_resolver:, as_of: Date.current)
+  # as the balance anchor is (PlaidAccount::Processor#balance_date). `currency`
+  # is the account's currency, used for a holding Plaid gives none for.
+  def initialize(plaid_account, security_resolver:, currency: nil, as_of: Date.current)
     @plaid_account = plaid_account
     @security_resolver = security_resolver
+    @currency = currency
     @as_of = as_of
   end
 
@@ -54,7 +56,7 @@ class PlaidAccount::Investments::HoldingsProcessor
         # Skip if essential values are missing
         next if quantity_bd.nil? || price_bd.nil?
 
-        currency = plaid_holding["iso_currency_code"] || account.currency
+        currency = plaid_holding["iso_currency_code"] || @currency || account.currency
         # Compute amount using BigDecimal arithmetic to avoid floating point drift
         amount_bd = quantity_bd * price_bd
 
