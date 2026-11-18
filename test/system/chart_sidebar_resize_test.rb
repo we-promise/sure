@@ -505,28 +505,26 @@ class ChartSidebarResizeTest < ApplicationSystemTestCase
     page.driver.browser.manage.window.resize_to(1100, 900) rescue nil
   end
 
-  # Opening or closing a sidebar animates its width; keyboard resizing and
-  # resetting max-width apply immediately. The animated toggle must redraw
-  # the chart at its end, not a settle delay after the sidebar has stopped.
-  test "a sidebar toggle redraws the chart as its width animation ends" do
-    page.execute_script(<<~JS)
+  # Resizing a sidebar from the keyboard (or resetting it) changes its
+  # max-width, which animates too: its end must redraw the chart at once, not
+  # a settle delay after the sidebar has stopped.
+  test "a sidebar's max-width animation redraws the chart as it ends" do
+    result = page.evaluate_async_script(<<~JS)
+      const done = arguments[0];
       const chart = document.querySelector("#{NET_WORTH}");
       const sidebar = document.querySelector("[data-app-layout-target='leftSidebar']");
-      window.__sidebarResize = { ended: null, drawn: null };
-      sidebar.addEventListener("transitionend", (event) => {
-        if (event.target === sidebar && event.propertyName === "width") window.__sidebarResize.ended ??= performance.now();
-      });
+      let ended = null; let drawn = null;
+      sidebar.addEventListener("transitionend", (event) => { if (event.propertyName === "max-width") ended ??= performance.now(); });
       new MutationObserver((mutations) => {
-        const result = window.__sidebarResize;
-        if (result.ended !== null && result.drawn === null && mutations.some((m) => Array.from(m.addedNodes).some((n) => n.nodeName === "svg"))) result.drawn = performance.now();
+        if (ended !== null && drawn === null && mutations.some((m) => Array.from(m.addedNodes).some((n) => n.nodeName === "svg"))) drawn = performance.now();
       }).observe(chart, { childList: true, subtree: true });
+      // 60px narrower than it is now, as an arrow key or a reset would.
+      const width = Math.round(sidebar.getBoundingClientRect().width) - 60;
+      document.querySelector("[data-controller~='sidebar-resize']").style.setProperty("--left-sidebar-width", `${width}px`);
+      setTimeout(() => done({ ended, drawn }), 1200);
     JS
-    before = net_worth_width
-    toggle_left_sidebar
-    wait_until_settled(changed_from: before)
 
-    result = page.evaluate_script("window.__sidebarResize")
-    assert result["ended"], "the sidebar's width never animated: #{result.inspect}"
+    assert result["ended"], "the sidebar's max-width never animated: #{result.inspect}"
     assert result["drawn"], "the chart was not redrawn after the animation: #{result.inspect}"
     assert_operator result["drawn"] - result["ended"], :<, 80, "the chart waited out the settle delay after the sidebar stopped: #{result.inspect}"
   end
