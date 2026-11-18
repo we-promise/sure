@@ -46,12 +46,11 @@ class Provider::TwelveData < Provider
 
       limit = parsed.dig("plan_daily_limit")
       used = parsed.dig("daily_usage")
-      remaining = limit - used
 
       UsageData.new(
         used: used,
         limit: limit,
-        utilization: used / limit * 100,
+        utilization: used.to_f / limit * 100,
         plan: parsed.dig("plan_category"),
       )
     end

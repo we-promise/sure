@@ -6,6 +6,25 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
   end
 
   # ================================
+  #            Usage Tests
+  # ================================
+
+  test "usage reports fractional utilization below the daily limit" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({ "plan_category" => "basic", "daily_usage" => 400, "plan_daily_limit" => 800 }.to_json)
+
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.usage
+
+    assert result.success?
+    assert_equal 400, result.data.used
+    assert_equal 800, result.data.limit
+    assert_in_delta 50.0, result.data.utilization, 0.001
+  end
+
+  # ================================
   #     Rate Limit Detection Tests
   # ================================
 
