@@ -247,7 +247,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal "DE89370400440532013000", result[:accounts].first.iban # pipelock:ignore IBAN
+    assert_equal "DE89370400440532013000", Account.find(result[:account_ids].first).iban # pipelock:ignore IBAN
   end
 
   test "keeps an existing account iban when a re-imported file omits the key" do
@@ -288,7 +288,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       { type: "Account", data: account_data.merge(id: "old-account-3", name: "Euro", currency: "EUR") }
     ])).import!
 
-    accounts = result[:accounts].index_by(&:name)
+    accounts = Account.where(id: result[:account_ids]).index_by(&:name)
     assert_equal 3, accounts.size
     assert_equal "DE89370400440532013000", accounts["First"].reload.iban # pipelock:ignore IBAN
     assert_nil accounts["Second"].reload.iban
@@ -333,7 +333,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       { type: "Account", data: account_data.merge(id: "old-account-2", name: "Car", accountable_type: "Vehicle", accountable: {}) }
     ])).import!
 
-    accounts = result[:accounts].index_by(&:name)
+    accounts = Account.where(id: result[:account_ids]).index_by(&:name)
     assert_nil accounts["Car"].reload.iban
     assert_nil result[:summary].dig("account_ibans", "skipped")
   end
