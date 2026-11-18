@@ -258,7 +258,7 @@ class InsightsHelperTest < ActionView::TestCase
 
   test "dig in is unavailable when the family's assistant is MCP-only" do
     insight = build_insight("idle_cash")
-    Assistant.stubs(:builtin_provider).returns(mock)
+    Assistant.expects(:builtin_provider).never
     insight.family.stubs(:assistant_enabled?).returns(false)
 
     assert_not insight_dig_in_available?(insight)
@@ -266,7 +266,7 @@ class InsightsHelperTest < ActionView::TestCase
 
   test "dig in is available through a configured external assistant without an LLM provider" do
     insight = build_insight("idle_cash")
-    Assistant.stubs(:builtin_provider).returns(nil)
+    Assistant.expects(:builtin_provider).never
     insight.family.stubs(:effective_assistant_type).returns("external")
     Assistant::External.stubs(:configured?).returns(true)
 
@@ -275,7 +275,7 @@ class InsightsHelperTest < ActionView::TestCase
 
   test "dig in is unavailable when the external assistant is not configured" do
     insight = build_insight("idle_cash")
-    Assistant.stubs(:builtin_provider).returns(mock)
+    Assistant.expects(:builtin_provider).never
     insight.family.stubs(:effective_assistant_type).returns("external")
     Assistant::External.stubs(:configured?).returns(false)
 

@@ -13,7 +13,7 @@ class PdfImportReadingTest < ApplicationSystemTestCase
     VectorStore::Registry.stubs(:adapter).returns(adapter)
   end
 
-  test "an upload is read the way chosen, and a way the route can't do is greyed out" do
+  test "an upload stores the way chosen, and a way the route can't do is greyed out" do
     visit new_import_path(type: "PdfImport")
 
     select = find("select[name='import[read_as]']")

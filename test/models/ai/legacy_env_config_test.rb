@@ -233,6 +233,8 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
 
   test "Anthropic only gets no embed route without an embedding server" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns(nil)   # a host's OPENAI_ACCESS_TOKEN at boot would leak in
+    Setting.stubs(:openai_uri_base).returns(nil)
     config = build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic")
 
     assert_equal :pgvector, config.vector_store_backend, "the chunks table is still provisioned"

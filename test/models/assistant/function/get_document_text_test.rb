@@ -211,6 +211,7 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
   end
 
   test "reports a scan with no text layer as unreadable and names the reason" do
+    use_no_ai   # no model that could read it, whatever the machine running the test has
     statement = create_statement
 
     blank_pages = [ stub(text: "  "), stub(text: "") ]

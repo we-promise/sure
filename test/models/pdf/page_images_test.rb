@@ -3,11 +3,8 @@ require "test_helper"
 # The hardened pdftoppm, ported from the spike's page_images_test with PDFs
 # built to misbehave and stand-in pdftoppm scripts.
 class Pdf::PageImagesTest < ActiveSupport::TestCase
-  setup do
-    skip "pdftoppm isn't installed (poppler-utils)" unless system("pdftoppm", "-v", out: File::NULL, err: File::NULL)
-  end
-
   test "renders every page as a PNG at 150 dpi, a scan included" do
+    skip_without_pdftoppm
     pages = Pdf::PageImages.render(statement("impact_scanned"))
 
     assert_equal 2, pages.size
@@ -17,6 +14,7 @@ class Pdf::PageImagesTest < ActiveSupport::TestCase
   end
 
   test "renders only the pages asked for, so a 300-page upload costs what a batch needs" do
+    skip_without_pdftoppm
     pdf = blank_pdf(pages: 300)
 
     pages, seconds = timed { Pdf::PageImages.render(pdf, pages: 11..15) }
@@ -127,6 +125,10 @@ class Pdf::PageImagesTest < ActiveSupport::TestCase
   end
 
   private
+    def skip_without_pdftoppm
+      skip "pdftoppm isn't installed (poppler-utils)" unless system("pdftoppm", "-v", out: File::NULL, err: File::NULL)
+    end
+
     def statement(name) = file_fixture("statements/#{name}.pdf").binread
 
     # A killed orphan stays a zombie until init reaps it, which can lag under a parallel run;

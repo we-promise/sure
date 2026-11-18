@@ -36,6 +36,13 @@ class AiConfigTest < ActiveSupport::TestCase
   # The instance's choice: Jev for every family when it's chosen and reachable,
   # the preferred LLM otherwise, and the shadow route runs the other one.
 
+  test "C7's LLM_PROVIDER=anthropic picks Anthropic, so its routes are compared against Anthropic's" do
+    in_ai_setup("C7", family: @family) do
+      assert_kind_of Provider::Anthropic, Assistant.builtin_provider
+      assert_equal "anthropic", Ai.plan(:extract_pdf, family: @family, user: @user).route.endpoint.name
+    end
+  end
+
   test "a setup's settings take effect after an earlier setup in the same test, as ai_agreement_test runs them" do
     in_ai_setup("C1", family: @family) { }
 
@@ -64,7 +71,7 @@ class AiConfigTest < ActiveSupport::TestCase
     broken = OPENAI.merge(ANTHROPIC).merge("LLM_PROVIDER" => "anthropic", "ANTHROPIC_BASE_URL" => "https://gateway.example.test")
 
     with_env_overrides(CONTROLLED.index_with { nil }.merge(broken)) do
-      assert_raises(Provider::Error) { Provider::Registry.get_provider(:anthropic) }
+      assert_raises(Provider::Error) { Assistant.builtin_provider }   # stops at the broken preferred provider
       (LLM_FEATURES + %i[categorize]).each { |feature| assert_nil Ai.plan(feature, family: @family, user: @user), feature }
     end
   end

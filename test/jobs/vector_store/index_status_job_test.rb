@@ -57,6 +57,16 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     assert_equal "error", @document.reload.status
   end
 
+  test "a status request that fails leaves the document processing and polls again, then records the outcome" do
+    @adapter.expects(:file_status).returns(VectorStore::Response.new(success?: false, data: nil, error: VectorStore::Error.new("503")))
+    assert_enqueued_with(job: VectorStore::IndexStatusJob, args: [ @document, 2 ]) { VectorStore::IndexStatusJob.perform_now(@document) }
+    assert_equal "processing", @document.reload.status
+
+    expect_status("ready")
+    VectorStore::IndexStatusJob.perform_now(@document, 2)
+    assert_equal "ready", @document.reload.status
+  end
+
   test "deleting the family deletes its store" do
     @adapter.expects(:delete_store).with(store_id: "vs_abc123").returns(VectorStore::Response.new(success?: true, data: nil, error: nil))
 

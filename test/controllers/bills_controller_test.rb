@@ -2681,15 +2681,14 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   test "the bill drawer offers smart configure only when AI is available" do
     bill = create_bill(name: "Power Co", amount: 80)
 
-    Assistant.stubs(:builtin_provider).returns(Object.new)
-
+    # The router decides, never the chat provider: each request has the opposite of the other.
+    Assistant.stubs(:builtin_provider).returns(nil)
     use_ai_routes
     get_bill_drawer(bill)
     assert_response :success
     assert_match smart_configuration_bill_path(bill), response.body
 
-    Assistant.stubs(:builtin_provider).returns(nil)
-
+    Assistant.stubs(:builtin_provider).returns(Object.new)
     use_no_ai
     get_bill_drawer(bill)
     assert_response :success

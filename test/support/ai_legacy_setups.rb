@@ -5,7 +5,7 @@ module AiLegacySetups
   # Cleared in every setup, so the host's environment can't leak in.
   CONTROLLED = %w[
     OPENAI_ACCESS_TOKEN OPENAI_URI_BASE OPENAI_MODEL ANTHROPIC_ACCESS_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL
-    ANTHROPIC_MODEL LLM_PROVIDER JEV_API_KEY JEV_ENDPOINT JEV_MODEL JEV_CONCURRENCY CATEGORIZATION_PROVIDER VECTOR_STORE_PROVIDER
+    ANTHROPIC_MODEL LLM_PROVIDER OPENAI_SUPPORTS_PDF_PROCESSING JEV_API_KEY JEV_ENDPOINT JEV_MODEL JEV_CONCURRENCY CATEGORIZATION_PROVIDER VECTOR_STORE_PROVIDER
     ASSISTANT_TYPE EMBEDDING_URI_BASE EMBEDDING_ACCESS_TOKEN EMBEDDING_MODEL EXTERNAL_ASSISTANT_URL
     EXTERNAL_ASSISTANT_TOKEN EXTERNAL_ASSISTANT_MODEL EXTERNAL_ASSISTANT_ALLOWED_EMAILS
   ].freeze
@@ -45,6 +45,8 @@ module AiLegacySetups
     # ENV here can't undo: the ones the setup doesn't name read as unset, for this setup only, so a
     # later setup in the same test reads its own.
     unset = Ai::LegacyEnvConfig::SETTING_FIELDS - settings.keys
+    # llm_provider's stored value only: Setting.llm_provider still reads LLM_PROVIDER first.
+    unset = unset.map { _1 == :llm_provider ? :raw_llm_provider : _1 }
     unset.each { Setting.stubs(_1).returns(nil) }
     settings.each { |field, value| Setting.public_send("#{field}=", value) }
     family.update!(family_attributes) if family_attributes.any?

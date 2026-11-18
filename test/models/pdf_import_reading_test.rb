@@ -61,13 +61,16 @@ class PdfImportReadingTest < ActiveSupport::TestCase
     @import.update!(read_with: "text", extraction_checks: { "passed" => false }, extracted_data: { "transactions" => [] })
     @import.stubs(:pdf_uploaded?).returns(true)
     @import.stubs(:pdf_reading).returns(stub(ways: { images: nil }))
+    row = @import.rows.create!(source_row_number: 1, date: "01/15/2024", amount: "-50.00", name: "Coffee Shop", currency: "USD")
 
     assert_enqueued_with(job: ProcessPdfJob, args: [ @import, { reread: true } ]) { assert @import.reread!("images") }
 
     @import.reload
     assert_equal "images", @import.read_as
     assert_equal "importing", @import.status
+    assert Import::Row.exists?(row.id), "kept until the job starts"
     @import.clear_reading!
+    assert_not Import::Row.exists?(row.id)
     assert_equal 0, @import.reload.rows.count
     assert_nil @import.ai_summary
     assert_nil @import.extraction_checks

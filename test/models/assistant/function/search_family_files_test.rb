@@ -302,14 +302,17 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_not @function.respond_to?(:create_langfuse_trace, true)
   end
 
-  test "without the user's consent it falls back to metadata search, saying the router's reason" do
+  test "a search route whose model can't embed falls back to metadata search, saying the router's reason" do
     @user.family.update!(vector_store_id: "vs_test123")
-    Ai::Router.any_instance.stubs(:resolve).returns(Ai::Availability.unavailable(:search_documents, :no_user_consent))
+    use_ai_routes(embed: %w[gpu/qwen3-8b])   # a chat model: no `embedding`
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:search).never
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
 
     result = @function.call("query" => "tax return")
 
     assert_equal "metadata_only", result[:search_mode]
-    assert_equal "no_user_consent", result[:reason]
+    assert_equal "capability_missing", result[:reason]
     assert_no_match(/No documents have been uploaded/i, result[:message])
   end
 end

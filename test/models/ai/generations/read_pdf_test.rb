@@ -9,12 +9,14 @@ class Ai::Generations::ReadPdfTest < ActiveSupport::TestCase
   end
 
   test "sends today's instructions with the text layer, and reads the first batch only" do
+    use_ai_model_settings(batch_size: 1)   # two batches, so batches: 1 has one to leave
     requests = stub_ai(:extract_pdf, returns: { document_type: "bank_statement", summary: "A statement", extracted_data: nil })
     units = [ Ai::PdfReading::Unit.text("page one", page: 1), Ai::PdfReading::Unit.text("page two", page: 2) ]
 
     result = generation(units).call(batches: 1)
 
     assert result.success?
+    assert_equal [ units.last ], result.remaining
     assert_equal "bank_statement", result.value[:document_type]
     assert_match "You are a financial document analysis assistant", requests.sole.instructions
     assert_match "--- Page 1 ---\npage one", requests.sole.input

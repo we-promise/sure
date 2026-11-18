@@ -231,15 +231,20 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
   test "read gives what the document is, from the first batch" do
     requests = stub_ai(:extract_pdf, returns: { document_type: "bank_statement", summary: "YourBank, February 2019",
                                                 extracted_data: { institution_name: "YourBank", currency: "GBP" } })
+    reader = reading(@bac)
+    units = [ Ai::PdfReading::Unit.text("PAGE ONE", page: 1), Ai::PdfReading::Unit.text("PAGE TWO", page: 2) ]
+    reader.stubs(:units_for).returns([ units, "PAGE ONE\nPAGE TWO" ])
 
-    with_reading_routes(text_model) do
-      outcome = reading(@bac).read
+    with_reading_routes(text_model.with(batch_size: 1)) do
+      outcome = reader.read
 
       assert_equal "bank_statement", outcome.value[:document_type]
       assert_equal "YourBank", outcome.value.dig(:extracted_data, :institution_name)
       assert_equal :text, outcome.way
     end
     assert_match "Please analyze the following document text", requests.sole.input
+    assert_includes requests.sole.input, "PAGE ONE"
+    assert_not_includes requests.sole.input, "PAGE TWO"
   end
 
   test "pages that can't be rendered move Auto on, keeping the extraction in hand" do
