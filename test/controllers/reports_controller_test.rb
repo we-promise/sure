@@ -1075,7 +1075,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     get reports_path
     assert_response :ok
-    assert_select "#liquidity-releases td", text: /Term deposit/
+    assert_select "#liquidity-releases th", text: /Term deposit/
   end
 
   # The card was gated on `investment_accounts`, which is visible accounts

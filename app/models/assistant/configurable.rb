@@ -165,7 +165,14 @@ module Assistant::Configurable
         return "" unless account.asset? && !account.available_on?
 
         release = account.next_release_date
-        release ? ", locked until #{release.iso8601}" : ", #{account.liquidity.tr("_", "-")}"
+        if release.nil?
+          ", #{account.liquidity.tr("_", "-")}"
+        elsif account.auto_renew?
+          # The date is a rollover: the money locks again unless cancelled.
+          ", locked, renews automatically on #{release.iso8601}"
+        else
+          ", locked until #{release.iso8601}"
+        end
       end
 
       def categories_context(user)

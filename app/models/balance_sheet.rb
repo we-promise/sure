@@ -56,7 +56,15 @@ class BalanceSheet
 
   # Available net worth over time: release dates are evaluated per day with
   # today's classification.
+  # Stops at the family's today: a period that ends later (a custom month
+  # start, a custom range) would otherwise count a locked deposit as released
+  # on its future release date, a gain that has not happened.
   def available_net_worth_series(period: Period.last_30_days)
+    today = Account.liquidity_today_for(family)
+    if period.end_date > today && period.start_date <= today
+      period = Period.custom(start_date: period.start_date, end_date: today)
+    end
+
     net_worth_series_builder.available_net_worth_series(period: period)
   end
 

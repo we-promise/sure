@@ -114,6 +114,20 @@ class BalanceSheet::LiquidityOverviewTest < ActiveSupport::TestCase
     assert_equal 5_800, values.fetch(period.end_date)
   end
 
+  test "available net worth series stops at today" do
+    period = Period.custom(start_date: Date.current - 2.days, end_date: Date.current + 10.days)
+    checking = create_account(name: "Checking", balance: 1_000, accountable: Depository.new(subtype: "checking"))
+    deposit = create_locked("Term deposit", 5_000, Date.current + 5.days)
+    [ checking, deposit ].each do |account|
+      (Date.current - 2.days).upto(Date.current) { |date| create_balance(account: account, date: date, balance: account.balance) }
+    end
+
+    values = BalanceSheet.new(@family).available_net_worth_series(period: period).values
+
+    assert_equal Date.current, values.map(&:date).max
+    assert_equal [ 1_000 ], values.map { |value| value.value.amount }.uniq
+  end
+
   test "converts accounts in another currency to the family currency" do
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.25)
     create_account(name: "Checking", balance: 1_000, accountable: Depository.new(subtype: "checking"))

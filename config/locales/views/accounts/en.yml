@@ -229,6 +229,7 @@ en:
         short_term: Available at short notice
         locked: Locked
         locked_until: "Locked until %{date}"
+        renews_on: "Locked, renews %{date}"
         long_term: Locked long-term
       form:
         heading: Availability
@@ -261,6 +262,7 @@ en:
           user: Set by you
           tax_treatment: Follows the tax treatment
           liquidity: Follows the availability
+          excluded_from_reports: The account is excluded from reports
     tax_treatments:
       taxable: Taxable
       tax_deferred: Tax-Deferred

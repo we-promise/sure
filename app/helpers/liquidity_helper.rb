@@ -24,6 +24,20 @@ module LiquidityHelper
     t("liquidity.remaining.days", count: release.days)
   end
 
+  LiquidityReleaseTableRow = Data.define(:release, :year, :amount) do
+    def total? = release.nil?
+  end
+
+  # The release table's rows: the releases of each year followed by that
+  # year's total, flat, so DS::Table renders them as one list.
+  def liquidity_release_table_rows(overview)
+    totals = overview.releases_by_year
+    overview.releases.group_by { |release| release.date.year }.flat_map do |year, releases|
+      releases.map { |release| LiquidityReleaseTableRow.new(release: release, year: year, amount: release.amount) } +
+        [ LiquidityReleaseTableRow.new(release: nil, year: year, amount: totals[year]) ]
+    end
+  end
+
   # Width (percent) of a bar relative to the largest value in the set.
   def liquidity_bar_width(amount, max)
     return 0 unless max.positive? && amount.positive?

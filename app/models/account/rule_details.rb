@@ -57,16 +57,25 @@ class Account::RuleDetails
       Row.new(key: :tax_treatment, value: account.tax_treatment, source: source)
     end
 
-    # Whether the account's transactions count as income and spending.
+    # Whether the account's transactions count as income and spending: the
+    # same rules as IncomeStatement#eligible_accounts.
     def budget_row
+      return excluded_row(:counts_in_budget) if account.exclude_from_reports?
+
       Row.new(key: :counts_in_budget, value: !account.tax_advantaged?, source: :tax_treatment)
     end
 
     # Whether the balance counts as money for this month's budget ("really
-    # free"): only immediately available assets do.
+    # free"): only immediately available assets do, as in the preview's
+    # Account.immediate_assets_on.
     def budget_cash_row
       return nil unless account.asset?
+      return excluded_row(:counts_as_budget_cash) if account.exclude_from_reports?
 
       Row.new(key: :counts_as_budget_cash, value: account.effective_liquidity(date) == "immediate", source: :liquidity)
+    end
+
+    def excluded_row(key)
+      Row.new(key: key, value: false, source: :excluded_from_reports)
     end
 end
