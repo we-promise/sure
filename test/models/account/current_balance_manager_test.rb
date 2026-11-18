@@ -487,10 +487,9 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     end
   end
 
-  # `current_anchor_valuation` picks the newest of several anchor rows, but max_by over an
-  # unordered query needs an explicit tiebreak to resolve a same-date tie. Duplicates are
-  # reachable: the only guard is Entry's app-level date uniqueness validation (no DB index).
-  test "current anchor lookup resolves a same-date duplicate to the newest row" do
+  # A second in-flight sync can pass Entry's date validation before the first commits, so
+  # the database itself must refuse a second anchor row for the same account and date.
+  test "database rejects a second current anchor on the same date" do
     anchor_name = Valuation.build_current_anchor_name(@linked_account.accountable_type)
 
     @linked_account.entries.create!(
@@ -501,8 +500,6 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
       entryable: Valuation.new(kind: "current_anchor")
     )
 
-    # How such a row exists in production: pre-dating the validation, inserted via raw SQL,
-    # or written by a second in-flight transaction that could not see the first one commit.
     duplicate = @linked_account.entries.new(
       date: Date.current,
       name: anchor_name,
@@ -510,14 +507,10 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
       currency: "USD",
       entryable: Valuation.new(kind: "current_anchor")
     )
-    duplicate.save!(validate: false)
 
-    assert_equal 2, @linked_account.valuations.current_anchor.count
-
-    manager = Account::CurrentBalanceManager.new(@linked_account)
-
-    assert_equal 9999, manager.current_balance,
-      "with two anchors tied on date the newest row must win"
+    assert_raises(ActiveRecord::RecordNotUnique) { duplicate.save!(validate: false) }
+    assert_equal 1, @linked_account.valuations.current_anchor.count
+    assert_equal 100, Account::CurrentBalanceManager.new(@linked_account).current_balance
   end
 
   test "preserves a stale anchor when the explaining window mixes currencies" do
