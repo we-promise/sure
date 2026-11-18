@@ -3,13 +3,25 @@ module Security::Provided
 
   SecurityInfoMissingError = Class.new(StandardError)
 
+  # Needs no API key, so it can stand in for an enabled provider that can't be built
+  KEYLESS_FALLBACK_PROVIDER = "yahoo_finance"
+
   class_methods do
-    # Returns all enabled and configured securities providers
+    # Returns all enabled and configured securities providers. When the first
+    # enabled provider can't be built (e.g. no API key), the keyless Yahoo
+    # Finance provider takes its place, unless that is already enabled. Only
+    # the first position is substituted, so the substitute is always the
+    # default for securities without an assigned provider.
     def providers
-      Setting.enabled_securities_providers.filter_map do |name|
-        Provider::Registry.for_concept(:securities).get_provider(name.to_sym)
-      rescue Provider::Registry::Error
-        nil
+      names = Setting.enabled_securities_providers
+      substitute = !names.include?(KEYLESS_FALLBACK_PROVIDER)
+
+      names.each_with_index.filter_map do |name, index|
+        provider = build_provider(name)
+        next provider if provider || !substitute || index.positive?
+
+        log_keyless_substitution(name)
+        build_provider(KEYLESS_FALLBACK_PROVIDER)
       end
     end
 
@@ -84,17 +96,26 @@ module Security::Provided
         end
 
         provider_key = provider_key_for(active_providers[idx])
+        # The keyless substitute's key is never stored, so a security found
+        # through it follows providers.first and moves to the configured
+        # provider once that can be built. Its ticker is stored without Yahoo's
+        # exchange suffix (SAP.DE becomes SAP on XETR), so that provider gets
+        # the symbol it expects; Yahoo re-adds the suffix from the MIC.
+        keyless_substitute = provider_key == KEYLESS_FALLBACK_PROVIDER && !Setting.enabled_securities_providers.include?(KEYLESS_FALLBACK_PROVIDER)
+        provider_key = nil if keyless_substitute
 
         provider_results.each do |ps|
+          ticker = keyless_substitute ? strip_yahoo_suffix(ps[:symbol], ps[:exchange_operating_mic]) : ps[:symbol]
+
           # Dedup key includes provider so the same ticker on the same exchange can
           # appear once per provider — the user picks which provider's price feed
           # they want and that choice is stored in price_provider.
-          dedup_key = "#{ps[:symbol]}|#{ps[:exchange_operating_mic]}|#{provider_key}".upcase
+          dedup_key = "#{ticker}|#{ps[:exchange_operating_mic]}|#{provider_key}".upcase
           next if seen_keys.include?(dedup_key)
           seen_keys.add(dedup_key)
 
           security = Security.new(
-            ticker: ps[:symbol],
+            ticker: ticker,
             name: ps[:name],
             logo_url: ps[:logo_url],
             exchange_operating_mic: ps[:exchange_operating_mic],
@@ -115,6 +136,24 @@ module Security::Provided
     end
 
     private
+      def build_provider(name)
+        Provider::Registry.for_concept(:securities).get_provider(name.to_sym)
+      rescue Provider::Registry::Error
+        nil
+      end
+
+      def strip_yahoo_suffix(symbol, exchange_operating_mic)
+        suffix = Provider::YahooFinance::EXCHANGE_CONFIG.dig(exchange_operating_mic, :yahoo_suffix)
+        suffix && symbol.end_with?(suffix) ? symbol.delete_suffix(suffix) : symbol
+      end
+
+      def log_keyless_substitution(name)
+        @logged_keyless_substitutions ||= Concurrent::Set.new
+        return unless @logged_keyless_substitutions.add?(name)
+
+        Rails.logger.info("Securities provider #{name} can't be built; using #{KEYLESS_FALLBACK_PROVIDER} in its place")
+      end
+
       def provider_key_for(provider_instance)
         provider_instance.class.name.demodulize.underscore
       end
