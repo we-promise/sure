@@ -2328,6 +2328,33 @@ end
     assert_equal [ tags(:one).id ], @entry.entryable.reload.tag_ids
   end
 
+  test "update keeps existing tags when every tag id belongs to another family" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ])
+    foreign_tag = families(:empty).tags.create!(name: "Foreign Tag")
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        entryable_attributes: { id: @entry.entryable_id, tag_ids: [ foreign_tag.id ] }
+      }
+    }
+
+    assert_equal [ tags(:one).id ], @entry.entryable.reload.tag_ids
+  end
+
+  test "update with an explicitly empty tag list still clears tags" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ])
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        entryable_attributes: { id: @entry.entryable_id, tag_ids: [ "" ] }
+      }
+    }
+
+    assert_empty @entry.entryable.reload.tag_ids
+  end
+
   test "an annotate-only member cannot set a category or merchant from another family" do
     accounts(:depository).account_shares.find_or_initialize_by(user: users(:family_member)).update!(permission: "read_write")
     sign_in users(:family_member)

@@ -697,7 +697,7 @@ class TransactionsController < ApplicationController
     # The ids arrive straight from the form, so resolve them through the family
     # (Family::TransactionReferences). A foreign category or merchant is a 404,
     # as in the categorize flow, unless the caller only re-renders the form;
-    # foreign tag ids are dropped, as in #update_tags. A merchant id that is
+    # foreign tag ids are dropped, as in the bulk update. A merchant id that is
     # already on the transaction is kept without a lookup: the drawer resends it
     # with every unrelated change.
     def scope_entryable_associations!(attrs, foreign_references:)
@@ -710,7 +710,17 @@ class TransactionsController < ApplicationController
       end
 
       if attrs.key?(:tag_ids)
-        attrs[:tag_ids] = Current.family.transaction_tag_ids_for(attrs[:tag_ids])
+        requested_tag_ids = Array(attrs[:tag_ids]).compact_blank
+        tag_ids = Current.family.transaction_tag_ids_for(requested_tag_ids)
+
+        # Tags were requested but none belong to this family: leave the
+        # transaction's tags alone, as the bulk update does. An explicitly
+        # empty list still clears them.
+        if requested_tag_ids.any? && tag_ids.empty?
+          attrs.delete(:tag_ids)
+        else
+          attrs[:tag_ids] = tag_ids
+        end
       end
     end
 
