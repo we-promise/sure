@@ -4,6 +4,10 @@ es:
     demo_banner_title: Modo de demostración activo
     demo_banner_message: "Tokens gratuitos para LLM por cortesía de Vercel AI Gateway. Los resultados pueden variar porque cambiamos con frecuencia los pesos de los modelos para realizar pruebas. ¡Consulta la documentación de Vercel para saber adónde van tus conversaciones! 🤖"
     thinking: Procesando ...
+    ai_busy: Estoy terminando una tarea en segundo plano y enseguida me pongo con tu mensaje.
+    reservation:
+      ready_html: He aplazado algunas tareas en segundo plano para ponerme ya con tu mensaje. Volverán dentro de %{countdown} s, ¡así que sigue escribiendo!
+      busy: Estoy terminando una tarea en segundo plano y enseguida soy todo tuyo. ¡Sigue escribiendo!
     worker_unhealthy_warning: 'Puede que las respuestas de la IA no lleguen ahora mismo: el worker en segundo plano parece estar caído o saturado. Comprueba que tu worker de Sidekiq está en marcha.'
     ai_greeting:
       greeting: ¡Hola, %{name}! Soy una IA (modelo de lenguaje) que puede ayudarte con tus finanzas. Tengo acceso a la web y a los datos de tu cuenta.
@@ -28,6 +32,8 @@ es:
     index:
       chats: Chats
       new_chat: Nuevo chat
+    new:
+      default_title: Nuevo chat %{timestamp}
     update:
       success: Chat actualizado
     ai_consent:

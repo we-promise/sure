@@ -4,6 +4,8 @@ class SureImport < Import
 
   DEFAULT_MAX_NDJSON_SIZE_MB = 10
   DEFAULT_MAX_ROW_COUNT = 100_000
+  # Ids per UPDATE batch when linking created records to the import.
+  LINK_BATCH_SIZE = 1_000
   IMPORTABLE_NDJSON_TYPES = {
     "Account" => :accounts,
     "Balance" => :balances,
@@ -139,17 +141,21 @@ class SureImport < Import
     importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self, user: import_session&.created_by || published_by)
     result = importer.import!
 
+    # DataImporter doesn't set import_id, so link the records it created here.
+    # Done by hand instead of `accounts.concat` / `entries.concat`: those load
+    # the association and need every record in memory at once, while this holds
+    # at most one batch of records at a time. Don't replace it with update_all,
+    # which would skip callbacks.
     Import.transaction do
-      result[:accounts].each { |account| account.save! if account.new_record? }
-      result[:entries].each { |entry| entry.save! if entry.new_record? }
-
-      account_ids = result[:accounts].filter_map(&:id)
-      entry_ids = result[:entries].filter_map(&:id)
-      existing_account_ids = accounts.where(id: account_ids).pluck(:id)
-      existing_entry_ids = entries.where(id: entry_ids).pluck(:id)
-
-      accounts.concat(result[:accounts].reject { |account| existing_account_ids.include?(account.id) })
-      entries.concat(result[:entries].reject { |entry| existing_entry_ids.include?(entry.id) })
+      # IS DISTINCT FROM, not `!=`: a NULL import_id must match too.
+      result[:account_ids].each_slice(LINK_BATCH_SIZE) do |ids|
+        family.accounts.where(id: ids).where("accounts.import_id IS DISTINCT FROM ?", id)
+          .find_each { |account| account.update!(import_id: id) }
+      end
+      result[:entry_ids].each_slice(LINK_BATCH_SIZE) do |ids|
+        family.entries.where(id: ids).where("entries.import_id IS DISTINCT FROM ?", id)
+          .find_each { |entry| entry.update!(import_id: id) }
+      end
       update!(summary: result[:summary]) if has_attribute?(:summary)
     end
 
