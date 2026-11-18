@@ -193,6 +193,15 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     assert_not Rails.cache.exist?(ProviderMerchant::Enhancer.lock_key(@family))
   end
 
+  test "a run whose enqueue raises releases its lock and raises EnqueueError, keeping the cause" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Ai::GenerationJob.stubs(:perform_later).raises(Redis::CannotConnectError, "queue down")
+
+    error = assert_raises(ActiveJob::EnqueueError) { ProviderMerchant::Enhancer.enhance_later(@family) }
+    assert_kind_of Redis::CannotConnectError, error.cause
+    assert_not Rails.cache.exist?(ProviderMerchant::Enhancer.lock_key(@family))
+  end
+
   test "each batch renews the lock, so a run longer than its TTL keeps it" do
     Rails.stubs(:cache).returns(cache = ActiveSupport::Cache::MemoryStore.new)
     provider_merchant("Walmart")

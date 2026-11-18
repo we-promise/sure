@@ -74,11 +74,20 @@ class CollapseAiPromptOverrideKeysMigrationTest < ActiveSupport::TestCase
     end
   end
 
-  test "a saved provider wins over LLM_PROVIDER, as Setting.llm_provider reads them" do
+  test "LLM_PROVIDER wins over a saved provider, as Setting.llm_provider reads them" do
     overrides!("categorizer_openai" => "OpenAI version", "categorizer_anthropic" => "Claude version")
     save_setting("llm_provider", "anthropic")
 
     with_env_overrides("LLM_PROVIDER" => "openai", "OPENAI_ACCESS_TOKEN" => "k", "OPENAI_URI_BASE" => nil, "ANTHROPIC_API_KEY" => "k") do
+      assert_equal({ "categorize_transactions" => "OpenAI version" }, run_migration)
+    end
+  end
+
+  test "a saved provider is used when LLM_PROVIDER isn't set" do
+    overrides!("categorizer_openai" => "OpenAI version", "categorizer_anthropic" => "Claude version")
+    save_setting("llm_provider", "anthropic")
+
+    with_env_overrides("LLM_PROVIDER" => nil, "OPENAI_ACCESS_TOKEN" => "k", "OPENAI_URI_BASE" => nil, "ANTHROPIC_API_KEY" => "k") do
       assert_equal({ "categorize_transactions" => "Claude version" }, run_migration)
     end
   end

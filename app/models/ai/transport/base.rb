@@ -81,8 +81,10 @@ class Ai::Transport::Base
       return if text.blank?
 
       cleaned = strip_thinking(text.to_s)
-      # Fenced JSON in the raw text too: one holding "<think>" in a string loses its start when stripped.
-      fenced = [ cleaned, text.to_s ].flat_map { _1.scan(/```(?:json)?\s*([\[{][\s\S]*?[\]}])\s*```/m).flatten.reverse }
+      # Fenced JSON in the text outside closed reasoning blocks too: one holding "<think>" in a string
+      # has no closing tag, and loses its start when stripped. A draft inside a closed block is never read.
+      outside_reasoning = text.to_s.gsub(%r{<think>[\s\S]*?</think>}m, "")
+      fenced = [ cleaned, outside_reasoning ].flat_map { _1.scan(/```(?:json)?\s*([\[{][\s\S]*?[\]}])\s*```/m).flatten.reverse }
       unclosed = cleaned[/```(?:json)?\s*([\[{][\s\S]*[\]}])\s*\z/m, 1]
       # The outer container first: `Here: [{...}]` is the array, not the object inside it.
       outer = [ cleaned[/\{[\s\S]*\}/m], cleaned[/\[[\s\S]*\]/m] ].compact.sort_by { cleaned.index(_1) }

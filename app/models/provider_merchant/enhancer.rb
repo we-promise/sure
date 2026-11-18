@@ -20,6 +20,9 @@ class ProviderMerchant::Enhancer
     queued = false
     begin
       queued = Ai::GenerationJob.perform_later(:enhance_merchants, { family_id: family.id })
+    rescue StandardError
+      # A queue adapter raises its own errors (Redis down); the caller handles one kind.
+      raise ActiveJob::EnqueueError, "the merchant enhancement couldn't be queued"
     ensure
       Rails.cache.delete(lock_key(family)) unless queued
     end

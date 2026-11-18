@@ -143,6 +143,19 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
     assert_raises(Ai::Error::InvalidOutput) { generate(json_mode: :none) }
   end
 
+  test "a fenced draft inside a closed think block with no answer after it is unusable" do
+    stub_chat(answer("<think>Draft:\n```json\n#{FULL.to_json}\n```\n</think>"))
+
+    assert_raises(Ai::Error::InvalidOutput) { generate(json_mode: :none) }
+  end
+
+  test "a fenced draft inside a think block loses to the answer after it" do
+    draft = { items: [ { id: "a", name: "Draft" }, { id: "b", name: "Draft" } ] }
+    stub_chat(answer("<think>```json\n#{draft.to_json}\n```</think>\nFinal: #{FULL.to_json}"))
+
+    assert_equal FULL.deep_stringify_keys, generate(json_mode: :none).json
+  end
+
   test "a bare array with prose around it is the array, not the first object inside it" do
     stub_chat(answer("Here: [#{FULL[:items].first.to_json}] Done."))
 

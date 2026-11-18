@@ -5,7 +5,7 @@
 #   merchant_openai,    merchant_anthropic    -> detect_merchants
 #
 # Where a family has both and they differ, the one for the provider this install calls is kept:
-# the saved setting or LLM_PROVIDER, unless that provider has no key and the other has, as
+# LLM_PROVIDER or the saved setting, unless that provider has no key and the other has, as
 # Provider::Registry.preferred_llm_provider falls back. The other goes to a DebugLogEntry that
 # the prompts page shows until the family admin next saves.
 class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
@@ -87,8 +87,8 @@ class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
       false
     end
 
-    # Setting.llm_provider: the saved value, with LLM_PROVIDER only as its default.
-    def llm_provider = setting_value("llm_provider") || ENV["LLM_PROVIDER"].presence || "openai"
+    # As Setting.llm_provider: LLM_PROVIDER wins over the saved value.
+    def llm_provider = ENV["LLM_PROVIDER"].presence || setting_value("llm_provider") || "openai"
 
     def record_dropped(family, key, text)
       execute ActiveRecord::Base.sanitize_sql([
