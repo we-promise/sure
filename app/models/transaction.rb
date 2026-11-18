@@ -211,6 +211,12 @@ class Transaction < ApplicationRecord
 
   scope :excluding_pending, -> { where(Transaction.not_pending_sql) }
 
+  # Transactions carrying any of the given tags. A subquery rather than a
+  # join, so a transaction with several of them is returned once.
+  scope :with_any_tag, ->(tag_ids) {
+    where(id: Tagging.where(tag_id: tag_ids, taggable_type: "Transaction").select(:taggable_id))
+  }
+
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.
   #

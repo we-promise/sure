@@ -34,8 +34,7 @@ class SplitsController < ApplicationController
     end
 
     set_form_options
-    # In the order the rows were entered; without an ORDER BY a rewritten row can move.
-    @children = @entry.child_entries.order(:created_at, :id).includes(entryable: :tags)
+    @children = @entry.child_entries.in_split_order.includes(entryable: :tags)
   end
 
   def update

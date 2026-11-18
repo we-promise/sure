@@ -252,13 +252,17 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
       { name: "Part 1", amount: 60, category_id: nil },
       { name: "Part 2", amount: 40, category_id: nil }
     ])
-    @entry.child_entries.find_by!(name: "Part 2").update_columns(created_at: 1.day.ago)
 
-    get edit_transaction_split_path(@entry)
+    queries = sql_queries { get edit_transaction_split_path(@entry) }
+    assert_response :success
+    # Without an ORDER BY PostgreSQL returns the rows in physical order.
+    row_reads = queries.select { |sql| sql.include?('"entries"."parent_entry_id" =') && !sql.include?("SELECT 1 AS one") }
+    assert row_reads.any?, "expected the split rows to be read"
+    assert row_reads.all? { |sql| sql.include?('ORDER BY "entries"."created_at" ASC, "entries"."id" ASC') }, row_reads.join("\n")
 
     doc = Nokogiri::HTML::Document.parse(response.body)
     names = doc.css("[data-split-transaction-target='rowsContainer'] input[name$='[name]']").map { |input| input["value"] }
-    assert_equal [ "Part 2", "Part 1" ], names
+    assert_equal [ "Part 1", "Part 2" ], names
   end
 
   test "edit on a child redirects to parent edit" do
@@ -523,5 +527,11 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
       doc = Nokogiri::HTML::Document.parse(response.body)
       prefix = doc.at_css("input[name$='[name]'][value='#{name}']")["name"].delete_suffix("[name]")
       doc.at_css("input[type=hidden][name='#{prefix}[merchant_id]']")["value"]
+    end
+
+    def sql_queries(&block)
+      queries = []
+      ActiveSupport::Notifications.subscribed(->(*, payload) { queries << payload[:sql] }, "sql.active_record", &block)
+      queries
     end
 end

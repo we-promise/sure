@@ -1,0 +1,14 @@
+---
+zh-CN:
+  portfolios:
+    empty_state:
+      add_account: 添加投资账户
+      description: 您计入财务与报表中的券商、退休和加密货币账户及其余额会在此列出。
+      title: 暂无可显示的投资账户
+    sections:
+      accounts: 账户
+    show:
+      section_aria: "%{title} 分区。按 Enter 或空格键抓取以重新排序，然后使用方向键移动。"
+      sections_aria: 投资组合分区
+      subtitle: 您的投资账户及各自价值。
+      title: 投资组合

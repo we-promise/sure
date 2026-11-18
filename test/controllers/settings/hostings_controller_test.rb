@@ -1540,32 +1540,35 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.tinkoff_invest_api_key = nil
   end
 
+  # The cron job lives under one global key in the shared Redis, so these
+  # tests stub Sidekiq::Cron instead: parallel workers creating and deleting
+  # the real job made them fail at random.
   test "can update market data sync settings when self hosting is enabled" do
     with_self_hosting do
+      Sidekiq::Cron::Job.expects(:create)
+        .with(has_entries(name: MarketDataScheduler::JOB_NAME, class: "ImportMarketDataJob", cron: regexp_matches(/\A30 18 /)))
+        .returns(OpenStruct.new(valid?: true))
+
       patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1", market_data_sync_time: "18:30" } }
 
       assert_redirected_to settings_hosting_url
       assert Setting.market_data_sync_enabled
       assert_equal "18:30", Setting.market_data_sync_time
-
-      job = Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
-      assert job, "Expected the market data cron job to be (re)created"
-      assert_equal "ImportMarketDataJob", job.klass
     end
-  ensure
-    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
   end
 
   test "disabling market data sync removes its cron job" do
     with_self_hosting do
+      Sidekiq::Cron::Job.expects(:create)
+        .with(has_entries(name: MarketDataScheduler::JOB_NAME))
+        .returns(OpenStruct.new(valid?: true))
       patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1" } }
-      assert Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
 
+      job = mock("cron job")
+      job.expects(:destroy)
+      Sidekiq::Cron::Job.expects(:find).with(MarketDataScheduler::JOB_NAME).returns(job)
       patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "0" } }
-      refute Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
     end
-  ensure
-    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
   end
 
   test "rejects an invalid market data sync time" do
@@ -1582,14 +1585,13 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   test "still applies market_data_sync_enabled when market_data_sync_time in the same request is invalid" do
     with_self_hosting do
       Setting.market_data_sync_enabled = false
+      Sidekiq::Cron::Job.stubs(:create).returns(OpenStruct.new(valid?: true))
 
       patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1", market_data_sync_time: "not-a-time" } }
 
       assert_redirected_to settings_hosting_path
       assert Setting.market_data_sync_enabled, "enabled flag from the same submission should not be dropped by the invalid time"
     end
-  ensure
-    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
   end
 
   test "logs a failed market data schedule sync to the debug log" do
