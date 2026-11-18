@@ -27,6 +27,7 @@ ro:
       account_label: Cont
       counterparty_account_label: "Contul contrapărții"
       counterparty_iban_label: "IBAN-ul contrapărții"
+      counterparty_own_account_label: "Cont propriu"
       amount: Sumă
       category_label: Categorie
       date_label: Dată

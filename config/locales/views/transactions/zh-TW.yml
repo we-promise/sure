@@ -66,6 +66,7 @@ zh-TW:
       account_label: 帳戶
       counterparty_account_label: "交易對方帳戶"
       counterparty_iban_label: "交易對方 IBAN"
+      counterparty_own_account_label: "自有帳戶"
       amount: 金額
       category_label: 分類
       date_label: 日期

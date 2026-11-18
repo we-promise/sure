@@ -27,6 +27,7 @@ nb:
       account_label: Konto
       counterparty_account_label: "Motpartens konto"
       counterparty_iban_label: "Motpartens IBAN"
+      counterparty_own_account_label: "Egen konto"
       amount: Beløp
       category_label: Kategori
       date_label: Dato

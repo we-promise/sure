@@ -66,6 +66,7 @@ hu:
       account_label: Számla
       counterparty_account_label: "Partner számlája"
       counterparty_iban_label: "Partner IBAN"
+      counterparty_own_account_label: "Saját számla"
       amount: Összeg
       category_label: Kategória
       date_label: Dátum

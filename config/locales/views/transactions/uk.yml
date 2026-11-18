@@ -74,6 +74,7 @@ uk:
       account_label: Рахунок
       counterparty_account_label: "Рахунок контрагента"
       counterparty_iban_label: "IBAN контрагента"
+      counterparty_own_account_label: "Власний рахунок"
       amount: Сума
       category_label: Категорія
       date_label: Дата

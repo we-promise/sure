@@ -84,6 +84,7 @@ nl:
       account_label: "Account"
       counterparty_account_label: "Rekening tegenpartij"
       counterparty_iban_label: "IBAN tegenpartij"
+      counterparty_own_account_label: "Eigen rekening"
       amount: "Bedrag"
       category_label: "Categorie"
       date_label: "Datum"
@@ -270,6 +271,7 @@ nl:
     toggle_recurring_section: "Schakel aankomende terugkerende transacties in/uit"
     search:
       filters:
+        balance_updates: Saldi
         account: "Account"
         date: "Datum"
         type: "Type"
@@ -324,6 +326,11 @@ nl:
         unexpected_error: "Onverwachte fout tijdens conversie: %{error}"
     searches:
       filters:
+        balance_updates_filter:
+          always_shown: Altijd getoond, ingesteld in
+          hint: Alleen voor deze weergave. Om ze altijd te tonen, zet je ze aan in
+          preferences_link: Voorkeuren
+          show: Gesynchroniseerde saldo-updates tonen
         account_filter:
           filter_accounts: "Accounts filteren"
         category_filter:
@@ -341,6 +348,7 @@ nl:
           less_than: "Kleiner dan"
           placeholder: "0"
         badge:
+          balance_updates: Gesynchroniseerde saldi
           expense: "Uitgave"
           income: "Inkomsten"
           on_or_after: "op of na %{date}"

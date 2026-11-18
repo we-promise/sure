@@ -2513,7 +2513,7 @@ end
   end
 
   test "shows the counterparty account when the setting is on and data is present" do
-    @entry.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @entry.transaction.update!(counterparty_iban_last4: "3000")
 
     get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
 
@@ -2528,9 +2528,24 @@ end
     assert_match "•••3000", response.body
     assert_select "dl dt", text: I18n.t("transactions.show.counterparty_iban_label")
     assert_select "dl dd.privacy-sensitive", text: "•••3000"
-    # The full IBAN must never appear anywhere in the response, including
-    # the raw "Additional Details" debug dump further down the page -- that
-    # surface strips these keys unconditionally, regardless of this setting.
+  end
+
+  test "names the family's own counterparty account" do
+    @entry.transaction.update!(counterparty_iban_last4: "3201", counterparty_own_account: accounts(:connected))
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "dl dt", text: I18n.t("transactions.show.counterparty_own_account_label")
+    assert_select "dl dd a[href=?]", account_path(accounts(:connected)), text: accounts(:connected).name
+  end
+
+  test "keeps a full IBAN an older sync left in extra out of the raw details" do
+    @entry.transaction.update_columns(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
     assert_no_match "DE89370400440532013000", response.body # pipelock:ignore IBAN
   end
 
@@ -2543,20 +2558,18 @@ end
   end
 
   test "hides the counterparty account when the user has disabled the setting" do
-    @entry.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @entry.transaction.update!(counterparty_iban_last4: "3000")
     @user.update!(preferences: { "show_counterparty_account" => false })
 
     get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
 
     assert_response :success
     assert_no_match I18n.t("transactions.show.counterparty_iban_label"), response.body
-    # The dedicated row is gone; the raw-extra debug dump (Additional
-    # Details) always strips this key too, regardless of the setting.
-    assert_no_match "DE89370400440532013000", response.body # pipelock:ignore IBAN
+    assert_no_match "•••3000", response.body
   end
 
   test "hides the counterparty account id when the user has disabled the setting" do
-    @entry.transaction.update!(counterparty_account_id: "ACC-998877")
+    @entry.transaction.update!(counterparty_reference_last4: "8877")
     @user.update!(preferences: { "show_counterparty_account" => false })
 
     get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
@@ -2566,8 +2579,8 @@ end
     assert_no_match "•••8877", response.body
   end
 
-  test "falls back to counterparty_account_id when no iban is present" do
-    @entry.transaction.update!(counterparty_account_id: "ACC-998877")
+  test "falls back to the account reference when no iban is present" do
+    @entry.transaction.update!(counterparty_reference_last4: "8877")
 
     get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
 

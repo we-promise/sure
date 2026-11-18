@@ -1,23 +1,28 @@
 module TransactionsHelper
-  # Returns [label, masked value] for the counterparty row, or nil when the
-  # transaction carries no counterparty data. Only an actual IBAN is labelled
-  # as one; the provider's generic account id gets a neutral label. The value
-  # is always masked to its last 4 characters: it is a third party's account
-  # number, so Privacy Mode's opt-in blur alone is not enough.
-  def counterparty_account_display(transaction)
-    if (iban = transaction.counterparty_iban.presence)
-      [ t("transactions.show.counterparty_iban_label"), mask_last4(iban) ]
-    elsif (account_id = transaction.counterparty_account_id.presence)
-      [ t("transactions.show.counterparty_account_label"), mask_last4(account_id) ]
+  # Returns [label, masked value, own account] for the counterparty row, or
+  # nil when the transaction carries no counterparty data. Only an IBAN is
+  # labelled as one; the provider's generic account reference gets a neutral
+  # label. Only the last four characters are stored. The own account is the
+  # family's account with that IBAN, shown only to a user who can see it.
+  def counterparty_account_display(transaction, user: Current.user)
+    own_account = transaction.counterparty_own_account
+    own_account = nil unless own_account && user&.accessible_accounts&.exists?(own_account.id)
+
+    if (iban_last4 = transaction.counterparty_iban_last4.presence)
+      [ t("transactions.show.counterparty_iban_label"), mask_last4(iban_last4), own_account ]
+    elsif (reference_last4 = transaction.counterparty_reference_last4.presence)
+      [ t("transactions.show.counterparty_account_label"), mask_last4(reference_last4), nil ]
     end
   end
 
   # @param exclude [Array<String>] filter keys to leave out (e.g. the account
   #   tab doesn't apply to the account activity feed, which is already scoped
   #   to one account)
+  # @param balance_updates [Boolean] offer the filter that shows a linked
+  #   account's synced balance updates (account activity feed only)
   # @return [Array<Hash>] the filters offered above the transaction list, each
   #   with the key its partial is named for, a translated label and an icon
-  def transaction_search_filters(exclude: [])
+  def transaction_search_filters(exclude: [], balance_updates: false)
     filters = [
       { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },
       { key: "date_filter", label: t("transactions.search.filters.date"), icon: "calendar" },
@@ -33,6 +38,10 @@ module TransactionsHelper
 
     if Current.family&.manual_reconciliation?
       filters.insert(4, { key: "reconcile_status_filter", label: t("transactions.search.filters.reconcile_status"), icon: "check-circle" })
+    end
+
+    if balance_updates
+      filters << { key: "balance_updates_filter", label: t("transactions.search.filters.balance_updates"), icon: "scale" }
     end
 
     filters.reject { |filter| exclude.include?(filter[:key]) }
@@ -306,10 +315,10 @@ module TransactionsHelper
         simplefin: {},
         plaid: {},
         provider_extras: [],
-        # counterparty_iban/counterparty_account_id live in their own encrypted
-        # columns and are shown masked above; an already-synced row from before
-        # that change may still carry them here, so they never reach the raw dump.
-        raw: pretty_json(extra.is_a?(Hash) ? extra.except("counterparty_iban", "counterparty_account_id") : extra)
+        # The import never stores counterparty keys in extra; a row synced by an
+        # older build may still carry a full IBAN there, so they never reach
+        # the raw dump.
+        raw: pretty_json(extra.is_a?(Hash) ? extra.except("counterparty_iban", "counterparty_account_id", "counterparty_reference") : extra)
       }
     end
   end

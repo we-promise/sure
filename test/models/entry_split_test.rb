@@ -81,7 +81,7 @@ class EntrySplitTest < ActiveSupport::TestCase
   end
 
   test "split! children inherit the parent's counterparty identifiers" do
-    @entry.transaction.update!(counterparty_iban: "AT611904300234573201", counterparty_account_id: "OTHER-ACCOUNT-1") # pipelock:ignore IBAN
+    @entry.transaction.update!(counterparty_iban_last4: "3201", counterparty_reference_last4: "NT-1", counterparty_own_account_id: accounts(:connected).id)
 
     children = @entry.split!([
       { name: "Part 1", amount: 60, category_id: nil },
@@ -89,8 +89,9 @@ class EntrySplitTest < ActiveSupport::TestCase
     ])
 
     children.each do |child|
-      assert_equal "AT611904300234573201", child.transaction.reload.counterparty_iban # pipelock:ignore IBAN
-      assert_equal "OTHER-ACCOUNT-1", child.transaction.counterparty_account_id
+      assert_equal "3201", child.transaction.reload.counterparty_iban_last4
+      assert_equal "NT-1", child.transaction.counterparty_reference_last4
+      assert_equal accounts(:connected), child.transaction.counterparty_own_account
     end
   end
 

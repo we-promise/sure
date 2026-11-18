@@ -661,6 +661,35 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "security is required", exception.message
   end
 
+  test "an imported coin transfer into a goal-linked crypto account resolves its transfer pledge" do
+    crypto = accounts(:crypto)
+    goal = goals(:vacation_italy)
+    goal.goal_accounts.find_or_create_by!(account: crypto)
+    pledge = GoalPledge.create!(goal: goal, account: crypto, amount: 200, currency: "USD", kind: "transfer",
+                                status: "open", expires_at: 7.days.from_now)
+    btc = Security.find_or_create_by!(ticker: "CRYPTO:BTC") { |s| s.name = "Bitcoin" }
+
+    entry = Account::ProviderImportAdapter.new(crypto).import_trade(
+      security: btc, quantity: BigDecimal("0.004"), price: 50_000, amount: 0, currency: "USD",
+      date: Date.current, external_id: "onchain-in-1", source: "onchain_wallet", activity_label: Trade::TRANSFER_LABEL
+    )
+
+    assert_equal "matched", pledge.reload.status
+    assert_equal pledge.id, entry.trade.reload.extra.dig("goal", "pledge_id")
+  end
+
+  test "an imported coin transfer on a crypto account linked to no goal runs no reconcile" do
+    crypto = accounts(:crypto)
+    GoalAccount.where(account: crypto).delete_all
+    btc = Security.find_or_create_by!(ticker: "CRYPTO:BTC") { |s| s.name = "Bitcoin" }
+    GoalPledge::Reconciler.any_instance.expects(:run).never
+
+    Account::ProviderImportAdapter.new(crypto).import_trade(
+      security: btc, quantity: BigDecimal("0.004"), price: 50_000, amount: 0, currency: "USD",
+      date: Date.current, external_id: "onchain-in-2", source: "onchain_wallet", activity_label: Trade::TRANSFER_LABEL
+    )
+  end
+
   test "imports trade with all parameters" do
     investment_account = accounts(:investment)
     adapter = Account::ProviderImportAdapter.new(investment_account)
@@ -2541,7 +2570,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       name: "Old Landlord Payment",
       source: "enable_banking"
     )
-    assert_nil entry.transaction.counterparty_iban
+    assert_nil entry.transaction.counterparty_iban_last4
 
     entry.mark_user_modified!
     assert entry.reload.user_modified?, "entry should be marked user-modified"
@@ -2562,7 +2591,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
       assert_equal entry.id, updated_entry.id
       updated_entry.reload
-      assert_equal "AT611904300234573201", updated_entry.transaction.counterparty_iban # pipelock:ignore IBAN
+      assert_equal "3201", updated_entry.transaction.counterparty_iban_last4
     end
   end
 
@@ -2576,7 +2605,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       source: "enable_banking",
       extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
     )
-    assert_equal "AT611904300234573201", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "3201", entry.transaction.counterparty_iban_last4
 
     entry.mark_user_modified!
     assert entry.reload.user_modified?, "entry should be marked user-modified"
@@ -2598,7 +2627,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
       assert_equal entry.id, updated_entry.id
       updated_entry.reload
-      assert_equal "AT611904300234573201", updated_entry.transaction.counterparty_iban, # pipelock:ignore IBAN
+      assert_equal "3201", updated_entry.transaction.counterparty_iban_last4,
         "a nil counterparty_iban on a later sync must not clobber an already-backfilled value on a protected entry"
     end
   end
@@ -2613,7 +2642,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       source: "enable_banking",
       extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
     )
-    assert_equal "AT611904300234573201", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "3201", entry.transaction.counterparty_iban_last4
 
     updated_entry = @adapter.import_transaction(
       external_id: "eb_unprotected_iban_then_nil",
@@ -2622,11 +2651,11 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       date: Date.today - 5.days,
       name: "Landlord Payment",
       source: "enable_banking",
-      extra: { "counterparty_iban" => nil, "counterparty_account_id" => nil }
+      extra: { "counterparty_iban" => nil, "counterparty_reference" => nil }
     )
 
     assert_equal entry.id, updated_entry.id
-    assert_equal "AT611904300234573201", updated_entry.reload.transaction.counterparty_iban, # pipelock:ignore IBAN
+    assert_equal "3201", updated_entry.reload.transaction.counterparty_iban_last4,
       "a redelivery without counterparty data must not clear an IBAN an earlier sync captured"
   end
 
@@ -2638,9 +2667,9 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       date: Date.today - 5.days,
       name: "Landlord Payment",
       source: "enable_banking",
-      extra: { "counterparty_iban" => nil, "counterparty_account_id" => "LEGACY-ACCOUNT-1" }
+      extra: { "counterparty_iban" => nil, "counterparty_reference" => "LEGACY-ACCOUNT-1" }
     )
-    assert_equal "LEGACY-ACCOUNT-1", entry.transaction.counterparty_account_id
+    assert_equal "NT-1", entry.transaction.counterparty_reference_last4
 
     updated_entry = @adapter.import_transaction(
       external_id: "eb_unprotected_iban_corrected",
@@ -2649,13 +2678,13 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       date: Date.today - 5.days,
       name: "Landlord Payment",
       source: "enable_banking",
-      extra: { "counterparty_iban" => "AT611904300234573201", "counterparty_account_id" => nil } # pipelock:ignore IBAN
+      extra: { "counterparty_iban" => "AT611904300234573201", "counterparty_reference" => nil } # pipelock:ignore IBAN
     )
 
     assert_equal entry.id, updated_entry.id
     updated_entry.reload
-    assert_equal "AT611904300234573201", updated_entry.transaction.counterparty_iban # pipelock:ignore IBAN
-    assert_nil updated_entry.transaction.counterparty_account_id
+    assert_equal "3201", updated_entry.transaction.counterparty_iban_last4
+    assert_nil updated_entry.transaction.counterparty_reference_last4
   end
 
   test "leaves counterparty iban columns untouched when the provider never mentions them" do
@@ -2669,8 +2698,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       extra: { "fx_rate" => "1.05" }
     )
 
-    assert_nil entry.transaction.counterparty_iban
-    assert_nil entry.transaction.counterparty_account_id
+    assert_nil entry.transaction.counterparty_iban_last4
+    assert_nil entry.transaction.counterparty_reference_last4
     assert_equal "1.05", entry.transaction.extra["fx_rate"]
   end
 
@@ -2682,7 +2711,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       date: Date.today - 5.days,
       name: "Landlord Payment",
       source: "enable_banking",
-      extra: { "enable_banking" => { "pending" => true }, "counterparty_iban" => "AT611904300234573201", "counterparty_account_id" => nil } # pipelock:ignore IBAN
+      extra: { "enable_banking" => { "pending" => true }, "counterparty_iban" => "AT611904300234573201", "counterparty_reference" => nil } # pipelock:ignore IBAN
     )
     assert entry.transaction.pending?
 
@@ -2693,18 +2722,18 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       date: Date.today - 5.days,
       name: "Landlord Payment",
       source: "enable_banking",
-      extra: { "counterparty_iban" => nil, "counterparty_account_id" => "OTHER-ACCOUNT-1" }
+      extra: { "counterparty_iban" => nil, "counterparty_reference" => "OTHER-ACCOUNT-1" }
     )
 
     assert_equal entry.id, booked_entry.id
     booked_entry.reload
     assert_not booked_entry.transaction.pending?
-    assert_equal "AT611904300234573201", booked_entry.transaction.counterparty_iban # pipelock:ignore IBAN
-    assert_equal "OTHER-ACCOUNT-1", booked_entry.transaction.counterparty_account_id
+    assert_equal "3201", booked_entry.transaction.counterparty_iban_last4
+    assert_equal "NT-1", booked_entry.transaction.counterparty_reference_last4
   end
 
   test "never stores counterparty keys in the plaintext extra column" do
-    counterparty = { counterparty_iban: "AT611904300234573201", counterparty_account_id: "OTHER-ACCOUNT-1" } # pipelock:ignore IBAN
+    counterparty = { counterparty_iban: "AT611904300234573201", counterparty_reference: "OTHER-ACCOUNT-1" } # pipelock:ignore IBAN
 
     entry = @adapter.import_transaction(
       external_id: "eb_counterparty_not_in_extra",
@@ -2742,14 +2771,94 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       extra: counterparty
     )
     assert_counterparty_absent_from_extra entry
-    assert_equal "AT611904300234573201", entry.reload.transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "3201", entry.reload.transaction.counterparty_iban_last4
+  end
+
+  test "links the counterparty to the family's own account with that iban" do
+    own_account = accounts(:connected)
+    own_account.update!(iban: "AT61 1904 3002 3457 3201") # pipelock:ignore IBAN
+
+    entry = @adapter.import_transaction(
+      external_id: "eb_own_account_counterparty",
+      amount: 200.0,
+      currency: "EUR",
+      date: Date.today - 2.days,
+      name: "Transfer to savings",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201", "counterparty_reference" => nil } # pipelock:ignore IBAN
+    )
+
+    assert_equal own_account, entry.reload.transaction.counterparty_own_account
+    assert_equal "3201", entry.transaction.counterparty_iban_last4
+  end
+
+  test "does not link a counterparty iban shared by two own accounts" do
+    accounts(:connected).update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+    @family.accounts.create!(name: "Second savings", balance: 0, currency: "EUR", accountable: Depository.new,
+      iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    entry = @adapter.import_transaction(
+      external_id: "eb_ambiguous_own_account",
+      amount: 200.0,
+      currency: "EUR",
+      date: Date.today - 2.days,
+      name: "Transfer",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+
+    assert_nil entry.reload.transaction.counterparty_own_account_id
+    assert_equal "3201", entry.transaction.counterparty_iban_last4
+  end
+
+  test "never links a transaction to the account it was imported into" do
+    @account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    entry = @adapter.import_transaction(
+      external_id: "eb_self_counterparty",
+      amount: 200.0,
+      currency: "EUR",
+      date: Date.today - 2.days,
+      name: "Refund",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+
+    assert_nil entry.reload.transaction.counterparty_own_account_id
+  end
+
+  test "a corrected counterparty iban drops a stale own-account link" do
+    accounts(:connected).update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+    entry = @adapter.import_transaction(
+      external_id: "eb_corrected_own_account",
+      amount: 200.0,
+      currency: "EUR",
+      date: Date.today - 2.days,
+      name: "Transfer",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+    assert_equal accounts(:connected), entry.reload.transaction.counterparty_own_account
+
+    Account::ProviderImportAdapter.new(@account).import_transaction(
+      external_id: "eb_corrected_own_account",
+      amount: 200.0,
+      currency: "EUR",
+      date: Date.today - 2.days,
+      name: "Transfer",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "DE89370400440532013000" } # pipelock:ignore IBAN
+    )
+
+    assert_nil entry.reload.transaction.counterparty_own_account_id
+    assert_equal "3000", entry.transaction.counterparty_iban_last4
   end
 
   private
     def assert_counterparty_absent_from_extra(entry)
       extra_json = entry.reload.transaction.extra.to_json
       assert_not_includes extra_json, "counterparty_iban"
-      assert_not_includes extra_json, "counterparty_account_id"
+      assert_not_includes extra_json, "counterparty_reference"
       assert_not_includes extra_json, "AT611904300234573201" # pipelock:ignore IBAN
     end
 
