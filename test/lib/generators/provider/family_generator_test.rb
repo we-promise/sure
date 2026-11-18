@@ -950,7 +950,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
     assert_includes html, item.brex_accounts.first.name
     assert_includes html, "/brex_items/#{item.id}/complete_account_setup"
-    assert_includes html, %(<option selected="selected" value="skip">)
+    assert_match %r{<input value="skip"[^>]* name="account_types\[#{item.brex_accounts.first.id}\]"}, html
   end
 
   # The messages the kit's view components read under <key>_items; %s is the
