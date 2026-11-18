@@ -89,6 +89,19 @@ class Pdf::PageImagesTest < ActiveSupport::TestCase
     assert_match "poppler-utils", error.message
   end
 
+  test "a MediaBox stored as a reference is resolved before the size check" do
+    objects = [ "<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox 4 0 R >>", "[0 0 612 792]" ]
+    pdf = +"%PDF-1.4\n"
+    offsets = objects.each_with_index.map { |object, i| pdf.bytesize.tap { pdf << "#{i + 1} 0 obj\n#{object}\nendobj\n" } }
+    xref = pdf.bytesize
+    pdf << "xref\n0 #{objects.size + 1}\n0000000000 65535 f \n" << offsets.map { format("%010d 00000 n \n", _1) }.join
+    pdf << "trailer\n<< /Size #{objects.size + 1} /Root 1 0 R >>\nstartxref\n#{xref}\n%%EOF\n"
+
+    error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(pdf, binary: "no-such-pdftoppm") }
+    assert_equal :missing_binary, error.code, "the size check passed; only the missing binary stopped it"
+  end
+
   private
     def statement(name) = file_fixture("statements/#{name}.pdf").binread
 

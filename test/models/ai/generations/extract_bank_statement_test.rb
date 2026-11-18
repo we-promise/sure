@@ -88,6 +88,33 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_equal 40_000.0, statement[:opening_balance]
   end
 
+  test "an amount inside a longer printed number isn't in the source" do
+    checks = Ai::Generations::ExtractBankStatement.checks(
+      { opening_balance: 100.0, closing_balance: 120.0, transactions: [ { date: "2019-02-01", amount: 20.0 } ] },
+      source: "01/02 Rent 120.00 Refund -100.00"
+    )
+
+    assert_equal false, checks.amounts_in_source
+  end
+
+  test "only a row repeated across a batch boundary is dropped; equal rows inside a batch are two purchases" do
+    coffee = { date: "2019-02-01", description: "Coffee", amount: -12.5, reference: nil, category: nil }
+    lunch = { date: "2019-02-01", description: "Lunch", amount: -9.0, reference: nil, category: nil }
+    generation = Ai::Generations::ExtractBankStatement.new(units: [], content: "", family: nil)
+
+    merged = generation.merge_values([ { transactions: [ lunch, coffee ] }, { transactions: [ coffee, coffee, lunch ] } ])
+
+    assert_equal [ lunch, coffee, coffee, lunch ], merged[:transactions]
+  end
+
+  test "an extraction missing pages is incomplete: worth another way, and flagged" do
+    checks = check(value(BAC_ROWS)).with(complete: false)
+
+    assert_not checks.passed?
+    assert checks.worth_another_way?
+    assert_includes checks.failed, :complete
+  end
+
   private
     def row(date, amount) = { date:, description: "row", amount:, reference: nil, category: nil }
 

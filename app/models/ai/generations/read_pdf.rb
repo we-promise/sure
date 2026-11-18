@@ -27,6 +27,9 @@ class Ai::Generations::ReadPdf < Ai::Generation
     additionalProperties: false
   }.freeze)
 
-  # The first batch is enough to say what a document is.
-  def merge_values(values) = values.first || {}
+  # The first batch is enough to say what a document is. No answer at all (no slice fitted) is
+  # unusable, so Auto reads another way rather than classify the file as nothing.
+  def merge_values(values)
+    values.first || raise(Ai::Error::InvalidOutput, "no batch of the document was answered")
+  end
 end

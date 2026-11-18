@@ -47,6 +47,12 @@ class Ai::Generations::ReadPdfTest < ActiveSupport::TestCase
     assert_equal %w[png2 png4], attachments.map(&:data)
   end
 
+  test "no batch answered is unusable, not a document of no type" do
+    generation = Ai::Generations::ReadPdf.new(units: [], content: "", family: nil)
+
+    assert_raises(Ai::Error::InvalidOutput) { generation.merge_values([]) }
+  end
+
   private
     def generation(units) = Ai::Generations::ReadPdf.new(units:, content: "%PDF", family: @family)
 end

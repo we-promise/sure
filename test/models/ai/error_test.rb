@@ -24,11 +24,12 @@ class Ai::ErrorTest < ActiveSupport::TestCase
     end
   end
 
-  test "a server without a vision projector refusing images is Refused, not an outage" do
+  test "a server without a vision projector refusing images is UnsupportedInput, a refusal, not an outage" do
     message = "image input is not supported - hint: if this is unexpected, you may need to provide the mmproj"   # llama.cpp, Ollama
 
-    assert_equal Ai::Error::Refused, Ai::Error.for_status(500, message)
-    assert_equal Ai::Error::Refused, Ai::Error.for_status(500, nil, body: { "error" => { "code" => 500, "message" => message } })
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, message)
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { "error" => { "code" => 500, "message" => message } })
+    assert_operator Ai::Error::UnsupportedInput, :<, Ai::Error::Refused
   end
 
   test "a spent balance is NoCredit, however the provider says it" do

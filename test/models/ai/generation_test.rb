@@ -369,4 +369,18 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_equal %w[t0], answered_ids(result)
     assert_equal [ "t1" ], DebugLogEntry.order(:created_at).last.metadata["item_ids"]
   end
+  test "a model that can't take the input passes the batch to the next route, without marking itself down" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    stub_ai(:detect_merchants) do |request|
+      raise Ai::Error::UnsupportedInput, "image input is not supported" if request.model.name == "qwen3-8b"
+
+      AiTestGeneration.answer(request)
+    end
+    Ai::DownMarks.expects(:mark).never
+
+    result = generation(2).call
+
+    assert result.success?
+    assert_equal "openai", result.route.endpoint.name
+  end
 end

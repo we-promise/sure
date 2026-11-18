@@ -242,6 +242,37 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_match "Please analyze the following document text", requests.sole.input
   end
 
+  test "pages that can't be rendered move Auto on, keeping the extraction in hand" do
+    wrong = BAC_ROWS.map { |date, amount| [ date, -amount ] }
+    stub_ai(:extract_pdf, returns: statement(wrong))
+    Pdf::PageImages.stubs(:render).raises(Pdf::PageImages::Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary))
+
+    with_reading_routes(vision_model) do
+      outcome = reading(@bac).extract
+
+      assert_equal :text, outcome.way
+      assert outcome.flagged?
+      assert_equal :missing_binary, outcome.attempts.last[:render_error]
+    end
+  end
+
+  test "a page no route can fit is skipped and logged, and the extraction is incomplete" do
+    units = [ Ai::PdfReading::Unit.text("PAGE ONE 24.50", page: 1), Ai::PdfReading::Unit.text("PAGE TWO #{"x" * 50}", page: 2) ]
+    stub_ai(:extract_pdf) do |request|
+      raise Ai::Error::ContextTooLong, "too long" if request.input.include?("PAGE TWO")
+
+      statement([ [ "2019-02-01", -24.5 ] ])
+    end
+
+    with_reading_routes(text_model.with(batch_size: 1)) do
+      result = Ai::Generations::ExtractBankStatement.new(units:, content: "", family: @family).call
+
+      assert result.success?
+      assert_equal [ units.last ], result.skipped
+      assert_equal [ "text:2-2" ], DebugLogEntry.where(category: "ai_generation").last.metadata["item_ids"]
+    end
+  end
+
   private
     def reading(content) = Ai::PdfReading.new(content:, family: @family, filename: "statement.pdf")
 

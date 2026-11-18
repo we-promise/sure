@@ -148,6 +148,7 @@ class Ai::Generation
     @usage = nil
     @failed_over_from = []
     @logged_ids = Set.new
+    @skipped = []
     result = batch_key ? call_batched(routes, batches:, cancelled:, answered_before:) : call_single(routes, cancelled:)
     Ai::Shadow.enqueue(self, result) if shadow && !shadow_run?
     result
@@ -275,7 +276,7 @@ class Ai::Generation
           answers.concat(partial.values.map { [ route, _1 ] })
           pending = partial.pending
           failed.call(route, partial.error)
-        rescue *Ai::DownMarks::FAILOVER, Ai::Error::InvalidOutput, Ai::Error::ContextTooLong => error
+        rescue *Ai::DownMarks::FAILOVER, Ai::Error::InvalidOutput, Ai::Error::ContextTooLong, Ai::Error::UnsupportedInput => error
           failed.call(route, error)
         end
       end
@@ -425,20 +426,24 @@ class Ai::Generation
       return unless merge_key   # one answer for the whole batch, with nothing to leave out
 
       answered_ids = values.flat_map { Array(_1[merge_key]) }.map { _1[merge_by].to_s }
-      log_unanswered(items.reject { answered_ids.include?(_1[:id].to_s) })
+      log_unanswered(items.reject { answered_ids.include?(item_id(_1).to_s) })
     end
 
     # Ids only: the items themselves hold the family's data. Each item is logged once.
     def log_unanswered(items)
-      items = items.reject { @logged_ids.include?(_1[:id]) }
+      items = items.reject { @logged_ids.include?(item_id(_1)) }
       return if items.empty?
 
-      @logged_ids.merge(items.map { _1[:id] })
+      @logged_ids.merge(items.map { item_id(_1) })
+      @skipped.concat(items)
       DebugLogEntry.capture(
         category: "ai_generation", level: "warn", message: "Items no route could answer were left unanswered",
-        source: self.class.name, family:, metadata: { feature: feature_key.to_s, item_ids: items.map { _1[:id] } }
+        source: self.class.name, family:, metadata: { feature: feature_key.to_s, item_ids: items.map { item_id(_1) } }
       )
     end
+
+    # A hash item's id, or what an item object logs as (Ai::PdfReading::Unit#log_id).
+    def item_id(item) = item.is_a?(Hash) ? item[:id] : item.log_id
 
     # The tokens the prompt takes before any item: rendered once per route with no items. A judge
     # model has no prompt.
@@ -464,6 +469,6 @@ class Ai::Generation
 
     def result(value:, route:, remaining: [], answered_by: {})
       Ai::Result.new(value:, usage: @usage, route:, failed_over_from: @failed_over_from.presence, remaining:,
-                     correlation_id: Ai::CallContext.correlation_id, answered_by:)
+                     correlation_id: Ai::CallContext.correlation_id, answered_by:, skipped: @skipped.dup)
     end
 end

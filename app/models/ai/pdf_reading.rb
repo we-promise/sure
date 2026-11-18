@@ -83,6 +83,7 @@ class Ai::PdfReading
       result.value!
 
       checks = Ai::Generations::ExtractBankStatement.checks(result.value, source:, balances: printed_balances(source))
+                                                    .with(complete: result.skipped.empty? && result.remaining.empty?)
       outcome = Outcome.new(value: result.value, way:, model: result.route&.model&.name, checks:, usage: result.usage, attempts:)
       attempts << { way:, checks: checks.to_h }
       return outcome unless checks.worth_another_way?
@@ -139,6 +140,11 @@ class Ai::PdfReading
           yield way, units, source
         rescue *NEXT_WAY => error
           attempts << { way:, error: error.is_a?(Ai::Error::Unavailable) ? error.reason : error.class.name.demodulize }
+        rescue Pdf::PageImages::Error => error
+          # The pages couldn't be rendered (pdftoppm missing, a page too large): another way may
+          # still read the file, and an extraction in hand is kept.
+          Rails.logger.warn("[Ai::PdfReading] #{way}: #{error.message}")
+          attempts << { way:, error: :unreadable, render_error: error.code }
         rescue Ai::Error::Base => error
           raise unless keep.call
 
@@ -221,8 +227,10 @@ class Ai::PdfReading
     # The balances printed on the statement, by #4054's parser: from its text layer, else from the
     # text the model read (an OCR transcription). Models write figures to fit their rows, so
     # `reconciles` trusts these over the model's.
+    # A source with both balances wins over one with only one of them.
     def printed_balances(source)
-      [ text_pages.join("\n"), source ].compact.uniq.lazy.map { parsed_balances(_1) }.find(&:present?) || {}
+      parsed = [ text_pages.join("\n"), source ].compact.uniq.map { parsed_balances(_1) }
+      parsed.find { _1.size == 2 } || parsed.find(&:present?) || {}
     end
 
     def parsed_balances(text)

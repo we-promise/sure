@@ -77,8 +77,8 @@ module Pdf::PageImages
   def check_size!(pdf, first:, last:, dpi:)
     pages = readable { pdf.pages[(first - 1)..(last - 1)] }
     pages.each_with_index do |page, i|
-      left, bottom, right, top = page.attributes[:MediaBox] || [ 0, 0, 612, 792 ]
-      pixels = ((right - left).abs * dpi / 72.0) * ((top - bottom).abs * dpi / 72.0)
+      box = readable { page.rectangles[:MediaBox] }   # resolved, even when the PDF stores it as a reference
+      pixels = (box.width.abs * dpi / 72.0) * (box.height.abs * dpi / 72.0)
       if pixels > MAX_PIXELS
         raise Error.new("page #{first + i} would be #{(pixels / 1e6).round} million pixels at #{dpi} dpi", code: :too_large)
       end

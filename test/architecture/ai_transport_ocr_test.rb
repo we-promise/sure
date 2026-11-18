@@ -88,6 +88,12 @@ class AiTransportOcrTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { local_model(ocr_prompt: "made_up") }
   end
 
+  test "a transcription cut at the output limit is unusable, so Auto reads another way" do
+    stub_json(CHAT_URL, chat_answer("| Date | Amount |\n| 1 Feb | 24.50 |").tap { _1[:choices].first[:finish_reason] = "length" })
+
+    assert_raises(Ai::Error::InvalidOutput) { ocr(local_model(ocr_prompt: "markdown")) }
+  end
+
   private
     def local_model(ocr_prompt: "markdown")
       endpoint = ai_endpoint(name: "ocr", base_url: "http://ocr.local:8080/v1", location: :local)

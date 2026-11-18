@@ -33,6 +33,8 @@ module Ai::Error
   InvalidOutput  = Class.new(Base)   # parse or schema failure after the transport's fallbacks
   OutputCut      = Class.new(ContextTooLong)   # the answer stopped at the output limit: split the batch
   Refused        = Class.new(Base)   # any other 4xx: not retried anywhere
+  # The model can't take this input (an image to a model without vision): the next route may.
+  UnsupportedInput = Class.new(Refused)
 
   # Errors a transport retries itself, up to the endpoint's max_retries.
   RETRYABLE = [ RateLimited, Upstream, Timeout ].freeze
@@ -55,7 +57,8 @@ module Ai::Error
   MODEL_MISSING = [ /model_not_found/i, /model\b.{0,120}\bnot found/im, /model\b.{0,120}\bdoes not exist/im ].freeze
 
   # llama.cpp and Ollama: 500 "image input is not supported" from a model without a vision
-  # projector. The model can't do it, so it's a refusal, not an outage to retry or mark down.
+  # projector. The model can't do it, so it's a refusal, not an outage to retry or mark down; the
+  # next route is still tried (Ai::Generation), as it may have vision.
   UNSUPPORTED_INPUT = [ /image input is not supported/i ].freeze
 
   module_function
@@ -74,7 +77,7 @@ module Ai::Error
       elsif matches?(text, NO_CREDIT) then NoCredit
       else Refused
       end
-    when 500..599 then matches?(text, UNSUPPORTED_INPUT) ? Refused : Upstream
+    when 500..599 then matches?(text, UNSUPPORTED_INPUT) ? UnsupportedInput : Upstream
     else Refused
     end
   end

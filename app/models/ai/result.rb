@@ -2,9 +2,11 @@
 # raises its Ai::Error.
 # `route` is the last route that answered; `answered_by` maps each answered item id to its own,
 # since a slice can be answered part by one route and part by its fallback.
-Ai::Result = Data.define(:value, :error, :availability, :usage, :route, :failed_over_from, :remaining, :correlation_id, :answered_by) do
+# `skipped` holds the items no route could answer, which the call logged and went on without.
+Ai::Result = Data.define(:value, :error, :availability, :usage, :route, :failed_over_from, :remaining, :correlation_id, :answered_by,
+                         :skipped) do
   def initialize(value: nil, error: nil, availability: nil, usage: nil, route: nil, failed_over_from: nil, remaining: [], correlation_id: nil,
-                 answered_by: {})
+                 answered_by: {}, skipped: [])
     super
   end
 

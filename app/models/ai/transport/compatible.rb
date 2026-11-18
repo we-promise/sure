@@ -88,6 +88,10 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       end
 
       message = attempt { mapping_errors { chat.generate } }
+      # A transcription cut at the output limit is missing rows, which can still net to the
+      # printed balances: unusable, so Auto reads another way.
+      raise Ai::Error::InvalidOutput, "the transcription stopped at the output limit" if cut_at_limit?(message.finish_reason)
+
       OcrResponse.new(texts: [ message.content.to_s.gsub(SPECIAL_TOKENS, "").strip ], usage: Ai::Tokens.from_ruby_llm(message.tokens))
     end
 

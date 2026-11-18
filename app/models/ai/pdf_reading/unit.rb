@@ -16,5 +16,8 @@ class Ai::PdfReading::Unit < Data.define(:way, :first_page, :last_page, :text)
 
   def cost = text? ? Assistant::TokenEstimator.estimate(text) : PAGE_IMAGE_TOKENS * page_count
 
+  # What a log names the unit by: its way and pages, never its text.
+  def log_id = "#{way}:#{first_page}-#{last_page}"
+
   def inspect = "#<Ai::PdfReading::Unit #{way} #{first_page}..#{last_page}>"
 end
