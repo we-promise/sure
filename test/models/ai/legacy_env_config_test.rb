@@ -341,4 +341,9 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal Ai::LegacyEnvConfig::Jev::UNREADABLE_HOST, Ai::LegacyEnvConfig::Jev.host_for("https://user:secret@bad host/v1")
     assert_equal Ai::LegacyEnvConfig::Jev::UNREADABLE_HOST, Ai::LegacyEnvConfig::Jev.host_for("user:secret")
   end
+  test "OpenAI's own URL, set explicitly, keeps the OpenAI vector store" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "https://api.openai.com/v1")
+
+    assert_equal :openai, config.vector_store_backend
+  end
 end

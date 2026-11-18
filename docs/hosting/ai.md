@@ -1717,7 +1717,9 @@ one page image per request) has been tested live; Mistral's hasn't. A llama.cpp 
   Removing a document, or deleting the family, now deletes its files from OpenAI's Files API.
   **Files that documents removed before this release left behind can't be traced to a row and
   stay in your OpenAI account**: list them in OpenAI's dashboard (Storage → Files, purpose
-  `assistants`) and delete the ones you don't recognise from another app.
+  `assistants`). Delete only files you can confirm nothing uses any more: an unfamiliar name
+  doesn't make a file an orphan, as it may belong to a current Sure document or another app. When
+  you can't tell, leave it.
 - Statements stored in the vault are indexed for search only for users with AI turned on.
 
 

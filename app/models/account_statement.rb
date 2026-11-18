@@ -376,7 +376,10 @@ class AccountStatement < ApplicationRecord
 
     # Under the row lock: ProcessPdfJob makes the same check on another queue.
     with_lock do
-      next false if indexed_in_vector_store?
+      if (existing = vector_store_document)
+        existing.poll_index_later
+        next false
+      end
 
       family.upload_document(
         file_content: original_file.download,
@@ -470,12 +473,14 @@ class AccountStatement < ApplicationRecord
 
     # A vault upload isn't an AI action, so indexing it (on an OpenAI store, sending the whole
     # statement to OpenAI) needs `embed` available to the uploader and the uploader's own AI
-    # switch, checked here because Ai::Consent checks the switch only for chat and bills.
+    # switch, checked here because Ai::Consent checks the switch only for chat and bills, and
+    # again by the job before anything is sent. A PDF import indexes without it: starting one is
+    # asking for AI (ProcessPdfJob).
     def index_in_vector_store_later
       user = Current.user
       return unless user&.ai_enabled? && Ai.available?(:embed, family:, user:)
 
-      IndexAccountStatementJob.perform_later(id)
+      IndexAccountStatementJob.perform_later(id, user.id)
     end
 
     # Never raises: the statement is already deleted. A copy left behind stays searchable, so it's

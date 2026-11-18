@@ -227,7 +227,7 @@ class Ai::LegacyEnvConfig
       explicit = env("VECTOR_STORE_PROVIDER")&.to_sym
       return explicit if explicit && VectorStore::Registry::ADAPTERS.key?(explicit)
       return :pgvector if Setting.llm_provider == "anthropic"
-      return if openai_uri_base
+      return if Provider::Openai.custom_endpoint?(openai_uri_base)   # OpenAI's own URL, regional ones included, keeps it
 
       :openai if env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.present?
     end

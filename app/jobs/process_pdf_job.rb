@@ -91,7 +91,9 @@ class ProcessPdfJob < ApplicationJob
     end
 
     # One search copy per statement, shared with IndexAccountStatementJob, which runs on another
-    # queue in no fixed order: both check for the copy under the statement's row lock.
+    # queue in no fixed order: both check for the copy under the statement's row lock. Unlike a
+    # vault upload, no user's AI switch is checked: starting a PDF import is asking for AI, and the
+    # search copy is part of it.
     def upload_to_vector_store(pdf_import, document_type:)
       return unless Ai.available?(:embed, family: pdf_import.family)
 
@@ -106,8 +108,9 @@ class ProcessPdfJob < ApplicationJob
       statement_id = statement&.id
 
       documents = pdf_import.family.family_documents
-      return if statement_id.present? && documents.where("metadata->>'account_statement_id' = ?", statement_id).exists?
-      return if documents.where("metadata->>'pdf_import_id' = ?", pdf_import.id).exists?   # read again
+      existing = (documents.find_by("metadata->>'account_statement_id' = ?", statement_id) if statement_id.present?) ||
+                 documents.find_by("metadata->>'pdf_import_id' = ?", pdf_import.id)   # read again
+      return existing.poll_index_later if existing
 
       family_document = pdf_import.family.upload_document(
         file_content: pdf_import.pdf_file_content,

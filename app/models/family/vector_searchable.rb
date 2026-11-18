@@ -4,8 +4,8 @@ module Family::VectorSearchable
   included do
     has_many :family_documents, dependent: :destroy
     # The store and its files go with the family: on OpenAI they would otherwise stay in the
-    # Files API.
-    before_destroy :delete_vector_store
+    # Files API. Only once the deletion commits: a rolled-back one keeps the family and its store.
+    after_destroy_commit :delete_vector_store
   end
 
   def ensure_vector_store!
@@ -43,15 +43,15 @@ module Family::VectorSearchable
 
     return [] unless response.success?
 
-    user ? readable_documents(response.data, user) : response.data
+    user ? readable_documents(response.data, user) : tracked_documents(response.data)
   end
 
   def readable_documents(results, user)
     file_ids = results.filter_map { |result| result[:file_id] }.uniq
     return results if file_ids.empty?
 
-    # FamilyDocument#readable_by decides what's withheld. A hit with no row stays visible, and is
-    # logged: the store holds a file Sure has lost track of.
+    # FamilyDocument#readable_by decides what's withheld. A hit with no row is withheld too, and
+    # logged: the store holds a file Sure has lost track of, and no row says who may read it.
     withheld = family_documents.where(provider_file_id: file_ids)
                                .where.not(id: family_documents.readable_by(user).select(:id))
                                .pluck(:provider_file_id)
@@ -69,9 +69,19 @@ module Family::VectorSearchable
       )
     end
 
+    withheld.merge(untracked)
     return results if withheld.empty?
 
     results.reject { |result| withheld.include?(result[:file_id]) }
+  end
+
+  # Without a user (MCP, the tool's own call): every hit Sure has a row for.
+  def tracked_documents(results)
+    file_ids = results.filter_map { |result| result[:file_id] }.uniq
+    return results if file_ids.empty?
+
+    tracked = family_documents.where(provider_file_id: file_ids).pluck(:provider_file_id).to_set
+    results.select { |result| result[:file_id].nil? || tracked.include?(result[:file_id]) }
   end
 
   def upload_document(file_content:, filename:, metadata: {})
@@ -94,7 +104,7 @@ module Family::VectorSearchable
 
     # An OpenAI store indexes in the background: the document is `processing` until
     # VectorStore::IndexStatusJob records the outcome, not `ready` before it can be found.
-    family_documents.create!(
+    create_document_row!(adapter, store_id, response.data[:file_id],
       filename: filename,
       content_type: Marcel::MimeType.for(name: filename),
       file_size: file_content.bytesize,
@@ -103,6 +113,19 @@ module Family::VectorSearchable
       account_id: accounts.where(id: metadata["account_id"]).pick(:id),
       metadata: metadata
     )
+  end
+
+  # The row that makes an uploaded file findable, and readable only by who may. When it can't be
+  # written the file is removed from the store again, so nothing is searchable without one.
+  def create_document_row!(adapter, store_id, file_id, **attributes)
+    family_documents.create!(**attributes)
+  rescue StandardError
+    begin
+      adapter.remove_file(store_id:, file_id:)
+    rescue StandardError => cleanup_error
+      Rails.logger.warn("[Family] couldn't remove unrecorded file #{file_id}: #{cleanup_error.class}")
+    end
+    raise
   end
 
   def remove_document(family_document)

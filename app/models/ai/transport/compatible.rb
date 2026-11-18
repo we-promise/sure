@@ -44,6 +44,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
     # vectors would refuse it). RubyLLM 2.1.1 keeps the rows in the server's order (#1160 sorts
     # by index after 2.1.1); OpenAI-compatible servers answer in order.
     def run_embed(request)
+      refuse_static_headers!
       embedding = attempt do
         mapping_errors do
           ruby_llm_context.embed(request.texts, model: request.model.name, provider: ruby_llm_provider,
@@ -95,13 +96,18 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       OcrResponse.new(texts: [ message.content.to_s.gsub(SPECIAL_TOKENS, "").strip ], usage: Ai::Tokens.from_ruby_llm(message.tokens))
     end
 
+    # A gateway that routes or authenticates by a static header would get the document without it.
+    def refuse_static_headers!
+      return if Ai::Transport::Http.headers(endpoint).empty?
+
+      raise Ai::Error::Refused, "embedding requests can't carry the endpoint's static headers yet"
+    end
+
     # One vector, with the model's dimensions. RubyLLM 2.1.1's embed takes no headers
     # (crmne/ruby_llm#1556), so an endpoint that needs them is refused rather than probed
     # without them.
     def probe_embedding(model, timeout:)
-      if Ai::Transport::Http.headers(endpoint).any?
-        raise Ai::Error::Refused, "embedding requests can't carry the endpoint's static headers yet"
-      end
+      refuse_static_headers!
 
       embedding = mapping_errors do
         ruby_llm_context(timeout:).embed(Ai::Transport::Base::PROBE_EMBEDDING_INPUT, model: model.name, provider: ruby_llm_provider,

@@ -81,6 +81,7 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
 
   test "returns search results on success" do
     @user.family.update!(vector_store_id: "vs_test123")
+    @user.family.family_documents.create!(filename: "2024_tax_return.pdf", provider_file_id: "file-abc", status: "ready")
 
     mock_adapter = mock("vector_store_adapter")
     mock_adapter.stubs(:search).returns(
@@ -212,6 +213,7 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
       provider_file_id: "file-private", status: "ready",
       account: private_account
     )
+    family.family_documents.create!(filename: "quittance.pdf", provider_file_id: "file-shared", status: "ready")
 
     mock_adapter = mock("vector_store_adapter")
     mock_adapter.stubs(:search).returns(

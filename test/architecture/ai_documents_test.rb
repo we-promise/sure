@@ -72,6 +72,59 @@ class AiDocumentsTest < ActiveSupport::TestCase
     assert_equal [ "nomic-embed-text" ], requests.map { _1.model.name }
   end
 
+  test "a search hit with no family_documents row is withheld, with or without an asking user" do
+    tracked = @family.family_documents.create!(filename: "tax.pdf", provider_file_id: "file-tax", status: "ready")
+    results = [ { file_id: tracked.provider_file_id, content: "a" }, { file_id: "file-lost", content: "an untracked statement" } ]
+
+    assert_equal %w[file-tax], @family.readable_documents(results, @user).map { _1[:file_id] }
+    assert_equal %w[file-tax], @family.tracked_documents(results).map { _1[:file_id] }
+  end
+
+  test "an uploaded file whose row can't be written is removed from the store again" do
+    adapter = mock("adapter")
+    adapter.expects(:upload_file).returns(VectorStore::Response.new(success?: true, data: { file_id: "file-1" }, error: nil))
+    adapter.expects(:remove_file).with(store_id: "vs-1", file_id: "file-1")
+    @family.stubs(:vector_store_adapter).returns(adapter)
+    @family.stubs(:ensure_vector_store!).returns("vs-1")
+    @family.family_documents.stubs(:create!).raises(ActiveRecord::RecordInvalid)
+
+    assert_raises(ActiveRecord::RecordInvalid) { @family.upload_document(file_content: "x", filename: "s.pdf") }
+  end
+
+  test "the indexing job sends nothing once the uploader has turned AI off" do
+    use_ai_routes
+    record = statement(@family).tap(&:save!)
+    @user.update!(ai_enabled: false)
+    AccountStatement.any_instance.expects(:index_in_vector_store!).never
+
+    IndexAccountStatementJob.perform_now(record.id, @user.id)
+  end
+
+  test "a copy already uploaded but still processing is polled again instead of uploaded twice" do
+    record = statement(@family).tap(&:save!)
+    copy = @family.family_documents.create!(filename: "s.pdf", provider_file_id: "file-s", status: "ready",
+                                            metadata: { "account_statement_id" => record.id })
+    copy.update_column(:status, "processing")
+    @family.expects(:upload_document).never
+
+    assert_enqueued_with(job: VectorStore::IndexStatusJob) { assert_not record.index_in_vector_store! }
+  end
+
+  test "the family's store goes only when its deletion commits" do
+    family = Family.create!(name: "Leaving", vector_store_id: "vs-gone")
+    adapter = mock("adapter")
+    Family.any_instance.stubs(:vector_store_adapter).returns(adapter)
+
+    adapter.expects(:delete_store).never
+    Family.transaction do
+      family.destroy!
+      raise ActiveRecord::Rollback
+    end
+
+    adapter.expects(:delete_store).with(store_id: "vs-gone").returns(VectorStore::Response.new(success?: true, data: nil, error: nil))
+    family.reload.destroy!
+  end
+
   private
     def statement(family)
       family.account_statements.build(filename: "releve-#{SecureRandom.hex(4)}.pdf", content_type: "application/pdf", byte_size: 42,

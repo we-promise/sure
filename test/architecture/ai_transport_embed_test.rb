@@ -104,6 +104,16 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     end
   end
 
+  test "an endpoint with static headers is refused before the texts are sent without them" do
+    stub = stub_request(:post, URL)
+    endpoint = ai_endpoint(name: "embed", base_url: "http://embed.local:8081/v1", location: :local, extra_headers: { "X-Gateway" => "docs" })
+    model = ai_model(name: "nomic-embed-text", endpoint:, capabilities: %i[embedding], embedding_dimensions: 3)
+    request = Ai::Transport::Base::EmbedRequest.new(feature: :embed, family: @family, model:, texts: %w[secret])
+
+    assert_raises(Ai::Error::Refused) { Ai::Transport.for(endpoint).embed(request) }
+    assert_not_requested stub
+  end
+
   private
     def embed(texts, task_type: nil, family: nil, max_retries: 0)
       endpoint = ai_endpoint(name: "embed", base_url: "http://embed.local:8081/v1", location: :local, max_retries:)

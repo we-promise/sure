@@ -32,6 +32,10 @@ class FamilyDocument < ApplicationRecord
   # Watches an asynchronous index until it settles (VectorStore::IndexStatusJob).
   after_create_commit -> { VectorStore::IndexStatusJob.perform_later(self) }, if: -> { status == "processing" }
 
+  # A copy found already uploaded but still `processing` may have lost its poll (the queue was
+  # down when it was created): polling again is harmless.
+  def poll_index_later = (VectorStore::IndexStatusJob.perform_later(self) if status == "processing")
+
   def mark_ready!
     update!(status: "ready")
   end

@@ -3,9 +3,12 @@
 class IndexAccountStatementJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(:embed) }
 
-  def perform(statement_id)
+  # uploader_id: whose AI switch allowed the upload; checked again here, as it may have been turned
+  # off while the job waited. A job queued without one predates the check.
+  def perform(statement_id, uploader_id = nil)
     statement = AccountStatement.find_by(id: statement_id)
     return unless statement
+    return if uploader_id && !User.find_by(id: uploader_id)&.ai_enabled?
     return unless Ai.available?(:embed, family: statement.family)
 
     return if statement.index_in_vector_store!
