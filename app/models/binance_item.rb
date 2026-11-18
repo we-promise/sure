@@ -134,6 +134,13 @@ class BinanceItem < ApplicationRecord
       .where("binance_accounts.extra -> 'binance' ->> 'stale_rate' = 'true'")
   end
 
+  def incomplete_valuation_accounts
+    binance_accounts
+      .joins(:account)
+      .where(accounts: { status: "active" })
+      .where("binance_accounts.extra -> 'binance' ->> 'incomplete_valuation' = 'true'")
+  end
+
   def linked_accounts_count
     binance_accounts.joins(:account_provider).count
   end

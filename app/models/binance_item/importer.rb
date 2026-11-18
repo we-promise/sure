@@ -138,15 +138,7 @@ class BinanceItem::Importer
     end
 
     def price_for(symbol)
-      return 1.to_d if BinanceAccount::STABLECOINS.include?(symbol)
-
-      price = BigDecimal(binance_provider.get_spot_price("#{symbol}USDT").to_s)
-      return price if price.finite? && price.positive?
-
-      nil
-    rescue => e
-      Rails.logger.warn "BinanceItem::Importer - could not get price for #{symbol}: #{e.message}"
-      nil
+      BinanceAccount::PriceFetcher.fetch(symbol, provider: binance_provider)
     end
 
     def upsert_binance_account(all_assets:, total_usd:, valuation_complete:, spot_raw:, margin_raw:, earn_raw:, futures_raw:)

@@ -79,17 +79,22 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
 
   test "syncs trades and repairs the opening anchor before reporting missing FX" do
     @account.update!(balance: 850, cash_balance: 25)
-    Account::OpeningBalanceManager.new(@account).set_opening_balance(balance: 0, date: 2.years.ago.to_date)
+    Account::OpeningBalanceManager.new(@account).set_opening_balance(balance: 0, date: 10.days.ago.to_date)
     @ba.update!(raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1" } ] })
     provider = mock
     @item.stubs(:binance_provider).returns(provider)
     @ba.stubs(:binance_item).returns(@item)
     provider.stubs(:get_spot_trades).returns([])
     provider.stubs(:get_all_p2p_trades).returns([])
-    provider.stubs(:get_futures_trades).returns(
-      [ { "id" => 1, "time" => 3.years.ago.to_i * 1000, "qty" => "0.1", "price" => "40000",
-          "quoteQty" => "4000", "commission" => "0", "commissionAsset" => "USDT", "buyer" => true } ], []
-    )
+    @item.update!(sync_start_date: 30.days.ago.to_date)
+    trade_time = 20.days.ago.beginning_of_day.to_i * 1000
+    provider.stubs(:get_futures_trades).returns([])
+    provider.expects(:get_futures_trades).with do |symbol, **options|
+      symbol == "BTCUSDT" && options[:start_time] <= trade_time && options[:end_time] >= trade_time
+    end.returns([
+      { "id" => 1, "time" => trade_time, "qty" => "0.1", "price" => "40000",
+        "quoteQty" => "4000", "commission" => "0", "commissionAsset" => "USDT", "buyer" => true }
+    ])
     Security.create!(ticker: "CRYPTO:BTC", name: "Bitcoin", price_provider: "binance_public")
     ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
 
@@ -97,10 +102,43 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
 
     assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_1")
     account = Account.find(@account.id)
-    assert_equal 3.years.ago.to_date.prev_day, account.opening_anchor_date
+    assert_equal 20.days.ago.to_date.prev_day, account.opening_anchor_date
     assert_equal 850.to_d, account.balance
     assert_equal 25.to_d, account.cash_balance
     assert_equal true, @ba.reload.extra.dig("binance", "stale_rate")
+  end
+
+  test "syncs trades and repairs the opening anchor before reporting missing prices" do
+    @account.update!(balance: 850, cash_balance: 25)
+    Account::OpeningBalanceManager.new(@account).set_opening_balance(balance: 0, date: 10.days.ago.to_date)
+    @ba.update!(raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1" } ] })
+    provider = mock
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+    provider.stubs(:get_spot_trades).returns([])
+    provider.stubs(:get_all_p2p_trades).returns([])
+    @item.update!(sync_start_date: 30.days.ago.to_date)
+    trade_time = 20.days.ago.beginning_of_day.to_i * 1000
+    provider.stubs(:get_futures_trades).returns([])
+    provider.expects(:get_futures_trades).with do |symbol, **options|
+      symbol == "BTCUSDT" && options[:start_time] <= trade_time && options[:end_time] >= trade_time
+    end.returns([
+      { "id" => 1, "time" => trade_time, "qty" => "0.1", "price" => "40000",
+        "quoteQty" => "4000", "commission" => "0", "commissionAsset" => "USDT", "buyer" => true }
+    ])
+    Security.create!(ticker: "CRYPTO:BTC", name: "Bitcoin", price_provider: "binance_public")
+    @ba.update!(raw_payload: @ba.raw_payload.merge("valuation_complete" => false))
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.92)
+
+    assert_raises(BinanceAccount::Processor::IncompleteValuation) { BinanceAccount::Processor.new(@ba).process }
+
+    assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_1")
+    account = Account.find(@account.id)
+    assert_equal 20.days.ago.to_date.prev_day, account.opening_anchor_date
+    assert_equal 850.to_d, account.balance
+    assert_equal 25.to_d, account.cash_balance
+    assert_equal true, @ba.reload.extra.dig("binance", "incomplete_valuation")
+    assert_equal false, @ba.extra.dig("binance", "stale_rate")
   end
 
   test "an empty non-USD wallet clears the old balance and FX warning without a rate" do
@@ -129,6 +167,9 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 850.to_d, @account.reload.balance
     assert_equal 25.to_d, @account.cash_balance
     assert_equal [ @ba.id ], @item.stale_rate_accounts.pluck(:id)
+    assert_equal [ @ba.id ], @item.incomplete_valuation_accounts.pluck(:id)
+    diagnostic = DebugLogEntry.where(source: "BinanceAccount::Processor", provider_key: "binance").order(:created_at).last
+    assert_equal true, diagnostic.metadata["incomplete_valuation"]
   end
 
   test "legacy nonempty payload with a zero total does not bypass missing FX" do
@@ -160,6 +201,28 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
       BinanceAccount::Processor.new(@ba).process
     end
     assert_equal 850.to_d, @account.reload.balance
+  end
+
+  test "incomplete pricing warns after the item catches the error and clears on refresh" do
+    @account.update!(balance: 850)
+    @ba.update!(current_balance: 10, raw_payload: { "valuation_complete" => false }, extra: { "other" => "preserved" })
+    BinanceItem.any_instance.stubs(:binance_provider).returns(nil)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.92)
+
+    assert_equal false, @item.process_accounts.sole[:success]
+    assert_equal 850.to_d, @account.reload.balance
+    assert_equal [ @ba.id ], @item.incomplete_valuation_accounts.pluck(:id)
+    assert_empty @item.stale_rate_accounts
+    assert_equal "preserved", @ba.reload.extra["other"]
+    diagnostic = DebugLogEntry.where(source: "BinanceAccount::Processor", provider_key: "binance").order(:created_at).last
+    assert_equal true, diagnostic.metadata["incomplete_valuation"]
+    assert_equal @account.account_providers.sole.id, diagnostic.account_provider_id
+
+    @ba.update!(current_balance: 1000, raw_payload: { "valuation_complete" => true })
+    assert_equal true, @item.process_accounts.sole[:success]
+    assert_equal 920.to_d, @account.reload.balance
+    assert_empty @item.incomplete_valuation_accounts
+    assert_equal false, @ba.reload.extra.dig("binance", "incomplete_valuation")
   end
 
   test "a rejected conversion remains visible after the item catches the error and clears on recovery" do

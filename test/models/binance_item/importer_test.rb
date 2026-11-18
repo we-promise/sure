@@ -183,6 +183,18 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 0.to_d, ba.current_balance
   end
 
+  test "uses an alternate quote before marking valuation incomplete" do
+    @provider.expects(:get_spot_price).with("BTCUSDT").returns(nil)
+    @provider.expects(:get_spot_price).with("BTCBUSD").returns("0")
+    @provider.expects(:get_spot_price).with("BTCFDUSD").returns("120")
+
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+
+    ba = @item.binance_accounts.sole
+    assert_equal true, ba.raw_payload["valuation_complete"]
+    assert_equal 120.to_d, ba.current_balance
+  end
+
   private
 
     def payload_assets

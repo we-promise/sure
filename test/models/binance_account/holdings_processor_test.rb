@@ -131,6 +131,33 @@ class BinanceAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_empty held_tickers, "the emptied wallet still reported holdings"
   end
 
+  test "invalid prices preserve existing holdings and a valid alternate quote refreshes them" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 1)
+    security = Security.create!(ticker: "CRYPTO:BTC", name: "BTC", exchange_operating_mic: "XBNC")
+    BinanceAccount::SecurityResolver.stubs(:resolve).returns(security)
+    provider = mock
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+    provider.stubs(:get_spot_price).returns("1000")
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+    holding = @account.holdings.sole
+    previous = holding.attributes.slice("qty", "price", "amount", "currency")
+    write_payload([ btc_asset.merge("total" => "2") ])
+
+    [ "0", "-1", "NaN", "Infinity", "bad", nil ].each do |price|
+      provider.stubs(:get_spot_price).returns(price)
+      BinanceAccount::HoldingsProcessor.new(@ba).process
+      assert_equal previous, holding.reload.attributes.slice("qty", "price", "amount", "currency")
+    end
+
+    provider.expects(:get_spot_price).with("BTCUSDT").returns("0")
+    provider.expects(:get_spot_price).with("BTCBUSD").raises(StandardError, "unavailable")
+    provider.expects(:get_spot_price).with("BTCFDUSD").returns("1200")
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+    assert_equal 2400.to_d, holding.reload.amount
+    assert_equal 1200.to_d, holding.price
+  end
+
   private
     def seed_rate_and_securities
       ExchangeRate.create!(from_currency: "USD", to_currency: "EUR",

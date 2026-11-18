@@ -135,17 +135,6 @@ class BinanceAccount::HoldingsProcessor
     end
 
     def fetch_price(symbol)
-      return 1.0 if BinanceAccount::STABLECOINS.include?(symbol)
-
-      provider = binance_account.binance_item&.binance_provider
-      return nil unless provider
-
-      %w[USDT BUSD FDUSD].each do |quote|
-        price_str = provider.get_spot_price("#{symbol}#{quote}")
-        return price_str.to_d if price_str.present?
-      end
-
-      Rails.logger.warn "BinanceAccount::HoldingsProcessor - no price found for #{symbol} across all quote pairs; skipping holding"
-      nil
+      BinanceAccount::PriceFetcher.fetch(symbol, provider: binance_account.binance_item&.binance_provider)
     end
 end
