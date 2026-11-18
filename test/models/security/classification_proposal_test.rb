@@ -10,6 +10,8 @@ require "test_helper"
 # `classification_source` exists so a figure in an allocation chart can be traced
 # to whoever asserted it.
 class Security::ClassificationProposalTest < ActiveSupport::TestCase
+  include ProviderTestHelper
+
   setup do
     @security = securities(:aapl)
     @family = families(:dylan_family)
@@ -204,6 +206,34 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
     assert_equal "north_america", @security.region
     assert_equal "ai", @security.classification_source
     assert proposal.reload.approved?
+  end
+
+  # End to end with provider classification ingestion: the next sync must not
+  # silently undo an approval. The provider is really asked, and its answer
+  # really lands where the approval said nothing (industry), so the approved
+  # columns surviving is precedence at work, not a skipped refresh.
+  test "an approved classification survives a provider refresh that disagrees" do
+    propose(asset_class: "fixed_income", asset_sub_class: "bond", sector: "Technology").approve!
+
+    provider = capable_provider
+    provider.stubs(:class).returns(Provider::TwelveData)
+    provider.expects(:fetch_security_info).once.returns(provider_success_response(
+      Provider::SecurityConcept::SecurityInfo.new(
+        symbol: "AAPL", name: nil, links: nil, logo_url: nil, description: nil,
+        kind: "Common Stock", exchange_operating_mic: "XNAS",
+        sector: "Provider sector", industry: "Consumer Electronics"
+      )
+    ))
+    @security.reload.stubs(:price_data_provider).returns(provider)
+    assert_nil @security.industry
+
+    @security.import_provider_details(include_classification: true)
+
+    @security.reload
+    assert_equal "Consumer Electronics", @security.industry, "the provider's answer never landed"
+    assert_equal [ "fixed_income", "bond", "Technology", "ai" ],
+                 [ @security.asset_class, @security.asset_sub_class, @security.sector, @security.classification_source ],
+                 "a provider refresh overwrote an approved classification"
   end
 
   # The window between proposing and approving is exactly where the security's
