@@ -3,10 +3,11 @@
 # to the router.
 #
 # Each value resolves the way the provider code resolves it. Wherever that code has a resolver
-# (Provider::Registry and the providers it builds, Assistant::External.config), this calls it, so
-# the router and the calls not yet on the router can't disagree. test/architecture/ai_config_test
-# checks that over every documented setup. The one deliberate difference: embeddings fall back
-# to the OpenAI values saved in Settings, as every other AI setting does.
+# (Provider::Registry and the providers it builds, Assistant::External.config,
+# Ai::LegacyEnvConfig::Jev), this calls it, so the router and the calls not yet on the router
+# can't disagree. test/architecture/ai_config_test checks that over every documented setup. The
+# one deliberate difference: embeddings fall back to the OpenAI values saved in Settings, as every
+# other AI setting does.
 #
 # It's built in every process. The release that stops reading the old variables deletes this file.
 class Ai::LegacyEnvConfig
@@ -27,24 +28,33 @@ class Ai::LegacyEnvConfig
   EXTERNAL_ASSISTANT_TIMEOUT = 120 # Assistant::External::Client::TIMEOUT_READ
 
   # The inputs a snapshot depends on, so Ai::Config rebuilds when one changes.
-  ENV_PREFIXES = %w[OPENAI_ ANTHROPIC_ LLM_ JEV_ EMBEDDING_ VECTOR_STORE_ EXTERNAL_ASSISTANT_].freeze
+  ENV_PREFIXES = %w[OPENAI_ ANTHROPIC_ LLM_ JEV_ EMBEDDING_ VECTOR_STORE_ EXTERNAL_ASSISTANT_ CATEGORIZATION_PROVIDER].freeze
   SETTING_FIELDS = %i[
     openai_access_token openai_uri_base openai_model openai_request_timeout anthropic_access_token anthropic_model
     anthropic_base_url llm_provider jev_api_key jev_endpoint jev_model external_assistant_url external_assistant_token
     external_assistant_model external_assistant_agent_id openai_json_mode llm_context_window llm_max_response_tokens
-    llm_max_items_per_call
+    llm_max_items_per_call categorization_provider
   ].freeze
+  CATEGORIZATION_PROVIDERS = %w[llm jev].freeze
 
   def self.build = new.build
+
+  # Which model categorizes every family's transactions: CATEGORIZATION_PROVIDER, then the
+  # instance's setting, else the LLM.
+  def self.categorization_provider
+    [ ENV["CATEGORIZATION_PROVIDER"].presence, Setting.categorization_provider.presence ]
+      .find { CATEGORIZATION_PROVIDERS.include?(_1) } || "llm"
+  end
 
   # The prompt variant the providers send for `feature` to this kind of endpoint: Anthropic's own,
   # the simplified one on a custom OpenAI-compatible server, otherwise OpenAI's detailed one.
   def self.prompt_for(feature, endpoint)
-    base = PROMPTS[feature.to_sym]
+    source = Ai::Routes.source_of(feature)   # a shadow runs its primary's variant
+    base = PROMPTS[source]
     return unless base && endpoint.protocol != :jev
 
     if endpoint.protocol == :anthropic then "#{base}_anthropic"
-    elsif endpoint.protocol == :compatible && SIMPLE_PROMPTS.include?(feature.to_sym) &&
+    elsif endpoint.protocol == :compatible && SIMPLE_PROMPTS.include?(source) &&
           Provider::Openai.custom_endpoint?(endpoint.base_url) then "#{base}_simple"
     else base
     end
@@ -79,10 +89,14 @@ class Ai::LegacyEnvConfig
     # sends a family's data to a provider the install doesn't use; chat lists every provider the
     # walk reaches, as it resolves its own provider.
     reached = reachable_llm_models(llm)
-    preferred = reached.first
-    routes = LLM_FEATURES.index_with { |feature| route_list(feature, [ preferred ].compact) }
+    preferred = [ reached.first ].compact
+    routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
     routes[:chat] = route_list(:chat, reached + [ agent_model ].compact)
-    routes[:categorize] = route_list(:categorize, [ jev_model, preferred ].compact, conditions: { jev_model => :jev_family })
+    # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM; the shadow
+    # route runs the other one.
+    jev_first = jev_model && self.class.categorization_provider == "jev"
+    routes[:categorize] = route_list(:categorize, jev_first ? [ jev_model ] : preferred)
+    routes[:shadow_categorize] = route_list(:shadow_categorize, jev_first ? preferred : [ jev_model ].compact)
     routes[:embed] = route_list(:embed, [ embed_route_model ].compact)
 
     endpoints = (llm.values.map(&:first) + [ jev_model, agent_model, embed_model ].compact.map(&:endpoint)).uniq
@@ -154,20 +168,20 @@ class Ai::LegacyEnvConfig
 
     def positive(*values) = values.map(&:to_i).find(&:positive?)
 
-    # Jev serves only families that chose it (Ai::Route#serves?), and only when it can be built:
-    # its constructor refuses a cleartext endpoint off localhost.
+    # Jev, when RubyLLM can reach it (Jev.unreachable_reason). An endpoint it can't reach is left
+    # out with a warning, so `categorize` uses the LLM.
     def jev
-      provider = buildable(:jev) { Provider::Registry.get_provider(:jev) }
-      return unless provider
+      return unless Jev.configured?
 
-      base_url = Provider::Jev.effective_endpoint
-      cloud = URI.parse(base_url).scheme == "https"
-      endpoint = Ai::Config::Endpoint.new(
-        name: "jev", protocol: :jev, preset: cloud ? :jev : :jev_local, base_url:, api_key: Provider::Jev.api_key,
-        location: location_for(base_url), timeout_seconds: ENV.fetch("JEV_REQUEST_TIMEOUT", 30).to_i
-      )
-      Ai::Config::Model.new(endpoint:, name: provider.default_model,
-                            capabilities: cloud ? %i[judge calibrated_confidence] : %i[judge])
+      url = Jev.effective_endpoint
+      if (reason = Jev.unreachable_reason(url))
+        Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{Jev::UNSUPPORTED.fetch(reason)}")
+        return
+      end
+
+      endpoint = Jev.endpoint(url, api_key: Jev.api_key, timeout_seconds: ENV.fetch("JEV_REQUEST_TIMEOUT", 30).to_i,
+                                   parallel_requests: positive(env("JEV_CONCURRENCY")))
+      Ai::Config::Model.new(endpoint:, name: Jev.effective_model, capabilities: Jev.capabilities(endpoint))
     end
 
     def external_assistant
@@ -221,8 +235,8 @@ class Ai::LegacyEnvConfig
       )
     end
 
-    def route_list(feature, models, conditions: {})
-      models.map { |model| Ai::Route.new(feature:, model:, condition: conditions[model], prompt: prompt_for(feature, model)) }
+    def route_list(feature, models)
+      models.map { |model| Ai::Route.new(feature:, model:, prompt: prompt_for(feature, model)) }
     end
 
     def prompt_for(feature, model) = self.class.prompt_for(feature, model.endpoint)

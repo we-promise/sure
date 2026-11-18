@@ -52,43 +52,54 @@ class Eval::Langfuse::ExperimentRunnerTest < ActiveSupport::TestCase
     ).send(:build_provider)
   end
 
-  test "builds a jev provider" do
-    built = runner(
-      provider: "jev",
-      model: "~typesafe/jev-latest",
-      provider_config: { "api_key" => "test-key" }
-    ).send(:build_provider)
+  test "builds a jev client on the judgement" do
+    # TypeSafe's own endpoint, named so a host's JEV_ENDPOINT (a self-hosted, uncalibrated Jev) can't change the answer.
+    config = { "api_key" => "test-key", "endpoint" => Ai::LegacyEnvConfig::Jev::DEFAULT_ENDPOINT }
+    built = runner(provider: "jev", model: "jev-latest", provider_config: config).send(:build_provider)
 
-    assert_instance_of Provider::Jev, built
+    assert_instance_of Eval::GenerationClient, built
+    route = built.ai_config(:categorize).routes_for(:categorize).sole
+    assert route.judge?
+    assert route.model.capable?(:calibrated_confidence)
   end
 
   test "passes jev endpoint and concurrency through from provider config" do
-    Provider::Jev.expects(:new).with(
-      "test-key",
-      endpoint: "https://api.typesafe.ai/v1/systemone",
-      model: "jev-latest",
-      concurrency: 4
-    )
-
-    runner(
+    built = runner(
       provider: "jev",
       model: "jev-latest",
-      provider_config: {
-        "api_key" => "test-key",
-        "endpoint" => "https://api.typesafe.ai/v1/systemone",
-        "concurrency" => 4
-      }
+      provider_config: { "api_key" => "test-key", "endpoint" => "http://jev:8080/v1/systemone", "concurrency" => 4 }
     ).send(:build_provider)
+
+    endpoint = built.ai_config(:categorize).routes_for(:categorize).sole.endpoint
+    assert_equal [ "http://jev:8080", 4, :jev_local ], [ endpoint.base_url, endpoint.parallel_requests, endpoint.preset ]
   end
 
-  test "raises when jev has no api key configured" do
-    Provider::Jev.stubs(:api_key).returns(nil)
+  test "raises when jev has no api key configured, or an endpoint RubyLLM can't reach" do
+    Ai::LegacyEnvConfig::Jev.stubs(:api_key).returns(nil)
 
     error = assert_raises(Eval::ProviderFactory::Error) do
       runner(provider: "jev", model: "jev-latest").send(:build_provider)
     end
-
     assert_match(/Jev API key not configured/, error.message)
+
+    error = assert_raises(Eval::ProviderFactory::Error) do
+      runner(provider: "jev", model: "~typesafe/jev-latest",
+             provider_config: { "api_key" => "test-key", "endpoint" => "https://openrouter.ai/api/alpha/decisions" }).send(:build_provider)
+    end
+    assert_match(/not supported/, error.message)
+  end
+
+  test "a jev run on another endpoint without its own key is refused, so the installed key never reaches it" do
+    Ai::LegacyEnvConfig::Jev.stubs(:api_key).returns("installed-key")
+    Ai::LegacyEnvConfig::Jev.stubs(:effective_endpoint).returns(Ai::LegacyEnvConfig::Jev::DEFAULT_ENDPOINT)
+
+    error = assert_raises(Eval::ProviderFactory::Error) do
+      runner(provider: "jev", model: "jev-latest", provider_config: { "endpoint" => "https://other.example.test/v1/systemone" }).send(:build_provider)
+    end
+    assert_match(/Jev API key not configured/, error.message)
+
+    built = runner(provider: "jev", model: "jev-latest").send(:build_provider)
+    assert_equal "installed-key", built.ai_config(:categorize).routes_for(:categorize).sole.endpoint.api_key
   end
 
   test "rejects an unknown provider" do

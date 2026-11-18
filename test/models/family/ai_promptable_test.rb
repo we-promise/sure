@@ -38,6 +38,17 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     assert_equal RubyLLM.render_prompt("categorize_transactions/instructions"), @family.ai_prompt_default(:categorize_transactions)
   end
 
+  test "on a Jev family, a generation key's default is the prompt its shadow LLM sends" do
+    config = AiTestHelper.test_config
+    jev = config.routes_for(:shadow_categorize).first.with(feature: :categorize)
+    llm = config.routes_for(:categorize).first.with(feature: :shadow_categorize, prompt: "categorize_transactions_simple")
+
+    Ai::Config.with(Ai::Config.new(endpoints: config.endpoints, models: config.models,
+                                   routes: config.routes.merge(categorize: [ jev ], shadow_categorize: [ llm ]))) do
+      assert_includes @family.ai_prompt_default(:categorize_transactions), '{"categorizations":'
+    end
+  end
+
   # Advisory only. It has to stay quiet for the pre-filled default, and on prompts that get their
   # shape from the schema, or admins learn to ignore it.
   test "flags only an override of the simplified prompt that dropped the wrapper key" do

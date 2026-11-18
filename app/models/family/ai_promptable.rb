@@ -70,10 +70,12 @@ module Family::AiPromptable
   end
 
   # The prompt folder this family's route sends for a generation key: its first LLM entry's
-  # prompt, else the feature's default.
+  # prompt, else the feature's default. A Jev family's route only judges, so the LLM that reads
+  # the prompt is its shadow's.
   def ai_prompt_folder(key)
     feature = Ai::Prompt::OVERRIDES.key(key.to_sym) || raise(KeyError, "no AI feature reads the #{key} override")
-    route = Ai.plan(feature, family: self)&.routes&.find { !_1.judge? }
+    shadows = Ai::Routes.features.select { Ai::Routes.fetch(_1)[:shadow_of] == feature }
+    route = [ feature, *shadows ].lazy.filter_map { Ai.plan(_1, family: self)&.routes&.find { |entry| !entry.judge? } }.first
     route&.prompt.presence || key.to_s
   end
 

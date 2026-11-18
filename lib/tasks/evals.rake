@@ -245,7 +245,7 @@ namespace :evals do
       puts
       puts "Produce the runs first, all on the same split:"
       puts "  PROVIDER=bayes SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,naive-bayes]'"
-      puts "  PROVIDER=jev SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,~typesafe/jev-latest]'"
+      puts "  PROVIDER=jev SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,jev-latest]'"
       exit 1
     end
 
@@ -309,7 +309,7 @@ namespace :evals do
   task smoke_test: :environment do
     puts "Running smoke test..."
 
-    route = Ai::Config.current.routes_for(:categorize).find { !_1.judge? }
+    route = Ai::Config.current.routes_for(:categorize).first   # Jev too: the generation answers through its judgement
     unless route
       puts "FAIL: no model is configured for categorization"
       puts "Set OPENAI_ACCESS_TOKEN or ANTHROPIC_API_KEY, or configure a provider in settings"
@@ -369,7 +369,7 @@ namespace :evals do
           config.filter_sensitive_data("<#{endpoint.name.upcase}_#{header.to_s.upcase.tr("-", "_")}>") { endpoint.extra_headers[header].presence }
         end
       end
-      config.filter_sensitive_data("<JEV_API_KEY>") { Provider::Jev.api_key.presence } # pipelock:ignore
+      config.filter_sensitive_data("<JEV_API_KEY>") { Ai::LegacyEnvConfig::Jev.api_key } # pipelock:ignore
     end
     VCR.use_cassette(name, record: recording ? :all : :none, drop_unused_requests: recording, match_requests_on: %i[method uri], &block)
   end

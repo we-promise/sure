@@ -26,9 +26,11 @@ class Ai::GenerationJob < ApplicationJob
       generation = requester.ai_generation
       next finish(applied) if generation.nil?
 
-      result = generation.call(batches: 1, cancelled: -> { requester.ai_cancelled? }, answered_before:)
+      result = generation.call(batches: 1, cancelled: -> { requester.ai_cancelled? }, answered_before:, shadow: false)
       result.value!
       applied += requester.apply_ai(result).to_i
+      # Only once applied: a deadlock in apply_ai retries the whole job, which would sample again.
+      Ai::Shadow.enqueue(generation, result)
 
       if result.remaining.any?
         # A result has a route only when a batch was answered. An enqueue that fails returns false

@@ -10,13 +10,6 @@ class Ai::GenerationTest < ActiveSupport::TestCase
 
   def generation(count, **) = AiTestGeneration.new(transactions: transactions(count), family: @family, **)
 
-  # detect_merchants on `routes`, with the test setup's openai/gpt-4.1-mini changed by `openai`.
-  def use_merchant_routes(*routes, **openai)
-    base = AiTestHelper.test_config
-    models = base.models.map { _1.endpoint.name == "openai" ? _1.with(**openai) : _1 }
-    Ai::Config.override = AiTestHelper.build_ai_config(models, { detect_merchants: routes })
-  end
-
   def answered_ids(result) = result.value[:merchants].map { _1[:transaction_id] }
 
   test "renders the route's prompt, sends the schema and the route's settings, and coerces the answer" do
@@ -40,6 +33,12 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     repeated = { "merchants" => Array.new(3) { { "transaction_id" => "t0", "business_name" => "Shop", "business_url" => nil } } }
 
     assert_in_delta 2 / 3.0, requests.first.failed_ratio.call(repeated)
+  end
+
+  test "use_ai_model_settings keeps the routes an earlier use_ai_routes set" do
+    use_ai_model_settings(batch_size: 2)
+
+    assert_equal %w[gpu], Ai::Config.current.routes_for(:detect_merchants).map { _1.endpoint.name }
   end
 
   test "batches by the model's batch size; call(batches: 1) leaves the rest as remaining" do
@@ -109,7 +108,8 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "a fallback with a smaller batch_size takes the batch in pieces of that size" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini", batch_size: 2)
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    use_ai_model_settings("openai/gpt-4.1-mini", batch_size: 2)
     requests = stub_ai(:detect_merchants) do |request|
       raise Ai::Error::Timeout, "slow" if request.model.endpoint.name == "gpu"
 
@@ -123,7 +123,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "an item no route can fit is skipped and logged, and the items after it still run" do
-    use_merchant_routes("openai/gpt-4.1-mini", batch_size: 1)
+    use_ai_model_settings(batch_size: 1)
     stub_ai(:detect_merchants) do |request|
       raise Ai::Error::ContextTooLong, "too long" if request.input.include?("t0")
 
@@ -141,7 +141,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "unusable answers skip a batch once another has worked, and fail the call before that" do
-    use_merchant_routes("openai/gpt-4.1-mini", batch_size: 1)
+    use_ai_model_settings(batch_size: 1)
     stub_ai(:detect_merchants) do |request|
       raise Ai::Error::InvalidOutput, "garbage" if request.input.include?("t1")
 
@@ -154,7 +154,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "a timeout while bisecting keeps the halves already answered and leaves the rest for later" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     stub_ai(:detect_merchants) do |request|
       ids = request.input.scan(/ID: (t\d)/).flatten
       raise Ai::Error::InvalidOutput, "garbage" if ids.size > 2 || request.model.endpoint.name == "openai"
@@ -171,7 +171,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "items a route can't fit wait for an escalation route that is only marked down" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     Ai::DownMarks.stubs(:state).returns(:up)
     Ai::DownMarks.stubs(:state).with { _1.endpoint.name == "openai" }.returns(:failing)
     stub_ai(:detect_merchants) do |request|
@@ -187,7 +187,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "a timeout on a later piece keeps the pieces answered and sends the rest to the next route" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     requests = stub_ai(:detect_merchants) do |request|
       ids = request.input.scan(/ID: (t\d)/).flatten
       if request.model.endpoint.name == "gpu"
@@ -208,7 +208,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "an unusable answer on a later piece keeps the pieces answered and escalates only the rest" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     requests = stub_ai(:detect_merchants) do |request|
       ids = request.input.scan(/ID: (t\d)/).flatten
       if request.model.endpoint.name == "gpu"
@@ -229,7 +229,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
 
   [ %w[gpu/qwen3-8b openai/gpt-4.1-mini], %w[openai/gpt-4.1-mini gpu/qwen3-8b] ].each do |routes|
     test "an item one route can't fit while #{routes.first.split("/").first} first and the other times out is retried, not skipped" do
-      use_merchant_routes(*routes)
+      use_ai_routes(detect_merchants: routes)
       stub_ai(:detect_merchants) do |request|
         raise Ai::Error::Timeout, "slow" if request.model.endpoint.name == "gpu"
 
@@ -241,7 +241,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "an item the fallback can't fit waits when the primary is down for a passing failure" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     gpu = ->(route) { route.endpoint.name == "gpu" }
     Ai::DownMarks.stubs(:state).returns(:up)
     Ai::DownMarks.stubs(:state).with(&gpu).returns(:passing)
@@ -251,7 +251,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "a fallback that can't fit the batch doesn't stop bisecting the route whose answer was unusable" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     stub_ai(:detect_merchants) do |request|
       raise Ai::Error::ContextTooLong, "too long" if request.model.endpoint.name == "openai"
       raise Ai::Error::InvalidOutput, "garbage" if request.input.scan("- ID:").size > 2
@@ -263,7 +263,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "an unusable answer that bisection can't fix still fails the call, though a fallback couldn't fit it" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     stub_ai(:detect_merchants) do |request|
       raise Ai::Error::ContextTooLong, "too long" if request.model.endpoint.name == "openai"
 
@@ -274,7 +274,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "a piece whose answer is unusable after another piece answered is still bisected" do
-    use_merchant_routes("gpu/qwen3-8b")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b])
     stub_ai(:detect_merchants) do |request|
       ids = request.input.scan(/ID: (t\d)/).flatten
       raise Ai::Error::ContextTooLong, "too long" if ids.size > 2
@@ -287,7 +287,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "an unusable first piece doesn't stop the route answering the pieces after it" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     requests = stub_ai(:detect_merchants) do |request|
       ids = request.input.scan(/ID: (t\d)/).flatten
       if request.model.endpoint.name == "gpu"
@@ -316,14 +316,14 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "an empty answer list for a batch is unusable, not a batch answered with nothing" do
-    use_merchant_routes("gpu/qwen3-8b")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b])
     stub_ai(:detect_merchants, returns: { merchants: [] })
 
     assert_kind_of Ai::Error::InvalidOutput, generation(2).call.error
   end
 
   test "a bad key on the primary outranks a fallback that can't fit, so the requester hears of it" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     stub_ai(:detect_merchants) do |request|
       raise Ai::Error::Unauthorized, "bad key" if request.model.endpoint.name == "gpu"
 
@@ -334,7 +334,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "a primary marked down for a failure that needs a fix outranks a fallback that can't fit" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     Ai::DownMarks.stubs(:state).returns(:up)
     Ai::DownMarks.stubs(:state).with { _1.endpoint.name == "gpu" }.returns(:failing)
     stub_ai(:detect_merchants) { raise Ai::Error::ContextTooLong, "too long" }
@@ -343,7 +343,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "every route marked down for a failure that needs a fix is refused, so the job doesn't retry a bad key" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     Ai::DownMarks.stubs(:state).returns(:failing)
     stub_ai(:detect_merchants) { flunk "no route should be called" }
 
@@ -351,7 +351,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "routes all marked down for a passing failure stay unreachable, so the job retries" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     Ai::DownMarks.stubs(:state).returns(:passing)
     stub_ai(:detect_merchants) { flunk "no route should be called" }
 

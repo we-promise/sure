@@ -9,7 +9,7 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     JEV_REQUEST_TIMEOUT CATEGORIZATION_PROVIDER VECTOR_STORE_PROVIDER EMBEDDING_URI_BASE EMBEDDING_ACCESS_TOKEN
     EMBEDDING_MODEL EMBEDDING_DIMENSIONS EXTERNAL_ASSISTANT_URL EXTERNAL_ASSISTANT_TOKEN EXTERNAL_ASSISTANT_MODEL
     EXTERNAL_ASSISTANT_AGENT_ID EXTERNAL_ASSISTANT_ALLOWED_EMAILS ASSISTANT_TYPE LLM_JSON_MODE LLM_CONTEXT_WINDOW
-    LLM_MAX_RESPONSE_TOKENS LLM_MAX_ITEMS_PER_CALL ANTHROPIC_MAX_TOKENS
+    LLM_MAX_RESPONSE_TOKENS LLM_MAX_ITEMS_PER_CALL ANTHROPIC_MAX_TOKENS JEV_CONCURRENCY
   ].freeze
 
   # The budget settings take their defaults from the host's LLM_* variables when Setting loads,
@@ -128,6 +128,8 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "enhance_merchants_anthropic", anthropic.routes_for(:enhance_merchants).first.prompt
     assert_equal "bill_setup", custom.routes_for(:bill_setup).first.prompt
     assert_equal "bill_setup_anthropic", anthropic.routes_for(:bill_setup).first.prompt
+    assert_equal "categorize_transactions_simple", Ai::LegacyEnvConfig.prompt_for(:shadow_categorize, custom.routes_for(:categorize).first.endpoint),
+                 "a shadow runs its primary's variant"
     assert_nil native.routes_for(:chat).first.prompt
   end
 
@@ -204,16 +206,66 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "sk-setting", endpoint.api_key
   end
 
-  test "Jev is listed first for categorization, for families that chose it, when it can be built" do
-    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test")
-    jev = config.routes_for(:categorize).first
+  test "Jev categorizes when the instance chose it, alone, and the LLM shadows it" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "CATEGORIZATION_PROVIDER" => "jev")
+    jev = config.routes_for(:categorize).sole
 
     assert_equal "jev", jev.endpoint.name
-    assert_equal :jev_family, jev.condition
+    assert_equal [ "openai" ], config.routes_for(:shadow_categorize).map { _1.endpoint.name }
+    assert_equal "categorize_transactions", config.routes_for(:shadow_categorize).first.prompt
     assert jev.model.capable?(:judge, :calibrated_confidence)
     assert_equal :jev, jev.endpoint.preset
 
-    assert_empty build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "http://jev.example.test/v1/systemone").routes_for(:categorize)
+    assert_equal "https://api.typesafe.ai", jev.endpoint.base_url, "RubyLLM appends /v1/systemone"
+    assert_equal 3, jev.endpoint.max_retries
+    assert_nil jev.endpoint.parallel_requests, "the transport's default: 8 in the cloud"
+  end
+
+  test "a self-hosted Jev on https has no calibrated confidence either: only TypeSafe's API does" do
+    jev = build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://jev.internal/v1/systemone", "CATEGORIZATION_PROVIDER" => "jev")
+            .routes_for(:categorize).first
+
+    assert jev.model.capable?(:judge)
+    assert_not jev.model.capable?(:calibrated_confidence)
+  end
+
+  test "TypeSafe's API keeps calibrated confidence however its host is cased" do
+    jev = build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://API.TypeSafe.ai/v1/systemone", "CATEGORIZATION_PROVIDER" => "jev")
+            .routes_for(:categorize).first
+
+    assert jev.model.capable?(:calibrated_confidence)
+  end
+
+  test "a self-hosted Jev on http is jev_local, with no calibrated confidence" do
+    jev = build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "http://jev:8080/v1/systemone", "JEV_CONCURRENCY" => "4",
+                "CATEGORIZATION_PROVIDER" => "jev")
+            .routes_for(:categorize).first
+
+    assert_equal :jev_local, jev.endpoint.preset
+    assert_equal :local, jev.endpoint.location
+    assert_equal "http://jev:8080", jev.endpoint.base_url
+    assert_equal 4, jev.endpoint.parallel_requests
+    assert jev.model.capable?(:judge)
+    assert_not jev.model.capable?(:calibrated_confidence)
+  end
+
+  test "a Jev endpoint RubyLLM can't reach is left out with a warning" do
+    { "https://openrouter.ai/api/alpha/decisions" => /RubyLLM 2.2/, "https://gw.example.test/v1/jev" => %r{/v1/systemone} }.each do |url, reason|
+      Rails.logger.expects(:warn).with(regexp_matches(reason))
+
+      config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => url)
+
+      assert_equal [ "openai" ], config.routes_for(:categorize).map { _1.endpoint.name }
+    end
+  end
+
+  test "one answer to whether a Jev endpoint can be reached" do
+    jev = Ai::LegacyEnvConfig::Jev
+
+    assert_nil jev.unreachable_reason("https://api.typesafe.ai/v1/systemone")
+    assert_equal :openrouter, jev.unreachable_reason("https://openrouter.ai/api/alpha/decisions")
+    assert_equal :path, jev.unreachable_reason("https://gw.example.test/v1/jev")
+    assert_equal :path, jev.unreachable_reason("ftp://jev.example.test/v1/systemone")
   end
 
   test "the external assistant is an agent endpoint at the end of chat's list" do
@@ -225,5 +277,11 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "openclaw/main", agent.model.name
     assert_equal %w[a@example.com b@example.com], agent.endpoint.agent_settings[:allowed_emails]
     assert_not config.routes_for(:bill_setup).any?(&:agent?)
+  end
+
+  test "the Jev host shown to members is never the raw endpoint, which can carry credentials" do
+    assert_equal "jev.example.test", Ai::LegacyEnvConfig::Jev.host_for("https://user:secret@jev.example.test/v1/systemone")
+    assert_equal Ai::LegacyEnvConfig::Jev::UNREADABLE_HOST, Ai::LegacyEnvConfig::Jev.host_for("https://user:secret@bad host/v1")
+    assert_equal Ai::LegacyEnvConfig::Jev::UNREADABLE_HOST, Ai::LegacyEnvConfig::Jev.host_for("user:secret")
   end
 end

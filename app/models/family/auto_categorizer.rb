@@ -2,10 +2,10 @@
 # and never over an answer that's locked. The requester of :categorize: Ai::GenerationJob runs it
 # one batch at a time.
 #
-# The route's first entry decides who answers: an LLM through
-# Ai::Generations::CategorizeTransactions, or Jev through Provider::Jev (JevCall). Jev's answers
-# carry calibrated confidence, so the family's threshold can withhold them; the LLMs' don't, so
-# they always apply.
+# Ai::Generations::CategorizeTransactions answers on an LLM, and its judgement
+# (Ai::Judgements::CategorizeTransaction) on Jev, in one shape. Answers from a model with
+# `calibrated_confidence` (TypeSafe's own Jev API) can be withheld by the family's threshold; the others
+# always apply. Shadow runs are the generation's own (Ai::ShadowJob).
 class Family::AutoCategorizer
   include Ai::Requester
   include RuleRun::AiProgress
@@ -40,17 +40,12 @@ class Family::AutoCategorizer
       raise Error, "No categories available for auto-categorization"
     end
 
-    plan = Ai.plan(:categorize, family:)
-    return JevCall.new(self, plan.route) if plan&.route&.judge?
-
-    log_jev_fallback if family.effective_categorization_provider == "jev"
-
+    log_jev_fallback
     Ai::Generations::CategorizeTransactions.new(transactions: transactions_input, categories: categories_input, family:)
   end
 
   def apply_ai(result)
     decisions = result.value[:categorizations]
-    shadow = run_shadow(result)
     modified_count = 0
     categorized_transaction_ids = []
     withheld = []
@@ -68,7 +63,7 @@ class Family::AutoCategorizer
         # Withheld rather than applied: the transaction is left unlocked and still enrichable, so a
         # later run (or a better model) can try again. Applying a coin-flip guess and locking it
         # would be worse than leaving it blank, because the lock stops anything else correcting it.
-        if withhold?(decision)
+        if withhold?(decision, result.route_for(transaction.id))
           withheld << { transaction_id: transaction.id, category_name: decision[:category_name], confidence: decision[:confidence] }
           next
         end
@@ -82,11 +77,9 @@ class Family::AutoCategorizer
       report_batch(result, modified: modified_count)
     end
 
-    record_shadow_comparisons(result.route, decisions, shadow) if shadow
-
     DebugLogEntry.capture(
       category: "auto_categorization", level: "info", message: "AI categorization completed",
-      source: self.class.name, family:, provider: provider_key(result.route),
+      source: self.class.name, family:, provider: result.route&.endpoint&.name,
       metadata: {
         requested_transaction_ids: transaction_ids - result.remaining_ids,
         categorized_transaction_ids:,
@@ -94,12 +87,20 @@ class Family::AutoCategorizer
         blocked_transaction_ids: @blocked_ids,
         modified_count:,
         confidence_threshold: family.effective_categorization_confidence_threshold,
-        withheld_low_confidence: withheld,
-        shadow_compared_count: shadow ? shadow[:decisions].size : 0
+        withheld_low_confidence: withheld
       }.compact
     )
 
     modified_count
+  end
+
+  # A shadow run's generation: these transactions as they are now. The primary's answer is
+  # applied by then, so they're read without `scope`'s uncategorized and unlocked filters.
+  def ai_shadow_generation
+    transactions = family.transactions.where(id: transaction_ids).includes(:merchant, :entry)
+    return if transactions.none? || categories_input.empty?
+
+    Ai::Generations::CategorizeTransactions.new(transactions: transactions_input(transactions), categories: categories_input, family:)
   end
 
   # The modified counts reached the run per batch (apply_ai); this releases the rest.
@@ -118,66 +119,25 @@ class Family::AutoCategorizer
     )
   end
 
-  # Jev's decisions as the generation's hashes, or nil when Jev failed.
-  def jev_decisions(provider = jev_provider, input = transactions_input)
-    return unless provider
-
-    response = provider.auto_categorize(transactions: input, user_categories: categories_input, family:)
-    return unless response.success?
-
-    response.data.map do |decision|
-      { transaction_id: decision.transaction_id, category_name: decision.category_name,
-        confidence: (decision.confidence if decision.respond_to?(:confidence)),
-        probabilities: (decision.probabilities if decision.respond_to?(:probabilities)), calibrated: true }
-    end
-  end
-
-  # Jev: one Provider::Jev call per batch, answered in the generation's shape, with
-  # each answer's calibrated confidence. No failover from Jev.
-  class JevCall
-    def initialize(categorizer, route)
-      @categorizer, @route = categorizer, route
-    end
-
-    def call(cancelled: nil, **)
-      return Ai::Result.failure(Ai::Error::Cancelled.new("cancelled"), route: @route) if cancelled&.call
-
-      response = @categorizer.jev_decisions
-      return Ai::Result.new(value: { categorizations: response }, route: @route) if response
-
-      Ai::Result.failure(Ai::Error::Upstream.new("Jev categorization failed"), route: @route)
-    end
-  end
-
   private
     attr_reader :family, :transaction_ids
 
-    def jev_provider
-      Provider::Registry.get_provider(:jev)
-    rescue Provider::Error => error
-      log_jev_misconfiguration(error, "skipping Jev")
-      nil
-    end
-
-    def log_jev_misconfiguration(error, consequence)
-      # Without this the only symptom is categorization silently running on the provider the
-      # family did not choose. The endpoint is redacted because a gateway URL can carry a key.
-      DebugLogEntry.capture(
-        category: "auto_categorization", level: "error", message: "Jev is misconfigured; #{consequence}",
-        source: self.class.name, family:, provider: "jev",
-        metadata: {
-          endpoint: Provider::Jev.redacted_endpoint(Provider::Jev.effective_endpoint),
-          error_class: error.class.name,
-          error_message: error.message
-        }
-      )
-    end
-
-    # The family chose Jev but its route has none: say why when Jev can't be built.
+    # The instance chose Jev, but the config left it out because RubyLLM can't reach its endpoint.
+    # Without this the only symptom is categorization silently running on the LLM. The endpoint is
+    # redacted, because a gateway URL can carry a key.
     def log_jev_fallback
-      Provider::Registry.get_provider(:jev)
-    rescue Provider::Error => error
-      log_jev_misconfiguration(error, "falling back to the LLM provider")
+      return unless Ai::LegacyEnvConfig.categorization_provider == "jev" && Ai::LegacyEnvConfig::Jev.configured?
+
+      endpoint = Ai::LegacyEnvConfig::Jev.effective_endpoint
+      reason = Ai::LegacyEnvConfig::Jev.unreachable_reason(endpoint)
+      return unless reason
+
+      DebugLogEntry.capture(
+        category: "auto_categorization", level: "error", message: "Jev is misconfigured; falling back to the LLM provider",
+        source: self.class.name, family:, provider: "jev",
+        metadata: { endpoint: Ai::LegacyEnvConfig::Jev.redacted_endpoint(endpoint), reason:,
+                    detail: Ai::LegacyEnvConfig::Jev::UNSUPPORTED.fetch(reason) }
+      )
     end
 
     def log_no_categories
@@ -188,90 +148,12 @@ class Family::AutoCategorizer
       )
     end
 
-    # Only answers with calibrated confidence (Jev's) can be gated, and one that arrives without a
-    # confidence is malformed, so it's withheld: nil becomes 0, below any positive threshold.
-    def withhold?(decision)
+    # Only answers from a model with calibrated confidence can be gated, and one that
+    # arrives without a confidence is malformed, so it's withheld: nil becomes 0, below any
+    # positive threshold.
+    def withhold?(decision, route)
       threshold = family.effective_categorization_confidence_threshold
-      threshold.positive? && decision[:calibrated] && decision[:confidence].to_f < threshold
-    end
-
-    # Asks the provider that is NOT in use to categorize the same batch, so it can be judged on
-    # real data before anyone switches; its answers are never applied. Sampled per run, and any
-    # failure is swallowed: a diagnostic must never break the categorization it observes. It runs
-    # inline, in the categorization job.
-    def run_shadow(result)
-      rate = family.effective_categorization_shadow_rate
-      return unless rate.positive? && rand < rate
-
-      primary_route, input = result.route, batch_input(result)
-      decisions, route_key =
-        if primary_route&.judge?
-          shadow_on_llm(input)
-        elsif (provider = shadow_jev_provider)
-          [ jev_decisions(provider, input), "jev" ]
-        end
-      decisions && { decisions:, provider: route_key }
-    rescue => error
-      Rails.logger.warn("Shadow categorization failed for family #{family.id}: #{error.class}: #{error.message}")
-      nil
-    end
-
-    # A Jev family's shadow: the LLM entries of its categorize route.
-    def shadow_on_llm(input)
-      plan = Ai.plan(:categorize, family:)
-      llm = plan&.routes&.reject(&:judge?)
-      return if llm.blank?
-
-      result = Ai::Generations::CategorizeTransactions.new(transactions: input, categories: categories_input, family:)
-                                                       .call(plan: plan.with(routes: llm))
-      [ result.value[:categorizations], provider_key(result.route) ] if result.success?
-    end
-
-    # An LLM family's shadow is Jev, when it can be built.
-    def shadow_jev_provider
-      family.shadow_categorization_provider { |error| log_jev_misconfiguration(error, "skipping the shadow comparison") }
-            .then { _1.is_a?(Provider::Jev) ? _1 : nil }
-    end
-
-    # Built from the decision lists rather than from `scope`, which is a fresh query: by now the
-    # applied answers have been written and locked, so re-running it would match nothing.
-    def record_shadow_comparisons(primary_route, applied_decisions, shadow)
-      shadow_decisions = shadow[:decisions]
-      ids = (applied_decisions.map { _1[:transaction_id] } + shadow_decisions.map { _1[:transaction_id] }).uniq
-
-      rows = ids.filter_map do |id|
-        applied = applied_decisions.find { _1[:transaction_id] == id }
-        shadowed = shadow_decisions.find { _1[:transaction_id] == id }
-        next if applied.nil? && shadowed.nil?
-
-        {
-          family_id: family.id,
-          transaction_id: id,
-          applied_provider: provider_key(primary_route),
-          applied_category_name: applied&.dig(:category_name),
-          shadow_provider: shadow[:provider],
-          shadow_category_name: shadowed&.dig(:category_name),
-          shadow_confidence: shadowed&.dig(:confidence),
-          shadow_probabilities: shadowed&.dig(:probabilities) || {},
-          # Both declining to guess counts as agreement — an abstention is an answer. A missing
-          # decision is not: comparing nil == nil would inflate the rate.
-          agreed: applied.present? && shadowed.present? && applied[:category_name] == shadowed[:category_name],
-          created_at: Time.current,
-          updated_at: Time.current
-        }
-      end
-
-      CategorizationComparison.insert_all(rows) if rows.any?
-    rescue => error
-      Rails.logger.warn("Recording shadow comparison failed for family #{family.id}: #{error.class}: #{error.message}")
-    end
-
-    # The provider names CategorizationComparison and the debug log have always used.
-    def provider_key(route)
-      return if route.nil?
-      return "jev" if route.judge?
-
-      route.endpoint.protocol == :anthropic ? "anthropic" : "openai"
+      threshold.positive? && route&.model&.capable?(:calibrated_confidence) && decision[:confidence].to_f < threshold
     end
 
     # The chosen categories that still exist, locked until the batch commits: the prompt's list was
@@ -289,17 +171,8 @@ class Family::AutoCategorizer
       end
     end
 
-    # The transactions this job's batch covered: the shadow compares those, not the ones later
-    # jobs will send.
-    def batch_input(result)
-      left = result.remaining_ids
-      transactions_input.reject { left.include?(_1[:id]) }
-    end
-
-    # Kept from the generation, so the shadow sees what the primary saw, not a transaction that
-    # became eligible since.
-    def transactions_input
-      @transactions_input ||= scope.map do |transaction|
+    def transactions_input(transactions = scope)
+      transactions.map do |transaction|
         {
           id: transaction.id,
           amount: transaction.entry.amount.abs,
