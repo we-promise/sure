@@ -570,7 +570,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       expense_money: Money.new(999, "USD"),
       transfer_inflow_money: Money.new(0, "USD"), transfer_outflow_money: Money.new(0, "USD")
     )
-    cache.write("transaction_search_totals/v4/#{search.cache_key_base}", stale)
+    cache.write("transaction_search_totals/v4/#{ExchangeRate::CONVERSION_CACHE_VERSION}/#{search.cache_key_base}", stale)
 
     assert_equal Money.new(100, "USD"), search.totals.expense_money
   end
