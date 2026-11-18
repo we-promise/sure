@@ -173,6 +173,46 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_empty health.overlaps
   end
 
+  test "equals conditions whose text only contains the other are not the same text" do
+    create_rule(name_condition("=", "Uber"), category: @groceries)
+    create_rule(name_condition("=", "Uber Eats"), category: @dining)
+
+    assert_empty health.overlaps
+  end
+
+  test "equals text that an ends with condition would not match is not the same text" do
+    create_rule(name_condition("=", "Uber Eats"), category: @groceries)
+    create_rule(name_condition("ends_with", "Uber"), category: @dining)
+
+    assert_empty health.overlaps
+  end
+
+  test "equals text is the same text as a starts with condition only when it starts with it" do
+    above = create_rule(name_condition("starts_with", "uber"), category: @groceries)
+    below = create_rule(name_condition("=", "Uber Eats zz"), category: @dining)
+    create_rule(name_condition("=", "Zz Uber"), category: @dining)
+
+    assert_equal [ [ below, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+  end
+
+  test "contains conditions whose text differs in case are still the same text" do
+    above = create_rule(name_condition("like", "UBER"), category: @groceries)
+    below = create_rule(name_condition("starts_with", "uber eats zz"), category: @dining)
+
+    assert_equal [ [ below, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+  end
+
+  test "merchant conditions compare the merchant, not its name" do
+    uber = @family.merchants.create!(name: "Uber")
+    uber_eats = @family.merchants.create!(name: "Uber Eats")
+    synced_uber = ProviderMerchant.create!(name: "Uber", source: "plaid")
+    [ uber, uber_eats, synced_uber ].each do |merchant|
+      create_rule(Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: merchant.id), category: @groceries)
+    end
+
+    assert_empty health.overlaps
+  end
+
   test "contained text with contradicting amount conditions is not an overlap" do
     create_rule(name_condition("like", "uber"), amount_condition(">", "100"), category: @groceries)
     create_rule(name_condition("like", "uber"), amount_condition("<", "10"), category: @dining)

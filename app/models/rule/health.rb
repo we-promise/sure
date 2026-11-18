@@ -283,17 +283,35 @@ class Rule::Health
     def same_text?(rule, other)
       return false unless conditions_besides_text(rule) == conditions_besides_text(other)
 
-      texts(rule).any? do |text, folds|
-        texts(other).any? do |other_text, other_folds|
-          text, other_text = text.downcase, other_text.downcase if folds || other_folds
-          text.include?(other_text) || other_text.include?(text)
-        end
+      texts(rule).any? { |text| texts(other).any? { |other_text| same_or_contained?(text, other_text) } }
+    end
+
+    # `=` is exact and compares case, so its text only overlaps a condition it
+    # would itself match. A merchant `=` compares the merchant, not its name.
+    def same_or_contained?((text, operator, merchant_id), (other_text, other_operator, other_merchant_id))
+      return merchant_id == other_merchant_id if merchant_id && other_merchant_id
+      return text == other_text if operator == "=" && other_operator == "="
+      return matches_text?(text, other_text, other_operator) if operator == "="
+      return matches_text?(other_text, text, operator) if other_operator == "="
+
+      text, other_text = text.downcase, other_text.downcase
+      text.include?(other_text) || other_text.include?(text)
+    end
+
+    # Whether an exact value passes a contains, starts with or ends with
+    # condition, which all ignore case.
+    def matches_text?(value, text, operator)
+      value, text = value.downcase, text.downcase
+      case operator
+      when "starts_with" then value.start_with?(text)
+      when "ends_with" then value.end_with?(text)
+      else value.include?(text)
       end
     end
 
     # The text a match must contain, with a merchant condition read as its
-    # merchant's name, and whether its operator runs as ILIKE, so case can be
-    # ignored; `=` compares case too.
+    # merchant's name, its operator, and the merchant's id for a merchant
+    # condition.
     def texts(rule)
       @texts ||= {}.compare_by_identity
       @texts[rule] ||= leaf_conditions(rule).filter_map do |condition|
@@ -304,7 +322,7 @@ class Rule::Health
         when "transaction_merchant" then merchant_name(condition.value.to_s)
         end
         text = text.to_s.gsub(/\s+/, " ").strip.presence
-        [ text, CASE_INSENSITIVE_OPERATORS.include?(condition.operator) ] if text
+        [ text, condition.operator, (condition.value.to_s if condition.condition_type == "transaction_merchant") ] if text
       end
     end
 
