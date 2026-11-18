@@ -31,6 +31,15 @@ class ProviderItem::AccountSetupComponent < ApplicationComponent
     account_type == "Depository" ? @defaults.fetch(provider_account.id)[:depository_subtype] : ""
   end
 
+  # DS::Select items from [label, value] option pairs.
+  def select_items(options)
+    options.map { |label, value| { value: value, label: label } }
+  end
+
+  def subtype_placeholder(account_type)
+    t("#{provider_key}_items.subtype_select.placeholder.#{account_type == "Depository" ? "subtype" : "type"}")
+  end
+
   def complete_path
     helpers.public_send(:"complete_account_setup_#{provider_key}_item_path", item)
   end
