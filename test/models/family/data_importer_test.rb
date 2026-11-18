@@ -2345,6 +2345,28 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert rule.review_required?
   end
 
+  test "a transfer rule's target is mapped to the imported account" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-checking", name: "Restored Checking", balance: "10", currency: "USD", accountable_type: "Depository", accountable: { subtype: "checking" } } },
+      { type: "Rule", version: 1, data: { id: "rule-t", name: "Transfer", resource_type: "transaction",
+        actions: [ { action_type: "set_as_transfer_or_payment", value: "old-checking" } ] } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    restored = @family.accounts.find_by!(name: "Restored Checking")
+    assert_equal restored.id, @family.rules.find_by!(name: "Transfer").actions.first.value
+  end
+
+  test "a rule exported while waiting for review comes back waiting" do
+    ndjson = build_ndjson([ { type: "Rule", version: 1, data: { id: "held-1", name: "Held", resource_type: "transaction", active: false, review_required: true,
+      actions: [ { action_type: "exclude_transaction" } ] } } ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert @family.rules.find_by!(name: "Held").review_required?
+  end
+
   test "imports rule groups by name and keeps each group in one block" do
     existing = @family.rule_groups.create!(name: "Food")
     rule_record = ->(name, position, group) do

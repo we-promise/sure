@@ -427,6 +427,15 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports whether a rule waits for review" do
+    @rule.update_columns(review_required: true, active: false)
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }.find { |record| record["type"] == "Rule" && record["data"]["id"] == @rule.id }
+      assert_equal true, rule_data["data"]["review_required"]
+    end
+  end
+
   test "exports rules in NDJSON format with versioning" do
     zip_data = @exporter.generate_export
 

@@ -1533,8 +1533,10 @@ class Family::DataImporter
         rule.restricted_to = data["restricted_to"].presence && @family.users.find_by(email: data["restricted_to"])
         hold_for_review(rule) if data["restricted_to"].present? && rule.restricted_to.nil?
       end
-      # A session records who opened it; without them (removed since, or a
-      # session from before creators were recorded) nobody can be restricted.
+      hold_for_review(rule) if data["review_required"]
+      # A session records who opened it; without them (removed since, gone
+      # to another family, or a session from before creators were recorded)
+      # nobody can be restricted.
       hold_for_review(rule) if @import_session && @user.nil?
       rule.restrict_to_editor(@user)
     end
@@ -1632,6 +1634,13 @@ class Family::DataImporter
       # Map merchant names to IDs
       if action_type == "set_transaction_merchant"
         return resolve_rule_merchant_id(action_data, value)
+      end
+
+      # The export holds the source account's id: point at the account it
+      # was restored to. An unmapped target stays as it is, for the rule's
+      # target validation to judge.
+      if action_type == "set_as_transfer_or_payment"
+        return mapped_id(:accounts, value, record_type: "Rule", required: false) || value
       end
 
       value

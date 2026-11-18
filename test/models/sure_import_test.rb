@@ -34,6 +34,20 @@ class SureImportTest < ActiveSupport::TestCase
     assert held
   end
 
+  test "rules from a session whose creator has left the family wait for review" do
+    member = users(:family_member)
+    session = @family.import_sessions.create!(created_by: member, expected_chunks: 1)
+    member.update_columns(family_id: families(:empty).id, role: "admin")
+    @import.update_columns(import_session_id: session.id, sequence: 1, checksum: "0" * 64)
+    attach_ndjson({ type: "Rule", data: { id: "rule-1", name: "From a leaver", resource_type: "transaction", active: true, actions: [ { action_type: "exclude_transaction" } ] } }.to_json)
+
+    @import.reload.import!(import_session: session)
+
+    rule = @family.rules.find_by!(name: "From a leaver")
+    assert rule.review_required?
+    assert_not rule.active?
+  end
+
   test "dry_run reflects attached ndjson content" do
     ndjson = [
       { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } },

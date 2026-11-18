@@ -135,8 +135,7 @@ class SureImport < Import
   def import!(import_session: nil)
     sync_ndjson_counts!
     before_counts = readback_count_snapshot
-    # A session's rules belong to who wrote them, even when an admin publishes.
-    importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self, user: import_session&.created_by || published_by)
+    importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self, user: importing_user(import_session))
     result = importer.import!
 
     Import.transaction do
@@ -265,6 +264,17 @@ class SureImport < Import
   end
 
   private
+    # Whom the rules this import brings are restricted to. A session's rules
+    # belong to who opened it, even when an admin publishes, and only while
+    # they are still in this family; otherwise nobody (the importer holds the
+    # rules for review).
+    def importing_user(import_session)
+      return published_by unless import_session
+
+      creator = import_session.created_by
+      creator if creator&.family_id == family_id
+    end
+
 
     def sync_ndjson_counts!
       line_counts = self.class.ndjson_line_type_counts(ndjson_blob_string)
