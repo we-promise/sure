@@ -10,6 +10,11 @@ zh-CN:
         mfa_title: 双重认证
         mfa_enabled_status_html: 双重认证已<span class="font-medium text-green-600">启用</span>
         mfa_enabled_description: 你的账户受到额外安全层保护。
+        compromised_secret_warning:
+          title: 加密密钥实际上并不保密
+          intro: 此实例的加密密钥是从一个此前曾作为本项目示例 Docker Compose 文件默认工作值的 SECRET_KEY_BASE 自动派生的。任何知道该值的人都能计算出相同的加密密钥，因此这些数据实际上并未受到保护。
+          generate: 请勿直接设置新的 SECRET_KEY_BASE 并运行回填任务：如果已有数据使用该已泄露密钥加密，回填任务无法区分密文与真实明文，会再次在其上进行加密，导致数据无法恢复。请改为在停止应用后安全轮换：使用 bin/rails db:encryption:init 生成新密钥并设为 ACTIVE_RECORD_ENCRYPTION_* 变量，然后仅在执行该命令时将该 SECRET_KEY_BASE 放入 ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE 环境变量中，运行 bin/rails "security:backfill_encryption[100,0]"，使现有数据仍可解密并迁移至新密钥。请参阅 Docker 部署指南。
+          settings_secrets: 保存在设置中的 API 密钥和令牌使用由 SECRET_KEY_BASE 本身派生的密钥加密，上述方案不会涵盖这部分数据。更改 SECRET_KEY_BASE 后，请将旧值放入 OLD_SECRET_KEY_BASE 环境变量中并运行 bin/rails "security:rotate_setting_secrets[0]" 重新加密（请参阅 Docker 部署指南）。对于报告为无法解密的任何密钥，请重新输入。
         mfa_disabled_status_html: 双重认证已<span class="font-medium text-red-600">禁用</span>
         mfa_disabled_description: 启用双重认证，为账户增加一层保护。
         webauthn_add: 添加通行密钥或安全密钥

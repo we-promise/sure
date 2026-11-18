@@ -63,7 +63,7 @@ class IbkrAccount < ApplicationRecord
         provider_name: "Interactive Brokers",
         statement_from_date: data.dig(:statement, :from_date),
         statement_to_date: data.dig(:statement, :to_date)
-      }.compact,
+      }.compact.merge(institution_metadata.to_h.slice("history")),
       report_date: data[:report_date],
       raw_holdings_payload: data[:open_positions] || [],
       raw_activities_payload: {

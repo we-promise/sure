@@ -26,6 +26,7 @@ export default class extends Controller {
 
     if (this.hasDropdownTarget) {
       this.dropdownTarget.classList.toggle("hidden")
+      this.#syncExpanded()
     }
   }
 
@@ -38,7 +39,17 @@ export default class extends Controller {
   close() {
     if (this.hasDropdownTarget) {
       this.dropdownTarget.classList.add("hidden")
+      this.#syncExpanded()
     }
+  }
+
+  // The badge says whether its dropdown is open, for assistive technology,
+  // and so a row with it open is not contained (and the dropdown clipped)
+  // while a sidebar is dragged.
+  #syncExpanded() {
+    if (!this.hasBadgeTarget) return
+    const open = !this.dropdownTarget.classList.contains("hidden")
+    this.badgeTarget.setAttribute("aria-expanded", open.toString())
   }
 
   async select(event) {

@@ -66,6 +66,7 @@ es:
       title: Configura tus cuentas de Enable Banking
       header_subtitle: Elige los tipos de cuenta correctos para tus cuentas importadas
       choose_account_type: 'Elige el tipo de cuenta correcto para cada cuenta de Enable Banking:'
+      skip_notice: 'Las cuentas omitidas se recuerdan: Sure deja de importarlas hasta que las vincules a una cuenta.'
       historical_data_range: 'Rango de datos históricos:'
       sync_start_date_label: 'Empezar a sincronizar transacciones desde:'
       sync_start_date_help: Selecciona hasta cuándo quieres sincronizar el historial de transacciones. Hay disponible un máximo de 2 años de historial.
@@ -74,6 +75,7 @@ es:
       create_accounts: Crear cuentas
       creating_accounts: Creando cuentas...
       cancel: Cancelar
+      psd2_savings_notice: 'Nota: algunas cuentas de ahorro reguladas francesas (Livret A, PEL, LEP, LDDS) pueden tener acceso limitado o nulo a través de Open Banking (PSD2). Si falta una cuenta de ahorro, puedes añadirla manualmente.'
     new:
       link_enable_banking_title: Vincular Enable Banking
       session_expired: 'Sesión caducada: se requiere volver a autorizar'

@@ -60,3 +60,9 @@ zh-CN:
         preview:
           title: 启用预览功能
           description: 选择启用标记为 preview 或 canary 的进行中功能。
+        transactions_title: 交易
+        transactions_subtitle: 配置交易的显示与行为
+        manual_reconciliation: 手动核对
+        manual_reconciliation_hint: 在手动录入的账户中显示核对控件。已启用银行同步的账户请改用对账单核对。
+        rule_suggestions: 规则建议
+        rule_suggestions_hint: 更改交易分类后提示创建规则
