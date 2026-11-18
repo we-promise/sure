@@ -78,9 +78,9 @@ class Transfer < ApplicationRecord
   def name
     acc = to_account
     if payment?
-      acc ? "Payment to #{acc.name}" : "Payment"
+      acc ? I18n.t("transfer.payment_name", to_account: acc.name) : I18n.t("transfer.contextual.payment")
     else
-      acc ? "Transfer to #{acc.name}" : "Transfer"
+      acc ? I18n.t("transfer.name", to_account: acc.name) : I18n.t("transfer.contextual.transfer")
     end
   end
 
@@ -99,12 +99,12 @@ class Transfer < ApplicationRecord
   end
 
   def contextual_name
-    return "Credit card payment" if to_account&.credit_card?
-    return "Loan payment" if to_account&.loan?
-    return "Investment contribution" if investment_contribution?
-    return "Payment" if payment?
+    return I18n.t("transfer.contextual.credit_card_payment") if to_account&.credit_card?
+    return I18n.t("transfer.contextual.loan_payment") if to_account&.loan?
+    return I18n.t("transfer.contextual.investment_contribution") if investment_contribution?
+    return I18n.t("transfer.contextual.payment") if payment?
 
-    "Transfer"
+    I18n.t("transfer.contextual.transfer")
   end
 
   # Renames both legs. Returns false when either name is blank. A changed entry

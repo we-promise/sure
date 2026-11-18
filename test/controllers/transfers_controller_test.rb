@@ -730,7 +730,8 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_select "dt", text: I18n.t("transfers.show.transaction_name"), count: 2
     assert_select "label[for='transfer_outflow_name'] input[name='transfer[outflow_name]']"
     assert_select "label[for='transfer_inflow_name'] input[name='transfer[inflow_name]']"
-    assert_select "input[name='transfer[outflow_name]'][aria-label=?]", I18n.t("transfers.show.transaction_name")
+    assert_select "input[name='transfer[outflow_name]'][aria-label=?]", I18n.t("transfers.show.transaction_name_aria", account: transfer.from_account.name)
+    assert_select "input[name='transfer[inflow_name]'][aria-label=?]", I18n.t("transfers.show.transaction_name_aria", account: transfer.to_account.name)
     assert_select "p", text: I18n.t("transfers.show.transaction_name_help")
     assert_select "#display_name_transfer_#{transfer.id}", text: "Credit card payment"
   end

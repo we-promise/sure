@@ -1,4 +1,4 @@
-<%# locals: (form:, method:, value:) %>
+<%# locals: (form:, method:, account:, value:) %>
 
 <dl>
   <%= render DS::DetailRow.new(label: t("transfers.show.transaction_name"), align: :center) do |row| %>
@@ -7,7 +7,7 @@
             form: form,
             method: method,
             value: value,
-            aria_label: t("transfers.show.transaction_name"),
+            aria_label: t("transfers.show.transaction_name_aria", account: account.name),
             data: { auto_submit_form_target: "auto" }
           ) %>
     <% end %>
