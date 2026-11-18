@@ -23,12 +23,163 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:accounts].count
-    account = result[:accounts].first
+    assert_equal 1, result[:account_ids].count
+    account = Account.find(result[:account_ids].first)
     assert_equal "Test Checking", account.name
     assert_equal 1500.0, account.balance.to_f
     assert_equal "USD", account.currency
     assert_equal "Depository", account.accountable_type
+  end
+
+  test "round trips loan terms through full export" do
+    source_family = Family.create!(name: "Source Loan Family", currency: "EUR", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Round Trip Land Loan",
+      balance: 18_000,
+      currency: "USD",
+      accountable: Loan.new(
+        subtype: "other",
+        interest_rate: 7.25,
+        rate_type: "variable",
+        term_months: 120,
+        start_date: Date.new(2025, 3, 1),
+        down_payment: 4_000,
+        initial_balance: 20_000,
+        insurance_rate: 0.35,
+        insurance_rate_type: "level_term",
+        day_count_convention: "actual_365",
+        principal_only_transfers: true,
+        variable_rate_schedule: { "2026-01-01" => "6.5" }
+      )
+    )
+
+    Family::DataImporter.new(@family, full_export_ndjson(source_family)).import!
+
+    loan = @family.accounts.find_by!(name: "Round Trip Land Loan").accountable
+    assert_equal "other", loan.subtype
+    assert_equal BigDecimal("7.25"), loan.interest_rate
+    assert_equal "variable", loan.rate_type
+    assert_equal 120, loan.term_months
+    assert_equal Date.new(2025, 3, 1), loan.start_date
+    assert_equal BigDecimal("4000"), loan.down_payment
+    assert_equal BigDecimal("20000"), loan.initial_balance
+    assert_equal BigDecimal("0.35"), loan.insurance_rate
+    assert_equal "level_term", loan.insurance_rate_type
+    assert_equal "actual_365", loan.day_count_convention
+    assert loan.principal_only_transfers
+    assert_equal [ [ Date.new(2026, 1, 1), BigDecimal("6.5") ] ], loan.variable_rates
+  end
+
+  test "round trips credit card details through full export" do
+    source_family = Family.create!(name: "Source Card Family", currency: "EUR", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Round Trip Card",
+      balance: 350,
+      currency: "EUR",
+      accountable: CreditCard.new(
+        subtype: "credit_card",
+        apr: 19.9,
+        annual_fee: 45,
+        minimum_payment: 25,
+        available_credit: 2_650,
+        due_day: 5,
+        statement_close_day: 20,
+        expiration_date: Date.new(2029, 8, 31)
+      )
+    )
+
+    Family::DataImporter.new(@family, full_export_ndjson(source_family)).import!
+
+    card = @family.accounts.find_by!(name: "Round Trip Card").accountable
+    assert_equal BigDecimal("19.9"), card.apr
+    assert_equal BigDecimal("45"), card.annual_fee
+    assert_equal BigDecimal("25"), card.minimum_payment
+    assert_equal BigDecimal("2650"), card.available_credit
+    assert_equal 5, card.due_day
+    assert_equal 20, card.statement_close_day
+    assert_equal Date.new(2029, 8, 31), card.expiration_date
+  end
+
+  test "imports loans and credit cards from an export without their details" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-loan", name: "Old Loan", balance: "1000", currency: "USD", subtype: "auto", accountable_type: "Loan", accountable: { subtype: "auto" } } },
+      { type: "Account", data: { id: "old-card", name: "Old Card", balance: "100", currency: "USD", accountable_type: "CreditCard", accountable: { subtype: "credit_card" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    loan = @family.accounts.find_by!(name: "Old Loan").accountable
+    assert_equal "auto", loan.subtype
+    assert_nil loan.interest_rate
+    assert_equal Loan::DEFAULT_DAY_COUNT_CONVENTION, loan.day_count_convention
+    assert_not loan.principal_only_transfers
+    assert_equal({}, loan.variable_rate_schedule)
+
+    card = @family.accounts.find_by!(name: "Old Card").accountable
+    assert_nil card.apr
+    assert_nil card.due_day
+  end
+
+  test "imports a loan whose detail columns are null in the export" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-loan", name: "Null Loan", balance: "1000", currency: "USD", accountable_type: "Loan",
+          accountable: { interest_rate: "5.0", day_count_convention: nil, principal_only_transfers: nil, variable_rate_schedule: nil, start_date: nil }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    loan = @family.accounts.find_by!(name: "Null Loan").accountable
+    assert_equal BigDecimal("5"), loan.interest_rate
+    assert_equal Loan::DEFAULT_DAY_COUNT_CONVENTION, loan.day_count_convention
+    assert_not loan.principal_only_transfers
+    assert_equal({}, loan.variable_rate_schedule)
+  end
+
+  test "rejects a loan rate schedule that cannot be read" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-loan", name: "Bad Schedule Loan", balance: "1000", currency: "USD", accountable_type: "Loan",
+          accountable: { rate_type: "variable", interest_rate: "5", variable_rate_schedule: { "not a date" => "6" } }
+        }
+      }
+    ])
+
+    assert_raises(ActiveRecord::RecordInvalid) { Family::DataImporter.new(@family, ndjson).import! }
+    assert_not @family.accounts.exists?(name: "Bad Schedule Loan")
+  end
+
+  test "imports into existing accounts given as account targets" do
+    account = @family.accounts.create!(name: "Existing", balance: 0, currency: "USD", accountable: Depository.new)
+    ndjson = build_ndjson([
+      { type: "Transaction", data: { id: "old-txn", account_id: "old-account", date: "2024-01-02", amount: "10.00", name: "Grocer" } }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson, account_targets: { "old-account" => account }).import!
+
+    assert_empty result[:account_ids]
+    assert_equal [ "Grocer" ], account.entries.pluck(:name)
+  end
+
+  test "keeps a transaction's own extra metadata and import lock" do
+    account = @family.accounts.create!(name: "Existing", balance: 0, currency: "USD", accountable: Depository.new)
+    ndjson = build_ndjson([
+      { type: "Transaction", data: { id: "old-txn", account_id: "old-account", date: "2024-01-02", amount: "10.00",
+        name: "Grocer", extra: { monarch: { transaction_id: "1" } }, import_locked: true } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, account_targets: { "old-account" => account }).import!
+
+    entry = account.entries.sole
+    assert_equal({ "monarch" => { "transaction_id" => "1" } }, entry.transaction.extra)
+    assert entry.import_locked?
+    assert_nil entry.external_id
   end
 
   test "restores the Brandfetch logo choice so no fetched icon replaces it" do
@@ -48,7 +199,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       }
     ])
 
-    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+    account_id = Family::DataImporter.new(@family, ndjson).import![:account_ids].first
+    account = Account.find(account_id)
 
     assert account.reload.logo_brandfetch?
     assert_not account.logo_auto_fetchable?
@@ -70,7 +222,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       }
     ])
 
-    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+    account_id = Family::DataImporter.new(@family, ndjson).import![:account_ids].first
+    account = Account.find(account_id)
 
     assert account.reload.logo_automatic?
   end
@@ -93,7 +246,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    account = result[:accounts].first
+    account = Account.find(result[:account_ids].first)
     assert_equal "Closed Checking", account.name
     assert_equal "disabled", account.status
   end
@@ -116,7 +269,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    account = result[:accounts].first
+    account = Account.find(result[:account_ids].first)
     assert_equal "Pending Delete Checking", account.name
     assert_equal "active", account.status
   end
@@ -839,7 +992,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:entries].count
+    assert_equal 1, result[:entry_ids].count
 
     transaction = @family.transactions.first
     assert_not_nil transaction
@@ -944,8 +1097,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     parent_entry = @family.entries.find_by!(name: "ATM withdrawal plus fee")
     assert parent_entry.split_parent?
     assert_equal true, parent_entry.excluded
-    assert_equal 4, result[:entries].count
-    assert_includes result[:entries].map(&:id), parent_entry.id
+    assert_equal 4, result[:entry_ids].count
+    assert_includes result[:entry_ids], parent_entry.id
 
     transfer_child = parent_entry.child_entries.find_by!(name: "Cash movement")
     fee_child = parent_entry.child_entries.find_by!(name: "ATM fee")
@@ -1151,7 +1304,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     result = importer.import!
 
     # Account + Opening balance + Trade entry
-    assert_equal 1, result[:entries].count
+    assert_equal 1, result[:entry_ids].count
 
     trade = @family.trades.first
     assert_not_nil trade
@@ -1356,6 +1509,89 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert imported_holding.security_locked
   end
 
+  test "round trips property details and address through full export" do
+    source_family = Family.create!(name: "Source Property Family", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Round Trip Land",
+      balance: 150_000_000,
+      currency: "PYG",
+      accountable: Property.new(
+        subtype: "plot",
+        year_built: 2001,
+        area_value: 12_000,
+        area_unit: "sqm",
+        address: Address.new(line1: "Ruta 2 km 40", locality: "Caacupe", region: "Cordillera", postal_code: "3000", country: "PY")
+      )
+    )
+
+    zip_data = Family::DataExporter.new(source_family).generate_export
+    ndjson = nil
+    Zip::File.open_buffer(zip_data) { |zip| ndjson = zip.read("all.ndjson") }
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    property = @family.accounts.find_by!(name: "Round Trip Land").accountable
+    assert_equal "plot", property.subtype
+    assert_equal 2001, property.year_built
+    assert_equal 12_000, property.area_value
+    assert_equal "sqm", property.area_unit
+
+    address = property.address
+    assert_not_nil address, "the address should survive a backup and restore"
+    assert_equal "Ruta 2 km 40", address.line1
+    assert_equal "Caacupe", address.locality
+    assert_equal "Cordillera", address.region
+    assert_equal "3000", address.postal_code
+    assert_equal "PY", address.country
+  end
+
+  test "imports property details from an export without an address" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-property-1",
+          name: "Imported Land",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Property",
+          accountable: { subtype: "agri_land", year_built: nil, area_value: 50, area_unit: "sqm", id: "ignored", avm_provider: "rentcast" }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    property = @family.accounts.find_by!(name: "Imported Land").accountable
+    assert_equal 50, property.area_value
+    assert_equal "sqm", property.area_unit
+    assert_nil property.year_built
+    assert_nil property.avm_provider, "provider links are not restored"
+    assert_nil property.address
+  end
+
+  test "an explicit null property detail keeps the default" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-property-2",
+          name: "Null Unit Land",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Property",
+          accountable: { subtype: "plot", area_value: 50, area_unit: nil }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    property = @family.accounts.find_by!(name: "Null Unit Land").accountable
+    assert_equal 50, property.area_value
+    assert_equal "sqft", property.area_unit
+  end
+
   test "round trips raw balance history through full export" do
     source_family = Family.create!(
       name: "Source Balance Family",
@@ -1532,7 +1768,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:entries].count
+    assert_equal 1, result[:entry_ids].count
 
     account = @family.accounts.find_by(name: "Property")
     valuation = account.valuations.joins(:entry).find_by(entries: { name: "Updated valuation" })
@@ -2341,6 +2577,41 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal category.id, second_rule.actions.first.value
   end
 
+  test "points imported merchant rules at a reused provider merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Grocer", source: "plaid", provider_merchant_id: "plaid_synced_grocer")
+    value_ref = { type: "Merchant", id: "old-provider-merchant", name: "Synced Grocer" }
+
+    ndjson = build_ndjson([
+      {
+        type: "ProviderMerchant",
+        data: { id: "old-provider-merchant", name: "Synced Grocer", source: "plaid", provider_merchant_id: "plaid_synced_grocer" }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Grocer rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_merchant", operator: "=", value: "Synced Grocer", value_ref: value_ref }
+          ],
+          actions: [
+            { action_type: "set_transaction_merchant", value: "Synced Grocer", value_ref: value_ref }
+          ]
+        }
+      }
+    ])
+
+    assert_no_difference -> { @family.merchants.count } do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
+
+    rule = @family.rules.find_by!(name: "Grocer rule")
+    assert_equal provider_merchant.id, rule.conditions.first.value
+    assert_equal provider_merchant.id, rule.actions.first.value
+  end
+
   test "reuses a merchant created for an earlier rule within the same import" do
     ndjson = build_ndjson([
       {
@@ -2892,8 +3163,31 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:accounts].count
-    assert_equal "Valid Account", result[:accounts].first.name
+    assert_equal 1, result[:account_ids].count
+    account_id = result[:account_ids].first
+    assert_equal "Valid Account", Account.find(account_id).name
+  end
+
+  test "session import persists source mappings without retaining them on the session" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    ndjson = [
+      { type: "Account", data: {
+        id: "acct-1", name: "Mapped Account", balance: "100.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } },
+      { type: "Transaction", data: {
+        id: "txn-1", account_id: "acct-1", date: "2024-01-15", amount: "-25.00",
+        name: "Coffee", currency: "USD"
+      } }
+    ].map(&:to_json).join("\n")
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    # The session lives for every chunk of a publish run; anything built onto
+    # its association stays in memory until the whole run ends.
+    assert_empty session.source_mappings.target
+    assert_empty @family.import_source_mappings.target
+    assert_equal %w[Account Transaction], ImportSourceMapping.where(import_session_id: session.id).pluck(:source_type).sort
   end
 
   test "skips unsupported record types" do
@@ -2917,7 +3211,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:accounts].count
+    assert_equal 1, result[:account_ids].count
   end
 
   test "full import scenario with all entity types" do
@@ -3036,7 +3330,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     result = importer.import!
 
     # Verify all entities were created
-    assert_equal 1, result[:accounts].count
+    assert_equal 1, result[:account_ids].count
     assert_equal 1, @family.categories.count
     assert_equal 1, @family.tags.count
     assert_equal 1, @family.merchants.count
@@ -3237,6 +3531,12 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")
+    end
+
+    def full_export_ndjson(family)
+      ndjson = nil
+      Zip::File.open_buffer(Family::DataExporter.new(family).generate_export) { |zip| ndjson = zip.read("all.ndjson") }
+      ndjson
     end
 
     # A bill, one non-monthly rule, a settled occurrence, and the payment that

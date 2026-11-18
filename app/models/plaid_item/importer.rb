@@ -50,12 +50,11 @@ class PlaidItem::Importer
 
     def fetch_and_import_accounts_data
       snapshot = PlaidItem::AccountsSnapshot.new(plaid_item, plaid_provider: plaid_provider)
+      returned_ids = snapshot.accounts.map(&:account_id)
 
       PlaidItem.transaction do
         snapshot.accounts.each do |raw_account|
-          plaid_account = plaid_item.plaid_accounts.find_or_initialize_by(
-            plaid_id: raw_account.account_id
-          )
+          plaid_account = plaid_account_for(raw_account, returned_ids: returned_ids)
 
           PlaidAccount::Importer.new(
             plaid_account,
@@ -68,5 +67,74 @@ class PlaidItem::Importer
         # Once we know all data has been imported, save the cursor to avoid re-fetching the same data next time
         plaid_item.update!(next_cursor: snapshot.transactions_cursor)
       end
+    end
+
+    def plaid_account_for(raw_account, returned_ids:)
+      plaid_item.plaid_accounts.find_by(plaid_id: raw_account.account_id) ||
+        reissued_plaid_account(raw_account, returned_ids: returned_ids) ||
+        plaid_item.plaid_accounts.new(plaid_id: raw_account.account_id)
+    end
+
+    # At institutions with tokenized account numbers, such as Chase, re-consenting
+    # through update mode can make Plaid issue a new account_id for an account it
+    # already shares, while persistent_account_id stays the same. Moving the
+    # existing PlaidAccount to the new id keeps it, and the Sure account linked to
+    # it, instead of importing the account a second time. Only an account Plaid no
+    # longer returns under its old id is taken over. The payload is encrypted, so
+    # the match is made in Ruby.
+    #
+    # An Item duplicated before this matching existed holds stale copies next to
+    # the one in use. A copy linked to a Sure account is preferred, then the most
+    # recently created, which is the one Plaid moved to last. updated_at cannot
+    # tell them apart, because clearing an omitted copy's liabilities updates it.
+    def reissued_plaid_account(raw_account, returned_ids:)
+      persistent_id = raw_account.try(:persistent_account_id).presence
+      return unless persistent_id
+
+      candidates = omitted_accounts(returned_ids)
+      matches = candidates.select { |_, candidate_persistent_id| candidate_persistent_id == persistent_id }.keys
+      plaid_account = matches.max_by { |candidate| [ candidate.current_account ? 1 : 0, candidate.created_at ] }
+      return unless plaid_account
+
+      candidates.delete(plaid_account)
+      plaid_account.plaid_id = raw_account.account_id
+      plaid_account
+    end
+
+    # The accounts Plaid did not return in this import, each with its
+    # persistent_account_id. They are loaded and their payloads decrypted once,
+    # when the first unknown account_id needs them, so an unreadable payload is
+    # logged once. An account is removed once it has been taken over.
+    def omitted_accounts(returned_ids)
+      @omitted_accounts ||= plaid_item.plaid_accounts.where.not(plaid_id: returned_ids).to_h do |plaid_account|
+        [ plaid_account, persistent_account_id_of(plaid_account) ]
+      end
+    end
+
+    # A payload that cannot be decrypted is left unmatched, so the account is
+    # imported as it was before this matching rather than failing the import.
+    def persistent_account_id_of(plaid_account)
+      payload = plaid_account.raw_payload
+      payload["persistent_account_id"] if payload.is_a?(Hash)
+    rescue ActiveRecord::Encryption::Errors::Decryption
+      log_unreadable_payload(plaid_account)
+      nil
+    end
+
+    def log_unreadable_payload(plaid_account)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Skipped a Plaid account with an unreadable payload when matching a reissued account_id",
+        source: self.class.name,
+        provider_key: "plaid",
+        family: plaid_item.family,
+        account: plaid_account.current_account,
+        account_provider: plaid_account.account_provider,
+        metadata: {
+          plaid_item_id: plaid_item.id,
+          plaid_account_id: plaid_account.id
+        }
+      )
     end
 end

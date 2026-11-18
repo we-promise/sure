@@ -1,0 +1,442 @@
+---
+id:
+  settings:
+    providers:
+      update:
+        updated_successfully: Pengaturan penyedia berhasil diperbarui
+        no_changes: Tidak ada perubahan yang dibuat
+      not_authorized: Tidak berwenang
+      bank_sync:
+        page_title: Sinkronisasi bank
+        lede: Hubungkan rekening eksternal agar transaksi, saldo, dan kepemilikan masuk ke Sure secara otomatis.
+      status:
+        ok: Terhubung
+        warn: Perlu tindakan
+        err: Kesalahan
+        "off": Belum dikonfigurasi
+      maturity:
+        beta: Beta
+        alpha: Alfa
+      drawer_trust_statement: "Akses baca-saja. Sure tidak akan pernah dapat memindahkan uang, dan kredensial Anda disimpan dalam bentuk terenkripsi."
+      drawer_trust_statement_encryption_unconfigured: "Akses baca-saja. Sure tidak akan pernah dapat memindahkan uang. Konfigurasikan kunci enkripsi secara eksplisit sebelum menyimpan kredensial penyedia di produksi."
+      provider_setup_encryption_warning:
+        title: Kunci enkripsi belum diatur
+        message: "Instalasi self-hosted ini belum mengonfigurasi kunci enkripsi Active Record secara eksplisit. Konfigurasikan primary_key, deterministic_key, dan key_derivation_salt sebelum menyimpan kredensial penyedia di produksi."
+      setup_steps:
+        eyebrow: Pengaturan
+        need_help: "Butuh bantuan?"
+      connect: Hubungkan
+      financekit:
+        app_store: App Store
+        coming_soon: Segera hadir!
+        description: "Kelola koneksi Apple Wallet di aplikasi Sure iOS. Data dompet disinkronkan saat aplikasi terbuka; sinkronisasi latar belakang otomatis belum tersedia."
+        summary: Sinkronisasi dompet
+        accounts: Rekening tertaut
+        linked_accounts:
+          one: 1 rekening tertaut
+          other: "%{count} rekening tertaut"
+        status:
+          active: Sinkronisasi aktif
+          repair_required: Perlu perbaikan — buka aplikasi Sure iOS
+        last_accepted_at: Terakhir diterima oleh Sure
+        last_imported_at: Terakhir diimpor ke keluarga Anda
+        not_yet: Belum pernah
+      groups:
+        your_connections: Koneksi Anda
+        available: Tersedia
+        empty_available: Semua penyedia yang tersedia sudah terhubung.
+      health_strip:
+        connected: terhubung
+        needs_attention: perlu perhatian
+        accounts_syncing: rekening sedang disinkronkan
+        last_synced: Terakhir disinkronkan %{time} yang lalu
+      meta:
+        sync_error: Kesalahan sinkronisasi
+        no_recent_sync: Sinkronisasi terlambat
+        reconsent_required: Persetujuan ulang diperlukan
+        login_required: Login diperlukan
+        login_expires_soon: "Login berakhir dalam %{time} (%{at})"
+        reconsent_needed:
+          one: Persetujuan ulang diperlukan dalam 1 hari
+          other: Persetujuan ulang diperlukan dalam %{count} hari
+        last_synced: Disinkronkan %{time} yang lalu
+      sync_all: Sinkronkan semua
+      sync_all_in_progress: Menyinkronkan semua penyedia yang terhubung…
+      sync_all_recently: Sinkronisasi sudah berjalan. Coba lagi sebentar lagi.
+      sync_provider: Sinkronkan sekarang
+      sync_provider_in_progress: Sinkronisasi dimulai.
+      recently_synced: Baru saja disinkronkan. Coba lagi sebentar lagi.
+      taglines:
+        financekit: Sinkronkan (sebagian) rekening FinanceKit melalui aplikasi Sure iOS.
+        akahu: Sinkronkan lembaga keuangan Selandia Baru melalui Akahu.
+        simplefin: Hubungkan rekening bank AS melalui protokol terbuka SimpleFIN.
+        lunchflow: Hubungkan 20rb+ bank dari 40+ negara (Inggris Raya, UE, AS, dan lainnya!)
+        redbark: Sinkronkan rekening bank Australia melalui open banking Redbark.
+        up: Sinkronkan rekening bank Up Australia dengan token akses pribadi.
+        monobank: Sinkronkan kartu dan jar Monobank Ukraina dengan token API pribadi.
+        fio: Sinkronkan rekening Fio banka dengan token API baca-saja.
+        enable_banking: Sinkronkan rekening bank Eropa melalui open banking PSD2.
+        truelayer: Sinkronkan rekening bank dan kartu kredit Inggris Raya melalui open banking TrueLayer.
+        coinstats: Pantau seluruh portofolio kripto Anda di berbagai dompet dan bursa.
+        wise: Sinkronkan saldo multi-mata uang dan transfer internasional Wise secara otomatis.
+        mercury: Sinkronkan rekening perbankan bisnis Mercury Anda secara otomatis.
+        brex: Sinkronkan aktivitas kas dan kartu korporat Brex dengan akses baca-saja.
+        coinbase: Impor kepemilikan kripto Coinbase Anda dan pantau kinerjanya.
+        binance: Sinkronkan saldo spot Binance Anda menggunakan kunci API baca-saja.
+        kraken: Sinkronkan saldo Kraken dan riwayat eksekusi perdagangan spot menggunakan kunci API baca-saja.
+        coinspot: Sinkronkan saldo CoinSpot, nilai AUD, transfer, setoran, penarikan, dan riwayat pesanan menggunakan kunci API baca-saja.
+        onchain_wallet: Pantau dompet Bitcoin, EVM, Solana, Cosmos, dan Polkadot yang dikelola sendiri dari alamat publiknya.
+        snaptrade: Hubungkan rekening pialang melalui jaringan agregasi SnapTrade.
+        trading212: Sinkronkan portofolio investasi Trading 212 Anda menggunakan kunci API baca-saja.
+        sharesight: Sinkronkan portofolio yang Anda pantau di Sharesight menggunakan API-nya.
+        trade_republic: Sinkronkan rekening investasi Trade Republic Anda melalui login web baca-saja yang aman.
+        ibkr: Sinkronkan rekening investasi Interactive Brokers melalui impor Flex Query.
+        questrade: Sinkronkan rekening investasi Questrade Anda secara langsung melalui API Questrade.
+        indexa_capital: Pantau portofolio investasi otomatis Indexa Capital Anda.
+        sophtron: Hubungkan bank dan utilitas AS & Kanada.
+        plaid: Hubungkan ribuan lembaga keuangan AS melalui Plaid.
+        plaid_eu: Hubungkan lembaga keuangan Eropa melalui Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Cari penyedia
+        placeholder: Cari penyedia
+        chips:
+          all: Semua
+          bank: Bank
+          crypto: Kripto
+          investment: Investasi
+      empty_filter: Tidak ada penyedia yang cocok dengan filter Anda.
+      clear_filter: Hapus filter
+      encryption_error:
+        title: Kunci enkripsi belum diatur
+        message: "Sinkronisasi bank memerlukan enkripsi Active Record yang telah dikonfigurasi. Atur primary_key, deterministic_key, dan key_derivation_salt di kredensial Rails atau variabel lingkungan Anda."
+      provider_form:
+        save_and_connect: "Simpan dan hubungkan"
+      coinbase_panel:
+        setup_instructions: "Untuk menghubungkan Coinbase:"
+        step1_html: Buka <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
+        step2: Buat kunci API baru dengan izin baca-saja (lihat rekening, lihat transaksi)
+        step3: Salin kunci API dan rahasia API Anda lalu tempel di bawah ini
+        api_key_label: Kunci API
+        api_key_placeholder: Masukkan kunci API Coinbase Anda
+        api_secret_label: Rahasia API
+        api_secret_placeholder: Masukkan rahasia API Coinbase Anda
+        connect_button: Hubungkan Coinbase
+        syncing: Menyinkronkan...
+        sync: Sinkronkan
+        disconnect: Putuskan koneksi
+        disconnect_confirm: Yakin ingin memutuskan koneksi Coinbase ini? Rekening yang tersinkronisasi akan menjadi rekening manual.
+      binance_panel:
+        setup_instructions: "Untuk menghubungkan Binance, buat kunci API baca-saja:"
+        step1_html: 'Buka <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>'
+        step2: "Buat kunci API baru hanya dengan izin Enable Reading"
+        step3: "Tempel Kunci API dan Rahasia Anda di bawah ini"
+        no_withdraw_title: "Hanya kunci baca-saja"
+        no_withdraw_body: "Jangan aktifkan izin penarikan saat membuat kunci API Binance Anda. Sure hanya memerlukan akses baca."
+        ip_hint_title: "Daftar putih IP diperlukan"
+        ip_hint_body: "Tambahkan IP keluar server aplikasi ke daftar putih Kunci API Binance:"
+        ip_hint_contact_admin: "Hubungi administrator Anda untuk mendapatkan alamat IP keluar server aplikasi."
+        api_key_label: Kunci API
+        api_key_placeholder: Tempel Kunci API Binance Anda
+        api_secret_label: Rahasia API
+        api_secret_placeholder: Tempel Rahasia API Binance Anda
+        connect_button: Hubungkan Binance
+        syncing: Menyinkronkan...
+        sync: Sinkronkan
+        historical_import: "Pengaturan Impor Historis"
+        sync_start_date_label: "Impor data mulai dari"
+        sync_start_date_help: "Pilih seberapa jauh ke belakang perdagangan historis akan diambil."
+        disconnect: Putuskan koneksi
+        disconnect_confirm: "Yakin ingin memutuskan koneksi Binance?"
+      kraken_panel:
+        step1_html: 'Buka <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">pengaturan API Kraken</a>'
+        step2: "Buat kunci API hanya dengan izin Query Funds dan Query Closed Orders & Trades."
+        step3: "Tempel kunci API dan kunci privat di bawah ini."
+        read_only_title: "Hanya sinkronisasi bursa baca-saja"
+        read_only_body: "Jangan berikan izin perdagangan, pembatalan, penarikan, ekspor, buku besar, Earn, staking, atau transfer. Sure hanya mengimpor saldo, kepemilikan, dan eksekusi perdagangan spot."
+        default_connection_name: Kraken
+        add_connection: Tambah koneksi Kraken
+        update_connection: Perbarui koneksi
+        connection_name_label: Nama koneksi
+        connection_name_placeholder: Kraken Utama
+        api_key_label: Kunci API
+        api_key_placeholder: Tempel kunci API Kraken Anda
+        keep_api_key_placeholder: Biarkan kosong untuk mempertahankan kunci API yang ada
+        api_secret_label: Kunci Privat
+        api_secret_placeholder: Tempel kunci privat Kraken Anda
+        keep_api_secret_placeholder: Biarkan kosong untuk mempertahankan kunci privat yang ada
+        setup_accounts: Atur rekening
+        syncing: Menyinkronkan...
+        sync: Sinkronkan
+        disconnect: Putuskan koneksi
+        disconnect_confirm: "Yakin ingin memutuskan koneksi %{name}?"
+      coinspot_panel:
+        step1_html: 'Buka <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">pengaturan API CoinSpot</a>'
+        step2: "Buat kunci API dengan akses baca-saja ke saldo dan riwayat."
+        step3: "Tempel kunci API dan rahasia di bawah ini."
+        read_only_title: "Hanya sinkronisasi bursa baca-saja"
+        read_only_body: "Jangan berikan izin kirim, penarikan, perdagangan, atau transfer. Sure hanya mengimpor saldo, nilai AUD, transfer, setoran, penarikan, dan riwayat pesanan yang selesai."
+        default_connection_name: CoinSpot
+        add_connection: Tambah koneksi CoinSpot
+        update_connection: Perbarui koneksi
+        connection_name_label: Nama koneksi
+        connection_name_placeholder: CoinSpot Utama
+        api_key_label: Kunci API
+        api_key_placeholder: Tempel kunci API CoinSpot Anda
+        keep_api_key_placeholder: Biarkan kosong untuk mempertahankan kunci API yang ada
+        api_secret_label: Rahasia API
+        api_secret_placeholder: Tempel rahasia API CoinSpot Anda
+        keep_api_secret_placeholder: Biarkan kosong untuk mempertahankan rahasia API yang ada
+        setup_accounts: Atur rekening
+        syncing: Menyinkronkan...
+        sync: Sinkronkan
+        disconnect: Putuskan koneksi
+        disconnect_confirm: "Yakin ingin memutuskan koneksi %{name}?"
+      onchain_wallet_panel:
+        add_wallet: Tambah dompet
+        advanced: Lanjutan
+        disconnect_all: Putuskan semua dompet
+        disconnect_all_confirm: Tindakan ini menghapus setiap alamat yang dipantau beserta rekeningnya. Lanjutkan?
+        etherscan_api_key_label: Kunci API Etherscan (opsional)
+        etherscan_api_key_placeholder: Tempel kunci API Etherscan
+        etherscan_hint: Pembacaan Ethereum berfungsi tanpa kunci. Menambahkan kunci Etherscan hanya menaikkan batas laju untuk Ethereum.
+        keep_etherscan_api_key: Biarkan kosong untuk mempertahankan kunci yang ada
+        manage_wallets: Kelola dompet
+        keyless_body: Sure hanya pernah membaca data rantai publik. Tidak ada kunci, seed phrase, atau tanda tangan yang terlibat, dan tidak ada yang dapat dibelanjakan.
+        keyless_title: Baca-saja, tidak memerlukan kunci
+        save: Simpan
+        sync_start_date_hint: Transfer sebelum tanggal ini diabaikan. Biarkan kosong untuk mengimpor semua yang dilaporkan explorer.
+        sync_start_date_label: Abaikan transfer sebelum
+      enable_banking_panel:
+        callback_url_instruction: "Untuk URL callback, gunakan %{callback_url}."
+        connection_error: Kesalahan Koneksi
+        step_1_html: "Buka %{link} dan ambil kredensial pengembang Anda."
+        step_2: "Pilih negara Anda dan tempel Application ID + Client Certificate di bawah ini."
+        step_3: "Simpan, lalu gunakan Tambah Koneksi untuk menautkan bank Anda."
+        config_locked_title: "Konfigurasi dikunci"
+        config_locked_message: "Putuskan koneksi semua bank yang tertaut sebelum mengubah kredensial ini."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Masukkan application ID"
+        application_id_placeholder_update: "Masukkan ID baru untuk memperbarui"
+        client_certificate_label: "Sertifikat Klien (dengan Kunci Privat)"
+        keep_client_certificate_hint: "Biarkan kosong untuk mempertahankan sertifikat saat ini"
+        save_and_connect: "Simpan dan hubungkan"
+        update_connection: "Perbarui koneksi"
+        connected_bank: "Bank Terhubung"
+        session_expires: "Sesi berakhir: %{date}"
+        unknown: "Tidak diketahui"
+        connection: "Koneksi"
+        session_expired_reconnect: "Sesi berakhir - hubungkan kembali"
+        configured: "Terkonfigurasi"
+        ready_to_link: "Siap menautkan rekening"
+        sync: "Sinkronkan"
+        reconnect: "Hubungkan kembali"
+        connect_bank: "Hubungkan bank"
+        remove: "Hapus"
+        remove_confirm: "Yakin ingin menghapus koneksi ini?"
+        add_connection: "Tambah Koneksi"
+        syncing: "Menyinkronkan"
+        select_country: "Pilih negara..."
+        country_label: "Negara"
+      lunchflow_panel:
+        step_1_html: "Buka %{link} dan buat kunci API."
+        step_2: "Tempel kunci Anda di bawah ini dan hubungkan."
+        step_3: "Lalu buka Rekening untuk menautkan rekening yang tersinkronisasi."
+        api_key_label: "Kunci API"
+        api_key_placeholder_new: "Tempel kunci API di sini"
+        api_key_placeholder_update: "Masukkan kunci API baru untuk memperbarui"
+        base_url_label: "Base URL (Opsional)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (bawaan)"
+        sync_start_date_label: "Impor transaksi mulai dari"
+        sync_start_date_help: "Biarkan kosong untuk mengimpor semua yang dimiliki Lunch Flow. Memajukan tanggal lebih awal mengimpor periode yang terlewat pada sinkronisasi berikutnya. Memundurkan tanggal tidak memengaruhi transaksi yang sudah diimpor."
+        save_and_connect: "Simpan dan hubungkan"
+        update_connection: "Perbarui koneksi"
+      akahu_panel:
+        step_1_html: "Buka %{link} dan buat aplikasi pribadi."
+        step_2: "Salin token aplikasi dan token pengguna Anda."
+        step_3: "Tempel token di bawah ini, simpan, lalu tautkan rekening yang tersinkronisasi."
+      up_panel:
+        step_1_html: "Buka %{link} dan buat token akses pribadi."
+        step_2: "Salin token akses pribadi Anda."
+        step_3: "Tempel token di bawah ini, simpan, lalu tautkan rekening yang tersinkronisasi."
+      monobank_panel:
+        step_1_html: "Buka %{link}, masuk dengan aplikasi Monobank, dan buat token pribadi."
+        step_2: "Salin tokennya — token hanya ditampilkan sekali."
+        step_3: "Tempel token di bawah ini, simpan, lalu tautkan kartu dan jar yang ingin Anda pantau."
+      fio_panel:
+        step_1_html: "Masuk ke internet banking %{link} dan buka Pengaturan → API."
+        step_2: 'Buat token dengan akses baca-saja ("Sledování účtu"). Token ini memerlukan otorisasi kuat dan berlaku hingga 180 hari.'
+        step_3: "Tempel token di bawah ini dan simpan. Satu token menjangkau satu rekening, jadi tambahkan satu koneksi per rekening Fio."
+      simplefin_panel:
+        step_1_html: "Buka %{link} untuk mendapatkan token pengaturan sekali pakai."
+        step_2: "Tempel token di bawah ini dan hubungkan."
+        step_3: "Lalu buka Rekening untuk menautkan rekening yang tersinkronisasi."
+        setup_token_label: "Token Pengaturan"
+        setup_token_placeholder: "Tempel token pengaturan SimpleFIN"
+        save_and_connect: "Simpan dan hubungkan"
+      plaid_panel:
+        step_1_html: "Buka %{link} lalu salin Client ID dan Secret Key Anda."
+        step_2: "Pilih lingkungan. Gunakan sandbox untuk pengujian dan production untuk rekening sungguhan."
+        step_3: "Tempel kredensial Anda di bawah ini dan hubungkan."
+      plaid_eu_panel:
+        step_1_html: "Buka %{link} lalu salin Client ID UE dan Secret Key Anda."
+      not_found: Penyedia tidak ditemukan.
+      sync_provider_no_items: Tidak ada koneksi yang tersedia untuk disinkronkan.
+      ibkr_panel:
+        add_connection: Tambah koneksi Interactive Brokers
+        connection_name_label: Nama koneksi
+        connection_name_placeholder: mis. IBKR Irlandia, IBKR AS
+        disconnect: Putuskan koneksi
+        disconnect_confirm_named: Putuskan koneksi %{name}?
+        setup_accounts: Atur rekening
+        steps:
+          step_1: 'Di Portal Klien IBKR Anda, buka "Performance & Reports" > "Flex Queries".'
+          step_2: 'Klik ikon "+" di bagian "Activity Flex Query" untuk membuat kueri baru.'
+          step_3: 'Beri nama kueri Anda (mis. "Sure Sync"), lalu tinjau detail Flex Query di bawah ini dan aktifkan bagian, kolom, dan opsi konfigurasi yang tercantum.'
+          step_4: 'Simpan kueri, catat "Query ID" Anda, lalu gunakan ikon roda gigi di bagian "Flex Web Service Configuration" untuk membuat Token akses.'
+          step_5: "Tempel Query ID dan Token Anda di bawah ini, simpan konfigurasi, lalu buka Rekening untuk menautkan rekening IBKR yang ditemukan."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Bagian, kolom, dan konfigurasi
+          summary: Rentangkan untuk melihat bagian, kolom, dan pengaturan persis yang harus disertakan dalam IBKR Activity Flex Query Anda.
+          sections_heading: Aktifkan bagian dan kolom ini
+          configuration_heading: Atur opsi kueri ini
+        sections:
+          account_information: "Account Information: Account ID, Currency"
+          cash_report: "Cash Report:"
+          cash_report_options: "Options: None"
+          cash_report_fields: "Fields: Currency, Ending Cash"
+          cash_transactions: "Cash Transactions:"
+          cash_transactions_options: "Options: Dividends, Deposits & Withdrawals, Detail"
+          cash_transactions_fields: "Fields: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
+          change_in_position_value_summary: "Change In Position Value Summary: Currency, End Of Period Value"
+          net_asset_value: "Net Asset Value (NAV) in Base:"
+          net_asset_value_options: "Options: None"
+          net_asset_value_fields: "Fields: Currency, Report Date, Total"
+          open_positions: "Open Positions:"
+          open_positions_options: "Options: Summary"
+          open_positions_fields: "Fields: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol"
+          trades: "Trades:"
+          trades_options: "Options: Execution"
+          trades_fields: "Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
+        configuration:
+          models: "Models: Optional"
+          format: "Format: XML"
+          period: "Period: Last 365 Calendar Days"
+          date_format: "Date Format: yyyy-MM-dd"
+          time_format: "Time Format: HH:mm:ss"
+          date_time_separator: "Date/Time Separator: ; (titik koma)"
+          profit_and_loss: "Profit and Loss: Default"
+          all_other_options: 'Semua opsi konfigurasi lainnya: "No"'
+        report_window_note: "Laporan Flex IBKR terbatas pada rentang kueri yang Anda konfigurasikan di IBKR. Sure akan mengimpor seluruh kepemilikan saat ini ditambah aktivitas hingga 365 hari terakhir dari laporan ini."
+        sync: Sinkronkan
+        query_id_label: Query ID
+        query_id_placeholder_new: Masukkan IBKR Flex Query ID Anda
+        query_id_placeholder_existing: Biarkan kosong untuk mempertahankan Query ID saat ini
+        token_label: Token
+        token_placeholder_new: Masukkan IBKR Flex Web Service Token Anda
+        token_placeholder_existing: Biarkan kosong untuk mempertahankan Token saat ini
+        update_configuration: Perbarui Konfigurasi
+        not_configured: Belum dikonfigurasi.
+      trade_republic_panel:
+        encryption_warning:
+          title: Enkripsi belum dikonfigurasi
+          message: Kredensial dan data sesi Trade Republic tidak dapat disimpan dengan aman hingga Enkripsi Active Record dikonfigurasi.
+        steps:
+          step_1: Masukkan nomor telepon dan PIN atau kata sandi yang Anda gunakan untuk aplikasi Trade Republic, lalu simpan.
+          step_2: Masukkan kode dari aplikasi autentikator Anda saat diminta.
+          step_3: Setujui login di aplikasi Trade Republic Anda saat diminta.
+        phone_number_label: Nomor telepon
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: Biarkan kosong untuk mempertahankan nomor telepon saat ini
+        pin_label: PIN atau kata sandi
+        pin_placeholder_new: PIN atau kata sandi Trade Republic Anda
+        pin_placeholder_existing: Biarkan kosong untuk mempertahankan PIN atau kata sandi saat ini
+        currency_label: Mata uang rekening
+        connect: Masuk
+        confirm_login: Periksa login
+        complete_login: Lanjutkan
+        authenticator_code_label: Kode autentikator (jika diminta)
+        authenticator_code_placeholder: "Kode 6 digit"
+        push_login_notice: Setujui login di aplikasi Trade Republic Anda sekarang. Sure memeriksa secara otomatis di latar belakang. Anda juga dapat memeriksa statusnya sendiri.
+        check_login_status: Periksa status sekarang
+        authenticator_code_notice: Masukkan kode dari aplikasi autentikator Anda.
+        approval_pending: Login dimulai. Setujui di aplikasi Trade Republic; Sure sedang memeriksa secara otomatis.
+        awaiting_confirmation: Persetujuan di aplikasi Trade Republic sedang menunggu.
+        awaiting_authenticator_code: Kode autentikator diperlukan.
+        login_expired: Permintaan persetujuan telah kedaluwarsa.
+        restart_login: Mulai login lagi
+        connection_success:
+          title: Trade Republic berhasil terhubung
+          message: Koneksi Trade Republic Anda sudah siap.
+          description: Sure kini menyinkronkan data Trade Republic Anda di latar belakang.
+          close: Selesai
+        qr_login: Masuk dengan kode QR
+        qr_cancel: Batalkan login QR
+        qr_back_to_credentials: Kembali ke nomor telepon dan PIN atau kata sandi
+        qr_loading: Menyiapkan kode QR …
+        qr_instruction: Pindai kode QR dengan kamera ponsel Anda, lalu setujui login di aplikasi Trade Republic.
+        qr_success: Login disetujui. Sure sedang memuat ulang halaman penyedia.
+        qr_error: Login QR tidak dapat dimulai. Silakan coba lagi.
+        requires_update: Masuk lagi untuk melanjutkan sinkronisasi.
+        session_expires_in: "Login berakhir dalam %{time} (%{at})."
+        add_account: Tambah koneksi lain
+        save_configuration: Simpan & Mulai Login
+        update_configuration: Perbarui Konfigurasi
+        sync: Sinkronkan
+        syncing: Menyinkronkan...
+        disconnect: Putuskan Trade Republic
+        disconnect_confirm: Putuskan koneksi Trade Republic? Rekening yang tersinkronisasi akan menjadi rekening manual.
+        disconnect_confirm_with_identifier: "Putuskan koneksi Trade Republic yang berakhiran %{last4}? Rekening yang tersinkronisasi akan menjadi rekening manual."
+        identifier_phone: Telepon
+        identifier_account: Rekening
+        status_configured_prefix: "Terhubung. Buka tab"
+        accounts_tab: Rekening
+        setup_accounts: Atur rekening
+        accounts_discovered:
+          one: 1 rekening Trade Republic ditemukan.
+          other: "%{count} rekening Trade Republic ditemukan."
+        status_configured_suffix: untuk mengelola rekening yang ditemukan.
+        not_configured: Belum dikonfigurasi.
+      sharesight_panel:
+        steps:
+          step_1: Minta dukungan Sharesight untuk mengaktifkan akses API. Fitur ini tersedia pada paket berbayar.
+          step_2: Di pengaturan akun Sharesight Anda, buka halaman API lalu salin client ID dan client secret.
+          step_3: Tempel keduanya di bawah ini dan simpan. Sure kemudian akan menemukan portofolio Anda sehingga Anda dapat menautkannya.
+        client_id_label: Client ID
+        client_id_placeholder_new: Tempel client ID Sharesight Anda
+        client_id_placeholder_existing: Biarkan kosong untuk mempertahankan client ID saat ini
+        client_secret_label: Client secret
+        client_secret_placeholder_new: Tempel client secret Sharesight Anda
+        client_secret_placeholder_existing: Biarkan kosong untuk mempertahankan client secret saat ini
+        save_configuration: Simpan Konfigurasi
+        update_configuration: Perbarui Konfigurasi
+        status_configured_prefix: "Terkonfigurasi. Buka tab"
+        accounts_tab: Rekening
+        status_configured_suffix: untuk menautkan portofolio Anda.
+      trading212_panel:
+        steps:
+          step_1: Buka Trading 212 → Settings → API (aplikasi web atau seluler).
+          step_2: Buat kunci API baru — Trading 212 akan menampilkan API ID dan Secret Key.
+          step_3: Tempel keduanya di bawah ini, pilih lingkungan dan mata uang rekening Anda, lalu simpan.
+        api_key_label: API ID
+        api_key_placeholder_new: Tempel API ID Trading 212 Anda
+        api_key_placeholder_existing: Biarkan kosong untuk mempertahankan API ID saat ini
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Tempel Secret Key Trading 212 Anda
+        api_secret_placeholder_existing: Biarkan kosong untuk mempertahankan Secret Key saat ini
+        environment_label: Lingkungan
+        environment_live: Rekening live
+        environment_demo: Rekening demo
+        currency_label: Mata uang rekening
+        save_configuration: Simpan Konfigurasi
+        update_configuration: Perbarui Konfigurasi
+        sync: Sinkronkan
+        syncing: Menyinkronkan...
+        disconnect: Putuskan rekening Trading 212
+        disconnect_confirm: Putuskan koneksi Trading 212?
+        default_account_name: Rekening Trading 212
+        add_account: Tambah rekening lain
+        status_configured_prefix: "Terkonfigurasi. Buka tab"
+        accounts_tab: Rekening
+        status_configured_suffix: untuk mengelola rekening yang ditemukan.
+        not_configured: Belum dikonfigurasi.

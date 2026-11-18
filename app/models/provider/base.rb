@@ -69,6 +69,17 @@ class Provider::Base
     klass.respond_to?(:member_connectable?) && klass.member_connectable?
   end
 
+  # SQL that is true when automatic transfer matching must not pair the two
+  # accounts behind these aliases, because this provider already links the
+  # transfers between them from its own feed (for example, two balances of one
+  # connection). Nil when the provider has no such pairs.
+  # @param inflow_accounts_alias [String] SQL alias of the inflow's accounts row
+  # @param outflow_accounts_alias [String] SQL alias of the outflow's accounts row
+  # @return [String, nil]
+  def self.auto_match_exclusion_sql(inflow_accounts_alias, outflow_accounts_alias)
+    nil
+  end
+
   # Returns the provider type (class name)
   # @return [String] The provider account class name
   def provider_type

@@ -223,6 +223,26 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal 1, @occurrence.allocations.where(entry: lump).count
   end
 
+  test "remaining_by_entry reports what each used entry has left in one query" do
+    partly = entry_for(500)
+    fully = entry_for(300)
+    unused = entry_for(100)
+    @allocator.allocate!(entry: partly, amount: 200)
+    @allocator.allocate!(entry: fully, amount: 300)
+
+    remaining = assert_queries_count(1) { Allocator.remaining_by_entry([ partly, fully, unused ]) }
+
+    assert_equal({ partly.id => 300, fully.id => 0 }, remaining)
+  end
+
+  test "remaining_by_entry treats an unmeasurable entry as used up" do
+    ExchangeRate.delete_all
+    entry = foreign_entry(amount: 100, currency: "EUR")
+    Allocator.new(usd_occurrence(expected: 150)).allocate!(amount: 150, entry: entry)
+
+    assert_equal({ entry.id => 0 }, Allocator.remaining_by_entry([ entry ]))
+  end
+
   test "the same entry cannot be allocated twice to one occurrence" do
     # Partial amounts so the capacity guard passes; the unique index is the
     # backstop this test pins.
@@ -364,6 +384,84 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
 
     assert allocation.persisted?
     assert_equal 95, occurrence.reload.allocations.sum(:allocated_amount)
+  end
+
+  test "a payment can be linked to a new bill after the original bill is ended" do
+    # Reproduces: we-promise/sure#3592
+    # entry_capacity was summing allocations from ended series, making the
+    # entry appear fully spent and blocking re-use on a new bill.
+    payment = entry_for(2000)
+
+    # Link the payment to the original bill's occurrence and close it.
+    @allocator.allocate!(entry: payment)
+    assert @occurrence.reload.paid?
+
+    # End the original series (what the app does when a user "deletes" a bill).
+    @rent.update!(status: "ended")
+
+    # Create a replacement bill for the same obligation.
+    replacement = @family.recurring_transactions.create!(
+      account: @account,
+      name: "Watson Property",
+      amount: 2000,
+      currency: "USD",
+      expected_day_of_month: 29,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      manual: true,
+      dedup_scope: "replacement"
+    )
+    new_occurrence = replacement.recurring_occurrences.create!(
+      family: @family,
+      original_due_on: (Date.current + 1.month).beginning_of_month + 9,
+      due_on: (Date.current + 1.month).beginning_of_month + 9,
+      currency: "USD"
+    )
+
+    # Linking the same payment to the new bill must succeed.
+    assert_nothing_raised do
+      Allocator.new(new_occurrence).allocate!(entry: payment)
+    end
+
+    assert new_occurrence.reload.paid?
+  end
+
+  test "a payment fully linked to an active bill cannot be re-linked to another active bill" do
+    # The ended-series exclusion must NOT weaken the double-allocation guard for
+    # allocations that belong to a still-active series: a payment already spent
+    # on an active bill stays spent.
+    payment = entry_for(2000)
+
+    @allocator.allocate!(entry: payment)
+    assert @occurrence.reload.paid?
+
+    # A second, still-active bill (the original @rent is left active).
+    other = @family.recurring_transactions.create!(
+      account: @account,
+      name: "Unrelated Active Bill",
+      amount: 2000,
+      currency: "USD",
+      expected_day_of_month: 29,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      manual: true,
+      dedup_scope: "unrelated"
+    )
+    other_occurrence = other.recurring_occurrences.create!(
+      family: @family,
+      original_due_on: (Date.current + 1.month).beginning_of_month + 9,
+      due_on: (Date.current + 1.month).beginning_of_month + 9,
+      currency: "USD"
+    )
+
+    # The entry is fully consumed by the active allocation, so there is no
+    # capacity left for another active bill.
+    assert_raises(Allocator::EntryExhaustedError) do
+      Allocator.new(other_occurrence).allocate!(entry: payment)
+    end
+    assert_not other_occurrence.reload.paid?
   end
 
   private

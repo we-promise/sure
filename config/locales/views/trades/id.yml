@@ -1,0 +1,72 @@
+---
+id:
+  trades:
+    api_errors:
+      activity_label_must_match_type: "investment_activity_label harus berupa %{label} ketika type adalah %{type}"
+      invalid_activity_label: Label aktivitas investasi tidak valid
+      invalid_type: Jenis tidak valid
+      supported_types: "type harus salah satu dari: %{types}"
+    form:
+      account: Akun transfer (opsional)
+      account_prompt: Cari akun
+      amount: Jumlah
+      fee: Biaya transaksi
+      holding: Simbol ticker
+      holding_optional: Simbol ticker (opsional)
+      price: Harga per lembar
+      qty: Kuantitas
+      submit: Tambah transaksi
+      ticker_placeholder: AAPL
+      type: Jenis
+      type_buy: Beli
+      type_sell: Jual
+      type_deposit: Setoran
+      type_withdrawal: Penarikan
+      type_dividend: Dividen
+      type_interest: Bunga
+      dividend_requires_security: Efek diperlukan untuk dividen
+      trade_requires_security: Efek (ticker) diperlukan untuk transaksi beli dan jual
+    header:
+      buy: Beli
+      sell: Jual
+      dividend: Dividen
+      interest: Bunga
+      contribution: Kontribusi
+      exchange: Pertukaran
+      fee: Biaya
+      other: Lainnya
+      reinvestment: Reinvestasi
+      sweep_in: Sweep in
+      sweep_out: Sweep out
+      transfer: Transfer
+      withdrawal: Penarikan
+      current_market_price_label: Harga Pasar Saat Ini
+      overview: Ringkasan
+      purchase_price_label: Harga Pembelian
+      purchase_qty_label: Jumlah Pembelian
+      symbol_label: Simbol
+      total_return_label: Keuntungan/kerugian belum terealisasi
+    new:
+      title: Transaksi baru
+    show:
+      additional: Tambahan
+      amount_label: Jumlah
+      buy: Beli
+      category_label: Kategori
+      cost_per_share_label: Biaya per Lembar
+      date_label: Tanggal
+      delete: Hapus
+      fee_label: Biaya transaksi
+      delete_subtitle: Tindakan ini tidak dapat dibatalkan
+      delete_title: Hapus Transaksi
+      details: Detail
+      provider_disabled_warning: "Pembaruan harga dijeda — penyedia %{provider} dinonaktifkan. Aktifkan kembali di Pengaturan atau petakan ulang kepemilikan ke penyedia lain."
+      exclude_subtitle: Transaksi ini tidak akan disertakan dalam laporan dan perhitungan
+      exclude_title: Kecualikan dari analitik
+      no_category: Tanpa kategori
+      note_label: Catatan
+      note_placeholder: Tambahkan catatan tambahan di sini...
+      quantity_label: Kuantitas
+      sell: Jual
+      settings: Pengaturan
+      type_label: Jenis

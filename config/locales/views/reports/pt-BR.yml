@@ -6,7 +6,6 @@ pt-BR:
       subtitle: Insights completos sobre sua saúde financeira
       export: Exportar CSV
       print_report: Imprimir Relatório
-      toggle_section: "Alternar visibilidade da seção"
       periods:
         monthly: Mensal
         quarterly: Trimestral

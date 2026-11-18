@@ -1,0 +1,23 @@
+---
+zh-TW:
+  settings:
+    mcp:
+      show:
+        page_title: MCP Server
+        connect_title: 連接 AI 助手
+        connect_subtitle: 將這個網址貼到 Claude.ai（或任何支援 MCP 的用戶端），即可連接到您的 Sure 帳號。
+        copy_url: 複製
+        copied: 已複製！
+        how_to_connect_title: 如何連接 Claude
+        step_1: 開啟 Claude.ai，前往 Settings → Customize → Connectors。
+        step_2: 點選「Add connector」，貼上上方的 MCP 伺服器網址。
+        step_3: 點選 Connect — 您會被導向 Sure 登入並授權存取。
+        step_4: 授權完成後，Claude 就能讀取您的帳戶、交易與餘額資料。
+        connected_title: 已連接的用戶端
+        connected_subtitle: 這些應用程式目前可以存取您的 Sure 資料。不再使用的請撤銷。
+        unknown_client: 未知用戶端
+        connected_ago: 於 %{time}前連接
+        revoke: 撤銷
+        revoke_confirm: 要撤銷此用戶端的存取權嗎？
+      revoke:
+        revoked: 連線已撤銷。

@@ -93,6 +93,8 @@ tr:
       success: Interactive Brokers yapılandırması başarıyla güncellendi.
   providers:
     ibkr:
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "%{name} Flex sorgunuzdaki hesapları bağlayın"
       connection_description: Bir Interactive Brokers Flex Web Service raporu bağlayın
       institution_name: Interactive Brokers
       name: Interactive Brokers

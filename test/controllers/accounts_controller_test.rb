@@ -17,6 +17,28 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "account reconciliation indicators only render when manual reconciliation is enabled" do
+    get accounts_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+
+    @user.family.update!(manual_reconciliation: true)
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+  end
+
+  # Opening the account groups makes the list scroll; reserving the scrollbar's
+  # space keeps the sidebar from shifting sideways when it appears.
+  test "the sidebar keeps room for its scrollbar" do
+    get root_url
+
+    assert_select "#sidebar-scroll[class*='[scrollbar-gutter:stable]']"
+  end
+
   test "show points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
     create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
@@ -68,6 +90,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_response :success
     assert_select "##{dom_id(kraken_item)}"
+  end
+
+  test "index titles each ibkr connection with its own name" do
+    first = ibkr_items(:configured_item)
+    first.update!(name: "IBKR Ireland")
+    second = @user.family.ibkr_items.create!(name: "IBKR US", query_id: "Q2", token: "T2")
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(first)}", text: /IBKR Ireland/
+    assert_select "##{dom_id(second)}", text: /IBKR US/
   end
 
   test "index renders on-chain wallet items" do
@@ -480,6 +514,32 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show renders the scheduled balance tooltip when a scheduled transaction exists" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-controller='DS--tooltip']"
+  end
+
+  test "show adds the scheduled projection to the investment value tooltip" do
+    investment_account = accounts(:investment)
+    create_transaction(account: investment_account, amount: 200, date: 3.days.from_now.to_date)
+
+    get account_url(investment_account)
+
+    assert_response :success
+    assert_select "[role='tooltip']", text: /#{I18n.t("investments.value_tooltip.projected")}/
+  end
+
+  test "show omits the scheduled projection from the investment value tooltip without scheduled entries" do
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "[role='tooltip']", text: /#{I18n.t("investments.value_tooltip.projected")}/, count: 0
+  end
+
   test "show renders the balance chart as drag-selectable for a custom date range" do
     get account_url(@account)
 
@@ -524,6 +584,79 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(categorized)}"
     assert_select "##{dom_id(uncategorized)}", count: 0
     assert_select "##{dom_id(valuation)}", count: 0
+  end
+
+  test "show hides balance updates on a linked account by default" do
+    account = accounts(:connected)
+    transaction = create_transaction(account: account, name: "Linked Transaction")
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "##{dom_id(transaction)}"
+    assert_select "##{dom_id(balance_update)}", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 1
+    assert_select "input[type=checkbox][name=?]:not([checked])", "q[balance_updates]"
+  end
+
+  test "show lists balance updates on a linked account when the preference is on" do
+    account = accounts(:connected)
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date, name: "Manual balance update")
+    @user.update_show_balance_updates(true)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}", text: /Synced balance/
+    # Nothing left to switch in the filter: it shows as on, and points to Preferences.
+    assert_select "input[type=checkbox][name=?][checked][disabled]", "q[balance_updates]"
+    assert_select "#account-activity-filters li", count: 0
+  end
+
+  test "the activity filter shows balance updates for one view without saving the preference" do
+    account = accounts(:connected)
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account), params: { q: { balance_updates: "show", search: "Valuation" } }
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}"
+    assert_select "#account-activity-filters li", count: 2
+    assert_select "#account-activity-filters li", text: /Synced balances/
+    assert_not @user.reload.show_balance_updates?
+  end
+
+  test "clearing the balance updates badge hides them again and keeps the other filters" do
+    account = accounts(:connected)
+
+    delete clear_filter_account_url(account), params: {
+      q: { balance_updates: "show", search: "Valuation" },
+      param_key: "balance_updates",
+      param_value: "show"
+    }
+
+    assert_redirected_to account_url(account, q: { search: "Valuation" }, tab: "activity", page: nil, per_page: nil)
+  end
+
+  test "show lists balance updates on a manual account without offering the filter" do
+    balance_update = create_valuation(account: @account, date: 2.days.ago.to_date)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}"
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 0
+  end
+
+  test "show omits the balance updates filter on a linked account without any" do
+    account = accounts(:connected)
+    account.entries.balance_updates.destroy_all
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 0
   end
 
   test "show renders a badge for each active filter" do
@@ -1296,6 +1429,52 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "sidebar sparkline URLs carry a version the browser may reuse" do
+    get account_url(@account)
+
+    [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ].each do |src|
+      assert_match(/[?&]v=\h{16}\z/, src)
+      get src
+      assert_response :success
+      assert_includes response.headers["Cache-Control"], "max-age=86400"
+    end
+  end
+
+  test "a sparkline URL with an outdated version must be revalidated" do
+    get sparkline_account_url(@account, v: "outdated")
+    assert_response :success
+    assert_includes response.headers["Cache-Control"], "max-age=0"
+
+    get accountable_sparkline_url("depository", v: "outdated")
+    assert_response :success
+    assert_includes response.headers["Cache-Control"], "max-age=0"
+  end
+
+  test "a sidebar sparkline URL changes when the account's balances do" do
+    get account_url(@account)
+    before = sidebar_sparkline_src(dom_id(@account, :sparkline))
+
+    travel 1.minute do
+      @account.balances.create!(date: 40.days.ago.to_date, balance: 1, currency: @account.currency)
+      get account_url(@account)
+    end
+
+    assert_not_equal before, sidebar_sparkline_src(dom_id(@account, :sparkline))
+  end
+
+  test "sidebar sparkline URLs change the next day" do
+    get account_url(@account)
+    before = [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ]
+
+    travel 1.day do
+      get account_url(@account)
+      after = [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ]
+
+      assert_not_equal before[0], after[0]
+      assert_not_equal before[1], after[1]
+    end
+  end
+
   test "sparkline renders an empty series without a trend" do
     empty_series = Series.new(
       start_date: 1.day.ago.to_date,
@@ -1801,6 +1980,10 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def sidebar_sparkline_src(frame_id)
+      css_select("turbo-frame##{frame_id}").first["src"]
+    end
+
     def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
       Account::LogoFetcher::Icon.new(key:, source:, name:, body:, size:, content_type: "image/png", extension: "png")
     end

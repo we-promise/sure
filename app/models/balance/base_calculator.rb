@@ -31,13 +31,40 @@ class Balance::BaseCalculator
   # branches) and the underlying MIN(date) is a non-trivial scan on accounts
   # with large entry histories. Calculator instances are per-sync, so there is
   # no staleness concern.
+  # Clamped at Date.current: when an account's only entries are scheduled
+  # (future-dated) and it has no opening anchor yet, Account#opening_anchor_date
+  # falls back to (oldest entry date - 1 day), which can itself land in the
+  # future. Without the clamp, calc_start_date would exceed calc_end_date
+  # (which never extends past today -- see Balance::ForwardCalculator) and the
+  # calculation would silently produce zero balance rows instead of a
+  # Date.current baseline.
   def calculation_start_date
-    @calculation_start_date ||= [ account.opening_anchor_date, account.entries.excluding_pending.minimum(:date) ].compact.min
+    @calculation_start_date ||= [ account.opening_anchor_date, account.entries.excluding_pending.minimum(:date), Date.current ].compact.min
   end
 
   private
     def sync_cache
       @sync_cache ||= Balance::SyncCache.new(account)
+    end
+
+    def loan_principal_change(date)
+      loan_principal_payments&.change_for(date)
+    end
+
+    # The balance change a loan's payment actually makes when interest is
+    # taken out first. A sync is background work with no `Current.user`, so the
+    # family rollup is the right preview check: one opted-in member enables the
+    # recalculated balance for the shared account. The guide reserves the
+    # per-user check for UI.
+    def loan_principal_payments
+      return @loan_principal_payments if defined?(@loan_principal_payments)
+
+      @loan_principal_payments = if account.loan? &&
+          account.loan.amortizable? &&
+          account.has_opening_anchor? &&
+          account.family.preview_features_enabled?
+        sync_cache.loan_principal_payments(account.loan)
+      end
     end
 
     def holdings_value_for_date(date)
@@ -110,8 +137,13 @@ class Balance::BaseCalculator
       income_outflow_sum = income_trades.select { |e| e.amount >= 0 }.sum(&:amount)
 
       if account.balance_type == :non_cash && account.accountable_type == "Loan"
-        non_cash_inflows = txn_inflow_sum.abs
-        non_cash_outflows = txn_outflow_sum
+        if (change = loan_principal_change(date))
+          non_cash_inflows = change.principal_paid
+          non_cash_outflows = change.principal_added
+        else
+          non_cash_inflows = txn_inflow_sum.abs
+          non_cash_outflows = txn_outflow_sum
+        end
       elsif account.balance_type != :non_cash
         cash_inflows = txn_inflow_sum.abs + trade_cash_inflow_sum.abs + income_inflow_sum.abs
         cash_outflows = txn_outflow_sum + trade_cash_outflow_sum + income_outflow_sum
