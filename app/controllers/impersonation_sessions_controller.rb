@@ -53,6 +53,10 @@ class ImpersonationSessionsController < ApplicationController
       @impersonation_session =
         Current.true_user.impersonated_support_sessions.find_by(id: params[:id]) ||
         Current.true_user.impersonator_support_sessions.find_by(id: params[:id])
+
+      # Anyone who is neither party gets the same 404 as a missing record
+      # instead of a NoMethodError on nil.
+      raise_unauthorized! if @impersonation_session.nil?
     end
 
     def require_super_admin!
