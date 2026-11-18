@@ -100,6 +100,10 @@ zh-CN:
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
           mansa: Mansa
+      reset_market_data:
+        market_data_reset: 市场数据重置已加入队列。汇率和价格将重新导入，随后所有账户将同步。
+        market_data_reset_already_queued: 市场数据重置已在队列中或正在运行。
+        market_data_reset_failed: 无法将市场数据重置加入队列。未删除任何数据，请重试。
       show:
         demo_refresh: 演示数据刷新
         clear_cache: 清除数据缓存
@@ -109,6 +113,11 @@ zh-CN:
           body: "确定要清除数据缓存吗？您家庭账户的余额和持仓将被重新计算，它们使用的汇率和证券价格将被重新加载。只会删除您家庭的余额和持仓；汇率和证券价格由此实例上的所有家庭共享，也会为他们更新。此操作不可撤销。"
           body_without_provider: "确定要清除数据缓存吗？您家庭账户的余额和持仓将被重新计算。由于未配置汇率或证券价格提供商，已保存的汇率和证券价格将保持不变。此操作不可撤销。"
           title: 确认清除数据缓存？
+        reset_market_data: 重置所有家庭的市场数据
+        reset_market_data_warning: 删除您的提供商可重新加载的汇率和证券价格，重新导入它们，然后同步每个账户。在导入完成前，外币总额可能会显示为未换算状态。
+        confirm_reset_market_data:
+          title: 重置所有家庭的市场数据？
+          body: 这将删除此实例上每个家庭中提供商可重新加载的汇率和证券价格，并重新导入。在导入完成前，外币金额可能会显示为未换算状态。此操作无法撤销。
         danger_zone: 高风险操作
         financial_data_providers: 金融数据提供商
         general: 通用设置
@@ -185,7 +194,7 @@ zh-CN:
           title: 断开外部助手？
           body: 断开后将无法继续使用此远程助手。
         type_mcp_only: 应用内不启用（通过 MCP 连接您自己的代理）
-        mcp_only_help: 此家庭中的所有成员均关闭应用内助手。账单 AI 快捷方式和 AI 编写的洞察文本也将停止。MCP 和后台分类仍然可用；可在“设置 > MCP”中连接外部代理。
+        mcp_only_help: 此家庭中的所有成员均关闭应用内助手。账单 AI 快捷方式和洞察上的“借助 AI 深入分析”也将停止。MCP 和后台分类仍然可用；可在“设置 > MCP”中连接外部代理。
         agent_discovery_configure_first: 保存有效的端点 URL 和 API 令牌以加载可用代理。
         external_agent_required: 保存前请选择一个外部代理。
         external_agent_invalid: 请选择配置的端点所返回的代理。

@@ -23,6 +23,7 @@ class Account < ApplicationRecord
   has_many :valuations, through: :entries, source: :entryable, source_type: "Valuation"
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
+  has_many :holding_lots
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
   has_many :goal_accounts, dependent: :destroy
@@ -69,6 +70,7 @@ class Account < ApplicationRecord
 
   def reload(*)
     @scheduled_entry_flows = nil
+    @current_holdings_total = nil
     super
   end
 
@@ -135,6 +137,14 @@ class Account < ApplicationRecord
       )
     SQL
   }
+
+  # SHA-256 of a set of account ids, in id order, joined by commas. An
+  # aggregate over no rows still yields one value, the hash of "". Insight
+  # generators store it with a total and Insight.about_shared_accounts
+  # recomputes it on read, so both share this one expression.
+  ID_SET_DIGEST_SQL = Arel.sql(<<~SQL.squish)
+    encode(sha256(convert_to(coalesce(string_agg(accounts.id::text, ',' ORDER BY accounts.id), ''), 'UTF8')), 'hex')
+  SQL
 
   # Accounts a user can write to (owned or shared with full_control)
   WRITABLE_BY_CONDITION = "accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')".freeze
@@ -709,6 +719,12 @@ class Account < ApplicationRecord
       manual?
   end
 
+  # Only an account linked to a goal can hold a goal pledge, so callers use
+  # this to skip pledge reconciliation for every other account.
+  def linked_to_goal?
+    goal_accounts.exists?
+  end
+
   # True when the account has no live sync provider attached. Mirrors the
   # `Account.manual` scope so per-instance checks don't drift from the query.
   def manual?
@@ -819,6 +835,11 @@ class Account < ApplicationRecord
 
     assign_attributes(restored)
     clear_attribute_changes(restored.keys)
+  end
+
+  def current_holdings_total
+    # A holding with no exchange rate is left out rather than counted 1:1.
+    @current_holdings_total ||= current_holdings.sum { |h| h.amount_in_account_currency(unconvertible: 0) }
   end
 
   def current_holdings

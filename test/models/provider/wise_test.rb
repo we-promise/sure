@@ -148,6 +148,23 @@ class Provider::WiseTest < ActiveSupport::TestCase
     assert_equal({ profile: 123, limit: 100, offset: 200, createdDateStart: "2025-10-07" }, sent)
   end
 
+  test "lists profiles from v2 in the shape the profile picker reads" do
+    body = [
+      { id: 1, type: "PERSONAL", fullName: "Jane Doe", profileRole: "DIRECT_CUSTOMER_PROFILE" },
+      { id: 2, type: "BUSINESS", businessName: "Owned Ltd", companyRole: "OWNER" },
+      { id: 3, type: "BUSINESS", businessName: "Missing From V1 Ltd", companyRole: "" }
+    ].to_json
+    Provider::Wise.expects(:get)
+      .with { |url, _options| url == "https://api.wise.com/v2/profiles" }
+      .returns(fake_response(code: 200, body: body))
+
+    assert_equal [
+      { "id" => 1, "type" => "personal", "details" => { "name" => "Jane Doe" } },
+      { "id" => 2, "type" => "business", "details" => { "name" => "Owned Ltd" } },
+      { "id" => 3, "type" => "business", "details" => { "name" => "Missing From V1 Ltd" } }
+    ], @provider.get_profiles
+  end
+
   test "reads the multi-currency account from the v4 endpoint" do
     Provider::Wise.expects(:get)
       .with { |url, _options| url == "https://api.wise.com/v4/profiles/123/multi-currency-account" }

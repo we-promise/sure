@@ -6,8 +6,15 @@ en:
       subtitle: Comprehensive insights into your financial health
       export: Export CSV
       print_report: Print Report
+      tag_filter:
+        all: All tags
+        selected:
+          one: "%{count} tag"
+          other: "%{count} tags"
+        search: Search tags
+        apply: Apply
+      section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
       sections_aria: Reports sections
-      toggle_section: "Toggle section visibility"
       periods:
         monthly: Monthly
         quarterly: Quarterly
@@ -86,6 +93,14 @@ en:
       description: Start tracking your finances by adding transactions or connecting your accounts to see comprehensive reports
       add_transaction: Add Transaction
       add_account: Add Account
+    biggest_expenses:
+      title: Biggest Expenses
+      one_time: One-time
+      limit_aria: Number of expenses to show
+      table:
+        name: Name
+        category: Category
+        amount: Amount
     transactions_breakdown:
       title: Activity Breakdown
       no_transactions: No activity found for the selected period and filters
@@ -185,6 +200,9 @@ en:
       realized_gains: Realized Gains
       total_gains: Total Gains
       taxable_realized_note: These gains may be subject to taxes
+      unconverted_note:
+        one: "%{count} gain is not included: no exchange rate to %{currency}"
+        other: "%{count} gains are not included: no exchange rate to %{currency}"
       no_data: "-"
       view_details: View details
       holdings_count:
@@ -271,3 +289,11 @@ en:
         amount: Amount
         percent: "%"
         more_categories: "+ %{count} more categories"
+      biggest_expenses:
+        title: Biggest Expenses
+        date: Date
+        name: Name
+        category: Category
+        account: Account
+        amount: Amount
+        one_time: One-time

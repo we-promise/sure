@@ -79,7 +79,7 @@ nl:
         type_builtin: "Ingebouwd (directe LLM)"
         type_external: "Extern (externe agent)"
         type_mcp_only: "Geen in de app (koppel uw eigen agent via MCP)"
-        mcp_only_help: "De assistent in de app staat uit voor iedereen in dit huishouden. Ook de AI-snelkoppelingen bij vaste lasten en door AI geschreven teksten bij inzichten stoppen. MCP en categorisatie op de achtergrond blijven beschikbaar; koppel externe agents via Instellingen > MCP."
+        mcp_only_help: "De assistent in de app staat uit voor iedereen in dit huishouden. Ook de AI-snelkoppelingen bij vaste lasten en „Verder uitzoeken met AI” bij inzichten stoppen. MCP en categorisatie op de achtergrond blijven beschikbaar; koppel externe agents via Instellingen > MCP."
         external_status: "Endpoint van externe assistent"
         external_configured: "Geconfigureerd"
         external_not_configured: "Niet geconfigureerd. Voer hieronder de URL en het token in, of stel de omgevingsvariabelen EXTERNAL_ASSISTANT_URL en EXTERNAL_ASSISTANT_TOKEN in."
