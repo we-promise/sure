@@ -348,7 +348,7 @@ class Family::DataImporter
         else
           # Build accountable
           accountable = accountable_class.new
-          accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
+          accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"].present?
           assign_liability_details(accountable, accountable_data)
 
           # Copy any other accountable attributes

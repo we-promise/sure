@@ -132,6 +132,18 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "checking", @family.accounts.find_by!(name: "Both").accountable.subtype
   end
 
+  test "does not store a blank nested accountable subtype" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "a1", name: "Blank Nested", balance: "0", currency: "USD", accountable_type: "Depository", accountable: { subtype: "" } } },
+      { type: "Account", data: { id: "a2", name: "Blank Nested With Top Level", balance: "0", currency: "USD", subtype: "savings", accountable_type: "Depository", accountable: { subtype: "" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_nil @family.accounts.find_by!(name: "Blank Nested").accountable.subtype
+    assert_equal "savings", @family.accounts.find_by!(name: "Blank Nested With Top Level").accountable.subtype
+  end
+
   test "imports a loan whose detail columns are null in the export" do
     ndjson = build_ndjson([
       {
