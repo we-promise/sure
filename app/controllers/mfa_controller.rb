@@ -1,8 +1,9 @@
 class MfaController < ApplicationController
-  include WebauthnRelyingParty
+  include WebauthnRelyingParty, DemoMfaRestriction
 
   layout :determine_layout
   skip_authentication only: [ :verify, :verify_code, :webauthn_options, :verify_webauthn ]
+  before_action :require_mfa_enrollment_allowed, only: [ :new, :create ]
   before_action :require_local_password, only: [ :new, :create, :disable ]
 
   def new
