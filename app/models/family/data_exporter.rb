@@ -599,7 +599,7 @@ class Family::DataExporter
       if parent_entry.association(:child_entries).loaded?
         parent_entry.child_entries.sort_by { |entry| [ entry.created_at, entry.id ] }
       else
-        parent_entry.child_entries.order(:created_at, :id).to_a
+        parent_entry.child_entries.in_split_order.to_a
       end
     end
 
