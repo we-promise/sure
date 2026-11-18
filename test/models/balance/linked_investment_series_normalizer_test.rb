@@ -659,6 +659,30 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal Money.new(1_000, "USD"), normalized.values.first.value
   end
 
+  test "a manual account's reconciliations do not shorten a mixed group's linked history" do
+    linked = linked_investment_account("Linked In Mixed Group")
+    manual = families(:empty).accounts.create!(name: "Manual In Mixed Group", balance: 0, currency: "USD", accountable: Investment.new)
+    linked_activity_date = 20.days.ago.to_date
+
+    linked.entries.create!(date: linked_activity_date, name: "Trade", amount: 100, currency: "USD", source: "snaptrade", entryable: Transaction.new)
+    manual.entries.create!(date: 5.days.ago.to_date, name: "Balance update", amount: 500, currency: "USD", entryable: Valuation.new(kind: "reconciliation"))
+
+    assert_equal linked_activity_date, Balance::LinkedInvestmentSeriesNormalizer
+      .send(:common_supported_history_start_date, [ linked.id, manual.id ])
+  end
+
+  test "reconciliations restored from a Sure export count as user history" do
+    account = linked_investment_account("Linked With Restored History")
+    valuation_date = 2.years.ago.to_date
+
+    account.entries.create!(date: valuation_date, name: "Restored balance", amount: 1_000, currency: "USD",
+                            source: "sure_import_session:#{SecureRandom.uuid}", entryable: Valuation.new(kind: "reconciliation"))
+    account.entries.create!(date: 10.days.ago.to_date, name: "Provider Transaction", amount: 100, currency: "USD",
+                            source: "simplefin", entryable: Transaction.new)
+
+    assert_equal valuation_date, Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(account)
+  end
+
   test "provider-created reconciliation valuations do not extend supported history" do
     account = linked_investment_account("Linked With Provider Valuation")
     activity_date = 10.days.ago.to_date
