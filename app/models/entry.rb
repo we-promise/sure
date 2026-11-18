@@ -634,6 +634,12 @@ class Entry < ApplicationRecord
     parent_entry_id.present?
   end
 
+  # The other side of a split: a child's parent, or a parent's children. Both
+  # sides are the same money. Siblings are not: each child is its own part.
+  def split_counterparts
+    self.class.where(id: parent_entry_id).or(self.class.where(parent_entry_id: id))
+  end
+
   # Splits this entry into child entries. Marks parent as excluded.
   #
   # @param splits [Array<Hash>] array of { name:, amount:, category_id:, merchant_id:, tag_ids:, excluded: } hashes.
