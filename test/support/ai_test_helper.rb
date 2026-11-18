@@ -177,6 +177,8 @@ module AiTestHelper
   end
 
   def with_ai_live
+    raise ArgumentError, "with_ai_live needs AI_LIVE=1 or RECORD_CASSETTES=1" unless ENV["AI_LIVE"] == "1" || ENV["RECORD_CASSETTES"] == "1"
+
     config = WebMock::Config.instance
     previous = [ config.allow_net_connect, config.allow_localhost, config.allow ]
     WebMock.allow_net_connect!

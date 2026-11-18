@@ -26,12 +26,31 @@ class AiNetworkPolicyTest < ActiveSupport::TestCase
       "WebMock.allow_net_connect!" => "WebMock.allow_net_connect!",
       "WebMock.disable_net_connect!(allow: \"api.openai.com\")" => "disable_net_connect!(allow: host)",
       "VCR.turned_off { get_models }" => "VCR.turned_off / VCR.turn_off!",
-      "VCR.use_cassette(\"x\", record: :new_episodes) { }" => "a cassette recording live requests"
+      "VCR.use_cassette(\"x\", record: :new_episodes) { }" => "a cassette recording live requests",
+      "VCR.use_cassette(\"x\", record: :once) { }" => "a cassette recording live requests",
+      "VCR.configure { _1.ignore_request { |r| r.uri.include?(\"anthropic\") } }" => "VCR ignore_request"
     }.each do |line, reported|
       output, status = run_policy(with_test_file(line))
 
       assert_not status.success?, line
       assert_includes output, "test/models/leaky_test.rb: #{reported}"
+    end
+  end
+
+  test "test_helper.rb keeps its one ignore_request for Selenium; a second one there is reported" do
+    FileUtils.mkdir_p(File.join(@scratch_root, "test"))
+    File.write(File.join(@scratch_root, "test/test_helper.rb"), "c.ignore_request { selenium }\n")
+    assert run_policy(@scratch_root).last.success?
+
+    File.write(File.join(@scratch_root, "test/test_helper.rb"), "c.ignore_request { selenium }\nc.ignore_request { openai }\n")
+    output, status = run_policy(@scratch_root)
+    assert_not status.success?
+    assert_includes output, "test/test_helper.rb: VCR ignore_request"
+  end
+
+  test "with_ai_live refuses to open the network outside a live or recording run" do
+    with_env_overrides("AI_LIVE" => nil, "RECORD_CASSETTES" => nil) do
+      assert_raises(ArgumentError) { with_ai_live { flunk "the network was opened" } }
     end
   end
 

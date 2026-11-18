@@ -21,14 +21,21 @@ NETWORK_OPENERS = {
   "VCR.turned_off / VCR.turn_off!" => /VCR\.turn(ed)?_off/,
   "VCR allow_http_connections_*" => /allow_http_connections/,
   "VCR ignore_hosts" => /ignore_hosts/,
-  "a cassette recording live requests" => /record:\s*:(all|new_episodes)/
+  "VCR ignore_request" => /ignore_request/,
+  "a cassette recording live requests" => /record:\s*:(all|new_episodes|once)/
 }.freeze
+
+# Openers a file may use this many times: test_helper.rb's ignore_request lets the system tests
+# reach their Selenium server. A second one there is still reported.
+ALLOWED_USES = { [ "test/test_helper.rb", "VCR ignore_request" ] => 1 }.freeze
 
 offenses = Dir.glob("test/**/*.rb", base: ROOT).sort.flat_map do |path|
   next [] if ALLOWED.include?(path)
 
   source = File.read(File.join(ROOT, path))
-  NETWORK_OPENERS.filter_map { |name, pattern| "#{path}: #{name}" if source.match?(pattern) }
+  NETWORK_OPENERS.filter_map do |name, pattern|
+    "#{path}: #{name}" if source.scan(pattern).size > ALLOWED_USES.fetch([ path, name ], 0)
+  end
 end
 
 if offenses.any?
