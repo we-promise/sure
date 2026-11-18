@@ -38,6 +38,9 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
       .where(entries: { excluded: [ false, nil ] })
       .where.not(entries: { account_id: target_account.id })
 
+    # Checked once per run, not per transaction.
+    reconcile_pledges = target_account.linked_to_goal?
+
     count_modified_resources(scope) do |txn|
       entry = txn.entry
       unless txn.transfer?
@@ -48,6 +51,8 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
         end
 
         transfer.sync_account_later
+        # An outflow's new counterpart is a deposit on the target account.
+        GoalPledge::Reconciler.run_after_commit(transfer.inflow_transaction.entry) if reconcile_pledges && entry.amount.positive?
       end
     end
   end

@@ -34,7 +34,7 @@ class SplitsController < ApplicationController
     end
 
     set_form_options
-    @children = @entry.child_entries.includes(entryable: :tags)
+    @children = @entry.child_entries.in_split_order.includes(entryable: :tags)
   end
 
   def update
