@@ -19,6 +19,9 @@ class Portfolio::SectionRegistry
   # carry arbitrary strings into the user's preferences.
   KEYS = %w[holdings accounts].freeze
 
+  # Everything an account card's logo reads, preloaded onto the cards.
+  CARD_PRELOADS = [ { logo_attachment: :blob }, :accountable, :plaid_account, :simplefin_account, { account_providers: :provider } ].freeze
+
   attr_reader :statement, :period, :as_of, :user, :sort, :dir, :extra_sections
 
   # `sort` and `dir` are the holdings table's query-string state, passed
@@ -94,14 +97,20 @@ class Portfolio::SectionRegistry
       @holdings_rows ||= statement.holdings_table_rows(sort: sort, dir: dir)
     end
 
-    # The accounts the cards show, in name order (id breaks ties, so
-    # same-named cards keep their places), with every record the logo reads
-    # (the attachment, the accountable's colour, the provider links and the
-    # provider each falls back to) loaded here rather than once per card.
+    # The accounts the cards show, in name order (case-insensitive; id breaks
+    # ties, so same-named cards keep their places), with every record the logo
+    # reads (the attachment, the accountable's colour, the provider links and
+    # the provider each falls back to) loaded here rather than once per card.
+    #
+    # They are the statement's own records, sorted here, rather than a second
+    # query: the holdings section's weights load the same accounts through the
+    # statement, and the page reads them once.
     def accounts_for_cards
-      @accounts_for_cards ||= statement.investment_accounts.with_attached_logo
-        .includes(:accountable, :plaid_account, :simplefin_account, account_providers: :provider)
-        .alphabetically.order(:id).to_a
+      @accounts_for_cards ||= begin
+        accounts = statement.investment_accounts.to_a.sort_by { |account| [ account.name.downcase, account.id ] }
+        ActiveRecord::Associations::Preloader.new(records: accounts, associations: CARD_PRELOADS).call
+        accounts
+      end
     end
 
     def shared_locals

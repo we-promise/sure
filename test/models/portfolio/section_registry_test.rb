@@ -47,6 +47,57 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
       "the cards must be exactly the statement's investment accounts"
   end
 
+  # The cards are the statement's own records, so the associations their
+  # logos read have to be preloaded onto those records, not left to load per
+  # card.
+  test "the account cards come with everything their logos read preloaded" do
+    logoed = accounts(:investment)
+    logoed.logo.attach(io: StringIO.new("logo"), filename: "logo.png", content_type: "image/png")
+    provider = LunchflowAccount.create!(lunchflow_item: lunchflow_items(:one), account_id: "lf_registry_logo",
+                                        name: logoed.name, currency: "USD")
+    AccountProvider.create!(account: logoed, provider: provider)
+    @statement = InvestmentStatement.new(@family, user: @user)
+
+    cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
+
+    assert_not_empty cards
+    cards.each do |account|
+      %i[logo_attachment accountable plaid_account simplefin_account account_providers].each do |name|
+        assert account.association(name).loaded?, "#{name} is not preloaded on #{account.name}"
+      end
+    end
+    card = cards.find { |account| account.id == logoed.id }
+    assert card.logo_attachment.association(:blob).loaded?, "the logo's blob is not preloaded"
+    assert_not_empty card.account_providers
+    card.account_providers.each do |link|
+      assert link.association(:provider).loaded?, "the provider link's provider is not preloaded"
+    end
+  end
+
+  test "the account cards ignore case when ordering by name" do
+    lower = @family.accounts.create!(name: "alpha brokerage", balance: 100, currency: "USD", accountable: Investment.new, owner: @user)
+    upper = @family.accounts.create!(name: "Beta brokerage", balance: 100, currency: "USD", accountable: Investment.new, owner: @user)
+    @statement = InvestmentStatement.new(@family, user: @user)
+
+    cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
+
+    assert_operator cards.index(lower), :<, cards.index(upper)
+  end
+
+  # The statement's query has no order of its own, so the tiebreak must not
+  # lean on whatever order its rows arrive in: feed them in descending id.
+  test "account cards with the same name are ordered by id whatever order the statement returns" do
+    same = %w[b d f].map do |digit|
+      @family.accounts.create!(id: "#{digit * 8}-0000-4000-8000-000000000000", name: "Same brokerage", balance: 100,
+                               currency: "USD", accountable: Investment.new, owner: @user)
+    end
+    @statement.stubs(:investment_accounts).returns(@family.accounts.where(id: same.map(&:id)).order(id: :desc))
+
+    cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
+
+    assert_equal same.map(&:id), cards.map(&:id)
+  end
+
   test "orders sections by the user's saved order, appending anything it omits" do
     @user.update_section_preferences("portfolio", order: %w[stub])
 
