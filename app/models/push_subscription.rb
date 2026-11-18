@@ -86,6 +86,8 @@ class PushSubscription < ApplicationRecord
 
   # A response may arrive after the app has registered again. Only remove the
   # exact registration sent, and respect APNs' invalidation timestamp when given.
+  # Destroy (not delete) so the subscription's ledger rows are cleaned up with
+  # it; a surviving row would claim against a parent that no longer exists.
   def invalidate_if_unchanged!(response)
     return unless response.status.to_i == 410
 
@@ -96,6 +98,6 @@ class PushSubscription < ApplicationRecord
     end
 
     self.class.where(id: id, token: token, environment: environment,
-      last_registered_at: last_registered_at).delete_all
+      last_registered_at: last_registered_at).destroy_all
   end
 end

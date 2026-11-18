@@ -95,7 +95,7 @@ class PushDelivery < ApplicationRecord
   end
 
   def enqueue!(recover: false)
-    return false unless subscription.channel_ready?
+    return false unless subscription&.channel_ready?
 
     claimed_at = Time.current
     claimed = with_lock do
@@ -123,7 +123,7 @@ class PushDelivery < ApplicationRecord
   # The reservation commits before provider IO. A lost worker therefore spends
   # an attempt, and a recovered ActiveJob cannot start a fresh provider budget.
   def claim_attempt!
-    return unless subscription.channel_ready?
+    return unless subscription&.channel_ready?
 
     with_lock do
       next unless status_pending?
@@ -149,6 +149,18 @@ class PushDelivery < ApplicationRecord
     end
   end
 
+  # The channel could not attempt (for example the client went unavailable
+  # between claim and deliver). Hand back the whole reservation so an outage
+  # cannot exhaust the budget without provider IO, and clear the queue claim
+  # so the next generation pass can re-enqueue immediately.
+  def release_attempt!(attempt)
+    with_lock do
+      next false unless current_attempt?(attempt)
+      update!(attempted_at: nil, enqueued_at: nil, provider_attempts: provider_attempts - 1)
+      true
+    end
+  end
+
   def complete_attempt!(attempt, result:, subscription_updated_at: nil)
     if result == :gone
       # Registration takes parent then child locks. Cleanup uses that same
@@ -168,14 +180,19 @@ class PushDelivery < ApplicationRecord
     else
       with_lock do
         next unless current_attempt?(attempt)
-        update!(status: result == :accepted ? :accepted : :rejected, attempted_at: nil)
+        status = case result
+                 when :accepted then :accepted
+                 when :failed then :failed
+                 else :rejected
+                 end
+        update!(status: status, attempted_at: nil)
       end
     end
   end
 
   def eligible?
     if insight
-      insight.notification_version == insight_version && subscription.eligible_for?(insight)
+      insight.notification_version == insight_version && subscription&.eligible_for?(insight)
     else
       # Test sends exist only on the web push channel and expire quickly.
       subscription.is_a?(WebPushSubscription) && subscription.eligible? &&
