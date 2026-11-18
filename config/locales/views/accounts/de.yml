@@ -172,6 +172,7 @@ de:
         short_term: Kurzfristig verfügbar
         locked: Gebunden
         locked_until: "Gebunden bis %{date}"
+        renews_on: "Gebunden, verlängert sich am %{date}"
         long_term: Langfristig gebunden
       form:
         heading: Verfügbarkeit
@@ -204,6 +205,7 @@ de:
           user: Von dir gesetzt
           tax_treatment: Folgt der Steuerart
           liquidity: Folgt der Verfügbarkeit
+          excluded_from_reports: Das Konto ist von Berichten ausgenommen
     tax_treatments:
       taxable: Versteuerbar
       tax_deferred: Steuerlich aufgeschoben

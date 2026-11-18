@@ -26,7 +26,14 @@ module AccountsHelper
     when "long_term" then t("accounts.liquidity.badge.long_term")
     when "locked"
       release = account.next_release_date(date)
-      release ? t("accounts.liquidity.badge.locked_until", date: l(release, format: :long)) : t("accounts.liquidity.badge.locked")
+      if release.nil?
+        t("accounts.liquidity.badge.locked")
+      elsif account.auto_renew?
+        # The date is the next rollover, on which the money locks again.
+        t("accounts.liquidity.badge.renews_on", date: l(release, format: :long))
+      else
+        t("accounts.liquidity.badge.locked_until", date: l(release, format: :long))
+      end
     end
   end
   def summary_card(title:, &block)

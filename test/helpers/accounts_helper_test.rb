@@ -80,6 +80,21 @@ class AccountsHelperTest < ActionView::TestCase
     assert_not_equal before, sidebar_key
   end
 
+  test "the header badge names the renewal date of an auto renewing deposit" do
+    account = @family.accounts.create!(
+      name: "Rolling deposit", balance: 1000, currency: "USD", accountable: Depository.new(subtype: "cd"),
+      available_on: Date.new(2026, 1, 15), auto_renew: true, renewal_term_months: 12
+    )
+    date = Date.new(2026, 3, 1)
+    release = l(account.next_release_date(date), format: :long)
+
+    assert_equal I18n.t("accounts.liquidity.badge.renews_on", date: release), liquidity_badge_label(account, date)
+
+    account.update!(auto_renew: false, renewal_term_months: nil, available_on: Date.new(2026, 6, 1))
+    assert_equal I18n.t("accounts.liquidity.badge.locked_until", date: l(Date.new(2026, 6, 1), format: :long)),
+      liquidity_badge_label(account, date)
+  end
+
   private
     def sidebar_key
       account_sidebar_tabs_cache_key(family: @user.family, active_tab: "all", mobile: false)

@@ -106,6 +106,8 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "updating the overview saves a chosen availability" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
     patch property_path(@account), params: {
       account: {
         name: @account.name,

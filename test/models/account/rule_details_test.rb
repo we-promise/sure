@@ -23,6 +23,17 @@ class Account::RuleDetailsTest < ActiveSupport::TestCase
     assert rows[:counts_as_budget_cash].value
   end
 
+  test "an account excluded from reports counts in neither budget row" do
+    account = create_account(Depository, "checking")
+    account.update!(exclude_from_reports: true)
+    rows = Account::RuleDetails.new(account, date: @today).rows.index_by(&:key)
+
+    assert_not rows[:counts_in_budget].value
+    assert_not rows[:counts_as_budget_cash].value
+    assert_equal :excluded_from_reports, rows[:counts_in_budget].source
+    assert_equal :excluded_from_reports, rows[:counts_as_budget_cash].source
+  end
+
   private
     def create_account(klass, subtype)
       @family.accounts.create!(
