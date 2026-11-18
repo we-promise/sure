@@ -1044,6 +1044,39 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
   end
 
+  # The category column of the reports export is a user-supplied name, and this
+  # is the export the app points at Google Sheets.
+  test "transactions export escapes formula-triggering category names" do
+    malicious = "=SUM(A1)"
+    malicious_income = "@income"
+    account = @family.accounts.first
+
+    # One expense and one income, so both sections of the export are covered.
+    { malicious => 42.00, malicious_income => -500.00 }.each do |name, amount|
+      account.entries.create!(
+        name: "Payee",
+        date: Date.current.beginning_of_month + 3.days,
+        amount: amount,
+        currency: "USD",
+        entryable: Transaction.new(category: @family.categories.create!(name: name, color: "#123456"), kind: "standard")
+      )
+    end
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :monthly,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month
+    )
+
+    assert_response :ok
+    rows = CSV.parse(@response.body)
+    [ malicious, malicious_income ].each do |name|
+      assert rows.any? { |r| r.first == "'#{name}" }, "the #{name} category cell must be escaped"
+      assert_not rows.any? { |r| r.first == name }, "a raw #{name} must not lead a row"
+    end
+  end
+
   # The card was gated on `investment_accounts`, which is visible accounts
   # only (draft and active), while its realised-gains half is measured over
   # every account included in reports, disabled ones too. A family whose only

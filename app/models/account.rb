@@ -917,6 +917,31 @@ class Account < ApplicationRecord
             .order(:ticker)
   end
 
+  NegativePosition = Data.define(:security, :first_date, :lowest_qty)
+
+  # Securities whose calculated position dropped below zero on some day, for
+  # example after a sale without its purchase or after deleting a purchase.
+  # The holdings tab shows them instead of hiding the gap.
+  # Linked accounts are left out entirely: their provider's holdings are the
+  # truth, so a negative quantity there (reported, or carried back by the
+  # reverse calculator) is a short position, not missing data.
+  def negative_positions
+    return [] if linked?
+
+    rows = holdings
+      .joins(:security)
+      .merge(Security.standard)
+      .where(account_provider_id: nil)
+      .where("holdings.qty < 0")
+      .group(:security_id)
+      .pluck(:security_id, Arel.sql("MIN(holdings.date)"), Arel.sql("MIN(holdings.qty)"))
+    return [] if rows.empty?
+
+    securities = Security.where(id: rows.map(&:first)).index_by(&:id)
+    rows.map { |security_id, first_date, lowest_qty| NegativePosition.new(securities[security_id], first_date, lowest_qty) }
+        .sort_by { |position| [ position.first_date, position.security.ticker, position.security.id ] }
+  end
+
   # The balance type determines which "component" of balance is being tracked.
   # This is primarily used for balance related calculations and updates.
   #
@@ -934,6 +959,16 @@ class Account < ApplicationRecord
     else
       raise "Unknown account type: #{accountable_type}"
     end
+  end
+
+  # Whether the activity feed hides balance updates unless asked to show them.
+  #
+  # A linked account gets one from almost every daily sync, and users can't add
+  # their own there, so they bury the transactions they sit between. Property,
+  # vehicle, loan and other non-cash accounts are valued by those entries, so
+  # they keep showing them.
+  def hides_balance_updates_by_default?
+    linked? && balance_type != :non_cash
   end
 
   def owned_by?(user)
