@@ -248,4 +248,10 @@ class ImportTest < ActiveSupport::TestCase
 
     assert_equal "O'Brien", csv.first["name"]
   end
+
+  test "parse_csv_str preserves a literal leading apostrophe before a formula marker" do
+    csv = Import.parse_csv_str("name\n'+44 Taxis\n+44 Taxis\n")
+
+    assert_equal [ "'+44 Taxis", "+44 Taxis" ], csv["name"]
+  end
 end

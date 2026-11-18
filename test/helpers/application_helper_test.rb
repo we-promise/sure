@@ -161,6 +161,14 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_match(%r{href="https://example\.com"}, rendered)
   end
 
+  test "markdown preserves underline formatting" do
+    assert_includes markdown("This is _underlined_"), "<u>underlined</u>"
+  end
+
+  test "markdown preserves inline quote formatting" do
+    assert_includes markdown('She said "hello"'), "<q>hello</q>"
+  end
+
   test "markdown renders images written as markdown" do
     assert_match(%r{<img[^>]+src="https://example\.com/a\.png"}, markdown("![alt](https://example.com/a.png)"))
   end
