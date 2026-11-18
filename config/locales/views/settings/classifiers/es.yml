@@ -1,0 +1,156 @@
+---
+es:
+  settings:
+    classifiers:
+      account:
+        account_field: Incluir la cuenta como un token
+        account_field_hint: 'La cuenta en la que está una transacción cuenta como indicio. Nunca decide sola: la transacción necesita una palabra o un comercio conocidos.'
+      amount:
+        amount_by_direction: Incluir el sentido, entrada o salida de dinero
+        amount_by_direction_hint: Cada categoría aprende en qué sentido va su dinero, y las devoluciones y compras en la misma tienda se mantienen separadas.
+        amount_field: Incluir el importe
+        amount_field_hint: Compara el importe con los importes habituales de cada categoría en la misma moneda, en escala logarítmica.
+      category_training:
+        apply: Aplicar
+        categories: Categorías
+        categories_all: Todas las categorías
+        categories_hint: Las categorías sin marcar, con sus subcategorías, quedan fuera del entrenamiento, así que Bayes nunca las elige.
+        categories_some: "%{count} de %{total} categorías"
+        exclude_transfers: Excluir transferencias
+        exclude_transfers_hint: Transferencias y pagos entre tus cuentas.
+        search_categories: Buscar categorías
+        skip_self_labels: No aprender de las propias suposiciones de Bayes hasta que se confirmen o tengan esta antigüedad en días
+        skip_self_labels_hint: Confirmada significa que la has cambiado o bloqueado. Una suposición errónea no se realimenta ni se refuerza; si se deja tanto tiempo sin tocar, cuenta como aceptada.
+      add_rule:
+        success: La regla %{name} se ha añadido al principio de tus reglas.
+      classifier:
+        apply: Aplicar
+        lock_results: Bloquear las categorías que asigna el clasificador
+        lock_results_hint: Impide que las reglas cambien lo que elige Bayes, salvo que pulses Aplicar en una regla. La IA nunca cambia lo que elige Bayes, esté bloqueado o no.
+        rule: Categorizar con el clasificador
+        rule_hint: La regla Clasificador de categorías, que se activa y desactiva con esta opción en Reglas. Categoriza las transacciones sin categoría en el orden de tus reglas, tras cada sincronización; lo que no tiene claro se deja para una regla de Categorizar automáticamente.
+        threshold: Umbral
+        threshold_hint: Puntuación mínima con la que actúa Bayes (0,05–0,99). Más baja categoriza más, con más errores.
+      clear_locks:
+        success: Se están quitando los bloqueos de Bayes. Puede tardar unos instantes.
+      evaluation:
+        apply_best: Aplicar esta configuración
+        best: Mejor encontrada
+        best_changes: 'Mejor encontrada, cambios respecto a la tuya:'
+        best_no_changes: Nada ha puntuado mejor que tu configuración.
+        buttons_hint: 'Probar mi configuración puntúa tus ajustes. Buscar la mejor configuración explora los %{tuning} meses anteriores a los mostrados, así que lo que encuentra se puntúa en meses que no ha visto. Juzga por ROC-AUC: lo bien que las puntuaciones ordenan las transacciones de cada categoría por encima del resto, con cualquier umbral, y solo se queda con un cambio cuando mejora en conjunto y en todos esos %{tuning} meses por separado salvo uno. Primero elige las entradas (todas las combinaciones del token del comercio, el importe y la cuenta; después puntuar el comercio y la cuenta por separado; después el nombre del comercio y las notas como palabras), luego prueba un cambio cada vez en los demás ajustes y, por último, en Puntuación. Los valores por defecto son los del clasificador original, con las categorías que hayas elegido; Restablecer valores por defecto los aplica y los prueba.'
+        categories_heading: Clasificador de categorías
+        change: "%{setting}: %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: 'Errores más frecuentes: %{column} con %{threshold}'
+        current: Mi configuración
+        defaults: Por defecto
+        description: Cada columna se puntúa sobre los últimos %{months} meses como si fueran transacciones nuevas, entrenando cada mes con el historial anterior, y se compara con tus categorías. La prueba no cambia la categoría de ninguna transacción, y los ajustes del clasificador solo cambian cuando aplicas o restableces.
+        find_best: Buscar la mejor configuración
+        matcher_confusions: 'Errores de comercio más frecuentes: %{column} con %{similarity}'
+        matcher_description: 'Comercios que el emparejador rellena en los mismos %{months} meses: %{count} transacciones con comercio, cada una emparejada con el historial anterior a su mes con su comercio oculto; acierto es el comercio que tiene. Se puntúan todos los cortes y números de comercios; Mejor encontrada es la que tiene la mejor celda para el coste de un error, y es la que fija Aplicar. La prueba no rellena ningún comercio.'
+        merchants_heading: Emparejador de comercios
+        no_confusions: Ningún error con este umbral.
+        no_matcher_confusions: Ningún error de comercio con esta similitud.
+        no_uncategorized: Nada queda sin categoría con este umbral.
+        no_unfilled: Nada queda sin comercio con esta similitud.
+        none: Aún no se ha probado.
+        'off': desactivado
+        'on': activado
+        ran_at: Puntuado hace %{time} sobre %{count} transacciones (%{months}).
+        reset: Restablecer valores por defecto
+        reset_confirm: "¿Restablecer todos los ajustes del clasificador a su valor por defecto y probarlos?"
+        right_wrong: Cada celda es aciertos / errores.
+        run: Probar mi configuración
+        running: Probando… esta sección se actualizará al terminar.
+        short_history: Aún no hay historial suficiente para ajustar el clasificador de categorías. Hacen falta unos %{months} meses de transacciones categorizadas, así que por ahora Aplicar no toca sus ajustes.
+        similarity: Similitud
+        stale: La configuración ha cambiado desde esta prueba.
+        threshold: Umbral
+        trying: Probando %{changes}…
+        uncategorized: 'Sin categoría más frecuentes: %{column} con %{threshold}'
+        unfilled: 'Sin rellenar más frecuentes: %{column} con %{similarity}'
+        weight: Un error cuesta
+        weight_hint: 'Elige lo que fija Aplicar: las celdas en negrita, donde los aciertos menos esta cantidad por error dan el valor más alto. Para las categorías, el umbral de Mejor encontrada; para el emparejador, el corte, la similitud y el número de comercios.'
+        weight_option:
+          one: 1 acierto
+          other: "%{count} aciertos"
+      matcher:
+        lock_similar_merchants: Bloquear los comercios que asigna el emparejador
+        lock_similar_merchants_hint: Impide que las reglas, la IA y las sincronizaciones los cambien, salvo que pulses Aplicar en una regla. Sus propios bloqueos no cuentan como confirmados (Ajuste del emparejador de comercios).
+        rule: Rellenar los comercios que faltan a partir de casi duplicados
+        rule_hint: La regla Emparejador de comercios, que se activa y desactiva con esta opción en Reglas. En el orden de tus reglas, una transacción sin comercio recibe el que tienen todos sus casi duplicados, como "NETFLIX.COM 8812" y "Netflix com". Las transferencias quedan fuera.
+        similar_threshold: Similitud
+        similar_threshold_hint: Similitud mínima de las descripciones, sin contar números ni códigos de referencia (0,5–0,99). Más baja rellena más, con más errores. El Aplicar del ajuste automático también la fija.
+      matcher_tuning:
+        similar_common_share: Corte
+        similar_common_share_hint: Una palabra o fragmento de 3 letras que aparece en una proporción de las transacciones de origen mayor que esta (0,01–1), y en al menos 50 de ellas, es demasiado común para distinguirlas, como "tarjeta" o "pago", así que se ignora. Un valor más alto tiene en cuenta más de ellas. El Aplicar del ajuste automático también lo fija.
+        similar_min_neighbours: Comercios coincidentes
+        similar_min_neighbours_hint: Cuántos casi duplicados deben tener el comercio, sin que ninguno tenga otro. Con 1 se copia una sola transacción, errores incluidos.
+        similar_min_neighbours_option:
+          one: 1 comercio
+          other: "%{count} comercios"
+        similar_skip_self: No copiar de los comercios del propio emparejador hasta que se confirmen o tengan esta antigüedad en días
+        similar_skip_self_hint: Confirmado significa que lo has cambiado o bloqueado. Una copia errónea no se propaga; si se deja tanto tiempo sin tocar, cuenta como aceptada.
+      merchant:
+        merchant_field: Incluir el comercio como un token, si existe
+        merchant_field_hint: Cuenta por identidad, así que un comercio renombrado conserva su historial.
+        merchant_name_words: Incluir el nombre del comercio como palabras
+        merchant_name_words_hint: Se lee como la descripción, igual que en el original, así que los nombres parecidos comparten indicios. Se solapa con el token de abajo.
+      run:
+        success: Bayes está categorizando las transacciones sin categoría. Puede tardar unos instantes.
+      scoring:
+        complement: Usar naive Bayes complementario
+        complement_hint: Puntúa cada categoría según lo mal que encaja la transacción en las demás, lo que funciona mejor con categorías de tamaños muy distintos. Desactivado es el multinomial original.
+        prior: Incluir la frecuencia de uso de cada categoría
+        prior_hint: Se inclina por las categorías que más usas. Desactivado trata todas las categorías por igual, como el original.
+        separate_fields: Puntuar el comercio y la cuenta aparte de las palabras
+        separate_fields_hint: Cada uno tiene su propia distribución, así que una descripción larga no pesa más que ellos. Necesita incluir el comercio o la cuenta; el importe siempre se puntúa por separado.
+        smoothing: Suavizado
+        smoothing_hint: Se suma a cada recuento para que una palabra no vista no descarte una categoría (0,001–10). 1 es el del original; un valor más bajo confía más en lo ya visto.
+      show:
+        add_rule_body: No hay ninguna regla %{name} entre tus reglas, así que no hay nada que activar. ¿La añado al principio de tus reglas?
+        add_rule_cancel: 'No'
+        add_rule_confirm: Añadir regla
+        add_rule_title: "¿Añadir la regla %{name}?"
+        account: Ajuste de cuentas
+        amount: Ajuste del importe
+        auto_tune: Ajuste automático
+        category_training: Ajuste del clasificador de categorías
+        clear_locks: Quitar bloqueos de Bayes
+        clear_locks_confirm_body: Desbloquea las categorías que bloqueó Bayes y los comercios que bloqueó el emparejador y que siguen siendo los que asignaron, para que las reglas y la IA puedan volver a cambiarlos. Las categorías y los comercios se mantienen.
+        clear_locks_confirm_button: Quitar bloqueos
+        clear_locks_confirm_title: "¿Quitar los bloqueos de Bayes?"
+        description: El clasificador bayesiano de categorías aprende de tus transacciones categorizadas y categoriza las nuevas antes que cualquier proveedor de IA. Los cambios en estos ajustes se aplican a partir de la próxima categorización; las transacciones ya categorizadas conservan su categoría.
+        matcher: Emparejador
+        matcher_description: Rellena los comercios que faltan a partir de casi duplicados, como la regla Emparejador de comercios (tras cada sincronización) y al pulsar Ejecutar. Cambia los comercios guardados.
+        matcher_tuning: Ajuste del emparejador de comercios
+        merchant: Ajuste de comercios
+        run: Ejecutar
+        scoring: Puntuación
+        title: Clasificador
+        training: Entrenamiento
+        words: Ajuste de transacciones
+      training:
+        max_training_transactions: Transacciones de entrenamiento
+        max_training_transactions_hint: 'Cuántas de las transacciones más recientes usar (100–20.000): las categorizadas de las que aprende el clasificador y las que tienen comercio de las que copia el emparejador.'
+      words:
+        bigrams: Incluir pares de palabras
+        bigrams_hint: Las palabras contiguas también cuentan juntas, como "pago tarjeta".
+        binary: Excluir palabras repetidas
+        binary_hint: Cada palabra cuenta una vez por transacción.
+        drop_codes: Excluir códigos de referencia
+        drop_codes_hint: Palabras que mezclan letras con 2 o más dígitos, como 2k4l19.
+        drop_numbers: Excluir números
+        drop_numbers_hint: Números de tienda, fechas e importes en la descripción.
+        include_notes: Incluir las notas
+        include_notes_hint: Lee las notas además del nombre.
+        keep_single_chars: Incluir palabras de un carácter
+        keep_single_chars_hint: Letras y dígitos sueltos que quedan tras separar, como la "s" de mcdonald's.
+        spread_filter: Excluir palabras que todas las categorías usan por igual
+        spread_filter_hint: No dicen nada de la categoría. El número indica cuánto por encima de un reparto uniforme debe estar el uso de una categoría.
+        word_split: Las palabras se forman con
+        word_split_ascii: a–z y 0–9
+        word_split_hint: Cualquier otro carácter separa palabras. Con letras de cualquier alfabeto, palabras como Geschäft o Кофейня quedan enteras; con símbolos internos, las letras unidas por un solo símbolo también forman una palabra, como mcdonald's, s/o y m&s (un símbolo en un extremo, como en *netflix, se sigue quitando).
+        word_split_symbols: Letras, dígitos y símbolos internos
+        word_split_unicode: Letras y dígitos de cualquier alfabeto

@@ -1,0 +1,435 @@
+---
+es:
+  admin:
+    system_health:
+      hosted_usage:
+        loading: Cargando el uso del servicio alojado…
+        title: Uso del servicio alojado
+        snapshot: Instantánea de solo lectura de la base de datos a %{time}
+        summary:
+          trial_households_count: Familias en prueba (últimos 30 días)
+          trial_members_count: Cuentas de miembros en prueba actuales
+          trials_expiring_soon_count: Pruebas que caducan en los próximos 7 días
+          cleanup_eligible_count: Familias aptas para limpieza
+          active_supporter_households_count: Familias colaboradoras activas (local)
+          supporter_subscription_count: Filas de suscripción vinculadas a Stripe
+        summary_help: Los totales de prueba cubren las suscripciones registradas en los últimos 30 días. Los totales de pruebas a punto de caducar, limpieza y colaboradores cubren todas las filas actuales que coinciden, sin los límites de las tablas.
+        limitations_title: Qué nos dicen estas cifras
+        limitations: Las tablas actuales no guardan el historial completo de pruebas, pagos ni actividad de sesiones. La creación de una suscripción puede venir de una importación. Las cuentas de miembros no son necesariamente personas distintas. Esta vista no cambia ningún dato de familias ni de suscripciones. Los reinicios de la demo compartida eliminan familias y sesiones antiguas, así que no se puede reconstruir el historial de visitantes.
+        trials:
+          title: Familias en prueba recientes
+          description: Suscripciones registradas desde el %{date} que conservan una fecha de fin de prueba, incluidas las pruebas convertidas. Se muestran hasta %{limit} familias.
+          sessions_help: Las sesiones son registros de inicio de sesión conservados de usuarios activos, no usuarios conectados ahora ni visitas. Cerrar sesión borra el registro. La fecha de creación más reciente no es la última vez que se vio al usuario.
+          empty: No hay familias en prueba registradas en este periodo
+        cleanup:
+          title: Aptitud para limpieza
+          description: 'Coincide con el alcance de limpieza actual: una suscripción en pausa o en prueba que terminó hace más de 14 días, o sin suscripción y con una familia de más de 45 + 14 días. Se muestran hasta %{limit} familias.'
+          eligibility_help: Los inicios de sesión recientes no impiden la coincidencia. Ser apta no confirma la eliminación; los 90 días son la retención del archivo, no el umbral de limpieza de pruebas.
+          disabled: La limpieza programada de pruebas está desactivada fuera del modo gestionado. Esto solo muestra coincidencias con el alcance.
+          empty: Ninguna familia coincide con el alcance de limpieza
+          reasons:
+            expired_trial_grace_elapsed: Prueba terminada; pasaron los 14 días de gracia
+            no_subscription_grace_elapsed: Sin suscripción; pasaron 45 + 14 días
+        supporters:
+          title: Estado local de colaboradores
+          description: Filas de suscripción locales actuales con ID de cliente y de suscripción con formato de Stripe; se excluye la suscripción de la demo sintética. Los estados no verifican pagos recibidos ni fechas del primer pago. No se hace ninguna petición a Stripe.
+          empty: No hay filas de suscripción vinculadas a Stripe
+        columns:
+          household: ID de familia
+          recorded_at: Suscripción registrada
+          trial_ends_at: Fin de la prueba
+          status: Estado actual
+          members: Cuentas de miembros
+          retained_sessions: Sesiones conservadas
+          recent_sessions: Sesiones conservadas creadas en los últimos 30 días
+          latest_session: Último inicio de sesión conservado
+          cleanup_eligible: Apta para limpieza
+          cleanup_reason: Motivo
+          subscription_rows: Filas de suscripción
+        statuses:
+          unknown: Desconocido
+          incomplete: Incompleta
+          incomplete_expired: Incompleta, caducada
+          trialing: En prueba
+          active: Activa
+          past_due: Pago vencido
+          canceled: Cancelada
+          unpaid: Impagada
+          paused: En pausa
+          no_subscription: Sin suscripción
+        not_recorded: Sin registrar
+        eligible: Apta
+        not_eligible: No apta
+        synthetic_demo: Demo sintética
+      push_notifications:
+        send_test: Enviar notificación push de prueba
+        queueing: Poniendo en cola…
+        title: Notificaciones push
+        requested_at: Última prueba solicitada el %{time}
+        result_help: Que APNs la acepte no confirma que llegue a tu dispositivo. Actualiza para ver los resultados del worker. Los resultados se guardan 24 horas.
+        results_label: Resultados de la prueba
+        device: Dispositivo %{number}
+        pending: Pendiente
+        refresh: Actualizar resultados
+        columns:
+          device: Dispositivo
+          environment: Entorno de APNs
+          status: Resultado
+          checked_at: Última actualización
+        environments:
+          sandbox: Sandbox
+          production: Producción
+        messages:
+          enqueue_failed: No se ha podido poner la prueba en cola. Revisa Sidekiq y actualiza los resultados de abajo.
+          ready: Envía una notificación de prueba a los dispositivos iOS activados y registrados en tu cuenta.
+          queued: Notificación de prueba en cola. Actualiza los resultados de abajo para ver su estado.
+          hosted_only: Las notificaciones push solo están disponibles en modo alojado.
+          ineligible: Solo un superadministrador activo puede enviar una notificación de prueba.
+          no_devices: Activa las notificaciones push en la app de Sure para iOS con esta cuenta para enviar una prueba.
+          disabled: El operador ha desactivado el envío de notificaciones push.
+          not_configured: Las credenciales de APNs no están configuradas.
+          cooldown: Espera 30 segundos antes de enviar otra prueba.
+          storage_unavailable: No se ha podido guardar la petición de prueba. Revisa la configuración de la caché compartida.
+        statuses:
+          queued: En cola
+          accepted: Aceptada por APNs
+          skipped: 'Omitida: ya no cumple los requisitos'
+          rejected: Rechazada por APNs; revisa los registros de depuración de push
+          unregistered: El registro del dispositivo ya no es válido
+          retrying: Reintentando tras un fallo temporal
+          failed: Fallida; revisa los registros de depuración de push
+          enqueue_failed: No se ha podido poner en cola; revisa Sidekiq
+          expired: Caducada sin resultado final
+      push_notification:
+        title: Notificación de prueba de Sure
+        body: Esta es una notificación push de prueba para tu cuenta de Sure.
+      verify_worker_ai:
+        queued: Comprobación del worker en cola. Aparecerá abajo cuando un proceso worker la recoja, normalmente en unos segundos.
+      optional_services:
+        title: Servicios opcionales
+        description: 'Integraciones opcionales del operador. Los servicios sin configurar son solo informativos. Estas comprobaciones solo revisan los ajustes: no prueban la conectividad, no envían eventos de prueba ni cambian el consentimiento de analítica. Despliega un servicio para ver cómo configurarlo.'
+        missing_settings: 'Ajustes que faltan: %{settings}'
+        statuses:
+          configured: Configurado
+          not_configured: Sin configurar
+          incomplete: Configuración incompleta
+          disabled: Desactivado en este proceso
+          not_checked: Sin verificar
+        notes:
+          environment_disabled: La integración cargada está desactivada en este entorno de Rails.
+          explicitly_disabled: SKYLIGHT_ENABLED desactiva explícitamente la instrumentación.
+          self_hosted_checkout_disabled: El pago de suscripciones y el portal de facturación están desactivados en modo autoalojado. Los webhooks de Stripe se pueden configurar igualmente; aquí no hacen falta los ID de precio del pago.
+          browser_analytics_disabled: La analítica del navegador está desactivada en este entorno. Esto no desactiva el cliente de servidor, que se configura aparte.
+          shared_feedback_configured: Los comentarios en instalaciones autoalojadas tienen un proyecto incluido aparte y se activan según su propia configuración. No necesitan una POSTHOG_KEY del operador. No se comprueban la exclusión voluntaria en el navegador ni la disponibilidad del SDK.
+          shared_feedback_disabled: El proyecto aparte de comentarios autoalojados está desactivado por su ajuste de comentarios o de entorno. Esto no desactiva la analítica propia del operador.
+          production_only: Con la configuración actual de la aplicación, esta integración solo se usa en producción.
+        services:
+          langfuse:
+            title: Langfuse
+            description: Trazas de IA e informes de evaluación opcionales. Esta comprobación no envía trazas ni peticiones de evaluación.
+            guidance: Define LANGFUSE_PUBLIC_KEY y LANGFUSE_SECRET_KEY juntas. LANGFUSE_HOST es opcional. Reinicia los servicios afectados después de cambiar estos ajustes.
+          sentry:
+            title: Sentry
+            description: Informes opcionales de errores y rendimiento. El inicializador actual solo los activa en producción.
+            guidance: Define SENTRY_DSN y reinicia los servicios afectados. Esto comprueba la configuración del SDK cargado sin capturar ningún error ni enviar eventos.
+          skylight:
+            title: Skylight
+            description: Instrumentación opcional del rendimiento de la aplicación. Que haya configuración no confirma que el agente esté en marcha ni enviando datos.
+            guidance: Define SKYLIGHT_AUTHENTICATION y asegúrate de que Skylight se carga en el entorno de Rails previsto. SKYLIGHT_ENABLED=false desactiva la instrumentación; el indicador por sí solo no carga la gema. Reinicia después de los cambios.
+          stripe:
+            title: Stripe
+            description: Facturación de suscripciones y webhooks de pago opcionales. Esta comprobación no crea un cliente de Stripe, no valida credenciales ni hace peticiones de pago.
+            guidance: Define STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET juntas. El pago de suscripciones gestionado también necesita STRIPE_MONTHLY_PRICE_ID y STRIPE_ANNUAL_PRICE_ID.
+          posthog:
+            title: PostHog
+            description: Analítica opcional propia del operador, con la configuración cargada al arrancar. Configurado no significa que un usuario haya dado su consentimiento a la analítica.
+            guidance: Define POSTHOG_KEY y un POSTHOG_HOST no vacío, o deja el host sin definir para usar el predeterminado. La analítica del navegador necesita producción, o POSTHOG_DEVELOPMENT_ENABLED en desarrollo. POSTHOG_FEEDBACK_ENABLED controla los comentarios autoalojados, que van aparte, no la analítica del operador.
+          logtail:
+            title: Logtail
+            description: Reenvío opcional de registros en producción. Si no está configurado, la aplicación sigue escribiendo los registros en la salida estándar.
+            guidance: Define LOGTAIL_API_KEY y LOGTAIL_INGESTING_HOST juntas y reinicia los servicios afectados. Esta comprobación no emite ningún registro de prueba.
+      configuration:
+        description: Configuración visible para este proceso web. Estas comprobaciones no envían correos, no contactan con proveedores ni suben o descargan archivos. Configurado significa que los ajustes están presentes, no que se haya verificado el envío, el acceso al proveedor o el acceso al almacenamiento.
+        statuses:
+          configured: Configurado
+          not_configured: Sin configurar
+          incomplete: Configuración incompleta
+          disabled: Desactivado
+          not_checked: Sin verificar
+        settings_needed: Ajustes que revisar
+        unknown_provider: Proveedor seleccionado no reconocido
+        provider_statuses:
+          configured: Configurado
+          not_configured: Falta la clave API
+          invalid: Selección no válida
+        configure_providers: Abrir los ajustes de autoalojamiento
+        storage_backend: 'Almacenamiento seleccionado: %{backend}'
+        storage_backends:
+          local: Disco local
+          test: Disco de pruebas
+          amazon: Amazon S3
+          cloudflare: Cloudflare R2
+          generic_s3: Almacenamiento compatible con S3
+          google: Google Cloud Storage
+          other: Backend personalizado o no reconocido
+        checks:
+          smtp:
+            title: Correo electrónico (SMTP)
+            statuses:
+              configured: Los ajustes de SMTP están presentes.
+              not_configured: SMTP no está configurado. Los restablecimientos de contraseña, las invitaciones y otros correos del sistema no se pueden enviar por SMTP.
+              incomplete: Faltan ajustes de correo o están incompletos. Puede que los correos del sistema o sus enlaces no funcionen.
+              disabled: El envío de correo está desactivado en la configuración del mailer en uso.
+              not_checked: Este proceso usa un método de envío distinto de SMTP, como la vista previa de desarrollo. No se evalúa el envío por SMTP.
+            guidance: SMTP no se puede configurar desde la interfaz de administración. Define las variables de entorno de correo en los servicios web y worker y reinicia ambos. SMTP_USERNAME y SMTP_PASSWORD se pueden omitir los dos para un relay sin autenticación.
+            issues:
+              address: SMTP_ADDRESS
+              port: SMTP_PORT (un número de 1 a 65535)
+              sender: EMAIL_SENDER (sustituye el valor por defecto sender@sure.local)
+              app_domain: APP_DOMAIN (se usa en los enlaces de los correos)
+              authentication: SMTP_USERNAME y SMTP_PASSWORD (los dos o ninguno)
+          securities:
+            title: Precios de mercado
+            statuses:
+              configured: Todos los proveedores de precios de mercado activados están configurados.
+              not_configured: A los proveedores de precios de mercado activados les falta la clave API. La búsqueda automática de valores y la consulta de precios no están disponibles con estos proveedores.
+              incomplete: Al menos un proveedor de precios de mercado activado tiene la configuración incompleta o una selección no válida. Puede que los valores asignados a ese proveedor no reciban precios actualizados.
+              disabled: No hay ningún proveedor de precios de mercado activado. La búsqueda automática de valores y la consulta de precios no están disponibles.
+            guidance: Elige proveedores y añade las claves API necesarias en los ajustes de autoalojamiento, o configúralos en el entorno de despliegue. Las variables de entorno tienen prioridad. Los proveedores públicos no necesitan clave API.
+          exchange_rates:
+            title: Tipos de cambio de divisas
+            statuses:
+              configured: El proveedor de tipos de cambio seleccionado está configurado.
+              not_configured: No hay ningún proveedor de tipos de cambio utilizable. Puede que la conversión automática de divisas no esté disponible cuando falte un tipo guardado.
+            guidance: Elige un proveedor de tipos de cambio y añade su clave API, si la necesita, en los ajustes de autoalojamiento, o configúralo en el entorno de despliegue. EXCHANGE_RATE_PROVIDER y las variables de entorno con claves API de proveedores tienen prioridad.
+            issues:
+              invalid_provider: No se reconoce el proveedor de tipos de cambio seleccionado. La consulta automática de tipos fallará hasta que se elija un proveedor compatible.
+          storage:
+            title: Subida y almacenamiento de archivos
+            statuses:
+              configured: Los ajustes de almacenamiento están presentes; el disco local no necesita credenciales en la nube.
+              not_configured: El backend de almacenamiento seleccionado no tiene configuración. Puede que la subida de archivos no esté disponible.
+              incomplete: Faltan ajustes de almacenamiento obligatorios o están incompletos. Puede que la subida o la descarga de archivos no funcione.
+              not_checked: Este backend usa detección externa de credenciales o una configuración personalizada. Con estos ajustes no se puede determinar si tiene acceso.
+            guidance: Revisa ACTIVE_STORAGE_SERVICE y los ajustes de despliegue del backend seleccionado. El disco local necesita almacenamiento persistente compartido por los servicios web y worker. Cambiar de backend no migra los archivos existentes; planifica la migración por separado.
+            issues:
+              root: Raíz del almacenamiento local
+              bucket: Bucket de almacenamiento
+              region: Región de almacenamiento
+              credentials: Clave de acceso y clave secreta del almacenamiento (las dos, o usa detección externa de credenciales)
+              endpoint: Endpoint de almacenamiento (y CLOUDFLARE_ACCOUNT_ID para R2)
+      show:
+        title: Estado del sistema
+        tabs:
+          hosted_usage: Uso
+          background_jobs: Tareas
+          ai: IA
+          configuration: Configuración
+        alert:
+          title: Las tareas en segundo plano no se están ejecutando
+        status_section_title: Estado de Sidekiq
+        status_section_description: Estado actual del worker en segundo plano que hace las sincronizaciones y los cálculos de saldos y patrimonio neto.
+        counters_section_title: Contadores de tareas
+        counters_section_description: Contadores agregados de Sidekiq en todas las colas.
+        queues_section_title: Colas
+        queues_section_description: Profundidad de cada cola y antigüedad de su tarea más antigua. La latencia son los segundos que lleva esperando la tarea más antigua.
+        labels:
+          status: Estado
+          processes: Procesos worker
+          last_heartbeat: Último latido
+          max_queue_latency: Antigüedad de la tarea más antigua
+          enqueued: En cola
+          retries: Reintentos
+          failed: Fallidas
+          processed_total: Total procesadas
+          queue: Cola
+          size: Tamaño
+          latency: Latencia
+        values:
+          healthy: Correcto
+          unhealthy: Degradado
+          time_ago: hace %{time_ago}
+          never: Nunca
+          seconds: "%{seconds} s"
+          no_queues: No hay colas registradas. Puede que el worker no esté en marcha.
+        ai:
+          run_checks: Volver a ejecutar las comprobaciones
+          last_checked: Comprobaciones en vivo completadas hace %{time_ago}. Los resultados se guardan en caché un rato.
+          not_checked_help: Abre directamente la URL de estado de IA o ejecuta las comprobaciones para verificar que el servicio responde.
+          loading: Ejecutando comprobaciones en vivo…
+          alerts:
+            custom_openai:
+              title: La comprobación del vector store alojado ha fallado en este endpoint personalizado
+              message: El endpoint configurado no ha superado la comprobación de /v1/vector_stores. La mayoría de los endpoints locales y compatibles con OpenAI no implementan esa API. El chat y el procesamiento de PDF pueden seguir funcionando; para la configuración local habitual, usa pgvector con un endpoint de embeddings aparte. El fallo se ha registrado en Ajustes → Depuración y en Rails.logger.
+            function_calling_unsupported:
+              title: El modelo no admite llamadas a funciones
+              message: El endpoint atendió una petición de chat simple, pero rechazó la misma petición con el parámetro tools. El asistente de IA lee cuentas, transacciones y posiciones mediante llamadas a funciones, así que el chat seguirá fallando (a menudo con un 404 poco útil) hasta que el modelo admita herramientas. Elige un modelo cuyo proveedor documente soporte de llamadas a funciones. El fallo se ha registrado en Ajustes → Depuración y en Rails.logger.
+            function_calling_not_used:
+              title: El modelo respondió sin llamar a la herramienta que se le pidió
+              message: El endpoint aceptó el parámetro tools, pero el modelo respondió con texto en vez de llamar a la herramienta de comprobación de estado. El asistente de IA no puede leer datos financieros sin llamadas a herramientas, así que el chat puede no responder nada o inventarse cifras. Mejor un modelo cuyo proveedor documente soporte de llamadas a funciones.
+            llm_probe_failed:
+              title: Ha fallado la comprobación en vivo del LLM
+              message: Sure no ha podido verificar el endpoint y el modelo configurados. El fallo se ha registrado en Ajustes → Depuración y en Rails.logger.
+            llm_model_not_available:
+              title: El modelo de IA configurado no está disponible
+              message: El endpoint respondió, pero no listó ni sirvió el modelo configurado. Elige un modelo activo del proveedor seleccionado y vuelve a ejecutar las comprobaciones. Para Gemini a través de una capa de traducción compatible con OpenAI, usa un modelo con soporte actual, como gemini-3.8-flash.
+            pdf_text_extraction_failed:
+              title: Ha fallado la comprobación de extracción de texto con un PDF sintético
+              message: Sure no ha podido completar la ruta de texto, que extrae en local el texto incrustado del PDF y lo envía al modelo configurado. No se ha enviado ningún dato de clientes. El fallo se ha registrado en Ajustes → Depuración y en Rails.logger.
+            pdf_vision_processing_failed:
+              title: Ha fallado la comprobación de visión/nativa con un PDF sintético
+              message: Sure no ha podido completar la ruta de PDF como imagen o documento nativo con el modelo configurado. No se ha enviado ningún dato de clientes. El fallo se ha registrado en Ajustes → Depuración y en Rails.logger.
+            vector_probe_failed:
+              title: Ha fallado la comprobación en vivo de la búsqueda de documentos
+              message: Sure no ha podido verificar el vector store seleccionado y todos los servicios de embeddings necesarios. El fallo se ha registrado en Ajustes → Depuración y en Rails.logger.
+            pgvector_extension_not_enabled:
+              title: La extensión vector de PostgreSQL no está activada
+              message: El adaptador pgvector está seleccionado, pero PostgreSQL no tiene activada la extensión vector en esta base de datos. Usa una imagen de PostgreSQL que incluya pgvector, activa la extensión como propietario de la base de datos o superusuario y vuelve a ejecutar las migraciones con VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: Falta la tabla vector_store_chunks
+              message: La extensión pgvector está activada, pero no se encuentra la tabla de fragmentos. Revisa el estado de las migraciones y vuelve a ejecutar la migración del vector store con VECTOR_STORE_PROVIDER=pgvector para que Sure pueda crear vector_store_chunks.
+            pgvector_probe_failed:
+              title: Ha fallado la comprobación del almacenamiento pgvector
+              message: Sure no ha podido consultar la tabla de fragmentos de pgvector. Revisa los permisos de PostgreSQL, la extensión vector y la migración de vector_store_chunks. El fallo se ha registrado en Ajustes → Depuración y en Rails.logger.
+            embedding_dimensions_mismatch:
+              title: Las dimensiones de los embeddings no coinciden
+              message: El endpoint de embeddings devolvió un vector cuya longitud no coincide con EMBEDDING_DIMENSIONS. Ajusta EMBEDDING_MODEL y EMBEDDING_DIMENSIONS al tamaño de vector documentado del modelo, reinicia Sure para que el entorno se mantenga y, si los datos existentes usaban otro tamaño, modifica o recrea la columna/tabla de embeddings de pgvector y vuelve a generar los embeddings de los documentos.
+            embedding_probe_timeout:
+              title: Se ha agotado el tiempo de la comprobación en vivo de embeddings
+              message: El endpoint de embeddings no respondió antes de AI_HEALTH_PROBE_TIMEOUT. Aumenta ese tiempo de espera si el proveedor es lento y reinicia Sure para que el entorno se mantenga en todos los procesos. Si las llamadas normales al chat de IA también agotan el tiempo, sube OPENAI_REQUEST_TIMEOUT por separado.
+            embedding_probe_failed:
+              title: Ha fallado la comprobación en vivo de embeddings
+              message: Sure no ha podido crear un embedding de prueba corto con el endpoint y el modelo configurados. Revisa EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN y los registros del proveedor de embeddings. El fallo se ha registrado en Ajustes → Depuración y en Rails.logger.
+            qdrant:
+              title: El soporte de Qdrant todavía no está implementado
+              message: El adaptador de Qdrant está esbozado, pero la subida y la búsqueda de documentos fallan por ahora. Selecciona OpenAI o pgvector para la búsqueda de documentos.
+            missing_vector_store:
+              title: No hay ningún vector store configurado
+              message: Los documentos subidos no se pueden indexar ni buscar hasta que se configure un adaptador de vector store y sus requisitos.
+            unavailable_vector_store:
+              title: El vector store seleccionado no está disponible
+              message: Revisa los requisitos del adaptador más abajo. Para pgvector, la base de datos debe ofrecer la extensión vector o tener ya una tabla vector_store_chunks.
+          llm:
+            title: LLM y procesamiento de PDF
+            description: Las comprobaciones en vivo verifican el modelo configurado, le piden una llamada a función trivial como hace el asistente y, por separado, prueban la extracción de texto y el procesamiento de visión/nativo con un PDF sintético de una página sin datos de clientes. Los valores de las credenciales nunca se muestran.
+          vector_store:
+            title: Vector store y búsqueda de documentos
+            description: La comprobación en vivo consulta la API del vector store alojado, o prueba la tabla de pgvector y crea un embedding corto sin guardarlo.
+          labels:
+            selected_provider: Proveedor seleccionado
+            effective_provider: Proveedor efectivo
+            model: Modelo
+            endpoint: Endpoint
+            function_calling: Llamadas a funciones (tools)
+            pdf_text_extraction: Ruta de extracción de texto de PDF
+            pdf_vision_processing: Ruta de visión/nativa de PDF
+            llm_request_timeout: Tiempo de espera de peticiones al LLM
+            probe_request_timeout: Tiempo de espera de la comprobación de estado
+            openai_credentials: Credenciales de OpenAI
+            openai_compatible_credentials: Credenciales de API compatible con OpenAI
+            anthropic_credentials: Credenciales de Anthropic
+            adapter: Adaptador
+            adapter_available: Adaptador disponible
+            pgvector_extension: Extensión vector de PostgreSQL
+            pgvector_table: Tabla de fragmentos vectoriales
+            embedding_model: Modelo de embeddings
+            embedding_endpoint: Endpoint de embeddings
+            embedding_dimensions: Dimensiones de los embeddings
+            function_calling_failure_reason: Motivo del fallo de llamadas a funciones
+            pdf_text_extraction_failure_reason: Motivo del fallo de extracción de texto
+            pdf_vision_processing_failure_reason: Motivo del fallo de visión/nativo
+            storage_probe: Comprobación del almacenamiento pgvector
+            embedding_probe: Comprobación del endpoint de embeddings
+            failure_reason: Motivo del fallo
+          providers:
+            openai: OpenAI
+            openai_compatible: Compatible con OpenAI
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Endpoint personalizado
+          adapters:
+            openai: Vector store alojado de OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Configurado
+            not_configured: Sin configurar
+            fallback: "(alternativo)"
+            not_set: Sin definir
+            'yes': Sí
+            'no': 'No'
+            enabled: Activado
+            available_not_enabled: Disponible, no activado
+            not_available: No disponible
+            available: Disponible
+            not_found: No encontrado
+          function_calling_statuses:
+            supported: La llamada a herramienta en vivo ha funcionado
+            unsupported: El proveedor/modelo efectivo no lo admite
+            not_used: Herramientas aceptadas, pero el modelo no llamó a ninguna
+            failing: Ha fallado la comprobación en vivo
+            not_checked: Sin comprobar
+            unavailable: No disponible hasta que se configure un proveedor de LLM
+          pdf_statuses:
+            supported: Comprobación con PDF sintético superada
+            failing: Ha fallado la comprobación con PDF sintético
+            unsupported: Desactivado o no admitido por el proveedor/modelo efectivo
+            not_checked: Sin comprobar
+            unavailable: No disponible hasta que se configure un proveedor de LLM
+          probe_statuses:
+            passing: Comprobación en vivo superada
+            failing: Ha fallado la comprobación en vivo
+            not_checked: Sin comprobar
+            not_configured: Sin configurar
+          vector_statuses:
+            passing: Comprobaciones en vivo superadas
+            failing: Ha fallado la comprobación en vivo
+            not_checked: Sin comprobar
+            not_configured: Sin configurar
+            scaffolded: Esbozado
+            missing: Sin configurar
+          failure_codes:
+            model_not_available: El proveedor no ha devuelto el modelo configurado
+            no_tool_call: El modelo respondió sin llamar a la herramienta de comprobación de estado
+            tools_refused: El servicio atendió la misma petición sin herramientas y la rechazó con ellas
+            invalid_response: El servicio devolvió una respuesta inesperada
+            dimensions_mismatch: Las dimensiones del vector de embeddings no coinciden con las configuradas
+            extension_not_enabled: La extensión vector de PostgreSQL no está activada
+            table_not_found: No se encuentra la tabla vector_store_chunks
+            render_missing_binary: El renderizador pdftoppm (poppler-utils) no está disponible en este contenedor
+            timeout: El servicio no respondió antes de agotar el tiempo de la comprobación
+            no_credit: El servicio rechazó la petición porque la clave no tiene saldo
+            unauthorized: El servicio rechazó la clave API
+            unreachable: No se ha podido conectar con el servicio
+            request_failed: Ha fallado la petición al servicio
+            unsupported_provider: El proveedor no admite esta comprobación
+          worker:
+            title: Verificación del worker
+            description: Las comprobaciones anteriores se han ejecutado desde este proceso web. Casi todo el trabajo de IA (respuestas del asistente, procesamiento de PDF, embeddings, categorización automática y detección de comercios) se ejecuta en realidad en un proceso worker de Sidekiq, que puede tener otro acceso a la red, DNS, reglas de proxy o incluso otras credenciales cargadas. Pon en cola una comprobación para verificar la configuración y la conectividad del propio worker.
+            verify_button: Verificar la configuración del worker
+            coverage_notice: Cada comprobación verifica exactamente un proceso worker, el que la saque de la cola. Con más de una réplica de worker, un resultado correcto no confirma que todos estén bien; vuelve a poner la comprobación en cola para probar otro.
+            empty:
+              title: Ningún worker ha respondido todavía
+              description: Haz clic en "Verificar la configuración del worker" para poner en cola una comprobación asíncrona. El resultado aparecerá aquí cuando un proceso worker la recoja.
+            labels:
+              process: Proceso worker
+              checked_at: Comprobado
+              configuration: Configuración
+            configuration_statuses:
+              match: Igual que la web
+              mismatch: Distinta de la web
+            statuses:
+              passing: Correcto
+              failing: Con fallos
+              stale: Desactualizado
+            settings_origin:
+              title: "¿Qué ajustes necesitan un reinicio?"
+              database_backed: Los ajustes de proveedor, modelo y clave API que cambias en Ajustes → Autoalojamiento se guardan en la base de datos. rails-settings-cached invalida la caché compartida al escribir, así que tanto la web como el worker usan el valor nuevo en la siguiente petición o tarea en cola, sin reiniciar.
+              env_backed: La configuración de embeddings, y cualquier valor que solo se defina con una variable de entorno, queda fijada al arrancar cada contenedor. Rails no puede cambiar el entorno de otro contenedor, así que para cambiarlos hay que reiniciar o recrear los servicios web y worker; una herramienta de despliegue que solo reinicie uno de ellos (despliegue parcial, un Secret actualizado sin reiniciar el pod) no aplicará el cambio.
+          local_setup:
+            title: Configuración local recomendada
+            description: Ejecuta el LLM con tu endpoint local compatible con OpenAI, guarda los vectores de documentos en pgvector y apunta los ajustes de embeddings a un endpoint de embeddings compatible con OpenAI. La imagen de PostgreSQL debe incluir la extensión vector y las dimensiones de los embeddings deben coincidir con el modelo seleccionado.
