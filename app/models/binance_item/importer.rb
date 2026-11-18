@@ -45,11 +45,12 @@ class BinanceItem::Importer
       return { success: true, assets_imported: 0, total_usd: 0 }
     end
 
-    total_usd = calculate_total_usd(all_assets)
+    total_usd, valuation_complete = calculate_total_usd(all_assets)
 
     upsert_binance_account(
       all_assets: all_assets,
       total_usd: total_usd,
+      valuation_complete: valuation_complete,
       spot_raw: spot_result[:raw],
       margin_raw: margin_result[:raw],
       earn_raw: earn_result[:raw],
@@ -120,26 +121,35 @@ class BinanceItem::Importer
     end
 
     def calculate_total_usd(assets)
-      assets.sum do |asset|
+      complete = true
+      total = assets.sum do |asset|
         quantity = asset[:total].to_d
         next 0 if quantity.zero?
 
         price = price_for(asset[:symbol])
+        if price.nil?
+          complete = false
+          next 0
+        end
+
         quantity * price
       end.round(2)
+      [ total, complete ]
     end
 
     def price_for(symbol)
-      return 1.0 if BinanceAccount::STABLECOINS.include?(symbol)
+      return 1.to_d if BinanceAccount::STABLECOINS.include?(symbol)
 
-      price = binance_provider.get_spot_price("#{symbol}USDT")
-      price.to_d
+      price = BigDecimal(binance_provider.get_spot_price("#{symbol}USDT").to_s)
+      return price if price.finite? && price.positive?
+
+      nil
     rescue => e
       Rails.logger.warn "BinanceItem::Importer - could not get price for #{symbol}: #{e.message}"
-      0
+      nil
     end
 
-    def upsert_binance_account(all_assets:, total_usd:, spot_raw:, margin_raw:, earn_raw:, futures_raw:)
+    def upsert_binance_account(all_assets:, total_usd:, valuation_complete:, spot_raw:, margin_raw:, earn_raw:, futures_raw:)
       ba = binance_item.binance_accounts.find_or_initialize_by(account_type: "combined")
 
       ba.assign_attributes(
@@ -153,6 +163,7 @@ class BinanceItem::Importer
           "earn" => earn_raw,
           "futures" => futures_raw,
           "assets" => all_assets.map(&:stringify_keys),
+          "valuation_complete" => valuation_complete,
           "fetched_at" => Time.current.iso8601
         }
       )

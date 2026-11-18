@@ -158,6 +158,31 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     assert ba.raw_payload.key?("futures")
   end
 
+  test "marks failed and partial asset valuations incomplete and recovers" do
+    [ nil, "0", "-1", "NaN", "Infinity", "bad" ].each do |price|
+      @provider.stubs(:get_spot_price).returns(price)
+      BinanceItem::Importer.new(@item, binance_provider: @provider).import
+      assert_equal false, @item.binance_accounts.first.reload.raw_payload["valuation_complete"]
+    end
+
+    stub_spot_result([ { symbol: "BTC", total: "1" }, { symbol: "USDT", total: "10" } ])
+    @provider.stubs(:get_spot_price).raises(StandardError, "unavailable")
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    ba = @item.binance_accounts.first.reload
+    assert_equal 10.to_d, ba.current_balance
+    assert_equal false, ba.raw_payload["valuation_complete"]
+
+    @provider.stubs(:get_spot_price).returns("100")
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    assert_equal true, ba.reload.raw_payload["valuation_complete"]
+    assert_equal 110.to_d, ba.current_balance
+
+    stub_spot_result([])
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    assert_equal true, ba.reload.raw_payload["valuation_complete"]
+    assert_equal 0.to_d, ba.current_balance
+  end
+
   private
 
     def payload_assets

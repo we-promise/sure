@@ -36,6 +36,15 @@ class BinanceAccount::UsdConverterTest < ActiveSupport::TestCase
     end
   end
 
+  test "an incomplete zero valuation still requires an exchange rate" do
+    host = Host.new("AED")
+    ExchangeRate.expects(:find_or_fetch_rate).returns(nil)
+
+    assert_raises(Money::ConversionError) do
+      host.send(:convert_from_usd, 0, valuation_complete: false)
+    end
+  end
+
   test "returns converted amount when exact rate exists" do
     date = Date.new(2026, 3, 28)
     ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: date, rate: 0.92)
