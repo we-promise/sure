@@ -49,9 +49,16 @@ class Provider::Eodhd < Provider
     "XBOM" => "BSE",
     "XNSE" => "NSE",
     "XWAR" => "WAR",
+    # Further European venues, using the MICs from EODHD's own exchange list
+    # (https://eodhd.com/list-of-stock-markets)
+    "XFRA" => "F", "XBRU" => "BR", "XLIS" => "LS", "XWBO" => "VI", "XDUB" => "IR",
+    # German regional exchanges
+    "XBER" => "BE", "XDUS" => "DU", "XHAM" => "HM", "XHAN" => "HA", "XMUN" => "MU", "XSTU" => "STU",
     # Still accept legacy rows / inputs that store the raw EODHD code as MIC.
     # Persistence always canonicalizes WAR → XWAR via Security::MIC_ALIASES.
     "WAR" => "WAR",
+    "F" => "F", "BR" => "BR", "LS" => "LS", "VI" => "VI", "IR" => "IR",
+    "BE" => "BE", "DU" => "DU", "HM" => "HM", "HA" => "HA", "MU" => "MU", "STU" => "STU",
     "EUFUND" => "EUFUND"
   }.freeze
 
@@ -62,7 +69,9 @@ class Provider::Eodhd < Provider
     "TSE" => "XTKS", "MI" => "XMIL", "MC" => "XMAD",
     "OL" => "XOSL", "HE" => "XHEL", "CO" => "XCSE",
     "ST" => "XSTO", "KS" => "XKRX", "BSE" => "XBOM",
-    "NSE" => "XNSE", "WAR" => "XWAR"
+    "NSE" => "XNSE", "WAR" => "XWAR",
+    "F" => "XFRA", "BR" => "XBRU", "LS" => "XLIS", "VI" => "XWBO", "IR" => "XDUB",
+    "BE" => "XBER", "DU" => "XDUS", "HM" => "XHAM", "HA" => "XHAN", "MU" => "XMUN", "STU" => "XSTU"
   }.freeze
 
   EODHD_COUNTRY_TO_CODE = {
@@ -82,6 +91,8 @@ class Provider::Eodhd < Provider
     "ST" => "SEK", "KS" => "KRW", "BSE" => "INR",
     "NSE" => "INR",
     "WAR" => "PLN",
+    "F" => "EUR", "BR" => "EUR", "LS" => "EUR", "VI" => "EUR", "IR" => "EUR",
+    "BE" => "EUR", "DU" => "EUR", "HM" => "EUR", "HA" => "EUR", "MU" => "EUR", "STU" => "EUR",
     "EUFUND" => "EUR"
   }.freeze
 
@@ -164,7 +175,8 @@ class Provider::Eodhd < Provider
           logo_url: nil,
           exchange_operating_mic: mic,
           country_code: country,
-          currency: currency
+          currency: currency,
+          isin: security.dig("ISIN").presence&.to_s&.strip&.upcase
         )
       end
     end

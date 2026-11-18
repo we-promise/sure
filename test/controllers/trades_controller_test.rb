@@ -2,6 +2,7 @@ require "test_helper"
 
 class TradesControllerTest < ActionDispatch::IntegrationTest
   include EntryableResourceInterfaceTest
+  include GoalPledgeTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -534,6 +535,32 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert @entry.user_modified?, "Entry should be marked as user_modified"
     assert @entry.trade.locked_attributes.key?("investment_activity_label"), "investment_activity_label should be locked"
     assert @entry.protected_from_sync?, "Entry should be protected from sync"
+  end
+
+
+  # we-promise/sure#4226: a deposit with no "from" account books a standalone
+  # inflow on the investment account, which must resolve its pledge.
+  test "an unlinked deposit resolves the account's open transfer pledge" do
+    investment = accounts(:investment)
+    pledge = open_transfer_pledge(investment, amount: 250)
+
+    post trades_url(account_id: investment.id), params: {
+      model: { type: "deposit", date: Date.current, amount: 250, currency: "USD" }
+    }
+
+    entry = investment.entries.order(:created_at).last
+    assert_equal entry.transaction.id, pledge.reload.matched_transaction_id
+  end
+
+  test "an unlinked withdrawal leaves the pledge open" do
+    investment = accounts(:investment)
+    pledge = open_transfer_pledge(investment, amount: 250)
+
+    post trades_url(account_id: investment.id), params: {
+      model: { type: "withdrawal", date: Date.current, amount: 250, currency: "USD" }
+    }
+
+    assert_equal "open", pledge.reload.status
   end
 
   private
