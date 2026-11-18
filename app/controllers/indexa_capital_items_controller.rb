@@ -241,7 +241,7 @@ class IndexaCapitalItemsController < ApplicationController
     end
 
     def indexa_capital_item_params
-      params.require(:indexa_capital_item).permit(
+      permitted = params.require(:indexa_capital_item).permit(
         :name,
         :sync_start_date,
         :api_token,
@@ -249,6 +249,11 @@ class IndexaCapitalItemsController < ApplicationController
         :document,
         :password
       )
+      if @indexa_capital_item&.persisted?
+        permitted.delete(:api_token) if permitted[:api_token].blank?
+        permitted.delete(:password) if permitted[:password].blank?
+      end
+      permitted
     end
 
     def link_indexa_capital_account(indexa_capital_account, accountable_type)

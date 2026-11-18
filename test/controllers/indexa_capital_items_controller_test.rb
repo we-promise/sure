@@ -60,6 +60,45 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Name", @item.reload.name
   end
 
+  test "the re-rendered panel leaves the API token and password fields empty instead of echoing them" do
+    @item.update!(password: "ix-stored-password-7a2d")
+
+    patch indexa_capital_item_url(@item), params: { indexa_capital_item: { name: "Updated Name" } }, as: :turbo_stream
+
+    %w[api_token password].each do |field|
+      assert_select "form[action=?] input[name=?]", indexa_capital_item_path(@item), "indexa_capital_item[#{field}]" do |inputs|
+        assert_nil inputs.first["value"], "#{field} should not be rendered"
+      end
+    end
+    assert_not_includes response.body, "test_api_token_123"
+    assert_not_includes response.body, "ix-stored-password-7a2d"
+  end
+
+  test "update with the API token and password left blank keeps both" do
+    @item.update!(password: "ix-stored-password-7a2d")
+
+    patch indexa_capital_item_url(@item),
+          params: { indexa_capital_item: { name: "Updated Name", api_token: "", password: "" } },
+          as: :turbo_stream
+
+    @item.reload
+    assert_equal "Updated Name", @item.name
+    assert_equal "test_api_token_123", @item.api_token
+    assert_equal "ix-stored-password-7a2d", @item.password
+  end
+
+  test "update with a new API token replaces only the token" do
+    @item.update!(password: "ix-stored-password-7a2d")
+
+    patch indexa_capital_item_url(@item),
+          params: { indexa_capital_item: { api_token: "ix-rotated-token", password: "" } },
+          as: :turbo_stream
+
+    @item.reload
+    assert_equal "ix-rotated-token", @item.api_token
+    assert_equal "ix-stored-password-7a2d", @item.password
+  end
+
   test "invalid create from the page shows the error in the panel" do
     post indexa_capital_items_url,
          params: { indexa_capital_item: { name: "New Connection" } },

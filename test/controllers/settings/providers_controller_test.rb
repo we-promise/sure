@@ -770,6 +770,31 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Query ID/i, response.body)
   end
 
+  test "GET connect_form does not render stored provider credentials" do
+    coinstats = families(:dylan_family).coinstats_items.create!(name: "CoinStats", api_key: "cs-stored-key-91b0")
+    indexa = indexa_capital_items(:configured_with_token)
+    indexa.update!(password: "ix-stored-password-7a2d")
+
+    {
+      "coinstats" => [ coinstats_item_path(coinstats), { "coinstats_item[api_key]" => "cs-stored-key-91b0" } ],
+      "indexa_capital" => [ indexa_capital_item_path(indexa), {
+        "indexa_capital_item[api_token]" => indexa.api_token,
+        "indexa_capital_item[password]" => "ix-stored-password-7a2d"
+      } ]
+    }.each do |provider_key, (form_action, secrets)|
+      get connect_form_settings_providers_path(provider_key: provider_key)
+
+      assert_response :success
+      secrets.each do |field, stored|
+        assert stored.present?, "#{field} needs a stored value for this test to mean anything"
+        assert_select "form[action=?] input[name=?]", form_action, field do |inputs|
+          assert_nil inputs.first["value"], "#{provider_key} renders #{field}"
+        end
+        assert_not_includes response.body, stored, "#{provider_key} leaks #{field}"
+      end
+    end
+  end
+
   test "GET connect_form lists every Interactive Brokers connection" do
     families(:dylan_family).ibkr_items.create!(name: "IBKR Ireland", query_id: "Q1", token: "T1")
     families(:dylan_family).ibkr_items.create!(name: "IBKR US", query_id: "Q2", token: "T2")

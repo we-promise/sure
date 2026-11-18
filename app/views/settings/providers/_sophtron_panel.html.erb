@@ -27,12 +27,14 @@
     <%= form.text_field :user_id,
                         label: t("sophtron_items.sophtron_panel.fields.user_id.label"),
                         placeholder: is_new_record ? t("sophtron_items.sophtron_panel.fields.user_id.placeholder_new") : t("sophtron_items.sophtron_panel.fields.user_id.placeholder_edit"),
-                        type: :password %>
+                        type: :password,
+                        value: nil %>
 
     <%= form.text_field :access_key,
                         label: t("sophtron_items.sophtron_panel.fields.access_key.label"),
                         placeholder: is_new_record ? t("sophtron_items.sophtron_panel.fields.access_key.placeholder_new") : t("sophtron_items.sophtron_panel.fields.access_key.placeholder_edit"),
-                        type: :password %>
+                        type: :password,
+                        value: nil %>
 
     <%= form.text_field :base_url,
                         label: t("sophtron_items.sophtron_panel.fields.base_url.label"),
