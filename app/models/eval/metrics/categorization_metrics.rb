@@ -40,7 +40,7 @@ class Eval::Metrics::CategorizationMetrics < Eval::Metrics::Base
       null_expected_results = results.where(null_expected: true)
       return 100.0 if null_expected_results.empty?
 
-      correct = null_expected_results.where(null_returned: true).count
+      correct = null_expected_results.where(null_returned: true, correct: true).count
       total = null_expected_results.count
 
       (correct.to_f / total * 100).round(2)

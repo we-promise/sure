@@ -1,0 +1,85 @@
+# Picks a category for each transaction from the family's own, or none. On a Jev route,
+# Family::AutoCategorizer calls Provider::Jev itself instead.
+class Ai::Generations::CategorizeTransactions < Ai::Generation
+  feature :categorize
+  prompt "categorize_transactions"
+  schema_name "auto_categorize_personal_finance_transactions"
+  batch :transactions
+  merge :categorizations, by: :transaction_id
+  required :transaction_id
+  aliases categorizations: %w[results], transaction_id: %w[id txn_id], category_name: %w[category name]
+  blank_item { _1[:category_name].nil? }
+
+  # Common ways a model names a category the family spells differently.
+  NAME_VARIATIONS = [
+    [ "gas & fuel", "gas and fuel", "fuel", "gasoline" ], [ "restaurant", "dining", "food" ],
+    [ "grocery", "supermarket", "food store" ], [ "streaming services", "streaming service" ],
+    [ "ride share", "ride-share", "uber", "lyft" ], [ "coffee shops", "coffee shop", "cafe" ],
+    [ "fastfood", "quick service" ], [ "gym & fitness", "fitness", "gym and fitness" ],
+    [ "flight", "airline", "airlines", "airfare" ], [ "hotel", "lodging", "accommodation" ]
+  ].freeze
+
+  MIN_CONTAINED = 4
+
+  # transactions: [{ id:, amount:, classification:, description:, merchant: }];
+  # categories: the family's, [{ id:, name:, is_subcategory:, parent_id: }].
+  def initialize(transactions:, categories:, family:)
+    super(family:)
+    @transactions, @categories = transactions, categories
+  end
+
+  def prompt_locals = { transactions: items, categories: @categories }
+
+  # The family's spelling of the category the model named: exact, then ignoring case, then a
+  # fuzzy match. Nil when nothing matches.
+  def matchers = { category_name: ->(name) { category_name_for(name.to_s.strip) } }
+
+  def schema
+    {
+      type: "object",
+      properties: {
+        categorizations: {
+          type: "array",
+          description: "An array of auto-categorizations for each transaction",
+          items: {
+            type: "object",
+            properties: {
+              transaction_id: { type: "string", description: "The internal ID of the original transaction", enum: items.map { _1[:id].to_s } },
+              category_name: { type: %w[string null], description: "The matched category name of the transaction, or null if no match",
+                               enum: [ *@categories.map { _1[:name] }, "null", nil ] }
+            },
+            required: %w[transaction_id category_name],
+            additionalProperties: false
+          }
+        }
+      },
+      required: %w[categorizations],
+      additionalProperties: false
+    }
+  end
+
+  private
+    def category_name_for(name)
+      names = @categories.map { _1[:name].to_s }
+      names.find { _1 == name } || names.find { _1.casecmp?(name) } || fuzzy_match(name, names)
+    end
+
+    # Equal once spaces and punctuation go first, then a known variation, then the longest name
+    # inside the other or holding it: "Healthcare" is "Health", not "Car". A name shorter than
+    # MIN_CONTAINED letters matches only whole, or "Carpet cleaning" would be "Car".
+    def fuzzy_match(name, names)
+      squeezed = squeeze(name)
+      return if squeezed.empty?
+
+      names.find { squeeze(_1) == squeezed } ||
+        names.find { |candidate| NAME_VARIATIONS.any? { _1.include?(name.downcase) && _1.include?(candidate.downcase) } } ||
+        names.select { contains?(squeeze(_1), squeezed) }.max_by { squeeze(_1).size }
+    end
+
+    def contains?(other, squeezed)
+      shorter = [ other, squeezed ].min_by(&:size)
+      shorter.size >= MIN_CONTAINED && (squeezed.include?(other) || other.include?(squeezed))
+    end
+
+    def squeeze(name) = name.downcase.gsub(/[^a-z0-9]/, "")
+end

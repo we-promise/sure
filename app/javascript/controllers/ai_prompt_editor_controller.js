@@ -1,18 +1,11 @@
 import { Controller } from "@hotwired/stimulus";
 
-// Syncs a single textarea with provider hidden inputs. Pre-fills with the
+// Syncs a textarea with its prompt override's hidden input. Pre-fills with the
 // custom override or built-in default. Clears the input when text matches
 // the default to avoid storing duplicate copies.
 export default class extends Controller {
   static outlets = ["confirm-dialog"];
-  static targets = [
-    "textarea",
-    "prompt",
-    "provider",
-    "status",
-    "counter",
-    "reset",
-  ];
+  static targets = ["textarea", "prompt", "status", "counter", "reset"];
   static values = {
     resetConfirm: String,
     statusCustom: String,
@@ -24,14 +17,8 @@ export default class extends Controller {
     this.updateStatus();
   }
 
-  change() {
-    const prompt = this.selectedPrompt();
-    this.textareaTarget.value = prompt.value || prompt.dataset.default;
-    this.updateStatus();
-  }
-
   update() {
-    const prompt = this.selectedPrompt();
+    const prompt = this.promptTarget;
     const value = this.textareaTarget.value;
     prompt.value = value.trim() === prompt.dataset.default.trim() ? "" : value;
     this.updateStatus();
@@ -47,26 +34,14 @@ export default class extends Controller {
 
     if (!confirmed) return;
 
-    const prompt = this.selectedPrompt();
+    const prompt = this.promptTarget;
     prompt.value = "";
     this.textareaTarget.value = prompt.dataset.default;
     this.updateStatus();
   }
 
-  selectedPrompt() {
-    if (this.hasProviderTarget && this.providerTarget.value) {
-      const found = this.promptTargets.find(
-        (prompt) => prompt.dataset.key === this.providerTarget.value,
-      );
-      if (found) return found;
-    }
-    return this.promptTargets[0];
-  }
-
   updateStatus() {
-    const prompt = this.selectedPrompt();
-    if (!prompt) return;
-
+    const prompt = this.promptTarget;
     const customized = (prompt.value || "").trim().length > 0;
 
     if (this.hasStatusTarget) {

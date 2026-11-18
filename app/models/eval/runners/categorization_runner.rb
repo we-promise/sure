@@ -3,7 +3,7 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
 
     def process_samples
       all_samples = samples.to_a
-      batch_size = Provider::LlmConcept.max_items_per_call
+      batch_size = Eval::GenerationClient.batch_size_for(provider, :categorize)
       log_progress("Processing #{all_samples.size} samples in batches of #{batch_size}")
 
       all_samples.each_slice(batch_size).with_index do |batch, batch_idx|
@@ -33,7 +33,7 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
       end
 
       # Get categories from first sample's context (should be shared)
-      # Symbolize keys since Provider::Openai::AutoCategorizer expects symbol keys
+      # Symbolize keys: the generations read symbol keys
       categories = batch_samples.first.categories_context.map(&:deep_symbolize_keys)
 
       # Determine effective JSON mode for this batch
@@ -68,7 +68,11 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
     end
 
     def record_batch_results(batch_samples, categorizations, per_sample_latency)
-      batch_samples.each do |sample|
+      # A sample the generation skipped has no answer: an error, not a null that could score as right.
+      missing = batch_samples.reject { |sample| categorizations.any? { _1.transaction_id.to_s == sample.id.to_s } }
+      record_batch_errors(missing, "no answer for this sample", per_sample_latency) if missing.any?
+
+      (batch_samples - missing).each do |sample|
         # Find the categorization result for this sample
         categorization = categorizations.find { |c| c.transaction_id.to_s == sample.id.to_s }
         actual_category = categorization&.category_name

@@ -1,0 +1,16 @@
+MERCHANTS TO IDENTIFY:
+<%= merchants.map { |m| "- ID: #{m[:id]}, Name: #{m[:name].to_json}" }.join("\n") %>
+
+EXAMPLES of correct website detection:
+- "Amazon" → business_url: "amazon.com"
+- "Starbucks" → business_url: "starbucks.com"
+- "Netflix" → business_url: "netflix.com"
+- "Local Diner" → business_url: "null" (generic/unknown)
+- "ATM Withdrawal" → business_url: "null" (generic)
+
+IMPORTANT:
+- Return "null" (as a string) if you cannot confidently identify the business website
+- Don't include "www." in URLs
+
+Respond with ONLY this JSON format (no other text):
+{"merchants": [{"merchant_id": "...", "business_url": "..."}]}

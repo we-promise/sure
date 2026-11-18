@@ -4,9 +4,7 @@ uk:
     ai_prompts:
       show:
         page_title: Промпти ШІ
-        openai_label: OpenAI
         disable_ai: Вимкнути ШІ-помічника
-        prompt_instructions: Інструкції до промптів
         main_system_prompt:
           title: Основний системний промпт
           subtitle: Основні інструкції, що визначають поведінку ШІ-помічника у всіх чатах
@@ -25,10 +23,7 @@ uk:
           cancel: Скасувати
           confirm: Підтвердити
       prompt_field:
-        provider_label: Постачальник
-        prompt_label: Промпт
         provider_openai: OpenAI
-        provider_anthropic: Anthropic
         reset: Скинути до стандартного
         reset_confirm_title: Повернути стандартний промпт?
         reset_confirm_body: Ваш власний промпт буде видалено, а вбудовані стандартні інструкції — відновлено.

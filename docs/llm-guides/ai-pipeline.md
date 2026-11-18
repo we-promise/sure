@@ -51,7 +51,11 @@ flowchart LR
 - **Wrap every call in `Ai::CallContext.call`.** RubyLLM's `usage.ruby_llm` event then carries
   the family (the usage owner) and the call (the workflow), and `UsageSubscriber` writes one
   `llm_usages` row per request. A failed request's row takes its own error from the
-  `request.ruby_llm` event (`Ai::Transport::Instrumenter`).
+  `request.ruby_llm` event (`Ai::Transport::Instrumenter`). The row for the request that
+  answered takes its `finish_reason` from the call's `.ai` event; every other request's stays
+  nil, which is what a failure means. A job opens
+  `Ai::CallContext.job(correlation_id)` first, with the id from its arguments; the id reaches
+  the usage rows, the Langfuse session and the OTel `session.id`.
 - **Never create `ruby_llm_usages`.** RubyLLM's ledger would then record every call a second time.
 
 **Tests**
@@ -130,3 +134,90 @@ flowchart LR
 - `ai_config_test.rb` checks that the deprecated ENV path routes each feature to the provider and
   model the provider code uses; `ai_feature_guard_test.rb` that every action starting an AI feature
   declares `requires_ai`.
+
+## Generations
+
+Every structured-output feature (categorization, merchant detection and enhancement, bill setup)
+is one small `Ai::Generation` file, a prompt folder and a domain requester. Jobs, failover and
+parsing are the plumbing's.
+
+```mermaid
+flowchart LR
+  D["requester<br/>Family::AutoCategorizer, …"] -->|"Ai::GenerationJob(feature, ids)"| G["Ai::Generation#call(batches: 1)"]
+  G --> P["Ai::Prompt<br/>app/prompts/&lt;name&gt;/"]
+  G --> B["Ai::Batch<br/>batch_size + tokens"]
+  G --> T["route.transport.generate"]
+  T --> S["Ai::Schema<br/>coerce"]
+  S --> D
+```
+
+**Where things live**
+
+| Concern | File |
+|---|---|
+| A feature's declaration: key, prompt, schema, batching | `app/models/ai/generations/*.rb`, on `app/models/ai/generation.rb` |
+| Its prompts, one folder per variant | `app/prompts/<name>/instructions.txt.erb` and `input.txt.erb` |
+| The domain side: what to send, how to apply the answer | the requester, e.g. `app/models/family/auto_categorizer.rb` (`Ai::Requester`) |
+| The one job | `app/jobs/ai/generation_job.rb` |
+| JSON modes and tolerant parsing | `app/models/ai/transport/json_mode.rb`, `base.rb` |
+| Coercion | `app/models/ai/schema.rb` |
+| Batches and splitting | `app/models/ai/batch.rb`, `generation.rb` |
+| Down marks | `app/models/ai/down_marks.rb` |
+
+**Adding a generation feature**
+
+1. Add its row to `Ai::Routes::MATRIX` (see above).
+2. Write `app/models/ai/generations/<name>.rb`: `feature`, `prompt`, `schema` (a constant or a
+   method, valid in OpenAI's strict mode), and for a list `batch`, `merge … by:`, `required` and
+   `blank_item`. `prompt_locals` gives the templates their data.
+3. Write the prompt folder. ERB runs as RubyLLM renders it, with no trim mode, so check the
+   rendered text; shared parts go in `app/prompts/shared/_<name>.txt.erb`.
+4. Make a domain class its requester (`include Ai::Requester`, `ai_feature :key`,
+   `from_ai_job`, `ai_generation`, `apply_ai`, `ai_finished`, `ai_failed`) and list it in
+   `Ai::Requesters`. Enqueue `Ai::GenerationJob.perform_later(:key, { ids:, family_id: })`.
+5. Add `test/models/ai/generations/<name>_test.rb`; `ai_routing_matrix_test` and
+   `ai_schemas_test` check the rest.
+
+**Rules**
+
+- **One schema, every transport.** The schema goes through RubyLLM's `with_schema`: a strict
+  `response_format` on chat completions and the Responses API, native structured output on
+  Anthropic. Anthropic refuses numeric limits (`minimum`, `maximum`), so its transport moves them
+  into the field's description; `Ai::Schema` still enforces them on the answer.
+- **JSON modes** apply to chat-completions servers: `auto` walks strict, json_object, none, moving
+  on when the answer doesn't parse or, for a list, when more than half the items are blank; an
+  explicit mode stays. A 400 about the JSON mode or the reasoning effort, or any 400 to a request that sent an effort,
+  retries once in `none` without the effort; any other 400 ends the call.
+- **Overflow splits, invalid output escalates, then bisects.** `ContextTooLong` or an answer cut
+  at the output limit halves the batch on the same route; `InvalidOutput` moves what wasn't answered
+  to the next route, and when no route answers it the batch is halved on the route that found it unusable (`BISECT_DEPTH`, twice) to
+  find the transactions that break it. A route takes at most its own `batch_size`, so a fallback
+  with a smaller one gets the batch in pieces. Items still unanswered are skipped and logged
+  (`ai_generation` debug entries, ids only), and the run goes on, unless no batch in the run
+  has been answered yet and the answers were unusable on every route. A
+  timeout, 5xx, 429, refused connection, bad key or missing model marks the smallest broken thing
+  down for 60 seconds and moves on, keeping what was answered; items left when a route failed
+  over or was down go to a later job instead of being skipped. When no route answered, a failure
+  that passes (a timeout, an outage) retries the job, and one that needs a fix (a bad key, no
+  credit, a missing model) ends the run on it, so the requester hears why.
+- **Rule runs get one job per AI action.** The rule action counts the transactions onto
+  `RuleRun#transactions_awaiting_ai` and queues one `Ai::GenerationJob` with every id; the
+  requester reports each batch (`RuleRun#ai_handled!`) and completes the run once.
+  `GET /api/v1/rule_runs/:id/progress` lets a client watch the count reach 0.
+- **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
+  `app/models/ai/**` and controllers.
+- **Prompts change only with evals.** `test/architecture/ai_prompts_test.rb` renders each prompt
+  folder against its golden text in `test/fixtures/files/ai_prompts/`; a change to the text is its
+  own PR, run with the `ai-live` label.
+
+**Tests**
+
+- `stub_ai(:categorize, returns: { categorizations: [...] })` answers the feature's generations
+  without HTTP, still running coercion, failover, instrumentation and the requester; it returns
+  the requests sent. `raises: Ai::Error::Timeout` fails them; a block answers per request.
+- `use_ai_model_settings(batch_size: 2)` changes the test setup's OpenAI model for the rest of the test.
+- `test/models/ai/live/` replays cassettes with `with_ai_cassette(preset, name)` under
+  `test/vcr_cassettes/ai/<preset>/`; record them
+  with `RECORD_CASSETTES=1` and the keys in ENV, or run them live with `AI_LIVE=1`.
+- CI: `ai-evals.yml` runs the eval datasets against recorded answers on any AI change; the
+  `ai-live` label runs the live tests and evals with repository secrets.

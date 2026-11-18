@@ -42,6 +42,38 @@ class Ai::Instrumentation::UsageSubscriberTest < ActiveSupport::TestCase
                     subscriber.send(:cost, tokens, "claude-opus-5-5"), 1e-9
   end
 
+  test "a request the provider refused before running records zero — proof it wasn't billed" do
+    stub_request(:post, URL).to_return(status: 401, body: { error: { message: "Invalid key" } }.to_json, headers: json)
+
+    assert_raises(Ai::Error::Unauthorized) { run_call(feature: :categorize) }
+
+    row = @family.llm_usages.where(family: @family).order(:created_at).last
+    assert row.failed?
+    assert_equal 0, row.prompt_tokens
+    assert_equal 0, row.estimated_cost
+    assert_nil row.metadata["tokens_unknown"]
+  end
+
+  test "the answering request's row records the answer's finish reason; the failed retry does not" do
+    body = [ 200, { id: "c1", model: "gpt-4.1",
+                    choices: [ { index: 0, message: { role: "assistant", content: '{"items":[]}' }, finish_reason: "stop" } ],
+                    usage: { prompt_tokens: 100, completion_tokens: 5, total_tokens: 105 } } ]
+    stub_request(:post, URL).to_return({ status: 503, body: { error: { message: "busy" } }.to_json, headers: json },
+                                       { status: body[0], body: body[1].to_json, headers: json })
+
+    request = Ai::Transport::Base::Request.new(feature: :bill_setup, model: @model, family: @family,
+                                               instructions: "List the items.", input: "a, b",
+                                               schema: { type: "object", properties: { items: { type: "array", items: { type: "string" } } },
+                                                        required: %w[items], additionalProperties: false },
+                                               schema_name: "items_schema")
+    Ai::Transport.for(@endpoint).generate(request)
+
+    rows = @family.llm_usages.where(operation: "bill_setup").order(:created_at)
+    assert_equal %w[failed succeeded], rows.map(&:status)
+    assert_nil rows.first.finish_reason
+    assert_equal "stop", rows.second.finish_reason
+  end
+
   test "a failed call's rows get the error class and scrubbed message from its .ai event" do
     stub_request(:post, URL).to_return(status: 401, body: { error: { message: "Invalid key test-key" } }.to_json, headers: json)
 

@@ -5,7 +5,7 @@ class Eval::Runners::MerchantDetectionRunner < Eval::Runners::Base
 
     def process_samples
       all_samples = samples.to_a
-      batch_size = Provider::LlmConcept.max_items_per_call
+      batch_size = Eval::GenerationClient.batch_size_for(provider, :detect_merchants)
       log_progress("Processing #{all_samples.size} samples in batches of #{batch_size}")
 
       all_samples.each_slice(batch_size).with_index do |batch, batch_idx|
@@ -27,7 +27,7 @@ class Eval::Runners::MerchantDetectionRunner < Eval::Runners::Base
       end
 
       # Get merchants from first sample's context (should be shared)
-      # Symbolize keys since Provider::Openai::AutoMerchantDetector expects symbol keys
+      # Symbolize keys: the generations read symbol keys
       merchants = batch_samples.first.merchants_context.map(&:deep_symbolize_keys)
 
       start_time = Time.current
@@ -55,7 +55,11 @@ class Eval::Runners::MerchantDetectionRunner < Eval::Runners::Base
     end
 
     def record_batch_results(batch_samples, merchants_detected, per_sample_latency)
-      batch_samples.each do |sample|
+      # A sample the generation skipped has no answer: an error, not a null that could score as right.
+      missing = batch_samples.reject { |sample| merchants_detected.any? { _1.transaction_id.to_s == sample.id.to_s } }
+      record_batch_errors(missing, "no answer for this sample", per_sample_latency) if missing.any?
+
+      (batch_samples - missing).each do |sample|
         # Find the merchant detection result for this sample
         detection = merchants_detected.find { |m| m.transaction_id.to_s == sample.id.to_s }
 
@@ -99,7 +103,7 @@ class Eval::Runners::MerchantDetectionRunner < Eval::Runners::Base
           correct: false,
           exact_match: false,
           fuzzy_score: 0.0,
-          null_expected: sample.expected_business_name.nil?,
+          null_expected: sample.expects_null?,
           null_returned: true,
           latency_ms: per_sample_latency,
           metadata: { "error" => error_message }

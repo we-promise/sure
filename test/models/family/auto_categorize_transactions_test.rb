@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
-  include EntriesTestHelper, ProviderTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     # Fresh family: fixture families carry categorized transactions that
@@ -10,7 +10,6 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
     @account = @family.accounts.create!(name: "Entry test", balance: 100, currency: "USD", accountable: Depository.new)
     @coffee = @family.categories.create!(name: "Coffee")
     @groceries = @family.categories.create!(name: "Groceries")
-    @llm_provider = mock
   end
 
   # 10 coffee + 10 groceries = 20 categorized txns over 2 categories, so the
@@ -22,30 +21,27 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
 
   test "the rule's auto-categorize is the LLM only, even when Bayes would know" do
     train_two_categories
-    Provider::Registry.stubs(:preferred_llm_provider).returns(@llm_provider)
+    use_ai_routes
     txn = create_transaction(account: @account, name: "Starbucks Coffee").transaction
+    stub_ai(:categorize, returns: { categorizations: [ { transaction_id: txn.id, category_name: @groceries.name } ] })
 
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: @groceries.name)
-    ])).once
+    perform_enqueued_jobs { @family.auto_categorize_transactions_later(@family.transactions.where(id: txn.id)) }
 
-    assert_equal 1, @family.auto_categorize_transactions([ txn.id ])
     assert_equal @groceries, txn.reload.category
     assert_ai_categorization_log(transaction_ids: [ txn.id ])
   end
 
-  test "without a provider the LLM raises" do
+  test "without a model the run is discarded and nothing changes" do
+    use_no_ai
     txn = create_transaction(account: @account, name: "Something new").transaction
 
-    error = assert_raises(Family::AutoCategorizer::Error) do
-      @family.auto_categorize_transactions([ txn.id ])
-    end
-    assert_equal "No LLM provider for auto-categorization", error.message
+    perform_enqueued_jobs { @family.auto_categorize_transactions_later(@family.transactions.where(id: txn.id)) }
+
+    assert_nil txn.reload.category
   end
 
   test "Bayes categorizes the uncategorized, unlocked transactions and logs the count" do
     train_two_categories
-    Provider::Registry.expects(:preferred_llm_provider).never
     coffee = create_transaction(account: @account, name: "Starbucks Coffee").transaction
     novel = create_transaction(account: @account, name: "Novel Shop").transaction
     locked = create_transaction(account: @account, name: "Starbucks Coffee").transaction
@@ -133,6 +129,4 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
       assert_equal categorized_transaction_ids, log_entry.metadata["categorized_transaction_ids"]
       assert_equal categorized_transaction_ids.size, log_entry.metadata["modified_count"]
     end
-
-    AutoCategorization = Provider::LlmConcept::AutoCategorization
 end

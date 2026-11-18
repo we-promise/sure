@@ -20,7 +20,8 @@ class Ai::Config
   class << self
     # The snapshot for this request or job, rebuilt when its ENV or `Setting` inputs change.
     def current
-      return @override if @override
+      override = ActiveSupport::IsolatedExecutionState[:ai_config] || @override
+      return override if override
 
       fingerprint = Ai::LegacyEnvConfig.fingerprint
       unless Current.config && Current.fingerprint == fingerprint
@@ -29,12 +30,26 @@ class Ai::Config
       Current.config
     end
 
+    # Uses `config` instead of the built snapshot inside the block, on this thread or fiber only
+    # (Eval::GenerationClient).
+    def with(config)
+      previous = ActiveSupport::IsolatedExecutionState[:ai_config]
+      ActiveSupport::IsolatedExecutionState[:ai_config] = config
+      yield
+    ensure
+      ActiveSupport::IsolatedExecutionState[:ai_config] = previous
+    end
+
     # A fixed snapshot used instead of the built one, in every request and job until reset.
     # For tests (AiTestHelper#use_ai_routes, #use_no_ai).
     attr_writer :override
   end
 
   def routes_for(feature) = routes.fetch(feature.to_sym, [])
+
+  # How many items the feature's first route takes in one call, for callers that slice a list
+  # before it reaches a generation (the eval runners).
+  def batch_size_for(feature) = routes_for(feature).first&.model&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE
 
   def endpoint(name) = endpoints.find { _1.name == name.to_s }
 

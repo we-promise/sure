@@ -1,13 +1,12 @@
 require "test_helper"
 
 class Family::AutoCategorizerTest < ActiveSupport::TestCase
-  include EntriesTestHelper, ProviderTestHelper
+  include EntriesTestHelper, ProviderTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:dylan_family)
     @account = @family.accounts.create!(name: "Rule test", balance: 100, currency: "USD", accountable: Depository.new)
-    @llm_provider = mock
-    Provider::Registry.stubs(:preferred_llm_provider).returns(@llm_provider)
+    use_ai_routes
   end
 
   test "auto-categorizes transactions" do
@@ -17,16 +16,14 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
 
     test_category = @family.categories.create!(name: "Test category")
 
-    provider_response = provider_success_response([
-      AutoCategorization.new(transaction_id: txn1.id, category_name: test_category.name),
-      AutoCategorization.new(transaction_id: txn2.id, category_name: test_category.name),
-      AutoCategorization.new(transaction_id: txn3.id, category_name: nil)
-    ])
-
-    @llm_provider.expects(:auto_categorize).returns(provider_response).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn1.id, category_name: test_category.name },
+      { transaction_id: txn2.id, category_name: test_category.name },
+      { transaction_id: txn3.id, category_name: nil }
+    ] })
 
     assert_difference "DataEnrichment.count", 2 do
-      Family::AutoCategorizer.new(@family, transaction_ids: [ txn1.id, txn2.id, txn3.id ]).auto_categorize
+      categorize([ txn1.id, txn2.id, txn3.id ])
     end
 
     assert_equal test_category, txn1.reload.category
@@ -38,42 +35,134 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal 1, @account.transactions.reload.enrichable(:category_id).count
   end
 
-  test "raises when provider returns an unsuccessful response" do
-    txn = create_transaction(account: @account, name: "Coffee shop").transaction
-    @family.categories.create!(name: "Coffee")
+  test "a category deleted while the AI answers is skipped, and the rest of the batch still applies" do
+    gone = @family.categories.create!(name: "Coffee")
+    kept = @family.categories.create!(name: "Groceries")
+    coffee, groceries = [ "Blue Bottle", "Safeway" ].map { create_transaction(account: @account, name: _1).transaction }
+    categorizer = Family::AutoCategorizer.new(@family, transaction_ids: [ coffee.id, groceries.id ])
+    categorizer.ai_generation   # reads the family's categories
+    gone.destroy!
 
-    @llm_provider.expects(:auto_categorize)
-                 .returns(provider_error_response(Provider::Error.new("Fixed prompt tokens exceed context budget")))
+    categorizer.apply_ai(Ai::Result.new(value: { categorizations: [
+      { transaction_id: coffee.id, category_name: "Coffee" }, { transaction_id: groceries.id, category_name: "Groceries" }
+    ] }))
 
-    error = assert_raises(Family::AutoCategorizer::Error) do
-      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
-    end
-
-    assert_equal "Failed to auto-categorize transactions: Fixed prompt tokens exceed context budget", error.message
+    assert_nil coffee.reload.category
+    assert_equal kept, groceries.reload.category
   end
 
-  test "logs and raises when no categories are available" do
-    @family.categories.destroy_all
-    txn = create_transaction(account: @account, name: "Coffee shop").transaction
-    provider = Provider::Openai.allocate
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.expects(:auto_categorize).never
+  test "re-applying the same result does not double-apply; the enrichment lock wins" do
+    category = @family.categories.create!(name: "Coffee")
+    txn = create_transaction(account: @account, name: "Blue Bottle").transaction
+    categorizer = Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ])
+    categorizer.ai_generation
+    result = Ai::Result.new(value: { categorizations: [ { transaction_id: txn.id, category_name: "Coffee" } ] })
 
-    assert_difference "DebugLogEntry.count", 1 do
-      error = assert_raises(Family::AutoCategorizer::Error) do
-        Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
-      end
-      assert_equal "No categories available for auto-categorization", error.message
+    assert_equal 1, categorizer.apply_ai(result)
+    enrichments = DataEnrichment.count
+
+    # A crash between the batch commit and the enqueue of the rest leaves this job
+    # to run again with the same ids; the lock is what makes it a no-op.
+    assert_equal 0, categorizer.apply_ai(result)
+    assert_equal enrichments, DataEnrichment.count
+    assert_equal category, txn.reload.category
+  end
+
+  test "a batch locks the transactions it applies to until it commits" do
+    category = @family.categories.create!(name: "Coffee")
+    txn = create_transaction(account: @account, name: "Blue Bottle").transaction
+    categorizer = Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ])
+    categorizer.ai_generation
+
+    assert_queries_match(/FROM "transactions".*FOR UPDATE/m) do
+      categorizer.apply_ai(Ai::Result.new(value: { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] }))
+    end
+    assert_equal category, txn.reload.category
+  end
+
+  test "a rule run's progress moves with each batch" do
+    use_ai_model_settings(batch_size: 2)
+    category = @family.categories.create!(name: "Coffee")
+    ids = 3.times.map { |i| create_transaction(account: @account, name: "Coffee #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 3, executed_at: Time.current)
+    rule_run.await_ai!(3)
+    stub_ai(:categorize) do |request|
+      batch = request.schema.dig(:properties, :categorizations, :items, :properties, :transaction_id, :enum)
+      { categorizations: batch.map { { transaction_id: _1, category_name: category.name } } }
     end
 
-    log_entry = DebugLogEntry.order(:created_at).last
+    Ai::GenerationJob.perform_later(:categorize, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
+    progress = []
+    until enqueued_jobs.empty?
+      ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys)
+      progress << rule_run.reload.slice(:transactions_awaiting_ai, :transactions_modified, :status).values
+    end
+
+    assert_equal [ [ 1, 2, "pending" ], [ 0, 3, "success" ] ], progress
+  end
+
+  test "each batch logs only its own transactions, not every one still left in the run" do
+    use_ai_model_settings(batch_size: 2)
+    category = @family.categories.create!(name: "Coffee")
+    ids = 3.times.map { |i| create_transaction(account: @account, name: "Coffee #{i}").transaction.id }
+    stub_ai(:categorize) do |request|
+      batch = request.schema.dig(:properties, :categorizations, :items, :properties, :transaction_id, :enum)
+      { categorizations: batch.map { { transaction_id: _1, category_name: category.name } } }
+    end
+
+    perform_enqueued_jobs { Ai::GenerationJob.perform_later(:categorize, { ids:, family_id: @family.id }) }
+
+    logged = DebugLogEntry.where(message: "AI categorization completed").order(:created_at).map { _1.metadata["requested_transaction_ids"] }
+    assert_equal [ 2, 1 ], logged.map(&:size)
+    assert_equal ids.sort, logged.flatten.sort
+  end
+
+  test "a failed generation fails the rule run's job and is logged" do
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    @family.categories.create!(name: "Coffee")
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 1, executed_at: Time.current)
+    stub_ai(:categorize, raises: Ai::Error::InvalidOutput.new("no JSON"))
+
+    assert_difference -> { DebugLogEntry.where(message: "AI categorization failed").count }, 1 do
+      Ai::GenerationJob.perform_now(:categorize, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
+    end
+
+    assert_equal "failed", rule_run.reload.status
+    assert_includes rule_run.error_message, "no JSON"
+  end
+
+  test "no categories fails the rule run's job, logs why, and asks no model" do
+    @family.categories.destroy_all
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 1, executed_at: Time.current)
+    stub_ai(:categorize) { flunk "the model shouldn't be asked" }
+
+    Ai::GenerationJob.perform_now(:categorize, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
+
+    assert_equal "failed", rule_run.reload.status
+    assert_includes rule_run.error_message, "No categories available"
+    log_entry = DebugLogEntry.find_by!(message: "AI categorization failed: no categories available")
     assert_equal "auto_categorization", log_entry.category
     assert_equal "error", log_entry.level
-    assert_equal "AI categorization failed: no categories available", log_entry.message
     assert_equal "Family::AutoCategorizer", log_entry.source
     assert_equal @family, log_entry.family
-    assert_equal "openai", log_entry.provider_key
     assert_equal [ txn.id ], log_entry.metadata["requested_transaction_ids"]
+  end
+
+  test "sends the family's categories and transactions through the route's prompt" do
+    txn = create_transaction(account: @account, name: "Blue Bottle Coffee").transaction
+    @family.categories.create!(name: "Coffee")
+    requests = stub_ai(:categorize, returns: { categorizations: [] })
+
+    categorize([ txn.id ])
+
+    assert_includes requests.first.instructions, "Your job is to auto-categorize"
+    assert_includes requests.first.input, "Blue Bottle Coffee"
+    assert_includes requests.first.input, "\"name\":\"Coffee\""
+    assert_equal "auto_categorize_personal_finance_transactions", requests.first.schema_name
   end
 
   test "logs when AI categorization cache handles the batch" do
@@ -81,10 +170,10 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     category = @family.categories.create!(name: "Coffee")
     txn.enrich_attribute(:category_id, category.id, source: "ai")
     txn.lock_attr!(:category_id)
-    @llm_provider.expects(:auto_categorize).never
+    stub_ai(:categorize) { flunk "the model shouldn't be asked" }
 
     assert_difference "DebugLogEntry.count", 1 do
-      assert_equal 0, Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+      categorize([ txn.id ])
     end
 
     log_entry = DebugLogEntry.order(:created_at).last
@@ -98,10 +187,10 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
   test "logs when categorization is blocked by enrichment protection" do
     txn = create_transaction(account: @account, name: "Protected transaction").transaction
     txn.lock_attr!(:category_id)
-    @llm_provider.expects(:auto_categorize).never
+    stub_ai(:categorize) { flunk "the model shouldn't be asked" }
 
     assert_difference "DebugLogEntry.count", 1 do
-      assert_equal 0, Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+      categorize([ txn.id ])
     end
 
     log_entry = DebugLogEntry.order(:created_at).last
@@ -119,10 +208,10 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn.enrich_attribute(:category_id, ai_category.id, source: "ai")
     txn.lock_attr!(:category_id)
     txn.update!(category_id: user_category.id)
-    @llm_provider.expects(:auto_categorize).never
+    stub_ai(:categorize) { flunk "the model shouldn't be asked" }
 
     assert_difference "DebugLogEntry.count", 1 do
-      assert_equal 0, Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+      categorize([ txn.id ])
     end
 
     log_entry = DebugLogEntry.order(:created_at).last
@@ -137,12 +226,12 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     cached_txn.enrich_attribute(:category_id, category.id, source: "ai")
     cached_txn.lock_attr!(:category_id)
 
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: llm_txn.id, category_name: category.name)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: llm_txn.id, category_name: category.name }
+    ] })
 
     assert_difference "DebugLogEntry.count", 2 do
-      assert_equal 1, Family::AutoCategorizer.new(@family, transaction_ids: [ cached_txn.id, llm_txn.id ]).auto_categorize
+      categorize([ cached_txn.id, llm_txn.id ])
     end
 
     entries = DebugLogEntry.order(:created_at).last(2)
@@ -167,11 +256,11 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal "llm", @family.categorization_provider
     # Not even looked up: the choice short-circuits before the registry.
     Provider::Registry.expects(:get_provider).with(:jev).never
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn.id, category_name: category.name }
+    ] })
 
-    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    categorize([ txn.id ])
 
     assert_equal category, txn.reload.category
   end
@@ -185,7 +274,8 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     # the class name, so a Mocha::Mock would log "mock".
     jev = Provider::Jev.allocate
     Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
-    @llm_provider.expects(:auto_categorize).never
+    use_ai_routes(categorize: %w[jev/jev-latest openai/gpt-4.1-mini])
+    stub_ai(:categorize) { flunk "the model shouldn't be asked" }
     jev.expects(:auto_categorize).returns(provider_success_response([
       CategoryDecision.new(
         transaction_id: txn.id,
@@ -196,7 +286,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
       )
     ])).once
 
-    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    categorize([ txn.id ])
 
     # The richer struct maps back through the same loop as the LLM shape.
     assert_equal category, txn.reload.category
@@ -209,11 +299,11 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     category = @family.categories.create!(name: "Coffee")
 
     Provider::Registry.stubs(:get_provider).with(:jev).returns(nil)
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn.id, category_name: category.name }
+    ] })
 
-    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    categorize([ txn.id ])
 
     assert_equal category, txn.reload.category
   end
@@ -223,16 +313,16 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
 
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn.id, category_name: category.name }
+    ] })
 
     with_env_overrides(
       "JEV_API_KEY" => "test_api_key",
       "JEV_ENDPOINT" => "http://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET#frag" # pipelock:ignore Credential in URL
     ) do
       assert_difference "DebugLogEntry.count", 2 do
-        Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+        categorize([ txn.id ])
       end
     end
 
@@ -267,7 +357,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
 
     jev_returning(txn, category, confidence: nil)
 
-    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    categorize([ txn.id ])
 
     assert_nil txn.reload.category
     assert_includes @account.transactions.reload.enrichable(:category_id), txn
@@ -283,7 +373,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal 0.0, @family.effective_categorization_confidence_threshold
     jev_returning(txn, category, confidence: 0.12)
 
-    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    categorize([ txn.id ])
 
     assert_equal category, txn.reload.category
   end
@@ -296,7 +386,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     jev_returning(txn, category, confidence: 0.52)
 
     assert_no_difference "DataEnrichment.count" do
-      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+      categorize([ txn.id ])
     end
 
     assert_nil txn.reload.category
@@ -316,7 +406,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
 
     jev_returning(txn, category, confidence: 0.97)
 
-    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    categorize([ txn.id ])
 
     assert_equal category, txn.reload.category
   end
@@ -328,11 +418,11 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
 
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn.id, category_name: category.name }
+    ] })
 
-    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    categorize([ txn.id ])
 
     assert_equal category, txn.reload.category
   end
@@ -346,12 +436,12 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
 
     assert_equal 0.0, @family.effective_categorization_shadow_rate
     Provider::Registry.expects(:get_provider).with(:jev).never
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn.id, category_name: category.name }
+    ] })
 
     assert_no_difference "CategorizationComparison.count" do
-      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+      categorize([ txn.id ])
     end
   end
 
@@ -363,11 +453,9 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
 
     # Real instances, not bare mocks: the comparison records each provider by
     # its class name, and a Mocha::Mock would be stored as "mock".
-    openai = Provider::Openai.allocate
-    Provider::Registry.stubs(:preferred_llm_provider).returns(openai)
-    openai.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: applied.name)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn.id, category_name: applied.name }
+    ] })
 
     jev = Provider::Jev.allocate
     Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
@@ -382,7 +470,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     ])).once
 
     assert_difference "CategorizationComparison.count", 1 do
-      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+      categorize([ txn.id ])
     end
 
     # The incumbent's answer is the one that lands.
@@ -397,6 +485,23 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_in_delta 0.88, comparison.shadow_confidence, 0.001
   end
 
+  test "the shadow compares only the transactions in this job's batch" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    category = @family.categories.create!(name: "Coffee")
+    txns = Array.new(3) { create_transaction(account: @account, name: "Blue Bottle #{_1}").transaction }
+    stub_ai(:categorize) { |request| { categorizations: txns.map(&:id).select { request.input.include?(_1) }.map { { transaction_id: _1, category_name: category.name } } } }
+
+    jev = Provider::Jev.allocate
+    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
+    shadowed = []
+    jev.stubs(:auto_categorize).with { |transactions:, **| shadowed << transactions.map { _1[:id] } }.returns(provider_success_response([]))
+
+    use_ai_model_settings(batch_size: 2)
+    categorize(txns.map(&:id))
+
+    assert_equal [ 2 ], shadowed.map(&:size), "the first job's batch only"
+  end
+
   test "does not score a missing shadow answer as agreement" do
     # The comparison rows come from the union of both providers' decisions, so
     # one side can be absent entirely. When the other side abstained, both
@@ -406,12 +511,10 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
     @family.categories.create!(name: "Coffee")
 
-    openai = Provider::Openai.allocate
-    Provider::Registry.stubs(:preferred_llm_provider).returns(openai)
     # Answered, but declined to pick a category.
-    openai.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: nil)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn.id, category_name: nil }
+    ] })
 
     jev = Provider::Jev.allocate
     Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
@@ -419,7 +522,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     jev.expects(:auto_categorize).returns(provider_success_response([])).once
 
     assert_difference "CategorizationComparison.count", 1 do
-      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+      categorize([ txn.id ])
     end
 
     comparison = CategorizationComparison.order(:created_at).last
@@ -434,11 +537,9 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
     @family.categories.create!(name: "Coffee")
 
-    openai = Provider::Openai.allocate
-    Provider::Registry.stubs(:preferred_llm_provider).returns(openai)
-    openai.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: nil)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn.id, category_name: nil }
+    ] })
 
     jev = Provider::Jev.allocate
     Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
@@ -452,7 +553,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
       )
     ])).once
 
-    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    categorize([ txn.id ])
 
     assert CategorizationComparison.order(:created_at).last.agreed
   end
@@ -462,16 +563,16 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
 
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn.id, category_name: category.name }
+    ] })
 
     jev = Provider::Jev.allocate
     Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
     jev.expects(:auto_categorize).raises(Provider::Jev::Error.new("upstream down"))
 
     assert_nothing_raised do
-      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+      categorize([ txn.id ])
     end
 
     assert_equal category, txn.reload.category
@@ -483,12 +584,12 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
 
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
-    ])).once
+    stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: txn.id, category_name: category.name }
+    ] })
 
     with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_ENDPOINT" => "http://gw.example.com/v1") do
-      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+      categorize([ txn.id ])
     end
 
     entry = DebugLogEntry.where(message: "Jev is misconfigured; skipping the shadow comparison").sole
@@ -496,13 +597,27 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal category, txn.reload.category
   end
 
+
+  test "a cancelled Jev call makes no request" do
+    categorizer = mock
+    categorizer.expects(:jev_decisions).never
+
+    result = Family::AutoCategorizer::JevCall.new(categorizer, nil).call(cancelled: -> { true })
+
+    assert result.cancelled?
+  end
+
   private
-    AutoCategorization = Provider::LlmConcept::AutoCategorization
     CategoryDecision = Provider::ClassificationConcept::CategoryDecision
+
+    def categorize(transaction_ids)
+      Ai::GenerationJob.perform_now(:categorize, { ids: transaction_ids, family_id: @family.id })
+    end
 
     # Puts the family on Jev and has it return one decision at a given confidence.
     def jev_returning(transaction, category, confidence:)
       @family.update!(categorization_provider: "jev")
+      use_ai_routes(categorize: %w[jev/jev-latest openai/gpt-4.1-mini])
       jev = Provider::Jev.allocate
       Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
       jev.expects(:auto_categorize).returns(provider_success_response([
