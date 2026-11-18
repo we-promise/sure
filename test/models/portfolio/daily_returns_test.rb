@@ -726,11 +726,12 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
   # capital, which is valued at the previous day's rate, so it converts to the
   # family currency at that rate. A GBP account takes a 500 EUR deposit as 400
   # GBP (EUR->GBP 0.8 that day), and 400 GBP at the previous day's 1.25 is 500.
+  # Day two's own rate is 1.5, so a same-day conversion would read 600.
   test "a converted flow then reaches the family currency at the previous day's rate" do
     gbp = create_portfolio_account(family: @family, currency: "GBP")
     set_rate from: "EUR", to: "GBP", date: @day_two, rate: 0.8
     set_rate from: "GBP", to: "USD", date: @day_one, rate: 1.25
-    set_rate from: "GBP", to: "USD", date: @day_two, rate: 1.25
+    set_rate from: "GBP", to: "USD", date: @day_two, rate: 1.5
     lay_balance account: gbp, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: gbp, date: @day_two, opening: 1_000, closing: 1_400, cash_flow: 400
     deposit account: gbp, date: @day_two, amount: 500, currency: "EUR"
