@@ -6,7 +6,13 @@ es:
         delete: Eliminar categoría
         edit: Editar categoría
       show:
+        assign_error: La categoría se ha creado, pero no se ha podido asignar. Pulsa Crear otra vez para reintentarlo.
+        back: Atrás
+        choose_parent: 'Crear "%{name}" dentro de:'
         clear: Limpiar categoría
+        create: Crear "%{name}"
+        create_as_subcategory: Añadir como subcategoría…
+        create_error: No se ha podido crear esa categoría. Inténtalo de nuevo.
         no_categories: No se encontraron categorías
         recent: Recientes
         search_placeholder: Buscar

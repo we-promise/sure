@@ -65,6 +65,8 @@ To do this, you should get our .env.example as a starting point:
 curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 ```
 
+Optional linked-account balance anchoring is documented separately; see [Linked-account balance anchoring](balance-anchors.md) before enabling `BALANCE_REUSE_EXPLAINED_ANCHOR`.
+
 #### Generate the app secret key
 
 The app requires an environment variable called `SECRET_KEY_BASE` to run.
