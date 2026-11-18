@@ -56,9 +56,12 @@ class PlaidAccount::Investments::HoldingsProcessor
     # rows with no provider, are kept.
     def retire_rows_after(snapshot_date)
       account_provider_id = plaid_account.account_provider&.id
-      return if account.nil? || account_provider_id.nil?
+      return if account_provider_id.nil?
 
-      later = account.holdings.where(account_provider_id: account_provider_id).where("date > ?", snapshot_date)
+      # Read through the provider link, so a sync with no holdings to write
+      # leaves plaid_account.current_account unloaded, as it was, for the
+      # balance anchor the processor sets after this runs.
+      later = Holding.where(account_provider_id: account_provider_id).where("date > ?", snapshot_date)
       later.where("security_locked OR cost_basis_locked").order(:date, :id).each do |holding|
         import_adapter.carry_corrections_back(from: holding, date: snapshot_date)
       end
