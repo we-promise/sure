@@ -67,8 +67,9 @@ Rules:
   example single-account charts) count accounts in full.
 - Account group sparklines (`AccountableSparkline`) pass the viewer so the trend
   matches the group total. The cache key, and the `version` the sidebar puts in
-  the frame URL, digest the viewer's percentages, so a share edit fetches a new
-  series. Per-account sparklines stay whole-account, like the row balance.
+  the frame URL, digest the viewer's percentages (read in SQL in the same query
+  as the account rows, so the page makes no extra accounts query), so a share
+  edit fetches a new series. Per-account sparklines stay whole-account, like the row balance.
 - Sidebar rows show a small `DS::Pill` with the viewer's percentage when it is
   below 100 (`AccountsHelper#ownership_badge_label`); the row balance stays whole.
   The sidebar fragment cache version (`account_sidebar_tabs_v8`) must be bumped
@@ -84,10 +85,11 @@ Rules:
   share-weighted; `get_accounts` returns whole-account balances. The tool
   descriptions state this.
 
-The share is computed twice: in Ruby (`Account#ownership_percentage_for`,
-`owned_balance_for`) and in SQL (`ChartSeriesBuilder#viewer_fraction_sql`).
-`test/models/ownership_parity_test.rb` pins them to the same figure; change both
-together.
+The share is computed in Ruby (`Account#ownership_percentage_for`,
+`owned_balance_for`) and in SQL (`ChartSeriesBuilder#viewer_fraction_sql`, and the
+percentage column of `AccountableSparkline.identity_columns`).
+`test/models/ownership_parity_test.rb` pins the first two to the same figure,
+with two shared accounts at different percentages; change them together.
 
 ## Permissions
 
