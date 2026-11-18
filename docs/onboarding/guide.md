@@ -44,6 +44,7 @@ When you arrive at the main dashboard, showing **No accounts yet**, you're all s
 > - [**Redbark**](../providers/redbark.md) (Australian banks)
 > - [**Up**](https://up.com.au/) (Australian bank)
 > - [**Akahu**](https://www.akahu.nz/) (New Zealand banks)
+> - [**moomoo**](../providers/moomoo.md) (brokerage holdings, trades and cash movements, alpha)
 > - [**CoinStats**](https://coinstats.app/) (beta, crypto)
 >
 > See **Settings > Bank sync** in your instance for the full list of supported providers and their setup options. Only **admin** users can connect a provider.
