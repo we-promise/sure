@@ -70,4 +70,32 @@ class Account::CounterpartyRematcherTest < ActiveSupport::TestCase
       @own_account.update!(name: "Renamed")
     end
   end
+
+  test "leaves import-locked entries alone and only fills blanks on user-modified ones" do
+    @own_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+    entry = @transaction.entry
+    other_account = accounts(:credit_card)
+
+    entry.update!(import_locked: true)
+    Account::CounterpartyRematcher.new(@family).rematch!
+    assert_nil @transaction.reload.counterparty_own_account_id
+
+    entry.update!(import_locked: false, user_modified: true)
+    @transaction.update!(counterparty_own_account: other_account)
+    Account::CounterpartyRematcher.new(@family).rematch!
+    assert_equal other_account, @transaction.reload.counterparty_own_account
+
+    @transaction.update!(counterparty_own_account: nil)
+    Account::CounterpartyRematcher.new(@family).rematch!
+    assert_equal @own_account, @transaction.reload.counterparty_own_account
+  end
+
+  test "releasing an iban from an account rematches the family" do
+    @own_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+    @enable_banking_account.update_column(:iban, "AT611904300234573201") # pipelock:ignore IBAN
+
+    assert_enqueued_with(job: RematchCounterpartyAccountsJob, args: [ @family ]) do
+      @enable_banking_account.reload.release_iban_from!(@own_account.reload)
+    end
+  end
 end
