@@ -1,0 +1,10 @@
+<%# The rows the rejection changed (TransfersController#redrawn_entries): the
+    match's legs, loaded after it was destroyed (the transfer's own legs still
+    hold it in memory and would draw its pill again), and any row the
+    "Transfer?" hint now pairs with them. Each row holds its category menus and
+    match controls, so redrawing the row is enough. Rows are drawn in the
+    page's view (an account page signs a transfer's amount, other lists show
+    +/-). %>
+<% @redrawn_entries.each do |entry| %>
+  <%= turbo_stream.replace entry, partial: "entries/entry", locals: { entry: entry, view_ctx: @view_ctx } %>
+<% end %>

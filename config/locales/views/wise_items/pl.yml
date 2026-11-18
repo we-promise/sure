@@ -22,6 +22,7 @@ pl:
     entries:
       default_name: Transakcja Wise
       fee_name: Opłata Wise
+      refund_name: Zwrot Wise
     generate_sca_keypair:
       failed: Nie udało się wygenerować nowej pary kluczy SCA. Spróbuj ponownie.
       success: Wygenerowano nową parę kluczy SCA. Zarejestruj klucz publiczny w Wise,
@@ -31,9 +32,12 @@ pl:
       not_found: Nie znaleziono salda Wise.
       success: Połączono saldo Wise z kontem.
     link_existing_account:
+      account_already_linked: To konto jest już połączone z dostawcą.
+      currency_mismatch: "To saldo Wise jest w %{balance_currency}, a konto w %{account_currency}. Wybierz saldo w walucie konta."
       failed: Nie można połączyć konta. Spróbuj ponownie.
       not_found: Nie znaleziono konta lub salda Wise.
       success: Połączono %{account_name} z Wise
+      unsupported_account_type: Salda Wise można połączyć tylko z kontami gotówkowymi.
     link_profiles:
       already_connected: Wszystkie wybrane profile są już połączone.
       no_profiles_selected: Wybierz co najmniej jeden profil.
@@ -65,8 +69,9 @@ pl:
           Wise w produkcji. Bez szyfrowania tokeny są przechowywane w postaci zwykłego
           tekstu.
         title: Szyfrowanie bazy danych nie jest skonfigurowane
-      import_all_history_help: Pobiera wszystkie historyczne wyciągi Wise zamiast
-        tylko ostatniego roku.
+      import_all_history_help: Importuje całą historię Wise (przelewy, aktywności i wyciągi)
+        zamiast tylko ostatniego roku. Każde saldo zaczyna się wtedy od 0 w dniu,
+        w którym Wise je otworzył.
       import_all_history_label: Importuj pełną historię transakcji
       instructions:
         copy_token_html: Skopiuj token i wklej go poniżej. Sure używa go tylko do
@@ -174,6 +179,11 @@ pl:
       credentials_invalid: Nieprawidłowy token API Wise lub niewystarczające uprawnienia
       failed: Synchronizacja nie powiodła się. Spróbuj ponownie lub skontaktuj się
         z pomocą techniczną.
+      fetch_failed:
+        few: "%{count} żądania do Wise nie powiodły się. Następna synchronizacja ponowi próbę."
+        many: "%{count} żądań do Wise nie powiodło się. Następna synchronizacja ponowi próbę."
+        one: "%{count} żądanie do Wise nie powiodło się. Następna synchronizacja ponowi próbę."
+        other: "%{count} żądań do Wise nie powiodło się. Następna synchronizacja ponowi próbę."
       import_failed: Import Wise nie powiódł się.
       importing_accounts: Importowanie kont z Wise...
       processing_transactions: Przetwarzanie transakcji...

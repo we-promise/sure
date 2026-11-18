@@ -1,7 +1,8 @@
 class PlaidAccount::Investments::HoldingsProcessor
-  def initialize(plaid_account, security_resolver:)
+  def initialize(plaid_account, security_resolver:, currency: nil)
     @plaid_account = plaid_account
     @security_resolver = security_resolver
+    @currency = currency
   end
 
   def process
@@ -32,7 +33,7 @@ class PlaidAccount::Investments::HoldingsProcessor
         security: security,
         quantity: quantity_bd,
         amount: amount_bd,
-        currency: plaid_holding["iso_currency_code"] || account.currency,
+        currency: plaid_holding["iso_currency_code"] || @currency || account.currency,
         date: snapshot_date,
         price: price_bd,
         account_provider_id: plaid_account.account_provider&.id,

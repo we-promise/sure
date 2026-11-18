@@ -41,6 +41,25 @@ zh-CN:
       welcome: 欢迎回来，%{name}
       subtitle: 以下是您的财务状况概览
       new: 新建
+      cashflow_donut:
+        title: 现金流环形图
+        date_range: "%{start_date} 至 %{end_date}"
+        month_picker_aria_label: 选择月份
+        filter_accounts: 筛选账户 (%{count})
+        filter_accounts_all: 所有账户
+        period_scope_hint: 显示您在此处选择的月份 — 独立于仪表盘顶部的时间周期。
+        search_accounts: 搜索账户
+        apply: 应用
+        no_data: 本月暂无现金流
+        spent: 已支出
+        of_income: 共 %{amount} 收入
+        left_amount: 剩余 %{amount}
+        over_amount: 超出 %{amount}
+        left: 剩余可用
+        over: 超出收入
+        inflows: 流入
+        outflows: 流出
+        weight: 占比
       sections_aria_label: 仪表盘分区
       toggle_section: 切换模块可见性
       customize:

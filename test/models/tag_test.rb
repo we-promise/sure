@@ -16,6 +16,15 @@ class TagTest < ActiveSupport::TestCase
     end
   end
 
+  test "ids_with_transactions lists only the given tags that are on a transaction" do
+    family = families(:dylan_family)
+    ids = Tag.ids_with_transactions(family: family, tag_ids: [ tags(:one).id, tags(:two).id, tags(:three).id ])
+
+    assert_equal({ tags(:one).id => true, tags(:two).id => true }, ids)
+    assert_equal({}, Tag.ids_with_transactions(family: families(:empty), tag_ids: [ tags(:one).id ]))
+    assert_equal({}, Tag.ids_with_transactions(family: family, tag_ids: []))
+  end
+
   test "rejects the reserved Untagged filter sentinel as a name" do
     tag = families(:dylan_family).tags.new(name: Tag::UNTAGGED_FILTER_VALUE, color: "#e99537")
 

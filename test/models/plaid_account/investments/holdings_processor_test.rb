@@ -73,6 +73,47 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal 1.day.ago.to_date, undated.date
   end
 
+  test "uses the supplied snapshot currency when a holding omits its own currency" do
+    account = @plaid_account.current_account
+    account.update!(currency: "USD")
+    holding_date = 5.days.ago.to_date
+    @plaid_account.update!(
+      currency: "EUR",
+      raw_holdings_payload: {
+        securities: [],
+        holdings: [
+          {
+            "security_id" => "123",
+            "quantity" => 1,
+            "institution_price" => 10,
+            "institution_price_as_of" => holding_date
+          }
+        ],
+        transactions: []
+      }
+    )
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "123")
+                      .returns(
+                        OpenStruct.new(
+                          security: securities(:aapl),
+                          cash_equivalent?: false,
+                          brokerage_cash?: false
+                        )
+                      )
+
+    processor = PlaidAccount::Investments::HoldingsProcessor.new(
+      @plaid_account,
+      security_resolver: @security_resolver,
+      currency: @plaid_account.currency
+    )
+    processor.process
+
+    holding = Holding.find_by!(account: account, security: securities(:aapl), date: holding_date)
+    assert_equal "EUR", holding.currency
+  end
+
   # Users cannot delete Plaid holdings (PlaidAdapter#can_delete_holdings? is
   # false), but a sync retires Plaid's own rows dated after its snapshot: they
   # would stay the newest provider date and hide the snapshot just written.

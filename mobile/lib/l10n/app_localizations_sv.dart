@@ -736,6 +736,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get chatListDeleteFailed => 'Det gick inte att radera chattarna';
 
   @override
+  String get chatListIncomplete =>
+      'Vissa chattar kan saknas. Listan lästes inte in helt.';
+
+  @override
   String get chatListError => 'Det gick inte att läsa in chattar';
 
   @override

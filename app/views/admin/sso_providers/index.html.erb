@@ -26,13 +26,9 @@
             </div>
             <div class="flex items-center gap-2">
               <% if provider.enabled? %>
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 theme-dark:bg-green-tint-10 theme-dark:text-green-200">
-                  <%= t(".enabled") %>
-                </span>
+                <%= render DS::Pill.new(label: t(".enabled"), tone: :success, marker: false) %>
               <% else %>
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-secondary">
-                  <%= t(".disabled") %>
-                </span>
+                <%= render DS::Pill.new(label: t(".disabled"), tone: :neutral, marker: false) %>
               <% end %>
               <%= link_to edit_admin_sso_provider_path(provider), class: "p-1 text-secondary hover:text-primary", title: t(".edit") do %>
                 <%= icon "pencil", class: "w-4 h-4" %>
@@ -101,13 +97,9 @@
           <p class="text-sm text-secondary"><%= t(".db_backed_providers_description") %></p>
         </div>
         <% if FeatureFlags.db_sso_providers? %>
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-            <%= t(".enabled") %>
-          </span>
+          <%= render DS::Pill.new(label: t(".enabled"), tone: :success, marker: false) %>
         <% else %>
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-secondary">
-            <%= t(".disabled") %>
-          </span>
+          <%= render DS::Pill.new(label: t(".disabled"), tone: :neutral, marker: false) %>
         <% end %>
       </div>
       <p class="text-sm text-secondary">
