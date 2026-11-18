@@ -106,8 +106,8 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "title", text: "Lunch‑Flow-Konten einrichten"
-    assert_select "option", text: "Untertyp auswählen"
-    assert_select "option", text: "Typ auswählen"
+    assert_select "[role=option]", text: "Untertyp auswählen"
+    assert_select "[role=option]", text: "Typ auswählen"
 
     [
       "Nicht registriertes Anlagekonto",
@@ -124,10 +124,10 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
       "Kreditlinie",
       "Unternehmenskredit"
     ].each do |label|
-      assert_select "option", text: label
+      assert_select "[role=option]", text: label
     end
 
-    assert_select "option", text: "UGMA-Treuhandkonto"
+    assert_select "[role=option]", text: "UGMA-Treuhandkonto"
 
     refute_includes response.body, "Select subtype"
     refute_includes response.body, "Select type"
@@ -144,8 +144,8 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "title", text: "Set Up Lunch Flow Accounts"
-    assert_select "option", text: "Select subtype"
-    assert_select "option", text: "Select type"
+    assert_select "[role=option]", text: "Select subtype"
+    assert_select "[role=option]", text: "Select type"
   end
 
   test "account setup localizes an unexpected error in German" do

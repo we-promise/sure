@@ -62,26 +62,100 @@
 </div>
 </div>
 <div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
-<div>
-<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
-<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
-<option selected="selected" value="skip">Skip this account</option>
-<option value="Depository">Checking or Savings Account</option>
-</select>
+<div data-action="dropdown:select->account-type-selector#updateSubtype">
+<div class="relative" data-controller="select form-dropdown" data-select-menu-placement-value="auto" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="form-field ">
+<div class="form-field__body">
+<label class="form-field__label" id="account_types_UUID_label" for="account_types_UUID">Account Type:</label>
+<input value="skip" data-form-dropdown-target="input" data-auto-submit-target="auto" type="hidden" name="account_types[UUID]" id="account_types_UUID" />
+<button type="button" id="account_types_UUID_trigger" class="form-field__input w-full" data-select-target="button" data-action="click->select#toggle focus->select#handleButtonFocus" aria-haspopup="listbox" aria-expanded="false" tabindex="0" aria-labelledby="account_types_UUID_label account_types_UUID_trigger">Skip this account</button>
+</div>
+</div>
+<div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-border-lg bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+<div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" role="listbox" tabindex="-1">
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover bg-container-inset" role="option" tabindex="-1" aria-selected="true" data-select-target="option" data-action="click->select#select" data-value="skip" data-filter-name="Skip this account">
+<span class="check-icon ">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Skip this account</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="Depository" data-filter-name="Checking or Savings Account">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Checking or Savings Account</div>
+</div>
+</div>
+</div>
 </div>
 <!-- Subtype dropdowns (shown/hidden based on account type) -->
 <div data-account-type-selector-target="subtypeContainer">
 <div class="subtype-select" data-type="Depository" style="display: none;">
-<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
-<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
-<option value="">Select subtype</option>
-<option value="cash">Cash</option>
-<option selected="selected" value="checking">Checking</option>
-<option value="savings">Savings</option>
-<option value="hsa">Health Savings Account</option>
-<option value="cd">Certificate of Deposit</option>
-<option value="money_market">Money Market</option>
-</select>
+<div class="relative" data-controller="select form-dropdown" data-select-menu-placement-value="auto" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="form-field ">
+<div class="form-field__body">
+<label class="form-field__label" id="account_subtypes_UUID_label" for="account_subtypes_UUID">Account Subtype:</label>
+<input value="checking" data-form-dropdown-target="input" data-auto-submit-target="auto" type="hidden" name="account_subtypes[UUID]" id="account_subtypes_UUID" />
+<button type="button" id="account_subtypes_UUID_trigger" class="form-field__input w-full" data-select-target="button" data-action="click->select#toggle focus->select#handleButtonFocus" aria-haspopup="listbox" aria-expanded="false" tabindex="0" aria-labelledby="account_subtypes_UUID_label account_subtypes_UUID_trigger">Checking</button>
+</div>
+</div>
+<div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-border-lg bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+<div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" role="listbox" tabindex="-1">
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="" data-filter-name="Select subtype">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Select subtype</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="cash" data-filter-name="Cash">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Cash</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover bg-container-inset" role="option" tabindex="-1" aria-selected="true" data-select-target="option" data-action="click->select#select" data-value="checking" data-filter-name="Checking">
+<span class="check-icon ">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Checking</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="savings" data-filter-name="Savings">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Savings</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="hsa" data-filter-name="Health Savings Account">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Health Savings Account</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="cd" data-filter-name="Certificate of Deposit">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Certificate of Deposit</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="money_market" data-filter-name="Money Market">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Money Market</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -93,26 +167,100 @@
 </div>
 </div>
 <div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
-<div>
-<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
-<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
-<option selected="selected" value="skip">Skip this account</option>
-<option value="Depository">Checking or Savings Account</option>
-</select>
+<div data-action="dropdown:select->account-type-selector#updateSubtype">
+<div class="relative" data-controller="select form-dropdown" data-select-menu-placement-value="auto" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="form-field ">
+<div class="form-field__body">
+<label class="form-field__label" id="account_types_UUID_label" for="account_types_UUID">Account Type:</label>
+<input value="skip" data-form-dropdown-target="input" data-auto-submit-target="auto" type="hidden" name="account_types[UUID]" id="account_types_UUID" />
+<button type="button" id="account_types_UUID_trigger" class="form-field__input w-full" data-select-target="button" data-action="click->select#toggle focus->select#handleButtonFocus" aria-haspopup="listbox" aria-expanded="false" tabindex="0" aria-labelledby="account_types_UUID_label account_types_UUID_trigger">Skip this account</button>
+</div>
+</div>
+<div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-border-lg bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+<div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" role="listbox" tabindex="-1">
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover bg-container-inset" role="option" tabindex="-1" aria-selected="true" data-select-target="option" data-action="click->select#select" data-value="skip" data-filter-name="Skip this account">
+<span class="check-icon ">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Skip this account</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="Depository" data-filter-name="Checking or Savings Account">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Checking or Savings Account</div>
+</div>
+</div>
+</div>
 </div>
 <!-- Subtype dropdowns (shown/hidden based on account type) -->
 <div data-account-type-selector-target="subtypeContainer">
 <div class="subtype-select" data-type="Depository" style="display: none;">
-<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
-<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
-<option value="">Select subtype</option>
-<option value="cash">Cash</option>
-<option value="checking">Checking</option>
-<option value="savings">Savings</option>
-<option value="hsa">Health Savings Account</option>
-<option value="cd">Certificate of Deposit</option>
-<option selected="selected" value="money_market">Money Market</option>
-</select>
+<div class="relative" data-controller="select form-dropdown" data-select-menu-placement-value="auto" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="form-field ">
+<div class="form-field__body">
+<label class="form-field__label" id="account_subtypes_UUID_label" for="account_subtypes_UUID">Account Subtype:</label>
+<input value="money_market" data-form-dropdown-target="input" data-auto-submit-target="auto" type="hidden" name="account_subtypes[UUID]" id="account_subtypes_UUID" />
+<button type="button" id="account_subtypes_UUID_trigger" class="form-field__input w-full" data-select-target="button" data-action="click->select#toggle focus->select#handleButtonFocus" aria-haspopup="listbox" aria-expanded="false" tabindex="0" aria-labelledby="account_subtypes_UUID_label account_subtypes_UUID_trigger">Money Market</button>
+</div>
+</div>
+<div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-border-lg bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+<div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" role="listbox" tabindex="-1">
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="" data-filter-name="Select subtype">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Select subtype</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="cash" data-filter-name="Cash">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Cash</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="checking" data-filter-name="Checking">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Checking</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="savings" data-filter-name="Savings">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Savings</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="hsa" data-filter-name="Health Savings Account">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Health Savings Account</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="cd" data-filter-name="Certificate of Deposit">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Certificate of Deposit</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover bg-container-inset" role="option" tabindex="-1" aria-selected="true" data-select-target="option" data-action="click->select#select" data-value="money_market" data-filter-name="Money Market">
+<span class="check-icon ">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Money Market</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -124,26 +272,100 @@
 </div>
 </div>
 <div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
-<div>
-<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
-<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
-<option selected="selected" value="skip">Skip this account</option>
-<option value="Depository">Checking or Savings Account</option>
-</select>
+<div data-action="dropdown:select->account-type-selector#updateSubtype">
+<div class="relative" data-controller="select form-dropdown" data-select-menu-placement-value="auto" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="form-field ">
+<div class="form-field__body">
+<label class="form-field__label" id="account_types_UUID_label" for="account_types_UUID">Account Type:</label>
+<input value="skip" data-form-dropdown-target="input" data-auto-submit-target="auto" type="hidden" name="account_types[UUID]" id="account_types_UUID" />
+<button type="button" id="account_types_UUID_trigger" class="form-field__input w-full" data-select-target="button" data-action="click->select#toggle focus->select#handleButtonFocus" aria-haspopup="listbox" aria-expanded="false" tabindex="0" aria-labelledby="account_types_UUID_label account_types_UUID_trigger">Skip this account</button>
+</div>
+</div>
+<div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-border-lg bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+<div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" role="listbox" tabindex="-1">
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover bg-container-inset" role="option" tabindex="-1" aria-selected="true" data-select-target="option" data-action="click->select#select" data-value="skip" data-filter-name="Skip this account">
+<span class="check-icon ">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Skip this account</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="Depository" data-filter-name="Checking or Savings Account">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Checking or Savings Account</div>
+</div>
+</div>
+</div>
 </div>
 <!-- Subtype dropdowns (shown/hidden based on account type) -->
 <div data-account-type-selector-target="subtypeContainer">
 <div class="subtype-select" data-type="Depository" style="display: none;">
-<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
-<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
-<option selected="selected" value="">Select subtype</option>
-<option value="cash">Cash</option>
-<option value="checking">Checking</option>
-<option value="savings">Savings</option>
-<option value="hsa">Health Savings Account</option>
-<option value="cd">Certificate of Deposit</option>
-<option value="money_market">Money Market</option>
-</select>
+<div class="relative" data-controller="select form-dropdown" data-select-menu-placement-value="auto" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="form-field ">
+<div class="form-field__body">
+<label class="form-field__label" id="account_subtypes_UUID_label" for="account_subtypes_UUID">Account Subtype:</label>
+<input value="" data-form-dropdown-target="input" data-auto-submit-target="auto" type="hidden" name="account_subtypes[UUID]" id="account_subtypes_UUID" />
+<button type="button" id="account_subtypes_UUID_trigger" class="form-field__input w-full" data-select-target="button" data-action="click->select#toggle focus->select#handleButtonFocus" aria-haspopup="listbox" aria-expanded="false" tabindex="0" aria-labelledby="account_subtypes_UUID_label account_subtypes_UUID_trigger">Select subtype</button>
+</div>
+</div>
+<div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-border-lg bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+<div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" role="listbox" tabindex="-1">
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="" data-filter-name="Select subtype">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Select subtype</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="cash" data-filter-name="Cash">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Cash</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="checking" data-filter-name="Checking">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Checking</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="savings" data-filter-name="Savings">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Savings</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="hsa" data-filter-name="Health Savings Account">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Health Savings Account</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="cd" data-filter-name="Certificate of Deposit">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Certificate of Deposit</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="money_market" data-filter-name="Money Market">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Money Market</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -155,26 +377,100 @@
 </div>
 </div>
 <div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
-<div>
-<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
-<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
-<option selected="selected" value="skip">Skip this account</option>
-<option value="Depository">Checking or Savings Account</option>
-</select>
+<div data-action="dropdown:select->account-type-selector#updateSubtype">
+<div class="relative" data-controller="select form-dropdown" data-select-menu-placement-value="auto" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="form-field ">
+<div class="form-field__body">
+<label class="form-field__label" id="account_types_UUID_label" for="account_types_UUID">Account Type:</label>
+<input value="skip" data-form-dropdown-target="input" data-auto-submit-target="auto" type="hidden" name="account_types[UUID]" id="account_types_UUID" />
+<button type="button" id="account_types_UUID_trigger" class="form-field__input w-full" data-select-target="button" data-action="click->select#toggle focus->select#handleButtonFocus" aria-haspopup="listbox" aria-expanded="false" tabindex="0" aria-labelledby="account_types_UUID_label account_types_UUID_trigger">Skip this account</button>
+</div>
+</div>
+<div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-border-lg bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+<div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" role="listbox" tabindex="-1">
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover bg-container-inset" role="option" tabindex="-1" aria-selected="true" data-select-target="option" data-action="click->select#select" data-value="skip" data-filter-name="Skip this account">
+<span class="check-icon ">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Skip this account</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="Depository" data-filter-name="Checking or Savings Account">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Checking or Savings Account</div>
+</div>
+</div>
+</div>
 </div>
 <!-- Subtype dropdowns (shown/hidden based on account type) -->
 <div data-account-type-selector-target="subtypeContainer">
 <div class="subtype-select" data-type="Depository" style="display: none;">
-<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
-<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
-<option value="">Select subtype</option>
-<option value="cash">Cash</option>
-<option value="checking">Checking</option>
-<option selected="selected" value="savings">Savings</option>
-<option value="hsa">Health Savings Account</option>
-<option value="cd">Certificate of Deposit</option>
-<option value="money_market">Money Market</option>
-</select>
+<div class="relative" data-controller="select form-dropdown" data-select-menu-placement-value="auto" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="form-field ">
+<div class="form-field__body">
+<label class="form-field__label" id="account_subtypes_UUID_label" for="account_subtypes_UUID">Account Subtype:</label>
+<input value="savings" data-form-dropdown-target="input" data-auto-submit-target="auto" type="hidden" name="account_subtypes[UUID]" id="account_subtypes_UUID" />
+<button type="button" id="account_subtypes_UUID_trigger" class="form-field__input w-full" data-select-target="button" data-action="click->select#toggle focus->select#handleButtonFocus" aria-haspopup="listbox" aria-expanded="false" tabindex="0" aria-labelledby="account_subtypes_UUID_label account_subtypes_UUID_trigger">Savings</button>
+</div>
+</div>
+<div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-border-lg bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+<div data-list-filter-target="list" data-select-target="content" class="flex flex-col gap-0.5 max-h-64 overflow-auto" role="listbox" tabindex="-1">
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="" data-filter-name="Select subtype">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Select subtype</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="cash" data-filter-name="Cash">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Cash</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="checking" data-filter-name="Checking">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Checking</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover bg-container-inset" role="option" tabindex="-1" aria-selected="true" data-select-target="option" data-action="click->select#select" data-value="savings" data-filter-name="Savings">
+<span class="check-icon ">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Savings</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="hsa" data-filter-name="Health Savings Account">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Health Savings Account</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="cd" data-filter-name="Certificate of Deposit">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Certificate of Deposit</div>
+<div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover " role="option" tabindex="-1" aria-selected="false" data-select-target="option" data-action="click->select#select" data-value="money_market" data-filter-name="Money Market">
+<span class="check-icon hidden">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>Money Market</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
