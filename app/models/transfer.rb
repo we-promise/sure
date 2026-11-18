@@ -102,14 +102,14 @@ class Transfer < ApplicationRecord
     return "Credit card payment" if to_account&.credit_card?
     return "Loan payment" if to_account&.loan?
     return "Investment contribution" if investment_contribution?
-    return "Payment" if to_account&.liability?
+    return "Payment" if payment?
 
     "Transfer"
   end
 
-  # Renames both legs. Returns false when either name is blank (the controller
-  # validates before calling). A changed entry locks its name so provider syncs
-  # do not overwrite it, without freezing unrelated provider enrichment.
+  # Renames both legs. Returns false when either name is blank. A changed entry
+  # locks its name so provider syncs do not overwrite it, without freezing
+  # unrelated provider enrichment.
   def rename_entries!(outflow_name:, inflow_name:)
     names = {
       outflow_transaction.entry => outflow_name.to_s.strip,

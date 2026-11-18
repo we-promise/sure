@@ -1,6 +1,6 @@
-<%# locals: (transfer:, form:, can_rename:) %>
+<%# locals: (transfer:, form: nil) %>
 
-<% if can_rename %>
+<% if form %>
   <p class="text-xs text-secondary"><%= t("transfers.show.transaction_name_help") %></p>
 <% end %>
 
@@ -12,7 +12,7 @@
       <%= link_to transfer.from_account.name, account_path(transfer.from_account), data: { turbo_frame: "_top" } %>
     </dd>
   </dl>
-  <% if can_rename %>
+  <% if form %>
     <%= render "transfers/name_row",
           form: form,
           method: :outflow_name,
@@ -50,7 +50,7 @@
       <%= link_to transfer.to_account.name, account_path(transfer.to_account), data: { turbo_frame: "_top" } %>
     </dd>
   </dl>
-  <% if can_rename %>
+  <% if form %>
     <%= render "transfers/name_row",
           form: form,
           method: :inflow_name,

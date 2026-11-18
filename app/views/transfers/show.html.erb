@@ -24,11 +24,11 @@
               method: :patch,
               class: "pb-4 px-3 pt-2 text-sm space-y-3 text-primary",
               data: { controller: "auto-submit-form" } do |f| %>
-          <%= render "transfers/overview", transfer: @transfer, form: f, can_rename: true %>
+          <%= render "transfers/overview", transfer: @transfer, form: f %>
         <% end %>
       <% else %>
         <div class="pb-4 px-3 pt-2 text-sm space-y-3 text-primary">
-          <%= render "transfers/overview", transfer: @transfer, form: nil, can_rename: false %>
+          <%= render "transfers/overview", transfer: @transfer %>
         </div>
       <% end %>
     <% end %>
