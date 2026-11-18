@@ -7,6 +7,10 @@ module Holding::TradeCalculatorHelpers
       books.filter_map { |security_id, book| [ security_id, book.ledger ] if book.respond_to?(:ledger) }.to_h
     end
 
+    def disposals_from(books)
+      books.filter_map { |security_id, book| [ security_id, book.disposals ] if book.respond_to?(:disposals) }.to_h
+    end
+
     # Converts a trade's price into the account's currency at the rate of the
     # day it was made, or nil when there is no rate for that day.
     def converted_trade_price(trade, date:)
