@@ -617,6 +617,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal false, @entry.excluded
 
     assert_equal "Transaction updated", flash[:notice]
+    assert_equal "Updated name", flash[:cta][:merchant_name]
     assert_redirected_to account_url(@entry.account)
     assert_enqueued_with(job: SyncJob)
   end
