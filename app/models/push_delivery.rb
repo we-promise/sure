@@ -181,10 +181,10 @@ class PushDelivery < ApplicationRecord
       with_lock do
         next unless current_attempt?(attempt)
         status = case result
-                 when :accepted then :accepted
-                 when :failed then :failed
-                 else :rejected
-                 end
+        when :accepted then :accepted
+        when :failed then :failed
+        else :rejected
+        end
         update!(status: status, attempted_at: nil)
       end
     end

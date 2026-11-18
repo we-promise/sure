@@ -13,12 +13,12 @@ class GeneralizeWebPushDeliveryLedgerToPushDeliveries < ActiveRecord::Migration[
     # one; rename_table already renamed the surviving indexes to the new table
     # prefix, so only these two need explicit attention.
     remove_index :push_deliveries, :subscription_id
-    add_index :push_deliveries, [:subscription_type, :subscription_id],
+    add_index :push_deliveries, [ :subscription_type, :subscription_id ],
       name: "index_push_deliveries_on_subscription"
 
     # Dedupe must distinguish channels: the unique index gains the type.
-    remove_index :push_deliveries, [:subscription_id, :insight_id, :insight_version]
-    add_index :push_deliveries, [:subscription_type, :subscription_id, :insight_id, :insight_version],
+    remove_index :push_deliveries, [ :subscription_id, :insight_id, :insight_version ]
+    add_index :push_deliveries, [ :subscription_type, :subscription_id, :insight_id, :insight_version ],
       unique: true, name: "index_push_deliveries_on_channel_insight_version"
 
     restamp_push_delivery_constraints
@@ -27,7 +27,7 @@ class GeneralizeWebPushDeliveryLedgerToPushDeliveries < ActiveRecord::Migration[
   def down
     remove_index :push_deliveries, name: "index_push_deliveries_on_channel_insight_version"
     remove_index :push_deliveries, name: "index_push_deliveries_on_subscription"
-    add_index :push_deliveries, [:subscription_id, :insight_id, :insight_version],
+    add_index :push_deliveries, [ :subscription_id, :insight_id, :insight_version ],
       unique: true, name: "index_push_deliveries_on_insight_version"
     add_index :push_deliveries, :subscription_id, name: "index_push_deliveries_on_subscription_id"
     rename_column :push_deliveries, :subscription_id, :web_push_subscription_id
