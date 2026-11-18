@@ -48,6 +48,17 @@ class ProviderItem::CardComponent < ApplicationComponent
     visible_accounts.size == item.accounts.size
   end
 
+  # The title and description of the prompt to set up accounts: for imported
+  # accounts nobody has linked yet, or for a connection with no accounts at all.
+  # Nil when there is nothing to set up.
+  def setup_prompt
+    if unlinked_count > 0
+      { title: card_t("setup_needed"), description: card_t("setup_description", linked: linked_count, total: total_count) }
+    elsif item.accounts.empty? && total_count == 0
+      { title: card_t("no_accounts_title"), description: card_t("no_accounts_description") }
+    end
+  end
+
   def item_path
     helpers.polymorphic_path(item)
   end
