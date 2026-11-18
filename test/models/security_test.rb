@@ -186,6 +186,31 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal "XETR", found.reload.exchange_operating_mic
   end
 
+  test "find_by_ticker_and_exchange reuses legacy rows stored under raw EODHD codes" do
+    { "F" => "XFRA", "BR" => "XBRU", "LS" => "XLIS", "VI" => "XWBO", "IR" => "XDUB", "BE" => "XBER",
+      "DU" => "XDUS", "HM" => "XHAM", "HA" => "XHAN", "MU" => "XMUN", "STU" => "XSTU" }.each do |raw, mic|
+      legacy = Security.create!(ticker: "ABC#{raw}", exchange_operating_mic: mic)
+      legacy.update_columns(exchange_operating_mic: raw)
+
+      found = Security.find_by_ticker_and_exchange(ticker: "ABC#{raw}", exchange_operating_mic: mic)
+
+      assert_equal legacy.id, found&.id, "#{raw} row should be found for #{mic}"
+      assert_equal mic, found.reload.exchange_operating_mic
+    end
+  end
+
+  test "find_by_ticker_and_exchange upgrades rows stored under Yahoo's Canadian codes" do
+    { "VAN" => "XTSX", "CNQ" => "XCNQ", "NEO" => "NEOE" }.each do |raw, mic|
+      legacy = Security.create!(ticker: "ABC#{raw}", exchange_operating_mic: mic)
+      legacy.update_columns(exchange_operating_mic: raw)
+
+      found = Security.find_by_ticker_and_exchange(ticker: "ABC#{raw}", exchange_operating_mic: mic)
+
+      assert_equal legacy.id, found&.id, "#{raw} row should be found for #{mic}"
+      assert_equal mic, found.reload.exchange_operating_mic
+    end
+  end
+
   test "saving a legacy GER row keeps its MIC when an XETR row already exists" do
     Security.create!(ticker: "SXR8.DE", exchange_operating_mic: "XETR")
     legacy = Security.new(ticker: "SXR8.DE", exchange_operating_mic: "GER")
