@@ -3,6 +3,19 @@ require "test_helper"
 class TransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
+  test "with_any_tag returns transactions carrying any of the tags, each once" do
+    travel = families(:dylan_family).tags.create!(name: "Travel")
+    work = families(:dylan_family).tags.create!(name: "Work")
+    other = families(:dylan_family).tags.create!(name: "Other")
+    hotel = create_transaction(name: "Hotel", tags: [ travel ]).transaction
+    laptop = create_transaction(name: "Laptop", tags: [ work ]).transaction
+    lunch = create_transaction(name: "Airport lunch", tags: [ travel, work ]).transaction
+    create_transaction(name: "Rent", tags: [ other ])
+    create_transaction(name: "Untagged")
+
+    assert_equal [ hotel, laptop, lunch ].map(&:id).sort, Transaction.with_any_tag([ travel.id, work.id ]).pluck(:id).sort
+  end
+
   test "pending? is true when extra.simplefin.pending is truthy" do
     transaction = Transaction.new(extra: { "simplefin" => { "pending" => true } })
 
