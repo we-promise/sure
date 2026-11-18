@@ -397,7 +397,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       end
 
       response '201', 'deposit created' do
-        schema '$ref' => '#/components/schemas/TransactionResponse'
+        schema '$ref' => '#/components/schemas/Transaction'
 
         let(:body) do
           {
@@ -415,7 +415,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       end
 
       response '201', 'withdrawal created' do
-        schema '$ref' => '#/components/schemas/TransactionResponse'
+        schema '$ref' => '#/components/schemas/Transaction'
 
         let(:body) do
           {
@@ -433,7 +433,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       end
 
       response '201', 'trade created' do
-        schema '$ref' => '#/components/schemas/TransactionResponse'
+        schema '$ref' => '#/components/schemas/Trade'
 
         let(:body) do
           {
@@ -558,6 +558,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       response '403', 'forbidden - api key missing read_write scope' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
+        let(:id) { trade.id }
         let(:read_only_api_key) do
           key = ApiKey.generate_secure_key
           ApiKey.create!(
@@ -607,6 +608,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       response '403', 'forbidden - api key missing read_write scope' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
+        let(:id) { trade.id }
         let(:read_only_api_key) do
           key = ApiKey.generate_secure_key
           ApiKey.create!(
