@@ -69,6 +69,10 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     def add_unknown(*, **); end
 
     def settle_opening(*, **); end
+
+    def unpriced?
+      @unknown
+    end
   end
 
   THIRD = BigDecimal("10") / 3
