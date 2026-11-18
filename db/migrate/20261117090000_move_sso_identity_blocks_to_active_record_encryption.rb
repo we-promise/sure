@@ -30,7 +30,9 @@ class MoveSsoIdentityBlocksToActiveRecordEncryption < ActiveRecord::Migration[8.
 
     block_model = ActiveRecordEncryptionConfig.ready? ? encrypted_block_model : MigrationBlock
     begin
-      block_model.where(uid_digest: nil).find_each do |block|
+      # Recomputed for every encrypted row: a digest written next to the uid
+      # is stale once SECRET_KEY_BASE has changed.
+      block_model.where.not(uid: nil).find_each do |block|
         block.update_columns(uid_digest: OpenSSL::HMAC.hexdigest("SHA256", derived_key, block.uid.to_s))
       end
     rescue ActiveRecord::Encryption::Errors::Base => e

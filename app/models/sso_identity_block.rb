@@ -63,8 +63,13 @@ class SsoIdentityBlock < ApplicationRecord
 
     private
 
+      # The digest is still written next to the encrypted uid so that the
+      # previous release (an image rollback, or old processes during a
+      # rolling deploy) keeps seeing new blocks. Drop it in a later release.
       def uid_attributes(uid)
-        encryption_ready? ? { uid: uid.to_s } : { uid_digest: digest(uid) }
+        attributes = { uid_digest: digest(uid) }
+        attributes[:uid] = uid.to_s if encryption_ready?
+        attributes
       end
 
       # Returns the matching block and whether some legacy rows could not be

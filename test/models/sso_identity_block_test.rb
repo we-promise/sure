@@ -11,7 +11,8 @@ class SsoIdentityBlockTest < ActiveSupport::TestCase
     block = SsoIdentityBlock.last
     assert SsoIdentityBlock.blocked?(provider: identity.provider, uid: identity.uid)
     assert_equal identity.uid, block.uid
-    assert_nil block.uid_digest
+    assert_equal SsoIdentityBlock.digest(identity.uid), block.uid_digest,
+      "the previous release only checks the digest"
     assert_not_includes block.read_attribute_before_type_cast(:uid).to_s, identity.uid
   end
 
