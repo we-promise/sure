@@ -254,9 +254,10 @@ module ApplicationHelper
     return "" if text.blank?
 
     # filter_html drops raw HTML present in the input. It is not redundant with
-    # the sanitize below: `div`, `span` and `class` have to stay on that
-    # allow-list for footnotes and code blocks, so without this a chat message
-    # could ship `<div class="fixed inset-0">` and cover the app.
+    # the sanitize below: `div`, `span`, `class` and `style` have to stay on
+    # that allow-list for footnotes, code blocks and table alignment, so
+    # without this a chat message could ship `<div class="fixed inset-0">` and
+    # cover the app.
     renderer = Redcarpet::Render::HTML.new(
       hard_wrap: true,
       filter_html: true,
@@ -278,11 +279,13 @@ module ApplicationHelper
 
     # The second layer, for the markup the renderer itself produces: a markdown
     # link carries whatever scheme the author wrote, so `[x](javascript:...)`
-    # survives filter_html and only the allow-list drops it (CWE-79).
+    # survives filter_html and only the allow-list drops it (CWE-79). Every tag
+    # the extensions above generate has to be on it: `u` (underline), `q`
+    # (quote), `mark`, `del`, `sup`, and `style` for table column alignment.
     sanitize(
       markdown.render(text),
-      tags: %w[p br strong em a img ul ol li h1 h2 h3 h4 h5 h6 pre code blockquote table thead tbody tr th td span div sup sub del mark ins hr dl dt dd],
-      attributes: %w[href target rel class id src alt title]
+      tags: %w[p br strong em u q a img ul ol li h1 h2 h3 h4 h5 h6 pre code blockquote table thead tbody tr th td span div sup sub del mark ins hr dl dt dd],
+      attributes: %w[href target rel class id src alt title style]
     )
   end
 

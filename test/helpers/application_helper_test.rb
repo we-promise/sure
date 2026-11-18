@@ -130,11 +130,12 @@ class ApplicationHelperTest < ActionView::TestCase
   end
 
   # Raw HTML in a chat message must not survive, and stripping tags is not
-  # enough on its own: div, span and class stay allow-listed for footnotes and
-  # code blocks, so a bare allow-list would still let a message cover the app
-  # or lay an invisible link over it.
+  # enough on its own: div, span, class and style stay allow-listed for
+  # footnotes, code blocks and table alignment, so a bare allow-list would
+  # still let a message cover the app or lay an invisible link over it.
   test "markdown drops raw HTML a user typed, layout tags included" do
     assert_no_match(/<div/i, markdown('<div class="fixed inset-0 z-50 bg-black">covered</div>'))
+    assert_no_match(/position/i, markdown('<span style="position:fixed;inset:0">covered</span>'))
     assert_no_match(/fixed inset-0/, markdown('<a href="https://evil.example" class="fixed inset-0">x</a>'))
     assert_no_match(/evil\.example/, markdown('<img src="https://evil.example/track.gif">'))
   end
@@ -167,6 +168,31 @@ class ApplicationHelperTest < ActionView::TestCase
 
   test "markdown preserves inline quote formatting" do
     assert_includes markdown('She said "hello"'), "<q>hello</q>"
+  end
+
+  test "markdown keeps the rest of the markup its extensions generate" do
+    rendered = markdown(<<~MD)
+      ==marked== ~~struck~~ x^2 note[^1]
+
+      | left | right |
+      |:-----|------:|
+      | a    | b     |
+
+      ```ruby
+      x
+      ```
+
+      [^1]: footnote
+    MD
+
+    assert_includes rendered, "<mark>marked</mark>"
+    assert_includes rendered, "<del>struck</del>"
+    assert_includes rendered, "<sup>2</sup>"
+    assert_match(%r{<sup id="fnref1"><a href="#fn1"[^>]*>1</a></sup>}, rendered)
+    assert_match(%r{<div class="footnotes">.*<li id="fn1">}m, rendered)
+    assert_match(%r{<th style="text-align:\s*left;?">left</th>}, rendered)
+    assert_match(%r{<td style="text-align:\s*right;?">b</td>}, rendered)
+    assert_includes rendered, '<code class="ruby">'
   end
 
   test "markdown renders images written as markdown" do
