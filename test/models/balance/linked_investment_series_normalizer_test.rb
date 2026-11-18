@@ -707,6 +707,18 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal activity_date, Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(account)
   end
 
+  test "only the literal Sure import prefix marks a reconciliation as user history" do
+    account = linked_investment_account("Linked With Look-alike Source")
+    activity_date = 10.days.ago.to_date
+
+    account.entries.create!(date: 1.year.ago.to_date, name: "Look-alike balance", amount: 1_000, currency: "USD",
+                            source: "sure-import-session:abc", entryable: Valuation.new(kind: "reconciliation"))
+    account.entries.create!(date: activity_date, name: "Provider Transaction", amount: 100, currency: "USD",
+                            source: "simplefin", entryable: Transaction.new)
+
+    assert_equal activity_date, Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(account)
+  end
+
   private
     def linked_investment_account(name)
       account = families(:empty).accounts.create!(

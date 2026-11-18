@@ -75,10 +75,12 @@ class Balance::LinkedInvestmentSeriesNormalizer
 
       # Reconciliations a person entered: by hand or via the API (no source), or
       # restored from a Sure export (source "sure_import_session:<id>").
+      SURE_IMPORT_SOURCE_PREFIX = "sure_import_session:".freeze
+
       def user_entered_reconciliations(scope)
         scope
           .where(entryable_type: "Valuation", entryable_id: Valuation.reconciliation.select(:id))
-          .where("entries.source IS NULL OR entries.source LIKE ?", "sure_import_session:%")
+          .where("entries.source IS NULL OR entries.source LIKE ?", "#{Entry.sanitize_sql_like(SURE_IMPORT_SOURCE_PREFIX)}%")
       end
 
       def stable_provider_holding_start_dates(account_ids)
