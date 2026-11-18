@@ -32,6 +32,13 @@ sync_hourly:
   queue: "scheduled"
   description: "Syncs provider items that opt-in to hourly syncing"
 
+sync_scheduled_items:
+  cron: "*/15 * * * *" # SyncSchedule::TICK
+  class: "SyncScheduledItemsJob"
+  active_job: true
+  queue: "scheduled"
+  description: "Syncs provider connections whose per-connection schedule has come due"
+
 sync_property_valuations:
   cron: "30 1 1 * *" # monthly on the 1st at 1:30 AM
   class: "SyncPropertyValuationsJob"
@@ -81,6 +88,14 @@ generate_recurring_occurrences:
   queue: "scheduled"
   description: "Materializes the rolling window of recurring-transaction occurrences for every family"
 
+
+weekly_cleanup:
+  cron: "0 7 * * 1" # Mondays at 7:00 AM UTC, after the nightly jobs
+  class: "WeeklyCleanupJob"
+  active_job: true
+  queue: "scheduled"
+  description: "Opens a proactive weekly cleanup chat for each admin of preview-enabled families"
+
 generate_insights:
   cron: "0 6 * * *" # daily at 6:00 AM UTC, after the nightly cleanup jobs
   class: "GenerateInsightsJob"
@@ -101,3 +116,10 @@ refresh_maintained_goal_targets:
   active_job: true
   queue: "scheduled"
   description: "Recomputes the floor of reserves expressed in months of expenses"
+
+backfill_account_logos:
+  cron: "30 3 * * *" # 3:30 AM every day
+  class: "AccountLogoBackfillJob"
+  active_job: true
+  queue: "scheduled"
+  description: "Fetches icons for accounts with an institution domain and no logo"

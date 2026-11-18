@@ -32,7 +32,9 @@ en:
       sophtron_balance_sign_credit: Credit (bank owes you)
       sophtron_balance_sign_debt: Debt (you owe the bank)
       sophtron_balance_sign_description: Use an override only when Sophtron reports
-        an ambiguous sign. Automatic continues negating credit card balances.
+        an ambiguous sign. Automatic continues negating credit card balances and
+        transactions. An override also corrects this card's transaction signs on the
+        next sync.
       sophtron_balance_sign_label: Sophtron balance meaning
       simplefin_balance_sign_auto: Automatic
       simplefin_balance_sign_credit: Credit (bank owes you)
@@ -51,13 +53,24 @@ en:
       overview:
         above_minimum: This statement came to %{balance}, above the %{minimum} minimum.
           Paying only the minimum leaves the balance on the card at this APR.
+        annual_percentage_rate: Annual Percentage Rate
         apr: APR
+        balance_carried_label: Balance carried
+        charges: Charges
+        estimated_interest_label: Estimated interest
+        monthly_rate_label: Monthly rate
+        per_month: "%{amount}/month"
         closes_on: Next statement closes %{date}
         credit_toward_next: Credit toward the next statement
         due_on: "Due %{date}"
         edit_card_details: Edit card details
+        payments_credits: Payments/Credits
+        remaining_due: Remaining due %{amount}
+        scheduled_payment: Scheduled payment %{amount} on %{date}
         since_last_statement: Since Last Statement
         statement_balance: Statement Balance
+        status_paid: Paid
+        status_partial: Partially paid
         multi_currency_unavailable: This statement adds up entries recorded in more
           than one currency, which cannot be totalled here without a rate for every
           one of them. The balances are left blank rather than guessed.

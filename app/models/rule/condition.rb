@@ -95,7 +95,7 @@ class Rule::Condition < ApplicationRecord
   end
 
   def options
-    filter.options
+    rule.option_list([ :condition, condition_type ]) { filter.options }
   end
 
   def operators

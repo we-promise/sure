@@ -63,10 +63,12 @@ class Transfer::Creator
       apply_tags!(transfer) if tag_ids.any?
     end
 
-    if sync
-      source_account.sync_later
-      destination_account.sync_later
-    end
+    transfer.sync_account_later if sync
+
+    # After commit, including a caller's own transaction, so a reconcile
+    # error can never roll back the transfer. Only the inflow can resolve a
+    # transfer pledge.
+    GoalPledge::Reconciler.run_after_commit(transfer.inflow_transaction.entry)
 
     transfer
   rescue ActiveRecord::RecordNotUnique

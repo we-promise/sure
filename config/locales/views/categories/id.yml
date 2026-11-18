@@ -1,0 +1,75 @@
+---
+id:
+  categories:
+    bootstrap:
+      success: Kategori default berhasil dibuat
+    locked: Kategori terkunci. Buka kunci untuk menambahkan kategori baru.
+    toggle_lock:
+      locked: Kategori dikunci
+      unlocked: Kategori dibuka
+    category:
+      delete: Hapus kategori
+      edit: Edit kategori
+    create:
+      success: Kategori berhasil dibuat
+    destroy:
+      success: Kategori berhasil dihapus
+    edit:
+      edit: Edit kategori
+    form:
+      placeholder: Nama kategori
+      name_label: Nama
+      unassigned: "(belum ditetapkan)"
+      parent_category_label: "Kategori induk (opsional)"
+      trigger_label: Pilih warna dan ikon
+      color: Warna
+      icon: Ikon
+      auto_adjust: sesuaikan otomatis.
+      poor_contrast: "Kontras rendah, pilih warna lebih gelap atau"
+    destroy_all:
+      success: Semua kategori berhasil dihapus
+    index:
+      bootstrap: Gunakan default (disarankan)
+      categories: Kategori
+      categories_expenses: Kategori pengeluaran
+      categories_incomes: Kategori pemasukan
+      delete_all: Hapus semua
+      empty: Kategori tidak ditemukan
+      lock_categories: Kunci pembuatan kategori
+      locked_message: Pembuatan kategori dikunci. Impor dan sinkronisasi bank masih dapat menambahkan kategori.
+      merge: Gabungkan kategori
+      new: Kategori baru
+      unlock_categories: Buka kunci pembuatan kategori
+    merge:
+      title: Gabungkan kategori
+      description: Pilih kategori target dan kategori yang akan digabungkan ke dalamnya. Transaksi dan baris anggaran yang cocok akan dipindahkan ke target.
+      target_label: Gabungkan ke (target)
+      select_target: Pilih kategori target...
+      sources_label: Kategori yang akan digabungkan
+      sources_hint: Kategori yang dipilih akan dihapus setelah transaksi dan baris anggarannya dipindahkan ke target. Jangan pilih target sebagai sumber.
+      submit: Gabungkan yang dipilih
+    new:
+      new_category: Kategori baru
+    perform_merge:
+      success:
+        one: Berhasil menggabungkan %{count} kategori
+        other: Berhasil menggabungkan %{count} kategori
+      no_categories_selected: Tidak ada kategori yang dipilih untuk digabungkan
+      target_not_found: Kategori target tidak ditemukan
+      invalid_categories: Kategori yang dipilih tidak valid
+      target_selected_as_source: Pilih kategori yang berbeda untuk target dan sumber.
+    update:
+      success: Kategori berhasil diperbarui
+    virtual:
+      transfer: Transfer
+      payment: Pembayaran
+      trade: Transaksi efek
+  category:
+    dropdowns:
+      show:
+        bootstrap: Buat kategori default
+        empty: Kategori tidak ditemukan
+        match_transfer: Cocokkan transfer/pembayaran
+        one_time: "%{type} satu kali"
+        income: pemasukan
+        expense: pengeluaran

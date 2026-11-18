@@ -73,6 +73,31 @@ module DS
       obj&.respond_to?(:logo_url) && obj.logo_url.present? ? Setting.transform_brand_fetch_url(obj.logo_url) : nil
     end
 
+    # The logo (or lettermark) shown before an item's label in the :logo
+    # variant, both in the menu and on the closed trigger. select_controller.js
+    # copies the [data-select-logo] element onto the trigger when an option is
+    # picked.
+    def logo_markup(item)
+      url = logo_for(item)
+      content = if url
+        helpers.image_tag(url, class: "w-6 h-6 rounded-full border border-secondary", loading: "lazy")
+      else
+        render(DS::FilledIcon.new(variant: :text, text: item[:label], size: "sm", rounded: true))
+      end
+
+      tag.span(content, class: "shrink-0", data: { select_logo: true })
+    end
+
+    # A disabled select shows its value like a disabled native <select>: the
+    # trigger does not open and no field is submitted.
+    def disabled?
+      options[:disabled].present?
+    end
+
+    def trigger_logo?
+      variant == :logo && selected_item.present? && !selected_item[:value].nil?
+    end
+
     # Returns true if the item represents a child/subcategory of another item
     # in the list (i.e. has a parent). Used to visually indent hierarchical
     # items such as categories with subcategories.

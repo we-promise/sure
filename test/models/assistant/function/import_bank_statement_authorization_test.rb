@@ -32,6 +32,7 @@ class Assistant::Function::ImportBankStatementAuthorizationTest < ActiveSupport:
   end
 
   test "rechecks account permission after extraction before creating the import" do
+    Ai.stubs(:availability).returns(Ai::Availability.available(:extract_pdf))
     provider = mock
     provider.expects(:extract_bank_statement).returns(
       stub(success?: true, data: { transactions: [ { date: Date.current.iso8601, amount: 10, name: "Test" } ], period: nil, account_holder: nil })

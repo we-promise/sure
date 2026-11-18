@@ -112,7 +112,6 @@ class Assistant::Function::AccountActionsTest < ActiveSupport::TestCase
 
   test "rejects an invalid subtype without changing the account" do
     account = accounts(:depository)
-    original_subtype = account.subtype
 
     result = Assistant::Function::UpdateAccount.new(@user).call(
       "id" => account.id,
@@ -122,7 +121,7 @@ class Assistant::Function::AccountActionsTest < ActiveSupport::TestCase
     assert_equal false, result[:success]
     assert_equal "invalid_subtype", result[:error]
     Depository::SUBTYPES.each_key { |subtype| assert_includes result[:message], subtype }
-    assert_equal original_subtype, account.reload.subtype
+    assert_nil account.reload.subtype
   end
 
   test "schedules a manual account for deletion" do

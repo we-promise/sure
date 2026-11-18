@@ -196,4 +196,22 @@ class AccountProviderTest < ActiveSupport::TestCase
     # CoinStats provider accounts should be destroyed to avoid orphaned records
     assert_not CoinstatsAccount.exists?(coinstats_account_id)
   end
+
+  test "linking an ignored provider account stops ignoring it" do
+    indexa_account = indexa_capital_accounts(:pension_plan)
+    indexa_account.ignore!
+
+    AccountProvider.create!(account: @account, provider: indexa_account)
+
+    assert_not indexa_account.reload.ignored?
+  end
+
+  test "linking stops ignoring an account that was ignored after it was loaded" do
+    indexa_account = indexa_capital_accounts(:pension_plan)
+    IndexaCapitalAccount.find(indexa_account.id).ignore!
+
+    AccountProvider.create!(account: @account, provider: indexa_account)
+
+    assert_not indexa_account.reload.ignored?
+  end
 end
