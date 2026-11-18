@@ -216,7 +216,7 @@ hu:
           cash_report_options: "Opciók: Nincs"
           cash_report_fields: "Mezők: Pénznem, Záró készpénz"
           cash_transactions: "Készpénztranzakciók:"
-          cash_transactions_options: "Opciók: Osztalékok, Befizetések és kifizetések, Részletek"
+          cash_transactions_options: "Opciók: Osztalékok, Befizetések és kifizetések, Payment In Lieu Of Dividends, Withholding Tax, Broker Interest Paid, Broker Interest Received, Bond Interest Paid, Bond Interest Received, Other Fees, Commission Adjustments, Részletek"
           cash_transactions_fields: "Mezők: Összeg, Conid, Pénznem, FX-árfolyam alaphoz, Jelentési dátum, Tranzakció-azonosító, Típus"
           change_in_position_value_summary: "Pozícióérték változásának összefoglalója: Pénznem, Időszak végi érték"
           net_asset_value: "Nettó eszközérték (NAV) alapban:"

@@ -186,7 +186,10 @@ class Trade::CreateForm
         entryable: Transaction.new
       )
 
-      account.sync_later if entry.save_and_lock_attributes(user_modified: true) { entry.save }
+      if entry.save_and_lock_attributes(user_modified: true) { entry.save }
+        account.sync_later
+        GoalPledge::Reconciler.run_after_commit(entry) if signed_amount.negative?
+      end
 
       entry
     end

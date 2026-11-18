@@ -113,6 +113,21 @@ class IndexaCapitalItemTest < ActiveSupport::TestCase
     assert_equal 2, @item.unlinked_accounts_count
   end
 
+  test "an ignored account no longer needs setup" do
+    indexa_capital_accounts(:pension_plan).ignore!
+
+    assert_equal 1, @item.unlinked_accounts_count
+    assert_equal [ indexa_capital_accounts(:mutual_fund) ], @item.unlinked_indexa_capital_accounts.to_a
+  end
+
+  test "sync_status_summary does not ask to set up an ignored account" do
+    account = Account.create!(family: @family, name: "Fund", balance: 1000, currency: "EUR", accountable: Investment.new)
+    AccountProvider.create!(account: account, provider: indexa_capital_accounts(:mutual_fund))
+    indexa_capital_accounts(:pension_plan).ignore!
+
+    assert_equal I18n.t("indexa_capital_items.sync_status.synced", count: 1), @item.sync_status_summary
+  end
+
   test "sync_status_summary with no accounts" do
     item = IndexaCapitalItem.create!(family: @family, name: "Empty", api_token: "test")
     assert_equal I18n.t("indexa_capital_items.sync_status.no_accounts"), item.sync_status_summary
@@ -141,10 +156,15 @@ class IndexaCapitalItemTest < ActiveSupport::TestCase
     assert_equal I18n.t("indexa_capital_items.sync_status.synced_with_setup", linked: 1, unlinked: 1), @item.sync_status_summary
   end
 
-  test "declares password and api_token as encrypted" do
+  test "declares credentials and raw payloads as encrypted" do
     skip "Encryption not configured" unless IndexaCapitalItem.encryption_ready?
 
-    assert_includes IndexaCapitalItem.encrypted_attributes.map(&:to_s), "password"
-    assert_includes IndexaCapitalItem.encrypted_attributes.map(&:to_s), "api_token"
+    encrypted = Array(IndexaCapitalItem.encrypted_attributes).map(&:to_s)
+    assert_includes encrypted, "password"
+    assert_includes encrypted, "api_token"
+    assert_includes encrypted, "username"
+    assert_includes encrypted, "document"
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_institution_payload"
   end
 end

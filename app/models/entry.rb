@@ -90,6 +90,10 @@ class Entry < ApplicationRecord
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
 
+  # Split rows in the order they were entered. Without an ORDER BY PostgreSQL
+  # returns them in physical order, which shifts as rows are rewritten.
+  scope :in_split_order, -> { order(:created_at, :id) }
+
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
   }
@@ -152,6 +156,10 @@ class Entry < ApplicationRecord
       )
     SQL
   }
+
+  # The entries in `ids` and the children of any of them that was split, which
+  # stand in for their excluded parent wherever money is counted.
+  scope :with_split_children, ->(ids) { where(id: ids).or(where(parent_entry_id: ids)) }
 
   # Future-dated entries haven't happened yet, so "actual" reporting (budgets,
   # income statement, insights) should not count them until their date
