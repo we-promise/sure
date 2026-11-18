@@ -146,7 +146,8 @@ class Provider::Propertiesapi < Provider
         # it can also follow a connection reset after the request was sent. If
         # PropertiesAPI did receive the first request, a resend of the same home
         # is normally answered from its 24-hour cache at no charge; at worst it
-        # is one extra lookup, and every attempt counts against the monthly cap.
+        # is two extra lookups (max: 2 allows two retries), and every attempt counts against
+        # the monthly cap.
         faraday.request(:retry, {
           max: 2,
           interval: 1.0,
