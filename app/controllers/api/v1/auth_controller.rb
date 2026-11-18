@@ -156,7 +156,7 @@ module Api
             return
           end
 
-          render json: token_response.merge(user: mobile_user_payload(user))
+          render json: token_response.merge(user: user.mobile_payload)
         else
           render json: { error: "Invalid email or password" }, status: :unauthorized
         end
@@ -295,7 +295,7 @@ module Api
           return
         end
 
-        render json: token_response.merge(user: mobile_user_payload(user))
+        render json: token_response.merge(user: user.mobile_payload)
       end
 
       def sso_create_account
@@ -401,7 +401,7 @@ module Api
         end
 
         if user.update(ai_enabled: true)
-          render json: { user: mobile_user_payload(user) }
+          render json: { user: user.mobile_payload }
         else
           render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
         end
@@ -628,7 +628,7 @@ module Api
             return
           end
 
-          render json: token_response.merge(user: mobile_user_payload(user))
+          render json: token_response.merge(user: user.mobile_payload)
         end
 
         def ensure_write_scope

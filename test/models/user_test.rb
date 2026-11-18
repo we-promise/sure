@@ -47,7 +47,7 @@ class UserTest < ActiveSupport::TestCase
     assert @user.email_verified?
     assert_nil @user.password_digest
     assert api_key.reload.revoked_at.present?
-    assert_empty @user.sessions
+    assert_empty @user.sessions.reload
   end
 
   test "find_by_email_with_legacy_fallback matches encrypted and legacy plaintext email rows" do

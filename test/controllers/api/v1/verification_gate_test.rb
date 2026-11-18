@@ -19,6 +19,11 @@ class Api::V1::VerificationGateTest < ActionDispatch::IntegrationTest
       family: families(:empty)
     )
     @verified = users(:family_admin)
+
+    # The gate runs after the per-key rate limiter; firing one request per
+    # route through a single key would trip the 100/hr limit and mask the
+    # 403 this suite asserts, so take rate limiting out of the picture.
+    ApiRateLimiter.stubs(:limit).returns(NoopApiRateLimiter.new(nil))
   end
 
   test "every non-allowlisted API endpoint refuses unverified users" do
