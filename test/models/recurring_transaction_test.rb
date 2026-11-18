@@ -2,6 +2,8 @@ require "test_helper"
 
 class RecurringTransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include ActiveJob::TestHelper
+  include FamilyLockTestHelper
 
   def setup
     @family = families(:dylan_family)
@@ -865,8 +867,10 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   # is still covered by it.
   test "covering does not match a transfer leg to a bill by identity" do
     setup_covering_family
-    entry = create_transaction(account: @account, amount: 50, name: "Netflix")
+    # The bill first: declaring it after the charge would link the charge,
+    # and a linked charge is covered by its allocation, not by identity.
     bill = covering_series(name: "Netflix", amount: 50)
+    entry = create_transaction(account: @account, amount: 50, name: "Netflix")
     assert_equal bill, @family.recurring_transactions.covering(entry), "precondition: the ordinary charge is covered"
 
     entry.entryable.update!(kind: "funds_movement")
@@ -1860,7 +1864,134 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "LEGACY CO", bill.reload.matcher_name
   end
 
+
+  # --- A bill declared by hand links what it already paid ---
+
+  test "a bill declared active links past payments it matches exactly" do
+    payments = past_payments("CITY WATER", 3)
+
+    series = declare_bill("CITY WATER")
+
+    assert_equal 3, confirmed_allocations_for(series),
+      "declaring a bill must link the past payments it matches exactly"
+    payments.each do |entry|
+      assert RecurringAllocation.where(entry_id: entry.id, state: "confirmed").exists?
+    end
+  end
+
+  test "a bill marked recurring from a transaction links its earlier payments" do
+    entries = past_payments("CITY WATER", 3)
+    latest = entries.max_by(&:date)
+
+    series = RecurringTransaction.create_from_transaction(latest.transaction)
+
+    linked = RecurringAllocation.where(entry_id: entries.map(&:id), state: "confirmed").count
+    assert_equal 3, linked, "the transaction's own earlier payments must be linked"
+    assert_equal 3, confirmed_allocations_for(series)
+  end
+
+  test "a declared bill does not fabricate past debt" do
+    series = declare_bill("CITY WATER")
+
+    past = series.recurring_occurrences.where("due_on < ?", series.anchor_date)
+    assert_equal 0, past.count, "a past cycle no payment anchors must not be kept"
+    assert_equal 0, confirmed_allocations_for(series)
+  end
+
+  test "a declared bill does not link a charge with another name" do
+    past_payments("CITY GAS", 3)
+
+    series = declare_bill("CITY WATER")
+
+    assert_equal 0, confirmed_allocations_for(series)
+    assert_equal 0, series.recurring_occurrences.where("due_on < ?", series.anchor_date).count
+  end
+
+  test "a detected suggestion gets no history when it is created" do
+    entries = past_payments("CITY WATER", 3)
+    # The backfill's matcher pass is family-wide, so a suggestion must not
+    # start one: it would close other bills' history on a detection run.
+    RecurringTransaction::HistoryBackfiller.any_instance.expects(:run!).never
+
+    @family.recurring_transactions.create!(
+      name: "CITY WATER", account: @account, amount: 80, currency: "USD",
+      expected_day_of_month: entries.first.date.day, last_occurrence_date: entries.max_by(&:date).date,
+      next_expected_date: entries.max_by(&:date).date + 1.month, status: "suggested", manual: false
+    )
+
+    assert_equal 0, RecurringAllocation.where(entry_id: entries.map(&:id)).count,
+      "a suggestion is not a bill yet; its history is linked when it is confirmed"
+  end
+
+  test "restoring a bill from an export does not reconstruct its history" do
+    past_payments("CITY WATER", 3)
+    RecurringTransaction::HistoryBackfiller.any_instance.expects(:run!).never
+
+    series = @family.recurring_transactions.new(
+      name: "CITY WATER", account: @account, amount: 80, currency: "USD",
+      expected_day_of_month: 9, last_occurrence_date: Date.current,
+      next_expected_date: Date.current + 1.month, status: "active", manual: true
+    )
+    series.restoring_from_export = true
+    series.save!
+
+    assert_equal 0, confirmed_allocations_for(series)
+  end
+
+  test "declaring a bill while a pipeline holds the family lock queues the history" do
+    past_payments("CITY WATER", 3)
+    series = nil
+
+    with_family_lock_held_elsewhere(@family.id) do
+      assert_enqueued_jobs 1, only: BackfillRecurringHistoryJob do
+        series = declare_bill("CITY WATER")
+      end
+    end
+
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id ])
+    assert_equal 0, confirmed_allocations_for(series), "nothing may run under another session's lock"
+
+    # The refused pg_try_advisory_lock is a SELECT the test's query cache
+    # would replay; a real job runs on its own execution, with a fresh cache.
+    ActiveRecord::Base.connection.clear_query_cache
+    perform_enqueued_jobs(only: BackfillRecurringHistoryJob)
+
+    assert_equal 3, confirmed_allocations_for(series)
+  end
+
   private
+    # Monthly charges on the 9th, the most recent one a month ago.
+    def past_payments(name, count)
+      base = Date.current.beginning_of_month + 8.days
+      (1..count).map do |months_ago|
+        @account.entries.create!(
+          date: base - months_ago.months, amount: 80, currency: "USD", name: name,
+          entryable: Transaction.new
+        )
+      end
+    end
+
+    # Declared through the add-bill path, first due next month on the 9th.
+    def declare_bill(name)
+      series = RecurringTransaction::DeclaredBill.new(
+        family: @family,
+        user: users(:family_admin),
+        attrs: {
+          name: name, amount: 80, account_id: @account.id,
+          first_due_on: (Date.current.beginning_of_month + 8.days + 1.month).iso8601,
+          frequency_preset: "monthly"
+        }
+      ).build
+      assert RecurringTransaction::DeclaredBill.save(series), series.errors.full_messages.to_sentence
+      series
+    end
+
+    def confirmed_allocations_for(series)
+      RecurringAllocation.joins(:recurring_occurrence)
+                         .where(recurring_occurrences: { recurring_transaction_id: series.id }, state: "confirmed")
+                         .count
+    end
+
 
     def create_transfer_series(name, destination)
       @family.recurring_transactions.create!(

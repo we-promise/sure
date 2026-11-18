@@ -1,5 +1,5 @@
-# Reconstructs one bill's past payments when activating it could not: the
-# activation found a pipeline holding the family lock. Skipping instead left
+# Reconstructs one bill's past payments when activating or declaring it could
+# not: the callback found a pipeline holding the family lock. Skipping instead left
 # the bill with no history for good, because the live matcher only ever looks
 # at open occurrences from the current cycle on.
 class BackfillRecurringHistoryJob < ApplicationJob
