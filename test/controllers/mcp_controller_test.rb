@@ -1,6 +1,8 @@
 require "test_helper"
 
 class McpControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   MCP_PROTOCOL_VERSION = "2025-06-18"
 
   setup do
@@ -604,10 +606,21 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools/call rejects apply_rule for a guest" do
+    # The rule matches a transaction the guest can see, so the preview lists
+    # it and issues a token, and one in an account the guest cannot reach,
+    # whose category would change if the apply ran.
+    shared = accounts(:credit_card)
+    shared.account_shares.create!(user: family_guest, permission: "read_only")
+    hidden = accounts(:depository)
+    assert_not Account.accessible_by(family_guest).exists?(hidden.id)
+    create_transaction(account: shared, name: "Guest reach coffee")
+    hidden_entry = create_transaction(account: hidden, name: "Guest reach coffee", category: categories(:food_and_drink))
+    target = @user.family.categories.create!(name: "Guest rule target")
+
     rule = @user.family.rules.create!(
       resource_type: "transaction",
-      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "zxq coffee" } ],
-      actions_attributes: [ { action_type: "set_transaction_category", value: categories(:food_and_drink).id } ]
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Guest reach coffee" } ],
+      actions_attributes: [ { action_type: "set_transaction_category", value: target.id } ]
     )
     # Preview tokens are bound to the user who previewed, so the guest needs its
     # own: before the fix, preview_rule was open to guests too.
@@ -615,10 +628,13 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert token, "a preview of a saved rule should issue a token"
 
     with_guest_mcp_env do
-      post "/mcp", params: jsonrpc_request("tools/call", { name: "apply_rule", arguments: { rule_id: rule.id, preview_token: token } }, id: 8).to_json,
-           headers: mcp_headers(@token)
+      perform_enqueued_jobs(only: RuleJob) do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "apply_rule", arguments: { rule_id: rule.id, preview_token: token } }, id: 8).to_json,
+             headers: mcp_headers(@token)
+      end
 
       assert_response :ok
+      assert_equal categories(:food_and_drink).id, hidden_entry.transaction.reload.category_id, "apply_rule recategorised a transaction the guest cannot reach"
       assert_not rule.reload.active, "apply_rule activated the rule for a guest"
       assert_equal(-32602, JSON.parse(response.body).dig("error", "code"))
     end
