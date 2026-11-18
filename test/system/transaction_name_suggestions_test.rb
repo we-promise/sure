@@ -118,6 +118,50 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     assert_equal "Saturday market run", entry.name
   end
 
+  test "desktop free-text description survives clicking outside before suggestions return" do
+    page.current_window.resize_to(1280, 800)
+    open_new_transaction
+    hold_name_suggestions
+    find("#entry_name").click
+    find("input[role='combobox']").set("Saturday market run")
+
+    # The suggestions request has started and is held, so its response is
+    # guaranteed not to have arrived before the combobox closes.
+    assert_selector "html[data-name-search-pending]"
+
+    # Click into another field, as on a desktop: the combobox closes without
+    # a selection, and the typed description must stay in the field and save.
+    find("input[name='entry[amount]']").click
+    assert_field "entry_name", with: "Saturday market run"
+    release_name_suggestions
+
+    find("input[name='entry[amount]']").set("12.34")
+    click_button "Add transaction"
+    assert_created_transaction "Saturday market run"
+    entry = accounts(:depository).entries.find_by!(name: "Saturday market run")
+    assert_equal "Saturday market run", entry.name
+  end
+
+  test "desktop free-text description survives pressing Enter with suggestions open" do
+    page.current_window.resize_to(1280, 800)
+    open_new_transaction
+    find("#entry_name").click
+    find("input[role='combobox']").set("Starb")
+
+    # Wait for the suggestions list to open, as in the reporter video:
+    # pressing Enter closes the list without picking an option, and the
+    # typed description must stay in the field and save.
+    assert_selector ".hw-combobox [role='option']", text: "Starbucks"
+    find("input[role='combobox']").send_keys(:enter)
+    assert_field "entry_name", with: "Starb"
+
+    find("input[name='entry[amount]']").set("12.34")
+    click_button "Add transaction"
+    assert_created_transaction "Starb"
+    entry = accounts(:depository).entries.find_by!(name: "Starb")
+    assert_equal "Starb", entry.name
+  end
+
   private
     def open_new_transaction
       # Open the modal from its real parent page so submission returns to the
@@ -212,3 +256,4 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
       assert_selector "[data-category-select-target='hiddenInput'][value='#{category&.id}']", visible: :all
     end
 end
+
