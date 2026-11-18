@@ -1730,4 +1730,12 @@ class UserTest < ActiveSupport::TestCase
     assert @user.update_reports_preferences("reports_biggest_expenses_limit" => "1000")
     assert_equal 5, @user.reload.preferences["reports_biggest_expenses_limit"]
   end
+
+  test "changing hidden sidebar accounts only touches the accounts named" do
+    @user.update_sidebar_hidden_account_ids([ accounts(:depository).id ])
+
+    @user.change_sidebar_hidden_accounts(hide: [ accounts(:credit_card).id ], show: [])
+
+    assert_equal [ accounts(:depository).id, accounts(:credit_card).id ].sort, @user.reload.sidebar_hidden_account_ids.sort
+  end
 end

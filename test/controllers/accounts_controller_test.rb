@@ -1901,6 +1901,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "saving the sidebar visibility dialog keeps hidden accounts it doesn't list" do
+    disabled = accounts(:credit_card)
+    @user.update_sidebar_hidden_account_ids([ disabled.id ])
+    disabled.disable!
+
+    patch update_sidebar_visibility_accounts_url, params: { shown_account_ids: [ "" ] }
+
+    assert_includes @user.reload.sidebar_hidden_account_ids, disabled.id
+  end
+
   test "toggle_sidebar_hidden hides and shows an account in the user's sidebar" do
     patch toggle_sidebar_hidden_account_url(@account)
     assert_redirected_to accounts_path

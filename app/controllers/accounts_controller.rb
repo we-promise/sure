@@ -288,19 +288,18 @@ class AccountsController < ApplicationController
   end
 
   def update_sidebar_visibility
-    all_ids = Current.user.accessible_accounts.visible.pluck(:id).map(&:to_s)
-    shown_ids = Array(params[:shown_account_ids]).map(&:to_s)
-    Current.user.update_sidebar_hidden_account_ids(all_ids - shown_ids)
+    # Only the accounts the dialog listed change; hidden accounts it doesn't
+    # list (disabled ones) stay hidden.
+    listed_ids = Current.user.accessible_accounts.visible.pluck(:id).map(&:to_s)
+    shown_ids = Array(params[:shown_account_ids]).map(&:to_s) & listed_ids
+    Current.user.change_sidebar_hidden_accounts(hide: listed_ids - shown_ids, show: shown_ids)
     redirect_back_or_to root_path, status: :see_other
   end
 
   # Hides or shows one account in the current user's sidebar, from the
   # account menu on the accounts page.
   def toggle_sidebar_hidden
-    hidden_ids = Current.user.sidebar_hidden_account_ids
-    account_id = @account.id.to_s
-    hidden_ids = hidden_ids.include?(account_id) ? hidden_ids - [ account_id ] : hidden_ids + [ account_id ]
-    Current.user.update_sidebar_hidden_account_ids(hidden_ids)
+    Current.user.toggle_sidebar_hidden_account(@account.id)
     redirect_to accounts_path
   end
 

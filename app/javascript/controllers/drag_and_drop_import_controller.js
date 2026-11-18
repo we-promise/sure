@@ -34,7 +34,10 @@ export default class extends Controller {
 
   // Dragging an element on the page (e.g. reordering sidebar accounts) must
   // not open the import overlay; only drags from outside the page do.
-  internalDragStart() {
+  internalDragStart(event) {
+    // A drag the page cancelled (e.g. a touch-held sortable row) never gets a
+    // dragend, so it must not leave the flag set and block later file drops.
+    if (event.defaultPrevented) return
     this.internalDrag = true
   }
 

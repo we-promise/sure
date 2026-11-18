@@ -707,6 +707,34 @@ class User < ApplicationRecord
     end
   end
 
+  # Hides and shows accounts in one locked read-modify-write, so two requests
+  # changing different accounts can't drop each other's change. Accounts in
+  # neither list keep their current state (e.g. a disabled account the
+  # visibility dialog doesn't list).
+  def change_sidebar_hidden_accounts(hide: [], show: [])
+    hide = Array(hide).map(&:to_s).reject(&:blank?).uniq
+    show = Array(show).map(&:to_s).reject(&:blank?)
+    hide = accessible_accounts.where(id: hide).pluck(:id).map(&:to_s) if hide.any?
+
+    with_locked_preferences do |prefs|
+      current = Array(prefs["sidebar_hidden_account_ids"]).map(&:to_s)
+      updated = (current - show) | hide
+      raise ArgumentError, "too many hidden accounts" if updated.size > SIDEBAR_HIDDEN_ACCOUNTS_LIMIT
+
+      prefs["sidebar_hidden_account_ids"] = updated
+    end
+  rescue ArgumentError
+    false
+  end
+
+  def toggle_sidebar_hidden_account(account_id)
+    account_id = account_id.to_s
+    with_locked_preferences do |prefs|
+      current = Array(prefs["sidebar_hidden_account_ids"]).map(&:to_s)
+      prefs["sidebar_hidden_account_ids"] = current.include?(account_id) ? current - [ account_id ] : current + [ account_id ]
+    end
+  end
+
   # The sidebar only drags its visible rows, so a saved order arrives without
   # the hidden ones. Hidden accounts keep their saved slots and the visible ids
   # fill the remaining slots in their new order.
