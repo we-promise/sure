@@ -381,7 +381,6 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
 
     assert_nil linked_account.reload.iban
   end
-  end
 
   test "ignore! keeps the account's identity but drops what was fetched for it" do
     @account.update!(current_balance: 1234.56, raw_payload: { "uid" => "uid_1", "iban" => "FR7612345" },
