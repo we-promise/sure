@@ -69,11 +69,13 @@ class Provider::PropertiesapiTest < ActiveSupport::TestCase
   end
 
   test "maps home types and leaves unknown ones unset" do
-    stub_lookup(body: property_response_body("homeType" => "CONDO"))
-    assert_equal "condominium", fetch.data.property_type
+    with_env_overrides(PROPERTIESAPI_MAX_REQUESTS_PER_MONTH: "100") do
+      stub_lookup(body: property_response_body("homeType" => "CONDO"))
+      assert_equal "condominium", fetch.data.property_type
 
-    stub_lookup(body: property_response_body("homeType" => "MANUFACTURED"))
-    assert_nil fetch.data.property_type
+      stub_lookup(body: property_response_body("homeType" => "MANUFACTURED"))
+      assert_nil fetch.data.property_type
+    end
   end
 
   test "returns an error instead of the listing price when Zillow shows no Zestimate" do
@@ -95,36 +97,40 @@ class Provider::PropertiesapiTest < ActiveSupport::TestCase
   end
 
   test "maps not found, ambiguous address and unauthorized responses" do
-    {
-      404 => "providers.propertiesapi.errors.not_found",
-      409 => "providers.propertiesapi.errors.ambiguous_address",
-      401 => "providers.propertiesapi.errors.unauthorized"
-    }.each do |status, key|
-      stub_lookup(status: status, body: { "error" => { "code" => "x", "message" => "x" } }.to_json)
+    with_env_overrides(PROPERTIESAPI_MAX_REQUESTS_PER_MONTH: "100") do
+      {
+        404 => "providers.propertiesapi.errors.not_found",
+        409 => "providers.propertiesapi.errors.ambiguous_address",
+        401 => "providers.propertiesapi.errors.unauthorized"
+      }.each do |status, key|
+        stub_lookup(status: status, body: { "error" => { "code" => "x", "message" => "x" } }.to_json)
 
-      response = fetch
+        response = fetch
 
-      assert_not response.success?, "expected #{status} to fail"
-      assert_instance_of Provider::Propertiesapi::Error, response.error
-      assert_equal I18n.t(key), response.error.message
+        assert_not response.success?, "expected #{status} to fail"
+        assert_instance_of Provider::Propertiesapi::Error, response.error
+        assert_equal I18n.t(key), response.error.message
+      end
     end
   end
 
   test "maps each documented 402 error code to its own message" do
-    {
-      "credits_exhausted" => [ "providers.propertiesapi.errors.no_credits", { "upgrade_url" => "https://propertiesapi.com/pricing" } ],
-      "spend_limit_reached" => [ "providers.propertiesapi.errors.spend_limit_reached", { "dashboard_url" => "https://propertiesapi.com/dashboard" } ],
-      "payment_disputed" => [ "providers.propertiesapi.errors.payment_disputed", { "dashboard_url" => "https://propertiesapi.com/dashboard" } ],
-      "something_new" => [ "providers.propertiesapi.errors.payment_required", {} ]
-    }.each do |code, (key, details)|
-      body = { "error" => { "code" => code, "message" => "x", "details" => details }, "meta" => {} }.to_json
-      stub_lookup(status: 402, body: body)
+    with_env_overrides(PROPERTIESAPI_MAX_REQUESTS_PER_MONTH: "100") do
+      {
+        "credits_exhausted" => [ "providers.propertiesapi.errors.no_credits", { "upgrade_url" => "https://propertiesapi.com/pricing" } ],
+        "spend_limit_reached" => [ "providers.propertiesapi.errors.spend_limit_reached", { "dashboard_url" => "https://propertiesapi.com/dashboard" } ],
+        "payment_disputed" => [ "providers.propertiesapi.errors.payment_disputed", { "dashboard_url" => "https://propertiesapi.com/dashboard" } ],
+        "something_new" => [ "providers.propertiesapi.errors.payment_required", {} ]
+      }.each do |code, (key, details)|
+        body = { "error" => { "code" => code, "message" => "x", "details" => details }, "meta" => {} }.to_json
+        stub_lookup(status: 402, body: body)
 
-      response = fetch
+        response = fetch
 
-      assert_not response.success?, "expected #{code} to fail"
-      assert_instance_of Provider::Propertiesapi::Error, response.error
-      assert_equal I18n.t(key), response.error.message
+        assert_not response.success?, "expected #{code} to fail"
+        assert_instance_of Provider::Propertiesapi::Error, response.error
+        assert_equal I18n.t(key), response.error.message
+      end
     end
   end
 
@@ -158,18 +164,20 @@ class Provider::PropertiesapiTest < ActiveSupport::TestCase
   end
 
   test "retries connection failures, which never reached the API" do
-    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
-    stub_request(:get, PROPERTY_URL)
-      .with(query: { "address" => ADDRESS })
-      .to_raise(Faraday::ConnectionFailed.new("connection refused")).then
-      .to_return(status: 200, body: property_response_body)
+    with_env_overrides(PROPERTIESAPI_MAX_REQUESTS_PER_MONTH: "100") do
+      Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+      stub_request(:get, PROPERTY_URL)
+        .with(query: { "address" => ADDRESS })
+        .to_raise(Faraday::ConnectionFailed.new("connection refused")).then
+        .to_return(status: 200, body: property_response_body)
 
-    response = fetch
+      response = fetch
 
-    assert response.success?
-    assert_equal 512_000, response.data.valuation
-    assert_requested :get, PROPERTY_URL, query: { "address" => ADDRESS }, times: 2
-    assert_equal 2, ProviderRequestCount.count_for("propertiesapi")
+      assert response.success?
+      assert_equal 512_000, response.data.valuation
+      assert_requested :get, PROPERTY_URL, query: { "address" => ADDRESS }, times: 2
+      assert_equal 2, ProviderRequestCount.count_for("propertiesapi")
+    end
   end
 
   test "does not send a retry that would exceed the monthly limit" do
