@@ -464,6 +464,20 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "monthly breakdown month names link to that month's report with the selected tags" do
+    tag = @family.tags.create!(name: "Breakdown tag")
+    end_month = Date.current.beginning_of_month
+    start_month = end_month - 2.months
+
+    get reports_path(period_type: :custom, start_date: start_month, end_date: end_month.end_of_month, filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    [ start_month, end_month ].each do |month|
+      href = reports_path(period_type: :monthly, start_date: month, end_date: month.end_of_month, filter_tag_ids: [ tag.id ])
+      assert_select "[data-section-key=trends_insights] a[href=?][data-turbo-frame=_top]", href, text: month.strftime("%b %Y")
+    end
+  end
+
   test "index handles invalid date parameters gracefully" do
     get reports_path(
       period_type: :custom,
@@ -1114,10 +1128,15 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     )
     assert_response :ok
 
-    prev_start = 1.month.ago.to_date.beginning_of_month - 1.month
-    next_start = 1.month.ago.to_date.beginning_of_month + 1.month
-    assert_select "a[href*=?]", "start_date=#{prev_start}", count: 0
-    assert_select "a[href*=?]", "start_date=#{next_start}", count: 0
+    assert_select "a[aria-label=?]", I18n.t("reports.index.previous_period"), count: 0
+    assert_select "a[aria-label=?]", I18n.t("reports.index.next_period"), count: 0
+  end
+
+  test "monthly period shows previous period navigation" do
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "a[aria-label=?]", I18n.t("reports.index.previous_period"), count: 1
   end
 
   test "ytd period navigation shows previous year link" do
