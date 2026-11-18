@@ -6,10 +6,20 @@ class Holding::Materializer
   # alongside the full @holdings collection. Reduces peak RSS during sync.
   PERSIST_BATCH_SIZE = 2_000
 
-  def initialize(account, strategy:, security_ids: nil)
+  # calculated_holdings: holdings a caller has already calculated for this
+  # strategy, persisted in place of running the calculator again.
+  # calculated_by: the calculator that produced them. Its lots are persisted
+  # for the securities those holdings cover, and no others.
+  def initialize(account, strategy:, security_ids: nil, calculated_holdings: nil, calculated_by: nil)
+    if calculated_holdings && calculated_by.nil?
+      raise ArgumentError, "calculated_holdings needs the calculator that produced them (calculated_by:)"
+    end
+
     @account = account
     @strategy = strategy
     @security_ids = security_ids
+    @calculated_holdings = calculated_holdings
+    @calculated_by = calculated_by
   end
 
   def materialize_holdings
@@ -47,8 +57,8 @@ class Holding::Materializer
     attr_reader :account, :strategy, :security_ids
 
     def calculate_holdings
-      @calculator = calculator
-      @holdings = @calculator.calculate
+      @calculator = @calculated_by || calculator
+      @holdings = @calculated_holdings || @calculator.calculate
     end
 
     # Lot quantities and costs come from the calculator's lot books; a derived
@@ -56,7 +66,7 @@ class Holding::Materializer
     # trades know of, except on a position no trade explains, where it takes the
     # provider's figure.
     def persist_lots
-      rows = @calculator.lots_by_security.flat_map do |security_id, lots|
+      rows = calculated_lots.flat_map do |security_id, lots|
         explained = lots.any?(&:source_id)
         lots.map do |lot|
           unit_cost, currency = (lot.source_id || explained) ? [ lot.unit_cost, account.currency ] : provider_unit_cost(security_id)
@@ -65,8 +75,24 @@ class Holding::Materializer
       end
       rows += @calculator.clamped_security_ids.map { |security_id| lot_row(security_id, nil, qty: 0, clamped: true) }
 
-      # Only the reverse walk knows the units held before the trades.
-      HoldingLot.store!(account, rows, security_ids: security_ids, openings: strategy == :reverse)
+      # Only the reverse walk knows the units held before the trades. Holdings
+      # a caller built from trades alone are fully explained by them, so any
+      # opening lot an earlier reverse walk left for them goes.
+      HoldingLot.store!(account, rows, security_ids: security_ids, openings: strategy == :reverse || !@calculated_holdings.nil?)
+    end
+
+    # A caller that persists only part of a calculation (the trade fallback
+    # leaves out securities whose trade history is incomplete) persists the
+    # lots of that part only.
+    def calculated_lots
+      @calculated_lots ||= begin
+        lots = @calculator.lots_by_security
+        if @calculated_holdings
+          kept = @calculated_holdings.map(&:security_id).to_set
+          lots = lots.select { |security_id, _| kept.include?(security_id) }
+        end
+        lots
+      end
     end
 
     def lot_row(security_id, source_entry_id, qty:, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
@@ -337,7 +363,7 @@ class Holding::Materializer
     # snapshot and no market prices), and they read the same provider costs
     # and splits as the holdings do.
     def costed_security_ids
-      @costed_security_ids ||= (@holdings.map(&:security_id) | @calculator.lots_by_security.keys)
+      @costed_security_ids ||= (@holdings.map(&:security_id) | calculated_lots.keys)
     end
 
     def splits_by_security
