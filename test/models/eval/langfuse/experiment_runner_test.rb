@@ -89,6 +89,19 @@ class Eval::Langfuse::ExperimentRunnerTest < ActiveSupport::TestCase
     assert_match(/not supported/, error.message)
   end
 
+  test "a jev run on another endpoint without its own key is refused, so the installed key never reaches it" do
+    Ai::LegacyEnvConfig::Jev.stubs(:api_key).returns("installed-key")
+    Ai::LegacyEnvConfig::Jev.stubs(:effective_endpoint).returns(Ai::LegacyEnvConfig::Jev::DEFAULT_ENDPOINT)
+
+    error = assert_raises(Eval::ProviderFactory::Error) do
+      runner(provider: "jev", model: "jev-latest", provider_config: { "endpoint" => "https://other.example.test/v1/systemone" }).send(:build_provider)
+    end
+    assert_match(/Jev API key not configured/, error.message)
+
+    built = runner(provider: "jev", model: "jev-latest").send(:build_provider)
+    assert_equal "installed-key", built.ai_config(:categorize).routes_for(:categorize).sole.endpoint.api_key
+  end
+
   test "rejects an unknown provider" do
     error = assert_raises(Eval::ProviderFactory::Error) do
       runner(provider: "nonesuch", model: "x").send(:build_provider)
