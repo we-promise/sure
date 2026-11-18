@@ -13,10 +13,10 @@
 # Only certain pairs: the refund is uncategorized and not locked; the purchase
 # is in the same account and currency, for exactly the refunded amount, on or
 # up to WINDOW before the refund, and is the same card transaction (same
-# "CARD-<id>") or, for an activity refund, has the same merchant name (one
-# may contain the other, as "Vinted" / "Mgp*Vinted Vilnius"); exactly one
-# purchase matches, and it has a category. A partial refund, or one that
-# could be any of several purchases, is left as it is.
+# "CARD-<id>") or, when none is and for an activity refund only, has the same
+# merchant name (one may contain the other, as "Vinted" / "Mgp*Vinted
+# Vilnius"); exactly one purchase matches, and it has a category. A partial
+# refund, or one that could be any of several purchases, is left as it is.
 class WiseItem::RefundCategorizer
   WINDOW = 120.days
   # A shorter name inside a longer one is not taken as the same merchant.
@@ -53,16 +53,25 @@ class WiseItem::RefundCategorizer
                  .includes(:entry)
     end
 
-    # The single purchase the refund can be of, when it has a category. Every
-    # matching purchase counts towards that, categorized or not.
+    # The single purchase the refund can be of, when it has a category: the
+    # purchase of its card transaction, else (an activity refund only, as a
+    # statement row's name is Wise's description of the movement, not the
+    # merchant) the purchase from its merchant. Every match counts towards
+    # that, categorized or not.
     def purchase_for(refund)
       entry = refund.entry
-      matching = Transaction.joins(:entry)
-                            .where(entries: { account_id: entry.account_id, currency: entry.currency, amount: entry.amount.abs,
-                                              date: (entry.date - WINDOW)..entry.date })
-                            .where.not(id: refund.id)
-                            .includes(:entry)
-                            .select { |purchase| same_purchase?(purchase, refund) }
+      candidates = Transaction.joins(:entry)
+                              .where(entries: { account_id: entry.account_id, currency: entry.currency, amount: entry.amount.abs,
+                                                date: (entry.date - WINDOW)..entry.date })
+                              .where.not(id: refund.id)
+                              .includes(:entry)
+                              .to_a
+
+      reference = card_reference(refund)
+      matching = reference ? candidates.select { |purchase| card_reference(purchase) == reference } : []
+      if matching.empty? && !statement_row?(refund)
+        matching = candidates.select { |purchase| same_merchant?(purchase.entry.name, entry.name) }
+      end
       return unless matching.one?
 
       purchase = matching.first
@@ -70,23 +79,18 @@ class WiseItem::RefundCategorizer
     end
 
     # Under a row lock, on the refund as it is now: a category a person set
-    # or locked meanwhile stays.
+    # or locked meanwhile stays, and a refund whose amount or date changed
+    # meanwhile must still match the same purchase. A refund pruned, or a
+    # category deleted, meanwhile is skipped.
     def categorize(refund, purchase)
       refund.with_lock do
-        refund.category_id.nil? &&
+        refund.category_id.nil? && purchase_for(refund)&.id == purchase.id &&
           refund.enrich_attribute(:category_id, purchase.category_id, source: "wise",
                                   metadata: { refund_of_entry_id: purchase.entry.id })
       end
-    end
-
-    # A statement row's name is Wise's description of the movement, not the
-    # merchant, so a statement refund only matches its card transaction.
-    def same_purchase?(purchase, refund)
-      reference = card_reference(refund)
-      return true if reference && card_reference(purchase) == reference
-      return false if statement_row?(refund)
-
-      same_merchant?(purchase.entry.name, refund.entry.name)
+    rescue ActiveRecord::RecordNotFound, ActiveRecord::InvalidForeignKey => e
+      Rails.logger.warn("#{self.class.name} - Skipped refund transaction #{refund.id}: #{e.class}")
+      false
     end
 
     # "CARD-<id>": a statement row's reference, or an activity's card
@@ -118,8 +122,10 @@ class WiseItem::RefundCategorizer
       shorter.length >= MIN_CONTAINED_LENGTH && longer.include?(shorter)
     end
 
-    # Letters and digits of any script, accents dropped ("Café" is "cafe").
+    # Letters, marks and digits of any script; accents on Latin letters
+    # dropped ("Café" is "cafe"), other scripts' marks (vowel signs) kept.
     def normalize(name)
-      name.to_s.unicode_normalize(:nfkd).gsub(/\p{M}/, "").downcase.gsub(/[^\p{L}\p{N} ]/, " ").squeeze(" ").strip
+      name.to_s.unicode_normalize(:nfkd).gsub(/(?<=\p{Latin})\p{M}+/, "").unicode_normalize(:nfkc).downcase
+          .gsub(/[^\p{L}\p{M}\p{N} ]/, " ").squeeze(" ").strip
     end
 end
