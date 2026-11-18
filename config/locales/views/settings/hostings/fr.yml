@@ -122,6 +122,11 @@ fr:
         save_family: Enregistrer la famille de démo
       disconnect_external_assistant:
         external_assistant_disconnected: Assistant externe déconnecté
+      dvf_settings:
+        description: Estimez les appartements et maisons en France à partir des ventes récentes comparables de DVF, le registre public des ventes immobilières. Aucune clé API n'est nécessaire ; activer cette option autorise Sure à interroger les services de données ouvertes (data.gouv.fr et le géocodeur de la Géoplateforme). Les estimations sont actualisées chaque mois, DVF étant republié deux fois par an.
+        env_configured_message: Configuré via la variable d'environnement DVF_ENABLED.
+        title: DVF (France)
+        usage: "%{used} sur %{limit} recherches mensuelles utilisées"
       ensure_admin:
         not_authorized: Vous n'êtes pas autorisé à effectuer cette action
       ensure_super_admin_for_onboarding:

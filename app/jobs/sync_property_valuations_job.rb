@@ -46,8 +46,8 @@ class SyncPropertyValuationsJob < ApplicationJob
       # the wrong-city guard in the Realie lookup, letting a refresh accept
       # another property's valuation; ID-based providers (Chimnie) need the
       # property's UPRN. Each provider covers a single country.
-      unless provider_class.lookup_ready?(property.address, property.avm_external_id)
-        capture_failure(property, account, "Skipping refresh: property address or identifier is incomplete, or the property is outside #{provider_class.supported_country}", level: "warn")
+      unless provider_class.lookup_ready?(property.address, property.avm_external_id, area: property.area_in_sqft, property_type: property.subtype)
+        capture_failure(property, account, "Skipping refresh: property address, identifier, area or type is incomplete, or the property is outside #{provider_class.supported_country}", level: "warn")
         next
       end
 
@@ -84,10 +84,12 @@ class SyncPropertyValuationsJob < ApplicationJob
       lookup_params[:external_id] = property.avm_external_id if provider_class.requires_external_id?
       # Only a user-set area overrides the provider's record; an area copied
       # from the provider at creation is left out so later corrections to the
-      # provider's record still take effect.
-      if provider_class.accepts_square_footage? && property.user_set_area? && property.area_in_sqft.present?
+      # provider's record still take effect. Providers that require the area
+      # have no record of their own, so they always get it.
+      if provider_class.accepts_square_footage? && (provider_class.requires_area? || property.user_set_area?) && property.area_in_sqft.present?
         lookup_params[:square_footage] = property.area_in_sqft
       end
+      lookup_params[:property_type] = property.subtype if provider_class.accepts_property_type?
 
       response = provider.fetch_property_valuation(**lookup_params)
 

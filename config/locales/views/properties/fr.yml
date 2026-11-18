@@ -16,6 +16,7 @@ fr:
       title: Saisir la propriété manuellement
     avm_providers:
       chimnie: Chimnie
+      dvf: DVF
       realie: Realie
       rentcast: RentCast
     balances:
@@ -57,12 +58,14 @@ fr:
       not_linkable: Ce bien ne peut pas être lié à ce fournisseur. Vérifiez que son adresse est complète et située dans un pays pris en charge, et que la devise du compte correspond à celle du fournisseur.
     new:
       avm_attribution_chimnie: Données d'estimation fournies par Chimnie. Contient des données OS © Crown copyright and database right, des données Royal Mail © Royal Mail copyright and database right et des données HM Land Registry © Crown copyright and database right, sous licence Open Government Licence v3.0.
+      avm_attribution_dvf: "Estimation fondée sur les ventes comparables de DVF (Demandes de valeurs foncières, DGFiP), republiées par Etalab sous Licence Ouverte 2.0. DVF n'enregistre ni l'étage, ni l'état, ni la vue : l'estimation peut différer d'une expertise professionnelle."
       avm_confidence:
         high: Élevée
         low: Faible
         medium: Moyenne
       avm_county_label: Comté (facultatif)
       avm_description: Saisissez un nom pour le bien et son adresse. %{provider} recherchera pour vous les caractéristiques du bien et sa valeur de marché estimée.
+      avm_fr_only: "%{provider} estime les appartements et maisons en France à partir des ventes récentes comparables. Il ne couvre pas l'Alsace-Moselle ni Mayotte."
       avm_option: Ajouter via %{provider}
       avm_postcode_label: Code postal
       avm_preview_back: Retour
@@ -104,6 +107,7 @@ fr:
       year_built_placeholder: '1990'
     refresh_valuation:
       not_configured: "%{provider} n'est pas configuré. Ajoutez sa clé API dans Paramètres → Auto-hébergement pour actualiser cette estimation."
+      not_enabled: "%{provider} n'est pas activé. Activez-le dans Paramètres → Auto-hébergement (ou définissez DVF_ENABLED=true) pour actualiser cette estimation."
       not_linked: Ce bien n'est lié à aucun fournisseur d'estimation.
       queued: L'actualisation de l'estimation a démarré. La nouvelle valeur apparaîtra sous peu.
     subtypes:
@@ -116,12 +120,21 @@ fr:
       commercial:
         long: Propriété commerciale
         short: Commercial
+      condominium:
+        long: Copropriété
+        short: Copropriété
       plot:
         long: Terrain / Parcelle
         short: Terrain
       rented:
         long: Propriété louée
         short: Loué
+      single_family_home:
+        long: Maison individuelle
+        short: Maison
+      townhouse:
+        long: Maison de ville
+        short: Maison de ville
     tabs:
       overview:
         edit_account_details: Modifier les détails du compte
