@@ -85,30 +85,18 @@
           institutions_count: institutions_count
         ) %>
 
-        <% if unlinked_count > 0 %>
-          <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm"><%= card_t("setup_needed") %></p>
-            <p class="text-secondary text-sm"><%= card_t("setup_description", linked: linked_count, total: total_count) %></p>
-            <%= render DS::Link.new(
-              text: card_t("setup_action"),
-              icon: "settings",
-              variant: "primary",
-              href: setup_accounts_path,
-              frame: :modal
-            ) %>
-          </div>
-        <% elsif item.accounts.empty? && total_count == 0 %>
-          <div class="p-4 flex flex-col gap-3 items-center justify-center">
-            <p class="text-primary font-medium text-sm"><%= card_t("no_accounts_title") %></p>
-            <p class="text-secondary text-sm"><%= card_t("no_accounts_description") %></p>
-            <%= render DS::Link.new(
-              text: card_t("setup_action"),
-              icon: "settings",
-              variant: "primary",
-              href: setup_accounts_path,
-              frame: :modal
-            ) %>
-          </div>
+        <% if (prompt = setup_prompt) %>
+          <%= render DS::EmptyState.new(icon: "settings", **prompt) do |empty_state| %>
+            <% empty_state.with_action do %>
+              <%= render DS::Link.new(
+                text: card_t("setup_action"),
+                icon: "settings",
+                variant: "primary",
+                href: setup_accounts_path,
+                frame: :modal
+              ) %>
+            <% end %>
+          <% end %>
         <% end %>
       </div>
     <% end %>
