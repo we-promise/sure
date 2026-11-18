@@ -105,7 +105,8 @@ Re-enter any key the task lists under `not_decryptable`. Then start the
 app (web and worker) and check a login and a provider sync.
 
 Re-encrypting does not revoke anything. If the old key was publicly known
-and someone else may have had a copy of the database or a backup, they can
+or leaked in any other way, and someone else may have had a copy of the
+database or a backup, they can
 decrypt what was stored with it. In that case also issue new provider API
 keys and tokens at each provider (the keys on the self-hosting settings
 page and those of connected accounts), even if the tasks above decrypted
