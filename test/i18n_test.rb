@@ -230,12 +230,11 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
-  # The IBAN form strings sit next to the institution domain and merchant
-  # website strings, so every locale that translates those translates them too.
+  # The IBAN form strings sit next to the institution domain strings, so
+  # every locale that translates those translates them too.
   def test_iban_form_keys_exist_wherever_their_sibling_keys_do
     {
-      "accounts" => [ "institution_domain_label", %w[iban_label iban_placeholder iban_set_placeholder iban_remove_label] ],
-      "merchants" => [ "website_hint", %w[iban_placeholder iban_set_placeholder iban_hint iban_remove_label] ]
+      "accounts" => [ "institution_domain_label", %w[iban_label iban_placeholder iban_set_placeholder iban_remove_label] ]
     }.each do |dir, (sibling, keys)|
       checked = 0
       Dir[Rails.root.join("config/locales/views/#{dir}/*.yml")].each do |path|

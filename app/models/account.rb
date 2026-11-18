@@ -1,12 +1,11 @@
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable, IbanNormalizable, Logoable
 
-  # Deterministic so the family_id+iban+currency unique index and the
-  # uniqueness validation below still compare equal values once the column
-  # is encrypted (the same plaintext always produces the same ciphertext).
-  # The accepted tradeoff: equal IBANs are recognisable at rest.
+  # Not deterministic: an IBAN is never looked up by value in SQL. Code that
+  # matches IBANs loads the family's few accounts and compares in Ruby, so
+  # equal IBANs need not share a ciphertext.
   if encryption_ready?
-    encrypts :iban, deterministic: true
+    encrypts :iban
   end
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
@@ -16,8 +15,7 @@ class Account < ApplicationRecord
   # IbanNormalizable strips everything but letters/digits and upcases, so
   # IBANs from Enable Banking ("DE893704...") and manually-entered ones in any
   # formatting style ("DE89 3704...", "DE89.3704...", "DE89-3704...")
-  # normalize to the same value — required for both the uniqueness index and
-  # the deterministic-encryption equality checks to match.
+  # normalize to the same value and compare equal.
 
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
@@ -25,9 +23,6 @@ class Account < ApplicationRecord
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
-  # Scoped per currency: Revolut and Wise expose one IBAN for several
-  # currency sub-accounts, and each of them is its own Sure account.
-  validates :iban, uniqueness: { scope: [ :family_id, :currency ] }, allow_nil: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family

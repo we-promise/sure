@@ -175,46 +175,18 @@ class EnableBankingAccount < ApplicationRecord
     target.with_lock do
       next if target.iban.present? || target.locked?(:iban)
 
-      # Another account in the family already holds this IBAN in the same
-      # currency (e.g. a joint account linked through two consents). Every
-      # sync would fail the same uniqueness check again, so log it once and
-      # leave the account alone.
-      if iban_taken_in_family?(target)
-        capture_propagation_failure_once(target, "Another account in this family already has this IBAN in #{target.currency}")
-        next
-      end
-
       # A locked iban (the user set or cleared it via the account form --
       # lock_saved_attributes! locks either way) is skipped above. A plain
       # update, not enrich_attribute: that logs the value to
-      # data_enrichments, which is not encrypted. `update` rather than
-      # `update!`, so a Rails-level uniqueness validation failure just fails
-      # to write instead of raising. #with_lock only serializes writers to
-      # THIS row though: two different blank-iban accounts in the family can
-      # both pass that validation concurrently and then lose at the raw DB
-      # unique index on commit, which surfaces as RecordNotUnique. Isolated
-      # in its own savepoint: a failed statement would otherwise abort the
-      # whole surrounding transaction.
-      begin
-        saved = ActiveRecord::Base.transaction(requires_new: true) { target.update(iban: iban) }
-
-        # A failed save (e.g. another account in the family already has this
-        # IBAN) is worth surfacing in the support debug log rather than only
-        # a Rails log line. Once per message: every sync fails the same way.
-        capture_propagation_failure_once(target, target.errors.full_messages.join(", ")) unless saved
-      rescue ActiveRecord::RecordNotUnique
-        # Deliberately not e.message: PostgreSQL's unique-violation DETAIL
-        # clause embeds the actual conflicting IBAN value in plaintext,
-        # which would defeat the point of encrypting the column at rest by
-        # persisting it into an unrelated log table instead.
-        capture_propagation_failure_once(target, "Concurrent iban conflict on the family_id+iban+currency unique index")
-      end
+      # data_enrichments, which is not encrypted.
+      target.update(iban: iban)
     end
   end
 
   # On relink the IBAN follows the provider to the chosen account. The
   # previously linked account (deleted only after the relink commits, if at
-  # all) would otherwise keep holding it and block the chosen account.
+  # all) would otherwise keep holding it, and two accounts with one IBAN
+  # leave counterparty matching ambiguous.
   def release_iban_from!(previous_account)
     return if iban.blank? || previous_account.iban != iban
 
@@ -227,31 +199,6 @@ class EnableBankingAccount < ApplicationRecord
 
     def ignored_snapshot_reset
       { current_balance: nil, raw_payload: nil, raw_transactions_payload: nil }
-    end
-
-    def iban_taken_in_family?(target)
-      target.family.accounts.where.not(id: target.id).exists?(iban: iban, currency: target.currency)
-    end
-
-    def capture_propagation_failure_once(target, message)
-      full_message = "Could not propagate IBAN to account: #{message}"
-      return if DebugLogEntry.exists?(account_id: target.id, source: self.class.name, message: full_message)
-
-      capture_propagation_failure(target, message)
-    end
-
-    def capture_propagation_failure(target, message)
-      DebugLogEntry.capture(
-        category: "provider_sync_warning",
-        level: "warn",
-        message: "Could not propagate IBAN to account: #{message}",
-        source: self.class.name,
-        provider_key: "enable_banking",
-        family: enable_banking_item&.family,
-        account: target,
-        account_provider: account_provider,
-        metadata: { enable_banking_account_id: id, account_id: target.id }
-      )
     end
 
     def build_account_name(snapshot)

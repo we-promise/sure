@@ -344,24 +344,6 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil previous_account.reload.iban
   end
 
-  test "link_accounts ties an iban propagation failure to the new account provider" do
-    @item.update!(session_id: "test_session")
-    enable_banking_account = @item.enable_banking_accounts.create!(
-      uid: "acct_uid_6",
-      name: "Checking",
-      currency: "EUR",
-      iban: "DE89370400440532013000" # pipelock:ignore IBAN
-    )
-    @family.accounts.create!(name: "Other Checking", balance: 0, currency: "EUR", accountable: Depository.new, iban: "DE89370400440532013000") # pipelock:ignore IBAN
-
-    post link_accounts_enable_banking_items_url,
-         params: { account_uids: [ "acct_uid_6" ], accountable_type: "Depository" }
-
-    debug_entry = DebugLogEntry.where(source: "EnableBankingAccount").last
-    assert_not_nil debug_entry
-    assert_equal enable_banking_account.reload.account_provider.id, debug_entry.account_provider_id
-  end
-
   test "authorize sends a random state instead of the item id" do
     stub_authorization_start
 

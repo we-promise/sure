@@ -107,24 +107,12 @@ class AccountTest < ActiveSupport::TestCase
     assert_nil @account.iban
   end
 
-  test "rejects a duplicate iban within the same family" do
+  # One IBAN can cover two products of the same bank, so it is not unique.
+  test "allows the same iban on two accounts of one family" do
     @account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
-    other = @family.accounts.create!(name: "Other account", balance: 0, currency: "USD", accountable: Depository.new)
+    second = @account.family.accounts.build(name: "Sub-account", balance: 0, currency: @account.currency, accountable: Depository.new, iban: "AT611904300234573201") # pipelock:ignore IBAN
 
-    other.iban = "AT611904300234573201" # pipelock:ignore IBAN
-
-    assert_not other.valid?
-    assert_includes other.errors[:iban], "has already been taken"
-  end
-
-  test "allows the same iban on accounts with different currencies in one family" do
-    # Revolut and Wise expose one IBAN for several currency sub-accounts.
-    @account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
-    other = @family.accounts.build(name: "EUR sub-account", balance: 0, currency: "EUR", accountable: Depository.new, iban: "AT611904300234573201") # pipelock:ignore IBAN
-
-    assert_equal "USD", @account.currency
-    assert other.valid?
-    assert_nothing_raised { other.save! }
+    assert second.valid?
   end
 
   test "allows the same iban across different families" do

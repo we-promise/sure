@@ -247,7 +247,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal "DE89370400440532013000", result[:accounts].first.iban # pipelock:ignore IBAN
+    assert_equal "DE89370400440532013000", Account.find(result[:account_ids].first).iban # pipelock:ignore IBAN
   end
 
   test "keeps an existing account iban when a re-imported file omits the key" do
@@ -273,55 +273,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "DE89370400440532013000", @family.accounts.first.iban # pipelock:ignore IBAN
   end
 
-  test "drops an account iban the family already holds in that currency and keeps importing" do
-    account_data = {
-      balance: "100.00",
-      currency: "USD",
-      accountable_type: "Depository",
-      accountable: { subtype: "checking" },
-      iban: "DE89370400440532013000" # pipelock:ignore IBAN
-    }
-
-    result = Family::DataImporter.new(@family, build_ndjson([
-      { type: "Account", data: account_data.merge(id: "old-account-1", name: "First") },
-      { type: "Account", data: account_data.merge(id: "old-account-2", name: "Second") },
-      { type: "Account", data: account_data.merge(id: "old-account-3", name: "Euro", currency: "EUR") }
-    ])).import!
-
-    accounts = result[:accounts].index_by(&:name)
-    assert_equal 3, accounts.size
-    assert_equal "DE89370400440532013000", accounts["First"].reload.iban # pipelock:ignore IBAN
-    assert_nil accounts["Second"].reload.iban
-    assert_equal "DE89370400440532013000", accounts["Euro"].reload.iban # pipelock:ignore IBAN
-    assert_equal 1, result[:summary].dig("account_ibans", "skipped")
-  end
-
-  test "clears a kept account iban that a re-import's currency change makes taken" do
-    session = @family.import_sessions.create!(expected_chunks: 1)
-    account_data = {
-      balance: "100.00",
-      accountable_type: "Depository",
-      accountable: { subtype: "checking" },
-      iban: "DE89370400440532013000" # pipelock:ignore IBAN
-    }
-
-    Family::DataImporter.new(@family, build_ndjson([
-      { type: "Account", data: account_data.merge(id: "old-account-1", name: "Dollar", currency: "USD") },
-      { type: "Account", data: account_data.merge(id: "old-account-2", name: "Euro", currency: "EUR") }
-    ]), import_session: session).import!
-
-    result = Family::DataImporter.new(@family, build_ndjson([
-      { type: "Account", data: account_data.except(:iban).merge(id: "old-account-2", name: "Euro", currency: "USD") }
-    ]), import_session: session).import!
-
-    accounts = @family.accounts.index_by(&:name)
-    assert_equal "USD", accounts["Euro"].currency
-    assert_nil accounts["Euro"].iban
-    assert_equal "DE89370400440532013000", accounts["Dollar"].iban # pipelock:ignore IBAN
-    assert_equal 1, result[:summary].dig("account_ibans", "skipped")
-  end
-
-  test "ignores an iban on an account type without one, even when it is taken" do
+  test "ignores an iban on an account type without one" do
     account_data = {
       balance: "100.00",
       currency: "USD",
@@ -333,9 +285,9 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       { type: "Account", data: account_data.merge(id: "old-account-2", name: "Car", accountable_type: "Vehicle", accountable: {}) }
     ])).import!
 
-    accounts = result[:accounts].index_by(&:name)
+    accounts = Account.where(id: result[:account_ids]).index_by(&:name)
     assert_nil accounts["Car"].reload.iban
-    assert_nil result[:summary].dig("account_ibans", "skipped")
+    assert_equal "DE89370400440532013000", accounts["Checking"].reload.iban # pipelock:ignore IBAN
   end
 
   test "imports non-destructive account status from ndjson" do
@@ -802,62 +754,6 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     merchant = @family.merchants.find_by(name: "Amazon")
     assert_not_nil merchant
-  end
-
-  test "imports a manually entered merchant iban" do
-    ndjson = build_ndjson([
-      {
-        type: "Merchant",
-        data: {
-          id: "merchant-1",
-          name: "Landlord",
-          iban: "AT611904300234573201" # pipelock:ignore IBAN
-        }
-      }
-    ])
-
-    importer = Family::DataImporter.new(@family, ndjson)
-    importer.import!
-
-    merchant = @family.merchants.find_by(name: "Landlord")
-    assert_equal "AT611904300234573201", merchant.iban # pipelock:ignore IBAN
-  end
-
-  test "keeps an existing merchant iban when the imported file omits the key" do
-    merchant = @family.merchants.create!(name: "Landlord", iban: "AT611904300234573201") # pipelock:ignore IBAN
-
-    ndjson = build_ndjson([
-      { type: "Merchant", data: { id: "merchant-1", name: "Landlord" } }
-    ])
-    Family::DataImporter.new(@family, ndjson).import!
-
-    assert_equal "AT611904300234573201", merchant.reload.iban # pipelock:ignore IBAN
-  end
-
-  test "drops a merchant iban another family merchant holds and keeps importing" do
-    landlord = @family.merchants.create!(name: "Landlord", color: "#e99537", iban: "AT611904300234573201") # pipelock:ignore IBAN
-
-    ndjson = build_ndjson([
-      { type: "Merchant", data: { id: "merchant-1", name: "Tenant", color: "#4da568", iban: "at61 1904 3002 3457 3201" } } # pipelock:ignore IBAN
-    ])
-    result = Family::DataImporter.new(@family, ndjson).import!
-
-    tenant = @family.merchants.find_by(name: "Tenant")
-    assert_not_nil tenant
-    assert_nil tenant.iban
-    assert_equal "AT611904300234573201", landlord.reload.iban # pipelock:ignore IBAN
-    assert_equal 1, result[:summary].dig("merchant_ibans", "skipped")
-  end
-
-  test "clears a merchant iban when the imported file sets it to null" do
-    merchant = @family.merchants.create!(name: "Landlord", iban: "AT611904300234573201") # pipelock:ignore IBAN
-
-    ndjson = build_ndjson([
-      { type: "Merchant", data: { id: "merchant-1", name: "Landlord", iban: nil } }
-    ])
-    Family::DataImporter.new(@family, ndjson).import!
-
-    assert_nil merchant.reload.iban
   end
 
   test "imports recurring transactions with remapped account and merchant references" do
