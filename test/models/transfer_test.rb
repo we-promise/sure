@@ -371,6 +371,16 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:investment))
   end
 
+  test "kind_for_account keeps a rollover out of a matured deposit neutral" do
+    matured = create_term_deposit(available_on: 1.month.ago.to_date)
+    new_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
+
+    assert_equal "funds_movement",
+      Transfer.kind_for_account(accounts(:investment), from_account: matured, date: Date.current)
+    assert_equal "funds_movement",
+      Transfer.kind_for_account(new_deposit, from_account: matured, date: Date.current)
+  end
+
   test "kind_for_account does not count borrowed money as saving" do
     term_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
 

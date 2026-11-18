@@ -2,9 +2,10 @@
 
 # UpdateTransfer — changes how a confirmed transfer counts, as the transfer
 # drawer does. Today that is one switch: whether a transfer from a cash account
-# into an investment or crypto account is an investment contribution (counted
-# as spending in budgets and reports, the default) or a plain transfer (e.g.
-# a brokerage or crypto account used only to convert currency). See
+# into an investment, crypto, or locked or long-term bank account is an
+# investment contribution (money set aside in budgets and reports, the
+# default) or a plain transfer (e.g. a brokerage or crypto account used only
+# to convert currency). See
 # Transfer#update_investment_contribution!, which locks the choice against
 # provider syncs.
 class Assistant::Function::UpdateTransfer < Assistant::Function
@@ -21,12 +22,13 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
         counts in budgets and reports.
 
         investment_contribution: a transfer from a cash account into an
-        investment or crypto account counts as spending by default (an
-        investment contribution). Pass false to make it a plain transfer that
-        budgets and reports ignore, e.g. when the brokerage or crypto account is
-        only used to convert money into another currency; pass true to count it
-        as spending again. The choice survives
-        account syncs. Other transfers have no such switch.
+        investment or crypto account, or into a locked or long-term bank
+        account (term deposit, building savings, HSA), counts as money set
+        aside by default (an investment contribution). Pass false to make it a
+        plain transfer that budgets and reports ignore, e.g. when the account
+        only converts money into another currency; pass true to count it
+        again. The choice survives account syncs. Other transfers have no such
+        switch.
 
         Pass the id of either transaction in the transfer (get_transactions
         marks them is_transfer), or the transfer_id. Both accounts must be
@@ -52,7 +54,7 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
         },
         investment_contribution: {
           type: "boolean",
-          description: "true counts a transfer into an investment or crypto account as spending; false makes it a plain transfer."
+          description: "true counts a transfer into an investment, crypto, or locked or long-term bank account as money set aside; false makes it a plain transfer."
         },
         dry_run: {
           type: "boolean",
@@ -70,7 +72,7 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
     return transfer if transfer.is_a?(Hash)
 
     unless transfer.investment_contribution_switchable?
-      return error("not_switchable", "Only a confirmed transfer from a cash account into an investment or crypto account can be switched between an investment contribution and a plain transfer.")
+      return error("not_switchable", "Only a confirmed transfer from a cash account into an investment, crypto, or locked or long-term bank account can be switched between an investment contribution and a plain transfer.")
     end
 
     if ActiveModel::Type::Boolean.new.cast(params["dry_run"])

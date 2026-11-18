@@ -47,9 +47,25 @@ class Transfer::SavingsKindReconcilerTest < ActiveSupport::TestCase
 
   test "leaves transfers into instant-access accounts alone" do
     savings = @family.accounts.create!(name: "Savings", balance: 0, currency: "USD", accountable: Depository.new(subtype: "savings"))
-    create_transfer(from: accounts(:depository), to: savings, outflow_kind: "funds_movement")
+    transfer = create_transfer(from: accounts(:depository), to: savings, outflow_kind: "funds_movement")
 
-    assert_equal 0, Transfer::SavingsKindReconciler.new.run.checked
+    assert_empty Transfer::SavingsKindReconciler.new.run.changed
+    assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+  end
+
+  test "takes the saving kind and category back once the account is available" do
+    category = ensure_investment_contributions_category(@family)
+    transfer = create_transfer(from: accounts(:depository), to: @term_deposit, outflow_kind: "funds_movement")
+    Transfer::SavingsKindReconciler.new.run
+    assert_equal "investment_contribution", transfer.outflow_transaction.reload.kind
+    assert_equal category, transfer.outflow_transaction.category
+
+    @term_deposit.update!(liquidity_choice: "immediate")
+    result = Transfer::SavingsKindReconciler.new.run
+
+    assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+    assert_nil transfer.outflow_transaction.category
+    assert_equal({ "investment_contribution->funds_movement" => 1 }, result.changed)
   end
 
   test "keeps kinds the user chose and locked kinds" do

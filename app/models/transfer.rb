@@ -27,9 +27,10 @@ class Transfer < ApplicationRecord
     # it (the inflow leg is always funds_movement, see kind_for_leg).
     # `from_account` and `date` are the outflow leg's account and booking
     # date. An investment/crypto destination only counts as a contribution
-    # when the source isn't itself a savings account (investment, crypto or
-    # bound on that date); otherwise it's a plain funds movement. They also
-    # decide whether money moved into a bound bank account counts as saving.
+    # when the source isn't itself a savings account (investment, crypto or a
+    # locked or long-term bank account, matured or not); otherwise it's a
+    # plain funds movement. They also decide whether money moved into a bound
+    # bank account counts as saving.
     def kind_for_account(account, from_account: nil, date: nil)
       # Forms hand the booking date over as a string.
       date = date.presence&.to_date
@@ -37,7 +38,7 @@ class Transfer < ApplicationRecord
         "loan_payment"
       elsif account.credit_card?
         "cc_payment"
-      elsif (account.investment? || account.crypto?) && (from_account.nil? || !savings_account?(from_account, date))
+      elsif (account.investment? || account.crypto?) && (from_account.nil? || !savings_account?(from_account))
         "investment_contribution"
       elsif account.liability?
         "cc_payment"
@@ -60,11 +61,17 @@ class Transfer < ApplicationRecord
       return false unless bound_savings_account?(destination, date)
       return true if source.nil?
 
-      source.available_on?(date || source.liquidity_today) && !savings_account?(source, date)
+      source.available_on?(date || source.liquidity_today) && !savings_account?(source)
     end
 
-    def savings_account?(account, date = nil)
-      account.investment? || account.crypto? || bound_savings_account?(account, date)
+    # Whether money leaving this account was already saved: an investment or
+    # crypto account, or a locked or long-term bank account. A term deposit
+    # past its release date still counts, so rolling it over into a new
+    # deposit or a brokerage account is not new saving. The destination side
+    # (bound_savings_account?) asks about the booking date instead.
+    def savings_account?(account)
+      account.investment? || account.crypto? ||
+        (account.depository? && Account::Liquidity::BOUND_LEVELS.include?(account.liquidity))
     end
 
     private
@@ -142,10 +149,11 @@ class Transfer < ApplicationRecord
     Transfer.kind_for_account(to_account, from_account: from_account, date: outflow_transaction&.entry&.date)
   end
 
-  # A transfer into an investment or crypto account counts as an investment
-  # contribution (a budgeted expense) by default. A user can make it a plain
-  # transfer instead, e.g. when a brokerage or crypto account only converts
-  # money into another currency.
+  # A transfer that Transfer.kind_for_account makes an investment contribution
+  # (into an investment or crypto account, or saving into a locked or
+  # long-term bank account) counts as money set aside by default. A user can
+  # make it a plain transfer instead, e.g. when a brokerage or crypto account
+  # only converts money into another currency.
   def investment_contribution_switchable?
     confirmed? && contribution_by_default?
   end

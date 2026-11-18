@@ -1,6 +1,7 @@
-# Brings the stored kinds of transfers into locked or long-term bank accounts
-# in line with Transfer#kind_for_leg after a transfer from available money
-# into such an account started counting as saving (investment_contribution).
+# Brings the stored kinds of transfers into bank accounts in line with
+# Transfer#kind_for_leg after a transfer from available money into a locked or
+# long-term account started counting as saving (investment_contribution), and
+# again after an account's availability changes.
 # Kinds are stored per transaction, so transfers booked before that rule keep
 # funds_movement until this runs; the same movement would otherwise be
 # classified differently before and after the upgrade.
@@ -16,7 +17,9 @@ class Transfer::SavingsKindReconciler < Transfer::InvestmentKindReconciler
       scope
         .joins(inflow_transaction: { entry: :account })
         .where(status: "confirmed")
-        .where(accounts: { accountable_type: "Depository", liquidity: Account::Liquidity::BOUND_LEVELS })
+        # Every bank account, not only bound ones: after an account is marked
+        # available, its earlier transfers have to lose the saving kind too.
+        .where(accounts: { accountable_type: "Depository" })
         .includes(inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account })
     end
 
