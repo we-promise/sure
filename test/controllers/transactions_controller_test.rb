@@ -597,7 +597,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
           entryable_attributes: {
             id: @entry.entryable_id,
             tag_ids: [ tags(:one).id, tags(:two).id ],
-            category_id: Category.first.id,
+            category_id: categories(:income).id,
             merchant_id: Merchant.first.id
           }
         }
@@ -611,7 +611,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "USD", @entry.currency
     assert_equal -100, @entry.amount
     assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.entryable.tag_ids.sort
-    assert_equal Category.first.id, @entry.entryable.category_id
+    assert_equal categories(:income).id, @entry.entryable.category_id
     assert_equal Merchant.first.id, @entry.entryable.merchant_id
     assert_equal "test notes", @entry.notes
     assert_equal false, @entry.excluded
