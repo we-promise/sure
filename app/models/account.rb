@@ -294,13 +294,21 @@ class Account < ApplicationRecord
   end
 
   class << self
-    # Each normalized IBAN held by exactly one of the family's accounts, mapped
-    # to that account's id. An IBAN on two accounts identifies neither.
-    def own_account_ids_by_iban(family, excluding: nil)
-      family.accounts.where.not(iban: nil).where.not(id: excluding).pluck(:id, :iban)
-            .group_by { |_id, iban| iban }
-            .filter_map { |iban, pairs| [ iban, pairs.first.first ] if pairs.one? }
-            .to_h
+    # The family's accounts by normalized IBAN, as [id, currency] pairs.
+    def own_accounts_by_iban(family, excluding: nil)
+      family.accounts.where.not(iban: nil).where.not(id: excluding).pluck(:id, :iban, :currency)
+            .group_by { |_id, iban, _currency| iban }
+            .transform_values { |rows| rows.map { |id, _iban, currency| [ id, currency ] } }
+    end
+
+    # The one account a counterparty IBAN identifies. One IBAN can back
+    # several currency sub-accounts (Revolut, Wise), so the one in the
+    # transaction's currency wins; any other tie identifies none.
+    def own_account_id_for(candidates, currency:)
+      return candidates.first.first if candidates.to_a.one?
+
+      same_currency = candidates.to_a.select { |_id, account_currency| account_currency == currency }
+      same_currency.first.first if same_currency.one?
     end
 
     def normalize_institution_domain(value)

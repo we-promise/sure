@@ -23,7 +23,7 @@ class Account::CounterpartyRematcher
 
   private
     def rematch_account!(account, rows)
-      own_account_ids = Account.own_account_ids_by_iban(family, excluding: account)
+      own_accounts = Account.own_accounts_by_iban(family, excluding: account)
       external_ids = EnableBankingEntry::Processor.external_ids_for(rows, account: account)
 
       targets = Hash.new { |hash, key| hash[key] = [] }
@@ -31,7 +31,8 @@ class Account::CounterpartyRematcher
         iban = EnableBankingEntry::Processor.counterparty_account_info(row)[:iban]
         next if iban.blank? || external_ids[index].blank?
 
-        targets[[ iban.last(4), own_account_ids[iban] ]] << external_ids[index]
+        currency = row.with_indifferent_access.dig(:transaction_amount, :currency) || account.currency
+        targets[[ iban.last(4), Account.own_account_id_for(own_accounts[iban], currency: currency) ]] << external_ids[index]
       end
 
       targets.each do |(iban_last4, own_account_id), ids|
