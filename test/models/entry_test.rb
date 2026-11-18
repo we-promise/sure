@@ -128,6 +128,96 @@ class EntryTest < ActiveSupport::TestCase
     assert_equal "unreconciled", entry.reload.reconciled_status
   end
 
+  test "set_reconciled_status_for_account! updates every transaction on the account" do
+    account = Account.create!(
+      family: families(:dylan_family),
+      name: "Bulk reconcile",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    cleared = create_transaction(account: account, name: "Cleared")
+    reconciled = create_transaction(account: account, name: "Reconciled")
+    excluded = create_transaction(account: account, name: "Excluded")
+    cleared.update!(reconciled_status: "cleared")
+    reconciled.update!(reconciled_status: "reconciled")
+    excluded.update!(excluded: true)
+
+    updated_count = Entry.set_reconciled_status_for_account!(account, "reconciled")
+
+    assert_equal 3, updated_count
+    assert_equal %w[reconciled reconciled reconciled], [ cleared, reconciled, excluded ].map { |entry| entry.reload.reconciled_status }
+    assert_not cleared.reload.user_modified?, "reconciling is not an edit, so the entry stays open to auto-categorization"
+  end
+
+  test "set_reconciled_status_for_account! accepts every reconciled status" do
+    account = accounts(:depository)
+    entry = create_transaction(account: account, name: "Cycles")
+
+    Entry.reconciled_statuses.each_key do |status|
+      Entry.set_reconciled_status_for_account!(account, status)
+      assert_equal status, entry.reload.reconciled_status
+    end
+  end
+
+  test "set_reconciled_status_for_account! returns zero when the account has no transactions" do
+    account = Account.create!(
+      family: families(:dylan_family),
+      name: "Valuations only",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    create_valuation(account: account, date: 2.days.ago.to_date)
+
+    assert_equal 0, Entry.set_reconciled_status_for_account!(account, "reconciled")
+  end
+
+  test "set_reconciled_status_for_account! leaves other accounts, valuations and statement data alone" do
+    account = accounts(:depository)
+    entry = create_transaction(account: account, name: "Manual entry")
+    valuation = create_valuation(account: account, date: 2.days.ago.to_date)
+    other_entry = create_transaction(account: accounts(:credit_card), name: "Other account")
+    reconciled_at = 3.days.ago.change(usec: 0)
+    entry.update_columns(reconciled_at: reconciled_at, reconciled_by_statement_id: nil)
+
+    Entry.set_reconciled_status_for_account!(account, "cleared")
+
+    assert_equal "cleared", entry.reload.reconciled_status
+    assert_equal reconciled_at, entry.reconciled_at
+    assert_equal "unreconciled", valuation.reload.reconciled_status
+    assert_equal "unreconciled", other_entry.reload.reconciled_status
+  end
+
+  test "set_reconciled_status_for_account! updates split children but not the split parent" do
+    account = accounts(:depository)
+    parent = create_transaction(account: account, name: "Split parent", amount: 100)
+    parent.split!([ { name: "Part 1", amount: 60 }, { name: "Part 2", amount: 40 } ])
+    parent.reload
+
+    Entry.set_reconciled_status_for_account!(account, "cleared")
+
+    assert_equal "unreconciled", parent.reconciled_status, "the activity list hides split parents, so their status stays untouched"
+    assert_equal %w[cleared cleared], parent.child_entries.map { |child| child.reload.reconciled_status }
+  end
+
+  test "set_reconciled_status_for_account! changes the row cache key" do
+    account = accounts(:depository)
+    entry = create_transaction(account: account, name: "Cached row")
+    entry.update_columns(updated_at: 1.day.ago)
+    old_key = entry.reload.cache_key_with_version
+
+    Entry.set_reconciled_status_for_account!(account, "reconciled")
+
+    assert_not_equal old_key, entry.reload.cache_key_with_version
+  end
+
+  test "set_reconciled_status_for_account! rejects an unknown status" do
+    assert_raises(ArgumentError) do
+      Entry.set_reconciled_status_for_account!(accounts(:depository), "bogus")
+    end
+  end
+
   test "bulk_update! applies reconciled_status only to manual entries in a mixed selection and reports the accurate count" do
     manual_entry = create_transaction(account: accounts(:depository))
     synced_entry = create_transaction(account: accounts(:connected))

@@ -729,6 +729,22 @@ class Entry < ApplicationRecord
       unscoped.where(id: ids).reorder(:id).lock("FOR UPDATE OF entries").to_a
     end
 
+    # Sets the manual reconciliation status for every transaction on the
+    # account. Split parents stay out: the activity list hides them and shows
+    # their children instead.
+    #
+    # Reconciling is not an edit, so this leaves user_modified and the saved
+    # attributes alone. It does bump updated_at because the cached transaction
+    # row key includes it.
+    def set_reconciled_status_for_account!(account, status)
+      status = status.to_s
+      raise ArgumentError, "Unknown reconciled status: #{status}" unless reconciled_statuses.key?(status)
+
+      where(account: account, entryable_type: "Transaction")
+        .excluding_split_parents
+        .update_all(reconciled_status: status, updated_at: Time.current)
+    end
+
     # Bulk update entries with the given parameters.
     #
     # No authorization happens here: callers must scope the relation to entries

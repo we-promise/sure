@@ -3,7 +3,7 @@ class AccountsController < ApplicationController
   include FilterClearable
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
-  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports reconcile_all destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
@@ -278,6 +278,29 @@ class AccountsController < ApplicationController
   def toggle_exclude_from_reports
     @account.update!(exclude_from_reports: !@account.exclude_from_reports?)
     redirect_to accounts_path
+  end
+
+  # Sets one reconciliation status for every transaction on a manually entered
+  # account. Statement reconciliation columns stay as they are.
+  def reconcile_all
+    return head :not_found unless Current.family.manual_reconciliation?
+
+    status = params[:reconciled_status].to_s
+
+    unless Entry.reconciled_statuses.key?(status)
+      redirect_to account_path(@account), alert: t("accounts.reconcile_all.invalid_status")
+      return
+    end
+
+    unless @account.manual?
+      redirect_to account_path(@account), alert: t("accounts.reconcile_all.not_manual_account")
+      return
+    end
+
+    updated = Entry.set_reconciled_status_for_account!(@account, status)
+
+    redirect_back_or_to account_path(@account),
+      notice: t("accounts.reconcile_all.success", count: updated, status: t("transactions.reconcile.statuses.#{status}"))
   end
 
   def set_default
