@@ -381,4 +381,49 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
 
     assert_nil linked_account.reload.iban
   end
+  end
+
+  test "ignore! keeps the account's identity but drops what was fetched for it" do
+    @account.update!(current_balance: 1234.56, raw_payload: { "uid" => "uid_1", "iban" => "FR7612345" },
+      raw_transactions_payload: [ { "transaction_id" => "t1" } ])
+
+    assert @account.ignore!
+
+    @account.reload
+    assert @account.ignored?
+    assert_equal "hash_abc123", @account.uid
+    assert_equal "Mon compte", @account.name
+    assert_nil @account.current_balance
+    assert_nil @account.raw_payload
+    assert_nil @account.raw_transactions_payload
+  end
+
+  test "ignore! refuses an account that is linked to a Sure account" do
+    @account.update!(current_balance: 10)
+    AccountProvider.create!(account: accounts(:depository), provider: @account)
+
+    assert_not @account.ignore!
+    assert_not @account.reload.ignored?
+    assert_equal 10, @account.current_balance
+  end
+
+  test "needs_setup leaves out linked and ignored accounts" do
+    linked = EnableBankingAccount.create!(enable_banking_item: @item, name: "Linked", uid: "hash_linked", currency: "EUR")
+    AccountProvider.create!(account: accounts(:depository), provider: linked)
+
+    assert_equal [ @account ], @item.enable_banking_accounts.needs_setup.to_a
+
+    @account.ignore!
+    assert_empty @item.enable_banking_accounts.needs_setup
+  end
+
+  test "snapshot writers skip an account ignored after it was loaded" do
+    stale = EnableBankingAccount.find(@account.id)
+    @account.ignore!
+
+    assert_no_changes -> { @account.reload.attributes } do
+      assert_not stale.upsert_enable_banking_snapshot!(uid: "uid_1", identification_hash: "hash_abc123", name: "Renamed", currency: "EUR")
+      assert_not stale.upsert_enable_banking_transactions_snapshot!([ { "transaction_id" => "t1" } ])
+    end
+  end
 end

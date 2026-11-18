@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -656,6 +656,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
     t.uuid "enable_banking_item_id", null: false
     t.string "iban"
     t.jsonb "identification_hashes", default: []
+    t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
     t.string "name"
     t.string "product"
@@ -1456,6 +1457,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
     t.datetime "created_at", null: false
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4
+    t.boolean "ignored", default: false, null: false
     t.string "indexa_capital_account_id"
     t.string "indexa_capital_authorization_id"
     t.uuid "indexa_capital_item_id", null: false
@@ -2904,6 +2906,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
     t.string "kind", default: "standard", null: false
     t.jsonb "locked_attributes", default: {}
     t.uuid "merchant_id"
+    t.string "provider_entry_reference"
     t.uuid "transfer_id"
     t.datetime "updated_at", null: false
     t.index "(((extra -> 'goal'::text) ->> 'pledge_id'::text))", name: "ix_transactions_extra_goal_pledge_id", unique: true, where: "(((extra -> 'goal'::text) ->> 'pledge_id'::text) IS NOT NULL)"
@@ -3099,6 +3102,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
     t.index ["credential_id"], name: "index_webauthn_credentials_on_credential_id", unique: true
     t.index ["user_id"], name: "index_webauthn_credentials_on_user_id"
     t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
+  end
+
+  create_table "weekly_cleanup_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.date "period_start", null: false
+    t.jsonb "summary", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["family_id", "user_id", "period_start"], name: "idx_weekly_cleanup_runs_dedup", unique: true
+    t.index ["family_id"], name: "index_weekly_cleanup_runs_on_family_id"
+    t.index ["user_id"], name: "index_weekly_cleanup_runs_on_user_id"
   end
 
   create_table "wise_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3337,4 +3352,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
   add_foreign_key "wise_items", "families"
+  add_foreign_key "weekly_cleanup_runs", "families", on_delete: :cascade
+  add_foreign_key "weekly_cleanup_runs", "users", on_delete: :cascade
 end
