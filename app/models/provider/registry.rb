@@ -203,6 +203,14 @@ class Provider::Registry
 
         Provider::Chimnie.new(api_key)
       end
+
+      def propertiesapi
+        api_key = ENV["PROPERTIESAPI_API_KEY"].presence || Setting.propertiesapi_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Propertiesapi.new(api_key)
+      end
   end
 
   def initialize(concept)
@@ -245,7 +253,7 @@ class Provider::Registry
         # builds them by name when benchmarking against Jev.
         %i[jev]
       when :property_valuations
-        %i[rentcast realie chimnie]
+        %i[rentcast realie chimnie propertiesapi]
       else
         %i[plaid_us plaid_eu github openai anthropic]
       end

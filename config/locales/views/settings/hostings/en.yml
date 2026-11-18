@@ -253,6 +253,13 @@ en:
         label: API Key
         placeholder: Enter your Chimnie API key here
         usage: "%{used} of %{limit} monthly requests used"
+      propertiesapi_settings:
+        title: PropertiesAPI
+        description: Enter your PropertiesAPI key to use the Zestimate shown on a US home's public Zillow page as its value. PropertiesAPI is an independent paid service, not affiliated with Zillow. New accounts get 50 free lookups; after that each lookup is charged to your PropertiesAPI account. Sure caps lookups at 50 per month, shared between adding properties and valuation refreshes; change the cap with the PROPERTIESAPI_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the PROPERTIESAPI_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your PropertiesAPI key here
+        usage: "%{used} of %{limit} monthly requests used"
       tiingo_settings:
         title: Tiingo
         description: Enter the API token provided by Tiingo. Free tier supports 50 unique symbols per hour with 30+ years of historical data.

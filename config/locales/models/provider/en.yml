@@ -27,3 +27,11 @@ en:
         unsupported_property: Chimnie only values residential properties; this UPRN belongs to a commercial or mixed-use property.
         unauthorized: Chimnie rejected the API key. Check the key in Settings → Self-Hosting.
         insufficient_balance: Your Chimnie account balance is too low for this request.
+    propertiesapi:
+      errors:
+        not_found: PropertiesAPI could not find a home matching this address. Check the street, city, state and ZIP code, and include the unit number for a condo or apartment.
+        ambiguous_address: PropertiesAPI's closest match is a different home. Check the house number, unit and ZIP code and try again.
+        location_mismatch: PropertiesAPI matched a home in a different ZIP code. Please double-check the address.
+        no_valuation: Zillow does not show a Zestimate for this home, so there is no value to import.
+        unauthorized: PropertiesAPI rejected the API key. Check the key in Settings → Self-Hosting.
+        no_credits: Your PropertiesAPI account has no lookups left. Add credits in your PropertiesAPI dashboard.
