@@ -38,6 +38,49 @@ class WiseItem::RefundCategorizerTest < ActiveSupport::TestCase
     assert_nil refund.reload.category
   end
 
+  test "leaves a refund alone when an uncategorized purchase could be the one" do
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 1), category: @shopping)
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 3), category: nil)
+    refund = card_refund("Wallapop", 6.74, Date.new(2026, 9, 6))
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_nil refund.reload.category
+  end
+
+  test "tells merchants in other scripts apart" do
+    card_payment("東京 Shop", 9.5, Date.new(2026, 9, 1), category: @shopping)
+    refund = card_refund("大阪 Shop", 9.5, Date.new(2026, 9, 6))
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_nil refund.reload.category
+  end
+
+  test "matches merchants written only in other scripts" do
+    card_payment("東京ショップ", 9.5, Date.new(2026, 9, 1), category: @shopping)
+    refund = card_refund("東京ショップ", 9.5, Date.new(2026, 9, 6))
+
+    assert_equal 1, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_equal @shopping, refund.reload.category
+  end
+
+  # Once a balance has statements, its statement rows book the card
+  # payments, named by Wise's description and sharing the CARD- reference.
+  test "gives a statement refund the category of the statement purchase with its reference" do
+    statement_row("Card transaction of 21.94 EUR issued by Vinted", 21.94, Date.new(2026, 9, 26), "CARD-555", category: @shopping)
+    refund = statement_row("Refund of card transaction", -21.94, Date.new(2026, 10, 21), "CARD-555")
+
+    assert_equal 1, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_equal @shopping, refund.reload.category
+  end
+
+  test "leaves a statement refund of another card transaction alone" do
+    statement_row("Vinted", 21.94, Date.new(2026, 9, 26), "CARD-555", category: @shopping)
+    refund = statement_row("Vinted", -21.94, Date.new(2026, 10, 21), "CARD-556")
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_nil refund.reload.category
+  end
+
   test "does not change a refund whose category is locked" do
     card_payment("Wallapop", 6.74, Date.new(2026, 9, 5), category: @shopping)
     refund = card_refund("Wallapop", 6.74, Date.new(2026, 9, 6))
@@ -54,6 +97,11 @@ class WiseItem::RefundCategorizerTest < ActiveSupport::TestCase
 
     def card_refund(name, amount, date)
       wise_transaction(name, -amount, date, extra: { "activity_type" => "CARD_PAYMENT", "description" => "Refunded" })
+    end
+
+    def statement_row(name, amount, date, reference, category: nil)
+      extra = { "statement_id" => reference, "statement_type" => amount.negative? ? "CREDIT" : "DEBIT", "reference" => reference }
+      wise_transaction(name, amount, date, category: category, extra: extra)
     end
 
     def wise_transaction(name, amount, date, extra:, category: nil)
