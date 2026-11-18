@@ -29,17 +29,23 @@ export default class extends Controller {
 
   showSuccess(button) {
     if (this.hasAnnouncementTarget && this.hasCopiedTextValue) {
-      this.announcementTarget.textContent = this.copiedTextValue;
+      clearTimeout(this.announcementUpdateTimer);
+      this.announcementTarget.textContent = "";
+      this.announcementUpdateTimer = setTimeout(() => {
+        if (this.hasAnnouncementTarget) this.announcementTarget.textContent = this.copiedTextValue;
+      }, 50);
     }
 
     // Markup that ships explicit default/success icons (invite codes, MFA,
     // profiles) toggles between them.
     if (this.hasIconDefaultTarget && this.hasIconSuccessTarget) {
+      clearTimeout(this.iconResetTimer);
       this.iconDefaultTarget.classList.add("hidden");
       this.iconSuccessTarget.classList.remove("hidden");
-      setTimeout(() => {
+      this.iconResetTimer = setTimeout(() => {
         this.iconDefaultTarget.classList.remove("hidden");
         this.iconSuccessTarget.classList.add("hidden");
+        if (this.hasAnnouncementTarget) this.announcementTarget.textContent = "";
       }, RESET_DELAY_MS);
       return;
     }
@@ -69,6 +75,8 @@ export default class extends Controller {
   }
 
   disconnect() {
+    clearTimeout(this.iconResetTimer);
     clearTimeout(this.labelResetTimer);
+    clearTimeout(this.announcementUpdateTimer);
   }
 }

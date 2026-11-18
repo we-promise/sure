@@ -58,6 +58,15 @@ class I18nTest < ActiveSupport::TestCase
     end
     assert_empty missing_plurals, "Russian plural forms missing: #{missing_plurals.join(', ')}"
 
+    scalar_pluralizations = russian.keys.filter_map do |key|
+      base_key = key.sub(plural_suffix, "")
+      next if base_key.start_with?("number.human.decimal_units.units.")
+
+      base_key if key != base_key && english[base_key].is_a?(String) && !english[base_key].include?("%{count}")
+    end.uniq
+    assert_empty scalar_pluralizations,
+                 "Russian plural translations require %{count} in the English source: #{scalar_pluralizations.join(', ')}"
+
     mismatches = russian.filter_map do |key, value|
       base_key = key.sub(plural_suffix, "")
       source = english[key] || english["#{base_key}.other"] || english[base_key]

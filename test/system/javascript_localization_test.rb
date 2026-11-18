@@ -64,9 +64,18 @@ class JavascriptLocalizationTest < ApplicationSystemTestCase
       group = find("[data-controller='clipboard']", visible: true)
       expected = group.find("[data-clipboard-target='source']").text
       group.find("button").click
-      assert_selector "[data-clipboard-target='iconSuccess']:not(.hidden)"
-      assert_selector "[data-clipboard-target='announcement']", text: "Скопировано!", visible: :all
+      within(group) do
+        assert_selector "[data-clipboard-target='iconSuccess']:not(.hidden)"
+        assert_selector "[data-clipboard-target='announcement']", text: "Скопировано!", visible: :all
+      end
       assert_equal expected, page.evaluate_script("window.copiedCallback")
+
+      next unless strategy == "openid_connect"
+
+      within(group) { assert_selector "[data-clipboard-target='iconDefault']:not(.hidden)" }
+      assert_equal "", group.find("[data-clipboard-target='announcement']", visible: :all).text
+      group.find("button").click
+      within(group) { assert_selector "[data-clipboard-target='announcement']", text: "Скопировано!", visible: :all }
     end
 
     find("#sso_provider_strategy").find("option[value='openid_connect']").select_option
