@@ -36,10 +36,11 @@ class TradeRepublicAccount::ActivitiesProcessor
   end
 
   def process
-    return { trades: 0, transactions: 0 } unless account.present?
+    return { trades: 0, transactions: 0, failed: 0 } unless account.present?
 
     trade_count = 0
     transaction_count = 0
+    @failed_count = 0
 
     # Also before the events: a trade that moved to the Crypto account has to
     # lose its portfolio counterpart before its settlement can link to a new
@@ -76,7 +77,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     reconcile_settlement_counterparts!
     capture_incomplete_executions
 
-    { trades: trade_count, transactions: transaction_count }
+    { trades: trade_count, transactions: transaction_count, failed: @failed_count }
   end
 
   private
@@ -234,6 +235,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         import_labeled_cash_movement(event, detail, external_id, date, "dividend", sign: -1)
       end
     rescue => e
+      @failed_count += 1
       DebugLogEntry.capture(
         category: "sync",
         level: "error",

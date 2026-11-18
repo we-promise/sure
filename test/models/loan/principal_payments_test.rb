@@ -422,6 +422,8 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
       { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
     ])
     schedule = account.loan.amortization_schedule
+    # SyncCache excludes future entries; replay after the final payment is due.
+    travel_to schedule.payments.last.date + 2.days
 
     schedule.payments.each do |instalment|
       account.entries.create!(name: "Payment", date: instalment.date + 2.days,
@@ -493,6 +495,8 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
       { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
     ])
     schedule = account.loan.amortization_schedule
+    # SyncCache excludes future entries; replay after the final payment is due.
+    travel_to schedule.payments.last.date
 
     schedule.payments.each do |instalment|
       account.entries.create!(name: "Payment", date: instalment.date,
