@@ -2,6 +2,8 @@ require "test_helper"
 require "ostruct"
 
 class Security::ResolverTest < ActiveSupport::TestCase
+  include ProviderTestHelper
+
   test "resolves DB security" do
     # Given an existing security in the DB that exactly matches the lookup params
     db_security = Security.create!(ticker: "TSLA", exchange_operating_mic: "XNAS", country_code: "US")
@@ -456,5 +458,72 @@ class Security::ResolverTest < ActiveSupport::TestCase
 
     assert resolved.persisted?
     assert_equal "XWAR", resolved.exchange_operating_mic
+  end
+
+  test "upgrades a legacy GER row when Yahoo now reports XETR instead of creating a duplicate" do
+    legacy = Security.create!(ticker: "SXR8.DE", exchange_operating_mic: "XETR", country_code: "DE")
+    legacy.update_columns(exchange_operating_mic: "GER")
+
+    Security.expects(:search_provider).never
+
+    assert_no_difference "Security.count" do
+      resolved = Security::Resolver.new("SXR8.DE", exchange_operating_mic: "XETR", country_code: "DE").resolve
+
+      assert_equal legacy.id, resolved.id
+      assert_equal "XETR", resolved.reload.exchange_operating_mic
+    end
+  end
+
+  test "prefers canonical XETR when both GER and XETR rows exist" do
+    canonical = Security.create!(ticker: "SXR8.DE", exchange_operating_mic: "XETR", country_code: "DE")
+    legacy = Security.new(ticker: "SXR8.DE", exchange_operating_mic: "GER", country_code: "DE")
+    legacy.save!(validate: false)
+
+    Security.expects(:search_provider).never
+
+    resolved = Security::Resolver.new("SXR8.DE", exchange_operating_mic: "GER", country_code: "DE").resolve
+
+    assert_equal canonical.id, resolved.id
+    assert_equal "GER", legacy.reload.exchange_operating_mic
+  end
+
+  test "upgrades a legacy NEO row when Yahoo now reports NEOE instead of creating a duplicate" do
+    legacy = Security.create!(ticker: "CHE-UN.NE", exchange_operating_mic: "NEOE", country_code: "CA")
+    legacy.update_columns(exchange_operating_mic: "NEO")
+
+    Security.expects(:search_provider).never
+
+    assert_no_difference "Security.count" do
+      resolved = Security::Resolver.new("CHE-UN.NE", exchange_operating_mic: "NEOE", country_code: "CA").resolve
+
+      assert_equal legacy.id, resolved.id
+      assert_equal "NEOE", resolved.reload.exchange_operating_mic
+    end
+  end
+
+  test "a security resolved under the keyless fallback switches to Twelve Data once a key is added" do
+    yahoo = mock("yahoo_finance")
+    yahoo.stubs(:class).returns(Provider::YahooFinance)
+    yahoo.stubs(:search_securities).returns(provider_success_response([
+      Provider::SecurityConcept::Security.new(
+        symbol: "ZZYF", name: "Fallback Co", logo_url: nil,
+        exchange_operating_mic: "XNAS", country_code: "US", currency: "USD"
+      )
+    ]))
+    Provider::Registry.stubs(:yahoo_finance).returns(yahoo)
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+
+    resolved = with_env_overrides("TWELVE_DATA_API_KEY" => nil) do
+      Security::Resolver.new("ZZYF", exchange_operating_mic: "XNAS", country_code: "US").resolve.tap do |security|
+        assert_equal yahoo, security.price_data_provider
+      end
+    end
+
+    assert_nil resolved.reload.price_provider
+
+    with_env_overrides("TWELVE_DATA_API_KEY" => "test-key") do
+      assert_instance_of Provider::TwelveData, resolved.price_data_provider
+    end
   end
 end

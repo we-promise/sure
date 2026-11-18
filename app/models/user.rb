@@ -390,9 +390,7 @@ class User < ApplicationRecord
   # provider+uid) are not gated on #active?, so they must be torn down here for
   # revocation to be immediate; the async purge would otherwise leave a window.
   def revoke_all_credentials!
-    Doorkeeper::AccessToken
-      .where(resource_owner_id: id, revoked_at: nil)
-      .update_all(revoked_at: Time.current)
+    revoke_oauth_tokens!
     sessions.destroy_all
     api_keys.destroy_all
     mobile_devices.destroy_all
@@ -530,6 +528,18 @@ class User < ApplicationRecord
     Array(provider.public_send(item_association.name)) if item_association
   end
 
+  # Revokes every Doorkeeper access token issued to this user (mobile app and
+  # third-party OAuth clients; a revoked token's refresh token is refused too)
+  # and every authorization grant not yet exchanged for one. Returns the
+  # number of tokens and grants revoked.
+  def revoke_oauth_tokens!
+    now = Time.current
+    [
+      Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: now),
+      Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: now)
+    ]
+  end
+
   # Revokes mobile/third-party API access alongside the web-session
   # invalidation above. Without this, a deactivated user's existing
   # Doorkeeper tokens and API keys stay valid on the wire — currently
@@ -541,7 +551,7 @@ class User < ApplicationRecord
   # before deactivation could otherwise be exchanged for a fresh token
   # afterward.
   def revoke_all_access_tokens
-    tokens_revoked, grants_revoked = revoke_doorkeeper_tokens_and_grants
+    tokens_revoked, grants_revoked = revoke_oauth_tokens!
     keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
 
     if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
@@ -558,7 +568,7 @@ class User < ApplicationRecord
   # created deliberately for integrations and do not depend on the password,
   # so they stay.
   def revoke_oauth_access
-    tokens_revoked, grants_revoked = revoke_doorkeeper_tokens_and_grants
+    tokens_revoked, grants_revoked = revoke_oauth_tokens!
 
     if tokens_revoked > 0 || grants_revoked > 0
       Rails.logger.info(
@@ -570,13 +580,6 @@ class User < ApplicationRecord
 
   def password_fingerprint
     Digest::SHA256.hexdigest(password_digest.to_s)
-  end
-
-  def revoke_doorkeeper_tokens_and_grants
-    [
-      Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current),
-      Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
-    ]
   end
 
   def purge
@@ -699,6 +702,20 @@ class User < ApplicationRecord
 
   def account_order
     AccountOrder.find(default_account_order) || AccountOrder.default
+  end
+
+  # Whether the activity feed of a linked account always lists the balance
+  # updates its syncs leave behind (see Account#hides_balance_updates_by_default?).
+  # Off until turned on in Settings > Preferences. The activity Filter menu can
+  # show them for one view without changing this.
+  def show_balance_updates?
+    preferences&.dig("show_balance_updates") == true
+  end
+
+  # @param value [Boolean, String] a form value such as "true" or "false"
+  def update_show_balance_updates(value)
+    shown = ActiveModel::Type::Boolean.new.cast(value) == true
+    with_locked_preferences { |prefs| prefs["show_balance_updates"] = shown }
   end
 
   MANUAL_ACCOUNT_ORDER_LIMIT = 500
@@ -913,12 +930,26 @@ class User < ApplicationRecord
     section_order("reports")
   end
 
+  REPORTS_BIGGEST_EXPENSES_LIMITS = [ 5, 10, 25 ].freeze
+  DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT = 10
+
+  def reports_biggest_expenses_limit
+    stored = preferences&.[]("reports_biggest_expenses_limit")
+    REPORTS_BIGGEST_EXPENSES_LIMITS.include?(stored) ? stored : DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT
+  end
+
   def update_reports_preferences(prefs)
-    update_section_preferences(
+    return false unless update_section_preferences(
       "reports",
       order: prefs["reports_section_order"],
       collapsed: prefs["reports_collapsed_sections"]
     )
+
+    # A limit outside the offered choices is dropped, like any other bad value.
+    limit = Integer(prefs["reports_biggest_expenses_limit"].to_s, exception: false)
+    return true unless REPORTS_BIGGEST_EXPENSES_LIMITS.include?(limit)
+
+    with_locked_preferences { |updated_prefs| updated_prefs["reports_biggest_expenses_limit"] = limit }
   end
 
   # Transactions preferences management

@@ -65,8 +65,7 @@ class OidcAccountsController < ApplicationController
       session.delete(:pending_oidc_auth)
 
       if user.otp_required?
-        session[:mfa_user_id] = user.id
-        session[:mfa_password_fingerprint] = user.password_fingerprint
+        begin_mfa_handoff(user, password_fingerprint: user.password_fingerprint)
         redirect_to verify_mfa_path
       else
         redirect_to root_path, notice: t("sessions.openid_connect.account_linked", provider: @pending_auth["provider"])

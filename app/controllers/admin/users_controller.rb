@@ -106,12 +106,7 @@ module Admin
       elsif update_user_and_log_password_change
         changes = []
         changes << :role if @user.saved_change_to_role?
-        if @user.saved_change_to_password_digest?
-          changes << :password
-          # Whoever knew the old password must not stay signed in on the web.
-          # Keep the acting admin's own session when they change their own password.
-          @user.sessions.where.not(id: Current.session&.id).destroy_all
-        end
+        changes << :password if @user.saved_change_to_password_digest?
 
         success_key = case changes
         when [ :role, :password ] then ".success_role_and_password"
@@ -209,6 +204,10 @@ module Admin
 
           if @user.saved_change_to_password_digest?
             SecurityAuditLog.log_password_changed!(user: @user, request: request, actor: Current.true_user)
+            # A password set by an admin is usually account recovery, so every
+            # session the user had goes (CWE-613). The acting admin keeps
+            # theirs when changing their own password here.
+            @user.sessions.where.not(id: Current.session.id).destroy_all
           end
 
           true

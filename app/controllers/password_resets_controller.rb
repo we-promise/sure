@@ -38,8 +38,6 @@ class PasswordResetsController < ApplicationController
     end
 
     if update_password_and_log_change
-      # The reset proves only control of the email; end every session the old password opened.
-      @user.sessions.destroy_all
       redirect_to new_session_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity
@@ -61,6 +59,10 @@ class PasswordResetsController < ApplicationController
         next false unless @user.update(password_params)
 
         SecurityAuditLog.log_password_changed!(user: @user, request: request)
+        # The user is signed out on this path, so every session goes
+        # (CWE-613). User#revoke_oauth_access has already revoked every OAuth
+        # token (mobile app included) as part of the update.
+        @user.sessions.destroy_all
 
         true
       end

@@ -3,7 +3,9 @@ require "test_helper"
 class PasswordsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
+    @other_session = @user.sessions.create!
     sign_in @user
+    @current_session = Current.session
   end
 
   test "edit" do
@@ -21,6 +23,24 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     assert SecurityAuditLog.exists?(user: @user, event_type: "password_changed")
   end
 
+  test "changing the password revokes every other session and keeps the current one" do
+    patch password_path, params: { user: { password_challenge: user_password_test, password: "newtestpassword817983172", password_confirmation: "newtestpassword817983172" } }
+
+    assert_redirected_to root_path
+    assert_not Session.exists?(@other_session.id)
+    assert Session.exists?(@current_session.id)
+  end
+
+  test "changing the password revokes the user's OAuth access tokens" do
+    oauth_app = Doorkeeper::Application.create!(name: "Sure Mobile", redirect_uri: "https://client.example.com/callback", scopes: "read_write")
+    access_token = Doorkeeper::AccessToken.create!(application: oauth_app, resource_owner_id: @user.id, expires_in: 2.hours, scopes: "read_write", use_refresh_token: true)
+
+    patch password_path, params: { user: { password_challenge: user_password_test, password: "newtestpassword817983172", password_confirmation: "newtestpassword817983172" } }
+
+    assert_redirected_to root_path
+    assert access_token.reload.revoked?, "a mobile or OAuth token must not outlive a password change"
+  end
+
   test "update rejects a wrong current password" do
     assert_password_unchanged do
       patch password_path, params: { user: { password_challenge: "wrongpassword123", password: "newtestpassword817983172", password_confirmation: "newtestpassword817983172" } }
@@ -34,6 +54,22 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
 
     assert_password_unchanged do
       patch password_path, params: { user: { password: "newtestpassword817983172", password_confirmation: "newtestpassword817983172" } }
+    end
+  end
+
+  test "update rejects a null current password sent as JSON" do
+    assert_password_unchanged do
+      patch password_path,
+        params: { user: { password_challenge: nil, password: "newtestpassword817983172", password_confirmation: "newtestpassword817983172" } }.to_json,
+        headers: { "CONTENT_TYPE" => "application/json" }
+    end
+  end
+
+  test "update rejects a current password key sent without a value" do
+    assert_password_unchanged do
+      patch password_path,
+        params: "user[password_challenge]&user[password]=newtestpassword817983172&user[password_confirmation]=newtestpassword817983172",
+        headers: { "CONTENT_TYPE" => "application/x-www-form-urlencoded" }
     end
   end
 
@@ -63,6 +99,7 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal original_digest, @user.reload.password_digest
+    assert Session.exists?(@other_session.id), "a rolled-back change must not revoke sessions"
   end
 
   private
@@ -76,47 +113,6 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :unprocessable_entity
       assert_equal original_digest, @user.reload.password_digest
-    end
-
-    test "update revokes the user's OAuth access tokens" do
-      app = Doorkeeper::Application.create!(
-        name: "Test App #{SecureRandom.hex(4)}",
-        redirect_uri: "https://example.com/callback",
-        confidential: false
-      )
-      token = Doorkeeper::AccessToken.create!( # pipelock:ignore
-        application: app,
-        resource_owner_id: @user.id,
-        scopes: "read_write",
-        expires_in: 1.year
-      )
-
-      patch password_path, params: {
-        user: {
-          password_challenge: user_password_test,
-          password: "NewSecure1!pass",
-          password_confirmation: "NewSecure1!pass"
-        }
-      }
-
-      assert_redirected_to root_path
-      assert token.reload.revoked_at.present?
-    end
-
-    test "update signs the user out of their other web sessions and keeps the current one" do
-      current_session = @user.sessions.order(:created_at).last
-      other_session = @user.sessions.create!
-
-      patch password_path, params: {
-        user: {
-          password_challenge: user_password_test,
-          password: "NewSecure1!pass",
-          password_confirmation: "NewSecure1!pass"
-        }
-      }
-
-      assert_redirected_to root_path
-      assert Session.exists?(current_session.id)
-      assert_not Session.exists?(other_session.id)
+      assert Session.exists?(@other_session.id), "a rejected change must not revoke sessions"
     end
 end

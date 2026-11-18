@@ -326,44 +326,47 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert target.authenticate(new_password), "User should authenticate with the new password"
   end
 
-  test "update with a new password signs the user out of their web sessions" do
+  test "setting a user's password revokes every session that user has" do
     target = users(:family_member)
-    target_session = target.sessions.create!
-    admin_session = Current.session
+    sessions = 2.times.map { target.sessions.create! }
 
-    patch admin_user_url(target), params: {
-      user: { role: target.role, password: "Secure1!pass" }
-    }
+    patch admin_user_url(target), params: { user: { role: target.role, password: "Secure1!pass" } }
 
     assert_redirected_to admin_users_url
-    assert_not Session.exists?(target_session.id)
-    assert Session.exists?(admin_session.id), "the acting admin must stay signed in"
+    sessions.each { |s| assert_not Session.exists?(s.id), "a session must not outlive an admin password reset" }
   end
 
-  test "update with a new password for the acting admin keeps their current session" do
+  test "a super admin setting their own password keeps their current session" do
     admin = users(:sure_support_staff)
-    current_session = Current.session
-    other_session = admin.sessions.create!
+    current = admin.sessions.order(:created_at).last
+    other = admin.sessions.create!
 
-    patch admin_user_url(admin), params: {
-      user: { role: admin.role, password: "Secure1!pass" }
-    }
+    patch admin_user_url(admin), params: { user: { role: admin.role, password: "Secure1!pass" } }
 
     assert_redirected_to admin_users_url
-    assert Session.exists?(current_session.id)
-    assert_not Session.exists?(other_session.id)
+    assert Session.exists?(current.id)
+    assert_not Session.exists?(other.id)
   end
 
-  test "update without a password change keeps the user's web sessions" do
+  test "setting a user's password revokes that user's OAuth access tokens" do
     target = users(:family_member)
-    target_session = target.sessions.create!
+    oauth_app = Doorkeeper::Application.create!(name: "Sure Mobile", redirect_uri: "https://client.example.com/callback", scopes: "read_write")
+    access_token = Doorkeeper::AccessToken.create!(application: oauth_app, resource_owner_id: target.id, expires_in: 2.hours, scopes: "read_write", use_refresh_token: true)
 
-    patch admin_user_url(target), params: {
-      user: { role: "admin", password: "" }
-    }
+    patch admin_user_url(target), params: { user: { role: target.role, password: "Secure1!pass" } }
 
     assert_redirected_to admin_users_url
-    assert Session.exists?(target_session.id)
+    assert access_token.reload.revoked?, "a mobile or OAuth token must not outlive an admin password reset"
+  end
+
+  test "a role-only change leaves the user's sessions alone" do
+    target = users(:family_member)
+    session_record = target.sessions.create!
+
+    patch admin_user_url(target), params: { user: { role: "admin", password: "" } }
+
+    assert_redirected_to admin_users_url
+    assert Session.exists?(session_record.id)
   end
 
   test "update logs an audit entry with the admin as actor when setting a new password" do
@@ -388,6 +391,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
   test "update rolls back the password change when the audit log write fails" do
     target = users(:family_member)
     original_digest = target.password_digest
+    session_record = target.sessions.create!
 
     SecurityAuditLog.stubs(:log_password_changed!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
 
@@ -400,6 +404,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to admin_users_url
     assert_equal original_digest, target.reload.password_digest
+    assert Session.exists?(session_record.id), "a rolled-back change must not revoke sessions"
   end
 
   test "update does not log an audit entry when the password is unchanged" do
