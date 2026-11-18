@@ -2792,8 +2792,26 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "3201", entry.transaction.counterparty_iban_last4
   end
 
-  test "does not link a counterparty iban shared by two own accounts" do
+  test "links the own sub-account in the transaction's currency when one iban backs several" do
     accounts(:connected).update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+    euro_account = @family.accounts.create!(name: "Euro pocket", balance: 0, currency: "EUR", accountable: Depository.new,
+      iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    entry = @adapter.import_transaction(
+      external_id: "eb_sub_account_counterparty",
+      amount: 200.0,
+      currency: "EUR",
+      date: Date.today - 2.days,
+      name: "Transfer",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+
+    assert_equal euro_account, entry.reload.transaction.counterparty_own_account
+  end
+
+  test "does not link a counterparty iban shared by two own accounts in one currency" do
+    accounts(:connected).update!(iban: "AT611904300234573201", currency: "EUR") # pipelock:ignore IBAN
     @family.accounts.create!(name: "Second savings", balance: 0, currency: "EUR", accountable: Depository.new,
       iban: "AT611904300234573201") # pipelock:ignore IBAN
 

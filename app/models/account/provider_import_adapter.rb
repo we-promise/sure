@@ -52,7 +52,7 @@ class Account::ProviderImportAdapter
     if extra.is_a?(Hash)
       extra = extra.with_indifferent_access
       if extra.key?(:counterparty_iban) || extra.key?(:counterparty_reference)
-        counterparty = counterparty_attributes(iban: extra[:counterparty_iban], reference: extra[:counterparty_reference])
+        counterparty = counterparty_attributes(iban: extra[:counterparty_iban], reference: extra[:counterparty_reference], currency: currency)
       end
       extra = extra.except(:counterparty_iban, :counterparty_reference)
     end
@@ -1167,19 +1167,19 @@ class Account::ProviderImportAdapter
   private
     COUNTERPARTY_LAST_CHARACTERS = 4
 
-    def counterparty_attributes(iban:, reference:)
+    def counterparty_attributes(iban:, reference:, currency:)
       iban = IbanNormalizable.normalize(iban)
       {
         counterparty_iban_last4: iban&.last(COUNTERPARTY_LAST_CHARACTERS),
         counterparty_reference_last4: reference.to_s.strip.last(COUNTERPARTY_LAST_CHARACTERS).presence,
-        counterparty_own_account_id: iban && own_account_ids_by_iban[iban]
+        counterparty_own_account_id: iban && Account.own_account_id_for(own_accounts_by_iban[iban], currency: currency)
       }
     end
 
     # Account#iban is encrypted without determinism, so it cannot be looked up
     # by value; the family's few IBANs are decrypted once per adapter instead.
-    def own_account_ids_by_iban
-      @own_account_ids_by_iban ||= Account.own_account_ids_by_iban(account.family, excluding: account)
+    def own_accounts_by_iban
+      @own_accounts_by_iban ||= Account.own_accounts_by_iban(account.family, excluding: account)
     end
 
 
