@@ -10,6 +10,35 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
+  test "negative_positions lists calculated positions below zero" do
+    account = accounts(:investment)
+    msft = securities(:msft)
+    # A sale without its purchase, as an import or a deleted buy can leave behind.
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: msft, qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    positions = account.negative_positions
+
+    assert_equal [ msft ], positions.map(&:security)
+    assert_equal 3.days.ago.to_date, positions.first.first_date
+    assert_equal(-3, positions.first.lowest_qty)
+  end
+
+  test "negative_positions ignores linked accounts" do
+    account = accounts(:investment)
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    account.stubs(:linked?).returns(true)
+
+    assert_empty account.negative_positions
+  end
+
   test "linked cash and investment accounts hide balance updates by default" do
     assert accounts(:connected).hides_balance_updates_by_default?
 
