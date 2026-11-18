@@ -978,19 +978,38 @@ class EnableBankingItem::Importer
           end
         end
 
+        # A stored row is replaced in place when the ASPSP redelivers it in the
+        # current window, so the snapshot the processor reads carries the
+        # bank's latest version of the row (a corrected amount, remittance or
+        # counterparty) instead of keeping the first version forever because
+        # its id was already stored. Stored rows keep their order and new rows
+        # are appended, so the row that keeps a shared transaction_id's plain
+        # id does not change with the fetch order.
+        #
         # Ids are computed over stored + fetched rows together so a fetched row
         # sharing a stored row's transaction_id, but not its entry_reference, is
-        # recognised as new (see EnableBankingEntry::Processor.external_ids_for).
+        # recognised as a different row (see
+        # EnableBankingEntry::Processor.external_ids_for) and both are kept.
         ids = EnableBankingEntry::Processor.external_ids_for(existing_transactions + all_transactions)
-        existing_ids = ids.first(existing_transactions.size).compact.to_set
-
-        new_transactions = all_transactions.each_with_index.select { |_tx, index|
+        fetched_by_id = all_transactions.each_with_index.each_with_object({}) do |(tx, index), rows|
           ext_id = ids[existing_transactions.size + index]
-          ext_id.present? && !existing_ids.include?(ext_id)
-        }.map(&:first)
+          rows[ext_id] = tx if ext_id.present?
+        end
 
-        if new_transactions.any? || removed_pending
-          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
+        placed_ids = Set.new
+        snapshot = existing_transactions.each_with_index.filter_map do |tx, index|
+          ext_id = ids[index]
+          next tx unless ext_id.present? && fetched_by_id.key?(ext_id)
+          next if placed_ids.include?(ext_id)
+
+          placed_ids.add(ext_id)
+          fetched_by_id[ext_id]
+        end
+        snapshot += fetched_by_id.except(*placed_ids).values
+        # Most syncs refetch rows that are already stored unchanged; skip the
+        # write then.
+        if removed_pending || snapshot.as_json != enable_banking_account.raw_transactions_payload.to_a.as_json
+          enable_banking_account.upsert_enable_banking_transactions_snapshot!(snapshot)
         end
       elsif removed_pending
         enable_banking_account.upsert_enable_banking_transactions_snapshot!(
