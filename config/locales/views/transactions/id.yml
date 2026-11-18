@@ -82,6 +82,9 @@ id:
       potential_duplicate_title: Terdeteksi kemungkinan duplikat
       transfer: Transfer
       account_label: Rekening
+      counterparty_account_label: "Rekening pihak lawan"
+      counterparty_iban_label: "IBAN pihak lawan"
+      counterparty_own_account_label: "Rekening sendiri"
       amount: Jumlah
       category_label: Kategori
       date_label: Tanggal
