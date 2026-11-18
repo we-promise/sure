@@ -9,16 +9,5 @@ ru:
       default: "%{provider} (по умолчанию)"
       offline: "%{provider} (приостановлен)"
       unavailable: "%{provider} (недоступен)"
-      none: "Нет, цены из синхронизации счёта или сделок"
-    providers:
-      tinkoff_invest: T-Invest (T-Bank)
-      unknown: "Неизвестно"
-      alpha_vantage: Alpha Vantage
-      binance_public: Binance
-      eodhd: EODHD
-      mfapi: MFAPI.in
-      moex_public: MOEX
-      tiingo: Tiingo
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance
-      mansa: Mansa
+      none: "Нет, нет активного поставщика цен"
+    unknown_provider: "Неизвестно"

@@ -6,6 +6,5 @@ ro:
       default: "%{provider} (implicit)"
       offline: "%{provider} (în pauză)"
       unavailable: "%{provider} (indisponibil)"
-      none: "Niciuna, prețuri din sincronizarea contului sau din tranzacții"
-    providers:
-      unknown: "Necunoscut"
+      none: "Niciuna, niciun furnizor de prețuri activ"
+    unknown_provider: "Necunoscut"

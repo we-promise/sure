@@ -1,8 +1,9 @@
 module SecuritiesHelper
+  # Provider names are translated once, in the provider settings table.
   def security_price_provider_name(provider_key)
-    return t("securities.providers.unknown") if provider_key.blank?
+    return t("securities.unknown_provider") if provider_key.blank?
 
-    t("securities.providers.#{provider_key}", default: provider_key.to_s.humanize)
+    t("settings.hostings.provider_selection.providers.#{provider_key}", default: provider_key.to_s.humanize)
   end
 
   def security_price_source_label(security)

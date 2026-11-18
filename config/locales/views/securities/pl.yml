@@ -9,15 +9,5 @@ pl:
       default: "%{provider} (domyślny)"
       offline: "%{provider} (wstrzymany)"
       unavailable: "%{provider} (niedostępny)"
-      none: "Brak, kursy z synchronizacji konta lub transakcji"
-    providers:
-      tinkoff_invest: T-Invest (T-Bank)
-      unknown: "Nieznany"
-      alpha_vantage: Alpha Vantage
-      binance_public: Binance
-      eodhd: EODHD
-      mfapi: MFAPI.in
-      moex_public: MOEX
-      tiingo: Tiingo
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance
+      none: "Brak, brak aktywnego dostawcy kursów"
+    unknown_provider: "Nieznany"

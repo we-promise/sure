@@ -6,6 +6,5 @@ nb:
       default: "%{provider} (standard)"
       offline: "%{provider} (pauset)"
       unavailable: "%{provider} (ikke tilgjengelig)"
-      none: "Ingen, kurser fra kontosynkronisering eller handler"
-    providers:
-      unknown: "Ukjent"
+      none: "Ingen, ingen aktiv kursleverandør"
+    unknown_provider: "Ukjent"

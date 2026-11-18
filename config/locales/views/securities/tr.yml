@@ -9,16 +9,5 @@ tr:
       default: "%{provider} (varsayılan)"
       offline: "%{provider} (duraklatıldı)"
       unavailable: "%{provider} (kullanılamıyor)"
-      none: "Yok, fiyatlar hesap senkronizasyonundan veya işlemlerden"
-    providers:
-      tinkoff_invest: T-Invest (T-Bank)
-      unknown: "Bilinmiyor"
-      alpha_vantage: Alpha Vantage
-      binance_public: Binance
-      eodhd: EODHD
-      mfapi: MFAPI.in
-      moex_public: MOEX
-      tiingo: Tiingo
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance
-      mansa: Mansa
+      none: "Yok, etkin fiyat sağlayıcısı yok"
+    unknown_provider: "Bilinmiyor"

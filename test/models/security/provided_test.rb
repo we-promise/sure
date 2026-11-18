@@ -467,6 +467,15 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     end
   end
 
+  test "price_source names the keyless substitute as the default" do
+    stub_yahoo_finance
+    @security.update!(price_provider: nil, offline: false)
+
+    without_securities_keys([ "twelve_data" ]) do
+      assert_equal Security::PriceSource.new(provider: "yahoo_finance", status: :default), @security.price_source
+    end
+  end
+
   test "the setting and configuration health are unchanged under the fallback" do
     yahoo = stub_yahoo_finance
     Setting.securities_providers = "twelve_data"

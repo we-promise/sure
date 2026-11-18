@@ -9,15 +9,5 @@ pt-PT:
       default: "%{provider} (predefinido)"
       offline: "%{provider} (em pausa)"
       unavailable: "%{provider} (indisponível)"
-      none: "Nenhuma, preços da sincronização da conta ou das transações"
-    providers:
-      tinkoff_invest: T-Invest (T-Bank)
-      unknown: "Desconhecido"
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance
-      tiingo: Tiingo
-      eodhd: EODHD
-      alpha_vantage: Alpha Vantage
-      mfapi: MFAPI.in
-      binance_public: Binance
-      moex_public: MOEX
+      none: "Nenhuma, sem fornecedor de preços ativo"
+    unknown_provider: "Desconhecido"

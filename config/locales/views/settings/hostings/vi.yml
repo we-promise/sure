@@ -53,6 +53,8 @@ vi:
           mfapi: MFAPI.in
           binance_public: Binance
           moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          mansa: Mansa
       assistant_settings:
         title: Trợ lý AI
         description: Chọn cách trợ lý trò chuyện phản hồi. Tích hợp sẵn sử dụng nhà cung cấp LLM đã cấu hình trực tiếp. Bên ngoài ủy thác cho tác nhân AI từ xa có thể gọi lại các công cụ tài chính của Sure qua MCP.

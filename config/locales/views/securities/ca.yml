@@ -9,16 +9,5 @@ ca:
       default: "%{provider} (per defecte)"
       offline: "%{provider} (en pausa)"
       unavailable: "%{provider} (no disponible)"
-      none: "Cap, preus de la sincronització del compte o de les operacions"
-    providers:
-      tinkoff_invest: T-Invest (T-Bank)
-      unknown: "Desconegut"
-      alpha_vantage: Alpha Vantage
-      binance_public: Binance
-      moex_public: MOEX
-      eodhd: EODHD
-      mfapi: MFAPI.in
-      tiingo: Tiingo
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance
-      mansa: Mansa
+      none: "Cap, sense proveïdor de preus actiu"
+    unknown_provider: "Desconegut"

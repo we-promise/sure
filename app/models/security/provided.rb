@@ -265,7 +265,7 @@ module Security::Provided
   # provider key (nil when none); `status` says how it applies:
   # :assigned, :default (fallback to the first enabled provider),
   # :unavailable (assigned provider disabled or not configured),
-  # :offline (fetching paused for this security) or :none (prices only from syncs or trades).
+  # :offline (fetching paused for this security) or :none (no provider fetches prices).
   def price_source
     resolved = price_data_provider
     resolved_key = resolved && self.class.provider_key_for(resolved)

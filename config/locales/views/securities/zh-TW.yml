@@ -9,15 +9,5 @@ zh-TW:
       default: "%{provider}（預設）"
       offline: "%{provider}（已暫停）"
       unavailable: "%{provider}（無法使用）"
-      none: "無，價格來自帳戶同步或交易"
-    providers:
-      tinkoff_invest: T-Invest (T-Bank)
-      unknown: "未知"
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance
-      tiingo: Tiingo
-      eodhd: EODHD
-      alpha_vantage: Alpha Vantage
-      mfapi: MFAPI.in
-      binance_public: Binance
-      moex_public: MOEX
+      none: "無，沒有啟用的價格提供者"
+    unknown_provider: "未知"

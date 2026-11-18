@@ -9,15 +9,5 @@ vi:
       default: "%{provider} (mặc định)"
       offline: "%{provider} (tạm dừng)"
       unavailable: "%{provider} (không khả dụng)"
-      none: "Không có, giá từ đồng bộ tài khoản hoặc giao dịch"
-    providers:
-      tinkoff_invest: T-Invest (T-Bank)
-      unknown: "Không rõ"
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance
-      tiingo: Tiingo
-      eodhd: EODHD
-      alpha_vantage: Alpha Vantage
-      mfapi: MFAPI.in
-      binance_public: Binance
-      moex_public: MOEX
+      none: "Không có, không có nhà cung cấp giá đang hoạt động"
+    unknown_provider: "Không rõ"

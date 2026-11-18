@@ -57,6 +57,7 @@ zh-TW:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          mansa: Mansa
         title: 供應商選擇
         description: 選擇用於取得匯率和證券價格的服務。Yahoo Finance 是免費的且不需要 API 金鑰。Twelve Data 需要免費的 API 金鑰，但可能提供更廣的資料涵蓋範圍。
         securities_provider_label: 證券（股價）資料供應商

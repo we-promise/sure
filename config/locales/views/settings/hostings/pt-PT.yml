@@ -58,6 +58,7 @@ pt-PT:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          mansa: Mansa
       assistant_settings:
         title: Assistente de IA
         description: Escolha como o assistente de chat responde. O incorporado utiliza diretamente o seu serviço de AI configurado. O externo delega num agente de IA remoto que pode invocar as ferramentas financeiras da Sure via MCP.

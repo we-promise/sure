@@ -27,9 +27,23 @@ class SecuritiesHelperTest < ActionView::TestCase
     assert_equal "Unknown", security_price_provider_name(nil)
   end
 
-  test "has a translated name for every price provider" do
-    Security.valid_price_providers.each do |key|
-      assert I18n.exists?("securities.providers.#{key}", :en), "missing securities.providers.#{key}"
+  test "has a name for every price provider in each locale that lists provider names" do
+    locales = I18n.available_locales.select do |locale|
+      I18n.exists?("settings.hostings.provider_selection.providers", locale: locale, fallback: false)
+    end
+    assert_includes locales, :en
+
+    locales.each do |locale|
+      Security.valid_price_providers.each do |key|
+        assert I18n.exists?("settings.hostings.provider_selection.providers.#{key}", locale: locale, fallback: false),
+          "missing #{locale}.settings.hostings.provider_selection.providers.#{key}"
+      end
+    end
+  end
+
+  test "falls back to the English provider name in a locale without provider names" do
+    I18n.with_locale(:nb) do
+      assert_equal "Twelve Data", security_price_provider_name("twelve_data")
     end
   end
 end
