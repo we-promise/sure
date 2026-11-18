@@ -126,6 +126,73 @@ RSpec.configure do |config|
               total_pages: { type: :integer, minimum: 0 }
             }
           },
+          AccountStatementAccount: {
+            type: :object,
+            required: %w[id name currency],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              currency: { type: :string }
+            }
+          },
+          AccountStatement: {
+            type: :object,
+            required: %w[id filename content_type byte_size content_sha256 review_status created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              filename: { type: :string },
+              content_type: { type: :string },
+              byte_size: { type: :integer, minimum: 1 },
+              content_sha256: { type: :string, description: 'SHA-256 of the file (lowercase hex); the vault stores each file once per family' },
+              review_status: { type: :string, enum: %w[unmatched linked rejected] },
+              period_start_on: { type: :string, format: :date, nullable: true },
+              period_end_on: { type: :string, format: :date, nullable: true },
+              currency: { type: :string, nullable: true },
+              opening_balance: { type: :string, nullable: true },
+              closing_balance: { type: :string, nullable: true },
+              institution_name_hint: { type: :string, nullable: true },
+              account_last4_hint: { type: :string, nullable: true },
+              account: {
+                allOf: [ { '$ref' => '#/components/schemas/AccountStatementAccount' } ],
+                nullable: true,
+                description: 'Account the statement is linked to'
+              },
+              suggested_account: {
+                allOf: [ { '$ref' => '#/components/schemas/AccountStatementAccount' } ],
+                nullable: true,
+                description: 'Account the vault suggests for an unlinked statement; linking it is confirmed in the app'
+              },
+              match_confidence: { type: :number, nullable: true, minimum: 0, maximum: 1 },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          AccountStatementResponse: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: { '$ref' => '#/components/schemas/AccountStatement' },
+              meta: {
+                type: :object,
+                required: %w[duplicate],
+                properties: {
+                  duplicate: { type: :boolean, description: 'True when the uploaded file was already in the vault; the existing statement is returned and nothing is created' }
+                }
+              }
+            }
+          },
+          AccountStatementCollection: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: {
+                type: :array,
+                maxItems: 100,
+                items: { '$ref' => '#/components/schemas/AccountStatement' }
+              },
+              meta: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           FamilyExportFile: {
             type: :object,
             required: %w[attached],
@@ -1261,7 +1328,7 @@ RSpec.configure do |config|
             type: :object,
             required: %w[type valid content stats errors warnings],
             properties: {
-              type: { type: :string, enum: Import::TYPES },
+              type: { type: :string, enum: Import::Preflight::IMPORT_TYPES },
               valid: { type: :boolean },
               content: { '$ref' => '#/components/schemas/ImportPreflightContent' },
               stats: { '$ref' => '#/components/schemas/ImportPreflightStats' },
@@ -1685,6 +1752,7 @@ RSpec.configure do |config|
               qty: { type: :string },
               price: { type: :string },
               investment_activity_label: { type: :string, nullable: true },
+              lot_source_trade_id: { type: :string, format: :uuid, nullable: true, description: 'For a sale, the trade whose lot it names to sell from first. It applies only while the account sells by FIFO; an account that sells by average keeps it but sells from the pooled average.' },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {
                 type: :object,
@@ -1740,8 +1808,27 @@ RSpec.configure do |config|
                 }
               },
               avg_cost: { type: :string, nullable: true },
+              lots: {
+                type: :array,
+                nullable: true,
+                description: "The position's open lots, the opening lot first and then by acquisition. Present only on the position's latest row, while its lots add up to the holding; null otherwise.",
+                items: { '$ref' => '#/components/schemas/HoldingLot' }
+              },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          HoldingLot: {
+            type: :object,
+            required: %w[id opening qty manual_cost],
+            properties: {
+              id: { type: :string, format: :uuid },
+              opening: { type: :boolean, description: 'Units held before the first imported trade' },
+              acquired_on: { type: :string, format: :date, nullable: true, description: 'Null for the opening lot' },
+              qty: { type: :string, description: 'Units of the lot still held' },
+              unit_cost: { type: :string, nullable: true, description: 'Formatted cost per unit; null when unknown' },
+              manual_cost: { type: :boolean, description: 'Whether the cost was set by the user' },
+              trade_id: { type: :string, format: :uuid, nullable: true, description: 'The trade that acquired the lot; null for the opening lot' }
             }
           },
           HoldingCollection: {

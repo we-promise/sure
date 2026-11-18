@@ -16,6 +16,9 @@ ro:
       holdings: Dețineri
       name: Nume
       new_holding: Tranzacție nouă
+      negative_position: "%{name} (%{ticker}): sub zero din %{date}, minim %{qty}."
+      negative_positions_hint: "Probabil lipsește o cumpărare sau un transfer. Adaug-o sau corectează tranzacțiile care au adus poziția sub zero."
+      negative_positions_title: "Unele poziții au scăzut sub zero"
       no_holdings: Nu există dețineri de afișat.
       return: Randament total
       weight: Pondere

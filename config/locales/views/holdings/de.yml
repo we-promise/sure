@@ -42,6 +42,9 @@ de:
       holdings: Positionen
       name: Name
       new_holding: Neue Transaktion
+      negative_position: "%{name} (%{ticker}): ab %{date} unter null, niedrigster Stand %{qty}."
+      negative_positions_hint: Vermutlich fehlt ein Kauf oder ein Übertrag. Lege ihn an oder korrigiere die Trades, die den Bestand unter null gebracht haben.
+      negative_positions_title: Bestände unter null
       no_holdings: Keine Positionen vorhanden
       positions:
         one: "%{count} Position"

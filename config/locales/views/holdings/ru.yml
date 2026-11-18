@@ -38,6 +38,9 @@ ru:
       holdings: Активы
       name: Название
       new_holding: Новая активность
+      negative_position: "%{name} (%{ticker}): ниже нуля с %{date}, минимум %{qty}."
+      negative_positions_hint: "Вероятно, не хватает покупки или перевода. Добавьте её или исправьте сделки, из-за которых позиция ушла ниже нуля."
+      negative_positions_title: "Некоторые позиции ушли ниже нуля"
       no_holdings: Нет активов для отображения.
       return: Общая доходность
       weight: Доля

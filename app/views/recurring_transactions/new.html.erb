@@ -39,7 +39,7 @@
             it only exists on this variant: with no anchor it would guess.
             DS::Link translates method: into data-turbo-method, so this is a
             real POST; the anchor rides the query string. %>
-        <% if bills_one_shot_ai_available? %>
+        <% if ai_feature_available?(:bill_setup) %>
           <%= render DS::Link.new(
                 text: t(".smart_fill"),
                 icon: "sparkles",

@@ -49,6 +49,9 @@ es:
       holdings: Posiciones
       name: Nombre
       new_holding: Nueva transacción
+      negative_position: "%{name} (%{ticker}): por debajo de cero desde el %{date}, mínimo %{qty}."
+      negative_positions_hint: "Probablemente falta una compra o un traspaso. Añádela o corrige las operaciones que dejaron la posición por debajo de cero."
+      negative_positions_title: "Algunas posiciones quedaron por debajo de cero"
       no_holdings: No hay posiciones para mostrar.
       return: Rendimiento total
       weight: Peso
