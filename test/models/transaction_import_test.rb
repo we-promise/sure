@@ -374,7 +374,7 @@ class TransactionImportTest < ActiveSupport::TestCase
     loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow_entry = accounts(:depository).entries.create!(
       date: Date.new(2024, 1, 1), amount: 500, currency: "USD", name: "Loan payment",
-      entryable: Transaction.new(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+      entryable: Transaction.new(counterparty_iban_last4: "3000", counterparty_own_account: loan)
     )
     loan.family.auto_create_missing_transfer_counterparts!
     transfer = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id)

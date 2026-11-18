@@ -170,12 +170,12 @@ module Family::AutoTransferMatchable
     sync_principal_only_loan_accounts(created_transfers)
   end
 
-  # An outflow entry whose counterparty IBAN matches another of this
-  # family's accounts (synced or manual) is a transfer whose destination
+  # An outflow entry whose counterparty is another of this family's
+  # accounts (synced or manual, linked by IBAN at import) is a transfer whose destination
   # account is known, even though the matching inflow transaction doesn't
   # exist yet -- e.g. the destination is a manually-tracked account the
   # user hasn't recorded this deposit on. Returns that account, or nil when
-  # there's nothing to suggest (no counterparty IBAN, no matching account,
+  # there's nothing to suggest (no linked own account,
   # already a transfer, or the user already dismissed this suggestion).
   #
   # Deliberately entry-scoped rather than family-wide: this only needs to
@@ -199,13 +199,12 @@ module Family::AutoTransferMatchable
     return nil if transaction.transfer? || transaction.transfer.present?
     return nil if transaction.extra&.dig("counterparty_transfer_suggestion_dismissed") == true
 
-    counterparty_iban = transaction.counterparty_iban
-    return nil if counterparty_iban.blank?
+    # The import links the counterparty to the family's own account with
+    # that IBAN, preferring the sub-account in the outflow's currency.
+    own_account_id = transaction.counterparty_own_account_id
+    return nil if own_account_id.blank? || own_account_id == entry.account_id
 
-    # One IBAN can back several currency sub-accounts (Revolut, Wise), so
-    # prefer the one in the outflow's own currency.
-    candidates = accounts.writable_by(user).visible.where.not(id: entry.account_id).where(iban: normalize_iban(counterparty_iban)).to_a
-    candidates.find { |candidate| candidate.currency == entry.currency } || candidates.first
+    accounts.writable_by(user).visible.find_by(id: own_account_id)
   end
 
   # Family-wide counterpart to missing_transfer_suggestion_for: instead of
@@ -229,24 +228,21 @@ module Family::AutoTransferMatchable
   # destination account is eligible, keeping the fabricated entry's amount
   # exact rather than dependent on same-day exchange-rate availability.
   def auto_create_missing_transfer_counterparts!(account: nil)
-    # Only same-currency manual accounts that carry an IBAN can ever receive a
-    # fabricated counterpart, so look them up once and skip every outflow whose
-    # counterparty IBAN isn't one of theirs (rent, utilities and other third
-    # parties) before running any per-entry candidate query.
-    target_accounts_by_iban = accounts.visible_manual.to_a
-      .select { |target| target.iban.present? }
-      .group_by { |target| normalize_iban(target.iban) }
-    return if target_accounts_by_iban.empty?
+    # Only manual accounts can ever receive a fabricated counterpart, so look
+    # them up once and skip every outflow whose counterparty isn't one of
+    # them (rent, utilities and other third parties).
+    target_accounts = accounts.visible_manual.index_by(&:id)
+    return if target_accounts.empty?
 
     # Narrow in SQL to outflows that still could need a counterpart: they
-    # carry a counterparty IBAN, aren't already a transfer, and the user
+    # are linked to a manual own account, aren't already a transfer, and the user
     # hasn't dismissed the suggestion.
     outflow_entries = Entry.joins(:account)
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
       .where(accounts: { family_id: id, status: [ "draft", "active" ] })
       .where(entryable_type: "Transaction", excluded: false)
       .where("entries.amount > 0")
-      .where.not(transactions: { counterparty_iban: nil })
+      .where(transactions: { counterparty_own_account_id: target_accounts.keys })
       .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
       .where.not(transactions: { id: Transfer.select(:outflow_transaction_id) })
       .where.not("transactions.extra @> ?", { "counterparty_transfer_suggestion_dismissed" => true }.to_json)
@@ -262,9 +258,6 @@ module Family::AutoTransferMatchable
       next if transaction.transfer?
       next if transaction.extra&.dig("counterparty_transfer_suggestion_dismissed") == true
 
-      counterparty_iban = transaction.counterparty_iban
-      next if counterparty_iban.blank?
-
       # The sync runs without a user, so act on behalf of the outflow
       # account's owner: only fabricate into an account they could pick in
       # the manual match dialog (TransferMatchesController#new), never into
@@ -274,12 +267,11 @@ module Family::AutoTransferMatchable
       owner = entry.account.owner
       next unless owner
 
-      target_account = target_accounts_by_iban[normalize_iban(counterparty_iban)]&.find do |candidate|
-        candidate.id != entry.account_id &&
-          candidate.currency == entry.currency &&
-          writable_account_ids_by_owner[owner].include?(candidate.id)
-      end
-      next unless target_account
+      target_account = target_accounts[transaction.counterparty_own_account_id]
+      next unless target_account &&
+        target_account.id != entry.account_id &&
+        target_account.currency == entry.currency &&
+        writable_account_ids_by_owner[owner].include?(target_account.id)
 
       # A real match candidate (an inflow transaction that already exists)
       # is handled by auto_match_transfers! -- only fabricate a counterpart
@@ -357,8 +349,8 @@ module Family::AutoTransferMatchable
     end
 
     # Orders the candidates so that IBAN-confirmed ones are tried first. A
-    # confirmed IBAN (the destination account's own IBAN equals the outflow's
-    # recorded counterparty IBAN) is a more precise signal than amount and date
+    # confirmed IBAN (the outflow's counterparty IBAN is the destination
+    # account's own IBAN) is a more precise signal than amount and date
     # alone, which can be ambiguous with several similar transactions in flight.
     # It only breaks ties: the date window and every other matching rule stay
     # the same, and the resulting transfer is created like any other automatic
@@ -376,39 +368,32 @@ module Family::AutoTransferMatchable
         .map(&:first)
     end
 
-    # True when the inflow's destination account has its own IBAN set and it
-    # matches the outflow transaction's recorded counterparty IBAN. Blank on
-    # either side (no accounts.iban set, or the provider never supplied a
-    # counterparty IBAN for this transaction) always resolves to false --
-    # this is an additive signal, never a requirement.
+    # True when the import linked the outflow's counterparty to the inflow's
+    # account (its IBAN is that account's own IBAN, see
+    # Account::ProviderImportAdapter). No link on either side always resolves
+    # to false -- this is an additive signal, never a requirement.
     def iban_confirmed?(match, transactions_by_id)
       inflow = transactions_by_id[match.inflow_transaction_id]
       outflow = transactions_by_id[match.outflow_transaction_id]
       return false unless inflow && outflow
+      return false unless outflow.counterparty_own_account_id.present? &&
+        outflow.counterparty_own_account_id == inflow.entry.account_id
 
-      destination_iban = inflow.entry.account.iban
-      counterparty_iban = outflow.counterparty_iban
-      return false if destination_iban.blank? || counterparty_iban.blank?
-      return false unless normalize_iban(destination_iban) == normalize_iban(counterparty_iban)
+      # The inflow side's own counterparty (who the destination account's bank
+      # says paid it) is a second, independent signal. When it is known, it
+      # must agree with the source account -- matching amount and date, but a
+      # DIFFERENT payer on the destination side, means two distinct
+      # transactions that merely coincide. Blank is not a contradiction: not
+      # every provider supplies it on the inflow side.
+      if inflow.counterparty_own_account_id.present?
+        return inflow.counterparty_own_account_id == outflow.entry.account_id
+      end
 
-      # The inflow side's own recorded counterparty IBAN (who the destination
-      # account's bank says paid it) is a second, independent signal from the
-      # same provider sync. When it's present, it must agree with the source
-      # account's IBAN too -- a contradiction here (matching amount/date, but
-      # the destination account's bank recorded a DIFFERENT payer) means this
-      # is very likely two distinct transactions that merely coincide, not a
-      # confirmed transfer. Blank is not a contradiction: not every provider
-      # supplies this on the inflow side, so its absence is uninformative.
       source_iban = outflow.entry.account.iban
-      inflow_counterparty_iban = inflow.counterparty_iban
-      return false if source_iban.present? && inflow_counterparty_iban.present? &&
-        normalize_iban(source_iban) != normalize_iban(inflow_counterparty_iban)
+      inflow_iban_last4 = inflow.counterparty_iban_last4
+      return false if source_iban.present? && inflow_iban_last4.present? && source_iban.last(4) != inflow_iban_last4
 
       true
-    end
-
-    def normalize_iban(value)
-      IbanNormalizable.normalize(value).to_s
     end
 
     # A principal-only loan replays a linked transfer as principal. The balance

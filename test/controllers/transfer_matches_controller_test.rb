@@ -2,6 +2,7 @@ require "test_helper"
 
 class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
+  include GoalPledgeTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -149,7 +150,7 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     target_account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
-    outflow_entry.entryable.update!(counterparty_iban: "DE89 3704 0044 0532 0130 00")
+    link_counterparty!(outflow_entry, "DE89 3704 0044 0532 0130 00")
 
     get new_transaction_transfer_match_path(outflow_entry)
 
@@ -161,7 +162,7 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
 
   test "new does not suggest an account when no iban matches" do
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
-    outflow_entry.entryable.update!(counterparty_iban: "AT611904300234573201") # pipelock:ignore IBAN
+    link_counterparty!(outflow_entry, "AT611904300234573201") # pipelock:ignore IBAN
 
     get new_transaction_transfer_match_path(outflow_entry)
 
@@ -174,7 +175,7 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     target_account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
-    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    link_counterparty!(outflow_entry, "DE89370400440532013000") # pipelock:ignore IBAN
     # A real matching inflow already exists on the target account, so this
     # is a normal match, not a "missing counterpart" situation.
     create_transaction(amount: -100, account: target_account)
@@ -190,7 +191,7 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     target_account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
-    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    link_counterparty!(outflow_entry, "DE89370400440532013000") # pipelock:ignore IBAN
 
     post dismiss_suggestion_transaction_transfer_match_path(outflow_entry)
 
@@ -199,6 +200,32 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
 
     get new_transaction_transfer_match_path(outflow_entry)
     assert_no_match I18n.t("transfer_matches.matching_fields.dismiss_suggestion"), response.body
+  end
+
+  # we-promise/sure#4226: marking a synced bank outflow as a transfer to a
+  # manual account creates the deposit there, which must resolve its pledge.
+  test "matching an outflow to a new inflow on a pledged account resolves the pledge" do
+    investment = accounts(:investment)
+    pledge = open_transfer_pledge(investment, amount: 120)
+    outflow = create_transaction(amount: 120, account: accounts(:depository), name: "To brokerage")
+
+    post transaction_transfer_match_path(outflow), params: {
+      transfer_match: { method: "new", target_account_id: investment.id }
+    }
+
+    transfer = Transfer.find_by!(outflow_transaction_id: outflow.transaction.id)
+    assert_equal transfer.inflow_transaction.id, pledge.reload.matched_transaction_id
+  end
+
+  test "matching an inflow to a new outflow leaves the inflow account's pledge open" do
+    pledge = goal_pledges(:open_transfer)
+    inflow = create_transaction(amount: -200, account: pledge.account, name: "From brokerage")
+
+    post transaction_transfer_match_path(inflow), params: {
+      transfer_match: { method: "new", target_account_id: accounts(:investment).id }
+    }
+
+    assert_equal "open", pledge.reload.status
   end
 
   test "new shows the transaction being matched with its account logo" do
@@ -237,4 +264,18 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
       delete transaction_transfer_match_path(outflow)
     end
   end
+
+  private
+    # Links the counterparty the way Account::ProviderImportAdapter does on
+    # import: only the last four IBAN characters, plus the family's own
+    # account with that IBAN.
+    def link_counterparty!(entry, iban, **attributes)
+      iban = IbanNormalizable.normalize(iban)
+      candidates = Account.own_accounts_by_iban(entry.account.family, excluding: entry.account)[iban]
+      entry.entryable.update!(
+        counterparty_iban_last4: iban.last(4),
+        counterparty_own_account_id: Account.own_account_id_for(candidates, currency: entry.currency),
+        **attributes
+      )
+    end
 end

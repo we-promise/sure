@@ -40,22 +40,21 @@ class Account::ProviderImportAdapter
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
-    # counterparty_iban/counterparty_account_id describe a third party's own
-    # bank account -- unlike everything else callers pass through `extra`,
-    # they get their own deterministically encrypted transaction columns
-    # (see Transaction), not the plain jsonb `extra` column. Popped out here,
-    # before any of the jsonb-merging logic below runs, so they never land in
-    # the unencrypted column even transiently. A nil value from a caller
-    # that always sends the keys (EnableBankingEntry::Processor) means "no
-    # counterparty data in this payload" and never clears a value an earlier
-    # sync captured; a caller that omits the keys entirely (every other
-    # provider) leaves the columns untouched as well.
-    counterparty_keys_present = extra.is_a?(Hash) && (extra.with_indifferent_access.key?(:counterparty_iban) || extra.with_indifferent_access.key?(:counterparty_account_id))
+    # counterparty_iban/counterparty_reference describe a third party's own
+    # bank account. Popped out of `extra` before any of the jsonb merging
+    # below, so they never land in a column: only their last four characters
+    # are stored, plus a link when the IBAN is another account of this family.
+    # A nil value from a caller that always sends the keys
+    # (EnableBankingEntry::Processor) means "no counterparty data in this
+    # payload" and never clears what an earlier sync captured; a caller that
+    # omits the keys (every other provider) leaves the columns untouched.
+    counterparty = nil
     if extra.is_a?(Hash)
       extra = extra.with_indifferent_access
-      incoming_counterparty_iban = IbanNormalizable.normalize(extra[:counterparty_iban])
-      incoming_counterparty_account_id = extra[:counterparty_account_id].presence
-      extra = extra.except(:counterparty_iban, :counterparty_account_id)
+      if extra.key?(:counterparty_iban) || extra.key?(:counterparty_reference)
+        counterparty = counterparty_attributes(iban: extra[:counterparty_iban], reference: extra[:counterparty_reference], currency: currency)
+      end
+      extra = extra.except(:counterparty_iban, :counterparty_reference)
     end
 
     Account.transaction do
@@ -105,20 +104,14 @@ class Account::ProviderImportAdapter
               entry.transaction.extra = updated_extra
             end
 
-            # counterparty_iban/counterparty_account_id have no corresponding
-            # UI field, so backfilling them here doesn't risk reverting a
-            # user edit the way overwriting name/category/notes would --
-            # unlike those, protecting the user's work gives no reason to
-            # withhold this data. Without this, a transaction the user
-            # touched before this metadata existed would never receive it,
-            # even on later syncs. Purely additive (only fills a currently
-            # blank column), deliberately unlike the unprotected path below,
-            # which always assigns -- even nil -- so a later correction can
-            # clear a stale value there. A protected entry's already-set
-            # value must never be touched, correction or not.
-            if counterparty_keys_present
-              entry.transaction.counterparty_iban = incoming_counterparty_iban if entry.transaction.counterparty_iban.blank?
-              entry.transaction.counterparty_account_id = incoming_counterparty_account_id if entry.transaction.counterparty_account_id.blank?
+            # The counterparty columns have no form field, so filling them does
+            # not revert a user edit the way overwriting name/category/notes
+            # would. Only blank columns are filled, unlike the unprotected path
+            # below: a protected entry's stored value is never replaced.
+            if counterparty
+              counterparty.each do |attribute, value|
+                entry.transaction[attribute] = value if entry.transaction[attribute].blank?
+              end
             end
 
             entry.transaction.save! if entry.transaction.changed?
@@ -283,19 +276,16 @@ class Account::ProviderImportAdapter
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
       apply_provider_extra(entry, extra, replace_extra_namespaces)
 
-      # Unlike the protected path above, a later sync that carries a value
-      # replaces that column, so a corrected IBAN wins. A blank value leaves
-      # its column alone: some ASPSPs drop the IBAN once a pending
+      # Unlike the protected path above, a payload with an IBAN replaces all
+      # three columns, so a corrected IBAN wins. Without an IBAN only the
+      # reference is updated: some ASPSPs drop the IBAN once a pending
       # transaction is booked and send only a non-IBAN account id, and
-      # clearing here would lose an IBAN an earlier sync captured. The
-      # account id is only a fallback for a missing IBAN, so an incoming
-      # IBAN also replaces it (with nil when the payload has none).
-      if counterparty_keys_present && entry.entryable.is_a?(Transaction)
-        if incoming_counterparty_iban.present?
-          entry.transaction.counterparty_iban = incoming_counterparty_iban
-          entry.transaction.counterparty_account_id = incoming_counterparty_account_id
-        elsif incoming_counterparty_account_id.present?
-          entry.transaction.counterparty_account_id = incoming_counterparty_account_id
+      # clearing here would lose what an earlier sync captured.
+      if counterparty && entry.entryable.is_a?(Transaction)
+        if counterparty[:counterparty_iban_last4].present?
+          entry.transaction.assign_attributes(counterparty)
+        elsif counterparty[:counterparty_reference_last4].present?
+          entry.transaction.counterparty_reference_last4 = counterparty[:counterparty_reference_last4]
         end
         entry.transaction.save! if entry.transaction.changed?
       end
@@ -809,6 +799,15 @@ class Account::ProviderImportAdapter
       )
 
       entry.save!
+
+      # Coins arriving in a wallet are its deposits (GoalPledge.deposit_trade?).
+      # After commit, because a wallet writes the trade inside its own
+      # transaction. A re-imported trade is skipped by the reconciler once
+      # stamped.
+      if GoalPledge.deposit_trade?(entry) && account_linked_to_any_goal?
+        GoalPledge::Reconciler.run_after_commit(entry)
+      end
+
       entry
     end
   end
@@ -1166,6 +1165,23 @@ class Account::ProviderImportAdapter
   end
 
   private
+    COUNTERPARTY_LAST_CHARACTERS = 4
+
+    def counterparty_attributes(iban:, reference:, currency:)
+      iban = IbanNormalizable.normalize(iban)
+      {
+        counterparty_iban_last4: iban&.last(COUNTERPARTY_LAST_CHARACTERS),
+        counterparty_reference_last4: reference.to_s.strip.last(COUNTERPARTY_LAST_CHARACTERS).presence,
+        counterparty_own_account_id: iban && Account.own_account_id_for(own_accounts_by_iban[iban], currency: currency)
+      }
+    end
+
+    # Account#iban is encrypted without determinism, so it cannot be looked up
+    # by value; the family's few IBANs are decrypted once per adapter instead.
+    def own_accounts_by_iban
+      @own_accounts_by_iban ||= Account.own_accounts_by_iban(account.family, excluding: account)
+    end
+
 
     # The latest earlier holding of the security the provider reports. A
     # remapped row records that security in provider_security_id; an
@@ -1217,7 +1233,7 @@ class Account::ProviderImportAdapter
     def account_linked_to_any_goal?
       return @account_linked_to_any_goal if defined?(@account_linked_to_any_goal)
 
-      @account_linked_to_any_goal = account.goal_accounts.exists?
+      @account_linked_to_any_goal = account.linked_to_goal?
     end
 
     # Writes provider-owned metadata onto the transaction.

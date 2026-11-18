@@ -1,12 +1,11 @@
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable, IbanNormalizable, Logoable
 
-  # Deterministic so the family_id+iban+currency unique index and the
-  # uniqueness validation below still compare equal values once the column
-  # is encrypted (the same plaintext always produces the same ciphertext).
-  # The accepted tradeoff: equal IBANs are recognisable at rest.
+  # Not deterministic: an IBAN is never looked up by value in SQL. Code that
+  # matches IBANs loads the family's few accounts and compares in Ruby, so
+  # equal IBANs need not share a ciphertext.
   if encryption_ready?
-    encrypts :iban, deterministic: true
+    encrypts :iban
   end
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
@@ -16,18 +15,17 @@ class Account < ApplicationRecord
   # IbanNormalizable strips everything but letters/digits and upcases, so
   # IBANs from Enable Banking ("DE893704...") and manually-entered ones in any
   # formatting style ("DE89 3704...", "DE89.3704...", "DE89-3704...")
-  # normalize to the same value — required for both the uniqueness index and
-  # the deterministic-encryption equality checks to match.
+  # normalize to the same value and compare equal.
 
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
 
   after_destroy_commit :move_account_statements_to_inbox
+  # Transactions imported before this IBAN was known only kept the
+  # counterparty's last four characters; the raw rows still hold the full one.
+  after_save_commit :rematch_counterparty_transactions_later, if: :saved_change_to_iban?
 
   validates :name, :balance, :currency, presence: true
-  # Scoped per currency: Revolut and Wise expose one IBAN for several
-  # currency sub-accounts, and each of them is its own Sure account.
-  validates :iban, uniqueness: { scope: [ :family_id, :currency ] }, allow_nil: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
@@ -156,6 +154,14 @@ class Account < ApplicationRecord
       )
     SQL
   }
+
+  # SHA-256 of a set of account ids, in id order, joined by commas. An
+  # aggregate over no rows still yields one value, the hash of "". Insight
+  # generators store it with a total and Insight.about_shared_accounts
+  # recomputes it on read, so both share this one expression.
+  ID_SET_DIGEST_SQL = Arel.sql(<<~SQL.squish)
+    encode(sha256(convert_to(coalesce(string_agg(accounts.id::text, ',' ORDER BY accounts.id), ''), 'UTF8')), 'hex')
+  SQL
 
   # Accounts a user can write to (owned or shared with full_control)
   WRITABLE_BY_CONDITION = "accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')".freeze
@@ -288,6 +294,23 @@ class Account < ApplicationRecord
   end
 
   class << self
+    # The family's accounts by normalized IBAN, as [id, currency] pairs.
+    def own_accounts_by_iban(family, excluding: nil)
+      family.accounts.where.not(iban: nil).where.not(id: excluding).pluck(:id, :iban, :currency)
+            .group_by { |_id, iban, _currency| iban }
+            .transform_values { |rows| rows.map { |id, _iban, currency| [ id, currency ] } }
+    end
+
+    # The one account a counterparty IBAN identifies. One IBAN can back
+    # several currency sub-accounts (Revolut, Wise), so the one in the
+    # transaction's currency wins; any other tie identifies none.
+    def own_account_id_for(candidates, currency:)
+      return candidates.first.first if candidates.to_a.one?
+
+      same_currency = candidates.to_a.select { |_id, account_currency| account_currency == currency }
+      same_currency.first.first if same_currency.one?
+    end
+
     def normalize_institution_domain(value)
       host = value.to_s.strip.downcase
         .sub(%r{\A[a-z][a-z0-9+.-]*://}, "")
@@ -734,6 +757,12 @@ class Account < ApplicationRecord
       manual?
   end
 
+  # Only an account linked to a goal can hold a goal pledge, so callers use
+  # this to skip pledge reconciliation for every other account.
+  def linked_to_goal?
+    goal_accounts.exists?
+  end
+
   # True when the account has no live sync provider attached. Mirrors the
   # `Account.manual` scope so per-instance checks don't drift from the query.
   def manual?
@@ -926,6 +955,31 @@ class Account < ApplicationRecord
             .order(:ticker)
   end
 
+  NegativePosition = Data.define(:security, :first_date, :lowest_qty)
+
+  # Securities whose calculated position dropped below zero on some day, for
+  # example after a sale without its purchase or after deleting a purchase.
+  # The holdings tab shows them instead of hiding the gap.
+  # Linked accounts are left out entirely: their provider's holdings are the
+  # truth, so a negative quantity there (reported, or carried back by the
+  # reverse calculator) is a short position, not missing data.
+  def negative_positions
+    return [] if linked?
+
+    rows = holdings
+      .joins(:security)
+      .merge(Security.standard)
+      .where(account_provider_id: nil)
+      .where("holdings.qty < 0")
+      .group(:security_id)
+      .pluck(:security_id, Arel.sql("MIN(holdings.date)"), Arel.sql("MIN(holdings.qty)"))
+    return [] if rows.empty?
+
+    securities = Security.where(id: rows.map(&:first)).index_by(&:id)
+    rows.map { |security_id, first_date, lowest_qty| NegativePosition.new(securities[security_id], first_date, lowest_qty) }
+        .sort_by { |position| [ position.first_date, position.security.ticker, position.security.id ] }
+  end
+
   # The balance type determines which "component" of balance is being tracked.
   # This is primarily used for balance related calculations and updates.
   #
@@ -943,6 +997,16 @@ class Account < ApplicationRecord
     else
       raise "Unknown account type: #{accountable_type}"
     end
+  end
+
+  # Whether the activity feed hides balance updates unless asked to show them.
+  #
+  # A linked account gets one from almost every daily sync, and users can't add
+  # their own there, so they bury the transactions they sit between. Property,
+  # vehicle, loan and other non-cash accounts are valued by those entries, so
+  # they keep showing them.
+  def hides_balance_updates_by_default?
+    linked? && balance_type != :non_cash
   end
 
   def owned_by?(user)
@@ -991,6 +1055,10 @@ class Account < ApplicationRecord
   end
 
   private
+    def rematch_counterparty_transactions_later
+      RematchCounterpartyAccountsJob.perform_later(family)
+    end
+
     def clear_unsupported_iban
       self.iban = nil if iban.present? && !supports_iban?
     end

@@ -26,7 +26,7 @@ class Transactions::BulkDeletionsControllerTest < ActionDispatch::IntegrationTes
     accounts(:loan).update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow_entry = accounts(:depository).entries.create!(
       name: "Loan payment", amount: 500, currency: "USD", date: Date.current,
-      entryable: Transaction.new(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+      entryable: Transaction.new(counterparty_iban_last4: "3000", counterparty_own_account: accounts(:loan))
     )
     @user.family.auto_create_missing_transfer_counterparts!
     fabricated_entry = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).inflow_transaction.entry
@@ -41,7 +41,7 @@ class Transactions::BulkDeletionsControllerTest < ActionDispatch::IntegrationTes
     accounts(:loan).update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow_entry = accounts(:depository).entries.create!(
       name: "Loan payment", amount: 500, currency: "USD", date: Date.current,
-      entryable: Transaction.new(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+      entryable: Transaction.new(counterparty_iban_last4: "3000", counterparty_own_account: accounts(:loan))
     )
     @user.family.auto_create_missing_transfer_counterparts!
     fabricated_entry = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).inflow_transaction.entry

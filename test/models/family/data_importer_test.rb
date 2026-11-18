@@ -23,8 +23,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:accounts].count
-    account = result[:accounts].first
+    assert_equal 1, result[:account_ids].count
+    account = Account.find(result[:account_ids].first)
     assert_equal "Test Checking", account.name
     assert_equal 1500.0, account.balance.to_f
     assert_equal "USD", account.currency
@@ -163,7 +163,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     result = Family::DataImporter.new(@family, ndjson, account_targets: { "old-account" => account }).import!
 
-    assert_empty result[:accounts]
+    assert_empty result[:account_ids]
     assert_equal [ "Grocer" ], account.entries.pluck(:name)
   end
 
@@ -199,7 +199,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       }
     ])
 
-    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+    account_id = Family::DataImporter.new(@family, ndjson).import![:account_ids].first
+    account = Account.find(account_id)
 
     assert account.reload.logo_brandfetch?
     assert_not account.logo_auto_fetchable?
@@ -221,7 +222,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       }
     ])
 
-    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+    account_id = Family::DataImporter.new(@family, ndjson).import![:account_ids].first
+    account = Account.find(account_id)
 
     assert account.reload.logo_automatic?
   end
@@ -245,7 +247,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal "DE89370400440532013000", result[:accounts].first.iban # pipelock:ignore IBAN
+    assert_equal "DE89370400440532013000", Account.find(result[:account_ids].first).iban # pipelock:ignore IBAN
   end
 
   test "keeps an existing account iban when a re-imported file omits the key" do
@@ -271,55 +273,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "DE89370400440532013000", @family.accounts.first.iban # pipelock:ignore IBAN
   end
 
-  test "drops an account iban the family already holds in that currency and keeps importing" do
-    account_data = {
-      balance: "100.00",
-      currency: "USD",
-      accountable_type: "Depository",
-      accountable: { subtype: "checking" },
-      iban: "DE89370400440532013000" # pipelock:ignore IBAN
-    }
-
-    result = Family::DataImporter.new(@family, build_ndjson([
-      { type: "Account", data: account_data.merge(id: "old-account-1", name: "First") },
-      { type: "Account", data: account_data.merge(id: "old-account-2", name: "Second") },
-      { type: "Account", data: account_data.merge(id: "old-account-3", name: "Euro", currency: "EUR") }
-    ])).import!
-
-    accounts = result[:accounts].index_by(&:name)
-    assert_equal 3, accounts.size
-    assert_equal "DE89370400440532013000", accounts["First"].reload.iban # pipelock:ignore IBAN
-    assert_nil accounts["Second"].reload.iban
-    assert_equal "DE89370400440532013000", accounts["Euro"].reload.iban # pipelock:ignore IBAN
-    assert_equal 1, result[:summary].dig("account_ibans", "skipped")
-  end
-
-  test "clears a kept account iban that a re-import's currency change makes taken" do
-    session = @family.import_sessions.create!(expected_chunks: 1)
-    account_data = {
-      balance: "100.00",
-      accountable_type: "Depository",
-      accountable: { subtype: "checking" },
-      iban: "DE89370400440532013000" # pipelock:ignore IBAN
-    }
-
-    Family::DataImporter.new(@family, build_ndjson([
-      { type: "Account", data: account_data.merge(id: "old-account-1", name: "Dollar", currency: "USD") },
-      { type: "Account", data: account_data.merge(id: "old-account-2", name: "Euro", currency: "EUR") }
-    ]), import_session: session).import!
-
-    result = Family::DataImporter.new(@family, build_ndjson([
-      { type: "Account", data: account_data.except(:iban).merge(id: "old-account-2", name: "Euro", currency: "USD") }
-    ]), import_session: session).import!
-
-    accounts = @family.accounts.index_by(&:name)
-    assert_equal "USD", accounts["Euro"].currency
-    assert_nil accounts["Euro"].iban
-    assert_equal "DE89370400440532013000", accounts["Dollar"].iban # pipelock:ignore IBAN
-    assert_equal 1, result[:summary].dig("account_ibans", "skipped")
-  end
-
-  test "ignores an iban on an account type without one, even when it is taken" do
+  test "ignores an iban on an account type without one" do
     account_data = {
       balance: "100.00",
       currency: "USD",
@@ -331,9 +285,9 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       { type: "Account", data: account_data.merge(id: "old-account-2", name: "Car", accountable_type: "Vehicle", accountable: {}) }
     ])).import!
 
-    accounts = result[:accounts].index_by(&:name)
+    accounts = Account.where(id: result[:account_ids]).index_by(&:name)
     assert_nil accounts["Car"].reload.iban
-    assert_nil result[:summary].dig("account_ibans", "skipped")
+    assert_equal "DE89370400440532013000", accounts["Checking"].reload.iban # pipelock:ignore IBAN
   end
 
   test "imports non-destructive account status from ndjson" do
@@ -354,7 +308,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    account = result[:accounts].first
+    account = Account.find(result[:account_ids].first)
     assert_equal "Closed Checking", account.name
     assert_equal "disabled", account.status
   end
@@ -377,7 +331,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    account = result[:accounts].first
+    account = Account.find(result[:account_ids].first)
     assert_equal "Pending Delete Checking", account.name
     assert_equal "active", account.status
   end
@@ -802,93 +756,6 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not_nil merchant
   end
 
-  test "imports a manually entered merchant iban" do
-    ndjson = build_ndjson([
-      {
-        type: "Merchant",
-        data: {
-          id: "merchant-1",
-          name: "Landlord",
-          iban: "AT611904300234573201" # pipelock:ignore IBAN
-        }
-      }
-    ])
-
-    importer = Family::DataImporter.new(@family, ndjson)
-    importer.import!
-
-    merchant = @family.merchants.find_by(name: "Landlord")
-    assert_equal "AT611904300234573201", merchant.iban # pipelock:ignore IBAN
-  end
-
-  test "keeps an existing merchant iban when the imported file omits the key" do
-    merchant = @family.merchants.create!(name: "Landlord", iban: "AT611904300234573201") # pipelock:ignore IBAN
-
-    ndjson = build_ndjson([
-      { type: "Merchant", data: { id: "merchant-1", name: "Landlord" } }
-    ])
-    Family::DataImporter.new(@family, ndjson).import!
-
-    assert_equal "AT611904300234573201", merchant.reload.iban # pipelock:ignore IBAN
-  end
-
-  test "drops a merchant iban another family merchant holds and keeps importing" do
-    landlord = @family.merchants.create!(name: "Landlord", color: "#e99537", iban: "AT611904300234573201") # pipelock:ignore IBAN
-
-    ndjson = build_ndjson([
-      { type: "Merchant", data: { id: "merchant-1", name: "Tenant", color: "#4da568", iban: "at61 1904 3002 3457 3201" } } # pipelock:ignore IBAN
-    ])
-    result = Family::DataImporter.new(@family, ndjson).import!
-
-    tenant = @family.merchants.find_by(name: "Tenant")
-    assert_not_nil tenant
-    assert_nil tenant.iban
-    assert_equal "AT611904300234573201", landlord.reload.iban # pipelock:ignore IBAN
-    assert_equal 1, result[:summary].dig("merchant_ibans", "skipped")
-  end
-
-  test "clears a merchant iban when the imported file sets it to null" do
-    merchant = @family.merchants.create!(name: "Landlord", iban: "AT611904300234573201") # pipelock:ignore IBAN
-
-    ndjson = build_ndjson([
-      { type: "Merchant", data: { id: "merchant-1", name: "Landlord", iban: nil } }
-    ])
-    Family::DataImporter.new(@family, ndjson).import!
-
-    assert_nil merchant.reload.iban
-  end
-
-  test "keeps an existing merchant iban when a re-imported file omits the key" do
-    session = @family.import_sessions.create!(expected_chunks: 1)
-    merchant_data = { id: "merchant-1", name: "Landlord", color: "#e99537" }
-
-    Family::DataImporter.new(@family, build_ndjson([
-      { type: "Merchant", data: merchant_data.merge(iban: "AT611904300234573201") } # pipelock:ignore IBAN
-    ]), import_session: session).import!
-
-    Family::DataImporter.new(@family, build_ndjson([
-      { type: "Merchant", data: merchant_data }
-    ]), import_session: session).import!
-
-    merchant = @family.merchants.find_by!(name: "Landlord")
-    assert_equal "AT611904300234573201", merchant.iban # pipelock:ignore IBAN
-  end
-
-  test "clears a merchant iban when a re-imported file sets it to null" do
-    session = @family.import_sessions.create!(expected_chunks: 1)
-    merchant_data = { id: "merchant-1", name: "Landlord", color: "#e99537" }
-
-    Family::DataImporter.new(@family, build_ndjson([
-      { type: "Merchant", data: merchant_data.merge(iban: "AT611904300234573201") } # pipelock:ignore IBAN
-    ]), import_session: session).import!
-
-    Family::DataImporter.new(@family, build_ndjson([
-      { type: "Merchant", data: merchant_data.merge(iban: nil) }
-    ]), import_session: session).import!
-
-    assert_nil @family.merchants.find_by!(name: "Landlord").iban
-  end
-
   test "imports recurring transactions with remapped account and merchant references" do
     ndjson = build_ndjson([
       {
@@ -1187,7 +1054,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:entries].count
+    assert_equal 1, result[:entry_ids].count
 
     transaction = @family.transactions.first
     assert_not_nil transaction
@@ -1292,8 +1159,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     parent_entry = @family.entries.find_by!(name: "ATM withdrawal plus fee")
     assert parent_entry.split_parent?
     assert_equal true, parent_entry.excluded
-    assert_equal 4, result[:entries].count
-    assert_includes result[:entries].map(&:id), parent_entry.id
+    assert_equal 4, result[:entry_ids].count
+    assert_includes result[:entry_ids], parent_entry.id
 
     transfer_child = parent_entry.child_entries.find_by!(name: "Cash movement")
     fee_child = parent_entry.child_entries.find_by!(name: "ATM fee")
@@ -1499,7 +1366,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     result = importer.import!
 
     # Account + Opening balance + Trade entry
-    assert_equal 1, result[:entries].count
+    assert_equal 1, result[:entry_ids].count
 
     trade = @family.trades.first
     assert_not_nil trade
@@ -1963,7 +1830,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:entries].count
+    assert_equal 1, result[:entry_ids].count
 
     account = @family.accounts.find_by(name: "Property")
     valuation = account.valuations.joins(:entry).find_by(entries: { name: "Updated valuation" })
@@ -3358,8 +3225,31 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:accounts].count
-    assert_equal "Valid Account", result[:accounts].first.name
+    assert_equal 1, result[:account_ids].count
+    account_id = result[:account_ids].first
+    assert_equal "Valid Account", Account.find(account_id).name
+  end
+
+  test "session import persists source mappings without retaining them on the session" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    ndjson = [
+      { type: "Account", data: {
+        id: "acct-1", name: "Mapped Account", balance: "100.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } },
+      { type: "Transaction", data: {
+        id: "txn-1", account_id: "acct-1", date: "2024-01-15", amount: "-25.00",
+        name: "Coffee", currency: "USD"
+      } }
+    ].map(&:to_json).join("\n")
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    # The session lives for every chunk of a publish run; anything built onto
+    # its association stays in memory until the whole run ends.
+    assert_empty session.source_mappings.target
+    assert_empty @family.import_source_mappings.target
+    assert_equal %w[Account Transaction], ImportSourceMapping.where(import_session_id: session.id).pluck(:source_type).sort
   end
 
   test "skips unsupported record types" do
@@ -3383,7 +3273,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:accounts].count
+    assert_equal 1, result[:account_ids].count
   end
 
   test "full import scenario with all entity types" do
@@ -3502,7 +3392,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     result = importer.import!
 
     # Verify all entities were created
-    assert_equal 1, result[:accounts].count
+    assert_equal 1, result[:account_ids].count
     assert_equal 1, @family.categories.count
     assert_equal 1, @family.tags.count
     assert_equal 1, @family.merchants.count
