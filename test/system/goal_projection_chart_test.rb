@@ -67,7 +67,7 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       # $7,000 to go over ~24 months: the projection ends within a few dollars
       # of the target, so its end dot sits on the target line.
       goal = visit_goal(target: 10_000, saved: 3_000, pace: 291.67)
-      end_label = Money.new(goal.projection_end_amount(as_of: TODAY), "USD").format(precision: 0)
+      end_label = Money.new(goal.projection_end_amount, "USD").format(precision: 0)
 
       end_dot_y = page.evaluate_script(<<~JS)
         Number(Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg circle"))
@@ -95,6 +95,19 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
   end
 
+  test "a goal whose pace cannot be measured draws its target label but no projection or shortfall" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, saved: 3_000, pace: 200, measurable: false)
+
+      assert_equal "Target · $10,000", target_label["text"]
+      assert_empty chart_texts.select { |t| t["text"].end_with?(" short") }, "no shortfall label without a measurable pace"
+      assert_not page.evaluate_script(<<~JS), "no projection line without a measurable pace"
+        Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg path"))
+          .some((p) => p.getAttribute("stroke-dasharray") === "4 4")
+      JS
+    end
+  end
+
   test "a projection ending well short of the target keeps its shortfall label above the dot" do
     travel_to TODAY do
       visit_goal(target: 10_000, saved: 3_000, pace: 200)
@@ -104,9 +117,8 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
   end
 
-  # $3,000 saved at $200 a month: the projection falls short (a halo'd
-  # shortfall label), and the 50% and 75% milestones are drawn before the
-  # target date (hollow dots and halo'd labels).
+  # $3,000 saved at $200 a month: the projection falls short, so the chart
+  # draws a halo'd shortfall label beside the halo'd target label.
   test "in the dark theme every halo and ring matches the card" do
     @user.update!(theme: "dark")
     travel_to TODAY do
@@ -211,8 +223,12 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     # The saved history is pinned: empty by default, so the x-domain starts on
     # the day the goal was created; or one point at `history_from`, which is
     # where the domain then starts.
-    def visit_goal(target:, saved: 3_000, pace: 0, target_date: TARGET_DATE, history_from: nil)
+    # pace_measurable? is stubbed true by default: the test account has no
+    # transaction or balance history, so the chart would otherwise draw no
+    # projection at all. Pass measurable: false for that case.
+    def visit_goal(target:, saved: 3_000, pace: 0, target_date: TARGET_DATE, history_from: nil, measurable: true)
       Goal.any_instance.stubs(:pace).returns(pace)
+      Goal.any_instance.stubs(:pace_measurable?).returns(measurable)
       history = history_from ? [ OpenStruct.new(date: history_from, value: Money.new(saved, "USD")) ] : []
       Goal.any_instance.stubs(:balance_series_values).returns(history)
 
@@ -259,25 +275,22 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
           const svg = root.querySelector("svg");
           const halos = Array.from(svg.querySelectorAll("text[paint-order='stroke']"))
             .map((t) => ({ text: t.textContent, colour: getComputedStyle(t).stroke }));
-          const milestones = Array.from(svg.querySelectorAll("circle[data-milestone]"))
-            .map((c) => ({ percent: c.dataset.milestone, colour: getComputedStyle(c).fill }));
-          const rings = Array.from(svg.querySelectorAll("circle:not([data-milestone])"))
+          const rings = Array.from(svg.querySelectorAll("circle"))
             .map((c) => ({ fill: c.getAttribute("fill"), colour: getComputedStyle(c).stroke }));
-          return { backdrop, halos, milestones, rings };
+          return { backdrop, halos, rings };
         })()
       JS
     end
 
     def assert_backdrop_paint
       paint = backdrop_paint
-      # Target, shortfall and both milestone labels; both milestone dots; the
-      # projection end, Today and the two hover dots.
-      assert_operator paint["halos"].size, :>=, 4, "premise: halo'd labels drawn: #{paint["halos"].inspect}"
-      assert_operator paint["milestones"].size, :>=, 2, "premise: milestone dots drawn: #{paint["milestones"].inspect}"
+      # The target and shortfall labels; the projection end, Today and the two
+      # hover dots.
+      assert_operator paint["halos"].size, :>=, 2, "premise: halo'd labels drawn: #{paint["halos"].inspect}"
       assert_operator paint["rings"].size, :>=, 4, "premise: ringed dots drawn: #{paint["rings"].inspect}"
 
       backdrop = paint["backdrop"]
-      (paint["halos"] + paint["milestones"] + paint["rings"]).each do |item|
+      (paint["halos"] + paint["rings"]).each do |item|
         assert_equal backdrop, item["colour"], "does not match the card behind the chart: #{item.inspect}"
       end
     end
