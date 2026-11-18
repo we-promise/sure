@@ -1,6 +1,8 @@
 require "test_helper"
 
 class ImportTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")
@@ -8,6 +10,23 @@ class ImportTest < ActiveSupport::TestCase
     import.expects(:import!).never
 
     import.publish
+
+    assert_equal "complete", import.reload.status
+  end
+
+  test "publish schedules the catch-up sync for scheduled entries it created" do
+    import = imports(:transaction)
+    account = accounts(:depository)
+    import.define_singleton_method(:import!) do
+      account.entries.create!(
+        name: "Upcoming bill", date: 3.days.from_now.to_date, amount: 100, currency: "USD",
+        entryable: Transaction.new, import: self
+      )
+    end
+
+    assert_enqueued_jobs 1, only: EntryScheduledSyncJob do
+      import.publish
+    end
 
     assert_equal "complete", import.reload.status
   end
@@ -213,5 +232,17 @@ class ImportTest < ActiveSupport::TestCase
     import.update!(date_format: "%d/%m/%y")
 
     assert_equal Date.new(2024, 5, 15), Date.strptime("15/05/24", import.date_format)
+  end
+
+  test "parse_csv_str keeps a quote that is part of the value" do
+    csv = Import.parse_csv_str("name\nO'Brien\n")
+
+    assert_equal "O'Brien", csv.first["name"]
+  end
+
+  test "parse_csv_str preserves a literal leading apostrophe before a formula marker" do
+    csv = Import.parse_csv_str("name\n'+44 Taxis\n+44 Taxis\n")
+
+    assert_equal [ "'+44 Taxis", "+44 Taxis" ], csv["name"]
   end
 end

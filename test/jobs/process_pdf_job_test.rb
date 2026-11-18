@@ -6,6 +6,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
   setup do
     @import = imports(:pdf)
     @family = @import.family
+    use_ai_routes
   end
 
   test "skips non-PdfImport imports" do
@@ -80,6 +81,18 @@ class ProcessPdfJobTest < ActiveJob::TestCase
       assert_equal({ "type" => "financial_document" }, metadata)
       true
     end.returns(family_documents(:tax_return))
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert_equal "complete", @import.reload.status
+  end
+
+  test "skips the vector store when embed is unavailable" do
+    use_ai_routes(embed: [])
+    attach_pdf!(@import)
+    @import.expects(:process_with_ai).once.returns(Struct.new(:document_type).new("financial_document"))
+    @import.stubs(:send_next_steps_email)
+    @family.expects(:upload_document).never
 
     ProcessPdfJob.perform_now(@import)
 

@@ -9,6 +9,10 @@ class EnableBankingItem < ApplicationRecord
     encrypts :session_id, deterministic: true
     encrypts :raw_payload
     encrypts :raw_institution_payload
+    # The user's IP address, kept only while the bank session needs it (see
+    # with_stale_psu_ip); never looked up by value. Values stored before this
+    # was encrypted stay readable until they are encrypted.
+    encrypts :last_psu_ip, support_unencrypted_data: true
   end
 
   validates :name, presence: true
@@ -274,7 +278,7 @@ class EnableBankingItem < ApplicationRecord
   end
 
   def unlinked_accounts_count
-    enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    enable_banking_accounts.needs_setup.count
   end
 
   def total_accounts_count
@@ -301,7 +305,7 @@ class EnableBankingItem < ApplicationRecord
     else
       total_accounts = enable_banking_accounts.count
       linked_count = accounts.count
-      unlinked_count = total_accounts - linked_count
+      unlinked_count = unlinked_accounts_count
 
       if total_accounts == 0
         "No accounts found"
@@ -430,8 +434,10 @@ class EnableBankingItem < ApplicationRecord
         next unless uid.present?
 
         enable_banking_account = enable_banking_accounts.find_or_initialize_by(uid: uid)
-        enable_banking_account.upsert_enable_banking_snapshot!(account_data)
-        enable_banking_account.save!
+        # An ignored account keeps only its session identifiers current.
+        unless enable_banking_account.upsert_enable_banking_snapshot!(account_data)
+          enable_banking_account.refresh_session_identifiers!(account_data)
+        end
       end
     end
 end

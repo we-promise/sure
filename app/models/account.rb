@@ -23,6 +23,7 @@ class Account < ApplicationRecord
   has_many :valuations, through: :entries, source: :entryable, source_type: "Valuation"
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
+  has_many :holding_lots
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
   has_many :goal_accounts, dependent: :destroy
@@ -38,6 +39,44 @@ class Account < ApplicationRecord
            dependent: :destroy
 
   monetize :balance, :cash_balance
+
+  # Sum of scheduled (future-dated) entries, signed and converted the same way
+  # Balance::BaseCalculator#signed_entry_flows treats real flows -- so the
+  # projection stays consistent with what the balance will actually become
+  # once these entries land. Non-cash valuation-only accounts (Property,
+  # Vehicle, etc.) ignore transactions entirely for balance purposes, same as
+  # Balance::BaseCalculator#flows_for_date -- see Entry#scheduled?.
+  #
+  # Trades are included only when qty is 0 (Dividend/Interest): those are pure
+  # cash flows with no offsetting holdings change, same shape as a Transaction.
+  # A Buy/Sell/Transfer/etc. moves value between cash and holdings rather than
+  # into or out of the account, so summing its raw amount here would
+  # double-count against Balance::BaseCalculator#market_value_change_on_date
+  # once the trade lands.
+  # `through_date` bounds the scheduled window to entries dated on or before
+  # it (inclusive) -- used to project the balance as of a specific future
+  # date (see Account::ActivityFeedData) instead of the account's fully
+  # projected total.
+  #
+  # The flows are loaded and converted once per instance (see
+  # #scheduled_entry_flows), so the chart tooltip and every projected date
+  # group in the activity feed share one query and one FX pass.
+  def scheduled_entries_total_money(through_date: nil)
+    flows = scheduled_entry_flows
+    flows = flows.select { |date, _| date <= through_date } if through_date
+
+    Money.new(flows.sum { |_, amount| amount }, currency)
+  end
+
+  def reload(*)
+    @scheduled_entry_flows = nil
+    @current_holdings_total = nil
+    super
+  end
+
+  def projected_balance_money
+    balance_money + scheduled_entries_total_money
+  end
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
@@ -98,6 +137,14 @@ class Account < ApplicationRecord
       )
     SQL
   }
+
+  # SHA-256 of a set of account ids, in id order, joined by commas. An
+  # aggregate over no rows still yields one value, the hash of "". Insight
+  # generators store it with a total and Insight.about_shared_accounts
+  # recomputes it on read, so both share this one expression.
+  ID_SET_DIGEST_SQL = Arel.sql(<<~SQL.squish)
+    encode(sha256(convert_to(coalesce(string_agg(accounts.id::text, ',' ORDER BY accounts.id), ''), 'UTF8')), 'hex')
+  SQL
 
   # Accounts a user can write to (owned or shared with full_control)
   WRITABLE_BY_CONDITION = "accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')".freeze
@@ -495,6 +542,24 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_sharesight_account(sharesight_account)
+      family = sharesight_account.sharesight_item.family
+
+      attributes = {
+        family: family,
+        name: sharesight_account.name.presence || I18n.t("sharesight_items.defaults.name"),
+        balance: 0,
+        cash_balance: 0,
+        currency: sharesight_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     TRADE_REPUBLIC_ACCOUNT_TYPES = {
       "portfolio" => [ "Investment", "brokerage", "Trade Republic Portfolio" ],
       "cash" => [ "Depository", "checking", "Trade Republic Cash" ],
@@ -654,6 +719,12 @@ class Account < ApplicationRecord
       manual?
   end
 
+  # Only an account linked to a goal can hold a goal pledge, so callers use
+  # this to skip pledge reconciliation for every other account.
+  def linked_to_goal?
+    goal_accounts.exists?
+  end
+
   # True when the account has no live sync provider attached. Mirrors the
   # `Account.manual` scope so per-instance checks don't drift from the query.
   def manual?
@@ -766,6 +837,11 @@ class Account < ApplicationRecord
     clear_attribute_changes(restored.keys)
   end
 
+  def current_holdings_total
+    # A holding with no exchange rate is left out rather than counted 1:1.
+    @current_holdings_total ||= current_holdings.sum { |h| h.amount_in_account_currency(unconvertible: 0) }
+  end
+
   def current_holdings
     if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
       holdings
@@ -841,6 +917,31 @@ class Account < ApplicationRecord
             .order(:ticker)
   end
 
+  NegativePosition = Data.define(:security, :first_date, :lowest_qty)
+
+  # Securities whose calculated position dropped below zero on some day, for
+  # example after a sale without its purchase or after deleting a purchase.
+  # The holdings tab shows them instead of hiding the gap.
+  # Linked accounts are left out entirely: their provider's holdings are the
+  # truth, so a negative quantity there (reported, or carried back by the
+  # reverse calculator) is a short position, not missing data.
+  def negative_positions
+    return [] if linked?
+
+    rows = holdings
+      .joins(:security)
+      .merge(Security.standard)
+      .where(account_provider_id: nil)
+      .where("holdings.qty < 0")
+      .group(:security_id)
+      .pluck(:security_id, Arel.sql("MIN(holdings.date)"), Arel.sql("MIN(holdings.qty)"))
+    return [] if rows.empty?
+
+    securities = Security.where(id: rows.map(&:first)).index_by(&:id)
+    rows.map { |security_id, first_date, lowest_qty| NegativePosition.new(securities[security_id], first_date, lowest_qty) }
+        .sort_by { |position| [ position.first_date, position.security.ticker, position.security.id ] }
+  end
+
   # The balance type determines which "component" of balance is being tracked.
   # This is primarily used for balance related calculations and updates.
   #
@@ -858,6 +959,16 @@ class Account < ApplicationRecord
     else
       raise "Unknown account type: #{accountable_type}"
     end
+  end
+
+  # Whether the activity feed hides balance updates unless asked to show them.
+  #
+  # A linked account gets one from almost every daily sync, and users can't add
+  # their own there, so they bury the transactions they sit between. Property,
+  # vehicle, loan and other non-cash accounts are valued by those entries, so
+  # they keep showing them.
+  def hides_balance_updates_by_default?
+    linked? && balance_type != :non_cash
   end
 
   def owned_by?(user)
@@ -906,6 +1017,41 @@ class Account < ApplicationRecord
   end
 
   private
+    # [date, signed amount in account currency] for each scheduled entry that
+    # contributes to the projection.
+    def scheduled_entry_flows
+      @scheduled_entry_flows ||= if balance_type == :non_cash && accountable_type != "Loan"
+        []
+      else
+        entries.excluding_pending.excluding_split_parents
+          .where(entryable_type: [ "Transaction", "Trade" ])
+          .where("entries.date > ?", Date.current)
+          .includes(:entryable)
+          .filter_map { |entry| (amount = convert_scheduled_entry_amount(entry)) && [ entry.date, amount ] }
+      end
+    end
+
+    # Converts a scheduled entry's amount into this account's currency, signed
+    # the same way flows_for_date treats it (see Balance::BaseCalculator).
+    # Returns nil when the entry should not contribute -- a Buy/Sell trade
+    # (moves value between cash and holdings, not into/out of the account) or
+    # an unconvertible currency pair. Dropping the latter instead of using the
+    # raw, unconverted amount matches Balance::SyncCache#converted_entries,
+    # which drops the same entry outright once it materializes (see #1143) --
+    # a projection that doesn't drop it would disagree with the balance it's
+    # supposed to preview.
+    def convert_scheduled_entry_amount(entry)
+      return nil if entry.entryable_type == "Trade" && entry.entryable.qty.nonzero?
+
+      custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
+      converted = begin
+        entry.amount_money.exchange_to(currency, date: entry.date, custom_rate: custom_rate).amount
+      rescue Money::ConversionError
+        return nil
+      end
+
+      asset? ? -converted : converted
+    end
 
     # perform_later raises (the Sidekiq adapter re-raises RedisClient errors) or
     # returns false (ActiveJob::EnqueueError). Either way the status goes back.

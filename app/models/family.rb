@@ -15,7 +15,9 @@ class Family < ApplicationRecord
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable
+  include SharesightConnectable
   include AiPromptable
+  include AiSettings
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -34,16 +36,6 @@ class Family < ApplicationRecord
 
 
   MONIKERS = [ "Family", "Group" ].freeze
-  # `mcp_only` removes the in-app assistant (chat, sidebar, chat-seeding
-  # buttons) without touching MCP: /mcp serves the same tool registry to
-  # external agents whatever this says. "Off" stays free for a future
-  # no-LLM-at-all switch; categorization still runs under `mcp_only`.
-  ASSISTANT_TYPES = %w[builtin external mcp_only].freeze
-
-  # Which provider categorizes this family's transactions. Family-level rather
-  # than a global Setting because it decides whose transaction descriptions get
-  # sent to a third party — the same reason assistant_type lives here.
-  CATEGORIZATION_PROVIDERS = %w[llm jev].freeze
   SHARING_DEFAULTS = %w[shared private].freeze
 
   has_many :users, dependent: :destroy
@@ -163,100 +155,12 @@ class Family < ApplicationRecord
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
   validates :month_start_day, inclusion: { in: 1..28 }
   validates :moniker, inclusion: { in: MONIKERS }
-  validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
-  validates :categorization_provider, inclusion: { in: CATEGORIZATION_PROVIDERS }
-  validates :categorization_confidence_threshold,
-            numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
-  validates :categorization_shadow_rate,
-            numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
-
-  # Single definition of the ENV-over-column precedence, so the resolver and the
-  # settings UI can never disagree about which provider is actually in force.
-  def effective_categorization_provider
-    ENV["CATEGORIZATION_PROVIDER"].presence || categorization_provider
-  end
-
-  # ENV-over-column precedence for the assistant, same shape as the provider
-  # above. Unknown ENV values pass through; callers treat them as builtin.
-  def effective_assistant_type
-    ENV["ASSISTANT_TYPE"].presence || assistant_type.presence || "builtin"
-  end
-
-  def assistant_enabled?
-    effective_assistant_type != "mcp_only"
-  end
-
-  # The provider that will actually categorize this family's transactions,
-  # falling back to the LLM path when Jev is unselected or unconfigured.
-  # Credentials alone never select Jev; the family has to choose it, because
-  # this decides whose transaction descriptions reach a third party.
-  #
-  # Anything naming the provider calls this, including the rule confirmation
-  # screen's cost estimate, or it quotes a provider that will not run. Views
-  # call it while rendering, so it writes nothing itself; a caller that runs
-  # categorization passes a block to hear why Jev could not be built.
-  def resolved_categorization_provider(&on_jev_error)
-    jev = configured_jev_provider(&on_jev_error) if effective_categorization_provider == "jev"
-
-    # Honors Setting.llm_provider (#2113); Provider::Anthropic gained
-    # auto_categorize in #1984, so either LLM provider can serve this.
-    jev || Provider::Registry.preferred_llm_provider
-  end
-
-  def categorization_model_name
-    provider = resolved_categorization_provider
-    return unless provider
-
-    case provider
-    when Provider::Jev then Provider::Jev.effective_model
-    when Provider::Anthropic then Provider::Anthropic.effective_model
-    else Provider::Openai.effective_model
-    end
-  end
-
-  # Answers below this confidence are not applied. Zero applies everything and
-  # is the default. Only providers reporting calibrated confidence can be gated;
-  # the LLM providers return a bare category name. Clamped because the ENV
-  # override bypasses both the column validation and the DB check constraint.
-  def effective_categorization_confidence_threshold
-    (ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].presence || categorization_confidence_threshold).to_f.clamp(0.0, 1.0)
-  end
-
-  # Fraction of categorization runs that also ask the provider not in use, for
-  # comparison only. Zero disables it. Doubles spend on the runs it samples, so
-  # it is sampled rather than all-or-nothing. Clamped because `rand < rate` on
-  # an unbounded override samples every run.
-  def effective_categorization_shadow_rate
-    (ENV["CATEGORIZATION_SHADOW_RATE"].presence || categorization_shadow_rate).to_f.clamp(0.0, 1.0)
-  end
-
-  # The provider to run alongside the one in use, for comparison. Symmetric —
-  # returns whichever of the two is not selected, so either can be trialled
-  # against the other without a second mechanism.
-  def shadow_categorization_provider(&on_jev_error)
-    if effective_categorization_provider == "jev"
-      Provider::Registry.preferred_llm_provider
-    else
-      configured_jev_provider(&on_jev_error)
-    end
-  end
-
-  # Returns Jev, or nil when it cannot be built. The registry constructs a fresh
-  # Provider::Jev per lookup and its constructor rejects a cleartext endpoint,
-  # which JEV_ENDPOINT can set without passing the settings form's check.
-  def configured_jev_provider
-    Provider::Registry.get_provider(:jev)
-  rescue Provider::Error => error
-    yield error if block_given?
-    nil
-  end
-  private :configured_jev_provider
-
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
   validates :auto_generate_transaction_names, inclusion: { in: [ true, false ] }
   validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
+  validates :manual_reconciliation, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
   # The searchable timezone select submits "" while no zone is saved yet;
   # store nil so provider date parsing keeps its default instead of raising.
@@ -385,8 +289,8 @@ class Family < ApplicationRecord
   #
   # This is the single entry point for "a member just joined, give them the
   # accounts the family shares by default." It self-guards on the sharing policy
-  # and family membership so every membership path (invitation accept, SSO JIT
-  # sign-up, token registration, mobile SSO) can call it without reintroducing
+  # and family membership so every membership path (SSO JIT sign-up, token
+  # registration, mobile SSO) can call it without reintroducing
   # the "member joined but sees nothing" bug. No-op when sharing is disabled or
   # there is nothing to share, and idempotent on re-run.
   def auto_share_existing_accounts_with(user)
@@ -484,6 +388,17 @@ class Family < ApplicationRecord
       .distinct
       .pluck(:merchant_id)
     Merchant.where(id: merchant_ids)
+  end
+
+  # Merchants a rule can set on transactions: the family's own plus the
+  # provider merchants already on transactions the user can see. Unlike
+  # available_merchants_for, recently unlinked merchants are left out, since a
+  # rule that set one again would undo the unlink.
+  def assignable_merchants_for(user)
+    assigned_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
+      .select(:merchant_id)
+    Merchant.where(id: merchants.select(:id)).or(Merchant.where(type: "ProviderMerchant", id: assigned_ids))
   end
 
   def available_merchants_for(user)
@@ -737,6 +652,28 @@ class Family < ApplicationRecord
     (requires_exchange_rates_data_provider? && ExchangeRate.provider.nil?)
   end
 
+  # Currencies the family's accounts, entries or holdings use that have no
+  # stored exchange rate into the family currency on any date. Totals built on
+  # #rate_sql leave amounts in them out rather than counting them at 1;
+  # totals built on #rates_for include them only if the provider supplies a
+  # rate, which is then stored. The pages that show those totals say so.
+  #
+  # Pass the viewer's accounts so the note covers the totals they see: only
+  # visible accounts count, and a member is not told about the currency of an
+  # account shared with someone else.
+  def currencies_without_exchange_rate(accounts: self.accounts)
+    ExchangeRate.currencies_without_rate(currencies_in_use(accounts), to: currency)
+  end
+
+  # Currencies today's totals convert whose newest rate into the family
+  # currency is too old to count as today's, mapped to that rate's date. Today's
+  # totals use it, and the same pages say so. Only balances and current holdings
+  # count: a currency only old entries use is converted at its own date's rate,
+  # so an old newest rate is not out of date for it.
+  def stale_exchange_rate_dates(accounts: self.accounts)
+    ExchangeRate.stale_rate_dates(currencies_held_now(accounts), to: currency)
+  end
+
   # Returns securities with plan restrictions for a specific provider
   # @param provider [String] The provider name (e.g., "TwelveData")
   # @return [Array<Hash>] Array of hashes with ticker, name, required_plan, provider
@@ -802,6 +739,17 @@ class Family < ApplicationRecord
   # entry; category metadata also affects cached entry results.
   def categories_version
     "#{categories.count}-#{categories.maximum(:updated_at)&.to_f || 0}"
+  end
+
+  # Tag changes write taggings without touching their entries, so caches
+  # whose results depend on tag membership key on this too. The tag count
+  # catches a merge or a deletion, which moves or drops taggings without
+  # adding one.
+  def tags_version
+    tag_count, tag_max_at = tags.pick(Arel.sql("count(*)"), Arel.sql('max("tags"."updated_at")'))
+    tagging_count, tagging_max_at = Tagging.joins(:tag).where(tags: { family_id: id })
+      .pick(Arel.sql("count(*)"), Arel.sql('max("taggings"."updated_at")'))
+    "#{tag_count}-#{tag_max_at&.to_f}-#{tagging_count}-#{tagging_max_at&.to_f}"
   end
 
   # Used for invalidating caches keyed on recurring transactions (e.g. the
@@ -882,7 +830,78 @@ class Family < ApplicationRecord
     Rails.application.message_verifier("bills-user-feed")
   end
 
+  # The family's timezone, validated and with a safe fallback -- used both by
+  # `Localize#switch_timezone` (request path) and `Sync#perform` (background
+  # path), so a scheduled entry's "has it arrived yet?" check (Entry#scheduled?)
+  # agrees with the family's own clock in both places instead of silently
+  # defaulting to the app's zone (UTC) only in the background.
+  #
+  # `timezone` is a free-text IANA name (e.g. from an older DB dump, or a zone
+  # the tzdata maintainers later renamed, like the historical "Europe/Kiev" ->
+  # "Europe/Kyiv" switch), so this re-validates rather than trusting the
+  # column -- see `timezone_must_be_a_known_zone` below.
+  def resolved_time_zone
+    return Time.zone if timezone.blank?
+
+    zone = ActiveSupport::TimeZone[timezone]
+    return zone if zone.present?
+
+    log_invalid_timezone_once
+    Time.zone
+  end
+
+  # How often to write a DebugLogEntry for the same (family, bad value)
+  # pair. `resolved_time_zone` runs on every request and every sync, so
+  # without this an affected family would write one row per call forever.
+  INVALID_TIMEZONE_LOG_INTERVAL = 1.day
+  private_constant :INVALID_TIMEZONE_LOG_INTERVAL
+
   private
+    # Currencies of the given visible accounts' balances, and of each
+    # account's holdings on its latest holding date.
+    def currencies_held_now(scope)
+      account_ids = self.accounts.visible.where(id: scope.select(:id)).select(:id)
+      latest = Holding.where(account_id: account_ids).group(:account_id).select("account_id, MAX(date) AS date")
+      (
+        Account.where(id: account_ids).distinct.pluck(:currency) +
+          Holding.joins("JOIN (#{latest.to_sql}) latest ON latest.account_id = holdings.account_id AND latest.date = holdings.date")
+            .distinct.pluck(:currency)
+      ).compact.uniq
+    end
+
+    # Currencies used by the given accounts that are visible, by their entries,
+    # their trades and their holdings. Memoised per scope, so repeated reads in
+    # one render share one set of queries.
+    def currencies_in_use(scope)
+      account_ids = self.accounts.visible.where(id: scope.select(:id)).pluck(:id).sort
+      @currencies_in_use ||= {}
+      @currencies_in_use[account_ids] ||= (
+        Account.where(id: account_ids).distinct.pluck(:currency) +
+          Entry.where(account_id: account_ids).distinct.pluck(:currency) +
+          Trade.joins(:entry).where(entries: { account_id: account_ids }).distinct.pluck("trades.currency") +
+          Holding.where(account_id: account_ids).distinct.pluck(:currency)
+      ).compact.uniq
+    end
+
+    def log_invalid_timezone_once
+      cache_key = [ "invalid_family_timezone", id, timezone ]
+
+      # `fetch` is read-then-write, not atomic -- two concurrent
+      # requests/jobs could both see a miss and both log. `write(unless_exist:
+      # true)` maps to Redis's atomic SET NX in production, so only one ever
+      # wins the lease and logs.
+      lease_acquired = Rails.cache.write(cache_key, true, expires_in: INVALID_TIMEZONE_LOG_INTERVAL, unless_exist: true)
+      return unless lease_acquired
+
+      DebugLogEntry.capture(
+        category: "other",
+        level: "warn",
+        message: "Invalid family timezone #{timezone.inspect}, falling back to #{Time.zone.name}",
+        source: "Family#resolved_time_zone",
+        family: self
+      )
+    end
+
     # Bayes first, so the matcher lands above it.
     def add_classifier_rules
       CLASSIFIER_ACTION_TYPES.reverse_each { |action_type| add_classifier_rule!(action_type) }

@@ -34,7 +34,7 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
     client.expects(:deliver).with(
       token: @subscription.token,
       title: "New financial insight",
-      body: "Open Sure to review your latest AI insight.",
+      body: "Open Sure to review your latest insight.",
       insight_id: @insight.id
     ).returns(response)
 
@@ -51,6 +51,13 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
     DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: @subscription.id)
   end
 
+  test "does not push a household total computed from accounts someone can no longer open" do
+    @insight.update!(metadata: @insight.metadata.merge("accounts_digest" => "an-account-set-that-changed"))
+    Apns::Client.expects(:new).never
+
+    DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: @subscription.id)
+  end
+
   test "localizes notifications using the family locale" do
     @insight.family.update!(locale: "de")
     response = stub(ok?: true)
@@ -59,7 +66,7 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
     client.expects(:deliver).with(
       token: @subscription.token,
       title: "Neue Finanzanalyse",
-      body: "Öffne Sure, um deine neueste KI-Analyse anzusehen.",
+      body: "Öffne Sure, um deine neueste Analyse anzusehen.",
       insight_id: @insight.id
     ).returns(response)
 

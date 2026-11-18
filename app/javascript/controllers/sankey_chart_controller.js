@@ -10,6 +10,7 @@ import {
   buildCategoryTransactionsUrl,
   isNavigableCategoryNode,
 } from "utils/transactions_filter_url";
+import SettledResize from "utils/settled_resize";
 
 // Connects to data-controller="sankey-chart"
 export default class extends Controller {
@@ -47,12 +48,28 @@ export default class extends Controller {
   connect() {
     this.connected = true;
     this.zoomRootId = null;
-    this.resizeObserver = new ResizeObserver(() => this.#draw());
-    this.resizeObserver.observe(this.#chartElement());
+    // Crossing the subcategory threshold changes the columns, which a
+    // stretched drawing can't show: redraw then, not only at the end.
+    const minWidth = this.constructor.SUBCATEGORY_MIN_WIDTH;
+    this.settledResize = new SettledResize(
+      this.#chartElement(),
+      () => this.#draw(),
+      {
+        layoutChanges: (from, to) =>
+          from.width < minWidth !== to.width < minWidth,
+        // The extent's margin keeps its width, so the outer bars and their
+        // labels stay put at the edges.
+        margins: {
+          left: this.constructor.EXTENT_MARGIN,
+          right: this.constructor.EXTENT_MARGIN,
+        },
+      },
+    );
     this.tooltip = null;
     this.#createTooltip();
     this.#syncZoomControls();
     this.#draw();
+    this.settledResize.start();
 
     // A Turbo morph refresh (the sync toast's auto-refresh) keeps this
     // element and its controller but puts the server markup back around
@@ -81,7 +98,7 @@ export default class extends Controller {
   disconnect() {
     this.connected = false;
     document.removeEventListener("turbo:morph", this.onMorph);
-    this.resizeObserver?.disconnect();
+    this.settledResize?.stop();
     clearTimeout(this.drawTimeout);
     this.tooltip?.remove();
     this.tooltip = null;
@@ -136,6 +153,7 @@ export default class extends Controller {
       chart.selectAll("svg").remove();
       this.#render(nodes, links, width, false);
     }
+    this.settledResize?.drew();
   }
 
   #render(nodes, links, width, animate) {
@@ -325,6 +343,8 @@ export default class extends Controller {
       .data(links)
       .join("path")
       .attr("class", "sankey-link")
+      // Stays joined to its bars while a resize stretches the drawing.
+      .attr("data-settled-resize-joins", "")
       .attr("d", (d) =>
         d3.linkHorizontal()({
           source: [d.source.x1, d.y0],
@@ -347,6 +367,8 @@ export default class extends Controller {
     nodeGroups
       .append("path")
       .attr("d", (d) => this.#nodePath(d))
+      // Keeps its width while a resize stretches the drawing (SettledResize).
+      .attr("data-settled-resize-keep-width", "")
       .attr("fill", (d) => d.color || this.constructor.DEFAULT_COLOR)
       .attr("stroke", (d) => (d.color ? "none" : "var(--color-gray-500)"));
 

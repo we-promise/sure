@@ -661,6 +661,35 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "security is required", exception.message
   end
 
+  test "an imported coin transfer into a goal-linked crypto account resolves its transfer pledge" do
+    crypto = accounts(:crypto)
+    goal = goals(:vacation_italy)
+    goal.goal_accounts.find_or_create_by!(account: crypto)
+    pledge = GoalPledge.create!(goal: goal, account: crypto, amount: 200, currency: "USD", kind: "transfer",
+                                status: "open", expires_at: 7.days.from_now)
+    btc = Security.find_or_create_by!(ticker: "CRYPTO:BTC") { |s| s.name = "Bitcoin" }
+
+    entry = Account::ProviderImportAdapter.new(crypto).import_trade(
+      security: btc, quantity: BigDecimal("0.004"), price: 50_000, amount: 0, currency: "USD",
+      date: Date.current, external_id: "onchain-in-1", source: "onchain_wallet", activity_label: Trade::TRANSFER_LABEL
+    )
+
+    assert_equal "matched", pledge.reload.status
+    assert_equal pledge.id, entry.trade.reload.extra.dig("goal", "pledge_id")
+  end
+
+  test "an imported coin transfer on a crypto account linked to no goal runs no reconcile" do
+    crypto = accounts(:crypto)
+    GoalAccount.where(account: crypto).delete_all
+    btc = Security.find_or_create_by!(ticker: "CRYPTO:BTC") { |s| s.name = "Bitcoin" }
+    GoalPledge::Reconciler.any_instance.expects(:run).never
+
+    Account::ProviderImportAdapter.new(crypto).import_trade(
+      security: btc, quantity: BigDecimal("0.004"), price: 50_000, amount: 0, currency: "USD",
+      date: Date.current, external_id: "onchain-in-2", source: "onchain_wallet", activity_label: Trade::TRANSFER_LABEL
+    )
+  end
+
   test "imports trade with all parameters" do
     investment_account = accounts(:investment)
     adapter = Account::ProviderImportAdapter.new(investment_account)
@@ -1440,6 +1469,78 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
       # Newer entry should remain unclaimed
       assert_nil newer_entry.reload.external_id
+    end
+  end
+
+  test "claims a transaction entered ahead of time when the provider books it a few days off" do
+    expected_date = 2.days.ago.to_date
+    scheduled_entry = travel_to(10.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    assert_no_difference "@account.entries.count" do
+      entry = @adapter.import_transaction(
+        external_id: "enable_banking_gas",
+        amount: 200,
+        currency: "USD",
+        date: Date.current,
+        name: "PRLV GAZ",
+        source: "enable_banking"
+      )
+
+      assert_equal scheduled_entry.id, entry.id
+      assert_equal "enable_banking_gas", entry.external_id
+      assert_equal Date.current, entry.date, "moves to the day the provider booked it"
+      assert_equal "Gas bill", entry.name, "keeps the user's own name"
+    end
+  end
+
+  test "does not claim a transaction entered ahead of time outside the matching window" do
+    expected_date = 10.days.ago.to_date
+    scheduled_entry = travel_to(20.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(
+        external_id: "enable_banking_gas_late",
+        amount: 200,
+        currency: "USD",
+        date: Date.current,
+        name: "PRLV GAZ",
+        source: "enable_banking"
+      )
+
+      assert_not_equal scheduled_entry.id, entry.id
+    end
+  end
+
+  test "a pending claim of a transaction entered ahead of time reconciles with its booked version" do
+    expected_date = Date.current
+    scheduled_entry = travel_to(10.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_gas_pending",
+      amount: 200,
+      currency: "USD",
+      date: expected_date - 1.day,
+      name: "PRLV GAZ",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    assert_equal scheduled_entry.id, pending_entry.id
+    assert pending_entry.transaction.pending?
+
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_gas_posted",
+        amount: 200,
+        currency: "USD",
+        date: expected_date,
+        name: "PRLV GAZ",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      assert_equal scheduled_entry.id, posted_entry.id
+      assert_not posted_entry.transaction.pending?
     end
   end
 
@@ -2515,5 +2616,14 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         source: "plaid",
         account_provider_id: account_provider.id
       )
+    end
+
+    # Locked and user-modified, the way TransactionsController#create leaves a
+    # transaction the user typed in.
+    def create_user_entered_transaction(date:, amount:, name:)
+      entry = @account.entries.create!(date: date, amount: amount, currency: "USD", name: name, entryable: Transaction.new)
+      entry.lock_saved_attributes!
+      entry.mark_user_modified!
+      entry
     end
 end

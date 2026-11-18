@@ -56,6 +56,17 @@ class TradeTest < ActiveSupport::TestCase
     sell = cross_currency_disposal(rate: 1.5, rate_date: Date.new(2026, 3, 9))
 
     assert_nil sell.realized_gain_loss, "a neighbouring day's rate is not this day's"
+    assert sell.realized_gain_unconvertible?
+  end
+
+  # No rate on any date means the gain is unknown, not zero and not the figure
+  # a rate of 1.0 would produce, and the caller can tell why.
+  test "a cross-currency disposal with no rate at all has no figure and says why" do
+    sell = cross_currency_disposal(rate: 1.5)
+    ExchangeRate.where(from_currency: "EUR", to_currency: "USD").delete_all
+
+    assert_nil sell.realized_gain_loss
+    assert sell.realized_gain_unconvertible?
   end
 
   # `exchange_rates` no longer stores a 0 or a negative, but the conversion
