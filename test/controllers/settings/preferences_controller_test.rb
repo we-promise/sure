@@ -31,6 +31,15 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("settings.preferences.show.investment_contributions_as_spending"), response.body
   end
 
+  test "every user sees the synced balance updates toggle, off by default" do
+    sign_in users(:family_member)
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[type=checkbox][name='user[show_balance_updates]']:not([checked])"
+    assert_match I18n.t("settings.preferences.show.show_balance_updates"), response.body
+  end
+
   test "members do not see the investing-as-spending toggle" do
     sign_in users(:family_member)
     get settings_preferences_url
@@ -66,6 +75,15 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to settings_preferences_url
     assert user.reload.preview_features_enabled?
+  end
+
+  test "changing preview features syncs the manual loans" do
+    loan_account = accounts(:loan)
+    assert loan_account.manual?
+
+    assert_difference -> { loan_account.syncs.count }, 1 do
+      patch settings_preferences_url, params: { user: { preview_features_enabled: "1" } }
+    end
   end
 
   test "update toggles preview_features_enabled off" do
