@@ -141,9 +141,6 @@ class Provider::Eodhd < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      enforce_daily_limit!
-      throttle_request
-
       response = client.get("#{base_url}/api/search/#{CGI.escape(symbol)}") do |req|
         req.params["api_token"] = api_key
         req.params["fmt"] = "json"
@@ -190,10 +187,14 @@ class Provider::Eodhd < Provider
       failed_key = "eodhd:fundamentals_failed:#{Digest::SHA256.hexdigest(api_key.to_s)[0, 8]}:#{ticker}"
       raise Error, "Fundamentals for #{ticker} failed recently; retrying later" if Rails.cache.read(failed_key)
 
-      counted_on = enforce_daily_limit!(cost: FUNDAMENTALS_REQUEST_COST)
-      throttle_request
+      # Fundamentals are billed at 10 API calls, so each attempt — including
+      # retries — must reserve that cost. The hook registered on the client
+      # routes every attempt through this before it reaches EODHD.
+      @request_cost = FUNDAMENTALS_REQUEST_COST
 
       begin
+        @last_counted_on = nil
+
         response = client.get("#{base_url}/api/fundamentals/#{CGI.escape(ticker)}") do |req|
           req.params["api_token"] = api_key
           req.params["fmt"] = "json"
@@ -209,12 +210,14 @@ class Provider::Eodhd < Provider
         # under-counting a refused call is safer than refusing the day's prices.
         # An error in a 200 answer (Error, from check_api_error!) was served, and
         # EODHD bills failed lookups, so it keeps its full price.
-        refund_daily_requests(FUNDAMENTALS_REQUEST_COST - 1, key: counted_on) if e.is_a?(Faraday::ForbiddenError)
+        refund_daily_requests(FUNDAMENTALS_REQUEST_COST - 1, key: last_counted_on) if e.is_a?(Faraday::ForbiddenError)
         raise
       rescue Faraday::ClientError => e
         # EODHD answers 402 when the day's calls are used up and does not bill it
-        refund_daily_requests(FUNDAMENTALS_REQUEST_COST, key: counted_on) if e.response_status == 402
+        refund_daily_requests(FUNDAMENTALS_REQUEST_COST, key: last_counted_on) if e.response_status == 402
         raise
+      ensure
+        reset_request_cost!
       end
 
       general = parsed.dig("General") || {}
@@ -244,9 +247,6 @@ class Provider::Eodhd < Provider
 
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
-      enforce_daily_limit!
-      throttle_request
-
       ticker = eodhd_symbol(symbol, exchange_operating_mic)
 
       response = client.get("#{base_url}/api/eod/#{CGI.escape(ticker)}") do |req|
@@ -304,6 +304,10 @@ class Provider::Eodhd < Provider
           backoff_factor: 2,
           exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed ]
         })
+        # After the retry middleware, so every attempt — not only the first —
+        # is throttled and reserved against the daily request budget. The URL
+        # decides the billing cost: fundamentals are billed at ten API calls.
+        faraday.use RateLimitable::BeforeEachAttempt, ->(env) { count_request_attempt!(env.url) }
 
         faraday.request :json
         faraday.response :raise_error
@@ -342,6 +346,37 @@ class Provider::Eodhd < Provider
     # Cache key for tracking daily API usage
     def daily_cache_key
       "eodhd:daily:#{Date.current}"
+    end
+
+    # Runs on every HTTP attempt through BeforeEachAttempt, so a retried request
+    # is throttled and reserved again. The billing cost comes from the request
+    # URL (fundamentals are billed at ten API calls), falling back to
+    # `@request_cost` for fake clients in tests that don't carry one. The last
+    # key reserved against is remembered so a refund lands on the day the
+    # attempt ran, even when midnight falls between the reservation and the
+    # failure.
+    def count_request_attempt!(url = nil)
+      throttle_request
+      reserve_daily_limit!(cost: url ? billing_cost_for(url.to_s) : (@request_cost || 1))
+    end
+
+    def reserve_daily_limit!(cost: 1)
+      @last_counted_on = enforce_daily_limit!(cost: cost)
+    end
+
+    def last_counted_on
+      @last_counted_on || daily_cache_key
+    end
+
+    # Clears the per-request billing state after a request finishes, so a later
+    # plain request on this instance is not billed at a stale higher cost.
+    def reset_request_cost!
+      @request_cost = nil
+    end
+
+    # EODHD bills a fundamentals request as 10 API calls; everything else is one.
+    def billing_cost_for(url)
+      url.to_s.include?("/api/fundamentals/") ? FUNDAMENTALS_REQUEST_COST : 1
     end
 
     # Enforces the daily rate limit. Raises RateLimitError if the limit is exhausted.

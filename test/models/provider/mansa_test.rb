@@ -360,6 +360,57 @@ class Provider::MansaTest < ActiveSupport::TestCase
     store&.delete(provider&.send(:daily_cache_key))
   end
 
+  test "every attempt of a request is counted against the daily limit, including retries" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.unstub(:enforce_daily_limit!)
+
+    attempts = 0
+    provider = @provider
+    # Stands in for the retry middleware: it runs the per-attempt hook before
+    # each attempt, the way BeforeEachAttempt does on the real client.
+    client = Object.new
+    client.define_singleton_method(:get) do |*|
+      provider.send(:throttle_request)
+      provider.send(:enforce_daily_limit!)
+      attempts += 1
+      raise Faraday::TimeoutError if attempts < 3
+
+      Struct.new(:body).new({ success: true, data: { ticker: "MTNN", price: 815 }, meta: { exchange: "NGX", currency: "NGN" } }.to_json)
+    end
+    @provider.stubs(:client).returns(client)
+
+    assert @provider.fetch_security_price(symbol: "MTNN", exchange_operating_mic: "XNSA", date: Date.current).success?
+
+    assert_equal 3, attempts
+    assert_equal 3, Rails.cache.read("mansa:daily:#{Date.current}")
+  end
+
+  test "a retry that would exceed the daily limit is refused before reaching Mansa" do
+    store = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(store)
+    @provider.unstub(:enforce_daily_limit!)
+    store.write("mansa:daily:#{Date.current}", 99)
+
+    attempts = 0
+    provider = @provider
+    client = Object.new
+    client.define_singleton_method(:get) do |*|
+      provider.send(:throttle_request)
+      provider.send(:enforce_daily_limit!)
+      attempts += 1
+      raise Faraday::TimeoutError
+    end
+    @provider.stubs(:client).returns(client)
+
+    result = @provider.fetch_security_price(symbol: "MTNN", exchange_operating_mic: "XNSA", date: Date.current)
+
+    assert_not result.success?
+    assert_kind_of Provider::Mansa::RateLimitError, result.error
+    # The first attempt is counted (99 -> 100), the second is refused before the wire
+    assert_equal 2, attempts
+    assert_equal 100, store.read("mansa:daily:#{Date.current}")
+  end
+
   private
     def stub_search_response(*listings)
       mock_response = mock

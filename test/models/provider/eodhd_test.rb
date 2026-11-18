@@ -3,6 +3,7 @@ require "test_helper"
 class Provider::EodhdTest < ActiveSupport::TestCase
   setup do
     @provider = Provider::Eodhd.new("test_api_key")
+    stub_quota_hook(@provider)
   end
 
   test "preserves raw EODHD exchange code when no MIC mapping exists" do
@@ -292,177 +293,273 @@ class Provider::EodhdTest < ActiveSupport::TestCase
   end
 
   test "fetch_security_info does not retry a failed fundamentals lookup" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    @provider.stubs(:throttle_request)
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.expects(:get).once.raises(Faraday::ForbiddenError.new("403"))
+    with_fresh_cache do
+      @provider.unstub(:count_request_attempt!)
+      @provider.stubs(:client).returns(mock_client = mock)
+      mock_client.expects(:get).once.raises(Faraday::ForbiddenError.new("403"))
 
-    2.times do
-      result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
-      assert_not result.success?
+      @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
+      2.times do
+        result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
+        assert_not result.success?
+      end
+      # The refused (403) call is counted as one request, not ten
+      assert_equal 1, Rails.cache.read("eodhd:daily:#{Date.current}")
     end
-    # The refused (403) call is counted as one request, not ten
-    assert_equal 1, Rails.cache.read("eodhd:daily:#{Date.current}")
   end
 
   test "fetch_security_info retries after a transient failure" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    @provider.stubs(:throttle_request)
-    ok = mock
-    ok.stubs(:body).returns({ "General" => { "Name" => "Apple Inc" } }.to_json)
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.expects(:get).times(3).raises(Faraday::ServerError.new("502"))
-      .then.raises(Faraday::TimeoutError.new("timeout")).then.returns(ok)
+    with_fresh_cache do
+      ok = mock
+      ok.stubs(:body).returns({ "General" => { "Name" => "Apple Inc" } }.to_json)
+      @provider.stubs(:client).returns(mock_client = mock)
+      mock_client.expects(:get).times(3).raises(Faraday::ServerError.new("502"))
+        .then.raises(Faraday::TimeoutError.new("timeout")).then.returns(ok)
 
-    # Three fundamentals calls cost 30 requests, more than the free cap, so use a paid limit
-    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "100") do
-      2.times { assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success? }
-      assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      # Three fundamentals calls cost 30 requests, more than the free cap, so use a paid limit
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "100") do
+        2.times do
+          @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
+          assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+        end
+        @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
+        assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      end
     end
   end
 
   test "a fundamentals call counts as ten requests against the daily limit" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    @provider.stubs(:throttle_request)
-    ok = mock
-    ok.stubs(:body).returns({ "General" => { "Name" => "Apple Inc" } }.to_json)
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.expects(:get).once.returns(ok)
+    with_fresh_cache do
+      ok = mock
+      ok.stubs(:body).returns({ "General" => { "Name" => "Apple Inc" } }.to_json)
+      @provider.stubs(:client).returns(mock_client = mock)
+      mock_client.expects(:get).once.returns(ok)
 
-    assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
-    assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+      @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
+      assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+    end
   end
 
   test "a fundamentals call is refused when fewer than ten requests remain" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    Rails.cache.write("eodhd:daily:#{Date.current}", 15)
-    @provider.stubs(:throttle_request)
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.expects(:get).never
+    with_fresh_cache do
+      Rails.cache.write("eodhd:daily:#{Date.current}", 15)
+      @provider.unstub(:count_request_attempt!)
+      @provider.stubs(:client).returns(mock_client = mock)
+      mock_client.expects(:get).never
 
-    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
-      result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+        result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
 
-      assert_not result.success?
-      assert_kind_of Provider::Eodhd::RateLimitError, result.error
+        assert_not result.success?
+        assert_kind_of Provider::Eodhd::RateLimitError, result.error
+      end
     end
   end
 
   test "a refused fundamentals call leaves the remaining requests for prices" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    Rails.cache.write("eodhd:daily:#{Date.current}", 15)
-    @provider.stubs(:throttle_request)
+    with_fresh_cache do
+      Rails.cache.write("eodhd:daily:#{Date.current}", 15)
+      @provider.unstub(:count_request_attempt!)
 
-    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
-      assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
-      assert_equal 15, Rails.cache.read("eodhd:daily:#{Date.current}")
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+        assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+        assert_equal 15, Rails.cache.read("eodhd:daily:#{Date.current}")
 
-      prices = mock
-      prices.stubs(:body).returns([ { "date" => "2026-08-21", "close" => 1.0 } ].to_json)
-      @provider.stubs(:client).returns(mock_client = mock)
-      mock_client.expects(:get).once.returns(prices)
+        prices = mock
+        prices.stubs(:body).returns([ { "date" => "2026-08-21", "close" => 1.0 } ].to_json)
+        @provider.stubs(:client).returns(mock_client = mock)
+        mock_client.expects(:get).once.returns(prices)
+        @provider.send(:reserve_daily_limit!)
 
-      assert @provider.fetch_security_prices(
-        symbol: "AAPL", exchange_operating_mic: "XNYS",
-        start_date: Date.new(2026, 8, 21), end_date: Date.new(2026, 8, 21)
-      ).success?
+        assert @provider.fetch_security_prices(
+          symbol: "AAPL", exchange_operating_mic: "XNYS",
+          start_date: Date.new(2026, 8, 21), end_date: Date.new(2026, 8, 21)
+        ).success?
+      end
     end
   end
 
   test "fundamentals refused by the plan do not use up the day's price requests" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    @provider.stubs(:throttle_request)
-    prices = mock
-    prices.stubs(:body).returns([ { "date" => "2026-08-21", "close" => 1.0 } ].to_json)
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.stubs(:get).raises(Faraday::ForbiddenError.new("403")).then
-      .raises(Faraday::ForbiddenError.new("403")).then.returns(prices)
+    with_fresh_cache do
+      prices = mock
+      prices.stubs(:body).returns([ { "date" => "2026-08-21", "close" => 1.0 } ].to_json)
+      @provider.stubs(:client).returns(mock_client = mock)
+      mock_client.stubs(:get).raises(Faraday::ForbiddenError.new("403")).then
+        .raises(Faraday::ForbiddenError.new("403")).then.returns(prices)
 
-    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
-      assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
-      assert_not @provider.fetch_security_info(symbol: "MSFT", exchange_operating_mic: "XNYS").success?
-      assert_equal 2, Rails.cache.read("eodhd:daily:#{Date.current}")
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+        2.times do
+          @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
+        end
+        assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+        assert_not @provider.fetch_security_info(symbol: "MSFT", exchange_operating_mic: "XNYS").success?
+        assert_equal 2, Rails.cache.read("eodhd:daily:#{Date.current}")
 
-      assert @provider.fetch_security_prices(
-        symbol: "AAPL", exchange_operating_mic: "XNYS",
-        start_date: Date.new(2026, 8, 21), end_date: Date.new(2026, 8, 21)
-      ).success?
+        @provider.send(:reserve_daily_limit!)
+        assert @provider.fetch_security_prices(
+          symbol: "AAPL", exchange_operating_mic: "XNYS",
+          start_date: Date.new(2026, 8, 21), end_date: Date.new(2026, 8, 21)
+        ).success?
+      end
     end
   end
 
   test "a fundamentals lookup for an unknown ticker still counts as ten requests" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    @provider.stubs(:throttle_request)
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.expects(:get).once.raises(Faraday::ResourceNotFound.new("404"))
+    with_fresh_cache do
+      @provider.stubs(:client).returns(mock_client = mock)
+      mock_client.expects(:get).once.raises(Faraday::ResourceNotFound.new("404"))
 
-    assert_not @provider.fetch_security_info(symbol: "NOPE", exchange_operating_mic: "XNYS").success?
-    assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+      @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
+      assert_not @provider.fetch_security_info(symbol: "NOPE", exchange_operating_mic: "XNYS").success?
+      assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+    end
   end
 
   test "a fundamentals answer that carries an error still counts as ten requests" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    @provider.stubs(:throttle_request)
-    answered = mock
-    answered.stubs(:body).returns({ "error" => "Ticker not found" }.to_json)
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.expects(:get).once.returns(answered)
+    with_fresh_cache do
+      answered = mock
+      answered.stubs(:body).returns({ "error" => "Ticker not found" }.to_json)
+      @provider.stubs(:client).returns(mock_client = mock)
+      mock_client.expects(:get).once.returns(answered)
 
-    assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
-    assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+      @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
+      assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+    end
   end
 
   test "taking a refused request back off the count never makes it negative" do
     store = ActiveSupport::Cache::MemoryStore.new
-    Rails.stubs(:cache).returns(store)
-    key = "eodhd:daily:#{Date.current}"
-    store.write(key, 15)
-    # The counter is evicted (or the cache cleared) between the increment and the refund
-    original_decrement = store.method(:decrement)
-    store.define_singleton_method(:decrement) do |name, amount = 1, **options|
-      delete(name)
-      original_decrement.call(name, amount, **options)
-    end
-    @provider.stubs(:throttle_request)
+    with_fresh_cache(store) do
+      key = "eodhd:daily:#{Date.current}"
+      store.write(key, 15)
+      # The counter is evicted (or the cache cleared) between the increment and the refund
+      original_decrement = store.method(:decrement)
+      store.define_singleton_method(:decrement) do |name, amount = 1, **options|
+        delete(name)
+        original_decrement.call(name, amount, **options)
+      end
 
-    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
-      assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+        @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
+        assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      end
+      assert_equal 0, store.read(key).to_i
     end
-    assert_equal 0, store.read(key).to_i
   end
 
   test "a fundamentals call refused with 402 for lack of calls is not counted" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    Rails.cache.write("eodhd:daily:#{Date.current}", 10)
-    @provider.stubs(:throttle_request)
-    @provider.stubs(:client).returns(mock_client = mock)
-    # Twice: a 402 leaves no "failed recently" marker, so the next lookup still asks EODHD
-    mock_client.expects(:get).twice.raises(Faraday::ClientError.new("402", { status: 402 }))
+    with_fresh_cache do
+      Rails.cache.write("eodhd:daily:#{Date.current}", 10)
+      @provider.stubs(:client).returns(mock_client = mock)
+      # Twice: a 402 leaves no "failed recently" marker, so the next lookup still asks EODHD
+      mock_client.expects(:get).twice.raises(Faraday::ClientError.new("402", { status: 402 }))
 
-    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
-      2.times { assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success? }
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+        2.times do
+          @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
+          assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+        end
+      end
+      assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
     end
-    assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
   end
 
   test "a 403 that arrives after midnight is refunded to the day it was counted on" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    @provider.stubs(:throttle_request)
-    test_case = self
-    client = Object.new
-    client.define_singleton_method(:get) do |*|
-      test_case.travel_to Time.zone.local(2026, 8, 22, 0, 0, 1)
-      # Price requests already counted on the new day
-      Rails.cache.write("eodhd:daily:2026-08-22", 5)
-      raise Faraday::ForbiddenError, "403"
+    with_fresh_cache do
+      test_case = self
+      client = Object.new
+      client.define_singleton_method(:get) do |*|
+        test_case.travel_to Time.zone.local(2026, 8, 22, 0, 0, 1)
+        # Price requests already counted on the new day
+        Rails.cache.write("eodhd:daily:2026-08-22", 5)
+        raise Faraday::ForbiddenError, "403"
+      end
+      @provider.stubs(:client).returns(client)
+
+      travel_to Time.zone.local(2026, 8, 21, 23, 59, 59)
+      @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
+      assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+
+      assert_equal 1, Rails.cache.read("eodhd:daily:2026-08-21")
+      assert_equal 5, Rails.cache.read("eodhd:daily:2026-08-22")
     end
-    @provider.stubs(:client).returns(client)
+  end
 
-    travel_to Time.zone.local(2026, 8, 21, 23, 59, 59)
-    assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+  test "every attempt of a fundamentals request is reserved against the daily limit, including retries" do
+    store = ActiveSupport::Cache::MemoryStore.new
+    with_fresh_cache(store) do
+      @provider.unstub(:count_request_attempt!)
+      attempts = 0
+      provider = @provider
+      # Stands in for the retry middleware: it runs the per-attempt hook before
+      # each attempt, the way BeforeEachAttempt does on the real client.
+      client = Object.new
+      client.define_singleton_method(:get) do |*|
+        provider.send(:count_request_attempt!)
+        attempts += 1
+        raise Faraday::TimeoutError if attempts < 3
 
-    assert_equal 1, Rails.cache.read("eodhd:daily:2026-08-21")
-    assert_equal 5, Rails.cache.read("eodhd:daily:2026-08-22")
+        Struct.new(:body).new({ "General" => { "Name" => "Apple Inc" } }.to_json)
+      end
+      @provider.stubs(:client).returns(client)
+
+      # Three attempts at ten calls each need a paid limit to fit
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "100") do
+        assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      end
+
+      assert_equal 3, attempts
+      assert_equal 30, store.read("eodhd:daily:#{Date.current}")
+    end
+  end
+
+  test "a retried fundamentals request that would exceed the daily limit is refused before reaching EODHD" do
+    store = ActiveSupport::Cache::MemoryStore.new
+    with_fresh_cache(store) do
+      store.write("eodhd:daily:#{Date.current}", 15)
+      @provider.unstub(:count_request_attempt!)
+
+      attempts = 0
+      provider = @provider
+      client = Object.new
+      client.define_singleton_method(:get) do |*|
+        provider.send(:count_request_attempt!)
+        attempts += 1
+        raise Faraday::TimeoutError
+      end
+      @provider.stubs(:client).returns(client)
+
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+        result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
+
+        assert_not result.success?
+        assert_kind_of Provider::Eodhd::RateLimitError, result.error
+      end
+
+      # The first attempt is reserved (10 -> 25), the second is refused before the wire
+      assert_equal 2, attempts
+      assert_equal 15, store.read("eodhd:daily:#{Date.current}")
+    end
+  end
+
+  test "search requests count one request per attempt" do
+    store = ActiveSupport::Cache::MemoryStore.new
+    with_fresh_cache(store) do
+      @provider.unstub(:count_request_attempt!)
+      body = [ { "Code" => "AAPL", "Name" => "Apple Inc.", "Exchange" => "US", "Country" => "USA", "Currency" => "USD" } ].to_json
+      provider = @provider
+      client = Object.new
+      client.define_singleton_method(:get) do |*|
+        provider.send(:count_request_attempt!)
+        Struct.new(:body).new(body)
+      end
+      @provider.stubs(:client).returns(client)
+
+      assert @provider.search_securities("AAPL").success?
+      assert_equal 1, store.read("eodhd:daily:#{Date.current}")
+    end
   end
 
   # The test environment caches in a null store, so the usage readers need a real
@@ -487,4 +584,19 @@ class Provider::EodhdTest < ActiveSupport::TestCase
   ensure
     store&.delete(provider&.send(:daily_cache_key))
   end
+
+  private
+    # The real client routes every HTTP attempt through count_request_attempt!;
+    # these tests stub the client, so the hook is stubbed off the request path
+    # by default. Quota tests opt back in by calling the hook from their fake
+    # client, exactly where BeforeEachAttempt would run it.
+    def stub_quota_hook(provider)
+      provider.stubs(:count_request_attempt!)
+      provider.stubs(:throttle_request)
+    end
+
+    def with_fresh_cache(store = ActiveSupport::Cache::MemoryStore.new, &block)
+      Rails.stubs(:cache).returns(store)
+      yield
+    end
 end
