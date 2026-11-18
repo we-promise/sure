@@ -222,7 +222,7 @@ class AccountableSparklinesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_match(/SELECT .*"accounts"\."id".*"account_providers"\."id" FROM "accounts"/, queries.join("\n"))
+    assert_match(/SELECT .*"accounts"\."id".*"account_providers"\."id", CASE .* FROM "accounts"/, queries.join("\n"))
     assert_empty queries.grep(/SELECT "accounts"\.\* FROM "accounts"/)
     assert_empty queries.grep(/SELECT 1 AS one FROM "accounts".*JOIN "account_providers"/)
     assert_empty queries.grep(/SELECT (DISTINCT )?"accounts"\."id" FROM "accounts" .*"accounts"\."accountable_type" =/)

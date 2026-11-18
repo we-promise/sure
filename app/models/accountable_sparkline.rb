@@ -1,27 +1,31 @@
 # The sidebar sparkline of one account group, over the accounts the current user sees there.
 class AccountableSparkline
-  IDENTITY_COLUMNS = [ :id, :plaid_account_id, :simplefin_account_id, Arel.sql("account_providers.id") ].freeze
-
   # #version of several groups, reading their account rows in one query.
   def self.versions(accountables)
     rows = scope.where(accountable_type: accountables.map(&:name))
       .left_outer_joins(:account_providers)
-      .pluck(:accountable_type, *IDENTITY_COLUMNS)
+      .pluck(:accountable_type, *identity_columns)
       .group_by(&:first)
-
-    percentages = viewer_percentages(scope)
 
     accountables.to_h do |accountable|
       identity_rows = rows.fetch(accountable.name, []).map { |row| row.drop(1) }
-      [ accountable, new(accountable, account_identity_rows: identity_rows, viewer_percentages: percentages).version ]
+      [ accountable, new(accountable, account_identity_rows: identity_rows).version ]
     end
   end
 
-  # The share of each account the current user counts, by account id.
-  def self.viewer_percentages(accounts)
-    accounts.includes(:account_shares).to_h do |account|
-      [ account.id, account.ownership_percentage_for(Current.user) ]
-    end
+  # Per account: its identity (id and any provider link) and the share the
+  # current user counts, read in the same query as the rows. Same rule as
+  # Account#ownership_percentage_for.
+  def self.identity_columns
+    viewer = Account.connection.quote(Current.user.id)
+    [
+      :id, :plaid_account_id, :simplefin_account_id, Arel.sql("account_providers.id"),
+      Arel.sql(<<~SQL.squish)
+        CASE WHEN accounts.owner_id = #{viewer} THEN accounts.ownership_percentage
+        ELSE COALESCE((SELECT s.ownership_percentage FROM account_shares s
+                       WHERE s.account_id = accounts.id AND s.user_id = #{viewer}), 100) END
+      SQL
+    ]
   end
 
   # Same accounts the sidebar group total sums: accessible to the current
@@ -31,10 +35,9 @@ class AccountableSparkline
     Current.accessible_accounts.visible.included_in_reports.included_in_finances_for(Current.user)
   end
 
-  def initialize(accountable, account_identity_rows: nil, viewer_percentages: nil)
+  def initialize(accountable, account_identity_rows: nil)
     @accountable = accountable
     @account_identity_rows = account_identity_rows
-    @viewer_percentages = viewer_percentages
   end
 
   def series
@@ -76,7 +79,7 @@ class AccountableSparkline
     def account_identity_rows
       @account_identity_rows ||= account_scope
         .left_outer_joins(:account_providers)
-        .pluck(*IDENTITY_COLUMNS)
+        .pluck(*self.class.identity_columns)
     end
 
     def build_series
@@ -99,7 +102,7 @@ class AccountableSparkline
     def requires_normalized_aggregation?
       return false unless %w[Investment Crypto].include?(@accountable.name)
 
-      account_identity_rows.any? do |_account_id, plaid_account_id, simplefin_account_id, account_provider_id|
+      account_identity_rows.any? do |_account_id, plaid_account_id, simplefin_account_id, account_provider_id, _percentage|
         plaid_account_id.present? || simplefin_account_id.present? || account_provider_id.present?
       end
     end
@@ -116,13 +119,9 @@ class AccountableSparkline
     end
 
     # Rows are shared by everyone with the same accessible set, but the series
-    # is not: a co-owner at 40% must never read the owner's 60% series.
+    # is not: a co-owner at 40% must never read the owner's 60% series, so each
+    # row carries the viewer's percentage.
     def account_rows_digest
-      rows = account_identity_rows.map { |row| [ *row, viewer_percentages[row.first] ].join(":") }
-      Digest::SHA256.hexdigest(rows.sort.join(","))
-    end
-
-    def viewer_percentages
-      @viewer_percentages ||= self.class.viewer_percentages(account_scope)
+      Digest::SHA256.hexdigest(account_identity_rows.map { |row| row.join(":") }.sort.join(","))
     end
 end
