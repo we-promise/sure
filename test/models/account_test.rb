@@ -10,6 +10,51 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
+  test "negative_positions lists calculated positions below zero" do
+    account = accounts(:investment)
+    msft = securities(:msft)
+    # A sale without its purchase, as an import or a deleted buy can leave behind.
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: msft, qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    positions = account.negative_positions
+
+    assert_equal [ msft ], positions.map(&:security)
+    assert_equal 3.days.ago.to_date, positions.first.first_date
+    assert_equal(-3, positions.first.lowest_qty)
+  end
+
+  test "negative_positions ignores linked accounts" do
+    account = accounts(:investment)
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    account.stubs(:linked?).returns(true)
+
+    assert_empty account.negative_positions
+  end
+
+  test "linked cash and investment accounts hide balance updates by default" do
+    assert accounts(:connected).hides_balance_updates_by_default?
+
+    investment = accounts(:investment)
+    investment.stubs(:linked?).returns(true)
+    assert investment.hides_balance_updates_by_default?
+  end
+
+  test "manual accounts and linked non-cash accounts show balance updates" do
+    assert_not accounts(:depository).hides_balance_updates_by_default?
+
+    property = accounts(:property)
+    property.stubs(:linked?).returns(true)
+    assert_not property.hides_balance_updates_by_default?
+  end
+
   test "can destroy" do
     assert_difference "Account.count", -1 do
       @account.destroy
@@ -62,24 +107,12 @@ class AccountTest < ActiveSupport::TestCase
     assert_nil @account.iban
   end
 
-  test "rejects a duplicate iban within the same family" do
+  # One IBAN can cover two products of the same bank, so it is not unique.
+  test "allows the same iban on two accounts of one family" do
     @account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
-    other = @family.accounts.create!(name: "Other account", balance: 0, currency: "USD", accountable: Depository.new)
+    second = @account.family.accounts.build(name: "Sub-account", balance: 0, currency: @account.currency, accountable: Depository.new, iban: "AT611904300234573201") # pipelock:ignore IBAN
 
-    other.iban = "AT611904300234573201" # pipelock:ignore IBAN
-
-    assert_not other.valid?
-    assert_includes other.errors[:iban], "has already been taken"
-  end
-
-  test "allows the same iban on accounts with different currencies in one family" do
-    # Revolut and Wise expose one IBAN for several currency sub-accounts.
-    @account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
-    other = @family.accounts.build(name: "EUR sub-account", balance: 0, currency: "EUR", accountable: Depository.new, iban: "AT611904300234573201") # pipelock:ignore IBAN
-
-    assert_equal "USD", @account.currency
-    assert other.valid?
-    assert_nothing_raised { other.save! }
+    assert second.valid?
   end
 
   test "allows the same iban across different families" do
@@ -1397,6 +1430,16 @@ class AccountTest < ActiveSupport::TestCase
 
     accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
     assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
+  end
+
+  test "linked_to_goal? is true only for an account linked to a goal" do
+    account = @family.accounts.create!(name: "Goal savings", balance: 0, currency: "USD", accountable: Depository.new)
+
+    assert_not account.linked_to_goal?
+
+    goals(:vacation_italy).goal_accounts.create!(account: account)
+
+    assert account.linked_to_goal?
   end
 
   test "institution_domain is normalized to a bare host" do

@@ -172,8 +172,8 @@ module Family::AutoTransferMatchable
 
   private
     # Orders the candidates so that IBAN-confirmed ones are tried first. A
-    # confirmed IBAN (the destination account's own IBAN equals the outflow's
-    # recorded counterparty IBAN) is a more precise signal than amount and date
+    # confirmed IBAN (the outflow's counterparty IBAN is the destination
+    # account's own IBAN) is a more precise signal than amount and date
     # alone, which can be ambiguous with several similar transactions in flight.
     # It only breaks ties: the date window and every other matching rule stay
     # the same, and the resulting transfer is created like any other automatic
@@ -191,39 +191,32 @@ module Family::AutoTransferMatchable
         .map(&:first)
     end
 
-    # True when the inflow's destination account has its own IBAN set and it
-    # matches the outflow transaction's recorded counterparty IBAN. Blank on
-    # either side (no accounts.iban set, or the provider never supplied a
-    # counterparty IBAN for this transaction) always resolves to false --
-    # this is an additive signal, never a requirement.
+    # True when the import linked the outflow's counterparty to the inflow's
+    # account (its IBAN is that account's own IBAN, see
+    # Account::ProviderImportAdapter). No link on either side always resolves
+    # to false -- this is an additive signal, never a requirement.
     def iban_confirmed?(match, transactions_by_id)
       inflow = transactions_by_id[match.inflow_transaction_id]
       outflow = transactions_by_id[match.outflow_transaction_id]
       return false unless inflow && outflow
+      return false unless outflow.counterparty_own_account_id.present? &&
+        outflow.counterparty_own_account_id == inflow.entry.account_id
 
-      destination_iban = inflow.entry.account.iban
-      counterparty_iban = outflow.counterparty_iban
-      return false if destination_iban.blank? || counterparty_iban.blank?
-      return false unless normalize_iban(destination_iban) == normalize_iban(counterparty_iban)
+      # The inflow side's own counterparty (who the destination account's bank
+      # says paid it) is a second, independent signal. When it is known, it
+      # must agree with the source account -- matching amount and date, but a
+      # DIFFERENT payer on the destination side, means two distinct
+      # transactions that merely coincide. Blank is not a contradiction: not
+      # every provider supplies it on the inflow side.
+      if inflow.counterparty_own_account_id.present?
+        return inflow.counterparty_own_account_id == outflow.entry.account_id
+      end
 
-      # The inflow side's own recorded counterparty IBAN (who the destination
-      # account's bank says paid it) is a second, independent signal from the
-      # same provider sync. When it's present, it must agree with the source
-      # account's IBAN too -- a contradiction here (matching amount/date, but
-      # the destination account's bank recorded a DIFFERENT payer) means this
-      # is very likely two distinct transactions that merely coincide, not a
-      # confirmed transfer. Blank is not a contradiction: not every provider
-      # supplies this on the inflow side, so its absence is uninformative.
       source_iban = outflow.entry.account.iban
-      inflow_counterparty_iban = inflow.counterparty_iban
-      return false if source_iban.present? && inflow_counterparty_iban.present? &&
-        normalize_iban(source_iban) != normalize_iban(inflow_counterparty_iban)
+      inflow_iban_last4 = inflow.counterparty_iban_last4
+      return false if source_iban.present? && inflow_iban_last4.present? && source_iban.last(4) != inflow_iban_last4
 
       true
-    end
-
-    def normalize_iban(value)
-      IbanNormalizable.normalize(value).to_s
     end
 
     # A principal-only loan replays a linked transfer as principal. The balance

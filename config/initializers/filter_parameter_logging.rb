@@ -21,7 +21,7 @@ Rails.application.config.filter_parameters += [
   # FinanceKit publisher bodies. Anchored: an unanchored :credential also hides
   # credential_id and has_*_credentials, and :events any key containing "events".
   /\A(publisher_)?credential\z/i, /\Aevents\z/i, /\Aconsent\z/i, /\Abooked_balance\z/i,
-  # Account and merchant IBANs submitted through the forms. Anchored so
+  # IBANs submitted through the forms. Anchored so
   # remove_iban (a checkbox) stays readable.
   /\Aiban\z/i
 ]

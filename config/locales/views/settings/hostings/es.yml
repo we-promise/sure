@@ -16,7 +16,14 @@ es:
           open: Abierto
           closed: Cerrado
           invite_only: Solo con invitación
+      demo_refresh_settings:
+        description: Restablece automáticamente solo la familia de demostración seleccionada. Se eliminarán todos sus datos e inicios de sesión. Las demás familias no se tocan. Necesita un worker en ejecución con al menos 2 GiB de RAM. Crea primero una familia de demostración desechable con el generador de demostración y selecciónala aquí. No elijas la familia de un usuario real.
+        none: Ninguna familia de demostración seleccionada
+        family_label: Familia de demostración desechable
+        save_family: Guardar familia de demostración
+        enabled_label: Restablecer cada día la familia de demostración
       show:
+        demo_refresh: Restablecimiento de datos de demostración
         general: Configuración General
         ai_assistant: Asistente de IA
         financial_data_providers: Proveedores de Datos Financieros
@@ -25,11 +32,17 @@ es:
         invites: Códigos de Invitación
         title: Autoalojamiento
         danger_zone: Zona de Peligro
+        instance_settings_restricted: Las credenciales de proveedores, la conexión de IA compartida y la configuración de sincronización se aplican a todas las familias de esta instancia, así que solo un superadministrador puede cambiarlas. El asistente que usa tu familia se sigue eligiendo por familia. Alguien con acceso al servidor puede convertir a un usuario en superadministrador; la guía de autoalojamiento con Docker muestra el comando en sus notas de actualización.
         clear_cache: Limpiar caché de datos
         clear_cache_warning: Limpiar la caché de datos eliminará todos los tipos de cambio, precios de valores, saldos de cuentas y otros datos temporales. Esto no eliminará cuentas, transacciones, categorías ni otros datos del usuario.
         confirm_clear_cache:
           title: ¿Limpiar caché de datos?
           body: ¿Estás seguro de que deseas limpiar la caché de datos? Se eliminarán tipos de cambio, precios y saldos históricos. Esta acción no se puede deshacer.
+        reset_market_data: Restablecer los datos de mercado de todas las familias
+        reset_market_data_warning: Elimina los tipos de cambio y los precios de valores que tus proveedores pueden volver a cargar, los vuelve a importar y después sincroniza todas las cuentas. Los totales en moneda extranjera pueden aparecer sin convertir hasta que termine la importación.
+        confirm_reset_market_data:
+          title: "¿Restablecer los datos de mercado de todas las familias?"
+          body: Esto elimina los tipos de cambio y los precios de valores que tus proveedores pueden volver a cargar, para todas las familias de esta instancia, y los vuelve a importar. Hasta que termine la importación, los importes en moneda extranjera pueden aparecer sin convertir. Esta acción no se puede deshacer.
       provider_selection:
         exchange_rate_title: Proveedor de tipos de cambio
         exchange_rate_description: Selecciona un único proveedor para obtener los tipos de cambio de divisas.
@@ -46,6 +59,7 @@ es:
         binance_public_hint: gratis, sin clave API — solo cripto (BTC, ETH, etc.)
         moex_public_hint: gratis, sin clave API — acciones, fondos y bonos rusos (MOEX), incl. cambio RUB
         tinkoff_invest_hint: requiere token de solo lectura — precios de acciones/fondos/bonos rusos + logotipos de marcas
+        requires_api_key_mansa: requiere clave API, plan gratuito de 100 llamadas/día; bolsas africanas (NGX, JSE, NSE, GSE, BRVM y más)
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -57,6 +71,7 @@ es:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          mansa: Mansa
         title: Selección de Proveedores
         description: Elige qué servicio usar para obtener tipos de cambio y precios de acciones. Yahoo Finance es gratuito y no requiere clave API. Twelve Data requiere una clave API (gratuita disponible) pero ofrece mayor cobertura de datos.
         securities_provider_label: Proveedor de valores (Precios de acciones)
@@ -82,6 +97,18 @@ es:
         agent_id_label: ID del Agente (Opcional)
         agent_id_placeholder: main (por defecto)
         agent_id_help: Dirige las peticiones a un agente específico si el proveedor aloja varios. Déjalo en blanco para el predeterminado.
+        agent_discovery_configure_first: Guarda una URL de endpoint válida y un token de API para cargar los agentes disponibles.
+        external_agent_required: Selecciona un agente externo antes de guardar.
+        external_agent_invalid: Selecciona un agente devuelto por el endpoint configurado.
+        external_agent_reselect: El endpoint ha cambiado y el agente seleccionado ya no está disponible en él. Selecciona un agente del nuevo endpoint.
+        agent_discovery_error: 'No se han podido cargar los agentes: %{error}'
+        external_info:
+          title: Configuración de IA externa
+          items:
+          - Introduce la URL completa del endpoint compatible con OpenAI, terminada en /v1/chat/completions.
+          - Sure descubre los agentes disponibles desde /v1/models una vez guardados el endpoint y el token.
+          - El servicio externo elige el modelo que hay detrás de cada agente; Sure solo selecciona la ruta del agente.
+          - Los errores de autenticación, de endpoint o de agente los devuelve el servicio externo. Revisa sus registros cuando falle una petición.
         disconnect_title: Conexión externa
         disconnect_description: Elimina la conexión del asistente externo y vuelve al asistente integrado.
         disconnect_button: Desconectar
@@ -102,7 +129,7 @@ es:
         high_res_description: Cuando está habilitado, los logotipos se obtendrán a una resolución de 120x120 en lugar de 40x40. Esto ofrece imágenes más nítidas en pantallas de alta densidad de píxeles (DPI).
       llm_provider_selector:
         title: Proveedor de IA
-        description: Elige qué LLM impulsa el chat de IA. Las operaciones por lotes (categorización de transacciones, detección de comercios y procesamiento de PDF) actualmente siempre usan OpenAI.
+        description: Elige qué LLM se usa para el chat de IA, la detección de comercios y el procesamiento de PDF. La categorización de transacciones se configura aparte, más abajo.
         env_configured_message: Configurado correctamente mediante la variable de entorno LLM_PROVIDER.
         provider_label: Proveedor LLM activo
         provider_openai: OpenAI
@@ -124,6 +151,44 @@ es:
         model_label: Modelo predeterminado (opcional)
         model_placeholder: claude-sonnet-4-6 (predeterminado)
         model_help: Se usa para el chat y el procesamiento de PDF. Las operaciones por lotes (categorización, detección de comercios) usan Haiku por defecto para reducir costes.
+      categorization_provider_selector:
+        title: Categorización de transacciones
+        preview_pill: Vista previa
+        description: Elige qué proveedor categoriza las transacciones. Es independiente del proveedor de IA de arriba, que se encarga del chat y del procesamiento de PDF.
+        env_notice: Fijado en %{type} mediante variables de entorno.
+        provider_label: Proveedor de categorización
+        provider_llm: Proveedor de IA (OpenAI o Anthropic)
+        provider_jev: Jev (TypeSafe)
+        provider_help: El proveedor de IA lee un lote de transacciones y devuelve nombres de categoría. Jev elige de tu lista de categorías y devuelve una confianza calibrada para cada transacción.
+        jev_configured: Clave API de Jev configurada.
+        jev_not_configured: Jev está seleccionado pero no tiene clave API. La categorización sigue usando el proveedor de IA hasta que añadas una abajo.
+        data_retention_heading: Datos compartidos
+        data_retention_direct: Las descripciones e importes de las transacciones y los nombres de tus categorías se envían a TypeSafe para categorizarlos. Revisa su política de retención antes de activarlo con datos reales.
+        data_retention_proxied: Las descripciones e importes de las transacciones y los nombres de tus categorías se envían a %{host}, que los reenvía a TypeSafe. Revisa las políticas de retención de ambos proveedores antes de activarlo con datos reales.
+        confidence_threshold_label: Confianza mínima (0–1)
+        confidence_threshold_help: Por debajo de esta confianza no se aplica la categoría y la transacción queda sin categorizar, para que una ejecución posterior lo vuelva a intentar. No se descarta nada. Pon 0 para aplicar todas las respuestas.
+        confidence_threshold_env_notice: Bloqueado por la variable de entorno CATEGORIZATION_CONFIDENCE_THRESHOLD.
+        shadow_rate_label: Tasa de comparación en la sombra (0–1)
+        shadow_rate_help: Ejecuta el proveedor que NO has seleccionado junto al que sí, y registra en qué discrepan sin cambiar ninguna categoría. Duplica el gasto de API en cada categorización que muestrea. Pon 0 para desactivarlo.
+        shadow_rate_env_notice: Bloqueado por la variable de entorno CATEGORIZATION_SHADOW_RATE.
+      categorization_shadow_results:
+        shadow_results_heading: Comparación en la sombra
+        shadow_results_empty: Aún no hay comparaciones registradas. Pon una tasa de comparación en la sombra mayor que 0 y ejecuta la categorización para obtener algunas.
+        shadow_results_summary: "%{agreement}%% de coincidencia en %{count} transacciones muestreadas."
+        shadow_disagreements_heading: Discrepancias más recientes
+        shadow_disagreement_row: "%{applied_provider} eligió %{applied_category}; %{shadow_provider} eligió %{shadow_category}."
+        shadow_disagreement_confidence: "(confianza %{confidence})"
+        shadow_no_disagreements: Los dos proveedores coincidieron en todas las transacciones muestreadas.
+        shadow_no_category: sin categoría
+      jev_settings:
+        env_configured_message: Configurado correctamente mediante variables de entorno.
+        api_key_label: Clave API
+        api_key_placeholder: Introduce tu clave API de TypeSafe
+        endpoint_label: Endpoint (opcional)
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone (por defecto)
+        model_label: Modelo (opcional)
+        model_placeholder: jev-latest (por defecto)
+        model_help: Por defecto se conecta directamente a TypeSafe. Para llegar a Jev a través de OpenRouter, pon como endpoint https://openrouter.ai/api/alpha/decisions y como modelo ~typesafe/jev-latest.
       openai_settings:
         description: Introduce el token de acceso y, opcionalmente, configura un proveedor compatible con OpenAI personalizado
         env_configured_message: Configurado con éxito a través de variables de entorno.
@@ -134,6 +199,8 @@ es:
         uri_base_local_help: "Para un modelo en tu propio equipo, introduce su endpoint compatible con OpenAI, por ejemplo Ollama en http://localhost:11434/v1, o http://ollama:11434/v1 si Sure y Ollama se ejecutan como servicios de Docker Compose."
         model_label: Modelo (Opcional)
         model_placeholder: gpt-4.1 (por defecto)
+        model_function_calling_help: El asistente de IA lee tus datos mediante llamadas a funciones, así que elige un modelo que tu proveedor indique compatible con tools/function calling. Con un modelo sin esa función, el chat falla con un error opaco del proveedor.
+        model_function_calling_link: Comprobar el modelo configurado
         model_required_help: "Obligatorio cuando defines una URL base de la API: introduce el nombre del modelo que usa tu servidor, como llama3.1 para Ollama."
         json_mode_label: Modo JSON
         json_mode_auto: Automático (recomendado)
@@ -153,6 +220,8 @@ es:
         openai_request_timeout_help: "Predeterminado: 60. Se aplica a cada solicitud HTTP compatible con OpenAI, incluida la categorización automática, la detección de comercios, el chat, el procesamiento de PDF y las llamadas al almacén vectorial. OPENAI_REQUEST_TIMEOUT sobrescribe este campo."
         ai_response_timeout_label: Tiempo de espera de respuesta en segundos (opcional)
         ai_response_timeout_help: "Predeterminado: 90. Solo se aplica al monitor de turno completo del chat, así que dimensiona este valor como una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × tiempo de espera de solicitud, más el tiempo de ejecución de herramientas y cola. AI_RESPONSE_TIMEOUT sobrescribe este campo."
+        ai_health_probe_timeout_label: Tiempo de espera de la comprobación en segundos (opcional)
+        ai_health_probe_timeout_help: 'Por defecto: 5. Solo se aplica a las comprobaciones de IA en vivo de Ajustes → Estado del sistema, nunca a las llamadas reales a la IA. Súbelo si las comprobaciones de PDF dan un tiempo de espera agotado con un modelo en la nube. AI_HEALTH_PROBE_TIMEOUT tiene prioridad sobre este campo.'
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
@@ -179,6 +248,13 @@ es:
         label: Clave API
         placeholder: Introduce aquí tu clave API de Realie
         usage: "%{used} de %{limit} solicitudes mensuales utilizadas"
+      chimnie_settings:
+        title: Chimnie
+        description: Introduce tu clave API de Chimnie para valorar viviendas del Reino Unido por su UPRN. Crea una clave gratuita en dashboard.chimnie.com (el registro exige un email de empresa o de dominio propio; no se aceptan direcciones de Gmail, Outlook y similares). Las valoraciones por UPRN son gratuitas y se actualizan cada mes; Sure las limita a 1.000 peticiones al mes, algo que puedes cambiar con la variable de entorno CHIMNIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurado correctamente mediante la variable de entorno CHIMNIE_API_KEY.
+        label: Clave API
+        placeholder: Introduce aquí tu clave API de Chimnie
+        usage: "%{used} de %{limit} peticiones mensuales usadas"
       tiingo_settings:
         title: Tiingo
         description: Introduce el token de API proporcionado por Tiingo. El plan gratuito admite 50 símbolos únicos por hora con más de 30 años de datos históricos.
@@ -192,6 +268,7 @@ es:
       tinkoff_invest_settings:
         title: T-Invest (T-Bank)
         description: Introduce un token de API de T-Invest de solo lectura. Se usa para obtener los logotipos de marcas de los valores (incl. fondos y bonos, incluso cuando los cotiza MOEX) y, si lo activas arriba, los precios de instrumentos rusos.
+        moex_only_notice: No activado para precios arriba. T-Invest se usa para obtener los logotipos de marca de todos tus valores siempre que haya un token configurado, independientemente de la casilla de arriba.
         env_configured_message: Configurado correctamente mediante la variable de entorno TINKOFF_INVEST_API_KEY.
         label: Token de API
         placeholder: Introduce aquí tu token de API de T-Invest
@@ -210,6 +287,16 @@ es:
         step_2_html: Ve a tu <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">panel</a> para encontrar tu token de API.
         step_3: Copia tu token de API y pégalo abajo.
         rate_limit_warning: El plan gratuito de EODHD está limitado a 20 llamadas a la API al día. Es mejor usarlo como proveedor complementario para ETF de la UE no disponibles en otros proveedores.
+      mansa_settings:
+        title: Mansa
+        description: Introduce la clave API de Mansa API. Cubre 20 bolsas africanas, entre ellas NGX (Nigerian Exchange), JSE, NSE (Kenia), GSE (Ghana) y BRVM, varias de las cuales no cubre ningún otro proveedor de esta lista.
+        env_configured_message: Configurado correctamente mediante la variable de entorno MANSA_API_KEY.
+        label: Clave API
+        placeholder: Introduce aquí tu clave API de Mansa
+        show_details: "(ver detalles)"
+        step_1_html: Visita <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> y consigue tu clave API gratuita, sin tarjeta.
+        step_2: Copia tu clave API y pégala abajo.
+        rate_limit_warning: El plan gratuito de Mansa está limitado a 100 llamadas a la API al día y solo ofrece cotizaciones actuales; los precios históricos requieren un plan de pago.
       alpha_vantage_settings:
         title: Alpha Vantage
         description: Introduce la clave API de Alpha Vantage. Admite ETF de la UE en la Bolsa de Londres, XETRA y otras bolsas.
@@ -238,6 +325,8 @@ es:
         view_pricing: Ver precios de Twelve Data
         title: Twelve Data
       update:
+        invalid_demo_family: La familia seleccionada debe ser la dueña del email de demostración configurado.
+        select_demo_family: Selecciona primero una familia de demostración desechable.
         failure: Valor de configuración no válido
         success: Configuración actualizada
         invalid_onboarding_state: Estado de incorporación no válido
@@ -245,11 +334,17 @@ es:
         invalid_llm_budget: '%{field} debe ser un número entero ≥ %{minimum}.'
         invalid_anthropic_base_url: La URL base de Anthropic debe ser una URL http(s).
         anthropic_model_required_for_base_url: El modelo de Anthropic es obligatorio cuando se define una URL base personalizada.
+        invalid_jev_endpoint: El endpoint de Jev debe ser una URL https. Solo se acepta http sin cifrar para localhost.
+        invalid_categorization_rate: "%{field} debe ser un número entre 0 y 1."
         scheduler_sync_failed: Ajustes guardados, pero no se pudo actualizar la programación de sincronización. Inténtalo de nuevo o revisa los registros del servidor.
       disconnect_external_assistant:
         external_assistant_disconnected: Asistente externo desconectado
       clear_cache:
         cache_cleared: La caché de datos ha sido limpiada. Esto puede tardar unos momentos en completarse.
+      reset_market_data:
+        market_data_reset: Restablecimiento de datos de mercado en cola. Se volverán a importar los tipos y los precios y después se sincronizarán todas las cuentas.
+        market_data_reset_already_queued: Ya hay un restablecimiento de datos de mercado en cola o en curso.
+        market_data_reset_failed: No se ha podido poner en cola el restablecimiento de datos de mercado. No se ha eliminado nada; inténtalo de nuevo.
       not_authorized: No estás autorizado para realizar esta acción
       ensure_admin:
         not_authorized: No tienes autorización para realizar esta acción
@@ -262,6 +357,10 @@ es:
         auto_sync_description: Cuando está habilitado, todas las cuentas se sincronizarán automáticamente cada día a la hora especificada.
         auto_sync_time_label: Hora de sincronización (HH:MM)
         auto_sync_time_description: Especifica la hora del día en la que debe ocurrir la sincronización automática.
+        market_data_sync_label: Importar datos de mercado cada día
+        market_data_sync_description: Si está activado, los precios de los valores se importan automáticamente una vez al día (de lunes a viernes) a la hora indicada.
+        market_data_sync_time_label: Hora de importación de datos de mercado (HH:MM)
+        market_data_sync_time_description: Indica a qué hora del día debe ejecutarse la importación diaria de precios de valores; por ejemplo, poco después del cierre de tu bolsa principal.
         include_pending_label: Incluir transacciones pendientes
         include_pending_description: Cuando está habilitado, las transacciones pendientes (no liquidadas) se importarán y se conciliarán automáticamente cuando se confirmen. Desactívalo si tu banco proporciona datos pendientes poco fiables.
         env_configured_message: Este ajuste está desactivado porque hay una variable de entorno del proveedor (SIMPLEFIN_INCLUDE_PENDING o PLAID_INCLUDE_PENDING) definida. Elimínala para habilitar este ajuste aquí.

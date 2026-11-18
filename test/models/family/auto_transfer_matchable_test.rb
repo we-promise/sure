@@ -749,23 +749,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     confirmed_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
-    confirmed_outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
-
-    create_transaction(date: Date.current, account: @depository, amount: 500)
-
-    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
-
-    @family.auto_match_transfers!
-
-    transfer = Transfer.find_by!(inflow_transaction_id: inflow.entryable_id)
-    assert_equal confirmed_outflow.entryable_id, transfer.outflow_transaction_id
-  end
-
-  test "prefers an iban-confirmed candidate whose counterparty iban has dots and dashes" do
-    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
-
-    confirmed_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
-    confirmed_outflow.transaction.update!(counterparty_iban: "de89.3704-0044/0532:0130'00")
+    confirmed_outflow.transaction.update!(counterparty_iban_last4: "3000", counterparty_own_account: @credit_card)
 
     create_transaction(date: Date.current, account: @depository, amount: 500)
 
@@ -781,7 +765,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
-    outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow.transaction.update!(counterparty_iban_last4: "3000", counterparty_own_account: @credit_card)
 
     # Same-day inflow on another account: by date alone it would win.
     closest_inflow = create_transaction(date: 1.day.ago.to_date, account: @loan, amount: -500)
@@ -797,7 +781,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   test "a confirmed iban does not widen the date window" do
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow = create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
-    outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow.transaction.update!(counterparty_iban_last4: "3000", counterparty_own_account: @credit_card)
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
     assert_no_difference -> { Transfer.count } do
@@ -811,7 +795,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     closest_outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
 
     mismatched_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
-    mismatched_outflow.transaction.update!(counterparty_iban: "AT611904300234573201") # pipelock:ignore IBAN
+    mismatched_outflow.transaction.update!(counterparty_iban_last4: "3201")
 
     inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
@@ -822,10 +806,9 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   end
 
   test "does not prefer a candidate when the inflow side's own counterparty iban contradicts the outflow account" do
-    # The destination (credit_card) iban matches the outflow's recorded
-    # counterparty_iban, which alone would confirm the match. But the inflow
-    # transaction itself recorded a DIFFERENT counterparty_iban than the
-    # outflow account's own iban -- the destination bank says this money came
+    # The outflow's counterparty is linked to the destination (credit_card),
+    # which alone would confirm the match. But the inflow transaction itself
+    # recorded a DIFFERENT counterparty IBAN than the outflow account's own -- the destination bank says this money came
     # from somewhere else, so the IBAN signal must not override the date order.
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     @depository.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
@@ -833,10 +816,10 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     closest_outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
 
     iban_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
-    iban_outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    iban_outflow.transaction.update!(counterparty_iban_last4: "3000", counterparty_own_account: @credit_card)
 
     inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
-    inflow.transaction.update!(counterparty_iban: "FR1420041010050500013M02606") # pipelock:ignore IBAN
+    inflow.transaction.update!(counterparty_iban_last4: "2606")
 
     @family.auto_match_transfers!
 
@@ -851,10 +834,10 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     create_transaction(date: Date.current, account: @depository, amount: 500)
 
     iban_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
-    iban_outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    iban_outflow.transaction.update!(counterparty_iban_last4: "3000", counterparty_own_account: @credit_card)
 
     inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
-    inflow.transaction.update!(counterparty_iban: "AT611904300234573201") # pipelock:ignore IBAN
+    inflow.transaction.update!(counterparty_iban_last4: "3201", counterparty_own_account: @depository)
 
     @family.auto_match_transfers!
 
