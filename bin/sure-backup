@@ -780,7 +780,13 @@ cmd_daemon() {
     log "Next backup in $((wait_s / 3600))h $((wait_s % 3600 / 60))m"
     sleep "$wait_s" &
     wait $!
-    ( cmd_scheduled ) || warn "scheduled backup failed; retrying at the next scheduled time"
+    # Not `( ... ) || warn`: the left side of `||` ignores set -e, so a failed
+    # step would let the backup finish as "Done" and prune run anyway.
+    set +e
+    ( set -e; cmd_scheduled )
+    status=$?
+    set -e
+    [ "$status" -eq 0 ] || warn "scheduled backup failed; retrying at the next scheduled time"
   done
 }
 
