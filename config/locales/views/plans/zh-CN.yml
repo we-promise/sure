@@ -1,0 +1,39 @@
+---
+zh-CN:
+  plans:
+    show:
+      title: 规划
+      subtitle: 决定资金去向——花在何处，又存下多少。
+    budget_card:
+      title: 本月
+      edit_budget: 编辑预算
+      of_total: "/ %{total}"
+      days_left:
+        one: 剩余 1 天
+        other: "剩余 %{count} 天"
+      percent_used: "已使用 %{percent}%"
+      top_categories: 主要分类
+      view_budget: 查看完整预算
+      empty_body: 设定每月支出目标和各分类限额，以追踪本月收支进度。
+      set_up: 设定本月预算
+    goals_card:
+      title: 您的目标
+      currency_warning:
+        one: "1 个目标未计入 %{currencies} 余额（暂无汇率数据）。"
+        other: "%{count} 个目标未计入 %{currencies} 余额（暂无汇率数据）。"
+      new_goal: 新建目标
+      active_count:
+        one: 1 个进行中
+        other: "%{count} 个进行中"
+      of_targets: "/ 所有目标共 %{total}"
+      behind_count:
+        one: 1 个进度落后
+        other: "%{count} 个进度落后"
+      pending_count:
+        one: 1 笔待确认投入
+        other: "%{count} 笔待确认投入"
+      all_on_pace: 全部进度正常
+      active_goals: 进行中的目标
+      pending_marker: 待确认
+      runway: "可持续 %{months} 个月 · 每月 %{pace}"
+      all_goals: 所有目标

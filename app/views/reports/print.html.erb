@@ -357,6 +357,44 @@
     </section>
   <% end %>
 
+  <%# Biggest Expenses %>
+  <% if @biggest_expenses.any? %>
+    <section class="tufte-section tufte-keep-together">
+      <h2 class="tufte-section-title"><%= t("reports.print.biggest_expenses.title") %></h2>
+      <table class="tufte-table tufte-compact">
+        <thead>
+          <tr>
+            <th><%= t("reports.print.biggest_expenses.date") %></th>
+            <th><%= t("reports.print.biggest_expenses.name") %></th>
+            <th><%= t("reports.print.biggest_expenses.category") %></th>
+            <th><%= t("reports.print.biggest_expenses.account") %></th>
+            <th class="tufte-right"><%= t("reports.print.biggest_expenses.amount") %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @biggest_expenses.each do |expense| %>
+            <% category = expense[:transaction].category || Category.uncategorized %>
+            <tr>
+              <td><%= format_date(expense[:entry].date) %></td>
+              <td>
+                <%= expense[:entry].name %>
+                <% if expense[:transaction].one_time? %>
+                  <span class="tufte-muted"><%= t("reports.print.biggest_expenses.one_time") %></span>
+                <% end %>
+              </td>
+              <td>
+                <span class="tufte-dot" style="background: <%= category.color %>"></span>
+                <%= category.display_name %>
+              </td>
+              <td><%= expense[:entry].account.name %></td>
+              <td class="tufte-right"><%= expense[:amount].format %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  <% end %>
+
   <footer class="tufte-footer">
     <%= product_name %> · <%= @start_date.strftime("%B %Y") %> – <%= @end_date.strftime("%B %Y") %>
   </footer>

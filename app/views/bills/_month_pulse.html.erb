@@ -45,6 +45,7 @@
       <p>
         <span class="font-medium text-primary privacy-sensitive"><%= format_money(@due_next_seven) %></span>
         <span class="text-secondary"><%= t(".pulse_next_seven") %></span>
+        <span class="text-secondary"><%= t(".pulse_until", date: format_date(@next_seven_until), default: "until %{date}") %></span>
       </p>
     <% end %>
   </div>

@@ -71,6 +71,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   test "bills page shell is localized in German" do
     @user.update!(locale: "de")
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    use_ai_routes
 
     get bills_url
 
@@ -432,6 +433,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     travel_to Date.current.end_of_month - 2.days
     occurrence = snoozed_late_bill
     travel_to occurrence.reload.effective_due_on - 2.days
+    # Run in the first days of a month, this lands more than
+    # Session::INACTIVITY_TIMEOUT after setup signed in, with no request in
+    # between to keep the session alive; the user would sign in again.
+    sign_in @user
     pay(occurrence)
 
     get bills_url
@@ -563,6 +568,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.month_pulse.pulse_paid"), body
     assert_match I18n.t("bills.month_pulse.pulse_overdue"), body
     assert_match I18n.t("bills.month_pulse.pulse_next_seven"), body
+    assert_match I18n.t("bills.month_pulse.pulse_until", date: ApplicationController.helpers.format_date(6.days.from_now.to_date)), body
 
     # And it ends by saying what actually happens next.
     assert_match I18n.t("bills.month_pulse.next_up"), body
@@ -945,7 +951,33 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "$77.00", response.body
   end
 
-  test "the all view lists every series and filters compose" do
+  # The seven-day figure must count every occurrence inside the window, even
+  # when the window crosses the month end and one bill has two occurrences in it.
+  test "next seven days counts every occurrence across the month end" do
+    travel_to Date.new(2026, 10, 29) do
+      bill = create_bill(name: "Gym membership", amount: 25, manual: true,
+                         anchor_date: Date.new(2026, 11, 1), expected_day_of_month: 1,
+                         last_occurrence_date: Date.new(2026, 10, 1),
+                         next_expected_date: Date.new(2026, 11, 1))
+      # Creating the bill already materializes its first occurrence (Nov 1), so
+      # only add the second one and let find_or_create_by! reuse the first.
+      [ Date.new(2026, 11, 1), Date.new(2026, 11, 3) ].each do |due|
+        bill.recurring_occurrences.find_or_create_by!(original_due_on: due) do |occurrence|
+          occurrence.family = @family
+          occurrence.due_on = due
+          occurrence.currency = "USD"
+        end
+      end
+
+      get bills_url
+      assert_response :success
+
+      assert_match "$50.00", response.body
+      assert_match ApplicationController.helpers.format_date(Date.new(2026, 11, 4)), response.body
+    end
+  end
+
+  test "the all view lists every current series and filters compose" do
     create_bill(name: "Alpha bill", amount: 10)
     create_bill(name: "Beta paused", amount: 20, status: "paused")
     create_bill(name: "Gamma income", amount: -500)
@@ -976,6 +1008,64 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url(view: "all", q: { search: "gamma" })
     assert_match "Gamma income", response.body
     assert_no_match "Beta paused", response.body
+  end
+
+  # A removed detected bill stays as an ended tombstone so detection does not
+  # recreate it. It is not a current bill, so the default list hides it and the
+  # Dismissed filter is the way to find it.
+  test "the all view hides dismissed bills unless the dismissed filter asks for them" do
+    create_bill(name: "Live bill", amount: 10)
+    create_bill(name: "Dismissed bill", amount: 20, status: "ended", manual: false)
+
+    get bills_url(view: "all")
+    assert_response :success
+    assert_match "Live bill", response.body
+    assert_no_match "Dismissed bill", response.body
+    assert_select "select[name='q[status]'] option", text: I18n.t("bills.all.current_bills")
+
+    get bills_url(view: "all", q: { status: "ended" })
+    assert_response :success
+    assert_match "Dismissed bill", response.body
+    assert_no_match "Live bill", response.body
+  end
+
+  # With only tombstones left, the default list is empty. The empty state must
+  # point at the filter that shows them instead of telling the user to clear a
+  # filter they never set.
+  test "the all view points to the dismissed filter when only dismissed bills remain" do
+    create_bill(name: "Dismissed bill", amount: 20, status: "ended", manual: false)
+
+    get bills_url(view: "all")
+
+    assert_response :success
+    assert_match I18n.t("bills.all.dismissed_hidden_description"), response.body
+    assert_select "a[href=?]", bills_path(view: "all", q: { status: "ended" }),
+                  text: I18n.t("bills.all.status_filters.ended")
+  end
+
+  test "the all view dismissed state is localized in German" do
+    @user.update!(locale: "de")
+    create_bill(name: "Dismissed bill", amount: 20, status: "ended", manual: false)
+
+    get bills_url(view: "all")
+
+    assert_response :success
+    assert_select "select[name='q[status]'] option",
+                  text: I18n.t("bills.all.current_bills", locale: :de, fallback: false)
+    assert_match I18n.t("bills.all.no_matches_title", locale: :de, fallback: false), response.body
+    assert_match I18n.t("bills.all.dismissed_hidden_description", locale: :de, fallback: false), response.body
+    assert_select "a[href=?]", bills_path(view: "all", q: { status: "ended" }),
+                  text: I18n.t("bills.all.status_filters.ended", locale: :de, fallback: false)
+  end
+
+  test "the all view empty state is localized in German" do
+    @user.update!(locale: "de")
+
+    get bills_url(view: "all")
+
+    assert_response :success
+    assert_match I18n.t("bills.all.no_matches_title", locale: :de, fallback: false), response.body
+    assert_match I18n.t("bills.all.no_matches_description", locale: :de, fallback: false), response.body
   end
 
   # Content sits on a surface everywhere else in the app. The filters belong to
@@ -1088,6 +1178,25 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.safe_after_bills"), response.body
   end
 
+  test "a pay period marker totals the bills due after the month's end" do
+    travel_to Date.new(2026, 10, 23)
+    [ 21, 26 ].each do |day|
+      payday = Date.new(2026, 10, day)
+      @family.recurring_transactions.create!(
+        name: "Paycheck #{day}", account: accounts(:depository), amount: -1840, currency: "USD",
+        bill_type: "income", expected_day_of_month: day, anchor_date: payday,
+        last_occurrence_date: payday, next_expected_date: payday.next_month, status: "active", manual: true
+      )
+    end
+    create_bill(name: "Rent", amount: 900, expected_day_of_month: 28, next_expected_date: Date.new(2026, 10, 28))
+    create_bill(name: "Power", amount: 80, expected_day_of_month: 5, next_expected_date: Date.new(2026, 11, 5))
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.pay_period.due_before_date", amount: "$980.00", date: I18n.l(Date.new(2026, 11, 21), format: :short)), response.body
+  end
+
   # A lone materialized paycheck landing today collapses the planner's
   # boundary list to a single date, which yields an empty plan; the page must
   # treat that like no plan instead of crashing on plan.last.
@@ -1111,6 +1220,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # the missing chips can't pass for want of AI.
   test "the paycheck view offers its AI chips only with a plan" do
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    use_ai_routes
     chips = %w[due_before_paycheck safe_to_spend].map { |key| ERB::Util.html_escape(I18n.t("bills.ai_prompts.#{key}")) }
 
     get bills_url(view: "paycheck")
@@ -1649,6 +1759,52 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.all.subscription_price_changes"), response.body
   end
 
+  # The price-change list is historical, but a dismissed subscription is no
+  # longer a bill. Showing its name here would put back the tombstone the list
+  # just hid.
+  test "the subscription price-change list skips dismissed subscriptions" do
+    active = create_bill(name: "STREAMFLIX", amount: 24.99, bill_type: "subscription")
+    active.recurring_price_changes.create!(
+      effective_on: 2.months.ago.to_date, previous_amount: 19.99, new_amount: 24.99,
+      currency: "USD", source: "detected"
+    )
+    dismissed = create_bill(name: "OLD STREAMFLIX", amount: 9.99, bill_type: "subscription",
+                            status: "ended", manual: false)
+    dismissed.recurring_price_changes.create!(
+      effective_on: 2.months.ago.to_date, previous_amount: 7.99, new_amount: 9.99,
+      currency: "USD", source: "detected"
+    )
+
+    get bills_url(view: "all", q: { bill_type: "subscription" })
+
+    assert_response :success
+    assert_match I18n.t("bills.all.subscription_price_changes"), response.body
+    assert_match "STREAMFLIX", response.body
+    assert_no_match "OLD STREAMFLIX", response.body
+  end
+
+  # The subscription filter must also apply to the price-change list. Otherwise
+  # a bill or installment price change appears under the subscriptions heading.
+  test "the subscription price-change list skips other bill types" do
+    sub = create_bill(name: "STREAMFLIX", amount: 24.99, bill_type: "subscription")
+    sub.recurring_price_changes.create!(
+      effective_on: 2.months.ago.to_date, previous_amount: 19.99, new_amount: 24.99,
+      currency: "USD", source: "detected"
+    )
+    bill = create_bill(name: "CITY WATER", amount: 45, bill_type: "bill")
+    bill.recurring_price_changes.create!(
+      effective_on: 2.months.ago.to_date, previous_amount: 40, new_amount: 45,
+      currency: "USD", source: "detected"
+    )
+
+    get bills_url(view: "all", q: { bill_type: "subscription" })
+
+    assert_response :success
+    assert_match I18n.t("bills.all.subscription_price_changes"), response.body
+    assert_match "STREAMFLIX", response.body
+    assert_no_match "CITY WATER", response.body
+  end
+
   # Bare, the filters read as loose words with a chevron and had no focus
   # ring. Each sits in the boxed field the form builder draws.
   test "the All bills filters are boxed fields like the search beside them" do
@@ -1775,6 +1931,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
   test "a page without bill rows shows the empty state, not the month pulse or the AI prompts" do
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    use_ai_routes
 
     get bills_url
     assert_response :success
@@ -2000,6 +2157,165 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "POWER CO REFUND", response.body, "a pending match paid nothing"
   end
 
+  # History is the only list of cycles older than this month, and the payment
+  # drawer it points into is the only place a payment can be unlinked. Rows
+  # were static text, so a past payment was a dead end here.
+  test "every settled cycle in history opens the payment drawer for its own cycle" do
+    bill = create_bill(name: "Power Co", amount: 80)
+    paid_due = 2.months.ago.to_date
+    skipped_due = 3.months.ago.to_date
+    paid = bill.recurring_occurrences.create!(
+      family: @family, original_due_on: paid_due, due_on: paid_due, currency: "USD"
+    )
+    skipped = bill.recurring_occurrences.create!(
+      family: @family, original_due_on: skipped_due, due_on: skipped_due, currency: "USD"
+    )
+    skipped.skip!
+    missed_due = 4.months.ago.to_date
+    missed = bill.recurring_occurrences.create!(
+      family: @family, original_due_on: missed_due, due_on: missed_due, currency: "USD"
+    )
+    missed.miss!
+    RecurringTransaction::Allocator.new(paid).allocate!(amount: "78.50")
+    assert paid.reload.paid?
+
+    get_bill_history(bill)
+
+    assert_response :success
+    [ paid, skipped, missed ].each do |occurrence|
+      assert_select "a[data-turbo-frame=drawer][href=?]", recurring_occurrence_path(occurrence) do |links|
+        assert_select links.first, "p", text: I18n.l(occurrence.due_on, format: :long)
+        assert_select links.first, "svg", count: 1
+      end
+    end
+  end
+
+  # The drawer's primary verb only reaches the cycle it was opened on. On an
+  # open next cycle that is Find/Add/Review, so the bill's settled payments had
+  # no route from the drawer even though Unlink lives one level below it.
+  test "an open cycle's drawer offers Manage payments for the latest settled cycle" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    settled = settle_past_cycle(bill, months_ago: 2, amount: "78.50")
+
+    assert bill.reload.current_occurrence.scheduled?, "premise: the drawer shows the next open cycle"
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a[href=?]", recurring_occurrence_path(settled), text: I18n.t("bills.manage_payments")
+  end
+
+  test "the latest settled cycle is the one Manage payments opens" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    settle_past_cycle(bill, months_ago: 3, amount: "79")
+    latest = settle_past_cycle(bill, months_ago: 2, amount: "78.50")
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a[href=?]", recurring_occurrence_path(latest), text: I18n.t("bills.manage_payments")
+  end
+
+  # A skipped or missed cycle has no payment of its own, so its Manage payments
+  # verb opened an empty drawer. The earlier payment is still the thing to
+  # manage, and it must remain reachable when no cycle is open.
+  test "skipped and missed cycles still offer the latest settled payment" do
+    { skip!: "skipped", miss!: "missed" }.each do |closing, status|
+      bill = declare_bill(name: "Power Co #{status}", amount: 80, due: Date.current + 5)
+      settled = settle_past_cycle(bill, months_ago: 2, amount: "80")
+      bill.recurring_occurrences.open_status.each { |occurrence| occurrence.public_send(closing) }
+      current = bill.recurring_occurrences.order(due_on: :desc).first
+
+      assert_equal status, current.status
+      assert_equal current.id, bill.reload.current_occurrence.id,
+        "premise: the drawer shows the #{status} cycle"
+
+      get_bill_drawer(bill)
+
+      assert_response :success
+      assert_select "a[href=?]", recurring_occurrence_path(settled), text: I18n.t("bills.manage_payments")
+    end
+  end
+
+  # History stops at the 12 newest closed cycles. A settled payment older than
+  # that window must still be reachable from the drawer, or repeating skips and
+  # misses locks it away for good.
+  test "a settled payment older than the history window is still offered" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    settled = settle_past_cycle(bill, months_ago: 18, amount: "80")
+    bill.recurring_occurrences.open_status.each(&:skip!)
+    13.times do |i|
+      due = i.months.ago.to_date
+      bill.recurring_occurrences.create!(
+        family: @family, original_due_on: due, due_on: due, currency: "USD"
+      ).skip!
+    end
+
+    window = bill.recurring_occurrences.closed.order(due_on: :desc).limit(12).to_a
+    assert_not_includes window, settled, "premise: the payment is outside the history window"
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a[href=?]", recurring_occurrence_path(settled), text: I18n.t("bills.manage_payments")
+  end
+
+  # A closed cycle's own verb is already Manage payments (or Reopen); repeating
+  # the same action for a different cycle would make the drawer ambiguous.
+  test "the drawer does not repeat Manage payments when it already shows the settled cycle" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    settled = settle_past_cycle(bill, months_ago: 2, amount: "78.50")
+
+    get_bill_drawer(bill, occurrence: settled.id)
+
+    assert_response :success
+    assert_select "a[href=?]", recurring_occurrence_path(settled), text: I18n.t("bills.manage_payments"), count: 1
+  end
+
+  test "a bill with no settled payment offers no Manage payments action" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a", text: I18n.t("bills.manage_payments"), count: 0
+  end
+
+  # A pending match is not a payment: it is waiting on review and must not
+  # pretend there is a settled cycle to manage.
+  test "a suggested allocation does not create a Manage payments action" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    occurrence = bill.recurring_occurrences.open_status.order(:due_on).first
+    occurrence.allocations.create!(
+      entry: create_transaction_entry(name: "POWER CO", amount: 80, date: occurrence.due_on),
+      allocated_amount: 80, currency: "USD", state: "suggested", source: "auto_matched"
+    )
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a", text: I18n.t("bills.manage_payments"), count: 0
+  end
+
+  # Unlinking the last payment leaves a user-closed cycle paid with no
+  # allocations. It has nothing to manage, so the confirmed-allocation filter
+  # must keep it out of the shortcut.
+  test "a settled cycle with no confirmed allocation offers no Manage payments action" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    settled = bill.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date,
+      due_on: 2.months.ago.to_date, currency: "USD"
+    )
+    pay(settled)
+    RecurringTransaction::Allocator.new(settled).unallocate!(settled.allocations.sole)
+    assert settled.reload.paid?
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a", text: I18n.t("bills.manage_payments"), count: 0
+  end
+
   # "Something changed" is only useful if the thing you can still act on is
   # the thing you see first. Notices used to sort by date ascending, so a
   # month-old one-dollar rise outranked a trial converting tomorrow.
@@ -2096,7 +2412,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#{routine} .px-4.py-2\\.5", text: /#{I18n.t("bills.index.notices_routine", count: 2)}/
     assert_select "#{routine}[class^='bg-'], #{routine}[class*=' bg-']", count: 0
     # One chevron for both folds, not copies that drift apart.
-    chevron = "svg[class*='group-open:rotate-90']"
+    chevron = "svg[class*=':rotate-90']"
     chevrons = css_select("[data-persisted-disclosure-key-value='bills-suggested'] > summary #{chevron}, #{routine} #{chevron}")
     assert_equal 2, chevrons.size
     assert_equal 1, chevrons.map(&:to_html).uniq.size, "the folds' chevrons differ: #{chevrons.map { |svg| svg["class"] }.inspect}"
@@ -2276,6 +2592,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # a card of zeros and chips asking about bills nobody is paying.
   test "a page of only paused bills shows the dormant section without the month pulse or the AI prompts" do
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    use_ai_routes
     overdue_day = 5.days.ago.to_date
     bill = create_bill(name: "Paused gym", amount: 40,
                        expected_day_of_month: overdue_day.day,
@@ -2333,6 +2650,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # The chips only render over bill rows.
     create_bill(name: "Power Co", amount: 80)
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    use_ai_routes
     get bills_url
     assert_response :success
     # Apostrophe-free fragment: response bodies HTML-escape apostrophes.
@@ -2353,6 +2671,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # Consent without a configured provider is a button to a dead chat.
     @user.update!(ai_enabled: true)
     Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    use_no_ai
     get bills_url
     assert_response :success
     assert_no_match "due before my next paycheck", response.body
@@ -2363,11 +2682,15 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     bill = create_bill(name: "Power Co", amount: 80)
 
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+
+    use_ai_routes
     get_bill_drawer(bill)
     assert_response :success
     assert_match smart_configuration_bill_path(bill), response.body
 
     Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    use_no_ai
     get_bill_drawer(bill)
     assert_response :success
     assert_no_match smart_configuration_bill_path(bill), response.body
@@ -2595,6 +2918,85 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "a timeline row prints income minus obligations, which is a deficit on a window that earns nothing")
   end
 
+  # The strip printed a name and an amount only, so a bill due last week and
+  # the same bill next month read as one entry listed twice. Its rows also
+  # opened the bill drawer while the same bill in a period card opened the
+  # occurrence drawer.
+  test "the covered bridge shows each bill's due date and opens its occurrence" do
+    @family.accounts.where(accountable_type: "Depository").update_all(balance: 5_000)
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 5)
+    due = Date.current + 2
+    bill = declare_bill(name: "Curbside Cuts", amount: 150, due: due)
+    occurrence = bill.recurring_occurrences.find_by!(due_on: due)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_select "[data-paycheck-bridge] [data-paycheck-item]", 1 do
+      assert_select "[data-paycheck-item-date]", text: I18n.l(due, format: :short)
+      assert_select "a[href=?][data-turbo-frame=drawer]", recurring_occurrence_path(occurrence), text: "Curbside Cuts"
+    end
+  end
+
+  # Keyed on the occurrence's own overdue? (grace included), not on a raw
+  # past date: the row inside its grace is what tells the two apart.
+  test "only an occurrence past its grace is marked overdue" do
+    travel_to Date.current.beginning_of_month + 14.days
+
+    @family.accounts.where(accountable_type: "Depository").update_all(balance: 5_000)
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 5)
+    declare_bill(name: "Late Gym", amount: 40, due: Date.current - 5)
+    declare_bill(name: "Grace Water", amount: 60, due: Date.current - 1)
+    declare_bill(name: "Curbside Cuts", amount: 150, due: Date.current + 2)
+    declare_bill(name: "Next Period Phone", amount: 70, due: Date.current + 8)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_select "[data-paycheck-bridge] [data-paycheck-item]", 3
+    assert_select "[data-paycheck-overdue]", 1,
+      "one row is past its grace; the in-grace, upcoming and next-period rows are not overdue"
+    assert_select "[data-paycheck-bridge] [data-paycheck-item]", text: /Late Gym/ do
+      assert_select "[data-paycheck-overdue]", text: I18n.t("bills.paycheck.item_overdue")
+    end
+  end
+
+  test "the covered bridge lists five bills and folds the rest away" do
+    @family.accounts.where(accountable_type: "Depository").update_all(balance: 50_000)
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 5)
+    7.times do |index|
+      declare_bill(name: "Bill #{index}", amount: 100 + index, due: Date.current + 1 + (index % 3))
+    end
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_select "[data-paycheck-bridge]" do
+      assert_select "[data-paycheck-item]", 7
+      assert_select "details [data-paycheck-item]", 2
+      assert_select "details summary", text: /#{Regexp.escape(I18n.t("bills.paycheck.bridge_show_more", count: 2))}/
+    end
+  end
+
+  test "the covered bridge reports what is left after its bills" do
+    @family.accounts.where(accountable_type: "Depository").update_all(balance: 5_000)
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 5)
+    declare_bill(name: "Curbside Cuts", amount: 150, due: Date.current + 2)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    bridge = RecurringTransaction::PaycheckPlanner.new(@family, user: @user).plan.find(&:bridge?)
+    left = I18n.t("bills.paycheck.bridge_left", amount: money_string(bridge.cash_after_obligations))
+
+    assert_select "[data-paycheck-bridge]" do
+      assert_select "*", text: left
+      assert_select "[role=img][aria-label]", 1
+    end
+    assert_no_match I18n.t("bills.paycheck.review_plan"), response.body,
+      "the covered strip sits inside the plan, so a link back to the plan goes nowhere new"
+  end
+
   private
 
     def declare_scheduled_income(frequency:, weekday: nil, day_of_month: nil)
@@ -2666,6 +3068,19 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     def pay(occurrence)
       RecurringTransaction::Allocator.new(occurrence).mark_paid!(paid_on: Date.current)
+    end
+
+    # A settled cycle the bill's own generator did not create, for the history
+    # and Manage payments cases. The amount must be inside the bill's tolerance
+    # or the allocator leaves the cycle partially paid.
+    def settle_past_cycle(bill, months_ago:, amount:)
+      due = months_ago.months.ago.to_date
+      occurrence = bill.recurring_occurrences.create!(
+        family: @family, original_due_on: due, due_on: due, currency: "USD"
+      )
+      RecurringTransaction::Allocator.new(occurrence).allocate!(amount: amount)
+      assert occurrence.reload.paid?, "#{amount} against #{bill.amount} must settle the cycle"
+      occurrence
     end
 
     def create_transaction_entry(name:, amount:, date:, account: accounts(:depository))

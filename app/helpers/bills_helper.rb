@@ -1,4 +1,8 @@
 module BillsHelper
+  # Bills the covered bridge strip lists before folding the rest behind a
+  # disclosure. A month-long window holds dozens; five keeps the strip a strip.
+  PAYCHECK_BRIDGE_VISIBLE_ITEMS = 5
+
   # A bill's next due date reads "Oct 5" when it falls this year and gains the
   # year otherwise, so an every-2-years bill never shows "Sep 1" for a date
   # that is years out. Same rule as Period#label. Payment dates are historical
@@ -35,11 +39,10 @@ module BillsHelper
     date == Date.current ? t("bills.row_today") : bills_upcoming_date(date)
   end
 
-  # One-shot AI features (smart-fill, smart-configure) need both the user's
-  # consent AND a resolvable LLM provider -- an unconfigured self-hosted
-  # install renders no AI affordances at all, following the Rules registry's
-  # conditional-executor precedent.
-  def bills_one_shot_ai_available?
+  # The bills buttons that start a chat (the AI review, the prompt chips) use
+  # chat's own check, since chat doesn't go through the router. Smart-fill and
+  # smart-configure ask the router for `bill_setup` (ai_feature_available?).
+  def bills_ai_chat_available?
     Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider.present?
   end
 
@@ -47,8 +50,10 @@ module BillsHelper
   # period, so the section template can drop a marker between groups without
   # pre-bucketing the rows. Each marker carries its period and the summed
   # obligations due inside it. Dated like the rail, so a snoozed row counts
-  # toward the period it sits in.
-  def bills_pay_period_markers(occurrences, pay_periods)
+  # toward the period it sits in. A period can run past the rows' month, so
+  # the total sums `counted`, which reaches beyond it. A bill with no rate into
+  # `currency` is left out; the month pulse already counts it as unconvertible.
+  def bills_pay_period_markers(occurrences, pay_periods, currency:, counted: occurrences)
     return {} if pay_periods.blank?
 
     seen = Set.new
@@ -59,8 +64,12 @@ module BillsHelper
       period = pay_periods[index]
       markers[occurrence.id] = {
         period: period,
-        due_total: occurrences.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
-                              .sum { |o| o.resolved_expected_amount.abs }
+        due_total: counted.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
+                          .sum do |o|
+                            o.resolved_expected_amount_money.exchange_to(currency).amount.abs
+                          rescue Money::ConversionError
+                            0
+                          end
       }
     end
   end
@@ -162,6 +171,25 @@ module BillsHelper
 
       [ key, percent ]
     end
+  end
+
+  # The bridge's bar: what is due before payday against the cash on hand.
+  # Empty when the balance is unknown, since the bar would state a figure the
+  # planner deliberately does not claim.
+  def paycheck_bridge_segments(period)
+    return [] if period.cash_on_hand.nil?
+
+    normalize_segments([
+      [ :due, period.obligation_total ],
+      [ :left, period.cash_after_obligations ]
+    ], period.cash_on_hand)
+  end
+
+  def paycheck_bridge_aria(period, currency)
+    t("bills.paycheck.bridge_allocation_aria",
+      cash: format_money(Money.new(period.cash_on_hand, currency)),
+      due: format_money(Money.new(period.obligation_total, currency)),
+      left: format_money(Money.new(period.cash_after_obligations, currency)))
   end
 
   # The bar in words, in the same terms the card states in text.

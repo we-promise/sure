@@ -1,4 +1,4 @@
-<%# locals: (recurring_transaction:, sibling_count: 0) %>
+<%# locals: (recurring_transaction:, sibling_count: 0, source_entry_id: nil, allow_duplicate: false) %>
 
 <%# Income mode reshapes the dialog: a paycheck has a source and a payday,
     not a biller portal and an autopay toggle. %>
@@ -74,6 +74,14 @@
         bill-shaped labels, pressed Save bill, and got income. %>
     <% if recurring_transaction.new_record? && income %>
       <%= hidden_field_tag "recurring_transaction[is_income]", "1" %>
+    <% end %>
+
+    <%# The transaction a prefilled dialog came from travels with the form, so
+        create can ask it whether a bill already covers it: the fields alone
+        carry a name, and a detected bill is keyed by merchant. %>
+    <% if recurring_transaction.new_record? && source_entry_id %>
+      <%= hidden_field_tag :entry_id, source_entry_id, id: nil %>
+      <%= hidden_field_tag :allow_duplicate, "1", id: nil if allow_duplicate %>
     <% end %>
 
     <%# Name, amount, due date and how often are the whole job for most
@@ -165,6 +173,18 @@
           <p class="text-xs text-secondary"><%= t(".cancelled_on_hint") %></p>
         </div>
       <% end %>
+    <% end %>
+
+    <%# Edit shows category beside kind; a new bill has no kind to pick yet,
+        but a bill started from a transaction arrives with its category. %>
+    <% if recurring_transaction.new_record? && !income %>
+      <%= render DS::CategorySelect.new(
+            form: f,
+            categories: Current.family.categories.alphabetically_by_hierarchy.to_a,
+            selected_id: recurring_transaction.category_id,
+            blank_label: t(".category_blank"),
+            locked: Current.family.categories_locked?
+          ) %>
     <% end %>
 
     <%= render DS::Disclosure.new(title: t(".more_options")) do %>

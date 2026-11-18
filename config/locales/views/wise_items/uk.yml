@@ -6,6 +6,7 @@ uk:
     entries:
       default_name: Транзакція Wise
       fee_name: Комісія Wise
+      refund_name: Повернення Wise
     activities:
       jar_deposit: Переказ у Jar
       jar_withdrawal: Переказ із Jar
@@ -65,6 +66,11 @@ uk:
         other: "Синхронізацію %{count} рахунків Wise не вдалося запланувати."
         few: Синхронізацію %{count} рахунків Wise не вдалося запланувати.
         many: Синхронізацію %{count} рахунків Wise не вдалося запланувати.
+      fetch_failed:
+        one: "%{count} запит до Wise не вдався. Наступна синхронізація спробує знову."
+        other: "%{count} запитів до Wise не вдалися. Наступна синхронізація спробує знову."
+        few: "%{count} запити до Wise не вдалися. Наступна синхронізація спробує знову."
+        many: "%{count} запитів до Wise не вдалися. Наступна синхронізація спробує знову."
     provider_panel:
       add_connection: Додати з'єднання Wise
       token_label: Токен API
@@ -79,7 +85,7 @@ uk:
       disconnect: Відключити
       disconnect_label: "Відключити %{name}"
       disconnect_confirm: "Ви впевнені, що хочете відключити %{name}? Це видалить усі синхронізовані дані рахунку."
-      sandbox_note_html: "Використовуйте базову URL-адресу <strong>пісочниці</strong> (<code>https://api.sandbox.transferwise.tech</code>) для тестування. Встановіть <code>WISE_BASE_URL</code> у вашому середовищі."
+      sandbox_note_html: "Використовуйте базову URL-адресу <strong>пісочниці</strong> (<code>https://api.wise-sandbox.com</code>) для тестування. Встановіть <code>WISE_BASE_URL</code> у вашому середовищі."
       encryption_warning:
         title: Шифрування бази даних не налаштовано
         message: Налаштуйте ключі шифрування Active Record перед додаванням токенів Wise у виробництві. Без шифрування токени зберігаються у вигляді звичайного тексту.
@@ -91,7 +97,7 @@ uk:
       sync_start_date_label: Імпортувати транзакції з
       sync_start_date_help: Виписки Wise імпортуються починаючи з цієї дати. Залиште значення за замовчуванням, щоб отримати історію до одного року.
       import_all_history_label: Імпортувати всю історію транзакцій
-      import_all_history_help: Отримати всі історичні виписки Wise, а не лише за останній рік.
+      import_all_history_help: Імпортувати всю історію Wise (перекази, операції та виписки), а не лише за останній рік. Тоді кожен баланс починається з 0 у день, коли Wise його відкрив.
       sca:
         title: Строга автентифікація клієнта (SCA)
         description: Щоб читати повні виписки за транзакціями, зокрема вхідні платежі, Wise вимагає підписаний одноразовий токен-запит. Згенеруйте тут пару ключів і зареєструйте відкритий ключ у Wise, щоб увімкнути цю функцію.
@@ -165,6 +171,9 @@ uk:
       failed: Не вдалося пов'язати баланс Wise. Спробуйте ще раз.
     link_existing_account:
       not_found: Рахунок або баланс Wise не знайдено.
+      account_already_linked: Цей рахунок уже пов'язано з постачальником.
+      unsupported_account_type: Баланси Wise можна пов'язати лише з грошовими рахунками.
+      currency_mismatch: "Цей баланс Wise у %{balance_currency}, а рахунок — у %{account_currency}. Виберіть баланс у валюті рахунку."
       success: "Успішно пов'язано %{account_name} з Wise"
       failed: Не вдалося пов'язати рахунок. Спробуйте ще раз.
     complete_account_setup:

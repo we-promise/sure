@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged by Tauri into the app bundle's Info.plist. -->
+<plist version="1.0">
+<dict>
+  <!-- macOS asks for Local Network access before the app can reach a
+       self-hosted server on a LAN address; without this key it is refused. -->
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Sure connects to your self-hosted Sure server on your local network.</string>
+</dict>
+</plist>

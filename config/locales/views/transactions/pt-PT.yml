@@ -41,6 +41,7 @@ pt-PT:
       date: Data
       description: Descrição
       description_placeholder: Descreva a transação
+      description_placeholder_optional: "Deixe em branco para usar o nome da categoria/comerciante, ou selecione um deles primeiro"
       expense: Despesa
       income: Rendimento
       merchant_label: Comerciante

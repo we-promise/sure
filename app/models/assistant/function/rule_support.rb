@@ -137,10 +137,14 @@ module Assistant::Function::RuleSupport
       if params.key?("actions")
         actions = params["actions"]
         if actions.is_a?(Array)
+          # An email action replacing the rule's own keeps the baseline it recorded
+          # (see Rule::Action#keep_notification_baseline).
+          had_email_action = rule.stored_email_notification_action?
           rule.actions.each(&:mark_for_destruction)
           actions.each_with_index do |action, index|
             problems.concat(build_action(rule, action, "actions[#{index}]"))
           end
+          rule.actions.select(&:new_record?).each { |a| a.keep_notification_baseline = had_email_action }
         else
           problems << "actions must be an array."
         end
@@ -221,6 +225,7 @@ module Assistant::Function::RuleSupport
         return [ "#{path}: value is required for #{type}." ] if value.blank?
 
         allowed = allowed_values(type)
+        allowed += saved_merchant_values(rule) if type == "set_transaction_merchant"
         return [ "#{path}: '#{value}' is not a valid value for #{type}. #{value_hint(type)}" ] if allowed && !allowed.include?(value)
       end
 
@@ -241,6 +246,14 @@ module Assistant::Function::RuleSupport
       [ e.message ]
     end
 
+    # A merchant another member saved on the rule may be on accounts this user
+    # can't see. Re-submitting the rule keeps it, as the rule form does (see
+    # Rule::Action#options), without letting the user pick it anew elsewhere.
+    def saved_merchant_values(rule)
+      rule.actions.select { |action| action.persisted? && action.action_type == "set_transaction_merchant" }
+        .map { |action| action.value_was.to_s }
+    end
+
     # nil means free text (no fixed list of values).
     def allowed_values(key)
       case key
@@ -248,7 +261,7 @@ module Assistant::Function::RuleSupport
       when *CATEGORY_KEYS then family.categories.pluck(:id).map(&:to_s)
       when *TAG_KEYS then family.tags.pluck(:id).map(&:to_s)
       when "transaction_merchant" then family.available_merchants_for(user).pluck(:id).map(&:to_s)
-      when "set_transaction_merchant" then family.merchants.pluck(:id).map(&:to_s)
+      when "set_transaction_merchant" then family.assignable_merchants_for(user).pluck(:id).map(&:to_s)
       when "transaction_type" then %w[income expense transfer]
       when "set_investment_activity_label" then Transaction::ACTIVITY_LABELS
       end

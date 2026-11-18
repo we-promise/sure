@@ -222,12 +222,24 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     # Redirects to account page holdings tab to refresh list
     assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.unlock_cost_basis.success"), flash[:notice]
     @holding.reload
 
     # Then: lock is removed but cost_basis and source remain
     assert_not @holding.cost_basis_locked?
     assert_equal 50.0, @holding.cost_basis.to_f
     assert_equal "manual", @holding.cost_basis_source
+  end
+
+  test "reset_security restores the provider security and confirms it" do
+    @holding.account.update!(plaid_account: plaid_accounts(:one))
+    @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+
+    post reset_security_holding_path(@holding)
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.reset_security.success"), flash[:notice]
+    assert_equal securities(:aapl), @holding.reload.security
   end
 
   test "remap_security brings offline security back online" do
