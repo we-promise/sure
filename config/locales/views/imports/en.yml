@@ -237,11 +237,14 @@ en:
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
     uploads:
+      sample_csv:
+        unavailable: A sample CSV is not available for this import type.
       handle_qif_upload:
         qif_uploaded: "QIF file uploaded successfully."
         qif_account_required: Please select an account for the QIF import
       update:
         qif_uploaded: "QIF file uploaded successfully."
+        qif_account_required: Please select an account for the QIF import
         monarch_uploaded: Monarch exports uploaded.
         monarch_balances_required: Choose the Monarch balances export.
       show:
@@ -298,6 +301,7 @@ en:
         hint_html: Upload the <strong>all.ndjson</strong> file from your data export ZIP
         ndjson_invalid: Must be valid NDJSON with at least one record
   imports:
+    configuration_locked: "This import's data is already in Sure, so its files and choices can't change. Try again to finish it, or delete it to start over."
     mapping_labels:
       account_type: "Account Type"
       account: "Account"
@@ -618,7 +622,6 @@ en:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Processing failed: %{error}"
       errors:
-        provider_not_configured: AI provider not configured
         provider_no_pdf_support: AI provider does not support PDF processing
       ready_for_review_title: Ready for Review
       ready_for_review_description:

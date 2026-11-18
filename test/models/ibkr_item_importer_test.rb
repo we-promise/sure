@@ -26,7 +26,7 @@ class IbkrItemImporterTest < ActiveSupport::TestCase
     assert_equal 2, primary_account.raw_equity_summary_payload.size
     assert_equal 1, primary_account.raw_holdings_payload.size
     assert_equal 2, primary_account.raw_activities_payload["trades"].size
-    assert_equal 2, primary_account.raw_activities_payload["cash_transactions"].size
+    assert_equal 3, primary_account.raw_activities_payload["cash_transactions"].size
   end
 
   test "raises parse error for malformed flex statement xml" do

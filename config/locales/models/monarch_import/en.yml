@@ -12,6 +12,7 @@ en:
           blank_account: "A row has no account name. Check that the file is a Monarch export."
           blank_transaction_id: "A transaction has no Id. Check that the file is a Monarch transactions export."
           opening_balance_changed: "The opening balance of %{account} changed while importing. Review the import and publish it again."
+          target_not_supported: "Sure can't import into %{accounts} anymore. Destinations must be manual accounts without holdings or trades. Choose other destinations and publish again."
           no_accounts: "The exports don't contain any accounts. Check that you exported the right files from Monarch."
           files:
             balances: balances

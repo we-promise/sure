@@ -7,7 +7,6 @@ nl:
       export: "CSV exporteren"
       print_report: "Rapport afdrukken"
       sections_aria: "Rapportsecties"
-      toggle_section: "Zichtbaarheid sectie wijzigen"
       periods:
         monthly: "Maandelijks"
         quarterly: "Per kwartaal"

@@ -7,30 +7,120 @@ es:
       interest_rate: Tasa de interés
       interest_rate_placeholder: '5.25'
       initial_balance: Saldo original del préstamo
+      day_count_convention: Base de cálculo de intereses
+      day_count_convention_actual_365: Real/365
+      day_count_convention_actual_actual: Real/real
+      day_count_convention_hint: Cómo mide tu prestamista cada periodo respecto a un año. Real/365 cobra según la duración del mes y es lo habitual en hipotecas del Reino Unido y Australia. 30/360 cobra una doceava parte fija, la base que Sure ha usado siempre.
+      day_count_convention_thirty_360: 30/360 (una doceava parte fija)
       rate_type: Tipo de interés
       term_months: Plazo (meses)
       term_months_placeholder: '360'
       none: Ninguno
       subtype_prompt: Selecciona el tipo de préstamo
       subtype_none: Ninguno
+      rate_type_adjustable: Revisable
+      rate_type_fixed: Fijo
+      rate_type_variable: Variable
+      rate_changes: Cambios de tipo
+      rate_changes_hint: Cada fila fija el tipo que se aplica desde su fecha de efecto hasta la siguiente. Volver a introducir una fecha sustituye esa fila en lugar de añadir otra.
+      rate_changes_empty: No hay cambios de tipo registrados. El préstamo usa el tipo de interés indicado arriba.
+      rate_change_effective_date: Fecha de efecto
+      rate_change_rate: Tipo
+      rate_change_add: Añadir cambio de tipo
+      rate_change_remove: Quitar
+      start_date: Fecha de formalización
+      start_date_hint: Cuándo se dispuso el préstamo. El historial de saldos de un préstamo nuevo empieza en esta fecha, no en la del saldo inicial. Déjalo en blanco para usar la fecha del saldo inicial.
+      down_payment: Entrada
+      insurance_rate: Tipo del seguro
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_hint: Un tipo anual que se cobra cada mes junto con la cuota. La prima constante se calcula sobre el saldo original; la decreciente, sobre lo que aún se debe.
+      insurance_rate_type: Tipo de seguro
+      insurance_rate_type_decreasing_life: Decreciente
+      insurance_rate_type_level_term: Prima constante
+      principal_only_transfers: Las transferencias vinculadas son solo capital
+      principal_only_transfers_hint: Actívalo si transfieres solo el capital y registras los intereses por separado. Déjalo desactivado si la transferencia vinculada es el pago completo.
     new:
       title: Introduce los detalles del préstamo
     overview:
       interest_rate: Tasa de interés
       monthly_payment: Pago mensual
       not_applicable: N/A
+      original_payoff_date: Fecha de liquidación original
       original_principal: Principal original
       remaining_principal: Principal restante
       term: Plazo
       type: Tipo
       unknown: Desconocido
     tabs:
-      overview:
-        interest_rate: Tipo de interés
+      extra_repayments:
+        amount_label: Pago adicional
+        amount_placeholder: '0.00'
+        apply: Aplicar
+        baseline_not_cleared: Con la cuota actual, este préstamo no se liquida al vencimiento original y aún se deberían %{balloon}, así que no hay fecha anterior ni ahorro de intereses con que comparar. Con este pago adicional se liquida en la fecha indicada arriba.
+        clear: Borrar
+        comparison_basis: Comparado con pagar la cuota actual sin nada adicional, a partir del saldo de hoy.
+        dated_note: Los pagos adicionales semanales y quincenales se cuentan en la cuota siguiente a cada uno, así que los intereses ahorrados, en todo caso, se quedan cortos.
+        extra_not_cleared: Ni siquiera con este pago adicional se liquida el préstamo al vencimiento original. Prueba con un importe mayor.
+        frequencies:
+          fortnightly: Quincenal
+          monthly: Mensual
+          weekly: Semanal
+        frequency_label: Frecuencia
+        interest_saved: Intereses ahorrados
+        intro: Mira cuánto antes se liquida el préstamo y cuántos intereses te ahorras si pagas un importe adicional cada semana, quincena o mes además de tus cuotas.
+        invalid_amount: Introduce un importe de cero o más, en cifras.
+        invalid_frequency: Elige semanal, quincenal o mensual.
+        months_sooner:
+          zero: Se liquida el mismo mes
+          one: "%{count} mes antes"
+          other: "%{count} meses antes"
+        no_scheduled_repayments: No quedan cuotas programadas en este préstamo, pero aún hay saldo pendiente, así que no hay ninguna cuota a la que sumar un pago adicional.
+        not_applicable: No queda nada por pagar en este préstamo, así que no hay pago adicional que simular.
+        payoff_with_extra: Liquidación con pago adicional
+        total_cost: Coste total desde hoy
+        total_cost_not_cleared: No se liquida al vencimiento original
+        total_cost_saved: "%{amount} menos que sin el pago adicional"
+        variable_rate_notice: El tipo de este préstamo cambia con el tiempo. Estas cifras aplican los cambios de tipo ya registrados; un cambio que aún no se haya registrado las modificará.
+      repayment_progress:
+        instalment: Cuota %{number} · %{date}
+        insurance: Seguro
+        interest: Intereses
+        of_original: de %{amount}
+        principal: Capital
+        repaid: Devuelto
+        total: Total
+      schedule:
+        date: Fecha
+        description: Calculado a partir del saldo, el tipo y el plazo originales, desde el %{start_date}. No refleja los pagos adicionales.
+        variable_rate_notice: El tipo de este préstamo cambia con el tiempo. El calendario se recalcula en cada cambio registrado, manteniendo la fecha de liquidación original y ajustando la cuota; un cambio que aún no se haya registrado modificará estas cifras.
+        opening_payment: Primera cuota
+        forecasted_payoff_date: Fecha de liquidación prevista
+        forecasted_payoff_not_converged: No se liquida con la cuota actual
+        interest: Intereses
         monthly_payment: Cuota mensual
         not_applicable: N/D
+        number: "#"
+        payment: Cuota
+        principal: Capital
+        remaining_balance: Saldo pendiente
+        total_cost: Coste total
+        total_interest: Intereses totales
+      overview:
+        insurance_rate_only: "%{rate} al año"
+        interest_rate: Tipo de interés
+        leverage: Apalancamiento
+        leverage_band_conservative: Conservador
+        leverage_band_high: Alto
+        leverage_band_moderate: Moderado
+        leverage_multiple: "%{ratio}x"
+        monthly_payment: Cuota mensual
+        not_applicable: N/D
+        original_payoff_date: Fecha de liquidación original
         original_principal: Capital inicial
         remaining_principal: Capital pendiente
+        total_cost: Coste total
+        total_cost_with_insurance: Coste total con seguro
+        total_insurance: Seguro
         term: Plazo
         type: Tipo
         unknown: Desconocido
