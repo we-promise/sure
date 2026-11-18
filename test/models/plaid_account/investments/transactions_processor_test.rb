@@ -246,7 +246,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_instance_of Transaction, entry.entryable
   end
 
-  test "rescales a trade price quoted as a percent of par" do
+  test "rescales a trade price quoted as a percent of par and keeps the cash amount" do
     @plaid_account.update!(raw_holdings_payload: {
       transactions: [
         {
@@ -269,10 +269,10 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
 
     entry = Entry.find_by!(external_id: "bond_buy")
     assert_equal BigDecimal("0.995"), entry.entryable.price
-    assert_equal BigDecimal("9950"), entry.amount
+    assert_equal BigDecimal("9955.25"), entry.amount
   end
 
-  test "keeps the reported price when the trade amount includes fees" do
+  test "keeps the reported price and the cash amount when the trade includes fees" do
     @plaid_account.update!(raw_holdings_payload: {
       transactions: [
         {
@@ -295,6 +295,6 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
 
     entry = Entry.find_by!(external_id: "stock_buy")
     assert_equal 100, entry.entryable.price
-    assert_equal 1000, entry.amount
+    assert_equal BigDecimal("1004.95"), entry.amount
   end
 end

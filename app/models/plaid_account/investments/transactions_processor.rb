@@ -65,14 +65,15 @@ class PlaidAccount::Investments::TransactionsProcessor
       external_id = transaction["investment_transaction_id"]
       return if external_id.blank?
 
+      quantity = derived_qty(transaction)
       price = trade_price(transaction)
 
       import_adapter.import_trade(
         external_id: external_id,
         security: resolved_security_result.security,
-        quantity: derived_qty(transaction),
+        quantity: quantity,
         price: price,
-        amount: derived_qty(transaction) * price,
+        amount: trade_cash_impact(transaction, quantity, price),
         currency: transaction["iso_currency_code"],
         date: transaction["date"],
         name: transaction["name"],
@@ -117,6 +118,16 @@ class PlaidAccount::Investments::TransactionsProcessor
 
       ratio = quantity * price / cash
       (ratio / 100 - 1).abs <= PERCENT_OF_PAR_TOLERANCE ? price / 100 : transaction["price"]
+    end
+
+    # Plaid's amount is the cash that moved, including fees and accrued
+    # interest. Its sign follows the derived quantity because Plaid's signage
+    # is unreliable.
+    def trade_cash_impact(transaction, quantity, price)
+      cash = transaction["amount"].to_d.abs
+      return quantity * price if cash.zero?
+
+      quantity.negative? ? -cash : cash
     end
 
     # Plaid unfortunately returns incorrect signage on some `quantity` values. They claim all "sell" transactions
