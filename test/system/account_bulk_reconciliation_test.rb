@@ -46,6 +46,13 @@ class AccountBulkReconciliationTest < ApplicationSystemTestCase
     click_on I18n.t("accounts.show.menu.reconcile_all.unreconciled")
     confirm_dialog
 
+    # Wait for Turbo to finish the request and redirect before reading the rows.
+    assert_text I18n.t(
+      "accounts.reconcile_all.success",
+      count: @entries.size,
+      status: I18n.t("transactions.reconcile.statuses.unreconciled")
+    )
+
     @entries.each do |entry|
       assert_equal "unreconciled", entry.reload.reconciled_status
       assert_selector "##{dom_id(entry)} a[aria-label='#{I18n.t("transactions.reconcile.statuses.unreconciled")}']"
@@ -69,6 +76,7 @@ class AccountBulkReconciliationTest < ApplicationSystemTestCase
     end
 
     def confirm_dialog
+      assert_selector "#confirm-dialog[open]"
       within("#confirm-dialog") do
         find("button[value='confirm']:not([hidden])").click
       end

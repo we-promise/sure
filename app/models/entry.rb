@@ -733,6 +733,10 @@ class Entry < ApplicationRecord
     # account. Split parents stay out: the activity list hides them and shows
     # their children instead.
     #
+    # Lock the entries in ascending id order before the update. Bulk updates
+    # and Transfer::Matcher take entry locks in that order too, so a
+    # concurrent request cannot deadlock with this account-wide write.
+    #
     # Reconciling is not an edit, so this leaves user_modified and the saved
     # attributes alone. It does bump updated_at because the cached transaction
     # row key includes it.
@@ -740,9 +744,12 @@ class Entry < ApplicationRecord
       status = status.to_s
       raise ArgumentError, "Unknown reconciled status: #{status}" unless reconciled_statuses.key?(status)
 
-      where(account: account, entryable_type: "Transaction")
-        .excluding_split_parents
-        .update_all(reconciled_status: status, updated_at: Time.current)
+      scope = where(account: account, entryable_type: "Transaction").excluding_split_parents
+
+      transaction do
+        scope.reorder(:id).lock("FOR UPDATE OF entries").pluck(:id)
+        scope.update_all(reconciled_status: status, updated_at: Time.current)
+      end
     end
 
     # Bulk update entries with the given parameters.

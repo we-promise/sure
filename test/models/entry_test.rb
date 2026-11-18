@@ -212,6 +212,26 @@ class EntryTest < ActiveSupport::TestCase
     assert_not_equal old_key, entry.reload.cache_key_with_version
   end
 
+  test "set_reconciled_status_for_account! locks entries by id before updating them" do
+    account = accounts(:depository)
+    create_transaction(account: account, name: "Locked row")
+
+    payloads = []
+    callback = ->(_name, _started, _finished, _unique_id, payload) { payloads << payload }
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      Entry.set_reconciled_status_for_account!(account, "cleared")
+    end
+
+    lock_index = payloads.index { |payload| payload[:sql].include?("FOR UPDATE OF entries") }
+    update_index = payloads.index { |payload| payload[:sql].start_with?('UPDATE "entries"') }
+
+    assert lock_index, "expected an entry lock"
+    assert update_index, "expected the entry update"
+    assert_operator lock_index, :<, update_index, "the entries must be locked before the update"
+    assert_match(/ORDER BY "entries"\."id" ASC/, payloads[lock_index][:sql])
+  end
+
   test "set_reconciled_status_for_account! rejects an unknown status" do
     assert_raises(ArgumentError) do
       Entry.set_reconciled_status_for_account!(accounts(:depository), "bogus")
