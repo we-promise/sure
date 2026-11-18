@@ -49,7 +49,7 @@ es:
       bill_not_covered: Recibos
       loan_payment_change: Cuota del préstamo
       bank_fees: Comisiones
-      fixed_commitments_ratio: Gastos fijos
+      fixed_commitments_ratio: Compromisos fijos
     meta:
       next_n_days:
         one: Próximo día
@@ -112,8 +112,8 @@ es:
         down: La cuota de %{account} va a bajar
       bank_fees: Comisiones en %{account}
       fixed_commitments_ratio:
-        up: Tus gastos fijos pesan más en tus ingresos
-        over_half: Tus gastos fijos ya se llevan la mitad o más de tus ingresos
+        up: Tus compromisos fijos pesan más en tus ingresos
+        over_half: Tus compromisos fijos ya se llevan la mitad o más de tus ingresos
     templates:
       spending_anomaly:
         above: Vas camino de gastar %{projected_spend} en %{category} este mes, aproximadamente un %{deviation_pct}% más que tu promedio mensual reciente de %{baseline_spend}.
@@ -140,7 +140,7 @@ es:
       bank_fees:
         recurring: "%{account} acumula %{amount} en comisiones en los últimos %{days} días."
         new: "%{account} acumula %{amount} en comisiones en los últimos %{days} días, y ninguna en los %{days} días anteriores."
-      fixed_commitments_ratio: "Tus pagos recurrentes, %{commitments} al mes, se llevan el %{current_ratio}% de tus ingresos mensuales habituales (%{income}), frente al %{previous_ratio}% de hace seis meses. %{explanation}"
+      fixed_commitments_ratio: "Tus compromisos recurrentes, %{commitments} al mes, se llevan el %{current_ratio}% de tus ingresos mensuales habituales (%{income}), frente al %{previous_ratio}% de hace seis meses. %{explanation}"
     fixed_commitments_ratio:
       contributors: "Lo que más ha cambiado: %{list}."
       contributor:
