@@ -28,6 +28,16 @@ class Valuation::Name
     end
   end
 
+  # Returns the I18n key suffix for a reconciliation that a provider sync left
+  # behind (see Account::CurrentBalanceManager#preserve_anchor_as_reconciliation_if_stale).
+  def synced_translation_key
+    case accountable_type
+    when "Property", "Investment", "Vehicle", "Crypto", "OtherAsset" then :synced_value
+    when "Loan" then :synced_principal
+    else :synced_balance
+    end
+  end
+
   private
     attr_reader :valuation_kind, :accountable_type
 
