@@ -5,6 +5,7 @@ class DemoMfaRestrictionTest < ActionDispatch::IntegrationTest
   setup do
     @demo_user = users(:new_email)
     @member = users(:empty)
+    @member.family.start_subscription!(Subscription::DEMO_STRIPE_ID)
     assert_equal Rails.application.config_for(:demo).fetch(:email), @demo_user.email
     assert_equal @demo_user.family, @member.family
   end
@@ -36,6 +37,53 @@ class DemoMfaRestrictionTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_security_path
     assert_not @demo_user.reload.otp_required?
     assert_empty @demo_user.otp_backup_codes
+  end
+
+  test "email changes do not unlock demo family enrollment" do
+    @demo_user.update!(email: "changed-demo@example.com")
+    host! "app.sure.am"
+    sign_in @member
+
+    get new_mfa_path
+    assert_redirected_to settings_security_path
+    assert_nil @member.reload.otp_secret
+
+    @member.setup_mfa!
+    code = ROTP::TOTP.new(@member.otp_secret).now
+    post mfa_path, params: { code: code, password: user_password_test }
+    assert_redirected_to settings_security_path
+    assert_not @member.reload.otp_required?
+
+    @member.enable_mfa!
+    post options_settings_webauthn_credentials_path,
+      params: { webauthn_credential: { code: code } }, as: :json
+    assert_response :forbidden
+  end
+
+  test "legacy plaintext demo email does not unlock demo family enrollment" do
+    store_legacy_plaintext_email(@demo_user)
+    host! "app.sure.am"
+    sign_in @member
+
+    get new_mfa_path
+    assert_redirected_to settings_security_path
+    assert_nil @member.reload.otp_secret
+
+    @member.setup_mfa!
+    code = ROTP::TOTP.new(@member.otp_secret).now
+    post mfa_path, params: { code: code, password: user_password_test }
+    assert_redirected_to settings_security_path
+    assert_not @member.reload.otp_required?
+  end
+
+  test "configured email alone does not restrict an unmarked family" do
+    @member.family.subscription.update!(stripe_id: "sub_regular")
+    host! "app.sure.am"
+    sign_in @member
+
+    get new_mfa_path
+    assert_response :success
+    assert @member.reload.otp_secret.present?
   end
 
   test "deployment domain also protects enrollment through an alternate hostname" do
@@ -95,15 +143,16 @@ class DemoMfaRestrictionTest < ActionDispatch::IntegrationTest
     sign_in @member
     @member.setup_mfa!
     @member.enable_mfa!
-    # Obtain a real challenge before this family becomes the configured demo.
+    # Obtain a real challenge before this family is marked as a demo.
     @demo_user.update!(email: "former-demo@example.com")
+    @member.family.subscription.update!(stripe_id: "sub_regular")
     code = ROTP::TOTP.new(@member.otp_secret).now
     post options_settings_webauthn_credentials_path,
       params: { webauthn_credential: { code: code } }, as: :json
     assert_response :success
     client = WebAuthn::FakeClient.new("http://app.sure.am")
     credential = client.create(challenge: response.parsed_body.fetch("challenge"), rp_id: "app.sure.am")
-    @demo_user.update!(email: Rails.application.config_for(:demo).fetch(:email))
+    @member.family.start_subscription!(Subscription::DEMO_STRIPE_ID)
 
     assert_no_difference "WebauthnCredential.count" do
       post settings_webauthn_credentials_path,

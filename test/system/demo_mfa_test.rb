@@ -3,6 +3,8 @@ require "application_system_test_case"
 class DemoMfaTest < ApplicationSystemTestCase
   test "demo family cannot start MFA enrollment on a sure.am installation" do
     with_env_overrides("APP_DOMAIN" => "app.sure.am") do
+      users(:empty).family.start_subscription!(Subscription::DEMO_STRIPE_ID)
+      users(:new_email).update!(email: "changed-demo@example.com")
       sign_in users(:empty)
       visit settings_security_path
 

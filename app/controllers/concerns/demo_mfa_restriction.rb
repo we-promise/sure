@@ -15,8 +15,9 @@ module DemoMfaRestriction
       end
       return false unless sure_domain && Current.family
 
-      email = Rails.application.config_for(:demo).fetch(:email)
-      email.present? && Current.family.users.exists?(email: email)
+      # The generator marks demo subscriptions independently of editable user
+      # emails and their encrypted/legacy storage representation.
+      Current.family.subscription&.synthetic? || false
     end
 
     def require_mfa_enrollment_allowed
