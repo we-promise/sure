@@ -733,9 +733,9 @@ class HoldingTest < ActiveSupport::TestCase
     old_security = @amzn.security
     new_security = create_security("GOOGGONE", prices: [ { date: Date.current, price: 100.0 } ])
     create_trade(old_security, account: @account, qty: 5, price: 100.00, date: Date.current)
-    Holding.any_instance.stubs(:update_columns).returns(false)
+    assert_equal 2, @account.holdings.where(security: old_security).count
 
-    assert_raises(ActiveRecord::RecordNotSaved) { @amzn.remap_security!(new_security) }
+    assert_first_holding_write_rolled_back { @amzn.remap_security!(new_security) }
 
     assert_equal 1, @account.trades.where(security: old_security).count
     assert_equal 0, @account.trades.where(security: new_security).count
@@ -746,9 +746,9 @@ class HoldingTest < ActiveSupport::TestCase
     new_security = create_security("GOOGRST", prices: [ { date: Date.current, price: 100.0 } ])
     create_trade(old_security, account: @account, qty: 5, price: 100.00, date: Date.current)
     @amzn.remap_security!(new_security)
-    Holding.any_instance.stubs(:update_columns).returns(false)
+    assert_equal 2, @account.holdings.where(security: new_security).count
 
-    assert_raises(ActiveRecord::RecordNotSaved) { @amzn.reset_security_to_provider! }
+    assert_first_holding_write_rolled_back { @amzn.reset_security_to_provider! }
 
     assert_equal 1, @account.trades.where(security: new_security).count
     assert_equal 0, @account.trades.where(security: old_security).count
@@ -1196,6 +1196,28 @@ class HoldingTest < ActiveSupport::TestCase
 
     def assert_cost(expected, actual, message)
       expected.nil? ? assert_nil(actual, message) : assert_equal(expected, actual, message)
+    end
+
+    # Lets the first holding write land and makes the next one miss, as when
+    # that row is deleted mid-write, so the raise has a real write to undo.
+    def assert_first_holding_write_rolled_back(&block)
+      original = Holding.method(:_update_record)
+      moved_id = before = nil
+      miss_second = ->(values, constraints) do
+        return 0 if moved_id
+        moved_id = constraints.values.first
+        before = holding_columns(moved_id)
+        original.call(values, constraints)
+      end
+
+      assert_raises(ActiveRecord::RecordNotSaved) { Holding.stub(:_update_record, miss_second, &block) }
+
+      assert moved_id, "expected one holding write to land before the miss"
+      assert_equal before, holding_columns(moved_id), "the holding written before the miss was not rolled back"
+    end
+
+    def holding_columns(id)
+      Holding.where(id: id).pick(:security_id, :security_locked, :provider_security_id)
     end
 
     def load_holdings
