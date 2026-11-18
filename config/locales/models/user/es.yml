@@ -18,6 +18,8 @@ es:
             base:
               cannot_deactivate_admin_with_other_users: El administrador no puede eliminar la cuenta 
                 mientras haya otros usuarios. Por favor, elimine primero a todos los miembros.
+              provider_item_has_other_accounts: El usuario tiene cuentas vinculadas a una conexión de proveedor que también tiene cuentas de otro usuario. Mueve o desvincula esas cuentas antes de cambiar la pertenencia a la familia o grupo.
+              cannot_remove_last_super_admin: No se puede quitar al último superadministrador activo. Convierte antes a otro usuario en superadministrador.
             password:
               missing_case: debe incluir letras mayúsculas y minúsculas
               missing_number: debe incluir al menos un número
