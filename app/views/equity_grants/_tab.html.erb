@@ -1,0 +1,158 @@
+<%# locals: (account:) %>
+
+<% summary = EquityGrant::Summary.new(account) %>
+<% can_edit = account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
+<% ai_available = ai_feature_available?(:extract_pdf) %>
+<% unvested = summary.unvested_total %>
+<% next_year = summary.next_year_total %>
+<% next_vest = summary.upcoming.first %>
+
+<div class="space-y-4" data-testid="grants-tab">
+  <% if summary.any? %>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <%= summary_card title: t(".unvested") do %>
+        <span class="privacy-sensitive"><%= unvested.money ? format_money(unvested.money) : t(".unknown_value") %></span>
+        <span class="block text-sm text-secondary"><%= t(".units", count: number_with_delimiter(summary.unvested_units.to_f.round(3))) %></span>
+        <% unless unvested.complete? %>
+          <span class="block text-xs text-secondary"><%= t(".unvalued", count: unvested.unvalued_count) %></span>
+        <% end %>
+      <% end %>
+      <%= summary_card title: t(".next_12_months") do %>
+        <span class="privacy-sensitive"><%= next_year.money ? format_money(next_year.money) : t(".unknown_value") %></span>
+        <span class="block text-sm text-secondary"><%= t(".vests", count: summary.next_year.size) %></span>
+        <% unless next_year.complete? %>
+          <span class="block text-xs text-secondary"><%= t(".unvalued", count: next_year.unvalued_count) %></span>
+        <% end %>
+      <% end %>
+      <%= summary_card title: t(".next_vest") do %>
+        <% if next_vest %>
+          <%= l(next_vest.last.vest_date, format: :long) %>
+          <span class="block text-sm text-secondary privacy-sensitive">
+            <%= t(".units", count: number_with_delimiter(next_vest.last.units.to_f.round(3))) %><% if (value = next_vest.last.estimated_value) %> · <%= format_money(value) %><% end %>
+          </span>
+        <% else %>
+          <%= t(".none") %>
+        <% end %>
+      <% end %>
+    </div>
+    <p class="text-xs text-secondary px-1"><%= t(".value_note") %></p>
+  <% else %>
+    <div class="rounded-xl bg-container-inset p-4">
+      <p class="text-sm font-medium text-primary"><%= t(".empty_title") %></p>
+      <p class="text-sm text-secondary"><%= t(".empty_description") %></p>
+    </div>
+  <% end %>
+
+  <% if summary.upcoming.any? %>
+    <%= render DS::Table.new(rows: summary.upcoming, inset: true, label: t(".upcoming_title")) do |table| %>
+      <% table.with_column(t(".vest_date")) { |(_, vest)| l(vest.vest_date, format: :long) } %>
+      <% table.with_column(t(".grant")) { |(grant, _)| "#{grant.ticker} · #{grant.label}" } %>
+      <% table.with_column(t(".units_heading"), numeric: true) { |(_, vest)| number_with_delimiter(vest.units.to_f.round(3)).to_s } %>
+      <% table.with_column(t(".estimated_value"), numeric: true, class: "privacy-sensitive") { |(_, vest)| (value = vest.estimated_value) ? format_money(value) : t(".unknown_value") } %>
+      <% if can_edit %>
+        <% table.with_column(t(".actions"), numeric: true) do |(_, vest)| %>
+          <%= render DS::Button.new(variant: :icon, icon: "trash-2", href: equity_vest_path(vest), method: :delete, aria: { label: t(".delete") }) %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if summary.any? %>
+    <%= render DS::Table.new(rows: summary.grants, inset: true, label: t(".grants_title")) do |table| %>
+      <% table.with_column(t(".grant")) { |grant| "#{grant.ticker} · #{grant.label}" } %>
+      <% table.with_column(t(".type")) { |grant| grant.forfeited? ? t(".forfeited_on", date: l(grant.forfeited_on, format: :long)) : t(".grant_types.#{grant.grant_type}") } %>
+      <% table.with_column(t(".granted"), numeric: true) { |grant| grant.total_units ? number_with_delimiter(grant.total_units.to_f.round(3)).to_s : t(".none") } %>
+      <% table.with_column(t(".vested"), numeric: true) { |grant| number_with_delimiter(grant.vested_units.to_f.round(3)).to_s } %>
+      <% table.with_column(t(".unvested_heading"), numeric: true) { |grant| number_with_delimiter(grant.unvested_units.to_f.round(3)).to_s } %>
+      <% if can_edit %>
+        <% table.with_column(t(".actions"), numeric: true) do |grant| %>
+          <div class="flex items-center justify-end gap-1">
+            <% unless grant.forfeited? %>
+              <%= render DS::Button.new(variant: :ghost, size: :sm, text: t(".forfeit"), href: forfeit_equity_grant_path(grant), method: :post,
+                                        confirm: CustomConfirm.new(title: t(".forfeit_confirm_title"), body: t(".forfeit_confirm_body"), btn_text: t(".forfeit"))) %>
+            <% end %>
+            <%= render DS::Button.new(variant: :icon, icon: "trash-2", href: equity_grant_path(grant), method: :delete, aria: { label: t(".delete") },
+                                      confirm: CustomConfirm.for_resource_deletion("grant")) %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if summary.past.any? %>
+    <%= render DS::Table.new(rows: summary.past, inset: true, label: t(".past_title")) do |table| %>
+      <% table.with_column(t(".vest_date")) { |(_, vest)| l(vest.vest_date, format: :long) } %>
+      <% table.with_column(t(".grant")) { |(grant, _)| "#{grant.ticker} · #{grant.label}" } %>
+      <% table.with_column(t(".units_heading"), numeric: true) { |(_, vest)| number_with_delimiter(vest.units.to_f.round(3)).to_s } %>
+      <% table.with_column(t(".withheld"), numeric: true) { |(_, vest)| vest.units_withheld ? number_with_delimiter(vest.units_withheld.to_f.round(3)).to_s : t(".none") } %>
+      <% table.with_column(t(".net_proceeds"), numeric: true, class: "privacy-sensitive") { |(_, vest)| vest.net_proceeds_money ? format_money(vest.net_proceeds_money) : t(".none") } %>
+      <% if can_edit %>
+        <% table.with_column(t(".actions"), numeric: true) do |(_, vest)| %>
+          <%= render DS::Button.new(variant: :icon, icon: "trash-2", href: equity_vest_path(vest), method: :delete, aria: { label: t(".delete") }) %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if can_edit %>
+    <div class="grid gap-4 lg:grid-cols-3">
+      <div class="rounded-xl bg-container-inset p-4 space-y-3">
+        <div>
+          <p class="text-sm font-medium text-primary"><%= t(".documents_title") %></p>
+          <p class="text-xs text-secondary"><%= ai_available ? t(".documents_description") : t(".documents_no_ai") %></p>
+        </div>
+        <% if ai_available %>
+          <%= styled_form_with url: upload_account_equity_grants_path(account), multipart: true, class: "space-y-2", data: { turbo: false } do |form| %>
+            <%= form.file_field :files, multiple: true, accept: ".pdf", label: t(".document_files") %>
+            <%= form.submit t(".upload_and_read") %>
+          <% end %>
+          <%= render DS::Button.new(variant: :ghost, size: :sm, text: t(".read_existing"), href: read_statements_account_equity_grants_path(account), method: :post) %>
+        <% end %>
+        <%= styled_form_with url: import_account_equity_grants_path(account), multipart: true, class: "space-y-2 pt-2 border-t border-divider", data: { turbo: false } do |form| %>
+          <%= form.file_field :file, accept: ".csv", label: t(".csv_file") %>
+          <%= form.text_field :ticker, label: t(".default_ticker"), placeholder: "ACME" %>
+          <p class="text-xs text-secondary">
+            <%= t(".csv_hint") %>
+            <%= link_to t(".csv_template"), template_account_equity_grants_path(account), class: "underline" %>
+          </p>
+          <%= form.submit t(".import_csv") %>
+        <% end %>
+      </div>
+
+      <div class="rounded-xl bg-container-inset p-4 space-y-3">
+        <p class="text-sm font-medium text-primary"><%= t(".add_grant_title") %></p>
+        <%= styled_form_with model: EquityGrant.new, url: account_equity_grants_path(account), class: "space-y-2" do |form| %>
+          <div class="grid grid-cols-2 gap-2">
+            <%= form.text_field :ticker, label: t(".ticker"), required: true, placeholder: "ACME" %>
+            <%= form.select :grant_type, EquityGrant::GRANT_TYPES.map { |k| [ t(".grant_types.#{k}"), k ] }, { label: t(".type") } %>
+          </div>
+          <%= form.text_field :grant_identifier, label: t(".grant_identifier") %>
+          <div class="grid grid-cols-2 gap-2">
+            <%= form.date_field :grant_date, label: t(".grant_date") %>
+            <%= form.number_field :total_units, label: t(".granted"), step: "any" %>
+          </div>
+          <%= form.number_field :strike_price, label: t(".strike_price"), step: "any" %>
+          <p class="text-xs text-secondary -mt-1"><%= t(".strike_price_hint") %></p>
+          <%= form.submit t(".add_grant") %>
+        <% end %>
+      </div>
+
+      <% if summary.any? %>
+        <div class="rounded-xl bg-container-inset p-4 space-y-3">
+          <p class="text-sm font-medium text-primary"><%= t(".add_vest_title") %></p>
+          <p class="text-xs text-secondary"><%= t(".add_vest_hint") %></p>
+          <%= styled_form_with scope: :equity_vest, url: account_equity_vests_path(account), class: "space-y-2" do |form| %>
+            <%= form.select :equity_grant_id, summary.grants.map { |grant| [ "#{grant.ticker} · #{grant.label}", grant.id ] }, { label: t(".grant") } %>
+            <div class="grid grid-cols-2 gap-2">
+              <%= form.date_field :vest_date, label: t(".vest_date"), value: Date.current, required: true %>
+              <%= form.number_field :units, label: t(".units_heading"), step: "any", required: true %>
+              <%= form.number_field :every_months, label: t(".every_months"), min: 0 %>
+              <%= form.number_field :count, label: t(".count"), min: 1 %>
+            </div>
+            <%= form.submit t(".add_vest") %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

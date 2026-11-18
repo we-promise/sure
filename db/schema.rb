@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_18_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -56,6 +56,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.string "content_type", limit: 100, null: false
     t.datetime "created_at", null: false
     t.string "currency", limit: 3
+    t.datetime "equity_grants_read_at"
     t.uuid "family_id", null: false
     t.string "filename", limit: 255, null: false
     t.string "institution_name_hint", limit: 200
@@ -749,6 +750,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.index ["reconciled_by_statement_id"], name: "index_entries_on_reconciled_by_statement", where: "(reconciled_by_statement_id IS NOT NULL)"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
     t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
+  end
+
+  create_table "equity_grants", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "account_statement_id"
+    t.uuid "security_id"
+    t.string "grant_identifier", limit: 100
+    t.string "ticker", limit: 20, null: false
+    t.string "grant_type", default: "rsu", null: false
+    t.date "grant_date"
+    t.decimal "total_units", precision: 24, scale: 6
+    t.decimal "strike_price", precision: 19, scale: 4
+    t.date "forfeited_on"
+    t.string "notes", limit: 500
+    t.string "source", default: "manual", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "grant_identifier"], name: "index_equity_grants_on_account_id_and_grant_identifier", unique: true, where: "(grant_identifier IS NOT NULL)"
+    t.index ["account_id"], name: "index_equity_grants_on_account_id"
+    t.index ["account_statement_id"], name: "index_equity_grants_on_account_statement_id"
+    t.index ["security_id"], name: "index_equity_grants_on_security_id"
+  end
+
+  create_table "equity_vests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "equity_grant_id", null: false
+    t.uuid "account_statement_id"
+    t.date "vest_date", null: false
+    t.decimal "units", precision: 24, scale: 6, null: false
+    t.decimal "units_withheld", precision: 24, scale: 6
+    t.decimal "net_proceeds", precision: 19, scale: 4
+    t.string "currency", limit: 3
+    t.string "source", default: "manual", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_statement_id"], name: "index_equity_vests_on_account_statement_id"
+    t.index ["equity_grant_id", "vest_date"], name: "index_equity_vests_on_equity_grant_id_and_vest_date", unique: true
+    t.index ["equity_grant_id"], name: "index_equity_vests_on_equity_grant_id"
   end
 
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3193,6 +3231,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "entries", column: "parent_entry_id", on_delete: :cascade
   add_foreign_key "entries", "imports"
+  add_foreign_key "equity_grants", "account_statements", on_delete: :nullify
+  add_foreign_key "equity_grants", "accounts", on_delete: :cascade
+  add_foreign_key "equity_grants", "securities", on_delete: :nullify
+  add_foreign_key "equity_vests", "account_statements", on_delete: :nullify
+  add_foreign_key "equity_vests", "equity_grants", on_delete: :cascade
   add_foreign_key "eval_results", "eval_runs"
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"

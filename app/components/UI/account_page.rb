@@ -59,7 +59,9 @@ class UI::AccountPage < ApplicationComponent
 
   def tabs
     base_tabs = case account.accountable_type
-    when "Investment", "Crypto"
+    when "Investment"
+      account.investment.stock_plan? ? [ :activity, :holdings, :grants ] : [ :activity, :holdings ]
+    when "Crypto"
       [ :activity, :holdings ]
     when "Loan"
       account.loan.amortizable? ? [ :activity, :overview, :schedule, :extra_repayments ] : [ :activity, :overview ]
@@ -123,6 +125,8 @@ class UI::AccountPage < ApplicationComponent
       render "loans/tabs/extra_repayments",
              account: account, projection: loan_projection, extra_projection: @loan_extra_projection,
              extra_repayment: extra_repayment
+    when :grants
+      render "equity_grants/tab", account: account
     when :statements
       render_statement_tab
     end
