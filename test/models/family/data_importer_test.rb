@@ -2133,6 +2133,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           budget_id: "budget-1",
           category_id: "cat-groceries",
           budgeted_spending: "500.00",
+          rollover_enabled: true,
           currency: "USD"
         }
       }
@@ -2146,6 +2147,21 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not_nil budget_category
     assert_equal "Groceries", budget_category.category.name
     assert_equal 500.0, budget_category.budgeted_spending.to_f
+    assert budget_category.rollover_enabled?
+  end
+
+  test "imports a budget_category with only its required fields" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    budget_category = @family.budgets.first.budget_categories.first
+    assert_equal 0, budget_category.budgeted_spending
+    assert_not budget_category.rollover_enabled?
   end
 
   test "reuses an untouched default budget for the same period" do

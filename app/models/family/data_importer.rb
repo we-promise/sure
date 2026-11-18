@@ -1431,9 +1431,13 @@ class Family::DataImporter
 
         budget_category = budget.budget_categories.find_or_initialize_by(category_id: new_category_id)
         created = budget_category.new_record?
+        # Only budget_id/category_id are required. A field the line leaves out
+        # keeps its current value -- both columns are NOT NULL, so assigning
+        # nil would fail the save; a new row with no amount budgets 0.
         budget_category.assign_attributes(
           category_id: new_category_id,
-          budgeted_spending: data["budgeted_spending"].to_d,
+          budgeted_spending: data["budgeted_spending"].present? ? data["budgeted_spending"].to_d : (budget_category.budgeted_spending || 0),
+          rollover_enabled: data["rollover_enabled"].nil? ? budget_category.rollover_enabled : ActiveModel::Type::Boolean.new.cast(data["rollover_enabled"]),
           currency: data["currency"] || budget.currency
         )
 
