@@ -85,11 +85,14 @@ en:
         total_cost_saved: "%{amount} less than without the extra"
         variable_rate_notice: This loan's rate changes over time. These figures apply the rate changes already recorded; a change that has not been recorded yet will shift them.
       repayment_progress:
+        estimated_interest: Interest is estimated from the schedule.
         instalment: Payment %{number} · %{date}
         insurance: Insurance
         interest: Interest
         of_original: of %{amount}
+        paid_so_far: Paid so far · %{date}
         principal: Principal
+        principal_and_interest: Principal + interest
         repaid: Repaid
         total: Total
       schedule:
