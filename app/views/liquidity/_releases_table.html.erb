@@ -1,45 +1,33 @@
 <%# locals: (overview:) %>
 
-<div class="bg-container-inset rounded-xl p-1 overflow-x-auto w-full">
-  <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
-    <table class="w-full" id="liquidity-releases">
-      <caption class="sr-only"><%= t(".caption") %></caption>
-      <thead class="bg-container-inset">
-        <tr class="uppercase text-xs font-medium text-secondary">
-          <th scope="col" class="px-4 py-2 text-left font-medium"><%= t(".account") %></th>
-          <th scope="col" class="px-4 py-2 text-left font-medium"><%= t(".released_on") %></th>
-          <th scope="col" class="px-4 py-2 text-right font-medium"><%= t(".remaining") %></th>
-          <th scope="col" class="px-4 py-2 text-right font-medium"><%= t(".amount") %></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if overview.releases.any? %>
-          <% by_year = overview.releases_by_year %>
-          <% overview.releases.group_by { |release| release.date.year }.each do |year, releases| %>
-            <% releases.each do |release| %>
-              <tr class="table-divider">
-                <td class="py-3 px-4 text-sm font-medium text-primary">
-                  <%= link_to release.account.name, account_path(release.account) %>
-                  <% if release.auto_renew %>
-                    <span class="block text-xs text-secondary font-normal"><%= t(".renews") %></span>
-                  <% end %>
-                </td>
-                <td class="py-3 px-4 text-sm text-secondary"><%= l(release.date, format: :long) %></td>
-                <td class="py-3 px-4 text-sm text-secondary text-right"><%= liquidity_release_remaining(release) %></td>
-                <td class="py-3 px-4 text-sm font-medium text-right text-primary privacy-sensitive"><%= format_money(release.amount) %></td>
-              </tr>
-            <% end %>
-            <tr class="bg-container-inset">
-              <th scope="row" colspan="3" class="py-2 px-4 text-xs font-medium text-secondary text-left"><%= t(".year_total", year: year) %></th>
-              <td class="py-2 px-4 text-sm font-medium text-right text-primary privacy-sensitive"><%= format_money(by_year[year]) %></td>
-            </tr>
-          <% end %>
-        <% else %>
-          <tr>
-            <td colspan="4" class="text-sm text-subdued py-3 px-4"><%= t(".empty") %></td>
-          </tr>
+<% if overview.releases.any? %>
+  <%= render DS::Table.new(
+        rows: liquidity_release_table_rows(overview),
+        inset: true,
+        label: t(".caption"),
+        id: "liquidity-releases",
+        row_class: ->(row) { "bg-container-inset" if row.total? }
+      ) do |table| %>
+    <% table.with_column(t(".account"), row_header: true) do |row| %>
+      <% if row.total? %>
+        <span class="text-xs font-medium text-secondary"><%= t(".year_total", year: row.year) %></span>
+      <% else %>
+        <%= link_to row.release.account.name, account_path(row.release.account) %>
+        <% if row.release.auto_renew %>
+          <span class="block text-xs text-secondary font-normal"><%= t(".renews") %></span>
         <% end %>
-      </tbody>
-    </table>
-  </div>
-</div>
+      <% end %>
+    <% end %>
+    <% table.with_column(t(".released_on"), class: "text-secondary") do |row| %>
+      <%= l(row.release.date, format: :long) unless row.total? %>
+    <% end %>
+    <% table.with_column(t(".remaining"), align: :right, class: "text-secondary") do |row| %>
+      <%= liquidity_release_remaining(row.release) unless row.total? %>
+    <% end %>
+    <% table.with_column(t(".amount"), numeric: true, class: "font-medium privacy-sensitive") do |row| %>
+      <%= format_money(row.amount) %>
+    <% end %>
+  <% end %>
+<% else %>
+  <p class="text-sm text-subdued" id="liquidity-releases"><%= t(".empty") %></p>
+<% end %>

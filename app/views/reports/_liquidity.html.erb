@@ -5,31 +5,28 @@
 
 <div class="space-y-6" id="liquidity">
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="p-4 bg-surface-inset rounded-lg">
-      <p class="text-sm text-secondary mb-2"><%= t("reports.liquidity.available_net_worth") %></p>
+    <%= render DS::SummaryTile.new(label: t("reports.liquidity.available_net_worth")) do %>
       <p class="text-2xl font-semibold text-primary privacy-sensitive"><%= format_money(overview.available_net_worth) %></p>
       <% if trend %>
         <p class="text-xs mt-1 privacy-sensitive" style="color: <%= trend.color %>">
           <%= t("reports.liquidity.period_change", change: trend.value.format(signify_positive: true)) %>
         </p>
       <% end %>
-    </div>
+    <% end %>
 
-    <div class="p-4 bg-surface-inset rounded-lg">
-      <p class="text-sm text-secondary mb-2"><%= t("reports.liquidity.bound_assets") %></p>
+    <%= render DS::SummaryTile.new(label: t("reports.liquidity.bound_assets")) do %>
       <p class="text-2xl font-semibold text-primary privacy-sensitive"><%= format_money(overview.bound_assets) %></p>
       <p class="text-xs text-secondary mt-1 privacy-sensitive"><%= t("reports.liquidity.share_of_assets", share: number_to_percentage(overview.bound_share, precision: 0)) %></p>
-    </div>
+    <% end %>
 
-    <div class="p-4 bg-surface-inset rounded-lg">
-      <p class="text-sm text-secondary mb-2"><%= t("reports.liquidity.next_release") %></p>
+    <%= render DS::SummaryTile.new(label: t("reports.liquidity.next_release")) do %>
       <% if (release = overview.next_release) %>
         <p class="text-2xl font-semibold text-primary privacy-sensitive"><%= format_money(release.amount) %></p>
         <p class="text-xs text-secondary mt-1"><%= release.account.name %> · <%= l(release.date, format: :long) %></p>
       <% else %>
         <p class="text-2xl font-semibold text-subdued">--</p>
       <% end %>
-    </div>
+    <% end %>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
