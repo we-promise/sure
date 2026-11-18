@@ -9,8 +9,9 @@ class AiOcrLiveTest < ActiveSupport::TestCase
   SERVERS = {
     mistral: { key: "MISTRAL_LIVE_API_KEY", model: ENV.fetch("MISTRAL_LIVE_OCR_MODEL", "mistral-ocr-latest"), preset: :mistral },
     cohere: { key: "COHERE_LIVE_API_KEY", model: ENV.fetch("COHERE_LIVE_OCR_MODEL", "parse-v5.0"), preset: :cohere },
-    llama_cpp: { key: "LLAMA_CPP_API_KEY", model: ENV.fetch("OCR_LIVE_MODEL", "Unlimited-OCR-2-Q4_K_M"), preset: nil,
-                 base_url: ENV.fetch("OCR_LIVE_BASE_URL", "http://10.72.200.61:8180/v1"), ocr_prompt: "unlimited_ocr_2" }
+    # OCR_LIVE_MODEL changes the model for live and recording runs; a replay asks for the recorded one.
+    llama_cpp: { key: "LLAMA_CPP_API_KEY", model: (AiTestHelper.live_or_recording? && ENV["OCR_LIVE_MODEL"].presence) || "unlimited-ocr-2",
+                 preset: nil, base_url: AiTestHelper::LLAMA_CPP_URL, ocr_prompt: "unlimited_ocr_2" }
   }.freeze
 
   SERVERS.each do |name, server|
@@ -25,7 +26,8 @@ class AiOcrLiveTest < ActiveSupport::TestCase
       png = Pdf::PageImages.render(file_fixture("statements/impact_scanned.pdf").binread, pages: 1..1).first
       request = Ai::Transport::Base::OcrRequest.new(feature: :extract_pdf, model:, pages: [ Ai::Attachment.png(png, filename: "page-1.png") ])
 
-      response = with_ai_cassette(name.to_s, "ocr_impact_page") { Ai::Transport.for(endpoint).ocr(request) }
+      match = name == :llama_cpp ? %i[method uri ai_model] : %i[method uri]
+      response = with_ai_cassette(name.to_s, "ocr_impact_page", match:) { Ai::Transport.for(endpoint).ocr(request) }
 
       assert_includes response.text, "763.01"
       assert_includes response.text, "586.71"

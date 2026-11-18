@@ -2,7 +2,7 @@
 http_interactions:
 - request:
     method: post
-    uri: http://10.72.200.61:8181/v1/embeddings
+    uri: <EMBED_URL>/embeddings
     body:
       encoding: UTF-8
       string: '{"model":"granite-embedding-small-english-r2","input":["Monthly apartment
