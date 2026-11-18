@@ -241,6 +241,19 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "Groups", family.moniker_label_plural
   end
 
+  test "tags_version changes when tags are added, removed, merged or deleted" do
+    family = families(:dylan_family)
+    tag = family.tags.create!(name: "Version tag")
+    other = family.tags.create!(name: "Other version tag")
+    transaction = family.transactions.first
+
+    assert_tags_version_changes(family) { transaction.toggle_tag!(tag) }
+    assert_tags_version_changes(family) { transaction.toggle_tag!(tag) }
+    assert_tags_version_changes(family) { transaction.toggle_tag!(other) }
+    assert_tags_version_changes(family) { other.replace_and_destroy!(tag) }
+    assert_tags_version_changes(family) { tag.destroy! }
+  end
+
   test "entries_cache_version changes when an older entry is destroyed" do
     family = families(:dylan_family)
     newer_entry = entries(:transaction)
@@ -923,6 +936,12 @@ class FamilyTest < ActiveSupport::TestCase
   end
 
   private
+    def assert_tags_version_changes(family)
+      before = family.tags_version
+      yield
+      assert_not_equal before, family.reload.tags_version
+    end
+
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
     end
