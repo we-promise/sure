@@ -349,6 +349,7 @@ class Sync < ApplicationRecord
     def perform_post_sync
       Rails.logger.info("Performing post-sync for #{syncable_type} (#{syncable.id})")
       syncable.perform_post_sync
+      apply_rules_after_standalone_provider_sync
       syncable.broadcast_sync_complete
     rescue => e
       Rails.logger.error("Error performing post-sync for #{syncable_type} (#{syncable.id}): #{e.message}")
@@ -356,6 +357,21 @@ class Sync < ApplicationRecord
     ensure
       # A resync request outlives a post-sync failure.
       queue_full_resync
+    end
+
+    # The family sync applies the rules once its children are done (see
+    # Family::Syncer#perform_post_sync), but a provider connection also syncs on
+    # its own: on its schedule, hourly, or from its Sync button. Without this,
+    # what those syncs import stays unprocessed by rules until the next family
+    # sync, up to a day later. Only for a completed top-level provider sync: a
+    # child of a family sync is covered by the family, and an account sync
+    # follows every manual edit.
+    def apply_rules_after_standalone_provider_sync
+      return if parent_id.present? || !completed?
+      return if syncable.is_a?(Family) || syncable.is_a?(Account)
+
+      family = syncable.try(:family)
+      ApplyRulesJob.perform_later(family) if family
     end
 
     # A loan input can change while this sync runs. The running sync cannot
