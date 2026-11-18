@@ -2,14 +2,21 @@
 es:
   layouts:
     application:
+      insights: Insights
       privacy_mode: Alternar modo de privacidad
       resize_left_sidebar: Redimensionar la barra lateral de cuentas
       resize_right_sidebar: Redimensionar la barra lateral del asistente
       skip_to_main: Saltar al contenido principal
+      release_highlight:
+        title: Novedades
+        done: Entendido
       nav:
         assistant: Asistente
+        bills: Recibos
         budgets: Presupuestos
         home: Inicio
+        plan: Plan
+        portfolio: Cartera
         reports: Informes
         goals: Objetivos
         transactions: Transacciones
@@ -26,6 +33,11 @@ es:
         are_you_sure: ¿Estás seguro?
         cannot_be_undone: Esta acción no se puede deshacer.
         confirm: Confirmar
+      notification_tray:
+        download_complete: Descarga completada
+        download_failed: No se ha podido descargar. Inténtalo de nuevo.
+        download_location: El archivo está en tu carpeta de Descargas.
+        order_save_failed: No se ha podido confirmar que el nuevo orden se haya guardado. Comprueba tu conexión y recarga la página para ver el orden guardado.
     trial:
       open_demo: Demo pública
       data_deleted_in_days: Los datos se eliminarán en %{days} días

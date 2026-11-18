@@ -145,6 +145,23 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
+  # The below-zero warning speaks wherever the holdings tab is translated.
+  def test_negative_position_keys_exist_wherever_the_holdings_tab_is_translated
+    {
+      "holdings.index.new_holding" => %w[
+        holdings.index.negative_position holdings.index.negative_positions_hint holdings.index.negative_positions_title
+      ]
+    }.each do |sibling, keys|
+      locales = I18n.available_locales.select { |locale| I18n.t(sibling, locale: locale, fallback: false, default: nil) }
+      assert_includes locales, :de
+
+      locales.each do |locale|
+        missing = keys.reject { |key| I18n.t(key, locale: locale, fallback: false, default: nil) }
+        assert_empty missing, "#{locale} translates #{sibling} but is missing #{missing.join(", ")}"
+      end
+    end
+  end
+
   # The All bills default status option. Every bills locale must translate it,
   # or the default filter falls back to English.
   def test_bills_current_bills_label_exists_for_each_bills_locale

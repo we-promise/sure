@@ -5,11 +5,9 @@ class EnableBankingAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
-    # This column stored plaintext before it was encrypted, so existing rows
-    # stay readable (support_unencrypted_data) until
-    # security:backfill_encryption encrypts them; new writes are always
-    # encrypted. Deterministic like Account#iban.
-    encrypts :iban, deterministic: true, support_unencrypted_data: true
+    # Not deterministic: the IBAN is never looked up by value, so equal IBANs
+    # need not share a ciphertext.
+    encrypts :iban
   end
 
   belongs_to :enable_banking_item
