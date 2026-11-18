@@ -10,15 +10,25 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
-  test "held_securities_on lists the latest calculated row per security on that day" do
-    account = accounts(:investment)
-    aapl = securities(:aapl)
-    # Clear of the fixture rows (today and yesterday at load time), even when
-    # the suite runs across midnight.
-    account.holdings.create!(security: aapl, date: 5.days.ago.to_date, qty: 5, price: 200, amount: 1000, currency: "USD")
-    account.holdings.create!(security: securities(:msft), date: 5.days.ago.to_date, qty: 0, price: 400, amount: 0, currency: "USD")
+  test "held_securities_on calculates the position from the trades on that day" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    held = Security.create!(ticker: "HELD", name: "Held")
+    sold = Security.create!(ticker: "SOLD", name: "Sold")
+    buy(account, held, 5, 6.days.ago.to_date)
+    buy(account, sold, 2, 6.days.ago.to_date)
+    buy(account, sold, -2, 5.days.ago.to_date)
 
-    assert_equal [ [ aapl, 5 ] ], account.held_securities_on(5.days.ago.to_date)
+    assert_equal [ [ held, 5 ] ], account.held_securities_on(5.days.ago.to_date)
+  end
+
+  # The sync that writes holdings runs later; the picker must not wait for it.
+  test "held_securities_on counts a purchase made today before the sync" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "NEWBUY", name: "New Buy")
+    buy(account, security, 3, Date.current)
+
+    assert_empty account.holdings
+    assert_equal [ [ security, 3 ] ], account.held_securities_on(Date.current)
   end
 
   test "held_securities_on takes a linked account's provider snapshot as a whole" do
@@ -1607,6 +1617,14 @@ class AccountTest < ActiveSupport::TestCase
   end
 
   private
+    def buy(account, security, qty, date)
+      account.entries.create!(
+        name: qty.positive? ? "Buy" : "Sell", date: date, amount: qty * 100, currency: "USD",
+        entryable: Trade.new(security: security, qty: qty, price: 100, currency: "USD",
+                             investment_activity_label: qty.positive? ? "Buy" : "Sell")
+      )
+    end
+
     def create_loan_with_start_date(start_date, opening_balance_date)
       Account.create_and_sync(
         {

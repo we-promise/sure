@@ -49,7 +49,7 @@ class Trade::SaleLimit
   # Adds an error to the entry and returns false when the sale is too large.
   def validate
     return true unless checks?
-    return true if sold_qty <= available_qty
+    return true if fits?
 
     entry.errors.add(:base, error_message)
     false
@@ -108,37 +108,61 @@ class Trade::SaleLimit
     end
 
     # [date, units on the sale date] for the day that leaves the least room,
-    # from the sale date on. Every quantity is converted into units of the
-    # sale date, so a split in between scales it the way the holdings do.
-    # Days before the first holding count as zero. Holdings stop at today, so
-    # days after it add the account's other future-dated trades to today's
-    # position: two sales dated tomorrow cannot both count the same units.
+    # from the sale date on: the most the sale could have removed and still
+    # left that day at zero.
     def limiting_day
-      @limiting_day ||= begin
-        last_day = [ entry.date, Date.current, future_changes.keys.max ].compact.max
-        entry.date.upto(last_day).map { |date| [ date, quantity_on(date) ] }.min_by(&:last)
+      @limiting_day ||= positions_with_sale.min_by { |_, room| room }.then do |date, room|
+        [ date, sold_qty + Security::Split.unscale(room, split_factor(entry.date, date)) ]
       end
     end
 
-    # The position on a day, in units of the sale date. After today, each
-    # future-dated trade is converted on its own date, since a split announced
-    # for a later day changes the units that trade is written in.
-    def quantity_on(date)
-      today = Date.current
-      return in_sale_units(quantities.fetch(date, 0), date) if date <= today
-
-      in_sale_units(quantities.fetch(today, 0), today) +
-        future_changes.sum { |day, qty| day <= date ? in_sale_units(qty, day) : 0 }
+    # Whether the position with this sale stays at or above zero on every day.
+    def fits?
+      positions_with_sale.all? { |_, room| room >= 0 }
     end
 
-    # A quantity written in units of `date`, expressed in units of the sale date.
-    # Rounded the way the holdings are: BigDecimal division by a Rational such
-    # as 2/3 falls a hair short of the exact quotient and would refuse a sale
-    # of the whole position.
-    def in_sale_units(qty, date)
-      from, to = [ entry.date, date ].minmax
-      factor = split_ratios.select { |day, _| day > from && day <= to }.values.reduce(Rational(1), :*)
-      date >= entry.date ? Security::Split.unscale(qty, factor) : Security::Split.scale(qty, factor)
+    # [date, position with this sale, in units of that day] for each day from
+    # the sale date on where the position can change. Walks the days the way
+    # Holding::ForwardCalculator does, a split rounding the running position
+    # on its ex-date, so the check refuses exactly the sales that would take
+    # the holdings below zero. Days before the first holding count as zero.
+    # Holdings stop at today; after it, the walk visits only the days of the
+    # account's other future-dated trades and of splits, so a trade dated far
+    # ahead does not mean a walk over every day in between.
+    def positions_with_sale
+      @positions_with_sale ||= begin
+        today = Date.current
+        days = if entry.date <= today
+          entry.date.upto(today).to_a
+        else
+          [ today, entry.date ]
+        end
+        last_day = [ entry.date, today, future_changes.keys.max ].compact.max
+        days |= (future_changes.keys + split_ratios.keys).select { |day| day > today && day <= last_day }
+        days.sort!
+
+        base = position = nil
+        days.filter_map do |day|
+          ratio = split_ratios[day] if base
+          scaled_base = base && (ratio ? Security::Split.scale(base, ratio) : base)
+          change = if day <= today
+            quantities.fetch(day, 0) - (scaled_base || 0)
+          else
+            future_changes.fetch(day, 0)
+          end
+
+          base = (scaled_base || 0) + change
+          position = (position && ratio ? Security::Split.scale(position, ratio) : (position || 0)) + change
+          position -= sold_qty if day == entry.date
+
+          [ day, position ] if day >= entry.date
+        end
+      end
+    end
+
+    # Product of the split ratios after `from` up to and including `to`.
+    def split_factor(from, to)
+      split_ratios.select { |day, _| day > from && day <= to }.values.reduce(Rational(1), :*)
     end
 
     # Net units of this security that other trades dated after today add or remove, by day.

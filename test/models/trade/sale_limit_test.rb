@@ -255,6 +255,29 @@ class Trade::SaleLimitTest < ActiveSupport::TestCase
     assert Trade::SaleLimit.save(build_sale(qty: 10, date: Date.current))
   end
 
+  # The holdings round the position to 18 places at each split. A sale of the
+  # whole position before two uneven splits leaves exactly zero there, so the
+  # limit, walking the splits the same way, allows it.
+  test "follows the holdings' rounding at each split" do
+    create_trade(@security, account: @account, qty: 1, date: 10.days.ago.to_date, price: 100)
+    Security::Split.create!(security: @security, ex_date: 8.days.ago.to_date, numerator: 1, denominator: 3, source: "manual")
+    Security::Split.create!(security: @security, ex_date: 6.days.ago.to_date, numerator: 3, denominator: 1, source: "manual")
+
+    assert Trade::SaleLimit.new(build_sale(qty: 1, date: 9.days.ago.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: BigDecimal("1.000000000000000001"), date: 9.days.ago.to_date)).validate
+  end
+
+  # A trade dated far ahead must not make the check walk every day up to it.
+  test "checks a sale next to a trade dated far in the future" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    create_trade(@security, account: @account, qty: 1, date: Date.new(9999, 12, 31), price: 100)
+
+    limit = Trade::SaleLimit.new(build_sale(qty: 10, date: Date.current))
+
+    assert limit.validate
+    assert_operator limit.send(:positions_with_sale).size, :<, 10
+  end
+
   private
     def build_sale(qty:, date:)
       @account.entries.new(

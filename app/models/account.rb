@@ -921,27 +921,29 @@ class Account < ApplicationRecord
   end
 
   # Standard securities the account holds at the end of +date+, with their
-  # quantity, for the sale picker. Reads the synced holdings: on a linked
-  # account the provider snapshot on or before the date as a whole (as
-  # current_holdings does), otherwise the latest calculated row per security
-  # (today's rows may not be synced yet). For a date after today, trades dated between today and
-  # that date are added, so a sale can follow a future-dated purchase.
+  # quantity, for the sale picker. On a linked account, the provider snapshot
+  # on or before the date as a whole (as current_holdings does). Otherwise
+  # the position is calculated from the trades, as Trade::SaleLimit does, so
+  # a purchase entered a moment ago counts before the sync has written its
+  # holdings. For a date after today, trades dated between today and that
+  # date are added, so a sale can follow a future-dated purchase.
   def held_securities_on(date)
     cutoff = [ date, Date.current ].min
     provider_rows = holdings.where.not(account_provider_id: nil).where(date: ..cutoff)
     snapshot_date = provider_rows.maximum(:date) if linked?
 
-    rows = if snapshot_date
-      provider_rows.where(date: snapshot_date)
-    else
+    positions = if snapshot_date
+      provider_rows.where(date: snapshot_date).group(:security_id).sum(:qty).transform_values(&:to_d)
+    elsif linked?
+      # No provider snapshot yet: the latest calculated row per security.
       holdings.where(
         id: holdings.where(account_provider_id: nil).where(date: ..cutoff)
           .select("DISTINCT ON (holdings.security_id) holdings.id")
           .order("holdings.security_id, holdings.date DESC, holdings.id")
-      )
+      ).group(:security_id).sum(:qty).transform_values(&:to_d)
+    else
+      calculated_positions_on(cutoff)
     end
-
-    positions = rows.group(:security_id).sum(:qty).transform_values(&:to_d)
 
     if date > Date.current
       future = Trade.joins(:entry)
@@ -969,6 +971,16 @@ class Account < ApplicationRecord
       .map { |security| [ security, held[security.id] ] }
       .sort_by { |security, _| [ (security.name.presence || security.ticker).downcase, security.id ] }
   end
+
+  # The calculated position of every security at the end of +date+ (today or
+  # earlier), from the account's trades.
+  def calculated_positions_on(date)
+    Holding::ForwardCalculator.new(self).calculate
+      .select { |holding| holding.date == date }
+      .group_by(&:security_id)
+      .transform_values { |rows| rows.sum { |holding| holding.qty.to_d } }
+  end
+  private :calculated_positions_on
 
   NegativePosition = Data.define(:security, :first_date, :lowest_qty)
 
