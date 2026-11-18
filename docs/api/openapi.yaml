@@ -10314,11 +10314,16 @@ paths:
       parameters: []
       responses:
         '201':
-          description: trade created
+          description: 'created: a Trade for trade types, a Transaction for a deposit
+            or withdrawal without transfer_account_id, or a TransferDecision for a
+            deposit or withdrawal with transfer_account_id'
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Trade"
+                oneOf:
+                - "$ref": "#/components/schemas/Trade"
+                - "$ref": "#/components/schemas/Transaction"
+                - "$ref": "#/components/schemas/TransferDecision"
         '403':
           description: forbidden - api key missing read_write scope
           content:
