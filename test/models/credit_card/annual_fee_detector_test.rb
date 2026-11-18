@@ -39,6 +39,34 @@ class CreditCard::AnnualFeeDetectorTest < ActiveSupport::TestCase
     assert_equal [ 300, 6, 5 ], [ @card.reload.annual_fee, @card.annual_fee_month, @card.annual_fee_day ]
   end
 
+  test "a charge named after the card is not mistaken for a refund" do
+    charge("CREDIT CARD ANNUAL FEE", 140, Date.new(2026, 5, 2))
+
+    assert_equal 140, CreditCard::AnnualFeeDetector.new(@card, as_of: Date.new(2026, 11, 17)).detect.amount
+  end
+
+  test "a refund that doesn't repeat the fee wording still counts" do
+    charge("Annual Membership Fee", 200, Date.new(2026, 7, 3))
+    charge("Fee Refund", -200, Date.new(2026, 7, 20))
+
+    assert CreditCard::AnnualFeeDetector.new(@card, as_of: Date.new(2026, 11, 17)).detect.refunded
+  end
+
+  test "fills in only the missing part of the date" do
+    @card.update!(annual_fee_month: 6, annual_fee_day: nil)
+    charge("Annual Fee", 250, Date.new(2026, 9, 8))
+
+    CreditCard::AnnualFeeDetector.new(@card, as_of: Date.new(2026, 11, 17)).apply!
+
+    assert_equal [ 6, 8 ], [ @card.reload.annual_fee_month, @card.annual_fee_day ]
+  end
+
+  test "ignores fee charges in another currency" do
+    @account.entries.create!(name: "Annual Fee", amount: 100, currency: "EUR", date: Date.new(2026, 9, 8), entryable: Transaction.new)
+
+    assert_nil CreditCard::AnnualFeeDetector.new(@card, as_of: Date.new(2026, 11, 17)).detect
+  end
+
   test "ignores charges older than about 13 months" do
     charge("Annual Fee", 80, Date.new(2024, 1, 1))
 

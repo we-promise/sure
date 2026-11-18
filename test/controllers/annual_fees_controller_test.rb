@@ -58,4 +58,16 @@ class AnnualFeesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".privacy-sensitive", text: "—"
   end
+
+  test "a card without an exchange rate leaves the other cards in the total" do
+    @account.credit_card.update!(annual_fee: 100, annual_fee_month: 1, annual_fee_day: 1)
+    @account.family.accounts.create!(name: "Euro card", balance: 0, currency: "EUR", owner: users(:family_admin),
+                                    accountable: CreditCard.new(annual_fee: 50, annual_fee_month: 1, annual_fee_day: 1))
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    get annual_fees_url
+
+    assert_select ".privacy-sensitive", text: "$100.00"
+    assert_match "1 card left out, no exchange rate", response.body
+  end
 end

@@ -3,69 +3,51 @@
   <%= render DS::Link.new(text: t(".detect"), icon: "search", variant: "outline", href: detect_annual_fees_path, method: :post) %>
 <% end %>
 
-<% with_fee = @cards.select { |c| c.annual_fee.to_d.positive? } %>
-<% yearly = annual_fee_total(with_fee, currency: Current.family.currency, date: @as_of) %>
-<% upcoming = with_fee.select { |c| (d = c.days_until_annual_fee(as_of: @as_of)) && d <= 60 } %>
+<% yearly = @summary.yearly %>
+<% upcoming = @summary.upcoming %>
+<% next_fee = @summary.next_fee %>
 
 <div class="space-y-4">
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-    <%= summary_card title: t(".per_year") do %>
-      <span class="privacy-sensitive"><%= yearly ? format_money(yearly) : "—" %></span>
-      <span class="block text-sm text-secondary"><%= t(".cards_with_fee", count: with_fee.size) %></span>
-    <% end %>
-    <%= summary_card title: t(".next_60_days") do %>
-      <span class="privacy-sensitive"><% upcoming_total = annual_fee_total(upcoming, currency: Current.family.currency, date: @as_of) %>
-      <%= upcoming_total ? format_money(upcoming_total) : "—" %></span>
-      <span class="block text-sm text-secondary"><%= t(".cards_with_fee", count: upcoming.size) %></span>
-    <% end %>
+    <%= render "annual_fees/total_card", title: t(".per_year"), total: yearly %>
+    <%= render "annual_fees/total_card", title: t(".next_60_days"), total: upcoming %>
     <%= summary_card title: t(".next_fee") do %>
-      <% if (nxt = with_fee.find { |c| c.next_annual_fee_date(as_of: @as_of) }) %>
-        <%= l(nxt.next_annual_fee_date(as_of: @as_of), format: :long) %>
-        <span class="block text-sm text-secondary privacy-sensitive"><%= nxt.account.name %> · <%= format_money(nxt.annual_fee_money) %></span>
+      <% if next_fee %>
+        <%= l(next_fee.next_date, format: :long) %>
+        <span class="block text-sm text-secondary privacy-sensitive"><%= next_fee.card.account.name %> · <%= format_money(next_fee.card.annual_fee_money) %></span>
       <% else %>
-        —
+        <%= t(".none") %>
       <% end %>
     <% end %>
   </div>
 
-  <div class="bg-container rounded-xl shadow-border-xs overflow-x-auto">
-    <% if @cards.any? %>
-      <table class="w-full text-sm" data-testid="annual-fees-table">
-        <thead>
-          <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
-            <th class="px-4 py-3 text-left"><%= t(".card") %></th>
-            <th class="px-4 py-3 text-right"><%= t(".fee") %></th>
-            <th class="px-4 py-3 text-left"><%= t(".next_charge") %></th>
-            <th class="px-4 py-3"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @cards.each do |card| %>
-            <% next_date = card.next_annual_fee_date(as_of: @as_of) %>
-            <tr class="border-b border-subdued last:border-0">
-              <td class="px-4 py-3 text-primary"><%= link_to card.account.name, account_path(card.account, tab: "overview"), class: "hover:underline" %></td>
-              <td class="px-4 py-3 text-right privacy-sensitive <%= card.annual_fee.present? ? "text-primary" : "text-subdued" %>">
-                <%= card.annual_fee.present? ? format_money(card.annual_fee_money) : t(".unknown") %>
-              </td>
-              <td class="px-4 py-3 text-secondary">
-                <% if next_date && card.annual_fee.to_d.positive? %>
-                  <%= l(next_date, format: :long) %> · <%= t(".in_days", count: card.days_until_annual_fee(as_of: @as_of)) %>
-                <% elsif next_date %>
-                  <%= l(next_date, format: :long) %>
-                <% else %>
-                  <span class="text-subdued"><%= t(".no_date") %></span>
-                <% end %>
-              </td>
-              <td class="px-4 py-3 text-right">
-                <%= link_to t(".edit"), edit_credit_card_path(card.account), data: { turbo_frame: :modal }, class: "text-sm text-primary underline" %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    <% else %>
-      <p class="px-4 py-6 text-sm text-secondary text-center"><%= t(".empty") %></p>
+  <% if @summary.rows.any? %>
+    <%= render DS::Table.new(rows: @summary.rows, label: t(".title"), data: { testid: "annual-fees-table" }) do |table| %>
+      <% table.with_column(t(".card")) do |row| %>
+        <%= link_to row.card.account.name, account_path(row.card.account, tab: "overview"), class: "text-primary hover:underline" %>
+      <% end %>
+      <% table.with_column(t(".fee"), numeric: true, class: "privacy-sensitive") do |row| %>
+        <% if row.card.annual_fee.present? %>
+          <%= format_money(row.card.annual_fee_money) %>
+        <% else %>
+          <span class="text-subdued"><%= t(".unknown") %></span>
+        <% end %>
+      <% end %>
+      <% table.with_column(t(".next_charge")) do |row| %>
+        <% if row.next_date && row.fee? %>
+          <%= l(row.next_date, format: :long) %> · <%= t(".in_days", count: row.days_until) %>
+        <% elsif row.next_date %>
+          <%= l(row.next_date, format: :long) %>
+        <% else %>
+          <span class="text-subdued"><%= t(".no_date") %></span>
+        <% end %>
+      <% end %>
+      <% table.with_column(t(".actions"), numeric: true) do |row| %>
+        <%= link_to t(".edit"), edit_credit_card_path(row.card.account), data: { turbo_frame: :modal }, class: "text-sm text-primary underline" %>
+      <% end %>
     <% end %>
-  </div>
+  <% else %>
+    <p class="px-4 py-6 text-sm text-secondary text-center"><%= t(".empty") %></p>
+  <% end %>
   <p class="text-xs text-secondary"><%= t(".hint") %></p>
 </div>

@@ -27,3 +27,8 @@ en:
       per_year: Annual fees per year
       title: Annual fees
       unknown: Not set
+      actions: Actions
+      none: "—"
+      unconverted:
+        one: 1 card left out, no exchange rate
+        other: "%{count} cards left out, no exchange rate"

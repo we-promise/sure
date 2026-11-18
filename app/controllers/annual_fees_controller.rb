@@ -1,12 +1,7 @@
 # Every credit card's annual fee and when it next renews.
 class AnnualFeesController < ApplicationController
   def index
-    @as_of = Date.current
-    # Cards with a renewal date first, soonest first; the rest by name.
-    @cards = cards.sort_by do |card|
-      date = card.next_annual_fee_date(as_of: @as_of)
-      [ date ? 0 : 1, date || Date.new(9999, 12, 31), card.account.name ]
-    end
+    @summary = AnnualFeeSummary.new(cards, currency: Current.family.currency, as_of: Date.current)
   end
 
   # Looks for each card's fee in its own transactions and fills in what's missing.
