@@ -347,6 +347,10 @@ module Security::Provided
       )
 
       if response.success?
+        # Before the lock: `with_lock` reloads the row, and `store_constituents`
+        # compares the stamp under its own lock with the one this import read
+        # before asking. Reloading first would make another import's set look
+        # like this one's, and replace it.
         store_constituents(response.data.constituents) if wants_constituents
         # `with_lock` re-reads the row, so precedence is checked against what
         # it holds now: a manual classification, a sector or a lock written
