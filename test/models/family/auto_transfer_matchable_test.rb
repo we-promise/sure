@@ -331,6 +331,118 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_not Transfer.exists?(inflow_transaction_id: coincidental_inflow.entryable_id)
   end
 
+  test "does not auto-match a cross-currency pair whose legs have different categories" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500, category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD", category: categories(:income))
+
+    # Otherwise eligible: the automatic path's other restrictions still offer the pair.
+    eligible = @family.transfer_match_candidates(include_rejected: false, restrict_cross_currency_to_linked_accounts: true, require_common_writer: true)
+    assert_includes eligible.map { |c| [ c.inflow_transaction_id, c.outflow_transaction_id ] }, [ inflow.entryable_id, outflow.entryable_id ]
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  # A route the user confirmed is a stronger signal than the categories, which an
+  # auto-categorizer can get wrong on one leg.
+  test "auto-matches a cross-currency pair with different categories on a confirmed route" do
+    load_family_currency_rates
+    confirm_transfer!(from: @depository, to: @other_asset)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP", category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD", category: categories(:income))
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  # The category filter removes one row, not the inflow's slot: the greedy matcher
+  # then takes the next eligible candidate, as it does after a rejected pair.
+  test "a category-blocked cross-currency candidate leaves the inflow to the next eligible one" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD", category: categories(:income))
+    blocked_outflow = create_transaction(date: Date.current, account: @depository, amount: 500, category: categories(:food_and_drink))
+    next_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 505)
+
+    # Without the category filter the blocked outflow, one day closer, ranks first.
+    unfiltered = @family.transfer_match_candidates(include_rejected: false, restrict_cross_currency_to_linked_accounts: true, require_common_writer: true)
+    assert_equal [ blocked_outflow.entryable_id, next_outflow.entryable_id ],
+                 unfiltered.select { |c| c.inflow_transaction_id == inflow.entryable_id }.map(&:outflow_transaction_id)
+
+    @family.auto_match_transfers!
+
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: next_outflow.entryable_id)
+    assert_not Transfer.exists?(outflow_transaction_id: blocked_outflow.entryable_id)
+  end
+
+  test "auto-matches a cross-currency pair when either leg is uncategorized" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    uncategorized_inflow_out = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500, category: categories(:food_and_drink))
+    uncategorized_inflow_in = create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: uncategorized_inflow_in.entryable_id, outflow_transaction_id: uncategorized_inflow_out.entryable_id)
+
+    uncategorized_outflow_out = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
+    uncategorized_outflow_in = create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD", category: categories(:income))
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: uncategorized_outflow_in.entryable_id, outflow_transaction_id: uncategorized_outflow_out.entryable_id)
+  end
+
+  test "auto-matches a cross-currency pair whose legs share a category" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500, category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD", category: categories(:food_and_drink))
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "auto-matches a same-currency exact pair whose legs have different categories" do
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500, category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500, category: categories(:income))
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "a cross-currency pair with different categories can still be matched by hand" do
+    load_exchange_prices
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500, category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD", category: categories(:income))
+
+    assert_includes inflow.transaction.transfer_match_candidates.map(&:outflow_transaction_id), outflow.entryable_id
+
+    transfer = Transfer::Matcher.new(inflow.transaction).match_with!(outflow.transaction)
+    assert transfer.confirmed?
+    assert_equal [ inflow.entryable_id, outflow.entryable_id ], [ transfer.inflow_transaction_id, transfer.outflow_transaction_id ]
+  end
+
   test "does not suggest a family currency cross rate outside the exchange rate tolerance" do
     load_family_currency_rates
 
@@ -862,7 +974,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
     assert_includes sql, ":restrict_cross_currency_to_linked_accounts = FALSE"
     assert_equal 2, sql.scan(":require_common_writer = FALSE").size
-    assert_equal 2, sql.scan(":exclude_same_wise_item = FALSE").size
+    assert_equal 2, sql.scan(":exclude_same_connection_pairs = FALSE").size
   end
 
   # Moves between one Wise connection's balances are linked from Wise's own
@@ -908,6 +1020,34 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
     assert Transfer.exists?(inflow_transaction_id: bank_credit.entryable_id, outflow_transaction_id: payout.entryable_id)
     assert Transfer.exists?(inflow_transaction_id: move_in.entryable_id, outflow_transaction_id: move_out.entryable_id)
+  end
+
+  test "the same-connection exclusion comes from the provider adapter" do
+    wise_item = wise_items(:one)
+    jar_out = create_transaction(date: Date.current, account: link_wise_balance!(wise_item, "EUR"), amount: 250.75, currency: "EUR")
+    jar_in = create_transaction(date: Date.current, account: link_wise_balance!(wise_item, "EUR"), amount: -250.75, currency: "EUR")
+    Provider::WiseAdapter.stubs(:auto_match_exclusion_sql).returns(nil)
+
+    @family.auto_match_transfers!
+
+    assert Transfer.exists?(inflow_transaction_id: jar_in.entryable_id, outflow_transaction_id: jar_out.entryable_id)
+  end
+
+  test "one provider adapter's exclusion does not lift another's" do
+    wise_item = wise_items(:one)
+    jar_out = create_transaction(date: Date.current, account: link_wise_balance!(wise_item, "EUR"), amount: 250.75, currency: "EUR")
+    jar_in = create_transaction(date: Date.current, account: link_wise_balance!(wise_item, "EUR"), amount: -250.75, currency: "EUR")
+    link_account!(@depository)
+    link_account!(@credit_card)
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    Provider::PlaidAdapter.stubs(:auto_match_exclusion_sql).with("inflow_accounts", "outflow_accounts")
+                          .returns("inflow_accounts.id = '#{@credit_card.id}'")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+    assert_not Transfer.exists?(inflow_transaction_id: jar_in.entryable_id, outflow_transaction_id: jar_out.entryable_id)
   end
 
   test "does not auto-match transfers when the family has disabled auto match" do
