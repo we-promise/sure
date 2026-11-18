@@ -2,7 +2,8 @@
 
 # HTML snapshots for the provider kit's view components. A snapshot is the
 # provider's own partial rendered before it moved onto a component; the
-# component must render the same HTML. Record ids, random element ids and CSRF
+# component must render the same HTML. A deliberate markup change re-records
+# only the snapshots it touches. Record ids, random element ids and CSRF
 # tokens are normalised, time is frozen by the test, and whitespace between and
 # around tags is ignored (a component's template is indented differently).
 # Set PROVIDER_ITEM_SNAPSHOTS=write to record a missing snapshot.
