@@ -195,7 +195,7 @@ class Portfolio::Performance
         period.start_date, period.end_date,
         # A rate stored or corrected changes every converted figure, and the
         # rate importers touch no family timestamp.
-        ExchangeRate.maximum(:updated_at)&.to_i
+        ExchangeRate.updated_at_version
       ].compact.join("_"),
       invalidate_on_data_updates: true
     )

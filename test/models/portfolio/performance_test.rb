@@ -219,6 +219,20 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     refute_equal before_key, performance.cache_key
   end
 
+  # Two writes inside one second: a key cut to whole seconds would not move,
+  # and the figures computed without the second rate would be served on.
+  test "cache key changes when a rate is stored within the same second as the previous one" do
+    build_textbook_case
+    second = Time.zone.parse("2026-11-16 10:00:00")
+    ExchangeRate.update_all(updated_at: second - 1.day)
+    set_rate(from: "EUR", to: "USD", date: @day_one, rate: 1.1).update_columns(updated_at: second + 0.1)
+    before_key = performance.cache_key
+
+    set_rate(from: "GBP", to: "USD", date: @day_one, rate: 1.3).update_columns(updated_at: second + 0.6)
+
+    refute_equal before_key, performance.cache_key
+  end
+
   # A rate stored after an instance has read its rows moves the key. The
   # entry computed on that miss must come from current data, or the stale
   # rows are cached under the newer key and served to every later instance.
