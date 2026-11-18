@@ -15,6 +15,7 @@ export default class extends Controller {
     "amountTypeStrategySelect",
     "debitCreditFieldset",
     "amountColumnSelect",
+    "amountColumnField",
   ];
 
   connect() {
@@ -137,7 +138,7 @@ export default class extends Controller {
   }
 
   // Separate debit and credit columns replace the single amount column, so the
-  // amount select is switched off while they are in use.
+  // amount select is hidden and switched off while they are in use.
   #toggleDebitCreditFieldset(active) {
     if (this.hasDebitCreditFieldsetTarget) {
       this.debitCreditFieldsetTarget.classList.toggle("hidden", !active);
@@ -149,6 +150,10 @@ export default class extends Controller {
     if (this.hasAmountColumnSelectTarget) {
       this.amountColumnSelectTarget.toggleAttribute("required", !active);
       this.amountColumnSelectTarget.toggleAttribute("disabled", active);
+    }
+
+    if (this.hasAmountColumnFieldTarget) {
+      this.amountColumnFieldTarget.classList.toggle("hidden", active);
     }
 
     if (active) {
