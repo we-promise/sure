@@ -21,6 +21,9 @@ class Account < ApplicationRecord
   before_destroy :cleanup_transfers
 
   after_destroy_commit :move_account_statements_to_inbox
+  # Transactions imported before this IBAN was known only kept the
+  # counterparty's last four characters; the raw rows still hold the full one.
+  after_save_commit :rematch_counterparty_transactions_later, if: :saved_change_to_iban?
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
@@ -291,6 +294,15 @@ class Account < ApplicationRecord
   end
 
   class << self
+    # Each normalized IBAN held by exactly one of the family's accounts, mapped
+    # to that account's id. An IBAN on two accounts identifies neither.
+    def own_account_ids_by_iban(family, excluding: nil)
+      family.accounts.where.not(iban: nil).where.not(id: excluding).pluck(:id, :iban)
+            .group_by { |_id, iban| iban }
+            .filter_map { |iban, pairs| [ iban, pairs.first.first ] if pairs.one? }
+            .to_h
+    end
+
     def normalize_institution_domain(value)
       host = value.to_s.strip.downcase
         .sub(%r{\A[a-z][a-z0-9+.-]*://}, "")
@@ -1035,6 +1047,10 @@ class Account < ApplicationRecord
   end
 
   private
+    def rematch_counterparty_transactions_later
+      RematchCounterpartyAccountsJob.perform_later(family)
+    end
+
     def clear_unsupported_iban
       self.iban = nil if iban.present? && !supports_iban?
     end
