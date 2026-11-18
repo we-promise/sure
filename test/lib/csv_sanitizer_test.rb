@@ -47,22 +47,4 @@ class CsvSanitizerTest < ActiveSupport::TestCase
   test "sanitizes every cell of a row" do
     assert_equal [ "'=a", "b", nil, 3 ], CsvSanitizer.sanitize_row([ "=a", "b", nil, 3 ])
   end
-
-  test "unescape reverses the escape so an export can be imported again" do
-    [ "=SUM(A1)", "+cmd|calc", "-1.5x leverage", "@home", "\t=SUM(A1)" ].each do |original|
-      assert_equal original, CsvSanitizer.unescape(CsvSanitizer.sanitize(original)),
-        "failed to round-trip #{original.inspect}"
-    end
-  end
-
-  test "unescape leaves quotes that are part of the value alone" do
-    [ "'tis the season", "'quoted'", "O'Brien", "'", "" ].each do |value|
-      assert_equal value, CsvSanitizer.unescape(value)
-    end
-  end
-
-  test "unescape passes non-string values through untouched" do
-    assert_nil CsvSanitizer.unescape(nil)
-    assert_equal 42, CsvSanitizer.unescape(42)
-  end
 end

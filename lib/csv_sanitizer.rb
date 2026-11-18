@@ -10,8 +10,12 @@
 # A plain signed number such as "-42.5" is left alone: it cannot run anything,
 # and escaping it would turn every negative amount into text.
 #
-# CSV only. Never apply this to JSON or NDJSON output: it would mutate the
-# user's data and break the export/import round-trip.
+# CSV only. Never apply this to JSON or NDJSON output: all.ndjson is the
+# lossless export/import round-trip.
+#
+# Imports never undo the escape: a leading quote in an imported CSV may be the
+# user's own data ("'+44 Taxis"), and there is no telling it apart from one
+# this module added.
 module CsvSanitizer
   FORMULA_TRIGGER = /\A[=+\-@\t\r\n]/
   PLAIN_NUMBER = /\A[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\z/
@@ -30,16 +34,5 @@ module CsvSanitizer
   # fields by hand is how new user-controlled columns end up unescaped.
   def sanitize_row(values)
     Array(values).map { |value| sanitize(value) }
-  end
-
-  # Reverses #sanitize. The exports are meant to be importable again, so the
-  # CSV parser undoes the escape rather than reading it back as part of the
-  # name. Only a quote followed by a formula trigger is removed, so "O'Brien"
-  # and "'tis" survive, and a file written by a spreadsheet that used the same
-  # convention is read the way it was meant.
-  def unescape(value)
-    return value unless value.is_a?(String)
-
-    value.start_with?("'") && value[1..].match?(FORMULA_TRIGGER) ? value[1..] : value
   end
 end
