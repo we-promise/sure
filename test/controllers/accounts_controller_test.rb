@@ -17,18 +17,30 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
-  test "account reconciliation indicators only render when manual reconciliation is enabled" do
-    get accounts_url
+  test "account reconciliation indicator renders only on the account page" do
+    create_transaction(account: @account, name: "Unreconciled", amount: 10)
+
+    get account_url(@account)
 
     assert_response :success
     assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
 
     @user.family.update!(manual_reconciliation: true)
 
+    get account_url(@account)
+
+    assert_response :success
+    assert_equal 1, response.body.scan(I18n.t("accounts.reconciliation_indicator.needs_attention")).size
+
     get accounts_url
 
     assert_response :success
-    assert_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+    assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+
+    get root_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
   end
 
   # Opening the account groups makes the list scroll; reserving the scrollbar's

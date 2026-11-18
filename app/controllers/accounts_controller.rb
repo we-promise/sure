@@ -17,11 +17,6 @@ class AccountsController < ApplicationController
           .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
-    @reconciliation_indicators = if Current.family.manual_reconciliation?
-      Account::ReconciliationIndicator.for_accounts(@manual_accounts)
-    else
-      {}
-    end
     @financekit_accounts = Current.family.accounts
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
       .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
