@@ -28,6 +28,13 @@ Account::ProviderImportAdapter#import_transaction
 Account::ReconciliationManager#reconcile
   → GoalPledge::Reconciler.new(prepared_valuation).run  (manual_save path)
 
+In-app transfer deposits (transfer-kind path, after the caller's transaction
+commits, via GoalPledge::Reconciler.run_after_commit):
+Transfer::Creator#create                           → inflow leg
+TransferMatchesController#create                   → inflow leg
+Rule::ActionExecutor::SetAsTransferOrPayment       → inflow leg (goal-linked accounts only)
+Trade::CreateForm (unlinked cash deposit)          → the deposit entry
+
 SweepExpiredGoalPledgesJob (cron, every 15 minutes)
   → GoalPledge.open_and_expired_now.find_each(&:expire!)
 ```
@@ -38,7 +45,7 @@ Model layer:
 
 - `app/models/goal.rb` — balance, pace, status, projection, color map.
 - `app/models/goal_pledge.rb` — pledge, match policy, lifecycle.
-- `app/models/goal_pledge/reconciler.rb` — entry-to-pledge resolver, called from the import adapters.
+- `app/models/goal_pledge/reconciler.rb` — entry-to-pledge resolver, called from the import adapters and, through `run_after_commit`, from in-app transfer deposits.
 - `app/models/account.rb` — `#manual?` instance method (mirrors the `Account.manual` scope) drives pledge kind detection.
 - `app/models/family.rb` — `#savings_inflow_velocity` powers the KPI strip.
 
@@ -95,15 +102,34 @@ icon, optional notes, currency, and an AASM `state` (`active` / `paused` /
 `completed` / `archived`). It links cash, investment and crypto accounts via the
 join table `goal_accounts`.
 
-The goal's *progress* is its allocated share of linked accounts, converted to
-its currency at request time. `Goal#current_balance` preserves native account
-allocations and shared-pool limits before conversion. Investment- and
-crypto-backed goals default to contribution progress, excluding cumulative
-market gains from their backing; `market_value_money` separately shows the
-current market value. Market gains come from `balances.net_market_flows`,
-which is derived from holdings, so an account synced as a bare balance with
-no holdings (common for crypto wallets) has none: its contribution progress
-equals its balance and price moves still show up.
+The goal's *progress* is computed live from its linked accounts. There is
+no ledger of contributions. `Goal#current_balance` sums, over the linked
+accounts, this goal's share of each one: its earmark
+(`goal_accounts.allocated_amount`, scaled down pro rata when the earmarks
+on an account exceed its figure), or for an unallocated link the remainder
+after other goals' earmarks (`Goal#backing_share_for`). The share is taken
+in the account's native currency, preserving shared-pool limits, and then
+converted to the goal's currency at request time.
+
+`progress_basis` says what each account's figure counts before that share
+is taken, and the user chooses it on the form: `balance` (the default) is
+the account's balance, what it is worth today; `contributions` is the
+balance minus the account's cumulative market gain or loss (the sum of
+its signed `balances.net_market_flows`, so a loss adds back), floored at
+zero. Nothing re-bases a goal on save or when an account is linked, so an
+explicit choice is kept (#3964).
+`market_value_money` separately shows the backing's current market value,
+whatever the basis.
+
+A goal that has completed reports `completed_amount`, frozen on the basis
+it had when it closed, instead of the live figure; its basis is locked
+until it is reopened or restored. An archived goal that never completed has no
+snapshot and keeps the live calculation.
+
+Market gains come from `balances.net_market_flows`, which is derived from
+holdings, so an account synced as a bare balance with no holdings (common for
+crypto wallets) has none: its contribution progress equals its balance and
+price moves still show up.
 
 A `GoalPledge` is an intent: amount, account, kind, status, expires_at.
 The status enum is `open` / `matched` / `cancelled` / `expired`. The kind
@@ -142,6 +168,12 @@ balances and transactions are unchanged; no migration is required.
 
 - `:reached` when `progress_percent >= 100`.
 - `:no_target_date` when `target_date.nil?`.
+- `:pace_unknown` when the goal has a deadline but `pace_measurable?` is
+  false: at least one linked account gives no evidence of how its balance
+  moves (see below). It is neither on track nor behind, so it stays out of
+  the "behind" count and the on-track tile's denominator (whose subline
+  counts it instead), sorts beside `:no_target_date`, and has no index chip
+  of its own.
 - `:on_track` when the goal has a deadline and `monthly_target_amount <= pace`.
 - `:behind` otherwise.
 
@@ -166,6 +198,40 @@ divided by three. The query joins `entries` with `transactions`
 pending provider transactions via `Transaction.excluding_pending`. This
 last filter matters: a pending Plaid deposit that later reverses would
 otherwise quietly reshape pace.
+
+That reads cash transactions only, so an account maintained by balance
+updates (a manually tracked pension or superannuation fund) would always
+show 0. Each linked account therefore takes exactly one of four paths, in
+this order:
+
+1. **Transactions.** At least one counted transaction in the 90-day
+   window: the net inflow above, divided by three. Unchanged.
+2. **Balance.** Otherwise, a `reconciliation` or `current_anchor` valuation
+   in the trailing 365 days: the account's balance today minus the
+   `end_balance` of its latest balance row on or before a year ago,
+   divided by twelve. On the contributions basis the window's
+   `net_market_flows` are subtracted, so pace measures what progress does.
+   Stored balances include excluded entries, so excluded transactions in
+   the window are taken back out, as path 1 leaves them out. They are read
+   as `Balance::SyncCache` counts them: split parents skipped, amounts
+   converted to the account's currency, unconvertible entries skipped.
+   With no balance row a year back, the account is unmeasured; a missing
+   row is never read as a zero opening balance.
+3. **Dormant.** Otherwise, any transaction that is neither excluded nor
+   pending, at any date: a measured zero.
+   A savings account nobody has paid into lately is honestly behind.
+4. **Unmeasured.** Anything else (an opening balance and nothing since,
+   or valuations all older than a year).
+
+`Goal#pace_measurable?` is true only when every linked account is on path
+1, 2 or 3. `Goal#pace` stays numeric (an unmeasured account adds 0). When
+pace is unmeasurable, `projection_payload` sends `avg_monthly: nil` and no
+shortfall label, and the chart draws no projection line. The evidence is
+read by `Goal.pace_for` and `Goal.balance_pace_for`, both family-wide and
+injected by `Goal.inject_backing_math!`, so a page of goals costs no
+query per goal. That method reads the linked account ids once
+(`Goal.linked_account_ids_for`) and passes them to both, and to
+`Goal.market_flows_for`.
 
 `Goal#monthly_target_amount` is `(remaining_amount / months_remaining).ceil(2)`.
 `months_remaining` uses day precision: `(target_date - Date.current) / 30.0`,
@@ -270,11 +336,14 @@ state means touching:
 3. `Goals::StatusPillComponent::VARIANTS` to add the chip styling
    (classes + icon).
 4. `Goals::CardComponent#footer_line` if the footer copy depends.
-5. `GoalsController#kpi_payload` if the KPI strip counts it.
-6. `config/locales/views/goals/en.yml` under `goals.status.*` for the
+5. `GoalsController#kpi_payload` if the KPI strip counts it, and
+   `tracked_total` if it has no pace benchmark.
+6. `Goal::ACTIVE_DISPLAY_STATUS_RANK`, or it sorts below funded reserves.
+7. `config/locales/views/goals/en.yml` under `goals.status.*` for the
    pill label, plus chip and subtitle keys if the new status filters
    on the index.
-7. `Goals::StatusPillComponent#status_key` and the goal-filter Stimulus
+8. `Goal#status_callout_context` if the show page should explain it.
+9. `Goals::StatusPillComponent#status_key` and the goal-filter Stimulus
    controller (`data-status="..."` on chips) if the new status filters.
 
 ### Adding a new pledge kind

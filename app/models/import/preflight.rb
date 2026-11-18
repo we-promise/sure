@@ -46,12 +46,9 @@ class Import::Preflight
   UNSUPPORTED_PREFLIGHT_IMPORT_TYPES = %w[PdfImport QifImport MonarchImport].freeze
   IMPORT_TYPES = (Import::TYPES - UNSUPPORTED_PREFLIGHT_IMPORT_TYPES).freeze
 
-  # user, when given, limits account_id to accounts that user can write to,
-  # the same rule the API applies when the import is actually created.
-  def initialize(family:, params:, user: nil)
+  def initialize(family:, params:)
     @family = family
     @params = params.to_h.symbolize_keys
-    @user = user
   end
 
   def call
@@ -64,7 +61,7 @@ class Import::Preflight
   end
 
   private
-    attr_reader :family, :params, :user
+    attr_reader :family, :params
 
     def preflight_import_type
       type = params[:type].to_s
@@ -177,8 +174,7 @@ class Import::Preflight
     def preflight_account
       raise ActiveRecord::RecordNotFound unless Api::V1::BaseController.valid_uuid?(params[:account_id])
 
-      accounts = user ? family.accounts.writable_by(user) : family.accounts
-      accounts.find(params[:account_id])
+      family.accounts.find(params[:account_id])
     end
 
     def csv_upload_attributes

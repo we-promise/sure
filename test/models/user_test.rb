@@ -1281,6 +1281,37 @@ class UserTest < ActiveSupport::TestCase
     assert_not users(:family_admin).manages_instance_settings?
   end
 
+  test "generated demo families do not revoke the only real family's instance settings access" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    real_family = families(:dylan_family)
+    Family.where.not(id: real_family.id).each do |demo_family|
+      demo_family.start_subscription!(Subscription::DEMO_STRIPE_ID)
+    end
+
+    assert users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+    assert_not users(:empty).manages_instance_settings?, "demo admins must not manage instance settings"
+
+    # Even a demo-only installation must not grant its public demo login access.
+    Family.stubs(:count).returns(1)
+    assert_not users(:empty).manages_instance_settings?
+    Family.unstub(:count)
+
+    # An unmarked household still counts, even if it calls itself Demo Family.
+    Family.create!(name: "Demo Family")
+    assert_not users(:family_admin).manages_instance_settings?
+  end
+
+  test "demo exclusion does not grant family admins instance access in managed mode" do
+    Family.where.not(id: families(:dylan_family).id).each do |demo_family|
+      demo_family.start_subscription!(Subscription::DEMO_STRIPE_ID)
+    end
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+
+    assert_not users(:family_admin).manages_instance_settings?
+    assert users(:sure_support_staff).manages_instance_settings?
+  end
+
   # First user role assignment tests
   test "role_for_new_family_creator returns super_admin when no users exist" do
     # Delete all users to simulate fresh instance
@@ -1646,5 +1677,27 @@ class UserTest < ActiveSupport::TestCase
   test "update_manual_account_order rejects unknown groups" do
     assert_not @user.update_manual_account_order("transactions", [ accounts(:depository).id ])
     assert_equal({}, @user.reload.manual_account_order)
+  end
+
+  test "reports biggest expenses limit defaults to 10 and only returns an offered choice" do
+    @user.update_columns(preferences: {})
+    assert_equal 10, @user.reports_biggest_expenses_limit
+
+    @user.update_columns(preferences: { "reports_biggest_expenses_limit" => 25 })
+    assert_equal 25, @user.reload.reports_biggest_expenses_limit
+
+    @user.update_columns(preferences: { "reports_biggest_expenses_limit" => 7 })
+    assert_equal 10, @user.reload.reports_biggest_expenses_limit
+  end
+
+  test "update_reports_preferences stores an offered biggest expenses limit alongside the section keys" do
+    @user.update_columns(preferences: { "reports_section_order" => %w[net_worth] })
+
+    assert @user.update_reports_preferences("reports_biggest_expenses_limit" => "5")
+    assert_equal 5, @user.reload.preferences["reports_biggest_expenses_limit"]
+    assert_equal %w[net_worth], @user.preferences["reports_section_order"]
+
+    assert @user.update_reports_preferences("reports_biggest_expenses_limit" => "1000")
+    assert_equal 5, @user.reload.preferences["reports_biggest_expenses_limit"]
   end
 end

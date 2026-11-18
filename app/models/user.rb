@@ -115,11 +115,20 @@ class User < ApplicationRecord
   # unknown emails. The legacy lookup runs first on every login (one indexed
   # query) so that legacy and encrypted rows cost the same single password
   # check. Nil and empty passwords are rejected up front, as authenticate_by does.
+  # A user without a local password (SSO only) still costs one hash, so
+  # response time does not reveal such accounts. A non-String password (a
+  # JSON number) is checked as text instead of raising.
   def self.authenticate_by_email(email:, password:)
-    return nil if password.nil? || password.empty?
+    return nil if password.nil? || password.to_s.empty?
 
+    password = password.to_s
     normalized = email.to_s.strip.downcase
     legacy_user = find_by_legacy_plaintext_email(normalized)
+    user = legacy_user || find_by(email: normalized)
+    if user && user.password_digest.blank?
+      new(password: password)
+      return nil
+    end
     return authenticate_by(email: normalized, password: password) unless legacy_user
 
     legacy_user if legacy_user.authenticate(password)
@@ -204,13 +213,18 @@ class User < ApplicationRecord
 
   # Setting values are shared by every family on the instance, so changing them
   # is a super admin's job: a family admin is anyone who signed up. A
-  # self-hosted instance with a single family has no other tenant to protect,
-  # and installs that predate the super_admin role may not have one, so that
-  # family's admins keep access there.
+  # self-hosted instance with a single real family has no other tenant to
+  # protect. Generated demo households must neither revoke that family's access
+  # nor grant instance access to demo users. Use the generator's synthetic
+  # subscription marker, never an editable family name or user email.
   def manages_instance_settings?
     return true if super_admin?
+    return false unless admin? && Rails.application.config.app_mode.self_hosted?
+    return false if family.subscription&.synthetic?
+    return true if Family.count == 1
 
-    admin? && Rails.application.config.app_mode.self_hosted? && Family.count == 1
+    demo_family_ids = Subscription.where(stripe_id: Subscription::DEMO_STRIPE_ID).select(:family_id)
+    Family.where.not(id: demo_family_ids).limit(2).pluck(:id) == [ family_id ]
   end
 
   def accessible_accounts
@@ -368,9 +382,7 @@ class User < ApplicationRecord
   # provider+uid) are not gated on #active?, so they must be torn down here for
   # revocation to be immediate; the async purge would otherwise leave a window.
   def revoke_all_credentials!
-    Doorkeeper::AccessToken
-      .where(resource_owner_id: id, revoked_at: nil)
-      .update_all(revoked_at: Time.current)
+    revoke_oauth_tokens!
     sessions.destroy_all
     api_keys.destroy_all
     mobile_devices.destroy_all
@@ -499,6 +511,18 @@ class User < ApplicationRecord
     Array(provider.public_send(item_association.name)) if item_association
   end
 
+  # Revokes every Doorkeeper access token issued to this user (mobile app and
+  # third-party OAuth clients; a revoked token's refresh token is refused too)
+  # and every authorization grant not yet exchanged for one. Returns the
+  # number of tokens and grants revoked.
+  def revoke_oauth_tokens!
+    now = Time.current
+    [
+      Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: now),
+      Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: now)
+    ]
+  end
+
   # Revokes mobile/third-party API access alongside the web-session
   # invalidation above. Without this, a deactivated user's existing
   # Doorkeeper tokens and API keys stay valid on the wire — currently
@@ -510,8 +534,7 @@ class User < ApplicationRecord
   # before deactivation could otherwise be exchanged for a fresh token
   # afterward.
   def revoke_all_access_tokens
-    tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
-    grants_revoked = Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    tokens_revoked, grants_revoked = revoke_oauth_tokens!
     keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
 
     if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
@@ -642,6 +665,20 @@ class User < ApplicationRecord
 
   def account_order
     AccountOrder.find(default_account_order) || AccountOrder.default
+  end
+
+  # Whether the activity feed of a linked account always lists the balance
+  # updates its syncs leave behind (see Account#hides_balance_updates_by_default?).
+  # Off until turned on in Settings > Preferences. The activity Filter menu can
+  # show them for one view without changing this.
+  def show_balance_updates?
+    preferences&.dig("show_balance_updates") == true
+  end
+
+  # @param value [Boolean, String] a form value such as "true" or "false"
+  def update_show_balance_updates(value)
+    shown = ActiveModel::Type::Boolean.new.cast(value) == true
+    with_locked_preferences { |prefs| prefs["show_balance_updates"] = shown }
   end
 
   MANUAL_ACCOUNT_ORDER_LIMIT = 500
@@ -856,12 +893,26 @@ class User < ApplicationRecord
     section_order("reports")
   end
 
+  REPORTS_BIGGEST_EXPENSES_LIMITS = [ 5, 10, 25 ].freeze
+  DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT = 10
+
+  def reports_biggest_expenses_limit
+    stored = preferences&.[]("reports_biggest_expenses_limit")
+    REPORTS_BIGGEST_EXPENSES_LIMITS.include?(stored) ? stored : DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT
+  end
+
   def update_reports_preferences(prefs)
-    update_section_preferences(
+    return false unless update_section_preferences(
       "reports",
       order: prefs["reports_section_order"],
       collapsed: prefs["reports_collapsed_sections"]
     )
+
+    # A limit outside the offered choices is dropped, like any other bad value.
+    limit = Integer(prefs["reports_biggest_expenses_limit"].to_s, exception: false)
+    return true unless REPORTS_BIGGEST_EXPENSES_LIMITS.include?(limit)
+
+    with_locked_preferences { |updated_prefs| updated_prefs["reports_biggest_expenses_limit"] = limit }
   end
 
   # Transactions preferences management

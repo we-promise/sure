@@ -80,7 +80,7 @@ en:
         type_builtin: Builtin (direct LLM)
         type_external: External (remote agent)
         type_mcp_only: None in app (connect your own agent via MCP)
-        mcp_only_help: The in-app assistant is off for everyone in this household. Bills AI shortcuts and AI-written insight text also stop. MCP and background categorization stay available; connect external agents in Settings > MCP.
+        mcp_only_help: The in-app assistant is off for everyone in this household. Bills AI shortcuts and Dig in with AI on insights also stop. MCP and background categorization stay available; connect external agents in Settings > MCP.
         external_status: External assistant endpoint
         external_configured: Configured
         external_not_configured: Not configured. Enter the URL and token below, or set EXTERNAL_ASSISTANT_URL and EXTERNAL_ASSISTANT_TOKEN environment variables.
@@ -284,7 +284,7 @@ en:
         step_1_html: 'Visit <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> and create a free account.'
         step_2_html: 'Go to your <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> to find your API token.'
         step_3: Copy your API token and paste it below.
-        rate_limit_warning: "EODHD free tier is limited to 20 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
+        rate_limit_warning: "EODHD free tier is limited to 20 API calls per day and 1 year of history. Paid plan only: set EODHD_MAX_REQUESTS_PER_DAY to your plan's daily limit; this also lifts the history limit."
       mansa_settings:
         title: Mansa
         description: Enter the API key from Mansa API. Supports 20 African stock exchanges, including NGX (Nigerian Exchange), JSE, NSE (Kenya), GSE (Ghana) and BRVM -- several of which no other provider here covers.

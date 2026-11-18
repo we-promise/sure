@@ -747,10 +747,14 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
            headers: api_headers(member_key)
     end
 
-    [ accounts(:credit_card), accounts(:investment) ].each do |account|
-      preflight.call(account)
-      assert_response :not_found
-    end
+    # Not shared with the member: answered like an unknown id.
+    preflight.call(accounts(:investment))
+    assert_response :not_found
+
+    # Shared read only: visible, but not writable.
+    preflight.call(accounts(:credit_card))
+    assert_response :forbidden
+    assert_equal "forbidden", JSON.parse(response.body)["error"]
 
     preflight.call(accounts(:depository))
     assert_response :success
@@ -1461,33 +1465,29 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     Redis.new.del("api_rate_limit:#{member_key.id}")
     csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
 
-    [ accounts(:credit_card), accounts(:investment) ].each do |account|
-      assert_no_difference("Import.count") do
-        post api_v1_imports_url,
-             params: {
-               raw_file_content: csv_content,
-               date_col_label: "date",
-               amount_col_label: "amount",
-               name_col_label: "name",
-               account_id: account.id
-             },
-             headers: api_headers(member_key)
-      end
-      assert_response :unprocessable_entity
-      assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
-    end
-
-    assert_difference("Import.count", 1) do
+    create_import = ->(account) do
       post api_v1_imports_url,
            params: {
              raw_file_content: csv_content,
              date_col_label: "date",
              amount_col_label: "amount",
              name_col_label: "name",
-             account_id: accounts(:depository).id
+             account_id: account.id
            },
            headers: api_headers(member_key)
     end
+
+    # Not shared with the member: answered like an unknown id.
+    assert_no_difference("Import.count") { create_import.call(accounts(:investment)) }
+    assert_response :unprocessable_entity
+    assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
+
+    # Shared read only: visible, but not writable.
+    assert_no_difference("Import.count") { create_import.call(accounts(:credit_card)) }
+    assert_response :forbidden
+    assert_equal "forbidden", JSON.parse(response.body)["error"]
+
+    assert_difference("Import.count", 1) { create_import.call(accounts(:depository)) }
     assert_response :created
   end
 

@@ -36,7 +36,6 @@ RSpec.describe 'API V1 Valuations', type: :request do
   let(:account) do
     Account.create!(
       family: family,
-      owner: user,
       name: 'Investment Account',
       balance: 10000,
       currency: 'USD',
@@ -216,7 +215,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
         run_test!
       end
 
-      response '404', 'account not found or not writable by the API user' do
+      response '404', 'account not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -250,7 +249,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
         run_test!
       end
 
-      response '404', 'valuation not found or its account not shared with the API user' do
+      response '404', 'valuation not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
@@ -324,7 +323,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
         run_test!
       end
 
-      response '404', 'valuation not found or its account not writable by the API user' do
+      response '404', 'valuation not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }

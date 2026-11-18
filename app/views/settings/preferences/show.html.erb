@@ -35,8 +35,40 @@
               checked: !@user.rule_prompts_disabled, checked_value: "false", unchecked_value: "true",
               "aria-labelledby": "rule_suggestions_label", data: { auto_submit_form_target: "auto" }) %>
       </div>
+      <div class="flex items-center justify-between gap-4">
+        <div class="space-y-1">
+          <p class="text-sm" id="show_balance_updates_label"><%= t(".show_balance_updates") %></p>
+          <p class="text-secondary text-sm"><%= t(".show_balance_updates_hint") %></p>
+        </div>
+        <%= render DS::Toggle.new(id: "user_show_balance_updates", name: "user[show_balance_updates]",
+              checked: @user.show_balance_updates?, checked_value: "true", unchecked_value: "false",
+              "aria-labelledby": "show_balance_updates_label", data: { auto_submit_form_target: "auto" }) %>
+      </div>
     <% end %>
   </div>
+<% end %>
+<% if Current.user.admin? && preview_features_enabled? %>
+  <%= settings_section title: t(".transactions_title"), subtitle: t(".transactions_subtitle") do %>
+    <div>
+      <%= styled_form_with model: @user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
+        <%= form.hidden_field :redirect_to, value: "preferences" %>
+        <%= form.fields_for :family do |family_form| %>
+          <div class="flex items-center justify-between gap-4">
+            <div class="space-y-1">
+              <p class="text-sm flex items-center gap-1.5" id="manual_reconciliation_label">
+                <%= t(".manual_reconciliation") %>
+                <%= render DS::Pill.new(label: t("shared.preview"), size: :sm) %>
+              </p>
+              <p class="text-secondary text-sm"><%= t(".manual_reconciliation_hint") %></p>
+            </div>
+            <%= family_form.toggle :manual_reconciliation,
+                "aria-labelledby": "manual_reconciliation_label",
+                data: { auto_submit_form_target: "auto" } %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
 <% end %>
 <%= settings_section title: t(".budget_title"), subtitle: t(".budget_subtitle") do %>
   <div>
@@ -64,10 +96,10 @@
         <% if Current.user.admin? && preview_features_enabled? %>
           <div class="flex items-center justify-between">
             <div class="space-y-1">
-              <p class="text-sm flex items-center gap-1.5">
-                <%= t(".personal_budgets") %>
+              <div class="flex items-center gap-1.5">
+                <p class="text-sm"><%= t(".personal_budgets") %></p>
                 <%= render DS::Pill.new(label: t("shared.preview"), size: :sm) %>
-              </p>
+              </div>
               <p class="text-secondary text-sm"><%= t(".personal_budgets_hint") %></p>
             </div>
             <%= family_form.toggle :personal_budgets,
