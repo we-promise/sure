@@ -28,6 +28,24 @@
                               [[t("vehicles.form.mileage_unit_miles"), "mi"], [t("vehicles.form.mileage_unit_kilometers"), "km"]],
                               { label: t("vehicles.form.mileage_unit") } %>
       </div>
+
+      <% unless account.linked? %>
+        <div class="flex items-center gap-2">
+          <%= vehicle_form.money_field :initial_balance,
+                                     label: t("vehicles.form.purchase_price"),
+                                     currency_value_override: account.currency,
+                                     currency_source: "select[name='account[currency]']",
+                                     value: vehicle_form.object.initial_balance || (vehicle_form.object.purchase_price.amount if account.persisted?),
+                                     hide_currency: true %>
+          <% if account.persisted? %>
+            <%= vehicle_form.hidden_field :initial_balance_shown,
+                                        value: vehicle_form.object.initial_balance_shown || vehicle_form.object.purchase_price.amount %>
+            <%= vehicle_form.date_field :purchase_date,
+                                      label: t("vehicles.form.purchase_date"),
+                                      value: vehicle_form.object.purchase_date || account.opening_anchor_date %>
+          <% end %>
+        </div>
+      <% end %>
     <% end %>
   </div>
 <% end %>

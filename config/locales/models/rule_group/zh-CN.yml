@@ -1,0 +1,10 @@
+---
+zh-CN:
+  activerecord:
+    models:
+      rule_group:
+        one: "分组"
+        other: "分组"
+    attributes:
+      rule_group:
+        name: "名称"

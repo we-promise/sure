@@ -330,6 +330,58 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     assert_nil Loan::PayoffChart.new(on_contract_loan, as_of: @today).payload[:balloon]
   end
 
+  # Without an extra the payload is exactly what it was before the extra
+  # existed: no key, no visible entry, no label.
+  test "without an extra projection the payload is unchanged" do
+    payload = Loan::PayoffChart.new(on_contract_loan, as_of: @today, period: @all_time).payload
+
+    assert_equal %i[actual scheduled projected], Loan::PayoffChart::SERIES
+    assert_equal %i[
+      today locale currency currency_precision domain_start domain_end actual scheduled projected visible
+      scheduled_payoff_date projected_payoff_date months_saved interest_saved balloon labels aria_description
+    ], payload.keys
+    assert_equal %i[actual scheduled projected], payload[:visible]
+    assert_equal %i[actual scheduled projected principal interest interest_share principal_share today interactive_chart], payload[:labels].keys
+  end
+
+  test "an extra projection draws its own line, named in the legend and the description" do
+    loan = on_contract_loan
+    projection = loan.payoff_projection(as_of: @today)
+    extra = loan.payoff_projection(as_of: @today, extra: 5_000)
+
+    payload = Loan::PayoffChart.new(loan, as_of: @today, period: @all_time,
+                                    projection: projection, extra_projection: extra).payload
+
+    assert_equal({ date: @today.iso8601, balance: projection.current_balance.amount.to_f }, payload[:extra].first,
+      "the extra line opens at today's balance, as the projection does")
+    assert_equal extra.payoff_date.iso8601, payload[:extra].last[:date]
+    assert_equal extra.payoff_date.iso8601, payload[:extra_payoff_date]
+    assert_includes payload[:visible], :extra
+    assert_equal I18n.t("UI.account.chart.loan.extra"), payload[:labels][:extra]
+    assert_includes payload[:aria_description], I18n.t(
+      "UI.account.chart.loan.aria_extra_payoff", date: I18n.l(extra.payoff_date, format: :long)
+    )
+    # The other series do not move for it.
+    plain = Loan::PayoffChart.new(loan, as_of: @today, period: @all_time, projection: projection).payload
+    assert_equal plain[:projected], payload[:projected]
+    assert_equal plain[:scheduled], payload[:scheduled]
+  end
+
+  # An extra too small to clear a loan that is far behind still draws, and the
+  # description says it does not pay the loan off rather than quoting nil.
+  test "the description says so when even the extra does not pay the loan off" do
+    loan = build_loan
+    loan.account.update!(balance: 400_000)
+    extra = loan.payoff_projection(as_of: @today, extra: 10)
+
+    payload = Loan::PayoffChart.new(loan, as_of: @today, extra_projection: extra).payload
+
+    assert_nil payload[:extra_payoff_date]
+    assert_includes payload[:aria_description], I18n.t(
+      "UI.account.chart.loan.aria_extra_payoff", date: I18n.t("UI.account.chart.loan.no_payoff")
+    )
+  end
+
   # Owner review of #3474: the chart has no data table any more; the Schedule
   # tab carries the figures, so the payload builds no rows for one.
   test "the payload carries no data table rows" do

@@ -53,6 +53,15 @@ RSpec.configure do |config|
           }
         },
         schemas: {
+          Version: {
+            type: :object,
+            additionalProperties: false,
+            required: %w[version commit_sha],
+            properties: {
+              version: { type: :string, description: 'Running Sure version, without a v prefix.' },
+              commit_sha: { type: :string, nullable: true, description: 'Build commit SHA, or null when unavailable.' }
+            }
+          },
           SplitRequest: {
             type: :object,
             required: %w[split],
@@ -115,6 +124,73 @@ RSpec.configure do |config|
               per_page: { type: :integer, minimum: 1 },
               total_count: { type: :integer, minimum: 0 },
               total_pages: { type: :integer, minimum: 0 }
+            }
+          },
+          AccountStatementAccount: {
+            type: :object,
+            required: %w[id name currency],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              currency: { type: :string }
+            }
+          },
+          AccountStatement: {
+            type: :object,
+            required: %w[id filename content_type byte_size content_sha256 review_status created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              filename: { type: :string },
+              content_type: { type: :string },
+              byte_size: { type: :integer, minimum: 1 },
+              content_sha256: { type: :string, description: 'SHA-256 of the file (lowercase hex); the vault stores each file once per family' },
+              review_status: { type: :string, enum: %w[unmatched linked rejected] },
+              period_start_on: { type: :string, format: :date, nullable: true },
+              period_end_on: { type: :string, format: :date, nullable: true },
+              currency: { type: :string, nullable: true },
+              opening_balance: { type: :string, nullable: true },
+              closing_balance: { type: :string, nullable: true },
+              institution_name_hint: { type: :string, nullable: true },
+              account_last4_hint: { type: :string, nullable: true },
+              account: {
+                allOf: [ { '$ref' => '#/components/schemas/AccountStatementAccount' } ],
+                nullable: true,
+                description: 'Account the statement is linked to'
+              },
+              suggested_account: {
+                allOf: [ { '$ref' => '#/components/schemas/AccountStatementAccount' } ],
+                nullable: true,
+                description: 'Account the vault suggests for an unlinked statement; linking it is confirmed in the app'
+              },
+              match_confidence: { type: :number, nullable: true, minimum: 0, maximum: 1 },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          AccountStatementResponse: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: { '$ref' => '#/components/schemas/AccountStatement' },
+              meta: {
+                type: :object,
+                required: %w[duplicate],
+                properties: {
+                  duplicate: { type: :boolean, description: 'True when the uploaded file was already in the vault; the existing statement is returned and nothing is created' }
+                }
+              }
+            }
+          },
+          AccountStatementCollection: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: {
+                type: :array,
+                maxItems: 100,
+                items: { '$ref' => '#/components/schemas/AccountStatement' }
+              },
+              meta: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
           FamilyExportFile: {
@@ -1252,7 +1328,7 @@ RSpec.configure do |config|
             type: :object,
             required: %w[type valid content stats errors warnings],
             properties: {
-              type: { type: :string, enum: Import::TYPES },
+              type: { type: :string, enum: Import::Preflight::IMPORT_TYPES },
               valid: { type: :boolean },
               content: { '$ref' => '#/components/schemas/ImportPreflightContent' },
               stats: { '$ref' => '#/components/schemas/ImportPreflightStats' },
@@ -1814,6 +1890,59 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          SecurityPriceImportRequest: {
+            type: :object,
+            required: %w[security_id prices],
+            properties: {
+              security_id: { type: :string, format: :uuid, description: 'An offline security no provider has ever matched (no offline_reason or price_provider), traded in an account the caller can write to, or held in a linked one' },
+              prices: {
+                type: :array,
+                minItems: 1,
+                maxItems: 1000,
+                description: 'Daily closes, all in one currency. A date already stored is replaced.',
+                items: {
+                  type: :object,
+                  required: %w[date price currency],
+                  properties: {
+                    date: { type: :string, format: :date, description: 'Not after today in the family time zone' },
+                    price: { type: :string, description: 'Positive decimal with at most 4 decimal places', example: '12.3400' },
+                    currency: { type: :string, description: "ISO 4217 code; must match the security's existing prices, or the caller's trades in it" }
+                  }
+                }
+              }
+            }
+          },
+          SecurityPriceImportResult: {
+            type: :object,
+            required: %w[security_id currency created updated start_date end_date],
+            properties: {
+              security_id: { type: :string, format: :uuid },
+              currency: { type: :string },
+              created: { type: :integer },
+              updated: { type: :integer },
+              start_date: { type: :string, format: :date },
+              end_date: { type: :string, format: :date }
+            }
+          },
+          SecurityPriceImportError: {
+            type: :object,
+            required: %w[error errors],
+            properties: {
+              error: { type: :string },
+              message: { type: :string },
+              errors: {
+                type: :array,
+                items: {
+                  type: :object,
+                  required: %w[index message],
+                  properties: {
+                    index: { type: :integer, nullable: true, description: 'Position of the offending row in prices, or null for the request as a whole' },
+                    message: { type: :string }
+                  }
+                }
+              }
+            }
+          },
           Money: {
             type: :object,
             required: %w[amount currency formatted],
@@ -1835,7 +1964,7 @@ RSpec.configure do |config|
             type: :object, required: %w[basis income spending net_savings nodes links],
             description: 'Refunds net within each category. Parent direct amounts exclude child totals before partitioning by direction. Graph income/spending may differ from gross monthly totals; net savings agrees. Decimal strings retain FX precision. Empty flow has empty nodes and links.',
             properties: {
-              basis: { type: :string, enum: %w[net_by_category net_by_account], description: 'net_by_account (group_by=account) replaces the Cash Flow node with one account node per account, each balanced by Surplus or Deficit' },
+              basis: { type: :string, enum: %w[net_by_category net_by_account], description: 'net_by_account (group_by=account) replaces the Cash Flow node with one account node per account, each balanced by Surplus or Deficit. Where an account in surplus paid one in deficit by confirmed transfer in the period, that amount is a link between the two account nodes instead' },
               income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
               invested: { type: :string, description: "Money moved into investment accounts, shown as its own node. Zero unless the family does not count investing as spending" },
               nodes: { type: :array, items: {

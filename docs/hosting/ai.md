@@ -37,7 +37,7 @@ Background jobs that classify transactions and detect merchants. These use the L
 
 If you use an external agent for chat, you still need an LLM provider configured (`OPENAI_ACCESS_TOKEN` or `ANTHROPIC_API_KEY`) for auto-categorization and merchant detection to work. The two systems are fully independent.
 
-With `mcp_only`, Sure also skips the features that need a user's AI consent: the bills AI shortcuts (review, smart fill, smart configuration). Insights never use AI: their text comes from templates.
+With `mcp_only`, the buttons that start a chat go too, including the bills AI review. Smart fill and smart configuration don't start a chat, so they follow each member's own AI switch, like the other AI features. Insights never use AI: their text comes from templates.
 
 ### Where AI jobs run (Sidekiq lanes)
 
@@ -470,6 +470,21 @@ For self-hosted deployments, you can configure AI settings through the web inter
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
 
+**Give the `web` and `worker` containers the same AI variables.** Each process reads its own
+environment: the web container decides which AI buttons and actions are offered, and the worker
+runs the AI jobs. When their AI variables differ, a feature can be offered that the worker can't
+run, or hidden although it would work. Settings saved in the UI are shared by both.
+
+**Which AI features are available** is decided in one place for every feature except chat, from
+the same settings: a button, rule action or MCP tool appears only when a configured model can do
+the work. For example, **Enhance merchants** appears on an install with only an Anthropic key, as
+merchant enhancement runs on Anthropic too.
+
+Chat, and the buttons that open it (the Bills AI review and prompt chips, **Review with AI** and
+**Dig in with AI**), keep their own check: the user's AI switch and a configured provider. They can
+appear when a custom endpoint has no model, or when chat doesn't accept the configured model, and
+then every chat turn fails with an error.
+
 ## External AI Assistant
 
 Instead of using the built-in LLM (which calls OpenAI or a local model directly), you can delegate chat to an **external AI agent**. The agent receives the conversation, can call back to Sure's financial data via MCP, and streams a response.
@@ -611,7 +626,7 @@ it implements.
 
 ### Security with Pipelock
 
-When [Pipelock](https://github.com/luckyPipewrench/pipelock) is enabled (`pipelock.enabled=true` in Helm, or the `pipelock` service in Docker Compose), Sure configures two mediated routes:
+When [Pipelock](https://github.com/pipelab-org/pipelock) is enabled (`pipelock.enabled=true` in Helm, or the `pipelock` service in Docker Compose), Sure configures two mediated routes:
 
 - **Outbound** (Sure -> agent): routed through Pipelock's forward proxy via `HTTPS_PROXY`
 - **Inbound** (agent -> Sure /mcp): routed through Pipelock's MCP reverse proxy (port 8889)
@@ -636,7 +651,7 @@ pipelock:
         action: block
 ```
 
-See the [Pipelock documentation](https://github.com/luckyPipewrench/pipelock) for tool policy configuration details.
+See the [Pipelock documentation](https://github.com/pipelab-org/pipelock) for tool policy configuration details.
 
 ### Network Policies (Kubernetes)
 
@@ -1075,6 +1090,48 @@ All LLM operations will now be logged to Langfuse, including:
 
 **For maximum privacy:** Self-host Langfuse on your own infrastructure.
 
+### Tracing modes: content or metadata
+
+AI calls made through Sure's AI transports are traced in one of two modes, never both. Health
+probes aren't traced in either: they carry no family data and run each time an admin opens the
+health page. The mode follows the variables you already set:
+
+| You set | Mode | What leaves the server |
+|---|---|---|
+| `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | `content` | Prompts, outputs, token usage, the model and endpoint, and Sure's error class |
+| Only `OTLP_ENDPOINT` (and `OTLP_HEADERS` for authentication) | `metadata` | Model, settings, finish reason, token counts and latency, as OpenTelemetry spans to any OTLP backend (Langfuse, Tempo, Jaeger, OpenObserve). No prompts, tool results or answers |
+| Both | `content`, with a warning in the log | As `content` |
+| Neither | off | Nothing |
+
+```bash
+# metadata mode: cost and latency without sending financial data to a tracing backend
+OTLP_ENDPOINT=https://otel.example.com/v1/traces
+OTLP_HEADERS=Authorization=Basic%20${OTLP_BASIC_AUTH}
+```
+
+`OTLP_HEADERS` uses the OpenTelemetry form, `key=value` pairs separated by commas, with values
+URL-encoded. In `metadata` mode traces lose the endpoint name, Sure's error class and errors
+raised before a request is sent.
+
+### Usage: one row per request, shown per call
+
+The LLM usage page shows one row per AI call. A call that took several requests (a retried
+`429` or `503`, for example) opens to show each request with its status, tokens, cost and error,
+and the totals count calls. If you query the `llm_usages` table yourself, group by
+`COALESCE(call_id, id)` to count calls: older rows, and rows from features that don't use the
+transports, have no `call_id` and are calls of one request.
+
+### Outbound proxy
+
+Sure resolves the proxy once for its AI clients: `HTTPS_PROXY`, then `HTTP_PROXY`, whatever the
+scheme of the server it calls, honouring `NO_PROXY` (CIDR blocks such as `10.0.0.0/8` included).
+Loopback addresses (`127.0.0.0/8`, `::1`, `localhost`) never go through the proxy. `NO_PROXY`
+matches a host exactly as written: `127.0.0.1` doesn't cover `localhost`.
+
+This covers the OpenAI and OpenAI-compatible clients, the external assistant, and the AI health
+probes. Anthropic's client library takes no proxy setting, so native Anthropic calls that don't
+use the transports go direct, unless `HTTP_PROXY` is set (the only variable that library reads).
+
 ## Testing and Evaluation
 
 ### Manual Testing
@@ -1134,21 +1191,34 @@ Good test queries that exercise different capabilities:
 
 ### Cloud Costs
 
-**Pricing table last updated and verified: October 17, 2026.** Every model
-listed in [`LlmUsage::PRICING`](../../app/models/llm_usage.rb) was checked against
-official sources. `PRICING_VERIFIED_ON` supplies the verification date shown on
+**Full pricing table last verified: October 17, 2026.** Every model
+listed in [`config/llm_pricing.yml`](../../config/llm_pricing.yml) was checked
+against official sources on that date, except the Claude and OpenAI rows: those
+were last reviewed on November 1, 2026, without re-checking the Gemini rows.
+The file's `verified_on` supplies the full-table verification date shown on
 the LLM usage screen. This is a manual review date, not a claim that providers
 changed every price that day.
+
+The **Refresh LLM pricing** workflow runs on every release tag and on demand.
+It runs `bin/update_llm_pricing`, which reads
+[LiteLLM's price list](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)
+and then opens a pull request. While that pull request is open, later runs
+skip, so nothing overwrites a review in progress. The pull request rewrites listed
+rows whose prices changed and adds new Claude and GPT tier releases (for
+example `claude-opus-6` or `gpt-6.2-sol`). Its description lists the changes
+and any rows LiteLLM does not have. Check each change against the provider's
+pricing page before merging. After adding a newer release, point the family or
+tier fallback alias at it. Bump `verified_on` only after reviewing every row.
 
 Rates are USD per million tokens at the Standard tier. The source coverage is:
 
 | Models in the code | Official pricing source |
 | --- | --- |
-| GPT-6 Sol/6.1 Sol, GPT-5.6, GPT-5.5, GPT-5.4, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1, o3, o4-mini (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
+| GPT-6 Astra, GPT-6 Sol/6.1 Sol, GPT-6.1 Terra, GPT-6 Luna, GPT-5.6 (and its `gpt-5.6` alias for Sol), GPT-5.6/5.5 Cyber, GPT-5.5, GPT-5.4, GPT-5.3 Codex, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1/o1-pro, o3, o4-mini, chat-latest (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
 | GPT-5.2/5.1 Chat aliases | [GPT-5.2 Chat](https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest), [GPT-5.1 Chat](https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest) |
 | o1-mini | [o1-mini](https://developers.openai.com/api/docs/models/o1-mini) |
 | Gemini 4 Argon, 3.8/3.7/3.6/3.5 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro, 3 Flash, 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
-| Claude Opus 4.6/4.7, Sonnet 4.5/4.6, Haiku 4.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
+| Claude Fable 5/5.1, Opus 4/4.1/4.5/4.6/4.7/4.8/5/5.5, Sonnet 4/4.5/4.6/5/5.5, Haiku 4.5/5.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
 
 #### Dated pricing changes
 
@@ -1174,7 +1244,8 @@ and Gemini 3.8, 3.7, and 3.6 Flash through December 31, 2026.
 
 #### Context tiers and estimate limits
 
-OpenAI's listed GPT-6 Sol, GPT-6.1 Sol, GPT-5.6, GPT-5.5/Pro and GPT-5.4/Pro
+OpenAI's listed GPT-6 Astra, GPT-6 Sol, GPT-6.1 Sol, GPT-6.1 Terra, GPT-6 Luna,
+GPT-5.6, GPT-5.5/Pro and GPT-5.4/Pro
 rates increase above 272,000 input tokens: input doubles and output increases
 by 50% for the entire request. GPT-5.4 mini/nano retain their flat rates.
 Gemini 4 Argon is $2.00 / $10.00 through November 2026 ($4.00 / $20.00 standard starting
@@ -1186,14 +1257,30 @@ $4.00 / $18.00 above 200,000 input tokens. Gemini 3.8 Flash, 3.7 Flash, and
 Gemini 3.5 Flash is $1.50 / $9.00, Gemini 3.5 Flash-Lite is $0.30 / $2.50,
 Gemini 3.1 Flash-Lite is $0.25 / $1.50, Gemini 3 Flash is $0.50 / $3.00,
 and Gemini 2.5 Flash remains $0.30 / $2.50.
-Claude 4.6/4.7 use standard rates throughout their context window.
+Claude Haiku 5.5 changes from $0.10 / $0.50 to $0.50 / $2.50 above 100,000
+prompt tokens, counting cache reads and writes. Other Claude models use
+standard rates throughout their context window. Claude cache reads cost 0.1x
+input, except Opus 5.5 and Sonnet 5.5 (0.05x) and Fable 5.1 (0.025x).
+A Claude model released after the last review (for example `claude-opus-6`)
+is estimated at the newest listed rate of its family (Fable, Opus, Sonnet or
+Haiku) until the table is updated. Likewise, an unlisted release of an OpenAI
+tier (for example `gpt-6.2-sol` or `gpt-7-astra`) is estimated at the newest
+listed Astra, Sol, Terra or Luna rate. A listed version row covers its dated snapshots but not
+later versions, so other unlisted OpenAI models (for example `gpt-5.9`) show
+no estimate instead of an older model's rate.
 
 Sure estimates individual requests using these tiers. Aggregate categorization
-previews assume short requests. Saved usage costs are historical estimates and
-are not recalculated by this update. Estimates exclude regional premiums,
+previews assume short requests. For [OpenRouter's official API endpoints](https://openrouter.ai/docs/cookbook/administration/usage-accounting), saved
+usage prefers a valid nonnegative provider-reported `usage.cost` in USD, including
+zero, over the token-price estimate. Other endpoints, or responses with absent or
+invalid costs, use the bundled estimates. Unknown models can therefore have a
+recorded post-call cost even when their pre-run estimate is N/A. Saved usage costs
+are not recalculated. Estimates exclude regional premiums,
 alternative service tiers, tool charges and audio-specific rates. Anthropic
-five-minute cache writes and reads are included when reported; OpenAI and Gemini
-cache discounts and cache-write/storage charges are not currently modeled.
+five-minute cache writes and reads are included when reported. For Claude models
+reached through an OpenAI-compatible endpoint, `cached_tokens` are priced at the
+Claude cache-read rate. OpenAI and Gemini cache discounts and
+cache-write/storage charges are not currently modeled.
 Custom endpoints may charge different rates.
 
 For comparison, GPT-4.1 is $2 input / $8 output, GPT-5 is $1.25 / $10,
@@ -1588,9 +1675,13 @@ VECTOR_STORE_PROVIDER=pgvector
 # Embedding model configuration
 EMBEDDING_MODEL=mxbai-embed-large         # Default: mxbai-embed-large
 EMBEDDING_DIMENSIONS=1024                 # Default: 1024 (must match your model)
-EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to OPENAI_URI_BASE if not set
-EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN if not set
+EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to the OpenAI API Base URL (ENV or Settings) if not set
+EMBEDDING_ACCESS_TOKEN=                   # Falls back to the OpenAI Access Token (ENV or Settings) if not set
 ```
+
+The fallbacks include values saved in **Settings** → **Self-Hosting**. Before this release they
+read only `OPENAI_URI_BASE` and `OPENAI_ACCESS_TOKEN` from the environment, so an install that set
+its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key.
 
 Sure enables the `vector` extension when it first provisions the chunks table,
 provided the database user has permission. If the AI status page reports that
@@ -1695,7 +1786,10 @@ endpoint**.
 
 Results are cached for 60 seconds by default. **Run checks again** bypasses the
 cache. Set `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request
-timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
+timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Five
+seconds is too short for a model running on CPU, such as llama.cpp without a GPU:
+the function-calling check can take 20 seconds there and shows as a timeout, so
+set `AI_HEALTH_PROBE_TIMEOUT=60` or more. Failed
 checks are written as system-wide entries in **Settings → Debug logs** and to
 `Rails.logger`; endpoints are redacted and credentials are never included.
 

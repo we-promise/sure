@@ -1,31 +1,80 @@
 ---
 nl:
   valuations:
+    names:
+      current_account_value: "Huidige accountwaarde"
+      current_balance: "Huidig saldo"
+      current_loan_balance: "Huidig leningsaldo"
+      current_market_value: "Huidige marktwaarde"
+      manual_balance_update: "Handmatige saldo-update"
+      manual_principal_update: "Handmatige update hoofdsom"
+      manual_value_update: "Handmatige waarde-update"
+      opening_account_value: "Beginwaarde account"
+      opening_balance: "Beginsaldo"
+      original_principal: "Oorspronkelijke hoofdsom"
+      original_purchase_price: "Oorspronkelijke aankoopprijs"
+    confirmation_contents:
+      this_will: "Hiermee gaat u de accountwaarde %{action_verb} per"
+      to_colon: "naar:"
+      total_account_value: "Totale accountwaarde"
+      holdings_value: "Waarde posities"
+      brokerage_cash: "Contant geld bij broker"
+      account_balance: "accountsaldo"
+      credit_card_balance: "creditcardsaldo"
+      loan_balance: "leningsaldo"
+      property_value: "vastgoedwaarde"
+      vehicle_value: "voertuigwaarde"
+      crypto_balance: "cryptosaldo"
+      asset_value: "waarde bezitting"
+      liability_balance: "saldo schuld"
+      balance: "saldo"
+      "on": "per"
+      to: "naar"
+      recalculate_notice: "Alle toekomstige transacties en saldi worden herberekend op basis van deze %{change_or_update}."
+      change: "wijziging"
+      update: "aanpassing"
+      action_set: "instellen"
+      action_update: "bijwerken"
+    create:
+      account_updated: "Account bijgewerkt"
+    update:
+      account_updated: "Account bijgewerkt"
+      entry_updated: "Boeking bijgewerkt"
+    errors:
+      amount_required: "Bedrag is verplicht"
     form:
-      amount: Bedrag
-      submit: Voeg balansupdate toe
+      amount: "Bedrag"
+      submit: "Voeg balansupdate toe"
     header:
-      balance: Balans
+      balance: "Balans"
     index:
-      change: wijziging
-      date: datum
-      new_entry: Nieuwe invoer
-      no_valuations: Nog geen waarderingen voor dit account
-      valuations: Waarderingen
-      value: waarde
+      change: "wijziging"
+      date: "datum"
+      new_entry: "Nieuwe invoer"
+      no_valuations: "Nog geen waarderingen voor dit account"
+      valuations: "Waarderingen"
+      value: "waarde"
     new:
-      title: Nieuwe balans
+      title: "Nieuwe balans"
     show:
-      amount: Bedrag
-      date_label: Datum
-      delete: Verwijder
-      delete_subtitle: Deze actie kan niet ongedaan worden gemaakt
-      delete_title: Verwijder invoer
-      details: Details
-      name_label: Naam
-      name_placeholder: Voer een naam in voor deze invoer
-      note_label: Notities
-      note_placeholder: Voeg eventuele aanvullende details toe over deze invoer
-      overview: Overzicht
-      settings: Instellingen
-      opening_balance: Beginsaldo
+      amount: "Bedrag"
+      amount_label: "Accountwaarde op datum"
+      date_label: "Datum"
+      delete: "Verwijder"
+      delete_subtitle: "Deze actie kan niet ongedaan worden gemaakt"
+      delete_title: "Verwijder invoer"
+      details: "Details"
+      name_label: "Naam"
+      name_placeholder: "Voer een naam in voor deze invoer"
+      note_label: "Notities"
+      note_placeholder: "Voeg eventuele aanvullende details toe over deze invoer"
+      overview: "Overzicht"
+      settings: "Instellingen"
+      opening_balance: "Beginsaldo"
+      update_value: "Waarde bijwerken"
+    confirm_create:
+      confirm: "Bevestigen"
+      title: "Nieuw saldo bevestigen"
+    confirm_update:
+      title: "Saldo bijwerken"
+      update: "Bijwerken"
