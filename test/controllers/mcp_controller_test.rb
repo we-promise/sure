@@ -623,7 +623,8 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       actions_attributes: [ { action_type: "set_transaction_category", value: target.id } ]
     )
     # Preview tokens are bound to the user who previewed, so the guest needs its
-    # own: before the fix, preview_rule was open to guests too.
+    # own. It is issued directly because MCP does not offer preview_rule to a
+    # guest.
     token = Assistant::Function::PreviewRule.new(family_guest).call("rule_id" => rule.id)[:preview][:preview_token]
     assert token, "a preview of a saved rule should issue a token"
 
