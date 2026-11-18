@@ -245,4 +245,56 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal "Bank Transfer", entry.name
     assert_instance_of Transaction, entry.entryable
   end
+
+  test "rescales a trade price quoted as a percent of par" do
+    @plaid_account.update!(raw_holdings_payload: {
+      transactions: [
+        {
+          "investment_transaction_id" => "bond_buy",
+          "security_id" => "bond",
+          "type" => "buy",
+          "quantity" => 10000,
+          "price" => 99.5,
+          "amount" => 9955.25, # includes accrued interest
+          "iso_currency_code" => "USD",
+          "date" => Date.current,
+          "name" => "Buy treasury"
+        }
+      ]
+    })
+
+    @security_resolver.stubs(:resolve).returns(OpenStruct.new(security: securities(:aapl)))
+
+    PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    entry = Entry.find_by!(external_id: "bond_buy")
+    assert_equal BigDecimal("0.995"), entry.entryable.price
+    assert_equal BigDecimal("9950"), entry.amount
+  end
+
+  test "keeps the reported price when the trade amount includes fees" do
+    @plaid_account.update!(raw_holdings_payload: {
+      transactions: [
+        {
+          "investment_transaction_id" => "stock_buy",
+          "security_id" => "stock",
+          "type" => "buy",
+          "quantity" => 10,
+          "price" => 100,
+          "amount" => 1004.95,
+          "iso_currency_code" => "USD",
+          "date" => Date.current,
+          "name" => "Buy AAPL"
+        }
+      ]
+    })
+
+    @security_resolver.stubs(:resolve).returns(OpenStruct.new(security: securities(:aapl)))
+
+    PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    entry = Entry.find_by!(external_id: "stock_buy")
+    assert_equal 100, entry.entryable.price
+    assert_equal 1000, entry.amount
+  end
 end
