@@ -239,6 +239,7 @@ ru:
     potential_duplicate_title: Обнаружен возможный дубликат
     search:
       filters:
+        balance_updates: Балансы
         account: Счёт
         amount: Сумма
         category: Категория
@@ -252,6 +253,11 @@ ru:
         reconcile_status: "Сверка"
     searches:
       filters:
+        balance_updates_filter:
+          always_shown: Всегда показывать, как задано в
+          hint: Только для этого представления. Чтобы всегда показывать их, включите в
+          preferences_link: Настройки
+          show: Показывать синхронизированные обновления баланса
         account_filter:
           filter_accounts: Фильтр по счетам
         amount_filter:
@@ -260,6 +266,7 @@ ru:
           less_than: Меньше чем
           placeholder: '0'
         badge:
+          balance_updates: Синхронизированные балансы
           confirmed: Подтверждено
           expense: Расход
           income: Доход

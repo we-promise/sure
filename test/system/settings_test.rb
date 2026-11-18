@@ -37,14 +37,16 @@ class SettingsTest < ApplicationSystemTestCase
 
   test "Russian settings localize option labels without changing their stored values" do
     @user.update!(locale: "ru")
-    @user.family.update!(moniker: "Family")
+    @user.family.update!(moniker: "Family", timezone: "Europe/Moscow")
 
     [ 1400, 390 ].each do |width|
       page.current_window.resize_to(width, 900)
       visit settings_preferences_path
       assert_selector "html[lang='ru']"
       assert_selector "select#user_locale option[value='ru']", text: "Русский (ru)", visible: :all
-      assert_selector "select#user_family_attributes_timezone option[value='Europe/Moscow']", text: "Москва", visible: :all
+      assert_selector "input[type=hidden][name='user[family_attributes][timezone]'][value='Europe/Moscow']", visible: :all
+      assert_selector "button#timezone_trigger", text: "(+03:00) Москва"
+      assert_selector "[role=option][data-value='Europe/Moscow']", text: "(+03:00) Москва", visible: :all
       assert_selector "select#user_family_attributes_month_start_day option[value='1']", text: "1-е число", visible: :all
       assert_selector "select#user_family_attributes_month_start_day option[value='28']", text: "28-е число", visible: :all
       page.scroll_to(find("#investment_contributions_as_spending_label", visible: :all), align: :center)

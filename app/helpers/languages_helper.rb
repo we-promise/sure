@@ -423,7 +423,10 @@ module LanguagesHelper
         .sort_by { |row| [ row[:offset], row[:identifier] ] }
     end
 
-    rows.map { |row| [ row[:label], row[:identifier] ] }
+    rows.map do |row|
+      city = I18n.t("settings.preferences.show.timezones.#{row[:identifier]}", default: row[:identifier].tr("_", " "))
+      [ "(#{ActiveSupport::TimeZone.seconds_to_utc_offset(row[:offset])}) #{city}", row[:identifier] ]
+    end
   end
 
   # Labels use each zone's standard (base) offset, which daylight saving time

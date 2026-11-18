@@ -54,6 +54,14 @@ class LanguagesHelperTest < ActionView::TestCase
     assert_includes timezone_options.map(&:last), "America/Argentina/Cordoba"
   end
 
+  test "timezone labels use the selected locale without changing IANA values" do
+    I18n.with_locale(:ru) do
+      assert_includes timezone_options, [ "(+03:00) Москва", "Europe/Moscow" ]
+    end
+
+    assert_includes timezone_options, [ "(+03:00) Europe/Moscow", "Europe/Moscow" ]
+  end
+
   test "timezone options cover every zone offered by Rails" do
     rails_identifiers = ActiveSupport::TimeZone.all.map { |tz| tz.tzinfo.identifier }
     renamed = rails_identifiers.map { |identifier| LanguagesHelper::RENAMED_TIMEZONES.fetch(identifier, identifier) }

@@ -80,4 +80,7 @@ ru:
       opening_account_value: 'Начальная стоимость счёта'
       original_principal: 'Первоначальная сумма основного долга'
       original_purchase_price: 'Первоначальная цена покупки'
+      synced_balance: Синхронизированный баланс
+      synced_principal: Синхронизированная основная сумма долга
+      synced_value: Синхронизированная стоимость
       opening_balance: Начальный остаток

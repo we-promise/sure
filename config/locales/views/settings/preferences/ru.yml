@@ -3,6 +3,8 @@ ru:
   settings:
     preferences:
       show:
+        show_balance_updates: Синхронизированные обновления баланса
+        show_balance_updates_hint: Всегда показывать в активности подключённых счетов ежедневные значения баланса, записанные при синхронизации с банком
         additional_currencies_label: Дополнительные валюты
         base_currency_badge: Базовая валюта
         base_currency_label: Базовая валюта

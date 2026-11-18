@@ -1041,6 +1041,11 @@ ru:
       background_jobs_label: Фоновые задачи
       system_health_label: Состояние системы
       classifier_label: Классификатор
+    settings_search:
+      aria_label: Поиск настроек
+      no_results: Нет настроек, соответствующих вашему запросу.
+      placeholder: Поиск настроек
+      results_label: Подходящие настройки
     settings_nav_link_large:
       next: Далее
       previous: Назад
