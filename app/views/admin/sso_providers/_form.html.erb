@@ -95,7 +95,7 @@
 
     <div data-oidc-field class="<%= "hidden" unless sso_provider.strategy == "openid_connect" %>">
       <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.redirect_uri_label") %></label>
-      <div class="flex items-center gap-2" data-controller="clipboard" data-clipboard-error-text-value="<%= t("javascript.admin_sso_form.copy_failed") %>">
+      <div class="flex items-center gap-2" data-controller="clipboard" data-clipboard-copied-text-value="<%= t("javascript.admin_sso_form.copied") %>" data-clipboard-error-text-value="<%= t("javascript.admin_sso_form.copy_failed") %>">
         <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
               data-clipboard-target="source" data-admin-sso-form-target="callbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
         <button type="button"
@@ -108,6 +108,7 @@
             <span class="sr-only"><%= t("javascript.admin_sso_form.copied") %></span>
           </span>
         </button>
+        <span class="sr-only" aria-live="polite" data-clipboard-target="announcement"></span>
       </div>
       <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.redirect_uri_help") %></p>
     </div>
@@ -182,7 +183,7 @@
 
     <div>
       <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.saml_sp_callback_url_label") %></label>
-      <div class="flex items-center gap-2" data-controller="clipboard" data-clipboard-error-text-value="<%= t("javascript.admin_sso_form.copy_failed") %>">
+      <div class="flex items-center gap-2" data-controller="clipboard" data-clipboard-copied-text-value="<%= t("javascript.admin_sso_form.copied") %>" data-clipboard-error-text-value="<%= t("javascript.admin_sso_form.copy_failed") %>">
         <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
               data-clipboard-target="source" data-admin-sso-form-target="samlCallbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
         <button type="button"
@@ -195,6 +196,7 @@
             <span class="sr-only"><%= t("javascript.admin_sso_form.copied") %></span>
           </span>
         </button>
+        <span class="sr-only" aria-live="polite" data-clipboard-target="announcement"></span>
       </div>
       <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.saml_sp_callback_url_help") %></p>
     </div>

@@ -176,6 +176,7 @@ en:
   number:
     currency:
       format:
+        format: "%u %n"
         significant: false
         strip_insignificant_zeros: false
     format:

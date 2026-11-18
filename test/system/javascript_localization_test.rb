@@ -65,6 +65,7 @@ class JavascriptLocalizationTest < ApplicationSystemTestCase
       expected = group.find("[data-clipboard-target='source']").text
       group.find("button").click
       assert_selector "[data-clipboard-target='iconSuccess']:not(.hidden)"
+      assert_selector "[data-clipboard-target='announcement']", text: "Скопировано!", visible: :all
       assert_equal expected, page.evaluate_script("window.copiedCallback")
     end
 

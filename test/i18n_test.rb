@@ -59,18 +59,21 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing_plurals, "Russian plural forms missing: #{missing_plurals.join(', ')}"
 
     mismatches = russian.filter_map do |key, value|
-      source = english[key] || english[key.sub(/\.(few|many)\z/, ".other")]
+      base_key = key.sub(plural_suffix, "")
+      source = english[key] || english["#{base_key}.other"] || english[base_key]
       next unless source.is_a?(String) && value.is_a?(String)
 
       required = source.scan(/%\{(\w+)\}/).flatten.uniq
       actual = value.scan(/%\{(\w+)\}/).flatten.uniq
-      key if (required - actual).any? || (actual - required - [ "count" ]).any?
+      extra = actual - required
+      extra -= [ "count" ] if key != base_key
+      key if (required - actual).any? || extra.any?
     end
     assert_empty mismatches, "Russian interpolation mismatch: #{mismatches.join(', ')}"
   end
 
   def test_russian_timezone_names_cover_runtime_identifiers
-    missing = ActiveSupport::TimeZone.all.map { |zone| zone.tzinfo.identifier }.uniq.reject do |identifier|
+    missing = LanguagesHelper.timezone_option_rows.map { |row| row[:identifier] }.uniq.reject do |identifier|
       I18n.exists?("settings.preferences.show.timezones.#{identifier}", :ru, fallback: false)
     end
 

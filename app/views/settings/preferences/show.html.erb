@@ -263,7 +263,7 @@
                     "bg-surface-inset": base_currency,
                     "cursor-default": base_currency
                   ) %>"
-                         data-filter-name="<%= "#{currency.iso_code} #{currency.localized_name}" %>">
+                         data-filter-name="<%= "#{currency.iso_code} #{currency.name} #{currency.localized_name}" %>">
                     <%= check_box_tag "user[family_attributes][enabled_currencies][]",
                                       currency.iso_code,
                                       checked,

@@ -168,7 +168,7 @@ class LlmUsage < ApplicationRecord
 
   # Check if this usage record represents a failed API call
   def failed?
-    metadata.present? && metadata["error"].present?
+    status == "failed"
   end
 
   # The most recent calls in scope, newest first, each with all its requests in order, even one

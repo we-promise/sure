@@ -5,7 +5,7 @@ import { Controller } from "@hotwired/stimulus";
 const RESET_DELAY_MS = 2000;
 
 export default class extends Controller {
-  static targets = ["source", "iconDefault", "iconSuccess"];
+  static targets = ["source", "iconDefault", "iconSuccess", "announcement"];
   static values = { copiedText: String, errorText: String };
 
   copy(event) {
@@ -28,6 +28,10 @@ export default class extends Controller {
   }
 
   showSuccess(button) {
+    if (this.hasAnnouncementTarget && this.hasCopiedTextValue) {
+      this.announcementTarget.textContent = this.copiedTextValue;
+    }
+
     // Markup that ships explicit default/success icons (invite codes, MFA,
     // profiles) toggles between them.
     if (this.hasIconDefaultTarget && this.hasIconSuccessTarget) {
