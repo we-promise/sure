@@ -25,6 +25,14 @@ class Insight::Generators::AccountReleaseGeneratorTest < ActiveSupport::TestCase
     assert_equal 10, insight.facts[:days]
   end
 
+  test "returns the most imminent release last, so the feed shows it first" do
+    enable(@admin)
+    later = term_deposit(available_on: Date.new(2026, 10, 15))
+    sooner = term_deposit(available_on: Date.new(2026, 10, 8))
+
+    assert_equal [ later.id, sooner.id ], generate.map { |insight| insight.metadata[:account_id] }
+  end
+
   test "a release on the day stays medium so it is not pushed" do
     enable(@admin)
     term_deposit(available_on: Date.new(2026, 10, 5))

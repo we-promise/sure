@@ -19,7 +19,10 @@ class Insight::Generators::AccountReleaseGenerator < Insight::Generator
   def generate
     return [] if recipients.empty?
 
-    reminders.first(MAX_INSIGHTS).map { |reminder| insight_for(reminder) }
+    # Latest release first: GenerateInsightsJob stamps each new row in this
+    # order and the feed shows the newest first, so the most imminent
+    # release, upserted last, stays in the dashboard's short list.
+    reminders.first(MAX_INSIGHTS).reverse.map { |reminder| insight_for(reminder) }
   end
 
   private
