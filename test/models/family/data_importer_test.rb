@@ -102,6 +102,44 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal Date.new(2029, 8, 31), card.expiration_date
   end
 
+  test "round trips vehicle details through full export" do
+    source_family = Family.create!(name: "Source Vehicle Family", currency: "EUR", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Round Trip Car",
+      balance: 18_500,
+      currency: "EUR",
+      accountable: Vehicle.new(subtype: "car", make: "Toyota", model: "Camry", year: 2024, mileage_value: 15_000, mileage_unit: "mi")
+    )
+
+    Family::DataImporter.new(@family, full_export_ndjson(source_family)).import!
+
+    vehicle = @family.accounts.find_by!(name: "Round Trip Car").accountable
+    assert_equal "car", vehicle.subtype
+    assert_equal "Toyota", vehicle.make
+    assert_equal "Camry", vehicle.model
+    assert_equal 2024, vehicle.year
+    assert_equal 15_000, vehicle.mileage_value
+    assert_equal "mi", vehicle.mileage_unit
+  end
+
+  test "imports vehicles from an export without their details or with null details" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-car", name: "Old Car", balance: "5000", currency: "USD", accountable_type: "Vehicle", accountable: { subtype: "car" } } },
+      { type: "Account", data: { id: "null-car", name: "Null Car", balance: "5000", currency: "USD", accountable_type: "Vehicle",
+                                 accountable: { subtype: "car", make: nil, model: nil, year: nil, mileage_value: nil, mileage_unit: nil } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    [ "Old Car", "Null Car" ].each do |name|
+      vehicle = @family.accounts.find_by!(name: name).accountable
+      assert_nil vehicle.make
+      assert_nil vehicle.year
+      assert_nil vehicle.mileage_value
+      assert_equal "mi", vehicle.mileage_unit
+    end
+  end
+
   test "imports loans and credit cards from an export without their details" do
     ndjson = build_ndjson([
       { type: "Account", data: { id: "old-loan", name: "Old Loan", balance: "1000", currency: "USD", subtype: "auto", accountable_type: "Loan", accountable: { subtype: "auto" } } },
