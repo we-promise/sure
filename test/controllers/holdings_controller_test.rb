@@ -12,6 +12,28 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "warns about positions that went below zero" do
+    # An import that records a sale without its purchase, as a provider or CSV can.
+    @account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    get holdings_url(account_id: @account.id)
+
+    assert_response :success
+    assert_match "Some positions went below zero", response.body
+    assert_match "Microsoft (MSFT): below zero from", response.body
+  end
+
+  test "shows no below-zero warning for a normal portfolio" do
+    get holdings_url(account_id: @account.id)
+
+    assert_response :success
+    assert_no_match "Some positions went below zero", response.body
+  end
+
   test "gets holding" do
     get holding_path(@holding)
 

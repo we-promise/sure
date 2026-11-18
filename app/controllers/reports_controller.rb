@@ -981,6 +981,10 @@ class ReportsController < ApplicationController
     def generate_transactions_csv
       require "csv"
 
+      # Category names are user-supplied and this is the export the app points
+      # at Google Sheets, so the cells that carry them are escaped against
+      # formula injection (CWE-1236). Only that column: the amount cells are
+      # formatted money such as "-$42.00", which the escape would turn to text.
       CSV.generate do |csv|
         # Build header row: Category + Month columns + Total
         month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
@@ -992,7 +996,7 @@ class ReportsController < ApplicationController
           csv << [ "INCOME" ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:income].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvSanitizer.sanitize(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -1024,7 +1028,7 @@ class ReportsController < ApplicationController
           csv << [ "EXPENSES" ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:expenses].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvSanitizer.sanitize(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
