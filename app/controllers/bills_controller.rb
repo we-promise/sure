@@ -228,11 +228,11 @@ class BillsController < ApplicationController
       # The next income EVENT, which is not the same fact as any one series'
       # next payday: two sources can land on the same day.
       arrivals = @next_income_by_series.values
-      first_arrival = arrivals.min_by(&:due_on)
+      first_arrival = arrivals.min_by(&:effective_due_on)
       if first_arrival
-        same_day = arrivals.select { |occurrence| occurrence.due_on == first_arrival.due_on }
+        same_day = arrivals.select { |occurrence| occurrence.effective_due_on == first_arrival.effective_due_on }
         total, unconvertible = total_of(same_day) { |occurrence| occurrence.resolved_expected_amount_money }
-        @next_income = { date: first_arrival.due_on, occurrences: same_day, total: total, unconvertible: unconvertible }
+        @next_income = { date: first_arrival.effective_due_on, occurrences: same_day, total: total, unconvertible: unconvertible }
       end
 
       @income_needs_attention = @income_series.any? { |series| !paycheck_income_plans?(series) }
@@ -480,86 +480,27 @@ class BillsController < ApplicationController
     end
 
     # What each upcoming payday has to cover: the open bills due from it up to
-    # the next payday. A passed payday carries nothing, since its bills are
-    # settled. A window with a bill that cannot be converted to the family
-    # currency carries nothing either, rather than a total that leaves it out.
+    # the next payday. The planner owns the window, so this figure is the one the
+    # Income plan shows for the same payday. A passed payday carries nothing,
+    # since its bills are settled. A window the planner cannot total (it reaches
+    # past the bills the overview loads, or holds a bill with no exchange rate)
+    # carries nothing either, rather than a total that leaves a bill out.
     def payday_due_before(paydays, today)
       upcoming = paydays.select { |payday| payday.scheduled? && payday.effective_due_on >= today }
       return {} if upcoming.empty?
 
-      income_records = Current.family.recurring_transactions
-                              .where(bill_type: "income", manual: true, status: "active")
-                              .accessible_by(Current.user)
-                              .to_a
-      income_ids = income_records.map(&:id)
+      windows = RecurringTransaction::PaycheckPlanner
+                  .new(Current.family, user: Current.user)
+                  .plan(through: upcoming.last.effective_due_on, cash: false)
+                  .to_a
+                  .index_by(&:starts_on)
 
-      # Every income payday that has not been skipped ends a window, including
-      # one already settled, so a window never runs past a payday that arrived.
-      effective_sql = RecurringOccurrence::EFFECTIVE_DUE_ON_SQL
-      payday_dates = Current.family.recurring_occurrences
-                            .where(recurring_transaction_id: income_ids)
-                            .where.not(status: "skipped")
-                            .where("#{effective_sql} >= ?", today)
-                            .distinct
-                            .pluck(Arel.sql(effective_sql))
-                            .map(&:to_date)
+      upcoming.each_with_object({}) do |payday, due_before|
+        window = windows[payday.effective_due_on]
+        next if window.nil? || !window.bills_total_known?
 
-      # Rows are only materialized up to a horizon, so the payday after the
-      # last upcoming one may not exist yet. Derive each series' next payday from
-      # its schedule, stepping past any the user skipped, so the last window is
-      # still bounded.
-      last_payday = upcoming.last.effective_due_on
-      # Compared by scheduled date (due_on), not effective date: a snooze moves
-      # effective_due_on but the schedule still produces the original date.
-      # Only rows after the last upcoming payday can change the derived successor.
-      income_rows = Current.family.recurring_occurrences
-                           .where(recurring_transaction_id: income_ids)
-                           .where("recurring_occurrences.due_on > ?", last_payday)
-                           .pluck(:recurring_transaction_id, :status, :due_on)
-      skipped_dates = income_rows.select { |_, status, _| status == "skipped" }
-                                 .group_by(&:first)
-                                 .transform_values { |rows| rows.map { |_, _, due| due.to_date }.to_set }
-      # A non-skipped row already sits on this scheduled date, so it is not derived.
-      scheduled_dates = income_rows.reject { |_, status, _| status == "skipped" }
-                                   .map { |id, _, due| [ id, due.to_date ] }
-                                   .to_set
-      derived = income_records.filter_map do |series|
-        skipped = skipped_dates.fetch(series.id, Set.new)
-        taken = ->(date) { skipped.include?(date) || scheduled_dates.include?([ series.id, date ]) }
-        # Schedules repeat before the income starts, so the successor cannot
-        # fall before the series' anchor date. The occurrence generator applies
-        # the same limit when it creates the stored rows.
-        candidate = series.schedule.next_occurrence_after([ last_payday, series.anchor_date&.prev_day ].compact.max)
-        # Step past every taken date. Each step moves later and taken is finite.
-        candidate = series.schedule.next_occurrence_after(candidate) while candidate && taken.call(candidate)
-        candidate
+        due_before[payday.id] = { amount: Money.new(window.bills_total, Current.family.currency), until: window.ends_on + 1 }
       end
-      payday_dates = (payday_dates + derived).uniq.sort
-
-      # Paydays on the same date share one window, so the bills are counted once.
-      upcoming.group_by(&:effective_due_on).flat_map do |from, same_day|
-        until_on = payday_dates.find { |date| date > from }
-
-        bills = Current.family.recurring_occurrences
-                       .where(recurring_transaction_id: payable_series_ids(statuses: %w[active]))
-                       .scheduled
-                       .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} >= ?", from)
-        bills = bills.where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} < ?", until_on) if until_on
-        # Only rows through the materialization horizon are stored, so a window
-        # that reaches past it cannot be totaled. Withhold its total instead of
-        # showing one that leaves out the bills due after the horizon.
-        next [] if until_on && until_on - 1 > Date.current + RecurringTransaction::OccurrenceGenerator::HORIZON_DAYS
-
-        bills = bills.to_a
-        preload_allocation_sums(bills)
-
-        total, unconvertible = total_of(bills) { |occurrence| occurrence.remaining_amount_money.abs }
-        next [] if unconvertible.positive?
-
-        same_day.map do |payday|
-          [ payday.id, { amount: total || Money.new(0, Current.family.currency), until: until_on } ]
-        end
-      end.to_h
     end
 
     # Manually declared income due this month or next, whether or not its date
@@ -586,11 +527,11 @@ class BillsController < ApplicationController
     # month, for every payable series (bills, subscriptions, and debt
     # payments alike). Inactive series ride along so their leftover open
     # occurrences can render as Dormant instead of haunting Past Due.
-    def payable_series_ids(statuses: %w[active inactive])
+    def payable_series_ids
       debt_accounts = Account.where(accountable_type: %w[CreditCard Loan]).select(:id)
 
       Current.family.recurring_transactions
-             .where(status: statuses)
+             .where(status: %w[active inactive])
              .where("amount > 0")
              .merge(
                RecurringTransaction.where(destination_account_id: nil)

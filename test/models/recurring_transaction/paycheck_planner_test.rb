@@ -460,6 +460,139 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_not bridge.short?, "an unknown balance is not evidence of a shortfall"
   end
 
+  # The Bills overview reads a window per payday from the plan, so each of
+  # these pins one rule that used to live in the controller.
+  test "through plans every payday up to the date and closes the last at the payday after it" do
+    first = Date.current + 3
+    create_series(name: "Paycheck", amount: -1840, due: first, preset: "weekly", income: true)
+
+    plan = Planner.new(@family, user: @user).plan(through: first + 7, cash: false)
+
+    assert_equal [ Date.current, first, first + 7 ], plan.map(&:starts_on)
+    assert_equal first + 13, plan.last.ends_on, "the last window runs to the day before the next payday"
+  end
+
+  test "the last window is closed by a payday derived from the schedule when none is stored" do
+    series = create_series(name: "Paycheck", amount: -3000, due: Date.current + 3, income: true)
+    last = series.recurring_occurrences.maximum(:due_on)
+    successor = series.schedule.next_occurrence_after(last)
+    assert series.recurring_occurrences.where(due_on: successor).none?, "precondition: the successor is not stored yet"
+
+    plan = Planner.new(@family, user: @user).plan(through: last, cash: false)
+
+    assert_equal last, plan.last.starts_on
+    assert_equal successor - 1, plan.last.ends_on
+  end
+
+  # A schedule repeats before the income it describes starts, so projecting it
+  # forward can land on a date that is not a payday yet.
+  test "a derived payday cannot fall before the income starts" do
+    existing = create_series(name: "Paycheck", amount: -3000, due: Date.current + 3, income: true)
+    last = existing.recurring_occurrences.maximum(:due_on)
+    later = create_series(name: "New job", amount: -2000, due: Date.current + 120, preset: "weekly", income: true)
+    assert later.recurring_occurrences.where(due_on: ..(Date.current + 90)).none?, "precondition: the new income has nothing stored yet"
+    assert_operator later.schedule.next_occurrence_after(last), :<, existing.schedule.next_occurrence_after(last),
+      "precondition: unanchored, the new income's schedule would end the window early"
+
+    plan = Planner.new(@family, user: @user).plan(through: last, cash: false)
+
+    assert_equal existing.schedule.next_occurrence_after(last) - 1, plan.last.ends_on
+  end
+
+  test "a payday that was skipped does not end a window" do
+    first = Date.current + 3
+    paycheck = create_series(name: "Paycheck", amount: -1840, due: first, preset: "weekly", income: true)
+    paycheck.recurring_occurrences.open_status.order(:due_on).second.skip!
+
+    plan = Planner.new(@family, user: @user).plan(through: first, cash: false)
+
+    assert_equal first + 13, plan.last.ends_on, "the window runs to the next payday that is still coming"
+  end
+
+  test "a payday that is already settled ends the window before it" do
+    first = Date.current + 3
+    create_series(name: "Paycheck", amount: -1840, due: first, preset: "weekly", income: true)
+    bonus = create_series(name: "Bonus", amount: -500, due: first + 3, income: true)
+    bonus.recurring_occurrences.open_status.order(:due_on).first.close!("paid", source: "user")
+
+    through = Planner.new(@family, user: @user).plan(through: first, cash: false)
+    default = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal [ Date.current, first ], through.map(&:starts_on)
+    assert_equal first + 2, through.last.ends_on, "money that already arrived ends the window"
+    assert_equal first + 6, default[1].ends_on, "the plan itself only slices by paychecks still to come"
+  end
+
+  test "a snoozed payday opens its window on the date it was snoozed to" do
+    first = Date.current + 3
+    paycheck = create_series(name: "Paycheck", amount: -1840, due: first, preset: "weekly", income: true)
+    paycheck.recurring_occurrences.open_status.order(:due_on).first.snooze!(first + 2)
+
+    default = Planner.new(@family, user: @user).plan(periods_limit: 3)
+    through = Planner.new(@family, user: @user).plan(through: first + 7, cash: false)
+
+    assert_equal first + 2, default[1].starts_on
+    assert_equal first + 1, default.first.ends_on
+    assert_equal 1840, default[1].income
+    assert_equal first + 2, through[1].starts_on, "every view opens the window on the same date"
+  end
+
+  test "bills_total counts a bill in full where it falls due, even when its paycheck cannot fund it" do
+    first = Date.current + 3
+    create_series(name: "Paycheck", amount: -1000, due: first, preset: "weekly", income: true)
+    create_series(name: "Rent", amount: 2150, due: first + 9)
+
+    window = Planner.new(@family, user: @user).plan(through: first + 7, cash: false).last
+
+    assert_equal first + 7, window.starts_on
+    assert_equal 2150, window.bills_total
+    assert_equal 1000, window.due_total, "due_total is only the share this paycheck funds"
+    assert window.bills_total_known?
+  end
+
+  test "a window that reaches past the bill horizon is flagged" do
+    create_series(name: "Paycheck", amount: -4000, due: Date.current + 3, preset: "quarterly", income: true)
+
+    window = Planner.new(@family, user: @user).plan(through: Date.current + 3, cash: false).last
+
+    assert_equal Date.current + 3, window.starts_on
+    assert window.beyond_horizon, "the bills due after the horizon are not stored yet"
+    assert_not window.bills_total_known?
+  end
+
+  test "a window inside the horizon is not flagged" do
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 3, preset: "weekly", income: true)
+
+    plan = Planner.new(@family, user: @user).plan(through: Date.current + 10, cash: false)
+
+    assert plan.none?(&:beyond_horizon)
+    assert plan.all?(&:bills_total_known?)
+  end
+
+  test "a window holding a bill with no exchange rate cannot state a total" do
+    first = Date.current + 3
+    create_series(name: "Paycheck", amount: -1840, due: first, preset: "weekly", income: true)
+    @family.recurring_transactions.create!(
+      name: "Tokyo storage", account: @account, amount: 50_000, currency: "JPY",
+      bill_type: "bill", expected_day_of_month: (first + 2).day,
+      anchor_date: first + 2, last_occurrence_date: first + 2,
+      next_expected_date: first + 2, status: "active", manual: true
+    )
+    assert_equal 0, ExchangeRate.where(from_currency: "JPY", to_currency: "USD").count
+
+    plan = Planner.new(@family, user: @user).plan(through: first, cash: false)
+
+    assert plan.last.unconvertible
+    assert_not plan.last.bills_total_known?
+    assert plan.first.bills_total_known?, "only the window holding the bill is affected"
+  end
+
+  test "cash: false leaves the balance out" do
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 3, preset: "weekly", income: true)
+
+    assert_nil Planner.new(@family, user: @user).plan(through: Date.current + 3, cash: false).first.cash_on_hand
+  end
+
   private
     # The family fixture carries more than one deposit account, and the plan
     # sums all of them, so a test that means to pin the cash has to set them all.

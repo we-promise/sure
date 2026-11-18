@@ -209,6 +209,22 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, response.body.scan(I18n.t("bills.payday.due_before", amount: money_string(900), date: until_text)).size
   end
 
+  test "a snoozed payday's due-before window starts on the date it was snoozed to" do
+    travel_to Date.new(2026, 10, 23)
+    income = declare_income(name: "Santa Maria", amount: -1700, payday: Date.new(2026, 10, 26))
+    income.recurring_occurrences.find_by!(due_on: Date.new(2026, 10, 26)).snooze!(Date.new(2026, 10, 28))
+    declare_bill(name: "Rent", amount: 900, due: Date.new(2026, 10, 27))
+    declare_bill(name: "Gym", amount: 50, due: Date.new(2026, 10, 29))
+
+    get bills_url
+
+    assert_response :success
+    until_text = I18n.l(Date.new(2026, 11, 26), format: "%-d %b")
+    assert_match I18n.t("bills.payday.due_before", amount: money_string(50), date: until_text), response.body,
+      "only the bill due on or after the snoozed date counts toward it"
+    assert_no_match I18n.t("bills.payday.due_before", amount: money_string(950), date: until_text), response.body
+  end
+
   test "index excludes income and inactive rows but shows debt payments" do
     create_bill(name: "Real bill", amount: 50)
     create_bill(name: "Salary deposit", amount: -2000)

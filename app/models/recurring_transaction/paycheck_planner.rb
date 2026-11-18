@@ -10,11 +10,33 @@ class RecurringTransaction
     # pre-converted to the family currency so no view has to convert money.
     Item = Data.define(:occurrence, :share, :remaining_total, :due_in_period)
 
+    # `beyond_horizon` and `unconvertible` say whether the window's bills are
+    # all accounted for. Occurrences are only materialized up to a horizon, so a
+    # window that reaches past it is missing the bills due after it, and a bill
+    # with no exchange rate never makes it into the figures. Both default to
+    # false so a period built by hand stays valid.
     Period = Data.define(
       :starts_on, :ends_on, :income, :income_sources, :items,
       :due_total, :reserved_total, :obligation_total, :remaining, :leading, :final,
-      :cash_on_hand
+      :cash_on_hand, :beyond_horizon, :unconvertible
     ) do
+      def initialize(beyond_horizon: false, unconvertible: false, **attributes)
+        super(beyond_horizon: beyond_horizon, unconvertible: unconvertible, **attributes)
+      end
+
+      # What the bills falling due inside this window cost in full. Not
+      # `due_total`, which is only the share this window's own paycheck funds:
+      # a bill that outgrows its paycheck leaves the rest as reserves in
+      # earlier windows, but it still falls due here.
+      def bills_total
+        items_due.sum(&:remaining_total)
+      end
+
+      # Whether bills_total can be stated without leaving a bill out.
+      def bills_total_known?
+        !beyond_horizon && !unconvertible
+      end
+
       # The window between today and the next payday: nothing arrives in it, so
       # what it needs must come from cash already in hand.
       def bridge?
@@ -79,11 +101,19 @@ class RecurringTransaction
     end
 
     # nil when no income schedule is declared (the view prompts for one).
-    def plan(periods_limit: 3)
+    #
+    # By default the plan covers `periods_limit` paychecks after the leading
+    # window. With `through:` it covers every paycheck up to that date instead,
+    # and closes the last one at the payday after it, derived from the income
+    # schedule when no row for it is stored yet. Windows then also end at paydays
+    # that are already settled, so a window never runs past a payday that has
+    # arrived. `cash: false` skips the cash balance for callers that do not
+    # show it.
+    def plan(periods_limit: 3, through: nil, cash: true)
       incomes = upcoming_income_occurrences
       return nil if incomes.empty?
 
-      boundaries = period_boundaries(incomes, periods_limit)
+      boundaries = through ? boundaries_through(incomes, through) : period_boundaries(incomes, periods_limit)
       periods = build_periods(boundaries, incomes)
       # A single boundary (every upcoming paycheck lands today) yields no
       # periods to spread anything across.
@@ -108,7 +138,9 @@ class RecurringTransaction
           remaining: period[:income] - obligation_total,
           leading: period[:leading],
           final: period[:final],
-          cash_on_hand: period[:leading] ? cash_on_hand : nil
+          cash_on_hand: (cash && period[:leading]) ? cash_on_hand : nil,
+          beyond_horizon: period[:ends_on] > Date.current + OccurrenceGenerator::HORIZON_DAYS,
+          unconvertible: period[:unconvertible]
         )
       end
     end
@@ -132,23 +164,100 @@ class RecurringTransaction
                 .joins(:recurring_transaction)
                 .where(recurring_transactions: { status: :active, bill_type: :income, manual: true })
                 .merge(RecurringTransaction.accessible_by(user))
-                .where("recurring_occurrences.due_on >= ?", Date.current)
+                # The snoozed date, the one the rows list a payday under, so a
+                # snoozed payday opens the same window in every view.
+                .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} >= ?", Date.current)
                 .includes(:recurring_transaction)
-                .order(:due_on)
+                .order(Arel.sql(RecurringOccurrence::EFFECTIVE_DUE_ON_SQL), :id)
                 .to_a
       end
 
       # Today up to the first paycheck is its own period, then one per paycheck.
       def period_boundaries(incomes, periods_limit)
-        dates = incomes.map(&:due_on).uniq.first(periods_limit + 1)
+        dates = incomes.map(&:effective_due_on).uniq.first(periods_limit + 1)
         boundaries = ([ Date.current ] + dates).uniq
 
         boundaries.first(periods_limit + 2)
       end
 
+      # One period per open payday up to `through`, closed by the first payday
+      # after the last of them. Settled paydays that fall between are boundaries
+      # too; they open a window with no income of its own, which carries its
+      # bills like any other and never reaches a view that does not ask for it.
+      def boundaries_through(incomes, through)
+        last_start = incomes.map(&:effective_due_on).select { |date| date <= through }.max
+        return [] if last_start.nil?
+
+        dates = window_dates(last_start)
+        closing = dates.find { |date| date > last_start }
+
+        ([ Date.current ] + dates.select { |date| date <= last_start } + [ closing ].compact).uniq
+      end
+
+      # Declared income only, like upcoming_income_occurrences, and the series
+      # the successor paydays are derived from.
+      def income_series
+        @income_series ||=
+          family.recurring_transactions
+                .where(bill_type: "income", manual: true, status: "active")
+                .accessible_by(user)
+                .to_a
+      end
+
+      # Every date a window can end on: each income payday that has not been
+      # skipped, settled ones included, plus the paydays that follow the last
+      # one with a window.
+      def window_dates(last_start)
+        (stored_window_dates + derived_successor_dates(last_start)).uniq.sort
+      end
+
+      def stored_window_dates
+        family.recurring_occurrences
+              .where(recurring_transaction_id: income_series.map(&:id))
+              .where.not(status: "skipped")
+              .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} >= ?", Date.current)
+              .distinct
+              .pluck(Arel.sql(RecurringOccurrence::EFFECTIVE_DUE_ON_SQL))
+              .map(&:to_date)
+      end
+
+      # Rows are only materialized up to a horizon, so the payday after the last
+      # stored one may not exist yet. Derive each series' next payday from its
+      # schedule, stepping past any the user skipped, so the last window is
+      # still bounded.
+      #
+      # Compared by scheduled date (due_on), not effective date: a snooze moves
+      # effective_due_on but the schedule still produces the original date. Only
+      # rows after `last_start` can change the derived successor.
+      def derived_successor_dates(last_start)
+        rows = family.recurring_occurrences
+                     .where(recurring_transaction_id: income_series.map(&:id))
+                     .where("recurring_occurrences.due_on > ?", last_start)
+                     .pluck(:recurring_transaction_id, :status, :due_on)
+        skipped_dates = rows.select { |_, status, _| status == "skipped" }
+                            .group_by(&:first)
+                            .transform_values { |series_rows| series_rows.map { |_, _, due| due.to_date }.to_set }
+        # A non-skipped row already sits on this scheduled date, so it is not derived.
+        scheduled_dates = rows.reject { |_, status, _| status == "skipped" }
+                              .map { |id, _, due| [ id, due.to_date ] }
+                              .to_set
+
+        income_series.filter_map do |series|
+          skipped = skipped_dates.fetch(series.id, Set.new)
+          taken = ->(date) { skipped.include?(date) || scheduled_dates.include?([ series.id, date ]) }
+          # Schedules repeat before the income starts, so the successor cannot
+          # fall before the series' anchor date. The occurrence generator
+          # applies the same limit when it creates the stored rows.
+          candidate = series.schedule.next_occurrence_after([ last_start, series.anchor_date&.prev_day ].compact.max)
+          # Step past every taken date. Each step moves later and taken is finite.
+          candidate = series.schedule.next_occurrence_after(candidate) while candidate && taken.call(candidate)
+          candidate
+        end
+      end
+
       def build_periods(boundaries, incomes)
         boundaries.each_cons(2).map.with_index do |(starts_on, next_start), index|
-          arrivals = incomes.select { |occurrence| occurrence.due_on == starts_on }
+          arrivals = incomes.select { |occurrence| occurrence.effective_due_on == starts_on }
 
           {
             starts_on: starts_on,
@@ -157,7 +266,8 @@ class RecurringTransaction
             income_sources: arrivals.map { |occurrence| occurrence.recurring_transaction.display_name }.uniq,
             items: [],
             leading: index.zero?,
-            final: false
+            final: false,
+            unconvertible: false
           }
         end.tap { |periods| periods.last[:final] = true if periods.any? }
       end
@@ -182,9 +292,6 @@ class RecurringTransaction
                         .sort_by { |occurrence| [ occurrence.effective_due_on, occurrence.id ] }
 
         occurrences.each do |occurrence|
-          remaining = to_family_currency(occurrence.remaining_amount_money)
-          next unless remaining.positive?
-
           # A snoozed bill falls due on the date it was snoozed to, the one the
           # overview's pay-period markers file it under. A past-due open
           # occurrence still needs paying; it lands whole in the leading
@@ -192,6 +299,18 @@ class RecurringTransaction
           effective_due = [ occurrence.effective_due_on, periods.first[:starts_on] ].max
           home = periods.index { |period| effective_due.between?(period[:starts_on], period[:ends_on]) }
           next if home.nil?
+
+          # A bill with no exchange rate is counted and left out, and its window
+          # remembers it, so a total for that window is never stated as if the
+          # bill were not there.
+          remaining = begin
+            occurrence.remaining_amount_money.exchange_to(family.currency).amount
+          rescue Money::ConversionError
+            @unconvertible_count += 1
+            periods[home][:unconvertible] = true
+            next
+          end
+          next unless remaining.positive?
 
           funded = [ remaining, [ available[home], 0 ].max ].min
           uncovered = remaining - funded
