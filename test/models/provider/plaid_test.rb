@@ -241,9 +241,19 @@ class Provider::PlaidTest < ActiveSupport::TestCase
         request.is_a?(Plaid::WebhookVerificationKeyGetRequest) && request.key_id == jwk.kid
       end.returns(Struct.new(:key).new(jwk.export))
 
-      provider = Provider::Plaid.new(nil)
+      config = Plaid::Configuration.new
+      config.server_index = Plaid::Configuration::Environment["sandbox"]
+      provider = Provider::Plaid.new(config)
       provider.instance_variable_set(:@client, client)
 
       [ provider, jwk, key, body ]
+    end
+
+    def get_access_token
+      VCR.use_cassette("plaid/access_token") do
+        public_token = @plaid.create_public_token
+        exchange_response = @plaid.exchange_public_token(public_token)
+        exchange_response.access_token
+      end
     end
 end
