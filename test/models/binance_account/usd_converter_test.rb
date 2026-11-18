@@ -24,6 +24,18 @@ class BinanceAccount::UsdConverterTest < ActiveSupport::TestCase
     assert_nil rate_date
   end
 
+  test "zero needs no exchange rate in any target currency" do
+    ExchangeRate.expects(:find_or_fetch_rate).never
+    host = Host.new("AED")
+
+    [ 0, 0.0, 0.to_d ].each do |zero|
+      amount, stale, rate_date = host.send(:convert_from_usd, zero, date: Date.current)
+      assert_equal 0.to_d, amount
+      assert_equal false, stale
+      assert_nil rate_date
+    end
+  end
+
   test "returns converted amount when exact rate exists" do
     date = Date.new(2026, 3, 28)
     ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: date, rate: 0.92)

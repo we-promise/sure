@@ -68,10 +68,48 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "EUR", @account.currency
     assert_equal 850.to_d, @account.balance
     assert_equal 25.to_d, @account.cash_balance
-    assert_equal({ "previous_sync" => "preserved" }, @ba.extra)
+    assert_equal "preserved", @ba.extra["previous_sync"]
+    assert_equal true, @ba.extra.dig("binance", "stale_rate")
+    assert_equal Date.current.to_s, @ba.extra.dig("binance", "rate_target_date")
+    assert_nil @ba.extra.dig("binance", "rate_date_used")
     diagnostic = DebugLogEntry.where(source: "BinanceAccount::Processor", provider_key: "binance").order(:created_at).last
     assert_equal @account.account_providers.sole.id, diagnostic.account_provider_id
     assert_equal "EUR", diagnostic.metadata["to_currency"]
+  end
+
+  test "an empty non-USD wallet clears the old balance and FX warning without a rate" do
+    @account.update!(balance: 850)
+    @ba.update!(current_balance: 0, extra: { "binance" => { "stale_rate" => true } })
+    ExchangeRate.expects(:find_or_fetch_rate).never
+
+    BinanceAccount::Processor.new(@ba).process
+
+    assert_equal 0.to_d, @account.reload.balance
+    assert_equal "EUR", @account.currency
+    assert_equal false, @ba.reload.extra.dig("binance", "stale_rate")
+    assert_empty @item.stale_rate_accounts
+  end
+
+  test "a rejected conversion remains visible after the item catches the error and clears on recovery" do
+    @account.update!(balance: 850)
+    @ba.update!(extra: { "binance" => { "stale_rate" => false } })
+    BinanceItem.any_instance.stubs(:binance_provider).returns(nil)
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    results = @item.process_accounts
+
+    assert_equal false, results.sole[:success]
+    assert_equal 850.to_d, @account.reload.balance
+    assert_equal [ @ba.id ], @item.stale_rate_accounts.pluck(:id)
+    assert_equal Date.current.to_s, @ba.reload.extra.dig("binance", "rate_target_date")
+
+    rate = ExchangeRate.new(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.92)
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(rate)
+    results = @item.process_accounts
+
+    assert_equal true, results.sole[:success]
+    assert_equal 920.to_d, @account.reload.balance
+    assert_empty @item.stale_rate_accounts
   end
 
   test "clears stale flag on subsequent sync when exact rate found" do

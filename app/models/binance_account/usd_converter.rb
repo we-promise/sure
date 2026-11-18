@@ -13,6 +13,7 @@ module BinanceAccount::UsdConverter
     #   stale is false when the exact date rate was found, true otherwise.
     #   rate_date_used is nil when the exact rate was used.
     def convert_from_usd(amount, date: Date.current)
+      return [ 0.to_d, false, nil ] if amount.to_d.zero?
       return [ amount, false, nil ] if target_currency == "USD"
 
       rate = ExchangeRate.find_or_fetch_rate(from: "USD", to: target_currency, date: date)

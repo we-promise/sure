@@ -41,6 +41,7 @@ class BinanceAccount::Processor
     begin
       process_account!
     rescue Money::ConversionError => e
+      binance_account.update!(extra: binance_account.extra.to_h.deep_merge(build_stale_extra(true, nil, e.date)))
       DebugLogEntry.capture(
         category: "provider_sync", level: "error", message: e.message,
         source: self.class.name, provider_key: "binance",
