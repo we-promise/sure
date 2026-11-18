@@ -757,6 +757,11 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "option[selected][value=?]", "once"
     assert_select "input[name=?][value=?]", "recurring_transaction[frequency_once_on]", due.iso8601
+
+    get bill_url(bill, display: "history"),
+        headers: { "Turbo-Frame" => ActionView::RecordIdentifier.dom_id(bill, :history) }
+    assert_response :success
+    assert_match I18n.t("bills.detail.once_kind_hint"), response.body
   end
 
   test "a one-off dated in the past still materializes, and its date can move" do

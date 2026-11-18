@@ -43,6 +43,9 @@
             <%= t("bills.detail.rule_learned_tolerance", percent: number_to_percentage(hints[:learned_pct], precision: 1, format: "%n%")) %>
           </p>
         <% end %>
+        <% if series.one_off? %>
+          <p class="text-xs text-secondary"><%= t("bills.detail.once_kind_hint") %></p>
+        <% end %>
       </div>
 
       <%# What it has actually cost: the shape over twelve months, then the figures. %>
