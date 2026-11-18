@@ -61,6 +61,37 @@ class ProviderItem::CardComponentTest < ActiveSupport::TestCase
     assert_includes some_unlinked, ERB::Util.html_escape(I18n.t("brex_items.brex_item.setup_description", linked: 2, total: 7))
   end
 
+  # Both setup prompts are one DS::EmptyState: the branch picks only the title
+  # and description, and the action is the setup link.
+  test "each setup prompt renders as a DS::EmptyState with the setup link" do
+    prompts = {
+      { linked: 2, unlinked: 5, total: 7 } => [
+        I18n.t("brex_items.brex_item.setup_needed"),
+        I18n.t("brex_items.brex_item.setup_description", linked: 2, total: 7)
+      ],
+      { linked: 0, unlinked: 0, total: 0 } => [
+        I18n.t("brex_items.brex_item.no_accounts_title"),
+        I18n.t("brex_items.brex_item.no_accounts_description")
+      ]
+    }
+
+    prompts.each do |counts, (title, description)|
+      html = render_card(user: :family_admin, visible: :all) do |visible|
+        ProviderItem::CardComponent.new(item: @item, visible_accounts: visible, account_counts_map: { @item.id => counts })
+      end
+      page = Nokogiri::HTML5.fragment(html)
+
+      empty_states = page.css("div.text-center.py-12")
+      assert_equal 1, empty_states.size, "#{counts}: expected one DS::EmptyState"
+      empty_state = empty_states.first
+      assert_equal [ title, description ], empty_state.css("p").map { |p| p.text.strip }
+      link = empty_state.at_css("a[href='/brex_items/#{@item.id}/setup_accounts']")
+      assert link, "#{counts}: the setup link is the empty state's action"
+      assert_includes link.text, I18n.t("brex_items.brex_item.setup_action")
+      assert_empty page.css("div.p-4.gap-3.justify-center"), "#{counts}: the hand-built prompt is gone"
+    end
+  end
+
   test "snapshots treat a blank CSRF token as a difference" do
     assert_equal %(<input name="authenticity_token" value="">\n), normalise_provider_item_html(%(<input name="authenticity_token" value="">))
     assert_equal %(<input name="authenticity_token" value="CSRF">\n), normalise_provider_item_html(%(<input name="authenticity_token" value="abc123">))
