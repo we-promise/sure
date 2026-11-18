@@ -12,7 +12,7 @@ de:
       turn_off_suggestions: Regelvorschläge ausschalten
       message: "Auf %{category_name} geändert"
     classifier_rules:
-      category_classifier: Kategorie-Klassifikator
+      category_classifier: Kategorie-Zuordnung (Bayes)
       merchant_matcher: Händlererkennung
     actions:
       to_label: auf
