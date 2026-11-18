@@ -28,6 +28,18 @@ class RecurringAllocation < ApplicationRecord
 
   before_validation :default_paid_on
 
+  # Confirmed payments of the family's bills. Transfers to liabilities are
+  # not spending and stay out, as do tombstones of ended series (a deleted or
+  # dismissed bill), which the Allocator also ignores so the entry can be
+  # matched again.
+  scope :to_family_bills, ->(family) {
+    confirmed
+      .joins(recurring_occurrence: :recurring_transaction)
+      .merge(RecurringTransaction.outflows)
+      .where(recurring_transactions: { family_id: family.id })
+      .where.not(recurring_transactions: { status: "ended" })
+  }
+
   private
     def currency_matches_occurrence
       return if recurring_occurrence.nil? || currency == recurring_occurrence.currency

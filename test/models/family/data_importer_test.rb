@@ -23,8 +23,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:accounts].count
-    account = result[:accounts].first
+    assert_equal 1, result[:account_ids].count
+    account = Account.find(result[:account_ids].first)
     assert_equal "Test Checking", account.name
     assert_equal 1500.0, account.balance.to_f
     assert_equal "USD", account.currency
@@ -196,7 +196,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     result = Family::DataImporter.new(@family, ndjson, account_targets: { "old-account" => account }).import!
 
-    assert_empty result[:accounts]
+    assert_empty result[:account_ids]
     assert_equal [ "Grocer" ], account.entries.pluck(:name)
   end
 
@@ -232,7 +232,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       }
     ])
 
-    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+    account_id = Family::DataImporter.new(@family, ndjson).import![:account_ids].first
+    account = Account.find(account_id)
 
     assert account.reload.logo_brandfetch?
     assert_not account.logo_auto_fetchable?
@@ -254,9 +255,48 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       }
     ])
 
-    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+    account_id = Family::DataImporter.new(@family, ndjson).import![:account_ids].first
+    account = Account.find(account_id)
 
     assert account.reload.logo_automatic?
+  end
+
+  test "restores an account's cost basis method" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Brokerage",
+          balance: "1500.00",
+          currency: "USD",
+          cost_basis_method: "fifo",
+          accountable_type: "Investment",
+          accountable: {}
+        }
+      }
+    ])
+
+    account_id = Family::DataImporter.new(@family, ndjson).import![:account_ids].first
+
+    assert Account.find(account_id).cost_basis_fifo?
+  end
+
+  test "an export without a known cost basis method imports as average" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: { id: "old-account-1", name: "Older", balance: "100", currency: "USD", accountable_type: "Investment", accountable: {} }
+      },
+      {
+        type: "Account",
+        data: { id: "old-account-2", name: "Newer", balance: "100", currency: "USD", cost_basis_method: "some-future-method", accountable_type: "Investment", accountable: {} }
+      }
+    ])
+
+    account_ids = Family::DataImporter.new(@family, ndjson).import![:account_ids]
+
+    assert_equal %w[average average], Account.where(id: account_ids).pluck(:cost_basis_method)
   end
 
   test "imports non-destructive account status from ndjson" do
@@ -277,7 +317,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    account = result[:accounts].first
+    account = Account.find(result[:account_ids].first)
     assert_equal "Closed Checking", account.name
     assert_equal "disabled", account.status
   end
@@ -300,7 +340,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    account = result[:accounts].first
+    account = Account.find(result[:account_ids].first)
     assert_equal "Pending Delete Checking", account.name
     assert_equal "active", account.status
   end
@@ -1023,7 +1063,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:entries].count
+    assert_equal 1, result[:entry_ids].count
 
     transaction = @family.transactions.first
     assert_not_nil transaction
@@ -1128,8 +1168,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     parent_entry = @family.entries.find_by!(name: "ATM withdrawal plus fee")
     assert parent_entry.split_parent?
     assert_equal true, parent_entry.excluded
-    assert_equal 4, result[:entries].count
-    assert_includes result[:entries].map(&:id), parent_entry.id
+    assert_equal 4, result[:entry_ids].count
+    assert_includes result[:entry_ids], parent_entry.id
 
     transfer_child = parent_entry.child_entries.find_by!(name: "Cash movement")
     fee_child = parent_entry.child_entries.find_by!(name: "ATM fee")
@@ -1335,7 +1375,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     result = importer.import!
 
     # Account + Opening balance + Trade entry
-    assert_equal 1, result[:entries].count
+    assert_equal 1, result[:entry_ids].count
 
     trade = @family.trades.first
     assert_not_nil trade
@@ -1799,7 +1839,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:entries].count
+    assert_equal 1, result[:entry_ids].count
 
     account = @family.accounts.find_by(name: "Property")
     valuation = account.valuations.joins(:entry).find_by(entries: { name: "Updated valuation" })
@@ -3194,8 +3234,31 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:accounts].count
-    assert_equal "Valid Account", result[:accounts].first.name
+    assert_equal 1, result[:account_ids].count
+    account_id = result[:account_ids].first
+    assert_equal "Valid Account", Account.find(account_id).name
+  end
+
+  test "session import persists source mappings without retaining them on the session" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    ndjson = [
+      { type: "Account", data: {
+        id: "acct-1", name: "Mapped Account", balance: "100.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } },
+      { type: "Transaction", data: {
+        id: "txn-1", account_id: "acct-1", date: "2024-01-15", amount: "-25.00",
+        name: "Coffee", currency: "USD"
+      } }
+    ].map(&:to_json).join("\n")
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    # The session lives for every chunk of a publish run; anything built onto
+    # its association stays in memory until the whole run ends.
+    assert_empty session.source_mappings.target
+    assert_empty @family.import_source_mappings.target
+    assert_equal %w[Account Transaction], ImportSourceMapping.where(import_session_id: session.id).pluck(:source_type).sort
   end
 
   test "skips unsupported record types" do
@@ -3219,7 +3282,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     importer = Family::DataImporter.new(@family, ndjson)
     result = importer.import!
 
-    assert_equal 1, result[:accounts].count
+    assert_equal 1, result[:account_ids].count
   end
 
   test "full import scenario with all entity types" do
@@ -3338,7 +3401,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     result = importer.import!
 
     # Verify all entities were created
-    assert_equal 1, result[:accounts].count
+    assert_equal 1, result[:account_ids].count
     assert_equal 1, @family.categories.count
     assert_equal 1, @family.tags.count
     assert_equal 1, @family.merchants.count
