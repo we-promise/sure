@@ -22,7 +22,7 @@ ru:
               split_name_required: 'у части №%{index} не указано название'
               split_name_too_long: 'название части №%{index} слишком длинное (не более 255 символов)'
               split_name_invalid: 'название части №%{index} содержит недопустимые символы'
-              split_type_invalid: 'тип части №%{index} должен быть «фиксированный» или «процентный»'
+              split_type_invalid: 'тип части №%{index} должен быть фиксированным или процентным'
               split_share_invalid: 'доля части №%{index} должна быть положительным числом'
               split_category_invalid: 'категория части №%{index} не принадлежит этой семье/группе'
               split_merchant_invalid: 'продавец для части №%{index} не принадлежит этой семье/группе'

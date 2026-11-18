@@ -115,7 +115,7 @@ ru:
       no_accounts_description: 'Загрузите данные счетов Up и выберите, какие из них связать.'
       no_accounts_title: Счета ещё не импортированы
       setup_action: Настроить счета
-      setup_description: 'Связано %{linked} из %{total} счетов.'
+      setup_description: 'Связано счетов: %{linked} из %{total}.'
       setup_needed: Требуется настройка счетов
       status_never: Ещё не синхронизировалось
       status_with_summary: Синхронизировано %{timestamp} назад · %{summary}

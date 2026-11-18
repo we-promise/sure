@@ -6,7 +6,7 @@ ru:
       success: Новый продавец успешно создан
     destroy:
       success: Продавец успешно удалён
-      unlinked_success: Продавец удалён из ваших операций
+      unlinked_success: Продавец отвязан от ваших операций
     edit:
       title: Редактировать продавца
     enhance:

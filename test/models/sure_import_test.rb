@@ -924,6 +924,15 @@ class SureImportTest < ActiveSupport::TestCase
     )
   end
 
+  test "preflight localizes provider merchant diff fields" do
+    ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn", website_url: "https://amazon.com")
+    attach_ndjson(provider_merchant_ndjson(website_url: "https://amazon.co.uk"))
+
+    I18n.with_locale(:ru) do
+      assert_includes @import.sure_preflight.provider_merchant_diff_warnings.first[:message], "поля Сайт отличаются"
+    end
+  end
+
   test "preflight does not warn when the provider merchant is new or identical" do
     attach_ndjson(provider_merchant_ndjson(website_url: "https://amazon.com"))
     assert_empty @import.sure_preflight.provider_merchant_diff_warnings

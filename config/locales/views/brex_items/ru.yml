@@ -226,7 +226,7 @@ ru:
       subtypes:
         depository:
           cd: Срочный вклад
-          checking: Расчётный
+          checking: Текущий
           hsa: Счёт медицинских сбережений
           money_market: Денежный рынок
           savings: Сберегательный

@@ -56,7 +56,11 @@ ru:
           few: '%{count} траты за последние 30 дней (%{amount})'
           many: '%{count} трат за последние 30 дней (%{amount})'
           other: '%{count} траты за последние 30 дней (%{amount})'
-        reconciliation: 'Сверено %{matched} из %{total} балансов по счетам.'
+        reconciliation:
+          one: 'Сверен %{matched} из %{total} баланс по счёту.'
+          few: 'Сверено %{matched} из %{total} баланса по счетам.'
+          many: 'Сверено %{matched} из %{total} балансов по счетам.'
+          other: 'Сверено %{matched} из %{total} баланса по счетам.'
         sync_history: Последние синхронизации
         sync_status:
           completed: Завершена

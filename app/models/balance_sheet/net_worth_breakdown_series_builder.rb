@@ -21,6 +21,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
         start_date: period.start_date,
         end_date: period.end_date,
         interval: INTERVAL,
+        locale: I18n.locale.to_s,
         trend: net_series.trend,
         values: [ nil, *net_series.values ].each_cons(2).map do |previous, value|
           breakdown_value(value, previous, groups)

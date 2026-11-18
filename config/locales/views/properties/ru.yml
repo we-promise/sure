@@ -9,7 +9,7 @@ ru:
       country_label: Страна
       country_placeholder: Название страны
       postal_code_label: Почтовый индекс
-      postal_code_placeholder: '12345'
+      postal_code_placeholder: '101000'
       save: Сохранить
       state_region_label: Область/Регион
       state_region_placeholder: Область или регион
@@ -32,12 +32,12 @@ ru:
       area_placeholder: '2000'
       area_unit: Единица измерения
       country: Страна
-      country_placeholder: 'US'
+      country_placeholder: 'Россия'
       locality: Город
       locality_placeholder: Город или населённый пункт
       none: Нет
       postal_code: Почтовый индекс
-      postal_code_placeholder: '94105'
+      postal_code_placeholder: '101000'
       region: Область/Регион
       region_placeholder: Область или регион
       subtype_prompt: Выберите тип недвижимости

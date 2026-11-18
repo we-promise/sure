@@ -12,7 +12,7 @@ ru:
         good: В норме
         over: Превышение бюджета
         warning: Близко к лимиту
-      suggested_daily: 'Рекомендуемый расход в день: %{amount}. Осталось дней: %{days}.'
+      suggested_daily: 'Рекомендуемый расход в день: %{amount}. Осталось: %{days} дн.'
       title: Выполнение бюджета
     empty_state:
       add_account: Добавить счёт
