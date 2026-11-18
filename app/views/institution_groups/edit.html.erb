@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", name: @bundle.name)) %>
+  <% dialog.with_body do %>
+    <%= render "institution_groups/form", institution_group: @institution_group, bundle: @bundle %>
+  <% end %>
+<% end %>

@@ -1,0 +1,29 @@
+<%# locals: (institution_group:, bundle:) %>
+<% logo_preview = institution_group.logo_preview(bundle.lead_account, name: bundle.name) %>
+<%= styled_form_with model: institution_group, url: institution_group_path(bundle), method: :patch, class: "space-y-4" do |form| %>
+  <% if institution_group.errors.any? %>
+    <%= render DS::Alert.new(message: institution_group.errors.full_messages.to_sentence, variant: :error) %>
+  <% end %>
+
+  <%# Blank fields follow the accounts, so the form shows what they give. %>
+  <%= form.text_field :name, value: institution_group.name || bundle.inherited_name,
+                      label: t(".name"), placeholder: t(".name_placeholder"), autofocus: true %>
+
+  <%= form.text_field :institution_domain, value: institution_group.institution_domain || bundle.inherited_domain,
+                      label: t(".institution_domain"), placeholder: t(".institution_domain_placeholder") %>
+
+  <%# The account form's icon picker, showing the group's own icon; saving
+      gives the icon chosen to the group and every account. %>
+  <%= render "accounts/logo_picker", form: form, account: logo_preview, name_field: "name",
+                                     label: t(".icon"), hint: t(".icon_hint") %>
+  <p class="text-xs text-secondary"><%= t(".accounts_hint") %></p>
+
+  <%= form.select :currency,
+                  currency_picker_options_for_family(extra: [ institution_group.currency, bundle.currency ].compact).map { |code| [ currency_label(code), code ] },
+                  { label: t(".currency"), include_blank: t(".currency_default") } %>
+  <p class="text-xs text-secondary"><%= t(".currency_hint") %></p>
+
+  <%= form.submit t(".save") %>
+<% end %>
+
+<%= render "accounts/logo_forms", account: logo_preview, url: logo_options_institution_group_path(bundle) %>

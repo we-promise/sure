@@ -96,6 +96,19 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     MarketDataImporter.new(mode: :snapshot).import_exchange_rates
   end
 
+  test "syncs account currencies into the currency their institution entry is shown in" do
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Wise GBP", currency: "GBP", balance: 100, accountable: Depository.new,
+                                      institution_name: "Wise", institution_domain: "wise.com")
+    family.accounts.create!(name: "Other GBP", currency: "GBP", balance: 100, accountable: Depository.new, institution_name: "Monzo")
+    family.institution_groups.create!(key: InstitutionGroup.key_for(account), currency: "EUR")
+
+    pairs = MarketDataImporter.new(mode: :snapshot).required_exchange_rate_pairs.map { |pair| [ pair[:source], pair[:target] ] }
+
+    assert_includes pairs, %w[GBP EUR]
+    assert_includes pairs, %w[GBP USD]
+  end
+
   test "syncs security prices" do
     security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
     family = Family.create!(name: "Smith", currency: "USD")

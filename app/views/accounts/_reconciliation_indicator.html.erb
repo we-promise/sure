@@ -1,0 +1,38 @@
+<%# locals: (indicator:, html_class: nil) %>
+<%#
+  Status only, never an action — the account itself offers no
+  reconciliation control, so the tooltip explains the colour on hover and
+  is exposed to AT via aria-describedby.
+
+  On a logo, the corner offset lives on the tooltip wrapper (`html_class:`),
+  not on the dot. The wrapper is inline-level, so in flow it opens a line box
+  inside the logo's `relative` container and grows that container — which
+  pushed the `absolute` dot clear of the corner. Out of flow, the wrapper
+  sizes to the dot and anchors to the container as intended. Without a logo
+  (an account listed under its institution in the sidebar) it sits in line.
+
+  The dot carries `data-row-click-ignore` so a click on it doesn't open the
+  account row (ClickableRowController#open).
+%>
+<% if indicator == :matched %>
+  <%= render DS::Tooltip.new(
+        text: t("accounts.reconciliation_indicator.matched"),
+        as: :span,
+        html_class: html_class,
+        trigger_content: tag.span(
+          icon("check", class: "w-2 h-2 text-inverse"),
+          class: "flex h-3 w-3 items-center justify-center rounded-full border border-container bg-success",
+          data: { row_click_ignore: true }
+        )
+      ) %>
+<% else %>
+  <%= render DS::Tooltip.new(
+        text: t("accounts.reconciliation_indicator.needs_attention"),
+        as: :span,
+        html_class: html_class,
+        trigger_content: tag.span(
+          class: "h-2.5 w-2.5 rounded-full border border-container bg-warning",
+          data: { row_click_ignore: true }
+        )
+      ) %>
+<% end %>

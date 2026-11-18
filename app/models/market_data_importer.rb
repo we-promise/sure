@@ -142,6 +142,20 @@ class MarketDataImporter
         pair_dates[key] = [ pair_dates[key], chosen_date ].compact.min
       end
 
+      # 3. INSTITUTION PAIRS – an institution's entry can show its accounts in a
+      # currency of its own (InstitutionGroup#currency), charted from each
+      # account's history. Few groups choose one, and their keys are worked
+      # out from the accounts' institutions in Ruby.
+      InstitutionGroup.where.not(currency: nil).includes(:family).find_each do |group|
+        group.family.accounts.where.not(currency: group.currency).find_each do |account|
+          next unless InstitutionGroup.key_for(account) == group.key
+
+          chosen_date = [ account.entries.minimum(:date), default_start_date ].compact.min
+          key = [ account.currency, group.currency ]
+          pair_dates[key] = [ pair_dates[key], chosen_date ].compact.min
+        end
+      end
+
       # Convert to array of hashes for ease of use
       pair_dates.map do |(source, target), date|
         { source: source, target: target, start_date: date }

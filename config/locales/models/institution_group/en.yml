@@ -1,0 +1,8 @@
+---
+en:
+  activerecord:
+    attributes:
+      institution_group:
+        currency: Display currency
+        institution_domain: Institution URL
+        name: Name
