@@ -157,9 +157,10 @@ class I18nTest < ActiveSupport::TestCase
         holdings.index.negative_position holdings.index.negative_positions_hint holdings.index.negative_positions_title
       ]
     }.each do |sibling, keys|
-      I18n.available_locales.each do |locale|
-        next unless I18n.t(sibling, locale: locale, fallback: false, default: nil)
+      locales = I18n.available_locales.select { |locale| I18n.t(sibling, locale: locale, fallback: false, default: nil) }
+      assert_includes locales, :de
 
+      locales.each do |locale|
         missing = keys.reject { |key| I18n.t(key, locale: locale, fallback: false, default: nil) }
         assert_empty missing, "#{locale} translates #{sibling} but is missing #{missing.join(", ")}"
       end
