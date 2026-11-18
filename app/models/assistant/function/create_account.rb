@@ -34,6 +34,9 @@ class Assistant::Function::CreateAccount < Assistant::Function
       return error("invalid_subtype", message)
     end
 
+    balance = BigDecimal(params["balance"].to_s)
+    raise ArgumentError, "balance must be a finite number." unless balance.finite?
+
     opening_balance_date = params["opening_balance_date"].present? ? Date.iso8601(params["opening_balance_date"].to_s) : Date.current
     accountable = accountable_class.new
     accountable.subtype = subtype if subtype && accountable.respond_to?(:subtype=)
@@ -42,7 +45,7 @@ class Assistant::Function::CreateAccount < Assistant::Function
       created = family.accounts.create_and_sync(
         {
           name: params["name"].to_s.strip,
-          balance: BigDecimal(params["balance"].to_s),
+          balance: balance,
           currency: params["currency"].to_s.upcase,
           notes: params["notes"],
           exclude_from_reports: params.fetch("exclude_from_reports", false),

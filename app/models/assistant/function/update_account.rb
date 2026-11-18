@@ -36,13 +36,15 @@ class Assistant::Function::UpdateAccount < Assistant::Function
       return error("invalid_subtype", message)
     end
 
+    balance = BigDecimal(params["balance"].to_s) if params.key?("balance")
+    return error("invalid_balance", "balance must be a finite number.") if balance && !balance.finite?
+
     balance_error = nil
 
     Account.transaction do
       account = Account::MutationAccess.lock!(accounts: [ account ], user:, level: Account::MutationAccess::WRITE).fetch(account.id.to_s)
 
       if params.key?("balance")
-        balance = BigDecimal(params["balance"].to_s)
         result = account.set_current_balance(balance)
         unless result.success?
           balance_error = result.error

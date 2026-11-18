@@ -56,6 +56,18 @@ class Assistant::Function::GoalActionsTest < ActiveSupport::TestCase
     assert_equal 250, links.fetch(eur.id).allocated_amount.to_d
   end
 
+  test "rejects non-finite and non-positive target amounts" do
+    original_target = @goal.target_amount
+
+    [ "NaN", "Infinity", -1, 0 ].each do |target_amount|
+      result = Assistant::Function::UpdateGoal.new(@user).call("id" => @goal.id, "target_amount" => target_amount)
+
+      assert_equal false, result[:success]
+      assert_equal "invalid_parameters", result[:error]
+      assert_equal original_target, @goal.reload.target_amount
+    end
+  end
+
   test "deletes an archived goal" do
     @goal.update!(state: "archived")
 

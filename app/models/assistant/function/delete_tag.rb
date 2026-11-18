@@ -20,8 +20,8 @@ class Assistant::Function::DeleteTag < Assistant::Function
     tag_id = normalized_uuid(params["id"])
     return error("not_found", "Tag not found.") unless tag_id
 
-    replacement_id = params["replacement_tag_id"].presence
-    return error("invalid_replacement", "Replacement tag not found.") if replacement_id && !valid_uuid?(replacement_id)
+    replacement_id = params["replacement_tag_id"]
+    return error("invalid_replacement", "Replacement tag not found.") if !replacement_id.nil? && !valid_uuid?(replacement_id)
 
     replacement_id = replacement_id.to_s if replacement_id
     return error("invalid_replacement", "Replacement tag must differ from the deleted tag.") if replacement_id == tag_id

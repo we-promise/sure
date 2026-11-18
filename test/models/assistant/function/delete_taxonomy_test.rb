@@ -51,6 +51,19 @@ class Assistant::Function::DeleteTaxonomyTest < ActiveSupport::TestCase
     assert_not_includes transaction.tags, old_tag
   end
 
+  test "rejects a blank tag replacement without deleting taggings" do
+    transaction = transactions(:one)
+    tag = @family.tags.create!(name: "Protected MCP tag", color: "#e99537")
+    transaction.tags << tag
+
+    result = Assistant::Function::DeleteTag.new(@user).call("id" => tag.id, "replacement_tag_id" => "")
+
+    assert_equal false, result[:success]
+    assert_equal "invalid_replacement", result[:error]
+    assert Tag.exists?(tag.id)
+    assert_includes transaction.tags.reload, tag
+  end
+
   test "does not delete another family's taxonomy" do
     other_family = families(:empty)
     tag = other_family.tags.create!(name: "Foreign tag", color: "#e99537")

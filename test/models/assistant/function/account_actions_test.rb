@@ -50,6 +50,33 @@ class Assistant::Function::AccountActionsTest < ActiveSupport::TestCase
     Depository::SUBTYPES.each_key { |subtype| assert_includes result[:message], subtype }
   end
 
+  test "rejects non-finite balances when creating or updating accounts" do
+    create_account = Assistant::Function::CreateAccount.new(@user)
+    update_account = Assistant::Function::UpdateAccount.new(@user)
+    account = accounts(:depository)
+    original_balance = account.balance
+
+    %w[NaN Infinity].each do |balance|
+      assert_no_difference "@family.accounts.count" do
+        result = create_account.call(
+          "name" => "Invalid balance",
+          "account_type" => "Depository",
+          "balance" => balance,
+          "currency" => "USD"
+        )
+
+        assert_equal false, result[:success]
+        assert_equal "invalid_parameters", result[:error]
+      end
+
+      result = update_account.call("id" => account.id, "balance" => balance)
+
+      assert_equal false, result[:success]
+      assert_equal "invalid_balance", result[:error]
+      assert_equal original_balance, account.reload.balance
+    end
+  end
+
   test "updates a writable manual account" do
     account = accounts(:depository)
     function = Assistant::Function::UpdateAccount.new(@user)

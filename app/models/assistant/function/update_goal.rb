@@ -70,7 +70,12 @@ class Assistant::Function::UpdateGoal < Assistant::Function
     def goal_attributes(params)
       attrs = {}
       attrs[:name] = params["name"].to_s.strip if params.key?("name")
-      attrs[:target_amount] = BigDecimal(params["target_amount"].to_s) if params.key?("target_amount")
+      if params.key?("target_amount")
+        amount = BigDecimal(params["target_amount"].to_s)
+        raise ArgumentError, "target_amount must be finite and greater than zero." unless amount.finite? && amount.positive?
+
+        attrs[:target_amount] = amount
+      end
       attrs[:target_date] = parse_date(params["target_date"]) if params.key?("target_date")
       attrs[:notes] = params["notes"] if params.key?("notes")
       attrs
