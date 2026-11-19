@@ -311,6 +311,17 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_nil import.reload.read_as
   end
 
+  test "a reread that could not be queued says the reading was kept, not that it was published" do
+    use_ai_routes
+    import = imports(:pdf_with_rows)
+    PdfImport.any_instance.stubs(:reread!).returns(:enqueue_failed)
+
+    post reread_import_url(import), params: { import: { read_as: "text" } }
+
+    assert_redirected_to import_url(import)
+    assert_equal I18n.t("imports.pdf_import.reread.enqueue_failed"), flash[:alert]
+  end
+
   test "a flagged extraction shows its failed checks and asks before publishing" do
     use_ai_routes
     import = imports(:pdf_with_rows)
@@ -576,6 +587,36 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "Your import has started in the background.", flash[:notice]
     assert_redirected_to import_path(import)
+  end
+
+  test "a lost publish race is reported without starting a second publish" do
+    import = imports(:transaction)
+    TransactionImport.any_instance.expects(:publish_later).raises(Import::AlreadyClaimedError)
+
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.already_claimed"), flash[:alert]
+  end
+
+  test "publishing an import another request already completed is refused" do
+    import = imports(:transaction)
+    import.update_columns(status: "complete")
+
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.already_claimed"), flash[:alert]
+  end
+
+  test "a publish that could not be queued is reported as not published" do
+    import = imports(:transaction)
+    TransactionImport.any_instance.stubs(:publish_later).raises(Import::EnqueueFailedError)
+
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.enqueue_failed"), flash[:alert]
   end
 
   test "member cannot publish import targeting a read only shared account" do

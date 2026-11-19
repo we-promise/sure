@@ -21,8 +21,23 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_equal 2, result[:transaction_count]
     assert_equal "pdf", result[:read_as]
     assert result[:checks_passed]
-    assert_equal "TransactionImport", @user.family.imports.find(result[:import_id]).type
+    draft = @user.family.imports.find(result[:import_id])
+    assert_equal "TransactionImport", draft.type
+    assert_equal @import.id, draft.source_pdf_import_id
     assert_equal [ "application/pdf" ], requests.sole.attachments.map(&:content_type)
+  end
+
+  test "a second extraction for the same statement does not leave another live draft" do
+    stub_ai(:extract_pdf, returns: statement)
+
+    first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+    assert first[:success], first[:message]
+    second = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert_not second[:success]
+    assert_equal "draft_already_exists", second[:error]
+    assert_equal first[:import_id], second[:import_id]
+    assert_equal 1, @user.family.imports.where(type: "TransactionImport", source_pdf_import_id: @import.id).count
   end
 
   test "read_as reads it the way asked, and says when the extraction failed its checks" do

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_17_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_19_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -729,6 +729,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_000000) do
     t.string "reconciled_status", default: "unreconciled", null: false
     t.string "plaid_id"
     t.datetime "reconciled_at"
+    t.uuid "reconciled_by_import_id"
     t.uuid "reconciled_by_statement_id"
     t.string "source"
     t.datetime "updated_at", null: false
@@ -1428,10 +1429,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_000000) do
     t.string "read_model"
     t.string "read_with"
     t.jsonb "readback_verification", default: {}, null: false
+    t.string "reread_token"
     t.integer "rows_count", default: 0, null: false
     t.integer "rows_to_skip", default: 0, null: false
     t.integer "sequence"
     t.string "signage_convention", default: "inflows_positive"
+    t.uuid "source_pdf_import_id"
     t.string "status"
     t.jsonb "summary", default: {}, null: false
     t.string "tags_col_label"

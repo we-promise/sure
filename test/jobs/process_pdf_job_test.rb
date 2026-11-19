@@ -200,17 +200,36 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "failed", @import.reload.status
   end
 
-  test "a reread clears the previous reading when it starts, and only while it holds the claim" do
+  test "a reread clears the previous reading only while its attempt still holds the claim" do
     import = imports(:pdf_with_rows)
     ProcessPdfJob.any_instance.stubs(:process)
 
-    ProcessPdfJob.perform_now(import, reread: true)
+    ProcessPdfJob.perform_now(import, reread: true, reread_token: "stale")
     assert_equal 2, import.reload.rows_count, "not claimed: the previous reading stays"
 
-    import.update!(status: :importing)
+    import.update!(status: :importing, reread_token: "current")
+    ProcessPdfJob.perform_now(import, reread: true, reread_token: "stale")
+    assert_equal 2, import.reload.rows_count, "a stale job cannot clear a newer reread"
+
     ProcessPdfJob.perform_now(import, reread: true)
+    assert_equal 2, import.reload.rows_count, "a legacy reread without a token cannot clear a claim"
+
+    ProcessPdfJob.perform_now(import, reread: true, reread_token: "current")
     assert_equal 0, import.reload.rows_count
     assert_not import.ai_processed?
+  end
+
+  test "a reread's failure is recorded before the job is discarded" do
+    import = imports(:pdf_with_rows)
+    attach_pdf!(import)
+    import.update!(status: :importing, reread_token: "attempt")
+    import.expects(:process_with_ai).raises(Ai::Error::NoCredit.new("No credit", status: 400))
+
+    assert_nothing_raised { ProcessPdfJob.perform_now(import, reread: true, reread_token: "attempt") }
+
+    import.reload
+    assert import.failed?
+    assert_equal "No credit", import.error
   end
 
   test "a provider's own error message never reaches the import's error or the log" do
