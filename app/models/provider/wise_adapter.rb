@@ -24,13 +24,36 @@ class Provider::WiseAdapter < Provider::Base
     "wise"
   end
 
+  # Two balances of one Wise connection move money between each other only
+  # through conversions and Jar moves, which WiseItem#link_jar_transfers! links
+  # from Wise's own activity feed. Any other pair across them is a coincidence
+  # (a GBP top-up "matching" a USD payout).
+  def self.auto_match_exclusion_sql(inflow_accounts_alias, outflow_accounts_alias)
+    <<~SQL.squish
+      EXISTS (
+        SELECT 1
+        FROM account_providers inflow_wise_links
+        JOIN wise_accounts inflow_wise_accounts ON inflow_wise_accounts.id = inflow_wise_links.provider_id
+        JOIN account_providers outflow_wise_links ON (
+          outflow_wise_links.account_id = #{outflow_accounts_alias}.id AND
+          outflow_wise_links.provider_type = 'WiseAccount'
+        )
+        JOIN wise_accounts outflow_wise_accounts ON outflow_wise_accounts.id = outflow_wise_links.provider_id
+        WHERE
+          inflow_wise_links.account_id = #{inflow_accounts_alias}.id AND
+          inflow_wise_links.provider_type = 'WiseAccount' AND
+          outflow_wise_accounts.wise_item_id = inflow_wise_accounts.wise_item_id
+      )
+    SQL
+  end
+
   def self.build_provider(family: nil, wise_item_id: nil)
     return nil unless family.present?
 
     item = resolve_wise_item(family, wise_item_id)
     return nil unless item&.credentials_configured?
 
-    Provider::Wise.new(item.token.to_s.strip, base_url: Rails.configuration.x.wise.base_url)
+    Provider::Wise.new(item.token.to_s.strip, base_url: Rails.configuration.x.wise.base_url, sca_private_key: item.sca_private_key)
   end
 
   def sync_path

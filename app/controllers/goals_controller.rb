@@ -58,7 +58,8 @@ class GoalsController < ApplicationController
   def create
     @goal = Current.family.goals.new(goal_params)
     accounts = lookup_accounts(params.dig(:goal, :account_ids))
-    @goal.currency = (accounts.first&.currency || Current.family.primary_currency_code) if @goal.currency.blank?
+    # The family currency is what the form shows next to the target.
+    @goal.currency = Current.family.primary_currency_code if @goal.currency.blank?
 
     allocations = submitted_allocations
     Goal.transaction do
@@ -173,11 +174,13 @@ class GoalsController < ApplicationController
 
   def record_consumption
     txn = consumption_transaction
-    amount = txn ? txn.entry.amount.to_d : params[:amount].to_d
+    amount = txn ? @goal.convert_money!(txn.entry.amount_money, date: txn.entry.date).amount : params[:amount].to_d
 
     @goal.consume!(amount, account: consumption_account(txn), transaction: txn)
     redirect_to goal_path(@goal),
                 notice: t("goals.consume.success", amount: Money.new(amount, @goal.currency).format)
+  rescue Money::ConversionError
+    redirect_to goal_path(@goal), alert: t("goals.consume.errors.missing_exchange_rate")
   rescue Goal::ConsumptionRefused => e
     redirect_to goal_path(@goal), alert: t("goals.consume.errors.#{e.reason}")
   rescue ActiveRecord::RecordInvalid => e
@@ -202,11 +205,11 @@ class GoalsController < ApplicationController
     end
 
     def goal_params
-      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind, :target_mode, :target_months)
+      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind, :target_mode, :target_months, :progress_basis)
     end
 
     def goal_update_params
-      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind, :target_mode, :target_months)
+      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind, :target_mode, :target_months, :progress_basis)
     end
 
     def lookup_accounts(ids)
@@ -300,6 +303,7 @@ class GoalsController < ApplicationController
       reached = active_goals.count { |g| g.status == :reached }
       no_date = active_goals.count { |g| g.status == :no_target_date }
       paused = active_goals.count(&:paused?)
+      pace_unknown = active_goals.count { |g| !g.paused? && g.status == :pace_unknown }
 
       # Denominator of the "Goals on track" tile. A goal only belongs in
       # the fraction if there is a benchmark to compare against:
@@ -314,10 +318,13 @@ class GoalsController < ApplicationController
       #   exclusions above, so without this it would land in the denominator
       #   and never in the numerator: a family with one reserve read
       #   "0 of 1 on track" for a goal that is working exactly as intended.
+      # - pace_unknown → its accounts give no measurable pace, so there is
+      #   nothing to compare the required pace against. Like no_target_date,
+      #   it can be neither on track nor behind.
       # When this hits zero the tile swaps to a celebration / empty
       # state in the view.
       tracked_total = active_goals.count do |g|
-        !g.paused? && !g.maintained? && g.status != :reached && g.status != :no_target_date
+        !g.paused? && !g.maintained? && !g.status.in?(%i[reached no_target_date pace_unknown])
       end
 
       {
@@ -333,6 +340,7 @@ class GoalsController < ApplicationController
         behind_count: behind,
         no_date_count: no_date,
         paused_count: paused,
+        pace_unknown_count: pace_unknown,
         tracked_total: tracked_total,
         active_total: active_goals.size
       }

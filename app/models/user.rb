@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  has_many :financekit_items, dependent: :destroy
+
   include Encryptable
 
   # Allow nil password for SSO-only users (JIT provisioning).
@@ -52,6 +54,10 @@ class User < ApplicationRecord
   # SSO JIT users have password_digest = nil and authenticate via OIDC only.
   validates :password, presence: true, on: :create, unless: :skip_password_validation?
   validates :password, length: { minimum: 8 }, allow_nil: true
+  # `validations: false` above also drops Rails' confirmation and current-password
+  # (password_challenge) checks, so restore both here.
+  validates :password, confirmation: true, allow_blank: true
+  validate :password_challenge_matches, unless: -> { password_challenge.nil? }
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
   normalizes :locale, with: ->(locale) { locale.presence }
@@ -91,6 +97,52 @@ class User < ApplicationRecord
 
     User.exists? ? fallback_role : :super_admin
   end
+
+  # Deterministic lookups like `find_by(email:)` and `authenticate_by` miss
+  # rows whose email is still legacy plaintext (stored before encryption was
+  # active and not yet re-encrypted by `bin/rails security:backfill_encryption`):
+  # extend_queries does not cover attributes that also use `normalizes`. The
+  # fallback matches those rows by their literal column value.
+  def self.find_by_email_with_legacy_fallback(email)
+    normalized = email.to_s.strip.downcase
+    return nil if normalized.blank?
+
+    find_by(email: normalized) || find_by_legacy_plaintext_email(normalized)
+  end
+
+  # Takes the legacy path only for a plaintext row; every other case goes
+  # through authenticate_by, which stays timing-safe for wrong passwords and
+  # unknown emails. The legacy lookup runs first on every login (one indexed
+  # query) so that legacy and encrypted rows cost the same single password
+  # check. Nil and empty passwords are rejected up front, as authenticate_by does.
+  # A user without a local password (SSO only) still costs one hash, so
+  # response time does not reveal such accounts. A non-String password (a
+  # JSON number) is checked as text instead of raising.
+  def self.authenticate_by_email(email:, password:)
+    return nil if password.nil? || password.to_s.empty?
+
+    password = password.to_s
+    normalized = email.to_s.strip.downcase
+    legacy_user = find_by_legacy_plaintext_email(normalized)
+    user = legacy_user || find_by(email: normalized)
+    if user && user.password_digest.blank?
+      new(password: password)
+      return nil
+    end
+    return authenticate_by(email: normalized, password: password) unless legacy_user
+
+    legacy_user if legacy_user.authenticate(password)
+  end
+
+  # Legacy rows were always stored normalized (`normalizes :email` predates
+  # encryption), so an exact match uses the unique index. Only well-formed
+  # emails are looked up, so a pasted ciphertext can never match its own row.
+  def self.find_by_legacy_plaintext_email(normalized_email)
+    return nil unless normalized_email.match?(URI::MailTo::EMAIL_REGEXP)
+
+    find_by([ "email = ?", normalized_email ])
+  end
+  private_class_method :find_by_legacy_plaintext_email
 
   class << self
     def human_attribute_name(attribute, options = {})
@@ -159,6 +211,22 @@ class User < ApplicationRecord
     super_admin? || role == "admin"
   end
 
+  # Setting values are shared by every family on the instance, so changing them
+  # is a super admin's job: a family admin is anyone who signed up. A
+  # self-hosted instance with a single real family has no other tenant to
+  # protect. Generated demo households must neither revoke that family's access
+  # nor grant instance access to demo users. Use the generator's synthetic
+  # subscription marker, never an editable family name or user email.
+  def manages_instance_settings?
+    return true if super_admin?
+    return false unless admin? && Rails.application.config.app_mode.self_hosted?
+    return false if family.subscription&.synthetic?
+    return true if Family.count == 1
+
+    demo_family_ids = Subscription.where(stripe_id: Subscription::DEMO_STRIPE_ID).select(:family_id)
+    Family.where.not(id: demo_family_ids).limit(2).pluck(:id) == [ family_id ]
+  end
+
   def accessible_accounts
     family.accounts.accessible_by(self)
   end
@@ -194,9 +262,9 @@ class User < ApplicationRecord
   end
 
   def ai_available?
+    effective_type = family&.effective_assistant_type || "builtin"
+    return false if effective_type == "mcp_only"
     return true unless Rails.application.config.app_mode.self_hosted?
-
-    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
 
     case effective_type
     when "external"
@@ -245,6 +313,15 @@ class User < ApplicationRecord
   before_destroy :ensure_not_last_super_admin_on_destroy
 
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
+  after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
+  # Runs inside the update's transaction: the user row stays locked until commit,
+  # so a concurrent /api/v1/auth/refresh (which takes the same lock) cannot mint
+  # a token the revocation misses. Doorkeeper's own /oauth/token refresh locks
+  # only the old token, so a refresh already holding it can still commit a new
+  # token the in-transaction sweep does not see; the second sweep after commit
+  # revokes it, and any later refresh finds the old token revoked.
+  after_update :revoke_oauth_access, if: :saved_change_to_password_digest?
+  after_update_commit :revoke_oauth_access, if: :saved_change_to_password_digest?
 
   def deactivate
     return true unless active?
@@ -313,14 +390,51 @@ class User < ApplicationRecord
   # provider+uid) are not gated on #active?, so they must be torn down here for
   # revocation to be immediate; the async purge would otherwise leave a window.
   def revoke_all_credentials!
-    Doorkeeper::AccessToken
-      .where(resource_owner_id: id, revoked_at: nil)
-      .update_all(revoked_at: Time.current)
+    revoke_oauth_tokens!
     sessions.destroy_all
     api_keys.destroy_all
     mobile_devices.destroy_all
     webauthn_credentials.destroy_all
     oidc_identities.destroy_all
+  end
+
+  # Raised by #with_active_lock! to reject session/token issuance for a
+  # deactivated or concurrently-purged user. The one error contract every
+  # web/JSON/mobile/OAuth-adapter caller rescues, so a deactivation result
+  # can never be confused with an unrelated persistence failure.
+  class InactiveError < StandardError; end
+
+  # Raised by #with_active_lock! when the password changed between the
+  # caller's password check and the locked issuance step. The new password's
+  # revocation sweep has already run by then, so issuing would hand out a
+  # session or token for the old password that nothing revokes.
+  class StaleCredentialsError < StandardError; end
+
+  # The one locked primitive for the actual authorization boundary: asserts
+  # this user is eligible for new session/token issuance *right now*, under
+  # a row lock, immediately before minting. Callers may additionally check
+  # #active? earlier for a fast, friendly rejection (skip an MFA/device
+  # round trip) — that's a UX optimization only, never a substitute for
+  # this check, however "obviously" already-checked the user seems.
+  # Pass the #password_fingerprint taken when the password was checked to
+  # also reject issuance after a concurrent password change.
+  def with_active_lock!(password_fingerprint: nil)
+    lock_acquired = false
+
+    with_lock do
+      lock_acquired = true
+      raise InactiveError unless active?
+      raise StaleCredentialsError if password_fingerprint && password_fingerprint != self.password_fingerprint
+      yield self
+    end
+  rescue ActiveRecord::RecordNotFound
+    # Only translate a RecordNotFound raised by with_lock's own reload (the
+    # row was deleted by a concurrent purge before we could lock it) into
+    # InactiveError. Once the lock is held, re-raise: a RecordNotFound from
+    # inside the caller's block is an unrelated failure and must not be
+    # misreported as "inactive" either.
+    raise if lock_acquired
+    raise InactiveError
   end
 
   def can_deactivate
@@ -337,9 +451,12 @@ class User < ApplicationRecord
     transaction do
       lock!
 
-      accounts_to_move = owned_accounts.to_a
+      accounts_to_move = owned_accounts.order(:id).to_a
       provider_items_to_move = provider_items_for_transfer(accounts_to_move)
       moving_default_account = accounts_to_move.any? { |account| account.id == default_account_id }
+
+      provider_items_to_move.sort_by(&:id).each(&:lock!)
+      accounts_to_move.each(&:lock!)
 
       account_shares.delete_all
 
@@ -352,7 +469,21 @@ class User < ApplicationRecord
       AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
 
       provider_items_to_move.each do |provider_item|
-        provider_item.update!(family: new_family)
+        if provider_item.is_a?(FinancekitItem)
+          lineage_ids = provider_item.financekit_account_lineages.select(:id)
+          FinancekitAccountLineage.where(id: lineage_ids).update_all(family_id: new_family.id, updated_at: Time.current)
+          provider_item.financekit_conflicts.update_all(family_id: new_family.id, updated_at: Time.current)
+        end
+        attrs = { family: new_family }
+
+        # provider_items_for_transfer only returns items whose accounts all
+        # belong to this user, so the connection genuinely follows them. Its
+        # owner has to follow too: the previous owner stays behind in the old
+        # family, and ProviderItemOwnable validates that an owner and its item
+        # share a family.
+        attrs[:owner] = self if provider_item.respond_to?(:owner_id)
+
+        provider_item.update!(**attrs)
       end
 
       new_family.auto_share_existing_accounts_with(self)
@@ -363,11 +494,18 @@ class User < ApplicationRecord
     account_ids_to_move = accounts_to_move.map(&:id)
     provider_items = accounts_to_move.flat_map do |account|
       account.account_providers.includes(:provider).filter_map do |account_provider|
-        provider_item_for(account_provider.provider)
+        provider_items_for(account_provider.provider)
       end
-    end.uniq
+    end.flatten.uniq
+    provider_items.concat(financekit_items)
+    provider_items.uniq!
 
     provider_items.each do |provider_item|
+      if provider_item.is_a?(FinancekitItem) && provider_item.user_id != id
+        errors.add(:base, :provider_item_has_other_accounts)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
       linked_account_ids = provider_item.accounts.map(&:id)
       next if linked_account_ids.all? { |account_id| account_ids_to_move.include?(account_id) }
 
@@ -378,12 +516,70 @@ class User < ApplicationRecord
     provider_items
   end
 
-  def provider_item_for(provider)
+  def provider_items_for(provider)
+    if provider.is_a?(FinancekitAccountLineage)
+      return provider.financekit_accounts.includes(:financekit_item).map(&:financekit_item).uniq
+    end
+
     item_association = provider.class.reflect_on_all_associations(:belongs_to).find do |association|
       association.name.to_s.end_with?("_item") && provider.respond_to?(association.name)
     end
 
-    provider.public_send(item_association.name) if item_association
+    Array(provider.public_send(item_association.name)) if item_association
+  end
+
+  # Revokes every Doorkeeper access token issued to this user (mobile app and
+  # third-party OAuth clients; a revoked token's refresh token is refused too)
+  # and every authorization grant not yet exchanged for one. Returns the
+  # number of tokens and grants revoked.
+  def revoke_oauth_tokens!
+    now = Time.current
+    [
+      Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: now),
+      Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: now)
+    ]
+  end
+
+  # Revokes mobile/third-party API access alongside the web-session
+  # invalidation above. Without this, a deactivated user's existing
+  # Doorkeeper tokens and API keys stay valid on the wire — currently
+  # harmless only because Api::V1::BaseController/McpController re-check
+  # active? on every request, but that's a second, independent safeguard,
+  # not a substitute for actually revoking the credentials. Also revokes
+  # unexchanged OAuth authorization grants — /oauth/token doesn't go
+  # through the cookie authenticator, so a still-valid grant issued right
+  # before deactivation could otherwise be exchanged for a fresh token
+  # afterward.
+  def revoke_all_access_tokens
+    tokens_revoked, grants_revoked = revoke_oauth_tokens!
+    keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
+
+    if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
+      Rails.logger.warn(
+        "[AUTH] Revoked #{tokens_revoked} access token(s), #{grants_revoked} authorization grant(s), " \
+        "and #{keys_revoked} API key(s) for deactivated user_id=#{id}"
+      )
+    end
+  end
+
+  # A new password must lock out whoever signed in to the mobile app or an
+  # OAuth client with the old one: their access and refresh tokens would
+  # otherwise stay valid for up to 30 days and keep renewing. API keys are
+  # created deliberately for integrations and do not depend on the password,
+  # so they stay.
+  def revoke_oauth_access
+    tokens_revoked, grants_revoked = revoke_oauth_tokens!
+
+    if tokens_revoked > 0 || grants_revoked > 0
+      Rails.logger.info(
+        "[AUTH] Revoked #{tokens_revoked} access token(s) and #{grants_revoked} authorization grant(s) " \
+        "after password change for user_id=#{id}"
+      )
+    end
+  end
+
+  def password_fingerprint
+    Digest::SHA256.hexdigest(password_digest.to_s)
   end
 
   def purge
@@ -400,7 +596,8 @@ class User < ApplicationRecord
     update!(
       otp_secret: ROTP::Base32.random(32),
       otp_required: false,
-      otp_backup_codes: []
+      otp_backup_codes: [],
+      otp_last_used_at: nil
     )
   end
 
@@ -423,21 +620,57 @@ class User < ApplicationRecord
       update!(
         otp_secret: nil,
         otp_required: false,
-        otp_backup_codes: []
+        otp_backup_codes: [],
+        otp_last_used_at: nil
       )
       webauthn_credentials.destroy_all
     end
   end
 
-  def verify_otp?(code)
-    return false if otp_secret.blank?
+  # Same answer as verify_otp, but spends nothing: lets a passkey registration
+  # refuse a bad code before the browser creates a credential the server would
+  # then throw away. The code is still consumed by verify_otp when it is saved.
+  def otp_code_status(code)
+    return :invalid if otp_secret.blank?
 
     normalized_code = normalize_mfa_code(code)
-    return false if normalized_code.blank?
-    return true if totp.verify(normalized_code, drift_behind: 15)
-    return false unless backup_code_input?(normalized_code)
+    return :invalid if normalized_code.blank?
 
-    consume_backup_code!(normalized_code)
+    return :accepted if totp.verify(normalized_code, drift_behind: 15, after: otp_last_used_at)
+
+    if backup_code_input?(normalized_code)
+      matched = Array(otp_backup_codes).any? { |stored_code| backup_code_matches?(stored_code, normalized_code) }
+      return matched ? :accepted : :invalid
+    end
+
+    totp.verify(normalized_code, drift_behind: 15) ? :replayed : :invalid
+  end
+
+  def verify_otp?(code)
+    verify_otp(code) == :accepted
+  end
+
+  # Enrollment needs to tell a replayed (correct but already-used) code apart
+  # from a wrong one so a duplicate submit does not tear down MFA; login
+  # callers use verify_otp?, where a replay stays a plain failure.
+  def verify_otp(code)
+    return :invalid if otp_secret.blank?
+
+    normalized_code = normalize_mfa_code(code)
+    return :invalid if normalized_code.blank?
+
+    # after: rejects the time step already used, so a code seen once (over a
+    # shoulder, in a proxy log) cannot sign in again while it is still valid.
+    if (time_step = totp.verify(normalized_code, drift_behind: 15, after: otp_last_used_at))
+      return claim_otp_time_step!(time_step) ? :accepted : :replayed
+    end
+
+    if backup_code_input?(normalized_code)
+      return consume_backup_code!(normalized_code) ? :accepted : :invalid
+    end
+
+    # Still valid for the secret? Then only its time step was already used.
+    totp.verify(normalized_code, drift_behind: 15) ? :replayed : :invalid
   end
 
   def provisioning_uri
@@ -471,6 +704,58 @@ class User < ApplicationRecord
     AccountOrder.find(default_account_order) || AccountOrder.default
   end
 
+  # Whether the activity feed of a linked account always lists the balance
+  # updates its syncs leave behind (see Account#hides_balance_updates_by_default?).
+  # Off until turned on in Settings > Preferences. The activity Filter menu can
+  # show them for one view without changing this.
+  def show_balance_updates?
+    preferences&.dig("show_balance_updates") == true
+  end
+
+  # @param value [Boolean, String] a form value such as "true" or "false"
+  def update_show_balance_updates(value)
+    shown = ActiveModel::Type::Boolean.new.cast(value) == true
+    with_locked_preferences { |prefs| prefs["show_balance_updates"] = shown }
+  end
+
+  MANUAL_ACCOUNT_ORDER_LIMIT = 500
+
+  # Drag-and-drop order of accounts per account group, keyed by accountable
+  # key (e.g. "depository") with account ids in display order.
+  def manual_account_order
+    order = preferences&.dig("manual_account_order")
+    order.is_a?(Hash) ? order : {}
+  end
+
+  # Stores the order of one account group. Ids the user cannot access are
+  # dropped so the stored preference never references foreign accounts.
+  def update_manual_account_order(group_key, account_ids)
+    group_key = group_key.to_s
+    return false unless Accountable::TYPES.map(&:underscore).include?(group_key)
+    return false unless account_ids.is_a?(Array)
+
+    requested_ids = account_ids.map(&:to_s).uniq.first(MANUAL_ACCOUNT_ORDER_LIMIT)
+    accessible_ids = accessible_accounts.where(id: requested_ids, accountable_type: group_key.camelize).pluck(:id).to_set
+    ordered_ids = requested_ids.select { |id| accessible_ids.include?(id) }
+
+    with_locked_preferences do |prefs|
+      prefs["manual_account_order"] = manual_account_order.merge(group_key => ordered_ids)
+    end
+  end
+
+  # Locked read-modify-write of the preferences JSONB: yields a copy of the
+  # current preferences (re-read under a row lock) to change in place, then
+  # saves it, so concurrent updates of other keys are not lost. Attributes set
+  # on the user inside the block are saved with it.
+  def with_locked_preferences
+    transaction do
+      lock!
+      updated_prefs = (preferences || {}).deep_dup
+      yield updated_prefs
+      update!(preferences: updated_prefs)
+    end
+  end
+
   def default_account_for_transactions
     return nil unless default_account_id.present?
 
@@ -478,6 +763,47 @@ class User < ApplicationRecord
     return nil unless account&.eligible_for_transaction_default? && account.family_id == family_id
 
     account
+  end
+
+  # Release highlight ("What's new" popup) tracking. Account-level so every
+  # device the user signs in from stays in sync.
+  def last_seen_release_tag
+    preferences&.[]("last_seen_release_tag")
+  end
+
+  def release_seen?(tag)
+    tag == last_seen_release_tag || Array(preferences&.[]("seen_release_tags")).include?(tag)
+  end
+
+  def mark_release_seen!(tag)
+    parsed_release_tag_version!(tag)
+
+    with_lock do
+      # Acknowledgement is about identity, not version precedence: hotfix tags
+      # sort before their base release, and users can switch release channels.
+      # Merge after reloading under the lock so stale tabs cannot lose tags.
+      seen_tags = Array(preferences&.[]("seen_release_tags"))
+      legacy_tag = last_seen_release_tag
+      seen_tags += [ legacy_tag ] if parsed_release_tag_version(legacy_tag)
+      seen_tags = (seen_tags + [ tag ]).uniq
+
+      update!(preferences: (preferences || {}).merge(
+        "seen_release_tags" => seen_tags,
+        "last_seen_release_tag" => tag
+      ))
+    end
+  end
+
+  def parsed_release_tag_version!(tag)
+    raise ArgumentError, "invalid release tag" unless tag.to_s.match?(/\Av\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.-]+)?\z/)
+
+    Calver.from_release_tag(tag).version
+  end
+
+  def parsed_release_tag_version(tag)
+    parsed_release_tag_version!(tag)
+  rescue ArgumentError
+    nil
   end
 
   # Dashboard preferences management
@@ -489,9 +815,31 @@ class User < ApplicationRecord
     preferences&.[]("section_order") || default_dashboard_section_order
   end
 
+  def dashboard_hidden_sections
+    preferences&.[]("hidden_sections") || []
+  end
+
+  # Adds or removes one key rather than taking the whole list, so a stale tab
+  # hiding one widget can't bring back another hidden elsewhere.
+  def update_dashboard_section_hidden(section_key, hidden)
+    with_locked_preferences do |prefs|
+      keys = dashboard_hidden_sections - [ section_key ]
+      keys << section_key if hidden
+      prefs["hidden_sections"] = keys
+    end
+  end
+
   # Per-widget height preset override ("compact" | "auto" | "tall"); nil = use default.
   def dashboard_section_height(section_key)
     preferences&.dig("dashboard_section_layout", section_key, "height")
+  end
+
+  CASHFLOW_SANKEY_GROUPINGS = IncomeStatement::CashFlowGraph::GROUPINGS.keys.freeze
+
+  # Preview cash-flow Sankey: flows by category (default) or through each account.
+  def cashflow_sankey_group_by
+    group_by = preferences&.dig("cashflow_sankey_group_by")
+    CASHFLOW_SANKEY_GROUPINGS.include?(group_by) ? group_by : "category"
   end
 
   # Per-widget column-span override ("single" | "full"); nil = use default.
@@ -499,13 +847,14 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_section_layout", section_key, "col_span")
   end
 
-  def update_dashboard_preferences(prefs)
-    # Use pessimistic locking to ensure atomic read-modify-write
-    # This prevents race conditions when multiple sections are collapsed quickly
-    transaction do
-      lock! # Acquire row-level lock (SELECT FOR UPDATE)
-
-      updated_prefs = (preferences || {}).deep_dup
+  # laid_out_order is the order the dashboard laid its widgets out in, which
+  # also places widgets the saved order doesn't list yet.
+  def update_dashboard_preferences(prefs, laid_out_order: nil)
+    # Locked so sections collapsed in quick succession don't overwrite each other.
+    with_locked_preferences do |updated_prefs|
+      if prefs["section_order"]
+        prefs = prefs.merge("section_order" => keep_hidden_sections_in_order(prefs["section_order"], laid_out_order || dashboard_section_order))
+      end
       prefs.each do |key, value|
         if value.is_a?(Hash)
           updated_prefs[key] ||= {}
@@ -516,37 +865,91 @@ class User < ApplicationRecord
           updated_prefs[key] = value
         end
       end
+    end
+  end
 
-      update!(preferences: updated_prefs)
+  # Section preferences for the pages built on the Reports section
+  # framework (Reports, the portfolio hub). Each page is a namespace; its
+  # order lives under "<namespace>_section_order" and its collapsed set under
+  # "<namespace>_collapsed_sections", so two pages never read or write each
+  # other's keys. Reports' original keys are the "reports" namespace, so
+  # nothing already stored changes meaning. Each namespace maps to its
+  # default order; the portfolio's is read from its registry so the two
+  # lists cannot drift.
+  SECTION_DEFAULT_ORDERS = {
+    "reports" => %w[trends_insights transactions_breakdown].freeze,
+    "portfolio" => Portfolio::SectionRegistry::KEYS
+  }.freeze
+
+  def section_order(namespace)
+    prefix = section_namespace!(namespace)
+    stored = preferences&.[]("#{prefix}_section_order")
+    stored.is_a?(Array) ? stored.map(&:to_s).uniq : SECTION_DEFAULT_ORDERS.fetch(prefix).dup
+  end
+
+  def section_collapsed?(namespace, section_key)
+    prefix = section_namespace!(namespace)
+    collapsed = preferences&.[]("#{prefix}_collapsed_sections")
+    collapsed.is_a?(Hash) && collapsed[section_key] == true
+  end
+
+  # `order` replaces the namespace's order; `collapsed` merges into the
+  # namespace's collapsed set (one key per toggle, so quick successive
+  # toggles keep each other's state). The namespace decides which keys are
+  # written: a caller cannot reach another page's keys through this method.
+  # Only an array of keys (deduplicated) and a hash of key => flag are stored;
+  # any other shape is dropped, since the readers index into them.
+  def update_section_preferences(namespace, order: nil, collapsed: nil)
+    prefix = section_namespace!(namespace)
+    prefs = {}
+    prefs["#{prefix}_section_order"] = order.map(&:to_s).uniq if order.is_a?(Array)
+    collapsed = collapsed.to_unsafe_h if collapsed.respond_to?(:to_unsafe_h)
+    if collapsed.is_a?(Hash)
+      prefs["#{prefix}_collapsed_sections"] = collapsed.to_h { |key, flag| [ key.to_s, ActiveModel::Type::Boolean.new.cast(flag) == true ] }
+    end
+    return true if prefs.empty?
+
+    with_locked_preferences do |updated_prefs|
+      prefs.each do |key, value|
+        if value.is_a?(Hash)
+          stored = updated_prefs[key]
+          updated_prefs[key] = (stored.is_a?(Hash) ? stored : {}).merge(value)
+        else
+          updated_prefs[key] = value
+        end
+      end
     end
   end
 
   # Reports preferences management
   def reports_section_collapsed?(section_key)
-    preferences&.dig("reports_collapsed_sections", section_key) == true
+    section_collapsed?("reports", section_key)
   end
 
   def reports_section_order
-    preferences&.[]("reports_section_order") || default_reports_section_order
+    section_order("reports")
+  end
+
+  REPORTS_BIGGEST_EXPENSES_LIMITS = [ 5, 10, 25 ].freeze
+  DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT = 10
+
+  def reports_biggest_expenses_limit
+    stored = preferences&.[]("reports_biggest_expenses_limit")
+    REPORTS_BIGGEST_EXPENSES_LIMITS.include?(stored) ? stored : DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT
   end
 
   def update_reports_preferences(prefs)
-    # Use pessimistic locking to ensure atomic read-modify-write
-    transaction do
-      lock!
+    return false unless update_section_preferences(
+      "reports",
+      order: prefs["reports_section_order"],
+      collapsed: prefs["reports_collapsed_sections"]
+    )
 
-      updated_prefs = (preferences || {}).deep_dup
-      prefs.each do |key, value|
-        if value.is_a?(Hash)
-          updated_prefs[key] ||= {}
-          updated_prefs[key] = updated_prefs[key].merge(value)
-        else
-          updated_prefs[key] = value
-        end
-      end
+    # A limit outside the offered choices is dropped, like any other bad value.
+    limit = Integer(prefs["reports_biggest_expenses_limit"].to_s, exception: false)
+    return true unless REPORTS_BIGGEST_EXPENSES_LIMITS.include?(limit)
 
-      update!(preferences: updated_prefs)
-    end
+    with_locked_preferences { |updated_prefs| updated_prefs["reports_biggest_expenses_limit"] = limit }
   end
 
   # Transactions preferences management
@@ -554,16 +957,38 @@ class User < ApplicationRecord
     preferences&.dig("show_split_grouped") != false
   end
 
+  # Returns whether the user has enabled the two-column dashboard layout.
   def dashboard_two_column?
     preferences&.dig("dashboard_two_column") == true
   end
 
+  # Returns the accountable keys (e.g. "depository", "credit_card") that should
+  # start expanded in the sidebar and dashboard balance sheet, or an empty
+  # array when unset. Stored in the preferences JSONB column.
+  def always_expanded_account_groups
+    preferences&.dig("always_expanded_account_groups") || []
+  end
+
+  # Returns whether the given key (coerced to a string) is selected to start
+  # expanded in the sidebar and dashboard balance sheet.
+  def always_expanded_account_group?(account_group_key)
+    always_expanded_account_groups.include?(account_group_key.to_s)
+  end
+
+  # Returns whether clicking outside a modal is prevented from closing it.
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
   end
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
+  end
+
+  # The experimental Sankey comparison chart (and its feedback prompt) is
+  # opt-in on top of preview features, so a user can keep preview features
+  # enabled without a second chart rendering underneath the cash flow widget.
+  def cashflow_preview_enabled?
+    preferences&.dig("cashflow_preview_enabled") == true
   end
 
   private
@@ -608,12 +1033,32 @@ class User < ApplicationRecord
       skip_password_validation == true
     end
 
+    def password_challenge_matches
+      digest_was = password_digest_was
+      return if digest_was.present? && BCrypt::Password.new(digest_was).is_password?(password_challenge)
+
+      errors.add(:password_challenge)
+    end
+
+    # The dashboard only sends the order of the widgets it rendered, so put
+    # each hidden widget back after the one it followed before.
+    def keep_hidden_sections_in_order(new_order, old_order)
+      hidden = dashboard_hidden_sections
+      (old_order & hidden).reduce(new_order - hidden) do |order, key|
+        predecessor = old_order[0...old_order.index(key)].reverse.find { |k| order.include?(k) }
+        order.insert(predecessor ? order.index(predecessor) + 1 : 0, key)
+      end
+    end
+
     def default_dashboard_section_order
       %w[insights_feed cashflow_sankey outflows_donut net_worth_chart balance_sheet]
     end
 
-    def default_reports_section_order
-      %w[trends_insights transactions_breakdown]
+    def section_namespace!(namespace)
+      namespace = namespace.to_s
+      raise ArgumentError, "unknown section namespace #{namespace.inspect}" unless SECTION_DEFAULT_ORDERS.key?(namespace)
+
+      namespace
     end
     def ensure_valid_profile_image
       return unless profile_image.attached?
@@ -656,6 +1101,26 @@ class User < ApplicationRecord
 
     def totp
       ROTP::TOTP.new(otp_secret, issuer: "Sure Finances")
+    end
+
+    # Two requests carrying the same code can both pass verify before either
+    # records it; the conditional update lets only one of them through. The
+    # otp_secret match drops a claim verified against a secret that was
+    # replaced (disable + re-setup) in the meantime, so it cannot mark a time
+    # step as used on the newly enrolled factor.
+    def claim_otp_time_step!(time_step)
+      used_at = Time.zone.at(time_step)
+      claimed = self.class.where(id: id, otp_secret: otp_secret)
+        .where("otp_last_used_at IS NULL OR otp_last_used_at < ?", used_at)
+        .update_all(otp_last_used_at: used_at) == 1
+
+      if claimed
+        # Already written by update_all; keep the record clean so a later
+        # with_lock or update! sees it as persisted.
+        self.otp_last_used_at = used_at
+        clear_attribute_changes([ :otp_last_used_at ])
+      end
+      claimed
     end
 
     def consume_backup_code!(normalized_code)

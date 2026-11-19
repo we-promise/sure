@@ -7,4 +7,4 @@ pl:
         format: "%n %u"
         precision: 2
         separator: ","
-        unit: "zł"
+        unit: zł

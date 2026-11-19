@@ -44,6 +44,14 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the target amount field keeps its own action alongside the paste handler" do
+    get new_goal_url
+
+    assert_response :success
+    assert_select "input[data-money-field-target=?][data-action=?]", "amount",
+                  "input->goal-form#suggestedChanged paste->money-field#pasteAmount blur->money-field#normalizeAmount"
+  end
+
   test "create persists a goal with linked accounts" do
     # Fresh accounts: the goal fixtures already claim @depository and
     # @connected in full, and GoalAccount refuses a second whole-balance
@@ -128,6 +136,41 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_no_match(/Member Private Checking/, response.body)
     assert_no_match(/#{private_account.id}/, response.body)
+  end
+
+  # The builder's money field, not a bare number input: currency symbol and
+  # all. Its label used to point at nothing — `for` carried the label text —
+  # so the check is that it names the input the amount is posted from.
+  test "the consumption dialog asks for the amount with a labelled money field" do
+    get consume_goal_url(@goal)
+
+    assert_response :success
+    assert_select "[data-controller='money-field'] input[type=text][name=amount][id=amount][autofocus]"
+    assert_select "label[for=amount]", text: /#{I18n.t("goals.consume.amount_label")}/
+  end
+
+  # The amount is in goal currency even when it comes off a euro earmark, so
+  # the dialog says which currency it wants and which account holds which.
+  test "the consumption dialog names a foreign account's currency" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "Euro Savings", currency: "EUR", balance: 1_000)
+    @goal.goal_accounts.create!(account: eur, allocated_amount: 500)
+
+    get consume_goal_url(@goal)
+
+    assert_response :success
+    assert_includes response.body, "Euro Savings · EUR"
+    assert_select "p", text: I18n.t("goals.consume.goal_currency_hint", currency: "USD")
+  end
+
+  # Both figures in the dialog blur under privacy mode, as they do on the goal
+  # page. The amount also stays clickable: it is the one field the reader fills.
+  test "the consumption dialog blurs its figures under privacy mode and the amount stays editable" do
+    get consume_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[name=amount].form-field__input.privacy-sensitive.privacy-sensitive-interactive"
+    assert_select "p.privacy-sensitive", text: /is currently backing this goal/
   end
 
   test "consumption is refused against a linked account the viewer cannot see" do
@@ -221,28 +264,284 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_includes linked, @depository.id
   end
 
+  # The user chooses what progress counts.
+  test "create saves the progress basis the user chose" do
+    account = unclaimed_account("Basis Pot")
+
+    post goals_url, params: {
+      goal: { name: "Discipline goal", target_amount: "1000", progress_basis: "contributions", account_ids: [ account.id ] }
+    }
+
+    goal = @user.family.goals.find_by!(name: "Discipline goal")
+    assert_redirected_to goal_path(goal)
+    assert_equal "contributions", goal.progress_basis
+  end
+
+  test "create without a basis counts market value" do
+    account = unclaimed_account("Default Basis Pot")
+
+    post goals_url, params: { goal: { name: "Plain goal", target_amount: "1000", account_ids: [ account.id ] } }
+
+    goal = @user.family.goals.find_by!(name: "Plain goal")
+    assert_redirected_to goal_path(goal)
+    assert_equal "balance", goal.progress_basis
+  end
+
+  test "update changes the progress basis" do
+    assert_equal "balance", @goal.progress_basis
+
+    patch goal_url(@goal), params: { goal: { progress_basis: "contributions" } }
+
+    assert_redirected_to goal_path(@goal)
+    assert_equal "contributions", @goal.reload.progress_basis
+  end
+
+  test "update refuses an unknown progress basis" do
+    patch goal_url(@goal), params: { goal: { progress_basis: "speculative" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "balance", @goal.reload.progress_basis
+    # The re-rendered form still shows the stored basis, not two blank radios.
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=balance][checked]", 1
+    assert_select "input[type=radio][name='goal[progress_basis]'][checked]", 1
+  end
+
+  test "an unknown basis re-renders the stored basis after a valid one was saved" do
+    @goal.update!(progress_basis: "contributions")
+
+    patch goal_url(@goal), params: { goal: { progress_basis: "speculative" } }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=contributions][checked]", 1
+    assert_select "input[type=radio][name='goal[progress_basis]'][checked]", 1
+  end
+
+  test "create with an unknown basis re-renders with the default basis selected" do
+    account = unclaimed_account("Unknown Basis Pot")
+
+    assert_no_difference "Goal.count" do
+      post goals_url, params: {
+        goal: { name: "Unknown basis", target_amount: "1000", progress_basis: "speculative", account_ids: [ account.id ] }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=balance][checked]", 1
+    assert_select "input[type=radio][name='goal[progress_basis]'][checked]", 1
+  end
+
+  test "update refuses a basis change on a completed goal" do
+    @goal.complete!
+    snapshot = @goal.reload.completed_amount
+
+    patch goal_url(@goal), params: { goal: { progress_basis: "contributions" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "balance", @goal.reload.progress_basis
+    assert_equal snapshot, @goal.completed_amount
+    # The refusal has to reach the user: the re-rendered form names it, and
+    # the locked radios show the basis that was kept, not the one refused.
+    assert_select "p.text-destructive", text: I18n.t("activerecord.errors.models.goal.attributes.progress_basis.locked_once_completed")
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=balance][checked]", 1
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=contributions][checked]", 0
+  end
+
+  # A completed goal's basis is frozen with its snapshot, so the form must not
+  # offer a choice the model will refuse. Disabled radios are not submitted.
+  test "the form locks the basis on a completed goal and says how to unlock it" do
+    @goal.complete!
+
+    get edit_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[type=radio][name='goal[progress_basis]'][disabled]", 2
+    assert_select "p.text-secondary", text: "This goal's progress was frozen when it was completed. Reopen or restore it to change what counts toward it."
+  end
+
+  # Archiving a completed goal keeps its snapshot, so the basis stays locked,
+  # but the page offers Restore rather than Reopen. The note has to name a
+  # way out that the page actually shows.
+  test "the form locks the basis on an archived completed goal and names restore" do
+    @goal.complete!
+    @goal.archive!
+
+    get edit_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[type=radio][name='goal[progress_basis]'][disabled]", 2
+    assert_select "p.text-secondary", text: "This goal's progress was frozen when it was completed. Reopen or restore it to change what counts toward it."
+  end
+
+  test "update refuses a basis change on an archived completed goal and names restore" do
+    @goal.complete!
+    @goal.archive!
+
+    patch goal_url(@goal), params: { goal: { progress_basis: "contributions" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "balance", @goal.reload.progress_basis
+    assert_select "p.text-destructive", text: "Reopen or restore this goal before changing what counts toward it."
+  end
+
+  test "the form leaves the basis editable on an active goal" do
+    get edit_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[type=radio][name='goal[progress_basis]']", 2
+    assert_select "input[type=radio][name='goal[progress_basis]'][disabled]", 0
+    assert_not_includes response.body, I18n.t("goals.form.progress_basis_locked")
+  end
+
+  # What the locked form actually submits: everything but the basis.
+  test "an ordinary edit of a completed goal still saves" do
+    @goal.complete!
+
+    patch goal_url(@goal), params: { goal: { name: "Italy, done" } }
+
+    assert_redirected_to goal_path(@goal)
+    assert_equal "Italy, done", @goal.reload.name
+    assert_equal "balance", @goal.progress_basis
+  end
+
+  test "the basis of another family's goal cannot be changed" do
+    other_family = families(:empty)
+    account = Account.create!(family: other_family, accountable: Depository.new, name: "Theirs", currency: "USD", balance: 500)
+    theirs = other_family.goals.create!(name: "Theirs", target_amount: 1_000, currency: "USD") { |g| g.goal_accounts.build(account: account) }
+
+    patch goal_url(theirs), params: { goal: { progress_basis: "contributions" } }
+
+    assert_redirected_to goals_path
+    assert_equal "balance", theirs.reload.progress_basis
+  end
+
+  test "the form offers both progress bases with the current one selected" do
+    @goal.update_columns(progress_basis: "contributions")
+
+    get edit_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[type=radio][name='goal[progress_basis]']", 2
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=contributions][checked]", 1
+    assert_includes response.body, I18n.t("goals.form.progress_bases.balance.label")
+    assert_includes response.body, I18n.t("goals.form.progress_bases.contributions.label")
+  end
+
+  test "the goal page says which basis its progress counts" do
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis.balance")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis.contributions")
+
+    @goal.update_columns(progress_basis: "contributions")
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis.contributions")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis.balance")
+  end
+
+  # A completed goal shows its frozen snapshot, so its caption must not say
+  # the figure is what the accounts are worth today.
+  test "a completed goal's basis caption describes the completion snapshot" do
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis.balance")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis_at_completion.balance")
+
+    @goal.complete!
+    assert @goal.reload.completed_amount.present?
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis_at_completion.balance")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis.balance")
+
+    # The basis can't change on a completed goal, so reach a contributions
+    # snapshot the way a user would: reopen, switch, complete again.
+    @goal.reopen!
+    @goal.update!(progress_basis: "contributions")
+    @goal.complete!
+    assert @goal.reload.completed_amount.present?
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis_at_completion.contributions")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis.contributions")
+  end
+
+  # `archive` accepts an active goal, which then has no snapshot and keeps the
+  # live figure, so it keeps the live wording too.
+  test "an archived goal that never completed keeps the live basis caption" do
+    @goal.archive!
+    assert_nil @goal.reload.completed_amount
+
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis.balance")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis_at_completion.balance")
+  end
+
   test "update with empty account_ids re-renders with error" do
     patch goal_url(@goal), params: { goal: { account_ids: [ "" ] } }
     assert_response :unprocessable_entity
     assert_not_empty @goal.reload.goal_accounts
   end
 
-  test "update rejects a cross-currency account attachment" do
-    # Regression: sync_linked_accounts! used to call goal_accounts.create!
-    # directly, bypassing Goal#linked_accounts_must_match_goal_currency.
+  test "update accepts a foreign-currency account and converts its backing" do
     eur_account = Account.create!(
-      family: @goal.family,
-      accountable: Depository.new,
-      name: "EUR Checking",
-      currency: "EUR",
-      balance: 100
+      family: @goal.family, accountable: Depository.new,
+      name: "EUR Checking", currency: "EUR", balance: 100
     )
-    before_ids = @goal.goal_accounts.pluck(:account_id).sort
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
 
     patch goal_url(@goal), params: { goal: { account_ids: [ eur_account.id ] } }
 
-    assert_response :unprocessable_entity
-    assert_equal before_ids, @goal.reload.goal_accounts.pluck(:account_id).sort
+    assert_redirected_to goal_path(@goal)
+    assert_equal [ eur_account.id ], @goal.reload.goal_accounts.pluck(:account_id)
+    assert_equal "USD", @goal.currency
+    assert_equal 120, Goal.find(@goal.id).current_balance
+  end
+
+  test "create with mixed currencies uses the currency shown for the target" do
+    usd = unclaimed_account("USD pot")
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "EUR pot", currency: "EUR", balance: 100)
+    post goals_url, params: { goal: { name: "Mixed", target_amount: 1_000, account_ids: [ eur.id, usd.id ] } }
+
+    goal = Goal.order(created_at: :desc).first
+    assert_redirected_to goal_path(goal)
+    assert_equal @user.family.primary_currency_code, goal.currency
+    assert_equal [ eur.id, usd.id ].sort, goal.linked_accounts.pluck(:id).sort
+  end
+
+  test "show and index disclose an unavailable account conversion" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "EUR reserve", currency: "EUR", balance: 100)
+    @goal.goal_accounts.build(account: eur)
+    @goal.save!
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    warning = I18n.t("goals.currency_warning.body", count: 1, from: "EUR", to: @goal.currency)
+
+    get goal_url(@goal)
+    assert_response :success
+    assert_select "p", text: I18n.t("goals.show.funding_accounts.rate_unavailable")
+    assert_includes response.body, warning
+    # Above the headline figures, not below the funding breakdown.
+    assert_operator response.body.index(warning), :<, response.body.index(I18n.t("goals.show.funding_accounts_heading"))
+
+    get goals_url
+    assert_response :success
+    assert_select "p", text: I18n.t("goals.goal_card.partial_total")
+  end
+
+  test "detected foreign spending is converted on its date and releases native units" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "EUR spending", currency: "EUR", balance: 1_000)
+    @goal.goal_accounts.build(account: eur, allocated_amount: 500)
+    @goal.save!
+    date = 20.days.ago.to_date
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 2)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 3)
+    entry = eur.entries.create!(name: "Travel", date: date, amount: 100, currency: "EUR", entryable: Transaction.new)
+
+    post consume_goal_url(@goal), params: { transaction_id: entry.entryable_id }
+
+    assert_redirected_to goal_path(@goal)
+    assert_equal 200, @goal.reload.consumed_amount
+    assert_equal 400, @goal.goal_accounts.find_by!(account: eur).allocated_amount
+    assert_equal @goal.id, entry.entryable.reload.extra.dig("goal", "consumed_goal_id")
   end
 
   test "pause/resume/complete/archive/unarchive flow" do
@@ -361,7 +660,11 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     # One trackable goal (has target_date) + one open-ended (no target_date).
     # The trackable one should be the only thing in the denominator;
     # open-ended goals can't be off pace because they have no required pace.
-    build_goal(family, "House", target_amount: 1_000_000, target_date: 1.year.from_now)
+    house = build_goal(family, "House", target_amount: 1_000_000, target_date: 1.year.from_now)
+    # An account with no history at all has no measurable pace, and a goal
+    # without one leaves the fraction too. A deposit long ago gives it a
+    # measured pace of zero, which keeps it trackable (and behind).
+    create_transaction(account: house.linked_accounts.first, amount: -100, date: 200.days.ago.to_date)
     build_goal(family, "Emergency", target_amount: 1_000_000, target_date: nil)
 
     get goals_url
@@ -883,6 +1186,70 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       "a spend was still offered against money the reader cannot see"
   end
 
+  # A goal whose pace cannot be measured has no benchmark to be on track or
+  # behind against, so it belongs in neither the fraction nor the behind count
+  # -- the same treatment an open-ended goal gets.
+  test "an unmeasurable goal is not counted against the on-track tile" do
+    @goal.pause! # the fixture goal links an account with no history at all
+
+    paid = unclaimed_account("Paid Pot")
+    create_transaction(account: paid, amount: -3_000, date: 10.days.ago.to_date) # 1,000/mo
+    @user.family.goals.create!(
+      name: "On track", target_amount: 1_500, target_date: 300.days.from_now.to_date, currency: "USD"
+    ) { |g| g.goal_accounts.build(account: paid) }
+
+    anchored = unclaimed_account("Anchored Pot")
+    create_valuation(account: anchored, amount: 1_000, date: 30.days.ago.to_date, kind: "opening_anchor")
+    unknown = @user.family.goals.create!(
+      name: "Unknown", target_amount: 5_000, target_date: 300.days.from_now.to_date, currency: "USD"
+    ) { |g| g.goal_accounts.build(account: anchored) }
+
+    get goals_url
+
+    assert_response :success
+    assert_select "p", text: I18n.t("goals.index.kpi.on_track_value", on_track: 1, total: 1)
+    assert_select "p", text: I18n.t("goals.index.kpi.needs_this_month_zero_sub")
+    assert_no_match I18n.t("goals.index.kpi.on_track_sub_parts.behind", count: 1), response.body
+    assert_equal :pace_unknown, unknown.status
+    # Left out of the fraction, but not hidden: the tile must not call every
+    # goal on pace while one of them cannot be measured.
+    assert_select "p", text: /#{Regexp.escape(I18n.t("goals.index.kpi.on_track_sub_parts.pace_unknown", count: 1))}/
+    assert_no_match I18n.t("goals.index.kpi.on_track_sub_all_good"), response.body
+  end
+
+  test "a family whose only dated goal is unmeasurable is not told every goal is on pace" do
+    # Destroyed rather than paused: a paused goal at its target still counts as
+    # reached, which takes the tile to its "All caught up" branch instead.
+    @goal.destroy!
+    anchored = unclaimed_account("Anchored Pot")
+    create_valuation(account: anchored, amount: 1_000, date: 30.days.ago.to_date, kind: "opening_anchor")
+    @user.family.goals.create!(
+      name: "Unknown", target_amount: 5_000, target_date: 300.days.from_now.to_date, currency: "USD"
+    ) { |g| g.goal_accounts.build(account: anchored) }
+
+    get goals_url
+
+    assert_response :success
+    assert_select "p", text: /#{Regexp.escape(I18n.t("goals.index.kpi.on_track_sub_parts.pace_unknown", count: 1))}/
+    assert_no_match I18n.t("goals.index.kpi.on_track_sub_all_good"), response.body
+  end
+
+  test "a family with every tracked goal reached still hears about an unmeasurable one" do
+    @user.family.goals.where.not(id: @goal.id).destroy_all
+    @goal.update!(target_amount: 1) # reached against the depository balance
+    anchored = unclaimed_account("Anchored Pot")
+    create_valuation(account: anchored, amount: 1_000, date: 30.days.ago.to_date, kind: "opening_anchor")
+    @user.family.goals.create!(
+      name: "Unknown", target_amount: 5_000, target_date: 300.days.from_now.to_date, currency: "USD"
+    ) { |g| g.goal_accounts.build(account: anchored) }
+
+    get goals_url
+
+    assert_response :success
+    assert_select "p", text: I18n.t("goals.index.kpi.on_track_all_caught_up")
+    assert_select "p", text: /#{Regexp.escape(I18n.t("goals.index.kpi.on_track_sub_parts.pace_unknown", count: 1))}/
+  end
+
   private
 
     def spent_goal_for_display
@@ -961,6 +1328,41 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
                        I18n.t("goals.form.earmark.whole_balance_alone")
       assert_no_match(/earmark/i, I18n.t("goals.form.earmark.whole_balance_alone"),
         "the hint shown with no other claims should not mention earmarks")
+    end
+
+    # Privacy mode sets `pointer-events: none` on bare .privacy-sensitive, so
+    # the per-account amount has to opt back in or it cannot be typed into.
+    test "each account's earmark is a money field that stays editable in privacy mode" do
+      account = unclaimed_account("Earmark Pot")
+
+      get new_goal_url
+
+      assert_response :success
+      assert_select "label[for=goal_allocations_#{account.id}]", text: /#{I18n.t("goals.form.fields.earmark_for", account: "Earmark Pot")}/
+      # The text input has no native min; the bound rides on the money-field container.
+      assert_select "[data-controller='money-field'][data-money-field-min-value='0'] input#goal_allocations_#{account.id}", count: 1
+      assert_select "input#goal_allocations_#{account.id}[name='goal[allocations][#{account.id}]']", count: 1 do |inputs|
+        input = inputs.first
+        assert_includes input["class"].split, "privacy-sensitive"
+        assert_includes input["class"].split, "privacy-sensitive-interactive"
+        assert_equal I18n.t("goals.form.fields.whole_balance"), input["placeholder"]
+        assert_nil input["value"]
+        assert_equal "allocationInput", input["data-goal-earmark-target"]
+        assert_equal "amount", input["data-money-field-target"]
+        assert_includes input["data-action"], "input->goal-earmark#refresh"
+      end
+    end
+
+    test "a fixed earmark is filled back into its account's field" do
+      account = unclaimed_account("Filled Pot")
+      goal = @user.family.goals.create!(name: "Filled", target_amount: 5_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 250)
+      end
+
+      get edit_goal_url(goal)
+
+      assert_response :success
+      assert_select "input#goal_allocations_#{account.id}[value='250.00']"
     end
 
   private

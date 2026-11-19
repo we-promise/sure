@@ -48,8 +48,36 @@ class Provider::Base
   #   - can_connect: Boolean, whether family can connect to this provider
   #   - new_account_path: Proc that generates path for new account flow
   #   - existing_account_path: Proc that generates path for linking existing account
+  #   - member_connectable: Boolean, whether a non-admin member may connect it
   def self.connection_configs(family:)
     []
+  end
+
+  # The provider item class that represents a connection for this adapter, if
+  # the provider has one. Used to read the item's declared credential scope.
+  # @return [Class, nil]
+  def self.connection_item_class
+    nil
+  end
+
+  # May a non-admin household member create one of these connections? False
+  # unless the item class has declared `credential_scope :per_connection`, so
+  # an unclassified provider stays admin-only.
+  # @return [Boolean]
+  def self.member_connectable?
+    klass = connection_item_class
+    klass.respond_to?(:member_connectable?) && klass.member_connectable?
+  end
+
+  # SQL that is true when automatic transfer matching must not pair the two
+  # accounts behind these aliases, because this provider already links the
+  # transfers between them from its own feed (for example, two balances of one
+  # connection). Nil when the provider has no such pairs.
+  # @param inflow_accounts_alias [String] SQL alias of the inflow's accounts row
+  # @param outflow_accounts_alias [String] SQL alias of the outflow's accounts row
+  # @return [String, nil]
+  def self.auto_match_exclusion_sql(inflow_accounts_alias, outflow_accounts_alias)
+    nil
   end
 
   # Returns the provider type (class name)

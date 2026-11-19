@@ -10,6 +10,7 @@ ro:
       date: Dată
       description: Descriere
       description_placeholder: Descrie tranzacția
+      description_placeholder_optional: "Lasă gol pentru a folosi numele categoriei/comerciantului sau selectează mai întâi unul dintre ele"
       expense: Cheltuială
       income: Venit
       none: (niciunul)

@@ -29,32 +29,9 @@ class QuestradeItemsController < ApplicationController
       # Accounts tab for setup.
       @questrade_item.sync_later unless @questrade_item.syncing?
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured Questrade.")
-        @questrade_items = Current.family.questrade_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "questrade-providers-panel",
-            partial: "settings/providers/questrade_panel",
-            locals: { questrade_items: @questrade_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @questrade_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "questrade-providers-panel",
-          partial: "settings/providers/questrade_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message
-      end
+      render_provider_panel("questrade", alert: @questrade_item.errors.full_messages.join(", "))
     end
   end
 
@@ -64,32 +41,9 @@ class QuestradeItemsController < ApplicationController
     update_attrs = update_attrs.merge(status: :good) if update_attrs[:refresh_token].present?
 
     if @questrade_item.update(update_attrs)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully updated Questrade configuration.")
-        @questrade_items = Current.family.questrade_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "questrade-providers-panel",
-            partial: "settings/providers/questrade_panel",
-            locals: { questrade_items: @questrade_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("questrade", notice: t(".success"), questrade_items: Current.family.questrade_items.ordered)
     else
-      @error_message = @questrade_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "questrade-providers-panel",
-          partial: "settings/providers/questrade_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message
-      end
+      render_provider_panel("questrade", alert: @questrade_item.errors.full_messages.join(", "))
     end
   end
 
@@ -392,16 +346,29 @@ class QuestradeItemsController < ApplicationController
     def safe_return_to_path
       return nil if params[:return_to].blank?
 
-      return_to = params[:return_to].to_s
+      return_to = params[:return_to].to_s.strip
+      return nil unless return_to.start_with?("/")
+      return nil if return_to[1] == "/" || return_to[1] == "\\"
+      return nil if return_to.include?("\\") || return_to.match?(/[[:cntrl:]]/)
+      return nil if encoded_path_separator?(return_to)
 
-      begin
-        uri = URI.parse(return_to)
-        return nil if uri.scheme.present?
-        return nil if uri.host.present?
-        return nil unless return_to.start_with?("/")
-        return_to
-      rescue URI::InvalidURIError
-        nil
-      end
+      uri = URI.parse(return_to)
+      return nil unless uri.relative?
+
+      Rails.application.routes.recognize_path(uri.path, method: :get)
+
+      return_to
+    rescue URI::InvalidURIError, ActionController::RoutingError
+      nil
+    end
+
+    def encoded_path_separator?(return_to)
+      encoded_second_character = return_to[1, 3]
+      return false unless encoded_second_character&.start_with?("%")
+
+      decoded = URI.decode_www_form_component(encoded_second_character)
+      decoded == "/" || decoded == "\\"
+    rescue ArgumentError
+      true
     end
 end

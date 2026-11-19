@@ -114,10 +114,15 @@ class RecurringTransaction
         written = 0
 
         # Highest confidence claims first; each entry and occurrence is assigned
-        # at most once per run. The id tiebreak only makes equally confident
+        # at most once per run. A split child whose parent is also a candidate
+        # waits until every other candidate had its turn: the parent claims its
+        # bill as if the split came after matching, and the Allocator then
+        # refuses the child. The id tiebreak only makes equally confident
         # candidates resolve deterministically, since sort_by is not stable.
+        candidate_entry_ids = candidates.to_set { |candidate| candidate.entry.id }
         ordered = candidates.sort_by do |candidate|
-          [ -candidate.confidence, candidate.occurrence.id, candidate.entry.id ]
+          parent_competes = candidate_entry_ids.include?(candidate.entry.parent_entry_id)
+          [ parent_competes ? 1 : 0, -candidate.confidence, candidate.occurrence.id, candidate.entry.id ]
         end
 
         ordered.each do |candidate|
@@ -128,7 +133,8 @@ class RecurringTransaction
           next if tier.nil?
           next if tier == :high && !suggest
 
-          write_allocation(candidate, tier)
+          next unless write_allocation(candidate, tier)
+
           taken_entries << candidate.entry.id
           taken_occurrences << candidate.occurrence.id
           written += 1
@@ -164,21 +170,26 @@ class RecurringTransaction
         runner_up.nil? || candidate.confidence - runner_up.confidence >= AMBIGUITY_MARGIN
       end
 
+      # False when the occurrence should stay open to the next candidate.
       def write_allocation(candidate, tier)
-        occurrence = candidate.occurrence
-        entry = candidate.entry
-
-        Allocator.new(occurrence).allocate_matched!(
-          entry: entry,
+        Allocator.new(candidate.occurrence).allocate_matched!(
+          entry: candidate.entry,
           state: tier == :exact ? "confirmed" : "suggested",
           confidence: candidate.confidence,
           signals: candidate.signals
         )
+        true
+      rescue Allocator::SplitCounterpartAllocatedError
+        # The other side of this split already pays a bill, so this entry is
+        # not money the occurrence can have. Another charge still can.
+        false
       rescue ActiveRecord::RecordNotUnique
         # Already allocated (a previous run wrote it); nothing to do.
+        true
       rescue Allocator::OverAllocationError
         # Another occurrence already claimed the entry's capacity. Skip the
         # candidate rather than aborting the run.
+        true
       end
 
       # The hard filters depend on the series and the entry, not the individual
@@ -229,7 +240,7 @@ class RecurringTransaction
         family.recurring_occurrences
               .open_status
               .includes(recurring_transaction: :recurrence_rules)
-              .reject { |occurrence| occurrence.recurring_transaction.transfer? }
+              .to_a
       end
 
       def rejected_pairs
@@ -251,20 +262,59 @@ class RecurringTransaction
       end
 
       # One query over the envelope of every open occurrence's window.
+      # Transfer legs are left out, except the outflow side of a transfer that
+      # a recurring transfer series could be paid by. A split charge stays in:
+      # its parent is excluded by the split, not by the user, and is the payment.
       def entries_for(occurrences, include_closed_window)
         window_min = occurrences.map { |occurrence| window_for(occurrence).begin }.min
         window_max = occurrences.map { |occurrence| window_for(occurrence).end }.max
         window_max = Date.current if !include_closed_window && window_max > Date.current
 
+        source_account_ids = occurrences.map(&:recurring_transaction).select(&:transfer?).map(&:account_id).uniq
+        preload_transfer_destinations(source_account_ids, window_min..window_max)
+
         family.entries
               .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
               .where(entryable_type: "Transaction")
-              .where(excluded: false)
+              .not_excluded_or_split_parent
               .where(date: window_min..window_max)
-              .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+              .where("transactions.kind NOT IN (?) OR transactions.id IN (?)", Transaction::TRANSFER_KINDS, transfer_destinations.keys)
               .where.not(id: RecurringAllocation.where.not(entry_id: nil).where(state: "confirmed").select(:entry_id))
               .includes(:entryable)
               .to_a
+      end
+
+      # Outflow transaction id => the account its transfer pays into, for the
+      # transfers leaving the given accounts in the window. Every entry
+      # candidate collection scores is in that window, so once this has run the
+      # map is complete and a missing entry is simply not a transfer outflow.
+      def preload_transfer_destinations(account_ids, dates)
+        @transfer_destinations_complete = true
+        return if account_ids.empty?
+
+        Transfer
+          .joins(outflow_transaction: :entry)
+          .joins("INNER JOIN entries inflow_entries ON inflow_entries.entryable_id = transfers.inflow_transaction_id AND inflow_entries.entryable_type = 'Transaction'")
+          .where(entries: { account_id: account_ids, date: dates })
+          .pluck(:outflow_transaction_id, "inflow_entries.account_id")
+          .each { |outflow_id, account_id| transfer_destinations[outflow_id] = account_id }
+      end
+
+      def transfer_destinations
+        @transfer_destinations ||= {}
+      end
+
+      # The account the entry pays into when it is the outflow of a transfer.
+      # Read from the preload during candidate collection; looked up on demand
+      # for explain and orphan repair, which handle one entry at a time.
+      def transfer_destination(entry)
+        transaction_id = entry.entryable_id
+        return transfer_destinations[transaction_id] if transfer_destinations.key?(transaction_id) || @transfer_destinations_complete
+
+        transfer_destinations[transaction_id] = Transfer
+          .where(outflow_transaction_id: transaction_id)
+          .joins(inflow_transaction: :entry)
+          .pick("entries.account_id")
       end
 
       # The occurrence's date window, snooze-aware and clamped so adjacent
@@ -298,6 +348,10 @@ class RecurringTransaction
       # keeps the merchant when it has one, and its name stays kin to the old
       # descriptor rather than equal to it.
       def repair_identity?(series, entry)
+        # A transfer leg's name is generic ("Transfer", a bank reference), so
+        # the account pair is the identity here too, as in identity_matches?.
+        return transfer_destination(entry) == series.destination_account_id if series.transfer?
+
         if series.merchant_id.present? && entry.entryable.merchant_id.present?
           return entry.entryable.merchant_id == series.merchant_id
         end
@@ -310,13 +364,19 @@ class RecurringTransaction
 
       # Hard filters: right sign, right currency, right account when the
       # series is account-scoped, and the identifier at least plausibly
-      # related (same merchant, or a name the series knows).
+      # related (same merchant, or a name the series knows). A recurring
+      # transfer is identified by its account pair instead: the entry must be
+      # the outflow of a transfer into the series' destination account. Any
+      # other series never matches a transfer leg.
       def identity_matches?(series, entry)
         return false unless entry.currency == series.currency
         return false if series.account_id.present? && entry.account_id != series.account_id
 
         expense_series = series.amount.positive?
         return false if expense_series != entry.amount.positive?
+
+        return transfer_destination(entry) == series.destination_account_id if series.transfer?
+        return false if entry.entryable.transfer?
 
         if series.merchant_id.present?
           entry.entryable.merchant_id == series.merchant_id
@@ -327,8 +387,7 @@ class RecurringTransaction
 
       def known_names(series)
         @known_names ||= {}
-        @known_names[series.id] ||= ([ series.name ] + Array(series.matcher_hints["name_aliases"]))
-                                      .compact.map { |name| self.class.normalize_name(name) }.to_set
+        @known_names[series.id] ||= series.known_names
       end
 
       def normalize_name(name)
@@ -348,7 +407,9 @@ class RecurringTransaction
         signals = {}
         expected = expected_for(occurrence)
 
-        if series.merchant_id.present?
+        if series.transfer?
+          signals[:transfer] = 0.40
+        elsif series.merchant_id.present?
           signals[:merchant] = 0.40
         else
           signals[:name] = 0.35
@@ -368,16 +429,12 @@ class RecurringTransaction
       def amount_score(series, expected, actual)
         return 0.30 if (actual - expected).abs < BigDecimal("0.01")
 
-        tolerance_pct = [ series.amount_tolerance_pct, learned_tolerance(series) ].max
+        tolerance_pct = series.effective_amount_tolerance_pct
         band = expected.abs * (tolerance_pct / BigDecimal("100"))
         distance = (actual - expected).abs
         return nil if band.zero? || distance > band
 
         (0.25 - (distance / band) * 0.10).round(4)
-      end
-
-      def learned_tolerance(series)
-        BigDecimal((series.matcher_hints["learned_tolerance_pct"] || 0).to_s)
       end
 
       # 0.20 on the due date, decaying linearly to 0.05 at the window edge.

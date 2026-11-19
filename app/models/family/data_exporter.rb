@@ -3,6 +3,7 @@ require "csv"
 
 class Family::DataExporter
   EXPORT_VERSION = 2
+  TRANSACTIONS_CSV_HEADERS = [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ].freeze
 
   def initialize(family)
     @family = family
@@ -60,8 +61,30 @@ class Family::DataExporter
       TEXT
     end
 
-    def generate_accounts_csv
+    # Wraps a CSV writer so every row emitted is escaped against formula
+    # injection. Wrapping the writer rather than each call site means a column
+    # added later cannot go out unescaped by accident, which is exactly how the
+    # ticker and subtype columns were missed before.
+    class SanitizedCsv
+      def initialize(csv)
+        @csv = csv
+      end
+
+      def <<(row)
+        @csv << CsvSanitizer.sanitize_row(row)
+      end
+    end
+
+    private_constant :SanitizedCsv
+
+    def generate_sanitized_csv
       CSV.generate do |csv|
+        yield SanitizedCsv.new(csv)
+      end
+    end
+
+    def generate_accounts_csv
+      generate_sanitized_csv do |csv|
         csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ]
 
         # Only export accounts belonging to this family
@@ -80,8 +103,8 @@ class Family::DataExporter
     end
 
     def generate_transactions_csv
-      CSV.generate do |csv|
-        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
+      generate_sanitized_csv do |csv|
+        csv << TRANSACTIONS_CSV_HEADERS
 
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)
@@ -107,7 +130,7 @@ class Family::DataExporter
     end
 
     def generate_trades_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency" ]
 
         # Only export trades from accounts belonging to this family
@@ -128,7 +151,7 @@ class Family::DataExporter
     end
 
     def generate_categories_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << [ "name", "color", "parent_category", "lucide_icon" ]
 
         # Only export categories belonging to this family
@@ -144,7 +167,7 @@ class Family::DataExporter
     end
 
     def generate_merchants_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         # Headers match MerchantImport's expected columns so the export round-trips
         csv << [ "name", "color", "website_url" ]
 
@@ -160,18 +183,20 @@ class Family::DataExporter
     end
 
     def generate_rules_csv
-      CSV.generate do |csv|
-        csv << [ "name", "resource_type", "active", "effective_date", "conditions", "actions" ]
+      generate_sanitized_csv do |csv|
+        csv << [ "name", "resource_type", "active", "effective_date", "conditions", "actions", "group" ]
 
-        # Only export rules belonging to this family
-        @family.rules.includes(conditions: :sub_conditions, actions: []).find_each do |rule|
+        # Only export rules belonging to this family, in run order so an
+        # import recreates them in the same order
+        @family.rules.includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
           csv << [
             rule.name,
             rule.resource_type,
             rule.active,
             rule.effective_date&.iso8601,
             serialize_conditions_for_csv(rule.conditions),
-            serialize_actions_for_csv(rule.actions)
+            serialize_actions_for_csv(rule.actions),
+            rule.rule_group&.name
           ]
         end
       end
@@ -245,13 +270,20 @@ class Family::DataExporter
 
       # Export accounts with full accountable data
       @family.accounts.includes(:accountable).find_each do |account|
+        data = account.as_json(
+          include: {
+            accountable: {}
+          }
+        )
+        # A property's address lives in its own table, so it is not part of
+        # the accountable's columns.
+        if account.accountable.is_a?(Property) && (address = account.accountable.address)
+          data["accountable"]["address"] = address.as_json(only: Family::DataImporter::PROPERTY_ADDRESS_ATTRIBUTES)
+        end
+
         lines << {
           type: "Account",
-          data: account.as_json(
-            include: {
-              accountable: {}
-            }
-          )
+          data: data
         }.to_json
       end
 
@@ -309,6 +341,27 @@ class Family::DataExporter
         lines << {
           type: "Merchant",
           data: merchant.as_json
+        }.to_json
+      end
+
+      # Export provider-assigned merchants (auto-detected by bank sync/AI enrichment)
+      # referenced by this family's transactions and recurring transactions. These
+      # are shared across every family on the instance, so only the ones actually
+      # in use here are included -- see #3113. ProviderMerchant does not support
+      # color, so none is exported for it.
+      referenced_provider_merchants.each do |merchant|
+        lines << {
+          type: "ProviderMerchant",
+          data: {
+            id: merchant.id,
+            name: merchant.name,
+            source: merchant.source,
+            provider_merchant_id: merchant.provider_merchant_id,
+            logo_url: merchant.logo_url,
+            website_url: merchant.website_url,
+            created_at: merchant.created_at,
+            updated_at: merchant.updated_at
+          }
         }.to_json
       end
 
@@ -411,6 +464,7 @@ class Family::DataExporter
             outflow_transaction_id: transfer.outflow_transaction_id,
             status: transfer.status,
             notes: transfer.notes,
+            investment_contribution: transfer.investment_contribution_choice,
             created_at: transfer.created_at,
             updated_at: transfer.updated_at
           }
@@ -430,8 +484,18 @@ class Family::DataExporter
         }.to_json
       end
 
-      # Export trades with full data
-      @family.trades.includes(:security, entry: :account).find_each do |trade|
+      # Export trades with full data. Lots are rebuilt from trades on sync, so
+      # a trade carries only what the user set on its lot: the lot's total
+      # cost, and, on a sale, the trade whose lot it names to sell from. Trades
+      # go in the order Holding::PortfolioCache#trades replays them: by date,
+      # then as entered, buys before sales entered together. An import stamps
+      # entries in file order, so the file's order is the imported replay
+      # order, and a named lot, which replays before its sale, is always
+      # ahead of it, even when an import arrives in chunks.
+      lot_total_costs = HoldingLot.derived.joins(:account).where(accounts: { family_id: @family.id })
+        .where.not(manual_total_cost: nil).pluck(:source_entry_id, :manual_total_cost).to_h
+      @family.trades.includes(:security, :lot_source_entry, entry: :account)
+        .order(Arel.sql("entries.date ASC, entries.created_at ASC, CASE WHEN trades.qty < 0 THEN 1 ELSE 0 END ASC, entries.id ASC")).each do |trade|
         lines << {
           type: "Trade",
           data: {
@@ -447,6 +511,8 @@ class Family::DataExporter
             price: trade.price,
             amount: trade.entry.amount,
             currency: trade.currency,
+            lot_total_cost: lot_total_costs[trade.entry.id],
+            lot_source_trade_id: trade.lot_source_entry&.entryable_id,
             created_at: trade.created_at,
             updated_at: trade.updated_at
           }
@@ -517,8 +583,8 @@ class Family::DataExporter
         }.to_json
       end
 
-      # Export rules with versioned schema
-      @family.rules.includes(conditions: :sub_conditions, actions: []).find_each do |rule|
+      # Export rules with versioned schema, in run order
+      @family.rules.includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
         lines << {
           type: "Rule",
           version: 1,
@@ -565,8 +631,18 @@ class Family::DataExporter
       if parent_entry.association(:child_entries).loaded?
         parent_entry.child_entries.sort_by { |entry| [ entry.created_at, entry.id ] }
       else
-        parent_entry.child_entries.order(:created_at, :id).to_a
+        parent_entry.child_entries.in_split_order.to_a
       end
+    end
+
+    def referenced_provider_merchants
+      @referenced_provider_merchants ||= ProviderMerchant.where(id: referenced_merchant_ids).to_a
+    end
+
+    def referenced_merchant_ids
+      transaction_ids = @family.transactions.where.not(merchant_id: nil).distinct.pluck(:merchant_id)
+      recurring_ids = @family.recurring_transactions.where.not(merchant_id: nil).distinct.pluck(:merchant_id)
+      (transaction_ids + recurring_ids).uniq
     end
 
     def family_transaction_ids
@@ -722,6 +798,10 @@ class Family::DataExporter
         resource_type: rule.resource_type,
         active: rule.active,
         effective_date: rule.effective_date&.iso8601,
+        position: rule.position,
+        stop_processing: rule.stop_processing,
+        apply_immediately: rule.apply_immediately,
+        group: rule.rule_group&.name,
         conditions: rule.conditions.where(parent_id: nil).map { |condition| serialize_condition(condition) },
         actions: rule.actions.map { |action| serialize_action(action) }
       }
@@ -761,17 +841,17 @@ class Family::DataExporter
 
       # Map category UUIDs to names for portability
       if condition.condition_type == "transaction_category"
-        return rule_operand(condition.value, type: "Category", relation: @family.categories)
+        return rule_operand(condition.value, type: "Category", relation: :categories)
       end
 
       # Map merchant UUIDs to names for portability
       if condition.condition_type == "transaction_merchant"
-        return rule_operand(condition.value, type: "Merchant", relation: @family.merchants)
+        return rule_operand(condition.value, type: "Merchant", relation: :available_merchants)
       end
 
       # Map tag UUIDs to names for portability
       if condition.condition_type == "transaction_tag"
-        return rule_operand(condition.value, type: "Tag", relation: @family.tags)
+        return rule_operand(condition.value, type: "Tag", relation: :tags)
       end
 
       rule_operand(condition.value)
@@ -782,20 +862,76 @@ class Family::DataExporter
 
       # Map category UUIDs to names for portability
       if action.action_type == "set_transaction_category"
-        return rule_operand(action.value, type: "Category", relation: @family.categories, fallback_to_name: true)
+        return rule_operand(action.value, type: "Category", relation: :categories, fallback_to_name: true)
       end
 
       # Map merchant UUIDs to names for portability
       if action.action_type == "set_transaction_merchant"
-        return rule_operand(action.value, type: "Merchant", relation: @family.merchants, fallback_to_name: true)
+        return rule_operand(action.value, type: "Merchant", relation: :available_merchants, fallback_to_name: true)
       end
 
-      # Map tag UUIDs to names for portability
+      # Map tag UUIDs to names for portability. Stored as a comma-separated
+      # list of tag ids (see Rule::Action#value=), so each id is resolved
+      # independently rather than treating the whole string as one operand.
       if action.action_type == "set_transaction_tags"
-        return rule_operand(action.value, type: "Tag", relation: @family.tags, fallback_to_name: true)
+        return resolve_multi_tag_operand(action.value)
+      end
+
+      if action.action_type == "split_transaction"
+        return { value: portable_split_value(action.value), value_ref: nil }
       end
 
       rule_operand(action.value)
+    end
+
+    # The split config is a JSON blob whose rows reference categories, merchants
+    # and tags by id. Ids only mean something inside this family, so each row
+    # carries names instead (see Rule::ActionExecutor::SplitTransaction.localize_value
+    # for the import side). Ids that no longer resolve (record deleted since the
+    # rule was saved) are dropped, matching how the executor ignores them.
+    def portable_split_value(value)
+      config = Rule::ActionExecutor::SplitTransaction.parse_config(value)
+      return value unless config
+
+      splits = config["splits"].map do |split|
+        row = split.except("category_id", "merchant_id", "tag_ids")
+        category = split_operand_record(:categories, split["category_id"])
+        merchant = split_operand_record(:merchants, split["merchant_id"])
+        tags = Array(split["tag_ids"]).filter_map { |id| split_operand_record(:tags, id) }
+
+        row["category"] = category.name if category
+        row["merchant"] = merchant.name if merchant
+        row["tags"] = tags.map(&:name) if tags.any?
+        row
+      end
+
+      # An object, not a JSON string: the CSV rule import unescapes \" inside string values,
+      # which would corrupt a nested JSON string whose names contain quotes.
+      config.merge("splits" => splits)
+    end
+
+    def split_operand_record(relation_key, id)
+      return nil unless id.is_a?(String) && uuid_like?(id)
+
+      operand_records_by_id(relation_key)[id.downcase]
+    end
+
+    def resolve_multi_tag_operand(value)
+      ids = value.to_s.split(",")
+      records = ids.map { |id| resolve_rule_operand_record(:tags, id, fallback_to_name: true) }
+      names = records.each_with_index.map { |record, i| record&.name || ids[i] }
+      refs = records.compact.map { |record| rule_value_ref("Tag", record) }
+
+      {
+        value: Rule::Action.encode_multi_value_names(names),
+        # A single tag keeps the pre-existing scalar value_ref shape for
+        # backward compatibility with older exports; only genuinely
+        # multi-tag actions use an array. Keyed off `ids.size` (not
+        # `refs.size`) so a partially-orphaned multi-tag action (one tag
+        # since deleted) still round-trips as an array instead of silently
+        # dropping the surviving tag's name on import.
+        value_ref: ids.size <= 1 ? refs.first : refs
+      }
     end
 
     def rule_operand(value, type: nil, relation: nil, fallback_to_name: false)
@@ -807,10 +943,28 @@ class Family::DataExporter
       }
     end
 
-    def resolve_rule_operand_record(relation, value, fallback_to_name:)
-      return relation.find_by(id: value) if uuid_like?(value)
+    def resolve_rule_operand_record(relation_key, value, fallback_to_name:)
+      return operand_records_by_id(relation_key)[value.to_s.downcase] if uuid_like?(value)
 
-      relation.find_by(name: value) if fallback_to_name
+      operand_records_by_name(relation_key)[value] if fallback_to_name
+    end
+
+    def operand_records(relation_key)
+      @operand_records ||= {}
+      # `.reload` bypasses any pre-existing in-memory association cache on
+      # `@family` (e.g. a prior `create!` through the same association) so
+      # destroyed records aren't served stale from that cache.
+      @operand_records[relation_key] ||= @family.public_send(relation_key).reload.to_a
+    end
+
+    def operand_records_by_id(relation_key)
+      @operand_records_by_id ||= {}
+      @operand_records_by_id[relation_key] ||= operand_records(relation_key).index_by(&:id)
+    end
+
+    def operand_records_by_name(relation_key)
+      @operand_records_by_name ||= {}
+      @operand_records_by_name[relation_key] ||= operand_records(relation_key).index_by(&:name)
     end
 
     def rule_value_ref(type, record)

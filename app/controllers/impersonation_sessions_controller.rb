@@ -9,6 +9,13 @@ class ImpersonationSessionsController < ApplicationController
 
   def join
     @impersonation_session = Current.true_user.impersonator_support_sessions.find_by(id: params[:impersonation_session_id])
+
+    # Structural guard, not just the self-healing one in
+    # Authentication#end_impersonation_if_target_inactive! — that check only
+    # runs on the *next* request, so without this, an admin could briefly
+    # join an impersonation targeting an already-deactivated user.
+    raise_unauthorized! if @impersonation_session && !@impersonation_session.impersonated.active?
+
     Current.session.update!(active_impersonator_session: @impersonation_session)
     redirect_to root_path, notice: t(".success")
   end
@@ -46,6 +53,10 @@ class ImpersonationSessionsController < ApplicationController
       @impersonation_session =
         Current.true_user.impersonated_support_sessions.find_by(id: params[:id]) ||
         Current.true_user.impersonator_support_sessions.find_by(id: params[:id])
+
+      # Anyone who is neither party gets the same 404 as a missing record
+      # instead of a NoMethodError on nil.
+      raise_unauthorized! if @impersonation_session.nil?
     end
 
     def require_super_admin!

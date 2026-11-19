@@ -3,6 +3,14 @@ class AccountShare < ApplicationRecord
   belongs_to :user
 
   PERMISSIONS = %w[full_control read_write read_only].freeze
+  # Share tiers that may annotate (category, tags, notes, merchant); owners
+  # always can. Single source for the per-account check and bulk scopes.
+  ANNOTATE_PERMISSIONS = %w[full_control read_write].freeze
+  # Fields those annotate-only tiers may change: notes on the entry, and
+  # category, merchant and tags on its transaction. Single-entry edits and
+  # bulk edits both filter through these lists.
+  ANNOTATE_ENTRY_ATTRIBUTES = %i[notes].freeze
+  ANNOTATE_TRANSACTION_ATTRIBUTES = %i[category_id merchant_id tag_ids].freeze
 
   validates :permission, inclusion: { in: PERMISSIONS }
   validates :user_id, uniqueness: { scope: :account_id }
@@ -24,7 +32,7 @@ class AccountShare < ApplicationRecord
   end
 
   def can_annotate?
-    full_control? || read_write?
+    permission.in?(ANNOTATE_PERMISSIONS)
   end
 
   def can_edit?

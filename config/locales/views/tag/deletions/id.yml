@@ -1,0 +1,16 @@
+---
+id:
+  tag:
+    deletions:
+      create:
+        deleted: Tag dihapus
+      new:
+        delete_and_leave_uncategorized: Hapus "%{tag_name}"
+        delete_and_recategorize: Hapus "%{tag_name}" dan tetapkan tag baru
+        delete_and_reassign: Hapus dan tetapkan ulang
+        delete_tag: Hapus tag?
+        explanation: "%{tag_name} akan dihapus dari transaksi dan entitas lain yang
+          dapat diberi tag. Alih-alih membiarkannya tanpa tag, Anda juga dapat
+          menetapkan tag baru di bawah ini."
+        replacement_tag_prompt: Pilih tag
+        tag: Tag

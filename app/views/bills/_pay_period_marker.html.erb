@@ -15,33 +15,40 @@
     band described a pay period without ever saying where it ended. %>
 <% next_payday = period.ends_on + 1 %>
 
-<div class="flex items-center gap-2 px-4 py-2 bg-container-inset">
-  <%# A leading window with nothing arriving is not a payday. Labelling it
-      "Paid $0.00" would read as a missed cheque rather than the stretch before
-      the next one, so it says what it is, the same wording the income plan uses. %>
+<%# Below @lg the two halves stack, the total under the label's text. Side by
+    side they need about 350px, so on a phone the label wrapped into two ragged
+    lines beside a one-line total. Container, not viewport, like the rows. %>
+<div class="flex items-start @lg:items-center gap-2 px-4 py-2 bg-container-inset">
   <% if period.bridge? %>
     <%= icon "wallet", size: "sm" %>
-
-    <p class="text-xs font-medium text-secondary">
-      <%= t("bills.pay_period.before_next_paycheck") %>
-    </p>
   <% else %>
     <%= icon "arrow-down-circle", size: "sm", color: "success" %>
-
-    <p class="text-xs font-medium text-secondary">
-      <%= t("bills.pay_period.paycheck_on", date: l(period.starts_on, format: :short)) %>
-      <span class="text-subdued">&middot;</span>
-      <span class="text-success privacy-sensitive">
-        +<%= format_money(Money.new(period.income, currency)) %>
-      </span>
-    </p>
   <% end %>
 
-  <% if due_total.positive? %>
-    <p class="ml-auto text-xs text-subdued privacy-sensitive shrink-0">
-      <%= t("bills.pay_period.due_before_date",
-            amount: format_money(Money.new(due_total, currency)),
-            date: l(next_payday, format: :short)) %>
-    </p>
-  <% end %>
+  <div class="flex-1 min-w-0 flex flex-col @lg:flex-row @lg:items-center gap-x-2 gap-y-0.5">
+    <%# A leading window with nothing arriving is not a payday. Labelling it
+        "Paid $0.00" would read as a missed cheque rather than the stretch before
+        the next one, so it says what it is, the same wording the income plan uses. %>
+    <% if period.bridge? %>
+      <p class="text-xs font-medium text-secondary">
+        <%= t("bills.pay_period.before_next_paycheck") %>
+      </p>
+    <% else %>
+      <p class="text-xs font-medium text-secondary">
+        <%= t("bills.pay_period.paycheck_on", date: l(period.starts_on, format: :short)) %>
+        <span class="text-subdued">&middot;</span>
+        <span class="text-success privacy-sensitive">
+          +<%= format_money(Money.new(period.income, currency)) %>
+        </span>
+      </p>
+    <% end %>
+
+    <% if due_total.positive? %>
+      <p class="@lg:ml-auto text-xs text-subdued privacy-sensitive shrink-0">
+        <%= t("bills.pay_period.due_before_date",
+              amount: format_money(Money.new(due_total, currency)),
+              date: l(next_payday, format: :short)) %>
+      </p>
+    <% end %>
+  </div>
 </div>

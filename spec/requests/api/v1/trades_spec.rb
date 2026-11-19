@@ -3,6 +3,24 @@
 require 'swagger_helper'
 
 RSpec.describe 'API V1 Trades', type: :request do
+  # POST /api/v1/trades answers 201 with one of three shapes. rswag keeps a
+  # single 201 entry per operation (the last example's schema, deep-merged), so
+  # every 201 example declares the same documented oneOf and then checks its own
+  # response against the one schema it should match.
+  created_response_schema = {
+    oneOf: [
+      { '$ref' => '#/components/schemas/Trade' },
+      { '$ref' => '#/components/schemas/Transaction' },
+      { '$ref' => '#/components/schemas/TransferDecision' }
+    ]
+  }
+
+  def expect_created_shape(response, schema_name)
+    metadata = RSpec.current_example.metadata.deep_dup
+    metadata[:response][:schema] = { '$ref' => "#/components/schemas/#{schema_name}" }
+    Rswag::Specs::ResponseValidator.new.validate!(metadata, response)
+  end
+
   let(:family) do
     Family.create!(
       name: 'API Family',
@@ -48,14 +66,6 @@ RSpec.describe 'API V1 Trades', type: :request do
       ticker: 'VTI',
       name: 'Vanguard Total Stock Market ETF',
       country_code: 'US'
-    )
-  end
-
-  let(:category) do
-    family.categories.create!(
-      name: 'Investments',
-      color: '#2196F3',
-      lucide_icon: 'trending-up'
     )
   end
 
@@ -160,17 +170,27 @@ RSpec.describe 'API V1 Trades', type: :request do
             properties: {
               account_id: { type: :string, format: :uuid, description: 'Account ID (required)' },
               date: { type: :string, format: :date, description: 'Trade date (required)' },
-              qty: { type: :number, description: 'Quantity (required for buy/sell)' },
-              price: { type: :number, description: 'Price (required for buy/sell)' },
-              amount: { type: :number, description: 'Amount (required for dividend, deposit, withdrawal, interest)' },
-              type: { type: :string, enum: %w[buy sell dividend deposit withdrawal interest], description: 'Trade type (required)' },
+              qty: { type: :number, description: 'Quantity (required for buy/sell/sweep_in/sweep_out/reinvestment)' },
+              price: { type: :number, description: 'Price (required for buy/sell/sweep_in/sweep_out/reinvestment)' },
+              amount: {
+                type: :number,
+                description: 'Amount (required for dividend, deposit, withdrawal, interest, fee)'
+              },
+              fee: {
+                type: :number,
+                description: 'Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)'
+              },
+              type: {
+                type: :string,
+                enum: %w[buy sell sweep_in sweep_out dividend reinvestment interest fee deposit withdrawal],
+                description: 'Trade type (required)'
+              },
               security_id: { type: :string, format: :uuid, description: 'Security ID (one of security_id, ticker, manual_ticker required)' },
               ticker: { type: :string, description: 'Ticker symbol' },
               manual_ticker: { type: :string, description: 'Manual ticker for offline securities' },
               currency: { type: :string, description: 'Currency (defaults to account currency)' },
               investment_activity_label: { type: :string, description: 'Activity label (e.g. Buy, Sell)' },
-              category_id: { type: :string, format: :uuid, description: 'Category ID' },
-              transfer_account_id: { type: :string, format: :uuid, description: 'Destination/source account ID for linked transfers' }
+              transfer_account_id: { type: :string, format: :uuid, description: 'Destination/source account ID for linked transfers. Must be an account the user can write to; otherwise the request returns 404.' }
             },
             required: %w[account_id date type]
           }
@@ -192,9 +212,11 @@ RSpec.describe 'API V1 Trades', type: :request do
       end
 
       response '201', 'trade created' do
-        schema '$ref' => '#/components/schemas/Trade'
+        schema created_response_schema
 
-        run_test!
+        run_test! do |response|
+          expect_created_shape(response, 'Trade')
+        end
       end
 
       response '403', 'forbidden - api key missing read_write scope' do
@@ -326,7 +348,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       end
 
       response '201', 'dividend created with security' do
-        schema '$ref' => '#/components/schemas/Trade'
+        schema created_response_schema
 
         let(:body) do
           {
@@ -341,7 +363,9 @@ RSpec.describe 'API V1 Trades', type: :request do
           }
         end
 
-        run_test!
+        run_test! do |response|
+          expect_created_shape(response, 'Trade')
+        end
       end
 
       response '422', 'dividend without security returns error' do
@@ -395,7 +419,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       end
 
       response '201', 'deposit created' do
-        schema '$ref' => '#/components/schemas/TransactionResponse'
+        schema created_response_schema
 
         let(:body) do
           {
@@ -409,11 +433,13 @@ RSpec.describe 'API V1 Trades', type: :request do
           }
         end
 
-        run_test!
+        run_test! do |response|
+          expect_created_shape(response, 'Transaction')
+        end
       end
 
       response '201', 'withdrawal created' do
-        schema '$ref' => '#/components/schemas/TransactionResponse'
+        schema created_response_schema
 
         let(:body) do
           {
@@ -427,11 +453,44 @@ RSpec.describe 'API V1 Trades', type: :request do
           }
         end
 
-        run_test!
+        run_test! do |response|
+          expect_created_shape(response, 'Transaction')
+        end
       end
 
-      response '201', 'interest created' do
-        schema '$ref' => '#/components/schemas/TransactionResponse'
+      response '201', 'linked transfer created (deposit or withdrawal with transfer_account_id)' do
+        schema created_response_schema
+
+        let(:transfer_account) do
+          Account.create!(
+            family: family,
+            name: 'Checking Account',
+            balance: 10_000,
+            currency: 'USD',
+            accountable: Depository.create!
+          )
+        end
+
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              type: 'withdrawal',
+              amount: 100.00,
+              currency: 'USD',
+              transfer_account_id: transfer_account.id
+            }
+          }
+        end
+
+        run_test! do |response|
+          expect_created_shape(response, 'TransferDecision')
+        end
+      end
+
+      response '201', 'created: a Trade for trade types, a Transaction for a deposit or withdrawal without transfer_account_id, or a TransferDecision for a deposit or withdrawal with transfer_account_id' do
+        schema created_response_schema
 
         let(:body) do
           {
@@ -445,10 +504,12 @@ RSpec.describe 'API V1 Trades', type: :request do
           }
         end
 
-        run_test!
+        run_test! do |response|
+          expect_created_shape(response, 'Trade')
+        end
       end
 
-      response '422', 'deposit without amount returns error' do
+      response '422', 'invalid trade request' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -515,13 +576,12 @@ RSpec.describe 'API V1 Trades', type: :request do
               date: { type: :string, format: :date },
               qty: { type: :number },
               price: { type: :number },
-              type: { type: :string, enum: %w[buy sell dividend deposit withdrawal interest] },
+              type: { type: :string, enum: %w[buy sell sweep_in sweep_out reinvestment] },
               nature: { type: :string, enum: %w[inflow outflow] },
               name: { type: :string },
               notes: { type: :string },
               currency: { type: :string },
-              investment_activity_label: { type: :string },
-              category_id: { type: :string, format: :uuid }
+              investment_activity_label: { type: :string }
             }
           }
         }
@@ -557,6 +617,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       response '403', 'forbidden - api key missing read_write scope' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
+        let(:id) { trade.id }
         let(:read_only_api_key) do
           key = ApiKey.generate_secure_key
           ApiKey.create!(
@@ -606,6 +667,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       response '403', 'forbidden - api key missing read_write scope' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
+        let(:id) { trade.id }
         let(:read_only_api_key) do
           key = ApiKey.generate_secure_key
           ApiKey.create!(

@@ -1,6 +1,14 @@
 ---
 es:
   credit_cards:
+    due:
+      in_days:
+        zero: Vence hoy
+        one: Vence mañana
+        other: Vence en %{count} días
+      overdue:
+        one: Venció ayer
+        other: Vencido hace %{count} días
     edit:
       edit: Editar %{account}
     form:
@@ -10,17 +18,50 @@ es:
       apr_placeholder: '15.99'
       available_credit: Crédito disponible
       available_credit_placeholder: '10000'
+      due_day: Día de vencimiento del pago
       expiration_date: Fecha de vencimiento
       minimum_payment: Pago mínimo
       minimum_payment_placeholder: '100'
+      statement_close_day: El extracto cierra el día
+      statement_cycle_description: El día del mes en que cierra tu extracto y el día en que vence el pago. Con estos datos, la pestaña Resumen muestra el importe de tu último extracto y lo que se va acumulando para el siguiente. Una tarjeta vinculada los rellena automáticamente y conserva lo que pongas a mano.
+      sophtron_balance_sign_auto: Automático
+      sophtron_balance_sign_credit: Crédito (el banco te debe)
+      sophtron_balance_sign_debt: Deuda (debes al banco)
+      sophtron_balance_sign_description: Fuerza un valor solo cuando Sophtron informe de un signo ambiguo. En automático se siguen invirtiendo los saldos y transacciones de tarjetas de crédito. Forzar un valor también corrige los signos de las transacciones de esta tarjeta en la próxima sincronización.
+      sophtron_balance_sign_label: Significado del saldo de Sophtron
+      simplefin_balance_sign_auto: Automático
+      simplefin_balance_sign_credit: Crédito (el banco te debe)
+      simplefin_balance_sign_debt: Deuda (debes al banco)
+      simplefin_balance_sign_description: Fuerza un valor solo cuando SimpleFIN informe de un signo ambiguo. En automático se siguen usando el historial de transacciones y el saldo del proveedor.
+      simplefin_balance_sign_label: Significado del saldo de SimpleFIN
+      treat_balance_as_available_credit_description: Actívalo si tu banco informa del saldo de esta tarjeta como el crédito disponible restante en lugar de la cantidad adeudada. La deuda se calcula entonces a partir del límite de crédito que informa tu banco o, si tu banco no lo proporciona, del campo Crédito disponible.
+      treat_balance_as_available_credit_label: El saldo es el crédito disponible
+    tabs:
+      overview:
+        above_minimum: Este extracto asciende a %{balance}, por encima del mínimo de %{minimum}. Si pagas solo el mínimo, el saldo queda en la tarjeta a esta TAE.
+        annual_percentage_rate: Tasa anual equivalente
+        apr: TAE
+        balance_carried_label: Saldo aplazado
+        charges: Cargos
+        estimated_interest_label: Intereses estimados
+        monthly_rate_label: Tipo mensual
+        per_month: "%{amount}/mes"
+        closes_on: El próximo extracto cierra el %{date}
+        credit_toward_next: Crédito para el próximo extracto
+        due_on: Vence el %{date}
+        edit_card_details: Editar datos de la tarjeta
+        payments_credits: Pagos/abonos
+        remaining_due: 'Pendiente de pago: %{amount}'
+        scheduled_payment: Pago programado de %{amount} el %{date}
+        since_last_statement: Desde el último extracto
+        statement_balance: Saldo del extracto
+        status_paid: Pagado
+        status_partial: Pagado en parte
+        multi_currency_unavailable: Este extracto suma movimientos registrados en más de una divisa, y no se pueden totalizar aquí sin un tipo de cambio para cada una. Los saldos se dejan en blanco en lugar de estimarlos.
+        no_cycle_description: Indica el día en que cierra tu extracto y el día en que vence el pago, y esta pestaña mostrará el importe de tu último extracto y lo que se va acumulando para el siguiente. Una tarjeta vinculada suele rellenarlos por ti.
+        no_cycle_title: No hay ciclo de extracto
+        unknown: Desconocido
     new:
       title: Introducir detalles de la tarjeta de crédito
-    overview:
-      amount_owed: Cantidad adeudada
-      annual_fee: Cuota anual
-      apr: TAE
-      available_credit: Crédito disponible
-      edit_account_details: Editar detalles de la cuenta
-      expiration_date: Fecha de vencimiento
-      minimum_payment: Pago mínimo
-      unknown: Desconocido
+    update:
+      sophtron_balance_sign_error: No se ha podido aplicar el significado del saldo de Sophtron. Se ha mantenido tu ajuste anterior. Inténtalo de nuevo.

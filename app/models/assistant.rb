@@ -35,6 +35,22 @@ module Assistant
     Function::RecordBillPayment
   ].freeze
 
+  # Guests may view family configuration (tags, categories, rules) but not
+  # change it, so these tools are left out of a guest's registry (chat and MCP
+  # alike). PreviewRule writes nothing, but it issues the token ApplyRule needs,
+  # and the web blocks guests from a rule's confirmation page too.
+  FAMILY_CONFIG_FUNCTION_CLASSES = [
+    Function::CreateTag,
+    Function::UpdateTag,
+    Function::CreateCategory,
+    Function::UpdateCategory,
+    Function::DeleteCategory,
+    Function::CreateRule,
+    Function::UpdateRule,
+    Function::ApplyRule,
+    Function::PreviewRule
+  ].freeze
+
   class << self
     def for_chat(chat)
       implementation_for(chat).for_chat(chat)
@@ -57,6 +73,7 @@ module Assistant
       classes = [
         Function::GetTransactions,
         Function::GetRecurringTransactions,
+        Function::GetUncategorizedTransactions,
         Function::GetAccounts,
         Function::GetHoldings,
         Function::GetBalanceSheet,
@@ -65,26 +82,46 @@ module Assistant
         Function::ImportBankStatement,
         Function::SearchFamilyFiles,
         Function::CreateGoal,
+        Function::SetOpeningBalance,
+        Function::UnmatchTransfer,
+        Function::UpdateTransfer,
         Function::GetTags,
         Function::CreateTag,
         Function::UpdateTag,
         Function::GetCategories,
         Function::CreateCategory,
         Function::UpdateCategory,
+        Function::DeleteCategory,
         Function::GetMerchants,
+        Function::GetRules,
+        Function::GetRuleOptions,
+        Function::PreviewRule,
+        Function::CreateRule,
+        Function::UpdateRule,
+        Function::ApplyRule,
         Function::UpdateTransaction,
+        Function::CreateTransaction,
+        Function::DeleteTransaction,
+        Function::GetTransferMatchCandidates,
+        Function::MatchTransfer,
+        Function::ReviewTransfer,
         Function::UpdateBudget
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
-      classes
+      classes -= FAMILY_CONFIG_FUNCTION_CLASSES if user&.guest?
+      classes.select { |fn_class| ai_feature_available?(fn_class, user) }
     end
 
     private
+      def ai_feature_available?(fn_class, user)
+        feature = fn_class.ai_feature
+        feature.nil? || user.nil? || Ai.available?(feature, family: user.family, user:)
+      end
 
       def implementation_for(chat)
         raise Error, "chat is required" if chat.blank?
-        type = ENV["ASSISTANT_TYPE"].presence || chat.user&.family&.assistant_type.presence || "builtin"
+        type = chat.user&.family&.effective_assistant_type || "builtin"
         REGISTRY.fetch(type) { REGISTRY["builtin"] }
       end
   end

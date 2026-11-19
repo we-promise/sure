@@ -12,13 +12,30 @@ class Category < ApplicationRecord
          dependent: :nullify
   belongs_to :parent, class_name: "Category", optional: true
 
+  # Set by .uncategorized so #filter_value can identify the synthetic instance
+  # without a locale-sensitive name comparison. Not a DB column.
+  attr_writer :synthetic_uncategorized
+
+  # Stable, non-localized filter value for the synthetic "Uncategorized" option.
+  # Using an opaque sentinel (rather than the translated display name) means a real
+  # category can never collide with it, regardless of name or locale.
+  UNCATEGORIZED_FILTER_VALUE = "__uncategorized__"
+
   validates :name, :color, :lucide_icon, :family, presence: true
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
   validates :name, uniqueness: { scope: :family_id }
+  validates :name, exclusion: { in: [ UNCATEGORIZED_FILTER_VALUE ] }
 
   validate :category_level_limit
+  validate :parent_in_same_family
 
   before_save :inherit_color_from_parent
+  after_update :propagate_color_to_subcategories, if: :saved_change_to_color?
+
+  # prepend: runs before dependent: :nullify's own before_destroy, so the
+  # reassignment (which touches entries to bust report caches) still sees the
+  # transactions; nullify then runs as the safety net.
+  before_destroy :reassign_transactions_to_nothing, prepend: true
 
   scope :alphabetically, -> { order(:name) }
   scope :recently_used, -> { where.not(last_used_at: nil).order(last_used_at: :desc) }
@@ -29,6 +46,10 @@ class Category < ApplicationRecord
       .order(:name, :id)
   }
   scope :roots, -> { where(parent_id: nil) }
+  # The default Fees category. Its stored name is in the locale active when it
+  # was created, which can be any member's (transfer fees create it under the
+  # request's locale), so every supported locale's name counts.
+  scope :fees, -> { where(name: LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t(FEES_NAME_KEY, locale: locale) }.uniq) }
   # Legacy scopes - classification removed; these now return all categories
   scope :incomes, -> { all }
   scope :expenses, -> { all }
@@ -94,6 +115,7 @@ class Category < ApplicationRecord
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
   OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
   INVESTMENT_CONTRIBUTIONS_NAME_KEY = "models.category.investment_contributions"
+  FEES_NAME_KEY = "models.category.defaults.fees"
   DEFAULT_CATEGORY_TRANSLATION_KEYS = %w[
     income
     food_and_drink
@@ -228,7 +250,7 @@ class Category < ApplicationRecord
         name: I18n.t(UNCATEGORIZED_NAME_KEY),
         color: UNCATEGORIZED_COLOR,
         lucide_icon: "circle-dashed"
-      )
+      ).tap { |category| category.synthetic_uncategorized = true }
     end
 
     def other_investments
@@ -336,7 +358,7 @@ class Category < ApplicationRecord
 
   def replace_and_destroy!(replacement)
     transaction do
-      transactions.update_all category_id: replacement&.id
+      Transaction.reassign_category!(transactions, replacement&.id)
       destroy!
     end
   end
@@ -364,6 +386,28 @@ class Category < ApplicationRecord
     self.class.localized_default_name_for(name)
   end
 
+  # True if `candidate` matches this category's display name in ANY
+  # supported locale, not just the current one -- a name generated (or
+  # persisted by a background job) under one locale must still be
+  # recognized as "this category" when compared under a different one. For
+  # a default category this checks every locale's translation of its i18n
+  # key; for a custom (non-default) category the raw `name` is the only
+  # locale-independent label there is.
+  def any_locale_display_name_matches?(candidate)
+    return false if candidate.blank?
+
+    normalized = candidate.strip
+    return true if normalized.casecmp?(name)
+
+    i18n_key = self.class.send(:default_category_translation_key_for, name)
+    return false unless i18n_key
+
+    LanguagesHelper::SUPPORTED_LOCALES.any? do |locale|
+      translated = I18n.t(i18n_key, locale: locale, default: nil)
+      translated.present? && normalized.casecmp?(translated)
+    end
+  end
+
   def display_name_with_parent
     subcategory? ? "#{parent.display_name} > #{display_name}" : display_name
   end
@@ -371,6 +415,18 @@ class Category < ApplicationRecord
   # Predicate: is this the synthetic "Uncategorized" category?
   def uncategorized?
     !persisted? && name == I18n.t(UNCATEGORIZED_NAME_KEY)
+  end
+
+  # The value the transactions-filter checkbox submits for this category: the
+  # persisted name for a real category, or the stable sentinel for the
+  # synthetic "Uncategorized" pseudo-category returned by .uncategorized.
+  #
+  # Uses the explicit synthetic_uncategorized marker set by .uncategorized, not
+  # uncategorized? -- that predicate compares name against I18n.t in the *current*
+  # locale, so it would give the wrong answer if the instance were built under one
+  # locale and read under another.
+  def filter_value
+    @synthetic_uncategorized ? UNCATEGORIZED_FILTER_VALUE : name
   end
 
   # Predicate: is this the synthetic "Other Investments" category?
@@ -384,10 +440,24 @@ class Category < ApplicationRecord
   end
 
   private
+    def propagate_color_to_subcategories
+      subcategories.update_all(color: color, updated_at: Time.current)
+    end
+
+    def reassign_transactions_to_nothing
+      Transaction.reassign_category!(transactions, nil)
+    end
+
     def category_level_limit
       if (subcategory? && parent&.subcategory?) || (parent? && subcategory?)
         errors.add(:parent, "can't have more than 2 levels of subcategories")
       end
+    end
+
+    def parent_in_same_family
+      return if parent.nil? || parent.family_id == family_id
+
+      errors.add(:parent, :invalid)
     end
 
     def monetizable_currency

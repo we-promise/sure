@@ -51,6 +51,28 @@ class Provider::Anthropic::ProviderMerchantEnhancerTest < ActiveSupport::TestCas
     assert_match(/did not invoke report_enhancements/i, err.message)
   end
 
+  test "sends tool_choice auto to a model that rejects a forced tool" do
+    fake_response = build_response(content: [
+      tool_use_block(
+        id: "toolu_3",
+        name: "report_enhancements",
+        input: { "merchants" => [ { "merchant_id" => "m1", "business_url" => "walmart.com" } ] }
+      )
+    ])
+    client = stub_client(fake_response, expect_request: ->(params) {
+      assert_equal({ type: "auto", disable_parallel_tool_use: true }, params[:tool_choice])
+      assert_includes params[:system_], "calling the report_enhancements tool"
+    })
+
+    result = Provider::Anthropic::ProviderMerchantEnhancer.new(
+      client,
+      model: "claude-sonnet-5-5",
+      merchants: @merchants
+    ).enhance_merchants
+
+    assert_equal "walmart.com", result.find { |r| r.merchant_id == "m1" }.business_url
+  end
+
   private
     def stub_client(response, expect_request: nil)
       messages = mock

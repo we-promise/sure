@@ -29,10 +29,9 @@ es:
     cost_basis_cell:
       unknown: --
       set: Establecer
-      set_cost_basis_header: Establecer base de costes para %{ticker} (%{qty} acciones)
+      set_cost_basis_header: Establecer base de costes para %{ticker}
       total_cost_basis_label: Base de costes total
-      or_per_share_label: 'O introduce por acción:'
-      per_share: por acción
+      per_share_label: "Por acción"
       cancel: Cancelar
       save: Guardar
       overwrite_confirm_title: ¿Sobrescribir base de costes?
@@ -50,6 +49,9 @@ es:
       holdings: Posiciones
       name: Nombre
       new_holding: Nueva transacción
+      negative_position: "%{name} (%{ticker}): por debajo de cero desde el %{date}, mínimo %{qty}."
+      negative_positions_hint: "Probablemente falta una compra o un traspaso. Añádela o corrige las operaciones que dejaron la posición por debajo de cero."
+      negative_positions_title: "Algunas posiciones quedaron por debajo de cero"
       no_holdings: No hay posiciones para mostrar.
       return: Rendimiento total
       weight: Peso

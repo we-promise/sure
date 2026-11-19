@@ -1,5 +1,6 @@
 class Provider::Anthropic::AutoMerchantDetector
   include Provider::Anthropic::Concerns::UsageRecorder
+  include Provider::Anthropic::Concerns::StructuredOutput
 
   TOOL_NAME = "report_merchants".freeze
 
@@ -15,19 +16,21 @@ class Provider::Anthropic::AutoMerchantDetector
   end
 
   def auto_detect_merchants
-    span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
+    span = langfuse_trace&.generation(name: "auto_detect_merchants_api_call", model: model, input: {
       model: model,
       transactions: transactions,
       user_merchants: user_merchants
     })
 
-    response = client.messages.create(
+    response = create_structured_message(
+      tool_name: TOOL_NAME,
+      operation: "auto_detect_merchants",
       model: model,
       max_tokens: max_tokens,
-      system_: instructions,
+      system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
       messages: [ { role: "user", content: user_message } ],
       tools: [ output_tool ],
-      tool_choice: { type: "tool", name: TOOL_NAME, disable_parallel_tool_use: true }
+      tool_choice: Provider::Anthropic.structured_output_tool_choice(model, TOOL_NAME)
     )
 
     merchants_data = extract_merchants(response)
@@ -47,6 +50,12 @@ class Provider::Anthropic::AutoMerchantDetector
       merchant_count: user_merchants.size
     })
     raise
+  end
+
+  # Public so /settings/ai_prompts can render the built-in text by constructing
+  # this class with `family: nil`.
+  def instructions
+    family&.ai_prompt(:merchant_anthropic) || default_instructions
   end
 
   private
@@ -94,7 +103,7 @@ class Provider::Anthropic::AutoMerchantDetector
       }
     end
 
-    def instructions
+    def default_instructions
       <<~INSTRUCTIONS.strip_heredoc
         You are an assistant to a consumer personal finance app. Detect the business name and website URL
         for each transaction and return the result via the report_merchants tool.
@@ -131,10 +140,10 @@ class Provider::Anthropic::AutoMerchantDetector
     end
 
     def extract_merchants(response)
-      tool_use = Array(response.content).find { |block| block_type(block) == :tool_use }
-      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME}" unless tool_use
+      tool_use = Array(response.content).find { |block| structured_block_type(block) == :tool_use }
+      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME} (stop_reason: #{response.stop_reason})" unless tool_use
 
-      input = block_input(tool_use)
+      input = structured_block_input(tool_use)
       input = JSON.parse(input) if input.is_a?(String)
       merchants = input.is_a?(Hash) ? (input["merchants"] || input[:merchants]) : nil
 
@@ -166,23 +175,5 @@ class Provider::Anthropic::AutoMerchantDetector
 
       match = user_merchants.find { |m| m[:name].to_s.casecmp(str).zero? }
       match ? match[:name] : str
-    end
-
-    def block_type(block)
-      raw = block.respond_to?(:type) ? block.type : block[:type] || block["type"]
-      raw.to_s.to_sym
-    end
-
-    def block_input(block)
-      block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
-    end
-
-    def usage_hash(raw_usage)
-      return {} unless raw_usage
-      {
-        "input_tokens" => raw_usage.input_tokens.to_i,
-        "output_tokens" => raw_usage.output_tokens.to_i,
-        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i
-      }
     end
 end

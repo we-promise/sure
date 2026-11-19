@@ -1,0 +1,46 @@
+---
+zh-TW:
+  settings:
+    background_jobs:
+      show:
+        page_title: 背景工作
+        title: Worker 狀態
+        subtitle: Sidekiq 即時執行狀態：worker 處理程序、佇列深度，以及重試與失效佇列。
+        redis_unreachable: 無法取得 Sidekiq 狀態（Redis 無法連線）。存活狀態未知，因此已停用相關操作。
+        operations_title: 進行中的作業
+        operations_subtitle: 所有家庭中尚未進入終結狀態的同步、匯入與匯出作業。作業若閒置超過 30 分鐘又查不到對應的背景工作，即推定為已遺失，可標記為遺失。
+        empty: 沒有進行中的作業。
+        missing_value: '-'
+        stats:
+          workers: Worker 數
+          busy: 忙碌中
+          enqueued: 佇列中
+          retries: 重試
+          scheduled: 已排程
+          dead: 失效
+          queue_label: "%{name}: %{size} · 延遲 %{latency} 秒"
+        table:
+          type: 作業
+          family: 家庭
+          status: 狀態
+          last_activity: 最後活動
+          liveness: 存活狀態
+          action: 操作
+      operation:
+        ago: '%{time}前'
+        sync_label: 同步 · %{type}
+        running: 執行中
+        queued: 佇列中
+        recent: 最近
+        unknown: 未知
+        stuck: 卡住 — 推定已遺失
+        confirm: 要將此作業標記為已遺失嗎？紀錄會移至終結狀態以便重試，底層資料不會受到影響。
+        missing_value: '-'
+        actions:
+          mark_stale: 標記為過期
+          mark_failed: 標記為失敗
+          release_claim: 釋放佔用
+      cancel:
+        cancelled: '%{type} 已標記為遺失。'
+        not_cancellable: 目前無法修改此作業 — 背景工作可能仍在佇列中或執行中。請等背景工作閒置滿 30 分鐘後再試。
+        cancelled_error: 由管理員標記為失敗 — 背景工作推定已遺失。

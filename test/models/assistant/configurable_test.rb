@@ -29,6 +29,18 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
     assert_includes instructions, "Today's date: #{Date.current}"
   end
 
+  test "a family's chat_system override replaces the static block but keeps session context" do
+    chat = chats(:one)
+    chat.user.family.update!(ai_prompt_chat_system: "CUSTOM IDENTITY")
+
+    instructions = Assistant.config_for(chat)[:instructions]
+
+    assert instructions.start_with?("CUSTOM IDENTITY")
+    assert_not_includes instructions, "You help users understand their financial data"
+    assert_includes instructions, "## Session context"
+    assert_includes instructions, "Today's date: #{Date.current}"
+  end
+
   test "session context lists accounts and categories for a typical family" do
     chat = chats(:one)
     family = chat.user.family

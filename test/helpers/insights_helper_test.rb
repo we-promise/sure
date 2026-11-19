@@ -69,6 +69,20 @@ class InsightsHelperTest < ActionView::TestCase
     assert_equal "Savings rate · June", insight_meta_line(insight)
   end
 
+  # The savings-rate window covers whole months. Read on the 1st, its range
+  # ends yesterday and used to come out as "Last 91 days".
+  test "meta line names a range of whole months by its first and last month" do
+    travel_to Date.new(2026, 11, 1) do
+      insight = build_insight(
+        "savings_rate_change",
+        period_start: Date.new(2026, 8, 1),
+        period_end: Date.new(2026, 10, 31)
+      )
+
+      assert_equal "Savings rate · August to October", insight_meta_line(insight)
+    end
+  end
+
   test "meta line labels a forward-looking window as next N days" do
     travel_to Date.new(2026, 8, 1) do
       insight = build_insight(
@@ -132,6 +146,19 @@ class InsightsHelperTest < ActionView::TestCase
     assert_equal "need attention", caption
   end
 
+  # The generator compares two three-month windows, so the caption names that
+  # basis rather than a single prior month.
+  test "savings rate change is captioned against the previous three months" do
+    insight = build_insight("savings_rate_change",
+      facts: { "change_pp" => "4.2" },
+      metadata: { "current_rate" => 18.0, "previous_rate" => 13.8 })
+
+    figure, caption = insight_key_figure(insight)
+
+    assert_equal "+4.2 pp", figure
+    assert_equal "vs previous three months", caption
+  end
+
   test "budget on track still leads with overall consumption" do
     insight = build_insight("budget_on_track", facts: { "budget_spent_pct" => 62 })
 
@@ -176,6 +203,114 @@ class InsightsHelperTest < ActionView::TestCase
 
     assert_equal account_path(account), insight_action(resolvable)[:href]
     assert_nil insight_action(dangling)
+  end
+
+  test "bank fees warn" do
+    assert_equal "warning", insight_icon_color(build_insight("bank_fees"))
+  end
+
+  test "bank fees lead with the total and link to that account's fees in the window" do
+    family = families(:dylan_family)
+    account = accounts(:depository)
+    family.categories.create!(name: "Fees", color: "#6b7280", lucide_icon: "receipt")
+    insight = build_insight("bank_fees",
+      metadata: { "account_id" => account.id },
+      facts: { "amount" => "$36.00", "count" => 3 },
+      period_start: Date.new(2026, 8, 18), period_end: Date.new(2026, 11, 16))
+
+    assert_equal [ "$36.00", "3 charges" ], insight_key_figure(insight)
+    assert_equal transactions_path(q: { account_ids: [ account.id ], categories: [ "Fees" ], status: [ "confirmed" ], types: [ "expense", "income" ], start_date: "2026-08-18", end_date: "2026-11-16" }),
+      insight_action(insight)[:href]
+  end
+
+  test "an uncovered bill renders destructive" do
+    assert_equal "destructive", insight_icon_color(build_insight("bill_not_covered", priority: "high"))
+  end
+
+  test "an uncovered bill leads with the shortfall and links to the paying account" do
+    account = accounts(:depository)
+    insight = build_insight("bill_not_covered",
+      metadata: { "account_id" => account.id },
+      facts: { "shortfall" => "$460.00", "due_on" => "Nov 23, 2026", "account" => "Checking Account" })
+
+    assert_equal [ "$460.00", "short on Nov 23, 2026" ], insight_key_figure(insight)
+    assert_equal account_path(account), insight_action(insight)[:href]
+    assert_equal "Bills · Checking Account", insight_meta_line(insight)
+  end
+
+  test "maintained reserve metadata and action render in German" do
+    family = families(:dylan_family)
+    goal = family.goals.first
+    insight = build_insight("maintained_goal_depleted", metadata: { "goal_id" => goal.id })
+
+    I18n.with_locale(:de) do
+      assert_equal "Rücklage", insight_meta_line(insight)
+      assert_equal "Rücklage ansehen", insight_action(insight)[:text]
+    end
+
+    %w[types actions titles templates].each do |scope|
+      assert I18n.exists?("insights.#{scope}.maintained_goal_depleted", :de, fallback: false)
+    end
+  end
+
+  test "dig in prompt carries the insight's title, body, period and figures" do
+    insight = build_insight("savings_rate_change",
+      facts: { "current_rate" => "12.1", "previous_rate" => "45.2" },
+      period_start: Date.new(2026, 9, 1), period_end: Date.new(2026, 9, 30))
+
+    prompt = insight_dig_in_prompt(insight)
+
+    assert_includes prompt, "Insight: t"
+    assert_includes prompt, "What Sure found: b"
+    assert_includes prompt, "#{l(Date.new(2026, 9, 1))} – #{l(Date.new(2026, 9, 30))}"
+    assert_includes prompt, "- Current rate: 12.1"
+    assert_includes prompt, "- Previous rate: 45.2"
+  end
+
+  test "dig in prompt uses the family's override and leaves unknown placeholders" do
+    insight = build_insight("idle_cash", facts: { "balance" => "$5,000" })
+    insight.family.update!(ai_prompt_insight_dig_in: "Look at %{title}: %{facts} %{titel}")
+
+    assert_equal "Look at t: - Balance: $5,000 %{titel}", insight_dig_in_prompt(insight)
+  end
+
+  test "dig in is unavailable when the family's assistant is MCP-only" do
+    insight = build_insight("idle_cash")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(mock)
+    insight.family.stubs(:assistant_enabled?).returns(false)
+
+    assert_not insight_dig_in_available?(insight)
+  end
+
+  test "dig in is available through a configured external assistant without an LLM provider" do
+    insight = build_insight("idle_cash")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    insight.family.stubs(:effective_assistant_type).returns("external")
+    Assistant::External.stubs(:configured?).returns(true)
+
+    assert insight_dig_in_available?(insight)
+  end
+
+  test "dig in is unavailable when the external assistant is not configured" do
+    insight = build_insight("idle_cash")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(mock)
+    insight.family.stubs(:effective_assistant_type).returns("external")
+    Assistant::External.stubs(:configured?).returns(false)
+
+    assert_not insight_dig_in_available?(insight)
+  end
+
+  test "loan payment change reads its direction for sentiment and leads with the new payment" do
+    up = build_insight("loan_payment_change",
+                       metadata: { "account_id" => accounts(:loan).id, "previous_payment" => 1424.0, "new_payment" => 1616.0 },
+                       facts: { "new_payment" => "$1,616.00", "effective_on" => "Dec 10", "account" => "Mortgage" })
+    down = build_insight("loan_payment_change", metadata: { "previous_payment" => 1616.0, "new_payment" => 1424.0 })
+
+    assert_equal :warning, insight_sentiment(up)
+    assert_equal :positive, insight_sentiment(down)
+    assert_equal [ "$1,616.00", "Dec 10" ], insight_key_figure(up)
+    assert_equal account_path(accounts(:loan)), insight_action(up)[:href]
+    assert_equal "Loan payment · Mortgage", insight_meta_line(up)
   end
 
   private

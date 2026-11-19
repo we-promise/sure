@@ -18,6 +18,7 @@ class Provider::Trading212
 
   LIVE_BASE_URI = "https://live.trading212.com/api/v0".freeze
   DEMO_BASE_URI = "https://demo.trading212.com/api/v0".freeze
+  API_PATH_PREFIX = "/api/v0".freeze
 
   MAX_PAGES = 200
   PAGE_LIMIT = 50
@@ -86,7 +87,8 @@ class Provider::Trading212
     end
 
     def get(path, query: {})
-      url = "#{base_uri}#{path}"
+      request_path = path.delete_prefix(API_PATH_PREFIX)
+      url = "#{base_uri}#{request_path}"
       response = with_retries(path) do
         self.class.get(url, headers: auth_headers, query: query.compact)
       end
@@ -95,36 +97,22 @@ class Provider::Trading212
 
     def fetch_all_pages(path)
       items = []
-      cursor = nil
+      next_page_path = nil
       pages_fetched = 0
 
       loop do
-        query = { limit: PAGE_LIMIT }
-        query[:cursor] = cursor if cursor
-
-        data = get(path, query: query)
+        data = next_page_path ? get(next_page_path) : get(path, query: { limit: PAGE_LIMIT })
         items.concat(Array(data["items"]))
 
-        next_page = data["nextPagePath"]
+        next_page_path = data["nextPagePath"]
         pages_fetched += 1
 
-        break if next_page.nil? || pages_fetched >= MAX_PAGES
-
-        cursor = extract_cursor(next_page)
-        break if cursor.nil?
+        break if next_page_path.nil? || pages_fetched >= MAX_PAGES
 
         sleep(10)  # 6 req/min limit on history endpoint
       end
 
       items
-    end
-
-    def extract_cursor(next_page_path)
-      uri = URI.parse("https://placeholder#{next_page_path}")
-      params = URI.decode_www_form(uri.query.to_s).to_h
-      params["cursor"]
-    rescue URI::InvalidURIError
-      nil
     end
 
     def handle_response(response)

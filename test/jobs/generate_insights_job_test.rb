@@ -17,9 +17,9 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_enqueued_with(job: GenerateInsightsJob, args: [ { family_id: @family.id } ])
   end
 
-  # Insights is a preview feature and the job manufactures data (and can spend
-  # LLM budget) per family, so families with nobody opted in are skipped
-  # entirely rather than generated for and hidden.
+  # Insights is a preview feature and the job manufactures data per family,
+  # so families with nobody opted in are skipped entirely rather than
+  # generated for and hidden.
   test "without args enqueues nothing when no family has preview access" do
     disable_preview_features(@family)
 
@@ -89,7 +89,34 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal 5000.0, insight.metadata["balance"]
   end
 
-  test "enqueues notifications for newly created insights" do
+  # The badge rides the family stream every layout subscribes to, so new unread
+  # insights bump the lightbulb count on whatever page is open.
+  test "broadcasts the unread badge alongside the refreshed list" do
+    stub_generated([ generated_insight ])
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to)
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).with(
+      @family,
+      targets: "[data-insights-badge]",
+      partial: "layouts/shared/insights_badge",
+      locals: { count: @family.insights.active.count + 1 }
+    )
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+  end
+
+  test "broadcasts the feed in the family's locale" do
+    @family.update!(locale: "de")
+    stub_generated([ generated_insight ])
+    locales = []
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to).with { locales << I18n.locale; true }
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert_equal [ :de ], locales.uniq
+  end
+
+  test "enqueues notifications for newly created high priority insights" do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
     opted_in_user, opted_out_user = @family.users.to_a
     set_preview_features(opted_out_user, false)
     subscription = opted_in_user.push_subscriptions.create!(
@@ -105,7 +132,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
       last_registered_at: Time.current
     )
     Apns::Client.stubs(:configured?).returns(true)
-    stub_generated([ generated_insight ])
+    stub_generated([ generated_insight(priority: "high") ])
 
     assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
       assert_enqueued_with(
@@ -135,7 +162,9 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal original_body, insight.reload.body
   end
 
-  test "persists display facts and refreshes them without a body rewrite when metadata is unchanged" do
+  # The body is the i18n template filled with the facts, so it refreshes with
+  # them; an unchanged metadata still means no resurfacing and no new push.
+  test "refreshes display facts and the body in place when metadata is unchanged" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
@@ -149,8 +178,31 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
 
     insight.reload
     assert_equal "$5040", insight.facts["balance"]
-    assert_equal original_body, insight.body
+    assert_not_equal original_body, insight.body
+    assert_includes insight.body, "$5040"
     assert insight.read?
+  end
+
+  test "a body refreshed in place is not notified again" do
+    stub_generated([ generated_insight(priority: "high") ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    DeliverInsightNotificationJob.expects(:enqueue_for).never
+    stub_generated([ generated_insight(priority: "high", display_balance: 5040) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+  end
+
+  test "an expired insight that returns with new display facts gets a fresh body" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+
+    stub_generated([], succeeded_types: [ "idle_cash" ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    stub_generated([ generated_insight(display_balance: 5040) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert_includes insight.reload.body, "$5040"
   end
 
   # The title is built from I18n and the generator's own data, not written by
@@ -169,7 +221,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
 
     insight.reload
     assert_equal "Idle cash in Holiday Fund", insight.title
-    assert_equal original_body, insight.body, "a rename is not worth an LLM rewrite"
+    assert_equal original_body, insight.body, "a rename doesn't rewrite the body"
     assert insight.read?, "a rename is not a reason to nag the user again"
   end
   test "a reactivated insight also picks up a renamed subject" do
@@ -213,6 +265,43 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal 9000.0, insight.metadata["balance"]
     assert_nil insight.dismissed_at
     assert_nil insight.read_at
+  end
+
+  # An aggregate carries the account set it was computed from. A share change
+  # (or a row stored before the digest existed) rewrites prose that may quote
+  # figures from the old set, without resurfacing what the user put away.
+  test "a changed account set rewrites the body but keeps acknowledged state" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    original_body = insight.body
+    insight.acknowledge!
+
+    rescoped = generated_insight(display_balance: 3000)
+    stub_generated([ rescoped.with(metadata: rescoped.metadata.merge(accounts_digest: "new-set")) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_not_equal original_body, insight.body
+    assert_includes insight.body, "$3000"
+    assert_equal "new-set", insight.metadata["accounts_digest"]
+    assert insight.acknowledged?
+  end
+
+  test "adding the account an insight is about keeps acknowledged state" do
+    stub_generated([ generated_insight.with(metadata: generated_insight.metadata.except(:account_id)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    insight.acknowledge!
+
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_equal accounts(:depository).id, insight.metadata["account_id"]
+    assert insight.acknowledged?
   end
 
   test "expires a visible insight whose condition cleared" do
@@ -265,6 +354,20 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_nil insight.read_at
   end
 
+  test "expires an insight hidden because its account is no longer shared with everyone" do
+    insight = @family.insights.create!(
+      insight_type: "idle_cash", priority: "low", status: "active", title: "Idle", body: "body",
+      metadata: { "account_id" => accounts(:connected).id }, dedup_key: "idle_cash:private",
+      generated_at: Time.current
+    )
+    assert_not @family.insights.visible.exists?(id: insight.id), "precondition: the row must be hidden, not just stale"
+    stub_generated([], succeeded_types: [ "idle_cash" ])
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert insight.reload.expired?, "a hidden row whose condition cleared must not come back stale once access returns"
+  end
+
   private
     def enable_preview_features(family)
       family.users.each { |user| set_preview_features(user, true) }
@@ -289,14 +392,14 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     # display_balance changes only the formatted facts, leaving metadata (the
     # material-change signal) untouched — mirrors a balance drifting slightly
     # between runs without crossing a bucket boundary.
-    def generated_insight(balance: 5000.0, display_balance: nil, title: "Idle cash in Test Checking")
+    def generated_insight(balance: 5000.0, display_balance: nil, priority: "low", title: "Idle cash in Test Checking")
       Insight::Generator::GeneratedInsight.new(
         insight_type: "idle_cash",
-        priority: "low",
+        priority: priority,
         title: title,
         template_key: "idle_cash",
         facts: { account: "Test Checking", balance: "$#{(display_balance || balance).to_i}", idle_days: 60 },
-        metadata: { account_id: "test-account", balance: balance },
+        metadata: { account_id: accounts(:depository).id, balance: balance },
         currency: "USD",
         period_start: nil,
         period_end: nil,

@@ -3,19 +3,18 @@ ru:
   activerecord:
     attributes:
       goal_pledge:
-        account: Account
-        amount: Amount
-        currency: Currency
-        expires_at: Expires at
-        kind: Kind
-        status: Status
+        account: Счёт
+        amount: Сумма
+        currency: Валюта
+        expires_at: Истекает
+        kind: Тип
+        status: Статус
     errors:
       models:
         goal_pledge:
           attributes:
             account:
-              must_be_linked_to_goal: Pick one of the goal's linked accounts.
+              must_be_linked_to_goal: Выберите один из счетов, связанных с целью.
             currency:
-              must_match_goal: Pledge currency must match the goal currency.
-          duplicate_open_pledge: You already have an open pledge for this amount on
-            this account. Cancel or extend the existing one before recording another.
+              must_match_goal: Валюта пополнения должна совпадать с валютой цели.
+          duplicate_open_pledge: У вас уже есть ожидаемое пополнение на эту сумму для этого счёта. Отмените или продлите его, прежде чем записывать новое.

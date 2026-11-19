@@ -1,16 +1,28 @@
 class Import::ConfigurationsController < ApplicationController
+  include ImportGuestGuardable
+
   layout "imports"
 
   before_action :set_import
+  before_action :require_import_editable!, only: :update
 
   def show
     # PDF imports are auto-configured from AI extraction, skip to clean step
     redirect_to import_clean_path(@import) and return if @import.is_a?(PdfImport)
     redirect_to import_qif_category_selection_path(@import) and return if @import.is_a?(QifImport)
+    return unless @import.is_a?(MonarchImport)
+
+    redirect_to import_upload_path(@import) and return unless @import.uploaded?
+
+    @target_accounts = monarch_target_accounts
+    render :monarch
   end
 
   def update
-    if params[:refresh_only]
+    if @import.is_a?(MonarchImport)
+      @import.apply_account_choices!(monarch_choices, target_accounts: monarch_target_accounts)
+      redirect_to import_path(@import), notice: t(".monarch_success")
+    elsif params[:refresh_only]
       @import.update!(rows_to_skip: params.dig(:import, :rows_to_skip).to_i)
       redirect_to import_configuration_path(@import)
     else
@@ -28,6 +40,21 @@ class Import::ConfigurationsController < ApplicationController
   private
     def set_import
       @import = Current.family.imports.find(params[:import_id])
+    end
+
+    # Existing accounts a Monarch account can go into: the manual ones this
+    # user can write to.
+    def monarch_target_accounts
+      Import::MonarchAccountMapping.target_accounts_for(@import).where(id: Account.writable_by(Current.user).select(:id))
+    end
+
+    MONARCH_CHOICE_FIELDS = %i[name type target_id closed include transactions current_balance].freeze
+
+    def monarch_choices
+      accounts = params[:accounts]
+      return {} unless accounts.is_a?(ActionController::Parameters)
+
+      accounts.permit(accounts.keys.index_with { MONARCH_CHOICE_FIELDS }).to_h.transform_values(&:symbolize_keys)
     end
 
     def import_params

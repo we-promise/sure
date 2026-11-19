@@ -31,20 +31,51 @@ class Settings::ApiKeysController < ApplicationController
     @api_key = Current.user.api_keys.build(api_key_params)
     @api_key.key = @plain_key
 
-    if @api_key.save
+    # audit_log_failed distinguishes "the key itself is invalid" (@api_key
+    # carries real validation errors, :new renders them) from "the audit
+    # write failed" (the transaction rolls back @api_key to a fresh record
+    # with no errors of its own — rendering :new for that case alone would be
+    # a 422 with nothing on it explaining what happened).
+    audit_log_failed = false
+
+    ActiveRecord::Base.transaction do
+      @api_key.save!
+
+      begin
+        SecurityAuditLog.log_api_key_created!(user: Current.user, api_key: @api_key, request: request, actor: Current.true_user)
+      rescue ActiveRecord::ActiveRecordError => e
+        Rails.logger.error("[Settings::ApiKeys] Failed to write audit log for created key: #{e.message}")
+        audit_log_failed = true
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    if audit_log_failed
+      flash.now[:alert] = t(".creation_failed")
+      render :new, status: :unprocessable_entity
+    else
       flash[:notice] = t(".success")
       redirect_to settings_api_key_path(@api_key, newly_created: true)
-    else
-      render :new, status: :unprocessable_entity
     end
+  rescue ActiveRecord::RecordInvalid
+    render :new, status: :unprocessable_entity
   end
 
   def destroy
-    @api_key.revoke!
+    begin
+      @api_key.revoke!
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
+      flash[:alert] = t(".revoke_failed")
+      return redirect_to settings_api_keys_path
+    end
+
+    begin
+      SecurityAuditLog.log_api_key_revoked!(user: Current.user, api_key: @api_key, request: request, actor: Current.true_user)
+    rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.error("[Settings::ApiKeys] Failed to write audit log for revoked key #{@api_key.id}: #{e.message}")
+    end
+
     flash[:notice] = t(".revoked_successfully")
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
-    flash[:alert] = t(".revoke_failed")
-  ensure
     redirect_to settings_api_keys_path
   end
 

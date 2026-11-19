@@ -36,46 +36,26 @@
       <%# Split rows pre-filled from existing children %>
       <div data-split-transaction-target="rowsContainer" class="space-y-3">
         <% @children.each_with_index do |child, index| %>
-          <div class="p-3 rounded-lg border border-secondary bg-container" data-split-transaction-target="row">
-            <div class="flex flex-wrap md:flex-nowrap items-end gap-2">
-              <div class="w-full md:flex-1 md:w-auto min-w-0 md:min-w-28">
-                <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.name_label") %></label>
-                <input type="text"
-                       name="split[splits][<%= index %>][name]"
-                       placeholder="<%= t("splits.new.name_placeholder") %>"
-                       class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
-                       required
-                       autocomplete="off"
-                       value="<%= child.name %>"
-                       data-split-transaction-target="nameInput">
-              </div>
-              <div class="flex-1 md:flex-none md:w-28">
-                <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.amount_label") %></label>
-                <input type="number"
-                       name="split[splits][<%= index %>][amount]"
-                       placeholder="0.00"
-                       step="0.01"
-                       class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
-                       required
-                       autocomplete="off"
-                       value="<%= (-child.amount).to_f %>"
-                       data-split-transaction-target="amountInput"
-                       data-action="input->split-transaction#updateRemaining">
-              </div>
-              <%= render "splits/category_select",
-                         name: "split[splits][#{index}][category_id]",
-                         categories: @categories,
-                         selected_id: child.entryable.try(:category_id) %>
-              <button type="button"
-                      class="w-8 h-8 shrink-0 flex items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
-                      aria-label="<%= t("splits.new.remove_row") %>"
-                      data-action="click->split-transaction#removeRow">
-                <%= icon "x", size: "sm" %>
-              </button>
-            </div>
-          </div>
+          <%= render "splits/row",
+                     index: index,
+                     name: child.name,
+                     amount: (-child.amount).to_f,
+                     category_id: child.entryable.try(:category_id),
+                     merchant_id: child.entryable.try(:merchant_id),
+                     tag_ids: child.entryable.try(:tag_ids) || [],
+                     categories: @categories,
+                     merchants: @merchants,
+                     tags: @tags %>
         <% end %>
       </div>
+
+      <template data-split-transaction-target="rowTemplate">
+        <%= render "splits/row",
+                   index: "ROW_IDX_PLACEHOLDER",
+                   categories: @categories,
+                   merchants: @merchants,
+                   tags: @tags %>
+      </template>
 
       <%# Add split button %>
       <button type="button"

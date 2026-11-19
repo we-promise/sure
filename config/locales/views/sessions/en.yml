@@ -4,6 +4,7 @@ en:
     create:
       invalid_credentials: Invalid email or password.
       local_login_disabled: Local password login is disabled. Please use single sign-on.
+      account_deactivated: This account has been deactivated. Please contact an administrator.
     destroy:
       logout_successful: You have signed out successfully.
     post_logout:

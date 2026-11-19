@@ -12,7 +12,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     trades_query = family.trades.visible
 
     trades_query = apply_filters(trades_query)
-    trades_query = trades_query.includes({ entry: :account }, :security, :category).reverse_chronological
+    trades_query = trades_query.includes({ entry: :account }, :security, :category, :lot_source_entry).reverse_chronological
 
     @pagy, @trades = pagy(
       trades_query,
@@ -51,7 +51,15 @@ class Api::V1::TradesController < Api::V1::BaseController
     create_params = build_create_form_params(account)
     return if performed? # build_create_form_params may have rendered validation errors
 
-    model = Trade::CreateForm.new(create_params).create
+    create_options = build_trade_create_options(create_params[:type])
+    return if performed?
+
+    model = ApplicationRecord.transaction do
+      created_model = Trade::CreateForm.new(create_params).create
+      created_trade = trade_from_created_model(created_model)
+      created_trade.update!(create_options) if created_model.persisted? && created_trade && create_options.any?
+      created_model
+    end
 
     unless model.persisted?
       errors = model.is_a?(Entry) ? model.errors.full_messages : [ "Trade could not be created" ]
@@ -68,8 +76,6 @@ class Api::V1::TradesController < Api::V1::BaseController
         render template: "api/v1/transactions/show", status: :created
       else
         @trade = model.trade
-        apply_trade_create_options!
-        return if performed?
         @entry = @trade.entry
         render :show, status: :created
       end
@@ -78,8 +84,6 @@ class Api::V1::TradesController < Api::V1::BaseController
       render template: "api/v1/transfers/show", status: :created
     else
       @trade = model
-      apply_trade_create_options!
-      return if performed?
       @entry = @trade.entry
       render :show, status: :created
     end
@@ -91,16 +95,29 @@ class Api::V1::TradesController < Api::V1::BaseController
   end
 
   def update
+    return unless valid_trade_update_semantics?
+
     updatable = build_entry_params_for_update
 
-    if @entry.update(updatable.except(:nature))
-      @entry.lock_saved_attributes!
-      @entry.mark_user_modified!
-      @entry.sync_account_later
-      @trade = @entry.trade
-      render :show
-    else
-      render_validation_error("Trade could not be updated", @entry.errors.full_messages)
+    # The edit and its follow-up writes commit together, as in
+    # TransactionsController#update: if one fails, a retry still finds the
+    # change to make.
+    Entry.transaction do
+      if @entry.update(updatable.except(:nature))
+        # Read before the follow-up writes below reset saved_changes. A request
+        # that changes nothing must not mark the entry user-modified, which would
+        # stop provider imports from updating it.
+        if @entry.saved_changes.any? || @entry.entryable.saved_changes.any?
+          @entry.lock_saved_attributes!
+          @entry.mark_user_modified!
+          @entry.sync_account_later
+        end
+        @trade = @entry.trade
+        render :show
+      else
+        render_validation_error("Trade could not be updated", @entry.errors.full_messages)
+        raise ActiveRecord::Rollback
+      end
     end
   rescue => e
     log_and_render_error("update", e)
@@ -157,7 +174,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_params
       params.require(:trade).permit(
         :account_id, :date, :qty, :price, :currency,
-        :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id,
+        :security_id, :ticker, :manual_ticker, :investment_activity_label,
         :fee, :type, :amount, :transfer_account_id
       )
     end
@@ -165,7 +182,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_update_params
       params.require(:trade).permit(
         :name, :date, :amount, :currency, :notes, :nature, :type,
-        :qty, :price, :investment_activity_label, :category_id
+        :qty, :price, :investment_activity_label
       )
     end
 
@@ -180,8 +197,7 @@ class Api::V1::TradesController < Api::V1::BaseController
         entryable_type: "Trade",
         entryable_attributes: {
           id: @trade.id,
-          investment_activity_label: flat[:investment_activity_label],
-          category_id: flat[:category_id]
+          investment_activity_label: flat[:investment_activity_label]
         }.compact_blank
       }.compact
 
@@ -198,24 +214,29 @@ class Api::V1::TradesController < Api::V1::BaseController
         entry_params[:amount] = signed_qty * price.to_d
         ticker = @trade.security&.ticker
         entry_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", signed_qty.abs, ticker) if ticker.present?
-        entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || @trade.investment_activity_label.presence || (is_sell ? "Sell" : "Buy")
+        type_label = Trade::CreateForm::SECURITY_TRADE_LABELS[flat[:type].to_s.downcase]
+        entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || type_label || @trade.investment_activity_label.presence || (is_sell ? "Sell" : "Buy")
       end
 
       entry_params
     end
 
-    # True for sell: "sell" or "inflow". False for buy: "buy", "outflow", or blank. Keeps create (buy/sell) and update (type or nature) consistent.
+    # True for sell: "sell", "sweep_out", or "inflow". False for buy: "buy", "outflow", or blank. Keeps create (buy/sell) and update (type or nature) consistent.
     def trade_sell_from_type_or_nature?(value)
       return false if value.blank?
 
       normalized = value.to_s.downcase.strip
-      %w[sell inflow].include?(normalized)
+      %w[sell sweep_out inflow].include?(normalized)
     end
 
     def build_create_form_params(account)
       type = params.dig(:trade, :type).to_s.downcase
-      unless %w[buy sell dividend deposit withdrawal interest].include?(type)
-        render_validation_error("Invalid type", [ "type must be 'buy', 'sell', 'dividend', 'deposit', 'withdrawal', or 'interest'" ])
+      unless Trade::CreateForm::SUPPORTED_TYPES.include?(type)
+        supported_types = Trade::CreateForm::SUPPORTED_TYPES.join(", ")
+        render_validation_error(
+          I18n.t("trades.api_errors.invalid_type"),
+          [ I18n.t("trades.api_errors.supported_types", types: supported_types) ]
+        )
         return nil
       end
 
@@ -237,10 +258,10 @@ class Api::V1::TradesController < Api::V1::BaseController
           amount: parse_positive_amount!(trade_params[:amount], context: "deposit/withdrawal"),
           currency: trade_params[:currency].presence || account.currency,
           type: type,
-          transfer_account_id: trade_params[:transfer_account_id]
+          transfer_account_id: writable_transfer_account_id
         }.compact
 
-      when "interest"
+      when "interest", "fee"
         unless trade_params[:date].present?
           render_validation_error("Date is required", [ "date must be present" ])
           return nil
@@ -253,7 +274,10 @@ class Api::V1::TradesController < Api::V1::BaseController
 
         ticker_value = nil
         manual_ticker_value = nil
-        if trade_params[:ticker].present?
+        if trade_params[:security_id].present?
+          security = Security.find(trade_params[:security_id])
+          ticker_value = ticker_from_security(security)
+        elsif trade_params[:ticker].present?
           ticker_value = trade_params[:ticker]
         elsif trade_params[:manual_ticker].present?
           manual_ticker_value = trade_params[:manual_ticker]
@@ -262,7 +286,7 @@ class Api::V1::TradesController < Api::V1::BaseController
         {
           account: account,
           date: trade_params[:date],
-          amount: parse_positive_amount!(trade_params[:amount], context: "interest"),
+          amount: parse_positive_amount!(trade_params[:amount], context: type),
           currency: trade_params[:currency].presence || account.currency,
           type: type,
           ticker: ticker_value,
@@ -288,7 +312,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
       if trade_params[:security_id].present?
         security = Security.find(trade_params[:security_id])
-        ticker_value = security.exchange_operating_mic.present? ? "#{security.ticker}|#{security.exchange_operating_mic}" : security.ticker
+        ticker_value = ticker_from_security(security)
       elsif trade_params[:ticker].present?
         ticker_value = trade_params[:ticker]
       elsif trade_params[:manual_ticker].present?
@@ -335,7 +359,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
       if trade_params[:security_id].present?
         security = Security.find(trade_params[:security_id])
-        ticker_value = security.exchange_operating_mic.present? ? "#{security.ticker}|#{security.exchange_operating_mic}" : security.ticker
+        ticker_value = ticker_from_security(security)
       elsif trade_params[:ticker].present?
         ticker_value = trade_params[:ticker]
       elsif trade_params[:manual_ticker].present?
@@ -361,25 +385,71 @@ class Api::V1::TradesController < Api::V1::BaseController
       }.compact
     end
 
-    def apply_trade_create_options!
+    def build_trade_create_options(type)
+      return {} unless Trade::CreateForm::ACTIVITY_LABELS.key?(type)
+
       attrs = {}
       if trade_params[:investment_activity_label].present?
         label = trade_params[:investment_activity_label]
-        unless Trade::ACTIVITY_LABELS.include?(label)
-          render_validation_error("Invalid investment_activity_label", [ "investment_activity_label must be one of: #{Trade::ACTIVITY_LABELS.join(', ')}" ])
-          return
+        expected_label = Trade::CreateForm::ACTIVITY_LABELS.fetch(type)
+        unless label == expected_label
+          render_validation_error(
+            I18n.t("trades.api_errors.invalid_activity_label"),
+            [ I18n.t("trades.api_errors.activity_label_must_match_type", label: expected_label, type: type) ]
+          )
+          return {}
         end
         attrs[:investment_activity_label] = label
       end
-      if trade_params[:category_id].present?
-        category = current_resource_owner.family.categories.find_by(id: trade_params[:category_id])
-        unless category
-          render_validation_error("Category not found or does not belong to your family", [ "category_id is invalid" ])
-          return
-        end
-        attrs[:category_id] = category.id
+      attrs
+    end
+
+    def trade_from_created_model(model)
+      return model.trade if model.is_a?(Entry) && model.entryable_type == "Trade"
+      return model if model.is_a?(Trade)
+
+      nil
+    end
+
+    def valid_trade_update_semantics?
+      type = trade_update_params[:type].to_s.downcase
+      label = trade_update_params[:investment_activity_label]
+      return true if type.blank?
+
+      expected_label = Trade::CreateForm::SECURITY_TRADE_LABELS[type]
+      unless expected_label
+        render_validation_error(
+          I18n.t("trades.api_errors.invalid_type"),
+          [ I18n.t("trades.api_errors.supported_types", types: Trade::CreateForm::SECURITY_TRADE_LABELS.keys.join(", ")) ]
+        )
+        return false
       end
-      @trade.update!(attrs) if attrs.any?
+
+      if label.present? && label != expected_label
+        render_validation_error(
+          I18n.t("trades.api_errors.invalid_activity_label"),
+          [ I18n.t("trades.api_errors.activity_label_must_match_type", label: expected_label, type: type) ]
+        )
+        return false
+      end
+
+      true
+    end
+
+    def ticker_from_security(security)
+      return security.ticker if security.exchange_operating_mic.blank?
+
+      "#{security.ticker}|#{security.exchange_operating_mic}"
+    end
+
+    # A deposit or withdrawal also books an entry on the other account, so it
+    # has to be one the key's user may write to. Raises RecordNotFound, which
+    # #create answers with "Account not found".
+    def writable_transfer_account_id
+      return if trade_params[:transfer_account_id].blank?
+
+      current_resource_owner.family.accounts.writable_by(current_resource_owner)
+        .find(trade_params[:transfer_account_id]).id
     end
 
     def render_validation_error(message, errors)

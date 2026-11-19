@@ -1,0 +1,54 @@
+---
+zh-TW:
+  settings:
+    profiles:
+      destroy:
+        cannot_remove_self: 您無法將自己從帳號中移除。
+        member_owns_other_family_data: 這位成員在另一個家庭中仍擁有帳戶，因此無法移除。請先轉移或移除那些帳戶。
+        member_removal_failed: 移除成員時發生問題。
+        member_removed: 已成功移除成員。
+        not_authorized: 您沒有移除成員的權限。
+      show:
+        confirm_delete:
+          body: 您確定要永久刪除您的帳號嗎？此操作無法復原。
+          title: 刪除帳號？
+        confirm_reset:
+          body: 您確定要重設帳號嗎？這將刪除您所有的帳戶、分類、商家、標籤及其他資料。此操作無法復原。
+          title: 重設帳號？
+        confirm_reset_with_sample_data:
+          body: 您確定要重設帳號並載入範例資料嗎？這將刪除您現有的資料，並替換為示範資料，讓您可以安全地探索 Sure 的功能。
+          title: 重設帳號並載入範例資料？
+        confirm_remove_invitation:
+          body: 您確定要移除對 %{email} 的邀請嗎？
+          title: 移除邀請
+        confirm_remove_member:
+          body: 您確定要將 %{name} 從您的帳號中移除嗎？
+          title: 移除成員
+        danger_zone_title: 危險區域
+        delete_account: 刪除帳號
+        delete_account_warning: 刪除帳號將永久移除您所有的資料，且無法復原。
+        reset_account: 重設帳號
+        reset_account_warning: 重設帳號將刪除您所有的帳戶、分類、商家、標籤及其他資料，但會保留您的使用者帳號。
+        reset_account_with_sample_data: 重設並預載資料
+        reset_account_with_sample_data_warning: 刪除所有現有資料，並載入全新的範例資料，讓您在預填好的環境中進行探索。
+        email: 電子郵件
+        first_name: 名字
+        group_form_input_placeholder: 輸入群組名稱
+        group_form_label: 群組名稱
+        group_title: 群組成員
+        household_form_input_placeholder: 輸入家庭名稱
+        household_form_label: 家庭名稱
+        household_subtitle: 受邀者可以登入您的%{moniker}帳號並存取共享資源。
+        household_title: 家庭
+        invitation_link: 邀請連結
+        invite_member: 新增成員
+        last_name: 姓氏
+        page_title: 個人資料
+        pending: 待處理
+        profile_subtitle: 自訂您在 %{product_name} 上的顯示方式
+        profile_title: 個人資訊
+        remove_invitation: 移除邀請
+        remove_member: 移除成員
+        resend_confirmation_link: 重新寄送確認信
+        save: 儲存
+        unconfirmed_email_notice_html: 您已要求將電子郵件變更為 %{email}。請至信箱確認以完成變更。若未收到信件，請檢查垃圾郵件匣，或%{resend_link}。

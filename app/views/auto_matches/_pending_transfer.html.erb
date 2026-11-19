@@ -1,0 +1,67 @@
+<%# locals: (transfer:) %>
+
+<% writable = @writable_account_ids.include?(transfer.from_account&.id) && @writable_account_ids.include?(transfer.to_account&.id) %>
+
+<tr id="<%= dom_id(transfer) %>" class="border-b border-subdued hover:bg-surface-hover">
+  <td class="py-3 pl-4 pr-2">
+    <% if writable %>
+      <%= check_box_tag "transfer_#{transfer.id}", "1", false,
+          class: "checkbox checkbox--light",
+          data: {
+            id: transfer.id,
+            auto_match_bulk_select_target: "row",
+            action: "auto-match-bulk-select#toggleRow"
+          } %>
+    <% end %>
+  </td>
+  <td class="py-3 px-2 text-sm">
+    <%= link_to entry_path(transfer.outflow_transaction.entry),
+        data: { turbo_frame: "drawer", turbo_prefetch: false },
+        class: "hover:underline" do %>
+      <div class="font-medium text-primary"><%= transfer.outflow_transaction.entry.name %></div>
+    <% end %>
+    <div class="text-xs text-secondary">
+      <%= transfer.from_account&.name %><%= " • #{transfer.outflow_transaction.merchant.name}" if transfer.outflow_transaction.merchant&.present? %>
+    </div>
+    <div class="text-xs text-secondary privacy-sensitive"><%= format_money(transfer.outflow_transaction.entry.amount_money) %></div>
+  </td>
+  <td class="py-3 px-2 text-sm">
+    <%= link_to entry_path(transfer.inflow_transaction.entry),
+        data: { turbo_frame: "drawer", turbo_prefetch: false },
+        class: "hover:underline" do %>
+      <div class="font-medium text-primary"><%= transfer.inflow_transaction.entry.name %></div>
+    <% end %>
+    <div class="text-xs text-secondary">
+      <%= transfer.to_account&.name %><%= " • #{transfer.inflow_transaction.merchant.name}" if transfer.inflow_transaction.merchant&.present? %>
+    </div>
+    <div class="text-xs text-secondary privacy-sensitive"><%= format_money(transfer.inflow_transaction.entry.amount_money.abs) %></div>
+  </td>
+  <td class="py-3 px-2 text-sm text-secondary">
+    <%= l(transfer.date, format: :short) %>
+  </td>
+  <td class="py-3 px-2 text-sm text-right">
+    <% if writable %>
+      <div class="flex items-center justify-end gap-2">
+        <%= render DS::Button.new(
+          variant: :icon,
+          icon: "check",
+          href: transfer_path(transfer, transfer: { status: "confirmed" }),
+          method: :patch,
+          data: { turbo: false },
+          aria: { label: t("transactions.transfer_match.confirm_match") }
+        ) %>
+
+        <%= render DS::Button.new(
+          variant: :icon,
+          icon: "x",
+          href: transfer_path(transfer, transfer: { status: "rejected" }),
+          method: :patch,
+          data: { turbo: false },
+          aria: { label: t("transactions.transfer_match.reject_match") }
+        ) %>
+      </div>
+    <% else %>
+      <span class="text-xs text-secondary"><%= t("account_sharings.show.permissions.read_only") %></span>
+    <% end %>
+  </td>
+</tr>

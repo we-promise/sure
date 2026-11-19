@@ -34,7 +34,7 @@ module EntriesTestHelper
     Entry.create! entry_defaults.merge(entry_attributes)
   end
 
-  def create_trade(security, account:, qty:, date:, price: nil, currency: "USD")
+  def create_trade(security, account:, qty:, date:, price: nil, currency: "USD", fee: 0)
     trade_price = price || Security::Price.find_by!(security: security, date: date).price
 
     trade = Trade.new \
@@ -42,6 +42,7 @@ module EntriesTestHelper
       security: security,
       price: trade_price,
       currency: currency,
+      fee: fee,
       investment_activity_label: qty > 0 ? "Buy" : "Sell"
 
     account.entries.create! \
@@ -59,7 +60,8 @@ module EntriesTestHelper
     transfer = Transfer.create!(
       outflow_transaction: outflow_transaction,
       inflow_transaction: inflow_transaction,
-      amount: amount.abs
+      amount: amount.abs,
+      status: "confirmed" # like Transfer::Creator; only a confirmed transfer carries transfer kinds
     )
 
     from_account.entries.create!(
@@ -105,5 +107,49 @@ module EntriesTestHelper
     end
 
     transfer
+  end
+
+  # A manual bill in `category` with no occurrences: creating a series
+  # generates its own, which tests clear so they assert against exactly the
+  # ones they add with pay_bill and expect_bill.
+  def create_bill(category:, amount:, name: "Bill", day: 1, account: accounts(:depository))
+    bill = category.family.recurring_transactions.create!(
+      name: name, account: account, amount: amount, currency: "USD", bill_type: "bill",
+      category_id: category.id, expected_day_of_month: day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    bill.recurring_occurrences.destroy_all
+    bill
+  end
+
+  # The entry that pays `bill` on `date`, and the paid occurrence it settles.
+  # The entry takes the bill's category unless `category:` says otherwise.
+  def pay_bill(bill, date:, amount: bill.amount, category: bill.category)
+    entry = create_transaction(category: category, account: bill.account, amount: amount, date: date, name: "#{bill.name} #{date}")
+    occurrence = bill.recurring_occurrences.create!(
+      family: bill.family, original_due_on: date, due_on: date, currency: bill.currency,
+      expected_amount: amount, status: "paid", closed_at: Time.current, closed_source: "auto"
+    )
+    occurrence.allocations.create!(entry: entry, allocated_amount: amount, currency: bill.currency, source: "auto_matched")
+    entry
+  end
+
+  # Splits a payment into `parts` ({ amount:, category:, kind:, excluded: }), the way a
+  # family splits a mortgage instalment into its interest and a transfer of
+  # the principal to the loan. A part with a transfer kind is that transfer.
+  def split_payment(entry, *parts)
+    children = entry.split!(parts.map.with_index(1) do |part, i|
+      { name: "#{entry.name} part #{i}", amount: part[:amount], category_id: part[:category]&.id, excluded: part[:excluded] }
+    end)
+    children.zip(parts) { |child, part| child.entryable.update!(kind: part[:kind]) if part[:kind] }
+    children
+  end
+
+  # An occurrence of `bill` still waiting to be paid.
+  def expect_bill(bill, due_on:, amount: bill.amount)
+    bill.recurring_occurrences.create!(
+      family: bill.family, original_due_on: due_on, due_on: due_on, currency: bill.currency, expected_amount: amount
+    )
   end
 end

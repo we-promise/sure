@@ -1,46 +1,61 @@
 require "test_helper"
-require "ostruct"
 
 class Insight::BodyWriterTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
   end
 
-  test "writes the template body when nobody in the family has AI enabled" do
-    @family.users.update_all(ai_enabled: false)
+  test "writes the template body without calling an LLM, even with AI enabled" do
+    assert @family.users.any?(&:ai_enabled?), "fixture family should have a user with AI enabled"
     Provider::Registry.expects(:preferred_llm_provider).never
 
-    body = Insight::BodyWriter.new(@family).write(generated_insight)
+    body = Insight::BodyWriter.new.write(generated_insight)
 
     assert_equal I18n.t("insights.templates.idle_cash", **generated_insight.facts.symbolize_keys), body
   end
 
-  test "uses LLM prose when a user has opted in and a provider is configured" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(FakeLlmProvider.new("Narrated body."))
-
-    body = Insight::BodyWriter.new(@family).write(generated_insight)
-
-    assert_equal "Narrated body.", body
-  end
-
-  test "falls back to the template and captures a debug log when the LLM call fails" do
-    provider = FakeLlmProvider.new("unused")
-    provider.stubs(:chat_response).raises(StandardError.new("boom"))
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-
-    body = nil
-    assert_difference "DebugLogEntry.count", 1 do
-      body = Insight::BodyWriter.new(@family).write(generated_insight)
-    end
-
-    assert_equal I18n.t("insights.templates.idle_cash", **generated_insight.facts.symbolize_keys), body
-  end
-
+  # In every locale that translates the template: a translation left on an
+  # old interpolation would otherwise raise only for the users who read it.
   test "every template key interpolates with its generator's facts" do
     TEMPLATE_FACTS.each do |template_key, facts|
-      body = I18n.t!("insights.templates.#{template_key}", **facts)
+      I18n.available_locales.each do |locale|
+        key = "insights.templates.#{template_key}"
+        next unless I18n.exists?(key, locale, fallback: false)
 
-      assert body.present?, "insights.templates.#{template_key} produced a blank body"
+        body = I18n.t!(key, locale: locale, **facts)
+
+        assert body.present?, "#{locale}: #{key} produced a blank body"
+      end
+    end
+  end
+
+  # A translation that drops a placeholder still interpolates, so it would
+  # pass the test above while losing a figure from the sentence.
+  test "translated savings-rate copy keeps the English placeholders" do
+    %w[templates.savings_rate_change.up templates.savings_rate_change.down
+       templates.savings_rate_change.down_negative titles.savings_rate_change.up
+       titles.savings_rate_change.down].each do |key|
+      expected = placeholders(I18n.t!("insights.#{key}", locale: :en))
+
+      I18n.available_locales.each do |locale|
+        next unless I18n.exists?("insights.#{key}", locale, fallback: false)
+
+        assert_equal expected, placeholders(I18n.t!("insights.#{key}", locale: locale)), "#{locale}: insights.#{key}"
+      end
+    end
+  end
+
+  test "uncovered bills have Spanish copy of their own" do
+    TEMPLATE_FACTS.slice("bill_not_covered").each do |template_key, facts|
+      assert I18n.exists?("insights.templates.#{template_key}", :es, fallback: false), "missing es copy for #{template_key}"
+      assert I18n.t!("insights.templates.#{template_key}", locale: :es, **facts).present?
+    end
+  end
+
+  test "bank fees have Spanish copy of their own" do
+    TEMPLATE_FACTS.slice("bank_fees.recurring", "bank_fees.new").each do |template_key, facts|
+      assert I18n.exists?("insights.templates.#{template_key}", :es, fallback: false), "missing es copy for #{template_key}"
+      assert I18n.t!("insights.templates.#{template_key}", locale: :es, **facts).present?
     end
   end
 
@@ -55,30 +70,20 @@ class Insight::BodyWriterTest < ActiveSupport::TestCase
       "cash_flow_warning.negative" => { projected_low: "-$412.00", projected_low_date: "Jul 28, 2026", current_balance: "$800.00", horizon_days: 30 },
       "net_worth_milestone" => { milestone: "$500,000", net_worth: "$878,578.56" },
       "subscription_audit" => { name: "Netflix", amount: "$15.49", days_overdue: 48, expected_on: "May 24, 2026" },
-      "savings_rate_change.up" => { month: "June", current_rate: 32.5, previous_rate: 20.1, change_pp: 12.4 },
-      "savings_rate_change.down" => { month: "June", current_rate: "12.1", previous_rate: "45.2", change_pp: 33.1 },
-      "savings_rate_change.down_negative" => { month: "June", current_rate: "−5.4", previous_rate: "45.2", change_pp: 50.6 },
+      "savings_rate_change.up" => { from_month: "April", to_month: "June", current_rate: 32.5, previous_rate: 20.1, change_pp: 12.4 },
+      "savings_rate_change.down" => { from_month: "April", to_month: "June", current_rate: "12.1", previous_rate: "45.2", change_pp: 33.1 },
+      "savings_rate_change.down_negative" => { from_month: "April", to_month: "June", current_rate: "−5.4", previous_rate: "45.2", change_pp: 50.6 },
       "idle_cash" => { account: "Emergency fund", balance: "$28,400.00", idle_days: 60 },
       "budget_at_risk.over" => { categories: "Food & Drink and Travel", count: 2, budget_spent_pct: 84 },
       "budget_at_risk.near" => { categories: "Shopping", count: 1, budget_spent_pct: 72 },
-      "budget_on_track" => { spent: "$2,948.00", budgeted: "$5,200.00", budget_spent_pct: 57 }
+      "budget_on_track" => { spent: "$2,948.00", budgeted: "$5,200.00", budget_spent_pct: 57 },
+      "bill_not_covered" => { name: "Rent", amount: "$1,460.00", due_on: "Dec 7, 2026", account: "Joint account", shortfall: "$300.00" },
+      "bank_fees.recurring" => { account: "Checking", amount: "$36.00", count: 3, days: 90 },
+      "bank_fees.new" => { account: "Checking", amount: "$3.00", count: 1, days: 90 }
     }.freeze
 
-    class FakeLlmProvider
-      def self.effective_model
-        "fake-model"
-      end
-
-      def initialize(body)
-        @body = body
-      end
-
-      def chat_response(*, **)
-        OpenStruct.new(
-          success?: true,
-          data: OpenStruct.new(messages: [ OpenStruct.new(id: "1", output_text: @body) ])
-        )
-      end
+    def placeholders(text)
+      text.scan(/%\{(\w+)\}/).flatten.sort
     end
 
     def generated_insight

@@ -1,6 +1,11 @@
 ---
 en:
   trades:
+    api_errors:
+      activity_label_must_match_type: "investment_activity_label must be %{label} when type is %{type}"
+      invalid_activity_label: Invalid investment activity label
+      invalid_type: Invalid type
+      supported_types: "type must be one of: %{types}"
     form:
       account: Transfer account (optional)
       account_prompt: Search account
@@ -21,6 +26,9 @@ en:
       type_interest: Interest
       dividend_requires_security: Security is required for dividends
       trade_requires_security: A security (ticker) is required for buy and sell trades
+    trade:
+      scheduled: Scheduled
+      scheduled_tooltip: Dated in the future — won't affect your balance until then
     header:
       buy: Buy
       sell: Sell
@@ -52,6 +60,9 @@ en:
       date_label: Date
       delete: Delete
       fee_label: Transaction fee
+      lot_label: Sold from lot
+      lot_oldest_first: Oldest first
+      lot_option: "%{date} · %{qty} at %{price}"
       delete_subtitle: This action cannot be undone
       delete_title: Delete Trade
       details: Details

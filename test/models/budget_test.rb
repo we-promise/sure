@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BudgetTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @family = families(:empty)
   end
@@ -225,6 +227,63 @@ class BudgetTest < ActiveSupport::TestCase
     )
   end
 
+  # The whole budget follows the rule its lines do: bills that fill it are
+  # not a reason to warn. Three months back keeps the fixture entries out.
+  test "near_limit? counts only spending outside bills" do
+    today = (Date.current - 3.months).change(day: 15)
+    category = @family.categories.create!(name: "Near limit budget", color: "#101010", lucide_icon: "circle")
+    account = @family.accounts.create!(name: "Checking", currency: "USD", balance: 0, accountable: Depository.new)
+    budget = @family.budgets.create!(start_date: today.beginning_of_month, end_date: today.end_of_month,
+                                     budgeted_spending: 1_000, expected_income: 2_000, currency: "USD")
+    budget.budget_categories.create!(category: category, budgeted_spending: 1_000, currency: "USD")
+
+    travel_to today do
+      pay_bill(create_bill(category: category, amount: 950, name: "Rent", account: account), date: today.change(day: 3))
+      assert_operator budget.percent_of_budget_spent, :>=, 90
+      assert_not budget.near_limit?
+
+      create_transaction(category: category, account: account, amount: 45, date: today.change(day: 4))
+      assert Budget.find(budget.id).near_limit?
+    end
+  end
+
+  # A refund in the bill's category brings that line's spending to 50, so only
+  # 50 of the budget's spending is bills; the 860 elsewhere fills what is left.
+  test "near_limit? counts no more bills than a line's spending after refunds" do
+    today = (Date.current - 3.months).change(day: 15)
+    home, food = %w[Home Food].map { |name| @family.categories.create!(name: "Refund #{name}", color: "#101010", lucide_icon: "circle") }
+    account = @family.accounts.create!(name: "Checking", currency: "USD", balance: 0, accountable: Depository.new)
+    budget = @family.budgets.create!(start_date: today.beginning_of_month, end_date: today.end_of_month,
+                                     budgeted_spending: 1_000, expected_income: 2_000, currency: "USD")
+    [ home, food ].each { |category| budget.budget_categories.create!(category: category, budgeted_spending: 500, currency: "USD") }
+
+    travel_to today do
+      pay_bill(create_bill(category: home, amount: 950, name: "Insurance", account: account), date: today.change(day: 3))
+      create_transaction(category: home, account: account, amount: -900, date: today.change(day: 4), name: "Insurance refund")
+      create_transaction(category: food, account: account, amount: 860, date: today.change(day: 5))
+
+      assert Budget.find(budget.id).near_limit?
+    end
+  end
+
+  # Uncategorized spending is part of actual_spending, so a bill paid from
+  # an uncategorized entry is part of the bills too.
+  test "near_limit? counts uncategorized bill payments as bills" do
+    today = (Date.current - 3.months).change(day: 15)
+    category = @family.categories.create!(name: "Uncategorized bill", color: "#101010", lucide_icon: "circle")
+    account = @family.accounts.create!(name: "Checking", currency: "USD", balance: 0, accountable: Depository.new)
+    budget = @family.budgets.create!(start_date: today.beginning_of_month, end_date: today.end_of_month,
+                                     budgeted_spending: 1_000, expected_income: 2_000, currency: "USD")
+
+    travel_to today do
+      pay_bill(create_bill(category: category, amount: 950, name: "Rent", account: account),
+               date: today.change(day: 3), category: nil)
+
+      assert_operator budget.percent_of_budget_spent, :>=, 90
+      assert_not budget.near_limit?
+    end
+  end
+
   test "to_donut_segments_json only includes top-level budget categories" do
     family = @family
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
@@ -374,6 +433,41 @@ class BudgetTest < ActiveSupport::TestCase
     spending_without_refund = budget.actual_spending
 
     assert_equal 150, spending_without_refund - spending_with_refund
+  end
+
+  test "actual_spending excludes scheduled (future-dated) entries" do
+    travel_to Date.current.beginning_of_month do
+      family = families(:dylan_family)
+      budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+      account = accounts(:depository)
+
+      healthcare = Category.create!(
+        name: "Healthcare #{Time.now.to_f}",
+        family: family,
+        color: "#e74c3c"
+      )
+
+      budget.sync_budget_categories
+      budget_category = budget.budget_categories.find_by(category: healthcare)
+      budget_category.update!(budgeted_spending: 200)
+
+      # A bill scheduled for later this month -- hasn't happened yet
+      Entry.create!(
+        account: account,
+        entryable: Transaction.create!(category: healthcare),
+        date: Date.current + 10.days,
+        name: "Scheduled dentist bill",
+        amount: 150,
+        currency: "USD"
+      )
+
+      budget = Budget.find(budget.id)
+      budget.sync_budget_categories
+
+      assert_equal 0, budget.budget_category_actual_spending(
+        budget.budget_categories.find_by(category: healthcare)
+      )
+    end
   end
 
   test "most_recent_initialized_budget returns latest initialized budget before this one" do
@@ -566,5 +660,36 @@ class BudgetTest < ActiveSupport::TestCase
     travel_to budget.end_date + 1.day do
       assert_equal 0, budget.days_remaining
     end
+  end
+
+  test "income methods treat a nil expected_income as zero" do
+    budget = budgets(:one)
+    budget.update!(expected_income: nil)
+    budget.stubs(:actual_income).returns(BigDecimal("1200"))
+
+    assert budget.initialized?
+    assert_equal Money.new(0, budget.currency), budget.expected_income_money
+    assert_equal 0, budget.actual_income_percent
+    assert_equal(-1200, budget.remaining_expected_income)
+    assert_equal Money.new(-1200, budget.currency), budget.remaining_expected_income_money
+    assert_equal 100, budget.surplus_percent
+  end
+
+  test "surplus_percent is 100 when nothing was expected and income came in" do
+    budget = budgets(:one)
+    budget.update!(expected_income: 0)
+    budget.stubs(:actual_income).returns(BigDecimal("50"))
+
+    assert_equal 100, budget.surplus_percent
+  end
+
+  test "income methods with no expected_income and no income show nothing earned" do
+    budget = budgets(:one)
+    budget.update!(expected_income: nil)
+    budget.stubs(:actual_income).returns(BigDecimal("0"))
+
+    assert_equal 0, budget.actual_income_percent
+    assert_equal 0, budget.remaining_expected_income
+    assert_equal 0, budget.surplus_percent
   end
 end

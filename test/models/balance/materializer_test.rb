@@ -14,6 +14,16 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     )
   end
 
+  # A sync and a lot edit's restatement both take the account row lock before
+  # writing holdings, so they cannot deadlock on each other's rows.
+  test "materializing takes the account row lock before writing holdings" do
+    order = sequence("materialize")
+    Account.any_instance.expects(:lock!).in_sequence(order).returns(true)
+    Holding::Materializer.any_instance.expects(:materialize_holdings).in_sequence(order).returns([])
+
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+  end
+
   test "syncs balances" do
     Holding::Materializer.any_instance.expects(:materialize_holdings).returns([]).once
 
@@ -84,6 +94,19 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     # Recalculated balance must be present.
     assert_not_nil @account.balances.find_by(date: 2.days.ago.to_date),
       "Recalculated balance for 2.days.ago should be persisted"
+  end
+
+  # Regression: account.balance must never surface a future-dated balance row,
+  # even if one exists in the table (e.g. left behind by a race between
+  # overlapping syncs). purge_stale_balances is the primary defense, but
+  # update_account_info must not rely on it exclusively -- see Entry#scheduled?.
+  test "update_account_info ignores future-dated balance rows even if one exists" do
+    create_balance(account: @account, date: Date.current, balance: 20000)
+    create_balance(account: @account, date: 3.days.from_now.to_date, balance: 99000)
+
+    Balance::Materializer.new(@account, strategy: :forward).send(:update_account_info)
+
+    assert_equal 20000, @account.reload.balance
   end
 
   # Regression: a prior full sync materializes balances for entries dated BEFORE

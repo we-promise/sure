@@ -32,17 +32,6 @@
     <% end %>
   </div>
 
-  <!-- Summary: trials expiring in next 7 days -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-    <div class="bg-container-inset rounded-lg p-4">
-      <div class="flex items-center gap-2 mb-2">
-        <%= icon "calendar-clock", class: "w-5 h-5 text-secondary" %>
-        <p class="text-xs font-medium text-secondary uppercase"><%= t(".summary.trials_expiring_7_days") %></p>
-      </div>
-      <p class="text-2xl font-semibold text-primary"><%= @trials_expiring_in_7_days %></p>
-    </div>
-  </div>
-
   <!-- Families/Groups & Users -->
   <div>
     <h2 class="text-lg font-semibold text-primary mb-3"><%= t(".section_title") %></h2>
@@ -101,14 +90,14 @@
                 <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
                   <% users.each do |user| %>
                     <tr>
-                      <td class="px-4 py-3">
-                        <div class="flex items-center gap-3">
-                          <div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center shrink-0">
-                            <span class="text-sm font-medium text-primary"><%= user.initials %></span>
+                      <td class="px-4 py-3 w-full max-w-0">
+                        <div class="flex items-center gap-3 min-w-0">
+                          <div class="w-8 h-8 shrink-0">
+                            <%= render "settings/user_avatar", avatar_url: user.profile_image&.variant(:small)&.url, initials: user.initials, lazy: true %>
                           </div>
-                          <div>
-                            <div class="flex items-center gap-2">
-                              <p class="font-medium text-primary"><%= user.display_name %></p>
+                          <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                              <p class="font-medium text-primary break-words min-w-0"><%= user.display_name %></p>
                               <% if user.id == Current.user.id %>
                                 <span class="text-xs font-medium text-secondary"><%= t(".you") %></span>
                               <% end %>
@@ -127,7 +116,7 @@
                                 <%= render DS::Pill.new(label: t(".auth_types.local"), tone: :neutral) %>
                               <% end %>
                             </div>
-                            <p class="text-sm text-secondary"><%= user.email %></p>
+                            <p class="text-sm text-secondary break-all"><%= user.email %></p>
                           </div>
                         </div>
                       </td>
@@ -206,7 +195,7 @@
                                   </div>
                                 </div>
 
-                                <% if user.has_local_password? %>
+                                <% if password_change_allowed_for?(user) %>
                                   <div>
                                     <%= form.label :password, t(".table.set_password"), class: "block text-xs font-medium text-secondary mb-1" %>
                                     <%= form.password_field :password,
@@ -258,11 +247,11 @@
                   <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200 border-t border-dashed border-primary">
                     <% pending_invitations.each do |invitation| %>
                       <tr class="bg-destructive/5">
-                        <td class="px-4 py-3">
-                          <div class="flex items-center gap-3">
+                        <td class="px-4 py-3 w-full max-w-0">
+                          <div class="flex items-center gap-3 min-w-0">
                             <%= icon "mail", class: "w-5 h-5 text-secondary shrink-0" %>
-                            <div>
-                              <p class="font-medium text-secondary italic"><%= invitation.email %></p>
+                            <div class="min-w-0">
+                              <p class="font-medium text-secondary italic break-all"><%= invitation.email %></p>
                               <p class="text-xs text-secondary"><%= t(".invitations.pending_label") %></p>
                             </div>
                           </div>

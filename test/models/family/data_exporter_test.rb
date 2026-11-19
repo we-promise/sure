@@ -200,7 +200,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       # Check rules.csv
       rules_csv = zip.read("rules.csv")
-      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions")
+      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions,group")
     end
   end
 
@@ -440,8 +440,37 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert rule_data["data"].key?("name")
       assert rule_data["data"].key?("resource_type")
       assert rule_data["data"].key?("active")
+      assert_equal @rule.position, rule_data["data"]["position"]
+      assert_equal false, rule_data["data"]["stop_processing"]
+      assert_equal false, rule_data["data"]["apply_immediately"]
       assert rule_data["data"].key?("conditions")
       assert rule_data["data"].key?("actions")
+    end
+  end
+
+  test "exports apply_immediately independently of stop_processing" do
+    @rule.update!(apply_immediately: true)
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }.find do |record|
+        record["type"] == "Rule" && record["data"]["name"] == "Test Rule"
+      end
+
+      assert_equal false, rule_data["data"]["stop_processing"]
+      assert_equal true, rule_data["data"]["apply_immediately"]
+    end
+  end
+
+  test "exports the rule group name in CSV and NDJSON" do
+    @rule.update!(rule_group: @family.rule_groups.create!(name: "Food"))
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rules_csv = CSV.parse(zip.read("rules.csv"), headers: true)
+      assert_equal "Food", rules_csv.find { |row| row["name"] == "Test Rule" }["group"]
+
+      rule_line = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .find { |line| line["type"] == "Rule" && line["data"]["name"] == "Test Rule" }
+      assert_equal "Food", rule_line["data"]["group"]
     end
   end
 
@@ -494,6 +523,77 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "split rule round-trips through NDJSON into another family" do
+    split_rule = create_split_rule!
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rule_line = zip.read("all.ndjson").split("\n").find do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == split_rule.name
+      end
+
+      exported_value = JSON.parse(rule_line)["data"]["actions"].first["value"].to_json
+      refute_includes exported_value, @category.id
+      refute_includes exported_value, @tag.id
+
+      existing_category = @other_family.categories.create!(name: "Test Category", color: "#FF0000")
+
+      Family::DataImporter.new(@other_family, rule_line).import!
+
+      assert_imported_split_rule(split_rule.name, category: existing_category)
+    end
+  end
+
+  test "split rule round-trips through rules CSV into another family" do
+    split_rule = create_split_rule!
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      import = @other_family.imports.create!(type: "RuleImport", raw_file_str: zip.read("rules.csv"), col_sep: ",")
+      import.generate_rows_from_csv
+      import.send(:import!)
+
+      assert_imported_split_rule(split_rule.name, category: @other_family.categories.find_by!(name: "Test Category"))
+    end
+  end
+
+  test "split rule with quotes in its names round-trips through rules CSV" do
+    @category.update!(name: 'Kids "Fun" \\ Stuff')
+    split_rule = create_split_rule!(row_name: 'My "half"')
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      import = @other_family.imports.create!(type: "RuleImport", raw_file_str: zip.read("rules.csv"), col_sep: ",")
+      import.generate_rows_from_csv
+      import.send(:import!)
+
+      mine = imported_split_config(split_rule.name).first
+      assert_equal 'My "half"', mine["name"]
+      assert_equal @other_family.categories.find_by!(name: 'Kids "Fun" \\ Stuff').id, mine["category_id"]
+    end
+  end
+
+  test "exports a split rule whose category was deleted without the stale id" do
+    split_rule = create_split_rule!
+    @category.destroy!
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rule_line = zip.read("all.ndjson").split("\n").find do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == split_rule.name
+      end
+
+      splits = JSON.parse(rule_line)["data"]["actions"].first["value"]["splits"]
+      assert_not splits.first.key?("category")
+      assert_not splits.first.key?("category_id")
+      assert_equal [ "Test Tag" ], splits.first["tags"]
+
+      Family::DataImporter.new(@other_family, rule_line).import!
+
+      split = imported_split_config(split_rule.name).first
+      assert_nil split["category_id"]
+      assert_equal [ @other_family.tags.find_by!(name: "Test Tag").id ], split["tag_ids"]
+    end
+  end
+
   test "exports rule condition value refs for mapped operands" do
     category_rule = @family.rules.build(
       name: "Category Condition Rule",
@@ -522,22 +622,67 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports provider merchant rule operands by name" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Grocer", source: "plaid")
+    @account.entries.create!(
+      date: Date.current, amount: 10, name: "Groceries", currency: "USD",
+      entryable: Transaction.new(merchant: provider_merchant)
+    )
+    rule = @family.rules.build(name: "Provider Merchant Rule", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_merchant", operator: "=", value: provider_merchant.id)
+    rule.actions.build(action_type: "set_transaction_merchant", value: provider_merchant.id)
+    rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").filter_map do |line|
+        parsed = JSON.parse(line)
+        parsed if parsed["type"] == "Rule" && parsed["data"]["name"] == "Provider Merchant Rule"
+      end.first
+
+      expected_ref = { "type" => "Merchant", "id" => provider_merchant.id, "name" => "Synced Grocer" }
+      assert_equal "Synced Grocer", rule_data["data"]["conditions"].first["value"]
+      assert_equal expected_ref, rule_data["data"]["conditions"].first["value_ref"]
+      assert_equal "Synced Grocer", rule_data["data"]["actions"].first["value"]
+      assert_equal expected_ref, rule_data["data"]["actions"].first["value_ref"]
+    end
+  end
+
+  test "rule operand lookup matches uppercase UUID values" do
+    operand = @exporter.send(
+      :rule_operand,
+      @category.id.upcase,
+      type: "Category",
+      relation: :categories,
+      fallback_to_name: true
+    )
+
+    assert_equal "Test Category", operand[:value]
+    assert_equal({ type: "Category", id: @category.id, name: "Test Category" }, operand[:value_ref])
+  end
+
   test "rule operand lookup skips name fallback for stale UUID values" do
     stale_uuid = SecureRandom.uuid
-    relation = mock
-    relation.expects(:find_by).with(id: stale_uuid).once.returns(nil)
-    relation.expects(:find_by).with(name: stale_uuid).never
+    @exporter.expects(:operand_records_by_name).never
 
     operand = @exporter.send(
       :rule_operand,
       stale_uuid,
       type: "Category",
-      relation: relation,
+      relation: :categories,
       fallback_to_name: true
     )
 
     assert_equal stale_uuid, operand[:value]
     assert_nil operand[:value_ref]
+  end
+
+  test "operand id and name lookups for the same relation share a single query" do
+    assert_queries_count(1) do
+      @exporter.send(:operand_records_by_id, :categories)
+      @exporter.send(:operand_records_by_name, :categories)
+    end
   end
 
   test "exports rule actions and maps tag UUIDs to names" do
@@ -579,6 +724,146 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       # Should export tag name instead of UUID
       assert_equal "Test Tag", actions[0]["value"]
       assert_equal({ "type" => "Tag", "id" => @tag.id, "name" => "Test Tag" }, actions[0]["value_ref"])
+    end
+  end
+
+  test "exports rule actions with multiple tags and maps each tag UUID independently" do
+    second_tag = @family.tags.create!(name: "Second Tag", color: "#0000FF")
+
+    tag_rule = @family.rules.build(
+      name: "Multi Tag Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.build(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.build(
+      action_type: "set_transaction_tags",
+      value: [ @tag.id, second_tag.id ]
+    )
+    tag_rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Multi Tag Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      assert_equal 1, actions.length
+      # Should export both tag names, comma-separated, not a single opaque id string
+      assert_equal "Test Tag,Second Tag", actions[0]["value"]
+      assert_equal(
+        [
+          { "type" => "Tag", "id" => @tag.id, "name" => "Test Tag" },
+          { "type" => "Tag", "id" => second_tag.id, "name" => "Second Tag" }
+        ],
+        actions[0]["value_ref"]
+      )
+    end
+  end
+
+  test "exports a multi-tag action's value CSV-quoted when a tag name contains a comma" do
+    comma_tag = @family.tags.create!(name: "Food, Dining", color: "#0000FF")
+
+    tag_rule = @family.rules.build(
+      name: "Comma Tag Name Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.build(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.build(
+      action_type: "set_transaction_tags",
+      value: [ @tag.id, comma_tag.id ]
+    )
+    tag_rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Comma Tag Name Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      # The comma-containing name must be quoted so it round-trips as one
+      # name rather than splitting into "Food" and " Dining" on import.
+      assert_equal "Test Tag,\"Food, Dining\"", actions[0]["value"]
+      assert_equal [ "Test Tag", "Food, Dining" ], CSV.parse_line(actions[0]["value"])
+    end
+  end
+
+  test "exports a partially-orphaned multi-tag action's value_ref as an array" do
+    second_tag = @family.tags.create!(name: "Second Tag", color: "#0000FF")
+
+    tag_rule = @family.rules.build(
+      name: "Orphaned Multi Tag Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.build(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.build(
+      action_type: "set_transaction_tags",
+      value: [ @tag.id, second_tag.id ]
+    )
+    tag_rule.save!
+
+    second_tag.destroy!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Orphaned Multi Tag Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      assert_equal 1, actions.length
+      # value_ref should stay an array (not collapse to a scalar Hash) even
+      # though only one of the two original tag ids still resolves, so the
+      # importer's array-handling branch keeps running instead of the
+      # legacy single-tag scalar branch.
+      assert_kind_of Array, actions[0]["value_ref"]
+      assert_equal(
+        [ { "type" => "Tag", "id" => @tag.id, "name" => "Test Tag" } ],
+        actions[0]["value_ref"]
+      )
     end
   end
 
@@ -701,6 +986,92 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports provider merchants referenced by transactions in NDJSON" do
+    provider_merchant = ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn")
+    @account.entries.create!(
+      date: Date.parse("2024-05-02"),
+      amount: 42.50,
+      name: "Amazon purchase",
+      currency: "USD",
+      entryable: Transaction.new(merchant: provider_merchant)
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      provider_merchant_data = ndjson_records.find do |record|
+        record["type"] == "ProviderMerchant" && record.dig("data", "id") == provider_merchant.id
+      end
+
+      assert provider_merchant_data
+      assert_equal "AMZN MKTP", provider_merchant_data["data"]["name"]
+      assert_equal "plaid", provider_merchant_data["data"]["source"]
+      assert_equal "plaid_amzn", provider_merchant_data["data"]["provider_merchant_id"]
+    end
+  end
+
+  test "does not export a color for a provider merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Colorless", source: "plaid")
+    @account.entries.create!(
+      date: Date.parse("2024-05-02"), amount: 5, name: "Colorless purchase", currency: "USD",
+      entryable: Transaction.new(merchant: provider_merchant)
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      data = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .find { |record| record["type"] == "ProviderMerchant" && record.dig("data", "id") == provider_merchant.id }["data"]
+
+      assert_not data.key?("color")
+    end
+  end
+
+  test "exports provider merchants referenced by recurring transactions in NDJSON" do
+    provider_merchant = ProviderMerchant.create!(name: "Recurring Provider Merchant", source: "ai")
+    @family.recurring_transactions.create!(
+      account: @account,
+      merchant: provider_merchant,
+      amount: -12.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.parse("2024-01-05"),
+      next_expected_date: Date.parse("2024-02-05")
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      assert ndjson_records.any? { |record| record["type"] == "ProviderMerchant" && record.dig("data", "id") == provider_merchant.id }
+    end
+  end
+
+  test "excludes provider merchants not referenced by the family from NDJSON" do
+    unreferenced = ProviderMerchant.create!(name: "Unrelated Provider Merchant", source: "plaid")
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      refute ndjson_records.any? { |record| record["type"] == "ProviderMerchant" && record.dig("data", "id") == unreferenced.id }
+    end
+  end
+
+  test "exports a user's choice to make an investment transfer a plain transfer" do
+    brokerage = @family.accounts.create!(name: "Brokerage", accountable: Investment.new, balance: 0, currency: "USD")
+    outflow = create_transaction_entry(@account, amount: 100, date: Date.parse("2024-01-15"), name: "To brokerage")
+    inflow = create_transaction_entry(brokerage, amount: -100, date: Date.parse("2024-01-15"), name: "From checking")
+    transfer = Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
+    assert transfer.update_investment_contribution!(false)
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      transfer_data = ndjson_records.find { |record| record["type"] == "Transfer" && record.dig("data", "id") == transfer.id }
+
+      assert_equal false, transfer_data["data"]["investment_contribution"]
+    end
+  end
+
   test "exports transfer decisions and rejected transfers in NDJSON" do
     destination_account = @family.accounts.create!(
       name: "Savings Account",
@@ -736,6 +1107,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal transfer_outflow.entryable.id, transfer_data["data"]["outflow_transaction_id"]
       assert_equal "confirmed", transfer_data["data"]["status"]
       assert_equal "Confirmed by user", transfer_data["data"]["notes"]
+      assert_nil transfer_data["data"]["investment_contribution"]
 
       rejected_transfer_data = ndjson_records.find { |record| record["type"] == "RejectedTransfer" && record.dig("data", "id") == rejected_transfer.id }
       assert rejected_transfer_data
@@ -933,6 +1305,114 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  # CSV formula injection (CWE-1236) -------------------------------------------
+  #
+  # These assert on the emitted CSV rather than on the helper. Sanitizing field
+  # by field is how fields get missed, so each generator is checked for the
+  # columns a user controls.
+
+  test "every CSV in the export escapes formula-triggering user content" do
+    security = Security.create!(ticker: "=SUM(A1)", name: "Formula Security", exchange_operating_mic: "XNAS")
+    account = @family.accounts.create!(
+      name: "@evil account",
+      accountable: Depository.new(subtype: "=cmd"),
+      balance: 500,
+      currency: "USD"
+    )
+    account.entries.create!(
+      date: Date.parse("2024-05-18"), amount: 1500, name: "Formula Trade", currency: "USD",
+      entryable: Trade.new(security: security, qty: 10, price: 150, currency: "USD")
+    )
+    category = @family.categories.create!(name: "+cmd|calc", color: "#123456", lucide_icon: "@icon")
+    account.entries.create!(
+      date: Date.parse("2024-05-19"), amount: 10, currency: "USD",
+      name: "=SUM(B1)", notes: "-1.5x leverage",
+      entryable: Transaction.new(category: category)
+    )
+    @family.merchants.create!(name: "-2+3", color: "#123456")
+    @family.rules.create!(
+      name: "@rule",
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id) ]
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      accounts = CSV.parse(zip.read("accounts.csv"), headers: true)
+      row = accounts.find { |r| r["name"] == "'@evil account" }
+      assert row, "account name must be escaped"
+      assert_equal "'=cmd", row["subtype"], "account subtype must be escaped"
+
+      trades = CSV.parse(zip.read("trades.csv"), headers: true)
+      assert trades.any? { |r| r["ticker"] == "'=SUM(A1)" }, "trade ticker must be escaped"
+      assert_not trades.any? { |r| r["ticker"] == "=SUM(A1)" }, "raw formula ticker must not appear"
+
+      categories = CSV.parse(zip.read("categories.csv"), headers: true)
+      row = categories.find { |r| r["name"] == "'+cmd|calc" }
+      assert row, "category name must be escaped"
+      assert_equal "'@icon", row["lucide_icon"], "category lucide_icon must be escaped"
+
+      transactions = CSV.parse(zip.read("transactions.csv"), headers: true)
+      row = transactions.find { |r| r["name"] == "'=SUM(B1)" }
+      assert row, "transaction name must be escaped"
+      assert_equal "'-1.5x leverage", row["notes"], "transaction notes must be escaped"
+
+      merchants = CSV.parse(zip.read("merchants.csv"), headers: true)
+      assert merchants.any? { |r| r["name"] == "'-2+3" }, "merchant name must be escaped"
+
+      rules = CSV.parse(zip.read("rules.csv"), headers: true)
+      assert rules.any? { |r| r["name"] == "'@rule" }, "rule name must be escaped"
+    end
+  end
+
+  # A bare number cannot run anything, and escaping it would turn every income
+  # amount, negative balance and sale quantity into text in the spreadsheet.
+  test "CSV export leaves negative numbers as numbers" do
+    account = @family.accounts.create!(name: "Overdrawn", accountable: Depository.new, balance: -250.5, currency: "USD")
+    account.entries.create!(
+      date: Date.parse("2024-05-19"), amount: -1200, currency: "USD", name: "Salary",
+      entryable: Transaction.new
+    )
+    security = Security.create!(ticker: "SELLME", name: "Sold Security", exchange_operating_mic: "XNAS")
+    account.entries.create!(
+      date: Date.parse("2024-05-20"), amount: -300, name: "Sell", currency: "USD",
+      entryable: Trade.new(security: security, qty: -2, price: 150, currency: "USD")
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      accounts = CSV.parse(zip.read("accounts.csv"), headers: true)
+      assert_equal "-250.5", accounts.find { |r| r["name"] == "Overdrawn" }["balance"]
+
+      transactions = CSV.parse(zip.read("transactions.csv"), headers: true)
+      assert_equal "-1200.0", transactions.find { |r| r["name"] == "Salary" }["amount"]
+
+      trade = CSV.parse(zip.read("trades.csv"), headers: true).find { |r| r["ticker"] == "SELLME" }
+      assert_equal "-2.0", trade["quantity"]
+      assert_equal "-300.0", trade["amount"]
+    end
+  end
+
+  test "NDJSON keeps formula-prefixed values verbatim so export and import round-trip" do
+    name  = "=SUM(A1)"
+    notes = "-1.5x leverage"
+    entry = @account.entries.create!(
+      date: Date.current, name: name, amount: 10, currency: "USD", notes: notes,
+      entryable: Transaction.new
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      line = zip.read("all.ndjson").each_line.find do |l|
+        parsed = JSON.parse(l)
+        parsed["type"] == "Transaction" && parsed.dig("data", "entry_id") == entry.id
+      end
+
+      assert line, "the transaction must be in all.ndjson"
+      data = JSON.parse(line)["data"]
+      assert_equal name, data["name"]
+      assert_equal notes, data["notes"]
+    end
+  end
+
+
   private
 
     def create_transaction_entry(account, amount:, date:, name:)
@@ -943,6 +1423,41 @@ class Family::DataExporterTest < ActiveSupport::TestCase
         currency: account.currency,
         entryable: Transaction.new(kind: "funds_movement")
       )
+    end
+
+    def create_split_rule!(row_name: "Mine")
+      merchant = @family.merchants.create!(name: "Split Merchant")
+      rule = @family.rules.build(name: "Split Rule", resource_type: "transaction", active: true)
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "shared")
+      rule.actions.build(
+        action_type: "split_transaction",
+        value: {
+          splits: [
+            { type: "percentage", name: row_name, share: "60", category_id: @category.id, merchant_id: merchant.id, tag_ids: [ @tag.id ] },
+            { type: "percentage", name: "Theirs", share: "40", category_id: nil, merchant_id: nil, tag_ids: [] }
+          ]
+        }.to_json
+      )
+      rule.save!
+      rule
+    end
+
+    def imported_split_config(rule_name)
+      action = @other_family.rules.find_by!(name: rule_name).actions.sole
+      assert_equal "split_transaction", action.action_type
+      JSON.parse(action.value)["splits"]
+    end
+
+    def assert_imported_split_rule(rule_name, category:)
+      mine, theirs = imported_split_config(rule_name)
+
+      assert_equal [ "percentage", "Mine", "60" ], mine.values_at("type", "name", "share")
+      assert_equal category.id, mine["category_id"]
+      assert_equal @other_family.merchants.find_by!(name: "Split Merchant").id, mine["merchant_id"]
+      assert_equal [ @other_family.tags.find_by!(name: "Test Tag").id ], mine["tag_ids"]
+      assert_nil theirs["category_id"]
+      assert_nil theirs["merchant_id"]
+      assert_equal [], theirs["tag_ids"]
     end
 
     def create_csv_export_trade!

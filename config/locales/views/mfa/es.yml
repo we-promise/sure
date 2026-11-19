@@ -1,6 +1,7 @@
 ---
 es:
   mfa:
+    local_password_required: La verificación en dos pasos necesita una contraseña local. La tuya se gestiona en tu proveedor de identidad.
     backup_codes:
       backup_codes_description: Cada código solo se puede usar una vez. Mantén estos códigos
         a salvo y seguros.
@@ -11,14 +12,21 @@ es:
       page_title: Códigos de Respaldo
       title: Guarda Tus Códigos de Respaldo
     create:
+      code_already_used: Ese código ya se ha utilizado. Por favor, introduce el siguiente código de tu aplicación de autenticación.
       invalid_code: Código de verificación inválido. Por favor, inténtalo de nuevo.
+      setup_failed: Ocurrió un error al activar la autenticación de dos factores. Por favor, inténtalo de nuevo.
+      invalid_password: Contraseña incorrecta. Inténtalo de nuevo.
     disable:
+      failure: Ocurrió un error al desactivar la autenticación de dos factores. Por favor, inténtalo de nuevo.
+      invalid_password: Contraseña incorrecta. Inténtalo de nuevo.
       success: La autenticación de dos factores ha sido desactivada
     new:
       code_label: Código de Verificación
       code_placeholder: Ingresa el código de 6 dígitos
       description: Mejora la seguridad de tu cuenta configurando la autenticación de dos factores
       page_title: Configuración de Autenticación de Dos Factores
+      password_label: Confirma con tu contraseña
+      password_placeholder: Introduce tu contraseña
       scan_description: Usa una aplicación de autenticación como Google Authenticator o 1Password
         para escanear este código QR
       scan_title: 1. Escanear Código QR

@@ -67,7 +67,7 @@ tr:
     registrations: Hesap oluştur
     reports: Raporlar
     rules: Kurallar
-    securities: Güvenlik
+    securities: "Menkul Kıymetler"
     security: Güvenlik
     self_hosting: Kendi Barındırma
     sessions: Giriş yap
@@ -86,3 +86,9 @@ tr:
     users: Kullanıcılar
     valuations: Değerlemeler
     vehicles: Araçlar
+    changelog: Yenilikler
+    feedback: Geri bildirim
+    monobank_items: Monobank
+    plan: Plan
+    redbark_items: Redbark
+    system_health: Sistem Durumu

@@ -20,8 +20,10 @@ ca:
       to: a
       to_colon: 'a:'
       total_account_value: Valor total del compte
-      update: actualització
+      update: ajust
       vehicle_value: valor del vehicle
+      action_set: establirà
+      action_update: actualitzarà
     create:
       account_updated: Compte actualitzat
     errors:
@@ -61,3 +63,9 @@ ca:
     update:
       account_updated: Compte actualitzat
       entry_updated: Entrada actualitzada
+    confirm_create:
+      confirm: Confirma
+      title: Confirma el nou saldo
+    confirm_update:
+      title: Actualitza el saldo
+      update: Actualitza

@@ -17,12 +17,3 @@ de:
       treat_balance_as_available_credit_label: Saldo ist verfügbarer Kreditrahmen
     new:
       title: Kreditkartendaten eingeben
-    overview:
-      amount_owed: Geschuldeter Betrag
-      annual_fee: Jahresgebühr
-      apr: Effektiver Jahreszins
-      available_credit: Verfügbarer Kreditrahmen
-      expiration_date: Ablaufdatum
-      minimum_payment: Mindestzahlung
-      unknown: Unbekannt
-      edit_account_details: Kontodaten bearbeiten

@@ -11,7 +11,7 @@ class InsightsController < ApplicationController
     # hits this GET before the user actually navigates, so skip the write
     # for prefetch requests or badges would clear on hover.
     unless prefetch_request?
-      Current.family.insights.active.update_all(status: "read", read_at: Time.current, updated_at: Time.current)
+      Current.family.insights.visible.active.update_all(status: "read", read_at: Time.current, updated_at: Time.current)
     end
   end
 
@@ -54,7 +54,9 @@ class InsightsController < ApplicationController
 
   private
     def set_insight
-      @insight = Current.family.insights.find(params[:id])
+      # Not `visible`: unacknowledge targets acknowledged rows. The account
+      # check still applies, so a hidden row can't be changed by id.
+      @insight = Current.family.insights.about_shared_accounts.find(params[:id])
     end
 
     def load_feed

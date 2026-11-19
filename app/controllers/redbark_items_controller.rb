@@ -14,32 +14,9 @@ class RedbarkItemsController < ApplicationController
       # Trigger the initial sync so accounts appear without a manual refresh
       @redbark_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @redbark_items = Current.family.redbark_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "redbark-providers-panel",
-            partial: "settings/providers/redbark_panel",
-            locals: { redbark_items: @redbark_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @redbark_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "redbark-providers-panel",
-          partial: "settings/providers/redbark_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("redbark", alert: @redbark_item.errors.full_messages.join(", "))
     end
   end
 
@@ -52,32 +29,9 @@ class RedbarkItemsController < ApplicationController
       # Rotated credentials should be exercised right away
       @redbark_item.sync_later if update_params[:api_key].present? && !@redbark_item.syncing?
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @redbark_items = Current.family.redbark_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "redbark-providers-panel",
-            partial: "settings/providers/redbark_panel",
-            locals: { redbark_items: @redbark_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("redbark", notice: t(".success"))
     else
-      @error_message = @redbark_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "redbark-providers-panel",
-          partial: "settings/providers/redbark_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("redbark", alert: @redbark_item.errors.full_messages.join(", "))
     end
   end
 
@@ -160,7 +114,6 @@ class RedbarkItemsController < ApplicationController
     end
 
     redbark_account.ensure_account_provider!(account)
-    redbark_account.update!(ignored: false)
     redbark_item.sync_later unless redbark_item.syncing?
 
     redirect_to account_path(account), notice: t(".success", account_name: account.name)
@@ -209,7 +162,6 @@ class RedbarkItemsController < ApplicationController
       ActiveRecord::Base.transaction do
         account = create_account_from_redbark(redbark_account, accountable_type, config)
         redbark_account.ensure_account_provider!(account)
-        redbark_account.update!(ignored: false)
         redbark_account.update!(sync_start_date: config[:sync_start_date]) if config[:sync_start_date].present?
       end
       created_count += 1
@@ -272,17 +224,30 @@ class RedbarkItemsController < ApplicationController
     def safe_return_to_path
       return nil if params[:return_to].blank?
 
-      return_to = params[:return_to].to_s
+      return_to = params[:return_to].to_s.strip
+      return nil unless return_to.start_with?("/")
+      return nil if return_to[1] == "/" || return_to[1] == "\\"
+      return nil if return_to.include?("\\") || return_to.match?(/[[:cntrl:]]/)
+      return nil if encoded_path_separator?(return_to)
 
-      begin
-        uri = URI.parse(return_to)
-        return nil if uri.scheme.present?
-        return nil if uri.host.present?
-        return nil unless return_to.start_with?("/")
-        return_to
-      rescue URI::InvalidURIError
-        nil
-      end
+      uri = URI.parse(return_to)
+      return nil unless uri.relative?
+
+      Rails.application.routes.recognize_path(uri.path, method: :get)
+
+      return_to
+    rescue URI::InvalidURIError, ActionController::RoutingError
+      nil
+    end
+
+    def encoded_path_separator?(return_to)
+      encoded_second_character = return_to[1, 3]
+      return false unless encoded_second_character&.start_with?("%")
+
+      decoded = URI.decode_www_form_component(encoded_second_character)
+      decoded == "/" || decoded == "\\"
+    rescue ArgumentError
+      true
     end
 
     def redbark_item_params
@@ -304,7 +269,6 @@ class RedbarkItemsController < ApplicationController
       )
 
       redbark_account.ensure_account_provider!(account)
-      redbark_account.update!(ignored: false)
       account
     end
 

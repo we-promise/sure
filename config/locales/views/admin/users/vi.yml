@@ -21,8 +21,6 @@ vi:
           trial_expiring_soon: "Hết hạn trong 7 ngày"
           trial_trialing: "Đang dùng thử"
           submit: "Lọc"
-        summary:
-          trials_expiring_7_days: "Các bản dùng thử hết hạn trong 7 ngày tới"
         table:
           user: "Người dùng"
           trial_ends_at: "Kết thúc dùng thử"

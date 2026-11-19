@@ -34,6 +34,60 @@ class RecurringOccurrence < ApplicationRecord
   scope :closed, -> { where.not(status: :scheduled) }
   scope :due_between, ->(from, to) { where(due_on: from..to) }
 
+  # The family's open bill occurrences due within `dates`, with their confirmed
+  # allocation sums and their series' spending shares loaded in grouped
+  # queries so remaining_spending_money on each row issues none. `series`
+  # narrows the bills read, e.g. to those the whole family may see.
+  def self.open_bills_due(family, dates, series: RecurringTransaction.all)
+    occurrences = open_status
+                    .joins(:recurring_transaction)
+                    .merge(RecurringTransaction.bills)
+                    .merge(series)
+                    .where(recurring_transactions: { family_id: family.id })
+                    .where(due_on: dates)
+                    .includes(:recurring_transaction)
+                    .to_a
+
+    sums = RecurringAllocation.confirmed
+                              .where(recurring_occurrence_id: occurrences.map(&:id))
+                              .group(:recurring_occurrence_id)
+                              .sum(:allocated_amount)
+    shares = spending_shares(family, occurrences.map(&:recurring_transaction_id).uniq)
+    occurrences.each do |occurrence|
+      occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
+      occurrence.spending_share = shares.fetch(occurrence.recurring_transaction_id, 1)
+    end
+  end
+
+  # The part of each series' charge that is spending, by series id, for the
+  # series whose charges get split: a mortgage instalment split into its
+  # interest and a transfer of the principal to the loan is spending only for
+  # the interest. Read off the series' latest split charge, as its children
+  # that count as spending over the charge: the family's reported kinds
+  # (Family#analytics_excluded_kinds, so a contribution to an investment
+  # account counts only when the family counts investing as spending, as in
+  # IncomeStatement::Totals) and not excluded. Series never split are absent:
+  # all spending.
+  def self.spending_shares(family, series_ids)
+    latest_splits = RecurringAllocation.confirmed
+      .joins(:recurring_occurrence, :entry)
+      .where(recurring_occurrences: { recurring_transaction_id: series_ids })
+      .where(entry_id: Entry.where.not(parent_entry_id: nil).select(:parent_entry_id))
+      .order("recurring_occurrences.recurring_transaction_id", "entries.date DESC", "entries.id DESC")
+      .pluck(Arel.sql("DISTINCT ON (recurring_occurrences.recurring_transaction_id) recurring_occurrences.recurring_transaction_id"),
+             "entries.id", "entries.amount")
+    return {} if latest_splits.empty?
+
+    spent = Entry.where(parent_entry_id: latest_splits.map(&:second), excluded: false, entryable_type: "Transaction")
+                 .where(entryable_id: Transaction.where.not(kind: family.analytics_excluded_kinds).select(:id))
+                 .group(:parent_entry_id)
+                 .sum(:amount)
+
+    latest_splits.each_with_object({}) do |(series_id, entry_id, amount), shares|
+      shares[series_id] = (spent.fetch(entry_id, 0) / amount).clamp(0, 1) if amount.positive?
+    end
+  end
+
   # The amount this occurrence expects, resolving NULL through the series'
   # amount strategy, which is what lets a price edit update every open
   # occurrence with no sweep. `series_amount` overrides what the series says it
@@ -58,6 +112,10 @@ class RecurringOccurrence < ApplicationRecord
     Money.new(resolved_expected_amount, currency)
   end
 
+  # effective_due_on as SQL, for queries that select by it. GREATEST skips a
+  # NULL snoozed_until the way compact does below.
+  EFFECTIVE_DUE_ON_SQL = "GREATEST(recurring_occurrences.due_on, recurring_occurrences.snoozed_until)".freeze
+
   # Snoozing postpones the presentation-level due date without rewriting the
   # schedule.
   def effective_due_on
@@ -67,6 +125,14 @@ class RecurringOccurrence < ApplicationRecord
   # List views preload allocation sums in one grouped query and inject them
   # here, so row rendering issues no per-occurrence SUM.
   attr_writer :cached_confirmed_allocated
+
+  def self.preload_confirmed_allocated(occurrences)
+    sums = RecurringAllocation.confirmed
+                              .where(recurring_occurrence_id: occurrences.map(&:id))
+                              .group(:recurring_occurrence_id)
+                              .sum(:allocated_amount)
+    occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+  end
 
   def confirmed_allocated
     @cached_confirmed_allocated || allocations.confirmed.sum(:allocated_amount)
@@ -84,14 +150,25 @@ class RecurringOccurrence < ApplicationRecord
     Money.new(remaining_amount, currency)
   end
 
+  attr_writer :spending_share
+
+  # The part of remaining_amount that will be spending: all of it, unless the
+  # series' charges get split (see .spending_shares).
+  def remaining_spending_money
+    share = @spending_share || self.class.spending_shares(family, [ recurring_transaction_id ]).fetch(recurring_transaction_id, 1)
+    Money.new((remaining_amount * share).round(Money::Currency.new(currency).default_precision), currency)
+  end
+
   # Exact sum, not tolerance: $1,850 allocated against $2,000 rent is
   # partially paid with $150 remaining, always.
   def partially_paid?
     scheduled? && confirmed_allocated.positive? && confirmed_allocated < resolved_expected_amount
   end
 
+  # Overpaid means beyond the tolerance band the matcher uses. A payment inside
+  # the band is the bill's real amount, not an overpayment.
   def overpaid?
-    confirmed_allocated > resolved_expected_amount + CLOSE_EPSILON
+    confirmed_allocated > resolved_expected_amount + overpaid_threshold
   end
 
   # Presentation state for open occurrences: upcoming until the notify
@@ -110,8 +187,16 @@ class RecurringOccurrence < ApplicationRecord
     end
   end
 
+  # Nobody is paying a bill that isn't active, so its leftover is neither late
+  # nor due, whatever the dates say. derived_state stays the raw schedule
+  # state: the matcher reads it to keep a late payment able to settle the
+  # leftover.
   def overdue?
-    derived_state == :overdue
+    recurring_transaction.active? && derived_state == :overdue
+  end
+
+  def due?
+    recurring_transaction.active? && derived_state == :due
   end
 
   # --- Lifecycle actions. Closing freezes the resolved amount so the row is
@@ -148,6 +233,11 @@ class RecurringOccurrence < ApplicationRecord
   end
 
   private
+    def overpaid_threshold
+      band = resolved_expected_amount * (recurring_transaction.effective_amount_tolerance_pct / BigDecimal("100"))
+      [ band, CLOSE_EPSILON ].max
+    end
+
     def notify_days
       recurring_transaction.notify_days_before || DEFAULT_NOTIFY_DAYS
     end

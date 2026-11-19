@@ -3,13 +3,25 @@ module Security::Provided
 
   SecurityInfoMissingError = Class.new(StandardError)
 
+  # Needs no API key, so it can stand in for an enabled provider that can't be built
+  KEYLESS_FALLBACK_PROVIDER = "yahoo_finance"
+
   class_methods do
-    # Returns all enabled and configured securities providers
+    # Returns all enabled and configured securities providers. When the first
+    # enabled provider can't be built (e.g. no API key), the keyless Yahoo
+    # Finance provider takes its place, unless that is already enabled. Only
+    # the first position is substituted, so the substitute is always the
+    # default for securities without an assigned provider.
     def providers
-      Setting.enabled_securities_providers.filter_map do |name|
-        Provider::Registry.for_concept(:securities).get_provider(name.to_sym)
-      rescue Provider::Registry::Error
-        nil
+      names = Setting.enabled_securities_providers
+      substitute = !names.include?(KEYLESS_FALLBACK_PROVIDER)
+
+      names.each_with_index.filter_map do |name, index|
+        provider = build_provider(name)
+        next provider if provider || !substitute || index.positive?
+
+        log_keyless_substitution(name)
+        build_provider(KEYLESS_FALLBACK_PROVIDER)
       end
     end
 
@@ -37,7 +49,15 @@ module Security::Provided
     # Per-provider timeout so one slow provider can't stall the entire search
     PROVIDER_SEARCH_TIMEOUT = 8.seconds
 
-    def search_provider(symbol, country_code: nil, exchange_operating_mic: nil)
+    # technical_failure is an optional callable invoked once per provider that
+    # errored/timed out (as opposed to answering with zero results). Callers
+    # that need to distinguish "provider search technically failed" from
+    # "provider search succeeded, nothing found" — e.g. Security::Resolver,
+    # which must not treat a rate-limited/timed-out search as a confirmed
+    # "no such security" — can pass a callback here instead of us changing
+    # the return type for all callers (e.g. SecuritiesController just wants
+    # the plain result array).
+    def search_provider(symbol, country_code: nil, exchange_operating_mic: nil, technical_failure: nil)
       return [] if symbol.blank?
 
       active_providers = providers.compact
@@ -70,25 +90,38 @@ module Security::Provided
       seen_keys = Set.new
 
       results_array.each_with_index do |provider_results, idx|
-        next if provider_results.nil?
+        if provider_results.nil?
+          technical_failure&.call(active_providers[idx])
+          next
+        end
 
         provider_key = provider_key_for(active_providers[idx])
+        # The keyless substitute's key is never stored, so a security found
+        # through it follows providers.first and moves to the configured
+        # provider once that can be built. Its ticker is stored without Yahoo's
+        # exchange suffix (SAP.DE becomes SAP on XETR), so that provider gets
+        # the symbol it expects; Yahoo re-adds the suffix from the MIC.
+        keyless_substitute = provider_key == KEYLESS_FALLBACK_PROVIDER && !Setting.enabled_securities_providers.include?(KEYLESS_FALLBACK_PROVIDER)
+        provider_key = nil if keyless_substitute
 
         provider_results.each do |ps|
+          ticker = keyless_substitute ? strip_yahoo_suffix(ps[:symbol], ps[:exchange_operating_mic]) : ps[:symbol]
+
           # Dedup key includes provider so the same ticker on the same exchange can
           # appear once per provider — the user picks which provider's price feed
           # they want and that choice is stored in price_provider.
-          dedup_key = "#{ps[:symbol]}|#{ps[:exchange_operating_mic]}|#{provider_key}".upcase
+          dedup_key = "#{ticker}|#{ps[:exchange_operating_mic]}|#{provider_key}".upcase
           next if seen_keys.include?(dedup_key)
           seen_keys.add(dedup_key)
 
           security = Security.new(
-            ticker: ps[:symbol],
+            ticker: ticker,
             name: ps[:name],
             logo_url: ps[:logo_url],
             exchange_operating_mic: ps[:exchange_operating_mic],
             country_code: ps[:country_code],
             search_currency: ps[:currency],
+            search_isin: ps[:isin],
             price_provider: provider_key
           )
           all_results << security
@@ -103,6 +136,24 @@ module Security::Provided
     end
 
     private
+      def build_provider(name)
+        Provider::Registry.for_concept(:securities).get_provider(name.to_sym)
+      rescue Provider::Registry::Error
+        nil
+      end
+
+      def strip_yahoo_suffix(symbol, exchange_operating_mic)
+        suffix = Provider::YahooFinance::EXCHANGE_CONFIG.dig(exchange_operating_mic, :yahoo_suffix)
+        suffix && symbol.end_with?(suffix) ? symbol.delete_suffix(suffix) : symbol
+      end
+
+      def log_keyless_substitution(name)
+        @logged_keyless_substitutions ||= Concurrent::Set.new
+        return unless @logged_keyless_substitutions.add?(name)
+
+        Rails.logger.info("Securities provider #{name} can't be built; using #{KEYLESS_FALLBACK_PROVIDER} in its place")
+      end
+
       def provider_key_for(provider_instance)
         provider_instance.class.name.demodulize.underscore
       end
@@ -120,7 +171,8 @@ module Security::Provided
           response.data.map do |ps|
             { symbol: ps.symbol, name: ps.name, logo_url: ps.logo_url,
               exchange_operating_mic: ps.exchange_operating_mic, country_code: ps.country_code,
-              currency: ps.respond_to?(:currency) ? ps.currency : nil }
+              currency: ps.respond_to?(:currency) ? ps.currency : nil,
+              isin: ps.respond_to?(:isin) ? ps.isin : nil }
           end
         end
       rescue => e
@@ -128,8 +180,25 @@ module Security::Provided
         nil
       end
 
+      ISIN_FORMAT = /\A[A-Z]{2}[A-Z0-9]{9}\d\z/
+
+      # True when the query is a well-formed ISIN: 2 letters, 9 alphanumerics and a
+      # check digit (letters expand to two digits, then the Luhn check applies).
+      def isin_query?(query)
+        return false unless query.match?(ISIN_FORMAT)
+
+        digits = query.chars.map { |c| c.match?(/\d/) ? c : (c.ord - 55).to_s }.join
+        sum = digits.reverse.chars.each_with_index.sum do |c, i|
+          n = c.to_i
+          n *= 2 if i.odd?
+          n > 9 ? n - 9 : n
+        end
+        (sum % 10).zero?
+      end
+
       # Scores and sorts search results so the most relevant matches appear first.
       # Scoring criteria (lower = better):
+      #  -1: the query is a valid ISIN and the result carries that exact ISIN
       #   0: exact ticker match
       #   1: ticker starts with query
       #   2: name contains query
@@ -138,10 +207,13 @@ module Security::Provided
       def rank_search_results(results, symbol, country_code)
         query = symbol.upcase
         user_country = country_code&.upcase
+        isin_search = isin_query?(query)
 
         results.sort_by do |s|
           ticker_up = s.ticker.upcase
-          relevance = if ticker_up == query
+          relevance = if isin_search && s.search_isin.present? && s.search_isin.upcase == query
+            -1
+          elsif ticker_up == query
             0
           elsif ticker_up.start_with?(query)
             1
@@ -196,14 +268,18 @@ module Security::Provided
     return nil if offline?
 
     # Make sure we have a data provider before fetching
-    return nil unless price_data_provider.present?
-    response = price_data_provider.fetch_security_price(
+    provider = price_data_provider
+    return nil unless provider.present?
+    response = provider.fetch_security_price(
       symbol: ticker,
       exchange_operating_mic: exchange_operating_mic,
       date: date
     )
 
-    return nil unless response.success? # Provider error
+    unless response.success? # Provider error
+      log_failed_price_fetch(response.error, provider)
+      return nil
+    end
 
     price = response.data
     Security::Price.find_or_create_by!(
@@ -213,6 +289,24 @@ module Security::Provided
     ) { |record| record.price = price.price } if cache
     price
   end
+
+  # Throttled so a page with many holdings missing today's price doesn't
+  # flood the debug log with one entry per request — at most one per
+  # security per day.
+  def log_failed_price_fetch(error, provider = price_data_provider)
+    cache_key = "security_price_fetch_log:#{id}:#{Date.current}"
+    return unless Rails.cache.write(cache_key, true, expires_in: 24.hours, unless_exist: true)
+
+    DebugLogEntry.capture(
+      category: "security_price_fetch",
+      level: "warn",
+      message: "find_or_fetch_price failed",
+      source: self.class.name,
+      provider: provider,
+      metadata: { security_id: id, ticker: ticker, provider_error: error&.message }
+    )
+  end
+  private :log_failed_price_fetch
 
   def import_provider_details(clear_cache: false)
     unless price_data_provider.present?

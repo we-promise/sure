@@ -7,6 +7,15 @@ es:
       close: Cerrar
   global:
     expand: Expandir
+  mcp:
+    errors:
+      invalid_session_id: ID de sesión de MCP no válido
+      unsupported_protocol_version: 'Versión del protocolo MCP no admitida: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris debe usar https, http de loopback o un esquema de URI de app nativa
+      invalid_client_name: client_name no puede contener caracteres de control bidireccionales
+      reserved_client_name: client_name está reservado para apps propias
   activerecord:
     errors:
       messages:
@@ -51,6 +60,7 @@ es:
       short: '%-d de %b'
       month_year: '%B de %Y'
       short_month_year: '%b %Y'
+      short_with_year: '%-d de %b de %Y'
     month_names:
     -
     - enero
@@ -164,6 +174,9 @@ es:
       submit: Guardar %{model}
       update: Actualizar %{model}
   number:
+    nth:
+      ordinals: ""
+      ordinalized: "%{number}"
     currency:
       format:
         significant: false

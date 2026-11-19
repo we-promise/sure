@@ -1,6 +1,8 @@
 require "test_helper"
 
 class RecurringOccurrenceTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   def setup
     @family = families(:dylan_family)
     @series = recurring_transactions(:netflix_subscription)
@@ -19,6 +21,44 @@ class RecurringOccurrenceTest < ActiveSupport::TestCase
 
     occurrence.override_amount!(nil)
     assert_equal 18.99, occurrence.resolved_expected_amount
+  end
+
+  test "remaining_spending_money is the whole remaining amount for a series never split" do
+    occurrence = create_occurrence
+
+    assert_equal occurrence.remaining_amount_money, occurrence.remaining_spending_money
+  end
+
+  # Only the interest of a mortgage instalment is spending; the principal is a
+  # transfer to the loan, and an excluded part is not counted either.
+  test "remaining_spending_money keeps the spending share of the series' latest split charge" do
+    interest = @family.categories.create!(name: "Mortgage interest")
+    mortgage = create_bill(category: interest, amount: 1_500, name: "Mortgage")
+    split_payment(pay_bill(mortgage, date: Date.current - 1.month),
+                  { amount: 700, category: interest },
+                  { amount: 40, category: interest, excluded: true },
+                  { amount: 760, kind: "funds_movement" })
+
+    assert_equal Money.new(700, "USD"), expect_bill(mortgage, due_on: Date.current).remaining_spending_money
+  end
+
+  # A charge split into spending and a contribution to an investment account
+  # reserves the contribution only for a family that counts investing as
+  # spending, as IncomeStatement::Totals does.
+  test "remaining_spending_money counts a split contribution only when investing counts as spending" do
+    [ [ true, 1_000 ], [ false, 200 ] ].each do |as_spending, expected|
+      @family.update!(investment_contributions_as_spending: as_spending)
+      groceries = @family.categories.create!(name: "Groceries #{as_spending}")
+      bill = create_bill(category: groceries, amount: 1_000, name: "Groceries and savings #{as_spending}")
+      split_payment(pay_bill(bill, date: Date.current - 1.month),
+                    { amount: 200, category: groceries },
+                    { amount: 800, kind: "investment_contribution" })
+      due = expect_bill(bill, due_on: Date.current)
+
+      assert_equal Money.new(expected, "USD"), due.remaining_spending_money, "as_spending: #{as_spending}"
+      loaded = RecurringOccurrence.open_bills_due(@family, Date.current..Date.current).find { |o| o.id == due.id }
+      assert_equal Money.new(expected, "USD"), loaded.remaining_spending_money, "open_bills_due, as_spending: #{as_spending}"
+    end
   end
 
   test "average strategy resolves through the series variance" do
@@ -57,6 +97,27 @@ class RecurringOccurrenceTest < ActiveSupport::TestCase
 
       overdue.snooze!(Date.new(2026, 8, 25))
       assert_equal :upcoming, overdue.derived_state
+    end
+  end
+
+  # Nobody is paying a bill that isn't active, so its leftover isn't late or
+  # due. The schedule state stays raw: the matcher reads it to keep a late
+  # payment able to settle the leftover.
+  test "a leftover of a bill that isn't active is neither overdue nor due" do
+    travel_to Date.new(2026, 8, 13) do
+      overdue = create_occurrence(due_on: Date.new(2026, 8, 5), original: Date.new(2026, 8, 5))
+      due = create_occurrence(due_on: Date.new(2026, 8, 11), original: Date.new(2026, 8, 11))
+      assert overdue.overdue?
+      assert due.due?
+
+      %w[inactive paused ended].each do |status|
+        @series.update!(status: status)
+
+        assert_not overdue.reload.overdue?, status
+        assert_equal :overdue, overdue.derived_state, status
+        assert_not due.reload.due?, status
+        assert_equal :due, due.derived_state, status
+      end
     end
   end
 

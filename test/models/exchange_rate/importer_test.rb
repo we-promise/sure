@@ -116,6 +116,70 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal [ 1.3, 1.4, 1.5 ], db_rates.map(&:rate)
   end
 
+  test "clear_cache carries the provider rate over the dates it skips instead of keeping stale rates" do
+    ExchangeRate.delete_all
+
+    (2.days.ago.to_date..Date.current).each do |date|
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date:, rate: 1.0)
+    end
+
+    # The provider skips yesterday (a weekend or holiday)
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 2.days.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current,        rate: 1.5)
+    ])
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(2.days.ago.to_date), end_date: Date.current)
+             .returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 2.days.ago.to_date,
+      end_date: Date.current,
+      clear_cache: true
+    ).import_provider_rates
+
+    db_rates = ExchangeRate.where(from_currency: "USD", to_currency: "EUR").order(:date)
+    assert_equal [ 1.3, 1.3, 1.5 ], db_rates.map(&:rate)
+  end
+
+  test "clear_cache keeps stored rates from before the provider's first rate" do
+    ExchangeRate.delete_all
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: 10.days.ago.to_date, rate: 0.9)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: 9.days.ago.to_date, rate: 0.95)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: 1.day.ago.to_date, rate: 1.0)
+
+    # The provider's history starts later than the stored history
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 1.day.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.5)
+    ])
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(10.days.ago.to_date), end_date: Date.current)
+             .returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 10.days.ago.to_date,
+      end_date: Date.current,
+      clear_cache: true
+    ).import_provider_rates
+
+    rates = ExchangeRate.where(from_currency: "USD", to_currency: "EUR").order(:date).pluck(:date, :rate).to_h
+    assert_equal 0.9, rates[10.days.ago.to_date]
+    assert_equal 0.95, rates[9.days.ago.to_date]
+    assert_equal 0.95, rates[8.days.ago.to_date]
+    assert_equal 1.3, rates[1.day.ago.to_date]
+    assert_equal 1.5, rates[Date.current]
+  end
+
   test "clamps end_date to today when future date is provided" do
     ExchangeRate.delete_all
 
@@ -253,6 +317,27 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal 0, ExchangeRate.where(from_currency: "USD", to_currency: "EUR").count
   end
 
+  test "skips inverse rates that would round to zero" do
+    ExchangeRate.delete_all
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "BTC", to: "XYZ", date: Date.current, rate: 2e13)
+    ])
+
+    @provider.expects(:fetch_exchange_rates).returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "BTC",
+      to: "XYZ",
+      start_date: Date.current,
+      end_date: Date.current
+    ).import_provider_rates
+
+    assert_equal 2e13, ExchangeRate.find_by!(from_currency: "BTC", to_currency: "XYZ", date: Date.current).rate
+    assert_not ExchangeRate.exists?(from_currency: "XYZ", to_currency: "BTC")
+  end
+
   test "handles rate limit error gracefully" do
     ExchangeRate.delete_all
 
@@ -342,7 +427,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     ExchangeRatePair.create!(
       from_currency: "USD", to_currency: "EUR",
       first_provider_rate_on: 3.days.ago.to_date,
-      provider_name: Setting.exchange_rate_provider.to_s
+      provider_name: ExchangeRate.provider_name
     )
 
     # Provider now returns an earlier date with clear_cache
@@ -367,6 +452,63 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal 10.days.ago.to_date, pair.first_provider_rate_on
   end
 
+  test "first_provider_rate_on is reset when Frankfurter replaces a keyless Twelve Data" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+    Setting.stubs(:exchange_rate_provider).returns("twelve_data")
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+
+    ExchangeRatePair.create!(
+      from_currency: "USD", to_currency: "EUR",
+      first_provider_rate_on: 10.days.ago.to_date,
+      provider_name: "twelve_data"
+    )
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 3.days.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current,        rate: 1.5)
+    ])
+
+    @provider.expects(:fetch_exchange_rates).returns(provider_response)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => nil) do
+      ExchangeRate::Importer.new(
+        exchange_rate_provider: @provider,
+        from: "USD",
+        to: "EUR",
+        start_date: 30.days.ago.to_date,
+        end_date: Date.current,
+        clear_cache: true
+      ).import_provider_rates
+    end
+
+    pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+    assert_equal "frankfurter", pair.provider_name
+    assert_equal 3.days.ago.to_date, pair.first_provider_rate_on
+  end
+
+  test "pair metadata keeps the name of the provider that fetched, even if settings change mid-import" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+    Setting.stubs(:exchange_rate_provider).returns("twelve_data")
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 3.days.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current,        rate: 1.5)
+    ])
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => nil) do
+      # A Twelve Data key is saved while the keyless Frankfurter fallback is fetching.
+      Provider::Frankfurter.any_instance.expects(:fetch_exchange_rates)
+        .with { ENV["TWELVE_DATA_API_KEY"] = "new-key" }.returns(provider_response)
+
+      ExchangeRate.import_provider_rates(from: "USD", to: "EUR", start_date: 30.days.ago.to_date, end_date: Date.current, clear_cache: true)
+    end
+
+    assert_equal "frankfurter", ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR").provider_name
+  end
+
   test "first_provider_rate_on is NOT moved forward when provider shrinks coverage" do
     ExchangeRate.delete_all
     ExchangeRatePair.delete_all
@@ -374,7 +516,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     ExchangeRatePair.create!(
       from_currency: "USD", to_currency: "EUR",
       first_provider_rate_on: 10.days.ago.to_date,
-      provider_name: Setting.exchange_rate_provider.to_s
+      provider_name: ExchangeRate.provider_name
     )
 
     # Provider now only returns from 3 days ago (shrunk window)
@@ -406,7 +548,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     ExchangeRatePair.create!(
       from_currency: "USD", to_currency: "EUR",
       first_provider_rate_on: clamp_date,
-      provider_name: Setting.exchange_rate_provider.to_s
+      provider_name: ExchangeRate.provider_name
     )
 
     # Seed DB with rates from clamp to yesterday
@@ -444,7 +586,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     ExchangeRatePair.create!(
       from_currency: "USD", to_currency: "EUR",
       first_provider_rate_on: clamp_date,
-      provider_name: Setting.exchange_rate_provider.to_s
+      provider_name: ExchangeRate.provider_name
     )
 
     (clamp_date..Date.current).each_with_index do |date, idx|

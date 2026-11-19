@@ -4,6 +4,9 @@ tr:
     errors:
       models:
         rule:
-          duplicate_actions: Kural, %{types} işlemlerini yinelenen olarak içeremez
-          min_actions: en az bir işlem içermelidir
+          duplicate_actions: 'Kural yinelenen eylemler içeremez: %{types}'
+          min_actions: en az bir eylem içermelidir
           nested_conditions: Bileşik koşullar iç içe olamaz
+  rule:
+    conditions:
+      unsupported_label: Desteklenmiyor (%{type})

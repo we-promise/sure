@@ -1,6 +1,12 @@
 ---
 en:
   goals:
+    currency_warning:
+      title: Some balances aren't counted
+      body:
+        one: "No %{from} → %{to} exchange rate is available yet, so %{from} balances are left out of this total."
+        other: "No exchange rates from %{from} to %{to} are available yet, so those balances are left out of this total."
+      settings_link: Exchange rate provider settings
     color_picker:
       trigger_label: Choose color and icon
       color_heading: Color
@@ -39,6 +45,9 @@ en:
           paused:
             one: 1 paused
             other: "%{count} paused"
+          pace_unknown:
+            one: 1 with pace unknown
+            other: "%{count} with pace unknown"
         on_track_sub_all_good: All active goals on pace
         on_track_all_caught_up: All caught up
       goals_section:
@@ -102,10 +111,12 @@ en:
       amount_hint: "%{saved} is currently backing this goal."
       account_label: From which account?
       earmark_note: The amount you record stops being reserved for this goal, so your other goals on that account get their share back.
+      goal_currency_hint: "Enter the amount in %{currency}. For an account in another currency, it's converted at today's rate before it comes off that account's earmark."
       cancel: Cancel
       submit: Record it
       success: "%{amount} recorded as used."
       errors:
+        missing_exchange_rate: No exchange rate is available yet for this account's currency, so this spending can't be recorded.
         non_positive: Enter an amount greater than zero.
         maintained: A reserve is drawn down and refilled, not spent — its shortfall already shows on the goal.
         exceeds_target: That is more than this goal ever set out to save.
@@ -139,6 +150,8 @@ en:
       funding_accounts_heading: Funding accounts
       funding_accounts:
         earmarked_of: "%{earmarked} earmarked of %{balance}"
+        converted: "≈ %{amount}"
+        rate_unavailable: No exchange rate yet, so this account isn't counted.
         empty:
           heading: No funding accounts linked yet
           body: Edit the goal to link the depository accounts you save into.
@@ -151,6 +164,7 @@ en:
         behind_covered: "pending pledges close the gap"
         on_track: "reaches goal around %{date}"
         no_target_date: "set a target date to project a finish line"
+        pace_unknown: "can't measure a pace from these accounts yet; that needs a balance update in the last year and a year of balance history"
       pending_pledge:
         title:
           zero: "Pending: %{amount} into %{account} · expires today"
@@ -175,6 +189,12 @@ en:
         to_go: "%{amount} to go"
         of_target: of target
         market_value: "Market value %{amount}"
+        basis:
+          balance: Counts what the accounts are worth today
+          contributions: Counts only what you have put in
+        basis_at_completion:
+          balance: Counted what the accounts were worth when the goal was completed
+          contributions: Counted only what you had put in when the goal was completed
         aria_label: "Goal %{percent}% complete. %{amount} of %{target} saved."
         aria_label_with_used: "Goal %{percent}% complete. %{amount} of %{target}, including %{used} already used."
       projection:
@@ -186,6 +206,7 @@ en:
         reached: You've hit the target. No projection needed.
         no_target_date: No target date set. Set one to project a finish line.
         no_pace: No deposits yet. Add money to a linked account to start a projection.
+        pace_unknown: Not enough history on these accounts to measure a pace yet, so there is no projection.
         behind: Falling short at current pace.
         on_track_html: At your current pace, you'll reach this goal around <strong class="text-primary whitespace-nowrap">%{date}</strong>.
         aria_label: "Projection chart for %{name}"
@@ -251,6 +272,7 @@ en:
       reached: Reached
       completed: Completed
       no_target_date: Open
+      pace_unknown: Pace unknown
       paused: Paused
       archived: Archived
     empty_state:
@@ -262,6 +284,7 @@ en:
       add_account: Add an account
     goal_card:
       including_used: "Including %{amount} already used"
+      partial_total: Some balances aren't counted (no exchange rate yet)
       no_accounts: No linked accounts
       n_accounts: "%{first} +%{count}"
       left: left
@@ -277,6 +300,8 @@ en:
         other: "%{count} days left"
       pace_with_target: "%{avg}/mo · target %{target}/mo"
       pace_no_target: "%{avg}/mo avg"
+      pace_unknown_with_target: "Pace unknown · target %{target}/mo"
+      pace_unknown: Pace unknown
       footer_paused: Paused
       footer_archived: Archived
       footer_reserve_intact: Reserve intact
@@ -297,6 +322,14 @@ en:
       target_modes:
         fixed: A fixed amount
         months_of_expenses: A number of months of expenses
+      progress_basis_locked: This goal's progress was frozen when it was completed. Reopen or restore it to change what counts toward it.
+      progress_bases:
+        balance:
+          label: What the accounts are worth today
+          hint: Market value. Investment gains and losses count toward the goal.
+        contributions:
+          label: Only what I have put in
+          hint: Net contributions. Market gains and losses are left out.
       kinds:
         one_off:
           hint: Save toward something, then close it when you spend it.
@@ -314,6 +347,7 @@ en:
         accounts_required: Pick at least one funding account.
       earmark:
         headroom: "{left} left to earmark on this account."
+        converted: "This earmark ≈ {amount}."
         prorata: "Your goals on this account come to {total} for a balance of {balance} — they will progress pro rata."
         whole_balance: This account will fund whatever is left after the other earmarks.
         whole_balance_alone: "This goal will use this account's whole balance."
@@ -332,10 +366,12 @@ en:
         notes: Notes (optional)
         notes_placeholder: A reminder for future you…
         funding_accounts: Funding accounts
+        progress_basis: What counts toward this goal
         funding_accounts_hint: This goal's balance is the balance (or earmarked portion) of these accounts.
-        whole_balance: Whole balance
+        whole_balance: "Blank: whole balance"
         earmark_for: Earmark amount for %{account}
         earmark_hint: Leave an amount blank to dedicate that account's whole balance.
+        currency_conversion_hint: "Accounts can use different currencies. Totals are converted to %{currency}; account earmarks stay in each account's currency."
       subtypes:
         checking: Checking
         savings: Savings

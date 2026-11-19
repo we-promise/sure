@@ -1,5 +1,40 @@
 class EnableBankingItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
+
+  COUNTRIES = [
+    [ "Austria (AT)", "AT" ],
+    [ "Belgium (BE)", "BE" ],
+    [ "Bulgaria (BG)", "BG" ],
+    [ "Croatia (HR)", "HR" ],
+    [ "Cyprus (CY)", "CY" ],
+    [ "Czech Republic (CZ)", "CZ" ],
+    [ "Denmark (DK)", "DK" ],
+    [ "Estonia (EE)", "EE" ],
+    [ "Finland (FI)", "FI" ],
+    [ "France (FR)", "FR" ],
+    [ "Germany (DE)", "DE" ],
+    [ "Greece (GR)", "GR" ],
+    [ "Hungary (HU)", "HU" ],
+    [ "Iceland (IS)", "IS" ],
+    [ "Ireland (IE)", "IE" ],
+    [ "Italy (IT)", "IT" ],
+    [ "Latvia (LV)", "LV" ],
+    [ "Liechtenstein (LI)", "LI" ],
+    [ "Lithuania (LT)", "LT" ],
+    [ "Luxembourg (LU)", "LU" ],
+    [ "Malta (MT)", "MT" ],
+    [ "Netherlands (NL)", "NL" ],
+    [ "Norway (NO)", "NO" ],
+    [ "Poland (PL)", "PL" ],
+    [ "Portugal (PT)", "PT" ],
+    [ "Romania (RO)", "RO" ],
+    [ "Slovakia (SK)", "SK" ],
+    [ "Slovenia (SI)", "SI" ],
+    [ "Spain (ES)", "ES" ],
+    [ "Sweden (SE)", "SE" ],
+    [ "United Kingdom (GB)", "GB" ]
+  ].freeze
+  COUNTRY_CODES = COUNTRIES.map(&:last).freeze
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -9,6 +44,10 @@ class EnableBankingItem < ApplicationRecord
     encrypts :session_id, deterministic: true
     encrypts :raw_payload
     encrypts :raw_institution_payload
+    # The user's IP address, kept only while the bank session needs it (see
+    # with_stale_psu_ip); never looked up by value. Values stored before this
+    # was encrypted stay readable until they are encrypted.
+    encrypts :last_psu_ip, support_unencrypted_data: true
   end
 
   validates :name, presence: true
@@ -27,10 +66,24 @@ class EnableBankingItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
+  # Nullify last_psu_ip once it's no longer needed for provider sync — either the
+  # consent session has actually expired, or (for items that never completed
+  # authorization, so session_expires_at is nil) once the ASPSP-accepted consent
+  # duration we stored at request time (requested_consent_valid_until) has
+  # elapsed, or — only if that wasn't recorded either — once the configured
+  # fallback window has elapsed since the record was last touched. Checking
+  # requested_consent_valid_until first prevents retaining the PSU IP past a
+  # shorter duration the ASPSP actually accepted (it can be less than the
+  # configured ceiling) for authorizations that never reached session creation.
+  scope :with_stale_psu_ip, -> {
+    fallback_cutoff = Rails.configuration.x.enable_banking.consent_days.days.ago
+    where.not(last_psu_ip: nil).where(
+      "(session_expires_at IS NOT NULL AND session_expires_at <= :now) OR " \
+      "(session_expires_at IS NULL AND requested_consent_valid_until IS NOT NULL AND requested_consent_valid_until <= :now) OR " \
+      "(session_expires_at IS NULL AND requested_consent_valid_until IS NULL AND updated_at <= :fallback_cutoff)",
+      now: Time.current, fallback_cutoff: fallback_cutoff
+    )
+  }
 
   def credentials_configured?
     application_id.present? && client_certificate.present? && country_code.present?
@@ -44,11 +97,11 @@ class EnableBankingItem < ApplicationRecord
     session_id.present? && session_expires_at.present? && session_expires_at <= Time.current
   end
 
+  # A session-level 401/404 flags the item requires_update while its session
+  # can still look unexpired.
   def needs_authorization?
-    !session_valid?
+    !session_valid? || requires_update?
   end
-
-  # TODO: implement data retention policy for last_psu_ip (GDPR/CCPA — nullify after session expiry or 90 days)
 
   validate :psu_type_in_aspsp_types
 
@@ -113,7 +166,8 @@ class EnableBankingItem < ApplicationRecord
 
     attributes = {
       authorization_id: result[:authorization_id],
-      aspsp_name: aspsp_name
+      aspsp_name: aspsp_name,
+      requested_consent_valid_until: result[:requested_valid_until]
     }
     attributes[:psu_type] = validated_psu_type if validated_psu_type.present?
 
@@ -154,6 +208,7 @@ class EnableBankingItem < ApplicationRecord
       session_id: result[:session_id],
       session_expires_at: parse_session_expiry(result),
       authorization_id: nil,  # Clear the authorization ID
+      requested_consent_valid_until: nil,  # Only needed as a fallback until the session is established
       status: :good
     )
 
@@ -258,7 +313,7 @@ class EnableBankingItem < ApplicationRecord
   end
 
   def unlinked_accounts_count
-    enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    enable_banking_accounts.needs_setup.count
   end
 
   def total_accounts_count
@@ -285,7 +340,7 @@ class EnableBankingItem < ApplicationRecord
     else
       total_accounts = enable_banking_accounts.count
       linked_count = accounts.count
-      unlinked_count = total_accounts - linked_count
+      unlinked_count = unlinked_accounts_count
 
       if total_accounts == 0
         "No accounts found"
@@ -335,7 +390,8 @@ class EnableBankingItem < ApplicationRecord
       update!(
         session_id: nil,
         session_expires_at: nil,
-        authorization_id: nil
+        authorization_id: nil,
+        last_psu_ip: nil
       )
     end
   end
@@ -388,15 +444,20 @@ class EnableBankingItem < ApplicationRecord
     end
 
     def parse_session_expiry(session_result)
+      # Prefer the duration actually accepted by the ASPSP during start_authorization
+      # (which may be shorter than the configured ceiling, e.g. after a fallback retry)
+      # over the global default, so session_valid? doesn't outlive the real consent.
+      default_expiry = requested_consent_valid_until || Rails.configuration.x.enable_banking.consent_days.days.from_now
+
       if session_result[:access].present? && session_result[:access][:valid_until].present?
         parsed = Time.zone.parse(session_result[:access][:valid_until])
-        parsed || 90.days.from_now
+        parsed || default_expiry
       else
-        90.days.from_now
+        default_expiry
       end
     rescue ArgumentError, TypeError => e
       Rails.logger.warn "EnableBankingItem #{id} - Failed to parse session expiry: #{e.message}"
-      90.days.from_now
+      default_expiry
     end
 
     def import_accounts_from_session(accounts_data)
@@ -408,8 +469,10 @@ class EnableBankingItem < ApplicationRecord
         next unless uid.present?
 
         enable_banking_account = enable_banking_accounts.find_or_initialize_by(uid: uid)
-        enable_banking_account.upsert_enable_banking_snapshot!(account_data)
-        enable_banking_account.save!
+        # An ignored account keeps only its session identifiers current.
+        unless enable_banking_account.upsert_enable_banking_snapshot!(account_data)
+          enable_banking_account.refresh_session_identifiers!(account_data)
+        end
       end
     end
 end

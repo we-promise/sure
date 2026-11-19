@@ -11,17 +11,17 @@ class KrakenItemsController < ApplicationController
     if @kraken_item.save
       @kraken_item.set_kraken_institution_defaults!
       @kraken_item.sync_later
-      render_panel_success(t(".success"))
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      render_panel_error(@kraken_item.errors.full_messages.join(", "))
+      render_provider_panel("kraken", alert: @kraken_item.errors.full_messages.join(", "))
     end
   end
 
   def update
     if @kraken_item.update(kraken_item_params)
-      render_panel_success(t(".success"))
+      render_provider_panel("kraken", notice: t(".success"))
     else
-      render_panel_error(@kraken_item.errors.full_messages.join(", "))
+      render_provider_panel("kraken", alert: @kraken_item.errors.full_messages.join(", "))
     end
   end
 
@@ -33,6 +33,7 @@ class KrakenItemsController < ApplicationController
 
   def sync
     @kraken_item.sync_later unless @kraken_item.syncing?
+    return render_provider_panel("kraken", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to settings_providers_path }
@@ -45,7 +46,8 @@ class KrakenItemsController < ApplicationController
     kraken_item = account_flow[:kraken_item]
 
     unless kraken_item
-      redirect_to settings_providers_path, alert: kraken_item_selection_message(account_flow[:credentialed_items])
+      message = kraken_item_selection_message(account_flow[:credentialed_items])
+      frame_redirect_to(settings_providers_path, alert: message)
       return
     end
 
@@ -166,29 +168,6 @@ class KrakenItemsController < ApplicationController
       permitted
     end
 
-    def render_panel_success(message)
-      if turbo_frame_request?
-        flash.now[:notice] = message
-        @kraken_items = Current.family.kraken_items.active.ordered
-        stream = turbo_stream.update("kraken-providers-panel", partial: "settings/providers/kraken_panel", locals: { kraken_items: @kraken_items })
-        render turbo_stream: [ stream, *flash_notification_stream_items ]
-      else
-        redirect_to settings_providers_path, notice: message, status: :see_other
-      end
-    end
-
-    def render_panel_error(message)
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "kraken-providers-panel",
-          partial: "settings/providers/kraken_panel",
-          locals: { error_message: message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: message, status: :see_other
-      end
-    end
-
     def kraken_item_account_flow_context
       credentialed_items = Current.family.kraken_items.active.credentials_configured.ordered.select(&:credentials_configured?)
       item = if params[:kraken_item_id].present?
@@ -228,14 +207,29 @@ class KrakenItemsController < ApplicationController
     def safe_return_to_path
       return nil if params[:return_to].blank?
 
-      value = params[:return_to].to_s
-      uri = URI.parse(value)
-      return nil if uri.scheme.present?
-      return nil if uri.host.present?
-      return nil unless value.start_with?("/")
+      return_to = params[:return_to].to_s.strip
+      return nil unless return_to.start_with?("/")
+      return nil if return_to[1] == "/" || return_to[1] == "\\"
+      return nil if return_to.include?("\\") || return_to.match?(/[[:cntrl:]]/)
+      return nil if encoded_path_separator?(return_to)
 
-      value
-    rescue URI::InvalidURIError
+      uri = URI.parse(return_to)
+      return nil unless uri.relative?
+
+      Rails.application.routes.recognize_path(uri.path, method: :get)
+
+      return_to
+    rescue URI::InvalidURIError, ActionController::RoutingError
       nil
+    end
+
+    def encoded_path_separator?(return_to)
+      encoded_second_character = return_to[1, 3]
+      return false unless encoded_second_character&.start_with?("%")
+
+      decoded = URI.decode_www_form_component(encoded_second_character)
+      decoded == "/" || decoded == "\\"
+    rescue ArgumentError
+      true
     end
 end

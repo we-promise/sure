@@ -136,7 +136,7 @@
         <% end %>
 
         <% if @linked_accounts.any? %>
-          <div class="<%= 'border-t border-primary pt-6 mt-4' if @unlinked_accounts.any? %>">
+          <div class="<%= "border-t border-primary pt-6 mt-4" if @unlinked_accounts.any? %>">
             <h3 class="font-medium text-primary mb-4"><%= t(".linked_accounts.title") %></h3>
             <% @linked_accounts.each do |t212_account| %>
               <div class="border border-success/20 bg-success/5 rounded-lg p-4 mb-2">

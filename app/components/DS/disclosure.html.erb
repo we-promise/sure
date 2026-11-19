@@ -17,9 +17,12 @@
         </div>
       <% end %>
     <% else %>
+      <%# The chevrons follow their own <details>, not `group-open:`, which
+          matches any open ancestor group: a disclosure inside an open one
+          would show open while closed. %>
       <div class="flex items-center gap-3">
         <% if align == :left %>
-          <%= helpers.icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+          <%= helpers.icon "chevron-right", class: "[details[open]>summary_&]:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
         <% end %>
 
         <%= tag.span class: class_names("font-medium", align == :left ? "text-sm text-primary" : "text-xs uppercase text-secondary") do %>
@@ -28,7 +31,7 @@
       </div>
 
       <% if align == :right %>
-        <%= helpers.icon "chevron-down", class: "group-open:rotate-180 motion-safe:transition-transform motion-safe:duration-150" %>
+        <%= helpers.icon "chevron-down", class: "[details[open]>summary_&]:rotate-180 motion-safe:transition-transform motion-safe:duration-150" %>
       <% end %>
     <% end %>
   <% end %>

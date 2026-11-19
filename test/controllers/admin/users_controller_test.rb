@@ -7,6 +7,14 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:sure_support_staff)
   end
 
+  test "index leaves the expiring trial summary to hosted system health" do
+    get admin_users_url
+
+    assert_response :success
+    assert_no_match I18n.t("admin.system_health.hosted_usage.summary.trials_expiring_soon_count", raise: true), response.body
+    assert_select "select[name='trial_status'] option[value='expiring_soon']"
+  end
+
   test "index groups users by family sorted by transaction count" do
     family_with_more = users(:family_admin).family
     family_with_fewer = users(:empty).family
@@ -92,6 +100,41 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/New family\/group name/, response.body)
     assert_match(/Unused families \/ groups/, response.body)
     assert_match(/Delete unused family/, response.body)
+  end
+
+  test "index renders the profile picture of users who have one" do
+    user = users(:family_admin)
+    user.profile_image.attach(
+      io: File.open(Rails.root.join("test/fixtures/files/profile_image.png")),
+      filename: "profile_image.png",
+      content_type: "image/png"
+    )
+    # The disk service URL embeds a token signed with an expiry, so freeze time
+    # to keep the expected URL identical to the one rendered by the request.
+    travel_to Time.current do
+      variant = user.profile_image.variant(:small).processed
+      ActiveStorage::Current.url_options = { host: "www.example.com", protocol: "http" }
+      expected_src = variant.url
+
+      get admin_users_url
+      assert_response :success
+
+      assert_select "img[src=?]", expected_src, { count: 1 },
+        "User management should render the small profile image variant for users who have one"
+    end
+  end
+
+  test "index falls back to initials for users without a profile picture" do
+    user = users(:family_admin)
+    assert_not user.profile_image.attached?
+
+    get admin_users_url
+    assert_response :success
+
+    assert_match user.initials, response.body,
+      "User management should fall back to initials when there is no profile picture"
+    assert_select "img[src*=?]", "active_storage", { count: 0 },
+      "No avatar image should render for users without a profile picture"
   end
 
 
@@ -281,6 +324,97 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("admin.users.update.success_password"), flash[:notice]
     target.reload
     assert target.authenticate(new_password), "User should authenticate with the new password"
+  end
+
+  test "setting a user's password revokes every session that user has" do
+    target = users(:family_member)
+    sessions = 2.times.map { target.sessions.create! }
+
+    patch admin_user_url(target), params: { user: { role: target.role, password: "Secure1!pass" } }
+
+    assert_redirected_to admin_users_url
+    sessions.each { |s| assert_not Session.exists?(s.id), "a session must not outlive an admin password reset" }
+  end
+
+  test "a super admin setting their own password keeps their current session" do
+    admin = users(:sure_support_staff)
+    current = admin.sessions.order(:created_at).last
+    other = admin.sessions.create!
+
+    patch admin_user_url(admin), params: { user: { role: admin.role, password: "Secure1!pass" } }
+
+    assert_redirected_to admin_users_url
+    assert Session.exists?(current.id)
+    assert_not Session.exists?(other.id)
+  end
+
+  test "setting a user's password revokes that user's OAuth access tokens" do
+    target = users(:family_member)
+    oauth_app = Doorkeeper::Application.create!(name: "Sure Mobile", redirect_uri: "https://client.example.com/callback", scopes: "read_write")
+    access_token = Doorkeeper::AccessToken.create!(application: oauth_app, resource_owner_id: target.id, expires_in: 2.hours, scopes: "read_write", use_refresh_token: true)
+
+    patch admin_user_url(target), params: { user: { role: target.role, password: "Secure1!pass" } }
+
+    assert_redirected_to admin_users_url
+    assert access_token.reload.revoked?, "a mobile or OAuth token must not outlive an admin password reset"
+  end
+
+  test "a role-only change leaves the user's sessions alone" do
+    target = users(:family_member)
+    session_record = target.sessions.create!
+
+    patch admin_user_url(target), params: { user: { role: "admin", password: "" } }
+
+    assert_redirected_to admin_users_url
+    assert Session.exists?(session_record.id)
+  end
+
+  test "update logs an audit entry with the admin as actor when setting a new password" do
+    target = users(:family_member)
+
+    assert_difference "SecurityAuditLog.count", 1 do
+      patch admin_user_url(target), params: {
+        user: {
+          role: target.role,
+          password: "Secure1!pass"
+        }
+      }
+    end
+
+    log = SecurityAuditLog.last
+    assert_equal "password_changed", log.event_type
+    assert_equal target.id, log.user_id
+    assert_equal users(:sure_support_staff).id, log.metadata["actor_user_id"]
+    assert_equal target.email, log.user_email
+  end
+
+  test "update rolls back the password change when the audit log write fails" do
+    target = users(:family_member)
+    original_digest = target.password_digest
+    session_record = target.sessions.create!
+
+    SecurityAuditLog.stubs(:log_password_changed!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    patch admin_user_url(target), params: {
+      user: {
+        role: target.role,
+        password: "Secure1!pass"
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal original_digest, target.reload.password_digest
+    assert Session.exists?(session_record.id), "a rolled-back change must not revoke sessions"
+  end
+
+  test "update does not log an audit entry when the password is unchanged" do
+    target = users(:family_member)
+
+    assert_no_difference "SecurityAuditLog.count" do
+      patch admin_user_url(target), params: {
+        user: { role: "admin", password: "" }
+      }
+    end
   end
 
   test "update shows descriptive notification for role change only" do
@@ -480,6 +614,74 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_match(/Set new password/, response.body, "Should show set password field for local users")
+  end
+
+  test "update rejects setting a password when only SSO login is allowed" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: "admin", password: "Secure1!pass" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.password_disabled"), flash[:alert]
+    target.reload
+    assert_equal old_digest, target.password_digest
+    assert_equal "member", target.role, "Nothing else should be saved alongside a rejected password"
+  end
+
+  test "update still changes the role without a password when only SSO login is allowed" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+    target = users(:family_member)
+
+    patch admin_user_url(target), params: { user: { role: "admin", password: "" } }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.success_role"), flash[:notice]
+    assert_equal "admin", target.reload.role
+  end
+
+  test "update rejects passwords for regular users under the local admin override" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "Secure1!pass" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.password_disabled"), flash[:alert]
+    assert_equal old_digest, target.reload.password_digest
+  end
+
+  test "update sets a super admin password under the local admin override" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+    target = users(:sure_support_staff)
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "Secure1!pass" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.success_password"), flash[:notice]
+    assert target.reload.authenticate("Secure1!pass")
+  end
+
+  test "index hides the set password field when only SSO login is allowed" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+
+    get admin_users_url
+    assert_response :success
+
+    assert_select "input[type=password][name='user[password]']", count: 0
   end
 
   test "index shows removed SSO identities with a recovery action" do

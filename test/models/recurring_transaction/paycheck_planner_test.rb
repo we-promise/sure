@@ -10,6 +10,39 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "a lone one-off income is credited in a window of its own" do
+    payday = Date.current + 6
+    create_series(name: "Bonus", amount: -3000, due: payday, preset: "once", income: true)
+    create_series(name: "Insurance", amount: 400, due: payday + 3, preset: "once")
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal [ Date.current, payday ], plan.map(&:starts_on)
+    assert_equal 3000, plan.last.income
+    assert_equal [ "Bonus" ], plan.last.income_sources
+    assert_equal 400, plan.last.due_total, "a bill after the one-off is funded from it"
+  end
+
+  test "a one-off income far ahead keeps its payday in a window that ends at its own date" do
+    payday = Date.current + 200
+    create_series(name: "Bonus", amount: -3000, due: payday, preset: "once", income: true)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal payday, plan.last.starts_on
+    assert_equal payday, plan.last.ends_on, "nothing past the payday is materialized for this window"
+    assert_equal 3000, plan.last.income
+  end
+
+  test "a one-off income arriving today still makes a plan" do
+    create_series(name: "Bonus", amount: -3000, due: Date.current, preset: "once", income: true)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal 1, plan.size
+    assert_equal 3000, plan.first.income
+  end
+
   test "no declared income means no plan" do
     create_series(name: "Rent", amount: 2150, due: Date.current + 10)
 
@@ -23,6 +56,22 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
 
     assert_nil Planner.new(@family, user: @user).plan,
                "a recurring one-cent transfer is income by sign and a paycheck by nothing"
+  end
+
+  test "recurring transfers between own depository accounts are not bills; debt transfers are" do
+    create_series(name: "Paycheck", amount: -2000, due: Date.current + 3, income: true)
+    expense = create_series(name: "Rent", amount: 500, due: Date.current + 5)
+    to_loan = create_series(name: "Mortgage payment", amount: 300, due: Date.current + 6)
+    to_loan.update!(destination_account: accounts(:loan))
+    to_savings = create_series(name: "To savings", amount: 700, due: Date.current + 7)
+    to_savings.update!(destination_account: accounts(:connected))
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 2)
+    series_ids = plan.flat_map(&:items).map { |item| item.occurrence.recurring_transaction_id }.uniq
+
+    assert_includes series_ids, expense.id
+    assert_includes series_ids, to_loan.id
+    assert_not_includes series_ids, to_savings.id
   end
 
   test "periods slice by paycheck and apportion bills to their due dates" do
@@ -328,6 +377,72 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_includes plan.first.items, shares.first, "and it belongs to the leading window"
   end
 
+  # Snoozing moves the day a bill falls due, and the overview's pay-period
+  # markers already file a snoozed bill under the paycheck its new date lands
+  # in. The plan kept the old date, so a bill snoozed past payday stayed owed
+  # before it and the cash in hand read as short.
+  test "a bill snoozed past payday is due in that payday's window" do
+    set_cash(100)
+    payday = Date.current + 3
+    create_series(name: "Paycheck", amount: -1840, due: payday, preset: "weekly", income: true)
+    create_series(name: "Internet", amount: 90, due: payday + 2)
+    power = create_series(name: "Power", amount: 120, due: Date.current - 6).recurring_occurrences.open_status.order(:due_on).first
+    water = create_series(name: "Water", amount: 120, due: Date.current + 1).recurring_occurrences.open_status.order(:due_on).first
+    power.snooze!(payday + 4)
+    water.snooze!(payday + 5)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal 0, plan.first.due_total, "nothing snoozed past payday is owed before it"
+    assert_not plan.first.short?, "so $100 in the bank is not short"
+    assert_equal %w[Internet Power Water], plan[1].items_due.map { |item| item.occurrence.recurring_transaction.name },
+      "payday's window carries both, in the order of the dates they were snoozed to"
+    markers = ApplicationController.helpers.bills_pay_period_markers([ power ], plan, currency: @family.currency)
+    assert_equal plan[1], markers.dig(power.id, :period), "the overview marks it under the same paycheck"
+  end
+
+  # Bills claim paychecks in date order, so a window's own bills are funded
+  # before a later bill's overflow reaches back for the spare. A snoozed bill
+  # takes its turn at its new date, or its overflow empties the paycheck of a
+  # bill that now falls due before it.
+  test "a snoozed bill claims paychecks in the order of its new date" do
+    payday = Date.current + 3
+    create_series(name: "Paycheck", amount: -100, due: payday, preset: "weekly", income: true)
+    create_series(name: "Phone", amount: 150, due: payday + 8)
+    insurance = create_series(name: "Insurance", amount: 150, due: payday + 1)
+    insurance.recurring_occurrences.open_status.order(:due_on).first.snooze!(payday + 15)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal 100, plan[3].due_total, "premise: the insurance is due in the week it was snoozed to"
+    assert_equal 100, plan[2].due_total, "the phone bill takes its own paycheck before the insurance can"
+    assert_equal 0, plan[2].reserved_total
+    assert_equal %w[Phone Insurance], plan[1].items_reserved.map { |item| item.occurrence.recurring_transaction.name },
+      "the first paycheck holds both overflows, listed in the order they fall due"
+  end
+
+  # A snooze can carry a bill out of the plan altogether. It is no longer one
+  # of the plan's bills then, so it is in no period, and not among the bills
+  # the page says it could not convert either.
+  test "a bill snoozed past the last period leaves the plan" do
+    payday = Date.current + 3
+    create_series(name: "Paycheck", amount: -1840, due: payday, preset: "weekly", income: true)
+    bills = [
+      create_series(name: "Insurance", amount: 300, due: payday + 2),
+      create_series(name: "Tokyo storage", amount: 50_000, due: payday + 2, currency: "JPY")
+    ]
+    planner = Planner.new(@family, user: @user)
+    last_day = planner.plan(periods_limit: 2).last.ends_on
+    assert_equal 1, planner.unconvertible_count, "premise: inside the plan, the yen bill has no rate"
+
+    bills.each { |bill| bill.recurring_occurrences.open_status.order(:due_on).first.snooze!(last_day + 1) }
+    planner = Planner.new(@family, user: @user)
+    plan = planner.plan(periods_limit: 2)
+
+    assert plan.flat_map(&:items).none? { |item| bills.include?(item.occurrence.recurring_transaction) }
+    assert_equal 0, planner.unconvertible_count
+  end
+
 
   # The bridge window earns nothing by construction, so judging it the way every
   # other window is judged made "short before your next payday" fire for anyone
@@ -403,12 +518,12 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
       @family.accounts.where(accountable_type: %q(Depository)).update_all(balance: amount / @family.accounts.where(accountable_type: %q(Depository)).count.to_d)
     end
 
-    def create_series(name:, amount:, due:, preset: "monthly", income: false)
+    def create_series(name:, amount:, due:, preset: "monthly", income: false, currency: "USD")
       series = @family.recurring_transactions.create!(
         name: name,
         account: @account,
         amount: amount,
-        currency: "USD",
+        currency: currency,
         bill_type: income ? "income" : "bill",
         expected_day_of_month: due.day,
         anchor_date: due,
@@ -419,7 +534,8 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
       )
 
       if preset != "monthly"
-        RecurringTransaction::FrequencyPreset.apply(series, preset: preset, weekday: due.wday)
+        RecurringTransaction::FrequencyPreset.apply(series, preset: preset, weekday: due.wday,
+                                                  once_on: (due if preset == "once"))
         series.save!
       end
 

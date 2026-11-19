@@ -1,6 +1,14 @@
 require "test_helper"
 
 class SeriesTest < ActiveSupport::TestCase
+  test "formats chart dates using the family's preferred format" do
+    family = families(:empty)
+    family.update!(date_format: "%d/%m/%Y")
+    Current.stubs(:family).returns(family)
+
+    assert_equal "01/06/2026", Series.format_date(Date.new(2026, 6, 1))
+  end
+
   test "a change between two values that print identically reads as no change" do
     series = build_series(previous: 100.001, current: 100.004, currency: "USD")
 

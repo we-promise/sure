@@ -76,6 +76,8 @@ tr:
         close: Kapat
         navigate: Gezin
         select: Seç
+        next: Sonraki
+        previous: Önceki
       import_accounts: Hesapları içe aktar
       method_selector:
         connected_entry: Hesabı bağla
@@ -100,8 +102,8 @@ tr:
         balance: Bakiye
         confirmed: Onaylandı
         date: Tarih
-        entries: girişler
-        entry: giriş
+        entries: kayıt
+        entry: kayıt
         filter: Filtrele
         new: Yeni
         new_activity: Yeni aktivite
@@ -148,6 +150,7 @@ tr:
         holdings: Varlıklar
         overview: Genel Bakış
         statements: Ekstreler
+        schedule: Ödeme planı
     sidebar:
       configure_providers: Sağlayıcılarınızı buradan yapılandırın.
       missing_data: Eksik geçmiş veri
@@ -162,6 +165,8 @@ tr:
         all: Tümü
         assets: Varlıklar
         debts: Borçlar
+      expand_all: Tümünü genişlet
+      collapse_all: Tümünü daralt
     subtype_regions:
       au: Avustralya
       ca: Kanada

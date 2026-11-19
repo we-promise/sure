@@ -17,6 +17,22 @@
 module Provider::RateLimitable
   extend ActiveSupport::Concern
 
+  # Runs a hook immediately before every HTTP attempt, including retries, so
+  # each one can be throttled and counted against a request budget. Register it
+  # after the :retry middleware: the retry middleware re-invokes the downstream
+  # stack on each attempt, so a hook downstream of it sees every attempt, while
+  # a call made once before client.get only sees the initial request.
+  class BeforeEachAttempt < Faraday::Middleware
+    def initialize(app, hook)
+      super(app)
+      @hook = hook
+    end
+
+    def on_request(env)
+      @hook.call(env)
+    end
+  end
+
   private
     # Enforces a minimum interval between consecutive requests on this instance.
     # Subclasses that need additional rate-limit layers (daily counters, hourly
@@ -31,7 +47,17 @@ module Provider::RateLimitable
     end
 
     def min_request_interval
-      ENV.fetch("#{provider_env_prefix}_MIN_REQUEST_INTERVAL", self.class::MIN_REQUEST_INTERVAL).to_f
+      key = "#{provider_env_prefix}_MIN_REQUEST_INTERVAL"
+      positive_interval(ENV.fetch(key, self.class::MIN_REQUEST_INTERVAL), key)
+    end
+
+    # A configured interval that does not parse, or is not positive, must not
+    # silently turn pacing off -- `"invalid".to_f` is 0 -- so it is an error.
+    def positive_interval(value, key)
+      interval = Float(value, exception: false)
+      raise ArgumentError, "#{key} must be a positive number of seconds, got #{value.inspect}" if interval.nil? || !interval.finite? || interval <= 0
+
+      interval
     end
 
     def provider_env_prefix

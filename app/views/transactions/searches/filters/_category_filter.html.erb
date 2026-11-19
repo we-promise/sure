@@ -16,7 +16,7 @@
         <%= form.check_box :categories,
                            {
                              multiple: true,
-                             checked: @q[:categories]&.include?(category.name),
+                             checked: @q[:categories]&.include?(category.filter_value),
                              class: "checkbox checkbox--light",
                              data: {
                                category_filter_target: "checkbox",
@@ -25,9 +25,9 @@
                                parent_id: category.parent_id
                              }
                            },
-                           category.name,
+                           category.filter_value,
                            nil %>
-        <%= form.label :categories, category.display_name, value: category.name, class: "text-sm text-primary cursor-pointer flex items-center gap-1" do %>
+        <%= form.label :categories, category.display_name, value: category.filter_value, class: "text-sm text-primary cursor-pointer flex items-center gap-1" do %>
           <% if is_child %>
             <%= icon("corner-down-right", size: "sm") %>
           <% end %>

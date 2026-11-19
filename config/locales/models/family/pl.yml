@@ -1,0 +1,10 @@
+---
+pl:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_categorizer_anthropic: Polecenie klasyfikacji transakcji (Anthropic)
+        ai_prompt_categorizer_openai: Polecenie klasyfikacji transakcji (OpenAI)
+        ai_prompt_chat_system: Systemowe polecenie czatu
+        ai_prompt_merchant_anthropic: Polecenie wykrywania sprzedawcy (Anthropic)
+        ai_prompt_merchant_openai: Polecenie wykrywania sprzedawcy (OpenAI)

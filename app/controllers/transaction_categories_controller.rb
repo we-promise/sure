@@ -4,7 +4,11 @@ class TransactionCategoriesController < ApplicationController
   def update
     @entry = Current.accessible_entries.transactions.find(params[:transaction_id])
     return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
+    # The inflow leg of a matched transfer shows its outflow's category
+    # read-only (Transaction#category_set_on_transfer_outflow?).
+    return head(:unprocessable_entity) if @entry.transaction.category_set_on_transfer_outflow?
 
+    rule_input = @entry.rule_input_snapshot
     @entry.update!(entry_params)
 
     transaction = @entry.transaction
@@ -22,6 +26,7 @@ class TransactionCategoriesController < ApplicationController
 
     transaction.lock_saved_attributes!
     @entry.lock_saved_attributes!
+    @entry.apply_immediate_rules_later(changed_from: rule_input)
 
     in_split_group = helpers.in_split_group?(@entry, params[:grouped])
     respond_to do |format|
@@ -55,6 +60,7 @@ class TransactionCategoriesController < ApplicationController
     end
 
     def needs_rule_notification?(transaction)
+      return false if Current.user.guest?
       return false if Current.user.rule_prompts_disabled
       return false if transaction.category_id.blank?
 

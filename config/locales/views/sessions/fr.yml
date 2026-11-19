@@ -2,6 +2,7 @@
 fr:
   sessions:
     create:
+      account_deactivated: Ce compte a été désactivé. Veuillez contacter un administrateur.
       invalid_credentials: Adresse e-mail ou mot de passe invalide.
       local_login_disabled: La connexion locale par mot de passe est désactivée. Veuillez
         utiliser l'authentification unique.
@@ -30,6 +31,8 @@ fr:
         activée. Veuillez contacter un administrateur.
       oidc: Se connecter avec OpenID Connect
       openid_connect: Se connecter avec OpenID Connect
+      passkey_button: Se connecter avec une clé d'accès
+      passkey_unsupported: Ce navigateur ne prend pas en charge les clés d'accès.
       password: Mot de passe
       password_placeholder: Entrez votre mot de passe
       submit: Se connecter
