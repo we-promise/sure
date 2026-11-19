@@ -27,4 +27,15 @@ module ProviderTestHelper
     end)
     seen
   end
+
+  # The read timeout each request a provider sends carries, in order, so a test
+  # can check a per-request override, not only the client's default.
+  def capture_request_timeouts(provider)
+    seen = []
+    recorder = Class.new(Faraday::Middleware) do
+      define_method(:on_request) { |env| seen << env.request.timeout }
+    end
+    provider.send(:client).builder.insert(0, recorder)
+    seen
+  end
 end

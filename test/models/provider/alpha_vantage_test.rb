@@ -86,8 +86,24 @@ class Provider::AlphaVantageTest < ActiveSupport::TestCase
 
     assert_not response.success?
     assert_instance_of Provider::AlphaVantage::Error, response.error
-    assert_requested search, at_least_times: 1
+    assert_requested search, times: 4
     assert_kind_of Faraday::ConnectionFailed, errors.last
     assert_kind_of Net::OpenTimeout, errors.last.wrapped_exception
+  end
+
+  test "a read timeout is retried and returns a failed response with the provider's Error" do
+    provider = Provider::AlphaVantage.new("test_api_key")
+    provider.stubs(:throttle_request)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    search = stub_request(:get, "https://www.alphavantage.co/query")
+      .with(query: hash_including("function" => "SYMBOL_SEARCH")).to_raise(Net::ReadTimeout)
+    errors = capture_transformed_errors(provider)
+
+    response = provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::AlphaVantage::Error, response.error
+    assert_requested search, times: 4
+    assert_kind_of Faraday::TimeoutError, errors.last
   end
 end

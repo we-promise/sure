@@ -11,6 +11,11 @@ class Provider::TwelveData < Provider
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 1.0
 
+  # time_series answers can hold years of daily rows and are slow to start, so
+  # they get a 60 s read limit rather than the client's 20 s.
+  # A retry after a timeout is not counted against the per-minute credits.
+  HISTORY_READ_TIMEOUT = 60
+
   # Pattern to detect plan upgrade errors in API responses
   PLAN_UPGRADE_PATTERN = /available starting with (\w+)/i
 
@@ -84,6 +89,7 @@ class Provider::TwelveData < Provider
       # Try to fetch the currency pair via the time_series API (consumes 1 credit) - this might not return anything as the API does not provide time series data for all possible currency pairs
       throttle_request
       response = client.get("#{base_url}/time_series") do |req|
+        req.options.timeout = HISTORY_READ_TIMEOUT
         req.params["symbol"] = "#{from}/#{to}"
         req.params["start_date"] = start_date.to_s
         req.params["end_date"] = end_date.to_s
@@ -99,6 +105,7 @@ class Provider::TwelveData < Provider
         Rails.logger.info("#{self.class.name}: Currency pair #{from}/#{to} not available, fetching via time_series/cross API")
         throttle_request(credits: 5)
         response = client.get("#{base_url}/time_series/cross") do |req|
+          req.options.timeout = HISTORY_READ_TIMEOUT
           req.params["base"] = from
           req.params["quote"] = to
           req.params["start_date"] = start_date.to_s
@@ -214,6 +221,7 @@ class Provider::TwelveData < Provider
     with_provider_response do
       throttle_request
       response = client.get("#{base_url}/time_series") do |req|
+        req.options.timeout = HISTORY_READ_TIMEOUT
         req.params["symbol"] = symbol
         req.params["mic_code"] = exchange_operating_mic
         req.params["start_date"] = start_date.to_s
