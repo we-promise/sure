@@ -18,6 +18,12 @@ class Insight < ApplicationRecord
   belongs_to :family
   has_many :push_deliveries, dependent: :destroy
 
+  # A new insight, or a new notification_version (GenerateInsightsJob bumps it
+  # when the signal materially changes), is one event for push recipients. They
+  # are recorded in the save's transaction and enqueued once it commits.
+  after_save -> { PushDelivery.record_for_insight!(self) }, if: :new_notification_version?
+  after_commit -> { PushDelivery.enqueue_insight_deliveries(self) }, on: [ :create, :update ], if: :new_notification_version?
+
   TYPES = %w[
     spending_anomaly
     cash_flow_warning
@@ -127,4 +133,9 @@ class Insight < ApplicationRecord
 
     update!(status: :read, dismissed_at: nil, read_at: read_at || Time.current)
   end
+
+  private
+    def new_notification_version?
+      previously_new_record? || saved_change_to_notification_version?
+    end
 end

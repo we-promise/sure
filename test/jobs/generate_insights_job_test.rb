@@ -204,30 +204,21 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     end
   end
 
-  test "a failed broadcast leaves an atomic unclaimed delivery that an unchanged rerun recovers once" do
+  test "a failed broadcast does not hold back the push and an unchanged rerun sends nothing new" do
     subscription = register_web_push(user: @family.users.first)
     WebPush::Client.stubs(:configured?).returns(true)
     stub_generated([ generated_insight(priority: "high") ])
     Turbo::StreamsChannel.stubs(:broadcast_replace_to).raises(StandardError, "Broadcast unavailable")
 
-    assert_raises(StandardError) { GenerateInsightsJob.perform_now(family_id: @family.id) }
-
-    insight = @family.insights.find_by!(dedup_key: "idle_cash:test-account:2026-07")
-    deliveries = PushDelivery.where(subscription: subscription, insight: insight,
-      insight_version: insight.notification_version)
-    assert_equal 1, deliveries.count
-    delivery = deliveries.first!
-    assert_nil delivery.enqueued_at
-    assert_equal "pending", delivery.status
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      assert_raises(StandardError) { GenerateInsightsJob.perform_now(family_id: @family.id) }
+    end
 
     Turbo::StreamsChannel.stubs(:broadcast_replace_to).returns(nil)
-    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
-      GenerateInsightsJob.perform_now(family_id: @family.id)
-    end
     assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
-    assert_equal [ delivery.id ], deliveries.pluck(:id)
+    assert_equal 1, subscription.push_deliveries.count
   end
 
   test "a ledger failure rolls back a newly generated insight and its version" do
