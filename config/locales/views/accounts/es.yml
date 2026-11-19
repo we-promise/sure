@@ -88,7 +88,7 @@ es:
       institution_domain_placeholder: ej. chase.com
       iban_label: "IBAN"
       iban_placeholder: "ej. DE89370400440532013000" # pipelock:ignore IBAN
-      iban_set_placeholder: "•••• •••• •••• •••• — IBAN guardado, introduce un nuevo valor para reemplazarlo"
+      iban_set_placeholder: "%{masked} — IBAN guardado, introduce un nuevo valor para reemplazarlo"
       iban_remove_label: "Eliminar IBAN"
       institution_domain_hint: Sirve para encontrar el icono de la entidad.
       institution_domain_missing_logo_key_hint: Sirve para encontrar el icono de la entidad. Los logotipos de Brandfetch no están disponibles porque no hay ningún client ID de Brandfetch configurado.
