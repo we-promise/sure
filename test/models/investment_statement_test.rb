@@ -1050,6 +1050,32 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     end
   end
 
+  # A manual account's balances are real history, not a broker's zeros before
+  # its first snapshot, so the trim to the linked broker's start must not
+  # cut a manual account's earlier points out of the family series.
+  test "a manual account keeps its history before a linked broker's first activity" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+    manual_start = 8.days.ago.to_date
+    linked_start = 3.days.ago.to_date
+
+    manual = create_investment_account(balance: 300)
+    linked = create_investment_account(balance: 1000)
+    (manual_start..Date.current).each { |date| create_balance(manual, date: date, amount: 300) }
+    (0..10).each do |offset|
+      date = 10.days.ago.to_date + offset
+      create_balance(linked, date: date, amount: date >= linked_start ? 1000 : 0)
+    end
+    linked.entries.create!(date: linked_start, name: "Deposit", amount: -1000, currency: "USD", source: "plaid", entryable: Transaction.new)
+
+    series = @statement.value_series(period: period)
+    by_date = series.values.index_by(&:date)
+
+    assert_equal manual_start, series.values.first.date, "the series starts with the manual account's history"
+    assert_in_delta 300, by_date.fetch(5.days.ago.to_date).value.amount, 0.001, "before the broker linked"
+    assert_in_delta 1300, by_date.fetch(Date.current).value.amount, 0.001
+    assert series.values.none? { |v| v.date < manual_start }, "dates before any history are still trimmed"
+  end
+
   test "an open older broker keeps its history when a newer broker links" do
     period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
     older_start = 6.days.ago.to_date

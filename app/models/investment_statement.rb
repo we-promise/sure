@@ -500,7 +500,9 @@ class InvestmentStatement
     def series_cache_key(kind, period)
       key = [
         "investment_statement_#{kind}_series",
-        "start-#{series_history_start}",
+        # "manual" marks the trim that keeps a manual account's history, so a
+        # series cached under the trim that cut it is not served again.
+        "start-#{series_history_start}-manual",
         user&.id,
         family.currency,
         accounts_version,

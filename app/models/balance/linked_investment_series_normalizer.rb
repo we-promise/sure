@@ -82,7 +82,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
       def supported_history_start_for(account_ids, history_start)
         case history_start
         when :common then common_supported_history_start_date(account_ids)
-        when :earliest then supported_history_start_dates(account_ids).min
+        when :earliest then (supported_history_start_dates(account_ids) + manual_history_start_dates(account_ids)).min
         else raise ArgumentError, "unknown history_start: #{history_start.inspect}"
         end
       end
@@ -109,6 +109,24 @@ class Balance::LinkedInvestmentSeriesNormalizer
         account_ids.filter_map do |account_id|
           [ activity_dates[account_id], stable_holding_dates[account_id] ].compact.min
         end
+      end
+
+      # A manual account's balances are its own history, not zeros before a
+      # broker's first snapshot, so under :earliest the first balance of each
+      # account with no provider history counts as a start too. Without it,
+      # trimming to a linked broker's start would cut a manual account's
+      # earlier points out of a mixed series.
+      def manual_history_start_dates(account_ids)
+        account_ids = Array(account_ids).compact
+        return [] if account_ids.empty?
+
+        linked_ids = Entry.where(account_id: account_ids).where.not(source: nil).distinct.pluck(:account_id) |
+          Holding.where(account_id: account_ids).where.not(account_provider_id: nil).distinct.pluck(:account_id)
+
+        manual_ids = account_ids - linked_ids
+        return [] if manual_ids.empty?
+
+        Balance.where(account_id: manual_ids).group(:account_id).minimum(:date).values
       end
 
       def stable_provider_holding_start_dates(account_ids)
