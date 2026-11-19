@@ -26,6 +26,22 @@ class Assistant::Function::CreateBillTest < ActiveSupport::TestCase
     assert_operator series.recurring_occurrences.count, :>, 0
   end
 
+  test "frequency once creates a single occurrence on the due date" do
+    due = Date.current + 40
+
+    result = call_tool(
+      "name" => "Domain renewal", "amount" => 18, "first_due_on" => due.iso8601,
+      "frequency" => "once"
+    )
+
+    assert result[:created]
+    assert_equal [ due.iso8601 ], result[:upcoming_due_dates]
+
+    series = @family.recurring_transactions.find_by!(name: "Domain renewal")
+    assert series.one_off?
+    assert_equal [ due ], series.recurring_occurrences.pluck(:due_on)
+  end
+
   test "income flips the stored sign, never the caller's" do
     result = call_tool(
       "name" => "Paycheck", "amount" => 1200,
