@@ -1999,6 +1999,24 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
   end
 
+  test "declaring a one-payment plan keeps the date the weekend moved before the declaration" do
+    # The only payment is scheduled for Sunday 2026-11-22 and moved to Friday
+    # the 20th. The plan has no cycle on the 21st, but it was owed after the
+    # bill was declared.
+    travel_to Date.new(2026, 11, 21) do
+      series = @family.recurring_transactions.create!(
+        name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
+        expected_day_of_month: 22, anchor_date: Date.new(2026, 11, 22),
+        last_occurrence_date: Date.new(2026, 10, 22), next_expected_date: Date.new(2026, 11, 22),
+        weekend_adjust: "before", end_mode: "after_count", end_after_count: 1,
+        status: "active", manual: true
+      )
+
+      assert series.recurring_occurrences.exists?(original_due_on: Date.new(2026, 11, 22)),
+        "the plan's only payment was scheduled after the declaration and must be kept"
+    end
+  end
+
   test "a family backfill keeps an ended bill's overdue final payment" do
     series = nil
     travel_to Date.new(2026, 12, 1) do

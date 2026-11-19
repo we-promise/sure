@@ -59,11 +59,13 @@ class RecurringTransaction
           uncovered = series.recurring_occurrences
                             .open_status
                             .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
-          cycle_start = current_cycle_start(series.schedule)
+          schedule = series.schedule
+          cycle_start = schedule.cycle_for(as_of)&.begin
           anchor = series.anchor_date if series.manual? && series.anchor_date.present? && series.anchor_date > as_of
           bounds = [
             (uncovered.where("due_on < ?", cycle_start) if cycle_start),
-            (uncovered.where("original_due_on < ?", anchor) if anchor)
+            (uncovered.where("original_due_on < ?", anchor) if anchor),
+            (uncovered.where("original_due_on < ?", as_of) if cycle_start.nil? && ended_before_declaration?(schedule))
           ].compact
           next if bounds.empty?
 
@@ -73,15 +75,14 @@ class RecurringTransaction
         pruned
       end
 
-      # A schedule with no current cycle is skipped, so an ended plan keeps its
-      # overdue final payments. Only a bill declared after its schedule ended
-      # owes nothing before the declaration. cycle_for is also nil before a
-      # one-off schedule's only date, which is still owed.
-      def current_cycle_start(schedule)
-        cycle = schedule.cycle_for(as_of)
-        return cycle.begin if cycle
-
-        as_of if @declared && schedule.first_occurrence_after(as_of).nil?
+      # A schedule with no current cycle is otherwise skipped, so an ended plan
+      # keeps its overdue final payments. Only a bill declared after its
+      # schedule ended owes nothing scheduled before the declaration; the
+      # scheduled date decides, so a payment the weekend moved ahead of the
+      # declaration is still owed. cycle_for is also nil before a one-off
+      # schedule's only date, which is still owed.
+      def ended_before_declaration?(schedule)
+        @declared && schedule.first_occurrence_after(as_of).nil?
       end
   end
 end
