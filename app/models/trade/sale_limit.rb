@@ -27,7 +27,7 @@ class Trade::SaleLimit
   def self.save(entry)
     entry.account.transaction do
       limit = new(entry)
-      entry.account.lock! if limit.guards_account?
+      limit.lock_account
       limit.validate && entry.save
     end
   end
@@ -37,7 +37,7 @@ class Trade::SaleLimit
   # saved, so each sale is checked against the batch's final state.
   def self.prepare(entry)
     limit = new(entry)
-    entry.account.lock! if limit.guards_account?
+    limit.lock_account
     limit.checks?
     limit
   end
@@ -58,6 +58,17 @@ class Trade::SaleLimit
   # The most this sale may remove, in units on the sale date. Never below zero.
   def available_qty
     @available_qty ||= [ limiting_day.last, 0 ].max
+  end
+
+  # Takes the account lock when this entry needs it. A sale field this request
+  # leaves alone is then read again: another request may have changed it while
+  # this one waited, and a save writes only the changed fields, so the check
+  # has to see the date, quantity and security that end up stored together.
+  def lock_account
+    return unless guards_account?
+
+    account.lock!
+    refresh_unchanged_fields
   end
 
   # Whether saving this entry can change what a sale on the same account may
@@ -94,6 +105,26 @@ class Trade::SaleLimit
       trade.qty.to_d.abs
     end
 
+    def refresh_unchanged_fields
+      refresh_unchanged(entry, Entry.unscoped, %w[date])
+      refresh_unchanged(trade, Trade, %w[qty security_id])
+    end
+
+    def refresh_unchanged(record, scope, fields)
+      return unless record.persisted?
+
+      unchanged = fields.reject { |field| record.attribute_changed?(field) }
+      return if unchanged.empty?
+
+      stored = scope.where(id: record.id).pick(*unchanged)
+      return if stored.nil?
+
+      Array(stored).zip(unchanged).each do |value, field|
+        record[field] = value
+        record.clear_attribute_changes([ field ])
+      end
+    end
+
     # An edit that only makes an existing sale smaller cannot take the position
     # lower than it already was, so it is not checked. That keeps old data,
     # which may already be oversold, editable (notes, price, a smaller qty).
@@ -109,11 +140,13 @@ class Trade::SaleLimit
 
     # [date, units on the sale date] for the day that leaves the least room,
     # from the sale date on: the most the sale could have removed and still
-    # left that day at zero.
+    # left that day at zero. Each day's room is converted to units on the sale
+    # date before comparing, since a split changes the unit.
     def limiting_day
-      @limiting_day ||= positions_with_sale.min_by { |_, room| room }.then do |date, room|
-        [ date, sold_qty + Security::Split.unscale(room, split_factor(entry.date, date)) ]
-      end
+      @limiting_day ||= positions_with_sale
+        .map { |date, room| [ date, Security::Split.unscale(room, split_factor(entry.date, date)) ] }
+        .min_by { |_, room| room }
+        .then { |date, room| [ date, sold_qty + room ] }
     end
 
     # Whether the position with this sale stays at or above zero on every day.

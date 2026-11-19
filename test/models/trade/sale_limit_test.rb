@@ -156,6 +156,20 @@ class Trade::SaleLimitTest < ActiveSupport::TestCase
     assert_not Trade::SaleLimit.new(build_sale(qty: 51, date: 1.day.from_now.to_date)).validate
   end
 
+  test "names the day that binds after a reverse split, in units on the sale date" do
+    create_trade(@security, account: @account, qty: 100, date: 5.days.ago.to_date, price: 10)
+    create_trade(@security, account: @account, qty: -50, date: 1.day.from_now.to_date, price: 10)
+    Security::Split.create!(security: @security, ex_date: 2.days.from_now.to_date, numerator: 1, denominator: 10, source: "manual")
+    create_trade(@security, account: @account, qty: -4, date: 3.days.from_now.to_date, price: 100)
+
+    # 4 after the split are 40 before it, so 100 - 50 - 40 leaves 10.
+    limit = Trade::SaleLimit.new(build_sale(qty: 60, date: Date.current))
+
+    assert_not limit.validate
+    assert_equal 10, limit.available_qty
+    assert_equal 3.days.from_now.to_date, limit.send(:limiting_day).first
+  end
+
   test "a future-dated forward split converts the trades after it" do
     create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
     Security::Split.create!(security: @security, ex_date: 3.days.from_now.to_date, numerator: 2, denominator: 1, source: "manual")
@@ -246,6 +260,35 @@ class Trade::SaleLimitTest < ActiveSupport::TestCase
     assert_no_difference "Entry.count" do
       assert_not Trade::SaleLimit.save(build_sale(qty: 6, date: Date.current))
     end
+  end
+
+  # Another request moved the sale to an earlier date while this one raised
+  # its quantity. The save writes only the quantity, so the check has to use
+  # the stored date.
+  test "save checks the date another request stored meanwhile" do
+    create_trade(@security, account: @account, qty: 4, date: 10.days.ago.to_date, price: 100)
+    create_trade(@security, account: @account, qty: 6, date: 6.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -4, date: 1.day.ago.to_date, price: 100)
+
+    entry = Entry.find(sale.id)
+    entry.entryable.qty = -10
+    Entry.where(id: sale.id).update_all(date: 8.days.ago.to_date)
+
+    assert_not Trade::SaleLimit.save(entry)
+    assert_equal(-4, Trade.find(entry.entryable_id).qty)
+  end
+
+  test "save keeps this request's own date change" do
+    create_trade(@security, account: @account, qty: 4, date: 10.days.ago.to_date, price: 100)
+    create_trade(@security, account: @account, qty: 6, date: 6.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -4, date: 8.days.ago.to_date, price: 100)
+
+    entry = Entry.find(sale.id)
+    entry.date = 1.day.ago.to_date
+    entry.entryable.qty = -10
+
+    assert Trade::SaleLimit.save(entry)
+    assert_equal 1.day.ago.to_date, entry.reload.date
   end
 
   test "save takes no lock on a linked account" do
