@@ -32,6 +32,21 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
     assert_not_includes config[:instructions], category_name
   end
 
+  test "unverified users keep financial tools and context when verification is disabled" do
+    EmailVerification.stubs(:enforced?).returns(false)
+    chat = chats(:one)
+    chat.user.update!(email_verified_at: nil)
+
+    config = Assistant.config_for(chat)
+
+    # Account/category context is generated (the section headers appear whether
+    # the roster is listed or collapsed to counts), and tools are available —
+    # neither of which happens for an unverified user while enforcement is on.
+    assert_not_empty config[:functions]
+    assert_includes config[:instructions], "### Accounts"
+    assert_includes config[:instructions], "### Categories"
+  end
+
   test "instructions start with the byte-stable static block and end with session context" do
     chat = chats(:one)
 

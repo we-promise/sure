@@ -56,6 +56,14 @@ class Api::V1::VerificationGateTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "disabling email verification lets unverified users through" do
+    EmailVerification.stubs(:enforced?).returns(false)
+
+    get "/api/v1/accounts", headers: api_headers(read_write_key_for(@unverified))
+
+    assert_response :success
+  end
+
   private
 
     def read_write_key_for(user)

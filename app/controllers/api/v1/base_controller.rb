@@ -226,6 +226,7 @@ class Api::V1::BaseController < ApplicationController
     end
 
     def ensure_verified_for_financial_data
+      return true unless EmailVerification.enforced?
       return true if current_resource_owner&.email_verified?
 
       render_json({

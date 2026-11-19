@@ -71,7 +71,7 @@ module Assistant
     # surface. Every tool reads or changes financial data, so an unverified
     # user gets none, here and over /mcp alike.
     def function_classes(user = nil)
-      return [] if user && !user.email_verified?
+      return [] if user && EmailVerification.enforced? && !user.email_verified?
 
       classes = [
         Function::GetTransactions,

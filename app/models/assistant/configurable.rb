@@ -130,7 +130,7 @@ module Assistant::Configurable
       CATEGORY_NAMES_LIMIT = 60
 
       def accounts_context(user)
-        return "" unless user&.email_verified?
+        return "" unless user && (!EmailVerification.enforced? || user.email_verified?)
 
         accounts = user.accessible_accounts.visible.to_a
         return "" if accounts.empty?
@@ -159,7 +159,7 @@ module Assistant::Configurable
       end
 
       def categories_context(user)
-        return "" unless user&.email_verified?
+        return "" unless user && (!EmailVerification.enforced? || user.email_verified?)
 
         names = user.family.categories.pluck(:name)
         return "" if names.empty?

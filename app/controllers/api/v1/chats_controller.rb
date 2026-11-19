@@ -88,7 +88,7 @@ class Api::V1::ChatsController < Api::V1::BaseController
     end
 
     def include_tool_call_data?
-      current_resource_owner.email_verified?
+      !EmailVerification.enforced? || current_resource_owner.email_verified?
     end
 
     def update_chat_params
