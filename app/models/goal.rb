@@ -972,7 +972,7 @@ class Goal < ApplicationRecord
   # strings server-side rather than build them with its own Intl calls.
   def projection_payload
     today = Date.current
-    series_values = balance_series_values
+    series_values = balance_series_values(today)
     # The historical series tracks the whole linked-account balances. Scale it
     # to this goal's backing so the saved line meets current_balance at "today"
     # instead of dropping off a cliff for earmarked goals. Assumes the earmark
@@ -1556,13 +1556,15 @@ class Goal < ApplicationRecord
       end
     end
 
-    def balance_series_values
+    # The 90 days of saved history ending on `today`, the payload's own date, so
+    # a request that crosses midnight doesn't start the window a day late.
+    def balance_series_values(today)
       return [] if linked_accounts.empty?
 
       Balance::ChartSeriesBuilder.new(
         account_ids: linked_accounts.map(&:id),
         currency: currency,
-        period: Period.last_90_days,
+        period: Period.new(start_date: today - 90, end_date: today),
         strict_currency_conversion: true
       ).balance_series.values
     rescue Money::ConversionError => e

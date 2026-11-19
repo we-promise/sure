@@ -1570,6 +1570,25 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal goal.milestones(as_of: today).map { |m| m[:date] }, payload[:milestones].map { |m| m[:date] }
   end
 
+  # The saved-history window used to read the clock for itself, so on a clock
+  # that crossed midnight it started a day after the payload's own `today`.
+  test "the projection payload builds its saved history from its own today" do
+    goal = milestone_goal
+    base = Date.new(2026, 3, 15)
+    travel_to Time.zone.local(2026, 3, 15, 23, 59, 59)
+    Date.stubs(:current).returns(*(0..200).map { |i| base + i })
+
+    periods = []
+    Balance::ChartSeriesBuilder.stubs(:new).with { |*positional, **kwargs| periods << (kwargs.presence || positional.last)[:period] }
+                               .returns(OpenStruct.new(balance_series: OpenStruct.new(values: [])))
+
+    payload = goal.projection_payload
+    today = Date.parse(payload[:today])
+
+    assert_equal 1, periods.size
+    assert_equal [ today - 90, today ], [ periods.first.start_date, periods.first.end_date ]
+  end
+
   # The projection's end value used to read the clock for itself, so on a
   # clock that moves it was measured from a later day than the payload's
   # `today`.
