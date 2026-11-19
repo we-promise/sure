@@ -180,6 +180,45 @@ class Trade < ApplicationRecord
     trades.each { |trade| trade.preloaded_exchange_rates = rates }
   end
 
+  # Set by callers that list many sales: the holdings this sale's basis is read
+  # from. Authoritative once set, so an empty list means there is no position
+  # to measure against, not that one should be looked up.
+  def preloaded_holdings=(value)
+    @preloaded_holdings = value
+    remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+  end
+
+  # Each disposal's basis position, for a whole set in one query: per trade,
+  # its security's latest holding on or before the trade date. Loading the
+  # accounts' holdings instead reads a row per security per day of their whole
+  # history, which on a long-lived brokerage account is hundreds of thousands.
+  def self.preload_basis_holdings(trades)
+    return if trades.empty?
+
+    wanted = [ trades.map { |t| t.entry.id }, trades.map { |t| t.entry.account_id },
+               trades.map(&:security_id), trades.map { |t| t.entry.date } ]
+    holdings = Holding.find_by_sql([ <<~SQL.squish, *wanted ])
+      SELECT basis.*, wanted.entry_id AS basis_for_entry_id
+      FROM unnest(ARRAY[?]::uuid[], ARRAY[?]::uuid[], ARRAY[?]::uuid[], ARRAY[?]::date[])
+        AS wanted(entry_id, account_id, security_id, date)
+      CROSS JOIN LATERAL (
+        SELECT holdings.* FROM holdings
+        WHERE holdings.account_id = wanted.account_id
+          AND holdings.security_id = wanted.security_id
+          AND holdings.date <= wanted.date
+        ORDER BY holdings.date DESC
+        LIMIT 1
+      ) AS basis
+    SQL
+
+    # A sale is measured against its holding's average cost, which for a
+    # position without a stored basis is two or more queries each.
+    Holding.preload_avg_costs(holdings)
+
+    by_entry = holdings.index_by { |holding| holding["basis_for_entry_id"] }
+    trades.each { |trade| trade.preloaded_holdings = Array(by_entry[trade.entry.id]) }
+  end
+
   # The currency this disposal's basis is carried in, where it can be answered
   # without a query. `Holding#avg_cost` is Money in the HOLDING's own currency,
   # which is not always the account's, and that is what the proceeds are
