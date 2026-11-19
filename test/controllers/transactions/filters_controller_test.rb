@@ -39,6 +39,13 @@ class Transactions::FiltersControllerTest < ActionDispatch::IntegrationTest
     assert_equal parent_index + 1, child_index
   end
 
+  test "does not offer the balance updates filter, which only applies to an account's activity" do
+    get filters_transactions_url, headers: { "Turbo-Frame" => "transaction-filters" }
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 0
+  end
+
   test "offers the attachment filter in the filter menu" do
     get filters_transactions_url, headers: { "Turbo-Frame" => "transaction-filters" }
 
