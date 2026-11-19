@@ -299,7 +299,7 @@ class PdfImport < Import
     token = with_lock do
       next false unless rereadable?
 
-      previous = { status: status, read_as: read_as }
+      previous = { status:, read_as: self.read_as }
       attempt = SecureRandom.uuid
       update!(read_as:, status: :importing, reread_token: attempt)
       attempt
