@@ -695,6 +695,7 @@ class Family::DataImporter
           }.compact
         )
 
+        recurring_transaction.restoring_from_export = true
         recurring_transaction.save!
         map_source!(:recurring_transactions, old_id, recurring_transaction)
         # A replacement points at another series that may not exist yet, so it

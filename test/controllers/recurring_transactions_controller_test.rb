@@ -1217,7 +1217,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     paid_on, suggestion, entry = suggested_bill_with_past_payment
 
     with_family_lock_held_elsewhere(@family.id) do
-      assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ suggestion.id ]) do
+      assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ suggestion.id, Date.current, false ]) do
         post confirm_recurring_transaction_url(suggestion)
       end
     end
@@ -1274,7 +1274,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     RecurringTransaction::HistoryBackfiller.any_instance.stubs(:run!).raises(ActiveRecord::Deadlocked)
     Rails.error.expects(:report).with(instance_of(ActiveRecord::Deadlocked), has_entry(handled: true))
 
-    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ suggestion.id ]) do
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ suggestion.id, Date.current, false ]) do
       post toggle_status_recurring_transaction_url(suggestion)
     end
 
