@@ -56,7 +56,7 @@ ru:
       institution_domain_placeholder: например, sberbank.ru
       iban_label: "IBAN"
       iban_placeholder: "например, DE89370400440532013000" # pipelock:ignore IBAN
-      iban_set_placeholder: "•••• •••• •••• •••• — IBAN сохранён, введите новое значение, чтобы заменить его"
+      iban_set_placeholder: "%{masked} — IBAN сохранён, введите новое значение, чтобы заменить его"
       iban_remove_label: "Удалить IBAN"
       institution_domain_hint: Используется, чтобы найти иконку учреждения.
       institution_domain_missing_logo_key_hint: Используется, чтобы найти иконку учреждения. Логотипы Brandfetch недоступны, потому что не задан Client ID Brandfetch.

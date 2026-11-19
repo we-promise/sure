@@ -91,19 +91,18 @@
         <% end %>
 
         <% if account.supports_iban? %>
-          <%# Never pre-filled with the stored (decrypted) value -- write-only,
-              like a password field (password_field also masks keystrokes as
-              they're typed, matching that convention visually too). A blank
-              submit means "unchanged"; the "Remove IBAN" toggle below is the
-              only way to actually clear it. The "already set" placeholder
-              leads with a fixed run of bullets (not the real value's length)
-              so a stored IBAN is visually obvious at a glance, the same way a
-              password manager shows a filled field -- the placeholder text
-              alone was easy to miss. %>
-          <%= form.password_field :iban,
+          <%# Never pre-filled with the stored value: a blank submit means
+              "unchanged" and the "Remove IBAN" toggle below is the only way
+              to clear it. Only the stored last four show, in the placeholder,
+              so people can check what they entered. A plain text field, not a
+              password field, so password managers don't fill in the login
+              password and save it as the IBAN. %>
+          <%= form.text_field :iban,
               value: nil,
+              autocomplete: "off",
+              spellcheck: false,
               label: t(".iban_label"),
-              placeholder: account.iban_in_database.present? ? t(".iban_set_placeholder") : t(".iban_placeholder") %>
+              placeholder: account.iban_in_database.present? ? t(".iban_set_placeholder", masked: mask_last4(account.iban_in_database)) : t(".iban_placeholder") %>
 
           <% if account.iban_in_database.present? %>
             <div class="flex items-center justify-between gap-2">
