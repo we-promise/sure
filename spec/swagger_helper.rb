@@ -447,7 +447,7 @@ RSpec.configure do |config|
               subtype: { type: :string, nullable: true },
               status: { type: :string, enum: %w[active draft disabled pending_deletion] },
               exclude_from_reports: { type: :boolean, readOnly: true, description: 'Whether this account is excluded from financial reports' },
-              archived: { type: :boolean, description: 'Archived: left out of account pickers and the sidebar; still included in net worth and reports' },
+              archived: { type: :boolean, readOnly: true, description: 'Whether this account is archived. Archived accounts are left out of the sidebar and of account pickers for new records, but are still offered when editing a record already linked to them. They are still included in net worth and reports.' },
               institution_name: { type: :string, nullable: true },
               institution_domain: { type: :string, nullable: true },
               created_at: { type: :string, format: :'date-time' },
