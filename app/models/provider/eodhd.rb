@@ -124,7 +124,7 @@ class Provider::Eodhd < Provider
       daily_limit = parsed.dig("dailyRateLimit").to_i
 
       daily_key = daily_cache_key
-      used = Rails.cache.read(daily_key).to_i
+      used = Rails.cache.read(daily_key, raw: true).to_i
 
       UsageData.new(
         used: used,

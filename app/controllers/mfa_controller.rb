@@ -199,8 +199,10 @@ class MfaController < ApplicationController
       # Cleared up front, as PasskeySessionsController does: a rejected user
       # mints no session, so the rotation never runs to clear it for us.
       session.delete(:mfa_user_id)
+      # Set only after a password check: a password change since then ends this sign-in.
+      password_fingerprint = session.delete(:mfa_password_fingerprint)
 
-      @session = create_session_for(user, preserve_oidc_handoff: came_from_oidc)
+      @session = create_session_for(user, preserve_oidc_handoff: came_from_oidc, password_fingerprint: password_fingerprint)
       return false unless @session
 
       true
