@@ -23,6 +23,7 @@ class Investment < ApplicationRecord
     "hsa" => { short: "HSA", long: "Health Savings Account", region: "us", tax_treatment: :tax_advantaged },
     "ugma" => { short: "UGMA", long: "UGMA Custodial Account", region: "us", tax_treatment: :taxable },
     "utma" => { short: "UTMA", long: "UTMA Custodial Account", region: "us", tax_treatment: :taxable },
+    "stock_plan" => { short: "Stock plan", long: "Employer stock plan (RSUs, options)", region: "us", tax_treatment: :taxable },
 
     # === United Kingdom ===
     "isa" => { short: "ISA", long: "Individual Savings Account", region: "uk", tax_treatment: :tax_exempt },
@@ -98,6 +99,11 @@ class Investment < ApplicationRecord
 
   def tax_treatment
     SUBTYPES.dig(subtype, :tax_treatment) || :taxable
+  end
+
+  # An employer stock plan, where grants and their vesting schedules live.
+  def stock_plan?
+    subtype == "stock_plan"
   end
 
   class << self

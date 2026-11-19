@@ -430,6 +430,24 @@ class Provider::Openai < Provider
     end
   end
 
+  # Structured data from a PDF, shaped by the caller's JSON schema. Used for
+  # equity grants read from documents uploaded to a stock plan account.
+  def extract_document_data(pdf_content:, tool_name:, schema:, instructions:, model: "", family: nil, json_mode: nil)
+    with_provider_response do
+      DocumentExtractor.new(
+        client: client,
+        model: model.presence || @default_model,
+        pdf_content: pdf_content,
+        schema: schema,
+        instructions: instructions,
+        operation: tool_name,
+        json_mode: json_mode,
+        family: family,
+        custom_provider: custom_provider?
+      ).extract
+    end
+  end
+
   def chat_response(
     prompt,
     model:,

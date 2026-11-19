@@ -1,0 +1,9 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        equity_grant:
+          attributes:
+            account:
+              not_a_stock_plan: must be a stock plan investment account

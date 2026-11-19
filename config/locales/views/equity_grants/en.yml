@@ -1,0 +1,109 @@
+---
+en:
+  equity_grants:
+    create:
+      created: Grant added
+    update:
+      updated: Grant updated
+    destroy:
+      deleted: Grant deleted
+    forfeit:
+      forfeited: Remaining units marked as forfeited
+    import:
+      csv_missing: Choose a CSV file under 2 MB.
+      imported: "Imported %{created} rows, skipped %{skipped}."
+    upload:
+      no_files: Choose at least one PDF.
+      queued:
+        zero: No documents to read.
+        one: Reading 1 document. Refresh in a minute to see the results.
+        other: "Reading %{count} documents. Refresh in a minute or two to see the results."
+      rejected: "Not uploaded: %{files}."
+      elsewhere: "Already uploaded to another account, so not read here: %{files}."
+    csv_import:
+      grant_key_missing: A grant ID or a grant date is needed to tell grants apart.
+      date_unreadable: "Couldn't read the date \"%{value}\". Use YYYY-MM-DD."
+      malformed: "The CSV couldn't be read: %{message}"
+      row_error: "Row %{row}: %{message}"
+      ticker_missing: A ticker is required (in the file or the ticker field).
+      too_many_rows: "The CSV has more than %{max} rows."
+    tab:
+      actions: Actions
+      add_grant: Add grant
+      add_grant_title: Add a grant
+      add_vest: Add vests
+      add_vest_hint: For a repeating schedule, set how many months apart and how many vests; each gets the same number of units. Dates that already have a vest are skipped.
+      add_vest_title: Add vests
+      count: Number of vests
+      csv_file: CSV file
+      csv_hint: "One row per vest. Columns: grant_id, ticker, grant_date, total_units, vest_date, units. Optional: units_withheld, net_proceeds, strike_price. Dates as YYYY-MM-DD."
+      csv_template: Download a template
+      default_ticker: Ticker for rows without one
+      delete: Delete
+      document_files: Grant documents or vest confirmations (PDF)
+      documents_description: Upload grant agreements, award summaries or release confirmations as PDFs and your AI provider reads the grants and their vesting schedules. Uploads also appear on the Statements tab.
+      documents_no_ai: Reading PDFs needs PDF import to be available (Settings → AI). Without it, import a CSV or add grants by hand.
+      documents_title: Add from documents
+      empty_description: Track stock grants (RSUs or options) and their vesting schedules to see what vests next and what it's worth. Upload grant documents, import a CSV, or add a grant below.
+      empty_title: No grants yet
+      estimated_value: Value now
+      every_months: Every N months
+      forfeit: Forfeit remaining
+      forfeit_confirm_body: Vests after today stop counting, for example after leaving the company. The grant and its past vests are kept.
+      forfeit_confirm_title: Forfeit the remaining units?
+      forfeited_on: "Forfeited %{date}"
+      grant: Grant
+      grant_date: Grant date
+      grant_identifier: Grant ID
+      grant_types:
+        option: Options
+        rsu: RSUs
+      granted: Granted
+      grants_title: Grants
+      import_csv: Import CSV
+      net_proceeds: Net proceeds
+      next_12_months: Vesting in the next 12 months
+      next_vest: Next vest
+      none: "—"
+      past_title: Past vests
+      read_existing: Read documents already uploaded to this account
+      strike_price: Strike price (options)
+      strike_price_hint: For options, the price per share to exercise. Options are valued at the amount the share price is above it.
+      ticker: Ticker
+      type: Type
+      units:
+        one: "%{count} unit"
+        other: "%{count} units"
+      units_heading: Units
+      unknown_value: "—"
+      unvalued:
+        one: 1 grant without a price yet
+        other: "%{count} grants without a price yet"
+      unvested: Unvested value
+      unvested_heading: Unvested
+      upcoming_title: Upcoming vests
+      upload_and_read: Upload and read
+      value_note: Values use the latest stored share price and don't include taxes. Grants don't change this account's balance.
+      vest_date: Vest date
+      vested: Vested
+      vests:
+        one: "%{count} vest"
+        other: "%{count} vests"
+      withheld: Withheld
+  equity_vests:
+    create:
+      created:
+        zero: No new vests added
+        one: Vest added
+        other: "%{count} vests added"
+      invalid: Enter a valid vest date
+      skipped:
+        one: 1 date already had a vest and was skipped.
+        other: "%{count} dates already had a vest and were skipped."
+    destroy:
+      deleted: Vest deleted
+  account_statements:
+    equity_grant_reader:
+      no_account: The document isn't on a stock plan account.
+      not_pdf: Only PDF documents can be read.
+      unreadable: The AI provider's answer couldn't be read, so nothing was changed.
