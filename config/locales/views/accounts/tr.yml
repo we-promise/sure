@@ -58,7 +58,7 @@ tr:
       institution_domain_placeholder: örn. chase.com
       iban_label: "IBAN"
       iban_placeholder: "örn. DE89370400440532013000" # pipelock:ignore IBAN
-      iban_set_placeholder: "•••• •••• •••• •••• — IBAN kayıtlı, değiştirmek için yeni bir değer girin"
+      iban_set_placeholder: "%{masked} — IBAN kayıtlı, değiştirmek için yeni bir değer girin"
       iban_remove_label: "IBAN'ı kaldır"
       institution_name_label: Kurum adı
       institution_name_placeholder: örn. Chase Bank
