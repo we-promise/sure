@@ -28,6 +28,12 @@ en:
         subtype: Subtype
       account/accountable:
         face_value: Initial amount
+      depository:
+        subtype: Account type
+      investment:
+        subtype: Investment type
+      loan:
+        subtype: Loan type
     errors:
       models:
         account:
