@@ -50,6 +50,24 @@ class Ai::Generations::ReadPdfTest < ActiveSupport::TestCase
     assert_equal %w[png2 png4], attachments.map(&:data)
   end
 
+  test "a statement classified in a later piece wins over a cover page" do
+    stub_ai(:extract_pdf) do |request|
+      raise Ai::Error::ContextTooLong, "too long" if request.input.include?("PAGE ONE") && request.input.include?("PAGE TWO")
+
+      if request.input.include?("PAGE ONE")
+        { document_type: "other", summary: "cover", extracted_data: nil }
+      else
+        { document_type: "bank_statement", summary: "statement", extracted_data: nil }
+      end
+    end
+    units = [ Ai::PdfReading::Unit.text("PAGE ONE", page: 1), Ai::PdfReading::Unit.text("PAGE TWO", page: 2) ]
+
+    result = generation(units).call(batches: 1)
+
+    assert result.success?
+    assert_equal "bank_statement", result.value[:document_type]
+  end
+
   test "no batch answered is unusable, not a document of no type" do
     generation = Ai::Generations::ReadPdf.new(units: [], content: "", family: nil)
 

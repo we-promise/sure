@@ -17,15 +17,16 @@
 #      batch in the run worked (`answered_before` carries that across Ai::GenerationJob's
 #      chain). Skipped items are logged. Nothing else is retried here; the transport has retried
 #      429s and 5xxs.
-#   5. Return an Ai::Result with the route that answered and the items not reached. When the
-#      feature declares `shadow` and the family's rate samples this call, enqueue Ai::ShadowJob
-#      with the ids of every item sent, answered or not, apart from those left for a later job
-#      (Ai::GenerationJob does this itself, after applying the answer).
+#   5. Return an Ai::Result with the route that answered and the items not reached. Answers keep
+#      their input order even when a fallback recovers an earlier piece. An outage on a later batch
+#      ends the run with the earlier answers and the rest left for a later job; a slice no route can
+#      use is skipped and logged. When the feature declares `shadow` and the family's rate samples
+#      this call, enqueue Ai::ShadowJob with the ids of every item sent, answered or not, apart from
+#      those left for a later job (Ai::GenerationJob does this itself, after applying the answer).
 #
 # `call(batches: 1)` runs one batch, which is what Ai::GenerationJob does (small batches,
-# so other work takes turns); plain `call` runs them all and merges the answers. `call!` returns the value or
-# raises the Ai::Error, for jobs. A plain `call` that fails on a later batch returns the failure and
-# drops the earlier batches' answers, so only pass it more than one batch's items when that's acceptable.
+# so other work takes turns); plain `call` runs them all and merges the answers in input order.
+# `call!` returns the value or raises the Ai::Error, for jobs.
 class Ai::Generation
   # How many times a batch whose answer is unusable on every route is halved to find the
   # transactions that break it.
@@ -206,13 +207,21 @@ class Ai::Generation
         slice = Ai::Batch.first_slice(remaining, model: route.model, fixed_tokens: fixed_tokens(route), cost: method(:item_cost))
         answers, unanswered = begin
           on_routes(routes, slice)
-        rescue Ai::Error::ContextTooLong, Ai::Error::InvalidOutput => error
+        rescue Ai::Error::ContextTooLong, Ai::Error::InvalidOutput, Ai::Error::UnsupportedInput => error
           # A slice no route can use is skipped, so it doesn't end the run for the items after it.
           # Unusable answers before anything in the run worked still fail: the model may be the problem.
-          raise if error.is_a?(Ai::Error::InvalidOutput) && values.empty? && !answered_before
+          raise if [ Ai::Error::InvalidOutput, Ai::Error::UnsupportedInput ].any? { error.is_a?(_1) } &&
+                   values.empty? && !answered_before
 
           log_unanswered(slice)
           [ [], [] ]
+        rescue *Ai::DownMarks::PASSING
+          # An outage on a later batch doesn't throw away what the earlier batches answered; the
+          # failed slice waits for the later job, like a failover part-way through a slice.
+          raise if values.empty?
+
+          remaining = slice + (remaining[slice.size..] || [])
+          break
         end
         answers.each do |by, value|
           served = by
@@ -230,17 +239,20 @@ class Ai::Generation
 
     # Runs `slice` (nil for a feature without items) down the routes: failover and escalation
     # move on, an overflow is split on the same route. Returns [[[route, value], ...], unanswered]:
-    # one pair per piece the slice was split into, and the items to retry later. Those are kept
-    # when a route failed over or was marked down, since it might still answer them; otherwise
-    # items no route could fit or answer are left out.
+    # one pair per piece the slice was split into, in the slice's order, and the items to retry
+    # later. Those are kept when a route failed over or was marked down, since it might still
+    # answer them; otherwise items no route could fit or answer are left out.
     def on_routes(routes, slice)
       pending = slice
-      answers = []
+      pending_offset = 0
+      answers = []   # [position, route, value], so a recovered earlier piece keeps its place
       last_error = nil
       transient = false
       passing = nil   # a failure that passes on its own: with no answer, the call is retried, not the items skipped
       needs_fix = nil   # one that doesn't (a bad key, no credit, a missing model): with no answer, the run ends on it
       unusable, unusable_on = nil, nil   # the first unusable answer, and the route bisection retries in halves
+      # Equal positions keep the order they were answered in, so normal in-order runs don't move.
+      ordered = -> { answers.each_with_index.sort_by { |(answer, i)| [ answer.first, i ] }.map { |(answer, _)| answer.drop(1) } }
 
       failed = lambda do |route, error|
         last_error = error
@@ -272,12 +284,14 @@ class Ai::Generation
         end
 
         begin
-          done, pending = split_on(route, pending)
-          answers.concat(done.map { [ route, _1 ] })
-          return [ answers, [] ] if pending.empty?
+          done, pending = split_on(route, pending, pending_offset)
+          answers.concat(done.map { |value, at| [ at, route, value ] })
+          pending_offset = position_of(pending.first, slice) if pending.any?
+          return [ ordered.call, [] ] if pending.empty?
         rescue Interrupted => partial
-          answers.concat(partial.values.map { [ route, _1 ] })
+          answers.concat(partial.values.map { |value, at| [ at, route, value ] })
           pending = partial.pending
+          pending_offset = position_of(pending.first, slice) if pending.any?
           failed.call(route, partial.error)
         rescue *Ai::DownMarks::FAILOVER, Ai::Error::InvalidOutput, Ai::Error::ContextTooLong, Ai::Error::UnsupportedInput => error
           failed.call(route, error)
@@ -289,11 +303,13 @@ class Ai::Generation
       # route that couldn't fit the batch doesn't change that.
       if unusable_on && pending && pending.size > 1 && @down_marks.state(route = unusable_on) == :up
         begin
-          done, pending = bisect(route, pending)
-          answers.concat(done.map { [ route, _1 ] })
+          done, pending = bisect(route, pending, 1, pending_offset)
+          answers.concat(done.map { |value, at| [ at, route, value ] })
+          pending_offset = position_of(pending.first, slice) if pending.any?
         rescue Interrupted => partial
-          answers.concat(partial.values.map { [ route, _1 ] })
+          answers.concat(partial.values.map { |value, at| [ at, route, value ] })
           pending = partial.pending
+          pending_offset = position_of(pending.first, slice) if pending.any?
           failed.call(route, partial.error)
         rescue *Ai::DownMarks::FAILOVER => error
           failed.call(route, error)
@@ -301,13 +317,13 @@ class Ai::Generation
       end
 
       # Part of the slice was answered: keep the answers. The rest is retried later when a route
-      # failed over or was down (a timeout, an outage), and left unanswered when it fits no route
-      # or breaks every answer.
+      # failed over or was down (a timeout, an outage), and left unanswered when it fits no route,
+      # breaks every answer or can't take the input.
       if answers.any?
-        return [ answers, pending ] if transient
+        return [ ordered.call, pending ] if transient
 
         log_unanswered(pending)
-        return [ answers, [] ]
+        return [ ordered.call, [] ]
       end
 
       # A later route that couldn't fit the slice doesn't hide why the earlier ones failed: an unusable
@@ -319,6 +335,13 @@ class Ai::Generation
             Ai::Error::Unreachable.new("every route for #{feature_key} is marked down")
     end
 
+    # Where a pending item started in the original slice, after a route answered only part of it.
+    def position_of(item, slice)
+      return 0 unless slice
+
+      slice.index { _1.equal?(item) } || slice.index(item) || 0
+    end
+
     def fail_over(route, error)
       @down_marks.mark(route, error)
       @failed_over_from << route
@@ -327,25 +350,27 @@ class Ai::Generation
 
     # Answers `slice` on one route: in pieces of the route's batch_size when it holds more (a
     # fallback can take fewer items than the route the slice was sized for), halved on overflow.
-    # Returns [values, items it couldn't fit or answer], or raises when nothing could be answered.
-    def split_on(route, slice)
+    # Returns [[value, position] pairs, items it couldn't fit or answer], or raises when nothing
+    # could be answered. Positions are relative to `slice`, so a piece recovered later by another
+    # route can be put back where it belongs.
+    def split_on(route, slice, offset = 0)
       cap = route.model.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE
-      return answer_pieces(route, slice.each_slice(cap).to_a) if slice && slice.size > cap
+      return answer_pieces(route, slice.each_slice(cap).to_a, offset) if slice && slice.size > cap
 
-      answer_whole(route, slice)
+      answer_whole(route, slice, offset)
     end
 
-    def answer_whole(route, slice)
-      [ [ run(route, slice) ], [] ]
+    def answer_whole(route, slice, offset = 0)
+      [ [ [ run(route, slice), offset ] ], [] ]
     rescue Ai::Error::ContextTooLong
       raise if slice.nil? || slice.size <= 1
 
-      answer_pieces(route, Ai::Batch.halves(slice))
+      answer_pieces(route, Ai::Batch.halves(slice), offset)
     end
 
-    def answer_pieces(route, pieces)
-      values, unfit = each_piece(pieces) do |piece|
-        split_on(route, piece)
+    def answer_pieces(route, pieces, offset = 0)
+      values, unfit = each_piece(pieces, offset) do |piece, at|
+        split_on(route, piece, at)
       rescue Ai::Error::ContextTooLong
         [ [], piece ]   # a single item that can't fit here
       end
@@ -355,34 +380,37 @@ class Ai::Generation
     end
 
     # Answers what it can of `items` on one route by halving them at most BISECT_DEPTH times.
-    # Returns [values, items left unanswered]. A model that answers nothing usable stops at the
-    # cap, so it costs a few calls, not one per item.
-    def bisect(route, items, depth = 1)
-      each_piece(Ai::Batch.halves(items)) do |half|
-        split_on(route, half)
+    # Returns [[value, position] pairs, items left unanswered]. A model that answers nothing usable
+    # stops at the cap, so it costs a few calls, not one per item.
+    def bisect(route, items, depth = 1, offset = 0)
+      each_piece(Ai::Batch.halves(items), offset) do |half, at|
+        split_on(route, half, at)
       rescue Ai::Error::InvalidOutput
-        depth < BISECT_DEPTH && half.size > 1 ? bisect(route, half, depth + 1) : [ [], half ]
+        depth < BISECT_DEPTH && half.size > 1 ? bisect(route, half, depth + 1, at) : [ [], half ]
       rescue Ai::Error::ContextTooLong
         [ [], half ]
       end
     end
 
-    # Gathers the block's [values, items left] over `pieces`. An unusable answer leaves its piece
-    # and the others go on, wherever it falls, so the outcome doesn't depend on item order; at the
-    # end it raises Interrupted with the answers, so the route can still be bisected, or the error
-    # itself when nothing was answered. A failover raises Interrupted at once, with everything still
-    # unanswered, or propagates as it is before any answer.
-    def each_piece(pieces)
+    # Gathers the block's [[value, position] pairs, items left] over `pieces`. An unusable or
+    # unsupported answer leaves its piece and the others go on, wherever it falls, so the outcome
+    # doesn't depend on item order; at the end it raises Interrupted with the answers, so the route
+    # can still be bisected, or the error itself when nothing was answered. A failover raises
+    # Interrupted at once, with everything still unanswered, or propagates as it is before any answer.
+    def each_piece(pieces, offset = 0)
       values, left, unusable = [], [], nil
+      at = offset
       pieces.each_with_index do |piece, i|
-        answered, rest = yield(piece)
+        starting_at = at
+        at += piece.size
+        answered, rest = yield(piece, starting_at)
         values.concat(answered)
         left.concat(rest)
-      rescue Ai::Error::InvalidOutput => error
+      rescue Ai::Error::InvalidOutput, Ai::Error::UnsupportedInput => error
         left.concat(piece)
         unusable ||= error
       rescue Interrupted => partial
-        unless partial.error.is_a?(Ai::Error::InvalidOutput)
+        unless partial.error.is_a?(Ai::Error::InvalidOutput) || partial.error.is_a?(Ai::Error::UnsupportedInput)
           raise Interrupted.new(values + partial.values, left + partial.pending + pieces.drop(i + 1).flatten(1), partial.error)
         end
 
@@ -432,16 +460,18 @@ class Ai::Generation
       log_unanswered(items.reject { answered_ids.include?(item_id(_1).to_s) })
     end
 
-    # Ids only: the items themselves hold the family's data. Each item is logged once.
+    # Ids only: the items themselves hold the family's data. A repeated unit is still skipped
+    # (two equal units are two inputs), but only its first skip gets a log entry.
     def log_unanswered(items)
-      items = items.reject { @logged_ids.include?(item_id(_1)) }
-      return if items.empty?
-
-      @logged_ids.merge(items.map { item_id(_1) })
+      ids = items.map { item_id(_1) }
       @skipped.concat(items)
+      fresh = ids.uniq.reject { @logged_ids.include?(_1) }
+      return if fresh.empty?
+
+      @logged_ids.merge(fresh)
       DebugLogEntry.capture(
         category: "ai_generation", level: "warn", message: "Items no route could answer were left unanswered",
-        source: self.class.name, family:, metadata: { feature: feature_key.to_s, item_ids: items.map { item_id(_1) } }
+        source: self.class.name, family:, metadata: { feature: feature_key.to_s, item_ids: fresh }
       )
     end
 
