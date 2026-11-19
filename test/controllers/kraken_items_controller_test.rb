@@ -144,6 +144,18 @@ class KrakenItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to setup_accounts_kraken_item_path(@second_item, return_to: nil)
   end
 
+  test "select accounts rejects hostless and encoded return paths" do
+    [ "///evil.example", "/%2fevil.example", "/\\evil.example", "/no-such-route-here" ].each do |return_to|
+      get select_accounts_kraken_items_url, params: {
+        kraken_item_id: @second_item.id,
+        accountable_type: "Crypto",
+        return_to: return_to
+      }
+
+      assert_redirected_to setup_accounts_kraken_item_path(@second_item, return_to: nil)
+    end
+  end
+
   test "select accounts rejects protocol-relative return paths" do
     get select_accounts_kraken_items_url, params: {
       kraken_item_id: @second_item.id,

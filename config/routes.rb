@@ -505,6 +505,11 @@ Rails.application.routes.draw do
   # Hub page fronting budgets + goals under a single "Plan" nav entry.
   resource :plan, only: :show
 
+  # Family-wide investment hub, built on the Reports section framework.
+  resource :portfolio, only: :show do
+    patch :update_preferences
+  end
+
   resources :budgets, only: %i[index show edit update], param: :month_year do
     post :copy_previous, on: :member
     get :picker, on: :collection
@@ -537,7 +542,9 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :merchants, only: :show
+  resources :merchants, only: :show do
+    delete :clear_filter, on: :member
+  end
 
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
@@ -582,6 +589,10 @@ Rails.application.routes.draw do
       post :reset_security
       post :sync_prices
     end
+
+    resources :lots, only: :update, controller: "holding_lots" do
+      post :unlock, on: :member
+    end
   end
   resources :trades, only: %i[show new create update destroy] do
     member do
@@ -613,6 +624,7 @@ Rails.application.routes.draw do
     collection do
       delete :clear_filter
       get :name_suggestions
+      get :filters, to: "transactions/filters#show"
     end
 
     member do
@@ -622,6 +634,7 @@ Rails.application.routes.draw do
       post :merge_duplicate
       post :dismiss_duplicate
       post :unlock
+      patch :reconcile
       patch :tags, action: :update_tags
     end
   end
@@ -735,6 +748,7 @@ Rails.application.routes.draw do
       get :sparkline
       patch :toggle_active
       patch :toggle_exclude_from_reports
+      patch :reconcile_all
       patch :set_default
       patch :remove_default
       get :select_provider
@@ -827,6 +841,7 @@ Rails.application.routes.draw do
 
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
+      resources :account_statements, only: [ :index, :show, :create ]
       resources :balances, only: [ :index, :show ]
       resources :budgets, only: [ :index, :show ]
       resources :budget_categories, only: [ :index, :show ]
@@ -1059,6 +1074,7 @@ Rails.application.routes.draw do
 
   # MCP server endpoint for external AI assistants (JSON-RPC 2.0)
   post "mcp", to: "mcp#handle"
+  match "mcp", to: "mcp#method_not_allowed", via: %i[get delete]
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.

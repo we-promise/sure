@@ -6,6 +6,9 @@ class Trade < ApplicationRecord
 
   belongs_to :security
   belongs_to :category, optional: true
+  # The acquisition a sale says it sold from. Set by the user, never by a
+  # provider, so it stays editable on a linked sale.
+  belongs_to :lot_source_entry, class_name: "Entry", optional: true
 
   # Use the same activity labels as Transaction
   ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup.freeze
@@ -54,6 +57,7 @@ class Trade < ApplicationRecord
   end
 
   validate :exchange_rate_must_be_valid
+  validate :lot_source_entry_must_be_a_lot_choice, if: -> { lot_source_entry_id_changed? && lot_source_entry_id }
 
   # Trade types for categorization
   def buy?
@@ -68,6 +72,27 @@ class Trade < ApplicationRecord
   # like a sale — same sign, same shape — and only the label tells them apart.
   def internal_movement?
     INTERNAL_MOVEMENT_LABELS.include?(investment_activity_label)
+  end
+
+  # The acquisitions this sale can name as the lot it sold from: buys and
+  # transfers-in of its security, in its account, that the replay applies
+  # before it (an earlier date, or the same date and entered no later: a
+  # purchase stamped with the sale's own created_at replays first, see
+  # Holding::PortfolioCache#trades), leaving out a lot sales dated before it had already
+  # emptied. Only a sale in an account that sells by fifo has any, since under
+  # average a sale relieves every lot pro rata. The choice the sale already
+  # holds is always among them, so an edit keeps it, and is replayed only
+  # while it names a lot that is still open; a new choice must be open by then.
+  def lot_choices
+    return Entry.none unless sell? && !internal_movement? && entry&.account&.cost_basis_fifo?
+
+    acquisitions = entry.account.entries
+      .where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security_id).where("qty > 0").select(:id))
+    before_sale = acquisitions
+      .where("(entries.date, entries.created_at) <= (:date, :created_at)",
+             date: entry.date, created_at: entry.created_at || Time.current)
+      .where.not(id: lots_emptied_before_sale)
+    before_sale.or(acquisitions.where(id: attribute_in_database(:lot_source_entry_id))).chronological
   end
 
   class << self
@@ -88,6 +113,15 @@ class Trade < ApplicationRecord
     Trend.new(current: current_value, previous: cost_basis)
   end
 
+  # Set by callers that list many sales: what this sale took from each lot, as
+  # HoldingLotDisposal.readable_by_sale gives it, or nil where there is no
+  # readable record and the basis comes from the holding snapshot. Clears the
+  # memo, so a sale measured before the preload does not keep its old figure.
+  def preloaded_lot_disposals=(value)
+    @preloaded_lot_disposals = value
+    remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+  end
+
   # Set by callers that list many disposals, so the proceeds conversion below
   # reads one preloaded set instead of a query per foreign disposal. Keyed
   # `[from, to, date]`.
@@ -101,6 +135,7 @@ class Trade < ApplicationRecord
   def preloaded_exchange_rates=(value)
     @preloaded_exchange_rates = value
     remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+    @realized_gain_unconvertible = false
   end
 
   # One query for every rate a set of disposals can need, instead of one per
@@ -161,7 +196,17 @@ class Trade < ApplicationRecord
   def realized_gain_loss
     return @realized_gain_loss if defined?(@realized_gain_loss)
 
+    @realized_gain_unconvertible = false
     @realized_gain_loss = calculate_realized_gain_loss
+  end
+
+  # True when #realized_gain_loss is nil only because the proceeds' currency
+  # has no usable rate into the basis currency for the disposal's day, as
+  # opposed to a buy, a transfer or an unknown cost basis. A caller summing
+  # gains counts these as left out.
+  def realized_gain_unconvertible?
+    realized_gain_loss
+    @realized_gain_unconvertible
   end
 
   # Trades are always excluded from expense budgets
@@ -172,6 +217,42 @@ class Trade < ApplicationRecord
 
   private
 
+    # Acquisitions whose lot is now empty and was emptied before this sale:
+    # no sale dated on or after it took anything from the lot.
+    #
+    # A transfer out consumes lots without recording a disposal, so once one
+    # replays at or after this sale an empty lot no longer says when it was
+    # emptied. Nothing is excluded then: a lot that turns out to be empty
+    # falls back to the account's method when the sale replays.
+    def lots_emptied_before_sale
+      later_transfers_out = on_or_after_sale(
+        entry.account.entries.where(entryable_type: "Trade",
+          entryable_id: Trade.where(security_id: security_id, investment_activity_label: INTERNAL_MOVEMENT_LABELS)
+                             .where("qty < 0").select(:id))
+      )
+      return HoldingLot.none.select(:source_entry_id) if later_transfers_out.exists?
+
+      later_disposals = on_or_after_sale(
+        HoldingLotDisposal.joins(:sale_entry).where(account_id: entry.account_id).where.not(lot_source_entry_id: nil)
+      )
+      HoldingLot.derived.where(account_id: entry.account_id, qty: 0)
+        .where.not(source_entry_id: later_disposals.select(:lot_source_entry_id))
+        .select(:source_entry_id)
+    end
+
+    # Entries replay by date, then in the order they were entered (see
+    # Holding::PortfolioCache#trades), so a same-day entry made earlier has
+    # already run by the time this sale does. `scope` must expose `entries`.
+    def on_or_after_sale(scope)
+      if entry.persisted?
+        scope.where("(entries.date, entries.created_at, entries.id) >= (:date, :created_at, :id)",
+                    date: entry.date, created_at: entry.created_at, id: entry.id)
+      else
+        scope.where("(entries.date, entries.created_at) >= (:date, :created_at)",
+                    date: entry.date, created_at: Time.current)
+      end
+    end
+
     def exchange_rate_must_be_valid
       if extra&.dig("exchange_rate_invalid")
         errors.add(:exchange_rate, "must be a number")
@@ -181,6 +262,10 @@ class Trade < ApplicationRecord
           errors.add(:exchange_rate, "must be greater than 0")
         end
       end
+    end
+
+    def lot_source_entry_must_be_a_lot_choice
+      errors.add(:lot_source_entry, :invalid) unless lot_choices.exists?(id: lot_source_entry_id)
     end
 
     # The position the disposal is measured against: the latest snapshot for
@@ -206,6 +291,28 @@ class Trade < ApplicationRecord
       end
     end
 
+    def lot_disposals
+      return @preloaded_lot_disposals if defined?(@preloaded_lot_disposals)
+
+      HoldingLotDisposal.readable_by_sale([ self ])[entry.id]
+    end
+
+    # The cost of the lots this sale consumed, :unknown when one of them has
+    # no cost, or nil when there is no record covering the whole sale.
+    def disposed_lots_cost
+      disposals = lot_disposals
+      return nil if disposals.blank? || disposals.sum(BigDecimal("0"), &:qty) != qty.abs
+      return :unknown if disposals.any? { |disposal| disposal.unit_cost.nil? }
+
+      Money.new(disposals.sum(BigDecimal("0")) { |disposal| disposal.qty * disposal.unit_cost }, disposals.first.currency)
+    end
+
+    # The position's average on the sale's day, applied to the units sold.
+    def snapshot_cost
+      holding = basis_holding
+      holding.avg_cost * qty.abs if holding&.avg_cost
+    end
+
     def calculate_realized_gain_loss
       return nil unless sell?
       # Moving an asset to another account you own realises nothing. Without
@@ -213,17 +320,22 @@ class Trade < ApplicationRecord
       # difference is booked as a gain the user never made.
       return nil if internal_movement?
 
-      holding = basis_holding
+      # Under fifo the snapshot is the open lots' mean after the sale, not the
+      # cost of the lots it consumed, so without a record covering the sale the
+      # gain is unknown rather than priced off the snapshot.
+      cost_basis = disposed_lots_cost || (snapshot_cost unless entry.account.cost_basis_fifo?)
 
-      return nil unless holding&.avg_cost
+      return nil unless cost_basis.is_a?(Money)
 
-      cost_basis = holding.avg_cost * qty.abs
       # A disposal's fee is what selling cost, so it comes off the proceeds.
       sale_proceeds = converted_to_basis_currency(price_money * qty.abs - fee_money, cost_basis.currency)
 
       # No rate for that day means the gain is unknown, not zero and not the
       # figure a rate of 1.0 would give.
-      return nil if sale_proceeds.nil?
+      if sale_proceeds.nil?
+        @realized_gain_unconvertible = true
+        return nil
+      end
 
       Trend.new(current: sale_proceeds, previous: cost_basis)
     end

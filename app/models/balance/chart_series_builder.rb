@@ -149,8 +149,12 @@ class Balance::ChartSeriesBuilder
       favorable_direction == "down" ? -1 : 1
     end
 
+    # 1 for an account already in the target currency, else the rate the
+    # lateral join below found. NULL when the currency has no usable rate, so
+    # the account drops out of the day's sum rather than counting at 1.
+    # Strict conversion raises on that same gap instead (see missing_currency).
     def balance_rate_sql
-      @strict_currency_conversion ? "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END" : "COALESCE(er.rate, 1)"
+      "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END"
     end
 
     def query
@@ -223,6 +227,7 @@ class Balance::ChartSeriesBuilder
              WHERE er.from_currency = accounts.currency
                AND er.to_currency = :target_currency
                AND er.date <= d.date
+               AND er.rate > 0
              ORDER BY er.date DESC
              LIMIT 1),
             (SELECT er.rate
@@ -230,6 +235,7 @@ class Balance::ChartSeriesBuilder
              WHERE er.from_currency = accounts.currency
                AND er.to_currency = :target_currency
                AND er.date > d.date
+               AND er.rate > 0
              ORDER BY er.date ASC
              LIMIT 1)
           ) AS rate
@@ -274,7 +280,7 @@ class Balance::ChartSeriesBuilder
             COALESCE(SUM(
               CASE
                 WHEN last_basis.cost_basis IS NOT NULL
-                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
+                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * CASE WHEN last_h.currency = :target_currency THEN 1 ELSE er.rate END
                 ELSE 0
               END
             ), 0) AS gains
@@ -283,7 +289,7 @@ class Balance::ChartSeriesBuilder
             ON accounts.active_until_date IS NULL OR d.date <= accounts.active_until_date
           LEFT JOIN account_securities sec ON sec.account_id = accounts.id
           LEFT JOIN LATERAL (
-            SELECT h.amount, h.qty, h.currency
+            SELECT h.date, h.amount, h.qty, h.currency
             FROM holdings h
             WHERE h.account_id = accounts.id
               AND h.security_id = sec.security_id
@@ -295,6 +301,10 @@ class Balance::ChartSeriesBuilder
           -- gap-filled holding rows (weekends, price-history gaps) are persisted without
           -- cost_basis even though the position and basis are unchanged, so the basis is
           -- carried forward from the last real snapshot instead of zeroing those points.
+          -- A calculated zero carries the same way, except past a later row the
+          -- materializer cleared as unknown (a transfer in): no cost, no source and not
+          -- a provider's row. A provider's row is never written by the materializer,
+          -- so a missing cost there does not stop the carry.
           LEFT JOIN LATERAL (
             SELECT h2.cost_basis
             FROM holdings h2
@@ -302,7 +312,24 @@ class Balance::ChartSeriesBuilder
               AND h2.security_id = sec.security_id
               AND h2.date <= d.date
               AND h2.cost_basis IS NOT NULL
-              AND (h2.cost_basis_locked OR h2.cost_basis > 0)
+              AND (
+                h2.cost_basis_locked
+                OR h2.cost_basis > 0
+                OR (
+                  h2.cost_basis_source = 'calculated'
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM holdings cleared
+                    WHERE cleared.account_id = h2.account_id
+                      AND cleared.security_id = h2.security_id
+                      AND cleared.date > h2.date
+                      AND cleared.date <= last_h.date
+                      AND cleared.cost_basis IS NULL
+                      AND cleared.cost_basis_source IS NULL
+                      AND cleared.account_provider_id IS NULL
+                  )
+                )
+              )
             ORDER BY h2.date DESC
             LIMIT 1
           ) last_basis ON TRUE
@@ -313,6 +340,7 @@ class Balance::ChartSeriesBuilder
                WHERE er.from_currency = last_h.currency
                  AND er.to_currency = :target_currency
                  AND er.date <= d.date
+                 AND er.rate > 0
                ORDER BY er.date DESC
                LIMIT 1),
               (SELECT er.rate
@@ -320,6 +348,7 @@ class Balance::ChartSeriesBuilder
                WHERE er.from_currency = last_h.currency
                  AND er.to_currency = :target_currency
                  AND er.date > d.date
+                 AND er.rate > 0
                ORDER BY er.date ASC
                LIMIT 1)
             ) AS rate

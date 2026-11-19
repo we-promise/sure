@@ -50,6 +50,16 @@ class Setting < RailsSettings::Base
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
 
+  # Set by `bin/rails security:backfill_encryption` once every model/field it
+  # covers has been re-encrypted with zero failures. Read at boot (see
+  # ActiveRecordEncryptionConfig.backfill_completed?) to decide whether the
+  # legacy-plaintext fallback (support_unencrypted_data/extend_queries in
+  # config/initializers/active_record_encryption.rb) is still needed.
+  # Versioned rather than a plain boolean so that a *future* expansion of the
+  # backfill task's model coverage doesn't get silently skipped for installs
+  # that completed a backfill under an older, narrower version.
+  field :encryption_backfill_completed_version, type: :integer, default: 0
+
   BRAND_FETCH_LOGO_SIZE_STANDARD = 40
   BRAND_FETCH_LOGO_SIZE_HIGH_RES = 120
   # Matches both legacy single-segment URLs (`/apple.com/icon/...`) and
@@ -62,12 +72,19 @@ class Setting < RailsSettings::Base
     brand_fetch_high_res_logos ? BRAND_FETCH_LOGO_SIZE_HIGH_RES : BRAND_FETCH_LOGO_SIZE_STANDARD
   end
 
-  # Transforms a stored Brandfetch URL to use the current logo size setting
+  # Transforms a stored Brandfetch URL to use the current logo size and client
+  # id. Stored URLs keep the client id they were generated with, so without
+  # this a changed id in Self-Hosting settings would leave them broken.
   def self.transform_brand_fetch_url(url)
     return url unless url.present? && url.match?(BRAND_FETCH_URL_PATTERN)
 
     size = brand_fetch_logo_size
-    url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
+    url = url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
+
+    client_id = brand_fetch_client_id
+    return url if client_id.blank?
+
+    url.sub(/\?c=[^&]*/) { "?c=#{client_id}" }
   end
 
   def self.brand_fetch_icon_url(identifier, fallback: "lettermark", namespace: nil, width: nil, height: nil)
@@ -100,6 +117,7 @@ class Setting < RailsSettings::Base
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
   field :realie_api_key, type: :string, default: ENV["REALIE_API_KEY"]
   field :chimnie_api_key, type: :string, default: ENV["CHIMNIE_API_KEY"]
+  field :terrascoutx_api_key, type: :string, default: ENV["TERRASCOUTX_API_KEY"]
 
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
@@ -119,6 +137,7 @@ class Setting < RailsSettings::Base
       rentcast_api_key
       realie_api_key
       chimnie_api_key
+      terrascoutx_api_key
       openai_access_token
       anthropic_access_token
       jev_api_key
@@ -136,15 +155,51 @@ class Setting < RailsSettings::Base
       end
     end
 
+    # The settings key is derived from SECRET_KEY_BASE alone, so it is not
+    # covered by Active Record encryption's `previous` schemes. After a
+    # SECRET_KEY_BASE change, stored values only decrypt with the old value;
+    # the getters above would then return the ciphertext itself. This moves
+    # every value the old key decrypts to the current key. Values neither key
+    # decrypts are left alone: they are either plaintext from before
+    # encryption (still readable) or need to be re-entered.
+    def reencrypt_secrets_from(old_secret_key_base, dry_run: true)
+      raise ArgumentError, "old secret_key_base is blank" if old_secret_key_base.blank?
+
+      old_encryptor = build_setting_encryptor(old_secret_key_base)
+      stored = where(var: ENCRYPTED_FIELDS.map(&:to_s)).to_h { |row| [ row.var.to_sym, row.value ] }
+
+      transaction do
+        ENCRYPTED_FIELDS.index_with do |field_name|
+          value = stored[field_name]
+          next :not_stored if value.blank?
+          next :current unless try_decrypt(setting_encryptor, value).nil?
+
+          plaintext = try_decrypt(old_encryptor, value)
+          next :not_decryptable if plaintext.nil?
+          next :would_reencrypt if dry_run
+
+          public_send(:"#{field_name}=", plaintext)
+          :reencrypted
+        end
+      end
+    end
+
     private
 
       def setting_encryptor
-        @setting_encryptor ||= begin
-          key = ActiveSupport::KeyGenerator.new(
-            Rails.application.secret_key_base
-          ).generate_key("setting_encryption", 32)
-          ActiveSupport::MessageEncryptor.new(key)
-        end
+        @setting_encryptor ||= build_setting_encryptor(Rails.application.secret_key_base)
+      end
+
+      def build_setting_encryptor(secret_key_base)
+        key = ActiveSupport::KeyGenerator.new(secret_key_base).generate_key("setting_encryption", 32)
+        ActiveSupport::MessageEncryptor.new(key)
+      end
+
+      def try_decrypt(encryptor, value)
+        encryptor.decrypt_and_verify(value)
+      rescue ActiveSupport::MessageVerifier::InvalidSignature,
+             ActiveSupport::MessageEncryptor::InvalidMessage
+        nil
       end
 
       def encrypt_setting(value)
@@ -154,12 +209,10 @@ class Setting < RailsSettings::Base
 
       def decrypt_setting(value)
         return value if value.blank?
-        setting_encryptor.decrypt_and_verify(value)
-      rescue ActiveSupport::MessageVerifier::InvalidSignature,
-             ActiveSupport::MessageEncryptor::InvalidMessage
+
         # Value was stored before encryption was enabled — return as-is.
         # It will be re-encrypted on next write.
-        value
+        try_decrypt(setting_encryptor, value) || value
       end
   end
 
@@ -343,8 +396,9 @@ class Setting < RailsSettings::Base
     uri_base_value = uri_base.nil? ? openai_uri_base : uri_base
     model_value = model.nil? ? openai_model : model
 
-    # If custom URI base is set, model must also be set
-    if uri_base_value.present? && model_value.blank?
+    # If a custom URI base is set, model must also be set. OpenAI's own
+    # hosts (including regional ones) fall back to the default model.
+    if Provider::Openai.custom_endpoint?(uri_base_value) && model_value.blank?
       raise ValidationError, "OpenAI model is required when custom URI base is configured"
     end
   end

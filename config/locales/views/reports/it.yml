@@ -6,7 +6,6 @@ it:
       subtitle: Analisi approfondita della tua salute finanziaria
       export: Esporta CSV
       print_report: Stampa rapporto
-      toggle_section: "Mostra/nascondi sezione"
       periods:
         monthly: Mensile
         quarterly: Trimestrale
