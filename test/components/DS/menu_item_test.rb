@@ -21,6 +21,15 @@ class DS::MenuItemTest < ViewComponent::TestCase
     assert_selector "a[role='menuitemradio'][aria-checked='false']"
   end
 
+  test "a selectable action row is a plain button that keeps its check for a script to move" do
+    render_inline(DS::MenuItem.new(variant: :action, text: "By name", selected: false, roving: false, data: { action: "sort#set" }))
+
+    assert_selector "button[type='button'][aria-pressed='false'][data-action='sort#set']"
+    assert_no_selector "button[role]"
+    assert_selector "span[data-menu-item-check][style*='display:none'] svg", visible: :all
+    assert_no_selector "form"
+  end
+
   test "plain action item (selected: nil) renders no check gutter" do
     render_inline(DS::MenuItem.new(variant: :link, text: "Edit", href: "/", icon: "pencil-line"))
 

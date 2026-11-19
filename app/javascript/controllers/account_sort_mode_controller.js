@@ -80,8 +80,8 @@ export default class extends Controller {
     const order = this.orderValue;
     this.orderOptionTargets.forEach((option) => {
       const selected = option.dataset.order === order;
-      option.setAttribute("aria-checked", selected ? "true" : "false");
-      const check = option.querySelector("[data-check]");
+      option.setAttribute("aria-pressed", selected ? "true" : "false");
+      const check = option.querySelector("[data-menu-item-check]");
       if (check) check.style.display = selected ? "" : "none";
     });
     this.reorderItemTargets.forEach((item) => {

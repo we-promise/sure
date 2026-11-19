@@ -43,39 +43,33 @@
 
       <p class="px-2 pt-1 pb-0.5 text-xs font-medium text-secondary"><%= t("accounts.sidebar.settings.sort_by") %></p>
       <%# Sorting happens in place (account-sort-mode#setOrder) and is saved in
-          the background, so open groups stay open. Check marks and the
-          reorder item are shown with inline display for the same reason as
-          the sort-mode handles (precompiled CSS). %>
+          the background, so open groups stay open. The script moves the
+          check and shows the reorder item with inline display, for the same
+          reason as the sort-mode handles (precompiled CSS). %>
       <% %w[name_asc name_desc balance_desc balance_asc manual].each do |order_key| %>
-        <div class="px-1">
-          <button type="button"
-                  role="menuitemradio"
-                  aria-checked="<%= current_order == order_key %>"
-                  class="flex items-center gap-2 p-2 rounded-md w-full focus-ring hover:bg-container-hover"
-                  data-account-sort-mode-target="orderOption"
-                  data-order="<%= order_key %>"
-                  data-account-sort-mode-order-param="<%= order_key %>"
-                  data-action="account-sort-mode#setOrder DS--popover#close">
-            <span class="flex items-center justify-center w-5 h-5 shrink-0" aria-hidden="true">
-              <span data-check style="<%= "display:none" unless current_order == order_key %>"><%= icon("check") %></span>
-            </span>
-            <span class="text-sm text-primary"><%= t("accounts.sidebar.settings.orders.#{order_key}") %></span>
-          </button>
-        </div>
+        <%= render DS::MenuItem.new(
+          variant: :action,
+          text: t("accounts.sidebar.settings.orders.#{order_key}"),
+          selected: current_order == order_key,
+          roving: false,
+          data: {
+            account_sort_mode_target: "orderOption",
+            order: order_key,
+            account_sort_mode_order_param: order_key,
+            action: "account-sort-mode#setOrder DS--popover#close"
+          }
+        ) %>
       <% end %>
 
       <% if has_groups %>
-        <div class="px-1"
-             data-account-sort-mode-target="reorderItem"
-             style="<%= "display:none" unless current_order == "manual" %>">
-          <button type="button"
-                  class="flex items-center gap-2 p-2 rounded-md w-full focus-ring hover:bg-container-hover"
-                  data-action="account-sort-mode#start DS--popover#close">
-            <span class="w-5 shrink-0"></span>
-            <%= icon("grip-vertical") %>
-            <span class="text-sm text-primary"><%= t("accounts.sidebar.settings.reorder") %></span>
-          </button>
-        </div>
+        <%= render DS::MenuItem.new(
+          variant: :action,
+          text: t("accounts.sidebar.settings.reorder"),
+          icon: "grip-vertical",
+          roving: false,
+          style: ("display:none" unless current_order == "manual"),
+          data: { account_sort_mode_target: "reorderItem", action: "account-sort-mode#start DS--popover#close" }
+        ) %>
       <% end %>
 
       <%= render "shared/ruler", classes: "my-1" %>

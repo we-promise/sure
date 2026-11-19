@@ -7,7 +7,9 @@
     <%= wrapper do %>
       <% if selectable? %>
         <span class="flex items-center justify-center w-5 h-5 shrink-0" aria-hidden="true">
-          <% if selected %><%= helpers.icon("check", color: destructive? ? :destructive : :default) %><% end %>
+          <% if render_check? %>
+            <%= tag.span(helpers.icon("check", color: destructive? ? :destructive : :default), data: { menu_item_check: true }, style: ("display:none" unless selected)) %>
+          <% end %>
         </span>
       <% end %>
       <% if icon %>

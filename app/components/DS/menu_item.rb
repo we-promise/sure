@@ -1,5 +1,5 @@
 class DS::MenuItem < DesignSystemComponent
-  VARIANTS = %i[link button divider].freeze
+  VARIANTS = %i[link button action divider].freeze
 
   attr_reader :variant, :text, :description, :icon, :href, :method, :destructive, :confirm, :frame, :roving, :selected, :opts
 
@@ -8,6 +8,11 @@ class DS::MenuItem < DesignSystemComponent
   # `roving: false` omits both so items stay in the normal Tab order — required
   # inside `DS::Popover`, which has no roving handler and is not a `role="menu"`
   # container.
+  #
+  # `:action` renders a plain `<button type="button">` for rows handled in the
+  # browser (a Stimulus `data-action`), with no request. A selectable action
+  # row always renders its check (hidden unless selected) so a script can move
+  # it, and outside `DS::Menu` it announces its state with `aria-pressed`.
   def initialize(variant:, text: nil, description: nil, icon: nil, href: nil, method: :post, destructive: false, confirm: nil, frame: nil, roving: true, selected: nil, **opts)
     @variant = variant.to_sym
     @text = text
@@ -43,6 +48,8 @@ class DS::MenuItem < DesignSystemComponent
       button_to href, method: method, class: container_classes, **html_opts, **attrs, &block
     elsif variant == :link
       link_to href, class: container_classes, **html_opts, **attrs, &block
+    elsif variant == :action
+      content_tag :button, type: "button", class: container_classes, **html_opts, **attrs, &block
     else
       nil
     end
@@ -67,9 +74,17 @@ class DS::MenuItem < DesignSystemComponent
     !selected.nil?
   end
 
+  # Whether the check is drawn: always for a selectable action row (shown or
+  # hidden by a script), otherwise only for the selected row.
+  def render_check?
+    selected || (selectable? && variant == :action)
+  end
+
   private
     def menuitem_attrs
-      return {} unless roving
+      unless roving
+        return variant == :action && selectable? ? { aria: { pressed: selected ? "true" : "false" } } : {}
+      end
 
       # Selectable rows are a single-select group: announce selection state to AT
       # via menuitemradio + aria-checked, not only the visual check gutter.
