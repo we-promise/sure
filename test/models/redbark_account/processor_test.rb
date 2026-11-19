@@ -255,6 +255,113 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 0, result[:failed]
   end
 
+  test "transactions processor applies the matched Sure category" do
+    @family.categories.bootstrap!
+    account, ra = link(Depository, provider: "fiskil", balance: "100")
+
+    ra.update!(raw_transactions_payload: [
+      {
+        "id" => "tx_cat_1",
+        "status" => "posted",
+        "date" => Date.current.to_s,
+        "description" => "WOOLWORTHS SYDNEY",
+        "amount" => "-45.00",
+        "direction" => "debit",
+        "merchantName" => "Woolworths",
+        "category" => "FOOD_AND_DRINK"
+      }
+    ])
+
+    RedbarkAccount::Transactions::Processor.new(ra).process
+
+    entry = account.entries.find_by(external_id: "redbark_tx_cat_1", source: "redbark")
+    assert_equal "Food & Drink", entry.transaction.category&.name
+  end
+
+  test "transactions processor falls back to merchant_category_code when category is unmapped" do
+    @family.categories.bootstrap!
+    account, ra = link(Depository, provider: "fiskil", balance: "100")
+
+    ra.update!(raw_transactions_payload: [
+      {
+        "id" => "tx_cat_mcc",
+        "status" => "posted",
+        "date" => Date.current.to_s,
+        "description" => "WOOLWORTHS SYDNEY",
+        "amount" => "-45.00",
+        "direction" => "debit",
+        "merchantName" => "Woolworths",
+        "category" => "MERCHANDISE", # intentionally unmapped by category code alone
+        "merchantCategoryCode" => "5411" # supermarkets -> Groceries
+      }
+    ])
+
+    RedbarkAccount::Transactions::Processor.new(ra).process
+
+    entry = account.entries.find_by(external_id: "redbark_tx_cat_mcc", source: "redbark")
+    assert_equal "Groceries", entry.transaction.category&.name
+  end
+
+  # The PR claims a category the user set or locked survives a re-import. enrich_attribute
+  # respects locked_attributes, so a re-sync of the same transaction must leave it alone.
+  test "transactions processor does not overwrite a locked category on re-import" do
+    @family.categories.bootstrap!
+    account, ra = link(Depository, provider: "fiskil", balance: "100")
+
+    payload = [
+      {
+        "id" => "tx_cat_locked",
+        "status" => "posted",
+        "date" => Date.current.to_s,
+        "description" => "WOOLWORTHS SYDNEY",
+        "amount" => "-45.00",
+        "direction" => "debit",
+        "merchant" => "Woolworths",
+        "category" => "FOOD_AND_DRINK"
+      }
+    ]
+
+    ra.update!(raw_transactions_payload: payload)
+    RedbarkAccount::Transactions::Processor.new(ra).process
+
+    entry = account.entries.find_by(external_id: "redbark_tx_cat_locked", source: "redbark")
+    chosen = @family.categories.find_by(name: "Entertainment")
+    entry.transaction.update!(category: chosen)
+    entry.transaction.lock_attr!(:category_id)
+
+    ra.update!(raw_transactions_payload: payload)
+    RedbarkAccount::Transactions::Processor.new(ra).process
+
+    assert_equal "Entertainment", entry.transaction.reload.category&.name,
+      "a locked category must survive a Redbark re-import"
+  end
+
+  test "transactions processor skips category matching when the account has the matcher switched off" do
+    @family.categories.bootstrap!
+    account, ra = link(Depository, provider: "fiskil", balance: "100")
+    account.update!(enable_category_matcher: false)
+
+    ra.update!(raw_transactions_payload: [
+      {
+        "id" => "tx_cat_2",
+        "status" => "posted",
+        "date" => Date.current.to_s,
+        "description" => "WOOLWORTHS SYDNEY",
+        "amount" => "-45.00",
+        "direction" => "debit",
+        "merchantName" => "Woolworths",
+        "category" => "FOOD_AND_DRINK"
+      }
+    ])
+
+    RedbarkAccount::Transactions::Processor.new(ra).process
+
+    entry = account.entries.find_by(external_id: "redbark_tx_cat_2", source: "redbark")
+    assert_nil entry.transaction.category_id
+    # Still imported, still carries the raw category - only the auto-category is withheld.
+    assert_equal "FOOD_AND_DRINK", entry.transaction.extra.dig("redbark", "category")
+  end
+
   test "transactions processor returns empty result when no transactions" do
     _, ra = link(Depository, provider: "fiskil", balance: "100")
     ra.update!(raw_transactions_payload: [])
@@ -263,6 +370,41 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
 
     assert result[:success]
     assert_equal 0, result[:total]
+  end
+
+  test "partial transaction import still records the provider reading without reusing the old anchor" do
+    Account.any_instance.stubs(:sync_later)
+    account, ra = link(Depository, provider: "fiskil", balance: "600")
+    day_one = Date.current - 1.day
+    ra.update!(raw_transactions_payload: [ { "id" => "tx_partial", "amount" => "-400.00", "date" => Date.current.to_s } ])
+
+    travel_to day_one do
+      account.entries.create!(
+        date: day_one,
+        name: "Late outflow",
+        amount: 400,
+        currency: @currency,
+        entryable: Transaction.new
+      )
+      account.set_current_balance(1000, schedule_sync: false)
+    end
+
+    RedbarkAccount::Transactions::Processor.any_instance.stubs(:process).returns(
+      { success: false, total: 1, imported: 0, skipped: 0, failed: 1, errors: [] }
+    )
+
+    RedbarkAccount::Processor.new(ra).process
+
+    assert_equal BigDecimal("600"), account.reload.balance
+    anchors = account.valuations.current_anchor
+    assert_equal 1, anchors.count
+    assert_equal BigDecimal("600"), anchors.first.entry.amount
+    assert_equal Date.current, anchors.first.entry.date
+
+    preserved = account.valuations.reconciliation.first
+    assert_not_nil preserved
+    assert_equal BigDecimal("1000"), preserved.entry.amount
+    assert_equal day_one, preserved.entry.date
   end
 
   private

@@ -1,0 +1,33 @@
+---
+en:
+  ai:
+    availability:
+      capability_missing:
+        admin: "%{feature} is unavailable: none of the configured AI models can do it. Check the models in Settings → Self-Hosting."
+        member: "%{feature} is unavailable: none of the configured AI models can do it."
+      not_configured:
+        admin: "%{feature} is unavailable: no AI model is set up for it. Add one in Settings → Self-Hosting."
+        member: "%{feature} is unavailable: AI isn't set up for it on this instance."
+      user_disabled:
+        member: "%{feature} needs AI turned on. You can turn it on from the AI assistant."
+    consent_rows:
+      bill_setup: Bills
+      categorize: Categories
+      chat: Chat
+      detect_merchants: Merchants
+      embed: Documents
+      extract_pdf: PDF import
+    sends:
+      bill_configuration: The bill's current settings
+      category_names: Your category names
+      chat_messages: Your chat messages
+      depends_on_vector_store: Your uploaded documents, as whole files to a vector store or as text chunks to an embedding model
+      looked_up_financial_data: The financial data the assistant looks up to answer
+      merchant_names: Merchant names
+      provider_category_hints: Categories your bank suggests
+      search_query: Your search text
+      stored_document_text: The text of statements stored in your vault
+      transaction_amounts: Transaction amounts
+      transaction_dates: Transaction dates
+      transaction_names: Transaction names
+      uploaded_document: The document you upload

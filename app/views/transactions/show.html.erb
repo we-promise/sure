@@ -232,7 +232,7 @@
       <% dialog.with_section(title: t("splits.show.title"), open: true) do %>
         <div class="px-3 py-2 space-y-2">
           <p class="text-xs text-secondary"><%= t("splits.show.description") %></p>
-          <% @entry.child_entries.includes(:entryable).each do |child| %>
+          <% @entry.child_entries.in_split_order.includes(:entryable).each do |child| %>
             <div class="flex items-center justify-between p-2 rounded-lg border border-primary">
               <div>
                 <p class="text-sm font-medium text-primary"><%= child.name %></p>

@@ -1,0 +1,21 @@
+<%# locals: (lot:, editable:) %>
+
+<span class="text-secondary">
+  <%= lot.opening? ? t("holdings.lots.opening") : l(lot.acquired_on, format: :long) %>
+  &middot;
+  <span class="privacy-sensitive"><%= t("holdings.holding.shares", qty: format_quantity(lot.qty, exact: true)) %></span>
+</span>
+<span class="text-primary flex items-center gap-1">
+  <span class="privacy-sensitive">
+    <%= lot.unit_cost ? t("holdings.lots.per_unit", amount: format_money(Money.new(lot.unit_cost, lot.currency))) : t("holdings.lots.unknown") %>
+  </span>
+  <% if lot.manual_cost? %>
+    <%= icon "lock", size: "xs", class: "text-secondary" %>
+  <% end %>
+  <% if editable %>
+    <%# Unnamed group-open: matches ANY open ancestor disclosure (the
+        Overview panel itself); follow the component's own chevron
+        idiom so the pencil lights with THIS row's details only. %>
+    <%= icon "pencil", size: "xs", class: "text-secondary [details[open]>summary_&]:text-primary" %>
+  <% end %>
+</span>

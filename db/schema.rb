@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -103,6 +103,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.decimal "balance", precision: 19, scale: 4
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
     t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
+    t.string "cost_basis_method", default: "average", null: false
     t.datetime "created_at", null: false
     t.string "currency"
     t.datetime "disabled_at"
@@ -136,6 +137,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.index ["plaid_account_id"], name: "index_accounts_on_plaid_account_id"
     t.index ["simplefin_account_id"], name: "index_accounts_on_simplefin_account_id"
     t.index ["status"], name: "index_accounts_on_status"
+    t.check_constraint "cost_basis_method::text = ANY (ARRAY['average'::character varying, 'fifo'::character varying]::text[])", name: "accounts_cost_basis_method_known"
   end
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -654,6 +656,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.uuid "enable_banking_item_id", null: false
     t.string "iban"
     t.jsonb "identification_hashes", default: []
+    t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
     t.string "name"
     t.string "product"
@@ -843,7 +846,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.datetime "updated_at", null: false
     t.index ["from_currency", "to_currency", "date"], name: "index_exchange_rates_on_base_converted_date_unique", unique: true
     t.index ["from_currency"], name: "index_exchange_rates_on_from_currency"
-    t.index ["to_currency"], name: "index_exchange_rates_on_to_currency"
+    t.index ["to_currency", "updated_at"], name: "index_exchange_rates_on_to_currency_and_updated_at"
+    t.index ["updated_at"], name: "index_exchange_rates_on_updated_at"
     t.check_constraint "rate > 0::numeric AND rate <> 'NaN'::numeric AND rate::text <> 'Infinity'::text", name: "chk_exchange_rates_rate_positive"
   end
 
@@ -1189,6 +1193,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying::text, 'months_of_expenses'::character varying::text])", name: "chk_goals_target_mode_enum"
   end
 
+  create_table "holding_lot_disposals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.uuid "lot_source_entry_id"
+    t.decimal "qty", precision: 34, scale: 18, null: false
+    t.uuid "sale_entry_id", null: false
+    t.decimal "unit_cost", precision: 25, scale: 10
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_holding_lot_disposals_on_account_id"
+    t.index ["lot_source_entry_id"], name: "index_holding_lot_disposals_on_lot_source_entry_id"
+    t.index ["sale_entry_id"], name: "index_holding_lot_disposals_on_sale_entry_id"
+    t.check_constraint "qty > 0::numeric", name: "holding_lot_disposals_qty_positive"
+  end
+
+  create_table "holding_lots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.date "acquired_on"
+    t.boolean "clamped", default: false, null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "manual_total_cost", precision: 19, scale: 4
+    t.uuid "origin_security_id"
+    t.decimal "qty", precision: 34, scale: 18, null: false
+    t.uuid "security_id", null: false
+    t.uuid "source_entry_id"
+    t.decimal "unit_cost", precision: 25, scale: 10
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "security_id"], name: "index_holding_lots_one_opening_lot_per_position", unique: true, where: "(source_entry_id IS NULL)"
+    t.index ["account_id", "source_entry_id"], name: "index_holding_lots_on_account_id_and_source_entry_id", unique: true
+    t.index ["origin_security_id"], name: "index_holding_lots_on_origin_security_id"
+    t.index ["security_id"], name: "index_holding_lots_on_security_id"
+    t.index ["source_entry_id"], name: "index_holding_lots_on_source_entry_id"
+    t.check_constraint "manual_total_cost >= 0::numeric", name: "holding_lots_manual_total_cost_non_negative"
+    t.check_constraint "qty >= 0::numeric", name: "holding_lots_qty_non_negative"
+  end
+
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "account_provider_id"
@@ -1433,6 +1474,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.datetime "created_at", null: false
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4
+    t.boolean "ignored", default: false, null: false
     t.string "indexa_capital_account_id"
     t.string "indexa_capital_authorization_id"
     t.uuid "indexa_capital_item_id", null: false
@@ -1577,6 +1619,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   create_table "llm_usages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.integer "cache_creation_tokens"
     t.integer "cache_read_tokens"
+    t.uuid "call_id"
     t.integer "completion_tokens", default: 0, null: false
     t.datetime "created_at", null: false
     t.decimal "estimated_cost", precision: 10, scale: 6
@@ -1586,13 +1629,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.string "operation", null: false
     t.integer "prompt_tokens", default: 0, null: false
     t.string "provider", null: false
+    t.string "status", default: "succeeded", null: false
     t.integer "total_tokens", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.index ["call_id"], name: "index_llm_usages_on_call_id"
     t.index ["family_id", "created_at"], name: "index_llm_usages_on_family_id_and_created_at"
     t.index ["family_id", "operation"], name: "index_llm_usages_on_family_id_and_operation"
     t.index ["family_id"], name: "index_llm_usages_on_family_id"
     t.check_constraint "cache_creation_tokens IS NULL OR cache_creation_tokens >= 0", name: "chk_llm_usages_cache_creation_tokens_non_negative"
     t.check_constraint "cache_read_tokens IS NULL OR cache_read_tokens >= 0", name: "chk_llm_usages_cache_read_tokens_non_negative"
+    t.check_constraint "status::text = ANY (ARRAY['succeeded'::character varying, 'failed'::character varying, 'cancelled'::character varying]::text[])", name: "chk_llm_usages_status"
   end
 
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1604,6 +1650,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.string "insurance_rate_type"
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
+    t.boolean "principal_only_transfers", default: false, null: false
     t.string "rate_type"
     t.date "start_date"
     t.string "subtype"
@@ -1979,7 +2026,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying, 'terrascoutx'::character varying]::text[]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2719,6 +2766,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.jsonb "data"
     t.string "error"
     t.datetime "failed_at"
+    t.boolean "full_resync_requested", default: false, null: false
     t.uuid "parent_id"
     t.datetime "pending_at"
     t.string "status", default: "pending"
@@ -2818,12 +2866,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.decimal "fee", precision: 19, scale: 4, default: "0.0", null: false
     t.string "investment_activity_label"
     t.jsonb "locked_attributes", default: {}
+    t.uuid "lot_source_entry_id"
     t.decimal "price", precision: 19, scale: 10
     t.decimal "qty", precision: 34, scale: 18
     t.uuid "security_id", null: false
     t.datetime "updated_at", null: false
     t.index ["extra"], name: "index_trades_on_extra", using: :gin
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
+    t.index ["lot_source_entry_id"], name: "index_trades_on_lot_source_entry_id"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -2873,6 +2923,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.string "kind", default: "standard", null: false
     t.jsonb "locked_attributes", default: {}
     t.uuid "merchant_id"
+    t.string "provider_entry_reference"
     t.uuid "transfer_id"
     t.datetime "updated_at", null: false
     t.index "(((extra -> 'goal'::text) ->> 'pledge_id'::text))", name: "ix_transactions_extra_goal_pledge_id", unique: true, where: "(((extra -> 'goal'::text) ->> 'pledge_id'::text) IS NOT NULL)"
@@ -3070,6 +3121,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
+  create_table "weekly_cleanup_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.date "period_start", null: false
+    t.jsonb "summary", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["family_id", "user_id", "period_start"], name: "idx_weekly_cleanup_runs_dedup", unique: true
+    t.index ["family_id"], name: "index_weekly_cleanup_runs_on_family_id"
+    t.index ["user_id"], name: "index_weekly_cleanup_runs_on_user_id"
+  end
+
   create_table "wise_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "balance_id", null: false
     t.datetime "created_at", null: false
@@ -3187,6 +3250,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "transactions", column: "matched_transaction_id", on_delete: :nullify
   add_foreign_key "goals", "families", on_delete: :cascade
+  add_foreign_key "holding_lot_disposals", "accounts", on_delete: :cascade
+  add_foreign_key "holding_lot_disposals", "entries", column: "lot_source_entry_id", on_delete: :nullify
+  add_foreign_key "holding_lot_disposals", "entries", column: "sale_entry_id", on_delete: :cascade
+  add_foreign_key "holding_lots", "accounts", on_delete: :cascade
+  add_foreign_key "holding_lots", "entries", column: "source_entry_id", on_delete: :cascade
+  add_foreign_key "holding_lots", "securities", column: "origin_security_id", on_delete: :nullify
+  add_foreign_key "holding_lots", "securities", on_delete: :cascade
   add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"
@@ -3284,6 +3354,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "trade_republic_accounts", "trade_republic_items"
   add_foreign_key "trade_republic_items", "families"
+  add_foreign_key "trades", "entries", column: "lot_source_entry_id", on_delete: :nullify
   add_foreign_key "trades", "securities"
   add_foreign_key "trading212_accounts", "trading212_items"
   add_foreign_key "trading212_items", "families"
@@ -3302,4 +3373,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
   add_foreign_key "wise_items", "families"
+  add_foreign_key "weekly_cleanup_runs", "families", on_delete: :cascade
+  add_foreign_key "weekly_cleanup_runs", "users", on_delete: :cascade
 end

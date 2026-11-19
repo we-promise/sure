@@ -190,6 +190,8 @@ en:
       confirm_button: Reset Cache
       success: AI cache is being cleared. This may take a few moments.
     condition_filters:
+      transaction_additional_detail:
+        label: Additional details (key=value)
       transaction_type:
         income: Income
         expense: Expense

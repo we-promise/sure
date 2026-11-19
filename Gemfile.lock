@@ -80,7 +80,7 @@ GEM
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
       uri (>= 0.13.1)
-    addressable (2.9.0)
+    addressable (2.9.1)
       public_suffix (>= 2.0.2, < 8.0)
     aes_key_wrap (1.1.0)
     afm (1.0.0)
@@ -442,7 +442,7 @@ GEM
     minitest-mock (5.27.0)
     mocha (2.7.1)
       ruby2_keywords (>= 0.0.5)
-    msgpack (1.8.2)
+    msgpack (1.8.7)
     multi_json (1.20.1)
     multi_xml (0.9.1)
       bigdecimal (>= 3.1, < 5)
@@ -771,12 +771,23 @@ GEM
       ffi (~> 1.12)
       logger
     ruby2_keywords (0.0.5)
+    ruby_llm (2.1.1)
+      base64
+      faraday (>= 1.10.0, != 2.0.0)
+      faraday-multipart (>= 1)
+      faraday-net_http (>= 1)
+      faraday-retry (>= 1)
+      json (< 4)
+      marcel (>= 1.0, < 3)
+      schematist (~> 1.1)
+      zeitwerk (~> 2)
     rubyzip (3.4.0)
     safety_net_attestation (0.5.0)
       jwt (>= 2.0, < 4.0)
     sawyer (0.9.2)
       addressable (>= 2.3.5)
       faraday (>= 0.17.3, < 3)
+    schematist (1.1.0)
     securerandom (0.4.1)
     selenium-webdriver (4.49.0)
       base64 (~> 0.2)
@@ -799,7 +810,7 @@ GEM
       logger (>= 1.6.2)
       rack (>= 3.1.0)
       redis-client (>= 0.23.2)
-    sidekiq-cron (2.3.0)
+    sidekiq-cron (2.4.0)
       cronex (>= 0.13.0)
       fugit (~> 1.8, >= 1.11.1)
       globalid (>= 1.0.1)
@@ -1004,6 +1015,7 @@ DEPENDENCIES
   rubocop-rails-omakase
   ruby-lsp-rails
   ruby-openai
+  ruby_llm (~> 2.1)
   rubyzip (~> 3.4)
   selenium-webdriver
   sentry-rails
