@@ -102,6 +102,44 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal Date.new(2029, 8, 31), card.expiration_date
   end
 
+  test "round trips vehicle details through full export" do
+    source_family = Family.create!(name: "Source Vehicle Family", currency: "EUR", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Round Trip Car",
+      balance: 18_500,
+      currency: "EUR",
+      accountable: Vehicle.new(subtype: "car", make: "Toyota", model: "Camry", year: 2024, mileage_value: 15_000, mileage_unit: "km")
+    )
+
+    Family::DataImporter.new(@family, full_export_ndjson(source_family)).import!
+
+    vehicle = @family.accounts.find_by!(name: "Round Trip Car").accountable
+    assert_equal "car", vehicle.subtype
+    assert_equal "Toyota", vehicle.make
+    assert_equal "Camry", vehicle.model
+    assert_equal 2024, vehicle.year
+    assert_equal 15_000, vehicle.mileage_value
+    assert_equal "km", vehicle.mileage_unit
+  end
+
+  test "imports vehicles from an export without their details or with null details" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-car", name: "Old Car", balance: "5000", currency: "USD", accountable_type: "Vehicle", accountable: { subtype: "car" } } },
+      { type: "Account", data: { id: "null-car", name: "Null Car", balance: "5000", currency: "USD", accountable_type: "Vehicle",
+                                 accountable: { subtype: "car", make: nil, model: nil, year: nil, mileage_value: nil, mileage_unit: nil } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    [ "Old Car", "Null Car" ].each do |name|
+      vehicle = @family.accounts.find_by!(name: name).accountable
+      assert_nil vehicle.make
+      assert_nil vehicle.year
+      assert_nil vehicle.mileage_value
+      assert_equal "mi", vehicle.mileage_unit
+    end
+  end
+
   test "imports loans and credit cards from an export without their details" do
     ndjson = build_ndjson([
       { type: "Account", data: { id: "old-loan", name: "Old Loan", balance: "1000", currency: "USD", subtype: "auto", accountable_type: "Loan", accountable: { subtype: "auto" } } },
@@ -120,6 +158,30 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     card = @family.accounts.find_by!(name: "Old Card").accountable
     assert_nil card.apr
     assert_nil card.due_day
+  end
+
+  test "keeps the nested accountable subtype when the account has no top-level subtype" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "a1", name: "Nested", balance: "0", currency: "USD", accountable_type: "Depository", accountable: { subtype: "savings" } } },
+      { type: "Account", data: { id: "a2", name: "Both", balance: "0", currency: "USD", accountable_type: "Depository", subtype: "savings", accountable: { subtype: "checking" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal "savings", @family.accounts.find_by!(name: "Nested").accountable.subtype
+    assert_equal "checking", @family.accounts.find_by!(name: "Both").accountable.subtype
+  end
+
+  test "does not store a blank nested accountable subtype" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "a1", name: "Blank Nested", balance: "0", currency: "USD", accountable_type: "Depository", accountable: { subtype: "" } } },
+      { type: "Account", data: { id: "a2", name: "Blank Nested With Top Level", balance: "0", currency: "USD", subtype: "savings", accountable_type: "Depository", accountable: { subtype: "" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_nil @family.accounts.find_by!(name: "Blank Nested").accountable.subtype
+    assert_equal "savings", @family.accounts.find_by!(name: "Blank Nested With Top Level").accountable.subtype
   end
 
   test "imports a loan whose detail columns are null in the export" do
@@ -2436,7 +2498,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
   test "imports rules in their exported run order after existing rules" do
     existing = @family.rules.create!(resource_type: "transaction",
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
-    rule_record = ->(name, position, stop_processing) do
+    rule_record = ->(name, position, stop_processing, apply_immediately) do
       {
         type: "Rule",
         version: 1,
@@ -2446,12 +2508,13 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           active: true,
           position: position,
           stop_processing: stop_processing,
+          apply_immediately: apply_immediately,
           conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
           actions: [ { action_type: "exclude_transaction" } ]
         }
       }
     end
-    ndjson = build_ndjson([ rule_record.call("Second", 2, false), rule_record.call("First", 1, true) ])
+    ndjson = build_ndjson([ rule_record.call("Second", 2, false, true), rule_record.call("First", 1, true, false) ])
 
     Family::DataImporter.new(@family, ndjson).import!
 
@@ -2459,6 +2522,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       @family.rules.ordered.pluck(:id).last(3)
     assert @family.rules.find_by(name: "First").stop_processing
     assert_not @family.rules.find_by(name: "Second").stop_processing
+    assert_not @family.rules.find_by(name: "First").apply_immediately
+    assert @family.rules.find_by(name: "Second").apply_immediately
   end
 
   test "imports rule groups by name and keeps each group in one block" do
@@ -2953,6 +3018,31 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal [ "set_transaction_name" ], rule.actions.map(&:action_type)
     assert_equal [ "other-old" ], other_rule.reload.conditions.map(&:value)
     assert_equal [ "auto_categorize" ], other_rule.actions.map(&:action_type)
+  end
+
+  test "session rule reimport keeps apply immediately when the export predates it" do
+    rule = @family.rules.create!(name: "Immediate Rule", resource_type: "transaction", active: true, apply_immediately: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.source_mappings.create!(family: @family, source_type: "Rule", source_id: "rule-1", target: rule)
+
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          id: "rule-1",
+          name: "Immediate Rule",
+          resource_type: "transaction",
+          active: true,
+          actions: [ { action_type: "exclude_transaction" } ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert rule.reload.apply_immediately
   end
 
   test "imports rules from normalized operand value refs" do

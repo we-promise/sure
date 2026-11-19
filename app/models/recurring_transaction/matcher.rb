@@ -114,10 +114,15 @@ class RecurringTransaction
         written = 0
 
         # Highest confidence claims first; each entry and occurrence is assigned
-        # at most once per run. The id tiebreak only makes equally confident
+        # at most once per run. A split child whose parent is also a candidate
+        # waits until every other candidate had its turn: the parent claims its
+        # bill as if the split came after matching, and the Allocator then
+        # refuses the child. The id tiebreak only makes equally confident
         # candidates resolve deterministically, since sort_by is not stable.
+        candidate_entry_ids = candidates.to_set { |candidate| candidate.entry.id }
         ordered = candidates.sort_by do |candidate|
-          [ -candidate.confidence, candidate.occurrence.id, candidate.entry.id ]
+          parent_competes = candidate_entry_ids.include?(candidate.entry.parent_entry_id)
+          [ parent_competes ? 1 : 0, -candidate.confidence, candidate.occurrence.id, candidate.entry.id ]
         end
 
         ordered.each do |candidate|
@@ -128,7 +133,8 @@ class RecurringTransaction
           next if tier.nil?
           next if tier == :high && !suggest
 
-          write_allocation(candidate, tier)
+          next unless write_allocation(candidate, tier)
+
           taken_entries << candidate.entry.id
           taken_occurrences << candidate.occurrence.id
           written += 1
@@ -164,21 +170,26 @@ class RecurringTransaction
         runner_up.nil? || candidate.confidence - runner_up.confidence >= AMBIGUITY_MARGIN
       end
 
+      # False when the occurrence should stay open to the next candidate.
       def write_allocation(candidate, tier)
-        occurrence = candidate.occurrence
-        entry = candidate.entry
-
-        Allocator.new(occurrence).allocate_matched!(
-          entry: entry,
+        Allocator.new(candidate.occurrence).allocate_matched!(
+          entry: candidate.entry,
           state: tier == :exact ? "confirmed" : "suggested",
           confidence: candidate.confidence,
           signals: candidate.signals
         )
+        true
+      rescue Allocator::SplitCounterpartAllocatedError
+        # The other side of this split already pays a bill, so this entry is
+        # not money the occurrence can have. Another charge still can.
+        false
       rescue ActiveRecord::RecordNotUnique
         # Already allocated (a previous run wrote it); nothing to do.
+        true
       rescue Allocator::OverAllocationError
         # Another occurrence already claimed the entry's capacity. Skip the
         # candidate rather than aborting the run.
+        true
       end
 
       # The hard filters depend on the series and the entry, not the individual
@@ -252,7 +263,8 @@ class RecurringTransaction
 
       # One query over the envelope of every open occurrence's window.
       # Transfer legs are left out, except the outflow side of a transfer that
-      # a recurring transfer series could be paid by.
+      # a recurring transfer series could be paid by. A split charge stays in:
+      # its parent is excluded by the split, not by the user, and is the payment.
       def entries_for(occurrences, include_closed_window)
         window_min = occurrences.map { |occurrence| window_for(occurrence).begin }.min
         window_max = occurrences.map { |occurrence| window_for(occurrence).end }.max
@@ -264,7 +276,7 @@ class RecurringTransaction
         family.entries
               .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
               .where(entryable_type: "Transaction")
-              .where(excluded: false)
+              .not_excluded_or_split_parent
               .where(date: window_min..window_max)
               .where("transactions.kind NOT IN (?) OR transactions.id IN (?)", Transaction::TRANSFER_KINDS, transfer_destinations.keys)
               .where.not(id: RecurringAllocation.where.not(entry_id: nil).where(state: "confirmed").select(:entry_id))
