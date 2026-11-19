@@ -257,6 +257,26 @@ class RevolutXAccount::TransactionsProcessorTest < ActiveSupport::TestCase
     assert_operator entry("revolut_x_b1").created_at, :<, entry("revolut_x_s1").created_at
   end
 
+  test "a same-day trade after a pending trade waits, so the pending one is written first" do
+    send_pending = tx("o1", "send", status: "pending", source: leg("0.5", "BTC"), destination: leg("0.5", "BTC", "external_crypto_wallet"))
+    earlier = tx("b0", "buy", source: leg("500", "USD"), destination: leg("0.01", "BTC"), created_ms: CREATED_MS - 60_000)
+    buy = tx("b1", "buy", source: leg("30000", "USD"), destination: leg("0.5", "BTC"), created_ms: CREATED_MS + 60_000)
+    fiat = tx("f1", "receive", source: leg("50", "USD", "revolut"), destination: leg("50", "USD"), created_ms: CREATED_MS + 120_000)
+    next_day = tx("n1", "buy", source: leg("1000", "USD"), destination: leg("0.01", "BTC"), created_ms: CREATED_MS + 86_400_000)
+
+    process send_pending, earlier, buy, fiat, next_day
+
+    assert entry("revolut_x_b0"), "a trade before the pending one is written"
+    assert entry("revolut_x_f1"), "a fiat-only row is not held back"
+    assert entry("revolut_x_n1"), "another day is not held back"
+    assert_nil entry("revolut_x_o1")
+    assert_nil entry("revolut_x_b1")
+
+    process send_pending.merge("status" => "completed"), earlier, buy, fiat, next_day
+
+    assert_operator entry("revolut_x_o1").created_at, :<, entry("revolut_x_b1").created_at
+  end
+
   test "the spec's paginated example end to end" do
     payload = JSON.parse(file_fixture("revolut_x/transactions.json").read)
     store(payload["data"])
