@@ -97,6 +97,11 @@ pl:
     set_default:
       depository_only: Tylko konta gotówkowe i karty kredytowe mogą być ustawione
         jako domyślne.
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): poniżej zera od %{date}, najniżej %{qty}."
+        hint: "Prawdopodobnie brakuje zakupu lub przeniesienia. Dodaj je albo popraw transakcje, które sprowadziły pozycję poniżej zera."
+        message: "Niektóre pozycje spadły poniżej zera"
     show:
       activity:
         amount: Kwota

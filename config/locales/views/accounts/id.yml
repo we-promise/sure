@@ -81,6 +81,11 @@ id:
         manual_entry: Masukkan saldo rekening
         title: Bagaimana Anda ingin menambahkannya?
       title: Apa yang ingin Anda tambahkan?
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): di bawah nol sejak %{date}, terendah %{qty}."
+        hint: Kemungkinan ada pembelian atau transfer yang belum dicatat. Tambahkan, atau perbaiki transaksi yang membuat posisi di bawah nol.
+        message: Beberapa posisi berada di bawah nol
     show:
       limited_fx_history_warning: "Riwayat kurs valas hanya tersedia mulai %{date} dan seterusnya. Transaksi sebelum tanggal ini menggunakan konversi mata uang perkiraan — hal ini dapat terjadi ketika penyedia valas hanya menyediakan rentang data historis yang terbatas."
       tabs:

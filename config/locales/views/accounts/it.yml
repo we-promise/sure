@@ -73,6 +73,11 @@ it:
         manual_entry: Inserisci saldo conto
         title: Come vuoi aggiungerlo?
       title: Cosa vuoi aggiungere?
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): sotto zero dal %{date}, minimo %{qty}."
+        hint: "Probabilmente manca un acquisto o un trasferimento. Aggiungilo o correggi le operazioni che hanno portato la posizione sotto zero."
+        message: "Alcune posizioni sono scese sotto zero"
     show:
       limited_fx_history_warning: "La cronologia dei tassi di cambio è disponibile solo dal %{date} in poi. Le transazioni precedenti a questa data usano conversioni valutarie approssimate — questo può accadere quando il provider FX offre solo una finestra storica limitata."
       tabs:

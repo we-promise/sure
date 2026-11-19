@@ -32,6 +32,11 @@ nb:
         manual_entry: Angi kontobalanse
         title: Hvordan vil du legge den til?
       title: Hva vil du legge til?
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): under null fra %{date}, lavest %{qty}."
+        hint: "Sannsynligvis mangler et kjøp eller en overføring. Legg det til, eller rett transaksjonene som tok beholdningen under null."
+        message: "Noen beholdninger gikk under null"
     show:
       activity:
         amount: Beløp

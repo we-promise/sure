@@ -145,11 +145,13 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
-  # The below-zero warning speaks wherever the holdings tab is translated.
+  # The below-zero status speaks wherever the holdings tab is translated.
   def test_negative_position_keys_exist_wherever_the_holdings_tab_is_translated
     {
       "holdings.index.new_holding" => %w[
-        holdings.index.negative_position holdings.index.negative_positions_hint holdings.index.negative_positions_title
+        accounts.health_status.negative_positions.detail
+        accounts.health_status.negative_positions.hint
+        accounts.health_status.negative_positions.message
       ]
     }.each do |sibling, keys|
       locales = I18n.available_locales.select { |locale| I18n.t(sibling, locale: locale, fallback: false, default: nil) }

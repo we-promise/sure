@@ -96,6 +96,11 @@ tr:
       title: Bağlamak için bir sağlayıcı seçin
     set_default:
       depository_only: Yalnızca nakit ve kredi kartı hesapları varsayılan olarak ayarlanabilir.
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): %{date} tarihinden beri sıfırın altında, en düşük %{qty}."
+        hint: "Muhtemelen bir alım veya transfer eksik. Ekleyin ya da pozisyonu sıfırın altına düşüren işlemleri düzeltin."
+        message: "Bazı pozisyonlar sıfırın altına düştü"
     show:
       activity:
         amount: Tutar

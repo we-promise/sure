@@ -1,0 +1,15 @@
+<div class="px-3 space-y-2" data-testid="account-health-status">
+  <% issues.each do |issue| %>
+    <%= render DS::Alert.new(title: issue.message, variant: issue.severity) do %>
+      <% issue.details.each do |detail| %>
+        <p class="privacy-sensitive"><%= detail %></p>
+      <% end %>
+      <% if issue.hint %>
+        <p class="text-secondary"><%= issue.hint %></p>
+      <% end %>
+      <% if issue.link %>
+        <p><%= render DS::Link.new(text: issue.link[:text], href: issue.link[:href], variant: :default, frame: :_top) %></p>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

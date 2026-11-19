@@ -34,6 +34,11 @@ ro:
         manual_entry: Introdu soldul contului
         title: Cum dorești să adaugi?
       title: Ce dorești să adaugi?
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): sub zero din %{date}, minim %{qty}."
+        hint: "Probabil lipsește o cumpărare sau un transfer. Adaug-o sau corectează tranzacțiile care au adus poziția sub zero."
+        message: "Unele poziții au scăzut sub zero"
     show:
       activity:
         amount: Sumă
