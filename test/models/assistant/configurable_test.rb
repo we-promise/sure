@@ -20,6 +20,7 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
   end
 
   test "unverified users keep chat without financial tools or account context" do
+    EmailVerification.stubs(:enforced?).returns(true)
     chat = chats(:one)
     chat.user.update!(email_verified_at: nil)
     account_name = chat.user.accessible_accounts.visible.first.name

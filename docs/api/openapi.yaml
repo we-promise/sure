@@ -10601,11 +10601,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: email not verified
+          description: guest users cannot modify tags, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/EmailVerificationRequired"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
       requestBody:
         content:
           application/json:

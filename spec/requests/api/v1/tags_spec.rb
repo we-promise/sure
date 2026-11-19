@@ -214,7 +214,21 @@ RSpec.describe 'API V1 Tags', type: :request do
         run_test!
       end
 
-      email_verification_required_response
+      response '403', 'guest users cannot modify tags, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
+
+        let(:user) do
+          family.users.create!(
+            email: 'api-guest@example.com',
+            password: 'password123',
+            password_confirmation: 'password123',
+            email_verified_at: Time.current,
+            role: 'guest'
+          )
+        end
+
+        run_test!
+      end
     end
 
     delete 'Delete a tag' do
