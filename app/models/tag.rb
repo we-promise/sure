@@ -55,6 +55,12 @@ class Tag < ApplicationRecord
     persisted? ? name : UNTAGGED_FILTER_VALUE
   end
 
+  # Read-only: Security#set_tags_for is the one writer, so tagging a security
+  # always takes its lock and stays inside the family.
+  def securities
+    Security.where(id: taggings.where(taggable_type: "Security").select(:taggable_id))
+  end
+
   def replace_and_destroy!(replacement)
     transaction do
       raise ActiveRecord::RecordInvalid, "Replacement tag cannot be the same as the tag being destroyed" if replacement == self
