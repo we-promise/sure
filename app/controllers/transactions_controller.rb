@@ -182,7 +182,8 @@ class TransactionsController < ApplicationController
         flash[:cta] = {
           type: "category_rule",
           category_id: transaction.category_id,
-          category_name: transaction.category.name
+          category_name: transaction.category.name,
+          merchant_name: @entry.name
         }
       end
       true

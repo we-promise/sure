@@ -8,6 +8,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
+  before_action :ensure_write_permission, only: [ :update, :destroy ]
 
   def index
     family = current_resource_owner.family
@@ -220,6 +221,27 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       load_accessible_transaction(params[:id])
     end
 
+    # Reading needs access to the account. Deleting, or changing anything
+    # outside the annotate fields, needs the write tier (AccountPolicy#update?);
+    # a member in the annotate tier may only change the AccountShare annotate
+    # fields (notes, category, merchant, tags), the same split the web UI
+    # applies in TransactionsController#permitted_entry_params. A refused request is a 403,
+    # not a silently trimmed update, so the client learns nothing was applied.
+    def ensure_write_permission
+      level = action_name == "update" && annotate_only_update? ? :annotate : :write
+
+      require_api_account_permission!(@entry.account, level, resource: "transaction")
+    end
+
+    # Judged on the permitted params, not raw params: keys outside
+    # transaction_params are ignored on update for every role (account_id
+    # included), so they cannot widen what an annotate-tier member changes.
+    def annotate_only_update?
+      transaction_params.except(
+        *AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES
+      ).empty?
+    end
+
     def ensure_read_scope
       authorize_scope!(:read)
     end
@@ -301,7 +323,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     def apply_search(query)
-      search_term = "%#{params[:search]}%"
+      # Escape the caller's term so "%" and "_" match literally instead of
+      # acting as ILIKE wildcards, where a bare "%" returns everything.
+      search_term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search].to_s)}%"
 
       query
         .left_joins(:merchant)
