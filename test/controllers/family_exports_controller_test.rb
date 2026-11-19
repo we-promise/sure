@@ -28,6 +28,12 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "Export your data"
   end
 
+  test "the export modal says where member-owned rules are" do
+    get new_family_export_path
+
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("family_exports.new.rules_note"))
+  end
+
   test "admin can mark a lost export as failed" do
     export = @family.family_exports.create!
     export.update_columns(status: "processing", updated_at: 2.hours.ago)

@@ -711,6 +711,28 @@ class RuleTest < ActiveSupport::TestCase
     assert_nil moved.reload.user_id
   end
 
+  test "a change of owner is recorded in the security audit log" do
+    rule = owned_rule(users(:family_member), "Audit probe")
+    Current.stubs(:true_user).returns(users(:family_admin))
+
+    assert_difference -> { SecurityAuditLog.by_event("rule_owner_changed").count }, 1 do
+      rule.update!(user: users(:family_admin))
+    end
+    log = SecurityAuditLog.by_event("rule_owner_changed").recent.first
+    assert_equal users(:family_admin), log.user
+    assert_equal({ "rule_id" => rule.id, "from_user_id" => users(:family_member).id, "to_user_id" => users(:family_admin).id }, log.metadata.slice("rule_id", "from_user_id", "to_user_id"))
+  end
+
+  test "an admin's removal records each rule left without an owner" do
+    leaver = family_user("audited-admin@example.com", "admin")
+    owned_rule(leaver, "Audit one")
+    owned_rule(leaver, "Audit two")
+
+    assert_difference -> { SecurityAuditLog.by_event("rule_owner_changed").count }, 2 do
+      leaver.destroy!
+    end
+  end
+
   test "a change of owner re-takes an email rule's baseline" do
     rule = owned_rule(users(:family_member), "Email probe", [ { action_type: "send_email_notification" } ])
     rule.expects(:seed_notification_baseline).once

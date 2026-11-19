@@ -22,6 +22,7 @@ es:
       investment_trades: Operaciones de inversión
       categories_tags_rules: Categorías, etiquetas y reglas
       note_label: Nota
+      rules_note: Las reglas que actúan por un miembro de la familia no van en rules.csv, que no tiene columna para eso; all.ndjson sí las incluye.
       note_description: Esta exportación incluye todos tus datos, pero solo una parte se puede volver a importar mediante la función de importación CSV. Admitimos importaciones de cuentas, transacciones (con categoría y etiquetas) y operaciones. El resto de los datos de las cuentas no se puede importar y es solo para tu archivo.
       cancel: Cancelar
       export_data: Exportar datos

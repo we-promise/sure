@@ -826,7 +826,7 @@ RSpec.configure do |config|
           },
           Rule: {
             type: :object,
-            required: %w[id resource_type active position stop_processing apply_immediately conditions actions created_at updated_at],
+            required: %w[id resource_type active position stop_processing apply_immediately owner applies_to conditions actions created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string, nullable: true },
@@ -836,6 +836,13 @@ RSpec.configure do |config|
               position: { type: :integer, description: 'Run order within the family; rules run from the lowest position up and the top rule wins per attribute' },
               stop_processing: { type: :boolean, description: 'When true, rules further down do not change transactions this rule matches' },
               apply_immediately: { type: :boolean, description: 'When true, the rule also runs right after a transaction is created or edited by hand, in a bulk edit, in Categorize, via the API or by the assistant (splits, transfers and conversions to trades wait for the nightly run); otherwise it only runs on the nightly and sync runs' },
+              owner: {
+                type: :object,
+                nullable: true,
+                description: 'Whom the rule acts for. Null for rules without an owner.',
+                properties: { id: { type: :string, format: :uuid }, name: { type: :string } }
+              },
+              applies_to: { type: :string, enum: %w[owner_accounts family], description: 'owner_accounts: the rule changes only accounts its owner may change. family: every account in the family (an admin-owned rule, or one without an owner).' },
               conditions: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/RuleCondition' }

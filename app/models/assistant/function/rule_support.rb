@@ -299,6 +299,9 @@ module Assistant::Function::RuleSupport
         name: rule.name,
         active: rule.active,
         effective_date: rule.effective_date&.iso8601,
+        # Whom the rule acts for (Rule#user), and so which accounts it changes.
+        owner: rule.user&.display_name,
+        applies_to: rule.restricted? ? "owner_accounts" : "family",
         conditions: rule.conditions.reject(&:marked_for_destruction?).select { |c| c.parent_id.nil? }.map { |c| serialize_condition(rule, c) },
         actions: rule.actions.reject(&:marked_for_destruction?).map { |a| serialize_action(rule, a) },
         updated_at: rule.updated_at&.iso8601

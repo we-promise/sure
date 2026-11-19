@@ -452,7 +452,12 @@ class User < ApplicationRecord
   # A rule acts for its owner. When they leave the family, an admin's rules
   # stay and act on the whole family, as they did; a member's go with them.
   def hand_over_rules
-    admin? ? rules.update_all(user_id: nil, updated_at: Time.current) : rules.destroy_all
+    return rules.destroy_all unless admin?
+
+    rules.find_each do |rule|
+      rule.update_columns(user_id: nil, updated_at: Time.current)
+      SecurityAuditLog.log_rule_owner_changed!(rule: rule, from_user_id: id, actor: Current.true_user)
+    end
   end
 
   def transfer_to_family!(new_family, role: self.role)

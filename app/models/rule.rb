@@ -32,6 +32,7 @@ class Rule < ApplicationRecord
   scope :ordered, -> { order(:position, :created_at, :id) }
   scope :applied_immediately, -> { where(active: true, apply_immediately: true) }
 
+  after_update_commit :log_owner_change, if: :saved_change_to_user_id?
   validate :owner_in_family, if: -> { user && will_save_change_to_user_id? }
 
   validates :resource_type, presence: true, if: -> { resource_type.to_s.valid_encoding? }
@@ -541,6 +542,10 @@ class Rule < ApplicationRecord
           end
         end
       end
+    end
+
+    def log_owner_change
+      SecurityAuditLog.log_rule_owner_changed!(rule: self, from_user_id: user_id_previously_was, actor: Current.true_user)
     end
 
     def owner_in_family
