@@ -9,6 +9,10 @@ class IndexaCapitalItem < ApplicationRecord
   if encryption_ready?
     encrypts :password, deterministic: true
     encrypts :api_token, deterministic: true
+    encrypts :username
+    encrypts :document
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
@@ -105,9 +109,9 @@ class IndexaCapitalItem < ApplicationRecord
     indexa_capital_accounts.joins(:account_provider)
   end
 
-  # Unlinked accounts (no AccountProvider association)
+  # Unlinked accounts that still need a setup decision (ignored ones are left out)
   def unlinked_indexa_capital_accounts
-    indexa_capital_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
+    indexa_capital_accounts.needs_setup
   end
 
   def sync_status_summary
@@ -129,7 +133,7 @@ class IndexaCapitalItem < ApplicationRecord
   end
 
   def unlinked_accounts_count
-    indexa_capital_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    unlinked_indexa_capital_accounts.count
   end
 
   def total_accounts_count

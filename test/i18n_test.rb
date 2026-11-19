@@ -42,6 +42,19 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
+  # The insights page, the card's "Dig in with AI" button and the push
+  # notification all read this tree, so a gap shows Spanish users English
+  # copy, and for the dig-in prompt, an English message in their chat box.
+  def test_spanish_insights_keys_and_placeholders_match_english
+    en = view_leaves("insights", "en")
+    es = view_leaves("insights", "es")
+
+    assert_equal en.keys.sort, es.keys.sort, "insights in views/insights/es.yml must carry every key en.yml does"
+    en.each do |key, value|
+      assert_equal value.scan(/%\{\w+\}/).sort, es.fetch(key).to_s.scan(/%\{\w+\}/).sort, "placeholders differ for #{key}"
+    end
+  end
+
   def test_no_missing_keys
     skip "Skipping missing keys test"
     missing_keys = @i18n.missing_keys(locales: [ :en ])
@@ -132,6 +145,23 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
+  # The below-zero warning speaks wherever the holdings tab is translated.
+  def test_negative_position_keys_exist_wherever_the_holdings_tab_is_translated
+    {
+      "holdings.index.new_holding" => %w[
+        holdings.index.negative_position holdings.index.negative_positions_hint holdings.index.negative_positions_title
+      ]
+    }.each do |sibling, keys|
+      locales = I18n.available_locales.select { |locale| I18n.t(sibling, locale: locale, fallback: false, default: nil) }
+      assert_includes locales, :de
+
+      locales.each do |locale|
+        missing = keys.reject { |key| I18n.t(key, locale: locale, fallback: false, default: nil) }
+        assert_empty missing, "#{locale} translates #{sibling} but is missing #{missing.join(", ")}"
+      end
+    end
+  end
+
   # The All bills default status option. Every bills locale must translate it,
   # or the default filter falls back to English.
   def test_bills_current_bills_label_exists_for_each_bills_locale
@@ -203,8 +233,13 @@ class I18nTest < ActiveSupport::TestCase
   private
     # { "months_saved.one" => "...", ... } for UI.account.chart.loan in one locale.
     def loan_chart_leaves(locale)
-      tree = YAML.load_file(Pathname.pwd.join("config/locales/views/components/#{locale}.yml"), aliases: true)
-        .dig(locale, "UI", "account", "chart", "loan") || {}
+      view_leaves("components", locale, "UI", "account", "chart", "loan")
+    end
+
+    # Leaves of config/locales/views/<dir>/<locale>.yml under the given keys.
+    def view_leaves(dir, locale, *keys)
+      tree = YAML.load_file(Pathname.pwd.join("config/locales/views/#{dir}/#{locale}.yml"), aliases: true)
+        .dig(locale, *keys) || {}
       flatten_leaves(tree)
     end
 

@@ -1691,4 +1691,26 @@ class UserTest < ActiveSupport::TestCase
     assert_not @user.update_manual_account_order("transactions", [ accounts(:depository).id ])
     assert_equal({}, @user.reload.manual_account_order)
   end
+
+  test "reports biggest expenses limit defaults to 10 and only returns an offered choice" do
+    @user.update_columns(preferences: {})
+    assert_equal 10, @user.reports_biggest_expenses_limit
+
+    @user.update_columns(preferences: { "reports_biggest_expenses_limit" => 25 })
+    assert_equal 25, @user.reload.reports_biggest_expenses_limit
+
+    @user.update_columns(preferences: { "reports_biggest_expenses_limit" => 7 })
+    assert_equal 10, @user.reload.reports_biggest_expenses_limit
+  end
+
+  test "update_reports_preferences stores an offered biggest expenses limit alongside the section keys" do
+    @user.update_columns(preferences: { "reports_section_order" => %w[net_worth] })
+
+    assert @user.update_reports_preferences("reports_biggest_expenses_limit" => "5")
+    assert_equal 5, @user.reload.preferences["reports_biggest_expenses_limit"]
+    assert_equal %w[net_worth], @user.preferences["reports_section_order"]
+
+    assert @user.update_reports_preferences("reports_biggest_expenses_limit" => "1000")
+    assert_equal 5, @user.reload.preferences["reports_biggest_expenses_limit"]
+  end
 end
