@@ -1628,9 +1628,14 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       suggestion = transfer_shaped_suggestion
       3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }.each(&:confirm!)
       cleaner = RecurringTransaction::Cleaner.new(@family)
-      # The scan read the row before an import replay marked it manual.
-      cleaner.stubs(:retirement_candidates).returns(@family.recurring_transactions.where(id: suggestion.id))
-      suggestion.update_columns(manual: true)
+      # The scan loaded the row while it was still detected; an import replay
+      # then marked it manual. Only the reload under the lock can see that.
+      scanned = RecurringTransaction.find(suggestion.id)
+      scan = stub
+      scan.stubs(:find_each).yields(scanned)
+      cleaner.stubs(:retirement_candidates).returns(scan)
+      RecurringTransaction.where(id: suggestion.id).update_all(manual: true)
+      assert_not scanned.manual?
 
       assert_equal 0, cleaner.retire_transfer_suggestions
       assert RecurringTransaction.exists?(suggestion.id)
