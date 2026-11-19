@@ -188,6 +188,16 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
+  test "confirm! schedules recurring detection only once the enclosing transaction commits" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    IdentifyRecurringTransactionsJob.expects(:schedule_for).never
+
+    Transfer.transaction do
+      transfer.confirm!
+      raise ActiveRecord::Rollback
+    end
+  end
+
   test "confirm! assigns the investment contributions category to an uncategorized outflow" do
     transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
 

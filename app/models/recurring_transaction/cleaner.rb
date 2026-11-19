@@ -53,17 +53,15 @@ class RecurringTransaction
     def retire_transfer_suggestions(claimed_ids: [])
       retired_count = 0
 
-      family.recurring_transactions
-            .suggested
-            .where(manual: false, destination_account_id: nil)
-            .where.not(id: claimed_ids)
-            .find_each do |recurring_transaction|
+      retirement_candidates(claimed_ids).find_each do |recurring_transaction|
         next unless recurring_transaction.matches_only_transfer_legs?
 
         # Re-check under a row lock: the user may have confirmed or dismissed
-        # the suggestion, or unlinked one of its transfers, since the check.
+        # the suggestion, an import may have marked it manual, or one of its
+        # transfers may have been unlinked since the check.
         retired = recurring_transaction.with_lock do
           recurring_transaction.suggested? &&
+            !recurring_transaction.manual? &&
             recurring_transaction.matches_only_transfer_legs? &&
             recurring_transaction.destroy!
         end
@@ -84,5 +82,14 @@ class RecurringTransaction
         .where("updated_at < ?", six_months_ago)
         .destroy_all
     end
+
+    private
+
+      def retirement_candidates(claimed_ids)
+        family.recurring_transactions
+              .suggested
+              .where(manual: false, destination_account_id: nil)
+              .where.not(id: claimed_ids)
+      end
   end
 end

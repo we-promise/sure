@@ -1623,6 +1623,20 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
   end
 
+  test "Cleaner keeps a suggestion that turned manual between its scan and the row lock" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }.each(&:confirm!)
+      cleaner = RecurringTransaction::Cleaner.new(@family)
+      # The scan read the row before an import replay marked it manual.
+      cleaner.stubs(:retirement_candidates).returns(@family.recurring_transactions.where(id: suggestion.id))
+      suggestion.update_columns(manual: true)
+
+      assert_equal 0, cleaner.retire_transfer_suggestions
+      assert RecurringTransaction.exists?(suggestion.id)
+    end
+  end
+
   test "Cleaner's retirement leaves the bill detectable again once the transfers are unlinked" do
     travel_to Date.new(2026, 8, 10) do
       transfer_shaped_suggestion
