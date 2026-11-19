@@ -492,6 +492,13 @@ class ReportsController < ApplicationController
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
+        # Buys/sells move value between cash and holdings; keep cash income and fees, decided by label as Portfolio::FlowClassifier does.
+        # A qty-0 trade also stays unless its label marks it as a movement (internal, external or transfer).
+        .where(
+          "trades.investment_activity_label IN (?) OR (trades.qty = 0 AND (trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)))",
+          Portfolio::FlowClassifier::INCOME_LABELS + Portfolio::FlowClassifier::FEE_LABELS,
+          Portfolio::FlowClassifier::INTERNAL_LABELS + Portfolio::FlowClassifier::EXTERNAL_LABELS + [ Portfolio::FlowClassifier::TRANSFER_LABEL ]
+        )
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
         .includes(entry: :account, category: :parent)
       trades = exclude_tax_advantaged_accounts(trades)
@@ -655,6 +662,10 @@ class ReportsController < ApplicationController
       sell_trades.each do |trade|
         trade.instance_variable_set(:@preloaded_holdings, holdings_by_account[trade.entry.account_id] || [])
       end
+
+      # What each fifo sale took from which lot, read once for the whole set.
+      lot_disposals = HoldingLotDisposal.readable_by_sale(sell_trades)
+      sell_trades.each { |trade| trade.preloaded_lot_disposals = lot_disposals[trade.entry.id] }
 
       # The rates the proceeds conversion needs, in one query rather than one
       # per foreign disposal.
@@ -981,6 +992,10 @@ class ReportsController < ApplicationController
     def generate_transactions_csv
       require "csv"
 
+      # Category names are user-supplied and this is the export the app points
+      # at Google Sheets, so the cells that carry them are escaped against
+      # formula injection (CWE-1236). Only that column: the amount cells are
+      # formatted money such as "-$42.00", which the escape would turn to text.
       CSV.generate do |csv|
         # Build header row: Category + Month columns + Total
         month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
@@ -992,7 +1007,7 @@ class ReportsController < ApplicationController
           csv << [ "INCOME" ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:income].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvSanitizer.sanitize(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -1024,7 +1039,7 @@ class ReportsController < ApplicationController
           csv << [ "EXPENSES" ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:expenses].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvSanitizer.sanitize(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
