@@ -191,8 +191,8 @@ class ImportSessionTest < ActiveSupport::TestCase
       Object.new.tap do |importer|
         importer.define_singleton_method(:import!) do
           {
-            accounts: [],
-            entries: [],
+            account_ids: [],
+            entry_ids: [],
             summary: { "transactions" => { "created" => 1 } }
           }
         end

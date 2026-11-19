@@ -145,6 +145,23 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
+  # The below-zero warning speaks wherever the holdings tab is translated.
+  def test_negative_position_keys_exist_wherever_the_holdings_tab_is_translated
+    {
+      "holdings.index.new_holding" => %w[
+        holdings.index.negative_position holdings.index.negative_positions_hint holdings.index.negative_positions_title
+      ]
+    }.each do |sibling, keys|
+      locales = I18n.available_locales.select { |locale| I18n.t(sibling, locale: locale, fallback: false, default: nil) }
+      assert_includes locales, :de
+
+      locales.each do |locale|
+        missing = keys.reject { |key| I18n.t(key, locale: locale, fallback: false, default: nil) }
+        assert_empty missing, "#{locale} translates #{sibling} but is missing #{missing.join(", ")}"
+      end
+    end
+  end
+
   # The All bills default status option. Every bills locale must translate it,
   # or the default filter falls back to English.
   def test_bills_current_bills_label_exists_for_each_bills_locale
@@ -192,6 +209,17 @@ class I18nTest < ActiveSupport::TestCase
     end
 
     assert_empty extra, "nl placeholders missing from en:\n#{extra.join("\n")}"
+  end
+
+  # The depository, investment and loan forms label their subtype select with
+  # the accountable's attribute name. A missing entry humanizes to "Subtype".
+  def test_accountable_subtype_labels_are_translated
+    [ Depository, Investment, Loan ].each do |model|
+      %i[en de].each do |locale|
+        key = "activerecord.attributes.#{model.model_name.i18n_key}.subtype"
+        assert I18n.t(key, locale: locale, fallback: false, default: nil).present?, "#{key} is missing in #{locale}"
+      end
+    end
   end
 
   def test_trade_republic_activity_labels_exist_for_each_locale

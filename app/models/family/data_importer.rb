@@ -34,6 +34,7 @@ class Family::DataImporter
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant ProviderMerchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   PROPERTY_DETAIL_ATTRIBUTES = %w[year_built area_value area_unit].freeze
   PROPERTY_ADDRESS_ATTRIBUTES = %w[line1 line2 locality region county postal_code country].freeze
+  VEHICLE_DETAIL_ATTRIBUTES = %w[make model year mileage_value mileage_unit].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
@@ -111,8 +112,9 @@ class Family::DataImporter
     account_targets.each { |source_id, account| @id_mappings[:accounts][source_id] = account.id }
     @security_cache = {}
     @pending_replacements = {}
-    @created_accounts = []
-    @created_entries = []
+    @created_account_ids = []
+    @created_entry_ids = []
+    @rollover_user_ids = Set.new
     @summary = Hash.new { |hash, key| hash[key] = empty_summary_bucket }
   end
 
@@ -149,7 +151,9 @@ class Family::DataImporter
       import_rules(records["Rule"] || [])
     end
 
-    { accounts: @created_accounts, entries: @created_entries, summary: compact_summary }
+    recompute_rollover_chains
+
+    { account_ids: @created_account_ids, entry_ids: @created_entry_ids, summary: compact_summary }
   end
 
   # A session imports each chunk through its own importer, so a property can
@@ -203,11 +207,21 @@ class Family::DataImporter
       return unless @import_session
 
       source_type = MAPPING_TYPES.fetch(mapping_key)
-      mapping = @import_session.source_mappings.find_or_initialize_by(
-        family: @family,
+      # The session outlives every chunk, so nothing here may append the mapping
+      # (and, through its target, the imported record) to one of its
+      # associations, or memory grows with the file. That rules out building
+      # through @import_session.source_mappings, and also assigning
+      # `import_session:`/`family:` objects, which only avoids it while the
+      # belongs_to has no inverse_of. Ids plus association(...).target= never
+      # inverse, and keep the loaded owners so validations don't reload them.
+      mapping = ImportSourceMapping.find_or_initialize_by(
+        import_session_id: @import_session.id,
+        family_id: @family.id,
         source_type: source_type,
         source_id: source_id
       )
+      mapping.association(:import_session).target = @import_session
+      mapping.association(:family).target = @family
       mapping.target = target
       mapping.save!
     end
@@ -347,7 +361,7 @@ class Family::DataImporter
         else
           # Build accountable
           accountable = accountable_class.new
-          accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
+          accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"].present?
           assign_liability_details(accountable, accountable_data)
 
           # Copy any other accountable attributes
@@ -359,6 +373,7 @@ class Family::DataImporter
           end
 
           assign_property_details(accountable, accountable_data) if accountable.is_a?(Property)
+          assign_vehicle_details(accountable, accountable_data) if accountable.is_a?(Vehicle)
 
           account = @family.accounts.build(accountable: accountable)
         end
@@ -368,12 +383,18 @@ class Family::DataImporter
           balance: data["balance"].to_d,
           cash_balance: data["cash_balance"]&.to_d || data["balance"].to_d,
           currency: data["currency"] || @family.currency,
-          subtype: data["subtype"],
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
           status: importable_account_status(data["status"])
         )
+        # `Account#subtype=` writes through to the accountable, so assigning a
+        # nil top-level subtype would wipe the nested one. The nested value
+        # wins, matching SureImport::Preflight#validate_accountables.
+        imported_subtype = accountable_data["subtype"].presence || data["subtype"].presence
+        account.subtype = imported_subtype if imported_subtype
+        # A file from before the setting existed leaves the account's own.
+        account.cost_basis_method = data["cost_basis_method"] if Account.cost_basis_methods.key?(data["cost_basis_method"])
         # Older exports predate the choice and keep the account's own.
         account.logo_selection = data["logo_selection"] if Account.logo_selections.key?(data["logo_selection"])
 
@@ -392,7 +413,7 @@ class Family::DataImporter
         end
 
         map_source!(:accounts, old_id, account)
-        @created_accounts << account if created
+        @created_account_ids << account.id if created
         increment_summary("Account", created ? :created : :updated)
       end
     end
@@ -405,6 +426,12 @@ class Family::DataImporter
 
       address_data = accountable_data["address"]
       property.build_address(address_data.slice(*PROPERTY_ADDRESS_ATTRIBUTES)) if address_data.is_a?(Hash)
+    end
+
+    # What the vehicle form edits. A missing or null value keeps the model's
+    # default, such as the mileage unit.
+    def assign_vehicle_details(vehicle, accountable_data)
+      vehicle.assign_attributes(accountable_data.slice(*VEHICLE_DETAIL_ATTRIBUTES).compact)
     end
 
     def importable_account_status(status)
@@ -1038,7 +1065,7 @@ class Family::DataImporter
         split_rows = importable_split_rows(data)
 
         if split_rows.any?
-          @created_entries << entry if created
+          @created_entry_ids << entry.id if created
           import_split_lines!(entry, split_rows, fallback_tag_ids: new_tag_ids)
         else
           transaction.taggings.destroy_all unless created
@@ -1046,7 +1073,7 @@ class Family::DataImporter
             transaction.taggings.create!(tag_id: tag_id)
           end
 
-          @created_entries << entry if created
+          @created_entry_ids << entry.id if created
         end
 
         increment_summary("Transaction", created ? :created : :updated)
@@ -1056,7 +1083,7 @@ class Family::DataImporter
     def mapped_tag_ids(old_tag_ids, record_type:)
       Array(old_tag_ids).map do |old_tag_id|
         mapped_id(:tags, old_tag_id, record_type: record_type)
-      end.compact
+      end.compact.uniq
     end
 
     def importable_split_rows(data)
@@ -1112,7 +1139,7 @@ class Family::DataImporter
         end
 
         map_source!(:transactions, row[:old_id], transaction) if row[:old_id].present?
-        @created_entries << child_entry
+        @created_entry_ids << child_entry.id
       end
     end
 
@@ -1188,6 +1215,8 @@ class Family::DataImporter
     end
 
     def import_trades(records)
+      imported = {}
+
       records.each do |record|
         data = record["data"]
         old_id = data["id"]
@@ -1238,9 +1267,80 @@ class Family::DataImporter
         end
 
         entry.save!
-        @created_entries << entry if created
+        imported[old_id] = entry
+        import_lot_total_cost(entry, data["lot_total_cost"])
+        @created_entry_ids << entry.id if created
         increment_summary("Trade", created ? :created : :updated)
       end
+
+      import_lot_sources(records, imported)
+    end
+
+    # The lot is rebuilt from its trade on the next sync, which keeps a cost
+    # already on the row, so the user's cost is seeded on the row now. A file
+    # without one clears a cost an earlier import of this trade set. A value
+    # the lot cannot hold drops the cost, not the trade.
+    def import_lot_total_cost(entry, raw)
+      trade = entry.trade
+      # Only a buy's entry keys a lot (source_entry_id is the acquiring
+      # trade's entry), so a sell never queries. A buy's lookup is per row
+      # and indexed, with no chunk-wide load.
+      lot = trade.qty.positive? ? HoldingLot.find_by(account_id: entry.account_id, source_entry_id: entry.id) : nil
+
+      if raw.blank?
+        lot.unlock_cost! if lot&.manual_cost?
+        return
+      end
+
+      total = BigDecimal(raw.to_s, exception: false)
+      return invalid_record!("Trade", "lot_total_cost", raw) unless total&.finite? && !total.negative? && trade.qty.positive?
+
+      lot ||= HoldingLot.new(account_id: entry.account_id, source_entry: entry, security: trade.security,
+                             acquired_on: entry.date, qty: trade.qty, currency: entry.account.currency)
+      lot.manual_total_cost = total
+      invalid_record!("Trade", "lot_total_cost", raw) unless lot.save
+    end
+
+    # A sale names its lot by the acquiring trade, which the export writes
+    # ahead of it: in this file, or in an earlier chunk of the same session.
+    # The choice is restored as stored, whatever the account's method, since
+    # an average account keeps but ignores it (Trade#lot_choices); it must
+    # still be a sale, not a transfer out, naming an acquisition of its
+    # security, in its account, that replays before it: an earlier date, or
+    # the same date and entered no later. Entries are stamped in file order,
+    # so a same-day lot listed after its sale is refused. A file without one
+    # clears an earlier import's choice.
+    def import_lot_sources(records, imported)
+      unnamed = []
+
+      records.each do |record|
+        data = record["data"]
+        row = imported[data["id"]]
+        next unless row
+
+        source_id = data["lot_source_trade_id"]
+        if source_id.blank?
+          unnamed << row.entryable_id
+          next
+        end
+
+        source = imported[source_id] || session_imported_entry(row.account, "Trade", source_id)
+        if source && lot_source_for?(row, source)
+          Trade.where(id: row.entryable_id).update_all(lot_source_entry_id: source.id)
+        else
+          invalid_record!("Trade", "lot_source_trade_id", source_id)
+        end
+      end
+
+      Trade.where(id: unnamed).where.not(lot_source_entry_id: nil).update_all(lot_source_entry_id: nil) if unnamed.any?
+    end
+
+    # The rule Trade#lot_choices applies to a sale and its lot, short of the
+    # account's method and of whether the lot is still open.
+    def lot_source_for?(sale, source)
+      sale.trade.qty.negative? && !sale.trade.internal_movement? && source.trade.qty.positive? &&
+        source.account_id == sale.account_id && source.trade.security_id == sale.trade.security_id &&
+        ([ source.date, source.created_at ] <=> [ sale.date, sale.created_at ]) <= 0
     end
 
     def import_holdings(records)
@@ -1325,7 +1425,7 @@ class Family::DataImporter
         end
 
         entry.save!
-        @created_entries << entry if created
+        @created_entry_ids << entry.id if created
         increment_summary("Valuation", created ? :created : :updated)
       end
     end
@@ -1451,14 +1551,43 @@ class Family::DataImporter
 
         budget_category = budget.budget_categories.find_or_initialize_by(category_id: new_category_id)
         created = budget_category.new_record?
+        # Only budget_id/category_id are required. A budgeted amount or
+        # rollover flag the line leaves out (or leaves blank) keeps its current
+        # value -- both columns are NOT NULL, so assigning nil would fail the
+        # save; a new row with no amount budgets 0.
+        rollover = ActiveModel::Type::Boolean.new.cast(data["rollover_enabled"])
         budget_category.assign_attributes(
           category_id: new_category_id,
-          budgeted_spending: data["budgeted_spending"].to_d,
+          budgeted_spending: data["budgeted_spending"].present? ? data["budgeted_spending"].to_d : (budget_category.budgeted_spending || 0),
+          rollover_enabled: rollover.nil? ? budget_category.rollover_enabled : rollover,
           currency: data["currency"] || budget.currency
         )
 
         budget_category.save!
+        @rollover_user_ids << budget.user_id
         increment_summary("BudgetCategory", created ? :created : :updated)
+      end
+    end
+
+    # The carried-over amount is derived state that only the calculator
+    # writes, so restoring the toggle refreshes each affected chain (household,
+    # or one member's personal budgets). It runs after the import's transaction
+    # has committed, because the calculator takes an advisory lock. The data is
+    # already in by then and the next budget load recomputes the same chain, so
+    # a failure is logged rather than failing an import that has committed.
+    def recompute_rollover_chains
+      @rollover_user_ids.each do |user_id|
+        owner = user_id && @family.users.find_by(id: user_id)
+        Budget::RolloverCalculator.new(family: @family, user: owner).recompute!
+      rescue StandardError => e
+        DebugLogEntry.capture(
+          category: "import",
+          level: "warn",
+          message: "Could not recompute rollover amounts after a budget import",
+          source: self.class.name,
+          family: @family,
+          metadata: { user_id: user_id, error_class: e.class.name, error_message: e.message }
+        )
       end
     end
 
@@ -1490,6 +1619,8 @@ class Family::DataImporter
           effective_date: data["effective_date"].present? ? Date.parse(data["effective_date"].to_s) : nil,
           stop_processing: data["stop_processing"] || false
         )
+        # Exports made before this setting existed don't carry it; keep the stored value then.
+        rule.apply_immediately = data["apply_immediately"] || false if data.key?("apply_immediately")
         # Exports from before rule groups have no group key; an existing rule
         # then keeps its group.
         rule.rule_group = find_or_create_rule_group(data["group"]) if data.key?("group")

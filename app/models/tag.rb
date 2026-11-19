@@ -55,12 +55,32 @@ class Tag < ApplicationRecord
     persisted? ? name : UNTAGGED_FILTER_VALUE
   end
 
+  # Read-only: Security#set_tags_for is the one writer, so tagging a security
+  # always takes its lock and stays inside the family.
+  def securities
+    Security.where(id: taggings.where(taggable_type: "Security").select(:taggable_id))
+  end
+
   def replace_and_destroy!(replacement)
     transaction do
       raise ActiveRecord::RecordInvalid, "Replacement tag cannot be the same as the tag being destroyed" if replacement == self
 
       if replacement
-        taggings.update_all tag_id: replacement.id
+        # Skip objects that already carry the replacement: moving their row
+        # would tag them twice. Their old row goes with destroy! below. The
+        # type is compared the way index_taggings_unique keys it, with a
+        # missing type folded to '', so the two always agree.
+        taggings.where(<<~SQL, replacement.id).update_all(tag_id: replacement.id)
+          NOT EXISTS (
+            SELECT 1 FROM taggings carried
+            WHERE carried.tag_id = ?
+              AND COALESCE(carried.taggable_type, '') = COALESCE(taggings.taggable_type, '')
+              AND carried.taggable_id = taggings.taggable_id
+          )
+        SQL
+        # A loaded taggings association still lists the moved rows, and
+        # destroy! would delete them by id.
+        taggings.reset
         # Properties counting this tag's transactions as costs follow them.
         Property.where(cost_tag_id: id).update_all cost_tag_id: replacement.id
       end

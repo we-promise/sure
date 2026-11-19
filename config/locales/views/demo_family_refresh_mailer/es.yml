@@ -1,0 +1,15 @@
+---
+es:
+  demo_family_refresh_mailer:
+    completed:
+      subject: Familia de demostración restablecida
+      activity_heading: Actividad en este periodo
+      sessions_label: Sesiones únicas de la familia de demostración anterior
+      families_label: Familias nuevas creadas
+      period_heading: Periodo del informe (UTC)
+      from_label: 'Desde:'
+      to_label: 'Hasta:'
+      time_format: "%-d %b %Y, %H:%M:%S UTC"
+      family_heading: Familia de demostración anterior
+      family_not_found: No encontrada
+      id_label: 'ID:'
