@@ -826,6 +826,21 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal 1_500, unconverted.net_contributions_series.values.last.value.amount, "and it counts as nothing"
   end
 
+  # The line counts deposits and withdrawals only. A dividend or fee that
+  # could not be valued leaves the value line short, not the contributions
+  # line, so it does not make the line incomplete.
+  test "an unvalued dividend or fee leaves net contributions complete" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    fee_entry account: account, date: @day_one + 1, amount: 25, currency: "EUR" # no EUR rate at all
+    income_transaction account: account, date: @day_one + 2, amount: 40, currency: "EUR"
+
+    refute contributions_builder(account).net_contributions_incomplete?, "only a fee and a dividend lack a rate"
+
+    deposit account: account, date: @day_one + 3, amount: 1_000, currency: "EUR"
+    assert contributions_builder(account).net_contributions_incomplete?, "an unvalued deposit still does"
+  end
+
   # The anchor day's flows are counted, so one that could not be
   # valued on that day makes the line incomplete. One before the anchor
   # is outside the line and does not.

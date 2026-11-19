@@ -134,9 +134,11 @@ class Balance::ChartSeriesBuilder
   # True when a flow the line counts could not be valued, so the line leaves
   # it out from that day on: too low for a deposit, too high for a
   # withdrawal. No direction is computed, since several unvalued flows of
-  # either sign have no known net. The returns engine reads the same
-  # two conditions: a flow in a currency with no rate (`rate_missing`)
-  # and a journal with no price for its date (`unvalued_journal`). Not
+  # either sign have no known net. DailyReturns narrows its two conditions
+  # to the deposits and withdrawals this line counts: a flow in a currency
+  # with no rate (`contribution_rate_missing`) and a journal with no price
+  # for its date (`contribution_journal_unpriced`). A dividend, fee or
+  # internal move that could not be valued leaves this line whole. Not
   # `suppressed`: DailyReturns also sets that for a non-positive
   # denominator, which an empty opening day has with nothing missing, and
   # an unpriced journal into an account opening at zero has too.
@@ -144,7 +146,7 @@ class Balance::ChartSeriesBuilder
     dates = (dates || query_data.map(&:date))
     # Every row the line adds is read, the anchor day's included.
     net_contribution_rows(anchor_date: anchor_date, through: dates.max).any? do |row|
-      row.rate_missing || row.unvalued_journal
+      row.contribution_rate_missing || row.contribution_journal_unpriced
     end
   end
 
