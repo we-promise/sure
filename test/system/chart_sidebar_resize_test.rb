@@ -505,9 +505,9 @@ class ChartSidebarResizeTest < ApplicationSystemTestCase
     page.driver.browser.manage.window.resize_to(1100, 900) rescue nil
   end
 
-  # Resizing a sidebar from the keyboard (or resetting it) changes its
-  # max-width, which animates too: its end must redraw the chart at once, not
-  # a settle delay after the sidebar has stopped.
+  # A width transition around a chart must redraw it at its end, not a settle
+  # delay after the sidebar has stopped. The sidebar's layout classes animate
+  # only its width, so this test sets the max-width transition it covers.
   test "a sidebar's max-width animation redraws the chart as it ends" do
     result = page.evaluate_async_script(<<~JS)
       const done = arguments[0];
@@ -518,6 +518,8 @@ class ChartSidebarResizeTest < ApplicationSystemTestCase
       new MutationObserver((mutations) => {
         if (ended !== null && drawn === null && mutations.some((m) => Array.from(m.addedNodes).some((n) => n.nodeName === "svg"))) drawn = performance.now();
       }).observe(chart, { childList: true, subtree: true });
+      sidebar.style.transition = "max-width 300ms linear";
+      sidebar.getBoundingClientRect();
       // 60px narrower than it is now, as an arrow key or a reset would.
       const width = Math.round(sidebar.getBoundingClientRect().width) - 60;
       document.querySelector("[data-controller~='sidebar-resize']").style.setProperty("--left-sidebar-width", `${width}px`);

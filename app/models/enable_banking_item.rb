@@ -1,6 +1,41 @@
 class EnableBankingItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
+  COUNTRIES = [
+    [ "Austria (AT)", "AT" ],
+    [ "Belgium (BE)", "BE" ],
+    [ "Bulgaria (BG)", "BG" ],
+    [ "Croatia (HR)", "HR" ],
+    [ "Cyprus (CY)", "CY" ],
+    [ "Czech Republic (CZ)", "CZ" ],
+    [ "Denmark (DK)", "DK" ],
+    [ "Estonia (EE)", "EE" ],
+    [ "Finland (FI)", "FI" ],
+    [ "France (FR)", "FR" ],
+    [ "Germany (DE)", "DE" ],
+    [ "Greece (GR)", "GR" ],
+    [ "Hungary (HU)", "HU" ],
+    [ "Iceland (IS)", "IS" ],
+    [ "Ireland (IE)", "IE" ],
+    [ "Italy (IT)", "IT" ],
+    [ "Latvia (LV)", "LV" ],
+    [ "Liechtenstein (LI)", "LI" ],
+    [ "Lithuania (LT)", "LT" ],
+    [ "Luxembourg (LU)", "LU" ],
+    [ "Malta (MT)", "MT" ],
+    [ "Netherlands (NL)", "NL" ],
+    [ "Norway (NO)", "NO" ],
+    [ "Poland (PL)", "PL" ],
+    [ "Portugal (PT)", "PT" ],
+    [ "Romania (RO)", "RO" ],
+    [ "Slovakia (SK)", "SK" ],
+    [ "Slovenia (SI)", "SI" ],
+    [ "Spain (ES)", "ES" ],
+    [ "Sweden (SE)", "SE" ],
+    [ "United Kingdom (GB)", "GB" ]
+  ].freeze
+  COUNTRY_CODES = COUNTRIES.map(&:last).freeze
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured

@@ -9,6 +9,12 @@ en:
       matched: All transactions reconciled
       needs_attention: Transactions need reconciliation
     not_authorized: "You don't have permission to manage this account"
+    reconcile_all:
+      success:
+        one: "%{count} transaction marked as %{status}."
+        other: "%{count} transactions marked as %{status}."
+      invalid_status: "Choose a valid reconciliation status."
+      not_manual_account: "Bulk reconciliation is only available for manually entered accounts."
     scheduled_balance_tooltip:
       description: Your balance once all scheduled transactions have posted
       current: Current balance
@@ -100,6 +106,11 @@ en:
       exclude_from_reports: Exclude from all reports
       enable_category_matcher_label: Enable category matcher
       enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.
+      cost_basis_method_label: Cost basis method
+      cost_basis_method_hint: How a sale is matched to the shares it came from. Changing it recalculates past realized gains and the average cost of what you hold. A sale of shares whose cost is unknown shows its gain as unknown.
+      cost_basis_methods:
+        average: Average cost
+        fifo: First in, first out (FIFO)
     index:
       accounts: Accounts
       financekit_accounts:
@@ -174,6 +185,13 @@ en:
         import_trades: Import trades
         import_transactions: Import transactions
         manage: Manage accounts
+        reconcile_all:
+          cleared: Mark all as cleared
+          confirm_accept: Mark all as %{status}
+          confirm_body: This changes the reconciliation status of every transaction in this account. Uploaded statements stay the same.
+          confirm_title: Mark every transaction as %{status}?
+          reconciled: Mark all as reconciled
+          unreconciled: Mark all as unreconciled
         sharing: Sharing
         statements: Statements
         exclude_from_reports: Exclude from all reports
