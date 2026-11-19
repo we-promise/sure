@@ -1,5 +1,7 @@
 class Rule::ActionExecutor
   TYPES = [ "select", "multi_select", "function", "text", "split" ]
+  # What an annotate-only share may change (#annotation?).
+  ANNOTATE_ATTRIBUTES = (AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES + AccountShare::ANNOTATE_ENTRY_ATTRIBUTES).freeze
 
   def initialize(rule)
     @rule = rule
@@ -48,16 +50,17 @@ class Rule::ActionExecutor
     []
   end
 
-  # Transaction attributes the action writes. Additive actions that claim
-  # nothing (tags) list theirs here.
+  # Attributes the action writes, on the transaction or its entry, by their
+  # real names (:notes for an entry's notes, not a name of the executor's
+  # own). Additive actions that claim nothing (tags) list theirs here.
   def written_attributes
     claimed_attributes
   end
 
   # Whether the action changes only what an annotate-only share may change
-  # (AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES); see Rule#permitted_accounts.
+  # (AccountShare::ANNOTATE_*); see Rule#permitted_accounts.
   def annotation?
-    written_attributes.any? && (written_attributes - AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES).empty?
+    written_attributes.any? && (written_attributes - ANNOTATE_ATTRIBUTES).empty?
   end
 
   # Whether matching this action keeps rules further down from setting

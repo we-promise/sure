@@ -671,6 +671,18 @@ class RuleTest < ActiveSupport::TestCase
     assert_empty owned_rule(member, "Annotate probe", [ category, { action_type: "set_transaction_name", value: "Renamed" } ]).matching_resources
   end
 
+  test "a member's rule that only writes notes reaches accounts shared with them read_write" do
+    member = users(:family_member)
+    accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
+    shared = create_transaction(account: accounts(:credit_card), name: "Notes probe")
+    # Stands in for a notes action (#4346), which writes the entry's notes.
+    Rule::ActionExecutor::ExcludeTransaction.any_instance.stubs(:written_attributes).returns([ :notes ])
+    notes = { action_type: "exclude_transaction" }
+
+    assert_equal [ shared.entryable_id ], owned_rule(member, "Notes probe", [ notes ]).matching_resources.pluck(:id)
+    assert_empty owned_rule(member, "Notes probe", [ notes, { action_type: "set_transaction_name", value: "Renamed" } ]).matching_resources
+  end
+
   test "only its owner or an admin can manage a rule" do
     rule = owned_rule(users(:family_member), "Manage probe")
 
