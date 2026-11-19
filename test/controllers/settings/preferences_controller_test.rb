@@ -31,6 +31,15 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("settings.preferences.show.investment_contributions_as_spending"), response.body
   end
 
+  test "every user sees the synced balance updates toggle, off by default" do
+    sign_in users(:family_member)
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[type=checkbox][name='user[show_balance_updates]']:not([checked])"
+    assert_match I18n.t("settings.preferences.show.show_balance_updates"), response.body
+  end
+
   test "members do not see the investing-as-spending toggle" do
     sign_in users(:family_member)
     get settings_preferences_url
@@ -115,6 +124,62 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.preferences.show.household_budget_enabled")
     assert_not_includes response.body, I18n.t("settings.preferences.show.budget_sharing_title")
+  end
+
+  test "browser notification card is preview gated" do
+    get settings_preferences_url
+    assert_select "[data-controller='web-push']", count: 0
+    user = users(:family_admin)
+    user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
+    get settings_preferences_url
+    assert_select "[data-controller='web-push']", count: 1
+    assert_select "input[name='user[push_budget_warnings_enabled]']"
+  end
+
+  test "budget warnings default off and are saved only for this user" do
+    user = users(:family_admin)
+    other = users(:family_member)
+    user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
+    assert_not user.push_budget_warnings_enabled?
+    patch settings_preferences_url, params: { user: { push_budget_warnings_enabled: "1" } }
+    assert_redirected_to settings_preferences_url
+    assert user.reload.push_budget_warnings_enabled?
+    assert_not other.reload.push_budget_warnings_enabled?
+    patch settings_preferences_url, params: { user: { push_budget_warnings_enabled: "0" } }
+    assert_not user.reload.push_budget_warnings_enabled?
+  end
+
+  test "browser registration inventory contains only current session ids and digests" do
+    require Rails.root.join("test/support/web_push_test_helper")
+    extend WebPushTestHelper
+    user = users(:family_admin)
+    user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
+    current_session = Current.session
+    device = register_web_push(user: user, session: current_session)
+    other = register_web_push(user: user, endpoint: "https://fcm.googleapis.com/other")
+    get settings_preferences_url
+    inventory = JSON.parse(css_select("[data-web-push-registrations-value]").first["data-web-push-registrations-value"])
+    assert_equal({ device.id => device.endpoint_digest }, inventory)
+    assert_not_includes inventory.keys, other.id
+    assert_not_includes response.body, device.endpoint
+    assert_not_includes response.body, device.auth
+  end
+
+  test "enabling preview and budget warnings together saves both values" do
+    user = users(:family_admin)
+    user.update!(preferences: {})
+    patch settings_preferences_url, params: { user: { preview_features_enabled: "1", push_budget_warnings_enabled: "1" } }
+    assert_redirected_to settings_preferences_url
+    assert user.reload.preview_features_enabled?
+    assert user.push_budget_warnings_enabled?
+  end
+
+  test "disabling preview in the request prevents enabling budget warnings" do
+    user = users(:family_admin)
+    user.update!(preferences: { "preview_features_enabled" => true })
+    patch settings_preferences_url, params: { user: { preview_features_enabled: "0", push_budget_warnings_enabled: "1" } }
+    assert_not user.reload.preview_features_enabled?
+    assert_not user.push_budget_warnings_enabled?
   end
 
   test "admins with preview access see the manual reconciliation toggle" do

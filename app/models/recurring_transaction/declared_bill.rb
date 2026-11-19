@@ -103,7 +103,8 @@ class RecurringTransaction
         weekday: due.wday,
         month_of_year: due.month,
         interval: attrs[:frequency_interval],
-        interval_unit: attrs[:frequency_interval_unit]
+        interval_unit: attrs[:frequency_interval_unit],
+        once_on: due
       )
 
       recurring

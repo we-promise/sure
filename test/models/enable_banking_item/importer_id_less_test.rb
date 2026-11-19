@@ -40,8 +40,8 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
   test "stores id-less transactions in raw_transactions_payload on first sync" do
     tx = id_less_tx
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ tx ])
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ [ tx ], false ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([ [], false ])
     @importer.stubs(:include_pending?).returns(false)
     @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
 
@@ -55,8 +55,8 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
     tx = id_less_tx
 
     # First sync
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ tx ])
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ [ tx ], false ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([ [], false ])
     @importer.stubs(:include_pending?).returns(false)
     @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
 
@@ -74,8 +74,8 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
     tx1 = id_less_tx(amount: "50.00", creditor: "Kaufland")
     tx2 = id_less_tx(amount: "12.50", creditor: "Starbucks")
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ tx1, tx2 ])
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ [ tx1, tx2 ], false ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([ [], false ])
     @importer.stubs(:include_pending?).returns(false)
     @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
 
@@ -91,8 +91,8 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
 
     @enable_banking_account.update!(raw_transactions_payload: [ pending_tx ])
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ tx ])
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ [ tx ], false ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([ [], false ])
     @importer.stubs(:include_pending?).returns(true)
     @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
 
@@ -130,8 +130,8 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
 
     @enable_banking_account.update!(raw_transactions_payload: [ pending_tx ])
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ booked_tx ])
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ [ booked_tx ], false ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([ [], false ])
     @importer.stubs(:include_pending?).returns(true)
     @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
 

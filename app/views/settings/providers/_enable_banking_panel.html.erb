@@ -1,4 +1,4 @@
-<div id="enable_banking-providers-panel" class="space-y-4">
+<div id="enable_banking-providers-panel" class="space-y-4" data-controller="enable-banking-country">
   <%
     eb_link = link_to("Enable Banking", "https://enablebanking.com", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")
   %>
@@ -33,41 +33,9 @@
                        class: "space-y-3" do |form| %>
 
     <%= form.select :country_code,
-                  options_for_select([
-                    ["Austria (AT)", "AT"],
-                    ["Belgium (BE)", "BE"],
-                    ["Bulgaria (BG)", "BG"],
-                    ["Croatia (HR)", "HR"],
-                    ["Cyprus (CY)", "CY"],
-                    ["Czech Republic (CZ)", "CZ"],
-                    ["Denmark (DK)", "DK"],
-                    ["Estonia (EE)", "EE"],
-                    ["Finland (FI)", "FI"],
-                    ["France (FR)", "FR"],
-                    ["Germany (DE)", "DE"],
-                    ["Greece (GR)", "GR"],
-                    ["Hungary (HU)", "HU"],
-                    ["Iceland (IS)", "IS"],
-                    ["Ireland (IE)", "IE"],
-                    ["Italy (IT)", "IT"],
-                    ["Latvia (LV)", "LV"],
-                    ["Liechtenstein (LI)", "LI"],
-                    ["Lithuania (LT)", "LT"],
-                    ["Luxembourg (LU)", "LU"],
-                    ["Malta (MT)", "MT"],
-                    ["Netherlands (NL)", "NL"],
-                    ["Norway (NO)", "NO"],
-                    ["Poland (PL)", "PL"],
-                    ["Portugal (PT)", "PT"],
-                    ["Romania (RO)", "RO"],
-                    ["Slovakia (SK)", "SK"],
-                    ["Slovenia (SI)", "SI"],
-                    ["Spain (ES)", "ES"],
-                    ["Sweden (SE)", "SE"],
-                    ["United Kingdom (GB)", "GB"]
-                  ], enable_banking_item.country_code),
+                  options_for_select(EnableBankingItem::COUNTRIES, enable_banking_item.country_code),
                   { label: true, include_blank: t("settings.providers.enable_banking_panel.select_country") },
-                  { label: t("settings.providers.enable_banking_panel.country_label"), class: "form-field__input" } %>
+                  { label: t("settings.providers.enable_banking_panel.country_label"), class: "form-field__input", data: { enable_banking_country_target: "select" } } %>
 
     <% if credentials_locked %>
       <%= render DS::Alert.new(
@@ -85,7 +53,7 @@
 
     <%= form.text_area :client_certificate,
                         label: t("settings.providers.enable_banking_panel.client_certificate_label"),
-                        placeholder: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+                        placeholder: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----",
                         value: "",
                         help_text: (t("settings.providers.enable_banking_panel.keep_client_certificate_hint") unless is_new_record || credentials_locked),
                         rows: 6,
@@ -194,6 +162,8 @@
             text: t("settings.providers.enable_banking_panel.add_connection"),
             icon: "plus",
             href: new_connection_enable_banking_item_path(item_for_new_connection),
+            params: { country_code: enable_banking_item.country_code },
+            form: { data: { action: "submit->enable-banking-country#applyCountry" } },
             variant: :primary,
             data: { turbo_method: :post, turbo_frame: "modal" }
           ) %>

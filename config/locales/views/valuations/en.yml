@@ -13,6 +13,9 @@ en:
       opening_balance: Opening balance
       original_principal: Original principal
       original_purchase_price: Original purchase price
+      synced_balance: Synced balance
+      synced_principal: Synced principal
+      synced_value: Synced value
     confirmation_contents:
       this_will: "This will %{action_verb} the account value on"
       to_colon: "to:"
