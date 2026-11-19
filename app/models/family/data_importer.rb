@@ -34,6 +34,7 @@ class Family::DataImporter
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant ProviderMerchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   PROPERTY_DETAIL_ATTRIBUTES = %w[year_built area_value area_unit].freeze
   PROPERTY_ADDRESS_ATTRIBUTES = %w[line1 line2 locality region county postal_code country].freeze
+  VEHICLE_DETAIL_ATTRIBUTES = %w[make model year mileage_value mileage_unit].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
@@ -348,7 +349,7 @@ class Family::DataImporter
         else
           # Build accountable
           accountable = accountable_class.new
-          accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
+          accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"].present?
           assign_liability_details(accountable, accountable_data)
 
           # Copy any other accountable attributes
@@ -360,6 +361,7 @@ class Family::DataImporter
           end
 
           assign_property_details(accountable, accountable_data) if accountable.is_a?(Property)
+          assign_vehicle_details(accountable, accountable_data) if accountable.is_a?(Vehicle)
 
           account = @family.accounts.build(accountable: accountable)
         end
@@ -369,7 +371,6 @@ class Family::DataImporter
           balance: data["balance"].to_d,
           cash_balance: data["cash_balance"]&.to_d || data["balance"].to_d,
           currency: data["currency"] || @family.currency,
-          subtype: data["subtype"],
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
@@ -379,6 +380,11 @@ class Family::DataImporter
         # Types without an IBAN (vehicle, property, ...) drop it on save
         # (Account#clear_unsupported_iban).
         account.iban = data["iban"] if data.key?("iban")
+        # `Account#subtype=` writes through to the accountable, so assigning a
+        # nil top-level subtype would wipe the nested one. The nested value
+        # wins, matching SureImport::Preflight#validate_accountables.
+        imported_subtype = accountable_data["subtype"].presence || data["subtype"].presence
+        account.subtype = imported_subtype if imported_subtype
         # A file from before the setting existed leaves the account's own.
         account.cost_basis_method = data["cost_basis_method"] if Account.cost_basis_methods.key?(data["cost_basis_method"])
         # Older exports predate the choice and keep the account's own.
@@ -412,6 +418,12 @@ class Family::DataImporter
 
       address_data = accountable_data["address"]
       property.build_address(address_data.slice(*PROPERTY_ADDRESS_ATTRIBUTES)) if address_data.is_a?(Hash)
+    end
+
+    # What the vehicle form edits. A missing or null value keeps the model's
+    # default, such as the mileage unit.
+    def assign_vehicle_details(vehicle, accountable_data)
+      vehicle.assign_attributes(accountable_data.slice(*VEHICLE_DETAIL_ATTRIBUTES).compact)
     end
 
     def importable_account_status(status)
@@ -1549,6 +1561,8 @@ class Family::DataImporter
           effective_date: data["effective_date"].present? ? Date.parse(data["effective_date"].to_s) : nil,
           stop_processing: data["stop_processing"] || false
         )
+        # Exports made before this setting existed don't carry it; keep the stored value then.
+        rule.apply_immediately = data["apply_immediately"] || false if data.key?("apply_immediately")
         # Exports from before rule groups have no group key; an existing rule
         # then keeps its group.
         rule.rule_group = find_or_create_rule_group(data["group"]) if data.key?("group")
