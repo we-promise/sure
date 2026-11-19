@@ -87,7 +87,7 @@ class RecurringTransaction < ApplicationRecord
   # FrequencyPreset and the controller translate these on save. Not persisted.
   attr_accessor :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
                 :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit,
-                :first_due_on, :is_income
+                :frequency_once_on, :first_due_on, :is_income
 
   # A scheme, followed by either "//" or by something that is not a port number.
   # "example.com:8080" is a host and port, not a scheme, so it does not match.
@@ -441,7 +441,15 @@ class RecurringTransaction < ApplicationRecord
   # a $120 annual bill contributes $10, a $10 weekly bill about $43.45. This
   # is the honest number for "recurring commitment" style totals; summing raw
   # amounts across mixed cadences answers no meaningful question.
+  # A one-off is a single payment, not a rate, so it adds nothing to
+  # "per month" commitment totals. The occurrence still shows on its date.
+  def one_off?
+    RecurringTransaction::FrequencyPreset.detect(self).key == RecurringTransaction::FrequencyPreset::ONCE
+  end
+
   def monthly_equivalent_amount
+    return amount_money * 0 if one_off?
+
     amount_money * (schedule.occurrences_per_year / 12.0)
   end
 
@@ -915,6 +923,21 @@ class RecurringTransaction < ApplicationRecord
       source_account: account,
       destination_account: destination_account
     )
+  end
+
+  # The tolerance band the matcher uses: the series' own tolerance, widened by
+  # what a manual attach has taught. Every amount decision reads this one value.
+  def effective_amount_tolerance_pct
+    [ amount_tolerance_pct, learned_amount_tolerance_pct ].max
+  end
+
+  # What a manual attach has taught, sanitised: a non-finite or invalid hint
+  # reads as zero, and an imported value never exceeds the learnable maximum.
+  # Display and matching both read this, so the copy cannot diverge from behavior.
+  def learned_amount_tolerance_pct
+    learned = BigDecimal((matcher_hints || {})["learned_tolerance_pct"].to_s, exception: false)
+    learned = BigDecimal("0") unless learned&.finite?
+    [ learned, Matcher::MAX_LEARNED_TOLERANCE_PCT ].min
   end
 
   private

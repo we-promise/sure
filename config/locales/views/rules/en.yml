@@ -73,6 +73,8 @@ en:
       restricted_to: Only changes accounts %{name} can edit
       widen: Apply to the whole family
       review_required: Switched off when the person it was limited to left. Switching it on applies it to the whole family.
+      apply_immediately: Immediately
+      apply_immediately_hint: Also runs right after a transaction is created or edited by hand, in a bulk edit, in Categorize, via the API or by the assistant, together with the active rules above it.
     form:
       rule_name_label: Rule name (optional)
       rule_name_placeholder: Enter a name for this rule
@@ -84,6 +86,8 @@ en:
       then: THEN
       stop_processing_label: Stop processing further rules
       stop_processing_description: Rules further down the list don't change transactions this rule matches.
+      apply_immediately_label: Apply immediately to new and changed transactions
+      apply_immediately_description: Runs right after a transaction is created or edited by hand, in a bulk edit, in Categorize, via the API or by the assistant, and still overnight.
       group_label: Group (optional)
       group_select_label: Group
       no_group: No group
@@ -178,6 +182,7 @@ en:
       execution_types:
         manual: Manual
         scheduled: Scheduled
+        immediate: Immediate
       statuses:
         pending: Pending
         success: Success
