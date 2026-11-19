@@ -202,6 +202,10 @@ class Provider::Eodhd < Provider
 
         parsed = JSON.parse(response.body)
         check_api_error!(parsed)
+      rescue RateLimitError
+        # Our own quota refusal says nothing about the ticker, so it must not
+        # be remembered as a fundamentals failure.
+        raise
       rescue Faraday::ForbiddenError, Faraday::ResourceNotFound, Error => e
         Rails.cache.write(failed_key, true, expires_in: 7.days)
         # EODHD documents that a lookup for an unknown ticker (404) is billed at its

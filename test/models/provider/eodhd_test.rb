@@ -533,6 +533,11 @@ class Provider::EodhdTest < ActiveSupport::TestCase
       # (15 -> 25) is refused before it and taken back off the count.
       assert_requested :get, FUNDAMENTALS_URL, query: hash_including("fmt" => "json"), times: 1
       assert_equal 15, store.read("eodhd:daily:#{Date.current}")
+
+      # Our own quota refusal says nothing about the ticker, so it is not remembered
+      # as a failed fundamentals lookup.
+      failed_key = "eodhd:fundamentals_failed:#{Digest::SHA256.hexdigest('test_api_key')[0, 8]}:AAPL.US"
+      assert_not store.exist?(failed_key)
     end
   end
 
