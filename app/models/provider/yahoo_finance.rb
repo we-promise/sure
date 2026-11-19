@@ -1,6 +1,29 @@
 require "set"
 
 class Provider::YahooFinance < Provider
+  # US venues, which Yahoo looks up without a suffix: the MICs map_exchange_mic
+  # returns for US exchanges, the OTC markets, and the Yahoo codes it passes
+  # through unmapped (PNK for Pink Sheets, BTS for Cboe BZX).
+  UNSUFFIXED_MICS = %w[XNAS XNYS ARCX XASE BATS IEXG OTCM OOTC PINX XOTC PNK BTS].freeze
+
+  # A ticker already in Yahoo's suffixed form (0005.HK, 7203.T), as Yahoo's own
+  # search stores it for venues EXCHANGE_CONFIG doesn't map.
+  YAHOO_SUFFIXED_TICKER = /\.[A-Z]{1,3}\z/
+
+  # Whether Yahoo resolves this ticker to the listing on this MIC. A MIC with
+  # no suffix mapping is looked up bare, which can be a different listing
+  # (BHP alone is the NYSE ADR), unless the ticker already carries Yahoo's
+  # suffix. A crypto ticker (CRYPTO:BTC) is never a Yahoo listing. A security
+  # with no MIC is looked up bare, as most of them are US shares entered by hand.
+  def self.venue_supported?(exchange_operating_mic, ticker: nil)
+    return false if ticker.to_s.start_with?(Provider::BinancePublic::CRYPTO_PREFIX)
+
+    exchange_operating_mic.blank? ||
+      UNSUFFIXED_MICS.include?(exchange_operating_mic) ||
+      EXCHANGE_CONFIG.key?(exchange_operating_mic) ||
+      ticker.to_s.match?(YAHOO_SUFFIXED_TICKER)
+  end
+
   include ExchangeRateConcept, SecurityConcept
   extend SslConfigurable
 
@@ -603,6 +626,8 @@ class Provider::YahooFinance < Provider
       "XHEL" => { yahoo_suffix: ".HE", default_currency: "EUR" },
       "XOSL" => { yahoo_suffix: ".OL", default_currency: "NOK" },
       "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }, # Vienna
+      # Asia-Pacific
+      "XASX" => { yahoo_suffix: ".AX", default_currency: "AUD" }, # Australian Securities Exchange
       # Canada. Yahoo writes share classes and units with a dash, not a dot:
       # CSH.UN is CSH-UN.TO and CCL.B is CCL-B.TO.
       "XTSE" => { yahoo_suffix: ".TO", default_currency: "CAD", share_class_separator: "-" }, # Toronto
