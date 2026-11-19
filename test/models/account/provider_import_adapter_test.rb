@@ -1931,7 +1931,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "enable_banking_atm_1",
       amount: 20.00,
       currency: "USD",
-      date: Date.today - 2.days,
+      date: Date.current - 2.days,
       name: "ATM Withdrawal",
       source: "enable_banking",
       extra: { "enable_banking" => { "pending" => true } }
@@ -1940,7 +1940,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "enable_banking_atm_2",
       amount: 20.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "ATM Withdrawal",
       source: "enable_banking",
       extra: { "enable_banking" => { "pending" => true } }
@@ -1950,7 +1950,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "enable_banking_atm_booked",
       amount: 20.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "ATM Withdrawal",
       source: "enable_banking",
       extra: { "enable_banking" => { "pending" => false } }
@@ -1966,7 +1966,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_excluded_pending",
       amount: 35.00,
       currency: "USD",
-      date: Date.today - 3.days,
+      date: Date.current - 3.days,
       name: "Old Hold",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1977,7 +1977,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_live_pending",
       amount: 35.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Live Hold",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1987,7 +1987,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_posted_hold",
       amount: 35.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Hold Posted",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => false } }
