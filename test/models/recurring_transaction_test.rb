@@ -1948,7 +1948,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       end
     end
 
-    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id, Date.current ])
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id, Date.current, true ])
     assert_equal 0, confirmed_allocations_for(series), "nothing may run under another session's lock"
 
     # The refused pg_try_advisory_lock is a SELECT the test's query cache
@@ -1997,6 +1997,71 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       assert_empty series.recurring_occurrences.open_status.where("due_on < ?", Date.current).pluck(:due_on),
         "an ended schedule owes nothing, so its unpaid past rows must be pruned"
     end
+  end
+
+  test "a family backfill keeps an ended bill's overdue final payment" do
+    series = nil
+    travel_to Date.new(2026, 12, 1) do
+      series = @family.recurring_transactions.create!(
+        name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
+        expected_day_of_month: 9, anchor_date: Date.new(2026, 10, 9),
+        last_occurrence_date: Date.new(2026, 11, 9), next_expected_date: Date.new(2026, 12, 9),
+        end_mode: "after_count", end_after_count: 3, status: "active", manual: true
+      )
+    end
+
+    travel_to Date.new(2026, 12, 15) do
+      final = series.recurring_occurrences.find_or_create_by!(original_due_on: Date.new(2026, 12, 9)) do |occurrence|
+        occurrence.due_on = Date.new(2026, 12, 9)
+      end
+
+      assert_no_difference -> { series.recurring_occurrences.where(id: final.id).count } do
+        RecurringTransaction::HistoryBackfiller.new(@family).run!
+      end
+    end
+  end
+
+  test "a family backfill keeps current-cycle rows before an anchor taken from a past payment" do
+    travel_to Date.new(2026, 11, 20) do
+      # A bill marked recurring from a payment, later given an anchor from
+      # that payment's date, as FrequencyPreset and the update form do.
+      series = @family.recurring_transactions.create!(
+        name: "GYM", account: @account, amount: 40, currency: "USD",
+        expected_day_of_month: 1, last_occurrence_date: Date.new(2026, 10, 1),
+        next_expected_date: Date.new(2026, 11, 1), status: "active", manual: true
+      )
+      series.update_columns(anchor_date: Date.new(2026, 11, 10))
+      current = series.recurring_occurrences.find_or_create_by!(original_due_on: Date.new(2026, 11, 1)) do |occurrence|
+        occurrence.due_on = Date.new(2026, 11, 1)
+      end
+
+      assert_no_difference -> { series.recurring_occurrences.where(id: current.id).count } do
+        RecurringTransaction::HistoryBackfiller.new(@family).run!
+      end
+    end
+  end
+
+  test "restoring a suggestion as active does not reconstruct its history" do
+    series = @family.recurring_transactions.create!(
+      name: "CITY WATER", account: @account, amount: 80, currency: "USD",
+      expected_day_of_month: 9, last_occurrence_date: Date.current,
+      next_expected_date: Date.current + 1.month, status: "suggested", manual: false
+    )
+    RecurringTransaction::HistoryBackfiller.any_instance.expects(:run!).never
+    BackfillRecurringHistoryJob.expects(:perform_later).never
+
+    series.restoring_from_export = true
+    series.update!(status: "active")
+  end
+
+  test "declaring a bill generates its occurrences once" do
+    generator = RecurringTransaction::OccurrenceGenerator
+    calls = 0
+    generator.any_instance.stubs(:generate!).with { calls += 1 }.returns(nil)
+
+    declare_bill("CITY WATER")
+
+    assert_equal 1, calls, "the declaration's history pass already generates; the create callback must not repeat it"
   end
 
   test "a declared bill keeps a first due date the weekend moved before its anchor" do

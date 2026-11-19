@@ -208,7 +208,11 @@ class RecurringTransaction < ApplicationRecord
     errors.add(:payment_url, :invalid_scheme) unless self.class.valid_payment_url?(payment_url)
   end
 
+  # A declaration's history pass has already generated, unless the family lock
+  # sent it to the job.
   def generate_occurrences
+    return @occurrences_generated = false if @occurrences_generated
+
     OccurrenceGenerator.new(self).generate!
   end
 
@@ -220,7 +224,7 @@ class RecurringTransaction < ApplicationRecord
   # family-wide on purpose (exact-tier, idempotent, and scoping it would need
   # a parallel Matcher entry point). Returns false only when another pipeline
   # holds the family lock.
-  def reconstruct_history!(as_of: Date.current)
+  def reconstruct_history!(as_of: Date.current, declared: false)
     return true if family.recurring_transactions_disabled?
 
     Pipeline.with_family_lock(family_id) do
@@ -233,11 +237,13 @@ class RecurringTransaction < ApplicationRecord
       # backfiller's, so a pause that committed since this record was read
       # is respected.
       series_scope.find_each { |series| OccurrenceGenerator.new(series).generate! }
+      @occurrences_generated = true
       HistoryBackfiller.new(
         family,
         months: Pipeline::FIRST_RUN_BACKFILL_MONTHS,
         series_scope: series_scope,
-        as_of: as_of
+        as_of: as_of,
+        declared: declared
       ).run!
     end
   end
@@ -246,7 +252,7 @@ class RecurringTransaction < ApplicationRecord
   # assigns every field and saves once, so by now the series reads active
   # whichever route it took.
   def activated_from_suggestion?
-    saved_change_to_status?(from: "suggested", to: "active")
+    saved_change_to_status?(from: "suggested", to: "active") && !restoring_from_export
   end
 
   def declared_active?
@@ -262,17 +268,21 @@ class RecurringTransaction < ApplicationRecord
   # re-runnable by construction. The job carries today's date, so a run that
   # waited reconstructs the same history an immediate one would have.
   def reconstruct_history_on_activation
-    as_of = Date.current
-    BackfillRecurringHistoryJob.perform_later(id, as_of) unless reconstruct_history!(as_of: as_of)
-  rescue StandardError => e
-    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
-    BackfillRecurringHistoryJob.perform_later(id, as_of)
+    reconstruct_history_or_queue(declared: false)
   end
 
-  # A second registration of the activation method would replace the first
-  # (callbacks are keyed by method name), so creation has its own entry point.
+  # A declaration also prunes what its schedule placed before the bill
+  # existed, which an activation must not.
   def reconstruct_history_on_declaration
-    reconstruct_history_on_activation
+    reconstruct_history_or_queue(declared: true)
+  end
+
+  def reconstruct_history_or_queue(declared:)
+    as_of = Date.current
+    BackfillRecurringHistoryJob.perform_later(id, as_of, declared) unless reconstruct_history!(as_of: as_of, declared: declared)
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
+    BackfillRecurringHistoryJob.perform_later(id, as_of, declared)
   end
 
   # Regenerating rebuilds only scheduled, allocation-free, not-yet-due rows;

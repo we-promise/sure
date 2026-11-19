@@ -6,14 +6,19 @@ class RecurringTransaction
   class HistoryBackfiller
     attr_reader :family, :months, :as_of
 
-    # as_of is the day the history is reconstructed for. A deferred run
-    # passes the day its caller wanted, so a backfill that waited on the
-    # family lock prunes exactly what an immediate run would have.
-    def initialize(family, months: 6, series_scope: nil, as_of: Date.current)
+    # as_of bounds the prune and the start of the backfill window. A deferred
+    # run passes the day its caller wanted, so a backfill that waited on the
+    # family lock deletes no more than an immediate run would have. Generation
+    # and matching still run for today: rows due after as_of were owed.
+    #
+    # declared marks a run for a bill that was just declared: everything its
+    # schedule placed before the declaration is not owed.
+    def initialize(family, months: 6, series_scope: nil, as_of: Date.current, declared: false)
       @family = family
       @months = months
       @series_scope = series_scope
       @as_of = as_of
+      @declared = declared
     end
 
     # Returns the number of pruned occurrences.
@@ -40,12 +45,13 @@ class RecurringTransaction
 
       # Uncovered past occurrences (before the current cycle, no payments)
       # are deleted, not marked missed -- backfill reconstructs what
-      # happened, it does not fabricate debt. A declared bill owes nothing
-      # before its first due date either, which can fall after the current
-      # cycle has begun. The anchor is a scheduled date, so it bounds
-      # original_due_on: weekend adjustment can move the first occurrence's
-      # due_on ahead of it. A schedule that has ended by as_of has no current
-      # cycle, so nothing before as_of is owed.
+      # happened, it does not fabricate debt. A bill whose first due date is
+      # still ahead owes nothing before it, even inside the current cycle. The
+      # anchor is a scheduled date, so it bounds original_due_on: weekend
+      # adjustment can move the first occurrence's due_on ahead of it. An
+      # anchor already passed is bounded by the cycle, and may not be a first
+      # due date at all (presets and the edit form fill it from the last
+      # payment).
       def prune_uncovered_past!
         pruned = 0
 
@@ -54,7 +60,7 @@ class RecurringTransaction
                             .open_status
                             .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
           cycle_start = current_cycle_start(series.schedule)
-          anchor = series.anchor_date if series.manual?
+          anchor = series.anchor_date if series.manual? && series.anchor_date.present? && series.anchor_date > as_of
           bounds = [
             (uncovered.where("due_on < ?", cycle_start) if cycle_start),
             (uncovered.where("original_due_on < ?", anchor) if anchor)
@@ -67,11 +73,15 @@ class RecurringTransaction
         pruned
       end
 
+      # A schedule with no current cycle is skipped, so an ended plan keeps its
+      # overdue final payments. Only a bill declared after its schedule ended
+      # owes nothing before the declaration. cycle_for is also nil before a
+      # one-off schedule's only date, which is still owed.
       def current_cycle_start(schedule)
         cycle = schedule.cycle_for(as_of)
         return cycle.begin if cycle
 
-        as_of if schedule.first_occurrence_after(as_of).nil?
+        as_of if @declared && schedule.first_occurrence_after(as_of).nil?
       end
   end
 end
