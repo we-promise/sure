@@ -112,6 +112,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.mark_user_modified! if user_modified_requested?
       @entry.sync_account_later
+      @entry.apply_immediate_rules_later
 
       @transaction = @entry.transaction
       render :show, status: :created
@@ -155,6 +156,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     return render_validation_error("Unknown category id") if unknown_category_id?
     return render_validation_error("Unknown merchant id") if unknown_merchant_id?
 
+    rule_input = @entry.rule_input_snapshot
+    updated = false
+
     Entry.transaction do
       if @entry.update(entry_params_for_update)
         sync_needed = @entry.saved_changes_affect_balances?
@@ -172,6 +176,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         @entry.mark_user_modified! if user_modified_requested?
 
         @transaction = @entry.transaction
+        updated = true
         render :show
       else
         render json: {
@@ -182,6 +187,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         raise ActiveRecord::Rollback
       end
     end
+
+    # After the commit, so the enqueue runs here and not in a deferred
+    # after-commit callback once the response is already rendered.
+    @entry.apply_immediate_rules_later(changed_from: rule_input) if updated
 
   rescue => e
     Rails.logger.error "TransactionsController#update error: #{e.message}"
