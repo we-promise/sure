@@ -43,17 +43,19 @@ class PortfoliosTest < ApplicationSystemTestCase
   end
 
   test "a holdings column header sorts the table and flips on a second click" do
-    Holding.create!(account: accounts(:investment), security: Security.create!(ticker: "ZZZ", name: "Zeta"),
+    # Name and ticker order disagree ("Aardvark" before "Apple", ZZZ
+    # after AAPL), so a name sort that compared tickers would fail.
+    Holding.create!(account: accounts(:investment), security: Security.create!(ticker: "ZZZ", name: "Aardvark"),
                     date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
     visit portfolio_path
 
     find("#portfolio-holdings th a[href*='sort=name']").click
     assert_selector "#portfolio-holdings th[aria-sort='ascending'] a[href*='sort=name']"
-    assert_equal %w[AAPL ZZZ], all("#portfolio-holdings tr[data-portfolio-holding]").map { |row| row["data-portfolio-holding"] }
+    assert_equal %w[ZZZ AAPL], all("#portfolio-holdings tr[data-portfolio-holding]").map { |row| row["data-portfolio-holding"] }
 
     find("#portfolio-holdings th a[href*='sort=name']").click
     assert_selector "#portfolio-holdings th[aria-sort='descending'] a[href*='sort=name']"
-    assert_equal %w[ZZZ AAPL], all("#portfolio-holdings tr[data-portfolio-holding]").map { |row| row["data-portfolio-holding"] }
+    assert_equal %w[AAPL ZZZ], all("#portfolio-holdings tr[data-portfolio-holding]").map { |row| row["data-portfolio-holding"] }
   end
 
   # A name that is clipped still sits in the DOM, so the assertion is on the
