@@ -8,8 +8,13 @@ es:
       success: Configuración de Binance actualizada correctamente.
     destroy:
       success: Conexión de Binance programada para su eliminación.
+    select_accounts:
+      connection_unavailable: Esa conexión de Binance no está disponible. Elige una en los Ajustes del proveedor.
+      no_credentials_configured: Conecta Binance en los Ajustes del proveedor antes de añadir sus cuentas.
+      select_connection: Elige una conexión de Binance en los Ajustes del proveedor.
     setup_accounts:
       title: Importar cuenta de Binance
+      historical_import: Importación histórica
       subtitle: Selecciona qué carteras quieres seguir
       instructions: Selecciona las carteras de Binance que quieres importar. Solo se muestran las carteras con saldos.
       no_accounts: Se han importado todas las cuentas.
@@ -21,6 +26,7 @@ es:
       cancel: Cancelar
       creating: Importando...
     complete_account_setup:
+      invalid_sync_start_date: La fecha de inicio de sincronización debe ser una fecha válida en el pasado.
       success:
         one: "Se ha importado %{count} cuenta"
         other: "Se han importado %{count} cuentas"

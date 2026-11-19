@@ -1,4 +1,6 @@
 class Settings::SecuritiesController < ApplicationController
+  include DemoMfaRestriction
+
   layout "settings"
 
   def show

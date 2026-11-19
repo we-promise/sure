@@ -342,6 +342,24 @@ class Provider::MansaTest < ActiveSupport::TestCase
     assert_no_match(/=>/, error.message) # would appear in a raw Hash#to_s dump
   end
 
+  # The test environment caches in a null store, so the usage readers need a real
+  # RedisCacheStore to notice a counter they cannot read back. The per-run namespace
+  # keeps runs sharing one Redis from reading each other's counts.
+  test "usage reports the request counter on a real Redis cache" do
+    store = ActiveSupport::Cache::RedisCacheStore.new(
+      url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
+      namespace: "test:mansa:#{SecureRandom.hex(8)}"
+    )
+    Rails.stubs(:cache).returns(store)
+
+    provider = Provider::Mansa.new("test_api_key")
+    2.times { provider.send(:enforce_daily_limit!) }
+
+    assert_equal 2, provider.usage.data.used
+  ensure
+    store&.delete(provider&.send(:daily_cache_key))
+  end
+
   private
     def stub_search_response(*listings)
       mock_response = mock
