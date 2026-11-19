@@ -24,6 +24,8 @@ class RevolutXAccount::TransactionsProcessor
 
     warm_prices
     rows.each do |row|
+      next if held_back?(row)
+
       process_row(row)
     rescue StandardError => e
       report("Revolut X transaction #{row["id"]} not imported: #{e.message}", row, level: "error")
@@ -58,8 +60,34 @@ class RevolutXAccount::TransactionsProcessor
     # Oldest first: holdings replay trades by (date, created_at), so a same-day
     # buy must be written before the sell it funds.
     def rows
-      revolut_x_account.raw_transactions_payload.to_h.fetch("transactions", {}).values
-        .sort_by { |row| [ row["created_date"].to_i, row["id"].to_s ] }
+      @rows ||= revolut_x_account.raw_transactions_payload.to_h.fetch("transactions", {}).values
+        .sort_by { |row| order_key(row) }
+    end
+
+    def order_key(row)
+      [ row["created_date"].to_i, row["id"].to_s ]
+    end
+
+    # A pending trade row is written in the sync where it completes, so a
+    # later same-day trade written before it would replay ahead of it. Such a
+    # trade waits, and the day is written in one run once the pending row
+    # resolves.
+    def held_back?(row)
+      return false unless row["status"] == "completed" && trade_row?(row)
+
+      first_pending = first_pending_trade_by_date[entry_date(row)]
+      first_pending.present? && (order_key(row) <=> first_pending).positive?
+    end
+
+    def first_pending_trade_by_date
+      @first_pending_trade_by_date ||= rows.select { |row| pending?(row) && trade_row?(row) }
+        .each_with_object({}) { |row, firsts| firsts[entry_date(row)] ||= order_key(row) }
+    end
+
+    # Rows that write a Trade: a mapped type with a crypto leg.
+    def trade_row?(row)
+      %w[buy sell receive send reward].include?(row["type"]) &&
+        [ row["source"], row["destination"] ].any? { |leg| leg.is_a?(Hash) && !item.fiat_currency?(leg["currency"]) }
     end
 
     # stake and un_stake map to nothing: the balance total already includes
