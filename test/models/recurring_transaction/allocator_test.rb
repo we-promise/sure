@@ -329,13 +329,7 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
 
   test "one entry can pay several occurrences but never more than itself" do
     lump = entry_for(1612.50)
-    # A mid-month date the day-29 series never generates, so this manual
-    # row can never collide with the generator's rows regardless of what
-    # Date.current is when the suite runs.
-    free_date = (Date.current + 2.months).beginning_of_month + 9
-    september = @rent.recurring_occurrences.create!(
-      family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
-    )
+    september = free_occurrence
 
     @allocator.allocate!(entry: lump, amount: 1000)
     Allocator.new(september).allocate!(entry: lump, amount: 612.50)
@@ -348,10 +342,7 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
   test "an entry another occurrence already uses up is refused as exhausted" do
     lump = entry_for(500)
     @allocator.allocate!(entry: lump)
-    free_date = (Date.current + 2.months).beginning_of_month + 9
-    september = @rent.recurring_occurrences.create!(
-      family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
-    )
+    september = free_occurrence
 
     # With no amount the default is what the entry has left, which is zero.
     # That used to reach the allocation's "greater than 0" validation instead.
@@ -381,6 +372,68 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     remaining = assert_queries_count(1) { Allocator.remaining_by_entry([ partly, fully, unused ]) }
 
     assert_equal({ partly.id => 300, fully.id => 0 }, remaining)
+  end
+
+  # A split parent and its children are the same money: whichever side pays a
+  # bill first, the other side is spent, suggestions included.
+  test "a split parent and its children never both pay" do
+    parent = entry_for(1612.50)
+    child, = parent.split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+    september = free_occurrence
+
+    @allocator.allocate!(entry: parent, amount: 1000)
+    assert_raises(Allocator::SplitCounterpartAllocatedError) { Allocator.new(september).allocate!(entry: child) }
+
+    @occurrence.allocations.destroy_all
+    Allocator.new(september).allocate_matched!(entry: child, state: "suggested", confidence: 0.7, signals: {})
+    assert_raises(Allocator::SplitCounterpartAllocatedError) { @allocator.allocate!(entry: parent) }
+    assert_empty @occurrence.allocations
+  end
+
+  test "the parts of a split can each pay a bill" do
+    rent, parking = entry_for(1612.50).split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+
+    @allocator.allocate!(entry: rent)
+    Allocator.new(free_occurrence).allocate!(entry: parking)
+
+    assert_equal 2, RecurringAllocation.where(entry: [ rent, parking ]).count
+  end
+
+  test "remaining_by_entry reports the other side of a paying split as used up, in one query" do
+    parent = entry_for(1612.50)
+    rent, parking = parent.split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+    @allocator.allocate!(entry: rent, amount: 400)
+
+    remaining = assert_queries_count(1) { Allocator.remaining_by_entry([ parent, rent, parking ]) }
+
+    assert_equal({ parent.id => 0, rent.id => 600 }, remaining)
+
+    other_parent = entry_for(500)
+    other_child, = other_parent.split!([ { name: "A", amount: 200 }, { name: "B", amount: 300 } ])
+    @allocator.allocate!(entry: other_parent, amount: 100)
+
+    assert_equal({ other_child.id => 0 }, Allocator.remaining_by_entry([ other_child ]))
+  end
+
+  # The guard ignores ended series, so the drawer must too: a deleted bill
+  # that a child paid leaves the parent free.
+  test "remaining_by_entry ignores what an ended bill took, on the entry or its counterpart" do
+    parent = entry_for(1612.50)
+    rent, = parent.split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+    @allocator.allocate!(entry: rent, amount: 400)
+    @rent.update!(status: "ended")
+
+    assert_empty Allocator.remaining_by_entry([ parent, rent ])
+  end
+
+  # Different locks would let a parent and a child pass their counterpart
+  # checks at once, each blind to the other's uncommitted allocation.
+  test "a split parent and its children share one entry lock" do
+    parent = entry_for(1612.50)
+    children = parent.split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+
+    assert_equal [ Allocator.entry_lock_id(parent) ], children.map { |child| Allocator.entry_lock_id(child) }.uniq
+    assert_not_equal Allocator.entry_lock_id(parent), Allocator.entry_lock_id(entry_for(10))
   end
 
   test "remaining_by_entry treats an unmeasurable entry as used up" do
@@ -435,10 +488,7 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     )
     @allocator.allocate!(entry: foreign, amount: 55)
 
-    free_date = (Date.current + 2.months).beginning_of_month + 9
-    other = @rent.recurring_occurrences.create!(
-      family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
-    )
+    other = free_occurrence
     # 50 EUR of the entry is spoken for, so the default is the 50 EUR
     # leftover converted, not the full 100 the old default reached for.
     allocation = Allocator.new(other).allocate!(entry: foreign)
@@ -670,6 +720,16 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
         currency: "USD",
         name: "Watson Property",
         entryable: Transaction.new
+      )
+    end
+
+    # A mid-month date the day-29 series never generates, so this manual
+    # row can never collide with the generator's rows regardless of what
+    # Date.current is when the suite runs.
+    def free_occurrence
+      free_date = (Date.current + 2.months).beginning_of_month + 9
+      @rent.recurring_occurrences.create!(
+        family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
       )
     end
 end

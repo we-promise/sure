@@ -145,13 +145,17 @@ class Entry < ApplicationRecord
     SQL
   }
 
-  scope :excluding_split_parents, -> {
-    where(<<~SQL.squish)
-      NOT EXISTS (
-        SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id
-      )
-    SQL
-  }
+  SPLIT_PARENT_SQL = "EXISTS (SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id)".freeze
+  private_constant :SPLIT_PARENT_SQL
+
+  scope :excluding_split_parents, -> { where("NOT #{SPLIT_PARENT_SQL}") }
+
+  # Non-excluded entries plus split parents. split! excludes the parent so its
+  # children are not counted twice, but the parent is still the charge the bank
+  # made, so anything matching real payments (bills) keeps it. Every other
+  # excluded entry is dropped: user exclusions and system ones alike (stale
+  # pending entries, pending duplicates of a posted transaction).
+  scope :not_excluded_or_split_parent, -> { where("entries.excluded = FALSE OR #{SPLIT_PARENT_SQL}") }
 
   # Balance updates: reconciliation valuations. On linked accounts most of them
   # are the provider's daily balance, kept as a waypoint by
@@ -634,6 +638,12 @@ class Entry < ApplicationRecord
   # deleted: removing a transfer leg removes the transfer with its fees.
   def accounts_changed_by_transfer_removal
     [ self, *child_entries ].flat_map { |entry| entry.entryable.try(:transfer)&.accounts_changed_by_removal || [] }.uniq
+  end
+
+  # The other side of a split: a child's parent, or a parent's children. Both
+  # sides are the same money. Siblings are not: each child is its own part.
+  def split_counterparts
+    self.class.where(id: parent_entry_id).or(self.class.where(parent_entry_id: id))
   end
 
   # Splits this entry into child entries. Marks parent as excluded.
