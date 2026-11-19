@@ -75,7 +75,7 @@ class Provider::AlphaVantage < Provider
   def usage
     with_provider_response do
       day_key = "alpha_vantage:daily:#{Date.current}"
-      used = Rails.cache.read(day_key).to_i
+      used = Rails.cache.read(day_key, raw: true).to_i
 
       UsageData.new(
         used: used,

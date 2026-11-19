@@ -21,6 +21,11 @@ class Assistant::Function::GetHoldings < Assistant::Function
 
         Note: This function only returns holdings from Investment and Crypto accounts.
 
+        Each holding's `lots` lists the parcels it is made of, oldest first:
+        when each was acquired, how many units are still held and what each
+        unit cost (`opening` is units held before the first recorded trade).
+        It is null when the recorded lots do not add up to the holding.
+
         Note on pagination:
 
         This function can be paginated. You can expect the following properties in the response:
@@ -102,6 +107,8 @@ class Assistant::Function::GetHoldings < Assistant::Function
 
     total_value = family_amounts.values.sum
 
+    open_lots = Holding.open_lots_for(paginated_holdings)
+
     normalized_holdings = paginated_holdings.map do |holding|
       {
         ticker: holding.ticker,
@@ -114,6 +121,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
         weight: holding.weight&.round(2),
         average_cost: holding.avg_cost&.to_f,
         formatted_average_cost: holding.avg_cost&.format,
+        lots: open_lots[holding.id]&.map { |lot| normalized_lot(lot) },
         account: holding.account.name,
         date: holding.date
       }
@@ -130,6 +138,20 @@ class Assistant::Function::GetHoldings < Assistant::Function
   end
 
   private
+    # One open lot of a position: the opening lot (units held before the first
+    # trade) has no acquisition date and, unless the user set one, no cost.
+    def normalized_lot(lot)
+      unit_cost = lot.unit_cost && Money.new(lot.unit_cost, lot.currency)
+      {
+        opening: lot.opening?,
+        acquired_on: lot.acquired_on,
+        quantity: lot.qty.to_f,
+        unit_cost: unit_cost&.amount&.to_f,
+        formatted_unit_cost: unit_cost&.format,
+        manual_cost: lot.manual_cost?
+      }
+    end
+
     def default_page_size
       self.class.default_page_size
     end

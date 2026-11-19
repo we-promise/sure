@@ -38,7 +38,7 @@ providers:
     # OpenAI routes the gpt-5.6 alias to GPT-5.6 Sol.
     gpt-5.6: *gpt-5-6-sol
     # Trusted-access cyber models; listed so they don't match the rows above.
-    gpt-5.6-cyber: { prompt: 12.5, completion: 75.0 }
+    gpt-5.6-cyber: { prompt: 12.5, completion: 75.0, long_context: { threshold: 272000, prompt: 25.0, completion: 112.5 } }
     gpt-5.5-cyber: { prompt: 12.5, completion: 75.0 }
     # Terra and Luna price reductions effective 2026-07-30.
     gpt-5.6-terra: { prompt: 2.0, completion: 12.0, long_context: { threshold: 272000, prompt: 4.0, completion: 18.0 } }
@@ -100,6 +100,8 @@ providers:
   # Source: https://platform.claude.com/docs/en/about-claude/pricing
   # cache_read is set only where Anthropic lists a rate other than 0.1x input.
   anthropic:
+    # Added by bin/update_llm_pricing; check against the official pricing page.
+    claude-fable-5-2: { prompt: 8.0, completion: 40.0, cache_read: 0.2 }
     claude-fable-5-1: &claude-fable-5-1 { prompt: 10.0, completion: 50.0, cache_read: 0.25 }
     claude-fable-5: { prompt: 10.0, completion: 50.0 }
     claude-opus-5-5: &claude-opus-5-5 { prompt: 4.0, completion: 20.0, cache_read: 0.2 }

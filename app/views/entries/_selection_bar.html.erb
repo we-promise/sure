@@ -21,12 +21,14 @@
     <%= link_to new_transactions_bulk_update_path,
                 class: "p-1.5 group/edit hover:bg-inverse flex items-center justify-center rounded-md",
                 title: t("transactions.selection_bar.edit"),
-                data: { turbo_frame: "bulk_transaction_edit_drawer" } do %>
+                data: { turbo_frame: "bulk_transaction_edit_drawer", bulk_select_target: "editLink" } do %>
       <%= icon "pencil-line", class: "group-hover/edit:text-inverse" %>
     <% end %>
 
+    <%= render "transactions/reconcile_menu", enabled: @account.nil? || @account.manual? %>
+
     <%= form_with url: transactions_bulk_deletion_path, data: { turbo_confirm: CustomConfirm.for_resource_deletion("entry").to_data_attribute, turbo_frame: "_top" } do %>
-      <button type="button" data-bulk-select-scope-param="bulk_delete" data-action="bulk-select#submitBulkRequest" class="p-1.5 group/delete hover:bg-inverse flex items-center justify-center rounded-md" title="Delete">
+      <button type="button" data-bulk-select-scope-param="bulk_delete" data-bulk-select-target="deleteButton" data-action="bulk-select#submitBulkRequest" class="p-1.5 group/delete hover:bg-inverse flex items-center justify-center rounded-md" title="Delete">
         <%= icon "trash-2", class: "group-hover/delete:text-inverse" %>
       </button>
     <% end %>

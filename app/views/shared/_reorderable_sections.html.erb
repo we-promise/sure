@@ -63,6 +63,13 @@
                 <%= render DS::Pill.new(label: t("shared.preview")) %>
               <% end %>
             </div>
+            <%# Optional controls on the title row. A click on a button in here
+                activates the button, not the summary, so it doesn't collapse the section. %>
+            <% if section[:header_partial] %>
+              <div class="ml-auto flex items-center gap-2">
+                <%= render partial: section[:header_partial], locals: section[:header_locals] || {} %>
+              </div>
+            <% end %>
             <%# A mouse grab hint. Keys only grab the section itself, so the
                 hint stays out of the tab order instead of being an invisible
                 stop. %>
