@@ -17,18 +17,30 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
-  test "account reconciliation indicators only render when manual reconciliation is enabled" do
-    get accounts_url
+  test "account reconciliation indicator renders only on the account page" do
+    create_transaction(account: @account, name: "Unreconciled", amount: 10)
+
+    get account_url(@account)
 
     assert_response :success
     assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
 
     @user.family.update!(manual_reconciliation: true)
 
+    get account_url(@account)
+
+    assert_response :success
+    assert_equal 1, response.body.scan(I18n.t("accounts.reconciliation_indicator.needs_attention")).size
+
     get accounts_url
 
     assert_response :success
-    assert_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+    assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+
+    get root_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
   end
 
   # Opening the account groups makes the list scroll; reserving the scrollbar's
@@ -614,6 +626,238 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(categorized)}"
     assert_select "##{dom_id(uncategorized)}", count: 0
     assert_select "##{dom_id(valuation)}", count: 0
+  end
+
+  test "show filters activity by reconciliation status on a manual account" do
+    @user.family.update!(manual_reconciliation: true)
+    cleared = create_transaction(name: "Cleared", amount: 50, account: @account)
+    cleared.update!(reconciled_status: "cleared")
+    unreconciled = create_transaction(name: "Unreconciled", amount: 60, account: @account)
+
+    get account_url(@account), params: { q: { reconcile_status: [ "cleared" ] } }
+
+    assert_response :success
+    assert_select "##{dom_id(cleared)}"
+    assert_select "##{dom_id(unreconciled)}", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "reconcile_status_filter"
+  end
+
+  test "show hides the reconciliation filter on a synced account and drops the param" do
+    @user.family.update!(manual_reconciliation: true)
+    synced_account = accounts(:connected)
+    entry = create_transaction(name: "Synced entry", amount: 50, account: synced_account)
+
+    get account_url(synced_account), params: { q: { reconcile_status: [ "unreconciled" ] } }
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "reconcile_status_filter", count: 0
+    assert_select "##{dom_id(entry)}"
+  end
+
+  test "reconcile_all marks every transaction on a manual account and keeps statement data" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    first = create_transaction(account: account, name: "First", amount: 10)
+    second = create_transaction(account: account, name: "Second", amount: 20)
+    valuation = create_valuation(account: account, date: 2.days.ago.to_date)
+    other_account_entry = create_transaction(account: accounts(:credit_card), name: "Other account")
+    reconciled_at = 2.days.ago.change(usec: 0)
+    first.update_columns(reconciled_at: reconciled_at)
+
+    patch reconcile_all_account_url(account), params: { reconciled_status: "reconciled" }
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.reconcile_all.success", count: 2, status: I18n.t("transactions.reconcile.statuses.reconciled")), flash[:notice]
+    assert_equal %w[reconciled reconciled], [ first, second ].map { |entry| entry.reload.reconciled_status }
+    assert_equal reconciled_at, first.reload.reconciled_at
+    assert_equal "unreconciled", valuation.reload.reconciled_status
+    assert_equal "unreconciled", other_account_entry.reload.reconciled_status
+  end
+
+  test "reconcile_all rejects a synced account" do
+    @user.family.update!(manual_reconciliation: true)
+    account = accounts(:connected)
+    entry = create_transaction(account: account, name: "Synced")
+
+    patch reconcile_all_account_url(account), params: { reconciled_status: "reconciled" }
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.reconcile_all.not_manual_account"), flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile_all rejects an unknown status" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    entry = create_transaction(account: account, name: "Untouched")
+
+    patch reconcile_all_account_url(account), params: { reconciled_status: "bogus" }
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.reconcile_all.invalid_status"), flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile_all returns not found when manual reconciliation is disabled" do
+    account = create_manual_account
+    entry = create_transaction(account: account, name: "Untouched")
+
+    patch reconcile_all_account_url(account), params: { reconciled_status: "reconciled" }
+
+    assert_response :not_found
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile_all requires write permission" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    entry = create_transaction(account: account, name: "Untouched")
+    member = users(:family_member)
+    account.account_shares.create!(user: member, permission: "read_only")
+
+    sign_in member
+    patch reconcile_all_account_url(account), params: { reconciled_status: "reconciled" }
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "show offers bulk reconciliation only on an eligible manual account" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    create_transaction(account: account, name: "Transaction")
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "[data-testid='account-menu']" do
+      assert_select "button", text: /#{I18n.t("accounts.show.menu.reconcile_all.unreconciled")}/
+      assert_select "button", text: /#{I18n.t("accounts.show.menu.reconcile_all.cleared")}/
+      assert_select "button", text: /#{I18n.t("accounts.show.menu.reconcile_all.reconciled")}/
+    end
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled")
+  end
+
+  test "show hides bulk reconciliation without the family setting" do
+    account = create_manual_account
+    create_transaction(account: account, name: "Transaction")
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled"), count: 0
+  end
+
+  test "show hides bulk reconciliation on a synced account" do
+    @user.family.update!(manual_reconciliation: true)
+    account = accounts(:connected)
+    create_transaction(account: account, name: "Synced")
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled"), count: 0
+  end
+
+  test "show hides bulk reconciliation on an account without transactions" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled"), count: 0
+  end
+
+  test "show hides bulk reconciliation from a read-only share" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    create_transaction(account: account, name: "Transaction")
+    member = users(:family_member)
+    account.account_shares.create!(user: member, permission: "read_only")
+
+    sign_in member
+    get account_url(account)
+
+    assert_response :success
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled"), count: 0
+  end
+
+  test "reconcile_all allows a member with full_control" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    entry = create_transaction(account: account, name: "Shared")
+    member = users(:family_member)
+    account.account_shares.create!(user: member, permission: "full_control")
+
+    sign_in member
+    patch reconcile_all_account_url(account), params: { reconciled_status: "cleared" }
+
+    assert_redirected_to account_url(account)
+    assert_equal "cleared", entry.reload.reconciled_status
+  end
+
+  test "reconcile_all treats a missing status as invalid" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    entry = create_transaction(account: account, name: "Untouched")
+
+    patch reconcile_all_account_url(account)
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.reconcile_all.invalid_status"), flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile_all reports zero updates for an account without transactions" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+
+    patch reconcile_all_account_url(account), params: { reconciled_status: "cleared" }
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.reconcile_all.success", count: 0, status: I18n.t("transactions.reconcile.statuses.cleared")), flash[:notice]
+  end
+
+  test "reconcile_all does not reach an account in another family" do
+    @user.family.update!(manual_reconciliation: true)
+    other_account = Account.create!(
+      family: families(:inactive_trial),
+      name: "Someone else's account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    patch reconcile_all_account_url(other_account), params: { reconciled_status: "reconciled" }
+
+    assert_response :not_found
+  end
+
+  test "show hides bulk reconciliation on an account with only valuations" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled"), count: 0
+  end
+
+  test "the bulk reconciliation items carry a confirmation" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    create_transaction(account: account, name: "Transaction")
+
+    get account_url(account)
+
+    assert_response :success
+    Entry.reconciled_statuses.each_key do |status|
+      assert_select "form[action=?] button[data-turbo-confirm]",
+                    reconcile_all_account_path(account, reconciled_status: status)
+    end
   end
 
   test "show hides balance updates on a linked account by default" do
@@ -2064,6 +2308,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    # A manual (unsynced) account with no entries, so counts stay exact.
+    def create_manual_account
+      @user.family.accounts.create!(
+        name: "Manual test account",
+        balance: 100,
+        currency: "USD",
+        accountable: Depository.new
+      )
+    end
+
     def sidebar_sparkline_src(frame_id)
       css_select("turbo-frame##{frame_id}").first["src"]
     end

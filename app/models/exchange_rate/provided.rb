@@ -6,6 +6,15 @@ module ExchangeRate::Provided
       Provider::Registry.for_concept(:exchange_rates).get_provider(name.to_sym)
     end
 
+    # Like provider, but nil instead of an error when no provider or an unknown one is set
+    def configured_provider
+      return if configured_provider_name.blank?
+
+      provider
+    rescue Provider::Registry::Error
+      nil
+    end
+
     # Name of the backend `provider` uses. The default, Twelve Data, needs an API key;
     # without one, use keyless Frankfurter rather than no provider, which would import
     # no rates at all. Pair metadata and sync diagnostics key on this name, so

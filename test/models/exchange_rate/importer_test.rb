@@ -116,6 +116,70 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal [ 1.3, 1.4, 1.5 ], db_rates.map(&:rate)
   end
 
+  test "clear_cache carries the provider rate over the dates it skips instead of keeping stale rates" do
+    ExchangeRate.delete_all
+
+    (2.days.ago.to_date..Date.current).each do |date|
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date:, rate: 1.0)
+    end
+
+    # The provider skips yesterday (a weekend or holiday)
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 2.days.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current,        rate: 1.5)
+    ])
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(2.days.ago.to_date), end_date: Date.current)
+             .returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 2.days.ago.to_date,
+      end_date: Date.current,
+      clear_cache: true
+    ).import_provider_rates
+
+    db_rates = ExchangeRate.where(from_currency: "USD", to_currency: "EUR").order(:date)
+    assert_equal [ 1.3, 1.3, 1.5 ], db_rates.map(&:rate)
+  end
+
+  test "clear_cache keeps stored rates from before the provider's first rate" do
+    ExchangeRate.delete_all
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: 10.days.ago.to_date, rate: 0.9)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: 9.days.ago.to_date, rate: 0.95)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: 1.day.ago.to_date, rate: 1.0)
+
+    # The provider's history starts later than the stored history
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 1.day.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.5)
+    ])
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(10.days.ago.to_date), end_date: Date.current)
+             .returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 10.days.ago.to_date,
+      end_date: Date.current,
+      clear_cache: true
+    ).import_provider_rates
+
+    rates = ExchangeRate.where(from_currency: "USD", to_currency: "EUR").order(:date).pluck(:date, :rate).to_h
+    assert_equal 0.9, rates[10.days.ago.to_date]
+    assert_equal 0.95, rates[9.days.ago.to_date]
+    assert_equal 0.95, rates[8.days.ago.to_date]
+    assert_equal 1.3, rates[1.day.ago.to_date]
+    assert_equal 1.5, rates[Date.current]
+  end
+
   test "clamps end_date to today when future date is provided" do
     ExchangeRate.delete_all
 

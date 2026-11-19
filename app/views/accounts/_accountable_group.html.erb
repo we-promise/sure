@@ -1,4 +1,4 @@
-<%# locals: (account_group:, mobile: false, all_tab: false, open: nil, sortable: false, reconciliation_indicators: {}, **args) %>
+<%# locals: (account_group:, mobile: false, all_tab: false, open: nil, sortable: false, **args) %>
 
 <%# Archived accounts still count in the group total but are not listed. %>
 <% shown_accounts, archived_accounts = account_group.accounts.partition { |account| !account.archived? } %>
@@ -67,7 +67,7 @@
                   ),
                   data: page_active?(account_path(account)) ? { active_account: true } : {},
                   title: account.name do %>
-          <%= render "accounts/logo", account: account, size: "sm", color: account_group.color, reconciliation_indicator: reconciliation_indicators[account.id] %>
+          <%= render "accounts/logo", account: account, size: "sm", color: account_group.color %>
 
           <div class="min-w-0 grow">
             <div class="flex items-center gap-2 mb-0.5">

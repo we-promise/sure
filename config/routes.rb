@@ -749,6 +749,7 @@ Rails.application.routes.draw do
       patch :toggle_active
       patch :toggle_exclude_from_reports
       patch :toggle_archived
+      patch :reconcile_all
       patch :set_default
       patch :remove_default
       get :select_provider
