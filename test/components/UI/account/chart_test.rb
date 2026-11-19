@@ -443,6 +443,18 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     refute_selector "[data-net-contributions-legend]"
   end
 
+  # A request for a frame the chart is not in (the activity feed's pages)
+  # renders the page and discards the chart, so the comparison is not built.
+  test "net contributions are not built when the chart card is not requested" do
+    component = UI::Account::Chart.new(account: @account, view: "balance", net_contributions: false)
+    @account.expects(:net_contributions_incomplete?).never
+
+    refute component.show_net_contributions?
+    render_inline(component)
+    refute_selector "[data-time-series-chart-comparison-value]"
+    refute_selector "[data-net-contributions-legend]"
+  end
+
   test "the chart says when net contributions are incomplete" do
     @account.stubs(:net_contributions_incomplete?).returns(true)
     render_inline(UI::Account::Chart.new(account: @account, view: "balance"))

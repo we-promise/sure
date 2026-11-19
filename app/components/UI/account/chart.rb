@@ -10,8 +10,13 @@ class UI::Account::Chart < ApplicationComponent
   # The page's reference date travels inside the payload (`today`), so the
   # component takes no date of its own. `extra_repayment` is the Extra
   # repayments tab's Loan::ExtraRepayment, which the period picker keeps.
-  def initialize(account:, period: nil, view: nil, loan_chart: nil, extra_repayment: nil)
+  #
+  # `net_contributions` is false when the request only wants a frame the chart
+  # is not in (an activity feed page): Turbo discards the chart, so its
+  # comparison line is not built.
+  def initialize(account:, period: nil, view: nil, loan_chart: nil, extra_repayment: nil, net_contributions: true)
     @account = account
+    @net_contributions = net_contributions
     @period = period
     @view = view
     @loan_chart = loan_chart
@@ -198,7 +203,7 @@ class UI::Account::Chart < ApplicationComponent
   # The Total value view of an account that holds trades draws a second line:
   # what has been put in, net of what was taken out.
   def show_net_contributions?
-    view == "balance" && account.supports_trades?
+    @net_contributions && view == "balance" && account.supports_trades?
   end
 
   # The second line for the chart controller: each point's net contributions
