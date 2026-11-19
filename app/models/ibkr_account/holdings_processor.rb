@@ -154,14 +154,14 @@ class IbkrAccount::HoldingsProcessor
     end
 
     def unlisted?(row)
-      UNLISTED_ASSET_CATEGORIES.include?(row[:asset_category].to_s)
+      UNLISTED_ASSET_CATEGORIES.include?(asset_category(row))
     end
 
     def unlisted_ticker(row)
       symbol = row[:symbol].to_s.strip.upcase
       return nil if symbol.blank?
 
-      prefix = TICKER_PREFIXES[row[:asset_category].to_s]
+      prefix = TICKER_PREFIXES[asset_category(row)]
       symbol.start_with?(prefix) ? symbol : "#{prefix}#{symbol}"
     end
 
@@ -182,7 +182,7 @@ class IbkrAccount::HoldingsProcessor
     end
 
     def pricing_attributes(row)
-      return { offline: true, offline_reason: COMMODITY_OFFLINE_REASON } unless row[:asset_category].to_s == "CRYPTO"
+      return { offline: true, offline_reason: COMMODITY_OFFLINE_REASON } unless asset_category(row) == "CRYPTO"
 
       {
         exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC,
@@ -193,7 +193,7 @@ class IbkrAccount::HoldingsProcessor
     # A position of a category or side Sure does not import, counted so the
     # sync can report it.
     def unsupported_kind?(row)
-      category = row[:asset_category].to_s.strip.upcase
+      category = asset_category(row)
       kind = if !SUPPORTED_ASSET_CATEGORIES.include?(category)
         category.presence || "unknown"
       elsif row[:side].to_s != "Long"

@@ -5,8 +5,13 @@ module IbkrAccount::DataHelpers
   # or trade quantity is that face value; its multiplier (0.01) relates the two.
   # Sure counts a bond in units of 100 face, the unit its price is quoted per,
   # so the price reads as IBKR quotes it and quantity x price is its value. A
-  # Flex Query without the Multiplier field gets IBKR's bond multiplier.
+  # Flex Query without the Multiplier field gets IBKR's bond multiplier, and so
+  # does a row whose value contradicts the multiplier it reports.
   BOND_MULTIPLIER = BigDecimal("0.01")
+
+  # How far, in orders of magnitude, a bond's implied unit factor may sit from
+  # a candidate (the reported multiplier, 1 or 0.01) to count as that one.
+  BOND_UNIT_TOLERANCE = 0.5
 
   # A bond is tracked under this prefix, its IBKR symbol and its contract id
   # (conid), as "BOND:<symbol>:<conid>". Trades carry no ISIN, and two bonds
@@ -99,16 +104,48 @@ module IbkrAccount::DataHelpers
     end
 
     def bond?(row)
-      row.with_indifferent_access[:asset_category].to_s.strip.upcase == "BOND"
+      asset_category(row) == "BOND"
     end
 
     # What one unit of the row's quantity counts as in Sure: a bond's face
-    # value times its multiplier, anything else as IBKR reports it.
+    # value times its unit factor, anything else as IBKR reports it.
+    #
+    # A bond's unit is read from the row's own value, not from its multiplier
+    # alone: IBKR's documentation does not say what the multiplier of a bond is
+    # (0.01 or the generic 1), and trusting a 1 would value a bond 100 times too
+    # high. The factor that makes quantity x price equal the reported value
+    # (positionValue for a position, proceeds or tradeMoney for a trade) is
+    # matched to the reported multiplier, 1 and 0.01. A row with no value to
+    # check against counts per 100 face.
     def quantity_multiplier(row)
       return BigDecimal("1") unless bond?(row)
 
-      multiplier = parse_decimal(row.with_indifferent_access[:multiplier])
-      multiplier&.positive? ? multiplier : BOND_MULTIPLIER
+      data = row.with_indifferent_access
+      implied = implied_unit_factor(data)
+      return BOND_MULTIPLIER unless implied
+
+      reported = parse_decimal(data[:multiplier])
+      candidates = [ reported, BigDecimal("1"), BOND_MULTIPLIER ].select { |c| c&.positive? }
+      best = candidates.min_by { |c| (Math.log10(implied.to_f) - Math.log10(c.to_f)).abs }
+      close = (Math.log10(implied.to_f) - Math.log10(best.to_f)).abs <= BOND_UNIT_TOLERANCE
+      close ? best : BOND_MULTIPLIER
+    end
+
+    # |value| / (|quantity| x |price|) for a position or a trade row, nil when
+    # the row lacks a figure to work it out from. Accrued interest and a bond's
+    # value factor move it a little, which the tolerance absorbs.
+    def implied_unit_factor(data)
+      quantity = parse_decimal(data[:position] || data[:quantity])
+      price = parse_decimal(data[:mark_price] || data[:trade_price])
+      value = [ data[:position_value], data[:proceeds], data[:trade_money] ]
+        .filter_map { |v| parse_decimal(v) }.find { |v| !v.zero? }
+      return nil unless quantity && price && value && !quantity.zero? && !price.zero?
+
+      value.abs / (quantity.abs * price.abs)
+    end
+
+    def asset_category(row)
+      row.with_indifferent_access[:asset_category].to_s.strip.upcase
     end
 
     # Securities are global, so an existing row is reused as it stands. The

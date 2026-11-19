@@ -138,6 +138,117 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("100"), trade.qty
   end
 
+  test "a bond reported with multiplier 1 is still counted per 100 face" do
+    bond_rows(@statement).each { |row| row["multiplier"] = "1" }
+
+    process!
+
+    bond = holding_for("BOND:SURCO 3 1/2 06/15/30:900003")
+    assert_equal BigDecimal("100"), bond.qty
+    assert_equal BigDecimal("98.5"), bond.price
+    assert_equal BigDecimal("9850"), bond.amount
+    assert_equal BigDecimal("9725"), bond.qty * bond.cost_basis
+  end
+
+  test "a bond reported with multiplier 0.01 is counted per 100 face" do
+    bond_rows(@statement).each { |row| row["multiplier"] = "0.01" }
+
+    process!
+
+    bond = holding_for("BOND:SURCO 3 1/2 06/15/30:900003")
+    assert_equal BigDecimal("100"), bond.qty
+    assert_equal BigDecimal("9850"), bond.amount
+  end
+
+  test "a bond price quoted per unit, not per 100 face, is counted per unit" do
+    # positionValue = position x markPrice, so the face value is the quantity.
+    position = @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
+    position.merge!("multiplier" => "1", "mark_price" => "0.985", "cost_basis_price" => "0.9725")
+
+    process!
+
+    bond = holding_for("BOND:SURCO 3 1/2 06/15/30:900003")
+    assert_equal BigDecimal("10000"), bond.qty
+    assert_equal BigDecimal("9850"), bond.amount
+  end
+
+  test "a bond trade reported with multiplier 1 is counted per 100 face" do
+    bond_rows(@statement).each { |row| row["multiplier"] = "1" }
+
+    process!
+
+    trade = @account.entries.find_by!(external_id: "ibkr_trade_9102")
+    assert_equal BigDecimal("100"), trade.entryable.qty
+    assert_equal BigDecimal("97.25"), trade.entryable.price
+    assert_equal BigDecimal("9730"), trade.amount
+  end
+
+  test "a bond trade without proceeds is checked against its trade money" do
+    trade = @statement[:trades].find { |row| row["asset_category"] == "BOND" }
+    trade.merge!("multiplier" => "1", "trade_money" => "9725.00")
+    trade.delete("proceeds")
+
+    process!
+
+    assert_equal BigDecimal("100"), @account.entries.find_by!(external_id: "ibkr_trade_9102").entryable.qty
+  end
+
+  test "a bond row with nothing to check the unit against falls back to 100 face" do
+    bond_rows(@statement).each do |row|
+      row["multiplier"] = "1"
+      row.delete("position_value")
+      row.delete("proceeds")
+    end
+
+    process!
+
+    assert_equal BigDecimal("100"), holding_for("BOND:SURCO 3 1/2 06/15/30:900003").qty
+    assert_equal BigDecimal("100"), @account.entries.find_by!(external_id: "ibkr_trade_9102").entryable.qty
+  end
+
+  test "a multiplier on a fund or stock changes nothing" do
+    @statement[:open_positions].each { |row| row["multiplier"] = "0.01" if %w[STK FUND].include?(row["asset_category"]) }
+    @statement[:trades].each { |row| row["multiplier"] = "0.01" if row["asset_category"] == "FUND" }
+
+    process!
+
+    assert_equal BigDecimal("12.5"), holding_for("SURFUND").qty
+    assert_equal BigDecimal("20"), holding_for("SURETST").qty
+    assert_equal BigDecimal("12.5"), @account.entries.find_by!(external_id: "ibkr_trade_9101").entryable.qty
+  end
+
+  test "bond, fund, stock and commodity in one account each keep their own unit" do
+    @statement[:open_positions] << {
+      "asset_category" => "CMDTY", "conid" => "900006", "security_id" => "", "security_id_type" => "",
+      "symbol" => "SURMETAL", "description" => "SURE TEST METAL", "position" => "3", "multiplier" => "0.01",
+      "mark_price" => "50.00", "position_value" => "150.00", "currency" => "EUR", "fx_rate_to_base" => "1",
+      "cost_basis_price" => "40.00", "report_date" => "2026-05-08", "side" => "Long"
+    }
+    bond_rows(@statement).each { |row| row["multiplier"] = "1" }
+
+    process!
+
+    assert_equal BigDecimal("100"), holding_for("BOND:SURCO 3 1/2 06/15/30:900003").qty
+    assert_equal BigDecimal("12.5"), holding_for("SURFUND").qty
+    assert_equal BigDecimal("20"), holding_for("SURETST").qty
+    assert_equal BigDecimal("3"), holding_for("CMDTY:SURMETAL").qty
+    assert_equal BigDecimal("150"), holding_for("CMDTY:SURMETAL").amount
+  end
+
+  test "a lowercase category is treated like its upper-case form" do
+    @statement[:open_positions] << {
+      "asset_category" => "cmdty", "conid" => "900006", "security_id" => "", "security_id_type" => "",
+      "symbol" => "SURMETAL", "description" => "SURE TEST METAL", "position" => "3", "multiplier" => "1",
+      "mark_price" => "50.00", "position_value" => "150.00", "currency" => "EUR", "fx_rate_to_base" => "1",
+      "cost_basis_price" => "40.00", "report_date" => "2026-05-08", "side" => "Long"
+    }
+
+    process!
+
+    assert_equal BigDecimal("3"), holding_for("CMDTY:SURMETAL").qty
+    assert_nil Security.find_by(ticker: "SURMETAL")
+  end
+
   test "fund and bond trades are imported in the holdings' units" do
     process!
 
@@ -196,6 +307,10 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     def process!
       @ibkr_account.upsert_from_ibkr_statement!(@statement)
       IbkrAccount::Processor.new(@ibkr_account).process
+    end
+
+    def bond_rows(statement)
+      (statement[:open_positions] + statement[:trades]).select { |row| row["asset_category"] == "BOND" }
     end
 
     def holding_for(ticker)

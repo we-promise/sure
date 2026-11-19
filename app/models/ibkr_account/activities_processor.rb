@@ -246,7 +246,7 @@ class IbkrAccount::ActivitiesProcessor
     end
 
     def supported_trade?(row)
-      category = row[:asset_category].to_s.strip.upcase
+      category = asset_category(row)
       unless SUPPORTED_TRADE_ASSET_CATEGORIES.include?(category)
         # A currency conversion (CASH) is not a position; its two legs are
         # already in IBKR's cash and balance, so it is not reported.
@@ -304,7 +304,7 @@ class IbkrAccount::ActivitiesProcessor
     # The row's asset category says so when the query includes it; otherwise a
     # bond interest row for the same conid in the statement does.
     def bond_withholding?(row)
-      return true if row[:asset_category].to_s.upcase.strip == "BOND"
+      return true if bond?(row)
 
       @cash_transactions.any? do |other|
         other[:conid].to_s == row[:conid].to_s && other[:type].to_s.upcase.strip.start_with?("BOND INTEREST")
