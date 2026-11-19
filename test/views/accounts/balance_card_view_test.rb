@@ -7,19 +7,19 @@ class AccountsBalanceCardViewTest < ActionView::TestCase
     @account = accounts(:investment)
   end
 
-  # The Reports investment card renders with the defaults, so these are the
-  # classes that page has always drawn.
+  # The Reports investment card renders with the defaults: a long name wraps
+  # beside the balance, and the balance never breaks.
   test "the defaults draw the plain card" do
     render partial: "accounts/balance_card", locals: { account: @account, href: "/accounts/1" }
 
-    assert_select "a[href='/accounts/1'][class=?]", "bg-container-inset rounded-lg p-4 flex items-center justify-between hover:bg-container-hover transition-colors" do
-      assert_select "> div[class=?]", "flex items-center gap-3" do
-        assert_select "> div:not([class])" do
-          assert_select "p[class=?]", "font-medium text-primary text-sm", text: @account.name
+    assert_select "a[href='/accounts/1'][class=?]", "bg-container-inset rounded-lg p-4 flex items-center justify-between gap-3 hover:bg-container-hover transition-colors" do
+      assert_select "> div[class=?]", "flex items-center gap-3 min-w-0" do
+        assert_select "> div[class=?]", "min-w-0" do
+          assert_select "p[class=?]", "font-medium text-primary text-sm break-words", text: @account.name
           assert_select "p[class=?]", "text-xs text-secondary", text: @account.short_subtype_label
         end
       end
-      assert_select "> p[class=?]", "font-medium text-primary privacy-sensitive", text: "$10,000.00"
+      assert_select "> p[class=?]", "font-medium text-primary whitespace-nowrap privacy-sensitive", text: "$10,000.00"
     end
   end
 

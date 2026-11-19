@@ -272,6 +272,30 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_empty @controller.view_assigns["ranked_candidates"]
   end
 
+  # The picker ranks with the matcher, so it must offer what the matcher would
+  # link: a split charge's parent is excluded by the split, not by the user.
+  test "a split charge is still offered, an excluded one is not" do
+    series = @family.recurring_transactions.create!(
+      name: "MORTGAGE", account: accounts(:depository), amount: 1000, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    split, excluded = 2.times.map do
+      accounts(:depository).entries.create!(
+        date: occurrence.due_on, amount: 1000, currency: "USD",
+        name: "MORTGAGE", entryable: Transaction.new
+      )
+    end
+    split.split!([ { name: "Interest", amount: 400 }, { name: "Principal", amount: 600 } ])
+    excluded.update!(excluded: true)
+
+    get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_equal [ split.id ], @controller.view_assigns["ranked_candidates"].map { |candidate, _| candidate.id }
+  end
+
   # One transaction can legitimately pay more than one bill, which is why the
   # Allocator guards capacity at write time rather than at read time. Excluding
   # every entry that already has a confirmed allocation would have quietly
