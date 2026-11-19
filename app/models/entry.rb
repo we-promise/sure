@@ -784,6 +784,47 @@ class Entry < ApplicationRecord
       30.years.ago.to_date
     end
 
+    # Lock the selected entries before a bulk update. Lock the transactions
+    # first, then the entries. Order each set by id.
+    #
+    # Transfer::Matcher locks in the same order, so a concurrent match cannot
+    # deadlock with a bulk update. Callers that update several permission
+    # groups must lock the full selection here first: per-group locks use
+    # different orders across concurrent requests.
+    #
+    # The ids must already be authorized by the caller.
+    def lock_for_bulk_update!(entry_ids)
+      ids = Array.wrap(entry_ids).compact.uniq
+      return [] if ids.empty?
+
+      transaction_ids = unscoped.where(id: ids, entryable_type: "Transaction").distinct.pluck(:entryable_id)
+      Transaction.where(id: transaction_ids).order(:id).lock.pluck(:id)
+      unscoped.where(id: ids).reorder(:id).lock("FOR UPDATE OF entries").to_a
+    end
+
+    # Sets the manual reconciliation status for every transaction on the
+    # account. Split parents stay out: the activity list hides them and shows
+    # their children instead.
+    #
+    # Lock the entries in ascending id order before the update. Bulk updates
+    # and Transfer::Matcher take entry locks in that order too, so a
+    # concurrent request cannot deadlock with this account-wide write.
+    #
+    # Reconciling is not an edit, so this leaves user_modified and the saved
+    # attributes alone. It does bump updated_at because the cached transaction
+    # row key includes it.
+    def set_reconciled_status_for_account!(account, status)
+      status = status.to_s
+      raise ArgumentError, "Unknown reconciled status: #{status}" unless reconciled_statuses.key?(status)
+
+      scope = where(account: account, entryable_type: "Transaction").excluding_split_parents
+
+      transaction do
+        scope.reorder(:id).lock("FOR UPDATE OF entries").pluck(:id)
+        scope.update_all(reconciled_status: status, updated_at: Time.current)
+      end
+    end
+
     # Bulk update entries with the given parameters.
     #
     # No authorization happens here: callers must scope the relation to entries
@@ -826,7 +867,35 @@ class Entry < ApplicationRecord
       rescheduled_ids = []
 
       transaction do
-        all.includes(:account).each do |entry|
+        # Lock before reading membership. A concurrent match cannot then turn a
+        # selected entry into a matched leg between the read and the update.
+        selected_entry_ids = all.except(:includes).pluck(:id)
+        locked_entries = lock_for_bulk_update!(selected_entry_ids)
+        ActiveRecord::Associations::Preloader.new(
+          records: locked_entries,
+          associations: [ :account, :entryable ]
+        ).call
+
+        # Resolve the matched-transfer set inside the transaction, after the
+        # locks, so it reflects a match that committed before the lock.
+        transfer_leg_entry_ids =
+          if bulk_attributes[:date].present? || bulk_attributes[:entryable_attributes].present?
+            Entry.unscoped.where(id: locked_entries.map(&:id), entryable_type: "Transaction")
+              .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+              .where(<<~SQL.squish)
+                EXISTS (
+                  SELECT 1 FROM transfers
+                  WHERE transfers.inflow_transaction_id = transactions.id
+                     OR transfers.outflow_transaction_id = transactions.id
+                )
+              SQL
+              .pluck("entries.id")
+              .to_set
+          else
+            Set.new
+          end
+
+        locked_entries.each do |entry|
           changed = false
           # Whether this row's changes should lock saved attributes / mark
           # user-modified. Reconciling is a verification action, not an
@@ -844,7 +913,28 @@ class Entry < ApplicationRecord
             attrs.delete(:entryable_attributes) unless entry.transaction?
             # reconciled_status is a manual-accounts-only concept — synced accounts
             # already have duplicate-matching + statement-level reconciliation.
-            attrs.delete(:reconciled_status) unless entry.account.manual?
+            # It is also a transaction concept: valuations and trades have no
+            # badge and the reconciliation indicator never counts them.
+            attrs.delete(:reconciled_status) unless entry.transaction? && entry.account.manual?
+
+            # A matched transfer leg keeps its date, and only the outflow of a
+            # categorizable transfer owns a category. Never apply a merchant
+            # to a transfer. This also preserves the categorize wizard, which
+            # intentionally includes loan_payment and investment_contribution
+            # outflows.
+            if transfer_leg_entry_ids.include?(entry.id)
+              attrs.delete(:date)
+
+              if attrs[:entryable_attributes].present?
+                category_id = attrs[:entryable_attributes][:category_id]
+
+                if category_id.present? && entry.transaction.category_editable?
+                  attrs[:entryable_attributes] = { category_id: category_id }
+                else
+                  attrs.delete(:entryable_attributes)
+                end
+              end
+            end
 
             if attrs.present?
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
@@ -884,7 +974,7 @@ class Entry < ApplicationRecord
       # Moving a date changes balances (and may make an entry scheduled), so
       # mirror Entry#sync_account_later -- once per account, not per entry.
       sync_windows.each { |account, window_start| account.sync_later(window_start_date: window_start) }
-      EntryScheduledSyncJob.schedule_for_entries(Entry.where(id: rescheduled_ids)) if rescheduled_ids.any?
+      EntryScheduledSyncJob.schedule_for_entries(Entry.unscoped.where(id: rescheduled_ids)) if rescheduled_ids.any?
 
       updated_count
     end
