@@ -7,18 +7,29 @@ module Security::Provided
   KEYLESS_FALLBACK_PROVIDER = "yahoo_finance"
 
   class_methods do
-    # Returns all enabled and configured securities providers. When none of
-    # them can be built (e.g. Twelve Data alone, with no API key), the keyless
-    # Yahoo Finance provider stands in, unless that is already enabled. A
-    # provider that can be built keeps the securities it prices: with Binance
-    # enabled beside a keyless Twelve Data, crypto stays on Binance.
+    # Returns all enabled and configured securities providers. When the first
+    # enabled provider can't be built (e.g. no API key), the keyless Yahoo
+    # Finance provider takes its place, unless that is already enabled. Only
+    # the first position is substituted, so the substitute is the default for
+    # securities without an assigned provider; price_data_provider still sends
+    # crypto to an enabled crypto provider such as Binance.
     def providers
       names = Setting.enabled_securities_providers
-      built = names.filter_map { |name| build_provider(name) }
-      return built if built.any? || names.empty? || names.include?(KEYLESS_FALLBACK_PROVIDER)
+      substitute = !names.include?(KEYLESS_FALLBACK_PROVIDER)
+      unbuilt = []
 
-      log_keyless_substitution(names.first)
-      [ build_provider(KEYLESS_FALLBACK_PROVIDER) ].compact
+      built = names.each_with_index.filter_map do |name, index|
+        provider = build_provider(name)
+        unbuilt << name unless provider
+        next provider if provider || !substitute || index.positive?
+
+        :substitute
+      end
+      return built unless built.first == :substitute
+
+      log_keyless_substitution(unbuilt)
+      built[0] = build_provider(KEYLESS_FALLBACK_PROVIDER)
+      built.compact
     end
 
     # True when provider_instance is Yahoo standing in for providers that
@@ -150,11 +161,13 @@ module Security::Provided
         suffix && symbol.end_with?(suffix) ? symbol.delete_suffix(suffix) : symbol
       end
 
-      def log_keyless_substitution(name)
+      # Logs once per set of providers that can't be built, naming all of them.
+      def log_keyless_substitution(names)
         @logged_keyless_substitutions ||= Concurrent::Set.new
-        return unless @logged_keyless_substitutions.add?(name)
+        listed = names.join(", ")
+        return unless @logged_keyless_substitutions.add?(listed)
 
-        Rails.logger.info("Securities provider #{name} can't be built; using #{KEYLESS_FALLBACK_PROVIDER} in its place")
+        Rails.logger.info("Securities provider #{listed} can't be built; using #{KEYLESS_FALLBACK_PROVIDER} in its place")
       end
 
       def provider_key_for(provider_instance)
@@ -246,14 +259,18 @@ module Security::Provided
       return nil # assigned provider is unavailable — don't silently fall back
     end
 
-    default = self.class.providers.first
-    # The keyless substitute looks a ticker up on the venue its MIC maps to.
-    # With no mapping it would ask for the bare ticker, often another
-    # listing (BHP is the NYSE ADR, not the ASX share), so it is skipped.
-    return nil if default && self.class.keyless_substitute?(default) &&
-      !Provider::YahooFinance.venue_supported?(exchange_operating_mic)
+    candidates = self.class.providers
+    default = candidates.first
+    return default unless default && self.class.keyless_substitute?(default)
 
-    default
+    # Yahoo is standing in for a provider with no key. It serves the shares,
+    # ETFs and funds that provider would have priced. Crypto goes to an
+    # enabled crypto provider (Binance), and a listing Yahoo can't resolve is
+    # skipped rather than priced as another one (BHP alone is the NYSE ADR).
+    return candidates.find { |provider| provider.is_a?(Provider::BinancePublic) } if crypto_listing?
+    return default if Provider::YahooFinance.venue_supported?(exchange_operating_mic, ticker: ticker)
+
+    nil
   end
 
   # Returns the health status of this security's provider link.
@@ -269,6 +286,13 @@ module Security::Provided
     return :stale if failed_fetch_count.to_i > 0
     :ok
   end
+
+  # A crypto asset as either form stores it: a Binance listing (crypto?) or
+  # the CRYPTO:BTC ticker the holdings processors write without a MIC.
+  def crypto_listing?
+    crypto? || ticker.to_s.start_with?(Provider::BinancePublic::CRYPTO_PREFIX)
+  end
+  private :crypto_listing?
 
   def find_or_fetch_price(date: Date.current, cache: true)
     price = prices.find_by(date: date)

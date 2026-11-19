@@ -1,12 +1,27 @@
 require "set"
 
 class Provider::YahooFinance < Provider
-  # Whether a ticker on this MIC resolves to that listing. A MIC with no
-  # suffix mapping is looked up bare, which can be a different listing.
-  def self.venue_supported?(exchange_operating_mic)
+  # US venues, which Yahoo looks up without a suffix: the MICs map_exchange_mic
+  # returns for US exchanges, the OTC markets, and the Yahoo codes it passes
+  # through unmapped (PNK for Pink Sheets, BTS for Cboe BZX).
+  UNSUFFIXED_MICS = %w[XNAS XNYS ARCX XASE BATS IEXG OTCM OOTC PINX XOTC PNK BTS].freeze
+
+  # A ticker already in Yahoo's suffixed form (0005.HK, 7203.T), as Yahoo's own
+  # search stores it for venues EXCHANGE_CONFIG doesn't map.
+  YAHOO_SUFFIXED_TICKER = /\.[A-Z]{1,3}\z/
+
+  # Whether Yahoo resolves this ticker to the listing on this MIC. A MIC with
+  # no suffix mapping is looked up bare, which can be a different listing
+  # (BHP alone is the NYSE ADR), unless the ticker already carries Yahoo's
+  # suffix. A crypto ticker (CRYPTO:BTC) is never a Yahoo listing. A security
+  # with no MIC is looked up bare, as most of them are US shares entered by hand.
+  def self.venue_supported?(exchange_operating_mic, ticker: nil)
+    return false if ticker.to_s.start_with?(Provider::BinancePublic::CRYPTO_PREFIX)
+
     exchange_operating_mic.blank? ||
       UNSUFFIXED_MICS.include?(exchange_operating_mic) ||
-      EXCHANGE_CONFIG.key?(exchange_operating_mic)
+      EXCHANGE_CONFIG.key?(exchange_operating_mic) ||
+      ticker.to_s.match?(YAHOO_SUFFIXED_TICKER)
   end
 
   include ExchangeRateConcept, SecurityConcept
@@ -587,9 +602,6 @@ class Provider::YahooFinance < Provider
     # A MIC missing here means the symbol is sent to Yahoo bare, which for any
     # non-US listing is a 404: the security then accumulates failed fetches and
     # never gets a price, with nothing telling the user why.
-    # US listings need no Yahoo suffix; other venues need one from EXCHANGE_CONFIG.
-    UNSUFFIXED_MICS = %w[XNAS XNYS ARCX XASE BATS IEXG].freeze
-
     EXCHANGE_CONFIG = {
       "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
       "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },

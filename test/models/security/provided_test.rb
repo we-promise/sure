@@ -292,19 +292,61 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     end
   end
 
-  test "no substitute while another enabled provider can be built" do
-    Provider::Registry.expects(:yahoo_finance).never
+  test "the substitute keeps the default's position" do
+    yahoo = stub_yahoo_finance
 
     without_securities_keys([ "twelve_data", "binance_public" ]) do
-      assert_equal [ Provider::BinancePublic ], Security.providers.map(&:class)
+      providers = Security.providers
+
+      assert_equal yahoo, providers.first
+      assert_equal [ Provider::YahooFinance, Provider::BinancePublic ], providers.map(&:class)
     end
   end
 
-  test "an unassigned crypto security stays on Binance beside a keyless Twelve Data" do
-    crypto = Security.create!(ticker: "CRYPTO:USDT", exchange_operating_mic: nil)
+  test "an unassigned share stays on the substitute beside Binance" do
+    yahoo = stub_yahoo_finance
+    share = Security.create!(ticker: "RDDT", exchange_operating_mic: "XNYS")
+
+    without_securities_keys([ "twelve_data", "binance_public" ]) do
+      assert_equal yahoo, share.price_data_provider
+    end
+  end
+
+  test "an unassigned crypto security goes to Binance, not the substitute" do
+    stub_yahoo_finance
+    crypto = Security.create!(ticker: "CRYPTO:BTC", exchange_operating_mic: nil)
+    binance_listed = Security.create!(ticker: "ETHUSD", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
 
     without_securities_keys([ "twelve_data", "binance_public" ]) do
       assert_instance_of Provider::BinancePublic, crypto.price_data_provider
+      assert_instance_of Provider::BinancePublic, binance_listed.price_data_provider
+    end
+  end
+
+  test "the substitute alone leaves an unassigned crypto security unpriced" do
+    stub_yahoo_finance
+    crypto = Security.create!(ticker: "CRYPTO:BTC", exchange_operating_mic: nil)
+
+    without_securities_keys([ "twelve_data" ]) do
+      assert_nil crypto.price_data_provider
+    end
+  end
+
+  test "the substitute prices a ticker that already carries Yahoo's suffix" do
+    yahoo = stub_yahoo_finance
+    hsbc = Security.create!(ticker: "0005.HK", exchange_operating_mic: "XHKG")
+
+    without_securities_keys([ "twelve_data" ]) do
+      assert_equal yahoo, hsbc.price_data_provider
+    end
+  end
+
+  test "the substitute prices a US over-the-counter listing" do
+    yahoo = stub_yahoo_finance
+    otc = Security.create!(ticker: "NSRGY", exchange_operating_mic: "OTCM")
+
+    without_securities_keys([ "twelve_data" ]) do
+      assert_equal yahoo, otc.price_data_provider
     end
   end
 
@@ -421,18 +463,31 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     end
   end
 
-  test "a keyless provider that can be built is used without a substitute" do
-    Provider::Registry.expects(:yahoo_finance).never
+  test "a keyless provider beside the substitute keeps its stamp" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([ search_result("AAPL") ]))
     mfapi = mock("mfapi")
     mfapi.stubs(:class).returns(Provider::Mfapi)
     mfapi.stubs(:search_securities).returns(provider_success_response([ search_result("AAPLMF") ]))
     Provider::Registry.stubs(:mfapi).returns(mfapi)
 
     without_securities_keys([ "twelve_data", "mfapi" ]) do
-      assert_equal [ mfapi ], Security.providers
+      assert_equal [ yahoo, mfapi ], Security.providers
 
       stamps = Security.search_provider("AAPL").to_h { |s| [ s.ticker, s.price_provider ] }
-      assert_equal({ "AAPLMF" => "mfapi" }, stamps)
+      assert_equal({ "AAPL" => nil, "AAPLMF" => "mfapi" }, stamps)
+    end
+  end
+
+  test "the substitution log names every provider it stands in for" do
+    stub_yahoo_finance
+    Security.instance_variable_set(:@logged_keyless_substitutions, nil)
+    Rails.logger.stubs(:info)
+    Rails.logger.expects(:info).with(regexp_matches(/twelve_data, tiingo can't be built/)).once
+
+    without_securities_keys([ "twelve_data", "tiingo" ]) do
+      Security.providers
+      Security.providers
     end
   end
 

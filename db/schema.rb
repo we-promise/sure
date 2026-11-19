@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_19_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2384,6 +2384,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.datetime "failed_fetch_at"
     t.integer "failed_fetch_count", default: 0, null: false
     t.date "first_provider_price_on"
+    t.string "first_provider_price_source"
     t.string "industry"
     t.string "kind", default: "standard", null: false
     t.datetime "last_health_check_at"

@@ -430,4 +430,15 @@ class SecurityTest < ActiveSupport::TestCase
 
     assert_nil security.crypto_base_asset
   end
+
+  test "assigning a different price provider clears the first price date and its source" do
+    security = Security.create!(ticker: "RDDT", exchange_operating_mic: "XNYS",
+                                first_provider_price_on: Date.new(2024, 3, 21),
+                                first_provider_price_source: "yahoo_finance")
+
+    security.update!(price_provider: "twelve_data")
+
+    assert_nil security.first_provider_price_on
+    assert_nil security.first_provider_price_source
+  end
 end

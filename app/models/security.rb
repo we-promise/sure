@@ -347,5 +347,6 @@ class Security < ApplicationRecord
       return unless price_provider_changed?
       return if first_provider_price_on_changed?
       self.first_provider_price_on = nil
+      self.first_provider_price_source = nil
     end
 end
