@@ -227,7 +227,7 @@ class Provider::PlaidTest < ActiveSupport::TestCase
   end
 
   test "rejects webhook tokens signed with an unsupported algorithm" do
-    provider, jwk, _key, body = verified_webhook_setup
+    provider, jwk, _key, body = verified_webhook_setup(require_key_fetch: false)
 
     token = JWT.encode(
       { iat: Time.current.to_i, request_body_sha256: Digest::SHA256.hexdigest(body) },
@@ -254,15 +254,21 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     # 3.3.0) rides on: JWKS built from the key Plaid publishes for the token's
     # kid, ES256 decode with expiration skipped in favor of the iat age check,
     # and the request-body SHA-256 comparison.
-    def verified_webhook_setup
+    def verified_webhook_setup(require_key_fetch: true)
       key = OpenSSL::PKey::EC.generate("prime256v1")
       jwk = JWT::JWK.new(key, { use: "sig" })
       body = '{"webhook_type":"TRANSACTIONS","webhook_code":"INITIAL_UPDATE"}'
 
       client = mock
-      client.expects(:webhook_verification_key_get).with do |request|
-        request.is_a?(Plaid::WebhookVerificationKeyGetRequest) && request.key_id == jwk.kid
-      end.returns(Struct.new(:key).new(jwk.export))
+      if require_key_fetch
+        client.expects(:webhook_verification_key_get).with do |request|
+          request.is_a?(Plaid::WebhookVerificationKeyGetRequest) && request.key_id == jwk.kid
+        end.returns(Struct.new(:key).new(jwk.export))
+      else
+        # An unsupported algorithm is rejected at decode time, before any
+        # key fetch happens.
+        client.stubs(:webhook_verification_key_get)
+      end
 
       config = Plaid::Configuration.new
       config.server_index = Plaid::Configuration::Environment["sandbox"]
