@@ -13,8 +13,29 @@ class Provider::RevolutXAdapterTest < ActiveSupport::TestCase
     assert_equal %w[Crypto], Provider::RevolutXAdapter.supported_account_types
   end
 
-  test "has no connection configs until the connection UI exists" do
-    assert_equal [], Provider::RevolutXAdapter.connection_configs(family: families(:dylan_family))
+  test "offers one fallback connection config when no connection has its API key" do
+    family = families(:dylan_family)
+    revolut_x_items(:one).update!(api_key: nil)
+
+    configs = Provider::RevolutXAdapter.connection_configs(family: family)
+
+    assert_equal [ "revolut_x" ], configs.map { |config| config[:key] }
+    assert_equal "/revolut_x_items/select_accounts?accountable_type=Crypto", configs.first[:new_account_path].call("Crypto", nil)
+  end
+
+  test "offers one connection config per credentialed connection" do
+    family = families(:dylan_family)
+    second = RevolutXItem.create!(family: family, name: "Business", api_key: "c3" * 32)
+
+    configs = Provider::RevolutXAdapter.connection_configs(family: family)
+
+    assert_equal [ "revolut_x_#{second.id}", "revolut_x_#{revolut_x_items(:one).id}" ].sort, configs.map { |config| config[:key] }.sort
+    assert_not_includes configs.map { |config| config[:key] }, "revolut_x_#{revolut_x_items(:awaiting_api_key).id}"
+    assert_includes configs.first[:existing_account_path].call("acc-1"), "revolut_x_item_id="
+  end
+
+  test "sync path points at the item's sync action" do
+    assert_equal "/revolut_x_items/#{revolut_x_items(:one).id}/sync", @adapter.sync_path
   end
 
   test "identifies the provider and its item" do

@@ -134,6 +134,12 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(kraken_item)}"
   end
 
+  test "index renders revolut x items" do
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(revolut_x_items(:one))}"
+  end
+
   test "index titles each ibkr connection with its own name" do
     first = ibkr_items(:configured_item)
     first.update!(name: "IBKR Ireland")

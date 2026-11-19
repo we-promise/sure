@@ -222,6 +222,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
       { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
       { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },
+      { key: "revolut_x",      title: "Revolut X",       turbo_id: "revolut_x",      partial: "revolut_x_panel" },
       { key: "coinspot",       title: "CoinSpot",        turbo_id: "coinspot",       partial: "coinspot_panel" },
       { key: "onchain_wallet", title: "On-chain wallets", turbo_id: "onchain_wallet", partial: "onchain_wallet_panel" },
       { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
@@ -255,6 +256,7 @@ class Settings::ProvidersController < ApplicationController
       "coinbase"       => "CoinbaseItem",
       "binance"        => "BinanceItem",
       "kraken"         => "KrakenItem",
+      "revolut_x"      => "RevolutXItem",
       "coinspot"       => "CoinspotItem",
       "onchain_wallet" => "OnchainWalletItem",
       "snaptrade"      => "SnaptradeItem",
@@ -301,6 +303,8 @@ class Settings::ProvidersController < ApplicationController
         @binance_items = Current.family.binance_items.active.ordered
       when "kraken"
         @kraken_items = Current.family.kraken_items.active.ordered
+      when "revolut_x"
+        @revolut_x_items = Current.family.revolut_x_items.active.ordered
       when "coinspot"
         @coinspot_items = Current.family.coinspot_items.active.ordered
       when "onchain_wallet"
@@ -357,6 +361,7 @@ class Settings::ProvidersController < ApplicationController
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
+      @revolut_x_items = Current.family.revolut_x_items.active.ordered
       @coinspot_items = Current.family.coinspot_items.active.ordered
       @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
@@ -405,6 +410,7 @@ class Settings::ProvidersController < ApplicationController
         "coinbase"       => @coinbase_items,
         "binance"        => @binance_items,
         "kraken"         => @kraken_items,
+        "revolut_x"      => @revolut_x_items,
         "coinspot"       => @coinspot_items,
         "onchain_wallet" => @onchain_wallet_items,
         "snaptrade"      => @snaptrade_items,
