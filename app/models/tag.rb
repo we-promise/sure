@@ -72,6 +72,9 @@ class Tag < ApplicationRecord
               AND carried.taggable_id = taggings.taggable_id
           )
         SQL
+        # A loaded taggings association still lists the moved rows, and
+        # destroy! would delete them by id.
+        taggings.reset
       end
 
       destroy!

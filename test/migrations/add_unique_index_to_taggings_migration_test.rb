@@ -96,6 +96,20 @@ class AddUniqueIndexToTaggingsMigrationTest < ActiveSupport::TestCase
     assert_includes held, "ShareRowExclusiveLock", "the lock was not held to the end of the transaction"
   end
 
+  # The LOCK TABLE above only works inside a transaction. This test runs the
+  # migration inside the fixture transaction, so it would pass even if the
+  # migration opted out of the one Rails wraps it in on deploy.
+  test "runs inside the transaction Rails wraps a migration in" do
+    assert_not AddUniqueIndexToTaggings.disable_ddl_transaction
+  end
+
+  # Looking up an index that isn't there must not abort the test's
+  # transaction, or every later statement in the test fails.
+  test "reads a missing index without aborting the transaction" do
+    assert_nil index_definition
+    assert_equal 1, connection.select_value("SELECT 1")
+  end
+
   # db/schema.rb carries the index by hand, as an expression, so check it is
   # the index the migration builds rather than trusting the dump format.
   test "builds the same index the schema declares" do
@@ -133,9 +147,7 @@ class AddUniqueIndexToTaggingsMigrationTest < ActiveSupport::TestCase
     end
 
     def index_definition
-      connection.select_value("SELECT pg_get_indexdef('#{INDEX}'::regclass)")
-    rescue ActiveRecord::StatementInvalid
-      nil
+      connection.select_value("SELECT pg_get_indexdef(to_regclass('#{INDEX}'))")
     end
 
     def run_migration

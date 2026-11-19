@@ -19,6 +19,23 @@ class TagTest < ActiveSupport::TestCase
     assert_equal [ new_tag ], moved.reload.tags.to_a
   end
 
+  # destroy! removes the taggings association it holds. If a caller loaded it
+  # before the merge, that list still names the rows the merge just moved.
+  test "replace and destroy keeps the moved rows when the source taggings were loaded first" do
+    old_tag = tags(:one)
+    new_tag = tags(:two)
+    moved = transactions(:transfer_out)
+    moved_tagging = moved.taggings.create!(tag: old_tag)
+    old_tag.taggings.load
+
+    assert_difference "Tagging.count", -1 do
+      old_tag.replace_and_destroy!(new_tag)
+    end
+
+    assert Tagging.exists?(moved_tagging.id)
+    assert_equal [ new_tag ], moved.reload.tags.to_a
+  end
+
   # The unique index treats a missing taggable_type as a value, so the merge
   # has to as well, or it moves the row into a duplicate and fails.
   test "replace and destroy skips a row with no taggable type that the replacement already has" do
