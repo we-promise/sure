@@ -577,7 +577,8 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     provider = Provider::Eodhd.new("test_api_key")
     2.times { provider.send(:enforce_daily_limit!) }
 
-    assert_equal 2, provider.usage.data.used
+    # The two limit checks plus the usage request itself, which is counted like any other attempt.
+    assert_equal 3, provider.usage.data.used
   ensure
     store&.delete(provider&.send(:daily_cache_key))
   end
