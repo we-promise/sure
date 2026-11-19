@@ -210,6 +210,7 @@ fr:
     potential_duplicate_title: Doublon possible détecté
     search:
       filters:
+        balance_updates: Soldes
         account: Compte
         ai: IA
         amount: Montant
@@ -222,6 +223,11 @@ fr:
         type: Type
     searches:
       filters:
+        balance_updates_filter:
+          always_shown: Toujours affichées, comme réglé dans les
+          hint: Pour cet affichage seulement. Pour toujours les afficher, activez-les dans les
+          preferences_link: Préférences
+          show: Afficher les mises à jour de solde synchronisées
         account_filter:
           filter_accounts: Filtrer les comptes
         ai_filter:
@@ -238,6 +244,7 @@ fr:
           with: Avec pièce jointe
           without: Sans pièce jointe
         badge:
+          balance_updates: Soldes synchronisés
           ai_current: IA
           ai_history: Historique IA
           attachment_with: Avec pièce jointe

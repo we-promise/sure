@@ -3,6 +3,19 @@ require "test_helper"
 class TransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
+  test "with_any_tag returns transactions carrying any of the tags, each once" do
+    travel = families(:dylan_family).tags.create!(name: "Travel")
+    work = families(:dylan_family).tags.create!(name: "Work")
+    other = families(:dylan_family).tags.create!(name: "Other")
+    hotel = create_transaction(name: "Hotel", tags: [ travel ]).transaction
+    laptop = create_transaction(name: "Laptop", tags: [ work ]).transaction
+    lunch = create_transaction(name: "Airport lunch", tags: [ travel, work ]).transaction
+    create_transaction(name: "Rent", tags: [ other ])
+    create_transaction(name: "Untagged")
+
+    assert_equal [ hotel, laptop, lunch ].map(&:id).sort, Transaction.with_any_tag([ travel.id, work.id ]).pluck(:id).sort
+  end
+
   test "pending? is true when extra.simplefin.pending is truthy" do
     transaction = Transaction.new(extra: { "simplefin" => { "pending" => true } })
 
@@ -476,6 +489,39 @@ class TransactionTest < ActiveSupport::TestCase
     stale_copy.toggle_tag!(tags(:two))
 
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
+  end
+
+  test "merge_tag_changes! keeps a tag written after the picker's copy was loaded" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+    stale_copy = Transaction.find(transaction.id)
+    stale_copy.tag_ids # load the tags the picker saw
+    rule_tag = transaction.entry.account.family.tags.create!(name: "Added by a rule")
+
+    transaction.update!(tag_ids: [ tags(:one).id, rule_tag.id ])
+    stale_copy.merge_tag_changes!([ tags(:two).id ], [], available_tags: Tag.where(id: [ tags(:two).id, tags(:one).id, rule_tag.id ]))
+
+    assert_equal [ tags(:one).id, tags(:two).id, rule_tag.id ].sort, transaction.reload.tag_ids.sort
+  end
+
+  test "merge_tag_changes! removes only the tags the picker took off" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id, tags(:two).id ])
+
+    transaction.merge_tag_changes!([ tags(:two).id ], [ tags(:one).id, tags(:two).id ], available_tags: Tag.all)
+
+    assert_equal [ tags(:two).id ], transaction.reload.tag_ids
+  end
+
+  test "replace_tags! sets exactly the available tags under the row lock" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+
+    assert_queries_match(/FOR UPDATE/) do
+      transaction.replace_tags!([ tags(:two).id, tags(:one).id ], available_tags: Tag.where(id: tags(:two).id))
+    end
+
+    assert_equal [ tags(:two).id ], transaction.reload.tag_ids
   end
 
   test "name_suggestions_for ranks names and each name's category by frequency" do

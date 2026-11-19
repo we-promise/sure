@@ -212,6 +212,12 @@ class Transaction < ApplicationRecord
 
   scope :excluding_pending, -> { where(Transaction.not_pending_sql) }
 
+  # Transactions carrying any of the given tags. A subquery rather than a
+  # join, so a transaction with several of them is returned once.
+  scope :with_any_tag, ->(tag_ids) {
+    where(id: Tagging.where(tag_id: tag_ids, taggable_type: "Transaction").select(:taggable_id))
+  }
+
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.
   #
@@ -434,6 +440,29 @@ class Transaction < ApplicationRecord
       existing.exists? ? existing.destroy_all : taggings.create!(tag: tag)
     end
     tags.reset
+  end
+
+  # Applies a tag picker's changes (selected_ids against previous_ids, the set
+  # it last saved) to the tags stored now, so tags another writer added in the
+  # meantime stay. Takes the same row lock as toggle_tag! and the rule tag
+  # action and reads the tags after it, so no concurrent write is lost.
+  def merge_tag_changes!(selected_ids, previous_ids, available_tags:)
+    selected_ids = selected_ids.map(&:to_s)
+    previous_ids = previous_ids.map(&:to_s)
+
+    with_lock do
+      wanted_ids = tag_ids.map(&:to_s) - (previous_ids - selected_ids) | (selected_ids - previous_ids)
+      self.tag_ids = available_tags.where(id: wanted_ids).pluck(:id)
+    end
+  end
+
+  # Replaces the whole tag set with the given ids, limited to available_tags,
+  # under the same row lock as toggle_tag! and merge_tag_changes!, so the
+  # replacement can't interleave with another writer's tag change.
+  def replace_tags!(tag_ids, available_tags:)
+    with_lock do
+      self.tag_ids = available_tags.where(id: tag_ids).pluck(:id)
+    end
   end
 
   # Marks a category as recently used. Called explicitly from the manual

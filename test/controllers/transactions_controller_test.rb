@@ -132,14 +132,31 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   # Bills has always linked out to transactions. Until now nothing linked back,
   # so a transaction that settled a bill was a dead end. The link-back is part
   # of the preview-gated bills surface, so the viewer needs the flag.
-  test "index loads the merchant list on demand and keeps selected merchants in the form" do
+  test "index lazy loads filters with selected merchants in the frame URL" do
     get transactions_url(q: { merchants: [ "Amazon" ] })
 
     assert_response :success
-    assert_select "#transactions-search turbo-frame#merchant_filter_options[loading=lazy][data-action=?]", "turbo:frame-load->list-filter#filter" do
-      assert_select "input[type=hidden][name='q[merchants][]'][value=?]", "Amazon"
-    end
+    assert_select "#transactions-search turbo-frame#transaction-filters[loading=lazy][src=?]",
+                  filters_transactions_path(q: { merchants: [ "Amazon" ] })
     assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
+  end
+
+  test "show lists split rows in the order they were entered" do
+    entry = create_transaction(amount: 100, name: "Split parent", account: accounts(:depository))
+    entry.split!([ { name: "Part 1", amount: 60 }, { name: "Part 2", amount: 40 } ])
+
+    queries = []
+    ActiveSupport::Notifications.subscribed(->(*, payload) { queries << payload[:sql] }, "sql.active_record") do
+      get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
+    end
+
+    assert_response :success
+    # Without an ORDER BY PostgreSQL returns the rows in physical order.
+    row_reads = queries.select { |sql| sql.include?('"entries"."parent_entry_id" =') && !sql.include?("SELECT 1 AS one") }
+    assert row_reads.any?, "expected the split rows to be read"
+    assert row_reads.all? { |sql| sql.include?('ORDER BY "entries"."created_at" ASC, "entries"."id" ASC') }, row_reads.join("\n")
+    names = css_select("p.font-medium").map(&:text).select { |text| text.start_with?("Part ") }
+    assert_equal [ "Part 1", "Part 2" ], names
   end
 
   test "a German transaction shows the bill it paid with localized copy" do
@@ -320,21 +337,6 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-activity-label-quick-edit-target=badge]", text: /Transfer/, count: 0
     # The picker shows translated names but still submits the stored label.
     assert_select "button[data-label='Sweep In']", text: "Автоперевод (зачисление)"
-  end
-
-  test "index groups subcategories immediately after their parent in the category filter" do
-    get transactions_url
-    assert_response :success
-
-    doc = Nokogiri::HTML::Document.parse(response.body)
-    checkbox_values = doc.css("input[name='q[categories][]']").map { |node| node["value"] }
-
-    parent_index = checkbox_values.index(categories(:food_and_drink).name)
-    child_index = checkbox_values.index(categories(:subcategory).name)
-
-    assert_not_nil parent_index
-    assert_not_nil child_index
-    assert_equal parent_index + 1, child_index
   end
 
   # The form passes its own change action on the currency select; the money
@@ -715,7 +717,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
           entryable_attributes: {
             id: @entry.entryable_id,
             tag_ids: [ tags(:one).id, tags(:two).id ],
-            category_id: Category.first.id,
+            category_id: categories(:income).id,
             merchant_id: Merchant.first.id
           }
         }
@@ -729,12 +731,13 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "USD", @entry.currency
     assert_equal -100, @entry.amount
     assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.entryable.tag_ids.sort
-    assert_equal Category.first.id, @entry.entryable.category_id
+    assert_equal categories(:income).id, @entry.entryable.category_id
     assert_equal Merchant.first.id, @entry.entryable.merchant_id
     assert_equal "test notes", @entry.notes
     assert_equal false, @entry.excluded
 
     assert_equal "Transaction updated", flash[:notice]
+    assert_equal "Updated name", flash[:cta][:merchant_name]
     assert_redirected_to account_url(@entry.account)
     assert_enqueued_with(job: SyncJob)
   end
@@ -908,6 +911,41 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_empty @entry.reload.entryable.tag_ids
+    assert @entry.entryable.locked?(:tag_ids)
+  end
+
+  test "tag-only endpoint replaces a bare tag set under the row lock" do
+    other_family_tag = users(:empty).family.tags.create!(name: "Other family")
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ], locked_attributes: {})
+
+    assert_queries_match(/FROM "transactions" WHERE .* FOR UPDATE/) do
+      patch tags_transaction_url(@entry, format: :json), params: {
+        tag_ids: [ tags(:two).id, other_family_tag.id ]
+      }, as: :json
+    end
+
+    assert_response :success
+    assert_equal [ tags(:two).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint keeps tags added since the drawer last saved" do
+    other_family_tag = users(:empty).family.tags.create!(name: "Other family")
+    rule_tag = @user.family.tags.create!(name: "Added by a rule")
+    @entry.entryable.update!(tag_ids: [ tags(:one).id, rule_tag.id ], locked_attributes: {})
+
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: [ tags(:one).id, tags(:two).id, other_family_tag.id ],
+      previous_tag_ids: [ tags(:one).id ]
+    }, as: :json
+
+    assert_response :success
+    assert_equal [ tags(:one).id, tags(:two).id, rule_tag.id ].sort, @entry.reload.entryable.tag_ids.sort
+
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: [], previous_tag_ids: [ tags(:one).id, tags(:two).id ]
+    }, as: :json
+
+    assert_equal [ rule_tag.id ], @entry.reload.entryable.tag_ids
     assert @entry.entryable.locked?(:tag_ids)
   end
 
@@ -2529,13 +2567,6 @@ end
     assert_response :success
   end
 
-  test "index offers the attachment filter in the filter menu" do
-    get transactions_url
-
-    assert_response :success
-    assert_select "#transaction-filters-menu input[type=checkbox][name='q[attachment_status][]']", count: 2
-  end
-
   test "index ignores unsupported attachment_status values without rendering a badge" do
     get transactions_url(q: { attachment_status: [ "bogus" ] })
 
@@ -2615,6 +2646,95 @@ end
     assert_match I18n.t("transactions.show.category_set_on_counterpart"), response.body
   end
 
+  test "creating a transaction runs rules set to apply immediately" do
+    create_immediate_rule
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id, name: "New transaction", date: Date.current,
+        currency: "USD", amount: 100, nature: "outflow", entryable_type: "Transaction",
+        entryable_attributes: { category_id: "" }
+      }
+    }
+
+    created_entry = Entry.order(:created_at).last
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ created_entry.entryable_id ] } ])
+  end
+
+  test "changing a transaction runs rules set to apply immediately" do
+    create_immediate_rule
+
+    patch transaction_url(@entry), params: { entry: { name: "Renamed" } }
+
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ] } ])
+  end
+
+  test "changing a transaction queues nothing without immediate rules" do
+    patch transaction_url(@entry), params: { entry: { name: "Renamed" } }
+
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "an update that changes nothing runs no immediate rules" do
+    create_immediate_rule
+
+    patch transaction_url(@entry), params: { entry: { name: @entry.name, notes: @entry.notes } }
+
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "an update reduced to nothing by the account permission runs no immediate rules" do
+    create_immediate_rule
+    read_only_entry = entries(:transfer_in) # credit card, shared read_only with family_member
+    sign_in users(:family_member)
+
+    patch transaction_url(read_only_entry), params: { entry: { name: "Renamed" } }
+
+    assert_not_equal "Renamed", read_only_entry.reload.name
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "setting the same tags again runs no immediate rules" do
+    create_immediate_rule
+    @entry.transaction.update!(tag_ids: [ tags(:one).id ])
+
+    patch tags_transaction_url(@entry, format: :json), params: { tag_ids: [ tags(:one).id ] }
+
+    assert_response :success
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "toggling a tag runs immediate rules" do
+    create_immediate_rule
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
+
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ] } ])
+  end
+
+  # A rule can change these fields while the drawer is open. Sharing a form
+  # with another field would send the drawer's stale value back on the next
+  # save of that field, undoing the rule's result and locking it.
+  test "the drawer sends each field that rules can set in a form of its own" do
+    rule_fields = %w[entry[name] entry[excluded] entry[entryable_attributes][category_id] entry[entryable_attributes][merchant_id] entry[entryable_attributes][tag_ids][]]
+    form_meta = %w[authenticity_token _method grouped entry[entryable_attributes][id]]
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+    assert_response :success
+
+    seen = css_select("form[action='#{transaction_path(@entry)}']").filter_map do |form|
+      names = form.css("input[name], select[name], textarea[name]").reject { |field| field["disabled"] }.map { |field| field["name"] }.uniq - form_meta
+      next if (names & rule_fields).empty?
+
+      assert_equal 1, names.size, "#{names.inspect} share one form"
+      names.first
+    end
+
+    assert_equal rule_fields.sort, seen.sort
+    # Leaving the name field untouched must not send its stale value either.
+    assert_select "input[name='entry[name]'][data-autosubmit-trigger-event=change]"
+  end
+
   test "does not offer guests to create a rule through a transaction update" do
     category = categories(:income)
     @entry.update!(name: "AMZN Mktp UK")
@@ -2638,6 +2758,14 @@ end
   end
 
   private
+    def create_immediate_rule
+      @user.family.rules.create!(
+        name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Renamed") ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id) ]
+      )
+    end
+
     # The Allocator's two-key advisory lock on this entry, held by this session.
     def entry_lock_held?(entry)
       ActiveRecord::Base.connection.select_value(ActiveRecord::Base.sanitize_sql_array([ <<~SQL, RecurringTransaction::Allocator::ENTRY_LOCK_NAMESPACE, RecurringTransaction::Allocator.entry_lock_id(entry) ]))

@@ -105,6 +105,17 @@ class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
     assert_equal "Monthly on the last day", Preset.label(@recurring.reload)
   end
 
+  test "labels in Spanish write the day as a plain number" do
+    I18n.with_locale(:es) do
+      assert_equal "Mensual, el día 5", Preset.label(@recurring)
+
+      Preset.apply(@recurring, preset: "interval", interval: 2, interval_unit: "yearly",
+                   day_of_month: 1, month_of_year: 9)
+      @recurring.save!
+      assert_equal "Cada 2 años, el 1 de septiembre", Preset.label(@recurring.reload)
+    end
+  end
+
   test "monthly equivalent amount normalizes cadence" do
     assert_in_delta @recurring.amount, @recurring.monthly_equivalent_amount.amount.to_f, 0.01
 

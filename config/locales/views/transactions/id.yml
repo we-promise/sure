@@ -267,6 +267,7 @@ id:
     toggle_recurring_section: Alihkan transaksi berulang mendatang
     search:
       filters:
+        balance_updates: Saldo
         account: Rekening
         date: Tanggal
         type: Jenis
@@ -321,6 +322,11 @@ id:
         unexpected_error: "Kesalahan tak terduga saat konversi: %{error}"
     searches:
       filters:
+        balance_updates_filter:
+          always_shown: Selalu ditampilkan, sesuai pengaturan di
+          hint: Hanya untuk tampilan ini. Agar selalu ditampilkan, aktifkan di
+          preferences_link: Preferensi
+          show: Tampilkan pembaruan saldo tersinkronisasi
         account_filter:
           filter_accounts: Filter rekening
         category_filter:
@@ -338,6 +344,7 @@ id:
           less_than: Lebih kecil dari
           placeholder: '0'
         badge:
+          balance_updates: Saldo tersinkronisasi
           expense: Pengeluaran
           income: Pemasukan
           on_or_after: pada atau setelah %{date}
