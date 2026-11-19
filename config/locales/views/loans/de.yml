@@ -15,6 +15,11 @@ de:
         britischen und australischen Hypotheken üblich. 30/360 berechnet ein
         glattes Zwölftel, die Grundlage, die Sure bisher immer verwendet hat.
       day_count_convention_thirty_360: 30/360 (glattes Zwölftel)
+      interest_compounding: "Zinskapitalisierung"
+      interest_compounding_annual: "Jährlich"
+      interest_compounding_hint: "Wie oft dein Kreditgeber den angegebenen Zinssatz kapitalisiert. Die meisten Kredite werden bei jeder Zahlung kapitalisiert, auch wenn die Zinsen täglich berechnet und monatlich belastet werden, wie in Australien und Großbritannien: Lass hier „Bei jeder Zahlung“ stehen. Kanadische Hypotheken mit festem Zinssatz werden halbjährlich kapitalisiert."
+      interest_compounding_per_period: "Bei jeder Zahlung"
+      interest_compounding_semi_annual: "Halbjährlich"
       rate_type: Zinssatztyp
       term_months: Laufzeit (Monate)
       term_months_placeholder: '360'

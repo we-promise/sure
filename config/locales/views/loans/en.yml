@@ -15,6 +15,11 @@ en:
         Australian mortgages. 30/360 charges a flat twelfth, the basis Sure has
         always used.
       day_count_convention_thirty_360: 30/360 (a flat twelfth)
+      interest_compounding: "Compounding"
+      interest_compounding_annual: "Yearly"
+      interest_compounding_hint: "How often your lender compounds the stated rate. Most loans compound once per payment, including loans where interest is calculated daily and charged monthly, as in Australia and the UK: leave this on “Each payment”. Canadian fixed-rate mortgages compound half-yearly."
+      interest_compounding_per_period: "Each payment"
+      interest_compounding_semi_annual: "Half-yearly"
       rate_type: Rate type
       term_months: Term (months)
       term_months_placeholder: '360'

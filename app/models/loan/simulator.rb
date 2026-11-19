@@ -64,6 +64,11 @@ class Loan
     DAY_COUNT_CONVENTIONS = %i[thirty_360 actual_365 actual_actual].freeze
     DEFAULT_DAY_COUNT_CONVENTION = :thirty_360
 
+    # How often the stated rate compounds; see AmortizationMath::COMPOUNDINGS.
+    # The default charges what this engine always has.
+    COMPOUNDINGS = AmortizationMath::COMPOUNDINGS
+    DEFAULT_COMPOUNDING = AmortizationMath::DEFAULT_COMPOUNDING
+
     def initialize(
       starting_balance:,
       accrual_start_date:,
@@ -74,7 +79,8 @@ class Loan
       payment_strategy: :reamortize,
       payment_amount: nil,
       settle_at_schedule_end: true,
-      day_count_convention: DEFAULT_DAY_COUNT_CONVENTION
+      day_count_convention: DEFAULT_DAY_COUNT_CONVENTION,
+      compounding: DEFAULT_COMPOUNDING
     )
       @starting_balance = BigDecimal(starting_balance.to_s)
       @accrual_start_date = accrual_start_date
@@ -95,6 +101,7 @@ class Loan
         end
       @settle_at_schedule_end = settle_at_schedule_end
       @day_count_convention = (day_count_convention || DEFAULT_DAY_COUNT_CONVENTION).to_sym
+      @compounding = (compounding.presence || DEFAULT_COMPOUNDING).to_sym
 
       raise ArgumentError, "payment schedule must not be empty" if @payment_schedule.empty?
       if @payment_schedule.length > MAX_PERIODS
@@ -112,6 +119,10 @@ class Loan
         raise ArgumentError,
               "unsupported day-count convention: #{@day_count_convention.inspect} " \
               "(expected one of #{DAY_COUNT_CONVENTIONS.join(', ')})"
+      end
+      unless COMPOUNDINGS.include?(@compounding)
+        raise ArgumentError,
+              "unsupported compounding: #{@compounding.inspect} (expected one of #{COMPOUNDINGS.join(', ')})"
       end
     end
 
@@ -133,8 +144,11 @@ class Loan
         # is an annuity formula and assumes ONE constant periodic rate; a factor
         # that moves with the length of the month would differ every period, so
         # under :reamortize the payment would be recomputed every month and stop
-        # being level. Sizing therefore stays on the nominal monthly rate, which
-        # is also what the borrower's contracted payment is set from.
+        # being level. Sizing therefore stays on the rate for a twelfth of a
+        # year, which is also what the borrower's contracted payment is set
+        # from. The compounding does reach it: a lender quoting a rate
+        # compounded half-yearly sizes the payment at that rate's monthly
+        # equivalent, and one constant rate keeps the payment level.
         accrual_annual = @accrual_rate_for.call(period_start)
         accrual_rate = accrual_factor(period_start, payment_date, accrual_annual)
         sizing_rate = monthly_rate(rate_on(payment_date))
@@ -207,9 +221,10 @@ class Loan
 
         # Two rates on the row, named for what each did: `interest_rate` is
         # the one the interest column was computed with, so a reader who
-        # recomputes the charge from beginning_balance, this rate and the
-        # period's day count (a flat twelfth under thirty_360) gets this row's
-        # figure;
+        # recomputes the charge from beginning_balance, this rate, the
+        # period's day count (a twelfth of a year under thirty_360) and the
+        # loan's compounding (`AmortizationMath.accrual_factor`) gets this
+        # row's figure;
         # `sizing_rate` is the one the payment was sized at. They differ only
         # on a row whose period straddles a rate change.
         payments << {
@@ -253,12 +268,13 @@ class Loan
           annual_percentage: annual_percentage,
           period_start: period_start,
           period_end: period_end,
-          day_count_convention: @day_count_convention
+          day_count_convention: @day_count_convention,
+          compounding: @compounding
         )
       end
 
       def monthly_rate(annual_percentage)
-        AmortizationMath.monthly_rate(annual_percentage)
+        AmortizationMath.monthly_rate(annual_percentage, compounding: @compounding)
       end
 
       def callable!(value, name)
