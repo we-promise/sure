@@ -371,7 +371,6 @@ fr:
       email_sent_notice: Un e-mail vous a été envoyé avec les prochaines étapes.
       errors:
         provider_no_pdf_support: Le fournisseur d'IA ne prend pas en charge le traitement des PDF
-        provider_not_configured: Fournisseur d'IA non configuré
       failed_description: Nous n'avons pas pu traiter votre document PDF. Veuillez réessayer ou contacter le support.
       failed_title: Traitement échoué
       no_accounts: Aucun compte disponible. Veuillez d'abord créer un compte.

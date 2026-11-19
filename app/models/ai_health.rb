@@ -134,22 +134,6 @@ class AiHealth
       .max
   end
 
-  def self.redact_endpoint(value)
-    return if value.blank?
-
-    uri = URI.parse(value.to_s)
-    uri.user = nil if uri.respond_to?(:user=)
-    uri.password = nil if uri.respond_to?(:password=)
-    uri.query = nil if uri.respond_to?(:query=)
-    uri.fragment = nil if uri.respond_to?(:fragment=)
-    uri.to_s
-  rescue URI::InvalidURIError
-    value.to_s
-         .sub(%r{\A([^:]+://)[^/@]+@}, "\\1")
-         .split(/[?#]/, 2)
-         .first
-  end
-
   private
     def load_llm_status
       @selected_llm_protocol = normalized_llm_provider(Setting.llm_provider)
@@ -211,8 +195,7 @@ class AiHealth
           provider: @effective_llm_protocol,
           endpoint: @llm_raw_endpoint,
           access_token: @llm_access_token,
-          model: llm_model,
-          openai_compatible: @effective_llm_protocol == :openai && openai_compatible_endpoint?
+          model: llm_model
         )
         @function_calling_probe = probe.function_calling(
           provider: @effective_llm_protocol,
@@ -390,9 +373,7 @@ class AiHealth
       Provider::Openai.hosted_endpoint?(value)
     end
 
-    def redact_endpoint(value)
-      self.class.redact_endpoint(value)
-    end
+    def redact_endpoint(value) = Ai::Instrumentation::Redactor.url(value)
 
     def safely(fallback)
       yield
