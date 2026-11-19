@@ -2195,46 +2195,6 @@ components:
       properties:
         message:
           type: string
-    TransactionResponse:
-      type: object
-      required:
-      - id
-      - date
-      - amount
-      - currency
-      - name
-      - entryable_type
-      - account
-      properties:
-        id:
-          type: string
-          format: uuid
-        date:
-          type: string
-          format: date
-        amount:
-          type: string
-        currency:
-          type: string
-        name:
-          type: string
-        entryable_type:
-          type: string
-        account:
-          type: object
-          required:
-          - id
-          - name
-          - account_type
-          properties:
-            id:
-              type: string
-              format: uuid
-            name:
-              type: string
-            account_type:
-              type: string
-              nullable: true
     ImportConfiguration:
       type: object
       properties:
@@ -10412,11 +10372,16 @@ paths:
       parameters: []
       responses:
         '201':
-          description: trade created
+          description: 'created: a Trade for trade types, a Transaction for a deposit
+            or withdrawal without transfer_account_id, or a TransferDecision for a
+            deposit or withdrawal with transfer_account_id'
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/TransactionResponse"
+                oneOf:
+                - "$ref": "#/components/schemas/Trade"
+                - "$ref": "#/components/schemas/Transaction"
+                - "$ref": "#/components/schemas/TransferDecision"
         '403':
           description: forbidden - api key missing read_write scope
           content:
