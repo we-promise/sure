@@ -237,19 +237,32 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#account_remove_iban_label", text: I18n.t("accounts.form.iban_remove_label")
   end
 
-  test "iban field masks keystrokes like a password field and signals a stored value" do
+  test "iban field is a plain text field that shows only the stored last four" do
     linked_account = accounts(:connected)
     linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
 
     get edit_account_url(linked_account)
 
     assert_response :success
-    # type=password, not type=text: typed input must be masked as you go,
-    # not just withheld from the initial render.
-    assert_select "input[type=password][name='account[iban]']", 1
-    # The placeholder alone ("IBAN on file...") was easy to miss -- a fixed
-    # run of bullets makes a stored value visually obvious at a glance.
-    assert_select "input[name='account[iban]'][placeholder^=?]", "••••"
+    # Not type=password: password managers would offer to fill the login
+    # password into it, and it would then be saved as the IBAN.
+    assert_select "input[type=password][name='account[iban]']", 0
+    assert_select "input[type=text][name='account[iban]'][autocomplete=off]:not([value])", 1
+    assert_select "input[name='account[iban]'][placeholder^=?]", "•••3201"
+    refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
+  end
+
+  test "iban field placeholder keeps the stored last four after a failed update" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { name: "", iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[iban]'][placeholder^=?]", "•••3201"
+    refute_includes response.body, "DE89370400440532013000" # pipelock:ignore IBAN
   end
 
   test "edit form does not render a remove_iban toggle when no iban is stored" do

@@ -50,7 +50,7 @@ zh-TW:
       institution_domain_placeholder: 例如：esunbank.com.tw
       iban_label: "IBAN"
       iban_placeholder: "例如：DE89370400440532013000" # pipelock:ignore IBAN
-      iban_set_placeholder: "•••• •••• •••• •••• — 已儲存 IBAN，輸入新值以取代"
+      iban_set_placeholder: "%{masked} — 已儲存 IBAN，輸入新值以取代"
       iban_remove_label: "移除 IBAN"
       notes_label: 備註
       notes_placeholder: 儲存額外資訊，例如帳號、分行代碼、IBAN、銀行轉帳號碼 (Routing numbers) 等。
