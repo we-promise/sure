@@ -59,6 +59,20 @@ class RevolutXItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "2500.0", assets["ETH"]["price_usd"]
   end
 
+  test "a balance in an ISO fiat Revolut X does not list, like CZK, is cash" do
+    @provider.stubs(:get_balances).returns(payload("balances") + [ { "currency" => "CZK", "total" => "1000.00" } ])
+    ExchangeRate.create!(from_currency: "CZK", to_currency: "USD", date: Date.current, rate: 0.04)
+
+    import
+
+    account = @item.revolut_x_accounts.sole
+    czk = account.raw_payload["assets"].find { |asset| asset["symbol"] == "CZK" }
+    assert_equal "fiat", czk["kind"]
+    assert_equal "0.04", czk["price_usd"]
+    assert_equal "40.0", czk["amount_usd"]
+    assert_equal (1.35.to_d * 120_000) + (42 * 3000) + 5500.50.to_d + 40, account.current_balance
+  end
+
   test "keeps an unpriced asset with no price and no value" do
     @tickers["data"].reject! { |ticker| ticker["symbol"].start_with?("ETH/") }
 

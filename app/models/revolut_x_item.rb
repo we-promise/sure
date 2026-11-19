@@ -4,8 +4,6 @@ class RevolutXItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   API_KEY_FORMAT = /\A[A-Za-z0-9]{64}\z/
-  # Treated as fiat even when /public/configuration/currencies does not list them.
-  DEFAULT_FIAT_CURRENCIES = %w[USD EUR GBP].freeze
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -115,13 +113,17 @@ class RevolutXItem < ApplicationRecord
   end
 
   # The only fiat/crypto classifier: Revolut X's own asset_type when the
-  # currency is listed, otherwise DEFAULT_FIAT_CURRENCIES.
+  # currency is listed (it lists only a few fiats), otherwise fiat iff
+  # config/currencies.yml has the code with an ISO numeric. Crypto entries
+  # there have a blank iso_numeric, as do a few non-ISO fiats (CNH, GBX,
+  # GGP, IMP, JEP, XFU), which are therefore treated as non-fiat.
   def fiat_currency?(code)
     code = code.to_s.upcase
     listed = raw_payload.is_a?(Hash) ? raw_payload.dig("currencies", code) : nil
     asset_type = listed["asset_type"] if listed.is_a?(Hash)
+    return asset_type == "fiat" if asset_type.present?
 
-    asset_type.present? ? asset_type == "fiat" : DEFAULT_FIAT_CURRENCIES.include?(code)
+    Money::Currency.all.dig(code.downcase, "iso_numeric").present?
   end
 
   def set_revolut_x_institution_defaults!

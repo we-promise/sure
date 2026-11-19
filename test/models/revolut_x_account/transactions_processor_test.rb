@@ -33,6 +33,15 @@ class RevolutXAccount::TransactionsProcessorTest < ActiveSupport::TestCase
     assert_equal "revolut_x", funding.entryable.extra.dig("revolut_x", "destination_account_type")
   end
 
+  test "buy paid in an ISO fiat Revolut X does not list, like CZK: Trade plus a funding Transaction" do
+    assert_no_difference -> { DebugLogEntry.where(provider_key: "revolut_x").count } do
+      process tx("b3", "buy", source: leg("2500.00", "CZK", "revolut"), destination: leg("100", "SUI"))
+    end
+
+    assert_trade entry("revolut_x_b3"), ticker: "CRYPTO:SUI", qty: 100, amount: 2500, currency: "CZK", label: "Buy"
+    assert_transaction entry("revolut_x_b3_funding"), amount: -2500, currency: "CZK", label: "Contribution", kind: "investment_contribution"
+  end
+
   test "buy paid from exchange cash: Trade only" do
     process tx("b2", "buy", source: leg("1000.00", "USD"), destination: leg("0.01", "BTC"))
 
