@@ -118,7 +118,7 @@ class Account::ProviderImportAdapter
             # not revert a user edit the way overwriting name/category/notes
             # would. Only blank columns are filled, unlike the unprotected path
             # below: a protected entry's stored value is never replaced.
-            if counterparty
+            if counterparty && !entry.import_locked?
               counterparty.each do |attribute, value|
                 entry.transaction[attribute] = value if entry.transaction[attribute].blank?
               end

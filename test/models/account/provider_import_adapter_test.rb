@@ -2812,6 +2812,31 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "leaves the counterparty of an import-locked user-modified entry alone" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_user_mod_locked_no_iban",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Old Landlord Payment",
+      source: "enable_banking"
+    )
+    entry.mark_user_modified!
+    entry.update!(import_locked: true)
+
+    @adapter.import_transaction(
+      external_id: "eb_user_mod_locked_no_iban",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Old Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+
+    assert_nil entry.reload.transaction.counterparty_iban_last4
+  end
+
   test "does not clobber a backfilled counterparty iban with a later nil on a user-modified entry" do
     entry = @adapter.import_transaction(
       external_id: "eb_user_mod_iban_then_nil",
