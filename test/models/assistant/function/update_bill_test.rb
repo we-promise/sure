@@ -154,6 +154,22 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
     assert_match(/More than one account/, result[:error])
   end
 
+  test "frequency once lands on the current due date, not the original anchor" do
+    series = create_series(name: "Tuition", amount: 500)
+    current_due = series.next_due_date
+    stale_anchor = current_due - 200
+    series.update_columns(anchor_date: stale_anchor)
+
+    result = call_tool(series.id, "frequency" => "once")
+
+    assert result[:updated], result[:error]
+    series.reload
+    assert_equal current_due, series.anchor_date
+    assert_includes series.recurring_occurrences.pluck(:due_on), current_due
+    assert_not_includes series.recurring_occurrences.pluck(:due_on), stale_anchor
+    assert_empty series.recurring_occurrences.where("due_on > ?", current_due)
+  end
+
   test "an unrecognized frequency is rejected before anything saves" do
     series = create_series(name: "Insurance", amount: 60)
 
@@ -176,6 +192,35 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
 
     assert_match(/not a status/, call_tool(series.id, "status" => "cancelled")[:error])
     assert_match(/not a kind/, call_tool(series.id, "bill_type" => "loan")[:error])
+  end
+
+  # The tool applies every field in memory and saves once, so whatever reacts
+  # to the activation must read the saved change, not the status after save.
+  test "activating a detected bill links its past payments" do
+    paid_on = Date.current.beginning_of_month + 8.days - 2.months
+    series = create_series(name: "CITY WATER", amount: 80, status: "suggested", manual: false,
+                           anchor_date: nil, expected_day_of_month: 9, last_occurrence_date: paid_on)
+    entry = accounts(:depository).entries.create!(
+      date: paid_on, amount: 80, currency: "USD", name: "CITY WATER", entryable: Transaction.new
+    )
+
+    assert_difference -> { series.recurring_occurrences.paid.where(due_on: paid_on).count }, 1 do
+      assert call_tool(series.id, "status" => "active")[:updated]
+    end
+    assert RecurringAllocation.where(entry_id: entry.id, state: "confirmed").exists?
+  end
+
+  test "resuming a paused bill does not reconstruct its history" do
+    paid_on = Date.current.beginning_of_month + 8.days - 2.months
+    series = create_series(name: "CITY WATER", amount: 80, status: "inactive", manual: false,
+                           anchor_date: nil, expected_day_of_month: 9, last_occurrence_date: paid_on)
+    accounts(:depository).entries.create!(
+      date: paid_on, amount: 80, currency: "USD", name: "CITY WATER", entryable: Transaction.new
+    )
+
+    assert_no_difference -> { series.recurring_occurrences.where(due_on: paid_on).count } do
+      assert call_tool(series.id, "status" => "active")[:updated]
+    end
   end
 
   private

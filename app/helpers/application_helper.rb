@@ -1,6 +1,12 @@
 module ApplicationHelper
   include Pagy::Frontend
 
+  # Whether an AI feature (a key in Ai::Routes::MATRIX) can run for the current family and user,
+  # so a view shows its AI affordance only then.
+  def ai_feature_available?(feature)
+    Ai.available?(feature, family: Current.family, user: Current.user)
+  end
+
   def product_name
     Rails.configuration.x.product_name
   end
@@ -65,7 +71,7 @@ module ApplicationHelper
 
   # The chevron for a DS::Disclosure summary_content slot; it turns as the disclosure opens.
   def disclosure_chevron
-    icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90"
+    icon "chevron-right", size: "sm", class: "[details[open]>summary_&]:rotate-90 motion-safe:transition-transform motion-safe:duration-150"
   end
 
   # Convert alpha (0-1) to 8-digit hex (00-FF)
@@ -144,6 +150,24 @@ module ApplicationHelper
         active: page_active?(budgets_path)
       }
     end
+  end
+
+  # The family-wide investment hub. Preview-gated (hidden entirely without the
+  # flag) and desktop-only: the bottom bar already carries five entries at the
+  # width it has, and the hub is a wide, multi-section page. `desktop_only`
+  # is filtered out of the mobile bar in the layout, the mirror of the
+  # `mobile_only` flag the Assistant entry uses.
+  def portfolio_nav_item
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.portfolio"),
+        path: portfolio_path,
+        icon: "briefcase",
+        icon_custom: false,
+        active: page_active?(portfolio_path),
+        desktop_only: true
+      }
+    )
   end
 
   # Wrapper around I18n.l to support custom date formats
@@ -229,8 +253,14 @@ module ApplicationHelper
   def markdown(text)
     return "" if text.blank?
 
+    # filter_html drops raw HTML present in the input. It is not redundant with
+    # the sanitize below: `div`, `span`, `class` and `style` have to stay on
+    # that allow-list for footnotes, code blocks and table alignment, so
+    # without this a chat message could ship `<div class="fixed inset-0">` and
+    # cover the app.
     renderer = Redcarpet::Render::HTML.new(
       hard_wrap: true,
+      filter_html: true,
       link_attributes: { target: "_blank", rel: "noopener noreferrer" }
     )
 
@@ -247,7 +277,16 @@ module ApplicationHelper
       footnotes: true
     )
 
-    markdown.render(text).html_safe
+    # The second layer, for the markup the renderer itself produces: a markdown
+    # link carries whatever scheme the author wrote, so `[x](javascript:...)`
+    # survives filter_html and only the allow-list drops it (CWE-79). Every tag
+    # the extensions above generate has to be on it: `u` (underline), `q`
+    # (quote), `mark`, `del`, `sup`, and `style` for table column alignment.
+    sanitize(
+      markdown.render(text),
+      tags: %w[p br strong em u q a img ul ol li h1 h2 h3 h4 h5 h6 pre code blockquote table thead tbody tr th td span div sup sub del mark ins hr dl dt dd],
+      attributes: %w[href target rel class id src alt title style]
+    )
   end
 
   # Generate the callback URL for Enable Banking OAuth (used in views and controller).
@@ -257,6 +296,13 @@ module ApplicationHelper
     return callback_enable_banking_items_url if Rails.env.production?
 
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
+  end
+
+  # The redirect URI registered on the TrueLayer app. TRUELAYER_REDIRECT_URI
+  # overrides it for instances behind a proxy that doesn't forward the
+  # public host; it must exactly match one registered on the TrueLayer app.
+  def truelayer_callback_url
+    ENV["TRUELAYER_REDIRECT_URI"].presence || callback_truelayer_items_url
   end
 
   # Formats a holding quantity with adaptive precision based on the value size.

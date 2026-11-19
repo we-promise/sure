@@ -1,13 +1,16 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
-import { sankey } from "d3-sankey";
+import { sankey, sankeyCenter } from "d3-sankey";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
+import { sankeyLabelOnRight } from "utils/sankey_align";
 import { hiddenSankeyLabels } from "utils/sankey_labels";
+import { withoutSankeySubcategories } from "utils/sankey_subcategories";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
 import {
   buildCategoryTransactionsUrl,
   isNavigableCategoryNode,
 } from "utils/transactions_filter_url";
+import SettledResize from "utils/settled_resize";
 
 // Connects to data-controller="sankey-chart"
 export default class extends Controller {
@@ -26,6 +29,9 @@ export default class extends Controller {
   static HOVER_OPACITY = 0.4;
   static HOVER_FILTER = "saturate(1.3) brightness(1.1)";
   static EXTENT_MARGIN = 16;
+  // Below this chart width the subcategory column is dropped: five columns
+  // on a phone leave about 60px between bars, too little for most labels.
+  static SUBCATEGORY_MIN_WIDTH = 640;
   static MIN_NODE_PADDING = 4;
   static MAX_PADDING_RATIO = 0.4;
   static CORNER_RADIUS = 8;
@@ -42,12 +48,35 @@ export default class extends Controller {
   connect() {
     this.connected = true;
     this.zoomRootId = null;
-    this.resizeObserver = new ResizeObserver(() => this.#draw());
-    this.resizeObserver.observe(this.#chartElement());
+    // Crossing the subcategory threshold changes the columns, which a
+    // stretched drawing can't show: redraw then, not only at the end.
+    const minWidth = this.constructor.SUBCATEGORY_MIN_WIDTH;
+    this.settledResize = new SettledResize(
+      this.#chartElement(),
+      () => this.#draw(),
+      {
+        layoutChanges: (from, to) =>
+          from.width < minWidth !== to.width < minWidth,
+        // The extent's margin keeps its width, so the outer bars and their
+        // labels stay put at the edges.
+        margins: {
+          left: this.constructor.EXTENT_MARGIN,
+          right: this.constructor.EXTENT_MARGIN,
+        },
+      },
+    );
     this.tooltip = null;
     this.#createTooltip();
     this.#syncZoomControls();
     this.#draw();
+    this.settledResize.start();
+
+    // A Turbo morph refresh (the sync toast's auto-refresh) keeps this
+    // element and its controller but puts the server markup back around
+    // them. Nothing else notices: the size has not changed and the data is
+    // unchanged unless the sync brought something new.
+    this.onMorph = () => this.#restoreAfterMorph();
+    document.addEventListener("turbo:morph", this.onMorph);
 
     // Labels are measured to keep them off neighbouring bars; measure again
     // once the page font has replaced the fallback.
@@ -68,10 +97,23 @@ export default class extends Controller {
 
   disconnect() {
     this.connected = false;
-    this.resizeObserver?.disconnect();
+    document.removeEventListener("turbo:morph", this.onMorph);
+    this.settledResize?.stop();
     clearTimeout(this.drawTimeout);
     this.tooltip?.remove();
     this.tooltip = null;
+  }
+
+  // The morph dropped the drawing and the tooltip appended outside this
+  // element, and put the server's hidden zoom-out button back while the
+  // zoom is kept here.
+  #restoreAfterMorph() {
+    if (!this.connected) return;
+
+    this.tooltip?.remove();
+    this.#createTooltip();
+    this.#syncZoomControls();
+    if (!this.#chartElement().querySelector("svg")) this.#draw();
   }
 
   zoomOut() {
@@ -83,7 +125,8 @@ export default class extends Controller {
   }
 
   #draw({ animate = false } = {}) {
-    const { nodes = [], links = [] } = this.#visibleData();
+    const width = this.#chartWidth();
+    const { nodes = [], links = [] } = this.#visibleData(width);
     if (!nodes.length || !links.length) return;
 
     // Hide tooltip and reset any hover states before redrawing
@@ -104,19 +147,19 @@ export default class extends Controller {
         .remove();
 
       this.drawTimeout = setTimeout(() => {
-        this.#render(nodes, links, true);
+        this.#render(nodes, links, width, true);
       }, this.constructor.ZOOM_TRANSITION_MS / 2);
     } else {
       chart.selectAll("svg").remove();
-      this.#render(nodes, links, false);
+      this.#render(nodes, links, width, false);
     }
+    this.settledResize?.drew();
   }
 
-  #render(nodes, links, animate) {
+  #render(nodes, links, width, animate) {
     const chartElement = this.#chartElement();
     const chart = d3.select(chartElement);
 
-    const width = chartElement.clientWidth || 600;
     const height = chartElement.clientHeight || 400;
 
     const svg = chart
@@ -157,10 +200,32 @@ export default class extends Controller {
     return this.hasChartTarget ? this.chartTarget : this.element;
   }
 
-  #visibleData() {
-    if (!this.zoomRootId) return this.dataValue || {};
+  // The data at the current zoom, before the narrow-chart filter. Drill-down
+  // is decided here, so a category whose children are all subcategories
+  // still opens on a phone; the zoomed-in view has no Cash Flow node for
+  // the filter to work from, so it keeps them.
+  #drillableData() {
+    return this.zoomRootId
+      ? zoomSankeyData(this.dataValue, this.zoomRootId)
+      : this.dataValue || {};
+  }
 
-    return zoomSankeyData(this.dataValue, this.zoomRootId);
+  // Decided on every draw from the width the chart is laid out at, so
+  // rotating a phone redraws with or without the subcategory column as the
+  // width allows.
+  #visibleData(width) {
+    const data = this.#drillableData();
+
+    return width < this.constructor.SUBCATEGORY_MIN_WIDTH
+      ? withoutSankeySubcategories(data)
+      : data;
+  }
+
+  // A container with no size yet (the expand dialog before it opens) gets
+  // the same fallback for the filter and the layout; the ResizeObserver
+  // redraws once it has one.
+  #chartWidth() {
+    return this.#chartElement().clientWidth || 600;
   }
 
   #syncZoomControls() {
@@ -170,7 +235,7 @@ export default class extends Controller {
   }
 
   #zoomIn(node) {
-    if (!node.id || !sankeyNodeHasChildren(this.#visibleData(), node.id))
+    if (!node.id || !sankeyNodeHasChildren(this.#drillableData(), node.id))
       return;
 
     this.zoomRootId = node.id;
@@ -211,6 +276,10 @@ export default class extends Controller {
   #generateSankeyData(nodes, links, width, height, nodePadding) {
     const margin = this.constructor.EXTENT_MARGIN;
     const sankeyGenerator = sankey()
+      // Centre alignment: a sink sits at its depth, a source one column
+      // before the nearest node it feeds. The default pushes every sink to
+      // the last column, which is the subcategories' once a family has any.
+      .nodeAlign(sankeyCenter)
       .nodeWidth(this.nodeWidthValue)
       .nodePadding(nodePadding)
       .extent([
@@ -274,6 +343,8 @@ export default class extends Controller {
       .data(links)
       .join("path")
       .attr("class", "sankey-link")
+      // Stays joined to its bars while a resize stretches the drawing.
+      .attr("data-settled-resize-joins", "")
       .attr("d", (d) =>
         d3.linkHorizontal()({
           source: [d.source.x1, d.y0],
@@ -296,10 +367,17 @@ export default class extends Controller {
     nodeGroups
       .append("path")
       .attr("d", (d) => this.#nodePath(d))
+      // Keeps its width while a resize stretches the drawing (SettledResize).
+      .attr("data-settled-resize-keep-width", "")
       .attr("fill", (d) => d.color || this.constructor.DEFAULT_COLOR)
       .attr("stroke", (d) => (d.color ? "none" : "var(--color-gray-500)"));
 
-    const hiddenLabels = this.#addNodeLabels(svg, nodeGroups, width, nodes);
+    const hiddenLabels = this.#addNodeLabels(
+      svg,
+      nodeGroups,
+      sankeyLabelOnRight(nodes, width),
+      nodes,
+    );
 
     return { nodeGroups, hiddenLabels };
   }
@@ -356,11 +434,11 @@ export default class extends Controller {
             L ${x0},${y1} Z`;
   }
 
-  #addNodeLabels(svg, nodeGroups, width, nodes) {
+  #addNodeLabels(svg, nodeGroups, labelOnRight, nodes) {
     const controller = this;
     const hiddenLabels = this.#calculateHiddenLabels(
       nodes,
-      this.#measureLabels(svg, nodes, width),
+      this.#measureLabels(svg, nodes, labelOnRight),
     );
 
     nodeGroups
@@ -378,21 +456,22 @@ export default class extends Controller {
       )
       .style("transition", "opacity 0.2s ease")
       .each(function (d) {
-        controller.#writeLabel(d3.select(this), d, width);
+        controller.#writeLabel(d3.select(this), d, labelOnRight);
       });
 
     return hiddenLabels;
   }
 
-  // Name above amount, beside the bar on the side facing the chart's middle.
-  #writeLabel(textEl, d, width) {
-    const x = d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6;
+  // Name above amount, beside the bar on the side the label rule picks.
+  #writeLabel(textEl, d, labelOnRight) {
+    const right = labelOnRight(d);
+    const x = right ? d.x1 + 6 : d.x0 - 6;
 
     textEl
       .attr("x", x)
       .attr("y", (d.y1 + d.y0) / 2)
       .attr("dy", "-0.2em")
-      .attr("text-anchor", d.x0 < width / 2 ? "start" : "end");
+      .attr("text-anchor", right ? "start" : "end");
 
     textEl.selectAll("tspan").remove();
     textEl.append("tspan").text(d.name);
@@ -408,7 +487,7 @@ export default class extends Controller {
   // Where each label lands at this width, measured with an invisible probe
   // before the real labels are drawn, so the overlap rule can see a label
   // that reaches into the next column.
-  #measureLabels(svg, nodes, width) {
+  #measureLabels(svg, nodes, labelOnRight) {
     const probe = svg
       .append("text")
       .attr("class", "text-xs font-medium select-none")
@@ -416,7 +495,7 @@ export default class extends Controller {
 
     const boxes = new Map();
     nodes.forEach((d) => {
-      this.#writeLabel(probe, d, width);
+      this.#writeLabel(probe, d, labelOnRight);
       const { x, y, width: boxWidth, height } = probe.node().getBBox();
       boxes.set(d.index, { x, y, width: boxWidth, height });
     });
@@ -499,7 +578,7 @@ export default class extends Controller {
     nodeGroups
       .selectAll("path")
       .style("cursor", (d) =>
-        sankeyNodeHasChildren(this.#visibleData(), d.id)
+        sankeyNodeHasChildren(this.#drillableData(), d.id)
           ? "pointer"
           : "default",
       )
@@ -529,7 +608,7 @@ export default class extends Controller {
       .selectAll("text")
       .style("cursor", (d) =>
         isNavigableCategoryNode(d.id) ||
-        sankeyNodeHasChildren(this.#visibleData(), d.id)
+        sankeyNodeHasChildren(this.#drillableData(), d.id)
           ? "pointer"
           : "default",
       )

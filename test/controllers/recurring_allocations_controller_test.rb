@@ -89,6 +89,25 @@ class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
       "a nil-cast date would have silently defaulted the payment to today"
   end
 
+  test "paying with a part of a split whose original charge already pays a bill says why" do
+    parent = accounts(:credit_card).entries.create!(
+      date: Date.current, amount: 95, currency: "USD", name: "Card Annual Fee", entryable: Transaction.new
+    )
+    child, = parent.split!([ { name: "Fee", amount: 60 }, { name: "Insurance", amount: 35 } ])
+    post recurring_occurrence_allocations_url(@occurrence), params: { entry_id: parent.id }
+
+    other = @family.recurring_transactions.create!(
+      name: "Card Insurance", account: accounts(:credit_card), amount: 35,
+      currency: "USD", expected_day_of_month: Date.current.day,
+      anchor_date: Date.current, last_occurrence_date: Date.current,
+      next_expected_date: Date.current, status: "active", manual: true
+    ).recurring_occurrences.order(:due_on).first
+    post recurring_occurrence_allocations_url(other), params: { entry_id: child.id }
+
+    assert_equal I18n.t("recurring_allocations.split_counterpart_allocated"), flash[:alert]
+    assert_empty other.reload.allocations
+  end
+
   test "allocation feedback is available in German" do
     expected_translations = {
       "recurring_allocations.over_allocation" => "Damit würdest du mehr als den Transaktionsbetrag zuordnen.",

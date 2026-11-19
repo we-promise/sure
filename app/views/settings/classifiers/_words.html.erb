@@ -1,0 +1,22 @@
+<%# locals: (settings:) %>
+<%# In the order the text is handled: what's read, how it splits into
+    words, which words are dropped, then how they're counted. Splitting
+    comes before dropping: split with symbols, mcdonald's stays whole, so
+    there's no "s" to drop. %>
+<%= classifier_section_form do |form| %>
+  <%= render "settings/classifiers/option", key: :include_notes, settings: settings, label: t(".include_notes"), hint: t(".include_notes_hint") %>
+
+  <%= render "settings/classifiers/select", form: form, key: :word_split, settings: settings, width: "w-64 max-w-1/2",
+        choices: Family::BayesSettings::CHOICES[:word_split].map { |choice| [ t(".word_split_#{choice}"), choice ] },
+        label: t(".word_split"), hint: t(".word_split_hint") %>
+
+  <%= render "settings/classifiers/option", key: :drop_numbers, settings: settings, label: t(".drop_numbers"), hint: t(".drop_numbers_hint") %>
+  <%= render "settings/classifiers/option", key: :keep_single_chars, settings: settings, label: t(".keep_single_chars"), hint: t(".keep_single_chars_hint") %>
+  <%= render "settings/classifiers/option", key: :drop_codes, settings: settings, label: t(".drop_codes"), hint: t(".drop_codes_hint") %>
+  <%= render "settings/classifiers/option", key: :spread_filter, settings: settings,
+        number_key: :spread_margin, number_attrs: { step: 0.05 },
+        label: t(".spread_filter"), hint: t(".spread_filter_hint") %>
+
+  <%= render "settings/classifiers/option", key: :binary, settings: settings, label: t(".binary"), hint: t(".binary_hint") %>
+  <%= render "settings/classifiers/option", key: :bigrams, settings: settings, label: t(".bigrams"), hint: t(".bigrams_hint") %>
+<% end %>

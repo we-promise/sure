@@ -1,0 +1,111 @@
+---
+zh-CN:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: 发现链上活动
+      explanation: 多个网络使用此地址格式，且每个网络上的余额各不相同。请选择您想要追踪的网络。
+      no_activity_found: 未发现活动
+      subtitle: "%{address}"
+      title: 选择哪个网络？
+    destroy:
+      success: 已计划删除自托管连接。
+    disconnect_asset:
+      success: 已停止追踪 %{symbol}。其账户和历史记录已保留。
+    disconnect_wallet:
+      success:
+        one: 已停止追踪该地址下的 1 个资产。
+        other: "已停止追踪该地址下的 %{count} 个资产。"
+    enable_crypto_prices:
+      not_self_hosted: 在此部署上，行情数据提供商由实例管理员统一配置。
+      success: 加密货币价格已启用。钱包估值将在下次同步后显示。
+    errors:
+      address_required: 请输入钱包地址。
+      already_linked: 该地址已在此网络上被追踪。请使用“检查代币”来更改追踪的资产。
+      chain_unreachable: 无法连接此网络的公共区块浏览器。请稍后重试。
+      rate_limited: 公共区块浏览器目前正在对请求进行限流。请在几分钟后重试。
+      unexpected: 读取此钱包时发生错误。详情已记录以供技术支持。
+      unrecognized_address: 该地址似乎不属于任何受支持的网络。
+      wallet_not_found: 此连接未追踪该钱包。
+    link_wallet:
+      errors:
+        none_tracked: "未能追踪任何资产：无法添加 %{assets}。请稍后重试。"
+        nothing_selected: 请至少选择一个要追踪的资产。
+        some_failed: "未能追踪 %{assets}，已将其忽略。"
+      success:
+        one: 正在追踪此钱包中的 1 个资产。
+        other: "正在追踪此钱包中的 %{count} 个资产。"
+    manage:
+      assets_truncated: "此地址持有的代币数量超过了单次读取的上限，因此仅列出最可信的 %{count} 个代币。已追踪的资产将继续同步。"
+      disconnect_asset: 停止追踪
+      disconnect_asset_confirm: "确定要停止追踪 %{symbol} 吗？其账户和历史记录将保留，但会停止更新。"
+      disconnect_wallet: 断开钱包连接
+      disconnect_wallet_confirm: 确定要停止追踪此地址下的所有资产吗？
+      history_note: 断开连接会保留账户及其历史记录；它们将直接停止更新。
+      history_truncated: 无法读取此地址的所有转账记录——交易历史超出了单次同步的覆盖范围，或者区块浏览器拒绝了请求。余额数据是完整的，但可能缺少部分转账记录。
+      native: 原生代币
+      no_wallets: 尚未追踪任何钱包。
+      review_tokens: 检查代币
+      subtitle: 此连接读取的所有地址，以及在各地址追踪的资产。
+      title: 管理自托管钱包
+    new_wallet:
+      address_label: 钱包地址
+      address_placeholder: bc1...、0x... 或 Solana 地址
+      bitcoin_single_address_note: 比特币每次只能追踪一个地址。系统不支持扩展公钥（xpub/ypub/zpub），因此如果钱包将资金分散在派生地址上，将仅显示您输入的地址余额。
+      chain_auto_detect: 自动检测
+      chain_label: 网络
+      continue: 继续
+      read_only_note: 仅读取公开链上数据。切勿输入助记词或私钥。
+      subtitle: 通过公开地址追踪您拥有私钥的钱包。
+      title: 添加自托管钱包
+    onchain_wallet_item:
+      assets_tracked:
+        one: 已追踪 1 个资产
+        other: "已追踪 %{count} 个资产"
+      sync: 立即同步
+      syncing: 同步中...
+    wallet_card:
+      addresses_tracked:
+        one: 已追踪 1 个地址
+        other: "已追踪 %{count} 个地址"
+      deletion_in_progress: 正在移除...
+      delete: 移除连接
+      needs_attention: 需要关注
+      no_wallets_message: 在提供商设置中关联地址后，即可在此处查看。
+      no_wallets_title: 尚未关联钱包
+      status: 上次同步于 %{timestamp} 前
+      sync: 立即同步
+      status_never: 尚未同步
+      syncing: 同步中...
+    price_provider_warning:
+      body: 没有已启用的行情数据提供商支持加密货币定价，因此这些钱包仅追踪数量，显示的价值为零。
+      enable: 启用加密货币价格
+      exchange_rate_body: "加密货币以 USD 计价，且未配置汇率提供商将其转换为 %{currency}，因此这些钱包仅追踪数量，显示的价值为零。请设置 EXCHANGE_RATE_PROVIDER — Frankfurter 无需 API 密钥。"
+      exchange_rate_title: 未配置汇率提供商
+      link: 打开行情数据设置
+      title: 未配置加密货币价格
+    provider_connection:
+      description: 通过公开地址追踪您拥有私钥的钱包。
+      name: 自托管钱包
+    review_tokens:
+      save: 保存追踪的资产
+      subtitle: "%{chain} · %{address}"
+      title: 检查追踪的资产
+    token_review:
+      import_selected: 追踪所选资产
+      subtitle: "%{chain} · %{address}"
+      title: 选择要追踪的内容
+    token_review_form:
+      assets_truncated: "此地址持有的代币数量超过了单次读取的上限，因此仅列出最可信的 %{count} 个代币。"
+      cancel: 取消
+      explanation: 已勾选有已知价格的资产。其他资产未勾选——钱包常会收到垃圾空投，追踪这些没有价值的资产没有意义。
+      native: 原生代币
+      no_price: 无可用价格；仅追踪数量
+      nothing_found: 在此网络上未找到此地址持有的任何资产。
+    update:
+      success: 自托管连接已更新。
+    update_tokens:
+      errors:
+        no_changes: 未发生任何变更；勾选的资产未变动。
+        none_tracked: "未发生变更：无法添加 %{assets}。请稍后重试。"
+        some_failed: "无法追踪 %{assets}，已将其忽略。"
+      success: "已更新追踪的资产（添加了 %{created} 个，移除了 %{removed} 个）。"

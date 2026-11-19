@@ -225,6 +225,82 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal "matched", @import.readback_verification["status"]
   end
 
+  test "readback matches when an untouched default budget is reused" do
+    category = @family.categories.create!(name: "Groceries", color: "#00FF00")
+    default_budget = @family.budgets.create!(
+      start_date: Date.parse("2024-01-01"), end_date: Date.parse("2024-01-31"), currency: "USD"
+    )
+    default_budget.budget_categories.create!(category: category, budgeted_spending: 0, currency: "USD")
+
+    attach_ndjson(build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: {
+        id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31",
+        budgeted_spending: "3000.00", expected_income: "5000.00", currency: "USD"
+      } },
+      { type: "BudgetCategory", data: {
+        id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", currency: "USD"
+      } }
+    ]))
+
+    @import.import!
+    @import.reload
+
+    assert_equal "matched", @import.readback_verification["status"]
+    assert_equal({ "categories" => 1, "budgets" => 1, "budget_categories" => 1 }, @import.readback_verification["reused_record_counts"])
+  end
+
+  test "import links created accounts and entries without loading them" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "acct-1", name: "Linked Account", balance: "100.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } },
+      { type: "Transaction", data: {
+        id: "txn-1", account_id: "acct-1", date: "2024-01-15", amount: "-25.00",
+        name: "Coffee", currency: "USD"
+      } }
+    ]))
+
+    result = @import.import!
+
+    assert_equal 1, result[:account_ids].size
+    assert_equal 1, result[:entry_ids].size
+    assert_equal @import.id, Account.find(result[:account_ids].first).import_id
+    assert_equal @import.id, Entry.find(result[:entry_ids].first).import_id
+    assert_not @import.accounts.loaded?
+    assert_not @import.entries.loaded?
+    assert @import.data_committed?
+  end
+
+  test "an import links only the records it created, never another import's unlinked ones" do
+    other = @family.imports.create!(type: "SureImport")
+    other_account = accounts(:depository)
+    other_entry = entries(:transaction)
+    # Records another import committed but hasn't linked yet.
+    other_account.update_columns(import_id: nil)
+    other_entry.update_columns(import_id: nil)
+
+    attach_ndjson(import_payload("first"))
+    result = @import.import!
+
+    assert_nil other_account.reload.import_id
+    assert_nil other_entry.reload.import_id
+    assert_equal result[:account_ids].sort, @import.accounts.pluck(:id).sort
+    assert_equal result[:entry_ids].sort, @import.entries.pluck(:id).sort
+
+    other.ndjson_file.attach(io: StringIO.new(import_payload("second")), filename: "second.ndjson", content_type: "application/x-ndjson")
+    other.sync_ndjson_rows_count!
+    other_result = other.import!
+
+    assert_empty result[:account_ids] & other_result[:account_ids]
+    assert_empty result[:entry_ids] & other_result[:entry_ids]
+    assert_equal result[:account_ids].sort, @import.accounts.reload.pluck(:id).sort
+    assert_equal result[:entry_ids].sort, @import.entries.reload.pluck(:id).sort
+    assert_equal other_result[:account_ids].sort, other.accounts.pluck(:id).sort
+    assert_equal other_result[:entry_ids].sort, other.entries.pluck(:id).sort
+  end
+
   test "publishes import successfully" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
@@ -601,6 +677,20 @@ class SureImportTest < ActiveSupport::TestCase
     assert_includes codes, "invalid_accountable_subtype"
     assert_includes codes, "duplicate_valuation"
     assert_includes codes, "missing_reference"
+  end
+
+  test "preflight rejects duplicate budget category pairs" do
+    attach_ndjson(build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-2", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "700.00", currency: "USD" } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_includes result.errors.map { |error| error[:code] }, "duplicate_budget_category"
   end
 
   test "preflight allows null rule names and treats orphaned rejected transfers as warnings" do
@@ -1111,6 +1201,19 @@ class SureImportTest < ActiveSupport::TestCase
           amount: "11.99", currency: "USD", expected_day_of_month: 28,
           last_occurrence_date: "2026-08-28", next_expected_date: "2026-09-28"
         }.merge(recurring_attrs) }
+      ])
+    end
+
+    def import_payload(label)
+      build_ndjson([
+        { type: "Account", data: {
+          id: "acct-#{label}", name: "#{label} account", balance: "100.00", currency: "USD",
+          accountable_type: "Depository", accountable: { subtype: "checking" }
+        } },
+        { type: "Transaction", data: {
+          id: "txn-#{label}", account_id: "acct-#{label}", date: "2024-01-15", amount: "-25.00",
+          name: "#{label} coffee", currency: "USD"
+        } }
       ])
     end
 

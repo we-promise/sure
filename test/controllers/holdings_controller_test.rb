@@ -1,6 +1,9 @@
 require "test_helper"
 
 class HoldingsControllerTest < ActionDispatch::IntegrationTest
+  include SqlQueryCapture
+  include EntriesTestHelper
+
   setup do
     sign_in users(:family_admin)
     @account = accounts(:investment)
@@ -10,6 +13,51 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
   test "gets holdings" do
     get holdings_url(account_id: @account.id)
     assert_response :success
+  end
+
+  # Each row shows its average cost, so the list loads them all together
+  # rather than running the per-holding fallback once per row.
+  test "the holdings list reads every row's average cost together" do
+    trade_queries = [ 2, 4 ].map do |count|
+      account = @account.family.accounts.create!(name: "Batch #{count}", balance: 0, cash_balance: 0, currency: "USD",
+                                                 accountable: Investment.new, cost_basis_method: "fifo")
+      count.times do |i|
+        security = Security.create!(ticker: "HB#{count}#{i}", name: "HB#{count}#{i}")
+        entry = account.entries.create!(name: "Buy", date: 2.days.ago.to_date, amount: 100, currency: "USD",
+                                        entryable: Trade.new(security: security, qty: 10, price: 10, currency: "USD"))
+        HoldingLot.create!(account: account, security: security, source_entry: entry, qty: 10, unit_cost: 10,
+                           currency: "USD", acquired_on: entry.date)
+        account.holdings.create!(security: security, date: Date.current, qty: 10, price: 12, amount: 120, currency: "USD")
+      end
+
+      queries = capture_sql_queries { get holdings_url(account_id: account.id) }
+      assert_response :success
+      queries.count { |sql| sql.include?('FROM "trades"') || sql.include?('FROM "holding_lots"') }
+    end
+
+    assert_equal trade_queries.first, trade_queries.last
+  end
+
+  test "warns about positions that went below zero" do
+    # An import that records a sale without its purchase, as a provider or CSV can.
+    @account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    get holdings_url(account_id: @account.id)
+
+    assert_response :success
+    assert_match "Some positions went below zero", response.body
+    assert_match "Microsoft (MSFT): below zero from", response.body
+  end
+
+  test "shows no below-zero warning for a normal portfolio" do
+    get holdings_url(account_id: @account.id)
+
+    assert_response :success
+    assert_no_match "Some positions went below zero", response.body
   end
 
   test "gets holding" do
@@ -163,6 +211,18 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[data-controller=cost-basis-form][data-turbo=false]", count: 0
   end
 
+  test "cost basis overwrite confirmation labels its button in the user's language" do
+    users(:family_admin).update!(locale: "de")
+    @holding.update!(qty: 10, cost_basis: 12.5, cost_basis_locked: true)
+
+    get holding_path(@holding)
+
+    form = css_select("form[data-controller=cost-basis-form]").first
+    confirmation = JSON.parse(form["data-turbo-confirm"])
+    assert_equal I18n.t("holdings.cost_basis_cell.overwrite_confirm_title", locale: :de), confirmation["title"]
+    assert_equal I18n.t("shared.custom_confirm.default_btn_text", locale: :de), confirmation["confirmText"]
+  end
+
   test "cost basis editor shows a stored zero basis instead of placeholders" do
     @holding.update!(qty: 10, cost_basis: 0, cost_basis_locked: true)
 
@@ -210,12 +270,96 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     # Redirects to account page holdings tab to refresh list
     assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.unlock_cost_basis.success"), flash[:notice]
     @holding.reload
 
     # Then: lock is removed but cost_basis and source remain
     assert_not @holding.cost_basis_locked?
     assert_equal 50.0, @holding.cost_basis.to_f
     assert_equal "manual", @holding.cost_basis_source
+  end
+
+  test "reset_security restores the provider security and confirms it" do
+    @holding.account.update!(plaid_account: plaid_accounts(:one))
+    @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+
+    post reset_security_holding_path(@holding)
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.reset_security.success"), flash[:notice]
+    assert_equal securities(:aapl), @holding.reload.security
+  end
+
+  # A remap onto a position with its own opening lot merges the two. The
+  # reset restates both securities, as a remap restates its target, so the
+  # lots match the holdings straight away rather than at the next sync.
+  test "reset_security restates both securities' lots" do
+    account = users(:family_admin).family.accounts.create!(name: "Reset lots", balance: 1000, cash_balance: 1000, currency: "USD", accountable: Investment.new)
+    item = users(:family_admin).family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: account, provider: item.coinstats_accounts.create!(name: "Provider", currency: "USD"))
+    original = Security.create!(ticker: "RSTA", name: "RSTA")
+    replacement = Security.create!(ticker: "RSTB", name: "RSTB")
+    [ original, replacement ].each do |security|
+      Security::Price.insert_all((5.days.ago.to_date..Date.current).map { |date| { security_id: security.id, date: date, price: 30, currency: "USD" } })
+    end
+    create_trade(original, account: account, qty: 10, price: 40, date: 3.days.ago.to_date)
+    provider_row = account.holdings.create!(security: original, date: Date.current, qty: 15, price: 30, amount: 450, currency: "USD", account_provider: provider)
+    account.holdings.create!(security: replacement, date: Date.current, qty: 6, price: 30, amount: 180, currency: "USD", account_provider: provider)
+    Holding::Materializer.new(account, strategy: :reverse).materialize_holdings
+    assert_equal [ 5, 6 ], [ original, replacement ].map { |security| HoldingLot.opening.find_by!(security: security).qty }
+
+    provider_row.remap_security!(replacement)
+    Holding::Materializer.new(account.reload, strategy: :reverse).materialize_holdings
+    merged = account.holdings.find_by!(security: replacement, date: Date.current)
+
+    post reset_security_holding_path(merged)
+
+    assert_redirected_to account_path(account, tab: "holdings")
+    assert_not HoldingLot.exists?(security: replacement), "the replacement holds nothing once its row is reset"
+    assert_equal [ [ account.id, original.id ] ].to_set, HoldingLot.in_partition([ account.id ], [ original.id ]),
+      "the original's lots add up to its position again"
+  end
+
+  # The reset and its restatement are one change: a restatement that fails
+  # leaves the holding, its trades and its lots where they were.
+  test "a reset whose restatement fails is not applied" do
+    @holding.account.update!(plaid_account: plaid_accounts(:one))
+    @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(RuntimeError, "restatement failed")
+
+    assert_raises(RuntimeError) { post reset_security_holding_path(@holding) }
+
+    @holding.reload
+    assert_equal [ securities(:msft), securities(:aapl) ], [ @holding.security, @holding.provider_security ]
+  end
+
+  test "a remap whose restatement fails is not applied" do
+    original = @holding.security
+    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(RuntimeError, "restatement failed")
+
+    assert_raises(RuntimeError) { patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" } }
+
+    assert_equal original, @holding.reload.security
+  end
+
+  # Both take the account row lock before any write, as a sync and a lot edit
+  # do, so they serialise with them in one lock order.
+  test "a reset locks the account before changing anything" do
+    linked_remapped_holding
+    expect_locked_change(:reset_security_to_provider!)
+
+    post reset_security_holding_path(@holding)
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+  end
+
+  test "a remap locks the account before changing anything" do
+    linked_remapped_holding
+    expect_locked_change(:remap_security!)
+
+    patch remap_security_holding_path(@holding), params: { security_id: "NVDA|XNAS" }
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
   end
 
   test "remap_security brings offline security back online" do
@@ -274,4 +418,19 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(@holding.account, tab: "holdings")
     assert_equal "Yahoo Finance rate limit exceeded", flash[:alert]
   end
+
+  private
+    def linked_remapped_holding
+      @holding.account.update!(plaid_account: plaid_accounts(:one))
+      @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+    end
+
+    # Mocha verifies these at teardown, so a request that skips the lock, the
+    # change or the restatement fails.
+    def expect_locked_change(change)
+      order = sequence(change.to_s)
+      Account.any_instance.expects(:lock!).at_least_once.in_sequence(order).returns(true)
+      Holding.any_instance.expects(change).in_sequence(order).returns(true)
+      Balance::Materializer.any_instance.expects(:materialize_balances).in_sequence(order)
+    end
 end

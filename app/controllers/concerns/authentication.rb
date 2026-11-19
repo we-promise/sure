@@ -14,6 +14,12 @@ module Authentication
     end
   end
 
+  # Stored by the OIDC callback for RP-initiated logout. The only Rails session
+  # keys that survive the sign-in rotation, and only when the session being
+  # minted comes from that same OIDC sign-in.
+  SESSION_KEYS_OIDC_HANDOFF = %i[id_token_hint sso_login_provider].freeze
+  private_constant :SESSION_KEYS_OIDC_HANDOFF
+
   private
     def authenticate_user!
       if session_record = find_session_by_cookie
@@ -29,27 +35,56 @@ module Authentication
     end
 
     def find_session_by_cookie
-      cookie_value = cookies.signed[:session_token]
-      return if cookie_value.blank?
+      session_record = Session.find_active_by_cookie(cookies.signed[:session_token])
+      return session_record if session_record
 
-      session_record = Session.includes(:user).find_by(id: cookie_value)
-      return session_record if session_record&.user&.active?
-
-      session_record&.destroy!
       cookies.delete(:session_token)
       nil
     end
 
-    def create_session_for(user)
+    # Every sign-in path (password, OIDC, passkey, desktop exchange, MFA) mints
+    # its session here, so this is where the pre-auth Rails session is rotated
+    # to prevent fixation (CWE-384). Only an OIDC sign-in should ask to keep
+    # the federated-logout keys it just stored. A path that checked the
+    # password passes the #password_fingerprint it saw, so a password change
+    # since that check ends the sign-in.
+    def create_session_for(user, preserve_oidc_handoff: false, password_fingerprint: nil)
       return false unless user&.persisted?
 
-      user.with_active_lock! do
+      # with_active_lock! has already refused an inactive user by the time the
+      # block runs, so a rejected sign-in never rotates the session.
+      user.with_active_lock!(password_fingerprint: password_fingerprint) do
+        rotate_rails_session(preserve_oidc_handoff: preserve_oidc_handoff)
         session = user.sessions.create!
         cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
         session
       end
-    rescue User::InactiveError
+    rescue User::InactiveError, User::StaleCredentialsError
       false
+    end
+
+    # Parks the user between the first factor and MFA. Only an OIDC sign-in
+    # carries federated-logout keys into the handoff; every other path drops
+    # whatever a previous OIDC session left behind, so a stale id_token_hint
+    # can never be replayed into a locally authenticated session. A first
+    # factor that checked the password hands its #password_fingerprint on to
+    # the MFA step; any other first factor clears one left behind.
+    def begin_mfa_handoff(user, from_oidc: false, password_fingerprint: nil)
+      SESSION_KEYS_OIDC_HANDOFF.each { |key| session.delete(key) } unless from_oidc
+      session[:mfa_user_id] = user.id
+
+      if password_fingerprint
+        session[:mfa_password_fingerprint] = password_fingerprint
+      else
+        session.delete(:mfa_password_fingerprint)
+      end
+    end
+
+    def rotate_rails_session(preserve_oidc_handoff:)
+      kept = preserve_oidc_handoff ? SESSION_KEYS_OIDC_HANDOFF.index_with { |key| session[key] }.compact_blank : {}
+
+      reset_session
+      kept.each { |key, value| session[key] = value }
     end
 
     # If a super admin is currently impersonating a user who gets deactivated

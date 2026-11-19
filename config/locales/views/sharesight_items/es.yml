@@ -1,0 +1,147 @@
+---
+es:
+  providers:
+    sharesight:
+      name: Sharesight
+      connection_description: Conecta tus carteras de Sharesight mediante la API de Sharesight
+      institution_name: Sharesight
+  sharesight_accounts:
+    settings_fields:
+      title: Efectivo y dividendos de Sharesight
+      description: Elige dónde están el efectivo y los dividendos de esta cartera, para que Sure no los cuente dos veces.
+      cash_mode: Efectivo
+      cash_modes:
+        broker: En el bróker
+        settlement: Se liquida en otra cuenta
+        untracked: Sin seguimiento (solo acciones)
+      cash_mode_help: Si el efectivo está en otra cuenta o no se sigue, esta cuenta muestra solo acciones. El efectivo de cada operación se compensa con una transferencia, vinculada a la cuenta por la que se liquidó.
+      settlement_account: Cuenta de liquidación
+      settlement_starts_on: Se liquida allí desde
+      settlement_window_days: Días que puede tardar el banco en mostrarlo
+      settlement_help: Cada compra y venta, y cada dividendo cobrado allí, se empareja por importe con una transacción de esa cuenta y se vincula como transferencia. En una cuenta manual se registra la transacción automáticamente. Antes de la fecha de inicio, el efectivo lo tenía el bróker.
+      choose_account: Elige una cuenta
+      no_account: Ninguna
+      funding_account: Cuenta de aportaciones
+      funding_match_terms: Texto de las transacciones de aportación
+      funding_match_terms_placeholder: CMC Share Transfer, CMC Markets
+      funding_help: Los ingresos y retiradas de la cuenta de aportaciones cuyo nombre o notas contengan alguno de estos textos (separados por comas) se reflejan aquí y se vinculan como transferencias.
+      cash_anchor_amount: Efectivo en el bróker
+      cash_anchor_on: Fecha
+      cash_anchor_help: 'Para el efectivo que Sharesight no ve: el saldo en esa fecha, actualizado con todo lo registrado aquí desde entonces. Cámbialo cada vez que revises el bróker.'
+      dividend_mode: Dividendos y repartos
+      dividend_modes:
+        with_cash: Donde esté el efectivo
+        other_account: En otra cuenta
+        skip: No importar (otra conexión ya los muestra)
+      dividend_mode_help: Los que se cobran fuera siguen contando como ingresos aquí, y se vinculan al ingreso en la cuenta donde se cobraron.
+      dividend_account: Se cobran en
+      sync_start_date: Importar actividad desde
+      sync_start_date_help: Las operaciones y dividendos anteriores se dejan fuera, y los ya importados se eliminan.
+    errors:
+      settlement_account_missing: Elige la cuenta por la que se liquida la cartera.
+      dividend_account_missing: Elige la cuenta en la que se cobran los dividendos.
+      cash_anchor_incomplete: Indica tanto el efectivo en el bróker como la fecha en que lo viste.
+      invalid_date:
+        settlement_starts_on: La fecha desde la que se liquida allí no es válida.
+        cash_anchor_on: La fecha en que viste el efectivo en el bróker no es válida.
+        sync_start_date: La fecha desde la que importar la actividad no es válida.
+      account_not_in_family: "%{name} no es una de tus cuentas."
+      account_is_portfolio: "%{name} es la propia cuenta de esta cartera."
+    notices:
+      unsettled_debit: Aún no hay un cargo de %{amount} en %{account} por %{description} el %{date}.
+      unsettled_credit: Aún no hay un abono de %{amount} en %{account} por %{description} el %{date}.
+      units_drift: "%{account}: Sharesight tiene %{held} %{ticker}, pero las operaciones suman %{traded}."
+  sharesight_items:
+    defaults:
+      name: Sharesight
+      portfolio_name: Cartera de Sharesight %{id}
+    sharesight_item:
+      deletion_in_progress: Eliminación en curso
+      syncing: Sincronizando
+      requires_update: El cliente de API necesita atención
+      error: Error
+      synced: Sincronizado hace %{time}. %{summary}.
+      never_synced: Nunca sincronizado.
+      setup_accounts: Configurar carteras
+      delete: Eliminar
+      accounts_need_setup: Hay carteras pendientes de configurar
+      accounts_need_setup_description: Tienes que vincular tus carteras de Sharesight a cuentas de Sure.
+      no_accounts_discovered: Aún no se ha encontrado ninguna cartera de Sharesight.
+      no_accounts_discovered_description: Sincroniza después de guardar tu cliente de API para encontrar tus carteras.
+    setup_accounts:
+      page_title: Configurar carteras de Sharesight
+      dialog_title: Configura tus carteras de Sharesight
+      subtitle: Vincula tus carteras de Sharesight a cuentas de inversión.
+      info_box:
+        title: Importación por la API de Sharesight
+        items:
+          item_1: Posiciones actuales con precios y cantidades, y el valor de la cartera
+          item_2: Compras, ventas, saldos iniciales, devoluciones de capital y dividendos, también los reinvertidos
+          item_3: Depósitos, retiradas, intereses y comisiones de cualquier cuenta de efectivo de Sharesight
+      status:
+        fetching_accounts: Obteniendo carteras de Sharesight...
+        no_accounts_found_title: No se ha encontrado ninguna cartera.
+        no_accounts_found_description: Sure no ha encontrado ninguna cartera de Sharesight. Comprueba que tu cliente de API es válido.
+      available_accounts:
+        title: Carteras disponibles
+        account_type_investment: Inversión
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: 'ID de cartera: %{account_id}'
+      link_existing:
+        description: O vincula una cartera encontrada a una cuenta de inversión manual existente.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Selecciona una cuenta...
+      linked_accounts:
+        title: Ya vinculadas
+        linked_to_html: 'Vinculada a: %{account}'
+      buttons:
+        refresh: Actualizar
+        cancel: Cancelar
+        back_to_settings: Volver a Ajustes
+        create_selected_accounts: Crear cuentas seleccionadas
+        link: Vincular
+        done: Hecho
+    sync:
+      status:
+        checking_credentials: Comprobando las credenciales de Sharesight...
+        importing_portfolios: Importando carteras de Sharesight...
+        checking_configuration: Comprobando la configuración de las carteras...
+        accounts_need_setup:
+          one: 1 cartera de Sharesight necesita configuración...
+          other: "%{count} carteras de Sharesight necesitan configuración..."
+        processing_activity: Procesando posiciones y actividad...
+        calculating_balances: Calculando saldos...
+    sync_status:
+      no_accounts: Aún no se ha encontrado ninguna cartera de Sharesight
+      all_linked:
+        one: 1 cartera vinculada
+        other: "%{count} carteras vinculadas"
+      partial: "%{linked} vinculadas, %{unlinked} pendientes de configurar"
+    select_existing_account:
+      title: Vincular cartera de Sharesight
+      no_accounts_available: Aún no hay carteras de Sharesight sin vincular.
+      run_sync_hint: Sincroniza desde Ajustes > Proveedores después de guardar tu cliente de API.
+      wait_for_sync: Espera a que termine la sincronización que busca las carteras.
+      balance: Saldo
+      link: Vincular
+      cancel: Cancelar
+    create:
+      success: Sharesight configurado correctamente.
+    update:
+      success: Configuración de Sharesight actualizada correctamente.
+    destroy:
+      success: La conexión con Sharesight se eliminará en breve.
+    select_accounts:
+      not_configured: Sharesight no está configurado.
+    link_existing_account:
+      not_found: No se ha encontrado la cuenta o la cartera de Sharesight.
+      only_manual_investment: Solo se pueden vincular a Sharesight cuentas de inversión manuales.
+      already_linked: Esta cartera de Sharesight ya está vinculada.
+      success: Vinculada correctamente a la cartera de Sharesight.
+      failed: No se ha podido vincular la cartera de Sharesight.
+    complete_account_setup:
+      success:
+        one: Se ha creado %{count} cuenta de Sharesight.
+        other: Se han creado %{count} cuentas de Sharesight.
+      none_selected: No se ha seleccionado ninguna cartera.
+      none_created: No se ha creado ninguna cuenta.

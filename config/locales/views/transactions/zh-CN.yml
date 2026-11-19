@@ -11,6 +11,9 @@ zh-CN:
         merchant_label: 商户
         merchant_prompt: 选择商户
         name_label: 名称
+        no_change: （无更改）
+        reconciled_status_hint: 仅适用于手动录入的账户（无银行同步）。
+        reconciled_status_label: 核对状态
         name_placeholder: 输入一个名称，该名称将应用于所选交易
         none: （无）
         notes_label: 备注
@@ -23,6 +26,7 @@ zh-CN:
     selection_bar:
       duplicate: 重复
       edit: 编辑
+      reconcile: 核对
       selected: 已选中
     form:
       details: 详情
@@ -32,9 +36,16 @@ zh-CN:
       category: 分类
       category_label: 分类
       category_prompt: 选择分类
+      category_search_placeholder: 搜索分类
+      create_category: "创建“%{name}”"
+      create_category_error: 无法创建分类
+      create_as_subcategory: 添加为子分类…
+      choose_parent: "在以下项下创建“%{name}”："
+      back_to_categories: 返回
       date: 日期
       description: 描述
       description_placeholder: 描述交易
+      description_placeholder_optional: "留空以使用分类/商户名称，或先选择其中一项"
       expense: 支出
       income: 收入
       merchant_label: 商户
@@ -42,6 +53,10 @@ zh-CN:
       note_label: 备注
       note_placeholder: 请输入备注
       create_tag: 创建
+      create_merchant: 创建
+      create_merchant_error: 无法创建商户
+      merchant_search_placeholder: 搜索或创建商户
+      no_matching_categories: 未找到匹配的分类
       submit: 添加交易
       tag_search_placeholder: 搜索或创建标签
       tags_label: 标签
@@ -52,12 +67,20 @@ zh-CN:
       updated: 交易已更新
     new:
       new_transaction: 新建交易
+    transaction_category:
+      set_on_outflow: 分类属于此转账的转出方，只能在转出方更改
     show:
+      category_set_on_hidden_outflow: 这是转账的转入方。其分类属于您无法访问的账户上的转出方，只能在转出方进行更改。
+      category_set_on_outflow: 这是转账的转入方。其分类属于转出方，只能在转出方更改，以便预算仅统计一次。
       keep_both: 不，保留两笔
       loan_payment: 贷款还款
       mark_recurring: 标记为循环
+      create_bill: 创建账单
       mark_recurring_subtitle: 将此交易跟踪为循环交易。金额差异会根据过去 6 个月的相似交易自动计算。
       mark_recurring_title: 循环交易
+      applied_to_title: 此交易支付的账单
+      applied_to_detail: "%{amount} 用于支付 %{date} 到期的账单"
+      applied_to_unreviewed: 待审核
       merge_duplicate: 是，合并它们
       potential_duplicate_description: 这笔待处理交易可能与下方已入账交易相同。如果是这样，请合并以避免重复计算。
       potential_duplicate_title: 检测到可能的重复项
@@ -100,7 +123,26 @@ zh-CN:
       payee: 收款方
       description: 描述
       memo: 备忘录
+      original_description: 原始描述
+      payment_channel: 支付渠道
+      transaction_code: 交易代码
       provider_extras: 提供商附加信息
+      plaid_payment_meta_label: "支付元数据 · %{name}"
+      plaid_counterparty_label: "交易对手方 %{index}"
+      provider_extra_fields:
+        by_order_of: 委托人
+        confidence_level: 置信度
+        entity_id: 实体 ID
+        logo_url: Logo 网址
+        name: 名称
+        payee: 收款方
+        payer: 付款方
+        phone_number: 电话号码
+        ppd_id: PPD ID
+        reason: 事由
+        reference_number: 参考编号
+        type: 类型
+        website: 网站
       transfer_or_debt_payment: 转账还是债务还款？
       open_matcher: 打开匹配器
       convert: 转换
@@ -128,6 +170,8 @@ zh-CN:
     transfer_match:
       auto_matched: 自动匹配
       auto_matched_short: 自/配
+      auto_matched_tooltip_html: "%{date} 在 %{account} 中的 %{amount}。点击查看。"
+      auto_matched_tooltip_hidden: 您无权查看的账户中的一笔交易。
       confirm_match: 确认匹配
       payment_confirmed: 付款已确认
       reject_match: 拒绝匹配
@@ -147,6 +191,9 @@ zh-CN:
       reject_title: 保持为独立交易
     summary:
       total_transactions: 交易总数
+      scheduled_count:
+        one: 含 %{count} 笔已计划
+        other: 含 %{count} 笔已计划
       income: 收入
       expenses: 支出
       inflow: 流入
@@ -213,14 +260,18 @@ zh-CN:
     toggle_recurring_section: 切换待发生循环交易
     search:
       filters:
+        balance_updates: 余额
         account: 账户
         date: 日期
         type: 类型
         status: 状态
+        reconcile_status: 核对状态
         amount: 金额
         category: 分类
         tag: 标签
         merchant: 商户
+        ai: AI
+        attachment: 附件
     convert_to_trade:
       title: 转换为证券交易
       description: 将此交易转换为带证券详情的交易
@@ -265,6 +316,11 @@ zh-CN:
         unexpected_error: 转换过程中发生意外错误：%{error}
     searches:
       filters:
+        balance_updates_filter:
+          always_shown: 已始终显示，设置位于
+          hint: 仅对当前视图生效。如需始终显示，请开启
+          preferences_link: 偏好设置
+          show: 显示同步余额更新
         date_filter:
           start_date: 开始日期
           end_date: 结束日期
@@ -274,6 +330,7 @@ zh-CN:
           less_than: 小于
           placeholder: '0'
         badge:
+          balance_updates: 同步余额
           expense: 支出
           income: 收入
           on_or_after: 于 %{date} 当日或之后
@@ -281,6 +338,18 @@ zh-CN:
           transfer: 转账
           confirmed: 已确认
           pending: 待处理
+          ai_current: AI
+          ai_history: AI 历史
+          attachment_with: 含附件
+          attachment_without: 无附件
+        attachment_filter:
+          with: 含附件
+          without: 无附件
+        ai_filter:
+          current: AI
+          current_description: 分类仍为自动分配的分类（AI 或贝叶斯）。
+          history: AI 历史
+          history_description: 曾被自动分类，但之后分类已被修改。
         type_filter:
           expense: 支出
           income: 收入
@@ -305,6 +374,7 @@ zh-CN:
         clear_filters: 清除筛选
         date_filter: 日期
         merchant_filter: 商户
+        reconcile_status_filter: 核对状态
         status_filter: 状态
         tag_filter: 标签
         type_filter: 类型
@@ -338,6 +408,9 @@ zh-CN:
     transaction:
       pending: 待处理
       pending_tooltip: 待处理交易，入账后可能变化
+      scheduled: 已计划
+      scheduled_tooltip: 日期在未来 — 在此之前不会影响您的余额
+      view_merchant: 查看商户
       linked_with_provider: 已关联 %{provider}
       activity_type_tooltip: 投资活动类型
       possible_duplicate: 重复？
@@ -347,3 +420,19 @@ zh-CN:
       split: 拆分
       split_tooltip: 此交易已拆分为多条记录
       split_child_tooltip: 拆分交易的一部分
+      transfer_hint: 转账？
+      transfer_hint_dismiss: 不是转账
+      transfer_hint_tooltip: 另一账户中的匹配交易疑似为此转账的对应记录 — 点击进行匹配
+    reconcile:
+      success: 已标记为%{status}
+      failure: 无法更新核对状态
+      unavailable: 此家庭未启用核对功能
+      not_manual_account: 核对状态仅适用于手动录入的账户（无银行同步）
+      statuses:
+        unreconciled: 未核对
+        cleared: 已核实
+        reconciled: 已核对
+      badge:
+        unreconciled_tooltip: 尚未与对账单核对。点击标记为已核实。
+        cleared_tooltip: 已在对账单上确认，但尚未完全核对。点击标记为已核对。
+        reconciled_tooltip: 对账单周期已完全核对。点击重置为未核对。

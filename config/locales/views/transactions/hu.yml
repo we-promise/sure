@@ -35,6 +35,7 @@ hu:
       date: Dátum
       description: Leírás
       description_placeholder: Tranzakció leírása
+      description_placeholder_optional: "Hagyd üresen a kategória/kereskedő nevének használatához, vagy előbb válassz egyet"
       expense: Kiadás
       income: Bevétel
       merchant_label: Kereskedő

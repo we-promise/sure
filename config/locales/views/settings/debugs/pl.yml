@@ -1,0 +1,39 @@
+---
+pl:
+  settings:
+    debugs:
+      show:
+        context:
+          account: account=%{value}
+          account_provider: account_provider=%{value}
+          family: family=%{value}
+          provider: provider=%{value}
+          user: user=%{value}
+        empty: Nie znaleziono zdarzeń debugowania.
+        filters:
+          account_id: ID konta
+          account_provider_id: ID dostawcy konta
+          all: Wszystkie
+          category: Kategoria
+          end_date: Do
+          family_id: ID gospodarstwa domowego
+          level: Poziom
+          provider: Dostawca
+          reset: Wyczyść
+          source: Źródło
+          start_date: Od
+          submit: Filtruj
+          user_id: ID użytkownika
+        missing_value: "-"
+        page_title: Debugowanie
+        subtitle: Istotne zdarzenia operacyjne dla superadministratorów. Od najnowszych.
+        table:
+          category: Kategoria
+          context: Kontekst
+          level: Poziom
+          message: Wiadomość
+          metadata: Metadane
+          source: Źródło
+          time: Czas
+          view_metadata: Podgląd
+        title: Dziennik zdarzeń debugowania

@@ -553,6 +553,21 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  # Issue #2925: Akahu (and sometimes Plaid) supply a website but no logo.
+  test "creates a website-only merchant with a Brandfetch logo" do
+    Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "akahu_merchant_123",
+      name: "Countdown",
+      source: "akahu",
+      website_url: "https://www.countdown.co.nz"
+    )
+
+    assert_equal "https://cdn.brandfetch.io/countdown.co.nz/icon/fallback/lettermark/w/40/h/40?c=test_client_id", merchant.logo_url
+  end
+
   test "returns nil when merchant data is insufficient" do
     merchant = @adapter.find_or_create_merchant(
       provider_merchant_id: "",
@@ -644,6 +659,35 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
 
     assert_equal "security is required", exception.message
+  end
+
+  test "an imported coin transfer into a goal-linked crypto account resolves its transfer pledge" do
+    crypto = accounts(:crypto)
+    goal = goals(:vacation_italy)
+    goal.goal_accounts.find_or_create_by!(account: crypto)
+    pledge = GoalPledge.create!(goal: goal, account: crypto, amount: 200, currency: "USD", kind: "transfer",
+                                status: "open", expires_at: 7.days.from_now)
+    btc = Security.find_or_create_by!(ticker: "CRYPTO:BTC") { |s| s.name = "Bitcoin" }
+
+    entry = Account::ProviderImportAdapter.new(crypto).import_trade(
+      security: btc, quantity: BigDecimal("0.004"), price: 50_000, amount: 0, currency: "USD",
+      date: Date.current, external_id: "onchain-in-1", source: "onchain_wallet", activity_label: Trade::TRANSFER_LABEL
+    )
+
+    assert_equal "matched", pledge.reload.status
+    assert_equal pledge.id, entry.trade.reload.extra.dig("goal", "pledge_id")
+  end
+
+  test "an imported coin transfer on a crypto account linked to no goal runs no reconcile" do
+    crypto = accounts(:crypto)
+    GoalAccount.where(account: crypto).delete_all
+    btc = Security.find_or_create_by!(ticker: "CRYPTO:BTC") { |s| s.name = "Bitcoin" }
+    GoalPledge::Reconciler.any_instance.expects(:run).never
+
+    Account::ProviderImportAdapter.new(crypto).import_trade(
+      security: btc, quantity: BigDecimal("0.004"), price: 50_000, amount: 0, currency: "USD",
+      date: Date.current, external_id: "onchain-in-2", source: "onchain_wallet", activity_label: Trade::TRANSFER_LABEL
+    )
   end
 
   test "imports trade with all parameters" do
@@ -1226,6 +1270,21 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "never claims a part of a split entry for a matching provider transaction" do
+    parent = @account.entries.create!(date: Date.today, amount: 37.50, currency: "USD", name: "Market", entryable: Transaction.new)
+    parent.split!([ { name: "Groceries", amount: 25, category_id: nil }, { name: "Household", amount: 12.50, category_id: nil } ])
+    household = parent.child_entries.find_by!(name: "Household")
+
+    entry = nil
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(external_id: "lunchflow_678", amount: 12.50, currency: "USD", date: Date.today,
+                                          name: "Hardware store", source: "lunchflow")
+    end
+
+    assert_not_equal household.id, entry.id
+    assert_equal [ nil, nil, "Household", parent.id ], household.reload.values_at(:external_id, :source, :name, :parent_entry_id)
+  end
+
   test "claims CSV imported transaction when provider syncs matching transaction" do
     # Create a CSV imported transaction (has import_id but no external_id)
     import = Import.create!(
@@ -1410,6 +1469,78 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
       # Newer entry should remain unclaimed
       assert_nil newer_entry.reload.external_id
+    end
+  end
+
+  test "claims a transaction entered ahead of time when the provider books it a few days off" do
+    expected_date = 2.days.ago.to_date
+    scheduled_entry = travel_to(10.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    assert_no_difference "@account.entries.count" do
+      entry = @adapter.import_transaction(
+        external_id: "enable_banking_gas",
+        amount: 200,
+        currency: "USD",
+        date: Date.current,
+        name: "PRLV GAZ",
+        source: "enable_banking"
+      )
+
+      assert_equal scheduled_entry.id, entry.id
+      assert_equal "enable_banking_gas", entry.external_id
+      assert_equal Date.current, entry.date, "moves to the day the provider booked it"
+      assert_equal "Gas bill", entry.name, "keeps the user's own name"
+    end
+  end
+
+  test "does not claim a transaction entered ahead of time outside the matching window" do
+    expected_date = 10.days.ago.to_date
+    scheduled_entry = travel_to(20.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(
+        external_id: "enable_banking_gas_late",
+        amount: 200,
+        currency: "USD",
+        date: Date.current,
+        name: "PRLV GAZ",
+        source: "enable_banking"
+      )
+
+      assert_not_equal scheduled_entry.id, entry.id
+    end
+  end
+
+  test "a pending claim of a transaction entered ahead of time reconciles with its booked version" do
+    expected_date = Date.current
+    scheduled_entry = travel_to(10.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_gas_pending",
+      amount: 200,
+      currency: "USD",
+      date: expected_date - 1.day,
+      name: "PRLV GAZ",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    assert_equal scheduled_entry.id, pending_entry.id
+    assert pending_entry.transaction.pending?
+
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_gas_posted",
+        amount: 200,
+        currency: "USD",
+        date: expected_date,
+        name: "PRLV GAZ",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      assert_equal scheduled_entry.id, posted_entry.id
+      assert_not posted_entry.transaction.pending?
     end
   end
 
@@ -1751,8 +1882,9 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "reconciles most recent pending when multiple exist" do
-    # Create two pending transactions with same amount
+  test "does not auto-claim pending when multiple same-amount candidates exist" do
+    # Two distinct pendings with the same amount: amount/date alone cannot tell
+    # which one the posted transaction belongs to (#2013).
     older_pending = @adapter.import_transaction(
       external_id: "simplefin_older_pending",
       amount: 60.00,
@@ -1773,8 +1905,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       extra: { "simplefin" => { "pending" => true } }
     )
 
-    # Import posted - should match the most recent pending (by date)
-    assert_no_difference "@account.entries.count" do
+    assert_difference "@account.entries.count", 1 do
       posted_entry = @adapter.import_transaction(
         external_id: "simplefin_posted_recurring",
         amount: 60.00,
@@ -1785,11 +1916,85 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         extra: { "simplefin" => { "pending" => false } }
       )
 
-      # Should match the newer pending entry
-      assert_equal newer_pending.id, posted_entry.id
-      # Older pending should remain untouched
-      assert_equal "simplefin_older_pending", older_pending.reload.external_id
+      assert_not_includes [ older_pending.id, newer_pending.id ], posted_entry.id
     end
+
+    assert_equal "simplefin_older_pending", older_pending.reload.external_id
+    assert_equal "simplefin_newer_pending", newer_pending.reload.external_id
+    assert newer_pending.transaction.pending?
+  end
+
+  test "keeps a distinct same-amount pending when another one is ambiguous (#2013)" do
+    # Two $20 ATM withdrawals pending, only one posts: neither pending may be
+    # overwritten, otherwise the other withdrawal's external_id is lost for good.
+    first = @adapter.import_transaction(
+      external_id: "enable_banking_atm_1",
+      amount: 20.00,
+      currency: "USD",
+      date: Date.today - 2.days,
+      name: "ATM Withdrawal",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+    second = @adapter.import_transaction(
+      external_id: "enable_banking_atm_2",
+      amount: 20.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "ATM Withdrawal",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+
+    posted_entry = @adapter.import_transaction(
+      external_id: "enable_banking_atm_booked",
+      amount: 20.00,
+      currency: "USD",
+      date: Date.today,
+      name: "ATM Withdrawal",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => false } }
+    )
+
+    assert posted_entry.transaction.extra["auto_claimed_pending_ids"].blank?
+    assert_equal "enable_banking_atm_1", first.reload.external_id
+    assert_equal "enable_banking_atm_2", second.reload.external_id
+  end
+
+  test "does not claim an excluded pending" do
+    excluded_pending = @adapter.import_transaction(
+      external_id: "simplefin_excluded_pending",
+      amount: 35.00,
+      currency: "USD",
+      date: Date.today - 3.days,
+      name: "Old Hold",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    excluded_pending.update!(excluded: true)
+
+    live_pending = @adapter.import_transaction(
+      external_id: "simplefin_live_pending",
+      amount: 35.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Live Hold",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    posted_entry = @adapter.import_transaction(
+      external_id: "simplefin_posted_hold",
+      amount: 35.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Hold Posted",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => false } }
+    )
+
+    assert_equal live_pending.id, posted_entry.id
+    assert_equal "simplefin_excluded_pending", excluded_pending.reload.external_id
   end
 
   # Every provider in Transaction::PENDING_PROVIDERS must be reconcilable, not just the
@@ -2485,5 +2690,14 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         source: "plaid",
         account_provider_id: account_provider.id
       )
+    end
+
+    # Locked and user-modified, the way TransactionsController#create leaves a
+    # transaction the user typed in.
+    def create_user_entered_transaction(date:, amount:, name:)
+      entry = @account.entries.create!(date: date, amount: amount, currency: "USD", name: name, entryable: Transaction.new)
+      entry.lock_saved_attributes!
+      entry.mark_user_modified!
+      entry
     end
 end

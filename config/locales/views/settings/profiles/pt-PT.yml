@@ -1,0 +1,56 @@
+---
+pt-PT:
+  settings:
+    profiles:
+      destroy:
+        cannot_remove_self: Não pode remover-se a si próprio da conta.
+        member_owns_other_family_data: Este membro ainda possui contas noutro agregado familiar e não pode ser removido. Transfira ou remova essas contas primeiro.
+        member_removal_failed: Houve um problema ao remover o membro.
+        member_removed: O membro foi removido com sucesso.
+        not_authorized: Não está autorizado a remover membros.
+      show:
+        confirm_delete:
+          body: Tem a certeza de que pretende eliminar permanentemente a sua conta? Esta ação
+            é irreversível.
+          title: Eliminar conta?
+        confirm_reset:
+          body: Tem a certeza de que pretende repor a sua conta? Isto eliminará todas as suas contas, categorias, comerciantes, etiquetas e outros dados. Esta ação é irreversível.
+          title: Repor conta?
+        confirm_reset_with_sample_data:
+          body: Tem a certeza de que pretende repor a sua conta e carregar dados de exemplo? Isto eliminará os seus dados existentes e substituí-los-á por dados de demonstração para poder explorar o Sure em segurança.
+          title: Repor conta e carregar dados de exemplo?
+        confirm_remove_invitation:
+          body: Tem a certeza de que pretende remover o convite para %{email}?
+          title: Remover Convite
+        confirm_remove_member:
+          body: Tem a certeza de que pretende remover %{name} da sua conta?
+          title: Remover Membro
+        danger_zone_title: Zona de Perigo
+        delete_account: Eliminar conta
+        delete_account_warning: Eliminar a sua conta removerá permanentemente todos
+          os seus dados. Esta ação é irreversível.
+        reset_account: Repor conta
+        reset_account_warning: Repor a sua conta eliminará todas as suas contas financeiras, categorias, comerciantes, etiquetas e outros dados, mas manterá a sua conta de utilizador intacta.
+        reset_account_with_sample_data: Repor e pré-carregar
+        reset_account_with_sample_data_warning: Elimine todos os seus dados existentes e carregue depois novos dados de exemplo para poder explorar um ambiente pré-preenchido.
+        email: Email
+        first_name: Primeiro Nome
+        group_form_input_placeholder: Introduza o nome do grupo
+        group_form_label: Nome do grupo
+        group_title: Membros do Grupo
+        household_form_input_placeholder: Introduza o nome do agregado familiar
+        household_form_label: Nome do agregado familiar
+        household_subtitle: Os convidados podem iniciar sessão na sua conta %{moniker} e aceder aos recursos partilhados.
+        household_title: Agregado familiar
+        invitation_link: Link de convite
+        invite_member: Adicionar membro
+        last_name: Apelido
+        page_title: Informações do Perfil
+        pending: Pendente
+        profile_subtitle: Personalize a sua apresentação no %{product_name}
+        profile_title: Pessoal
+        remove_invitation: Remover Convite
+        remove_member: Remover Membro
+        resend_confirmation_link: solicitar um novo email de confirmação
+        save: Guardar
+        unconfirmed_email_notice_html: Solicitou a alteração do seu email para %{email}. Aceda ao seu email e confirme para que a alteração produza efeito. Se não recebeu o email, verifique a pasta de spam ou %{resend_link}.

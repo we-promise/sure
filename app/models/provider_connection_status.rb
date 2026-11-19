@@ -11,6 +11,7 @@ class ProviderConnectionStatus
     { key: "simplefin", type: "SimplefinItem", association: :simplefin_items, accounts: :simplefin_accounts },
     { key: "lunchflow", type: "LunchflowItem", association: :lunchflow_items, accounts: :lunchflow_accounts },
     { key: "enable_banking", type: "EnableBankingItem", association: :enable_banking_items, accounts: :enable_banking_accounts },
+    { key: "truelayer", type: "TruelayerItem", association: :truelayer_items, accounts: :truelayer_accounts },
     { key: "coinbase", type: "CoinbaseItem", association: :coinbase_items, accounts: :coinbase_accounts },
     { key: "binance", type: "BinanceItem", association: :binance_items, accounts: :binance_accounts },
     { key: "kraken", type: "KrakenItem", association: :kraken_items, accounts: :kraken_accounts },
@@ -26,6 +27,7 @@ class ProviderConnectionStatus
     { key: "trading212", type: "Trading212Item", association: :trading212_items, accounts: :trading212_accounts },
     { key: "trade_republic", type: "TradeRepublicItem", association: :trade_republic_items, accounts: :trade_republic_accounts },
     { key: "questrade", type: "QuestradeItem", association: :questrade_items, accounts: :questrade_accounts },
+    { key: "sharesight", type: "SharesightItem", association: :sharesight_items, accounts: :sharesight_accounts },
     { key: "redbark", type: "RedbarkItem", association: :redbark_items, accounts: :redbark_accounts },
     { key: "wise", type: "WiseItem", association: :wise_items, accounts: :wise_accounts }
   ].freeze

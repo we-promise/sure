@@ -6,7 +6,6 @@ module Provider::Openai::Concerns::UsageRecorder
     # Records LLM usage for a family
     # Handles both old (prompt_tokens/completion_tokens) and new (input_tokens/output_tokens) API formats
     # Automatically infers provider from model name
-    # Returns nil if pricing is unavailable (e.g., custom/self-hosted models)
     def record_usage(model_name, usage_data, operation:, metadata: {})
       return unless family && usage_data
 
@@ -17,10 +16,10 @@ module Provider::Openai::Concerns::UsageRecorder
       completion_tokens = usage_data["completion_tokens"] || usage_data["output_tokens"] || 0
       total_tokens = usage_data["total_tokens"] || 0
 
-      estimated_cost = LlmUsage.calculate_cost(
+      estimated_cost = Provider::Openai::UsageCost.calculate(
         model: model_name,
-        prompt_tokens: prompt_tokens,
-        completion_tokens: completion_tokens
+        usage: usage_data,
+        uri_base: client.uri_base
       )
 
       # Log when we can't estimate the cost (e.g., custom/self-hosted models)

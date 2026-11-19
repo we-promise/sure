@@ -207,14 +207,29 @@ class KrakenItemsController < ApplicationController
     def safe_return_to_path
       return nil if params[:return_to].blank?
 
-      value = params[:return_to].to_s
-      uri = URI.parse(value)
-      return nil if uri.scheme.present?
-      return nil if uri.host.present?
-      return nil unless value.start_with?("/")
+      return_to = params[:return_to].to_s.strip
+      return nil unless return_to.start_with?("/")
+      return nil if return_to[1] == "/" || return_to[1] == "\\"
+      return nil if return_to.include?("\\") || return_to.match?(/[[:cntrl:]]/)
+      return nil if encoded_path_separator?(return_to)
 
-      value
-    rescue URI::InvalidURIError
+      uri = URI.parse(return_to)
+      return nil unless uri.relative?
+
+      Rails.application.routes.recognize_path(uri.path, method: :get)
+
+      return_to
+    rescue URI::InvalidURIError, ActionController::RoutingError
       nil
+    end
+
+    def encoded_path_separator?(return_to)
+      encoded_second_character = return_to[1, 3]
+      return false unless encoded_second_character&.start_with?("%")
+
+      decoded = URI.decode_www_form_component(encoded_second_character)
+      decoded == "/" || decoded == "\\"
+    rescue ArgumentError
+      true
     end
 end

@@ -235,9 +235,15 @@ class Budget < ApplicationRecord
         # a USD budget would read 1,200 available, 1,000 earmarked and 200
         # free, when none of it is free.
         Goal.prepared_for(family, scope: family.goals.where.not(state: Goal::RELEASED_STATES))
-            .sum { |goal| convert_to_budget_currency(goal.backing_within(ids), goal.currency) }
+            .sum { |goal| goal.backing_within(ids, currency: currency) }
       end
     end
+  end
+
+  # Currencies whose balances available_cash left out for want of a rate.
+  def missing_cash_currencies
+    available_cash
+    @missing_cash_currencies ||= Set.new
   end
 
   def free_cash
@@ -410,10 +416,22 @@ class Budget < ApplicationRecord
   end
 
   def budget_category_actual_spending(budget_category)
-    key = budget_category.category_id || stable_synthetic_key(budget_category.category)
-    expense = expense_totals_by_category[key]&.total || 0
-    refund = income_totals_by_category[key]&.total || 0
-    [ expense - refund, 0 ].max
+    actual_spending_for(category_key(budget_category))
+  end
+
+  # The part of budget_category_actual_spending that paid bills. Gross of
+  # refunds, which actual spending nets: a refund lowers the spending outside
+  # bills, which errs towards fewer warnings.
+  def budget_category_bills_paid(budget_category)
+    bills_paid_for(category_key(budget_category))
+  end
+
+  # Open bill occurrences due in this period, by category id, loaded once so
+  # each BudgetCategory#bills_reserved reads its slice instead of querying.
+  def open_bill_occurrences_by_category_id
+    @open_bill_occurrences_by_category_id ||= RecurringOccurrence
+      .open_bills_due(family, start_date..end_date)
+      .group_by { |occurrence| occurrence.recurring_transaction.category_id }
   end
 
   def category_median_monthly_expense(category)
@@ -432,6 +450,21 @@ class Budget < ApplicationRecord
     return 0 unless budgeted_spending > 0
 
     (actual_spending / budgeted_spending.to_f) * 100
+  end
+
+  # The part of actual_spending that paid bills, line by line: a line's
+  # refunds can bring its spending below its bills, and actual_spending only
+  # counts what is left. Uncategorized spending is in actual_spending, so its
+  # synthetic line is counted too.
+  def bills_paid
+    keys = budget_categories.reject(&:subcategory?).map { |bc| category_key(bc) } + [ :uncategorized ]
+    keys.uniq.sum { |key| [ bills_paid_for(key), actual_spending_for(key) ].min }
+  end
+
+  # The rule each line follows (BudgetCategory#near_limit?), for the whole budget.
+  def near_limit?
+    !available_to_spend.negative? && percent_of_budget_spent >= BudgetCategory::NEAR_LIMIT_PERCENT &&
+      BudgetCategory.near_limit_outside_bills?(spent: actual_spending, bills_paid: bills_paid, available: available_to_spend)
   end
 
   def overage_percent
@@ -505,17 +538,16 @@ class Budget < ApplicationRecord
   end
 
   private
-    # `find_or_fetch_rate`, not `find_rate` — the latter does not exist, and
-    # every multi-currency family opening this page hit a NoMethodError.
-    #
-    # No rate for the day leaves the amount as it stands. A cash panel that
-    # renders with one figure unconverted is wrong by the spread; one that
-    # raises takes the whole budget page down with it.
+    # Use the same known-subtotal policy as goal backing. A foreign balance
+    # without a rate is unavailable, never newly "free" cash at a 1:1 rate.
     def convert_to_budget_currency(amount, from_currency)
-      return amount.to_d if from_currency == currency
+      return amount.to_d if from_currency == currency || amount.to_d.zero?
 
       rate = ExchangeRate.find_or_fetch_rate(from: from_currency, to: currency, date: Date.current)&.rate
-      rate ? amount.to_d * rate : amount.to_d
+      return amount.to_d * rate if rate && rate.to_d.positive?
+
+      (@missing_cash_currencies ||= Set.new) << from_currency
+      0.to_d
     end
     def income_statement
       @income_statement ||= family.income_statement(user: current_user, accounts: income_statement_accounts)
@@ -550,6 +582,22 @@ class Budget < ApplicationRecord
 
     def income_totals_by_category
       @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
+    end
+
+    def category_key(budget_category)
+      budget_category.category_id || stable_synthetic_key(budget_category.category)
+    end
+
+    def actual_spending_for(key)
+      expense = expense_totals_by_category[key]&.total || 0
+      refund = income_totals_by_category[key]&.total || 0
+      [ expense - refund, 0 ].max
+    end
+
+    def bills_paid_for(key)
+      @bill_expense_totals_by_category ||= income_statement.bill_expense_totals(period: period)
+                                                           .category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
+      @bill_expense_totals_by_category[key]&.total || 0
     end
 
     def stable_synthetic_key(category)

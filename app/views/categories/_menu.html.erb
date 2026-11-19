@@ -1,20 +1,22 @@
-<%# locals: (transaction:, in_split_group: false) %>
+<%# locals: (transaction:, in_split_group: false, variant: "desktop") %>
 
-<%= render DS::Popover.new(variant: "button") do |popover| %>
+<%# The dropdown frame is created when the popover opens (DS::Popover frame_src),
+    not rendered per row. The badge inside the trigger is only the one this
+    variant's breakpoints can show: the mobile cell (below md) never reaches
+    the lg pill, the desktop cell still needs the icon badge between md and lg. %>
+<%= render DS::Popover.new(
+      variant: "button",
+      frame_id: "category_dropdown",
+      frame_src: category_dropdown_path(category_id: transaction.category_id, transaction_id: transaction.id, grouped: in_split_group)
+    ) do |popover| %>
   <% popover.with_button(class: "block w-full overflow-hidden") do %>
-    <div class="hidden min-w-0 w-full lg:flex">
-      <%= render partial: "categories/badge", locals: { category: transaction.category } %>
-    </div>
+    <% if variant.to_s == "desktop" %>
+      <div class="hidden min-w-0 w-full lg:flex">
+        <%= render partial: "categories/badge", locals: { category: transaction.category } %>
+      </div>
+    <% end %>
     <div class="flex lg:hidden">
       <%= render partial: "categories/badge_mobile", locals: { category: transaction.category } %>
     </div>
-  <% end %>
-
-  <% popover.with_custom_content do %>
-    <%= turbo_frame_tag "category_dropdown", src: category_dropdown_path(category_id: transaction.category_id, transaction_id: transaction.id, grouped: in_split_group), loading: :lazy do %>
-      <div class="p-6 flex items-center justify-center">
-        <p class="text-sm text-secondary animate-pulse"><%= t(".loading") %></p>
-      </div>
-    <% end %>
   <% end %>
 <% end %>
