@@ -225,6 +225,22 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("bills.payday.due_before", amount: money_string(950), date: until_text), response.body
   end
 
+  test "a payday received early does not close the window before the bills that follow it" do
+    travel_to Date.new(2026, 10, 23)
+    declare_income(name: "Santa Maria", amount: -1700, payday: Date.new(2026, 10, 27))
+    early = declare_income(name: "OutSystems", amount: -4300, payday: Date.new(2026, 10, 28))
+    early.recurring_occurrences.find_by!(due_on: Date.new(2026, 10, 28)).close!("paid", source: "user")
+    declare_bill(name: "Gym", amount: 100, due: Date.new(2026, 10, 29))
+
+    get bills_url
+
+    assert_response :success
+    until_text = I18n.l(Date.new(2026, 11, 27), format: "%-d %b")
+    assert_match I18n.t("bills.payday.due_before", amount: money_string(100), date: until_text), response.body,
+      "the bill after the settled payday counts toward the payday still coming, as in the Income plan"
+    assert_no_match I18n.t("bills.payday.due_before", amount: money_string(0), date: I18n.l(Date.new(2026, 10, 28), format: "%-d %b")), response.body
+  end
+
   test "index excludes income and inactive rows but shows debt payments" do
     create_bill(name: "Real bill", amount: 50)
     create_bill(name: "Salary deposit", amount: -2000)

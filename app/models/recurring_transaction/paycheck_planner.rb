@@ -105,10 +105,10 @@ class RecurringTransaction
     # By default the plan covers `periods_limit` paychecks after the leading
     # window. With `through:` it covers every paycheck up to that date instead,
     # and closes the last one at the payday after it, derived from the income
-    # schedule when no row for it is stored yet. Windows then also end at paydays
-    # that are already settled, so a window never runs past a payday that has
-    # arrived. `cash: false` skips the cash balance for callers that do not
-    # show it.
+    # schedule when no row for it is stored yet. The windows are the default
+    # plan's: only paychecks still to come slice them, so a payday that already
+    # arrived does not end one. `cash: false` skips the cash balance for callers
+    # that do not show it.
     def plan(periods_limit: 3, through: nil, cash: true)
       incomes = upcoming_income_occurrences
       return nil if incomes.empty?
@@ -180,16 +180,16 @@ class RecurringTransaction
         boundaries.first(periods_limit + 2)
       end
 
-      # One period per open payday up to `through`, closed by the first payday
-      # after the last of them. Settled paydays that fall between are boundaries
-      # too; they open a window with no income of its own, which carries its
-      # bills like any other and never reaches a view that does not ask for it.
+      # One period per open payday up to `through`, closed by the first open
+      # payday after the last of them: a stored one, or the one the schedule
+      # derives when none is stored yet. Settled and skipped paydays are not
+      # boundaries, as in period_boundaries, so both views total the same bills.
       def boundaries_through(incomes, through)
-        last_start = incomes.map(&:effective_due_on).select { |date| date <= through }.max
+        dates = incomes.map(&:effective_due_on).uniq
+        last_start = dates.select { |date| date <= through }.max
         return [] if last_start.nil?
 
-        dates = window_dates(last_start)
-        closing = dates.find { |date| date > last_start }
+        closing = (dates.select { |date| date > last_start } + derived_successor_dates(last_start)).min
 
         ([ Date.current ] + dates.select { |date| date <= last_start } + [ closing ].compact).uniq
       end
@@ -202,23 +202,6 @@ class RecurringTransaction
                 .where(bill_type: "income", manual: true, status: "active")
                 .accessible_by(user)
                 .to_a
-      end
-
-      # Every date a window can end on: each income payday that has not been
-      # skipped, settled ones included, plus the paydays that follow the last
-      # one with a window.
-      def window_dates(last_start)
-        (stored_window_dates + derived_successor_dates(last_start)).uniq.sort
-      end
-
-      def stored_window_dates
-        family.recurring_occurrences
-              .where(recurring_transaction_id: income_series.map(&:id))
-              .where.not(status: "skipped")
-              .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} >= ?", Date.current)
-              .distinct
-              .pluck(Arel.sql(RecurringOccurrence::EFFECTIVE_DUE_ON_SQL))
-              .map(&:to_date)
       end
 
       # Rows are only materialized up to a horizon, so the payday after the last

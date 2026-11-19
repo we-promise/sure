@@ -525,18 +525,21 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_equal first + 13, plan.last.ends_on, "the window runs to the next payday that is still coming"
   end
 
-  test "a payday that is already settled ends the window before it" do
+  test "a payday that is already settled does not end a window, as in the default plan" do
     first = Date.current + 3
     create_series(name: "Paycheck", amount: -1840, due: first, preset: "weekly", income: true)
     bonus = create_series(name: "Bonus", amount: -500, due: first + 3, income: true)
     bonus.recurring_occurrences.open_status.order(:due_on).first.close!("paid", source: "user")
+    create_series(name: "Gym", amount: 100, due: first + 4)
 
     through = Planner.new(@family, user: @user).plan(through: first, cash: false)
     default = Planner.new(@family, user: @user).plan(periods_limit: 3)
 
     assert_equal [ Date.current, first ], through.map(&:starts_on)
-    assert_equal first + 2, through.last.ends_on, "money that already arrived ends the window"
-    assert_equal first + 6, default[1].ends_on, "the plan itself only slices by paychecks still to come"
+    assert_equal first + 6, through.last.ends_on, "money that already arrived does not close the window"
+    assert_equal default[1].ends_on, through.last.ends_on
+    assert_equal default[1].bills_total, through.last.bills_total, "both views total the same bills"
+    assert_equal 100, through.last.bills_total, "the bill after the settled payday still sits in a window"
   end
 
   test "a snoozed payday opens its window on the date it was snoozed to" do
