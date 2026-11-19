@@ -36,6 +36,9 @@ tr:
       holdings: Varlıklar
       name: İsim
       new_holding: Yeni işlem
+      negative_position: "%{name} (%{ticker}): %{date} tarihinden beri sıfırın altında, en düşük %{qty}."
+      negative_positions_hint: "Muhtemelen bir alım veya transfer eksik. Ekleyin ya da pozisyonu sıfırın altına düşüren işlemleri düzeltin."
+      negative_positions_title: "Bazı pozisyonlar sıfırın altına düştü"
       no_holdings: Gösterilecek varlık yok.
       return: Toplam getiri
       weight: Ağırlık
