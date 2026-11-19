@@ -6,16 +6,18 @@
 #
 # Totals come from the user-scoped IncomeStatement, so pending transactions,
 # exclusions, transfers, tax-advantaged accounts and exchange rates follow the
-# rest of Reports. The selection scopes only this chart.
+# rest of Reports. The selection and the report's tag filter scope only this
+# chart.
 class Reports::CategoryTrend
   GRANULARITIES = %w[month year].freeze
 
   attr_reader :granularity
 
-  def initialize(statement, period:, selection:, granularity:)
+  def initialize(statement, period:, selection:, granularity:, tag_ids: nil)
     @statement = statement
     @period = period
     @selection = selection
+    @tag_ids = tag_ids
     @granularity = GRANULARITIES.include?(granularity.to_s) ? granularity.to_s : "month"
   end
 
@@ -38,7 +40,7 @@ class Reports::CategoryTrend
   end
 
   private
-    attr_reader :statement, :period, :selection
+    attr_reader :statement, :period, :selection, :tag_ids
 
     def series_for(value)
       category = category_for(value)
@@ -47,7 +49,7 @@ class Reports::CategoryTrend
       {
         name: category.name_with_parent,
         color: category.color.presence || Category::UNCATEGORIZED_COLOR,
-        values: values_for(value)
+        values: values_for(category)
       }
     end
 
@@ -57,9 +59,9 @@ class Reports::CategoryTrend
       statement.family.categories.find_by(id: value)
     end
 
-    def values_for(value)
+    def values_for(category)
       nets = net_by_key
-      key = key_for(value)
+      key = IncomeStatement::NetByCategory.key(category)
 
       bucket_starts.map do |start|
         {
@@ -74,18 +76,10 @@ class Reports::CategoryTrend
     # { category key => { bucket start => expense - income } } for the period.
     def net_by_key
       @net_by_key ||= bucket_starts.each_with_object({}) do |start, nets|
-        bucket = bucket_period(start)
-        add_totals(nets, start, statement.expense_totals(period: bucket).category_totals, 1)
-        add_totals(nets, start, statement.income_totals(period: bucket).category_totals, -1)
-      end
-    end
-
-    def add_totals(nets, start, category_totals, sign)
-      category_totals.each do |category_total|
-        next if category_total.total.zero?
-
-        key = key_for_category(category_total.category)
-        (nets[key] ||= {})[start] = (nets[key][start] || 0) + sign * category_total.total
+        net = IncomeStatement::NetByCategory.new(statement, period: bucket_period(start), tag_ids: tag_ids).call
+        net.each do |key, entry|
+          (nets[key] ||= {})[start] = entry[:net]
+        end
       end
     end
 
@@ -125,18 +119,5 @@ class Reports::CategoryTrend
 
     def bucket_short_label(start)
       granularity == "year" ? start.year.to_s : I18n.l(start, format: "%b")
-    end
-
-    def key_for(value)
-      return :uncategorized if value == Reports::CategorySelection::UNCATEGORIZED
-
-      value.to_s
-    end
-
-    def key_for_category(category)
-      return :uncategorized if category.uncategorized?
-      return :other_investments if category.other_investments?
-
-      category.id.to_s
     end
 end

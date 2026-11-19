@@ -1601,6 +1601,75 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0.0, series["values"].sum { |point| point["value"] }
   end
 
+  test "the category trend uses the selected tags" do
+    category = @family.categories.create!(name: "Trend tagged", color: "#131313")
+    tag = @family.tags.create!(name: "Trend tag")
+    create_transaction(account: accounts(:depository), name: "Tagged spend", amount: 40,
+                       category: category, tags: [ tag ], date: TAGGED_MONTH + 9.days)
+    create_transaction(account: accounts(:depository), name: "Untagged spend", amount: 60,
+                       category: category, date: TAGGED_MONTH + 9.days)
+
+    enable_preview!
+    get reports_path(period_type: :custom, start_date: TAGGED_MONTH,
+                     end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ tag.id ], trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    series = trend_chart_data["series"].sole
+
+    assert_equal 40.0, series["values"].sole["value"]
+  end
+
+  test "the category trend header shows the active tags" do
+    category = @family.categories.create!(name: "Trend header", color: "#141414")
+    tag = @family.tags.create!(name: "Trend header tag")
+
+    enable_preview!
+    get reports_path(period_type: :monthly, filter_tag_ids: [ tag.id ],
+                     trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    assert_select "[data-testid='category-trend-tags']", text: /#{Regexp.escape(tag.name)}/
+  end
+
+  test "the category trend Apply keeps the tag filter" do
+    category = @family.categories.create!(name: "Trend apply", color: "#151515")
+    tag = @family.tags.create!(name: "Trend apply tag")
+
+    enable_preview!
+    get reports_path(period_type: :monthly, filter_tag_ids: [ tag.id ],
+                     trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    form = css_select("form[action='#{reports_path}']").find do |node|
+      node.at_css("input[type=checkbox][name='trend_category_ids[]']")
+    end
+
+    assert form, "the category filter form must render"
+    assert form.at_css("input[type=hidden][name='filter_tag_ids[]'][value='#{tag.id}']"),
+           "the category filter Apply drops the tag filter"
+  end
+
+  test "the tag filter Apply keeps the trend selection and granularity" do
+    category = @family.categories.create!(name: "Trend tag filter", color: "#161616")
+    tag = @family.tags.create!(name: "Trend tag filter tag")
+
+    enable_preview!
+    get reports_path(period_type: :monthly, filter_tag_ids: [ tag.id ],
+                     trend_category_ids: [ category.id ], trend_granularity: "year")
+
+    assert_response :ok
+    form = css_select("form[action='#{reports_path}']").find do |node|
+      node.at_css("input[type=checkbox][name='filter_tag_ids[]']")
+    end
+
+    assert form, "the tag filter form must render"
+    assert form.at_css("input[type=hidden][name='trend_category_ids[]'][value='#{category.id}']"),
+           "the tag filter Apply drops the trend selection"
+    assert form.at_css("input[type=hidden][name='trend_granularity'][value='year']"),
+           "the tag filter Apply drops the trend granularity"
+  end
+
   test "period links keep the trend selection and granularity" do
     category = @family.categories.create!(name: "Trend link", color: "#444444")
 
@@ -1665,8 +1734,8 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_select "form[data-controller='auto-submit-form'] input[name='trend_granularity'][value='year']", count: 1
-    # The category filter form also carries the explicit choice.
-    assert_select "form input[name='trend_granularity'][value='year']", count: 2
+    # The category filter and tag filter forms also carry the explicit choice.
+    assert_select "form input[name='trend_granularity'][value='year']", count: 3
   end
 
   test "the trend chart lists its values in a data table" do

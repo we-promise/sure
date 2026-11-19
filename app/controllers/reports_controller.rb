@@ -649,7 +649,8 @@ class ReportsController < ApplicationController
         @income_statement,
         period: @period,
         selection: category_selection,
-        granularity: trend_granularity
+        granularity: trend_granularity,
+        tag_ids: filter_tags.map(&:id)
       )
     end
 

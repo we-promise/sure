@@ -1,7 +1,7 @@
 <%# locals: (trends_data:, period_type:, start_date:, end_date:, trend_granularity:, category_trend: nil, category_options: nil, selected_category_values: nil, selected_category_count: nil) %>
 <div class="@container space-y-8">
   <% if preview_features_enabled? && category_trend %>
-    <%# Category trends. Selection scopes this chart only, not the tables below. %>
+    <%# Category trends. The category selection and tag filter scope this chart only, not the tables below. %>
     <div>
       <div class="flex items-start justify-between gap-3 flex-wrap mb-3">
         <div class="space-y-1">
@@ -14,6 +14,14 @@
           <p class="text-sm text-secondary">
             <%= t("reports.trends.category_trend.subtitle") %>
           </p>
+          <% if filter_tags.any? %>
+            <div class="flex flex-wrap items-center gap-2 pt-1" data-testid="category-trend-tags">
+              <span class="text-xs text-secondary"><%= t("reports.trends.category_trend.filtered_by_tags") %></span>
+              <% filter_tags.each do |tag| %>
+                <%= render "tags/badge", tag: tag %>
+              <% end %>
+            </div>
+          <% end %>
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
@@ -32,7 +40,8 @@
                   end_date: end_date,
                   **explicit_granularity_field,
                   sort_by: params[:sort_by],
-                  sort_direction: params[:sort_direction]
+                  sort_direction: params[:sort_direction],
+                  **reports_filter_params
                 },
                 url: reports_path,
                 method: :get,

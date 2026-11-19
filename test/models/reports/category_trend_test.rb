@@ -28,6 +28,16 @@ class Reports::CategoryTrendTest < ActiveSupport::TestCase
     assert_equal(-30.0, trend(@groceries).series.sole[:values][1][:value])
   end
 
+  test "tag ids limit the series to tagged transactions" do
+    tag = @family.tags.create!(name: "Travel")
+    create_transaction(account: @account, date: Date.new(2026, 1, 10), amount: 100, category: @groceries)
+    create_transaction(account: @account, date: Date.new(2026, 1, 10), amount: 40, category: @groceries, tags: [ tag ])
+
+    series = trend(@groceries, tag_ids: [ tag.id ]).series.sole
+
+    assert_equal [ 40.0, 0.0, 0.0 ], series[:values].map { |point| point[:value] }
+  end
+
   test "a parent series includes its subcategories, and a child alone does not" do
     create_transaction(account: @account, date: Date.new(2026, 1, 10), amount: 30, category: @groceries)
     create_transaction(account: @account, date: Date.new(2026, 1, 20), amount: 20, category: @food)
@@ -82,9 +92,9 @@ class Reports::CategoryTrendTest < ActiveSupport::TestCase
   end
 
   private
-    def trend(*categories, period: @period, granularity: "month")
+    def trend(*categories, period: @period, granularity: "month", tag_ids: nil)
       selection = Reports::CategorySelection.new(@family, categories.map { |category| category.id.to_s })
       Reports::CategoryTrend.new(IncomeStatement.new(@family), period: period, selection: selection,
-                                 granularity: granularity)
+                                 granularity: granularity, tag_ids: tag_ids)
     end
 end

@@ -71,6 +71,7 @@ en:
       category_trend:
         title: Category trends
         subtitle: Monthly or yearly totals for the selected categories, net of refunds.
+        filtered_by_tags: Filtered by tags
         select: Select categories
         selected:
           one: "%{count} category"

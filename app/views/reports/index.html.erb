@@ -44,7 +44,13 @@
               button_text: @filter_tags.empty? ? t("reports.index.tag_filter.all") : t("reports.index.tag_filter.selected", count: @filter_tags.size),
               search_label: t("reports.index.tag_filter.search"),
               apply_text: t("reports.index.tag_filter.apply"),
-              hidden_fields: { period_type: @period_type, start_date: @start_date, end_date: @end_date },
+              hidden_fields: {
+                period_type: @period_type,
+                start_date: @start_date,
+                end_date: @end_date,
+                trend_category_ids: @category_selection.selected_values.presence,
+                trend_granularity: trend_granularity_param
+              }.compact,
               url: reports_path,
               form_data: { turbo_action: "advance" }
             } do %>
