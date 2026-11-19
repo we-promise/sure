@@ -165,7 +165,8 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
       end
 
       def period_year(period)
-        [ period&.[](:start_date), period&.[](:end_date) ].filter_map { normal_date(_1) }.first&.year
+        date = [ period&.[](:start_date), period&.[](:end_date) ].filter_map { normal_date(_1) }.first
+        Date.iso8601(date).year if date
       end
 
       # Some occurrence of the row's amount has, as the last date printed in the DATE_WINDOW

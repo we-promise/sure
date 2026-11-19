@@ -481,7 +481,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
 
     assert_equal %w[t0], answered_ids(result)
     assert_equal 2, result.skipped.size
-    assert_equal [ "t1" ], DebugLogEntry.order(:created_at).last.metadata["item_ids"]
+    assert_equal [ "t1" ], DebugLogEntry.where(message: "Items no route could answer were left unanswered").last.metadata["item_ids"]
   end
 
   test "a 5xx that names image support in another field stays an outage" do

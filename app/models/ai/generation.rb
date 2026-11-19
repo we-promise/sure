@@ -153,6 +153,7 @@ class Ai::Generation
     @failed_over_from = []
     @logged_ids = Set.new
     @skipped = []
+    @skipped_in_slice = Set.new
     result = batch_key ? call_batched(routes, batches:, cancelled:, answered_before:) : call_single(routes, cancelled:)
     Ai::Shadow.enqueue(self, result) if shadow && !shadow_run?
     result
@@ -205,6 +206,7 @@ class Ai::Generation
 
         route = routes.find { !@down_marks.down?(_1) } || routes.first
         slice = Ai::Batch.first_slice(remaining, model: route.model, fixed_tokens: fixed_tokens(route), cost: method(:item_cost))
+        @skipped_in_slice.clear   # a unit skipped by two paths in one slice is still one skipped unit
         answers, unanswered = begin
           on_routes(routes, slice)
         rescue Ai::Error::ContextTooLong, Ai::Error::InvalidOutput, Ai::Error::UnsupportedInput => error
@@ -460,18 +462,22 @@ class Ai::Generation
       log_unanswered(items.reject { answered_ids.include?(item_id(_1).to_s) })
     end
 
-    # Ids only: the items themselves hold the family's data. A repeated unit is still skipped
-    # (two equal units are two inputs), but only its first skip gets a log entry.
+    # Ids only: the items themselves hold the family's data. A unit can be reported by both
+    # on_routes and log_omitted in one slice; count it once, but keep separate units that happen
+    # to be equal. Only the first skip of a given id gets a log entry.
     def log_unanswered(items)
-      ids = items.map { item_id(_1) }
-      @skipped.concat(items)
-      fresh = ids.uniq.reject { @logged_ids.include?(_1) }
-      return if fresh.empty?
+      fresh_units = items.reject { @skipped_in_slice.include?(_1.object_id) }
+      return if fresh_units.empty?
 
-      @logged_ids.merge(fresh)
+      @skipped_in_slice.merge(fresh_units.map(&:object_id))
+      @skipped.concat(fresh_units)
+      fresh_ids = fresh_units.map { item_id(_1) }.uniq.reject { @logged_ids.include?(_1) }
+      return if fresh_ids.empty?
+
+      @logged_ids.merge(fresh_ids)
       DebugLogEntry.capture(
         category: "ai_generation", level: "warn", message: "Items no route could answer were left unanswered",
-        source: self.class.name, family:, metadata: { feature: feature_key.to_s, item_ids: fresh }
+        source: self.class.name, family:, metadata: { feature: feature_key.to_s, item_ids: fresh_ids }
       )
     end
 
