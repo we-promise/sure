@@ -163,4 +163,45 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     sso_user.reload
     assert_nil sso_user.password_digest, "SSO-only user should still have nil password_digest"
   end
+
+  test "update signs the user out everywhere" do
+    sign_in @user
+    @user.sessions.create!
+    assert_operator @user.sessions.count, :>=, 2
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" } }
+
+    assert_redirected_to new_session_path
+    assert_equal 0, @user.sessions.reload.count
+  end
+
+  test "update revokes the user's OAuth tokens and grants, so a refresh token stops working" do
+    oauth_app = Doorkeeper::Application.create!(name: "Sure Mobile", redirect_uri: "https://client.example.com/callback", scopes: "read_write")
+    access_token = Doorkeeper::AccessToken.create!(application: oauth_app, resource_owner_id: @user.id, expires_in: 2.hours, scopes: "read_write", use_refresh_token: true)
+    refresh_token = access_token.plaintext_refresh_token
+    grant = Doorkeeper::AccessGrant.create!(application: oauth_app, resource_owner_id: @user.id, expires_in: 10.minutes, redirect_uri: oauth_app.redirect_uri, scopes: "read_write")
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" } }
+    assert_redirected_to new_session_path
+
+    assert access_token.reload.revoked?, "the access token must not outlive a password reset"
+    assert grant.reload.revoked?, "an unexchanged grant must not be redeemable after a password reset"
+
+    post "/oauth/token", params: { grant_type: "refresh_token", refresh_token: refresh_token, client_id: oauth_app.uid, client_secret: oauth_app.secret }
+    assert_response :bad_request
+    assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+  end
+
+  test "a rejected reset leaves the user's OAuth tokens alone" do
+    oauth_app = Doorkeeper::Application.create!(name: "Sure Mobile", redirect_uri: "https://client.example.com/callback", scopes: "read_write")
+    access_token = Doorkeeper::AccessToken.create!(application: oauth_app, resource_owner_id: @user.id, expires_in: 2.hours, scopes: "read_write")
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewPassword123!", password_confirmation: "Mismatch123!" } }
+
+    assert_response :unprocessable_entity
+    assert_not access_token.reload.revoked?
+  end
 end

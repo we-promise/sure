@@ -8,7 +8,8 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "bulk update" do
-    transactions = @user.family.entries.transactions
+    transfer_entry_ids = [ entries(:transfer_out).id, entries(:transfer_in).id ]
+    transactions = @user.family.entries.transactions.where.not(id: transfer_entry_ids)
 
     assert_difference [ "Entry.count", "Transaction.count" ], 0 do
       post transactions_bulk_update_url, params: {
@@ -33,6 +34,328 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
       assert_equal "Updated note", transaction.notes
       assert_equal [ Tag.first.id, Tag.second.id ], transaction.entryable.tag_ids.sort
     end
+  end
+
+  test "bulk update keeps transfer date, category and merchant" do
+    @user.family.update!(manual_reconciliation: true)
+    transfer = create_transfer(
+      from_account: accounts(:depository),
+      to_account: accounts(:credit_card),
+      amount: 100,
+      date: Date.current
+    )
+    outflow_entry = transfer.outflow_transaction.entry
+    inflow_entry = transfer.inflow_transaction.entry
+    original_date = outflow_entry.date
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ outflow_entry.id ],
+        date: 1.day.ago.to_date,
+        category_id: Category.second.id,
+        merchant_id: Merchant.second.id,
+        tag_ids: [ Tag.first.id ],
+        notes: "Transfer note",
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    outflow_entry.reload
+    assert_equal original_date, outflow_entry.date
+    assert_nil outflow_entry.transaction.category_id
+    assert_nil outflow_entry.transaction.merchant_id
+    assert_equal "Transfer note", outflow_entry.notes
+    assert_equal [ Tag.first.id ], outflow_entry.transaction.tag_ids
+    assert_equal "reconciled", outflow_entry.reconciled_status
+
+    inflow_entry.reload
+    assert_equal original_date, inflow_entry.date
+    assert_nil inflow_entry.transaction.category_id
+    assert_equal "unreconciled", inflow_entry.reconciled_status
+  end
+
+  test "bulk update applies a category to a categorizable transfer outflow" do
+    transfer = create_transfer(
+      from_account: accounts(:depository),
+      to_account: accounts(:investment),
+      amount: 100
+    )
+    outflow_entry = transfer.outflow_transaction.entry
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ outflow_entry.id ],
+        category_id: Category.second.id
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal Category.second.id, outflow_entry.reload.transaction.category_id
+  end
+
+  test "bulk update keeps an unmatched transfer-kind transaction editable" do
+    entry = create_transaction(
+      account: accounts(:depository),
+      kind: "funds_movement",
+      name: "Unmatched transfer"
+    )
+    original_date = entry.date
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ entry.id ],
+        date: 1.day.ago.to_date,
+        category_id: Category.second.id,
+        merchant_id: Merchant.second.id,
+        tag_ids: [ Tag.first.id ],
+        notes: "Edited unmatched transfer"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    entry.reload
+    assert_not_equal original_date, entry.date
+    assert_equal 1.day.ago.to_date, entry.date
+    assert_equal Category.second, entry.transaction.category
+    assert_equal Merchant.second, entry.transaction.merchant
+    assert_equal "Edited unmatched transfer", entry.notes
+    assert_equal [ Tag.first.id ], entry.transaction.tag_ids
+  end
+
+  test "bulk update keeps transfer fee transactions editable" do
+    transfer = create_transfer(
+      from_account: accounts(:depository),
+      to_account: accounts(:credit_card),
+      amount: 100
+    )
+    fee_entry = accounts(:depository).entries.create!(
+      name: "Transfer fee",
+      date: Date.current,
+      amount: 10,
+      currency: "USD",
+      entryable: Transaction.new(kind: "standard", transfer: transfer)
+    )
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ fee_entry.id ],
+        date: 1.day.ago.to_date,
+        category_id: Category.second.id,
+        merchant_id: Merchant.second.id,
+        tag_ids: [ Tag.first.id ],
+        notes: "Edited fee"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    fee_entry.reload
+    assert_equal 1.day.ago.to_date, fee_entry.date
+    assert_equal Category.second, fee_entry.transaction.category
+    assert_equal Merchant.second, fee_entry.transaction.merchant
+    assert_equal "Edited fee", fee_entry.notes
+    assert_equal [ Tag.first.id ], fee_entry.transaction.tag_ids
+  end
+
+  test "bulk update applies safe fields to both selected transfer legs" do
+    @user.family.update!(manual_reconciliation: true)
+    transfer = create_transfer(
+      from_account: accounts(:depository),
+      to_account: accounts(:credit_card),
+      amount: 100
+    )
+    outflow_entry = transfer.outflow_transaction.entry
+    inflow_entry = transfer.inflow_transaction.entry
+    original_date = outflow_entry.date
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ outflow_entry.id, inflow_entry.id ],
+        date: 1.day.ago.to_date,
+        category_id: Category.second.id,
+        merchant_id: Merchant.second.id,
+        tag_ids: [ Tag.first.id ],
+        notes: "Both legs",
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "2 transactions updated", flash[:notice]
+
+    [ outflow_entry, inflow_entry ].each do |entry|
+      entry.reload
+      assert_equal original_date, entry.date
+      assert_nil entry.transaction.category_id
+      assert_nil entry.transaction.merchant_id
+      assert_equal "Both legs", entry.notes
+      assert_equal [ Tag.first.id ], entry.transaction.tag_ids
+      assert_equal "reconciled", entry.reconciled_status
+    end
+  end
+
+  test "bulk update applies normal fields to normal entries and safe fields to a transfer" do
+    @user.family.update!(manual_reconciliation: true)
+    normal_entry = create_transaction(account: accounts(:depository), name: "Normal entry")
+    transfer = create_transfer(
+      from_account: accounts(:depository),
+      to_account: accounts(:credit_card),
+      amount: 100
+    )
+    outflow_entry = transfer.outflow_transaction.entry
+    transfer_date = outflow_entry.date
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ normal_entry.id, outflow_entry.id ],
+        date: 1.day.ago.to_date,
+        category_id: Category.second.id,
+        merchant_id: Merchant.second.id,
+        tag_ids: [ Tag.first.id ],
+        notes: "Mixed update",
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "2 transactions updated", flash[:notice]
+
+    normal_entry.reload
+    assert_equal 1.day.ago.to_date, normal_entry.date
+    assert_equal Category.second, normal_entry.transaction.category
+    assert_equal Merchant.second, normal_entry.transaction.merchant
+    assert_equal "Mixed update", normal_entry.notes
+    assert_equal [ Tag.first.id ], normal_entry.transaction.tag_ids
+    assert_equal "reconciled", normal_entry.reconciled_status
+
+    outflow_entry.reload
+    assert_equal transfer_date, outflow_entry.date
+    assert_nil outflow_entry.transaction.category_id
+    assert_nil outflow_entry.transaction.merchant_id
+    assert_equal "Mixed update", outflow_entry.notes
+    assert_equal [ Tag.first.id ], outflow_entry.transaction.tag_ids
+    assert_equal "reconciled", outflow_entry.reconciled_status
+  end
+
+  test "bulk update ignores entries from inaccessible accounts" do
+    entry = create_transaction(account: accounts(:investment), name: "Private entry")
+    entry.update!(notes: "Original note")
+
+    sign_in users(:family_member)
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ entry.id ],
+        notes: "Should not apply"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "0 transactions updated", flash[:notice]
+    assert_equal "Original note", entry.reload.notes
+  end
+
+  test "bulk update does not look up transfers per normal entry" do
+    transfer_entry_ids = [ entries(:transfer_out).id, entries(:transfer_in).id ]
+    transaction_ids = @user.family.entries.transactions
+      .where.not(id: transfer_entry_ids)
+      .limit(5)
+      .pluck(:id)
+
+    queries = capture_sql_queries do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: transaction_ids,
+          date: 1.day.ago.to_date,
+          category_id: Category.second.id
+        }
+      }
+    end
+
+    transfer_queries = queries.grep(/FROM "?transfers"?/)
+    assert_equal 1, transfer_queries.size,
+      "expected one transfer-leg lookup, got: #{transfer_queries.inspect}"
+  end
+
+  test "new hides the reconciliation field when the selection has no transaction" do
+    @user.family.update!(manual_reconciliation: true)
+
+    get new_transactions_bulk_update_url, params: {
+      has_transaction_entry: "false",
+      has_transfer_entry: "false",
+      has_category_editable_entry: "false",
+      has_normal_transaction_entry: "false"
+    }
+
+    assert_response :success
+    assert_select "select[name='bulk_update[reconciled_status]']", count: 0
+    assert_select "input[name='bulk_update[date]']"
+    assert_select "input[name='bulk_update[category_id]']", count: 0
+    assert_select "input[name='bulk_update[merchant_id]']", count: 0
+  end
+
+  test "new hides transfer-unsafe fields for a non-categorizable transfer" do
+    @user.family.update!(manual_reconciliation: true)
+
+    get new_transactions_bulk_update_url, params: {
+      has_transaction_entry: "true",
+      has_transfer_entry: "true",
+      has_category_editable_entry: "false",
+      has_normal_transaction_entry: "false"
+    }
+
+    assert_response :success
+    assert_select "select[name='bulk_update[reconciled_status]']"
+    assert_select "input[name='bulk_update[date]']", count: 0
+    assert_select "input[name='bulk_update[category_id]']", count: 0
+    assert_select "input[name='bulk_update[merchant_id]']", count: 0
+    assert_select "input[name='bulk_update[name]']"
+    assert_select "textarea[name='bulk_update[notes]']"
+  end
+
+  test "new keeps category for a categorizable transfer outflow" do
+    @user.family.update!(manual_reconciliation: true)
+
+    get new_transactions_bulk_update_url, params: {
+      has_transaction_entry: "true",
+      has_transfer_entry: "true",
+      has_category_editable_entry: "true",
+      has_normal_transaction_entry: "false"
+    }
+
+    assert_response :success
+    assert_select "select[name='bulk_update[reconciled_status]']"
+    assert_select "input[name='bulk_update[date]']", count: 0
+    assert_select "input[name='bulk_update[category_id]']"
+    assert_select "input[name='bulk_update[merchant_id]']", count: 0
+  end
+
+  test "new keeps category and merchant for a mixed selection" do
+    @user.family.update!(manual_reconciliation: true)
+
+    get new_transactions_bulk_update_url, params: {
+      has_transaction_entry: "true",
+      has_transfer_entry: "true",
+      has_category_editable_entry: "true",
+      has_normal_transaction_entry: "true"
+    }
+
+    assert_response :success
+    assert_select "select[name='bulk_update[reconciled_status]']"
+    assert_select "input[name='bulk_update[date]']", count: 0
+    assert_select "input[name='bulk_update[category_id]']"
+    assert_select "input[name='bulk_update[merchant_id]']"
+  end
+
+  test "new shows all fields by default" do
+    @user.family.update!(manual_reconciliation: true)
+
+    get new_transactions_bulk_update_url
+
+    assert_response :success
+    assert_select "select[name='bulk_update[reconciled_status]']"
+    assert_select "input[name='bulk_update[date]']"
+    assert_select "input[name='bulk_update[category_id]']"
   end
 
   test "bulk update preloads transaction records" do
@@ -271,6 +594,48 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Private", nil ], [ private_entry.reload.name, private_entry.notes ]
   end
 
+  test "bulk update locks the whole mixed selection before it writes" do
+    accounts(:credit_card).account_shares.find_by!(user: users(:family_member)).update!(permission: "read_write")
+    full_entry = create_transaction(account: accounts(:depository), name: "Full")
+    annotate_entry = create_transaction(account: accounts(:credit_card), name: "Annotate")
+
+    payloads = []
+    callback = ->(_name, _started, _finished, _unique_id, payload) { payloads << payload }
+
+    sign_in users(:family_member)
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      post transactions_bulk_update_url, params: {
+        bulk_update: { entry_ids: [ full_entry.id, annotate_entry.id ], notes: "bulk note" }
+      }
+    end
+
+    assert_equal "2 transactions updated", flash[:notice]
+
+    transaction_lock_index = payloads.index do |payload|
+      payload[:sql].include?("FOR UPDATE") && payload[:sql].include?('"transactions"')
+    end
+    entry_lock_indexes = payloads.each_index.select do |index|
+      payloads[index][:sql].include?("FOR UPDATE") && payloads[index][:sql].include?('"entries"')
+    end
+    first_update_index = payloads.index { |payload| payload[:sql].start_with?('UPDATE "entries"') }
+
+    assert transaction_lock_index, "expected a lock on the transactions"
+    assert entry_lock_indexes.any?, "expected a lock on the entries"
+    assert first_update_index, "expected an entry update"
+
+    first_entry_lock = payloads[entry_lock_indexes.first]
+    locked_ids = first_entry_lock[:binds].flat_map { |bind| Array(bind.value) }
+    assert_includes locked_ids, full_entry.id,
+      "the first entry lock must cover the full-control entry"
+    assert_includes locked_ids, annotate_entry.id,
+      "the first entry lock must cover the annotate-only entry"
+
+    assert_operator transaction_lock_index, :<, entry_lock_indexes.first,
+      "the transactions must be locked before the entries"
+    assert_operator entry_lock_indexes.first, :<, first_update_index,
+      "the whole selection must be locked before the first write"
+  end
+
   test "bulk update sets reconciled_status on manual accounts" do
     @user.family.update!(manual_reconciliation: true)
     manual_entry = create_transaction(account: accounts(:depository))
@@ -285,6 +650,21 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to transactions_url
     assert_equal "reconciled", manual_entry.reload.reconciled_status
+  end
+
+  test "bulk update ignores reconciled_status on a valuation" do
+    @user.family.update!(manual_reconciliation: true)
+    valuation = create_valuation(account: accounts(:depository))
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ valuation.id ],
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "unreconciled", valuation.reload.reconciled_status
   end
 
   test "bulk update ignores reconciled_status on synced accounts" do

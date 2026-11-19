@@ -46,6 +46,7 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     # The prompt is rendered into the turbo-stream response (flash is cleared once rendered).
     assert_match %r{/rules/new\?[^"]*action_value=#{category.id}}, response.body
+    assert_match %r{/rules/new\?[^"]*name=AMZN\+Mktp\+UK}, response.body
   end
 
   test "does not offer a rule prompt when an existing rule already covers this transaction" do
