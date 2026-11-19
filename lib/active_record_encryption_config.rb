@@ -133,6 +133,7 @@ module ActiveRecordEncryptionConfig
     trading212_items: [ "Trading212Item", %i[api_key api_secret raw_instruments_payload] ],
     up_items: [ "UpItem", %i[access_token raw_payload raw_institution_payload] ],
     wise_items: [ "WiseItem", %i[token raw_payload sca_private_key] ],
+    web_push_subscriptions: [ "WebPushSubscription", %i[endpoint p256dh auth] ],
     plaid_accounts: [ "PlaidAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload] ],
     simplefin_accounts: [ "SimplefinAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload] ],
     lunchflow_accounts: [ "LunchflowAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload] ],
