@@ -152,7 +152,8 @@ export default class extends Controller {
   _drawChart() {
     this._drawTrendline();
 
-    if (this._comparisonPoints.length > 0) {
+    // From two points, as the legend's condition is: one point draws nothing.
+    if (this._comparisonPoints.length >= 2) {
       this._drawComparisonLine();
     }
 
@@ -621,7 +622,7 @@ export default class extends Controller {
   // The comparison's figure for the hovered date and its difference from the
   // trendline, signed, with the difference as a percentage of the comparison.
   // The percentage is left off when it has no finite value (a comparison of
-  // zero), rather than shown as infinity.
+  // zero), rather than shown as infinity, and when both figures are zero.
   //
   // Built as DOM nodes with d3's `.text()`, not as an HTML string, so no
   // label or amount is ever parsed as markup.
@@ -634,10 +635,11 @@ export default class extends Controller {
     const difference = point.difference;
     const amount = this._extractNumericValue(difference.value);
     const sign = amount > 0 ? "+" : "";
+    // percent_formatted arrives signed and in the page's locale.
     const percent =
       difference.percent === null || difference.percent === undefined
         ? ""
-        : ` (${difference.percent > 0 ? "+" : ""}${difference.percent_formatted})`;
+        : ` (${difference.percent_formatted})`;
 
     const block = this._d3Tooltip
       .append("div")

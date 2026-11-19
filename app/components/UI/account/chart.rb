@@ -304,7 +304,7 @@ class UI::Account::Chart < ApplicationComponent
         {
           date: point.date,
           value: contributions,
-          difference: Trend.new(current: value_point.value.for_display, previous: contributions)
+          difference: comparison_difference(Trend.new(current: value_point.value.for_display, previous: contributions))
         }
       end
 
@@ -313,6 +313,19 @@ class UI::Account::Chart < ApplicationComponent
         difference_label: I18n.t("UI.account.chart.net_contributions.difference"),
         values: points
       }
+    end
+
+    # The Trend as the tooltip reads it, with its percentage signed and in the
+    # page's locale. Zero over zero has no ratio, so no percentage, where
+    # Trend#percent says 0.0. A zero base under a non-zero value stays
+    # infinite: `percent` serializes as null and the formatted text says so.
+    def comparison_difference(trend)
+      json = trend.as_json
+      return json.merge(percent: nil, percent_formatted: nil) if trend.previous.zero? && trend.current.zero?
+      return json unless trend.percent.finite?
+
+      formatted = ActiveSupport::NumberHelper.number_to_percentage(trend.percent, precision: 1, locale: I18n.locale)
+      json.merge(percent_formatted: trend.percent.positive? ? "+#{formatted}" : formatted)
     end
 
     # Prefixes positive gains with "+"; other views keep plain Money formatting.

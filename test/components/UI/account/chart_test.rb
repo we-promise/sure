@@ -443,6 +443,40 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     refute_selector "[data-net-contributions-legend]"
   end
 
+  # The tooltip shows the percentage as the server formats it, signed, in
+  # the page's locale, beside money amounts formatted the same way.
+  test "the difference percentage is signed and formatted in the active locale" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 15_400)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+    create_balance(account: account, date: day_one + 1, balance: 15_400, start_cash_balance: 10_000, cash_adjustments: 5_400)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+
+    I18n.with_locale(:fr) do
+      render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+    end
+
+    last = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"].last
+    assert_equal "+2,7%", last["difference"]["percent_formatted"]
+  end
+
+  # Nothing in and nothing held: the difference is zero over a base of zero,
+  # a ratio with no value, so no percentage rather than 0.0%.
+  test "zero value over zero net contributions carries no percentage" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 0)
+    create_balance(account: account, date: day_one, balance: 0)
+    create_balance(account: account, date: day_one + 1, balance: 0)
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+
+    last = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"].last
+    assert_equal "0.0", last["value"]["amount"], "precondition: net contributions are zero"
+    assert_equal "0.0", last["difference"]["value"]["amount"], "precondition: so is the difference"
+    assert_nil last["difference"]["percent"]
+    assert_nil last["difference"]["percent_formatted"]
+  end
+
   # A request for a frame the chart is not in (the activity feed's pages)
   # renders the page and discards the chart, so the comparison is not built.
   test "net contributions are not built when the chart card is not requested" do

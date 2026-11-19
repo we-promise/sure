@@ -17,6 +17,10 @@ class AccountChartNetContributionsTest < ApplicationSystemTestCase
     visit account_url(account, chart_view: "balance")
 
     assert_selector "#lineChart path[stroke-dasharray]", visible: :all
+    # The dashed path must be drawn, not merely added: a path with no `d`
+    # passes the selector but has no length.
+    length = page.evaluate_script("document.querySelector('#lineChart path[stroke-dasharray]').getTotalLength()")
+    assert_operator length, :>, 0, "the dashed line has no geometry"
     assert_selector "[data-net-contributions-legend]", text: I18n.t("UI.account.chart.net_contributions.label")
   end
 
