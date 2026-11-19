@@ -2371,6 +2371,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
 
   create_table "rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.boolean "active", default: false, null: false
+    t.boolean "apply_immediately", default: false, null: false
     t.datetime "created_at", null: false
     t.date "effective_date"
     t.uuid "family_id", null: false
@@ -2803,6 +2804,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.uuid "taggable_id"
     t.string "taggable_type"
     t.datetime "updated_at", null: false
+    t.index "tag_id, COALESCE(taggable_type, ''::character varying), taggable_id", name: "index_taggings_unique", unique: true, where: "(taggable_id IS NOT NULL)"
     t.index ["tag_id"], name: "index_taggings_on_tag_id"
     t.index ["taggable_type", "taggable_id"], name: "index_taggings_on_taggable"
   end

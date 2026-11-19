@@ -53,7 +53,7 @@ class Provider::Tiingo < Provider
   def usage
     with_provider_response do
       count_key = "tiingo:symbol_count:#{Date.current.strftime('%Y-%m')}"
-      symbols_used = Rails.cache.read(count_key).to_i
+      symbols_used = Rails.cache.read(count_key, raw: true).to_i
 
       UsageData.new(
         used: symbols_used,

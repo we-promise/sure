@@ -22,6 +22,9 @@ class RecurringTransaction
     # holding the entry.
     class EntryExhaustedError < OverAllocationError; end
     class AlreadyAllocatedError < OverAllocationError; end
+    # The entry is one side of a split (the parent, or one of its children)
+    # and the other side already pays a bill. Both sides are the same money.
+    class SplitCounterpartAllocatedError < OverAllocationError; end
     class MissingRateError < StandardError; end
 
     # Postgres keeps single-key and two-key advisory locks in separate spaces,
@@ -42,24 +45,57 @@ class RecurringTransaction
       )
     end
 
+    # Keyed on the split root, so a split parent and its children share one
+    # lock: their counterpart checks then see each other's committed writes.
     def self.entry_lock_id(entry)
-      Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
+      Digest::MD5.hexdigest((entry.parent_entry_id || entry.id).to_s).to_i(16) % (2**31)
+    end
+
+    # Allocations that count toward an entry's capacity: everything except
+    # tombstones from ended series (a deleted or dismissed bill). Counting
+    # those would permanently consume the entry and block re-use on a new
+    # bill (see #3592). Defined once so the capacity checks stay in sync.
+    def self.active_allocations(allocations = RecurringAllocation.all)
+      allocations.joins(recurring_occurrence: :recurring_transaction)
+                 .where.not(recurring_transactions: { status: "ended" })
     end
 
     # What guard_entry_capacity! would leave of each entry for another bill,
     # for many entries in one query. Entries no bill uses yet are omitted.
     # Pass a narrower allocations scope to count only the bills a viewer can
     # see; the guard itself always counts every allocation.
+    #
+    # The query also reads the allocations of each entry's split counterparts
+    # (see Entry#split_counterparts): once one side of a split pays a bill, the
+    # other side has nothing left.
     def self.remaining_by_entry(entries, allocations: RecurringAllocation.all)
       by_id = entries.index_by(&:id)
+      scope = active_allocations(allocations).joins(:entry)
 
-      allocations.where(entry_id: by_id.keys).group(:entry_id).pluck(
-        :entry_id,
-        Arel.sql("SUM(COALESCE(source_amount, allocated_amount))"),
-        Arel.sql("BOOL_OR(source_amount IS NULL)")
-      ).to_h do |entry_id, used, unmeasurable|
-        [ entry_id, unmeasurable ? 0 : [ by_id[entry_id].amount.abs - used, 0 ].max ]
+      rows = scope.where(entry_id: by_id.keys + entries.filter_map(&:parent_entry_id))
+                  .or(scope.where(entries: { parent_entry_id: by_id.keys }))
+                  .group(:entry_id, "entries.parent_entry_id")
+                  .pluck(
+                    :entry_id,
+                    "entries.parent_entry_id",
+                    Arel.sql("SUM(COALESCE(source_amount, allocated_amount))"),
+                    Arel.sql("BOOL_OR(source_amount IS NULL)")
+                  )
+
+      paying_ids = rows.map(&:first).to_set
+      paying_parent_ids = rows.filter_map(&:second).to_set
+      spent_by_counterpart = entries.select do |entry|
+        paying_ids.include?(entry.parent_entry_id) || paying_parent_ids.include?(entry.id)
       end
+
+      remaining = rows.each_with_object({}) do |(entry_id, _parent_id, used, unmeasurable), result|
+        entry = by_id[entry_id]
+        next unless entry
+
+        result[entry_id] = unmeasurable ? 0 : [ entry.amount.abs - used, 0 ].max
+      end
+      spent_by_counterpart.each { |entry| remaining[entry.id] = 0 }
+      remaining
     end
 
     def initialize(occurrence)
@@ -345,15 +381,8 @@ class RecurringTransaction
         allocation
       end
 
-      # Allocations that count toward an entry's capacity: everything except
-      # tombstones from ended series (a deleted or dismissed bill). Counting
-      # those would permanently consume the entry and block re-use on a new
-      # bill (see #3592). Defined once so the capacity checks stay in sync.
       def active_allocations_for(entry)
-        RecurringAllocation
-          .where(entry: entry)
-          .joins(recurring_occurrence: :recurring_transaction)
-          .where.not(recurring_transactions: { status: "ended" })
+        self.class.active_allocations.where(entry: entry)
       end
 
       # True once any allocation on this entry (excluding those from ended
@@ -431,6 +460,14 @@ class RecurringTransaction
       # than one. Allocations from ended series are excluded throughout so a
       # deleted bill never blocks re-use of the same entry on a replacement.
       def guard_entry_capacity!(entry, source_amount)
+        # A split parent and its children are the same money, so whichever
+        # side pays a bill first (a suggestion included) takes the other side
+        # out. Otherwise the parent could pay one bill and a child another,
+        # counting more than the bank charged.
+        if active_allocations_for(entry.split_counterparts).exists?
+          raise SplitCounterpartAllocatedError, I18n.t("recurring_transactions.allocator.split_counterpart_allocated")
+        end
+
         if source_amount.nil? || unmeasurable_entry?(entry)
           return if active_allocations_for(entry).none?
 
