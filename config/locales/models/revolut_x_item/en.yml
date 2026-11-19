@@ -1,0 +1,16 @@
+---
+en:
+  activerecord:
+    attributes:
+      revolut_x_item:
+        api_key: API key
+        name: Connection name
+        private_key: Private key
+    errors:
+      models:
+        revolut_x_item:
+          attributes:
+            api_key:
+              invalid: must be the 64-character key Revolut X shows
+            private_key:
+              invalid: must be an Ed25519 private key in PEM format

@@ -108,6 +108,19 @@ class SettingsHelperTest < ActionView::TestCase
     assert_equal I18n.t("settings.providers.meta.reconsent_required"), summary[:meta]
   end
 
+  test "provider_summary for revolut_x warns while every connection waits for its API key" do
+    @revolut_x_items = [ OpenStruct.new(credentials_configured?: false) ]
+
+    assert_equal({ status: :warn, meta: I18n.t("settings.providers.meta.api_key_needed") }, provider_summary("revolut_x"))
+  end
+
+  test "provider_summary for revolut_x reports sync-based status once a connection has its API key" do
+    @revolut_x_items = [ OpenStruct.new(credentials_configured?: false), OpenStruct.new(credentials_configured?: true) ]
+    @provider_sync_health = {}
+
+    assert_equal({ status: :ok, last_synced_at: nil }, provider_summary("revolut_x"))
+  end
+
   test "provider_summary for trade_republic asks for a new login once a session has expired" do
     @trade_republic_items = [ TradeRepublicItem.new(session_blob: "session", session_expires_at: 1.minute.ago) ]
     @provider_sync_health = {}

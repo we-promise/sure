@@ -56,7 +56,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
                @truelayer_items @redbark_items @akahu_items @up_items @monobank_items @fio_items
                @enable_banking_items @coinstats_items @coinbase_items @mercury_items @brex_items
                @ibkr_items @snaptrade_items @indexa_capital_items @sophtron_items @binance_items
-               @kraken_items @coinspot_items @questrade_items @wise_items @onchain_wallet_items
+               @kraken_items @revolut_x_items @coinspot_items @questrade_items @wise_items @onchain_wallet_items
                @trade_republic_items @trading212_items @sharesight_items]
     assert_equal Provider::Factory.connection_declarations.size + 1, lists.size
 
@@ -167,6 +167,12 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_response :success
     assert_select "##{dom_id(kraken_item)}"
+  end
+
+  test "index renders revolut x items" do
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(revolut_x_items(:one))}"
   end
 
   test "index titles each ibkr connection with its own name" do
