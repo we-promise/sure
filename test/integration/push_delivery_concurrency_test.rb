@@ -30,7 +30,7 @@ class PushDeliveryConcurrencyTest < ActiveSupport::TestCase
 
     worker = Thread.new do
       ActiveRecord::Base.connection_pool.with_connection do
-        DeliverWebPushNotificationJob.perform_now(push_delivery_id: delivery.id)
+        DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
       end
     rescue => error
       errors << error

@@ -110,19 +110,6 @@ class WebPushSubscription < ApplicationRecord
     user.active? && session.user_id == user_id && !session.expired?
   end
 
-  def eligible_for?(insight)
-    return false unless eligible? && user.preview_features_enabled?
-    return false unless insight.family_id == user.family_id && insight.active?
-    return false unless Insight.about_shared_accounts.exists?(insight.id)
-    return false if insight.insight_type == "budget_on_track"
-
-    if insight.insight_type == "budget_at_risk"
-      user.web_push_budget_warnings_enabled? && (insight.priority_high? || insight.priority_medium?)
-    else
-      insight.priority_high?
-    end
-  end
-
   # Rate limits mirror the controller-level per-user limiter; this per-device
   # cooldown keeps one browser tab with an auto-retrying script from spamming
   # the delivery path.
@@ -136,12 +123,13 @@ class WebPushSubscription < ApplicationRecord
     end
   end
 
-  def channel_ready?
+  def self.channel_ready?
     WebPush::Client.configured?
   end
 
-  def notification_payload(delivery:)
-    I18n.with_locale(user.family.locale) do
+  # The browser adapter for PushDelivery. Lock-screen text stays generic.
+  def deliver(delivery)
+    payload = I18n.with_locale(user.family.locale) do
       {
         title: Rails.configuration.x.product_name,
         body: I18n.t(delivery.insight ? "web_push.notification.body" : "web_push.notification.test_body"),
@@ -149,6 +137,9 @@ class WebPushSubscription < ApplicationRecord
         data: { path: delivery.insight ? "/insights#insight_#{delivery.insight_id}" : "/insights" }
       }
     end
+    WebPush::Client.new.deliver(subscription: self, payload: payload)
+  rescue WebPush::Client::TransientError => e
+    raise PushDelivery::TransientError, e.message
   end
 
   private

@@ -158,13 +158,14 @@ Sure replaces the old row so queued jobs cannot reach the new account through it
 
 ## Alerts, privacy, and delivery behavior
 
-An enabled device receives new or materially resurfaced, high-priority active
-insights visible to the family. Enabling a device does not send a backlog.
-**Budget warnings** is an independent per-user preference, off by default. It
-adds the existing medium- and high-priority `budget_at_risk` insights for near-limit
-and over-budget conditions on that user's enabled browser devices. Turning it
-off suppresses both priorities. `budget_on_track` is never pushed. Existing
-financial generators and category thresholds are unchanged.
+Every channel uses one policy, `Insight#notifies?`: an enabled device receives
+new or materially resurfaced, high-priority active insights visible to the
+family, including over-budget `budget_at_risk` warnings. Enabling a device does
+not send a backlog. **Budget warnings** is a per-user preference, off by
+default, that adds the medium-priority near-limit `budget_at_risk` insights on
+all of that user's push devices, browser and iOS. `budget_on_track` is low
+priority and never pushed. Existing financial generators and category
+thresholds are unchanged.
 
 Lock-screen payloads contain the product name and generic localized text, with
 no balances, categories, accounts, or insight prose. They use the family's

@@ -9,7 +9,7 @@ en:
     session_notice: Notifications stop when you sign out or your session expires after 30 days of inactivity. Open Sure regularly to keep your session active.
     ios_guidance: On iPhone or iPad, open Sure in Safari, choose Share → Add to Home Screen, then enable notifications from the installed app. Requires iOS or iPadOS 16.4 or later.
     budget_title: Budget warnings
-    budget_description: Also notify me when existing budget insights report categories near their limit or over budget. Off by default; applies to my enabled browser devices.
+    budget_description: Also notify me when a budget category nears its limit. Over-budget alerts are always sent. Off by default; applies to all my push devices, browser and iOS.
     notification:
       body: A new financial alert is available. Open Sure to review it.
       test_body: Your test notification has arrived. Open Sure to continue.

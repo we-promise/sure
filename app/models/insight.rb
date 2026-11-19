@@ -112,6 +112,16 @@ class Insight < ApplicationRecord
       .order(generated_at: :desc)
   }
 
+  # The one push policy, read by every channel: high-priority insights, plus
+  # near-limit (medium) budget warnings for users who opt in. Tenancy and
+  # shared-account visibility mirror the feed.
+  def notifies?(user)
+    return false unless active? && user.active? && user.family_id == family_id && user.preview_features_enabled?
+    return false unless priority_high? || (insight_type == "budget_at_risk" && priority_medium? && user.push_budget_warnings_enabled?)
+
+    Insight.about_shared_accounts.exists?(id)
+  end
+
   def mark_read!
     return unless active?
 

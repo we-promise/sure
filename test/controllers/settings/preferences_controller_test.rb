@@ -133,20 +133,20 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
     get settings_preferences_url
     assert_select "[data-controller='web-push']", count: 1
-    assert_select "input[name='user[web_push_budget_warnings_enabled]']"
+    assert_select "input[name='user[push_budget_warnings_enabled]']"
   end
 
   test "budget warnings default off and are saved only for this user" do
     user = users(:family_admin)
     other = users(:family_member)
     user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
-    assert_not user.web_push_budget_warnings_enabled?
-    patch settings_preferences_url, params: { user: { web_push_budget_warnings_enabled: "1" } }
+    assert_not user.push_budget_warnings_enabled?
+    patch settings_preferences_url, params: { user: { push_budget_warnings_enabled: "1" } }
     assert_redirected_to settings_preferences_url
-    assert user.reload.web_push_budget_warnings_enabled?
-    assert_not other.reload.web_push_budget_warnings_enabled?
-    patch settings_preferences_url, params: { user: { web_push_budget_warnings_enabled: "0" } }
-    assert_not user.reload.web_push_budget_warnings_enabled?
+    assert user.reload.push_budget_warnings_enabled?
+    assert_not other.reload.push_budget_warnings_enabled?
+    patch settings_preferences_url, params: { user: { push_budget_warnings_enabled: "0" } }
+    assert_not user.reload.push_budget_warnings_enabled?
   end
 
   test "browser registration inventory contains only current session ids and digests" do
@@ -168,18 +168,18 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
   test "enabling preview and budget warnings together saves both values" do
     user = users(:family_admin)
     user.update!(preferences: {})
-    patch settings_preferences_url, params: { user: { preview_features_enabled: "1", web_push_budget_warnings_enabled: "1" } }
+    patch settings_preferences_url, params: { user: { preview_features_enabled: "1", push_budget_warnings_enabled: "1" } }
     assert_redirected_to settings_preferences_url
     assert user.reload.preview_features_enabled?
-    assert user.web_push_budget_warnings_enabled?
+    assert user.push_budget_warnings_enabled?
   end
 
   test "disabling preview in the request prevents enabling budget warnings" do
     user = users(:family_admin)
     user.update!(preferences: { "preview_features_enabled" => true })
-    patch settings_preferences_url, params: { user: { preview_features_enabled: "0", web_push_budget_warnings_enabled: "1" } }
+    patch settings_preferences_url, params: { user: { preview_features_enabled: "0", push_budget_warnings_enabled: "1" } }
     assert_not user.reload.preview_features_enabled?
-    assert_not user.web_push_budget_warnings_enabled?
+    assert_not user.push_budget_warnings_enabled?
   end
 
   test "admins with preview access see the manual reconciliation toggle" do

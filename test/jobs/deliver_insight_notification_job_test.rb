@@ -275,6 +275,16 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
     assert_equal 1, row.provider_attempts
   end
 
+  test "the budget warning opt in applies to APNs devices too" do
+    @insight.update!(insight_type: "budget_at_risk", priority: "medium")
+    PushDelivery.record_for_insight!(@insight)
+    assert_empty PushDelivery.apns.where(insight: @insight)
+
+    @user.update!(preferences: @user.preferences.merge("push_budget_warnings_enabled" => true))
+    PushDelivery.record_for_insight!(@insight)
+    assert_equal [ @subscription.id ], PushDelivery.apns.where(insight: @insight).pluck(:subscription_id)
+  end
+
   private
     def record_delivery
       PushDelivery.record_for_insight!(@insight)

@@ -16,10 +16,12 @@ class PushDelivery < ApplicationRecord
   CLAIM_TIMEOUT = 15.minutes
   MAX_PROVIDER_ATTEMPTS = 5
 
-  CHANNEL_JOBS = {
-    "PushSubscription" => "DeliverInsightNotificationJob",
-    "WebPushSubscription" => "DeliverWebPushNotificationJob"
-  }.freeze
+  # A channel is a subscription model with .channel_ready?, #eligible? (the
+  # device can still receive) and #deliver(delivery), which returns a result
+  # symbol or raises TransientError. Adding a channel means adding its model here.
+  CHANNELS = %w[PushSubscription WebPushSubscription].freeze
+
+  class TransientError < StandardError; end
 
   scope :apns, -> { where(subscription_type: "PushSubscription") }
   scope :web_push, -> { where(subscription_type: "WebPushSubscription") }
@@ -29,19 +31,10 @@ class PushDelivery < ApplicationRecord
   def self.record_for_insight!(insight)
     return unless insight.active?
 
-    if Apns::Client.available?
-      PushSubscription.joins(:user).recent
-        .where(users: { family_id: insight.family_id, active: true })
+    CHANNELS.map(&:constantize).select(&:channel_ready?).each do |channel|
+      channel.joins(:user).where(users: { family_id: insight.family_id, active: true })
         .includes(:user).find_each do |subscription|
-        for_subscription(subscription, insight) if subscription.eligible_for?(insight)
-      end
-    end
-
-    if WebPush::Client.configured?
-      WebPushSubscription.joins(:user)
-        .where(users: { family_id: insight.family_id, active: true })
-        .includes(:user, :session).find_each do |subscription|
-        for_subscription(subscription, insight) if subscription.eligible_for?(insight)
+        for_subscription(subscription, insight) if subscription.eligible? && insight.notifies?(subscription.user)
       end
     end
   end
@@ -57,7 +50,7 @@ class PushDelivery < ApplicationRecord
     end
   end
 
-  # Both channels enqueue from the same event: unclaimed pending rows and rows
+  # Every channel enqueues from the same event: unclaimed pending rows and rows
   # whose enqueue failed get one claim each.
   def self.enqueue_insight_deliveries(insight)
     deliveries = where(insight: insight, insight_version: insight.notification_version)
@@ -85,7 +78,7 @@ class PushDelivery < ApplicationRecord
   end
 
   def enqueue!(recover: false)
-    return false unless subscription&.channel_ready?
+    return false unless channel_ready?
 
     claimed_at = Time.current
     claimed = with_lock do
@@ -101,7 +94,7 @@ class PushDelivery < ApplicationRecord
     end
     return false unless claimed
 
-    job = deliver_job.constantize.perform_later(push_delivery_id: id)
+    job = DeliverInsightNotificationJob.perform_later(push_delivery_id: id)
     return true if job
     mark_enqueue_failed!(claimed_at)
     false
@@ -113,7 +106,7 @@ class PushDelivery < ApplicationRecord
   # The reservation commits before provider IO. A lost worker therefore spends
   # an attempt, and a recovered ActiveJob cannot start a fresh provider budget.
   def claim_attempt!
-    return unless subscription&.channel_ready?
+    return unless channel_ready?
 
     with_lock do
       next unless status_pending?
@@ -156,7 +149,7 @@ class PushDelivery < ApplicationRecord
       # Registration takes parent then child locks. Cleanup uses that same
       # order, and never holds either lock while contacting the provider.
       self.class.transaction do
-        subscription = WebPushSubscription.lock.find_by(id: subscription_id)
+        subscription = subscription_type.constantize.lock.find_by(id: subscription_id)
         next unless subscription
         with_lock do
           next unless current_attempt?(attempt)
@@ -181,24 +174,21 @@ class PushDelivery < ApplicationRecord
   end
 
   def eligible?
+    return false unless subscription&.eligible?
+
     if insight
-      insight.notification_version == insight_version && subscription&.eligible_for?(insight)
+      insight.notification_version == insight_version && insight.notifies?(subscription.user)
     else
-      # Test sends exist only on the web push channel and expire quickly.
-      subscription.is_a?(WebPushSubscription) && subscription.eligible? &&
-        subscription.user.preview_features_enabled? && created_at > TEST_SEND_WINDOW.ago
+      # Diagnostic test sends expire quickly.
+      subscription.user.preview_features_enabled? && created_at > TEST_SEND_WINDOW.ago
     end
   end
 
-  def payload
-    subscription.notification_payload(delivery: self)
-  end
-
-  def deliver_job
-    CHANNEL_JOBS.fetch(subscription_type)
-  end
-
   private
+    def channel_ready?
+      subscription.present? && subscription.class.channel_ready?
+    end
+
     def current_attempt?(attempt)
       status_pending? && provider_attempts == attempt
     end

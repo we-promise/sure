@@ -981,8 +981,8 @@ class User < ApplicationRecord
     preferences&.dig("disable_modal_click_outside") == true
   end
 
-  def web_push_budget_warnings_enabled?
-    preferences&.dig("web_push_budget_warnings_enabled") == true
+  def push_budget_warnings_enabled?
+    preferences&.dig("push_budget_warnings_enabled") == true
   end
 
   def preview_features_enabled?

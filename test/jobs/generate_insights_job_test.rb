@@ -158,17 +158,17 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     register_web_push(user: user)
     WebPush::Client.stubs(:configured?).returns(true)
     stub_generated([ generated_insight(priority: "high") ])
-    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+    assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
     insight = @family.insights.find_by!(dedup_key: "idle_cash:test-account:2026-07")
     original_version = insight.notification_version
-    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+    assert_no_enqueued_jobs only: DeliverInsightNotificationJob do
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
     assert_equal original_version, insight.reload.notification_version
     insight.update!(status: "expired")
-    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+    assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
     assert_equal original_version + 1, insight.reload.notification_version
@@ -182,7 +182,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     insight = @family.insights.find_by!(dedup_key: "idle_cash:test-account:2026-07")
     version = insight.notification_version
     stub_generated([ generated_insight(balance: 7500.0, priority: "high") ])
-    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+    assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
     assert_equal version + 1, insight.reload.notification_version
@@ -193,7 +193,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     subscription = register_web_push(user: @family.users.first)
     WebPush::Client.stubs(:configured?).returns(true)
     stub_generated([ generated_insight(priority: "high") ])
-    WebPushSubscription.any_instance.stubs(:eligible_for?).with do |_insight|
+    WebPushSubscription.any_instance.stubs(:eligible?).with do
       WebPushSubscription.where(id: subscription.id).delete_all
       true
     end.returns(true)
@@ -210,12 +210,12 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     stub_generated([ generated_insight(priority: "high") ])
     Turbo::StreamsChannel.stubs(:broadcast_replace_to).raises(StandardError, "Broadcast unavailable")
 
-    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+    assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
       assert_raises(StandardError) { GenerateInsightsJob.perform_now(family_id: @family.id) }
     end
 
     Turbo::StreamsChannel.stubs(:broadcast_replace_to).returns(nil)
-    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+    assert_no_enqueued_jobs only: DeliverInsightNotificationJob do
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
     assert_equal 1, subscription.push_deliveries.count
@@ -228,7 +228,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     PushDelivery.stubs(:for_subscription).raises(ActiveRecord::RecordInvalid.new(PushDelivery.new))
 
     assert_no_difference [ "Insight.count", "PushDelivery.count" ] do
-      assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      assert_no_enqueued_jobs only: DeliverInsightNotificationJob do
         GenerateInsightsJob.perform_now(family_id: @family.id)
       end
     end
@@ -246,7 +246,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     PushDelivery.stubs(:for_subscription).raises(ActiveRecord::RecordInvalid.new(PushDelivery.new))
 
     assert_no_difference "PushDelivery.count" do
-      assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      assert_no_enqueued_jobs only: DeliverInsightNotificationJob do
         GenerateInsightsJob.perform_now(family_id: @family.id)
       end
     end
@@ -261,7 +261,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     insight = @family.insights.find_by!(dedup_key: "idle_cash:test-account:2026-07")
     subscription = register_web_push(user: @family.users.first)
 
-    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+    assert_no_enqueued_jobs only: DeliverInsightNotificationJob do
       PushDelivery.enqueue_insight_deliveries(insight)
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
@@ -272,13 +272,13 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     user = @family.users.first
     subscription = register_web_push(user: user)
     WebPush::Client.stubs(:configured?).returns(true)
-    generated = generated_insight(priority: "high").with(insight_type: "budget_at_risk")
+    generated = generated_insight(priority: "medium").with(insight_type: "budget_at_risk")
     stub_generated([ generated ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
     insight = @family.insights.find_by!(dedup_key: generated.dedup_key)
-    user.update!(preferences: user.preferences.merge("web_push_budget_warnings_enabled" => true))
+    user.update!(preferences: user.preferences.merge("push_budget_warnings_enabled" => true))
 
-    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+    assert_no_enqueued_jobs only: DeliverInsightNotificationJob do
       PushDelivery.enqueue_insight_deliveries(insight)
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end

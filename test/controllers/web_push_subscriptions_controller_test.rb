@@ -74,7 +74,7 @@ class WebPushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
 
   test "testing the current device reports queued rather than provider accepted and is throttled" do
     device = register_web_push(user: @user, session: @session)
-    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+    assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
       post "/web_push_subscriptions/#{device.id}/test_notification", as: :json
       assert_response :accepted
       assert_equal "queued", response.parsed_body.fetch("status")
@@ -118,7 +118,7 @@ class WebPushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
       .with { |key, *| key.include?("web-push-test") && key.end_with?(@user.id) }
       .returns(1, 2, 3)
     devices = 3.times.map { |i| register_web_push(user: @user, session: @session, endpoint: "https://fcm.googleapis.com/rate-#{i}") }
-    assert_enqueued_jobs 2, only: DeliverWebPushNotificationJob do
+    assert_enqueued_jobs 2, only: DeliverInsightNotificationJob do
       devices.first(2).each do |device|
         post "/web_push_subscriptions/#{device.id}/test_notification", as: :json
         assert_response :accepted

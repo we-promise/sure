@@ -17,7 +17,7 @@ class Settings::PreferencesController < ApplicationController
   # UsersController#update flow (which expects a full user form payload).
   def update
     @user = Current.user
-    user_params = params.permit(user: [ :preview_features_enabled, :web_push_budget_warnings_enabled ]).fetch(:user, {})
+    user_params = params.permit(user: [ :preview_features_enabled, :push_budget_warnings_enabled ]).fetch(:user, {})
     preview_changed = false
 
     @user.with_locked_preferences do |updated_prefs|
@@ -26,9 +26,9 @@ class Settings::PreferencesController < ApplicationController
         preview_changed = updated_prefs["preview_features_enabled"] != enabled
         updated_prefs["preview_features_enabled"] = enabled
       end
-      if user_params.key?(:web_push_budget_warnings_enabled) && updated_prefs["preview_features_enabled"] == true
-        updated_prefs["web_push_budget_warnings_enabled"] =
-          ActiveModel::Type::Boolean.new.cast(user_params[:web_push_budget_warnings_enabled])
+      if user_params.key?(:push_budget_warnings_enabled) && updated_prefs["preview_features_enabled"] == true
+        updated_prefs["push_budget_warnings_enabled"] =
+          ActiveModel::Type::Boolean.new.cast(user_params[:push_budget_warnings_enabled])
       end
     end
 

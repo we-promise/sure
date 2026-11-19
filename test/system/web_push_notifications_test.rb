@@ -30,7 +30,7 @@ class WebPushNotificationsTest < ApplicationSystemTestCase
     client = mock
     WebPush::Client.expects(:new).returns(client)
     client.expects(:deliver).returns(:accepted)
-    DeliverWebPushNotificationJob.perform_now(push_delivery_id: delivery.id)
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
     assert_text I18n.t("web_push.status.accepted"), wait: 10
     capture_notification_card
 
@@ -42,9 +42,9 @@ class WebPushNotificationsTest < ApplicationSystemTestCase
 
   test "budget warning opt in is saved independently from device registration" do
     visit settings_preferences_path
-    find("#user_web_push_budget_warnings_enabled + label").click
-    assert_selector "#user_web_push_budget_warnings_enabled[checked]"
-    assert @user.reload.web_push_budget_warnings_enabled?
+    find("#user_push_budget_warnings_enabled + label").click
+    assert_selector "#user_push_budget_warnings_enabled[checked]"
+    assert @user.reload.push_budget_warnings_enabled?
     assert_empty @user.web_push_subscriptions
   end
 
