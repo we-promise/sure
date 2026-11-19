@@ -124,7 +124,26 @@ class Security::LookThroughTest < ActiveSupport::TestCase
   end
 
   test "a fund with no weighted rows reports a decimal nothing unlisted" do
-    assert_kind_of BigDecimal, Security::Constituent.fund_shares([]).unlisted
+    unlisted = Security::Constituent.fund_shares([]).unlisted
+    assert_kind_of BigDecimal, unlisted
+    assert_equal BigDecimal("0"), unlisted
+  end
+
+  # A bulk insert skips the model's validation, so the column refuses a
+  # negative weight itself. Zero and an unknown weight are still stored.
+  test "the database refuses a negative weight a bulk insert would otherwise store" do
+    now = Time.current
+    row = ->(ticker, weight) { { security_id: @security.id, ticker: ticker, weight: weight, created_at: now, updated_at: now } }
+
+    error = assert_raises(ActiveRecord::StatementInvalid) do
+      Security::Constituent.transaction(requires_new: true) do
+        Security::Constituent.insert_all([ row.call("SHORT", -2) ])
+      end
+    end
+    assert_match "chk_security_constituents_weight_nonnegative", error.message
+    assert_difference -> { @security.constituents.count }, 2 do
+      Security::Constituent.insert_all([ row.call("ZERO", 0), row.call("UNKNOWN", nil) ])
+    end
   end
 
   test "destroying a security removes its constituents in one statement" do

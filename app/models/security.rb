@@ -325,7 +325,7 @@ class Security < ApplicationRecord
   # fund is unlisted, not the listed names' to carry. The rule lives in
   # `Security::Constituent.fund_shares`.
   def look_through_weights
-    Security::Constituent.fund_shares(constituents.where.not(weight: nil).to_a).listed
+    Security::Constituent.fund_shares(constituents.to_a).listed
   end
 
   def to_combobox_option
