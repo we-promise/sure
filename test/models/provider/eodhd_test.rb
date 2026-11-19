@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Provider::EodhdTest < ActiveSupport::TestCase
+  include ProviderTestHelper
+
   FUNDAMENTALS_URL = "https://eodhd.com/api/fundamentals/AAPL.US".freeze
 
   setup do
@@ -599,12 +601,16 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     @provider.stubs(:enforce_daily_limit!)
     @provider.stubs(:throttle_request)
     Faraday::Retry::Middleware.any_instance.stubs(:sleep)
-    stub_request(:get, %r{\Ahttps://eodhd\.com/}).to_timeout
+    search = stub_request(:get, %r{\Ahttps://eodhd\.com/api/search/TEST}).to_timeout
+    errors = capture_transformed_errors(@provider)
 
     response = @provider.search_securities("TEST")
 
     assert_not response.success?
     assert_instance_of Provider::Eodhd::Error, response.error
+    assert_requested search, at_least_times: 1
+    assert_kind_of Faraday::ConnectionFailed, errors.last
+    assert_kind_of Net::OpenTimeout, errors.last.wrapped_exception
   end
 
   private
