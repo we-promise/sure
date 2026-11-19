@@ -1,12 +1,20 @@
 # frozen_string_literal: true
 
 # Fetches the API key's balances and stores them, valued in USD, on the
-# connection's single account. One API key is one Revolut X (sub-)account,
+# connection's single account, along with the raw transaction history.
+# One API key is one Revolut X (sub-)account,
 # so a connection always has exactly one RevolutXAccount.
 class RevolutXItem::Importer
   ACCOUNT_ID = "default"
   # Quotes tried when an asset has no USD pair, converted to USD via ExchangeRate.
   FALLBACK_QUOTES = %w[EUR GBP].freeze
+
+  TRANSACTIONS_WINDOW_MS = 30 * 86_400_000
+  TRANSACTIONS_PAGE_LIMIT = 1900
+  INCREMENTAL_OVERLAP = 3.days
+  DEFAULT_HISTORY = 2.years
+
+  class RepeatedCursorError < StandardError; end
 
   attr_reader :revolut_x_item, :revolut_x_provider
 
@@ -34,10 +42,80 @@ class RevolutXItem::Importer
     total_usd = assets.sum { |asset| asset["amount_usd"].to_d }
 
     account = upsert_account(assets, total_usd)
+    import_transactions(account)
     { success: true, account_id: account.id, assets_imported: assets.size, total_usd: total_usd }
   end
 
   private
+
+    # Walks back from now in 30-day windows (the API's maximum), newest first.
+    # The cursor only advances once every window and page arrived, so a walk
+    # cut short by a rate limit is redone from the same point next sync.
+    def import_transactions(account)
+      now = Time.current
+      stored = account.raw_transactions_payload.to_h.fetch("transactions", {})
+      fetched = {}
+
+      complete = begin
+        window_end = to_ms(now)
+        floor = transactions_floor_ms(stored)
+        while window_end > floor
+          window_start = [ window_end - TRANSACTIONS_WINDOW_MS, floor ].max
+          fetch_window(window_start, window_end) { |row| fetched[row["id"]] = row }
+          window_end = window_start
+        end
+        true
+      rescue Provider::RevolutX::RateLimitError, Provider::RevolutX::ApiError, RepeatedCursorError,
+             SystemCallError, *Provider::HttpTransport::TRANSPORT_ERRORS => e
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "warn",
+          message: "Revolut X transaction history stopped early: #{e.message}",
+          source: self.class.name,
+          provider_key: "revolut_x",
+          family: revolut_x_item.family,
+          account_provider: account.account_provider,
+          metadata: { revolut_x_item_id: revolut_x_item.id, error_class: e.class.name, rows_fetched: fetched.size }
+        )
+        false
+      end
+
+      account.update!(raw_transactions_payload: { "transactions" => stored.merge(fetched), "fetched_at" => now.iso8601 })
+      revolut_x_item.update!(transactions_synced_through: now) if complete
+    end
+
+    def fetch_window(start_ms, end_ms)
+      cursor = nil
+      seen = Set.new
+
+      loop do
+        page = revolut_x_provider.get_transactions(start_date: start_ms, end_date: end_ms, cursor: cursor, limit: TRANSACTIONS_PAGE_LIMIT).to_h
+        Array(page["data"]).each { |row| yield row if row.is_a?(Hash) && row["id"].present? }
+
+        cursor = page.dig("metadata", "next_cursor")
+        break if cursor.blank?
+        raise RepeatedCursorError, "cursor repeated" unless seen.add?(cursor)
+      end
+    end
+
+    # First sync: back to the oldest sub-account, or sync_start_date when that
+    # is later. Later syncs overlap the last walk by INCREMENTAL_OVERLAP, and
+    # reach further back for any row still pending so its outcome is picked up.
+    def transactions_floor_ms(stored)
+      synced_through = revolut_x_item.transactions_synced_through
+      if synced_through
+        oldest_pending = stored.values.select { |row| row["status"] == "pending" }.filter_map { |row| row["created_date"]&.to_i }.min
+        return [ to_ms(synced_through - INCREMENTAL_OVERLAP), oldest_pending ].compact.min
+      end
+
+      created = Array(revolut_x_item.raw_payload.to_h["sub_accounts"]).filter_map { |sub_account| sub_account["created_date"]&.to_i }.min
+      start = revolut_x_item.sync_start_date && to_ms(revolut_x_item.sync_start_date)
+      [ created, start ].compact.max || to_ms(DEFAULT_HISTORY.ago)
+    end
+
+    def to_ms(time)
+      (time.to_r * 1000).to_i
+    end
 
     def parse_asset(balance, tickers)
       symbol = balance["currency"].to_s.upcase

@@ -88,6 +88,18 @@ class RevolutXAccount::ProcessorTest < ActiveSupport::TestCase
     assert_match "GBP", DebugLogEntry.where(provider_key: "revolut_x").last.message
   end
 
+  test "imports the stored transaction history" do
+    account = import_and_link
+    @revolut_x_account.update!(raw_transactions_payload: {
+      "transactions" => JSON.parse(file_fixture("revolut_x/transactions.json").read)["data"].index_by { |row| row["id"] }
+    })
+    Security.any_instance.stubs(:import_provider_prices).returns(0)
+
+    RevolutXAccount::Processor.new(@revolut_x_account).process
+
+    assert_equal 3, account.entries.where(source: "revolut_x").count
+  end
+
   private
 
     def reimport(balances)
@@ -105,6 +117,7 @@ class RevolutXAccount::ProcessorTest < ActiveSupport::TestCase
       @tickers = tickers = payload("tickers")
       tickers["data"] << { "symbol" => "ETH/USD", "mid" => "3000.00" }
       provider.stubs(:get_tickers).returns(tickers)
+      provider.stubs(:get_transactions).returns({ "data" => [], "metadata" => {} })
       RevolutXItem::Importer.new(@item, revolut_x_provider: provider).import
 
       @revolut_x_account = @item.revolut_x_accounts.sole

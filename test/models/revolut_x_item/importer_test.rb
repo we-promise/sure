@@ -14,6 +14,7 @@ class RevolutXItem::ImporterTest < ActiveSupport::TestCase
     @tickers = payload("tickers")
     @tickers["data"] << { "symbol" => "ETH/USD", "mid" => "3000.00", "last_price" => "2999.00" }
     @provider.stubs(:get_tickers).returns(@tickers)
+    @provider.stubs(:get_transactions).returns(transactions_page([]))
   end
 
   test "stores one USD account valued from balances and tickers" do
@@ -69,10 +70,164 @@ class RevolutXItem::ImporterTest < ActiveSupport::TestCase
     assert_equal (1.35.to_d * 120_000) + 5500.50.to_d, account.current_balance
   end
 
+  # 2025-03-01T00:00:00Z, and 2024-12-01T00:00:00Z: the oldest sub-account in sub_accounts.json.
+  NOW_MS = 1_740_787_200_000
+  FLOOR_MS = 1_733_011_200_000
+  WINDOW_MS = 2_592_000_000
+
+  test "first sync walks back from now to the oldest sub-account in 30-day windows" do
+    windows = record_windows
+
+    travel_to(Time.at(NOW_MS / 1000).utc) { import }
+
+    assert_equal [
+      [ NOW_MS - WINDOW_MS, NOW_MS ],
+      [ NOW_MS - 2 * WINDOW_MS, NOW_MS - WINDOW_MS ],
+      [ FLOOR_MS, NOW_MS - 2 * WINDOW_MS ]
+    ], windows
+    assert windows.each_cons(2).all? { |newer, older| older[1] == newer[0] }
+    assert windows.all? { |from, to| to - from <= WINDOW_MS }
+    assert_equal Time.at(NOW_MS / 1000).utc, @item.reload.transactions_synced_through
+  end
+
+  test "a later sync_start_date raises the history floor" do
+    @item.update!(sync_start_date: Time.utc(2025, 2, 1))
+    windows = record_windows
+
+    travel_to(Time.at(NOW_MS / 1000).utc) { import }
+
+    assert_equal [ [ Time.utc(2025, 2, 1).to_i * 1000, NOW_MS ] ], windows
+  end
+
+  test "follows next_cursor within a window, always asking for 1900 rows" do
+    calls = []
+    @provider.stubs(:get_transactions).with do |**args|
+      calls << args
+      true
+    end.returns(transactions_page([ row("t1") ], next_cursor: "c1"), transactions_page([ row("t2") ], next_cursor: ""))
+    @item.update!(sync_start_date: 10.days.ago)
+
+    import
+
+    assert_equal 2, calls.size
+    assert_nil calls.first[:cursor]
+    assert_equal "c1", calls.second[:cursor]
+    assert calls.all? { |args| args[:limit] == 1900 }
+    assert_equal %w[t1 t2], stored_transactions.keys.sort
+  end
+
+  test "a repeated cursor aborts the walk without advancing it" do
+    @provider.stubs(:get_transactions).returns(transactions_page([ row("t1") ], next_cursor: "c1"))
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "revolut_x").count }, 1 do
+      import
+    end
+
+    assert_nil @item.reload.transactions_synced_through
+    assert_equal %w[t1], stored_transactions.keys
+  end
+
+  test "a later sync starts 3 days before the last completed walk" do
+    synced_through = Time.utc(2025, 2, 20)
+    @item.update!(transactions_synced_through: synced_through)
+    windows = record_windows
+
+    travel_to(Time.at(NOW_MS / 1000).utc) { import }
+
+    assert_equal [ [ (synced_through - 3.days).to_i * 1000, NOW_MS ] ], windows
+  end
+
+  test "a later sync reaches back to the oldest stored pending row" do
+    synced_through = Time.utc(2025, 2, 20)
+    pending_at = ((synced_through - 3.days - 10.days).to_i * 1000)
+    @item.update!(transactions_synced_through: synced_through)
+    import
+    @item.revolut_x_accounts.sole.update!(raw_transactions_payload: {
+      "transactions" => { "p1" => row("p1", status: "pending", created_date: pending_at) }
+    })
+    windows = record_windows
+
+    travel_to(Time.at(NOW_MS / 1000).utc) { import }
+
+    assert_equal pending_at, windows.last.first
+  end
+
+  test "a rate limit mid-walk keeps fetched rows, does not advance, and the balances still import" do
+    @provider.stubs(:get_transactions)
+      .returns(transactions_page([ row("t1") ]))
+      .then.raises(Provider::RevolutX::RateLimitError, "Revolut X rate limit exceeded")
+
+    result = nil
+    assert_difference -> { DebugLogEntry.where(provider_key: "revolut_x").count }, 1 do
+      result = travel_to(Time.at(NOW_MS / 1000).utc) { import }
+    end
+
+    assert result[:success]
+    assert @item.revolut_x_accounts.sole.current_balance.positive?
+    assert_nil @item.reload.transactions_synced_through
+    assert_equal %w[t1], stored_transactions.keys
+  end
+
+  test "a network error mid-walk keeps fetched rows, does not advance, and the balances still import" do
+    @provider.stubs(:get_transactions)
+      .returns(transactions_page([ row("t1") ]))
+      .then.raises(EOFError)
+
+    result = nil
+    assert_difference -> { DebugLogEntry.where(provider_key: "revolut_x").count }, 1 do
+      result = travel_to(Time.at(NOW_MS / 1000).utc) { import }
+    end
+
+    assert result[:success]
+    assert_nil @item.reload.transactions_synced_through
+    assert_equal %w[t1], stored_transactions.keys
+  end
+
+  test "rows merge by id, a newer copy replacing the stored one" do
+    @provider.stubs(:get_transactions).returns(transactions_page([ row("t1", status: "pending"), row("t2") ]))
+    import
+    @provider.stubs(:get_transactions).returns(transactions_page([ row("t1", status: "completed") ]))
+
+    import
+
+    assert_equal %w[t1 t2], stored_transactions.keys.sort
+    assert_equal "completed", stored_transactions["t1"]["status"]
+  end
+
+  test "authentication errors propagate" do
+    @provider.stubs(:get_transactions).raises(Provider::RevolutX::AuthenticationError, "bad key")
+
+    assert_raises(Provider::RevolutX::AuthenticationError) { import }
+  end
+
   private
 
     def import
       RevolutXItem::Importer.new(@item, revolut_x_provider: @provider).import
+    end
+
+    def record_windows
+      windows = []
+      @provider.stubs(:get_transactions).with do |start_date:, end_date:, **|
+        windows << [ start_date, end_date ]
+        true
+      end.returns(transactions_page([]))
+      windows
+    end
+
+    def stored_transactions
+      @item.revolut_x_accounts.sole.reload.raw_transactions_payload["transactions"]
+    end
+
+    def row(id, status: "completed", created_date: NOW_MS - 1000)
+      {
+        "id" => id, "status" => status, "type" => "reward", "created_date" => created_date,
+        "destination" => { "amount" => "1", "currency" => "ETH", "account" => { "type" => "revolut_x" } }
+      }
+    end
+
+    def transactions_page(rows, next_cursor: nil)
+      { "data" => rows, "metadata" => { "timestamp" => NOW_MS, "next_cursor" => next_cursor } }
     end
 
     def payload(name)
