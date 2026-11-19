@@ -299,9 +299,9 @@ module Security::Provided
     # nothing is known yet:
     # - `supplies_classification?` first: a provider with no sector to give
     #   never fills the columns below, so without it the gate never closes.
-    # - No source and no sector or industry: an ETF the type map leaves without
-    #   a source, or cash and crypto that carry a `default` source and no
-    #   sector, are not asked again for an answer no provider has.
+    # - No source: cash and crypto carry a `default` source, which no provider
+    #   improves on. A sector alone does not close the gate, since it leaves
+    #   the asset class unanswered.
     # - Not yet asked of this provider: an answer that holds nothing (a bond,
     #   an ETF with no sector) is stamped with the provider that gave it, so
     #   that provider is asked once. A failed answer is not stamped, so it is
@@ -310,7 +310,7 @@ module Security::Provided
     #   security with no `price_provider`) both open the gate.
     classification_provider_key = self.class.provider_key_for(price_data_provider)
     wants_classification = include_classification && price_data_provider.supplies_classification? &&
-      !classification_locked? && classification_source.blank? && sector.blank? && industry.blank? &&
+      !classification_locked? && classification_source.blank? &&
       (classification_fetched_at.nil? || classification_fetched_from != classification_provider_key)
 
     unless has_metadata && !wants_classification && !clear_cache
@@ -330,12 +330,13 @@ module Security::Provided
           attrs[:name]        = response.data.name    if response.data.name.present?
           attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
           attrs[:website_url] = response.data.links   if response.data.links.present?
-          attrs.merge!(classification_attributes_from(response.data))
+          attrs.merge!(classification_attributes_from(response.data, classifies: price_data_provider.supplies_classification?))
           stored = attrs.empty? || update(attrs)
           # Recorded only when the answer was stored. `update` runs the model's
           # validations, and a row can hold a value they now refuse; stamping
-          # anyway would close the gate on an answer that never landed.
-          if wants_classification && stored
+          # anyway would close the gate on an answer that never landed. A lock
+          # set while the provider answered rejects the answer the same way.
+          if wants_classification && stored && !classification_locked?
             update_columns(classification_fetched_at: Time.current, classification_fetched_from: classification_provider_key)
           end
         end
@@ -441,8 +442,11 @@ module Security::Provided
 
   # The provider is the second-weakest writer: it may fill what nothing has
   # answered, and may replace a `default`, but never a `manual` classification,
-  # and never anything at all on a locked security.
-  def classification_attributes_from(data)
+  # and never anything at all on a locked security. Only a provider that
+  # classifies may claim the classification: an instrument type from one that
+  # does not (Twelve Data) would stamp `provider` as the source and keep a
+  # capable provider from ever being asked.
+  def classification_attributes_from(data, classifies: true)
     return {} if classification_locked?
 
     kind = data.kind.to_s.downcase
@@ -466,7 +470,7 @@ module Security::Provided
     attrs[:sector] = provided_sector if provided_sector.present? && sector.blank?
     attrs[:industry] = data.industry if data.industry.present? && industry.blank?
 
-    return attrs unless classification_source.in?([ nil, "default" ])
+    return attrs unless classifies && classification_source.in?([ nil, "default" ])
 
     if mapped_class.present?
       attrs[:asset_class] = mapped_class
@@ -501,7 +505,8 @@ module Security::Provided
     return nil if weights[:leveraged_or_inverse]
 
     classes = weights[:asset_class] || {}
-    return nil if classes.values.any? { |percent| percent < -10 || percent > 110 }
+    tolerance = Provider::Eodhd::FUND_WEIGHT_TOLERANCE
+    return nil if classes.values.any? { |percent| percent < -tolerance || percent > 100 + tolerance }
 
     weights[:category_asset_class].presence || dominant_fund_weight(classes.except("liquidity"))
   end

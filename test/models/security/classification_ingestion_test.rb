@@ -36,13 +36,16 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
   end
 
   # The mirror. Once the provider has answered, the gate closes, so this is one
-  # call per security rather than one per sync forever.
-  test "a security that already has sector and industry is not asked again" do
+  # call per security rather than one per sync forever -- even when the answer
+  # left the asset class blank.
+  test "a security already asked of its provider is not asked again" do
     @security.update!(
       name: "Apple", logo_url: "https://example.com/aapl.png",
       sector: "Technology", industry: "Consumer Electronics"
     )
+    @security.update_columns(classification_fetched_at: 1.day.ago, classification_fetched_from: "eodhd")
     provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::Eodhd)
     provider.expects(:fetch_security_info).never
     @security.stubs(:price_data_provider).returns(provider)
 
@@ -50,8 +53,8 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
   end
 
   # An ETF is deliberately left without an asset class -- the wrapper does not
-  # imply one -- so it never gets a source. What the provider supplies, its
-  # sector, closes the gate instead.
+  # imply one -- so it never gets a source. The record of the answer closes the
+  # gate instead.
   test "a wrapper the type map will not classify is still only asked once" do
     @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
     import(info(kind: "ETF", sector: "Technology", industry: "Consumer Electronics"))
@@ -59,6 +62,7 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
     assert_nil @security.reload.classification_source, "an ETF is deliberately left unsourced"
 
     provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
     provider.expects(:fetch_security_info).never
     @security.stubs(:price_data_provider).returns(provider)
 
@@ -393,7 +397,7 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
   # what the provider now has.
   test "clear_cache asks a recorded security again" do
     @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
-    @security.update_column(:classification_fetched_at, 1.day.ago)
+    @security.update_columns(classification_fetched_at: 1.day.ago, classification_fetched_from: "eodhd")
     provider = capable_provider("provider")
     provider.stubs(:class).returns(Provider::Eodhd)
     provider.expects(:fetch_security_info).once.returns(provider_success_response(info(sector: "Technology")))
@@ -525,6 +529,80 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
     @security.reload
     assert_nil @security.asset_class
     assert_nil @security.sector
+  end
+
+  # A lock set mid-answer rejects the sector, so nothing is stored. Stamping
+  # that empty write anyway would keep the security from being asked again
+  # once the lock is lifted.
+  test "a lock set while the provider answers leaves no record" do
+    answer_after(-> { Security.where(id: @security.id).update_all(classification_locked: true) },
+                 info(sector: "Technology"))
+
+    @security.import_provider_details(include_classification: true)
+
+    assert_nil @security.reload.classification_fetched_at
+  end
+
+  # ------------------------------- a provider that cannot classify claims none
+
+  # Twelve Data reports an instrument type but no sector. Mapping that type to
+  # an asset class stamped `provider` as the source, which closed the gate for
+  # good: a capable provider configured later was never asked.
+  test "an instrument type from a provider that cannot classify claims no classification" do
+    @security.update!(name: nil, logo_url: nil, website_url: nil)
+    incapable = capable_provider("incapable", classification: false)
+    incapable.stubs(:class).returns(Provider::TwelveData)
+    incapable.expects(:fetch_security_info).once.returns(provider_success_response(info(kind: "Common Stock")))
+    @security.stubs(:price_data_provider).returns(incapable)
+
+    @security.import_provider_details(include_classification: true)
+
+    @security.reload
+    assert_nil @security.asset_class
+    assert_nil @security.classification_source
+  end
+
+  test "a capable provider is asked after one that cannot classify reported the instrument type" do
+    @security.update!(name: nil, logo_url: nil, website_url: nil)
+    incapable = capable_provider("incapable", classification: false)
+    incapable.stubs(:class).returns(Provider::TwelveData)
+    incapable.stubs(:fetch_security_info).returns(
+      provider_success_response(Provider::SecurityConcept::SecurityInfo.new(
+        symbol: "AAPL", name: "Apple", links: "https://apple.com", logo_url: nil, description: nil,
+        kind: "Common Stock", exchange_operating_mic: "XNAS"
+      ))
+    )
+    @security.stubs(:price_data_provider).returns(incapable)
+    @security.import_provider_details(include_classification: true)
+
+    capable = capable_provider("capable")
+    capable.stubs(:class).returns(Provider::Eodhd)
+    capable.expects(:fetch_security_info).once.returns(provider_success_response(info(kind: "Common Stock", sector: "Technology")))
+    @security.stubs(:price_data_provider).returns(capable)
+    @security.import_provider_details(include_classification: true)
+
+    @security.reload
+    assert_equal "Technology", @security.sector
+    assert_equal "equity", @security.asset_class
+    assert_equal "provider", @security.classification_source
+  end
+
+  # A sector with no asset class -- written by a provider that mapped no
+  # class, or approved on its own -- leaves the asset class unanswered, so a
+  # capable provider is still asked, once.
+  test "a security with a sector but no asset class is asked once by a capable provider" do
+    @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png", sector: "Technology")
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::Eodhd)
+    provider.expects(:fetch_security_info).once.returns(provider_success_response(info(kind: "Common Stock", sector: "Information Technology")))
+    @security.stubs(:price_data_provider).returns(provider)
+
+    @security.import_provider_details(include_classification: true)
+    @security.import_provider_details(include_classification: true)
+
+    @security.reload
+    assert_equal "equity", @security.asset_class
+    assert_equal "Technology", @security.sector, "a sector already set is not restated"
   end
 
   private

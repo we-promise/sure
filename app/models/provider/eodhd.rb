@@ -422,7 +422,8 @@ class Provider::Eodhd < Provider
       fund_data = {} unless fund_data.is_a?(Hash)
       general = parsed["General"].is_a?(Hash) ? parsed["General"] : {}
 
-      [ general["Category"], fund_data["Category"], fund_data["Fund_Category"] ].find { |value| value.is_a?(String) && value.present? }
+      [ general["Category"], general["Fund_Category"], fund_data["Category"], fund_data["Fund_Category"] ]
+        .find { |value| value.is_a?(String) && value.present? }
     end
 
     # Every net percentage in the allocation, mapped or not ("Other" counts too).
@@ -438,12 +439,24 @@ class Provider::Eodhd < Provider
 
     # Sums each entry's percentage into its mapped bucket. With no mapping the
     # provider's own label is the bucket (sectors are free text).
+    #
+    # Rows come in three shapes: keyed by label (ETF_Data), a list under a
+    # group, or indexed ("0", "1") either at the top level or under a group
+    # (MutualFund_Data). An indexed or listed row names itself in Name or Type.
     def sum_fund_weights(section, mapping, value_keys)
       entries =
         case section
         when Hash
           section.flat_map do |label, value|
-            value.is_a?(Array) ? value.filter_map { |row| [ row["Name"] || row["Type"], row ] if row.is_a?(Hash) } : [ [ label, value ] ]
+            if value.is_a?(Array)
+              named_fund_rows(value)
+            elsif value.is_a?(Hash) && value.values.any? { |child| child.is_a?(Hash) }
+              named_fund_rows(value.values)
+            elsif value.is_a?(Hash) && label.to_s.match?(/\A\d+\z/)
+              named_fund_rows([ value ])
+            else
+              [ [ label, value ] ]
+            end
           end
         else
           []
@@ -458,6 +471,10 @@ class Provider::Eodhd < Provider
 
         totals[bucket] += percent.to_f
       end.to_h
+    end
+
+    def named_fund_rows(rows)
+      rows.filter_map { |row| [ row["Name"] || row["Type"], row ] if row.is_a?(Hash) }
     end
 
     # Cache key for tracking daily API usage
