@@ -103,6 +103,22 @@ de:
       unlink_to_move: Um ein anderes Konto zu verknüpfen, löse die bestehende Verknüpfung zuerst über das Aktionsmenü des Kontos.
     setup_accounts:
       account_type_label: 'Kontoart:'
+      account_types:
+        credit_card: Kreditkarte
+        depository: Giro- oder Sparkonto
+        investment: Depot/Anlagekonto
+        loan: Darlehen oder Baufinanzierung
+        other_asset: Sonstiges Vermögen
+        skip: Dieses Konto überspringen
+      select_subtype: Kontotyp auswählen
+      select_type: Art auswählen
+      subtype_labels:
+        depository: 'Kontotyp:'
+        investment: 'Anlagetyp:'
+        loan: 'Darlehensart:'
+      subtype_messages:
+        credit_card: Kreditkarten werden automatisch als Kreditkartenkonten eingerichtet.
+        other_asset: Sonstiges Vermögen wird als allgemeiner Vermögenswert eingerichtet.
       balance: Saldo
       cancel: Abbrechen
       choose_account_type: 'Wähl für jedes Enable-Banking-Konto die passende Kontoart:'
