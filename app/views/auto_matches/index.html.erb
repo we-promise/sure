@@ -1,32 +1,21 @@
 <%= content_for :page_title, t("auto_matches.title") %>
 
 <div class="space-y-4 flex flex-col">
-  <div class="bg-container rounded-xl shadow-border-xs p-4">
-    <div class="flex items-center justify-between">
-      <div>
-        <p class="text-sm font-medium text-primary"><%= t("auto_matches.settings.enable_label") %></p>
-        <p class="text-xs text-secondary"><%= t("auto_matches.settings.enable_description") %></p>
-        <% unless Current.user.admin? %>
-          <p class="text-xs text-subdued"><%= t("auto_matches.settings.admin_only") %></p>
-        <% end %>
-      </div>
-      <% toggle = render DS::Toggle.new(
+  <%= render "auto_matches/setting_toggle",
         id: "auto_match_transfers_enabled",
-        name: "toggle_display",
+        param: :auto_match_transfers_disabled,
+        label: t("auto_matches.settings.enable_label"),
+        description: t("auto_matches.settings.enable_description"),
         checked: !@family.auto_match_transfers_disabled?,
-        disabled: !Current.user.admin?,
-        data: { auto_submit_form_target: "auto" }
-      ) %>
-      <% if Current.user.admin? %>
-        <%= form_with url: update_settings_auto_matches_path, method: :patch, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
-          <%= f.hidden_field :auto_match_transfers_disabled, value: @family.auto_match_transfers_disabled? ? "false" : "true" %>
-          <%= toggle %>
-        <% end %>
-      <% else %>
-        <%= toggle %>
-      <% end %>
-    </div>
-  </div>
+        submit_value: @family.auto_match_transfers_disabled? ? "false" : "true" %>
+
+  <%= render "auto_matches/setting_toggle",
+        id: "require_transfer_match_confirmation",
+        param: :require_transfer_match_confirmation,
+        label: t("auto_matches.settings.confirm_label"),
+        description: t("auto_matches.settings.confirm_description"),
+        checked: @family.require_transfer_match_confirmation?,
+        submit_value: @family.require_transfer_match_confirmation? ? "false" : "true" %>
 
   <div class="bg-container rounded-xl shadow-border-xs p-4">
     <% if @pending_transfers.empty? %>

@@ -221,4 +221,48 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "investment_contribution", imported_outflow.transaction.reload.kind
     assert_equal "funds_movement", imported_inflow.transaction.reload.kind
   end
+
+  test "update_settings disabling destroys pending auto-matches that carry transfer kinds and resets those kinds" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    transfer = outflow_entry.transaction.reload.transfer
+    assert_equal "cc_payment", outflow_entry.transaction.kind
+
+    patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+
+    assert_not Transfer.exists?(transfer.id)
+    assert_equal "standard", outflow_entry.transaction.reload.kind
+    assert_equal "standard", inflow_entry.transaction.reload.kind
+  end
+
+  test "update_settings requires confirmation and returns pending matches to their own kinds" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+
+    patch update_settings_auto_matches_url, params: { require_transfer_match_confirmation: "true" }
+
+    assert_redirected_to auto_matches_url
+    assert @family.reload.require_transfer_match_confirmation?
+    assert_not @family.auto_match_transfers_disabled?, "the other setting is left alone"
+    assert outflow_entry.transaction.reload.transfer.pending?
+    assert_equal "standard", outflow_entry.transaction.kind
+  end
+
+  test "update_settings requiring confirmation is refused for a member" do
+    sign_in users(:family_member)
+
+    patch update_settings_auto_matches_url, params: { require_transfer_match_confirmation: "true" }
+
+    assert_redirected_to accounts_url
+    assert_not @family.reload.require_transfer_match_confirmation?
+  end
+
+  test "index renders the confirmation toggle" do
+    get auto_matches_url
+
+    assert_response :success
+    assert_select "#require_transfer_match_confirmation"
+  end
 end

@@ -154,18 +154,48 @@ module Family::AutoTransferMatchable
 
         # Skip this candidate when the transfer for this exact pair was not created
         # (a concurrent sync claimed one of the transactions for a different pairing).
-        # A created transfer stays pending and leaves the transaction kinds untouched
-        # until the user confirms it (Transfer#confirm!).
         transfer = find_or_create_transfer!(match)
         next unless transfer
 
-        created_transfers << transfer if transfer.previously_new_record?
+        if transfer.previously_new_record?
+          # A new match stays pending. Its legs take the transfer kinds right
+          # away, so budgets and reports leave it out of income and spending,
+          # unless the family confirms matches first (Transfer#kinds_applied?).
+          transfer.apply_kinds! unless require_transfer_match_confirmation?
+          created_transfers << transfer
+        end
         used_transaction_ids << match.inflow_transaction_id
         used_transaction_ids << match.outflow_transaction_id
       end
     end
 
     sync_principal_only_loan_accounts(created_transfers)
+  end
+
+  # Switches whether pending auto-matches wait for the user's confirmation
+  # before their legs take transfer kinds, and brings the pending matches in
+  # line: they lose their transfer kinds when confirmation becomes required,
+  # and take them when it no longer is.
+  def update_transfer_match_confirmation!(required)
+    Family.transaction do
+      update!(require_transfer_match_confirmation: required)
+
+      pending_transfer_matches.find_each do |transfer|
+        next unless transfer.match_kinds_only?
+
+        required ? transfer.reset_kinds! : transfer.apply_kinds!
+      end
+    end
+  end
+
+  # Pending transfers between this family's transactions.
+  def pending_transfer_matches
+    family_transaction_ids = transactions.select(:id)
+
+    Transfer.pending
+      .where(inflow_transaction_id: family_transaction_ids)
+      .where(outflow_transaction_id: family_transaction_ids)
+      .includes(inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account })
   end
 
   private

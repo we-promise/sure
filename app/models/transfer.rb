@@ -183,25 +183,75 @@ class Transfer < ApplicationRecord
     end
   end
 
-  # Auto-matched transfers start out pending and leave both transactions as
-  # they were, so an unconfirmed suggestion never moves budgets or reports.
-  # The transfer kinds (and the Investment Contributions category) only apply
-  # once the user confirms the match.
+  # Whether the legs carry this transfer's kinds, the kinds budgets and
+  # reports use to leave transfers out of income and spending. A confirmed
+  # transfer always does. A pending auto-match does too, unless the family
+  # asked to confirm matches first (Family#require_transfer_match_confirmation),
+  # in which case the legs keep their own kinds until #confirm!.
+  def kinds_applied?
+    return true if confirmed?
+
+    family = to_account&.family || from_account&.family
+    !family&.require_transfer_match_confirmation?
+  end
+
+  # Whether removing this transfer returns a leg to the standard kind (see
+  # #release_transactions), moving it back into income and spending.
+  def releasing_resets_kinds?
+    kinds_applied? && [ inflow_transaction, outflow_transaction ].compact.any?(&:transfer?)
+  end
+
   def confirm!
     Transfer.transaction do
       update!(status: "confirmed")
+      apply_kinds!
+    end
+  end
 
-      # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
-      outflow_kind = Transfer.kind_for_account(to_account, from_account: from_account)
-      outflow_attrs = { kind: outflow_kind }
+  # Gives both legs their transfer kinds: the outflow by the destination
+  # account (matching Transfer::Creator), the inflow funds_movement, and an
+  # uncategorized contribution into an investment account the Investment
+  # Contributions category.
+  def apply_kinds!
+    outflow_kind = Transfer.kind_for_account(to_account, from_account: from_account)
+    outflow_attrs = { kind: outflow_kind }
 
-      if outflow_kind == "investment_contribution" && outflow_transaction.category_id.blank?
-        category = to_account.family.investment_contributions_category
-        outflow_attrs[:category] = category if category.present?
-      end
+    if outflow_kind == "investment_contribution" && outflow_transaction.category_id.blank?
+      category = to_account.family.investment_contributions_category
+      outflow_attrs[:category] = category if category.present?
+    end
 
+    Transfer.transaction do
       inflow_transaction.update!(kind: "funds_movement")
       outflow_transaction.update!(outflow_attrs)
+    end
+  end
+
+  # Whether each leg carries either its standard kind or the kind
+  # #apply_kinds! gives it: nothing but what an auto-match left behind. A
+  # pending transfer imported with other kinds is not a plain suggestion.
+  def match_kinds_only?
+    [ inflow_transaction, outflow_transaction ].all? do |transaction|
+      transaction.kind == "standard" || transaction.kind == kind_for_leg(transaction)
+    end
+  end
+
+  # Returns legs with a transfer kind to standard, the inverse of #apply_kinds!
+  # for a pending match whose family starts confirming matches first. The
+  # Investment Contributions category #apply_kinds! gave the outflow goes too;
+  # any other category stays.
+  def reset_kinds!
+    Transfer.transaction do
+      [ inflow_transaction, outflow_transaction ].each do |transaction|
+        next unless transaction.transfer?
+
+        attrs = { kind: "standard" }
+        if transaction.kind == "investment_contribution" && transaction.category &&
+            Category.all_investment_contributions_names.include?(transaction.category.name)
+          attrs[:category] = nil
+        end
+        transaction.update!(attrs)
+      end
     end
   end
 
@@ -245,9 +295,10 @@ class Transfer < ApplicationRecord
         next if transaction.nil? || key == deleted_leg_key
         next unless Transaction.exists?(transaction.id)
         begin
-          # A pending auto-match never changed the kind (see #confirm!), so a
-          # transfer kind on its transactions predates the match and stays.
-          if transaction.transfer? && !pending?
+          # A pending match the family confirms first never changed the kind
+          # (see #kinds_applied?), so a transfer kind on its transactions
+          # predates the match and stays.
+          if transaction.transfer? && kinds_applied?
             transaction.update!(kind: "standard")
             # A kind locked by update_investment_contribution! belonged to this transfer.
             transaction.unlock_attr!(:kind) if transaction.locked?(:kind)
