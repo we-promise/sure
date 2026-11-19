@@ -31,8 +31,8 @@ RSpec.describe "API V1 Insights", type: :request do
       end
 
 
-      response "403", "preview features disabled" do
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+      response "403", "preview features disabled, or email not verified" do
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         let(:user) do
           family.users.create!(
             email: "insights-disabled-api@example.com",
@@ -71,12 +71,12 @@ RSpec.describe "API V1 Insights", type: :request do
         schema "$ref" => "#/components/schemas/ErrorResponse"
         run_test!
       end
-      response "403", "write scope, member access or preview features required" do
+      response "403", "write scope, member access or preview features required, or email not verified" do
         let(:api_key) do
           key = ApiKey.generate_secure_key
           ApiKey.create!(user: user, name: "API Docs Read Key", key: key, scopes: %w[read], source: "web")
         end
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
       response "404", "insight not found or not visible to the family" do

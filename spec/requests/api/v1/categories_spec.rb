@@ -96,6 +96,8 @@ RSpec.describe 'API V1 Categories', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     post 'Create category' do
@@ -148,8 +150,8 @@ RSpec.describe 'API V1 Categories', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - api key missing read_write scope, or guest user' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'forbidden - api key missing read_write scope, or guest user, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:read_only_api_key) do
           key = ApiKey.generate_secure_key
@@ -217,6 +219,8 @@ RSpec.describe 'API V1 Categories', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 end

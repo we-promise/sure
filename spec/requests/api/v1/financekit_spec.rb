@@ -52,8 +52,8 @@ RSpec.describe "Api::V1::Financekit", type: :request do
       schema "$ref" => "#/components/schemas/FinancekitError"
       run_test! skip: "Documentation only; behavior covered by Minitest"
     end
-    response "403", "Insufficient permission or publisher eligibility" do
-      schema "$ref" => "#/components/schemas/FinancekitError"
+    response "403", "Insufficient permission, publisher eligibility, or email not verified" do
+      schema or_email_verification_required("#/components/schemas/FinancekitError")
       run_test! skip: "Documentation only; behavior covered by Minitest"
     end
     response "404", "Resource not found" do
@@ -217,6 +217,10 @@ RSpec.describe "Api::V1::Financekit", type: :request do
         run_test! skip: "Documentation only; behavior covered by Minitest"
       end
       response "401", "Invalid publisher credential" do
+        schema "$ref" => "#/components/schemas/FinancekitError"
+        run_test! skip: "Documentation only; behavior covered by Minitest"
+      end
+      response "403", "The publishing user's email is not verified (error: email_verification_required)" do
         schema "$ref" => "#/components/schemas/FinancekitError"
         run_test! skip: "Documentation only; behavior covered by Minitest"
       end

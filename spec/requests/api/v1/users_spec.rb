@@ -62,8 +62,8 @@ RSpec.describe 'API V1 Users', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - requires read_write scope and admin role' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'forbidden - requires read_write scope and admin role, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:api_key) do
           key = ApiKey.generate_secure_key
@@ -114,8 +114,8 @@ RSpec.describe 'API V1 Users', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - requires admin role' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'forbidden - requires admin role, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:role) { :member }
 

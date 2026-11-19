@@ -106,6 +106,8 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     post 'Create valuation' do
@@ -231,6 +233,8 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 
@@ -257,6 +261,8 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     patch 'Update a valuation' do
@@ -338,6 +344,8 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 end

@@ -91,8 +91,8 @@ RSpec.describe 'API V1 Rules', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - requires read scope' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'forbidden - requires read scope, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
 
@@ -141,8 +141,8 @@ RSpec.describe 'API V1 Rules', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - requires read scope' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'forbidden - requires read scope, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
 

@@ -55,6 +55,8 @@ RSpec.describe 'API V1 Balance Sheet', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 end

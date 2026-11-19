@@ -66,6 +66,8 @@ RSpec.describe 'API V1 Cash Flow', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 end

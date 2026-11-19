@@ -96,6 +96,8 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
         let(:split) { { split: { splits: [ { name: 'Too small', amount: '1.0' } ] } } }
         run_test!
       end
+
+      email_verification_required_response
     end
 
     get 'Retrieve a transaction split' do
@@ -113,6 +115,8 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
       response '404', 'transaction is not split' do
         run_test!
       end
+
+      email_verification_required_response
     end
 
     patch 'Replace a transaction split' do
@@ -133,6 +137,8 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
         before { transaction.entry.split!([ { name: 'A', amount: 70 }, { name: 'B', amount: 30 } ]) }
         run_test!
       end
+
+      email_verification_required_response
     end
 
     delete 'Remove a transaction split' do
@@ -148,6 +154,8 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
       response '404', 'transaction is not split' do
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 end

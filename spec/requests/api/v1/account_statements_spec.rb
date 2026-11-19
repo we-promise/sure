@@ -92,8 +92,8 @@ RSpec.describe 'API V1 Account Statements', type: :request do
         run_test!
       end
 
-      response '403', 'guests cannot use the Statement Vault' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'guests cannot use the Statement Vault, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
         let(:'X-Api-Key') { guest_api_key.plain_key }
         run_test!
       end
@@ -148,8 +148,8 @@ RSpec.describe 'API V1 Account Statements', type: :request do
         run_test!
       end
 
-      response '403', 'guest, or API key without write scope' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'guest, or API key without write scope, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
         let(:'X-Api-Key') { guest_api_key.plain_key }
         let(:file) { statement_file }
         run_test!
@@ -208,8 +208,8 @@ RSpec.describe 'API V1 Account Statements', type: :request do
         run_test!
       end
 
-      response '403', 'guests cannot use the Statement Vault' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'guests cannot use the Statement Vault, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
         let(:id) { statement.id }
         let(:'X-Api-Key') { guest_api_key.plain_key }
         run_test!

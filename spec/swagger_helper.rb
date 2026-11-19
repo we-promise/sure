@@ -235,6 +235,17 @@ RSpec.configure do |config|
               meta: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          EmailVerificationRequired: {
+            type: :object,
+            description: 'Returned by financial-data endpoints until the account email is verified. ' \
+                         'Call POST /api/v1/auth/resend_email_verification, then refresh with GET /api/v1/users/me.',
+            required: %w[error message action],
+            properties: {
+              error: { type: :string, enum: %w[email_verification_required] },
+              message: { type: :string },
+              action: { type: :string, enum: %w[resend_email] }
+            }
+          },
           ErrorResponse: {
             type: :object,
             required: %w[error],
@@ -2114,4 +2125,28 @@ RSpec.configure do |config|
   )
 
   config.openapi_format = :yaml
+end
+
+# Api::V1::BaseController refuses gated endpoints with a 403 until the
+# account email is verified. Behavior is covered by
+# test/controllers/api/v1/verification_gate_test.rb; these only document it.
+module EmailVerificationDocs
+  EMAIL_VERIFICATION_REF = '#/components/schemas/EmailVerificationRequired'
+
+  # For an operation that documents no other 403.
+  def email_verification_required_response
+    response '403', 'email not verified' do
+      schema '$ref' => EMAIL_VERIFICATION_REF
+      run_test! skip: 'Documentation only; behavior covered by Minitest'
+    end
+  end
+
+  # For an operation whose existing 403 response gains the verification case.
+  def or_email_verification_required(ref)
+    { anyOf: [ { '$ref' => ref }, { '$ref' => EMAIL_VERIFICATION_REF } ] }
+  end
+end
+
+RSpec.configure do |config|
+  config.extend EmailVerificationDocs, type: :request
 end

@@ -121,6 +121,8 @@ RSpec.describe 'API V1 Imports', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     post 'Create import' do
@@ -251,10 +253,11 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '403', 'guest users cannot import family configuration' do
-        schema oneOf: [
+      response '403', 'guest users cannot import family configuration, or email not verified' do
+        schema anyOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
-          { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }
+          { '$ref' => '#/components/schemas/ErrorResponseWithImportId' },
+          { '$ref' => EmailVerificationDocs::EMAIL_VERIFICATION_REF }
         ]
 
         let(:user) do
@@ -262,6 +265,7 @@ RSpec.describe 'API V1 Imports', type: :request do
             email: 'api-guest@example.com',
             password: 'password123',
             password_confirmation: 'password123',
+            email_verified_at: Time.current,
             role: 'guest'
           )
         end
@@ -339,6 +343,8 @@ RSpec.describe 'API V1 Imports', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 
@@ -371,8 +377,8 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '403', 'insufficient scope' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'insufficient scope, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
 
@@ -518,6 +524,8 @@ RSpec.describe 'API V1 Imports', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 end
