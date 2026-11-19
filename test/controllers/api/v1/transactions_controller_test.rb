@@ -763,6 +763,77 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "update changes the currency and syncs the account" do
+    entry = create_transaction(account: @account, amount: 25, currency: "USD", name: "Paid abroad")
+
+    assert_enqueued_with(job: SyncJob) do
+      patch api_v1_transaction_url(entry.transaction),
+            params: { transaction: { currency: "EUR" } },
+            headers: api_headers(@api_key)
+    end
+    assert_response :success
+
+    assert_equal "EUR", JSON.parse(response.body)["currency"]
+    assert_equal "EUR", entry.reload.currency
+    assert_equal 25, entry.amount
+  end
+
+  test "update normalizes the currency code" do
+    entry = create_transaction(account: @account, amount: 25, currency: "USD")
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: { currency: " eur " } },
+          headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal "EUR", entry.reload.currency
+  end
+
+  test "update with an unknown currency is refused and changes nothing" do
+    entry = create_transaction(account: @account, amount: 25, currency: "USD", name: "Kept")
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: { currency: "XYZ", name: "Renamed" } },
+          headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+
+    body = JSON.parse(response.body)
+    assert_equal "validation_failed", body["error"]
+    assert_equal "Unknown currency: XYZ", body["message"]
+    entry.reload
+    assert_equal "USD", entry.currency
+    assert_equal "Kept", entry.name
+  end
+
+  test "create with an unknown currency is refused and creates nothing" do
+    assert_no_difference "Entry.count" do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Bad code", amount: 5, date: Date.current, currency: "XYZ", nature: "expense" } },
+           headers: api_headers(@api_key)
+    end
+    assert_response :unprocessable_entity
+    assert_equal "Unknown currency: XYZ", JSON.parse(response.body)["message"]
+  end
+
+  test "update refuses a currency change on a split parent" do
+    parent = create_transaction(account: @account, amount: 100, currency: "USD", name: "Split parent")
+    parent.split!([ { name: "One", amount: 60 }, { name: "Two", amount: 40 } ])
+
+    patch api_v1_transaction_url(parent.transaction),
+          params: { transaction: { currency: "EUR" } },
+          headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+
+    assert_equal "USD", parent.reload.currency
+    assert parent.child_entries.all? { |child| child.currency == "USD" }
+
+    patch api_v1_transaction_url(parent.transaction),
+          params: { transaction: { currency: "usd", notes: "Same currency re-sent" } },
+          headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal "Same currency re-sent", parent.reload.notes
+  end
+
   test "should protect transaction from provider sync when updated with user_modified true" do
     update_params = {
       transaction: {
@@ -1474,12 +1545,13 @@ end
     assert_response :success
     assert_equal "annotated", entry.reload.notes
 
-    [ { amount: 999 }, { name: "Renamed" }, { date: 3.days.ago.to_date }, { notes: "x", amount: 999 } ].each do |attrs|
+    [ { amount: 999 }, { name: "Renamed" }, { date: 3.days.ago.to_date }, { currency: "EUR" }, { notes: "x", amount: 999 } ].each do |attrs|
       patch api_v1_transaction_url(entry.transaction), params: { transaction: attrs }, headers: api_headers(key)
       assert_response :forbidden, "expected #{attrs.keys} to be refused"
     end
     assert_equal "annotated", entry.reload.notes
     assert_equal 42, entry.amount
+    assert_equal "USD", entry.currency
 
     assert_no_difference "Entry.count" do
       delete api_v1_transaction_url(entry.transaction), headers: api_headers(key)

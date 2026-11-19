@@ -104,6 +104,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     return render_validation_error("Unknown tag id") if unknown_tag_ids?
     return render_validation_error("Unknown category id") if unknown_category_id?
     return render_validation_error("Unknown merchant id") if unknown_merchant_id?
+    return render_unknown_currency if unknown_currency?
 
     @entry = account.entries.new(entry_params_for_create)
 
@@ -147,7 +148,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     if @entry.split_parent? && split_financial_fields_changed?
-      render json: { error: "validation_failed", message: "Split parent amount, date, and type cannot be changed directly. Use the split editor." }, status: :unprocessable_entity
+      render json: { error: "validation_failed", message: "Split parent amount, currency, date, and type cannot be changed directly. Use the split editor." }, status: :unprocessable_entity
       return
     end
 
@@ -155,6 +156,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     return render_validation_error("Unknown tag id") if tags_provided? && unknown_tag_ids?
     return render_validation_error("Unknown category id") if unknown_category_id?
     return render_validation_error("Unknown merchant id") if unknown_merchant_id?
+    return render_unknown_currency if unknown_currency?
 
     rule_input = @entry.rule_input_snapshot
     updated = false
@@ -371,7 +373,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         name: transaction_params[:name] || transaction_params[:description],
         date: transaction_params[:date],
         amount: calculate_signed_amount,
-        currency: transaction_params[:currency] || current_resource_owner.family.currency,
+        currency: requested_currency || current_resource_owner.family.currency,
         notes: transaction_params[:notes],
         entryable_type: "Transaction",
         entryable_attributes: {
@@ -392,6 +394,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       entry_params = {
         name: transaction_params[:name] || transaction_params[:description],
         date: transaction_params[:date],
+        currency: requested_currency,
         notes: transaction_params[:notes],
         entryable_attributes: {
           id: @entry.entryable_id,
@@ -470,6 +473,25 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       Category.type_for_attribute(:id).cast(value)
     end
 
+    def requested_currency
+      transaction_params[:currency].to_s.strip.upcase.presence
+    end
+
+    # Entry does not check the code, and one Money does not know would be
+    # stored and then fail every read of the transaction's amount.
+    def unknown_currency?
+      return false unless requested_currency
+
+      Money::Currency.new(requested_currency)
+      false
+    rescue Money::Currency::UnknownCurrencyError
+      true
+    end
+
+    def render_unknown_currency
+      render_validation_error("Unknown currency: #{requested_currency}")
+    end
+
     # The request's tag ids in canonical UUID form, each once. Postgres matches
     # a UUID in any case, so one tag spelled two ways is one tag, and writing
     # the raw list would store it twice.
@@ -481,6 +503,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def split_financial_fields_changed?
       params.dig(:transaction, :amount).present? ||
+        (requested_currency.present? && requested_currency != @entry.currency) ||
         params.dig(:transaction, :date).present? ||
         params.dig(:transaction, :nature).present?
     end

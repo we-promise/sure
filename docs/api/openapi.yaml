@@ -10774,7 +10774,8 @@ paths:
                 "$ref": "#/components/schemas/Transaction"
         '422':
           description: validation error - missing required fields, malformed tag_ids,
-            or a tag, category or merchant id the family cannot use
+            an unknown currency, or a tag, category or merchant id the family cannot
+            use
           content:
             application/json:
               schema:
@@ -10810,7 +10811,8 @@ paths:
                       description: Additional notes
                     currency:
                       type: string
-                      description: Currency code (defaults to family currency)
+                      description: ISO 4217 currency code, case-insensitive (defaults
+                        to family currency). An unknown code returns 422.
                     category_id:
                       type: string
                       format: uuid
@@ -10909,8 +10911,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - malformed tag_ids, or a tag, category or
-            merchant id the family cannot use
+          description: validation error - malformed tag_ids, an unknown currency,
+            or a tag, category or merchant id the family cannot use
           content:
             application/json:
               schema:
@@ -10938,7 +10940,9 @@ paths:
                       type: string
                     currency:
                       type: string
-                      description: Currency code
+                      description: ISO 4217 currency code, case-insensitive. The amount
+                        is kept as stored, only its currency changes. An unknown code
+                        returns 422, as does a change on a split parent.
                     category_id:
                       type: string
                       format: uuid

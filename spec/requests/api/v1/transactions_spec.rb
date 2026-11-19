@@ -190,7 +190,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               name: { type: :string, description: 'Transaction name/description' },
               description: { type: :string, description: 'Alternative to name field' },
               notes: { type: :string, description: 'Additional notes' },
-              currency: { type: :string, description: 'Currency code (defaults to family currency)' },
+              currency: { type: :string, description: 'ISO 4217 currency code, case-insensitive (defaults to family currency). An unknown code returns 422.' },
               category_id: { type: :string, format: :uuid, description: 'Category ID' },
               merchant_id: { type: :string, format: :uuid, description: 'Merchant ID' },
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
@@ -273,7 +273,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - missing required fields, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
+      response '422', 'validation error - missing required fields, malformed tag_ids, an unknown currency, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -333,7 +333,11 @@ RSpec.describe 'API V1 Transactions', type: :request do
               name: { type: :string },
               description: { type: :string, description: 'Alternative to name field' },
               notes: { type: :string },
-              currency: { type: :string, description: 'Currency code' },
+              currency: {
+                type: :string,
+                description: 'ISO 4217 currency code, case-insensitive. The amount is kept as stored, only its currency changes. ' \
+                             'An unknown code returns 422, as does a change on a split parent.'
+              },
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
               nature: { type: :string, enum: %w[income expense inflow outflow] },
@@ -379,7 +383,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - malformed tag_ids, or a tag, category or merchant id the family cannot use' do
+      response '422', 'validation error - malformed tag_ids, an unknown currency, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { transaction: { tag_ids: [ SecureRandom.uuid ] } } }
