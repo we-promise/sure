@@ -8,6 +8,25 @@ class FamilyTest < ActiveSupport::TestCase
     @syncable = families(:dylan_family)
   end
 
+  test "missing_data_provider? is false under the keyless securities fallback" do
+    family = Family.create!(name: "Fallback", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    trade = Trade.new(security: securities(:aapl), qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy AAPL", date: 1.day.ago.to_date, amount: 100, currency: "USD", entryable: trade)
+
+    yahoo = mock("yahoo_finance")
+    yahoo.stubs(:class).returns(Provider::YahooFinance)
+    Provider::Registry.stubs(:yahoo_finance).returns(yahoo)
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+
+    with_env_overrides("TWELVE_DATA_API_KEY" => nil) do
+      assert family.requires_securities_data_provider?
+      assert_not family.requires_exchange_rates_data_provider?
+      assert_not family.missing_data_provider?
+    end
+  end
+
   test "local_date is the date in the family's zone" do
     family = families(:dylan_family)
     evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
@@ -239,6 +258,19 @@ class FamilyTest < ActiveSupport::TestCase
     family.update!(moniker: "Group")
     assert_equal "Group", family.moniker_label
     assert_equal "Groups", family.moniker_label_plural
+  end
+
+  test "tags_version changes when tags are added, removed, merged or deleted" do
+    family = families(:dylan_family)
+    tag = family.tags.create!(name: "Version tag")
+    other = family.tags.create!(name: "Other version tag")
+    transaction = family.transactions.first
+
+    assert_tags_version_changes(family) { transaction.toggle_tag!(tag) }
+    assert_tags_version_changes(family) { transaction.toggle_tag!(tag) }
+    assert_tags_version_changes(family) { transaction.toggle_tag!(other) }
+    assert_tags_version_changes(family) { other.replace_and_destroy!(tag) }
+    assert_tags_version_changes(family) { tag.destroy! }
   end
 
   test "entries_cache_version changes when an older entry is destroyed" do
@@ -732,20 +764,22 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "categorization_model_name names the Jev model when Jev will categorize" do
+  test "the categorize plan names the Jev model when Jev will categorize" do
     family = families(:dylan_family)
-    family.stubs(:resolved_categorization_provider).returns(Provider::Jev.allocate)
-    Provider::Jev.stubs(:effective_model).returns("~typesafe/jev-latest")
+    family.update!(categorization_provider: "jev")
 
-    assert_equal "~typesafe/jev-latest", family.categorization_model_name
+    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_MODEL" => "~typesafe/jev-latest", "OPENAI_ACCESS_TOKEN" => "sk-test") do
+      assert_equal "~typesafe/jev-latest", Ai.plan(:categorize, family:).model.name
+      assert_equal family.resolved_categorization_provider.class, Provider::Jev
+    end
   end
 
-  test "categorization_model_name names the Anthropic model when Anthropic will categorize" do
+  test "the categorize plan names the Anthropic model when Anthropic will categorize" do
     family = families(:dylan_family)
-    family.stubs(:resolved_categorization_provider).returns(Provider::Anthropic.allocate)
-    Provider::Anthropic.stubs(:effective_model).returns("claude-sonnet-test")
 
-    assert_equal "claude-sonnet-test", family.categorization_model_name
+    with_env_overrides("ANTHROPIC_API_KEY" => "test-key", "ANTHROPIC_MODEL" => "claude-sonnet-test", "LLM_PROVIDER" => "anthropic") do
+      assert_equal "claude-sonnet-test", Ai.plan(:categorize, family:).model.name
+    end
   end
 
   test "resolved_categorization_provider falls back to the LLM provider when the endpoint is rejected" do
@@ -771,14 +805,13 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "categorization_model_name does not write diagnostics from view-time callers" do
+  test "the categorize plan leaves out a rejected Jev endpoint and writes no diagnostics" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
 
     assert_no_difference "DebugLogEntry.count" do
       with_env_overrides(REJECTED_JEV_ENV) do
-        assert_nil family.categorization_model_name
+        assert_nil Ai.plan(:categorize, family:)
       end
     end
   end
@@ -922,6 +955,12 @@ class FamilyTest < ActiveSupport::TestCase
   end
 
   private
+    def assert_tags_version_changes(family)
+      before = family.tags_version
+      yield
+      assert_not_equal before, family.reload.tags_version
+    end
+
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
     end

@@ -2,6 +2,7 @@ require "digest"
 
 class PushSubscription < ApplicationRecord
   belongs_to :user
+  has_many :push_deliveries, as: :subscription, dependent: :destroy
 
   enum :environment, { sandbox: "sandbox", production: "production" }, validate: true
 
@@ -58,8 +59,26 @@ class PushSubscription < ApplicationRecord
     user.active? && last_registered_at > 90.days.ago
   end
 
+  def self.channel_ready?
+    Apns::Client.available?
+  end
+
+  # The APNs adapter for PushDelivery.
+  def deliver(delivery)
+    PushSubscription::Delivery.new(self).call do |client|
+      I18n.with_locale(user.family.locale) do
+        client.deliver(token: token, title: I18n.t("insights.notification.title"),
+          body: I18n.t("insights.notification.body"), insight_id: delivery.insight_id)
+      end
+    end
+  rescue Apns::Client::TransientError => e
+    raise PushDelivery::TransientError, e.message
+  end
+
   # A response may arrive after the app has registered again. Only remove the
   # exact registration sent, and respect APNs' invalidation timestamp when given.
+  # Destroy (not delete) so the subscription's ledger rows are cleaned up with
+  # it; a surviving row would claim against a parent that no longer exists.
   def invalidate_if_unchanged!(response)
     return unless response.status.to_i == 410
 
@@ -70,6 +89,6 @@ class PushSubscription < ApplicationRecord
     end
 
     self.class.where(id: id, token: token, environment: environment,
-      last_registered_at: last_registered_at).delete_all
+      last_registered_at: last_registered_at).destroy_all
   end
 end

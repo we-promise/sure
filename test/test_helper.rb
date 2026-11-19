@@ -29,6 +29,8 @@ require "uri"
 require Rails.root.join("test/support/sql_query_capture").to_s
 require Rails.root.join("test/support/rake_task_test_helper").to_s
 require Rails.root.join("test/support/family_lock_test_helper").to_s
+require Rails.root.join("test/support/ai_test_helper").to_s
+require Rails.root.join("test/support/ai_legacy_setups").to_s
 
 VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"
@@ -89,6 +91,7 @@ module ActiveSupport
     setup { Setting.clear_cache }
 
     include SqlQueryCapture
+    include AiTestHelper
 
     # Add more helper methods to be used by all tests here...
     def sign_in(user)
