@@ -349,7 +349,7 @@ class Family::DataImporter
         else
           # Build accountable
           accountable = accountable_class.new
-          accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
+          accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"].present?
           assign_liability_details(accountable, accountable_data)
 
           # Copy any other accountable attributes
@@ -371,12 +371,16 @@ class Family::DataImporter
           balance: data["balance"].to_d,
           cash_balance: data["cash_balance"]&.to_d || data["balance"].to_d,
           currency: data["currency"] || @family.currency,
-          subtype: data["subtype"],
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
           status: importable_account_status(data["status"])
         )
+        # `Account#subtype=` writes through to the accountable, so assigning a
+        # nil top-level subtype would wipe the nested one. The nested value
+        # wins, matching SureImport::Preflight#validate_accountables.
+        imported_subtype = accountable_data["subtype"].presence || data["subtype"].presence
+        account.subtype = imported_subtype if imported_subtype
         # A file from before the setting existed leaves the account's own.
         account.cost_basis_method = data["cost_basis_method"] if Account.cost_basis_methods.key?(data["cost_basis_method"])
         # Older exports predate the choice and keep the account's own.
