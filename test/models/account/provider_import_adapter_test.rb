@@ -646,19 +646,38 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "an exact name match wins over a family merchant matched by iban" do
-    # Two people paying from one joint account share the IBAN; each must
-    # keep their own merchant instead of being merged under one name.
-    @family.merchants.create!(name: "Alice Example", iban: "DE89370400440532013000") # pipelock:ignore IBAN
-    bob = ProviderMerchant.create!(
-      provider_merchant_id: "enable_banking_merchant_bob",
-      name: "Bob Example",
+  test "a family merchant matched by iban wins over a shared provider merchant with the same name" do
+    # The IBAN the family entered is its own statement; a same-named
+    # ProviderMerchant that any family may have imported must not beat it.
+    family_merchant = @family.merchants.create!(
+      name: "My Landlord",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+    ProviderMerchant.create!(
+      provider_merchant_id: "enable_banking_merchant_landlord",
+      name: "Landlord GmbH",
       source: "enable_banking"
     )
 
     merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "enable_banking_merchant_landlord",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_equal family_merchant.id, merchant.id
+  end
+
+  test "an iban entered on two family merchants is resolved by the name" do
+    # Two people paying from one joint account share the IBAN; the family
+    # enters it on both merchants and the provider name picks between them.
+    @family.merchants.create!(name: "Alice Example", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    bob = @family.merchants.create!(name: "Bob Example", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    merchant = @adapter.find_or_create_merchant(
       provider_merchant_id: "enable_banking_merchant_bob",
-      name: "Bob Example",
+      name: "BOB EXAMPLE",
       source: "enable_banking",
       iban: "DE89370400440532013000" # pipelock:ignore IBAN
     )
@@ -666,7 +685,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal bob.id, merchant.id
   end
 
-  test "does not match an iban the family entered on two merchants" do
+  test "does not match an iban the family entered on two merchants when the name matches neither" do
     @family.merchants.create!(name: "Alice Example", iban: "DE89370400440532013000") # pipelock:ignore IBAN
     @family.merchants.create!(name: "Bob Example", iban: "DE89370400440532013000") # pipelock:ignore IBAN
 

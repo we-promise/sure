@@ -15,7 +15,7 @@ es:
       website_hint: Introduce el sitio web del comercio para mostrar automáticamente su logotipo
       iban_placeholder: "IBAN (opcional)"
       iban_set_placeholder: "•••• •••• •••• •••• — IBAN guardado, introduce un nuevo valor para reemplazarlo"
-      iban_hint: "Las transacciones importadas de este número de cuenta se asignan a este comercio cuando su nombre no coincide con ningún otro comercio"
+      iban_hint: "Las transacciones importadas de este número de cuenta se asignan a este comercio. Si varios comercios comparten el número, decide el nombre"
       iban_remove_label: "Eliminar IBAN"
       logo_label: Logotipo
       logo_hint: Sustituye al logotipo del sitio web. JPEG, PNG o WebP, hasta %{max_megabytes} MB.
