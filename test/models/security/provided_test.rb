@@ -5,6 +5,7 @@ class Security::ProvidedTest < ActiveSupport::TestCase
 
   setup do
     @security = securities(:aapl)
+    Security.instance_variable_set(:@logged_keyless_substitutions, nil)
   end
 
   # --- search_provider ---
@@ -33,6 +34,7 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     )
 
     Security.stubs(:providers).returns([ provider_a, provider_b ])
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data", "yahoo_finance" ])
 
     results = Security.search_provider("AAPL")
 
@@ -267,6 +269,165 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal :ok, @security.provider_status
   end
 
+  # --- keyless fallback ---
+
+  test "providers falls back to Yahoo Finance when no enabled provider can be built" do
+    yahoo = stub_yahoo_finance
+    Rails.logger.stubs(:info)
+    Rails.logger.expects(:info).with(regexp_matches(/twelve_data can't be built; using yahoo_finance/)).once
+
+    without_securities_keys([ "twelve_data" ]) do
+      assert_equal [ yahoo ], Security.providers
+    end
+  end
+
+  test "no fallback when a Twelve Data key is present" do
+    Provider::Registry.expects(:yahoo_finance).never
+    Rails.logger.stubs(:info)
+    Rails.logger.expects(:info).with(regexp_matches(/can't be built/)).never
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+
+    with_env_overrides("TWELVE_DATA_API_KEY" => "test-key") do
+      assert_equal [ Provider::TwelveData ], Security.providers.map(&:class)
+    end
+  end
+
+  test "the substitute keeps the default's position" do
+    yahoo = stub_yahoo_finance
+
+    without_securities_keys([ "twelve_data", "binance_public" ]) do
+      providers = Security.providers
+
+      assert_equal yahoo, providers.first
+      assert_equal [ Provider::YahooFinance, Provider::BinancePublic ], providers.map(&:class)
+    end
+  end
+
+  test "only one substitute" do
+    yahoo = stub_yahoo_finance
+
+    without_securities_keys([ "twelve_data", "tiingo" ]) do
+      assert_equal [ yahoo ], Security.providers
+    end
+  end
+
+  test "no substitute when the unbuildable provider is not first" do
+    Provider::Registry.expects(:yahoo_finance).never
+    Rails.logger.stubs(:info)
+    Rails.logger.expects(:info).with(regexp_matches(/can't be built/)).never
+
+    without_securities_keys([ "mfapi", "twelve_data" ]) do
+      assert_equal [ Provider::Mfapi ], Security.providers.map(&:class)
+    end
+  end
+
+  test "the substitution is logged once per process" do
+    stub_yahoo_finance
+    messages = []
+    Rails.logger.stubs(:info).with { |message| messages << message }
+
+    without_securities_keys([ "twelve_data" ]) do
+      3.times { Security.providers }
+    end
+
+    assert_equal 1, messages.grep(/twelve_data can't be built/).size
+  end
+
+  test "no substitute when Yahoo is explicitly enabled" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([ search_result("AAPL") ]))
+
+    without_securities_keys([ "twelve_data", "yahoo_finance" ]) do
+      assert_equal [ yahoo ], Security.providers
+      assert_equal [ "yahoo_finance" ], Security.search_provider("AAPL").map(&:price_provider)
+    end
+  end
+
+  test "no fallback when the enabled list is explicitly empty" do
+    Provider::Registry.expects(:yahoo_finance).never
+
+    without_securities_keys([]) do
+      assert_equal [], Security.providers
+    end
+  end
+
+  test "search under the fallback stamps no price_provider" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([ search_result("AAPL") ]))
+
+    without_securities_keys([ "twelve_data" ]) do
+      results = Security.search_provider("AAPL")
+
+      assert_equal [ "AAPL" ], results.map(&:ticker)
+      assert_nil results.first.price_provider
+      option = results.first.to_combobox_option
+      assert_equal "AAPL|XNAS|", option.id
+    end
+  end
+
+  test "search under the fallback stores a Yahoo-suffixed listing by its bare ticker" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([
+      search_result("SAP.DE", mic: "XETR", country_code: "DE", currency: "EUR"),
+      search_result("BRK.B", mic: "XNYS")
+    ]))
+
+    without_securities_keys([ "twelve_data" ]) do
+      results = Security.search_provider("SAP").to_h { |s| [ s.exchange_operating_mic, s.ticker ] }
+
+      assert_equal({ "XETR" => "SAP", "XNYS" => "BRK.B" }, results)
+    end
+  end
+
+  test "an explicitly enabled Yahoo keeps its suffixed ticker" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([
+      search_result("SAP.DE", mic: "XETR", country_code: "DE", currency: "EUR")
+    ]))
+
+    without_securities_keys([ "twelve_data", "yahoo_finance" ]) do
+      assert_equal [ "SAP.DE" ], Security.search_provider("SAP").map(&:ticker)
+    end
+  end
+
+  test "a keyless provider beside the substitute keeps its stamp" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([ search_result("AAPL") ]))
+    mfapi = mock("mfapi")
+    mfapi.stubs(:class).returns(Provider::Mfapi)
+    mfapi.stubs(:search_securities).returns(provider_success_response([ search_result("AAPLMF") ]))
+    Provider::Registry.stubs(:mfapi).returns(mfapi)
+
+    without_securities_keys([ "twelve_data", "mfapi" ]) do
+      assert_equal [ yahoo, mfapi ], Security.providers
+
+      stamps = Security.search_provider("AAPL").to_h { |s| [ s.ticker, s.price_provider ] }
+      assert_equal({ "AAPL" => nil, "AAPLMF" => "mfapi" }, stamps)
+    end
+  end
+
+  test "an assigned twelve_data security stays unavailable under the fallback" do
+    stub_yahoo_finance
+    @security.update!(price_provider: "twelve_data")
+
+    without_securities_keys([ "twelve_data" ]) do
+      assert_nil @security.price_data_provider
+      assert_equal :provider_unavailable, @security.provider_status
+    end
+  end
+
+  test "the setting and configuration health are unchanged under the fallback" do
+    yahoo = stub_yahoo_finance
+    Setting.securities_providers = "twelve_data"
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+
+    with_env_overrides("TWELVE_DATA_API_KEY" => nil, "SECURITIES_PROVIDERS" => nil, "SECURITIES_PROVIDER" => nil) do
+      assert_equal [ yahoo ], Security.providers
+      assert_equal [ "twelve_data" ], Setting.enabled_securities_providers
+      assert_equal :not_configured, ConfigurationHealth.new.securities.status
+    end
+  end
+
   # --- rank_search_results ---
 
   # Helper to build unsaved Security objects for ranking tests
@@ -281,6 +442,27 @@ class Security::ProvidedTest < ActiveSupport::TestCase
 
   def rank(results, query, country_code = nil)
     Security.send(:rank_search_results, results, query, country_code)
+  end
+
+  def stub_yahoo_finance
+    yahoo = mock("yahoo_finance")
+    yahoo.stubs(:class).returns(Provider::YahooFinance)
+    Provider::Registry.stubs(:yahoo_finance).returns(yahoo)
+    yahoo
+  end
+
+  def without_securities_keys(enabled, &block)
+    Setting.stubs(:enabled_securities_providers).returns(enabled)
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+    Setting.stubs(:tiingo_api_key).returns(nil)
+    with_env_overrides("TWELVE_DATA_API_KEY" => nil, "TIINGO_API_KEY" => nil, &block)
+  end
+
+  def search_result(symbol, mic: "XNAS", country_code: "US", currency: "USD")
+    Provider::SecurityConcept::Security.new(
+      symbol: symbol, name: symbol, logo_url: nil,
+      exchange_operating_mic: mic, country_code: country_code, currency: currency
+    )
   end
 
   test "ranking: AAPL exact match ranks above AAPL-prefixed and unrelated" do
@@ -547,6 +729,9 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     ]))
 
     Security.stubs(:providers).returns([ without_isin, with_isin ])
+    # Yahoo is listed because it is enabled, not standing in for a keyless
+    # provider, so its ticker keeps the exchange suffix.
+    Setting.stubs(:enabled_securities_providers).returns([ "yahoo_finance", "eodhd" ])
 
     results = Security.search_provider("IE00B579F325")
 
