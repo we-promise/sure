@@ -573,6 +573,8 @@ class Family::DataImporter
         )
         # Older or hand-built files omit website_url; don't clear an existing one.
         merchant.website_url = data["website_url"] if data.key?("website_url")
+        # Same for iban; normalized on save.
+        merchant.iban = data["iban"] if data.key?("iban")
         merchant.save!
         map_source!(:merchants, old_id, merchant)
         increment_summary("Merchant", created ? :created : :updated)
