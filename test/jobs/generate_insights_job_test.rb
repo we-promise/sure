@@ -330,12 +330,24 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
   end
 
   test "a body refreshed in place is not notified again" do
+    user = @family.users.first
+    register_web_push(user: user)
+    WebPush::Client.stubs(:configured?).returns(true)
     stub_generated([ generated_insight(priority: "high") ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    original_version = insight.notification_version
+    clear_enqueued_jobs
 
-    DeliverInsightNotificationJob.expects(:enqueue_for).never
     stub_generated([ generated_insight(priority: "high", display_balance: 5040) ])
-    GenerateInsightsJob.perform_now(family_id: @family.id)
+    assert_no_enqueued_jobs do
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+
+    insight.reload
+    assert_equal original_version, insight.notification_version
+    assert_equal 1, PushDelivery.count
+    assert_equal "pending", PushDelivery.order(:created_at).last.reload.status
   end
 
   test "an expired insight that returns with new display facts gets a fresh body" do

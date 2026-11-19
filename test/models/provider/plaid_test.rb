@@ -226,6 +226,29 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects webhook tokens signed with an unsupported algorithm" do
+    provider, jwk, body = verified_webhook_setup
+
+    token = JWT.encode(
+      { iat: Time.current.to_i, request_body_sha256: Digest::SHA256.hexdigest(body) },
+      "not-a-real-secret", "HS256", { "kid" => jwk.kid }
+    )
+
+    assert_raises JWT::VerificationError, JWT::DecodeError do
+      provider.validate_webhook!(token, body)
+    end
+  end
+
+  test "accepts a token with an expired exp while the iat age check governs freshness" do
+    provider, jwk, key, body = verified_webhook_setup
+    token = JWT.encode(
+      { iat: Time.current.to_i, exp: 1.minute.ago.to_i, request_body_sha256: Digest::SHA256.hexdigest(body) },
+      key, "ES256", { "kid" => jwk.kid }
+    )
+
+    assert_nothing_raised { provider.validate_webhook!(token, body) }
+  end
+
   private
     # Pins the webhook verification contract that the jwt gem bump (2.10.3 ->
     # 3.3.0) rides on: JWKS built from the key Plaid publishes for the token's
