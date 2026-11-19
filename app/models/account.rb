@@ -974,11 +974,26 @@ class Account < ApplicationRecord
 
   # The calculated position of every security at the end of +date+ (today or
   # earlier), from the account's trades.
+  #
+  # Quantities only, walked the way Holding::ForwardCalculator does (a split
+  # scales the position at the open of its ex-date, before that day's trades),
+  # but without prices, so opening the sale picker converts no currencies.
   def calculated_positions_on(date)
-    Holding::ForwardCalculator.new(self).calculate
-      .select { |holding| holding.date == date }
-      .group_by(&:security_id)
-      .transform_values { |rows| rows.sum { |holding| holding.qty.to_d } }
+    cache = Holding::PortfolioCache.new(self)
+    positions = cache.get_securities.to_h { |security| [ security.id, 0.to_d ] }
+
+    start_date.upto(date) do |day|
+      positions.each_key do |security_id|
+        ratio = cache.get_split_ratio(security_id, day)
+        positions[security_id] = Security::Split.scale(positions[security_id], ratio) if ratio
+      end
+      cache.get_trades(date: day).each do |entry|
+        security_id = entry.entryable.security_id
+        positions[security_id] = positions.fetch(security_id, 0.to_d) + entry.entryable.qty.to_d
+      end
+    end
+
+    positions
   end
   private :calculated_positions_on
 

@@ -71,6 +71,21 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal [ [ security, 5 ] ], account.held_securities_on(4.days.from_now.to_date)
   end
 
+  test "held_securities_on applies a past split without looking up prices" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "EUR", accountable: Investment.new)
+    security = Security.create!(ticker: "SPLITPAST", name: "Split Past")
+    buy(account, security, 10, 6.days.ago.to_date)
+    Security::Split.create!(security: security, ex_date: 4.days.ago.to_date, numerator: 3, denominator: 1, source: "manual")
+    buy(account, security, -5, 4.days.ago.to_date)
+
+    Holding::PortfolioCache.any_instance.expects(:get_price).never
+    ExchangeRate.expects(:find_or_fetch_rate).never
+
+    # 10 become 30 at the open of the ex-date, before that day's sale of 5.
+    assert_equal [ [ security, 25 ] ], account.held_securities_on(2.days.ago.to_date)
+    assert_empty account.held_securities_on(7.days.ago.to_date)
+  end
+
   test "negative_positions lists calculated positions below zero" do
     account = accounts(:investment)
     msft = securities(:msft)
