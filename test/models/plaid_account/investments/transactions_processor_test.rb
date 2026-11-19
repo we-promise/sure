@@ -350,6 +350,18 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal "Buy", entry.trade.investment_activity_label
   end
 
+  test "a top-level dividend type without a subtype is still labelled Dividend" do
+    entry = process_plaid_transaction(trade_row("top_div_1", "dividend", nil))
+
+    assert_equal "Dividend", entry.trade.investment_activity_label
+  end
+
+  test "a top-level dividend reinvestment type without a subtype is still labelled Reinvestment" do
+    entry = process_plaid_transaction(trade_row("top_drip_1", "dividend reinvestment", nil))
+
+    assert_equal "Reinvestment", entry.trade.investment_activity_label
+  end
+
   private
 
     def cash_row(id, subtype, name)

@@ -10,18 +10,21 @@ class PlaidAccount::Investments::TransactionsProcessor
     "cash" => "Other",
     "fee" => "Fee",
     "transfer" => "Transfer",
+    "dividend" => "Dividend",
     "interest" => "Interest",
     "contribution" => "Contribution",
     "withdrawal" => "Withdrawal",
+    "dividend reinvestment" => "Reinvestment",
     "spin off" => "Other",
     "split" => "Other"
   }.freeze
 
   # Plaid reports dividends, reinvestments and interest as subtypes of a broader
   # type (a cash dividend is type "cash"), so these are checked before the type.
-  # Keyed by type as well: Plaid lists the dividend and interest subtypes under
-  # "fee" too (fee/interest can be margin interest charged), and subtypes such
-  # as "contribution" also appear under "buy", where the type's label is right.
+  # Keyed by type because the same subtypes appear under other types where the
+  # type's label is right: "fee" with subtype "interest" can be margin interest
+  # charged, and "buy" with subtype "contribution" is still a buy. Those types
+  # have no entry here and fall back to PLAID_TYPE_TO_LABEL.
   PLAID_SUBTYPE_TO_LABEL = {
     "cash" => {
       "dividend" => "Dividend",
