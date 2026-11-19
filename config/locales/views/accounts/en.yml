@@ -142,10 +142,9 @@ en:
         link: Review holdings
         message: Some positions went below zero
       sync_failed:
-        hint: The figures here may be out of date. Sync again, and if it keeps failing, check the connection.
         message: The last sync failed
+      sync_hint: The figures here may be out of date. Sync again to bring them up to date.
       sync_stale:
-        hint: The figures here may be out of date. Sync again to bring them up to date.
         message: The last sync did not finish
     show:
       limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."

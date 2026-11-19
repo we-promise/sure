@@ -106,10 +106,9 @@ fr:
         link: "Vérifier les holdings"
         message: "Certaines positions sont passées sous zéro"
       sync_failed:
-        hint: "Les chiffres affichés peuvent être obsolètes. Relancez la synchronisation et, si l'échec persiste, vérifiez la connexion."
         message: "La dernière synchronisation a échoué"
+      sync_hint: "Les chiffres affichés peuvent être obsolètes. Relancez la synchronisation pour les mettre à jour."
       sync_stale:
-        hint: "Les chiffres affichés peuvent être obsolètes. Relancez la synchronisation pour les mettre à jour."
         message: "La dernière synchronisation ne s'est pas terminée"
     show:
       activity:

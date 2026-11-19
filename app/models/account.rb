@@ -929,7 +929,7 @@ class Account < ApplicationRecord
   # truth, so a negative quantity there (reported, or carried back by the
   # reverse calculator) is a short position, not missing data.
   def negative_positions
-    return [] if linked?
+    return [] if linked? || balance_type != :investment
 
     rows = holdings
       .joins(:security)

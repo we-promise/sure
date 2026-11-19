@@ -39,10 +39,9 @@ nb:
         link: "Se gjennom beholdningene"
         message: "Noen beholdninger gikk under null"
       sync_failed:
-        hint: "Tallene her kan være utdaterte. Synkroniser på nytt, og sjekk tilkoblingen hvis det fortsatt mislykkes."
         message: "Den siste synkroniseringen mislyktes"
+      sync_hint: "Tallene her kan være utdaterte. Synkroniser på nytt for å oppdatere dem."
       sync_stale:
-        hint: "Tallene her kan være utdaterte. Synkroniser på nytt for å oppdatere dem."
         message: "Den siste synkroniseringen ble ikke fullført"
     show:
       activity:

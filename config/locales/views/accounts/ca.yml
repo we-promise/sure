@@ -102,10 +102,9 @@ ca:
         link: "Revisa les posicions"
         message: "Algunes posicions han quedat per sota de zero"
       sync_failed:
-        hint: "Les xifres poden estar desactualitzades. Torna a sincronitzar i, si continua fallant, revisa la connexió."
         message: "L'última sincronització ha fallat"
+      sync_hint: "Les xifres poden estar desactualitzades. Torna a sincronitzar per posar-les al dia."
       sync_stale:
-        hint: "Les xifres poden estar desactualitzades. Torna a sincronitzar per posar-les al dia."
         message: "L'última sincronització no ha acabat"
     show:
       activity:

@@ -46,10 +46,9 @@ pt-BR:
         link: "Revisar posições"
         message: "Algumas posições ficaram abaixo de zero"
       sync_failed:
-        hint: "Os valores aqui podem estar desatualizados. Sincronize novamente e, se continuar falhando, verifique a conexão."
         message: "A última sincronização falhou"
+      sync_hint: "Os valores aqui podem estar desatualizados. Sincronize novamente para atualizá-los."
       sync_stale:
-        hint: "Os valores aqui podem estar desatualizados. Sincronize novamente para atualizá-los."
         message: "A última sincronização não terminou"
     show:
       activity:

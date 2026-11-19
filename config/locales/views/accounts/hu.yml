@@ -76,10 +76,9 @@ hu:
         link: "Pozíciók ellenőrzése"
         message: "Néhány pozíció nulla alá került"
       sync_failed:
-        hint: "Az itt látható adatok elavultak lehetnek. Szinkronizálj újra, és ha továbbra is sikertelen, ellenőrizd a kapcsolatot."
         message: "Az utolsó szinkronizálás sikertelen volt"
+      sync_hint: "Az itt látható adatok elavultak lehetnek. Szinkronizálj újra a frissítésükhöz."
       sync_stale:
-        hint: "Az itt látható adatok elavultak lehetnek. Szinkronizálj újra a frissítésükhöz."
         message: "Az utolsó szinkronizálás nem fejeződött be"
     show:
       limited_fx_history_warning: "Az árfolyam-előzmények csak %{date} dátumtól érhetők el. Az ezt megelőző tranzakciókhoz közelítő árfolyamok kerülnek alkalmazásra – ez akkor fordulhat elő, ha a devizaárfolyam-szolgáltató csak korlátozott előzményadatokat kínál."

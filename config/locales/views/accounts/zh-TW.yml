@@ -83,10 +83,9 @@ zh-TW:
         link: "檢視持股"
         message: "部分持倉低於零"
       sync_failed:
-        hint: "此處的資料可能已過時。請重新同步；若仍失敗，請檢查連線。"
         message: "上次同步失敗"
+      sync_hint: "此處的資料可能已過時。請重新同步以更新資料。"
       sync_stale:
-        hint: "此處的資料可能已過時。請重新同步以更新資料。"
         message: "上次同步未完成"
     show:
       limited_fx_history_warning: 匯率歷史只有 %{date}之後的資料。當匯率供應商只提供有限的歷史區間時，這個日期之前的交易會改用近似的匯率換算。

@@ -153,9 +153,8 @@ class I18nTest < ActiveSupport::TestCase
         accounts.health_status.negative_positions.hint
         accounts.health_status.negative_positions.link
         accounts.health_status.negative_positions.message
-        accounts.health_status.sync_failed.hint
         accounts.health_status.sync_failed.message
-        accounts.health_status.sync_stale.hint
+        accounts.health_status.sync_hint
         accounts.health_status.sync_stale.message
       ]
     }.each do |sibling, keys|

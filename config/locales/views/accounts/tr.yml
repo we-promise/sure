@@ -103,10 +103,9 @@ tr:
         link: "Varlıkları incele"
         message: "Bazı pozisyonlar sıfırın altına düştü"
       sync_failed:
-        hint: "Buradaki rakamlar güncel olmayabilir. Yeniden senkronize edin; başarısız olmaya devam ederse bağlantıyı kontrol edin."
         message: "Son senkronizasyon başarısız oldu"
+      sync_hint: "Buradaki rakamlar güncel olmayabilir. Güncellemek için yeniden senkronize edin."
       sync_stale:
-        hint: "Buradaki rakamlar güncel olmayabilir. Güncellemek için yeniden senkronize edin."
         message: "Son senkronizasyon tamamlanmadı"
     show:
       activity:

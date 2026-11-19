@@ -80,10 +80,9 @@ de:
         link: "Positionen prüfen"
         message: Bestände unter null
       sync_failed:
-        hint: "Die Zahlen hier sind möglicherweise veraltet. Synchronisiere erneut und prüfe die Verbindung, falls es weiter fehlschlägt."
         message: "Die letzte Synchronisierung ist fehlgeschlagen"
+      sync_hint: "Die Zahlen hier sind möglicherweise veraltet. Synchronisiere erneut, um sie zu aktualisieren."
       sync_stale:
-        hint: "Die Zahlen hier sind möglicherweise veraltet. Synchronisiere erneut, um sie zu aktualisieren."
         message: "Die letzte Synchronisierung wurde nicht abgeschlossen"
     show:
       activity:

@@ -1,17 +1,15 @@
 # Data-quality problems on one account, shown next to its sync state on the
-# account page (#5162). Each source returns an Issue or nil; a new check adds
-# its name to SOURCES and a `<name>_issue` method.
+# account page. Each check returns an Issue or nil; a new one is a private
+# `*_issue` method added to `issues`.
 #
 # Computed for the account the viewer opened, so it is only ever shown to
 # someone who can see that account.
 class Account::HealthStatus
-  Issue = Data.define(:key, :severity, :message, :details, :hint, :link) do
-    def initialize(key:, severity:, message:, details: [], hint: nil, link: nil)
+  Issue = Data.define(:severity, :message, :details, :hint, :link) do
+    def initialize(severity:, message:, details: [], hint: nil, link: nil)
       super
     end
   end
-
-  SOURCES = %i[sync negative_positions].freeze
 
   attr_reader :account
 
@@ -20,21 +18,23 @@ class Account::HealthStatus
   end
 
   def issues
-    @issues ||= SOURCES.filter_map { |source| send("#{source}_issue") }
+    @issues ||= [ sync_issue, negative_positions_issue ].compact
   end
 
   private
     # The account's own latest sync: a later one that went through clears it.
+    # One still pending past Sync::VISIBLE_FOR lost its job; Sync.clean only
+    # marks it stale a day later.
     def sync_issue
       sync = account.latest_sync_record
-      return unless sync&.failed? || sync&.stale?
+      return unless sync
+      return unless sync.failed? || sync.stale? || (sync.in_progress? && !sync.visible?)
 
       key = sync.failed? ? :sync_failed : :sync_stale
       Issue.new(
-        key: key,
         severity: sync.failed? ? :error : :warning,
         message: I18n.t("accounts.health_status.#{key}.message"),
-        hint: I18n.t("accounts.health_status.#{key}.hint")
+        hint: I18n.t("accounts.health_status.sync_hint")
       )
     end
 
@@ -43,7 +43,6 @@ class Account::HealthStatus
       return if positions.empty?
 
       Issue.new(
-        key: :negative_positions,
         severity: :warning,
         message: I18n.t("accounts.health_status.negative_positions.message"),
         details: positions.map { |position| negative_position_detail(position) },

@@ -131,10 +131,9 @@ es:
         link: Revisar posiciones
         message: "Algunas posiciones quedaron por debajo de cero"
       sync_failed:
-        hint: Las cifras pueden estar desactualizadas. Vuelve a sincronizar y, si sigue fallando, revisa la conexión.
         message: La última sincronización falló
+      sync_hint: Las cifras pueden estar desactualizadas. Vuelve a sincronizar para ponerlas al día.
       sync_stale:
-        hint: Las cifras pueden estar desactualizadas. Vuelve a sincronizar para ponerlas al día.
         message: La última sincronización no terminó
     show:
       limited_fx_history_warning: El historial de tipos de cambio solo está disponible desde %{date}. Las transacciones anteriores a esa fecha usan conversiones de divisa aproximadas; esto puede ocurrir cuando el proveedor de tipos de cambio solo ofrece una ventana histórica limitada.

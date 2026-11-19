@@ -104,10 +104,9 @@ pl:
         link: "Sprawdź pozycje"
         message: "Niektóre pozycje spadły poniżej zera"
       sync_failed:
-        hint: "Dane mogą być nieaktualne. Zsynchronizuj ponownie, a jeśli nadal się nie uda, sprawdź połączenie."
         message: "Ostatnia synchronizacja nie powiodła się"
+      sync_hint: "Dane mogą być nieaktualne. Zsynchronizuj ponownie, aby je zaktualizować."
       sync_stale:
-        hint: "Dane mogą być nieaktualne. Zsynchronizuj ponownie, aby je zaktualizować."
         message: "Ostatnia synchronizacja nie została ukończona"
     show:
       activity:

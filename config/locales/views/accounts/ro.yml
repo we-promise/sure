@@ -41,10 +41,9 @@ ro:
         link: "Verifică dețineri"
         message: "Unele poziții au scăzut sub zero"
       sync_failed:
-        hint: "Cifrele de aici pot fi neactualizate. Sincronizează din nou și, dacă eșuează în continuare, verifică conexiunea."
         message: "Ultima sincronizare a eșuat"
+      sync_hint: "Cifrele de aici pot fi neactualizate. Sincronizează din nou pentru a le actualiza."
       sync_stale:
-        hint: "Cifrele de aici pot fi neactualizate. Sincronizează din nou pentru a le actualiza."
         message: "Ultima sincronizare nu s-a încheiat"
     show:
       activity:

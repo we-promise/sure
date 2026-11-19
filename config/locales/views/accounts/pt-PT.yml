@@ -83,10 +83,9 @@ pt-PT:
         link: "Rever posições"
         message: "Algumas posições ficaram abaixo de zero"
       sync_failed:
-        hint: "Os valores aqui podem estar desatualizados. Sincronize novamente e, se continuar a falhar, verifique a ligação."
         message: "A última sincronização falhou"
+      sync_hint: "Os valores aqui podem estar desatualizados. Sincronize novamente para os atualizar."
       sync_stale:
-        hint: "Os valores aqui podem estar desatualizados. Sincronize novamente para os atualizar."
         message: "A última sincronização não terminou"
     show:
       limited_fx_history_warning: "O histórico de taxas de câmbio só está disponível a partir de %{date}. As transações anteriores a esta data utilizam conversões de moeda aproximadas — tal acontece quando o serviço externo de câmbio apenas oferece uma janela histórica limitada."
