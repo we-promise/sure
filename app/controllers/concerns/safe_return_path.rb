@@ -1,6 +1,8 @@
 # The `return_to` param as a path on this site, or nil. Rejects absolute and
-# protocol-relative URLs (`//host`, `/\host`, and their percent-encoded forms)
-# so a crafted link can't send the user off the site after a provider flow.
+# protocol-relative URLs (`//host`, `/\host`, and their percent-encoded forms),
+# backslashes, control characters and paths that do not route, so a crafted
+# link can't send the user off the site after a provider flow. A bare `/` is
+# rejected too, so the caller's own default applies instead of the dashboard.
 module SafeReturnPath
   extend ActiveSupport::Concern
 
@@ -10,19 +12,18 @@ module SafeReturnPath
 
       return_to = params[:return_to].to_s.strip
       return nil unless return_to.start_with?("/")
-
-      second_character = return_to[1]
-      return nil if second_character.blank?
-      return nil if second_character == "/" || second_character == "\\"
-      return nil if second_character.match?(/[[:space:][:cntrl:]]/)
+      return nil if return_to == "/"
+      return nil if return_to[1] == "/" || return_to[1] == "\\"
+      return nil if return_to.include?("\\") || return_to.match?(/[[:cntrl:]]/)
       return nil if encoded_path_separator?(return_to)
 
       uri = URI.parse(return_to)
+      return nil unless uri.relative?
 
-      return nil if uri.scheme.present? || uri.host.present?
+      Rails.application.routes.recognize_path(uri.path, method: :get)
 
       return_to
-    rescue URI::InvalidURIError
+    rescue URI::InvalidURIError, ActionController::RoutingError
       nil
     end
 
@@ -33,6 +34,6 @@ module SafeReturnPath
       decoded = URI.decode_www_form_component(encoded_second_character)
       decoded == "/" || decoded == "\\"
     rescue ArgumentError
-      false
+      true
     end
 end
