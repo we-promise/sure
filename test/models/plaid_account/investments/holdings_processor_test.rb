@@ -372,8 +372,8 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
 
     @plaid_account.update!(raw_holdings_payload: {
       securities: [
-        { "security_id" => "zero_priced", "close_price" => 150.25 },
-        { "security_id" => "zero_no_close", "close_price" => nil }
+        { "security_id" => "zero_priced", "close_price" => 150.25, "iso_currency_code" => "USD" },
+        { "security_id" => "zero_no_close", "close_price" => nil, "iso_currency_code" => "USD" }
       ],
       holdings: [
         {

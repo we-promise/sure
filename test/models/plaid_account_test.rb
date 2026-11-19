@@ -80,9 +80,9 @@ class PlaidAccountTest < ActiveSupport::TestCase
     plaid_account.update!(raw_holdings_payload: {
       holdings: [],
       securities: [
-        { security_id: "priced", close_price: 42.5 },
-        { security_id: "no_close", close_price: nil },
-        { security_id: "zero_close", close_price: 0 }
+        { security_id: "priced", close_price: 42.5, iso_currency_code: "USD" },
+        { security_id: "no_close", close_price: nil, iso_currency_code: "USD" },
+        { security_id: "zero_close", close_price: 0, iso_currency_code: "USD" }
       ]
     })
     plaid_account.reload
@@ -94,5 +94,26 @@ class PlaidAccountTest < ActiveSupport::TestCase
     assert_equal 0, plaid_account.holding_price({ "security_id" => "zero_close", "institution_price" => 0 })
     assert_equal 0, plaid_account.holding_price({ "security_id" => "unknown", "institution_price" => 0 })
     assert_nil plaid_account.holding_price({ "security_id" => "priced", "institution_price" => nil })
+  end
+
+  test "holding_price keeps a zero price when the close price is in another currency or has none" do
+    plaid_account = plaid_accounts(:one) # USD
+    plaid_account.update!(raw_holdings_payload: {
+      holdings: [],
+      securities: [
+        { security_id: "cad_listed", close_price: 25.0, iso_currency_code: "CAD" },
+        { security_id: "no_currency", close_price: 25.0, iso_currency_code: nil, unofficial_currency_code: "XYZ" }
+      ]
+    })
+    plaid_account.reload
+
+    # The holding's own currency wins over the account's.
+    assert_equal 0, plaid_account.holding_price({ "security_id" => "cad_listed", "institution_price" => 0, "iso_currency_code" => "USD" })
+    assert_equal 25.0, plaid_account.holding_price({ "security_id" => "cad_listed", "institution_price" => 0, "iso_currency_code" => "CAD" })
+    # Without one, the account's currency (USD) is compared.
+    assert_equal 0, plaid_account.holding_price({ "security_id" => "cad_listed", "institution_price" => 0 })
+    # An explicit currency from the caller is compared instead.
+    assert_equal 25.0, plaid_account.holding_price({ "security_id" => "cad_listed", "institution_price" => 0 }, currency: "CAD")
+    assert_equal 0, plaid_account.holding_price({ "security_id" => "no_currency", "institution_price" => 0 })
   end
 end

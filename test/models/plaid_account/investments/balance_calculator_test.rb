@@ -94,7 +94,8 @@ class PlaidAccount::Investments::BalanceCalculatorTest < ActiveSupport::TestCase
           is_cash_equivalent: false,
           type: "equity",
           market_identifier_code: "XNAS",
-          close_price: 200
+          close_price: 200,
+          iso_currency_code: "USD"
         }
       ]
     })
