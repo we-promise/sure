@@ -130,8 +130,9 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
   private
     def expect_concurrent_status(concurrent_status, reported_status, error: nil)
       adapter = stub("vector_store_adapter")
+      document = @document
       adapter.define_singleton_method(:file_status) do |**_args|
-        @document.update_column(:status, concurrent_status)
+        document.update_column(:status, concurrent_status)
         VectorStore::Response.new(success?: true, data: { status: reported_status, error: }.compact, error: nil)
       end
       VectorStore::Registry.stubs(:adapter).returns(adapter)
