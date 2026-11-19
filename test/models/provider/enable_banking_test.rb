@@ -455,4 +455,31 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_not requested_queries.first.key?(:date_from)
     assert_not requested_queries.second.key?(:strategy)
   end
+
+  # The settings panel asks for the application's private key. Setups that
+  # pasted the key followed by a certificate must keep working.
+  test "accepts a private key followed by a certificate" do
+    key = OpenSSL::PKey::RSA.new(2048)
+    cert = OpenSSL::X509::Certificate.new
+    cert.version = 2
+    cert.serial = 1
+    cert.subject = cert.issuer = OpenSSL::X509::Name.parse("/CN=test")
+    cert.public_key = key.public_key
+    cert.not_before = Time.current
+    cert.not_after = 1.day.from_now
+    cert.sign(key, OpenSSL::Digest.new("SHA256"))
+
+    provider = Provider::EnableBanking.new(application_id: "test_app_id", client_certificate: key.to_pem + cert.to_pem)
+
+    assert_equal key.to_pem, provider.private_key.to_pem
+  end
+
+  test "an unreadable private key raises an error that names the private key" do
+    error = assert_raises Provider::EnableBanking::EnableBankingError do
+      Provider::EnableBanking.new(application_id: "test_app_id", client_certificate: "not a key")
+    end
+
+    assert_match(/\AInvalid private key: /, error.message)
+    assert_no_match(/certificate/i, error.message)
+  end
 end
