@@ -21,8 +21,11 @@ class Provider::Frankfurter < Provider
   # No published rate limit, but a light throttle is cheap insurance.
   MIN_REQUEST_INTERVAL = 0.15
 
-  def initialize
-    # No API key required, public endpoint only.
+  # No API key required. The defaults suit background syncs; a request-thread
+  # caller can pass a tighter timeout and no retries.
+  def initialize(timeout: 20, max_retries: 3)
+    @timeout = timeout
+    @max_retries = max_retries
   end
 
   def healthy?
@@ -113,11 +116,11 @@ class Provider::Frankfurter < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
-        faraday.options.open_timeout = 5
-        faraday.options.timeout      = 20
+        faraday.options.open_timeout = [ 5, @timeout ].min
+        faraday.options.timeout      = @timeout
 
         faraday.request(:retry, {
-          max: 3,
+          max: @max_retries,
           interval: 0.5,
           interval_randomness: 0.5,
           backoff_factor: 2,
@@ -128,6 +131,14 @@ class Provider::Frankfurter < Provider
         faraday.response :raise_error
         faraday.headers["Accept"] = "application/json"
       end
+    end
+
+    # A request that got no HTTP response at all (timeout, refused connection) is tagged
+    # :unreachable, so a caller can tell Frankfurter being down from a bad answer for one pair.
+    def default_error_transformer(error)
+      return super unless error.is_a?(Faraday::Error) && error.response.nil?
+
+      Error.new(error.message, failure_code: :unreachable)
     end
 
     def generate_same_currency_rates(from, to, start_date, end_date)

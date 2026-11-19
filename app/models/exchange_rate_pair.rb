@@ -3,7 +3,7 @@ class ExchangeRatePair < ApplicationRecord
 
   def self.for_pair(from:, to:, provider_name: nil)
     pair = find_or_create_by!(from_currency: from, to_currency: to)
-    current_provider = provider_name || resolve_provider_name
+    current_provider = provider_name || ExchangeRate.provider_name
 
     if pair.provider_name != current_provider && (pair.first_provider_rate_on.present? || pair.quoted_directly?)
       ExchangeRatePair
@@ -18,19 +18,13 @@ class ExchangeRatePair < ApplicationRecord
     find_by!(from_currency: from, to_currency: to)
   end
 
-  # Resolves the runtime provider name the same way as ExchangeRate::Provided.provider:
-  # ENV takes precedence over the DB Setting.
-  def self.resolve_provider_name
-    (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
-  end
-
   # Once the provider has answered the pair itself, a later failure is an
   # outage rather than a pair it lacks, so it no longer derives from USD legs.
   # A pair with a USD side is never derived, so its flag is never used.
   def self.record_direct_quote(from:, to:, provider_name: nil)
     return if from == "USD" || to == "USD"
 
-    current_provider = provider_name || resolve_provider_name
+    current_provider = provider_name || ExchangeRate.provider_name
     pair = for_pair(from: from, to: to, provider_name: current_provider)
     return if pair.quoted_directly?
 
@@ -42,7 +36,7 @@ class ExchangeRatePair < ApplicationRecord
   def self.record_first_provider_rate_on(from:, to:, date:, provider_name: nil)
     return if date.blank?
 
-    current_provider = provider_name || resolve_provider_name
+    current_provider = provider_name || ExchangeRate.provider_name
     pair = for_pair(from: from, to: to, provider_name: current_provider)
 
     ExchangeRatePair
