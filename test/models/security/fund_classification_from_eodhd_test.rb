@@ -89,4 +89,22 @@ class Security::FundClassificationFromEodhdTest < ActiveSupport::TestCase
     assert_equal "Vanguard 500 Admiral", s.name
     assert_equal [ "equity", "mutual_fund", "north_america" ], [ s.asset_class, s.asset_sub_class, s.region ]
   end
+
+  # EODHD also keys mutual-fund rows by index: the allocation at the top level,
+  # and regions and sectors one level down, under their group.
+  test "a mutual fund with indexed allocation, region and sector rows is classified" do
+    r = run_eodhd(sec("VFIAX", "XNAS", "US"), "General" => { "Type" => "FUND", "Name" => "Vanguard 500 Admiral" },
+      "MutualFund_Data" => {
+        "Asset_Allocation" => { "0" => { "Type" => "Cash", "Net_%" => "0.4" }, "1" => { "Type" => "US Stocks", "Net_%" => "99.2" } },
+        "World_Regions" => { "Americas" => { "0" => { "Name" => "North America", "Stocks_%" => "99.578" } } },
+        "Sector_Weights" => { "Sensitive" => { "0" => { "Type" => "Technology", "Amount_%" => "95" } } }
+      })
+    assert_equal [ "equity", "mutual_fund", "north_america", "Technology" ], r
+  end
+
+  test "a money market fund named only in General.Fund_Category is liquidity" do
+    r = run_eodhd(sec("SWVXX", "XNAS", "US"), "General" => { "Type" => "FUND", "Name" => "SWVXX", "Fund_Category" => "Money Market-Taxable" },
+      "MutualFund_Data" => { "Asset_Allocation" => { "Cash" => { "Net_%" => "100" } } })
+    assert_equal [ "liquidity", "mutual_fund", nil, nil ], r
+  end
 end
