@@ -433,7 +433,7 @@ RSpec.configure do |config|
           },
           AccountDetail: {
             type: :object,
-            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency ownership_percentage owned_balance owned_balance_cents classification account_type status created_at updated_at],
+            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency ownership_percentage owned_balance owned_balance_cents classification account_type status exclude_from_reports created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
@@ -449,6 +449,7 @@ RSpec.configure do |config|
               account_type: { type: :string, nullable: true },
               subtype: { type: :string, nullable: true },
               status: { type: :string, enum: %w[active draft disabled pending_deletion] },
+              exclude_from_reports: { type: :boolean, readOnly: true, description: 'Whether this account is excluded from financial reports' },
               institution_name: { type: :string, nullable: true },
               institution_domain: { type: :string, nullable: true },
               created_at: { type: :string, format: :'date-time' },
@@ -828,7 +829,7 @@ RSpec.configure do |config|
           },
           Rule: {
             type: :object,
-            required: %w[id resource_type active position stop_processing conditions actions created_at updated_at],
+            required: %w[id resource_type active position stop_processing apply_immediately conditions actions created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string, nullable: true },
@@ -837,6 +838,7 @@ RSpec.configure do |config|
               effective_date: { type: :string, format: :date, nullable: true },
               position: { type: :integer, description: 'Run order within the family; rules run from the lowest position up and the top rule wins per attribute' },
               stop_processing: { type: :boolean, description: 'When true, rules further down do not change transactions this rule matches' },
+              apply_immediately: { type: :boolean, description: 'When true, the rule also runs right after a transaction is created or edited by hand, in a bulk edit, in Categorize, via the API or by the assistant (splits, transfers and conversions to trades wait for the nightly run); otherwise it only runs on the nightly and sync runs' },
               conditions: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/RuleCondition' }
@@ -885,7 +887,7 @@ RSpec.configure do |config|
               id: { type: :string, format: :uuid },
               rule_id: { type: :string, format: :uuid },
               rule_name: { type: :string, nullable: true },
-              execution_type: { type: :string, enum: %w[manual scheduled] },
+              execution_type: { type: :string, enum: %w[manual scheduled immediate] },
               status: { type: :string, enum: %w[pending success failed] },
               transactions_queued: { type: :integer, minimum: 0 },
               transactions_processed: { type: :integer, minimum: 0 },
@@ -1178,27 +1180,6 @@ RSpec.configure do |config|
             required: %w[message],
             properties: {
               message: { type: :string }
-            }
-          },
-          TransactionResponse: {
-            type: :object,
-            required: %w[id date amount currency name entryable_type account],
-            properties: {
-              id: { type: :string, format: :uuid },
-              date: { type: :string, format: :date },
-              amount: { type: :string },
-              currency: { type: :string },
-              name: { type: :string },
-              entryable_type: { type: :string },
-              account: {
-                type: :object,
-                required: %w[id name account_type],
-                properties: {
-                  id: { type: :string, format: :uuid },
-                  name: { type: :string },
-                  account_type: { type: :string, nullable: true }
-                }
-              }
             }
           },
           ImportConfiguration: {

@@ -126,6 +126,24 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes account_names, inactive_account.name
   end
 
+  test "reports the exclusion flag without hiding excluded account identities" do
+    account = accounts(:depository)
+    get "/api/v1/accounts/#{account.id}", headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal false, JSON.parse(response.body).fetch("exclude_from_reports")
+
+    account.update!(exclude_from_reports: true)
+    get "/api/v1/accounts", params: { per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+    row = JSON.parse(response.body).fetch("accounts").find { |item| item["id"] == account.id }
+    assert_not_nil row
+    assert_equal true, row.fetch("exclude_from_reports")
+
+    get "/api/v1/accounts/#{account.id}", headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal true, JSON.parse(response.body).fetch("exclude_from_reports")
+  end
+
   test "should include disabled accounts when requested" do
     inactive_account = accounts(:depository)
     inactive_account.disable!
