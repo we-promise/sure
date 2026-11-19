@@ -714,27 +714,36 @@ class Entry < ApplicationRecord
   # parent. Editing an existing split doesn't re-check whether the parent is pending or a transfer:
   # it creates no new split. Raises SplitPartTransferredError while a part is a leg of a confirmed transfer.
   def resplit!(splits)
-    retrying_unsplit_deadlock do
-      with_split_lock do
-        next false unless split_parent?
+    with_split_lock do
+      next false unless split_parent?
 
-        unsplit!
-        split!(splits)
-        true
-      end
+      unsplit!
+      split!(splits)
+      true
     end
   end
 
   # Unsplits under the same lock. Returns false when another caller already did. Raises
   # SplitPartTransferredError while a part is a leg of a confirmed transfer.
   def unsplit_once!
-    retrying_unsplit_deadlock do
-      with_split_lock do
-        next false unless split_parent?
+    with_split_lock do
+      next false unless split_parent?
 
-        unsplit!
-        true
-      end
+      unsplit!
+      true
+    end
+  end
+
+  # Deletes this entry for a user. A split is refused like unsplit! while a part
+  # is a leg of a confirmed transfer: deleting the parent takes the part and its
+  # transfer with it and leaves the other leg behind as a standalone entry.
+  # Syncs and imports that remove entries call destroy! directly.
+  def destroy_unless_split_part_transferred!
+    return destroy! unless split_parent?
+
+    with_split_lock do
+      refuse_while_split_part_transferred! if split_parent?
+      destroy!
     end
   end
 
@@ -817,13 +826,7 @@ class Entry < ApplicationRecord
   # Removes split children and restores parent entry.
   def unsplit!
     self.class.transaction do
-      # Locks the parts' transfers and then the parts, the order Transfer#confirm!
-      # takes them in, so a transfer created or confirmed on a part at the same
-      # time waits and the check below sees it.
-      part_ids = split_part_transaction_ids.pluck(:entryable_id)
-      Transfer.where(outflow_transaction_id: part_ids).or(Transfer.where(inflow_transaction_id: part_ids)).order(:id).lock.pluck(:id)
-      Transaction.where(id: part_ids).order(:id).lock.pluck(:id)
-      raise SplitPartTransferredError, "Remove the transfer on a split part before changing the split" if split_part_transferred?
+      refuse_while_split_part_transferred!
 
       child_entries.each do |child|
         child.unsplitting = true
@@ -1089,21 +1092,14 @@ class Entry < ApplicationRecord
       end
     end
 
-    # Transfer#confirm! locks a transfer before its transactions and
-    # Transfer#destroy! locks them the other way round, so whichever order
-    # unsplit! takes, a confirm or unlink racing it can deadlock. Postgres then
-    # aborts one side; running the unsplit again checks against what the other
-    # side committed. Only the outermost transaction can be retried.
-    def retrying_unsplit_deadlock
-      attempts = 0
-      begin
-        yield
-      rescue ActiveRecord::Deadlocked
-        attempts += 1
-        raise if attempts >= 3 || self.class.lease_connection.transaction_open?
-
-        retry
-      end
+    # Locks the parts' transfers and then the parts, the order Transfer#confirm!
+    # and Transfer#destroy! take them in, so a transfer created, confirmed or
+    # removed on a part at the same time waits and the check sees it.
+    def refuse_while_split_part_transferred!
+      part_ids = split_part_transaction_ids.pluck(:entryable_id)
+      Transfer.where(outflow_transaction_id: part_ids).or(Transfer.where(inflow_transaction_id: part_ids)).order(:id).lock.pluck(:id)
+      Transaction.where(id: part_ids).order(:id).lock.pluck(:id)
+      raise SplitPartTransferredError, "Remove the transfer on a split part before changing the split" if split_part_transferred?
     end
 
     def split_part_transaction_ids

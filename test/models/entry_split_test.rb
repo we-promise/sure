@@ -377,4 +377,23 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert @entry.unsplit_once!
     assert_not @entry.reload.split_parent?
   end
+
+  test "deleting a split is refused while a part is a confirmed transfer leg" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    transfer = link_split_part_to_loan(part)
+
+    assert_raises(Entry::SplitPartTransferredError) { @entry.destroy_unless_split_part_transferred! }
+    assert Entry.exists?(@entry.id)
+    assert Transfer.exists?(transfer.id)
+  end
+
+  test "deleting a split with only a pending transfer suggestion on a part removes it" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part, status: "pending")
+
+    @entry.destroy_unless_split_part_transferred!
+
+    assert_not Entry.exists?(@entry.id)
+    assert_not Entry.exists?(part.id)
+  end
 end

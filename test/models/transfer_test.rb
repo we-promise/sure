@@ -198,6 +198,16 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal categories(:income), transfer.outflow_transaction.reload.category
   end
 
+  test "confirm! on a transfer removed in the meantime raises and leaves the legs alone" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:loan))
+    stale = Transfer.find(transfer.id)
+    transfer.destroy!
+
+    assert_raises(ActiveRecord::RecordNotFound) { stale.confirm! }
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+  end
+
   test "reject! leaves the kind of a pending transfer's transactions alone" do
     transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
     transfer.outflow_transaction.update!(kind: "one_time")

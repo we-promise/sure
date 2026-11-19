@@ -416,6 +416,19 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         run_test!
       end
+
+      response '422', 'the transaction is split and a part is linked as a transfer; remove that transfer first' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        before do
+          part = another_transaction.entry.split!([ { name: 'Principal', amount: 3 }, { name: 'Interest', amount: 2 } ]).first
+          loan_account = Account.create!(family: family, name: 'Mortgage', balance: 100_000, currency: 'USD', accountable: Loan.create!)
+          loan_entry = loan_account.entries.create!(name: 'Payment', date: part.date, amount: -3, currency: 'USD', entryable: Transaction.new)
+          Transfer.create!(inflow_transaction: loan_entry.transaction, outflow_transaction: part.transaction, status: 'confirmed', amount: 3)
+        end
+
+        run_test!
+      end
     end
   end
 end

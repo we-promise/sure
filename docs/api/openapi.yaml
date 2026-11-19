@@ -10982,6 +10982,13 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: the transaction is split and a part is linked as a transfer;
+            remove that transfer first
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/transfers":
     get:
       summary: List transfers

@@ -1434,6 +1434,19 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
   assert response_data.key?("message")
 end
 
+  test "should reject destroying a split whose part is linked as a transfer" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      delete api_v1_transaction_url(parent.transaction), headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
   test "should reject destroy with read-only API key" do
     delete api_v1_transaction_url(@transaction), headers: api_headers(@read_only_api_key)
     assert_response :forbidden

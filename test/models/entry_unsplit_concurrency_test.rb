@@ -1,12 +1,12 @@
 require "test_helper"
 require "concurrent"
 
-# Unsplitting while a transfer on one of the parts is confirmed or removed
-# must end in a consistent state, and the unsplit must either succeed or be
-# refused, never fail with a deadlock. The racing confirm or unlink may still
-# fail when the unsplit removed its transfer first; that is Transfer's own
-# behavior for a transfer deleted under it. Real threads on real connections,
-# so this needs real commits.
+# Unsplitting or deleting a split while a transfer on one of the parts is
+# confirmed or removed must end in a consistent state. The split action must
+# either succeed or be refused, and an unlink racing it must succeed, never
+# fail with a deadlock. A racing confirm fails with RecordNotFound when the
+# split action removed its transfer first, and then leaves the legs alone.
+# Real threads on real connections, so this needs real commits.
 class EntryUnsplitConcurrencyTest < ActiveSupport::TestCase
   self.use_transactional_tests = false
 
@@ -36,7 +36,7 @@ class EntryUnsplitConcurrencyTest < ActiveSupport::TestCase
     5.times do
       parent, transfer = split_with_part_transfer(status: "pending")
 
-      race(unsplit: -> { parent.unsplit_once! }, other: -> { transfer.confirm! })
+      race(split_action: -> { parent.unsplit_once! }, other: -> { transfer.confirm! }, other_may_raise: ActiveRecord::RecordNotFound)
 
       # Uncached: this thread's query cache still holds the rows read before the race.
       ActiveRecord::Base.uncached do
@@ -44,6 +44,7 @@ class EntryUnsplitConcurrencyTest < ActiveSupport::TestCase
           assert Transfer.find(transfer.id).confirmed?, "a split that stays must keep its confirmed transfer"
         else
           assert_not Transfer.exists?(transfer.id), "an unsplit must not leave the transfer behind"
+          assert_equal "standard", Transaction.find(transfer.inflow_transaction_id).kind, "a confirm after the unsplit must not change the loan leg"
         end
       end
     end
@@ -56,12 +57,29 @@ class EntryUnsplitConcurrencyTest < ActiveSupport::TestCase
       # updates them before it deletes the transfer row.
       transfer.confirm!
 
-      race(unsplit: -> { parent.unsplit_once! }, other: -> { transfer.destroy! })
+      race(split_action: -> { parent.unsplit_once! }, other: -> { transfer.destroy! })
 
       ActiveRecord::Base.uncached do
         if Transfer.exists?(transfer.id)
           assert Transfer.find(transfer.id).confirmed?
           assert Entry.find(parent.id).split_parent?, "a split must not be removed while its transfer stays"
+        end
+      end
+    end
+  end
+
+  test "deleting a split while a part's transfer is confirmed keeps both or removes both" do
+    5.times do
+      parent, transfer = split_with_part_transfer(status: "pending")
+
+      race(split_action: -> { parent.destroy_unless_split_part_transferred! }, other: -> { transfer.confirm! }, other_may_raise: ActiveRecord::RecordNotFound)
+
+      ActiveRecord::Base.uncached do
+        if Entry.exists?(parent.id)
+          assert Transfer.find(transfer.id).confirmed?, "a split that stays must keep its confirmed transfer"
+        else
+          assert_not Transfer.exists?(transfer.id), "deleting the split must not leave the transfer behind"
+          assert_equal "standard", Transaction.find(transfer.inflow_transaction_id).kind, "a confirm after the delete must not change the loan leg"
         end
       end
     end
@@ -81,24 +99,20 @@ class EntryUnsplitConcurrencyTest < ActiveSupport::TestCase
       [ Entry.find(parent.id), Transfer.find(transfer.id) ]
     end
 
-    # Starts both actions at the same moment. The unsplit may only succeed or
-    # be refused.
-    def race(unsplit:, other:)
+    # Starts both actions at the same moment. The split action may only
+    # succeed or be refused; the other action may only raise other_may_raise.
+    def race(split_action:, other:, other_may_raise: nil)
       errors = Concurrent::Array.new
       latch = Concurrent::CountDownLatch.new(2)
 
-      threads = [ [ unsplit, true ], [ other, false ] ].map do |action, collect|
+      threads = [ [ split_action, Entry::SplitPartTransferredError ], [ other, other_may_raise ] ].map do |action, allowed|
         Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do
             latch.count_down
             latch.wait(5)
             action.call
-          rescue Entry::SplitPartTransferredError
-            nil
           rescue => e
-            # Only the unsplit's errors count. The confirm or unlink may fail
-            # because the unsplit removed its transfer first.
-            errors << e if collect
+            errors << e unless allowed && e.is_a?(allowed)
           end
         end
       end

@@ -2478,6 +2478,18 @@ end
     assert_select "##{dom_id(outflow, "category_menu_desktop")} [data-ds--popover-frame-id-value='category_dropdown']"
   end
 
+  test "deleting a split is refused while a part is linked as a transfer" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      delete transaction_url(parent)
+    end
+
+    assert_equal I18n.t("account.entries.destroy.part_transferred"), flash[:alert]
+  end
+
   test "update keeps a split part's amount, currency and kind" do
     parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
     part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first

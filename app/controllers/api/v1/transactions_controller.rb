@@ -208,13 +208,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    @entry.destroy!
+    @entry.destroy_unless_split_part_transferred!
     @entry.sync_account_later
 
     render json: {
       message: "Transaction deleted successfully"
     }, status: :ok
 
+  rescue Entry::SplitPartTransferredError
+    render json: { error: "validation_failed", message: "A part of this split is linked as a transfer. Remove that transfer before you delete the transaction." }, status: :unprocessable_entity
   rescue => e
     Rails.logger.error "TransactionsController#destroy error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
