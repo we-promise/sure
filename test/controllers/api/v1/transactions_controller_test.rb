@@ -1311,6 +1311,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
         headers: api_headers(@api_key).merge("Content-Type" => "application/json")
 
     assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
     assert_equal before_ids, @transaction.reload.tag_ids.sort
   end
 
@@ -1327,6 +1328,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
           headers: api_headers(@api_key).merge("Content-Type" => "application/json")
 
       assert_response :unprocessable_entity, "tag_ids: #{tag_ids.inspect}"
+      assert_equal "validation_failed", JSON.parse(response.body)["error"], "tag_ids: #{tag_ids.inspect}"
       assert_equal before_ids, @transaction.reload.tag_ids.sort, "tag_ids: #{tag_ids.inspect}"
     end
   end
@@ -1340,6 +1342,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
         headers: api_headers(@api_key).merge("Content-Type" => "application/json")
 
     assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
     assert_equal before_ids, @transaction.reload.tag_ids.sort
   end
 

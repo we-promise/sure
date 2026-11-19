@@ -39,6 +39,16 @@ class Security::TagsTest < ActiveSupport::TestCase
     assert_equal 3, Tagging.where(taggable: @security).count
   end
 
+  # set_tags_for is the one writer: it takes the security's lock and keeps the
+  # edit inside the family. Tag#securities only reads.
+  test "a tag lists its securities but cannot attach one" do
+    @security.set_tags_for(@family, [ @tag.id ])
+
+    assert_equal [ @security ], @tag.securities.to_a
+    assert_not_respond_to @tag, :security_ids=
+    assert_not_respond_to @tag.securities, :<<
+  end
+
   test "set_tags_for attaches the family's tag and the tag reaches the security" do
     assert_difference -> { Tagging.where(taggable: @security).count }, 1 do
       @security.set_tags_for(@family, [ @tag.id ])

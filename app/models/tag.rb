@@ -14,7 +14,6 @@ class Tag < ApplicationRecord
   belongs_to :family
   has_many :taggings, dependent: :destroy
   has_many :transactions, through: :taggings, source: :taggable, source_type: "Transaction"
-  has_many :securities, through: :taggings, source: :taggable, source_type: "Security"
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
 
   validates :name, presence: true, uniqueness: { scope: :family }
@@ -54,6 +53,12 @@ class Tag < ApplicationRecord
   # "Untagged" pseudo-tag returned by .untagged.
   def filter_value
     persisted? ? name : UNTAGGED_FILTER_VALUE
+  end
+
+  # Read-only: Security#set_tags_for is the one writer, so tagging a security
+  # always takes its lock and stays inside the family.
+  def securities
+    Security.where(id: taggings.where(taggable_type: "Security").select(:taggable_id))
   end
 
   def replace_and_destroy!(replacement)
