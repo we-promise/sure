@@ -421,7 +421,7 @@ class TransferTest < ActiveSupport::TestCase
   test "rename_entries! renames both legs and strips whitespace" do
     transfer = transfers(:one)
 
-    assert transfer.rename_entries!(outflow_name: "  Rent  ", inflow_name: " Rent received ")
+    transfer.rename_entries!(outflow_name: "  Rent  ", inflow_name: " Rent received ")
 
     assert_equal "Rent", transfer.outflow_transaction.entry.reload.name
     assert_equal "Rent received", transfer.inflow_transaction.entry.reload.name
@@ -432,8 +432,11 @@ class TransferTest < ActiveSupport::TestCase
     outflow_name = transfer.outflow_transaction.entry.name
     inflow_name = transfer.inflow_transaction.entry.name
 
-    assert_not transfer.rename_entries!(outflow_name: "  ", inflow_name: "Rent received")
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      transfer.rename_entries!(outflow_name: "  ", inflow_name: "Rent received")
+    end
 
+    assert error.record.errors.of_kind?(:name, :blank)
     assert_equal outflow_name, transfer.outflow_transaction.entry.reload.name
     assert_equal inflow_name, transfer.inflow_transaction.entry.reload.name
   end

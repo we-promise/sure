@@ -98,19 +98,25 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
     submitted_names = submitted_transfer_names
-    if submitted_names && submitted_names.values.any?(&:blank?)
+
+    begin
+      Transfer.transaction do
+        update_transfer_status
+        update_transfer_fees_and_amount
+        update_transfer_details(submitted_names)
+        update_investment_contribution
+      end
+    rescue ActiveRecord::RecordInvalid => e
+      # A blank name fails Entry's presence validation inside
+      # rename_entries!, which the model owns; surface it as an alert. Any
+      # other invalid record is a real failure and propagates.
+      raise unless submitted_names && e.record.errors.of_kind?(:name, :blank)
+
       respond_to do |format|
         format.html { redirect_back_or_to transactions_url, alert: t(".name_required") }
         format.turbo_stream { stream_redirect_to(request.referer.presence || transactions_url, alert: t(".name_required")) }
       end
       return
-    end
-
-    Transfer.transaction do
-      update_transfer_status
-      update_transfer_fees_and_amount
-      update_transfer_details(submitted_names)
-      update_investment_contribution
     end
 
     @view_ctx = view_ctx_from_referer
@@ -408,13 +414,14 @@ class TransfersController < ApplicationController
 
     # Both leg names travel together: the form always submits both, and a
     # request with only one is treated as invalid rather than silently leaving
-    # the other leg unchanged.
+    # the other leg unchanged. Trimming and the blank rule live in
+    # Transfer#rename_entries!.
     def submitted_transfer_names
       return unless transfer_update_params.key?(:outflow_name) || transfer_update_params.key?(:inflow_name)
 
       {
-        outflow_name: transfer_update_params[:outflow_name].to_s.strip,
-        inflow_name: transfer_update_params[:inflow_name].to_s.strip
+        outflow_name: transfer_update_params[:outflow_name],
+        inflow_name: transfer_update_params[:inflow_name]
       }
     end
 

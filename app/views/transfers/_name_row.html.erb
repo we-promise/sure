@@ -1,15 +1,14 @@
 <%# locals: (form:, method:, account:, value:) %>
+<%# Renders inside the caller's <dl>: DS::DetailRow is a dt/dd row, not a list. %>
 
-<dl>
-  <%= render DS::DetailRow.new(label: t("transfers.show.transaction_name"), align: :center) do |row| %>
-    <% row.with_value do %>
-      <%= render DS::InlineEdit.new(
-            form: form,
-            method: method,
-            value: value,
-            aria_label: t("transfers.show.transaction_name_aria", account: account.name),
-            data: { auto_submit_form_target: "auto" }
-          ) %>
-    <% end %>
+<%= render DS::DetailRow.new(label: t("transfers.show.transaction_name"), align: :center) do |row| %>
+  <% row.with_value do %>
+    <%= render DS::InlineEdit.new(
+          form: form,
+          method: method,
+          value: value,
+          aria_label: t("transfers.show.transaction_name_aria", account: account.name),
+          data: { auto_submit_form_target: "auto" }
+        ) %>
   <% end %>
-</dl>
+<% end %>

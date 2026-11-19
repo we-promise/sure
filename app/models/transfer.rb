@@ -107,7 +107,9 @@ class Transfer < ApplicationRecord
     I18n.t("transfer.contextual.transfer")
   end
 
-  # Renames both legs. Returns false when either name is blank. A changed entry
+  # Renames both legs. A blank name raises ActiveRecord::RecordInvalid from
+  # Entry's presence validation, so the rule has a single owner and a partial
+  # rename never lands (the caller's transaction rolls back). A changed entry
   # locks its name so provider syncs do not overwrite it, without freezing
   # unrelated provider enrichment.
   def rename_entries!(outflow_name:, inflow_name:)
@@ -115,7 +117,6 @@ class Transfer < ApplicationRecord
       outflow_transaction.entry => outflow_name.to_s.strip,
       inflow_transaction.entry => inflow_name.to_s.strip
     }
-    return false if names.values.any?(&:blank?)
 
     Transfer.transaction do
       names.each do |entry, new_name|
@@ -125,8 +126,6 @@ class Transfer < ApplicationRecord
         entry.lock_saved_attributes!
       end
     end
-
-    true
   end
 
   def payment?
