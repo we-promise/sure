@@ -56,52 +56,56 @@ class Provider::EtfConstituentsTest < ActiveSupport::TestCase
 
   # `false` and a blank string are blank, but they are not an empty holdings
   # block. Read as "no holdings", they would wipe the fund's stored set and
-  # stamp it. Only null, {} and [] mean the fund lists nothing.
-  test "a holdings block that is false or a blank string fails the request" do
+  # stamp it. Only null, {} and [] mean the fund lists nothing. The rest of
+  # the answer is still good, so it succeeds and marks the holdings unreadable.
+  test "a holdings block that is false or a blank string is unreadable, and the rest of the answer lands" do
     [ false, "", "   " ].each do |holdings|
-      body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => holdings } }.to_json
+      body = { "General" => { "Name" => "Fund", "Type" => "ETF" }, "ETF_Data" => { "Holdings" => holdings } }.to_json
       response = fetch_response(body)
 
-      assert_not response.success?, "for #{holdings.inspect}"
-      assert_kind_of Provider::Eodhd::Error, response.error
+      assert response.success?, "for #{holdings.inspect}"
+      assert_equal "Fund", response.data.name
+      assert_equal Provider::SecurityConcept::UNREADABLE_CONSTITUENTS, response.data.constituents, "for #{holdings.inspect}"
     end
   end
 
   # Anything else in the holdings block is a response this parser cannot read.
-  # Answered as "no holdings", it would delete the fund's stored set and stamp
-  # the fund, and the gate would not ask again.
-  test "a holdings block that is not a map fails the request" do
+  test "a holdings block that is not a map is unreadable" do
     [ "unavailable", [ { "Code" => "AAPL" } ], 5 ].each do |holdings|
       body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => holdings } }.to_json
-      response = fetch_response(body)
 
-      assert_not response.success?, "for #{holdings.inspect}"
-      assert_kind_of Provider::Eodhd::Error, response.error
+      assert_equal Provider::SecurityConcept::UNREADABLE_CONSTITUENTS, fetch(body).constituents, "for #{holdings.inspect}"
     end
   end
 
-  # A map that is present but whose entries are all malformed is the same
-  # failure as one that is not a map: answered as "no holdings" it would wipe
-  # the stored set and stamp the fund, and the gate would not ask again. A
-  # partial read, by contrast, keeps the readable entries and drops the rest.
-  test "a holdings map whose entries are all malformed fails the request" do
+  # A map that is present but whose entries are all malformed is the same as
+  # one that is not a map.
+  test "a holdings map whose entries are all malformed is unreadable" do
     [ { "AAPL.US" => "not a hash", "MSFT.US" => 42 },
       { "AAPL.US" => nil, "MSFT.US" => [ "nested" ] } ].each do |holdings|
       body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => holdings } }.to_json
-      response = fetch_response(body)
 
-      assert_not response.success?, "for #{holdings.inspect}"
-      assert_kind_of Provider::Eodhd::Error, response.error
+      assert_equal Provider::SecurityConcept::UNREADABLE_CONSTITUENTS, fetch(body).constituents, "for #{holdings.inspect}"
     end
   end
 
-  test "a holdings map with some malformed entries keeps the readable subset" do
+  # A partial read keeps every entry, malformed ones included, so the importer
+  # can log what it skips.
+  test "a holdings map with some malformed entries passes them all to the importer" do
     body = {
       "General" => { "Type" => "ETF" },
       "ETF_Data" => { "Holdings" => { "AAPL.US" => { "Code" => "AAPL", "Assets_%" => 1 }, "MSFT.US" => "garbage" } }
     }.to_json
 
-    assert_equal [ "AAPL" ], fetch(body).constituents.map { |c| c[:ticker] }
+    constituents = fetch(body).constituents
+    assert_equal [ "AAPL" ], constituents.grep(Hash).map { |c| c[:ticker] }
+    assert_includes constituents, "garbage"
+  end
+
+  test "a positive holdings count with no list is unreadable" do
+    body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => nil, "Holdings_Count" => 503 } }.to_json
+
+    assert_equal Provider::SecurityConcept::UNREADABLE_CONSTITUENTS, fetch(body).constituents
   end
 
   # The ticker EODHD keys the hash by carries its exchange suffix; `Code` is the
