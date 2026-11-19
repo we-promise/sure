@@ -143,7 +143,10 @@ class Security::Price::Importer
     # want subsequent syncs to reflect the new earlier clamp. We never
     # move the column forward from a previously-discovered earlier value,
     # since that would silently hide older rows already in the DB.
-    if advanced_first_price_on.present? &&
+    #
+    # Not under the keyless substitute: the security doesn't record it, so a
+    # key added later changes the provider without resetting this date.
+    if advanced_first_price_on.present? && !keyless_substitute_import? &&
        (security.first_provider_price_on.blank? ||
         advanced_first_price_on < security.first_provider_price_on)
       security.update_column(:first_provider_price_on, advanced_first_price_on)
@@ -154,6 +157,10 @@ class Security::Price::Importer
 
   private
     attr_reader :security, :security_provider, :start_date, :end_date, :clear_cache
+
+    def keyless_substitute_import?
+      security.price_provider.blank? && Security.keyless_substitute?(security_provider)
+    end
 
     # The start date sent to the provider API, clamped to the provider's max
     # lookback window when applicable. Computed independently of provider_prices

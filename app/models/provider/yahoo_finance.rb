@@ -1,6 +1,14 @@
 require "set"
 
 class Provider::YahooFinance < Provider
+  # Whether a ticker on this MIC resolves to that listing. A MIC with no
+  # suffix mapping is looked up bare, which can be a different listing.
+  def self.venue_supported?(exchange_operating_mic)
+    exchange_operating_mic.blank? ||
+      UNSUFFIXED_MICS.include?(exchange_operating_mic) ||
+      EXCHANGE_CONFIG.key?(exchange_operating_mic)
+  end
+
   include ExchangeRateConcept, SecurityConcept
   extend SslConfigurable
 
@@ -579,6 +587,9 @@ class Provider::YahooFinance < Provider
     # A MIC missing here means the symbol is sent to Yahoo bare, which for any
     # non-US listing is a 404: the security then accumulates failed fetches and
     # never gets a price, with nothing telling the user why.
+    # US listings need no Yahoo suffix; other venues need one from EXCHANGE_CONFIG.
+    UNSUFFIXED_MICS = %w[XNAS XNYS ARCX XASE BATS IEXG].freeze
+
     EXCHANGE_CONFIG = {
       "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
       "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },
@@ -603,6 +614,8 @@ class Provider::YahooFinance < Provider
       "XHEL" => { yahoo_suffix: ".HE", default_currency: "EUR" },
       "XOSL" => { yahoo_suffix: ".OL", default_currency: "NOK" },
       "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }, # Vienna
+      # Asia-Pacific
+      "XASX" => { yahoo_suffix: ".AX", default_currency: "AUD" }, # Australian Securities Exchange
       # Canada. Yahoo writes share classes and units with a dash, not a dot:
       # CSH.UN is CSH-UN.TO and CCL.B is CCL-B.TO.
       "XTSE" => { yahoo_suffix: ".TO", default_currency: "CAD", share_class_separator: "-" }, # Toronto

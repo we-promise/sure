@@ -520,7 +520,10 @@ class Security::ResolverTest < ActiveSupport::TestCase
       end
     end
 
-    assert_nil resolved.reload.price_provider
+    resolved.reload
+    assert_nil resolved.price_provider
+    assert_not resolved.offline?, "the resolver must have saved Yahoo's match, not an offline placeholder"
+    assert_equal "Fallback Co", resolved.name
 
     with_env_overrides("TWELVE_DATA_API_KEY" => "test-key") do
       assert_instance_of Provider::TwelveData, resolved.price_data_provider

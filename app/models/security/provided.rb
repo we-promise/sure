@@ -7,22 +7,25 @@ module Security::Provided
   KEYLESS_FALLBACK_PROVIDER = "yahoo_finance"
 
   class_methods do
-    # Returns all enabled and configured securities providers. When the first
-    # enabled provider can't be built (e.g. no API key), the keyless Yahoo
-    # Finance provider takes its place, unless that is already enabled. Only
-    # the first position is substituted, so the substitute is always the
-    # default for securities without an assigned provider.
+    # Returns all enabled and configured securities providers. When none of
+    # them can be built (e.g. Twelve Data alone, with no API key), the keyless
+    # Yahoo Finance provider stands in, unless that is already enabled. A
+    # provider that can be built keeps the securities it prices: with Binance
+    # enabled beside a keyless Twelve Data, crypto stays on Binance.
     def providers
       names = Setting.enabled_securities_providers
-      substitute = !names.include?(KEYLESS_FALLBACK_PROVIDER)
+      built = names.filter_map { |name| build_provider(name) }
+      return built if built.any? || names.empty? || names.include?(KEYLESS_FALLBACK_PROVIDER)
 
-      names.each_with_index.filter_map do |name, index|
-        provider = build_provider(name)
-        next provider if provider || !substitute || index.positive?
+      log_keyless_substitution(names.first)
+      [ build_provider(KEYLESS_FALLBACK_PROVIDER) ].compact
+    end
 
-        log_keyless_substitution(name)
-        build_provider(KEYLESS_FALLBACK_PROVIDER)
-      end
+    # True when provider_instance is Yahoo standing in for providers that
+    # can't be built, rather than a Yahoo the user enabled.
+    def keyless_substitute?(provider_instance)
+      provider_key_for(provider_instance) == KEYLESS_FALLBACK_PROVIDER &&
+        !Setting.enabled_securities_providers.include?(KEYLESS_FALLBACK_PROVIDER)
     end
 
     # Backward compat: first enabled provider
@@ -101,7 +104,7 @@ module Security::Provided
         # provider once that can be built. Its ticker is stored without Yahoo's
         # exchange suffix (SAP.DE becomes SAP on XETR), so that provider gets
         # the symbol it expects; Yahoo re-adds the suffix from the MIC.
-        keyless_substitute = provider_key == KEYLESS_FALLBACK_PROVIDER && !Setting.enabled_securities_providers.include?(KEYLESS_FALLBACK_PROVIDER)
+        keyless_substitute = keyless_substitute?(active_providers[idx])
         provider_key = nil if keyless_substitute
 
         provider_results.each do |ps|
@@ -242,7 +245,15 @@ module Security::Provided
       return assigned if assigned.present?
       return nil # assigned provider is unavailable — don't silently fall back
     end
-    self.class.providers.first
+
+    default = self.class.providers.first
+    # The keyless substitute looks a ticker up on the venue its MIC maps to.
+    # With no mapping it would ask for the bare ticker, often another
+    # listing (BHP is the NYSE ADR, not the ASX share), so it is skipped.
+    return nil if default && self.class.keyless_substitute?(default) &&
+      !Provider::YahooFinance.venue_supported?(exchange_operating_mic)
+
+    default
   end
 
   # Returns the health status of this security's provider link.

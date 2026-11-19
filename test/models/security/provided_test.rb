@@ -292,15 +292,46 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     end
   end
 
-  test "the substitute keeps the default's position" do
-    yahoo = stub_yahoo_finance
+  test "no substitute while another enabled provider can be built" do
+    Provider::Registry.expects(:yahoo_finance).never
 
     without_securities_keys([ "twelve_data", "binance_public" ]) do
-      providers = Security.providers
-
-      assert_equal yahoo, providers.first
-      assert_equal [ Provider::YahooFinance, Provider::BinancePublic ], providers.map(&:class)
+      assert_equal [ Provider::BinancePublic ], Security.providers.map(&:class)
     end
+  end
+
+  test "an unassigned crypto security stays on Binance beside a keyless Twelve Data" do
+    crypto = Security.create!(ticker: "CRYPTO:USDT", exchange_operating_mic: nil)
+
+    without_securities_keys([ "twelve_data", "binance_public" ]) do
+      assert_instance_of Provider::BinancePublic, crypto.price_data_provider
+    end
+  end
+
+  test "the substitute prices an ASX listing it can map" do
+    yahoo = stub_yahoo_finance
+    bhp = Security.create!(ticker: "BHP", exchange_operating_mic: "XASX")
+
+    without_securities_keys([ "twelve_data" ]) do
+      assert_equal yahoo, bhp.price_data_provider
+    end
+  end
+
+  test "the substitute skips a non-US listing it cannot map" do
+    stub_yahoo_finance
+    hsbc = Security.create!(ticker: "0005", exchange_operating_mic: "XHKG")
+
+    without_securities_keys([ "twelve_data" ]) do
+      assert_nil hsbc.price_data_provider
+    end
+  end
+
+  test "an explicitly enabled Yahoo still prices an unmapped listing" do
+    yahoo = stub_yahoo_finance
+    hsbc = Security.create!(ticker: "0005", exchange_operating_mic: "XHKG")
+    Setting.stubs(:enabled_securities_providers).returns([ "yahoo_finance" ])
+
+    assert_equal yahoo, hsbc.price_data_provider
   end
 
   test "only one substitute" do
@@ -390,19 +421,18 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     end
   end
 
-  test "a keyless provider beside the substitute keeps its stamp" do
-    yahoo = stub_yahoo_finance
-    yahoo.stubs(:search_securities).returns(provider_success_response([ search_result("AAPL") ]))
+  test "a keyless provider that can be built is used without a substitute" do
+    Provider::Registry.expects(:yahoo_finance).never
     mfapi = mock("mfapi")
     mfapi.stubs(:class).returns(Provider::Mfapi)
     mfapi.stubs(:search_securities).returns(provider_success_response([ search_result("AAPLMF") ]))
     Provider::Registry.stubs(:mfapi).returns(mfapi)
 
     without_securities_keys([ "twelve_data", "mfapi" ]) do
-      assert_equal [ yahoo, mfapi ], Security.providers
+      assert_equal [ mfapi ], Security.providers
 
       stamps = Security.search_provider("AAPL").to_h { |s| [ s.ticker, s.price_provider ] }
-      assert_equal({ "AAPL" => nil, "AAPLMF" => "mfapi" }, stamps)
+      assert_equal({ "AAPLMF" => "mfapi" }, stamps)
     end
   end
 

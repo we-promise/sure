@@ -157,6 +157,33 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal listing, @security.reload.first_provider_price_on
   end
 
+  test "the keyless substitute leaves first_provider_price_on unset" do
+    # The security doesn't record the substitute, so adding a key later
+    # changes its provider without resetting the date; a date saved now would
+    # stop the new provider backfilling the earlier range.
+    Security::Price.delete_all
+    @provider.stubs(:class).returns(Provider::YahooFinance)
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+
+    start_date = Date.parse("2018-06-15")
+    listing    = Date.parse("2020-01-03")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: listing,         price: 6568, currency: "EUR"),
+      OpenStruct.new(security: @security, date: listing + 1.day, price: 6700, currency: "EUR")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: listing + 1.day
+    ).import_provider_prices
+
+    assert_equal 2, Security::Price.where(security: @security).count
+    assert_nil @security.reload.first_provider_price_on
+  end
+
   test "pre-listing fallback picks earliest VALID provider row, skipping nil/zero leaders" do
     # Regression: if the provider returns a row with a nil/zero price as its
     # earliest entry (e.g. a listing-day or halted-day placeholder), the
