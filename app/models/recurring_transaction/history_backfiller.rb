@@ -4,17 +4,21 @@ class RecurringTransaction
   # only unambiguous exact-tier links against entries not already allocated,
   # and the prune only deletes open, unallocated rows.
   class HistoryBackfiller
-    attr_reader :family, :months
+    attr_reader :family, :months, :as_of
 
-    def initialize(family, months: 6, series_scope: nil)
+    # as_of is the day the history is reconstructed for. A deferred run
+    # passes the day its caller wanted, so a backfill that waited on the
+    # family lock prunes exactly what an immediate run would have.
+    def initialize(family, months: 6, series_scope: nil, as_of: Date.current)
       @family = family
       @months = months
       @series_scope = series_scope
+      @as_of = as_of
     end
 
     # Returns the number of pruned occurrences.
     def run!
-      from = months.months.ago.to_date
+      from = as_of - months.months
 
       series_scope.find_each do |series|
         OccurrenceGenerator.new(series).backfill!(from: from)
@@ -40,7 +44,8 @@ class RecurringTransaction
       # before its first due date either, which can fall after the current
       # cycle has begun. The anchor is a scheduled date, so it bounds
       # original_due_on: weekend adjustment can move the first occurrence's
-      # due_on ahead of it.
+      # due_on ahead of it. A schedule that has ended by as_of has no current
+      # cycle, so nothing before as_of is owed.
       def prune_uncovered_past!
         pruned = 0
 
@@ -48,7 +53,7 @@ class RecurringTransaction
           uncovered = series.recurring_occurrences
                             .open_status
                             .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
-          cycle_start = series.schedule.cycle_for(Date.current)&.begin
+          cycle_start = current_cycle_start(series.schedule)
           anchor = series.anchor_date if series.manual?
           bounds = [
             (uncovered.where("due_on < ?", cycle_start) if cycle_start),
@@ -60,6 +65,13 @@ class RecurringTransaction
         end
 
         pruned
+      end
+
+      def current_cycle_start(schedule)
+        cycle = schedule.cycle_for(as_of)
+        return cycle.begin if cycle
+
+        as_of if schedule.first_occurrence_after(as_of).nil?
       end
   end
 end

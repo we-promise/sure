@@ -220,7 +220,7 @@ class RecurringTransaction < ApplicationRecord
   # family-wide on purpose (exact-tier, idempotent, and scoping it would need
   # a parallel Matcher entry point). Returns false only when another pipeline
   # holds the family lock.
-  def reconstruct_history!
+  def reconstruct_history!(as_of: Date.current)
     return true if family.recurring_transactions_disabled?
 
     Pipeline.with_family_lock(family_id) do
@@ -236,7 +236,8 @@ class RecurringTransaction < ApplicationRecord
       HistoryBackfiller.new(
         family,
         months: Pipeline::FIRST_RUN_BACKFILL_MONTHS,
-        series_scope: series_scope
+        series_scope: series_scope,
+        as_of: as_of
       ).run!
     end
   end
@@ -258,12 +259,14 @@ class RecurringTransaction < ApplicationRecord
   # The activation has committed by now, so a failure here must not fail the
   # caller's own write (a toggle, an API update, the assistant's update_bill).
   # It is reported and handed to the job, which retries; the backfill is
-  # re-runnable by construction.
+  # re-runnable by construction. The job carries today's date, so a run that
+  # waited reconstructs the same history an immediate one would have.
   def reconstruct_history_on_activation
-    BackfillRecurringHistoryJob.perform_later(id) unless reconstruct_history!
+    as_of = Date.current
+    BackfillRecurringHistoryJob.perform_later(id, as_of) unless reconstruct_history!(as_of: as_of)
   rescue StandardError => e
     Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
-    BackfillRecurringHistoryJob.perform_later(id)
+    BackfillRecurringHistoryJob.perform_later(id, as_of)
   end
 
   # A second registration of the activation method would replace the first

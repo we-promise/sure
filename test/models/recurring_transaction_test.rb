@@ -1948,7 +1948,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       end
     end
 
-    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id ])
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id, Date.current ])
     assert_equal 0, confirmed_allocations_for(series), "nothing may run under another session's lock"
 
     # The refused pg_try_advisory_lock is a SELECT the test's query cache
@@ -1957,6 +1957,46 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     perform_enqueued_jobs(only: BackfillRecurringHistoryJob)
 
     assert_equal 3, confirmed_allocations_for(series)
+  end
+
+  test "a deferred declaration backfill keeps the first obligation after declaration" do
+    # Declared on 2026-11-19, first due 2026-11-20. The backfill waits on the
+    # family lock and runs on 2026-12-25, a cycle later; it must keep what an
+    # immediate run on the 19th keeps.
+    series = nil
+    travel_to Date.new(2026, 11, 19) do
+      with_family_lock_held_elsewhere(@family.id) do
+        series = @family.recurring_transactions.create!(
+          name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
+          expected_day_of_month: 20, anchor_date: Date.new(2026, 11, 20),
+          last_occurrence_date: Date.new(2026, 10, 20), next_expected_date: Date.new(2026, 11, 20),
+          status: "active", manual: true
+        )
+      end
+    end
+
+    travel_to Date.new(2026, 12, 25) do
+      ActiveRecord::Base.connection.clear_query_cache
+      perform_enqueued_jobs(only: BackfillRecurringHistoryJob)
+
+      assert series.recurring_occurrences.exists?(original_due_on: Date.new(2026, 11, 20)),
+        "the first obligation after declaration must survive a deferred backfill"
+    end
+  end
+
+  test "declaring a bill whose schedule has already ended leaves no past occurrences" do
+    travel_to Date.new(2026, 11, 19) do
+      series = @family.recurring_transactions.create!(
+        name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
+        expected_day_of_month: 9, anchor_date: Date.new(2026, 8, 9),
+        last_occurrence_date: Date.new(2026, 9, 9), next_expected_date: Date.new(2026, 9, 9),
+        end_mode: "on_date", end_on: Date.new(2026, 9, 9),
+        status: "active", manual: true
+      )
+
+      assert_empty series.recurring_occurrences.open_status.where("due_on < ?", Date.current).pluck(:due_on),
+        "an ended schedule owes nothing, so its unpaid past rows must be pruned"
+    end
   end
 
   test "a declared bill keeps a first due date the weekend moved before its anchor" do
