@@ -41,7 +41,7 @@ nl:
       description: "Pas de gesplitste boekingen voor deze transactie aan."
       submit: "Splitsing bijwerken"
       not_split: "Deze transactie is niet gesplitst."
-      part_transferred: "Een deel van deze splitsing is gekoppeld als overboeking. Verwijder die overboeking voordat je de splitsing bewerkt of ongedaan maakt."
+      part_transferred: "Een deel van deze splitsing is gekoppeld als overboeking. Verwijder die overboeking voordat u de splitsing bewerkt of ongedaan maakt."
     update:
       success: "Splitsing succesvol bijgewerkt"
     child:
