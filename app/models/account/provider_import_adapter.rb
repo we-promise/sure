@@ -1,3 +1,30 @@
+      # A deleted provider entry stays deleted. Its external_id was tombstoned
+      # when it was destroyed, so a re-walked payload or long sync window
+      # must not resurrect it.
+      if ProviderImportTombstone.tombstoned?(account: account, source: source, external_id: external_id)
+        Rails.logger.info("ProviderImportAdapter: skipping tombstoned #{source} transaction #{external_id} for account #{account.id}")
+        return nil
+      end
+
+
+      # An automatically excluded stale pending (see Entry.auto_exclude_stale_pending)
+      # that the provider now delivers as booked under the same id becomes a normal
+      # entry again. Entries the user excluded are never touched. An import_locked
+      # entry that is not user_modified keeps its pending flag below, so it stays
+      # excluded rather than being re-excluded on every sync.
+      if entry.persisted? && !incoming_pending && entry.auto_excluded_pending? &&
+          (entry.user_modified? || !entry.import_locked?)
+        entry.update!(excluded: false) # also drops the mark (Entry callback)
+      end
+
+      # Coins arriving in a wallet are its deposits (GoalPledge.deposit_trade?).
+      # After commit, because a wallet writes the trade inside its own
+      # transaction. A re-imported trade is skipped by the reconciler once
+      # stamped.
+      if GoalPledge.deposit_trade?(entry) && account_linked_to_any_goal?
+        GoalPledge::Reconciler.run_after_commit(entry)
+      end
+
 class Account::ProviderImportAdapter
   SCHEDULED_MATCH_WINDOW_DAYS = 7
 
@@ -44,14 +71,6 @@ class Account::ProviderImportAdapter
     raise ArgumentError, "source is required" if source.blank?
 
     Account.transaction do
-      # A deleted provider entry stays deleted. Its external_id was tombstoned
-      # when it was destroyed, so a re-walked payload or long sync window
-      # must not resurrect it.
-      if ProviderImportTombstone.tombstoned?(account: account, source: source, external_id: external_id)
-        Rails.logger.info("ProviderImportAdapter: skipping tombstoned #{source} transaction #{external_id} for account #{account.id}")
-        return nil
-      end
-
       # Find or initialize by both external_id AND source
       # This allows multiple providers to sync same account with separate entries
       entry = account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
@@ -878,7 +897,7 @@ class Account::ProviderImportAdapter
   # @param currency [String] Currency code
   # @param source [String] Provider name (e.g., "simplefin")
   # @param date_window [Integer] Days to search around the posted date (default: 8)
-  # @return [Entry, nil] The pending entry or nil if not found
+  # @return [Entry, nil] The pending entry, or nil when none or several match
   def find_pending_transaction(date:, amount:, currency:, source:, date_window: 8)
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
@@ -898,9 +917,15 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
       .where(Transaction.pending_sql("transactions"))
-      .order(date: :desc) # Prefer most recent pending transaction
+      .where(excluded: false)
+      .limit(2)
+      .to_a
 
-    candidates.first
+    # Amount, currency and date alone cannot tell two same-amount pendings apart,
+    # so only claim when the match is unambiguous (#2013). Otherwise the posted
+    # transaction is imported as a new entry and the pendings stay for the
+    # stale-pending cleanup.
+    candidates.size == 1 ? candidates.first : nil
   end
 
   # Finds a pending transaction using fuzzy amount matching for tip adjustments
@@ -1167,7 +1192,7 @@ class Account::ProviderImportAdapter
     def account_linked_to_any_goal?
       return @account_linked_to_any_goal if defined?(@account_linked_to_any_goal)
 
-      @account_linked_to_any_goal = account.goal_accounts.exists?
+      @account_linked_to_any_goal = account.linked_to_goal?
     end
 
     # Writes provider-owned metadata onto the transaction.
