@@ -2691,16 +2691,19 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal member, rule.reload.restricted_to
   end
 
-  test "a restricted rule can't be imported with a transfer target its user cannot write" do
+  test "a member's import of a transfer rule targeting an account they can't write holds it for review" do
     family = families(:dylan_family)
     ndjson = build_ndjson([ { type: "Rule", version: 1, data: {
-      name: "Transfer", resource_type: "transaction",
+      id: "rule-m", name: "Transfer", resource_type: "transaction", active: true,
       actions: [ { action_type: "set_as_transfer_or_payment", value: accounts(:investment).id } ]
     } } ])
 
-    assert_raises(ActiveRecord::RecordInvalid) do
-      Family::DataImporter.new(family, ndjson, user: users(:family_member)).import!
-    end
+    Family::DataImporter.new(family, ndjson, user: users(:family_member)).import!
+
+    rule = family.rules.find_by!(name: "Transfer")
+    assert rule.review_required?
+    assert_not rule.active?
+    assert_equal users(:family_member), rule.restricted_to
   end
 
   test "rules from an import session whose creator is gone wait for an admin's review" do
@@ -2735,6 +2738,32 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     Family::DataImporter.new(@family, ndjson).import!
 
     assert @family.rules.find_by!(name: "Held").review_required?
+  end
+
+  test "a transfer rule whose target isn't in the file is held for review, not a failed import" do
+    ndjson = build_ndjson([ { type: "Rule", version: 1, data: { id: "rule-x", name: "Lost target", resource_type: "transaction", active: true,
+      actions: [ { action_type: "set_as_transfer_or_payment", value: SecureRandom.uuid } ] } } ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    rule = @family.rules.find_by!(name: "Lost target")
+    assert rule.review_required?
+    assert_not rule.active?
+  end
+
+  test "a restricted transfer rule whose user can't write the restored target is held for review" do
+    family = families(:dylan_family)
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-checking", name: "Restored for admin", balance: "10", currency: "USD", accountable_type: "Depository", accountable: { subtype: "checking" } } },
+      { type: "Rule", version: 1, data: { id: "rule-y", name: "Member transfer", resource_type: "transaction", active: true, restricted_to: users(:family_member).email,
+        actions: [ { action_type: "set_as_transfer_or_payment", value: "old-checking" } ] } }
+    ])
+
+    Family::DataImporter.new(family, ndjson).import!
+
+    rule = family.rules.find_by!(name: "Member transfer")
+    assert rule.review_required?
+    assert_not rule.active?
   end
 
   test "imports rule groups by name and keeps each group in one block" do

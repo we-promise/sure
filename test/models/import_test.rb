@@ -79,6 +79,14 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal 0, held
   end
 
+  test "the publish lock gives up instead of waiting for good" do
+    import = imports(:transaction)
+    Import.stubs(:publish_lock_wait).returns(0)
+    Import.lease_connection.stubs(:select_value).with(regexp_matches(/pg_try_advisory_lock/)).returns(false)
+
+    assert_raises(Import::PublishBusyError) { import.with_publish_lock { flunk "ran without the lock" } }
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

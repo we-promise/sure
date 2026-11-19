@@ -10,7 +10,9 @@ module SessionAdvisoryLockable
   extend ActiveSupport::Concern
 
   # error: the exception raised when called inside an open transaction.
-  def with_session_advisory_lock(namespace, error:)
+  # wait: seconds to keep trying before raising busy, for callers that must
+  # not hold a request waiting; without it the call waits as long as it takes.
+  def with_session_advisory_lock(namespace, error:, wait: nil, busy: nil)
     raise error, "#{self.class.name} #{id} must not take this lock inside a transaction" if self.class.current_transaction.open?
 
     connection = self.class.lease_connection
@@ -20,7 +22,7 @@ module SessionAdvisoryLockable
     outermost = !sessions.key?(namespace)
     locked = false
     begin
-      connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_lock(?, hashtext(?))", *key ]))
+      acquire_session_advisory_lock(connection, key, wait: wait, busy: busy)
       locked = true
       # Inside the begin, so a failure after taking the lock still releases it.
       sessions[namespace] ||= backend_pid(connection)
@@ -40,6 +42,18 @@ module SessionAdvisoryLockable
   end
 
   private
+    def acquire_session_advisory_lock(connection, key, wait:, busy:)
+      return connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_lock(?, hashtext(?))", *key ])) if wait.nil?
+
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + wait
+      loop do
+        return if connection.select_value(self.class.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?, hashtext(?))", *key ]))
+        raise busy, "#{self.class.name} #{id} is locked" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+        sleep 0.05
+      end
+    end
+
     # An unlock that does not run (the connection broke, the thread was
     # interrupted) would leave the lock with the connection; throwing the
     # connection away ends its session, which releases the lock. A session

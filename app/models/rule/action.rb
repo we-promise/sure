@@ -43,8 +43,10 @@ class Rule::Action < ApplicationRecord
   # A transfer target must be an account the rule's restricting user may
   # write (SetAsTransferOrPayment#target_accounts). Every save path restricts
   # the rule to its non-admin editor first (Rule#restrict_to_editor).
+  # A rule held for review runs nothing until an admin switches it on, and
+  # the executor checks the target again when it runs.
   validate :transfer_target_writable, if: -> {
-    action_type == "set_as_transfer_or_payment" && value.present? &&
+    action_type == "set_as_transfer_or_payment" && value.present? && !rule&.review_required? &&
       (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
   }
 

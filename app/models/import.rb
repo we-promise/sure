@@ -4,6 +4,8 @@ class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   AlreadyPublishedError = Class.new(StandardError)
   PublishLockInTransaction = Class.new(StandardError)
+  # Another request holds the publish lock (a publish or a wizard step).
+  PublishBusyError = Class.new(StandardError)
   PUBLISH_LOCK_NAMESPACE = 4015
   # reason is :accounts or :rules (see #publish_refusal_for).
   class PublishNotAllowedError < StandardError
@@ -325,7 +327,12 @@ class Import < ApplicationRecord
   end
 
   def with_publish_lock(&)
-    with_session_advisory_lock(PUBLISH_LOCK_NAMESPACE, error: PublishLockInTransaction, &)
+    with_session_advisory_lock(PUBLISH_LOCK_NAMESPACE, error: PublishLockInTransaction, wait: self.class.publish_lock_wait, busy: PublishBusyError, &)
+  end
+
+  # How long a request waits for the publish lock before asking to try again.
+  def self.publish_lock_wait
+    5
   end
 
   # Whether the web wizard may still change the import: one published is
@@ -612,7 +619,7 @@ class Import < ApplicationRecord
   # to a non-admin publisher or session creator (Family::DataImporter).
   def publish_refusal_for(user)
     return :accounts unless accounts_writable_by?(user)
-    return :rules if writes_rules? && !user&.admin?
+    return :rules if !user&.admin? && writes_rules?
 
     :guest_categories_or_tags if user&.guest? && creates_categories_or_tags?
   end

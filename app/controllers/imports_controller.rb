@@ -54,6 +54,8 @@ class ImportsController < ApplicationController
     redirect_back_or_to import_path(@import), alert: e.message
   rescue Import::AlreadyPublishedError
     redirect_to import_path(@import), alert: t("imports.published_locked")
+  rescue Import::PublishBusyError
+    redirect_to import_path(@import), alert: t("imports.publish_busy")
   end
 
   # Statement imports only: what became of each extracted transaction. Without it

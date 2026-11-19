@@ -83,6 +83,15 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, import_path(chunk)
   end
 
+  test "a change while the import is being published asks to try again" do
+    Import.any_instance.stubs(:with_publish_lock).raises(Import::PublishBusyError)
+
+    patch import_upload_url(@import), params: { import: { raw_file_str: file_fixture("imports/valid.csv").read, col_sep: "," } }
+
+    assert_redirected_to import_path(@import)
+    assert_equal I18n.t("imports.publish_busy"), flash[:alert]
+  end
+
   test "uploads valid csv by copy and pasting" do
     patch import_upload_url(@import), params: {
       import: {

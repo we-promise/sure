@@ -1621,6 +1621,10 @@ class Family::DataImporter
         # After the rebuild, so a switch-off alone keeps the rule's scope
         # (Rule#only_switched_off?), and before the save validates against it.
         assign_rule_restriction(rule, data)
+        # A transfer target the rule can't write here (an account the file
+        # doesn't hold, or one its user can't write) holds the rule rather
+        # than failing the whole import.
+        hold_for_review(rule) if rule.actions.any? { |action| unwritable_transfer_target?(action) }
 
         left_group_id = rule.rule_group_id_was if rule.will_save_change_to_rule_group_id? && rule.rule_group.nil?
 
@@ -1670,6 +1674,10 @@ class Family::DataImporter
       # nobody can be restricted.
       hold_for_review(rule) if @import_session && @user.nil?
       rule.restrict_to_editor(@user)
+    end
+
+    def unwritable_transfer_target?(action)
+      action.action_type == "set_as_transfer_or_payment" && action.value.present? && !action.executor.actionable?(action.value)
     end
 
     def hold_for_review(rule)

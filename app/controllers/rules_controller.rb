@@ -68,6 +68,8 @@ class RulesController < ApplicationController
 
     @rule.apply_later(ignore_attribute_locks: true, user: Current.user)
     redirect_back_or_to rules_path, notice: "#{@rule.resource_type.humanize} rule activated"
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back_or_to rules_path, alert: e.record.errors.full_messages.to_sentence
   end
 
   def confirm

@@ -17,6 +17,8 @@ module ImportGuestGuardable
           redirect_to import_path(@import), alert: t("imports.published_locked")
         end
       end
+    rescue Import::PublishBusyError
+      redirect_to import_path(@import), alert: t("imports.publish_busy")
     end
 
     def require_import_editable!

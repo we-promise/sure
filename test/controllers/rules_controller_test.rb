@@ -852,7 +852,24 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
     get rules_url
 
-    assert_includes response.body, I18n.t("rules.rule.review_required")
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("rules.rule.review_required"))
+  end
+
+  test "only an admin can switch on a rule held for review" do
+    rule = @user.family.rules.create!(resource_type: "transaction", review_required: true, actions_attributes: [ { action_type: "exclude_transaction" } ])
+    sign_in users(:family_member)
+
+    patch rule_url(rule), params: { rule: { active: "1" } }
+    post apply_rule_url(rule)
+
+    assert_equal I18n.t("activerecord.errors.models.rule.held_for_review"), flash[:alert]
+    assert_not rule.reload.active?
+    assert rule.review_required?
+
+    sign_in @user
+    patch rule_url(rule), params: { rule: { active: "1" } }
+    assert rule.reload.active?
+    assert_not rule.review_required?
   end
 
   test "guest cannot create rule" do

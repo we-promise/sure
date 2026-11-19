@@ -96,6 +96,18 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_equal "preview_stale", result[:error]
   end
 
+  test "a member can't switch on a rule held for review" do
+    member = users(:family_member)
+    create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
+    @rule.update_column(:review_required, true)
+    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
+
+    result = Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
+
+    assert_equal "held_for_review", result[:error]
+    assert_not @rule.reload.active?
+  end
+
   # Activating a rule with an email action records its current matches as
   # delivered. If that times out the rule stays off (Rule#seed_notification_baseline),
   # and queuing the run anyway would email every past match.

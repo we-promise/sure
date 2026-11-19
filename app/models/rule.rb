@@ -99,6 +99,11 @@ class Rule < ApplicationRecord
   # save then skips its own, which would run the query again and, on a timeout,
   # switch off a rule that has its baseline. Reset at the start of every save.
   before_save :reset_notification_baseline_taken
+  # Only an admin may switch a held rule back on: that is the review it waits
+  # for. The editor is whoever the save is for (#restrict_to_editor).
+  validate :switched_on_by_admin_when_held, if: -> {
+    review_required? && will_save_change_to_active?(to: true) && @editor && !@editor.admin?
+  }
   # Switching a rule on is the review a released rule waits for.
   before_save -> { self.review_required = false }, if: -> { review_required? && active? }
 
@@ -349,6 +354,7 @@ class Rule < ApplicationRecord
   # admin's edit keeps a restriction a member left; widening the rule to the
   # family is a separate admin action (RulesController#widen).
   def restrict_to_editor(user)
+    @editor = user
     return if user.nil? || user.admin? || only_switched_off?
 
     self.restricted_to = user
@@ -570,6 +576,10 @@ class Rule < ApplicationRecord
           end
         end
       end
+    end
+
+    def switched_on_by_admin_when_held
+      errors.add(:base, :held_for_review)
     end
 
     def note_match_criteria_change

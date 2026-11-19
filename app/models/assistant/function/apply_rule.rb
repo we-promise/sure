@@ -121,5 +121,9 @@ class Assistant::Function::ApplyRule < Assistant::Function
     }
   rescue Rule::SafeRegex::TimeoutError
     regex_timeout_error(rule, "Nothing was applied.")
+  rescue ActiveRecord::RecordInvalid => e
+    raise unless e.record.errors.of_kind?(:base, :held_for_review)
+
+    error("held_for_review", "This rule is switched off until an admin reviews it; only an admin can switch it on.")
   end
 end

@@ -70,7 +70,7 @@ es:
       on_or_after: '%{resource} a partir del %{date}'
       restricted_to: Solo cambia las cuentas que %{name} puede editar
       widen: Aplicar a toda la familia
-      review_required: Se desactivó cuando se fue la persona a la que estaba limitada. Al activarla, se aplica a toda la familia.
+      review_required: Desactivada hasta que la revise un administrador, porque no hay nadie en la familia por quien actúe (se fue, o vino de una importación que no lo indicaba). Solo un administrador puede activarla, y entonces se aplica a toda la familia.
       stop_processing: Parar
       stop_processing_hint: Las reglas de más abajo no cambian las transacciones que cumple esta regla.
     form:

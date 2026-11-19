@@ -51,13 +51,28 @@ class SureImportTest < ActiveSupport::TestCase
   test "publishing takes the publish lock once" do
     attach_ndjson({ type: "Tag", data: { id: "tag-1", name: "Once" } }.to_json)
     locks = 0
-    counter = ->(*, payload) { locks += 1 if payload[:sql].include?("pg_advisory_lock(") }
+    counter = ->(*, payload) { locks += 1 if payload[:sql].match?(/pg_(try_)?advisory_lock\(/) }
 
     ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
       @import.publish_later(user: users(:family_admin))
     end
 
     assert_equal 1, locks
+  end
+
+  test "writes_rules? reads the stored record counts instead of the file" do
+    attach_ndjson({ type: "Rule", data: { id: "rule-1", name: "Counted", resource_type: "transaction", actions: [ { action_type: "exclude_transaction" } ] } }.to_json)
+    import = SureImport.find(@import.id)
+    import.expects(:ndjson_blob_string).never
+
+    assert import.writes_rules?
+  end
+
+  test "an admin's publish doesn't look for rules" do
+    attach_ndjson({ type: "Tag", data: { id: "tag-1", name: "Admin" } }.to_json)
+    @import.expects(:writes_rules?).never
+
+    assert_nil @import.publish_refusal_for(users(:family_admin))
   end
 
   test "dry_run reflects attached ndjson content" do

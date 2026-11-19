@@ -108,7 +108,13 @@ class SureImport < Import
     false
   end
 
+  # From the record counts stored with the file (#sync_ndjson_rows_count!,
+  # run on every upload and before a publish), so a check under a lock
+  # doesn't download it; imports from before those counts read the file.
   def writes_rules?
+    counts = normalized_expected_record_counts
+    return counts["rules"].to_i.positive? if counts.key?("rules")
+
     ndjson_file.attached? && self.class.ndjson_line_type_counts(ndjson_blob_string)["Rule"].to_i.positive?
   end
 
@@ -174,6 +180,8 @@ class SureImport < Import
   def check_before_publish_claim!
     reload
     raise AlreadyPublishedError, "Import #{id} is #{status}" unless changeable?
+    # The counts the claim's checks read (#writes_rules?) match the file now.
+    sync_ndjson_rows_count!
     raise MaxRowCountExceededError if row_count_exceeded?
 
     validate_sure_preflight!

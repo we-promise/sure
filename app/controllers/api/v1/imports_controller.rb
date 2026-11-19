@@ -137,6 +137,8 @@ class Api::V1::ImportsController < Api::V1::BaseController
           @import.publish_later(user: current_resource_owner)
         rescue Import::PublishNotAllowedError => e
           return render_import_not_publishable(e)
+        rescue Import::PublishBusyError
+          return render_import_busy
         end
       end
 
@@ -203,6 +205,10 @@ class Api::V1::ImportsController < Api::V1::BaseController
     end
 
     # The import is kept: only the publish is refused, as in the web.
+    def render_import_busy
+      render_json({ error: "import_busy", message: "The import is being changed or published right now. Try again in a moment.", import_id: @import.id }, status: :conflict)
+    end
+
     def render_import_not_publishable(error)
       render_json({ error: "forbidden", message: error.api_message, import_id: @import.id }, status: :forbidden)
     end
@@ -274,6 +280,9 @@ class Api::V1::ImportsController < Api::V1::BaseController
         @import.publish_later(user: current_resource_owner) if params[:publish] == "true"
       rescue Import::PublishNotAllowedError => e
         render_import_not_publishable(e)
+        return
+      rescue Import::PublishBusyError
+        render_import_busy
         return
       rescue Import::MaxRowCountExceededError
         render json: {
