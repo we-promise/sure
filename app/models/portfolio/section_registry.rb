@@ -78,7 +78,7 @@ class Portfolio::SectionRegistry
           key: "holdings",
           title: "portfolios.sections.holdings",
           partial: "portfolios/holdings",
-          locals: shared_locals.merge(rows: holdings_rows, sort: sort, dir: dir),
+          locals: shared_locals.merge(rows: holdings_rows, sort: holdings_sort.first, dir: holdings_sort.last),
           visible: holdings_rows.any?,
           collapsible: true
         },
@@ -94,7 +94,13 @@ class Portfolio::SectionRegistry
     end
 
     def holdings_rows
-      @holdings_rows ||= statement.holdings_table_rows(sort: sort, dir: dir)
+      @holdings_rows ||= statement.holdings_table_rows(sort: holdings_sort.first, dir: holdings_sort.last)
+    end
+
+    # The sort the statement applies, so the view marks the header the rows
+    # are ordered by even when the requested one fell back.
+    def holdings_sort
+      @holdings_sort ||= InvestmentStatement.holdings_sort(sort, dir)
     end
 
     # The accounts the cards show, in name order (case-insensitive; id breaks

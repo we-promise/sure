@@ -137,6 +137,18 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     assert sections.find { |s| s[:key] == "accounts" }[:visible], "the accounts still list with nothing held"
   end
 
+  # The statement falls back on its own for an unknown sort, so the view must
+  # be told what it fell back to, or no header shows the sort it sees.
+  test "passes the effective sort and direction to the holdings locals" do
+    holdings = Portfolio::SectionRegistry.new(
+      statement: @statement, period: @period, as_of: @as_of, user: @user, sort: "unsupported", dir: "asc"
+    ).sections.find { |s| s[:key] == "holdings" }
+
+    assert_equal [ "value", "asc" ], [ holdings[:locals][:sort], holdings[:locals][:dir] ]
+    values = holdings[:locals][:rows].map { |row| row.amount.amount }
+    assert_equal values.sort, values, "the rows are in the order the locals name"
+  end
+
   test "passes the sort and direction through to the holdings locals" do
     # Ticker order and name order disagree for this one: it sorts last by
     # ticker and first by name, so a name sort that secretly ordered by
