@@ -27,6 +27,20 @@ class Transaction < ApplicationRecord
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
+  # A tag can be applied to a transaction only once, but assigning the same
+  # tag twice would insert two taggings. Collapse repeats first, comparing
+  # ids as the database does. The original values go on to `super`: Rails
+  # drops blanks before it casts, so passing a malformed id cast to nil would
+  # discard it silently instead of raising RecordNotFound.
+  def tag_ids=(ids)
+    id_type = Tag.type_for_attribute(:id)
+    super(Array(ids).uniq { |id| id_type.cast(id) || id })
+  end
+
+  def tags=(tags)
+    super(Array(tags).uniq)
+  end
+
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
   after_save :supersede_automatic_category_claims, if: :saved_change_to_category_id?
 
@@ -457,6 +471,29 @@ class Transaction < ApplicationRecord
       existing.exists? ? existing.destroy_all : taggings.create!(tag: tag)
     end
     tags.reset
+  end
+
+  # Applies a tag picker's changes (selected_ids against previous_ids, the set
+  # it last saved) to the tags stored now, so tags another writer added in the
+  # meantime stay. Takes the same row lock as toggle_tag! and the rule tag
+  # action and reads the tags after it, so no concurrent write is lost.
+  def merge_tag_changes!(selected_ids, previous_ids, available_tags:)
+    selected_ids = selected_ids.map(&:to_s)
+    previous_ids = previous_ids.map(&:to_s)
+
+    with_lock do
+      wanted_ids = tag_ids.map(&:to_s) - (previous_ids - selected_ids) | (selected_ids - previous_ids)
+      self.tag_ids = available_tags.where(id: wanted_ids).pluck(:id)
+    end
+  end
+
+  # Replaces the whole tag set with the given ids, limited to available_tags,
+  # under the same row lock as toggle_tag! and merge_tag_changes!, so the
+  # replacement can't interleave with another writer's tag change.
+  def replace_tags!(tag_ids, available_tags:)
+    with_lock do
+      self.tag_ids = available_tags.where(id: tag_ids).pluck(:id)
+    end
   end
 
   # Marks a category as recently used. Called explicitly from the manual

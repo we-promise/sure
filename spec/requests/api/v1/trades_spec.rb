@@ -3,6 +3,24 @@
 require 'swagger_helper'
 
 RSpec.describe 'API V1 Trades', type: :request do
+  # POST /api/v1/trades answers 201 with one of three shapes. rswag keeps a
+  # single 201 entry per operation (the last example's schema, deep-merged), so
+  # every 201 example declares the same documented oneOf and then checks its own
+  # response against the one schema it should match.
+  created_response_schema = {
+    oneOf: [
+      { '$ref' => '#/components/schemas/Trade' },
+      { '$ref' => '#/components/schemas/Transaction' },
+      { '$ref' => '#/components/schemas/TransferDecision' }
+    ]
+  }
+
+  def expect_created_shape(response, schema_name)
+    metadata = RSpec.current_example.metadata.deep_dup
+    metadata[:response][:schema] = { '$ref' => "#/components/schemas/#{schema_name}" }
+    Rswag::Specs::ResponseValidator.new.validate!(metadata, response)
+  end
+
   let(:family) do
     Family.create!(
       name: 'API Family',
@@ -198,9 +216,11 @@ RSpec.describe 'API V1 Trades', type: :request do
       end
 
       response '201', 'trade created' do
-        schema '$ref' => '#/components/schemas/Trade'
+        schema created_response_schema
 
-        run_test!
+        run_test! do |response|
+          expect_created_shape(response, 'Trade')
+        end
       end
 
       response '403', 'forbidden - api key missing read_write scope' do
@@ -332,7 +352,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       end
 
       response '201', 'dividend created with security' do
-        schema '$ref' => '#/components/schemas/Trade'
+        schema created_response_schema
 
         let(:body) do
           {
@@ -347,7 +367,9 @@ RSpec.describe 'API V1 Trades', type: :request do
           }
         end
 
-        run_test!
+        run_test! do |response|
+          expect_created_shape(response, 'Trade')
+        end
       end
 
       response '422', 'dividend without security returns error' do
@@ -401,7 +423,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       end
 
       response '201', 'deposit created' do
-        schema '$ref' => '#/components/schemas/TransactionResponse'
+        schema created_response_schema
 
         let(:body) do
           {
@@ -415,11 +437,13 @@ RSpec.describe 'API V1 Trades', type: :request do
           }
         end
 
-        run_test!
+        run_test! do |response|
+          expect_created_shape(response, 'Transaction')
+        end
       end
 
       response '201', 'withdrawal created' do
-        schema '$ref' => '#/components/schemas/TransactionResponse'
+        schema created_response_schema
 
         let(:body) do
           {
@@ -433,11 +457,44 @@ RSpec.describe 'API V1 Trades', type: :request do
           }
         end
 
-        run_test!
+        run_test! do |response|
+          expect_created_shape(response, 'Transaction')
+        end
       end
 
-      response '201', 'trade created' do
-        schema '$ref' => '#/components/schemas/TransactionResponse'
+      response '201', 'linked transfer created (deposit or withdrawal with transfer_account_id)' do
+        schema created_response_schema
+
+        let(:transfer_account) do
+          Account.create!(
+            family: family,
+            name: 'Checking Account',
+            balance: 10_000,
+            currency: 'USD',
+            accountable: Depository.create!
+          )
+        end
+
+        let(:body) do
+          {
+            trade: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              type: 'withdrawal',
+              amount: 100.00,
+              currency: 'USD',
+              transfer_account_id: transfer_account.id
+            }
+          }
+        end
+
+        run_test! do |response|
+          expect_created_shape(response, 'TransferDecision')
+        end
+      end
+
+      response '201', 'created: a Trade for trade types, a Transaction for a deposit or withdrawal without transfer_account_id, or a TransferDecision for a deposit or withdrawal with transfer_account_id' do
+        schema created_response_schema
 
         let(:body) do
           {
@@ -451,7 +508,9 @@ RSpec.describe 'API V1 Trades', type: :request do
           }
         end
 
-        run_test!
+        run_test! do |response|
+          expect_created_shape(response, 'Trade')
+        end
       end
 
       response '422', 'invalid trade request' do
@@ -562,6 +621,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       response '403', 'forbidden - api key missing read_write scope' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
+        let(:id) { trade.id }
         let(:read_only_api_key) do
           key = ApiKey.generate_secure_key
           ApiKey.create!(
@@ -611,6 +671,7 @@ RSpec.describe 'API V1 Trades', type: :request do
       response '403', 'forbidden - api key missing read_write scope' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
+        let(:id) { trade.id }
         let(:read_only_api_key) do
           key = ApiKey.generate_secure_key
           ApiKey.create!(

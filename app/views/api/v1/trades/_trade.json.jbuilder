@@ -24,6 +24,7 @@ json.fee_decimal trade.fee.to_s("F")
 # when both currencies are the account's.
 json.exchange_rate trade.numeric_exchange_rate
 json.amount_currency trade.entry.currency
+json.lot_source_trade_id trade.lot_source_entry&.entryable_id
 
 json.account do
   json.id trade.entry.account.id
