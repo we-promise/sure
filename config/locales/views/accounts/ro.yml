@@ -38,7 +38,14 @@ ro:
       negative_positions:
         detail: "%{name} (%{ticker}): sub zero din %{date}, minim %{qty}."
         hint: "Probabil lipsește o cumpărare sau un transfer. Adaug-o sau corectează tranzacțiile care au adus poziția sub zero."
+        link: "Verifică dețineri"
         message: "Unele poziții au scăzut sub zero"
+      sync_failed:
+        hint: "Cifrele de aici pot fi neactualizate. Sincronizează din nou și, dacă eșuează în continuare, verifică conexiunea."
+        message: "Ultima sincronizare a eșuat"
+      sync_stale:
+        hint: "Cifrele de aici pot fi neactualizate. Sincronizează din nou pentru a le actualiza."
+        message: "Ultima sincronizare nu s-a încheiat"
     show:
       activity:
         amount: Sumă

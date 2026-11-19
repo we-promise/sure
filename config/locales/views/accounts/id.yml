@@ -85,7 +85,14 @@ id:
       negative_positions:
         detail: "%{name} (%{ticker}): di bawah nol sejak %{date}, terendah %{qty}."
         hint: Kemungkinan ada pembelian atau transfer yang belum dicatat. Tambahkan, atau perbaiki transaksi yang membuat posisi di bawah nol.
+        link: "Tinjau kepemilikan"
         message: Beberapa posisi berada di bawah nol
+      sync_failed:
+        hint: "Angka di sini mungkin sudah usang. Sinkronkan lagi, dan jika masih gagal, periksa koneksinya."
+        message: "Sinkronisasi terakhir gagal"
+      sync_stale:
+        hint: "Angka di sini mungkin sudah usang. Sinkronkan lagi untuk memperbaruinya."
+        message: "Sinkronisasi terakhir tidak selesai"
     show:
       limited_fx_history_warning: "Riwayat kurs valas hanya tersedia mulai %{date} dan seterusnya. Transaksi sebelum tanggal ini menggunakan konversi mata uang perkiraan — hal ini dapat terjadi ketika penyedia valas hanya menyediakan rentang data historis yang terbatas."
       tabs:

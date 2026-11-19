@@ -77,7 +77,14 @@ it:
       negative_positions:
         detail: "%{name} (%{ticker}): sotto zero dal %{date}, minimo %{qty}."
         hint: "Probabilmente manca un acquisto o un trasferimento. Aggiungilo o correggi le operazioni che hanno portato la posizione sotto zero."
+        link: "Controlla il portafoglio"
         message: "Alcune posizioni sono scese sotto zero"
+      sync_failed:
+        hint: "I dati qui potrebbero non essere aggiornati. Sincronizza di nuovo e, se continua a non riuscire, controlla la connessione."
+        message: "L'ultima sincronizzazione non è riuscita"
+      sync_stale:
+        hint: "I dati qui potrebbero non essere aggiornati. Sincronizza di nuovo per aggiornarli."
+        message: "L'ultima sincronizzazione non è stata completata"
     show:
       limited_fx_history_warning: "La cronologia dei tassi di cambio è disponibile solo dal %{date} in poi. Le transazioni precedenti a questa data usano conversioni valutarie approssimate — questo può accadere quando il provider FX offre solo una finestra storica limitata."
       tabs:

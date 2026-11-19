@@ -120,7 +120,14 @@ nl:
       negative_positions:
         detail: "%{name} (%{ticker}): onder nul sinds %{date}, laagste %{qty}."
         hint: "Waarschijnlijk ontbreekt een aankoop of overboeking. Voeg die toe of corrigeer de transacties die de positie onder nul brachten."
+        link: "Posities bekijken"
         message: "Sommige posities zijn onder nul gekomen"
+      sync_failed:
+        hint: "De cijfers hier zijn mogelijk verouderd. Synchroniseer opnieuw en controleer de koppeling als het blijft mislukken."
+        message: "De laatste synchronisatie is mislukt"
+      sync_stale:
+        hint: "De cijfers hier zijn mogelijk verouderd. Synchroniseer opnieuw om ze bij te werken."
+        message: "De laatste synchronisatie is niet voltooid"
     show:
       limited_fx_history_warning: "Wisselkoersgeschiedenis is pas beschikbaar vanaf %{date}. Transacties vóór deze datum gebruiken benaderde valutaomrekeningen — dit kan gebeuren als de wisselkoersprovider maar een beperkte historische periode aanbiedt."
       tabs:

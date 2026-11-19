@@ -101,7 +101,14 @@ pl:
       negative_positions:
         detail: "%{name} (%{ticker}): poniżej zera od %{date}, najniżej %{qty}."
         hint: "Prawdopodobnie brakuje zakupu lub przeniesienia. Dodaj je albo popraw transakcje, które sprowadziły pozycję poniżej zera."
+        link: "Sprawdź pozycje"
         message: "Niektóre pozycje spadły poniżej zera"
+      sync_failed:
+        hint: "Dane mogą być nieaktualne. Zsynchronizuj ponownie, a jeśli nadal się nie uda, sprawdź połączenie."
+        message: "Ostatnia synchronizacja nie powiodła się"
+      sync_stale:
+        hint: "Dane mogą być nieaktualne. Zsynchronizuj ponownie, aby je zaktualizować."
+        message: "Ostatnia synchronizacja nie została ukończona"
     show:
       activity:
         amount: Kwota
