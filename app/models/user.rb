@@ -193,16 +193,22 @@ class User < ApplicationRecord
   # Only when the proven email is this account's: an identity linked with a
   # different address proves nothing about this one. Returns false (and
   # changes nothing) otherwise, or for already-verified accounts.
+  # Runs under a row lock and re-reads the account, so a concurrent email
+  # change can't let a stale record verify an address the provider never saw.
+  # Verification and revocation commit together: a half-done claim would leave
+  # the account verified while old credentials still work, and a retry would
+  # stop at the already-verified guard.
   def claim_by_trusted_provider!(email:)
-    return false if email_verified?
-    return false unless email.to_s.strip.casecmp?(self.email.to_s)
-
     transaction do
+      lock!
+      next false if email_verified?
+      next false unless email.to_s.strip.casecmp?(self.email.to_s)
+
       disable_mfa!
       update!(password_digest: nil, email_verified_at: Time.current)
+      revoke_all_access!
+      true
     end
-    revoke_all_access!
-    true
   end
 
   def revoke_all_access!
@@ -212,10 +218,18 @@ class User < ApplicationRecord
     api_keys.active.update_all(revoked_at: now)
   end
 
+  # The reset link proves the email, so an unverified account becomes
+  # verified. MFA and API keys set up before that may belong to whoever
+  # registered the address first, so they go. The caller ends sessions and
+  # the password change itself revokes OAuth tokens.
   def verify_after_password_reset!
     transaction do
-      disable_mfa! unless email_verified?
-      mark_email_verified!
+      lock!
+      next if email_verified?
+
+      disable_mfa!
+      api_keys.active.update_all(revoked_at: Time.current)
+      update!(email_verified_at: Time.current)
     end
   end
 
@@ -243,8 +257,14 @@ class User < ApplicationRecord
     return false if new_email == email
 
     if Rails.application.config.app_mode.self_hosted? && !Setting.require_email_confirmation
-      # No confirmation step, so nothing proves the new address yet.
-      update(email: new_email, email_verified_at: nil)
+      # No confirmation step, so nothing proves the new address yet. Send a
+      # verification link so the account isn't locked out of gated APIs.
+      if update(email: new_email, email_verified_at: nil)
+        send_email_verification
+        true
+      else
+        false
+      end
     else
       if update(unconfirmed_email: new_email)
         EmailConfirmationMailer.with(user: self).confirmation_email.deliver_later

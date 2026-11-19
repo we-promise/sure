@@ -2,8 +2,10 @@
 
 class Api::V1::ChatsController < Api::V1::BaseController
   include Pagy::Backend
-  # The assistant stays available before email verification.
+  # The assistant stays available before email verification, but without
+  # tools, and stored tool calls (balances, transactions) are withheld.
   skip_before_action :ensure_verified_for_financial_data
+  helper_method :include_tool_call_data?
   before_action :require_ai_enabled
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
@@ -83,6 +85,10 @@ class Api::V1::ChatsController < Api::V1::BaseController
 
     def chat_params
       params.permit(:title, :message, :model)
+    end
+
+    def include_tool_call_data?
+      current_resource_owner.email_verified?
     end
 
     def update_chat_params

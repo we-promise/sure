@@ -65,7 +65,7 @@ module Assistant::Configurable
       else
         {
           instructions: default_instructions(preferred_currency, preferred_date_format, user: chat.user),
-          functions: chat.user.email_verified? ? default_functions(chat.user) : []
+          functions: default_functions(chat.user)
         }
       end
     end

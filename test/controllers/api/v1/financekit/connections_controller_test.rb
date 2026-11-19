@@ -117,6 +117,17 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     assert_response :payload_too_large
   end
 
+  test "publisher credential of an unverified user cannot upload batches" do
+    @user.update_column(:email_verified_at, nil)
+    raw = JSON.generate(financekit_payload)
+
+    assert_no_difference "FinancekitBatch.count" do
+      post "/api/v1/financekit/publishers/#{@item.publisher_id}/batches", params: raw, headers: @publisher_headers
+    end
+    assert_response :forbidden
+    assert_equal "email_verification_required", response.parsed_body.fetch("error")
+  end
+
   test "connection health separates device receipt import and downstream timestamps" do
     batch = accept_and_apply
     @item.reload

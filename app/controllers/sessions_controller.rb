@@ -352,7 +352,8 @@ class SessionsController < ApplicationController
         name: auth.info&.name,
         first_name: auth.info&.first_name,
         last_name: auth.info&.last_name,
-        issuer: auth_issuer(auth)
+        issuer: auth_issuer(auth),
+        email_trusted: provider_email_trusted?(auth)
       }
       redirect_to link_oidc_account_path
     end
@@ -510,7 +511,8 @@ class SessionsController < ApplicationController
           name: auth.info&.name,
           issuer: auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss"),
           device_info: device_info,
-          allow_account_creation: allow_creation
+          allow_account_creation: allow_creation,
+          email_trusted: provider_email_trusted?(auth)
         },
         expires_in: 10.minutes
       )

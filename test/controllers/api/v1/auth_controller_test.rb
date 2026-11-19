@@ -97,6 +97,23 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal false, response.parsed_body.dig("user", "email_verified")
   end
 
+  test "a read-only credential can request the verification email" do
+    user = users(:family_member)
+    user.update!(email_verified_at: nil)
+    key = ApiKey.create!(
+      user: user,
+      name: "Verification resend read-only",
+      scopes: [ "read" ],
+      display_key: "resend_ro_#{SecureRandom.hex(8)}"
+    )
+
+    assert_enqueued_email_with EmailConfirmationMailer, :confirmation_email, params: { user: user } do
+      post "/api/v1/auth/resend_email_verification", headers: { "X-Api-Key" => key.display_key }
+    end
+
+    assert_response :success
+  end
+
   # RegistrationsController refuses to register when the instance is closed.
   # The API creates the same account and did not check.
   test "signup is refused when the instance is closed to registration" do
@@ -849,6 +866,48 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Linking code should be consumed
     assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
+  end
+
+  test "sso_link verifies the account only when the sign-in proved its email" do
+    user = users(:family_admin)
+
+    [ [ true, true ], [ false, false ], [ nil, false ] ].each_with_index do |(email_trusted, expected), i|
+      user.update_column(:email_verified_at, nil)
+      linking_code = SecureRandom.urlsafe_base64(32)
+      Rails.cache.write("mobile_sso_link:#{linking_code}", {
+        provider: "google_oauth2",
+        uid: "google-uid-verify-#{i}",
+        email: user.email,
+        email_trusted: email_trusted,
+        device_info: @device_info.stringify_keys,
+        allow_account_creation: true
+      }.compact, expires_in: 10.minutes)
+
+      post "/api/v1/auth/sso_link", params: { linking_code: linking_code, email: user.email, password: user_password_test }
+
+      assert_response :success
+      assert_equal expected, user.reload.email_verified?, "email_trusted=#{email_trusted.inspect}"
+    end
+  end
+
+  test "sso_create_account verifies the new account only when the sign-in proved its email" do
+    [ [ true, true ], [ false, false ], [ nil, false ] ].each_with_index do |(email_trusted, expected), i|
+      email = "sso-verify-#{i}@example.com"
+      linking_code = SecureRandom.urlsafe_base64(32)
+      Rails.cache.write("mobile_sso_link:#{linking_code}", {
+        provider: "google_oauth2",
+        uid: "google-uid-create-verify-#{i}",
+        email: email,
+        email_trusted: email_trusted,
+        device_info: @device_info.stringify_keys,
+        allow_account_creation: true
+      }.compact, expires_in: 10.minutes)
+
+      post "/api/v1/auth/sso_create_account", params: { linking_code: linking_code, first_name: "Sso", last_name: "Verify" }
+
+      assert_response :success
+      assert_equal expected, User.find_by!(email: email).email_verified?, "email_trusted=#{email_trusted.inspect}"
+    end
   end
 
   test "should link SSO for a user whose email row is still legacy plaintext" do

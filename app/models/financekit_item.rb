@@ -59,6 +59,7 @@ class FinancekitItem < ApplicationRecord
     user.reload
     Financekit.require!(user.active? && user.family_id == family_id && user.admin?,
       "publisher_forbidden", 403)
+    Financekit.require!(user.email_verified?, "email_verification_required", 403)
     Financekit.require!(!pending_account_setup?, "account_setup_required", 409)
     permitted_ids = family.accounts.writable_by(user).pluck(:id)
     Financekit.require!(selected_accounts.includes(financekit_account_lineage: :account).all? do |mapping|

@@ -16,8 +16,10 @@ json.messages @messages do |message|
     json.tool_calls message.tool_calls do |tool_call|
       json.id tool_call.id
       json.function_name tool_call.function_name
-      json.function_arguments tool_call.function_arguments
-      json.function_result tool_call.function_result
+      if include_tool_call_data?
+        json.function_arguments tool_call.function_arguments
+        json.function_result tool_call.function_result
+      end
       json.created_at tool_call.created_at.iso8601
     end
   end

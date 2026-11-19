@@ -6,7 +6,8 @@ class OidcIdentity < ApplicationRecord
   validates :user_id, presence: true
 
   # Providers whose sign-in proves the user controls the email address.
-  # Keep in sync with AddEmailVerifiedAtToUsers#backfill_sql.
+  # AddEmailVerifiedAtToUsers holds its own copy on purpose: a migration must
+  # keep doing what it did when it first ran.
   EMAIL_TRUSTED_PROVIDERS = %w[google_oauth2 apple].freeze
   GOOGLE_OIDC_ISSUERS = %w[https://accounts.google.com accounts.google.com].freeze
 

@@ -8,7 +8,10 @@ module Api
       skip_before_action :log_api_access
       skip_before_action :ensure_verified_for_financial_data
       before_action :authenticate_request!, only: %i[enable_ai resend_email_verification]
-      before_action :ensure_write_scope, only: %i[enable_ai resend_email_verification]
+      before_action :ensure_write_scope, only: :enable_ai
+      # Recovery for an unverified account, so any credential the gate turned
+      # away (read-only included) can ask for the link. It's rate limited.
+      before_action :ensure_read_scope, only: :resend_email_verification
       before_action :check_api_key_rate_limit, only: %i[enable_ai resend_email_verification]
       before_action :log_api_access, only: %i[enable_ai resend_email_verification]
       rescue_from SsoIdentityBlock::BlockedIdentity, with: :render_removed_identity
@@ -255,9 +258,9 @@ module Api
         device_info = device_info.symbolize_keys if device_info.respond_to?(:symbolize_keys)
 
         # The password proves the account, the provider proves its own email.
-        # Only when that is the account's email does this verify it.
-        if OidcIdentity.email_trusted?(provider: cached[:provider], issuer: cached[:issuer]) &&
-            cached[:email].to_s.casecmp?(user.email)
+        # Only when that is the account's email does this verify it. A code
+        # cached before email_trusted was stored counts as untrusted.
+        if cached[:email_trusted] == true && cached[:email].to_s.casecmp?(user.email)
           user.mark_email_verified!
         end
 
@@ -360,7 +363,7 @@ module Api
             user.family.auto_share_existing_accounts_with(user) if invitation.present?
 
             identity = OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
-            if identity.email_trusted?
+            if cached[:email_trusted] == true
               user.mark_email_verified!
             else
               user.send_email_verification

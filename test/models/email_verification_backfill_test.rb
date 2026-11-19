@@ -44,10 +44,32 @@ class EmailVerificationBackfillTest < ActiveSupport::TestCase
     assert_not generic_oidc.reload.email_verified?
   end
 
+  test "accounts whose email differs from the one the provider proved stay unverified" do
+    changed = account(password: nil, identity: { provider: "google_oauth2", email: "old-address@example.com" })
+    missing = account(password: nil, identity: { provider: "google_oauth2", email: nil })
+    case_only = account(password: nil, identity: { provider: "google_oauth2" })
+    case_only.oidc_identities.first.update_columns(info: { email: case_only.email.upcase })
+
+    run_backfill
+
+    assert_not changed.reload.email_verified?
+    assert_not missing.reload.email_verified?
+    assert case_only.reload.email_verified?
+  end
+
+  test "an account with a matching identity is verified even if another identity does not match" do
+    user = account(password: nil, identity: { provider: "google_oauth2", email: "old-address@example.com" })
+    OidcIdentity.create!(user: user, provider: "apple", uid: SecureRandom.hex(8), info: { email: user.email })
+
+    run_backfill
+
+    assert user.reload.email_verified?
+  end
+
   private
 
     def run_backfill
-      ActiveRecord::Base.connection.execute(AddEmailVerifiedAtToUsers.new.backfill_sql)
+      ActiveRecord::Migration.suppress_messages { AddEmailVerifiedAtToUsers.new.backfill! }
     end
 
     def account(password:, identity: nil)
@@ -65,7 +87,7 @@ class EmailVerificationBackfillTest < ActiveSupport::TestCase
           provider: identity[:provider],
           uid: SecureRandom.hex(8),
           issuer: identity[:issuer],
-          info: { email: user.email }
+          info: { email: identity.fetch(:email, user.email) }
         )
         record.update_columns(created_at: user.created_at + identity.fetch(:after, 0.seconds))
       end

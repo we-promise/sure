@@ -173,6 +173,34 @@ class OidcAccountsControllerTest < ActionController::TestCase
     }
   end
 
+  test "create_user verifies the new account only when the sign-in proved its email" do
+    [ [ true, true ], [ false, false ], [ nil, false ] ].each_with_index do |(email_trusted, expected), i|
+      email = "oidc-verify-#{i}@example.com"
+      session[:pending_oidc_auth] = new_user_auth.merge(
+        "provider" => "google_oauth2",
+        "uid" => "google-verify-#{i}",
+        "email" => email,
+        "email_trusted" => email_trusted
+      ).compact
+
+      post :create_user, params: { user: { first_name: "New", last_name: "User" } }
+
+      assert_redirected_to root_path
+      assert_equal expected, User.find_by!(email: email).email_verified?, "email_trusted=#{email_trusted.inspect}"
+    end
+  end
+
+  test "create_link verifies the account only when the sign-in proved its email" do
+    @user.update_column(:email_verified_at, nil)
+    session[:pending_oidc_auth] = pending_auth.merge("provider" => "google_oauth2", "email_trusted" => false)
+    post :create_link, params: { email: @user.email, password: user_password_test }
+    assert_not @user.reload.email_verified?
+
+    session[:pending_oidc_auth] = pending_auth.merge("provider" => "google_oauth2", "uid" => "trusted-uid", "email_trusted" => true)
+    post :create_link, params: { email: @user.email, password: user_password_test }
+    assert @user.reload.email_verified?
+  end
+
   test "should show new_user page when pending auth exists" do
     session[:pending_oidc_auth] = new_user_auth
     get :new_user

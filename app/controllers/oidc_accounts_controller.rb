@@ -37,12 +37,12 @@ class OidcAccountsController < ApplicationController
 
     if user&.active?
       linked = user.transaction do
-        identity = OidcIdentity.create_from_omniauth(
+        OidcIdentity.create_from_omniauth(
           build_auth_hash(@pending_auth),
           user
         )
 
-        if identity.email_trusted? && @pending_auth["email"].to_s.casecmp?(user.email)
+        if pending_email_trusted? && @pending_auth["email"].to_s.casecmp?(user.email)
           user.mark_email_verified!
         end
 
@@ -198,7 +198,7 @@ class OidcAccountsController < ApplicationController
         )
       end
 
-      if identity&.email_trusted?
+      if identity&.persisted? && pending_email_trusted?
         @user.mark_email_verified!
       else
         @user.send_email_verification
@@ -228,6 +228,12 @@ class OidcAccountsController < ApplicationController
 
       session.delete(:pending_oidc_auth)
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+    end
+
+    # Decided at sign-in, where the provider's email_verified claim is still
+    # available. Pending auth stored before this key existed is untrusted.
+    def pending_email_trusted?
+      @pending_auth["email_trusted"] == true
     end
 
     # Convert pending auth hash to OmniAuth-like structure

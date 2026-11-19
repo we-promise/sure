@@ -3,6 +3,7 @@ require "concurrent"
 
 class UserTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
+  include ActionMailer::TestHelper
 
   uses_transaction :test_first_user_role_lock_makes_concurrent_family_creators_deterministic,
     :"test_verify_otp?_claim_otp_time_step!_lets_only_one_of_two_racing_connections_claim_a_step"
@@ -48,6 +49,55 @@ class UserTest < ActiveSupport::TestCase
     assert_nil @user.password_digest
     assert api_key.reload.revoked_at.present?
     assert_empty @user.sessions.reload
+  end
+
+  test "trusted provider claim rechecks the stored email, not a stale copy" do
+    @user.update!(email_verified_at: nil)
+    proven_email = @user.email
+    User.where(id: @user.id).update_all(email: "changed-#{SecureRandom.hex(4)}@example.com")
+
+    assert_not @user.claim_by_trusted_provider!(email: proven_email)
+    assert_not @user.reload.email_verified?
+    assert @user.password_digest.present?
+  end
+
+  test "trusted provider claim leaves the account unverified when revocation fails" do
+    @user.update!(email_verified_at: nil)
+    @user.stubs(:revoke_oauth_tokens!).raises(ActiveRecord::StatementInvalid, "boom")
+
+    assert_raises(ActiveRecord::StatementInvalid) { @user.claim_by_trusted_provider!(email: @user.email) }
+
+    @user.reload
+    assert_not @user.email_verified?
+    assert @user.password_digest.present?
+  end
+
+  test "password reset verification revokes API keys created before verification" do
+    @user.update!(email_verified_at: nil)
+    api_key = @user.api_keys.create!(name: "Pre-verification", scopes: [ "read_write" ], display_key: "reset_#{SecureRandom.hex(8)}")
+
+    @user.verify_after_password_reset!
+
+    assert @user.reload.email_verified?
+    assert api_key.reload.revoked_at.present?
+  end
+
+  test "password reset leaves API keys of an already verified account alone" do
+    api_key = @user.api_keys.create!(name: "Verified", scopes: [ "read_write" ], display_key: "reset_ok_#{SecureRandom.hex(8)}")
+
+    @user.verify_after_password_reset!
+
+    assert_nil api_key.reload.revoked_at
+  end
+
+  test "email change without confirmation sends a verification link to the new address" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    Setting.stubs(:require_email_confirmation).returns(false)
+
+    assert_enqueued_email_with EmailConfirmationMailer, :confirmation_email, params: { user: @user } do
+      assert @user.initiate_email_change("changed-#{SecureRandom.hex(4)}@example.com")
+    end
+    assert_not @user.reload.email_verified?
   end
 
   test "find_by_email_with_legacy_fallback matches encrypted and legacy plaintext email rows" do
