@@ -441,7 +441,7 @@ class Family::DataImporter
     def check_imported_term_changes
       return if @import_session
 
-      @created_accounts.select(&:loan?).each do |account|
+      @family.accounts.where(id: @created_account_ids, accountable_type: "Loan").includes(:accountable).each do |account|
         loan = account.accountable
         next if loan.term_changes_fit_account?
 
