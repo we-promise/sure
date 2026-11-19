@@ -79,7 +79,7 @@ jobs:
       # One process: the live calls run one at a time, within the free tiers' rate limits.
       - name: End-to-end tests
         env:
-          AI_E2E: "1"
+          AI_E2E: "1"                # AiE2eHelper#with_live_ai sets AI_LIVE for each live call
           DISABLE_PARALLELIZATION: "true"
         run: bin/rails test test/e2e/ai
 
@@ -142,4 +142,4 @@ jobs:
           DISABLE_PARALLELIZATION: "true"
         run: |
           export KILO_API_KEY="${KILO_API_KEY:-anonymous}"
-          bin/rails test test/models/ai/live -v -n "/kilo-auto\/free|test_jev: |test_cohere: /"
+          bin/rails test test/models/ai/live -v -n "/kilo-auto\/free|test_jev:_|test_cohere:_/"

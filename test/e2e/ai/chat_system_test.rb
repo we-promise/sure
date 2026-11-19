@@ -6,6 +6,8 @@ class AiE2eChatSystemTest < ApplicationSystemTestCase
   include AiE2eHelper, ActiveJob::TestHelper
 
   setup do
+    skip "set AI_E2E=1 to run against live models" unless ENV["AI_E2E"] == "1"
+
     @user = users(:family_admin)
     @user.update!(ai_enabled: true)
     @user.chats.destroy_all
@@ -35,4 +37,11 @@ class AiE2eChatSystemTest < ApplicationSystemTestCase
 
     assert_ai_usage(@user.family, :chat)
   end
+
+  private
+    # ApplicationSystemTestCase's setup and teardown call this before AiE2eHelper's AI_E2E skip
+    # runs. `page` starts Selenium, so offline `bin/rails test` runs must not reach it.
+    def reset_viewport
+      super if ENV["AI_E2E"] == "1"
+    end
 end

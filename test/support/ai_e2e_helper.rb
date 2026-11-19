@@ -5,6 +5,10 @@
 #
 # Assertions check shape (records changed, usage written, no error logged), never accuracy:
 # that's the evals' job.
+#
+# The live models: Kilo's `kilo-auto/free` for generation, OpenCode Zen's `jev-1.13-free` for
+# judging, OpenRouter's free decisions stand-in `parallel/decisions-fast:free` (see
+# test/models/ai/live/openrouter_jev_live_test.rb), and Cohere's `embed-v5.0-fast` for documents.
 module AiE2eHelper
   KILO_URL = "https://api.kilo.ai/api/gateway".freeze
   KILO_MODEL = "kilo-auto/free".freeze
@@ -33,9 +37,11 @@ module AiE2eHelper
 
   # Kilo's gateway as the OpenAI-compatible LLM; `jev: true` makes Jev categorize, with Kilo as its
   # shadow. Kilo's free model answers anonymously; KILO_API_KEY and KILO_ORG_ID, when set, raise
-  # its rate limits.
+  # its rate limits. The e2e job sets AI_E2E, not AI_LIVE, so enable the network guard in the
+  # same scoped overrides; ClimateControl puts the caller's environment back afterwards.
   def with_live_ai(jev: false, **extra, &block)
-    with_env_overrides(kilo_env.merge(jev ? jev_env : {}).merge(extra)) { with_ai_live(&block) }
+    env = { AI_LIVE: "1" }.merge(kilo_env).merge(jev ? jev_env : {}).merge(extra)
+    with_env_overrides(env) { with_ai_live(&block) }
   end
 
   # Documents on pgvector, embedded by Cohere: what a self-hoster sets for a hosted embedding

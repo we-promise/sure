@@ -363,7 +363,12 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     requests = stub_ai(:categorize) { raise Ai::Error::Upstream, "Jev unreachable" }
 
-    with_env_overrides("OPENAI_ACCESS_TOKEN" => "sk-test", "CATEGORIZATION_PROVIDER" => "jev", "JEV_API_KEY" => "test_api_key") do
+    # A JEV_ENDPOINT inherited from the host (e.g. an OpenRouter decisions URL) would build a
+    # different route; this test is about the default TypeSafe endpoint going down. Setting's
+    # default is read from that same ENV at boot, so clear it too.
+    Setting.stubs(:jev_endpoint).returns(nil)
+    with_env_overrides("OPENAI_ACCESS_TOKEN" => "sk-test", "CATEGORIZATION_PROVIDER" => "jev", "JEV_API_KEY" => "test_api_key",
+                       "JEV_ENDPOINT" => nil) do
       categorize([ txn.id ])
     end
 

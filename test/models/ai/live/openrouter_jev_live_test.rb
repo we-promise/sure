@@ -7,13 +7,35 @@ require "test_helper"
 #
 # Replayed from test/vcr_cassettes/ai/openrouter_jev/, recorded with
 # RECORD_CASSETTES=1 and OPENROUTER_LIVE_API_KEY set, or run live with
-# AI_LIVE=1. With neither, it's skipped, saying so.
+# AI_LIVE=1. With neither, it's skipped, saying so. The recording asks for the free
+# `parallel/decisions-fast:free` decisions model; that's the JEV_MODEL to set when reproducing
+# the call through Sure's own env configuration.
 class AiOpenrouterJevLiveTest < ActiveSupport::TestCase
   KEY = "OPENROUTER_LIVE_API_KEY".freeze
   MODEL = "parallel/decisions-fast:free".freeze
 
+  # Both decisions requests share a URI; match on the state so each recorded answer is replayed
+  # for the transaction it answered, whichever way the batch orders the calls.
+  STATE_MATCHER = lambda do |recorded, played|
+    begin
+      JSON.parse(recorded.body.to_s)["state"] == JSON.parse(played.body.to_s)["state"]
+    rescue JSON::ParserError
+      false
+    end
+  end
+
   setup do
     @family = families(:dylan_family)
+  end
+
+  test "decisions recordings match on the transaction state, not only the shared URI" do
+    request = ->(description) do
+      VCR::Request.new(:post, "https://openrouter.ai/api/alpha/decisions",
+                       { model: MODEL, state: { description: } }.to_json, {})
+    end
+
+    assert STATE_MATCHER.call(request.("STARBUCKS 1234 SEATTLE"), request.("STARBUCKS 1234 SEATTLE"))
+    assert_not STATE_MATCHER.call(request.("STARBUCKS 1234 SEATTLE"), request.("ACME CORP PAYROLL"))
   end
 
   test "openrouter jev: categorize answers through the OpenRouter decisions preset" do
@@ -31,7 +53,7 @@ class AiOpenrouterJevLiveTest < ActiveSupport::TestCase
     ]
     generation = Ai::Generations::CategorizeTransactions.new(transactions:, categories:, family: @family)
 
-    result = with_ai_cassette("openrouter_jev", "judge_categorize", match: %i[method uri]) {
+    result = with_ai_cassette("openrouter_jev", "judge_categorize", match: [ :method, :uri, STATE_MATCHER ]) {
       generation.call(plan:)
     }
 
@@ -56,7 +78,7 @@ class AiOpenrouterJevLiveTest < ActiveSupport::TestCase
     ]
     generation = Ai::Generations::CategorizeTransactions.new(transactions:, categories:, family: @family)
 
-    result = with_ai_cassette("openrouter_jev", "judge_categorize", match: %i[method uri]) {
+    result = with_ai_cassette("openrouter_jev", "judge_categorize", match: [ :method, :uri, STATE_MATCHER ]) {
       generation.call(plan:)
     }
 
