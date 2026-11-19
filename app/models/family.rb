@@ -740,6 +740,17 @@ class Family < ApplicationRecord
     "#{categories.count}-#{categories.maximum(:updated_at)&.to_f || 0}"
   end
 
+  # Tag changes write taggings without touching their entries, so caches
+  # whose results depend on tag membership key on this too. The tag count
+  # catches a merge or a deletion, which moves or drops taggings without
+  # adding one.
+  def tags_version
+    tag_count, tag_max_at = tags.pick(Arel.sql("count(*)"), Arel.sql('max("tags"."updated_at")'))
+    tagging_count, tagging_max_at = Tagging.joins(:tag).where(tags: { family_id: id })
+      .pick(Arel.sql("count(*)"), Arel.sql('max("taggings"."updated_at")'))
+    "#{tag_count}-#{tag_max_at&.to_f}-#{tagging_count}-#{tagging_max_at&.to_f}"
+  end
+
   # Used for invalidating caches keyed on recurring transactions (e.g. the
   # transactions index's projected recurring list). See #entries_version for
   # why .count is included alongside the timestamp.

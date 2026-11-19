@@ -1,0 +1,156 @@
+---
+de:
+  settings:
+    classifiers:
+      account:
+        account_field: Konto als ein Merkmal einbeziehen
+        account_field_hint: "In welchem Konto eine Transaktion liegt, zählt als Hinweis. Es entscheidet nie allein: Eine Transaktion braucht ein bekanntes Wort oder einen bekannten Händler."
+      amount:
+        amount_by_direction: Richtung einbeziehen, Eingang oder Ausgang
+        amount_by_direction_hint: Jede Kategorie lernt, in welche Richtung ihr Geld fließt, und Erstattungen und Einkäufe im selben Geschäft bleiben getrennt.
+        amount_field: Betrag einbeziehen
+        amount_field_hint: Vergleicht den Betrag auf logarithmischer Skala mit den üblichen Beträgen jeder Kategorie in derselben Währung.
+      category_training:
+        apply: Anwenden
+        categories: Kategorien
+        categories_all: Alle Kategorien
+        categories_hint: Nicht ausgewählte Kategorien bleiben samt Unterkategorien beim Training außen vor, Bayes wählt sie also nie.
+        categories_some: "%{count} von %{total} Kategorien"
+        exclude_transfers: Umbuchungen ausschließen
+        exclude_transfers_hint: Umbuchungen und Zahlungen zwischen deinen Konten.
+        search_categories: Kategorien suchen
+        skip_self_labels: Nicht aus eigenen Vorschlägen von Bayes lernen, bis sie bestätigt oder so viele Tage alt sind
+        skip_self_labels_hint: Bestätigt heißt, dass du die Kategorie geändert oder gesperrt hast. Ein falscher Vorschlag wird so nicht wieder eingelernt und verstärkt; einer, der so lange unverändert bleibt, gilt als akzeptiert.
+      add_rule:
+        success: Die Regel „%{name}“ wurde oben in deine Regeln eingefügt.
+      classifier:
+        apply: Anwenden
+        lock_results: Von Bayes gesetzte Kategorien sperren
+        lock_results_hint: Verhindert, dass Regeln die Kategorien von Bayes ändern, außer du klickst bei einer Regel auf „Anwenden“. Die KI ändert die Kategorien von Bayes nie, ob gesperrt oder nicht.
+        rule: Kategorien mit Bayes zuordnen
+        rule_hint: Die zugehörige Regel, die sich mit dieser Einstellung in den Regeln ein- und ausschaltet. Sie kategorisiert nach jedem Sync nicht kategorisierte Transaktionen, an ihrer Stelle in deiner Regelreihenfolge; worüber sie sich nicht sicher ist, bleibt für eine Regel zur KI-Kategorisierung.
+        threshold: Schwellenwert
+        threshold_hint: Niedrigster Wert, ab dem Bayes handelt (0,05–0,99). Niedriger kategorisiert mehr, mit mehr Fehlern.
+      clear_locks:
+        success: Die Sperren von Bayes werden aufgehoben. Das kann einen Moment dauern.
+      evaluation:
+        apply_best: Diese Einstellungen übernehmen
+        best: Beste gefundene
+        best_changes: "Beste gefundene, geändert gegenüber deinen:"
+        best_no_changes: Nichts hat besser abgeschnitten als deine Einstellungen.
+        buttons_hint: "„Meine Einstellungen testen“ bewertet deine Einstellungen. „Beste Einstellungen suchen“ durchsucht die %{tuning} Monate vor den angezeigten, so dass das Ergebnis an Monaten bewertet wird, die die Suche nicht gesehen hat. Maßstab ist ROC-AUC: wie gut die Werte die Transaktionen jeder Kategorie über den übrigen einreihen, bei jedem Schwellenwert. Eine Änderung bleibt nur, wenn sie insgesamt besser ist und auch in allen dieser %{tuning} Monate bis auf einen. Zuerst werden die Eingaben gewählt (jede Kombination aus Händler-Merkmal, Betrag und Konto; dann Händler und Konto getrennt bewerten; dann Händlername und Notizen als Wörter), dann wird jeweils eine Änderung an den übrigen Einstellungen probiert, zuletzt an der Bewertung. Die Standardwerte sind die des ursprünglichen Verfahrens, mit deiner Auswahl an Kategorien; „Auf Standardwerte zurücksetzen“ stellt sie ein und testet sie."
+        categories_heading: Kategorie-Zuordnung (Bayes)
+        change: "%{setting}: %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: "Häufigste Fehler: %{column} bei %{threshold}"
+        current: Meine Einstellungen
+        defaults: Standardwerte
+        description: Jede Spalte wird anhand der letzten %{months} Monate bewertet, als wären es neue Transaktionen. Jeder Monat wird mit der Historie davor trainiert und dann mit deinen Kategorien verglichen. Der Test ändert keine Kategorie einer Transaktion, und die Einstellungen ändern sich nur, wenn du sie übernimmst oder zurücksetzt.
+        find_best: Beste Einstellungen suchen
+        matcher_confusions: "Häufigste Händler-Fehler: %{column} bei %{similarity}"
+        matcher_description: "Händler, die die Händlererkennung in denselben %{months} Monaten ergänzt: %{count} Transaktionen mit Händler, jede mit verborgenem Händler gegen die Historie vor ihrem Monat abgeglichen; als richtig gilt der Händler, den die Transaktion tatsächlich hat. Jeder Grenzwert und jede Anzahl an Händlern wird bewertet; „Beste gefundene“ ist die mit der besten Zelle für die Kosten eines Fehlers, und die stellt „Anwenden“ ein. Der Test ergänzt keine Händler."
+        merchants_heading: Händlererkennung
+        no_confusions: Keine Fehler bei diesem Schwellenwert.
+        no_matcher_confusions: Keine Händler-Fehler bei dieser Ähnlichkeit.
+        no_uncategorized: Bei diesem Schwellenwert bleibt nichts unkategorisiert.
+        no_unfilled: Bei dieser Ähnlichkeit bleibt nichts ohne Händler.
+        none: Noch nicht getestet.
+        "off": aus
+        "on": an
+        ran_at: An %{count} Transaktionen bewertet (%{months}), %{time} her.
+        reset: Auf Standardwerte zurücksetzen
+        reset_confirm: Alle Einstellungen der automatischen Zuordnung auf ihre Standardwerte zurücksetzen und testen?
+        right_wrong: Jede Zelle zeigt richtig / falsch.
+        run: Meine Einstellungen testen
+        running: Test läuft … dieser Abschnitt aktualisiert sich, wenn er fertig ist.
+        short_history: Noch nicht genug Historie, um die Kategorie-Zuordnung abzustimmen. Dafür braucht es etwa %{months} Monate mit kategorisierten Transaktionen; „Anwenden“ lässt die Einstellungen daher vorerst unverändert.
+        similarity: Ähnlichkeit
+        stale: Die Einstellungen wurden seit diesem Test geändert.
+        threshold: Schwellenwert
+        trying: "Probiere %{changes} …"
+        uncategorized: "Häufigste unkategorisierte: %{column} bei %{threshold}"
+        unfilled: "Häufigste ohne Händler: %{column} bei %{similarity}"
+        weight: Ein Fehler kostet
+        weight_hint: "Bestimmt, was „Anwenden“ einstellt: die fett markierten Zellen, in denen richtige Antworten abzüglich so vieler je Fehler am höchsten sind. Für Kategorien der Schwellenwert der besten gefundenen Einstellungen; für die Händlererkennung Grenzwert, Ähnlichkeit und Anzahl der Händler."
+        weight_option:
+          one: 1 richtige Antwort
+          other: "%{count} richtige Antworten"
+      matcher:
+        lock_similar_merchants: Von der Händlererkennung gesetzte Händler sperren
+        lock_similar_merchants_hint: Verhindert, dass Regeln, KI und Syncs sie ändern, außer du klickst bei einer Regel auf „Anwenden“. Ihre eigenen Sperren zählen nicht als bestätigt (Feinabstimmung der Händlererkennung).
+        rule: Fehlende Händler aus fast gleichen Transaktionen ergänzen
+        rule_hint: "Die zugehörige Regel, die sich mit dieser Einstellung in den Regeln ein- und ausschaltet. An ihrer Stelle in deiner Regelreihenfolge bekommt eine Transaktion ohne Händler den Händler, den alle fast gleichen Transaktionen haben, etwa „NETFLIX.COM 8812“ und „Netflix com“. Umbuchungen bleiben außen vor."
+        similar_threshold: Ähnlichkeit
+        similar_threshold_hint: Niedrigste Ähnlichkeit der Beschreibungen, ohne Zahlen und Referenzcodes (0,5–0,99). Niedriger ergänzt mehr, mit mehr Fehlern. „Anwenden“ bei der automatischen Abstimmung stellt sie ebenfalls ein.
+      matcher_tuning:
+        similar_common_share: Grenzwert
+        similar_common_share_hint: Ein Wort oder Stück aus 3 Buchstaben, das in mehr als diesem Anteil der Transaktionen vorkommt, aus denen übernommen wird (0,01–1), und in mindestens 50 davon, ist zu häufig, um sie zu unterscheiden, etwa „Karte“ oder „Zahlung“, und wird ignoriert. Höher berücksichtigt mehr davon. „Anwenden“ bei der automatischen Abstimmung stellt ihn ebenfalls ein.
+        similar_min_neighbours: Übereinstimmende Händler
+        similar_min_neighbours_hint: Wie viele fast gleiche Transaktionen den Händler haben müssen, ohne dass eine einen anderen hat. Bei 1 wird eine einzelne Transaktion übernommen, auch mit ihren Fehlern.
+        similar_min_neighbours_option:
+          one: 1 Händler
+          other: "%{count} Händler"
+        similar_skip_self: Nicht aus Händlern der Händlererkennung übernehmen, bis sie bestätigt oder so viele Tage alt sind
+        similar_skip_self_hint: Bestätigt heißt, dass du den Händler geändert oder gesperrt hast. Ein falsch übernommener Händler verbreitet sich so nicht; einer, der so lange unverändert bleibt, gilt als akzeptiert.
+      merchant:
+        merchant_field: Händler als ein Merkmal einbeziehen, falls gesetzt
+        merchant_field_hint: Zählt nach Identität, sodass ein umbenannter Händler seine Historie behält.
+        merchant_name_words: Namen des Händlers als Wörter einbeziehen
+        merchant_name_words_hint: Wird wie die Beschreibung gelesen, wie beim ursprünglichen Verfahren, sodass ähnliche Namen Hinweise teilen. Überschneidet sich mit dem Merkmal unten.
+      run:
+        success: Bayes kategorisiert nicht kategorisierte Transaktionen. Das kann einen Moment dauern.
+      scoring:
+        complement: Complement Naive Bayes verwenden
+        complement_hint: Bewertet jede Kategorie danach, wie schlecht die Transaktion zu den anderen passt. Das kommt besser mit sehr unterschiedlich großen Kategorien zurecht. Aus entspricht dem ursprünglichen multinomialen Verfahren.
+        prior: Einbeziehen, wie oft jede Kategorie verwendet wird
+        prior_hint: Bevorzugt die Kategorien, die du am häufigsten verwendest. „Aus“ behandelt alle Kategorien gleich, wie das ursprüngliche Verfahren.
+        separate_fields: Händler und Konto getrennt von den Wörtern bewerten
+        separate_fields_hint: Jedes bekommt eine eigene Verteilung, sodass eine lange Beschreibung sie nicht überwiegt. Setzt voraus, dass Händler oder Konto einbezogen sind; der Betrag wird immer eigenständig bewertet.
+        smoothing: Glättung
+        smoothing_hint: Wird zu jeder Zählung addiert, damit ein noch nie gesehenes Wort eine Kategorie nicht ausschließt (0,001–10). 1 ist der ursprüngliche Wert; niedriger vertraut dem Gesehenen stärker.
+      show:
+        add_rule_body: In deinen Regeln gibt es keine Regel „%{name}“, es gibt also nichts einzuschalten. Soll sie oben in deine Regeln eingefügt werden?
+        add_rule_cancel: Nein
+        add_rule_confirm: Regel hinzufügen
+        add_rule_title: Regel „%{name}“ hinzufügen?
+        account: Feinabstimmung Konto
+        amount: Feinabstimmung Betrag
+        auto_tune: Automatisch abstimmen
+        category_training: Feinabstimmung Kategorie-Zuordnung
+        clear_locks: Sperren von Bayes aufheben
+        clear_locks_confirm_body: Hebt die Sperren der Kategorien, die Bayes gesperrt hat, und der Händler, die die Händlererkennung gesperrt hat, auf, sofern sie noch dem gesetzten Wert entsprechen. Danach können Regeln und KI sie wieder ändern. Kategorien und Händler bleiben erhalten.
+        clear_locks_confirm_button: Sperren aufheben
+        clear_locks_confirm_title: Sperren von Bayes aufheben?
+        description: Das Bayes-Verfahren lernt aus deinen kategorisierten Transaktionen und ordnet neuen eine Kategorie zu, bevor ein KI-Anbieter zum Zug kommt. Änderungen an diesen Einstellungen wirken ab dem nächsten Kategorisierungslauf; bereits kategorisierte Transaktionen behalten ihre Kategorien.
+        matcher: Händlererkennung
+        matcher_description: Ergänzt fehlende Händler aus fast gleichen Transaktionen, über die zugehörige Regel (nach jedem Sync) und über „Ausführen“. Dabei werden die gespeicherten Händler geändert.
+        matcher_tuning: Feinabstimmung Händlererkennung
+        merchant: Feinabstimmung Händler
+        run: Ausführen
+        scoring: Bewertung
+        title: Automatische Zuordnung
+        training: Training
+        words: Feinabstimmung Transaktion
+      training:
+        max_training_transactions: Trainingstransaktionen
+        max_training_transactions_hint: "Wie viele der neuesten Transaktionen verwendet werden (100–20.000): Die kategorisierten, aus denen Bayes lernt, und die mit Händler, aus denen die Händlererkennung übernimmt."
+      words:
+        bigrams: Wortpaare einbeziehen
+        bigrams_hint: "Benachbarte Wörter zählen auch gemeinsam, etwa „Karte Zahlung“."
+        binary: Wiederholte Wörter ausschließen
+        binary_hint: Jedes Wort zählt einmal pro Transaktion.
+        drop_codes: Referenzcodes ausschließen
+        drop_codes_hint: Wörter, die Buchstaben mit 2 oder mehr Ziffern mischen, etwa 2k4l19.
+        drop_numbers: Zahlen ausschließen
+        drop_numbers_hint: Filialnummern, Datumsangaben und Beträge in der Beschreibung.
+        include_notes: Notizen einbeziehen
+        include_notes_hint: Liest neben dem Namen auch die Notizen.
+        keep_single_chars: Wörter aus einem Zeichen einbeziehen
+        keep_single_chars_hint: "Einzelne Buchstaben und Ziffern, die nach dem Aufteilen übrig bleiben, etwa das „s“ aus McDonald's."
+        spread_filter: Wörter ausschließen, die alle Kategorien gleich verwenden
+        spread_filter_hint: Sie sagen nichts über die Kategorie aus. Die Zahl gibt an, wie weit die Verwendung in einer Kategorie über einem gleichmäßigen Anteil liegen muss.
+        word_split: Wörter bestehen aus
+        word_split_ascii: a–z und 0–9
+        word_split_hint: "Jedes andere Zeichen trennt Wörter. Buchstaben jeder Schrift halten Wörter wie Geschäft oder Кофейня zusammen; mit inneren Symbolen bleiben auch durch ein Symbol verbundene Buchstaben ein Wort, etwa McDonald's, s/o und m&s (ein Symbol am Anfang oder Ende, wie bei *netflix, fällt weiterhin weg)."
+        word_split_symbols: Buchstaben, Ziffern, innere Symbole
+        word_split_unicode: Buchstaben und Ziffern, jede Schrift

@@ -67,11 +67,19 @@ class Insight::Generator
 
     # Totals have no single account that Insight.about_shared_accounts could
     # recheck on read, so an aggregate insight carries the account set it was
-    # computed from. When a share is granted or revoked the digest changes and
-    # the job rewrites the body (see GenerateInsightsJob#upsert_insights), so
-    # prose written from the old set does not outlive it.
+    # computed from. Once access changes the feed hides it, and the next run
+    # writes the new digest and rewrites the body (see
+    # GenerateInsightsJob#upsert_insights), so prose written from the old set
+    # does not outlive it.
+    #
+    # Hashed from the captured ids rather than the account rows, so an account
+    # deleted after the figures were computed still counts. The ids are
+    # aliased as accounts.id so the shared expression applies unchanged.
     def shared_accounts_digest
-      @shared_accounts_digest ||= Digest::SHA256.hexdigest(shared_account_ids.join(","))
+      @shared_accounts_digest ||= Account.connection.select_value(Account.sanitize_sql_array([
+        "SELECT #{Account::ID_SET_DIGEST_SQL} FROM unnest(?::uuid[]) AS accounts(id)",
+        "{#{shared_account_ids.join(",")}}"
+      ]))
     end
 
     # Recurring series follow the same rule, matching
@@ -80,6 +88,22 @@ class Insight::Generator
     def shared_recurring_transactions
       RecurringTransaction.where(account_id: nil)
                           .or(RecurringTransaction.where(account_id: shared_accounts.select(:id)))
+    end
+
+    # The household budget: the feed is shared by the whole family, so one
+    # member's personal budget can't speak for it. Its spending is read from
+    # the accounts every member may see; left alone, the budget would fall
+    # back to `Current.user` (nil here) and count every account.
+    def current_budget
+      return @current_budget if defined?(@current_budget)
+
+      @current_budget = family.budgets
+        .where(user_id: nil)
+        .includes(budget_categories: :category)
+        .where("start_date <= ? AND end_date >= ?", Date.current, Date.current)
+        .first
+      @current_budget&.income_statement_accounts = shared_accounts
+      @current_budget
     end
 
     def build_insight(insight_type:, priority:, title:, template_key:, facts:, dedup_key:, metadata:, period: nil)
@@ -117,5 +141,11 @@ class Insight::Generator
     # in `metadata`; this is for interpolation into template prose only.
     def signed_number(value)
       value.negative? ? "−#{value.abs}" : value.to_s
+    end
+
+    # A display fact rounded to one decimal with the locale's separator, so
+    # Spanish copy reads "35,0" rather than "35.0".
+    def decimal_fact(value)
+      ActiveSupport::NumberHelper.number_to_rounded(round(value, 1), precision: 1)
     end
 end

@@ -8,6 +8,25 @@ class FamilyTest < ActiveSupport::TestCase
     @syncable = families(:dylan_family)
   end
 
+  test "missing_data_provider? is false under the keyless securities fallback" do
+    family = Family.create!(name: "Fallback", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    trade = Trade.new(security: securities(:aapl), qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy AAPL", date: 1.day.ago.to_date, amount: 100, currency: "USD", entryable: trade)
+
+    yahoo = mock("yahoo_finance")
+    yahoo.stubs(:class).returns(Provider::YahooFinance)
+    Provider::Registry.stubs(:yahoo_finance).returns(yahoo)
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+
+    with_env_overrides("TWELVE_DATA_API_KEY" => nil) do
+      assert family.requires_securities_data_provider?
+      assert_not family.requires_exchange_rates_data_provider?
+      assert_not family.missing_data_provider?
+    end
+  end
+
   test "local_date is the date in the family's zone" do
     family = families(:dylan_family)
     evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
@@ -249,6 +268,19 @@ class FamilyTest < ActiveSupport::TestCase
     family.update!(moniker: "Group")
     assert_equal "Group", family.moniker_label
     assert_equal "Groups", family.moniker_label_plural
+  end
+
+  test "tags_version changes when tags are added, removed, merged or deleted" do
+    family = families(:dylan_family)
+    tag = family.tags.create!(name: "Version tag")
+    other = family.tags.create!(name: "Other version tag")
+    transaction = family.transactions.first
+
+    assert_tags_version_changes(family) { transaction.toggle_tag!(tag) }
+    assert_tags_version_changes(family) { transaction.toggle_tag!(tag) }
+    assert_tags_version_changes(family) { transaction.toggle_tag!(other) }
+    assert_tags_version_changes(family) { other.replace_and_destroy!(tag) }
+    assert_tags_version_changes(family) { tag.destroy! }
   end
 
   test "entries_cache_version changes when an older entry is destroyed" do
@@ -933,6 +965,12 @@ class FamilyTest < ActiveSupport::TestCase
   end
 
   private
+    def assert_tags_version_changes(family)
+      before = family.tags_version
+      yield
+      assert_not_equal before, family.reload.tags_version
+    end
+
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
     end

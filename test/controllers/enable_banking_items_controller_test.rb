@@ -15,6 +15,95 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "select_existing_account shows the last four IBAN digits to tell accounts apart" do
+    checking = @item.enable_banking_accounts.create!(name: "Jane Doe", uid: "eb_checking", currency: "EUR", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    savings = @item.enable_banking_accounts.create!(name: "Jane Doe", uid: "eb_savings", currency: "EUR", iban: "DE02120300000000202051") # pipelock:ignore IBAN
+
+    get select_existing_account_enable_banking_items_url, params: { account_id: accounts(:depository).id }
+
+    assert_response :success
+    label_for = ->(eba) { css_select("label").find { |label| label.at_css("input[type=radio][value='#{eba.id}']") } }
+
+    checking_label = label_for.call(checking)
+    savings_label = label_for.call(savings)
+    assert checking_label, "Expected a selectable entry for the checking account"
+    assert savings_label, "Expected a selectable entry for the savings account"
+    assert_match(/•\s*3000/, checking_label.text)
+    assert_match(/•\s*2051/, savings_label.text)
+    assert_no_match(/2051/, checking_label.text)
+    assert_no_match(/3000/, savings_label.text)
+    assert_no_match(/DE89370400440532013000/, @response.body, "Only the last four digits should be shown") # pipelock:ignore IBAN
+  end
+
+  test "select_bank lists banks for the requested country" do
+    Provider::EnableBanking.any_instance.expects(:get_aspsps).with(country: "AT").returns(aspsps: [])
+
+    get select_bank_enable_banking_item_url(@item, new_connection: true, country_code: "at")
+
+    assert_response :success
+  end
+
+  test "select_bank ignores the requested country unless it is for a new connection" do
+    Provider::EnableBanking.any_instance.expects(:get_aspsps).with(country: "DE").returns(aspsps: [])
+
+    get select_bank_enable_banking_item_url(@item, country_code: "AT")
+
+    assert_response :success
+  end
+
+  test "authorize keeps the item's country when it is not for a new connection" do
+    Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(aspsps: [ { name: "Test Bank", country: "DE" } ])
+
+    get select_bank_enable_banking_item_url(@item)
+
+    assert_select "form[action='#{authorize_enable_banking_item_path(@item)}'] input[name=country_code][value=DE]"
+  end
+
+  test "select_bank falls back to the item's country for an unknown country" do
+    Provider::EnableBanking.any_instance.expects(:get_aspsps).with(country: "DE").returns(aspsps: [])
+
+    get select_bank_enable_banking_item_url(@item, country_code: "ZZ")
+
+    assert_response :success
+  end
+
+  test "select_bank passes the requested country on to authorize" do
+    Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(aspsps: [ { name: "Test Bank", country: "AT" } ])
+
+    get select_bank_enable_banking_item_url(@item, new_connection: true, country_code: "AT")
+
+    assert_select "form[action='#{authorize_enable_banking_item_path(@item)}'] input[name=country_code][value=AT]"
+  end
+
+  test "new_connection forwards the requested country to select_bank" do
+    post new_connection_enable_banking_item_url(@item), params: { country_code: "AT" }
+
+    assert_redirected_to select_bank_enable_banking_item_url(@item, new_connection: true, country_code: "AT")
+  end
+
+  test "authorize creates a new connection in the requested country" do
+    stub_authorization_start
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      post authorize_enable_banking_item_url(@item),
+           params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true", country_code: "AT" }
+    end
+
+    created = @family.enable_banking_items.where.not(id: @item.id).order(:created_at).last
+    assert_equal "AT", created.country_code
+    assert_equal "DE", @item.reload.country_code
+  end
+
+  test "authorize keeps the item's country when the requested country is invalid" do
+    stub_authorization_start
+
+    post authorize_enable_banking_item_url(@item),
+         params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true", country_code: "ZZ" }
+
+    created = @family.enable_banking_items.where.not(id: @item.id).order(:created_at).last
+    assert_equal "DE", created.country_code
+  end
+
   test "select_bank exposes ASPSP BIC in the searchable data attribute" do
     Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
       aspsps: [
@@ -245,6 +334,186 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert @sent_state.length >= 32
   end
 
+  # One N26 login used to leave five connections behind, four of them empty.
+  test "starting a new connection twice for the same bank reuses the pending one" do
+    stub_authorization_start
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      2.times do
+        post authorize_enable_banking_item_url(@item),
+             params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+      end
+    end
+
+    assert_redirected_to "https://api.enablebanking.com/auth/redirect/abc"
+  end
+
+  test "a new connection to another bank still gets its own connection" do
+    stub_authorization_start(banks: [ "Test Bank", "Other Bank" ])
+
+    assert_difference -> { @family.enable_banking_items.count }, 2 do
+      post authorize_enable_banking_item_url(@item),
+           params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+      post authorize_enable_banking_item_url(@item),
+           params: { aspsp_name: "Other Bank", psu_type: "personal", new_connection: "true" }
+    end
+  end
+
+  test "a connection that already has a session is never reused for a new one" do
+    stub_authorization_start
+    start_new_connection
+    @family.enable_banking_items.order(:created_at).last.update!(session_id: "live-session")
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      start_new_connection
+    end
+  end
+
+  test "a connection that already has accounts is never reused for a new one" do
+    stub_authorization_start
+    start_new_connection
+    @family.enable_banking_items.order(:created_at).last
+      .enable_banking_accounts.create!(name: "Checking", uid: "eb_existing", currency: "EUR")
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      start_new_connection
+    end
+  end
+
+  # Reuse is limited to connections this browser started: two browsers of one
+  # family sharing a pending connection could both complete on it.
+  test "a pending connection started in another browser is not reused" do
+    stub_authorization_start
+
+    assert_difference -> { @family.enable_banking_items.count }, 2 do
+      start_new_connection
+      reset!
+      sign_in users(:family_admin)
+      start_new_connection
+    end
+  end
+
+  test "a start that failed at the provider is reused on the next attempt" do
+    Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
+      aspsps: [ { name: "Test Bank", country: "DE", psu_types: [ "personal" ], auth_methods: [ { approach: "REDIRECT" } ] } ]
+    )
+    Provider::EnableBanking.any_instance.stubs(:start_authorization)
+      .raises(Provider::EnableBanking::EnableBankingError.new("REDIRECT_URI_NOT_ALLOWED"))
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      3.times do
+        post authorize_enable_banking_item_url(@item),
+             params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+      end
+    end
+  end
+
+  test "a connection scheduled for deletion is not reused" do
+    stub_authorization_start
+    start_new_connection
+    @family.enable_banking_items.order(:created_at).last.update!(scheduled_for_deletion: true)
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      start_new_connection
+    end
+  end
+
+  # Two new logins to the same bank now share the pending connection, so only
+  # the newest may finish: otherwise the first login's accounts would end up on
+  # the second login's session.
+  test "of two new logins to the same bank, only the newest can complete" do
+    stub_authorization_start
+    post authorize_enable_banking_item_url(@item),
+         params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+    first_state = @sent_state
+    post authorize_enable_banking_item_url(@item),
+         params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+    second_state = @sent_state
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).once
+    get callback_enable_banking_items_url, params: { code: "first", state: first_state }
+    assert_redirected_to settings_providers_path
+    get callback_enable_banking_items_url, params: { code: "second", state: second_state }
+    assert_redirected_to accounts_path
+  end
+
+  test "a retry that fails to start leaves the earlier login able to complete" do
+    stub_authorization_start
+    start_new_connection
+    first_state = @sent_state
+    Provider::EnableBanking.any_instance.stubs(:start_authorization)
+      .raises(Provider::EnableBanking::EnableBankingError.new("ASPSP unavailable"))
+    start_new_connection
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).with(code: "first")
+    get callback_enable_banking_items_url, params: { code: "first", state: first_state }
+    assert_redirected_to accounts_path
+  end
+
+  # Each failed retry used to add a dead state, so enough of them pushed the
+  # earlier login's state out of the capped map.
+  test "repeated retries that fail to start leave the earlier login able to complete" do
+    stub_authorization_start
+    start_new_connection
+    first_state = @sent_state
+    Provider::EnableBanking.any_instance.stubs(:start_authorization)
+      .raises(Provider::EnableBanking::EnableBankingError.new("ASPSP unavailable"))
+    EnableBankingItemsController::MAX_PENDING_OAUTH_STATES.times { start_new_connection }
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).with(code: "first")
+    get callback_enable_banking_items_url, params: { code: "first", state: first_state }
+    assert_redirected_to accounts_path
+  end
+
+  test "a retry the provider sends to an untrusted host leaves the earlier login able to complete" do
+    stub_authorization_start
+    start_new_connection
+    first_state = @sent_state
+    Provider::EnableBanking.any_instance.stubs(:start_authorization)
+      .returns(url: "https://api.enablebanking.com.evil.test/auth", authorization_id: "auth_2")
+    start_new_connection
+    assert_redirected_to settings_providers_path
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).with(code: "first")
+    get callback_enable_banking_items_url, params: { code: "first", state: first_state }
+    assert_redirected_to accounts_path
+  end
+
+  # The retry's older state is dropped before the cap applies, so it never
+  # evicts another bank's login that is still open.
+  test "retrying one login keeps the other logins open when the limit is reached" do
+    banks = [ "Bank B", "Bank A", "Bank C", "Bank D", "Bank E" ]
+    assert_equal EnableBankingItemsController::MAX_PENDING_OAUTH_STATES, banks.size
+    stub_authorization_start(banks: banks)
+    start_new_connection(bank: "Bank B")
+    bank_b_state = @sent_state
+    banks.drop(1).each { |bank| start_new_connection(bank: bank) }
+    start_new_connection(bank: "Bank A")
+    assert_redirected_to "https://api.enablebanking.com/auth/redirect/abc"
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).with(code: "bank b")
+    get callback_enable_banking_items_url, params: { code: "bank b", state: bank_b_state }
+    assert_redirected_to accounts_path
+  end
+
+  test "reauthorize issues a state the callback accepts" do
+    stub_authorization_start
+    @item.update!(aspsp_name: "Test Bank")
+
+    post reauthorize_enable_banking_item_url(@item)
+    assert_redirected_to "https://api.enablebanking.com/auth/redirect/abc"
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).with(code: "reauth")
+    get callback_enable_banking_items_url, params: { code: "reauth", state: @sent_state }
+    assert_redirected_to accounts_path
+  end
+
   test "callback completes authorization when the state matches this session" do
     stub_authorization_start
     post authorize_enable_banking_item_url(@item), params: { aspsp_name: "Test Bank", psu_type: "personal" }
@@ -344,6 +613,31 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "active", orphan.reload.status
   end
 
+  test "setup_accounts does not offer an ignored account" do
+    mine = @item.enable_banking_accounts.create!(name: "Mine", uid: "hash_mine", currency: "EUR")
+    theirs = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", currency: "EUR")
+    theirs.ignore!
+
+    get setup_accounts_enable_banking_item_url(@item)
+
+    assert_response :success
+    assert_select "select[name=?]", "account_types[#{mine.id}]"
+    assert_select "select[name=?]", "account_types[#{theirs.id}]", count: 0
+  end
+
+  test "complete_account_setup remembers a skipped account as ignored" do
+    theirs = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", currency: "EUR", current_balance: 50)
+
+    assert_no_difference "Account.count" do
+      post complete_account_setup_enable_banking_item_url(@item), params: { account_types: { theirs.id => "skip" } }
+    end
+
+    assert_redirected_to accounts_path
+    assert theirs.reload.ignored?
+    assert_nil theirs.current_balance
+    assert_not @item.reload.pending_account_setup?
+  end
+
   # The modal's form is a plain form_with, so the date field's label and help
   # must be rendered as elements rather than passed as builder options (which
   # end up as unknown attributes on the input).
@@ -360,6 +654,21 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
       assert_nil inputs.first["label"]
       assert_nil inputs.first["help_text"]
     end
+  end
+
+  test "setup modal shows account types and subtypes in the user's language" do
+    @item.enable_banking_accounts.create!(name: "Checking", uid: "eb_setup_1", currency: "EUR", current_balance: 0)
+
+    get setup_accounts_enable_banking_item_url(@item, locale: :de)
+
+    assert_response :success
+    I18n.with_locale(:de) do
+      assert_select "option[value=Depository]", text: I18n.t("enable_banking_items.setup_accounts.account_types.depository")
+      assert_select "option[value=checking]", text: Depository.long_subtype_label_for("checking")
+      assert_select "option[value=mortgage]", text: Loan.long_subtype_label_for("mortgage")
+      assert_select "label", text: I18n.t("enable_banking_items.setup_accounts.subtype_labels.loan")
+    end
+    assert_no_match(/Checking or Savings Account|Loan or Mortgage|Account Subtype:/, response.body)
   end
 
   test "setup modal shows a start date that is already set" do
@@ -401,9 +710,14 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-    def stub_authorization_start
+    def start_new_connection(bank: "Test Bank")
+      post authorize_enable_banking_item_url(@item),
+           params: { aspsp_name: bank, psu_type: "personal", new_connection: "true" }
+    end
+
+    def stub_authorization_start(banks: [ "Test Bank" ])
       Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
-        aspsps: [ { name: "Test Bank", country: "DE", psu_types: [ "personal" ], auth_methods: [ { approach: "REDIRECT" } ] } ]
+        aspsps: banks.map { |name| { name: name, country: "DE", psu_types: [ "personal" ], auth_methods: [ { approach: "REDIRECT" } ] } }
       )
       test_case = self
       Provider::EnableBanking.any_instance.stubs(:start_authorization).with do |**kwargs|

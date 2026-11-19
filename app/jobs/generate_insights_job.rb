@@ -18,7 +18,7 @@ class GenerateInsightsJob < ApplicationJob
   private
     # Insights are a preview feature, so the nightly sweep only visits families
     # with an opted-in member. Unlike a job that moves existing data around,
-    # this one manufactures data per family — seven generators over the income
+    # this one manufactures data per family — every generator, most of them over the income
     # statement and balance sheet — so running it for
     # families who can't see the result is pure waste. Scoped in SQL rather
     # than checked per family to keep the fan-out a single indexed query.
@@ -44,12 +44,11 @@ class GenerateInsightsJob < ApplicationJob
     end
 
     def generate_and_broadcast(family)
-      notifiable_insights = with_advisory_lock(family.id) do
+      with_advisory_lock(family.id) do
         I18n.with_locale(family.locale) do
           result = Insight::GeneratorRegistry.new(family).generate_all
-          created_or_resurfaced = upsert_insights(family, result.insights)
+          upsert_insights(family, result.insights)
           expire_stale_insights(family, result)
-          created_or_resurfaced
         end
       end
 
@@ -57,7 +56,6 @@ class GenerateInsightsJob < ApplicationJob
       # current state, so a subscribed /insights page (waiting on its manual
       # refresh) always gets its list and button restored.
       I18n.with_locale(family.locale) { broadcast_feed(family) }
-      Array(notifiable_insights).each { |insight| DeliverInsightNotificationJob.enqueue_for(insight) }
     end
 
     def broadcast_feed(family)
@@ -141,6 +139,7 @@ class GenerateInsightsJob < ApplicationJob
             body: writer.write(generated),
             metadata: metadata,
             facts: facts,
+            notification_version: existing.notification_version + 1,
             period_start: generated.period_start,
             period_end: generated.period_end,
             generated_at: Time.current,
@@ -151,23 +150,24 @@ class GenerateInsightsJob < ApplicationJob
         elsif existing.expired?
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
-          # insight resurfaces; the body is still accurate, so no rewrite.
-          existing.update!(title: generated.title, status: "active", facts: facts,
-                           generated_at: Time.current, read_at: nil)
+          # insight resurfaces, with the body filled from the current facts.
+          existing.update!(title: generated.title, body: writer.write(generated), status: "active", facts: facts,
+                           notification_version: existing.notification_version + 1, generated_at: Time.current, read_at: nil)
           existing
         else
-          # Same signal, same numbers: don't rewrite the body and don't undo
-          # the user's read/dismissed state. Facts still
-          # refresh — they're display values (key figure, link labels), and
-          # keeping them current is exactly why they're not part of the
-          # material-change comparison.
+          # Same signal, same numbers: don't undo the user's read/dismissed
+          # state and don't notify again. Facts still refresh — they're
+          # display values (key figure, link labels), and keeping them current
+          # is exactly why they're not part of the material-change comparison.
+          # The body is the template filled with those facts, so it refreshes
+          # with them; otherwise the prose keeps last week's amounts.
           #
           # The title refreshes with them. It is built from I18n and the
           # generator's own data, not written by the model, so keeping it
           # current costs nothing — and a title naming a goal or a category
           # the user has since renamed is simply wrong on the page. Rename is
           # not a reason to resurface, so status and read state stay untouched.
-          existing.update!(title: generated.title, facts: facts, generated_at: Time.current)
+          existing.update!(title: generated.title, body: writer.write(generated), facts: facts, generated_at: Time.current)
           nil
         end
       rescue ActiveRecord::RecordNotUnique
