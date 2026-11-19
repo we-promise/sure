@@ -1489,6 +1489,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
     t.datetime "generated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "insight_type", null: false
     t.jsonb "metadata", default: {}, null: false
+    t.integer "notification_version", default: 1, null: false
     t.date "period_end"
     t.date "period_start"
     t.string "priority", default: "medium", null: false
@@ -1990,6 +1991,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
     t.string "provider_key", null: false
     t.datetime "updated_at", null: false
     t.index ["provider_key", "period"], name: "index_provider_request_counts_on_provider_key_and_period", unique: true
+  end
+
+  create_table "push_deliveries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "attempted_at"
+    t.datetime "created_at", null: false
+    t.datetime "enqueued_at"
+    t.uuid "insight_id"
+    t.integer "insight_version"
+    t.integer "provider_attempts", default: 0, null: false
+    t.string "status", default: "pending", null: false
+    t.uuid "subscription_id", null: false
+    t.string "subscription_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["insight_id"], name: "index_push_deliveries_on_insight_id"
+    t.index ["status", "updated_at"], name: "index_push_deliveries_on_status_and_updated_at"
+    t.index ["subscription_type", "subscription_id", "insight_id", "insight_version"], name: "index_push_deliveries_on_channel_insight_version", unique: true
+    t.index ["subscription_type", "subscription_id"], name: "index_push_deliveries_on_subscription"
+    t.check_constraint "insight_id IS NULL AND insight_version IS NULL OR insight_id IS NOT NULL AND insight_version IS NOT NULL AND insight_version > 0", name: "chk_push_deliveries_insight_version"
+    t.check_constraint "provider_attempts >= 0", name: "chk_push_deliveries_provider_attempts"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'skipped'::character varying, 'rejected'::character varying, 'failed'::character varying, 'enqueue_failed'::character varying]::text[])", name: "chk_push_deliveries_status"
   end
 
   create_table "push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3044,6 +3065,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
     t.integer "year"
   end
 
+  create_table "web_push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "auth", null: false
+    t.datetime "created_at", null: false
+    t.text "endpoint", null: false
+    t.string "endpoint_digest", null: false
+    t.datetime "last_test_requested_at"
+    t.text "p256dh", null: false
+    t.uuid "session_id", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["endpoint_digest"], name: "index_web_push_subscriptions_on_endpoint_digest", unique: true
+    t.index ["session_id"], name: "index_web_push_subscriptions_on_session_id"
+    t.index ["user_id"], name: "index_web_push_subscriptions_on_user_id"
+  end
+
   create_table "webauthn_credentials", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "credential_id", null: false
@@ -3235,6 +3271,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "plaid_items", "users", column: "owner_id", on_delete: :nullify
+  add_foreign_key "push_deliveries", "insights"
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"
@@ -3305,6 +3342,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
   add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
+  add_foreign_key "web_push_subscriptions", "sessions", on_delete: :cascade
+  add_foreign_key "web_push_subscriptions", "users"
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "weekly_cleanup_runs", "families", on_delete: :cascade
   add_foreign_key "weekly_cleanup_runs", "users", on_delete: :cascade
