@@ -283,6 +283,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
       OpenStruct.new(security: security, date: snapshot_start_date, price: 100, currency: "USD")
     ]))
     yahoo.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Apple", logo_url: "logo")))
+    yahoo.stubs(:supports_splits?).returns(false)
 
     MarketDataImporter.new(mode: :snapshot).import_security_prices
 
