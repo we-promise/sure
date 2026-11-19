@@ -259,7 +259,7 @@ class AiTransportContractTest < ActiveSupport::TestCase
       methods.each { assert owner.respond_to?(_1), "RubyLLM.#{_1}" }
     end
     { RubyLLM::Context => %i[chat embed], RubyLLM::Chat => %i[generate add_message with_headers with_max_output_tokens with_tools],
-      RubyLLM::Message => %i[content model tokens cost tool_calls], RubyLLM::Embedding => %i[vectors],
+      RubyLLM::Message => %i[content model tokens cost tool_calls], RubyLLM::ToolCall => %i[name arguments], RubyLLM::Embedding => %i[vectors],
       RubyLLM::Tokens => %i[input output cache_read cache_write reported_cost] }.each do |klass, methods|
       methods.each { assert klass.public_method_defined?(_1), "#{klass}##{_1}" }
     end

@@ -44,7 +44,8 @@ module SyncStats
         end
       end
 
-      unlinked_count = total_accounts - linked_count
+      # An account the user chose to ignore (never a linked one) is not outstanding setup work.
+      unlinked_count = total_accounts - linked_count - provider_accounts.count { |pa| pa.try(:ignored?) }
 
       setup_stats = {
         "total_accounts" => total_accounts,

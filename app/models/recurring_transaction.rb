@@ -355,7 +355,11 @@ class RecurringTransaction < ApplicationRecord
   # An active recurring expense you owe someone: transfers are internal moves and
   # income is not owed, so neither belongs on a list of things to pay. No minimum
   # amount, since any threshold is wrong in some currency; pause handles the rest.
-  scope :bills, -> { active.where(destination_account_id: nil).where("amount > 0") }
+  scope :bills, -> { active.outflows }
+
+  # Money leaving the family: not a transfer between its own accounts, and not
+  # income.
+  scope :outflows, -> { where(destination_account_id: nil).where(arel_table[:amount].gt(0)) }
 
   # Everything the Bills page owes an answer for: expense bills and
   # subscriptions, PLUS recurring transfers into liability accounts -- a
@@ -911,6 +915,21 @@ class RecurringTransaction < ApplicationRecord
       source_account: account,
       destination_account: destination_account
     )
+  end
+
+  # The tolerance band the matcher uses: the series' own tolerance, widened by
+  # what a manual attach has taught. Every amount decision reads this one value.
+  def effective_amount_tolerance_pct
+    [ amount_tolerance_pct, learned_amount_tolerance_pct ].max
+  end
+
+  # What a manual attach has taught, sanitised: a non-finite or invalid hint
+  # reads as zero, and an imported value never exceeds the learnable maximum.
+  # Display and matching both read this, so the copy cannot diverge from behavior.
+  def learned_amount_tolerance_pct
+    learned = BigDecimal((matcher_hints || {})["learned_tolerance_pct"].to_s, exception: false)
+    learned = BigDecimal("0") unless learned&.finite?
+    [ learned, Matcher::MAX_LEARNED_TOLERANCE_PCT ].min
   end
 
   private
