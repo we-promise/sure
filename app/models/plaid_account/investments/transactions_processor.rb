@@ -19,6 +19,8 @@ class PlaidAccount::Investments::TransactionsProcessor
     "split" => "Other"
   }.freeze
 
+  PERCENT_OF_PAR_TOLERANCE = BigDecimal("0.1")
+
   def initialize(plaid_account, security_resolver:)
     @plaid_account = plaid_account
     @security_resolver = security_resolver
@@ -63,12 +65,15 @@ class PlaidAccount::Investments::TransactionsProcessor
       external_id = transaction["investment_transaction_id"]
       return if external_id.blank?
 
+      quantity = derived_qty(transaction)
+      price = trade_price(transaction)
+
       import_adapter.import_trade(
         external_id: external_id,
         security: resolved_security_result.security,
-        quantity: derived_qty(transaction),
-        price: transaction["price"],
-        amount: derived_qty(transaction) * transaction["price"],
+        quantity: quantity,
+        price: price,
+        amount: trade_cash_impact(transaction, quantity, price),
         currency: transaction["iso_currency_code"],
         date: transaction["date"],
         name: transaction["name"],
@@ -99,6 +104,30 @@ class PlaidAccount::Investments::TransactionsProcessor
 
     def transactions
       plaid_account.raw_holdings_payload&.dig("transactions") || []
+    end
+
+    # Institutions quote some fixed income trades as a percent of par, so
+    # quantity * price comes out 100x the cash amount. Plaid's amount can
+    # include fees and accrued interest, so it isn't used as the price
+    # directly; the price is only rescaled when the gap is close to 100x.
+    def trade_price(transaction)
+      price = transaction["price"].to_d
+      quantity = transaction["quantity"].to_d.abs
+      cash = transaction["amount"].to_d.abs
+      return transaction["price"] if price.zero? || quantity.zero? || cash.zero?
+
+      ratio = quantity * price / cash
+      (ratio / 100 - 1).abs <= PERCENT_OF_PAR_TOLERANCE ? price / 100 : transaction["price"]
+    end
+
+    # Plaid's amount is the cash that moved, including fees and accrued
+    # interest. Its sign follows the derived quantity because Plaid's signage
+    # is unreliable.
+    def trade_cash_impact(transaction, quantity, price)
+      cash = transaction["amount"].to_d.abs
+      return quantity * price if cash.zero?
+
+      quantity.negative? ? -cash : cash
     end
 
     # Plaid unfortunately returns incorrect signage on some `quantity` values. They claim all "sell" transactions

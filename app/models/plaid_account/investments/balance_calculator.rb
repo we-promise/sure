@@ -66,6 +66,12 @@ class PlaidAccount::Investments::BalanceCalculator
         security.brokerage_cash?
       end
 
-      true_holdings.sum { |h| h["quantity"] * h["institution_price"] }
+      true_holdings.filter_map do |h|
+        PlaidAccount::Investments::HoldingValue.position_value(
+          quantity: h["quantity"]&.to_d,
+          institution_price: h["institution_price"]&.to_d,
+          institution_value: h["institution_value"]&.to_d
+        )
+      end.sum
     end
 end

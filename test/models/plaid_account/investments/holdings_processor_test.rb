@@ -366,4 +366,48 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     holding = account.holdings.find_by(security: securities(:aapl))
     assert_equal "EUR", holding.currency  # Should use account's currency
   end
+
+  test "values fixed income holdings from institution_value whether quoted as a percent or a fraction of par" do
+    @plaid_account.update!(raw_holdings_payload: {
+      securities: [],
+      holdings: [
+        {
+          "security_id" => "percent_of_par",
+          "quantity" => 10000,
+          "institution_price" => 91.12,
+          "institution_value" => 9112,
+          "iso_currency_code" => "USD",
+          "institution_price_as_of" => "2026-01-15"
+        },
+        {
+          "security_id" => "fraction_of_par",
+          "quantity" => 5000,
+          "institution_price" => 0.97,
+          "institution_value" => 4850,
+          "iso_currency_code" => "USD",
+          "institution_price_as_of" => "2026-01-15"
+        }
+      ],
+      transactions: []
+    })
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "percent_of_par")
+                      .returns(OpenStruct.new(security: securities(:aapl)))
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "fraction_of_par")
+                      .returns(OpenStruct.new(security: securities(:msft)))
+
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    holdings = @plaid_account.current_account.holdings.where(date: Date.parse("2026-01-15"))
+
+    percent_holding = holdings.find_by!(security: securities(:aapl))
+    assert_equal BigDecimal("9112"), percent_holding.amount
+    assert_equal BigDecimal("0.9112"), percent_holding.price
+
+    fraction_holding = holdings.find_by!(security: securities(:msft))
+    assert_equal BigDecimal("4850"), fraction_holding.amount
+    assert_equal BigDecimal("0.97"), fraction_holding.price
+  end
 end

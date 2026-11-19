@@ -15,13 +15,16 @@ class PlaidAccount::Investments::HoldingsProcessor
 
       # Parse quantity and price into BigDecimal for proper arithmetic
       quantity_bd = parse_decimal(plaid_holding["quantity"])
-      price_bd = parse_decimal(plaid_holding["institution_price"])
+      reported_price_bd = parse_decimal(plaid_holding["institution_price"])
 
-      # Skip if essential values are missing
-      next if quantity_bd.nil? || price_bd.nil?
+      amount_bd = PlaidAccount::Investments::HoldingValue.position_value(
+        quantity: quantity_bd,
+        institution_price: reported_price_bd,
+        institution_value: parse_decimal(plaid_holding["institution_value"])
+      )
+      next if amount_bd.nil?
 
-      # Compute amount using BigDecimal arithmetic to avoid floating point drift
-      amount_bd = quantity_bd * price_bd
+      price_bd = quantity_bd.nonzero? ? amount_bd / quantity_bd : reported_price_bd
 
       # Normalize date - handle string, Date, or nil
       holding_date = parse_date(plaid_holding["institution_price_as_of"]) || Date.current
