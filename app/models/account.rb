@@ -582,6 +582,10 @@ class Account < ApplicationRecord
       create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
     end
 
+    def create_from_revolut_x_account(revolut_x_account)
+      create_from_crypto_exchange_account(revolut_x_account, family: revolut_x_account.revolut_x_item.family)
+    end
+
     # Creates a manual Crypto account for a newly-selected CoinSpot account,
     # owned by the connection's family.
     def create_from_coinspot_account(coinspot_account)
