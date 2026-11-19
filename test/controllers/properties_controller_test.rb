@@ -39,6 +39,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1990, created_account.accountable.year_built
     assert_equal 1200, created_account.accountable.area_value
     assert_equal "sqft", created_account.accountable.area_unit
+    assert created_account.accountable.user_set_area?, "a manually entered area should count as user-set"
     assert_redirected_to balances_property_path(created_account)
   end
 
@@ -71,6 +72,20 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     else
       assert_redirected_to balances_property_path(@account)
     end
+  end
+
+  test "editing the living area marks it as user-set, so valuation refreshes send it" do
+    property = @account.accountable
+    assert_not property.user_set_area?
+
+    patch property_path(@account), params: {
+      account: { accountable_attributes: { id: property.id, area_value: 1364, area_unit: "sqft" } }
+    }
+
+    property.reload
+    assert_equal 1364, property.area_value
+    assert property.locked?(:area_value)
+    assert property.user_set_area?
   end
 
   # Tab view tests
@@ -309,6 +324,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   test "new skips method selector when no AVM provider is configured" do
     Provider::Registry.stubs(:rentcast).returns(nil)
     Provider::Registry.stubs(:realie).returns(nil)
+    Provider::Registry.stubs(:terrascoutx).returns(nil)
 
     get new_property_path(step: "method_select")
 
@@ -536,6 +552,14 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to new_property_path
+  end
+
+  test "edit form leaves out the icon picker, which property updates do not save" do
+    get edit_property_url(@account)
+
+    assert_response :success
+    assert_select "[data-controller=account-logo-picker]", 0
+    assert_select "form##{dom_id(@account, :logo_options)}", 0
   end
 
   # Chimnie (UK, UPRN-based) lookups
@@ -832,7 +856,66 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action*='avm_provider=chimnie']", count: 0
   end
 
+  test "overview shows the trend in the family currency for a foreign-currency property" do
+    purchase_date = 2.years.ago.to_date
+    foreign_property_with_value(purchase_date: purchase_date)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: purchase_date, rate: 1.0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']" do
+      assert_select "h4", text: "Trend in EUR"
+      assert_select "span", text: /-€1,000/
+      assert_select "span", text: "(-1.0%)"
+    end
+  end
+
+  test "overview shows an infinite family-currency trend from a zero purchase value" do
+    purchase_date = 2.years.ago.to_date
+    foreign_property_with_value(purchase_date: purchase_date, purchase_amount: 0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: purchase_date, rate: 1.0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']" do
+      assert_select "span", text: "(＋∞)"
+      assert_select "span", text: /Infinity|NaN/, count: 0
+    end
+  end
+
+  test "overview says the rate is unavailable instead of guessing a family-currency trend" do
+    foreign_property_with_value(purchase_date: 2.years.ago.to_date)
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']", text: /Exchange rate unavailable/
+    assert_select "[data-testid='family-currency-trend']", text: /€/, count: 0
+  end
+
+  test "overview has no family-currency trend when the property is in the family currency" do
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']", count: 0
+  end
+
   private
+    def foreign_property_with_value(purchase_date:, purchase_amount: 100_000)
+      @account.family.update!(currency: "EUR")
+      @account.entries.valuations.destroy_all
+      @account.entries.create!(
+        date: purchase_date, name: "Original purchase price", amount: purchase_amount, currency: "USD",
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+      @account.update!(balance: 110_000)
+    end
+
     def valuation_data(valuation)
       Provider::PropertyValuationConcept::PropertyValuation.new(
         valuation: valuation, currency: "USD", property_type: "single_family_home",

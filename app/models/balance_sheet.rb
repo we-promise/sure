@@ -69,15 +69,39 @@ class BalanceSheet
 
       case order_key
       when "name_asc"
-        accounts.sort_by(&:name)
+        sort_by_name(accounts)
       when "name_desc"
-        accounts.sort_by(&:name).reverse
+        sort_by_name(accounts).reverse
       when "balance_asc"
-        accounts.sort_by(&:balance)
+        sort_by_balance(accounts)
       when "balance_desc"
-        accounts.sort_by(&:balance).reverse
+        sort_by_balance(accounts).reverse
+      when "manual"
+        sort_manually(accounts)
       else
         accounts
+      end
+    end
+
+    # Array#sort_by isn't stable, so accounts with an equal sort value could
+    # swap places between renders; the id tie-break keeps the order fixed.
+    def sort_by_name(accounts)
+      accounts.sort_by { |account| [ account.name.to_s.downcase, account.id ] }
+    end
+
+    def sort_by_balance(accounts)
+      accounts.sort_by { |account| [ account.converted_balance, account.id ] }
+    end
+
+    # Accounts the user has dragged into place come first, in their saved
+    # position within their group; accounts added since then follow
+    # alphabetically.
+    def sort_manually(accounts)
+      positions = user.manual_account_order.values.flat_map { |ids| ids.each_with_index.to_a }.to_h
+
+      accounts.sort_by do |account|
+        position = positions[account.id]
+        [ position ? 0 : 1, position || 0, account.name.to_s.downcase, account.id.to_s ]
       end
     end
 end

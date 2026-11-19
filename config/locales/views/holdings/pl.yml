@@ -5,14 +5,13 @@ pl:
       brokerage_cash: Gotówka maklerska
     cost_basis_cell:
       cancel: Anuluj
-      or_per_share_label: 'Lub wpisz na akcję:'
+      per_share_label: "Na akcję"
       overwrite_confirm_body: Spowoduje to zastąpienie aktualnego kosztu bazowego
         wynoszącego %{current}.
       overwrite_confirm_title: Nadpisać koszt bazowy?
-      per_share: na akcję
       save: Zapisz
       set: Ustaw
-      set_cost_basis_header: Ustaw koszt bazowy dla %{ticker} (%{qty} akcji)
+      set_cost_basis_header: Ustaw koszt bazowy dla %{ticker}
       total_cost_basis_label: Łączny koszt bazowy
       unknown: "--"
     cost_basis_sources:
@@ -35,6 +34,9 @@ pl:
       holdings: Pozycje
       name: Nazwa
       new_holding: Nowa aktywność
+      negative_position: "%{name} (%{ticker}): poniżej zera od %{date}, najniżej %{qty}."
+      negative_positions_hint: "Prawdopodobnie brakuje zakupu lub przeniesienia. Dodaj je albo popraw transakcje, które sprowadziły pozycję poniżej zera."
+      negative_positions_title: "Niektóre pozycje spadły poniżej zera"
       no_holdings: Brak pozycji do wyświetlenia.
       positions:
         few: "%{count} pozycje"

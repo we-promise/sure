@@ -79,6 +79,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   private
 
+    # Capybara retries its own matchers; a value read through evaluate_script
+    # or from the database gets no such patience, so give it the same budget.
+    def wait_until(timeout: Capybara.default_max_wait_time)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+      sleep 0.05 until yield || Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+    end
+
     def reset_viewport
       page.current_window.resize_to(DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT) if page&.current_window
     end
@@ -113,6 +120,39 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
         .move_by((width - (2 * inset)).round, 0)
         .release
         .perform
+    end
+
+    # Lets a dashboard or reports test wait for a section order or collapse
+    # PATCH: once it answers, <html> carries data-order-saved with the response
+    # status. data-order-requests counts the PATCHes as soon as they are sent.
+    # Waits for the sortable-list controller to connect first, so keys sent
+    # next are handled.
+    def record_saved_section_order
+      page.document.synchronize do
+        connected = page.evaluate_script(<<~JS)
+          (() => {
+            const list = document.querySelector("[data-controller~='sortable-list']");
+            return !!list && !!window.Stimulus.getControllerForElementAndIdentifier(list, "sortable-list");
+          })()
+        JS
+        raise Capybara::ExpectationNotMet, "sortable-list is not connected" unless connected
+      end
+
+      page.execute_script(<<~JS)
+        const originalFetch = window.fetch;
+        window.fetch = (url, init) => {
+          const body = init?.body;
+          if (typeof body !== "string" || !(body.includes("section_order") || body.includes("collapsed_sections"))) {
+            return originalFetch(url, init);
+          }
+          const { dataset } = document.documentElement;
+          dataset.orderRequests = Number(dataset.orderRequests || 0) + 1;
+          return originalFetch(url, init).then((response) => {
+            dataset.orderSaved = response.status;
+            return response;
+          });
+        };
+      JS
     end
 
     def login_as(user)

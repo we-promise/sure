@@ -113,9 +113,14 @@ class RecurringAllocationsController < ApplicationController
 
     def allocation_error_message(error)
       case error
+      # The subclasses before OverAllocationError, which would otherwise claim
+      # them.
+      when RecurringTransaction::Allocator::AlreadyAllocatedError,
+           ActiveRecord::RecordNotUnique then t("recurring_allocations.already_allocated")
+      when RecurringTransaction::Allocator::EntryExhaustedError then t("recurring_allocations.entry_exhausted")
+      when RecurringTransaction::Allocator::SplitCounterpartAllocatedError then t("recurring_allocations.split_counterpart_allocated")
       when RecurringTransaction::Allocator::OverAllocationError then t("recurring_allocations.over_allocation")
       when RecurringTransaction::Allocator::MissingRateError then t("recurring_allocations.missing_rate")
-      when ActiveRecord::RecordNotUnique then t("recurring_allocations.already_allocated")
       else t("recurring_allocations.invalid")
       end
     end

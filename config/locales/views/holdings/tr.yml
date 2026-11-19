@@ -5,13 +5,12 @@ tr:
       brokerage_cash: Aracı kurum nakiti
     cost_basis_cell:
       cancel: İptal
-      or_per_share_label: 'Veya hisse başına girin:'
+      per_share_label: "Hisse başına"
       overwrite_confirm_body: Bu işlem, mevcut %{current} maliyet bazını değiştirecektir.
       overwrite_confirm_title: Maliyet bazının üzerine yazılsın mı?
-      per_share: hisse başına
       save: Kaydet
       set: Ayarla
-      set_cost_basis_header: "%{ticker} için maliyet bazını ayarla (%{qty} hisse)"
+      set_cost_basis_header: "%{ticker} için maliyet bazını ayarla"
       total_cost_basis_label: Toplam maliyet bazı
       unknown: "--"
     cost_basis_sources:
@@ -37,6 +36,9 @@ tr:
       holdings: Varlıklar
       name: İsim
       new_holding: Yeni işlem
+      negative_position: "%{name} (%{ticker}): %{date} tarihinden beri sıfırın altında, en düşük %{qty}."
+      negative_positions_hint: "Muhtemelen bir alım veya transfer eksik. Ekleyin ya da pozisyonu sıfırın altına düşüren işlemleri düzeltin."
+      negative_positions_title: "Bazı pozisyonlar sıfırın altına düştü"
       no_holdings: Gösterilecek varlık yok.
       return: Toplam getiri
       weight: Ağırlık

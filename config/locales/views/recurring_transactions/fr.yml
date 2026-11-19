@@ -22,6 +22,7 @@ fr:
       already_exists: Cette facture existe déjà
       amount_invalid: Saisissez le montant sous forme de nombre simple
       amount_too_precise: Utilisez au plus 4 décimales
+      category_invalid: Choisissez l'une de vos catégories, ou laissez le champ vide
       due_date_required: Saisissez la prochaine date d'échéance de la facture
       success: Facture ajoutée
       success_income: Revenu ajouté
@@ -141,6 +142,20 @@ fr:
     marked_inactive: Transaction récurrente marquée comme inactive
     new:
       candidate_meta: "%{count}× · dernière fois le %{date}"
+      covered_body: "%{name} suit déjà ce paiement : une nouvelle facture le compterait deux fois."
+      covered_confirm: Confirmer la facture
+      covered_create_anyway: Créer quand même une facture distincte
+      covered_income_body: "%{name} suit déjà ce dépôt : l'ajouter à nouveau le compterait deux fois."
+      covered_income_confirm: Ajouter le revenu
+      covered_income_create_anyway: Ajouter quand même un revenu distinct
+      covered_income_open: Ouvrir le revenu
+      covered_income_suggested_body: "%{name} vous attend dans vos suggestions. Ajoutez-le pour commencer à le suivre, afin que ce dépôt ne soit pas compté deux fois. Les dépôts correspondants sont liés automatiquement, et vous pouvez lier celui-ci depuis le revenu."
+      covered_income_suggested_title: Sure a déjà suggéré ce revenu
+      covered_income_title: Ce dépôt appartient déjà à un revenu
+      covered_open: Ouvrir la facture
+      covered_suggested_body: "%{name} vous attend dans vos suggestions. Confirmez-la pour commencer à la suivre, afin qu'une nouvelle facture ne compte pas ce paiement deux fois. Les paiements correspondants sont liés automatiquement, et vous pouvez lier celui-ci depuis la facture."
+      covered_suggested_title: Sure a déjà suggéré une facture pour ce paiement
+      covered_title: Cette transaction appartient déjà à une facture
       income_title: Nouveau revenu
       pick_different: Partir d'une autre transaction
       search_all_cta: Rechercher dans toutes vos transactions
@@ -221,3 +236,4 @@ fr:
       success_with_siblings:
         one: Facture mise à jour, et le lien de paiement a été copié sur 1 autre facture
         other: Facture mise à jour, et le lien de paiement a été copié sur %{count} autres factures
+    already_covered: Cette transaction correspond déjà à une transaction récurrente

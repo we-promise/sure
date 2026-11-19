@@ -1,0 +1,47 @@
+---
+id:
+  mfa:
+    local_password_required: Autentikasi dua faktor memerlukan kata sandi lokal. Kata sandi Anda dikelola melalui penyedia identitas Anda.
+    backup_codes:
+      backup_codes_description: Setiap kode hanya dapat digunakan satu kali. Simpan kode-kode ini dengan aman.
+      backup_codes_title: Kode Cadangan Anda
+      continue: Lanjutkan ke Pengaturan Keamanan
+      description: Simpan kode cadangan ini di tempat yang aman - Anda akan membutuhkannya jika kehilangan akses ke aplikasi autentikator Anda
+      page_title: Kode Cadangan
+      title: Simpan Kode Cadangan Anda
+    create:
+      code_already_used: Kode tersebut sudah digunakan. Silakan masukkan kode berikutnya dari aplikasi autentikator Anda.
+      invalid_code: Kode verifikasi tidak valid. Silakan coba lagi.
+      invalid_password: Kata sandi salah. Silakan coba lagi.
+    disable:
+      invalid_password: Kata sandi salah. Silakan coba lagi.
+      success: Autentikasi dua faktor telah dinonaktifkan
+    new:
+      code_label: Kode Verifikasi
+      code_placeholder: Masukkan kode 6 digit
+      description: Tingkatkan keamanan akun Anda dengan menyiapkan autentikasi dua faktor
+      page_title: Pengaturan Autentikasi Dua Faktor
+      password_label: Konfirmasikan dengan kata sandi Anda
+      password_placeholder: Masukkan kata sandi Anda
+      scan_description: Gunakan aplikasi autentikator seperti Google Authenticator atau 1Password untuk memindai kode QR ini
+      scan_title: 1. Pindai Kode QR
+      secret_description: Jika Anda tidak dapat memindai kode QR, masukkan kunci rahasia ini secara manual di aplikasi autentikator Anda
+      secret_title: Kode Entri Manual
+      title: Siapkan Autentikasi Dua Faktor
+      verify_button: Verifikasi dan Aktifkan 2FA
+      verify_description: Masukkan kode 6 digit dari aplikasi autentikator Anda
+      verify_title: 2. Masukkan Kode Verifikasi
+    verify:
+      description: Masukkan kode dari aplikasi autentikator Anda untuk melanjutkan
+      or: atau
+      page_title: Verifikasi Autentikasi Dua Faktor
+      title: Autentikasi Dua Faktor
+      verify_button: Verifikasi
+      webauthn_button: Gunakan passkey atau kunci keamanan
+      webauthn_unsupported: Browser ini tidak mendukung passkey atau kunci keamanan.
+    verify_code:
+      invalid_code: Kode autentikasi tidak valid. Silakan coba lagi.
+    verify_webauthn:
+      invalid_credential: Tidak dapat memverifikasi passkey atau kunci keamanan tersebut. Silakan coba lagi.
+    webauthn_options:
+      unavailable: Tidak ada passkey atau kunci keamanan yang tersedia untuk akun ini.

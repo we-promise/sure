@@ -2,10 +2,117 @@ require "test_helper"
 require "ostruct"
 
 class TransactionsHelperTest < ActionView::TestCase
+  include EntriesTestHelper
+
   # build_transaction_extra_details reads `extra` off a Transaction (or anything
   # that responds to :transaction), so a struct is enough to drive it.
   def transaction_with(extra)
     OpenStruct.new(extra: extra)
+  end
+
+  test "reconcile filter is hidden unless manual reconciliation is enabled" do
+    Current.session = Session.create!(user: users(:family_admin))
+
+    assert_not_includes transaction_search_filters.map { |filter| filter[:key] }, "reconcile_status_filter"
+
+    Current.family.update!(manual_reconciliation: true)
+
+    assert_includes transaction_search_filters.map { |filter| filter[:key] }, "reconcile_status_filter"
+  end
+
+  test "can_reconcile_account? mirrors the write access the reconcile action requires" do
+    Current.session = Session.create!(user: users(:family_member))
+
+    assert can_reconcile_account?(accounts(:depository)),
+      "full_control share is write access"
+    assert_not can_reconcile_account?(accounts(:credit_card)),
+      "read_only share cannot reconcile"
+    assert_not can_reconcile_account?(accounts(:investment)),
+      "an account with no share at all cannot reconcile"
+  end
+
+  test "can_reconcile_account? lets the owner reconcile" do
+    Current.session = Session.create!(user: users(:family_admin))
+
+    assert can_reconcile_account?(accounts(:investment)), "owner can reconcile"
+  end
+
+  test "can_reconcile_account? does not treat annotate access as write access" do
+    share = account_shares(:credit_card_shared_with_member)
+    share.update!(permission: "read_write")
+
+    Current.session = Session.create!(user: users(:family_member))
+
+    assert_not can_reconcile_account?(accounts(:credit_card)),
+      "read_write is annotate access, and #reconcile requires write"
+  end
+
+  test "reconcile filter is hidden when the user has no accessible manual account" do
+    Current.session = Session.create!(user: users(:empty))
+    Current.family.update!(manual_reconciliation: true)
+
+    assert_not_includes transaction_search_filters.map { |filter| filter[:key] }, "reconcile_status_filter"
+  end
+
+  test "bulk_reconcilable_transfer? is false while the setting is off" do
+    Current.session = Session.create!(user: users(:family_admin))
+
+    assert_not bulk_reconcilable_transfer?(entries(:transfer_out))
+  end
+
+  test "bulk_reconcilable_transfer? is true for a writable manual transfer" do
+    Current.session = Session.create!(user: users(:family_admin))
+    Current.family.update!(manual_reconciliation: true)
+
+    assert bulk_reconcilable_transfer?(entries(:transfer_out))
+  end
+
+  test "bulk_reconcilable_transfer? is false for a read_write share" do
+    share = account_shares(:credit_card_shared_with_member)
+    share.update!(permission: "read_write")
+    Current.session = Session.create!(user: users(:family_member))
+    Current.family.update!(manual_reconciliation: true)
+
+    assert_not bulk_reconcilable_transfer?(entries(:transfer_in))
+  end
+
+  test "bulk_reconcilable_transfer? is false for a synced account" do
+    Current.session = Session.create!(user: users(:family_admin))
+    Current.family.update!(manual_reconciliation: true)
+    transfer = create_transfer(
+      from_account: accounts(:connected),
+      to_account: accounts(:depository),
+      amount: 100
+    )
+
+    assert_not bulk_reconcilable_transfer?(transfer.outflow_transaction.entry)
+  end
+
+  test "bulk_reconcilable_transfer? is false for an unmatched transfer-kind transaction" do
+    Current.session = Session.create!(user: users(:family_admin))
+    Current.family.update!(manual_reconciliation: true)
+    entry = create_transaction(account: accounts(:depository), kind: "funds_movement")
+
+    assert_not bulk_reconcilable_transfer?(entry)
+  end
+
+  test "bulk_reconcilable_transfer? is false for a transfer fee" do
+    Current.session = Session.create!(user: users(:family_admin))
+    Current.family.update!(manual_reconciliation: true)
+    transfer = create_transfer(
+      from_account: accounts(:depository),
+      to_account: accounts(:credit_card),
+      amount: 100
+    )
+    fee_entry = accounts(:depository).entries.create!(
+      name: "Transfer fee",
+      date: Date.current,
+      amount: 10,
+      currency: "USD",
+      entryable: Transaction.new(kind: "standard", transfer: transfer)
+    )
+
+    assert_not bulk_reconcilable_transfer?(fee_entry)
   end
 
   test "extracts the named Plaid fields into their own section" do
@@ -132,6 +239,15 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_equal [ { "name" => "Amazon" } ], JSON.parse(row[:value])
     assert_includes row[:value], "\n"
     refute_includes row[:value], "\\\""
+  end
+
+  # Regression: passing the raw operator straight to t() raised
+  # I18n::ArgumentError for nil/blank (an empty key) and resolved a whole
+  # translation subtree for a dotted value like "transactions.search".
+  test "falls back to the raw operator instead of translating unknown or blank values" do
+    assert_equal "", transaction_amount_operator_label(nil)
+    assert_equal "foo", transaction_amount_operator_label("foo")
+    assert_equal "transactions.search", transaction_amount_operator_label("transactions.search")
   end
 
   test "falls back to a raw JSON dump for providers with no structured rendering" do

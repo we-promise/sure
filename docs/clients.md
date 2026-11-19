@@ -95,6 +95,11 @@ app clients.
 Start with the OpenAPI spec at [docs/api/openapi.yaml](api/openapi.yaml) and
 endpoint guides such as [docs/api/transactions.md](api/transactions.md).
 
+Native clients can acknowledge a proactive insight with
+[`PATCH /api/v1/insights/:id/acknowledge`](api/insights.md). This requires
+`read_write` credentials and preview-feature access; a successful response is
+`204 No Content`.
+
 ## Choosing a client
 
 - Start with the web app when a person needs the complete Sure experience.
@@ -115,7 +120,7 @@ Read monthly server-calculated totals and the daily spending comparison using
 use these values instead of rebuilding Sure's reporting rules from transactions.
 
 Structural node `name` values are fallback labels; clients should localize
-`cash_flow`, `surplus`, and `deficit` by `kind` at the presentation boundary.
+`cash_flow`, `surplus`, `deficit`, and `invested` by `kind` at the presentation boundary.
 
 `include` and `view` are mutually exclusive; combining them returns `422 invalid_view`.
 
@@ -160,4 +165,4 @@ owner or removed by that owner; knowing the APNs token alone never authorizes tr
 
 ## FinanceKit device publisher
 
-The native Apple client can enroll as a FinanceKit device publisher, map explicitly selected Wallet accounts, and upload an ordered local outbox during foreground or iOS-granted background execution. Setup and repair use normal Sure authentication; uploads use a revocable one-purpose credential that cannot read Sure data. Stable server-issued account lineages preserve identity across publisher replacement. See the [OpenAPI reference](api/openapi.yaml) and [operator guide](hosting/financekit.md).
+The native Apple client can enroll as a FinanceKit device publisher, map explicitly selected Wallet accounts, and upload an ordered local outbox during foreground or iOS-granted background execution. Setup and repair use normal Sure authentication; uploads use a revocable one-purpose credential that cannot read Sure data. Stable server-issued account lineages preserve identity across publisher replacement. See the [OpenAPI reference](api/openapi.yaml) and [operator guide](providers/financekit.md).

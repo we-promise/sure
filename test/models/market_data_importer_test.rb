@@ -61,7 +61,8 @@ class MarketDataImporterTest < ActiveSupport::TestCase
   end
 
   test "syncs account exchange rates into the primary currency when the family currency is blank or NULL" do
-    blank_family = Family.create!(name: "Blank", currency: "")
+    blank_family = Family.create!(name: "Blank", currency: "USD")
+    blank_family.update_column(:currency, "")
     null_family = Family.create!(name: "Null", currency: "USD")
     null_family.update_column(:currency, nil)
 
@@ -238,6 +239,30 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     @provider.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Shared", logo_url: "logo")))
 
     MarketDataImporter.new(mode: :full).import_security_prices
+  end
+
+  test "imports security prices under the keyless fallback" do
+    security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    trade = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy AAPL", date: 40.days.ago.to_date, amount: 100, currency: "USD", entryable: trade)
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD")
+
+    yahoo = mock("yahoo_finance")
+    yahoo.stubs(:class).returns(Provider::YahooFinance)
+    Provider::Registry.any_instance.stubs(:get_provider).with(:twelve_data).returns(nil)
+    Provider::Registry.any_instance.stubs(:get_provider).with(:yahoo_finance).returns(yahoo)
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+
+    yahoo.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: security, date: snapshot_start_date, price: 100, currency: "USD")
+    ]))
+    yahoo.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Apple", logo_url: "logo")))
+
+    MarketDataImporter.new(mode: :snapshot).import_security_prices
+
+    assert_equal 1, Security::Price.where(security: security, date: snapshot_start_date).count
   end
 
   private
