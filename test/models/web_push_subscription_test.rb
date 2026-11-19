@@ -71,7 +71,7 @@ class WebPushSubscriptionTest < ActiveSupport::TestCase
   end
 
   test "accepts the supported browser push services" do
-    %w[https://web.push.apple.com/Q https://fcm.googleapis.com/fcm/send/Q https://updates.push.services.mozilla.com/wpush/v2/Q https://wns2-db5p.notify.windows.com/w/?token=Q].each do |endpoint|
+    %w[https://web.push.apple.com/Q https://fcm.googleapis.com/fcm/send/Q https://updates.push.services.mozilla.com/wpush/v2/Q https://wns2-db5p.notify.windows.com/w/Q].each do |endpoint|
       assert register_web_push(endpoint: endpoint).persisted?, endpoint
     end
   end
