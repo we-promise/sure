@@ -1325,6 +1325,23 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 1, cash_sure.entries.where(external_id: "trade_republic_event_evt_net_sell").count
   end
 
+  # A cash account kept as long-term savings: money moved from it into the
+  # portfolio was already saved, as Transfer.kind_for_account rules.
+  test "a buy settled from a long-term cash account is a plain funds movement" do
+    cash_account, cash_sure = create_linked_cash_account!
+    cash_sure.update!(liquidity_choice: "long_term")
+    buy = order_execution_detail(event_id: "evt_saved_buy", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
+      .deep_merge(title: "Core S&P 500 USD (Acc)", subtitle: "Buy Order", detail: { signed_amount: -1024.92, fees: "1.0", price: "511.96" })
+    @tr_account.update!(raw_timeline_payload: [ buy ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    buy_cash = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_saved_buy")
+    assert_equal "funds_movement", buy_cash.transaction.kind
+    assert_equal "funds_movement", buy_cash.transaction.transfer.kind_for_leg(buy_cash.transaction)
+  end
+
   test "split accounts settle buys and sells against the cash account" do
     cash_account, cash_sure = create_linked_cash_account!
     buy = order_execution_detail(event_id: "evt_settle_buy", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")

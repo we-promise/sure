@@ -33,7 +33,7 @@ zh-CN:
       delete_title: 确认移除转账？
       details: 详情
       investment_contribution_title: 投资投入
-      investment_contribution_subtitle: 在预算和报表中将此转账计为支出。若券商或加密账户仅将资金兑换为另一种货币，请关闭此项。
+      investment_contribution_subtitle: "在预算和报表中将此转账计为留存资金，适用于券商、加密、定期或长期储蓄账户。若这笔钱并非真正储蓄，例如账户仅将其兑换为另一种货币，请关闭此项。"
       note_label: 备注
       note_placeholder: 为此转账添加备注
       overview: 概览

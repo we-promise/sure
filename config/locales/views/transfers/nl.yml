@@ -32,7 +32,7 @@ nl:
       delete_subtitle: "Dit verwijdert de overboeking. Het verwijdert niet de onderliggende transacties."
       delete_title: "Overboeking verwijderen?"
       details: "Details"
-      investment_contribution_subtitle: "Tel deze overboeking mee als uitgave in budgetten en rapporten. Schakel dit uit als het beleggings- of crypto-account het geld alleen omzet naar een andere valuta."
+      investment_contribution_subtitle: "Tel deze overboeking mee als opzijgezet geld in budgetten en rapporten, zoals bij een beleggings-, crypto-, vastgezette of langetermijnspaarrekening. Schakel dit uit als het geld niet echt gespaard wordt, bijvoorbeeld als de rekening het alleen omzet naar een andere valuta."
       investment_contribution_title: "Inleg in belegging"
       mark_recurring: "Markeren als terugkerend"
       mark_recurring_subtitle: "Volg deze overboeking als terugkerend patroon in het overzicht van komende posten en op de pagina Terugkerend."

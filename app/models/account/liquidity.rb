@@ -40,6 +40,7 @@ module Account::Liquidity
     validate :liquidity_choice_must_be_known
 
     before_validation :apply_liquidity
+    after_update_commit :reconcile_transfer_kinds, if: :transfer_kinds_affected?
 
     # Assets that can be reached at short notice on `date`: immediate and
     # short-term accounts, plus locked accounts whose release date has come.
@@ -176,6 +177,16 @@ module Account::Liquidity
   end
 
   private
+    # Whether a transfer into a bank account counts as saving depends on its
+    # level and release date (see Transfer.kind_for_account).
+    def transfer_kinds_affected?
+      depository? && (saved_change_to_liquidity? || saved_change_to_available_on? || saved_change_to_auto_renew?)
+    end
+
+    def reconcile_transfer_kinds
+      ReconcileAccountTransferKindsJob.perform_later(self)
+    end
+
     def apply_liquidity
       # A type with a fixed level always follows its default, also when a
       # choice arrives through the API or an import.

@@ -49,13 +49,21 @@ class InvestmentFlowStatement
 
   PeriodTotals = Data.define(:contributions, :withdrawals, :net_flow)
 
+  # Transfer.savings_account? as SQL for a bank account: locked or long-term,
+  # matured or not.
+  SAVINGS_DEPOSIT_SQL = <<~SQL.squish.freeze
+    accounts.accountable_type = 'Depository' AND accounts.liquidity IN ('locked', 'long_term')
+  SQL
+
   private
     # Matching a provider "Contribution" or "Withdrawal" on an investment/crypto
     # account to its cash counterpart turns that leg into funds_movement
     # (Transfer#kind_for_leg), so the kind filter above would drop it. Count it
     # when the other leg is outside the investment/crypto accounts, the same
     # endpoint rule Transfer.kind_for_account uses. Movements between investment
-    # or crypto accounts stay internal and are not counted.
+    # or crypto accounts stay internal and are not counted, and so do movements
+    # to or from a locked or long-term bank account, also one past its release
+    # date (money moved between two savings accounts is not new saving).
     def matched_investment_flows(base)
       matched_flow(base, label: "Contribution", leg: :inflow_transaction_id, counterpart: :outflow_transaction)
         .or(matched_flow(base, label: "Withdrawal", leg: :outflow_transaction_id, counterpart: :inflow_transaction))
@@ -71,6 +79,7 @@ class InvestmentFlowStatement
             .joins(counterpart => { entry: :account })
             .where(accounts: { family_id: family.id })
             .where.not(accounts: { accountable_type: INVESTMENT_ACCOUNT_TYPES })
+            .where.not(SAVINGS_DEPOSIT_SQL)
             .select(leg)
         )
     end
