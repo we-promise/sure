@@ -36,7 +36,7 @@ module TransactionsHelper
       { key: "attachment_filter", label: t("transactions.search.filters.attachment"), icon: "paperclip" }
     ]
 
-    if Current.family&.manual_reconciliation?
+    if manual_reconciliation_filter_available?
       filters.insert(4, { key: "reconcile_status_filter", label: t("transactions.search.filters.reconcile_status"), icon: "check-circle" })
     end
 
@@ -45,6 +45,14 @@ module TransactionsHelper
     end
 
     filters.reject { |filter| exclude.include?(filter[:key]) }
+  end
+
+  # Whether the reconciliation filter is worth offering. The setting alone is
+  # not enough: the filter only matches manual accounts, so it would return an
+  # empty list for a user with no accessible manual account.
+  def manual_reconciliation_filter_available?
+    Current.family&.manual_reconciliation? &&
+      (Current.user ? Current.user.accessible_accounts.manual.exists? : Current.family.accounts.manual.exists?)
   end
 
   # @param label [String] a stored investment_activity_label such as "Sweep In"
@@ -178,7 +186,9 @@ module TransactionsHelper
       # The "Transfer?" hint is drawn inside the cached row.
       @transfer_hint_transaction_ids&.include?(transaction.id) || false,
       can_annotate_account?(entry.account),
+      Current.family&.manual_reconciliation?,
       can_reconcile_account?(entry.account),
+      (manual_account?(entry.account) if transfer.present?),
       counterpart.present? && @accessible_account_ids&.include?(counterpart.id),
       Setting.brand_fetch_logo_size,
       Setting.brand_fetch_client_id.presence&.then { |id| Digest::SHA256.hexdigest(id) },
@@ -217,6 +227,30 @@ module TransactionsHelper
 
     @reconcilable_account_ids ||= Account.writable_by(Current.user).pluck(:id).to_set
     @reconcilable_account_ids.include?(account.id)
+  end
+
+  # Memoized per request so reading the row cache key does not run one
+  # account-provider query per transfer row.
+  def manual_account?(account)
+    return false unless account
+
+    @manual_account_cache ||= {}
+    @manual_account_cache.fetch(account.id) do
+      @manual_account_cache[account.id] = account.manual?
+    end
+  end
+
+  # A matched transfer cannot be bulk edited like a normal entry: its date,
+  # category and merchant belong to the pair or to the outflow leg. The
+  # checkbox is offered only where manual reconciliation is available, and
+  # Edit then exposes the safe fields (name, notes, tags, reconciliation).
+  def bulk_reconcilable_transfer?(entry)
+    transaction = entry.entryable
+
+    transaction&.transfer.present? &&
+      Current.family&.manual_reconciliation? &&
+      manual_account?(entry.account) &&
+      can_reconcile_account?(entry.account)
   end
 
   # The dashboard drill-down filters by account id, so its filter chips name
