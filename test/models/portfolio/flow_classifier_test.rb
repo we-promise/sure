@@ -284,6 +284,52 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_inflow, @family_scope.classify(inflow_transaction)
   end
 
+  # A cash-only trade (qty 0) has no quantity sign to read, so its direction
+  # comes from the amount, as a transaction's does. A qty-0 Fee or Interest
+  # trade can be relabelled Withdrawal, Contribution or Transfer from the
+  # activity-label badge.
+  test "a zero-quantity external trade takes its direction from the amount" do
+    withdrawal = cash_only_trade(label: "Withdrawal", amount: 500)
+    contribution = cash_only_trade(label: "Contribution", amount: -500)
+    sold_out = create_portfolio_trade(account: @brokerage, qty: -10, price: 50, label: "Withdrawal")
+
+    sql = @family_scope.classify_ids([ withdrawal.id, contribution.id, sold_out.id ])
+
+    assert_equal :external_outflow, @family_scope.classify(withdrawal)
+    assert_equal :external_outflow, sql[withdrawal.id]
+    assert_equal :external_inflow, @family_scope.classify(contribution)
+    assert_equal :external_inflow, sql[contribution.id]
+    assert_equal :external_outflow, @family_scope.classify(sold_out)
+    assert_equal :external_outflow, sql[sold_out.id]
+  end
+
+  test "a zero-quantity Transfer trade with no opposite leg in scope takes its direction from the amount" do
+    out_leg = cash_only_trade(label: "Transfer", amount: 500)
+    in_leg = cash_only_trade(label: "Transfer", amount: -500, security: create_portfolio_security)
+
+    sql = @family_scope.classify_ids([ out_leg.id, in_leg.id ])
+
+    assert_equal :external_outflow, @family_scope.classify(out_leg)
+    assert_equal :external_outflow, sql[out_leg.id]
+    assert_equal :external_inflow, @family_scope.classify(in_leg)
+    assert_equal :external_inflow, sql[in_leg.id]
+  end
+
+  # The opposite-leg match pairs on qty = -qty, which two qty-0 legs of the
+  # same security and day satisfy; they stay one internal movement.
+  test "two zero-quantity Transfer trades of one security on one day in scope are internal" do
+    security = create_portfolio_security
+    out_leg = cash_only_trade(label: "Transfer", amount: 500, security: security)
+    in_leg = cash_only_trade(label: "Transfer", amount: -500, security: security, account: @ira)
+
+    sql = @family_scope.classify_ids([ out_leg.id, in_leg.id ])
+
+    [ out_leg, in_leg ].each do |entry|
+      assert_equal :internal, @family_scope.classify(entry)
+      assert_equal :internal, sql[entry.id]
+    end
+  end
+
   test "every activity label has a rule" do
     assert_equal Transaction::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
     assert_equal Trade::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
@@ -338,6 +384,12 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
   end
 
   private
+    # A cash-only trade: qty 0 and price 0, with the money on the entry's
+    # amount (positive is money out).
+    def cash_only_trade(label:, amount:, account: @brokerage, security: create_portfolio_security)
+      create_portfolio_trade(account: account, security: security, qty: 0, price: 0, label: label).tap { |entry| entry.update!(amount: amount) }
+    end
+
     # One entry per contract row plus the shapes each provider writes, at
     # every position the classifier branches on.
     def build_corpus

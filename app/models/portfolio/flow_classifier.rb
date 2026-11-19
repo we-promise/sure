@@ -29,7 +29,8 @@
 # for an unlabelled Transaction its `kind`; and for a transfer, whether the
 # counterpart leg's account is inside the scope. Direction for an external
 # flow comes from the Trade's quantity sign or the Transaction's amount sign
-# (negative amount = money in).
+# (negative amount = money in); a cash-only Trade (quantity 0) uses the amount
+# sign too.
 #
 # What a caller must do with the answer:
 #
@@ -191,8 +192,8 @@ class Portfolio::FlowClassifier
 
       case rule
       when nil then :internal
-      when :external then trade_direction(trade)
-      when :transfer then security_transfer_counterpart_in_scope?(entry, trade) ? :internal : trade_direction(trade)
+      when :external then trade_direction(entry, trade)
+      when :transfer then security_transfer_counterpart_in_scope?(entry, trade) ? :internal : trade_direction(entry, trade)
       else rule
       end
     end
@@ -220,7 +221,11 @@ class Portfolio::FlowClassifier
       end
     end
 
-    def trade_direction(trade)
+    # A cash-only trade (qty 0) has no quantity sign, so its direction comes
+    # from the amount, as a transaction's does.
+    def trade_direction(entry, trade)
+      return transaction_direction(entry) if trade.qty.zero?
+
       trade.qty.negative? ? :external_outflow : :external_inflow
     end
 
@@ -270,7 +275,7 @@ class Portfolio::FlowClassifier
     def direction_sql
       <<~SQL.squish
         CASE
-          WHEN entries.entryable_type = 'Trade' THEN CASE WHEN trades.qty < 0 THEN 'external_outflow' ELSE 'external_inflow' END
+          WHEN entries.entryable_type = 'Trade' AND trades.qty <> 0 THEN CASE WHEN trades.qty < 0 THEN 'external_outflow' ELSE 'external_inflow' END
           WHEN entries.amount < 0 THEN 'external_inflow'
           ELSE 'external_outflow'
         END
