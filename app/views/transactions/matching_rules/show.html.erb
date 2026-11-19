@@ -1,0 +1,52 @@
+<%= turbo_frame_tag dom_id(@entry, :matching_rules) do %>
+  <% rules = @matching_rules.rules %>
+  <% attribute_label = ->(attribute) { t(".attributes.#{attribute}") } %>
+  <% rule_title = ->(rule) { rule.name.presence || rule.primary_condition_title } %>
+  <% if rules.empty? %>
+    <p class="text-xs text-secondary"><%= t(".none") %></p>
+  <% else %>
+    <div class="space-y-2">
+      <% @matching_rules.conflicts.each_key do |attribute| %>
+        <p class="text-xs text-warning" data-testid="matching-rules-conflict">
+          <%= t(".conflict", attribute: attribute_label.(attribute)) %>
+        </p>
+      <% end %>
+      <% @matching_rules.locked_attributes.each do |attribute| %>
+        <p class="text-xs text-secondary" data-testid="matching-rules-locked">
+          <%= t(".locked", attribute: attribute_label.(attribute)) %>
+        </p>
+      <% end %>
+      <ul class="space-y-2">
+        <% rules.each do |rule| %>
+          <% overridden = @matching_rules.overridden_attributes(rule) %>
+          <li class="flex items-start justify-between gap-2 text-xs" data-testid="matching-rule">
+            <div class="min-w-0 space-y-0.5">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="font-medium break-words <%= rule.active? ? "text-primary" : "text-secondary" %>">
+                  <%= rule_title.(rule) %>
+                </span>
+                <% unless rule.active? %>
+                  <%= render DS::Pill.new(label: t(".off"), tone: :neutral, marker: false) %>
+                <% end %>
+                <% if (stopper = @matching_rules.stopped_by(rule)) %>
+                  <%= render DS::Pill.new(label: t(".not_reached"), tone: :neutral, marker: false,
+                        title: t(".not_reached_hint", rule: rule_title.(stopper))) %>
+                <% end %>
+                <% if overridden.any? %>
+                  <%= render DS::Pill.new(label: t(".overridden"), tone: :warning, marker: false,
+                        title: t(".overridden_hint", attributes: overridden.map(&attribute_label).to_sentence)) %>
+                <% end %>
+              </div>
+              <% rule.actions.each do |action| %>
+                <p class="text-secondary break-words"><%= rule_action_summary(action) %></p>
+              <% end %>
+            </div>
+            <% unless Current.user&.guest? %>
+              <%= link_to t(".edit"), edit_rule_path(rule), class: "shrink-0 text-secondary hover:text-primary underline", data: { turbo_frame: "modal" } %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+<% end %>

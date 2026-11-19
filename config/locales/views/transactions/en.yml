@@ -72,6 +72,8 @@ en:
     transaction_category:
       set_on_outflow: "The category belongs to the outgoing side of this transfer and can only be changed there"
     show:
+      matching_rules: Which rules match?
+      matching_rules_loading: Checking rules…
       category_set_on_hidden_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side, on an account you cannot access, and can only be changed there."
       category_set_on_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side and can only be changed there, so budgets count it once."
       keep_both: No, keep both
@@ -182,6 +184,24 @@ en:
       payment_confirmed: Payment is confirmed
       reject_match: Reject match
       transfer_confirmed: Transfer is confirmed
+    matching_rules:
+      show:
+        none: No rule matches this transaction.
+        conflict: Matching rules set the %{attribute} to different values. The one highest in your rules list wins.
+        locked: The %{attribute} was set by hand, so the nightly run leaves it alone. Applying a rule by hand still changes it.
+        "off": "Off"
+        overridden: Overridden
+        overridden_hint: A rule above sets the %{attributes} first
+        not_reached: Not reached
+        not_reached_hint: "\"%{rule}\" matches first and stops processing"
+        edit: Edit
+        attributes:
+          category_id: category
+          merchant_id: merchant
+          name: name
+          excluded: exclusion
+          transfer: transfer
+          investment_activity_label: activity label
     category_provenance:
       title: Auto-categorization
       assigned: 'Assigned "%{category}" by %{source} %{time_ago} ago.'

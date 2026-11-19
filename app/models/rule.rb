@@ -405,9 +405,14 @@ class Rule < ApplicationRecord
   # resolved, so an immediate run doesn't scan the whole family. One array
   # parameter, like Rule.excluding_transaction_ids, so a large bulk edit stays
   # below PostgreSQL's bind limit.
-  def matching_scope(only_id: nil, within_ids: nil)
+  # only_entry_id goes with only_id when the caller knows the transaction's
+  # entry: entries.entryable_id has no index, so a transaction id alone makes
+  # the query read every entry of the family, while the entry's primary key
+  # (on both joins of entries in the resource scope) is a few index lookups.
+  def matching_scope(only_id: nil, within_ids: nil, only_entry_id: nil)
     scope = registry.resource_scope
     scope = scope.where(id: only_id) if only_id
+    scope = pin_entry(scope, only_entry_id) if only_entry_id
     scope = scope.where("transactions.id = ANY(?::uuid[])", PG::TextEncoder::Array.new.encode(within_ids)) if within_ids
 
     # 1. Prepare the query with joins required by conditions
@@ -426,10 +431,15 @@ class Rule < ApplicationRecord
     # caller such as Rule::Runner sees it as this rule failing.
     return scope unless conditions.any?(&:uses_regex?)
 
-    scope_for_transaction_ids(Rule::SafeRegex.with_timeout { scope.pluck(:id) })
+    matched = scope_for_transaction_ids(Rule::SafeRegex.with_timeout { scope.pluck(:id) })
+    only_entry_id ? pin_entry(matched, only_entry_id) : matched
   end
 
   private
+    def pin_entry(scope, entry_id)
+      scope.where(entries: { id: entry_id }, entry: { id: entry_id })
+    end
+
     # before_create runs inside the save transaction, so the lock taken by
     # next_position_for is held until the new row is committed.
     def assign_next_position

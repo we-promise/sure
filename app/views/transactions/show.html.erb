@@ -131,6 +131,22 @@
           <% end %>
         <% end %>
         <%= render "transactions/category_provenance", entry: @entry %>
+        <%# Rules are checked only when the disclosure opens: a lazy frame inside a
+            closed <details> is not visible, so it does not load. Split
+            parents are never matched by rules (Rule::Registry::TransactionResource). %>
+        <% unless @entry.split_parent? %>
+          <%= render DS::Disclosure.new(variant: :inline, class: "px-3 pt-2", body_class: "mt-1") do |disclosure| %>
+            <% disclosure.with_summary_content do %>
+              <span class="flex items-center gap-1 py-1 text-xs text-secondary hover:text-primary">
+                <%= icon "chevron-right", size: "sm", class: "[details[open]>summary_&]:rotate-90 motion-safe:transition-transform" %>
+                <%= t(".matching_rules") %>
+              </span>
+            <% end %>
+            <%= turbo_frame_tag dom_id(@entry, :matching_rules), src: transaction_matching_rules_path(@entry), loading: :lazy do %>
+              <p class="text-xs text-secondary"><%= t(".matching_rules_loading") %></p>
+            <% end %>
+          <% end %>
+        <% end %>
       </div>
     <% end %>
     <% dialog.with_section(title: t(".details")) do %>
