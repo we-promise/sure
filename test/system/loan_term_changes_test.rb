@@ -62,6 +62,6 @@ class LoanTermChangesTest < ApplicationSystemTestCase
     # the flash message with it. The edit dialog closing is the lasting sign
     # that the loan was saved; a refused save keeps the dialog open.
     def assert_loan_saved
-      assert_no_button "Update Account"
+      assert_no_selector "dialog[open]"
     end
 end
