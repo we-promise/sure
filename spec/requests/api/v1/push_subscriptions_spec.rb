@@ -7,7 +7,8 @@ RSpec.describe "API V1 Push Subscriptions", type: :request do
 
   let(:family) { Family.create!(name: "API Family") }
   let(:user) do
-    family.users.create!(email: "push-api@example.com", password: "password123", ai_enabled: true)
+    family.users.create!(email: "push-api@example.com", password: "password123", ai_enabled: true,
+      email_verified_at: Time.current)
   end
   let(:api_key) do
     key = ApiKey.generate_secure_key
@@ -25,9 +26,9 @@ RSpec.describe "API V1 Push Subscriptions", type: :request do
       parameter name: :subscription, in: :body, required: true, schema: { "$ref" => "#/components/schemas/PushSubscriptionRegistration" }
       let(:subscription) { { token: "ab" * 32, environment: "sandbox", platform: "ios" } }
 
-      response "403", "push unavailable in self-hosted mode or insufficient write scope" do
+      response "403", "push unavailable in self-hosted mode or insufficient write scope, or email not verified" do
         before { allow(Rails.application.config).to receive(:app_mode).and_return("self_hosted".inquiry) }
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
 
@@ -64,10 +65,10 @@ RSpec.describe "API V1 Push Subscriptions", type: :request do
       tags "Push Subscriptions"
       security [ { apiKeyAuth: [] } ]
 
-      response "403", "push unavailable in self-hosted mode or insufficient write scope" do
+      response "403", "push unavailable in self-hosted mode or insufficient write scope, or email not verified" do
         before { allow(Rails.application.config).to receive(:app_mode).and_return("self_hosted".inquiry) }
         produces "application/json"
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
 

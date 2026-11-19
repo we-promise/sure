@@ -11,6 +11,7 @@ RSpec.describe 'API V1 Account Statements', type: :request do
       email: 'api-user@example.com',
       password: 'password123',
       password_confirmation: 'password123',
+      email_verified_at: Time.current,
       role: 'admin'
     )
   end
@@ -30,6 +31,7 @@ RSpec.describe 'API V1 Account Statements', type: :request do
       email: 'api-guest@example.com',
       password: 'password123',
       password_confirmation: 'password123',
+      email_verified_at: Time.current,
       role: 'guest'
     )
   end
@@ -90,8 +92,8 @@ RSpec.describe 'API V1 Account Statements', type: :request do
         run_test!
       end
 
-      response '403', 'guests cannot use the Statement Vault' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'guests cannot use the Statement Vault, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
         let(:'X-Api-Key') { guest_api_key.plain_key }
         run_test!
       end
@@ -146,8 +148,8 @@ RSpec.describe 'API V1 Account Statements', type: :request do
         run_test!
       end
 
-      response '403', 'guest, or API key without write scope' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'guest, or API key without write scope, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
         let(:'X-Api-Key') { guest_api_key.plain_key }
         let(:file) { statement_file }
         run_test!
@@ -170,6 +172,7 @@ RSpec.describe 'API V1 Account Statements', type: :request do
             email: 'api-member@example.com',
             password: 'password123',
             password_confirmation: 'password123',
+            email_verified_at: Time.current,
             role: 'member'
           )
         end
@@ -205,8 +208,8 @@ RSpec.describe 'API V1 Account Statements', type: :request do
         run_test!
       end
 
-      response '403', 'guests cannot use the Statement Vault' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'guests cannot use the Statement Vault, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
         let(:id) { statement.id }
         let(:'X-Api-Key') { guest_api_key.plain_key }
         run_test!

@@ -171,18 +171,100 @@ class User < ApplicationRecord
   end
 
   generates_token_for :email_confirmation, expires_in: 1.day do
-    unconfirmed_email
+    [ unconfirmed_email, email, email_verified_at&.to_i ]
   end
 
   def pending_email_change?
     unconfirmed_email.present?
   end
 
+  def email_verified?
+    email_verified_at.present?
+  end
+
+  def mark_email_verified!
+    update!(email_verified_at: Time.current) unless email_verified?
+  end
+
+  # A trusted provider (Google/Apple) has just proven `email` on an account
+  # that isn't verified yet, so it may have been registered by someone else
+  # first. Anything set up before verification could belong to them: drop the
+  # password and MFA, mark verified, end every other login.
+  # Only when the proven email is this account's: an identity linked with a
+  # different address proves nothing about this one. Returns false (and
+  # changes nothing) otherwise, or for already-verified accounts.
+  # Runs under a row lock and re-reads the account, so a concurrent email
+  # change can't let a stale record verify an address the provider never saw.
+  # Verification and revocation commit together: a half-done claim would leave
+  # the account verified while old credentials still work, and a retry would
+  # stop at the already-verified guard.
+  def claim_by_trusted_provider!(email:)
+    transaction do
+      lock!
+      next false if email_verified?
+      next false unless email.to_s.strip.casecmp?(self.email.to_s)
+
+      disable_mfa!
+      update!(password_digest: nil, email_verified_at: Time.current)
+      revoke_all_access!
+      true
+    end
+  end
+
+  def revoke_all_access!
+    now = Time.current
+    revoke_oauth_tokens!
+    sessions.destroy_all
+    api_keys.active.update_all(revoked_at: now)
+  end
+
+  # The reset link proves the email, so an unverified account becomes
+  # verified. MFA and API keys set up before that may belong to whoever
+  # registered the address first, so they go. The caller ends sessions and
+  # the password change itself revokes OAuth tokens.
+  def verify_after_password_reset!
+    transaction do
+      lock!
+      next if email_verified?
+
+      disable_mfa!
+      api_keys.active.update_all(revoked_at: Time.current)
+      update!(email_verified_at: Time.current)
+    end
+  end
+
+  def email_confirmation_address
+    unconfirmed_email.presence || email
+  end
+
+  def send_email_verification
+    EmailConfirmationMailer.with(user: self).confirmation_email.deliver_later
+  end
+
+  def mobile_payload
+    {
+      id: id,
+      email: email,
+      first_name: first_name,
+      last_name: last_name,
+      ui_layout: ui_layout,
+      ai_enabled: ai_enabled?,
+      email_verified: email_verified?
+    }
+  end
+
   def initiate_email_change(new_email)
     return false if new_email == email
 
     if Rails.application.config.app_mode.self_hosted? && !Setting.require_email_confirmation
-      update(email: new_email)
+      # No confirmation step, so nothing proves the new address yet. Send a
+      # verification link so the account isn't locked out of gated APIs.
+      if update(email: new_email, email_verified_at: nil)
+        send_email_verification
+        true
+      else
+        false
+      end
     else
       if update(unconfirmed_email: new_email)
         EmailConfirmationMailer.with(user: self).confirmation_email.deliver_later

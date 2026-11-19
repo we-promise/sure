@@ -29,6 +29,11 @@ class RegistrationsController < ApplicationController
     end
 
     if signup_with_invite_claim!
+      if @invitation.present? || (self_hosted? && !Setting.require_email_confirmation)
+        @user.mark_email_verified!
+      else
+        @user.send_email_verification
+      end
       redirect_to root_path, notice: t(".success")
     elsif @invite_code_invalid
       redirect_to new_registration_path, alert: t("registrations.create.invalid_invite_code")

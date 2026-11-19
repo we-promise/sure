@@ -44,9 +44,9 @@ RSpec.describe "Api::V1::ProviderConnections", type: :request do
         run_test!
       end
 
-      response "403", "insufficient scope" do
+      response "403", "insufficient scope, or email not verified" do
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
     end

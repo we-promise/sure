@@ -341,6 +341,26 @@ components:
             "$ref": "#/components/schemas/FamilyExport"
         meta:
           "$ref": "#/components/schemas/Pagination"
+    EmailVerificationRequired:
+      type: object
+      description: Returned by financial-data endpoints until the account email is
+        verified. Call POST /api/v1/auth/resend_email_verification, then refresh with
+        GET /api/v1/users/me.
+      required:
+      - error
+      - message
+      - action
+      properties:
+        error:
+          type: string
+          enum:
+          - email_verification_required
+        message:
+          type: string
+        action:
+          type: string
+          enum:
+          - resend_email
     ErrorResponse:
       type: object
       required:
@@ -5042,11 +5062,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: guests cannot use the Statement Vault
+          description: guests cannot use the Statement Vault, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: invalid filter
           content:
@@ -5085,11 +5107,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: guest, or API key without write scope
+          description: guest, or API key without write scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: account_id is not an account the caller can write to
           content:
@@ -5148,11 +5172,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/AccountStatementResponse"
         '403':
-          description: guests cannot use the Statement Vault
+          description: guests cannot use the Statement Vault, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: statement not found
           content:
@@ -5192,6 +5218,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/AccountCollection"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/accounts/{id}":
     parameters:
     - name: id
@@ -5228,11 +5260,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: account not found
           content:
@@ -5284,6 +5318,8 @@ paths:
                         - dashboard
                         - intro
                       ai_enabled:
+                        type: boolean
+                      email_verified:
                         type: boolean
         '422':
           description: validation error
@@ -5401,6 +5437,8 @@ paths:
                         - dashboard
                         - intro
                       ai_enabled:
+                        type: boolean
+                      email_verified:
                         type: boolean
         '401':
           description: invalid credentials, MFA required, or account deactivated
@@ -5536,6 +5574,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      email_verified:
+                        type: boolean
         '401':
           description: invalid or expired code
           content:
@@ -5656,6 +5696,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      email_verified:
+                        type: boolean
         '400':
           description: missing linking code
           content:
@@ -5746,6 +5788,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      email_verified:
+                        type: boolean
         '400':
           description: missing linking code
           content:
@@ -5829,6 +5873,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      email_verified:
+                        type: boolean
         '401':
           description: unauthorized
           content:
@@ -5837,6 +5883,45 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
           description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/auth/resend_email_verification":
+    post:
+      summary: Resend the current user email verification message
+      tags:
+      - Auth
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: verification state returned and email queued when needed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      email_verified:
+                        type: boolean
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '429':
+          description: resend limit exceeded
           content:
             application/json:
               schema:
@@ -5863,6 +5948,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/balances":
     get:
       summary: List balance history records
@@ -5924,11 +6015,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: invalid filter
           content:
@@ -5964,11 +6057,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: balance not found
           content:
@@ -6039,11 +6134,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: invalid filter
           content:
@@ -6079,11 +6176,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: budget category not found
           content:
@@ -6138,11 +6237,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: invalid date filter
           content:
@@ -6178,11 +6279,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: budget not found
           content:
@@ -6276,6 +6379,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/categories":
     get:
       summary: List categories
@@ -6316,6 +6425,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/CategoryCollection"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     post:
       summary: Create category
       tags:
@@ -6337,11 +6452,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope, or guest user
+          description: forbidden - api key missing read_write scope, or guest user,
+            or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '400':
           description: bad request - missing category payload
           content:
@@ -6387,6 +6505,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/chats":
     get:
       summary: List chats
@@ -6633,11 +6757,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden
+          description: forbidden, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
     post:
       summary: Queues a family export
       tags:
@@ -6659,11 +6785,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden
+          description: forbidden, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: invalid params
           content:
@@ -6705,11 +6833,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden
+          description: forbidden, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: not found
           content:
@@ -6745,11 +6875,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden
+          description: forbidden, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: not found
           content:
@@ -6784,11 +6916,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/financekit/capabilities":
     get:
       summary: Discover FinanceKit background publisher support
@@ -6818,11 +6952,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '403':
-          description: Insufficient permission or publisher eligibility
+          description: Insufficient permission, publisher eligibility, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitError"
+                anyOf:
+                - "$ref": "#/components/schemas/FinancekitError"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: Resource not found
           content:
@@ -6887,11 +7024,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '403':
-          description: Insufficient permission or publisher eligibility
+          description: Insufficient permission, publisher eligibility, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitError"
+                anyOf:
+                - "$ref": "#/components/schemas/FinancekitError"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: Resource not found
           content:
@@ -6977,11 +7117,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '403':
-          description: Insufficient permission or publisher eligibility
+          description: Insufficient permission, publisher eligibility, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitError"
+                anyOf:
+                - "$ref": "#/components/schemas/FinancekitError"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: Resource not found
           content:
@@ -7062,11 +7205,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '403':
-          description: Insufficient permission or publisher eligibility
+          description: Insufficient permission, publisher eligibility, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitError"
+                anyOf:
+                - "$ref": "#/components/schemas/FinancekitError"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: Resource not found
           content:
@@ -7144,11 +7290,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '403':
-          description: Insufficient permission or publisher eligibility
+          description: Insufficient permission, publisher eligibility, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitError"
+                anyOf:
+                - "$ref": "#/components/schemas/FinancekitError"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: Resource not found
           content:
@@ -7225,11 +7374,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '403':
-          description: Insufficient permission or publisher eligibility
+          description: Insufficient permission, publisher eligibility, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitError"
+                anyOf:
+                - "$ref": "#/components/schemas/FinancekitError"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: Resource not found
           content:
@@ -7300,11 +7452,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '403':
-          description: Insufficient permission or publisher eligibility
+          description: Insufficient permission, publisher eligibility, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitError"
+                anyOf:
+                - "$ref": "#/components/schemas/FinancekitError"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: Resource not found
           content:
@@ -7375,11 +7530,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '403':
-          description: Insufficient permission or publisher eligibility
+          description: Insufficient permission, publisher eligibility, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitError"
+                anyOf:
+                - "$ref": "#/components/schemas/FinancekitError"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: Resource not found
           content:
@@ -7461,6 +7619,12 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '401':
           description: Invalid publisher credential
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: 'The publishing user''s email is not verified (error: email_verification_required)'
           content:
             application/json:
               schema:
@@ -7593,11 +7757,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '403':
-          description: Insufficient permission or publisher eligibility
+          description: Insufficient permission, publisher eligibility, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitError"
+                anyOf:
+                - "$ref": "#/components/schemas/FinancekitError"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: Resource not found
           content:
@@ -7675,11 +7842,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '403':
-          description: Insufficient permission or publisher eligibility
+          description: Insufficient permission, publisher eligibility, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitError"
+                anyOf:
+                - "$ref": "#/components/schemas/FinancekitError"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: Resource not found
           content:
@@ -7800,6 +7970,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/holdings/{id}":
     parameters:
     - name: id
@@ -7833,6 +8009,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/import_sessions":
     post:
       summary: Create import session
@@ -7857,11 +8039,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope or guest user
+          description: insufficient scope or guest user, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '409':
           description: client session conflict
           content:
@@ -7926,11 +8110,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: import session not found
           content:
@@ -8011,11 +8197,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '409':
           description: chunk conflict
           content:
@@ -8064,11 +8252,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: max_row_count_exceeded
           content:
@@ -8154,6 +8344,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ImportCollection"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     post:
       summary: Create import
       description: Create a new import from raw CSV content, inline Sure NDJSON content,
@@ -8171,13 +8367,15 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ImportResponse"
         '403':
-          description: guest users cannot import family configuration
+          description: guest users cannot import family configuration, or email not
+            verified
           content:
             application/json:
               schema:
-                oneOf:
+                anyOf:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/ErrorResponseWithImportId"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: validation error or publish rejection
           content:
@@ -8449,6 +8647,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/imports/{id}/rows":
     parameters:
     - name: id
@@ -8492,11 +8696,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: import not found
           content:
@@ -8545,6 +8751,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
       requestBody:
         content:
           application/json:
@@ -8788,11 +9000,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/InsightCollection"
         '403':
-          description: preview features disabled
+          description: preview features disabled, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/insights/{id}/acknowledge":
     patch:
       summary: Acknowledge a proactive insight
@@ -8822,11 +9036,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: write scope, member access or preview features required
+          description: write scope, member access or preview features required, or
+            email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: insight not found or not visible to the family
           content:
@@ -8849,6 +9066,12 @@ paths:
                 type: array
                 items:
                   "$ref": "#/components/schemas/MerchantDetail"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     post:
       summary: Import merchants from CSV
       tags:
@@ -8870,11 +9093,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: guest users cannot import merchants
+          description: guest users cannot import merchants, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: missing file or invalid CSV
           content:
@@ -8921,6 +9146,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/provider_connections":
     get:
       summary: Lists provider connection status summaries
@@ -8945,11 +9176,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/push_subscriptions":
     post:
       summary: Register an APNs device token
@@ -8962,11 +9195,13 @@ paths:
       responses:
         '403':
           description: push unavailable in self-hosted mode or insufficient write
-            scope
+            scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '201':
           description: token registered
           content:
@@ -9002,11 +9237,13 @@ paths:
       responses:
         '403':
           description: push unavailable in self-hosted mode or insufficient write
-            scope
+            scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '204':
           description: token unregistered
   "/api/v1/recurring_transactions":
@@ -9064,6 +9301,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     post:
       summary: Create recurring transaction
       tags:
@@ -9085,11 +9328,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - requires read_write scope
+          description: forbidden - requires read_write scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: account not found
           content:
@@ -9214,6 +9459,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     patch:
       summary: Update recurring transaction
       tags:
@@ -9235,11 +9486,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - requires read_write scope
+          description: forbidden - requires read_write scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: recurring transaction not found
           content:
@@ -9307,11 +9560,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - requires read_write scope
+          description: forbidden - requires read_write scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: recurring transaction not found
           content:
@@ -9373,11 +9628,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: invalid filter
           content:
@@ -9412,11 +9669,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: rejected transfer not found
           content:
@@ -9499,11 +9758,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: invalid filter
           content:
@@ -9540,11 +9801,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: rule run not found
           content:
@@ -9599,11 +9862,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - requires read scope
+          description: forbidden - requires read scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: unsupported resource type
           content:
@@ -9638,11 +9903,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - requires read scope
+          description: forbidden - requires read scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: rule not found
           content:
@@ -9710,11 +9977,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: invalid filter
           content:
@@ -9750,11 +10019,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: security not found
           content:
@@ -9829,11 +10100,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: invalid filter
           content:
@@ -9862,11 +10135,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/SecurityPriceImportResult"
         '403':
-          description: insufficient scope, a guest, or a managed instance
+          description: insufficient scope, a guest, or a managed instance, or email
+            not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: security not found among the caller's writable accounts
           content:
@@ -9914,11 +10190,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: security price not found
           content:
@@ -9975,6 +10253,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/transactions/{transaction_id}/split":
     parameters:
     - name: transaction_id
@@ -10003,6 +10287,12 @@ paths:
         '422':
           description: amounts do not sum to the parent, or the transaction cannot
             be split
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
       requestBody:
         content:
           application/json:
@@ -10024,6 +10314,12 @@ paths:
                 "$ref": "#/components/schemas/Split"
         '404':
           description: transaction is not split
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     patch:
       summary: Replace a transaction split
       tags:
@@ -10042,6 +10338,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Split"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
       requestBody:
         content:
           application/json:
@@ -10059,6 +10361,8 @@ paths:
           description: split removed
         '404':
           description: transaction is not split
+        '403':
+          description: email not verified
   "/api/v1/syncs":
     get:
       summary: Lists sync history
@@ -10095,11 +10399,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden
+          description: forbidden, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/syncs/latest":
     get:
       summary: Shows the latest sync
@@ -10123,11 +10429,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden
+          description: forbidden, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
   "/api/v1/syncs/{id}":
     parameters:
     - name: id
@@ -10157,11 +10465,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden
+          description: forbidden, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: not found
           content:
@@ -10182,6 +10492,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TagCollection"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     post:
       summary: Create tag
       tags:
@@ -10197,11 +10513,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/TagDetail"
         '403':
-          description: guest users cannot modify tags
+          description: guest users cannot modify tags, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: validation error - missing name
           content:
@@ -10256,6 +10574,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     patch:
       summary: Update a tag
       tags:
@@ -10276,6 +10600,14 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guest users cannot modify tags, or email not verified
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
       requestBody:
         content:
           application/json:
@@ -10301,6 +10633,8 @@ paths:
           description: tag deleted
         '404':
           description: tag not found
+        '403':
+          description: email not verified
   "/api/v1/trades":
     get:
       summary: List trades
@@ -10368,6 +10702,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     post:
       summary: Create trade
       tags:
@@ -10388,11 +10728,14 @@ paths:
                 - "$ref": "#/components/schemas/Transaction"
                 - "$ref": "#/components/schemas/TransferDecision"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '401':
           description: unauthorized - missing api key
           content:
@@ -10518,6 +10861,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     patch:
       summary: Update trade
       tags:
@@ -10539,11 +10888,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: trade not found
           content:
@@ -10608,11 +10960,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: trade not found
           content:
@@ -10739,6 +11094,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TransactionCollection"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     post:
       summary: Create transaction
       tags:
@@ -10766,6 +11127,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
       requestBody:
         content:
           application/json:
@@ -10868,6 +11235,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     patch:
       summary: Update a transaction
       tags:
@@ -10884,11 +11257,13 @@ paths:
                 "$ref": "#/components/schemas/Transaction"
         '403':
           description: account is shared with you without permission to change this
-            transaction
+            transaction, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: transaction not found
           content:
@@ -10965,11 +11340,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/DeleteResponse"
         '403':
-          description: account is shared with you without full control
+          description: account is shared with you without full control, or email not
+            verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: transaction not found
           content:
@@ -11040,11 +11418,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '422':
           description: invalid filter
           content:
@@ -11079,11 +11459,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or email not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '404':
           description: transfer not found
           content:
@@ -11115,11 +11497,14 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - requires read_write scope and admin role
+          description: forbidden - requires read_write scope and admin role, or email
+            not verified
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
         '500':
           description: reset enqueue failed
           content:
@@ -11151,12 +11536,56 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - requires admin role
+          description: forbidden - requires admin role, or email not verified
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/EmailVerificationRequired"
+  "/api/v1/users/me":
+    get:
+      summary: Retrieve current user
+      tags:
+      - Users
+      description: Returns the current mobile user profile and email verification
+        state.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: current user returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                        nullable: true
+                      last_name:
+                        type: string
+                        nullable: true
+                      ui_layout:
+                        type: string
+                      ai_enabled:
+                        type: boolean
+                      email_verified:
+                        type: boolean
+        '401':
+          description: unauthorized
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/users/me":
     delete:
       summary: Delete account
       tags:
@@ -11242,6 +11671,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     post:
       summary: Create valuation
       tags:
@@ -11274,6 +11709,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
       requestBody:
         content:
           application/json:
@@ -11343,6 +11784,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
     patch:
       summary: Update a valuation
       tags:
@@ -11369,6 +11816,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: email not verified
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EmailVerificationRequired"
       requestBody:
         content:
           application/json:

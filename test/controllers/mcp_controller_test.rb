@@ -442,6 +442,23 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an unverified user gets no tools and cannot call one" do
+    @user.update_column(:email_verified_at, nil)
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json, headers: mcp_headers(@token)
+
+      assert_response :ok
+      assert_empty JSON.parse(response.body)["result"]["tools"]
+
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "get_accounts", arguments: {} }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      assert_equal "Unknown tool: get_accounts", JSON.parse(response.body).dig("error", "message")
+    end
+  end
+
   test "tools stay available to external agents when the in-app assistant is off" do
     @user.family.update!(assistant_type: "mcp_only")
 

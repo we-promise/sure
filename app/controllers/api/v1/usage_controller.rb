@@ -1,4 +1,5 @@
 class Api::V1::UsageController < Api::V1::BaseController
+  skip_before_action :ensure_verified_for_financial_data
   # GET /api/v1/usage
   def show
     return unless authorize_scope!(:read)

@@ -37,9 +37,9 @@ RSpec.describe "Api::V1::FamilyExports", type: :request do
         run_test!
       end
 
-      response "403", "forbidden" do
+      response "403", "forbidden, or email not verified" do
         let(:user) { users(:family_member) }
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
     end
@@ -68,9 +68,9 @@ RSpec.describe "Api::V1::FamilyExports", type: :request do
         run_test!
       end
 
-      response "403", "forbidden" do
+      response "403", "forbidden, or email not verified" do
         let(:user) { users(:family_member) }
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
 
@@ -102,9 +102,9 @@ RSpec.describe "Api::V1::FamilyExports", type: :request do
         run_test!
       end
 
-      response "403", "forbidden" do
+      response "403", "forbidden, or email not verified" do
         let(:user) { users(:family_member) }
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
 
@@ -147,9 +147,9 @@ RSpec.describe "Api::V1::FamilyExports", type: :request do
         run_test!
       end
 
-      response "403", "forbidden" do
+      response "403", "forbidden, or email not verified" do
         let(:user) { users(:family_member) }
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
 

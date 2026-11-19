@@ -16,7 +16,8 @@ RSpec.describe 'API V1 Valuations', type: :request do
     family.users.create!(
       email: 'api-user@example.com',
       password: 'password123',
-      password_confirmation: 'password123'
+      password_confirmation: 'password123',
+      email_verified_at: Time.current
     )
   end
 
@@ -105,6 +106,8 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     post 'Create valuation' do
@@ -230,6 +233,8 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 
@@ -256,6 +261,8 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     patch 'Update a valuation' do
@@ -337,6 +344,8 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 end

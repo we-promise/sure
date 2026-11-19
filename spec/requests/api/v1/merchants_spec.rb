@@ -16,7 +16,8 @@ RSpec.describe 'API V1 Merchants', type: :request do
     family.users.create!(
       email: 'api-user@example.com',
       password: 'password123',
-      password_confirmation: 'password123'
+      password_confirmation: 'password123',
+      email_verified_at: Time.current
     )
   end
 
@@ -46,6 +47,8 @@ RSpec.describe 'API V1 Merchants', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     post 'Import merchants from CSV' do
@@ -85,14 +88,15 @@ RSpec.describe 'API V1 Merchants', type: :request do
         run_test!
       end
 
-      response '403', 'guest users cannot import merchants' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'guest users cannot import merchants, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:user) do
           family.users.create!(
             email: 'api-guest@example.com',
             password: 'password123',
             password_confirmation: 'password123',
+            email_verified_at: Time.current,
             role: 'guest'
           )
         end
@@ -134,6 +138,8 @@ RSpec.describe 'API V1 Merchants', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 end

@@ -85,6 +85,22 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert response_body["messages"].is_a?(Array)
   end
 
+  test "stored tool call data is withheld once the account is unverified" do
+    get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
+    tool_call = assistant_tool_calls(response.parsed_body).first
+    assert tool_call.key?("function_arguments")
+    assert tool_call.key?("function_result")
+
+    @user.update_column(:email_verified_at, nil)
+    get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
+
+    assert_response :success
+    tool_call = assistant_tool_calls(response.parsed_body).first
+    assert_equal "get_user_info", tool_call["function_name"]
+    assert_not tool_call.key?("function_arguments")
+    assert_not tool_call.key?("function_result")
+  end
+
   test "should create chat with write scope" do
     assert_difference "Chat.count" do
       post "/api/v1/chats",
@@ -212,6 +228,10 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def assistant_tool_calls(body)
+      body["messages"].flat_map { |message| message["tool_calls"] || [] }
+    end
 
     def bearer_auth_header(token)
       { "Authorization" => "Bearer #{token.token}" }

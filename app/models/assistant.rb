@@ -68,8 +68,11 @@ module Assistant
     # The single registry behind both the builtin chat and the /mcp endpoint's
     # tools/list — a function class added here is immediately callable by an
     # external agent, so pass the user to keep preview tools out of the default
-    # surface.
+    # surface. Every tool reads or changes financial data, so an unverified
+    # user gets none, here and over /mcp alike.
     def function_classes(user = nil)
+      return [] if user && EmailVerification.enforced? && !user.email_verified?
+
       classes = [
         Function::GetTransactions,
         Function::GetRecurringTransactions,

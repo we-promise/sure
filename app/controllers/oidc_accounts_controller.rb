@@ -42,6 +42,10 @@ class OidcAccountsController < ApplicationController
           user
         )
 
+        if pending_email_trusted? && @pending_auth["email"].to_s.casecmp?(user.email)
+          user.mark_email_verified!
+        end
+
         SsoAuditLog.log_link!(
           user: user,
           provider: @pending_auth["provider"],
@@ -194,6 +198,12 @@ class OidcAccountsController < ApplicationController
         )
       end
 
+      if identity&.persisted? && pending_email_trusted?
+        @user.mark_email_verified!
+      else
+        @user.send_email_verification
+      end
+
       # Clear pending auth from session
       session.delete(:pending_oidc_auth)
 
@@ -220,12 +230,19 @@ class OidcAccountsController < ApplicationController
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
     end
 
+    # Decided at sign-in, where the provider's email_verified claim is still
+    # available. Pending auth stored before this key existed is untrusted.
+    def pending_email_trusted?
+      @pending_auth["email_trusted"] == true
+    end
+
     # Convert pending auth hash to OmniAuth-like structure
     def build_auth_hash(pending_auth)
       OpenStruct.new(
         provider: pending_auth["provider"],
         uid: pending_auth["uid"],
-        info: OpenStruct.new(pending_auth.slice("email", "name", "first_name", "last_name"))
+        info: OpenStruct.new(pending_auth.slice("email", "name", "first_name", "last_name")),
+        extra: OpenStruct.new(raw_info: OpenStruct.new(iss: pending_auth["issuer"]))
       )
     end
 end

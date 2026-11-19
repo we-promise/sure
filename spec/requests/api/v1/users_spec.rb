@@ -19,7 +19,8 @@ RSpec.describe 'API V1 Users', type: :request do
       email: 'api-user@example.com',
       password: 'password123',
       password_confirmation: 'password123',
-      role: role
+      role: role,
+      email_verified_at: Time.current
     )
   end
 
@@ -61,8 +62,8 @@ RSpec.describe 'API V1 Users', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - requires read_write scope and admin role' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'forbidden - requires read_write scope and admin role, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:api_key) do
           key = ApiKey.generate_secure_key
@@ -113,8 +114,8 @@ RSpec.describe 'API V1 Users', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - requires admin role' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'forbidden - requires admin role, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:role) { :member }
 
@@ -124,6 +125,39 @@ RSpec.describe 'API V1 Users', type: :request do
   end
 
   path '/api/v1/users/me' do
+    get 'Retrieve current user' do
+      tags 'Users'
+      description 'Returns the current mobile user profile and email verification state.'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+
+      response '200', 'current user returned' do
+        schema type: :object,
+               properties: {
+                 user: {
+                   type: :object,
+                   properties: {
+                     id: { type: :string, format: :uuid },
+                     email: { type: :string },
+                     first_name: { type: :string, nullable: true },
+                     last_name: { type: :string, nullable: true },
+                     ui_layout: { type: :string },
+                     ai_enabled: { type: :boolean },
+                     email_verified: { type: :boolean }
+                   }
+                 }
+               }
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { 'invalid-key' }
+        run_test!
+      end
+    end
+
     delete 'Delete account' do
       tags 'Users'
       description 'Permanently deactivates the current user account and all associated data. ' \

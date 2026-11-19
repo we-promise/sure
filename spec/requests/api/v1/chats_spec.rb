@@ -17,6 +17,7 @@ RSpec.describe 'API V1 Chats', type: :request do
       email: 'api-user@example.com',
       password: 'password123',
       password_confirmation: 'password123',
+      email_verified_at: Time.current,
       ai_enabled: true
     )
   end
@@ -94,6 +95,7 @@ RSpec.describe 'API V1 Chats', type: :request do
             email: 'no-ai@example.com',
             password: 'password123',
             password_confirmation: 'password123',
+            email_verified_at: Time.current,
             ai_enabled: false
           )
         end

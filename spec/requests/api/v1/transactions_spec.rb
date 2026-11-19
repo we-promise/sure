@@ -16,7 +16,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
     family.users.create!(
       email: 'api-user@example.com',
       password: 'password123',
-      password_confirmation: 'password123'
+      password_confirmation: 'password123',
+      email_verified_at: Time.current
     )
   end
 
@@ -171,6 +172,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     post 'Create transaction' do
@@ -286,6 +289,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
   end
 
@@ -312,6 +317,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     patch 'Update a transaction' do
@@ -363,8 +370,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '403', 'account is shared with you without permission to change this transaction' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'account is shared with you without permission to change this transaction, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:id) { read_only_transaction.id }
 
@@ -401,8 +408,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '403', 'account is shared with you without full control' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'account is shared with you without full control, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:id) { read_only_transaction.id }
 

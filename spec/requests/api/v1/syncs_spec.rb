@@ -16,7 +16,8 @@ RSpec.describe "Api::V1::Syncs", type: :request do
     family.users.create!(
       email: "sync-api-user@example.com",
       password: "password123",
-      password_confirmation: "password123"
+      password_confirmation: "password123",
+      email_verified_at: Time.current
     )
   end
 
@@ -67,10 +68,10 @@ RSpec.describe "Api::V1::Syncs", type: :request do
         run_test!
       end
 
-      response "403", "forbidden" do
+      response "403", "forbidden, or email not verified" do
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
 
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
     end
@@ -95,10 +96,10 @@ RSpec.describe "Api::V1::Syncs", type: :request do
         run_test!
       end
 
-      response "403", "forbidden" do
+      response "403", "forbidden, or email not verified" do
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
 
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
     end
@@ -124,10 +125,10 @@ RSpec.describe "Api::V1::Syncs", type: :request do
         run_test!
       end
 
-      response "403", "forbidden" do
+      response "403", "forbidden, or email not verified" do
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
 
-        schema "$ref" => "#/components/schemas/ErrorResponse"
+        schema or_email_verification_required("#/components/schemas/ErrorResponse")
         run_test!
       end
 

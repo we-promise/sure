@@ -969,6 +969,35 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       assert_equal "New User", cached[:name]
       assert cached.key?(:device_info), "Expected device_info in cached payload"
       assert cached.key?(:allow_account_creation), "Expected allow_account_creation in cached payload"
+      assert_equal false, cached[:email_trusted], "A generic OIDC issuer does not prove the email"
+    ensure
+      Rails.cache = original_cache
+    end
+  end
+
+  test "mobile SSO onboarding caches whether Google proved the email" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    begin
+      { "true" => true, "false" => false }.each do |claim, expected|
+        OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
+          provider: "openid_connect",
+          uid: "google-unlinked-#{claim}",
+          info: { email: "google-#{claim}@example.com", name: "Google User" },
+          extra: { raw_info: { iss: "https://accounts.google.com", email_verified: claim } }
+        })
+
+        get "/auth/mobile/openid_connect", params: { device_id: "device-#{claim}", device_name: "Pixel", device_type: "android" }
+        get "/auth/openid_connect/callback"
+
+        linking_code = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)["linking_code"]
+        assert_equal expected, Rails.cache.read("mobile_sso_link:#{linking_code}")[:email_trusted],
+          "email_verified=#{claim} should cache email_trusted=#{expected}"
+      end
     ensure
       Rails.cache = original_cache
     end

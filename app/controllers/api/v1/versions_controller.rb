@@ -3,6 +3,7 @@
 class Api::V1::VersionsController < Api::V1::BaseController
   prepend_before_action :prevent_version_caching
   skip_before_action :authenticate_request!, if: :public_version_request?
+  skip_before_action :ensure_verified_for_financial_data, if: :public_version_request?
   before_action :ensure_read_scope, unless: :public_version_request?
 
   def show

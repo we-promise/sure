@@ -16,7 +16,8 @@ RSpec.describe 'API V1 Transfers', type: :request do
     family.users.create!(
       email: 'api-user@example.com',
       password: 'password123',
-      password_confirmation: 'password123'
+      password_confirmation: 'password123',
+      email_verified_at: Time.current
     )
   end
 
@@ -108,8 +109,8 @@ RSpec.describe 'API V1 Transfers', type: :request do
         run_test!
       end
 
-      response '403', 'insufficient scope' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'insufficient scope, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
 
@@ -156,8 +157,8 @@ RSpec.describe 'API V1 Transfers', type: :request do
         run_test!
       end
 
-      response '403', 'insufficient scope' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'insufficient scope, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
 

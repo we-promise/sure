@@ -16,7 +16,8 @@ RSpec.describe 'API V1 Recurring Transactions', type: :request do
     family.users.create!(
       email: 'api-user@example.com',
       password: 'password123',
-      password_confirmation: 'password123'
+      password_confirmation: 'password123',
+      email_verified_at: Time.current
     )
   end
 
@@ -108,6 +109,8 @@ RSpec.describe 'API V1 Recurring Transactions', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     post 'Create recurring transaction' do
@@ -177,8 +180,8 @@ RSpec.describe 'API V1 Recurring Transactions', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - requires read_write scope' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'forbidden - requires read_write scope, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:'X-Api-Key') { read_only_api_key.plain_key }
 
@@ -299,6 +302,8 @@ RSpec.describe 'API V1 Recurring Transactions', type: :request do
 
         run_test!
       end
+
+      email_verification_required_response
     end
 
     patch 'Update recurring transaction' do
@@ -341,8 +346,8 @@ RSpec.describe 'API V1 Recurring Transactions', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - requires read_write scope' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'forbidden - requires read_write scope, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:'X-Api-Key') { read_only_api_key.plain_key }
 
@@ -387,8 +392,8 @@ RSpec.describe 'API V1 Recurring Transactions', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - requires read_write scope' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
+      response '403', 'forbidden - requires read_write scope, or email not verified' do
+        schema or_email_verification_required('#/components/schemas/ErrorResponse')
 
         let(:'X-Api-Key') { read_only_api_key.plain_key }
 
