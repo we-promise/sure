@@ -11,6 +11,9 @@ class Entry < ApplicationRecord
   DESCRIPTIVE_ATTRIBUTES = %w[name notes updated_at].freeze
   DESCRIPTIVE_TRANSACTION_ATTRIBUTES = %w[category_id merchant_id updated_at].freeze
 
+  # Key in transactions.extra marking a stale pending the sync excluded on its own.
+  AUTO_EXCLUDED_PENDING_KEY = "auto_excluded_stale_pending".freeze
+
   # Raised when a split would be replaced or removed while one of its parts is
   # a leg of a confirmed transfer. Destroying that part destroys the transfer
   # and leaves the other leg behind as a standalone entry, so the transfer has
@@ -92,6 +95,13 @@ class Entry < ApplicationRecord
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
 
+  # Any other write of `excluded` (a user toggling it, a reconciliation) ends the
+  # "excluded automatically" state, so a later booking cannot override it. This
+  # also covers a write of the same value, e.g. a user excluding the entry from a
+  # page loaded before the sync excluded it.
+  before_save :clear_auto_excluded_pending_mark, if: -> { @excluded_assigned }
+  after_save -> { @excluded_assigned = false }
+
   # Split rows in the order they were entered. Without an ORDER BY PostgreSQL
   # returns them in physical order, which shifts as rows are rewritten.
   scope :in_split_order, -> { order(:created_at, :id) }
@@ -151,10 +161,32 @@ class Entry < ApplicationRecord
     SQL
   }
 
-  scope :excluding_split_parents, -> {
+  SPLIT_PARENT_SQL = "EXISTS (SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id)".freeze
+  private_constant :SPLIT_PARENT_SQL
+
+  scope :excluding_split_parents, -> { where("NOT #{SPLIT_PARENT_SQL}") }
+
+  # Non-excluded entries plus split parents. split! excludes the parent so its
+  # children are not counted twice, but the parent is still the charge the bank
+  # made, so anything matching real payments (bills) keeps it. Every other
+  # excluded entry is dropped: user exclusions and system ones alike (stale
+  # pending entries, pending duplicates of a posted transaction).
+  scope :not_excluded_or_split_parent, -> { where("entries.excluded = FALSE OR #{SPLIT_PARENT_SQL}") }
+
+  # Balance updates: reconciliation valuations. On linked accounts most of them
+  # are the provider's daily balance, kept as a waypoint by
+  # Account::CurrentBalanceManager#preserve_anchor_as_reconciliation_if_stale.
+  # Opening and current anchors are not included.
+  scope :balance_updates, -> {
+    where(entryable_type: "Valuation", entryable_id: Valuation.reconciliation.select(:id))
+  }
+
+  scope :excluding_balance_updates, -> {
     where(<<~SQL.squish)
-      NOT EXISTS (
-        SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id
+      entries.entryable_type != 'Valuation'
+      OR NOT EXISTS (
+        SELECT 1 FROM valuations v
+        WHERE v.id = entries.entryable_id AND v.kind = 'reconciliation'
       )
     SQL
   }
@@ -225,17 +257,45 @@ class Entry < ApplicationRecord
   # Called during sync to clean up pending transactions that never posted
   # @param account [Account] The account to clean up
   # @param days [Integer] Number of days after which pending is considered stale (default: 8)
+  # @param mark [Boolean] Remember on the transaction that the exclusion was automatic,
+  #   so an import that later books the same bank id can re-activate the entry
+  #   (see Account::ProviderImportAdapter). Entries excluded by the user carry no mark.
   # @return [Integer] Number of entries excluded
-  def self.auto_exclude_stale_pending(account:, days: 8)
+  def self.auto_exclude_stale_pending(account:, days: 8, mark: false)
     stale_entries = account.entries.stale_pending(days: days).where(excluded: false)
     count = stale_entries.count
 
     if count > 0
-      stale_entries.update_all(excluded: true, updated_at: Time.current)
-      Rails.logger.info("Auto-excluded #{count} stale pending transaction(s) for account #{account.id} (#{account.name})")
+      if mark
+        transaction do
+          # Re-check under a row lock: an entry the user excluded, or the import
+          # claimed, since the query above keeps its state and gets no mark.
+          # Transactions first, then entries: the same order as a Transaction
+          # save, which touches its entry, so the two cannot deadlock.
+          transaction_ids = Transaction.where(id: stale_entries.select(:entryable_id)).order(:id).lock.pluck(:id)
+          ids = stale_entries.where(entryable_id: transaction_ids).order(:id).lock("FOR UPDATE OF entries").pluck(:id)
+
+          Transaction.where(id: Entry.where(id: ids).select(:entryable_id))
+            .update_all([ "extra = COALESCE(extra, '{}'::jsonb) || jsonb_build_object(?::text, true)", AUTO_EXCLUDED_PENDING_KEY ])
+          count = Entry.where(id: ids).update_all(excluded: true, updated_at: Time.current)
+        end
+      else
+        stale_entries.update_all(excluded: true, updated_at: Time.current)
+      end
+      Rails.logger.info("Auto-excluded #{count} stale pending transaction(s) for account #{account.id} (#{account.name})") if count > 0
     end
 
     count
+  end
+
+  def excluded=(value)
+    @excluded_assigned = true
+    super
+  end
+
+  # True for a pending entry that auto_exclude_stale_pending(mark: true) excluded.
+  def auto_excluded_pending?
+    excluded? && entryable.is_a?(Transaction) && entryable.extra&.dig(AUTO_EXCLUDED_PENDING_KEY) == true
   end
 
   # Retroactively reconcile pending transactions that have a matching posted version
@@ -266,6 +326,7 @@ class Entry < ApplicationRecord
         .where.not(id: pending_entry.id)
         .where(currency: pending_entry.currency)
         .where(amount: pending_entry.amount)
+        .where(source: pending_entry.source) # one provider's pending is never another provider's duplicate
         .where(date: pending_entry.date..(pending_entry.date + date_window.days)) # Posted must be ON or AFTER pending date
         .where(not_pending_sql)
         .limit(2) # Only need to know if 0, 1, or 2+ candidates
@@ -273,7 +334,13 @@ class Entry < ApplicationRecord
 
       # Handle exact match - auto-exclude only if exactly ONE candidate (high confidence)
       # Multiple candidates = ambiguous = skip to avoid excluding wrong entry
+      # The posted match must also be unambiguous the other way round: two
+      # same-amount pendings would otherwise both be excluded against one booking,
+      # hiding the one that has not booked yet (#2013).
       if exact_candidates.size == 1
+        # Also no fuzzy suggestion then: it would point every pending at the same booking.
+        next unless sole_pending_for?(exact_candidates.first, date_window: date_window)
+
         posted_match = exact_candidates.first
         detail = {
           pending_id: pending_entry.id,
@@ -296,6 +363,8 @@ class Entry < ApplicationRecord
         end
         next
       end
+      # Two exact bookings: a name match would just pick one of them at random.
+      next if exact_candidates.size > 1
 
       # PRIORITY 2: If no exact match, try fuzzy amount match for tip adjustments
       # Store as SUGGESTION instead of auto-excluding (medium confidence)
@@ -308,6 +377,7 @@ class Entry < ApplicationRecord
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where.not(id: pending_entry.id)
         .where(currency: pending_entry.currency)
+        .where(source: pending_entry.source)
         .where(date: pending_entry.date..(pending_entry.date + fuzzy_date_window.days)) # Posted ON or AFTER pending
         .where("ABS(entries.amount) BETWEEN ? AND ?", min_amount, max_amount)
         .where(not_pending_sql)
@@ -370,6 +440,21 @@ class Entry < ApplicationRecord
     stats
   end
 
+  # True when no other live pending could claim this posted entry: the same
+  # amount/currency lookup Account::ProviderImportAdapter#find_pending_transaction
+  # runs at import time, seen from the posted side.
+  def self.sole_pending_for?(posted_entry, date_window:)
+    posted_entry.account.entries.pending
+      .where(excluded: false)
+      .where(currency: posted_entry.currency)
+      .where(amount: posted_entry.amount)
+      .where(source: posted_entry.source)
+      .where(date: (posted_entry.date - date_window.days)..posted_entry.date)
+      .limit(2)
+      .count == 1
+  end
+  private_class_method :sole_pending_for?
+
   def classification
     amount.negative? ? "income" : "expense"
   end
@@ -377,6 +462,39 @@ class Entry < ApplicationRecord
   def lock_saved_attributes!
     super
     entryable.lock_saved_attributes!
+  end
+
+  # Columns no rule condition or action reads: how an entry was edited, and
+  # import and reconciliation bookkeeping. Any other column counts, so a
+  # column rules start reading later can't be missed.
+  RULE_INPUT_IGNORED_COLUMNS = %w[
+    updated_at locked_attributes user_modified
+    import_locked reconciled_at reconciled_by_statement_id
+  ].freeze
+
+  # What rules can read from this transaction. Taken before an edit and passed
+  # to apply_immediate_rules_later, so an edit that changed nothing (same
+  # values, or only fields the person may not change) runs no rules. Tags are
+  # read from the database, since toggle_tag! bypasses the loaded association,
+  # unless the caller already has them.
+  def rule_input_snapshot(tag_ids: nil)
+    return unless transaction?
+
+    [
+      attributes.except(*RULE_INPUT_IGNORED_COLUMNS),
+      entryable.attributes.except(*RULE_INPUT_IGNORED_COLUMNS),
+      (tag_ids || Tagging.where(taggable: entryable).pluck(:tag_id)).map(&:to_s).sort
+    ]
+  end
+
+  # Rules set to "apply immediately" run for this transaction after a person
+  # created or changed it. With changed_from (a rule_input_snapshot from before
+  # the edit) they only run when the edit changed something.
+  def apply_immediate_rules_later(changed_from: nil)
+    return unless transaction?
+    return if changed_from && changed_from == rule_input_snapshot
+
+    Rule.apply_immediately_later(account.family, entryable_id)
   end
 
   # Enqueues an account sync whose window starts at the earliest date this
@@ -624,6 +742,12 @@ class Entry < ApplicationRecord
     parent_entry_id.present?
   end
 
+  # The other side of a split: a child's parent, or a parent's children. Both
+  # sides are the same money. Siblings are not: each child is its own part.
+  def split_counterparts
+    self.class.where(id: parent_entry_id).or(self.class.where(parent_entry_id: id))
+  end
+
   # Splits this entry into child entries. Marks parent as excluded.
   #
   # @param splits [Array<Hash>] array of { name:, amount:, category_id:, merchant_id:, tag_ids:, excluded: } hashes.
@@ -722,6 +846,47 @@ class Entry < ApplicationRecord
       30.years.ago.to_date
     end
 
+    # Lock the selected entries before a bulk update. Lock the transactions
+    # first, then the entries. Order each set by id.
+    #
+    # Transfer::Matcher locks in the same order, so a concurrent match cannot
+    # deadlock with a bulk update. Callers that update several permission
+    # groups must lock the full selection here first: per-group locks use
+    # different orders across concurrent requests.
+    #
+    # The ids must already be authorized by the caller.
+    def lock_for_bulk_update!(entry_ids)
+      ids = Array.wrap(entry_ids).compact.uniq
+      return [] if ids.empty?
+
+      transaction_ids = unscoped.where(id: ids, entryable_type: "Transaction").distinct.pluck(:entryable_id)
+      Transaction.where(id: transaction_ids).order(:id).lock.pluck(:id)
+      unscoped.where(id: ids).reorder(:id).lock("FOR UPDATE OF entries").to_a
+    end
+
+    # Sets the manual reconciliation status for every transaction on the
+    # account. Split parents stay out: the activity list hides them and shows
+    # their children instead.
+    #
+    # Lock the entries in ascending id order before the update. Bulk updates
+    # and Transfer::Matcher take entry locks in that order too, so a
+    # concurrent request cannot deadlock with this account-wide write.
+    #
+    # Reconciling is not an edit, so this leaves user_modified and the saved
+    # attributes alone. It does bump updated_at because the cached transaction
+    # row key includes it.
+    def set_reconciled_status_for_account!(account, status)
+      status = status.to_s
+      raise ArgumentError, "Unknown reconciled status: #{status}" unless reconciled_statuses.key?(status)
+
+      scope = where(account: account, entryable_type: "Transaction").excluding_split_parents
+
+      transaction do
+        scope.reorder(:id).lock("FOR UPDATE OF entries").pluck(:id)
+        scope.update_all(reconciled_status: status, updated_at: Time.current)
+      end
+    end
+
     # Bulk update entries with the given parameters.
     #
     # No authorization happens here: callers must scope the relation to entries
@@ -737,6 +902,9 @@ class Entry < ApplicationRecord
     #
     # To avoid accidentally clearing tags when only updating other fields,
     # tags are only modified when explicitly requested via update_tags: true.
+    #
+    # With a block, yields each transaction entry whose values actually changed
+    # (see Entry#rule_input_snapshot), e.g. to run immediate rules on them.
     #
     # @param bulk_update_params [Hash] The parameters to update
     # @param update_tags [Boolean] Whether to update tags (default: false)
@@ -764,8 +932,47 @@ class Entry < ApplicationRecord
       rescheduled_ids = []
 
       transaction do
-        all.includes(:account).each do |entry|
+        # Lock before reading membership. A concurrent match cannot then turn a
+        # selected entry into a matched leg between the read and the update.
+        selected_entry_ids = all.except(:includes).pluck(:id)
+        locked_entries = lock_for_bulk_update!(selected_entry_ids)
+        ActiveRecord::Associations::Preloader.new(
+          records: locked_entries,
+          associations: [ :account, :entryable ]
+        ).call
+
+        # Resolve the matched-transfer set inside the transaction, after the
+        # locks, so it reflects a match that committed before the lock.
+        transfer_leg_entry_ids =
+          if bulk_attributes[:date].present? || bulk_attributes[:entryable_attributes].present?
+            Entry.unscoped.where(id: locked_entries.map(&:id), entryable_type: "Transaction")
+              .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+              .where(<<~SQL.squish)
+                EXISTS (
+                  SELECT 1 FROM transfers
+                  WHERE transfers.inflow_transaction_id = transactions.id
+                     OR transfers.outflow_transaction_id = transactions.id
+                )
+              SQL
+              .pluck("entries.id")
+              .to_set
+          else
+            Set.new
+          end
+
+        # Tags before the edit for all entries in one query, not one per entry.
+        tag_ids_before = if block_given?
+          Tagging.where(taggable_type: "Transaction", taggable_id: locked_entries.map(&:entryable_id))
+                 .pluck(:taggable_id, :tag_id)
+                 .group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
+        end
+
+        locked_entries.each do |entry|
           changed = false
+          if block_given?
+            tags_before = tag_ids_before.fetch(entry.entryable_id, [])
+            before = entry.rule_input_snapshot(tag_ids: tags_before)
+          end
           # Whether this row's changes should lock saved attributes / mark
           # user-modified. Reconciling is a verification action, not an
           # edit — the single-row Entry#advance_reconciled_status! (used by
@@ -782,7 +989,28 @@ class Entry < ApplicationRecord
             attrs.delete(:entryable_attributes) unless entry.transaction?
             # reconciled_status is a manual-accounts-only concept — synced accounts
             # already have duplicate-matching + statement-level reconciliation.
-            attrs.delete(:reconciled_status) unless entry.account.manual?
+            # It is also a transaction concept: valuations and trades have no
+            # badge and the reconciliation indicator never counts them.
+            attrs.delete(:reconciled_status) unless entry.transaction? && entry.account.manual?
+
+            # A matched transfer leg keeps its date, and only the outflow of a
+            # categorizable transfer owns a category. Never apply a merchant
+            # to a transfer. This also preserves the categorize wizard, which
+            # intentionally includes loan_payment and investment_contribution
+            # outflows.
+            if transfer_leg_entry_ids.include?(entry.id)
+              attrs.delete(:date)
+
+              if attrs[:entryable_attributes].present?
+                category_id = attrs[:entryable_attributes][:category_id]
+
+                if category_id.present? && entry.transaction.category_editable?
+                  attrs[:entryable_attributes] = { category_id: category_id }
+                else
+                  attrs.delete(:entryable_attributes)
+                end
+              end
+            end
 
             if attrs.present?
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
@@ -814,6 +1042,10 @@ class Entry < ApplicationRecord
               entry.lock_saved_attributes!
               entry.mark_user_modified!
             end
+            if block_given?
+              tags_after = update_tags && entry.transaction? ? entry.transaction.tag_ids : tags_before
+              yield entry if before != entry.rule_input_snapshot(tag_ids: tags_after)
+            end
             updated_count += 1
           end
         end
@@ -822,13 +1054,26 @@ class Entry < ApplicationRecord
       # Moving a date changes balances (and may make an entry scheduled), so
       # mirror Entry#sync_account_later -- once per account, not per entry.
       sync_windows.each { |account, window_start| account.sync_later(window_start_date: window_start) }
-      EntryScheduledSyncJob.schedule_for_entries(Entry.where(id: rescheduled_ids)) if rescheduled_ids.any?
+      EntryScheduledSyncJob.schedule_for_entries(Entry.unscoped.where(id: rescheduled_ids)) if rescheduled_ids.any?
 
       updated_count
     end
   end
 
   private
+    # Works on the stored row: the loaded transaction may predate the sync
+    # that wrote the mark.
+    def clear_auto_excluded_pending_mark
+      return unless entryable_type == "Transaction" && entryable_id
+
+      Transaction.where(id: entryable_id).where("transactions.extra ->> ? IS NOT NULL", AUTO_EXCLUDED_PENDING_KEY)
+        .update_all([ "extra = extra - ?::text", AUTO_EXCLUDED_PENDING_KEY ])
+
+      if association(:entryable).loaded? && entryable.extra&.key?(AUTO_EXCLUDED_PENDING_KEY)
+        entryable.extra = entryable.extra.except(AUTO_EXCLUDED_PENDING_KEY)
+      end
+    end
+
     # Takes FOR UPDATE on the transaction row, then on this entry (lock! also reloads both), always
     # in that order so the split methods can't deadlock each other. Yields the transaction, or nil
     # for other entryables.
