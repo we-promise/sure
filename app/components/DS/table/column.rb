@@ -8,6 +8,7 @@ class DS::Table::Column < DesignSystemComponent
   # @param header [String] the column heading
   # @param cell [Proc] renders the cell for a row, given the row and its index
   # @param sticky [Boolean] set by the table when its header row is sticky
+  # @param inset [Boolean] set by the table when it sits in an inset frame
   # @param align [Symbol] :left (default) or :right, for the header and the cells
   # @param numeric [Boolean] a column of figures: right-aligned, tabular digits,
   #   never wrapped mid-number. Implies align: :right.
@@ -15,15 +16,19 @@ class DS::Table::Column < DesignSystemComponent
   #   column that names each row
   # @param class [String, nil] extra classes for the body cells, e.g. "text-secondary"
   #   or "privacy-sensitive"
-  def initialize(header, cell:, sticky: false, align: :left, numeric: false, row_header: false, class: nil)
+  # @param aria_sort [String, nil] "ascending" or "descending" on the column the
+  #   rows are sorted by; nil (the default) leaves the attribute off
+  def initialize(header, cell:, sticky: false, inset: false, align: :left, numeric: false, row_header: false, class: nil, aria_sort: nil)
     @header = header
     @cell = cell
     @sticky = sticky
+    @inset = inset
     @numeric = numeric
     # to_s first so a nil or unrecognized value falls back instead of raising.
     candidate = align.to_s.to_sym
     @align = numeric ? :right : (ALIGNS.include?(candidate) ? candidate : :left)
     @row_header = row_header
+    @aria_sort = aria_sort
     @cell_class = binding.local_variable_get(:class)
   end
 
@@ -31,12 +36,13 @@ class DS::Table::Column < DesignSystemComponent
   # the one job a line is good at, separating the labels from the data; the
   # rows use the subdued rule between them.
   def call
-    tag.th header, scope: "col", class: class_names(
+    tag.th header, scope: "col", aria: { sort: @aria_sort }.compact, class: class_names(
       "px-4 py-3 border-b border-divider text-xs uppercase font-medium text-secondary",
       alignment_classes,
       # z-10 so a privacy-blurred amount, which paints in a layer of its own,
       # doesn't show through the header as it scrolls under it.
-      ("sticky top-0 z-10 bg-container" if @sticky)
+      ("sticky top-0 z-10" if @sticky),
+      @inset ? "bg-container-inset" : ("bg-container" if @sticky)
     )
   end
 

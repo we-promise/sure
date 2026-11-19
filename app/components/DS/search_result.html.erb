@@ -1,0 +1,7 @@
+<%= link_to href, class: container_classes, **container_opts do %>
+  <span data-slot="icon" class="flex shrink-0"><%= helpers.icon(icon) if icon %></span>
+  <span class="min-w-0">
+    <span data-slot="title" class="block text-primary font-medium truncate"><%= title %></span>
+    <span data-slot="subtitle" class="block text-secondary text-xs truncate"><%= subtitle %></span>
+  </span>
+<% end %>

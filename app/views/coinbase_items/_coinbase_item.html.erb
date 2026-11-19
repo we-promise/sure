@@ -78,6 +78,7 @@
             <% end %>
 
             <%= render DS::Menu.new do |menu| %>
+              <% sync_schedule_menu_item(menu, coinbase_item) %>
               <% if unlinked_count.to_i > 0 %>
                 <% menu.with_item(
                   variant: "link",

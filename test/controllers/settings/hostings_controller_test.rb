@@ -19,6 +19,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:chimnie).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:terrascoutx).returns(nil)
     @provider.stubs(:usage).returns(provider_success_response(
       OpenStruct.new(
         used: 10,
@@ -32,7 +33,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key terrascoutx_api_key demo_family_refresh_enabled demo_family_refresh_family_id
        market_data_sync_enabled market_data_sync_time market_data_sync_timezone].each do |key|
       Setting.public_send("#{key}=", nil)
     end
@@ -118,6 +119,37 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
       get settings_hosting_url
       refute_includes response.body, I18n.t("settings.hostings.show.instance_settings_restricted")
+    end
+  end
+
+  test "demo households preserve the real admin's provider controls but cannot use them" do
+    with_self_hosting do
+      real_admin = users(:empty)
+      Family.where.not(id: real_admin.family_id).each do |demo_family|
+        demo_family.start_subscription!(Subscription::DEMO_STRIPE_ID)
+      end
+      users(:family_admin).update!(role: :admin)
+      sign_in real_admin
+
+      get settings_hosting_url
+      assert_response :success
+      assert_select "input[name='setting[securities_providers][]']"
+      refute_includes response.body, I18n.t("settings.hostings.show.instance_settings_restricted")
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "real-owner-key" } }
+      assert_redirected_to settings_hosting_url
+      assert_equal "real-owner-key", Setting.twelve_data_api_key
+
+      sign_in users(:family_admin)
+      get settings_hosting_url
+      assert_response :success
+      assert_select "input[name='setting[securities_providers][]']", count: 0
+      assert_includes response.body, I18n.t("settings.hostings.show.instance_settings_restricted")
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "demo-key" } }
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+      assert_equal "real-owner-key", Setting.twelve_data_api_key
     end
   end
 
@@ -292,6 +324,55 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { chimnie_api_key: "chimnie-token" } }
 
       assert_equal "chimnie-token", Setting.chimnie_api_key
+    end
+  end
+
+  test "clear cache texts promise reloaded market data only when a provider is configured" do
+    with_self_hosting do
+      ExchangeRate.stubs(:provider).returns(@provider)
+      get settings_hosting_url
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+
+      ExchangeRate.stubs(:provider).returns(nil)
+      Security.stubs(:provider).returns(nil)
+      get settings_hosting_url
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning_without_provider"))
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.confirm_clear_cache.body_without_provider"))
+      assert_not_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+    end
+  end
+
+  test "shows the clear cache text without provider when no exchange rate provider is set" do
+    Setting.stubs(:exchange_rate_provider).returns(nil)
+    Security.stubs(:provider).returns(nil)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning_without_provider"))
+      end
+    end
+  end
+
+  test "an unknown exchange rate provider does not hide a configured security provider" do
+    ExchangeRate.stubs(:provider).raises(Provider::Registry::Error, "Provider 'nope' not found")
+    Security.stubs(:provider).returns(@provider)
+
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+    end
+  end
+
+  test "can update terrascoutx api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { terrascoutx_api_key: "terrascoutx-token" } }
+
+      assert_equal "terrascoutx-token", Setting.terrascoutx_api_key
     end
   end
 
@@ -847,6 +928,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     exchange_rate = exchange_rates(:one)
     security_price = holding.security.prices.first
     account_balance = account.balances.create!(date: Date.current, balance: 1000, currency: "USD")
+    Family::MarketDataRefresher.any_instance.expects(:refresh)
 
     with_self_hosting do
       perform_enqueued_jobs(only: DataCacheClearJob) do
@@ -857,10 +939,80 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_hosting_url
     assert_equal I18n.t("settings.hostings.clear_cache.cache_cleared"), flash[:notice]
 
-    assert_not ExchangeRate.exists?(exchange_rate.id)
-    assert_not Security::Price.exists?(security_price.id)
+    # Market data is shared with other families, so it is refreshed rather than deleted
+    assert ExchangeRate.exists?(exchange_rate.id)
+    assert Security::Price.exists?(security_price.id)
     assert_not Holding.exists?(holding.id)
     assert_not Balance.exists?(account_balance.id)
+  end
+
+  test "super admin can reset market data for the whole instance" do
+    sign_in users(:sure_support_staff)
+    MarketDataResetJob.stubs(:guard_key).returns("market_data_reset_job:test:#{SecureRandom.hex(8)}")
+
+    with_self_hosting do
+      assert_enqueued_with(job: MarketDataResetJob) do
+        delete reset_market_data_settings_hosting_url
+      end
+    end
+
+    assert_redirected_to settings_hosting_url
+    assert_equal I18n.t("settings.hostings.reset_market_data.market_data_reset"), flash[:notice]
+  ensure
+    Sidekiq.redis { |conn| conn.call("DEL", MarketDataResetJob.guard_key) }
+  end
+
+  test "a second market data reset is not queued while one is pending" do
+    sign_in users(:sure_support_staff)
+    MarketDataResetJob.stubs(:enqueue_once).returns(:already_queued)
+
+    with_self_hosting do
+      delete reset_market_data_settings_hosting_url
+    end
+
+    assert_redirected_to settings_hosting_url
+    assert_equal I18n.t("settings.hostings.reset_market_data.market_data_reset_already_queued"), flash[:notice]
+  end
+
+  test "a market data reset that cannot be queued says so" do
+    sign_in users(:sure_support_staff)
+    MarketDataResetJob.stubs(:enqueue_once).returns(:failed)
+
+    with_self_hosting do
+      delete reset_market_data_settings_hosting_url
+    end
+
+    assert_redirected_to settings_hosting_url
+    assert_equal I18n.t("settings.hostings.reset_market_data.market_data_reset_failed"), flash[:alert]
+  end
+
+  test "family admin cannot reset market data for the whole instance" do
+    users(:family_admin).update!(role: :admin)
+
+    with_self_hosting do
+      assert_no_enqueued_jobs only: MarketDataResetJob do
+        delete reset_market_data_settings_hosting_url
+      end
+    end
+
+    assert_redirected_to settings_hosting_url
+    assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+  end
+
+  test "only super admins see the market data reset" do
+    users(:family_admin).update!(role: :admin)
+
+    with_self_hosting do
+      get settings_hosting_url
+      assert_response :success
+      assert_select "form[action='#{reset_market_data_settings_hosting_path}']", count: 0
+      assert_select "form[action='#{clear_cache_settings_hosting_path}']", count: 1
+
+      sign_in users(:sure_support_staff)
+      get settings_hosting_url
+      assert_response :success
+      assert_select "form[action='#{reset_market_data_settings_hosting_path}']", count: 1
+    end
   end
 
   test "can update assistant type to external" do
@@ -1440,32 +1592,35 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.tinkoff_invest_api_key = nil
   end
 
+  # The cron job lives under one global key in the shared Redis, so these
+  # tests stub Sidekiq::Cron instead: parallel workers creating and deleting
+  # the real job made them fail at random.
   test "can update market data sync settings when self hosting is enabled" do
     with_self_hosting do
+      Sidekiq::Cron::Job.expects(:create)
+        .with(has_entries(name: MarketDataScheduler::JOB_NAME, class: "ImportMarketDataJob", cron: regexp_matches(/\A30 18 /)))
+        .returns(OpenStruct.new(valid?: true))
+
       patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1", market_data_sync_time: "18:30" } }
 
       assert_redirected_to settings_hosting_url
       assert Setting.market_data_sync_enabled
       assert_equal "18:30", Setting.market_data_sync_time
-
-      job = Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
-      assert job, "Expected the market data cron job to be (re)created"
-      assert_equal "ImportMarketDataJob", job.klass
     end
-  ensure
-    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
   end
 
   test "disabling market data sync removes its cron job" do
     with_self_hosting do
+      Sidekiq::Cron::Job.expects(:create)
+        .with(has_entries(name: MarketDataScheduler::JOB_NAME))
+        .returns(OpenStruct.new(valid?: true))
       patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1" } }
-      assert Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
 
+      job = mock("cron job")
+      job.expects(:destroy)
+      Sidekiq::Cron::Job.expects(:find).with(MarketDataScheduler::JOB_NAME).returns(job)
       patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "0" } }
-      refute Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
     end
-  ensure
-    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
   end
 
   test "rejects an invalid market data sync time" do
@@ -1482,14 +1637,13 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   test "still applies market_data_sync_enabled when market_data_sync_time in the same request is invalid" do
     with_self_hosting do
       Setting.market_data_sync_enabled = false
+      Sidekiq::Cron::Job.stubs(:create).returns(OpenStruct.new(valid?: true))
 
       patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1", market_data_sync_time: "not-a-time" } }
 
       assert_redirected_to settings_hosting_path
       assert Setting.market_data_sync_enabled, "enabled flag from the same submission should not be dropped by the invalid time"
     end
-  ensure
-    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
   end
 
   test "logs a failed market data schedule sync to the debug log" do

@@ -10,6 +10,7 @@ class BinanceItem < ApplicationRecord
   if encryption_ready?
     encrypts :api_key, deterministic: true
     encrypts :api_secret
+    encrypts :raw_payload
   end
 
   validates :name, presence: true

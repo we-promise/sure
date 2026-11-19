@@ -14,6 +14,7 @@ else
     bills_nav_item,
     { name: t(".nav.reports"), path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
     plan_nav_item,
+    portfolio_nav_item,
     ({ name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true } if assistant_enabled)
   ].compact
 end %>
@@ -110,14 +111,16 @@ end %>
 
     <%# DESKTOP - Left sidebar %>
     <%= tag.div class: class_names(
-        "hidden lg:block relative py-4 shrink-0 transition-all duration-300 border-divider",
+        "hidden lg:block relative py-4 shrink-0 transition-[width] duration-300 border-divider",
         Current.user.show_sidebar? ? [expanded_sidebar_class, "border-r"] : [collapsed_sidebar_class, "border-r-0"],
        ),
        style: "max-width: var(--left-sidebar-width, 320px)",
        inert: !Current.user.show_sidebar?,
        data: { app_layout_target: "leftSidebar", sidebar_resize_target: "leftSidebar" } do %>
       <%= render "layouts/shared/sidebar_resize_handle", side: "left" %>
-      <div id="sidebar-scroll" data-controller="preserve-scroll" class="px-4 h-full flex flex-col overflow-y-auto">
+      <%# The scrollbar's space is kept even while the list fits, so opening or
+          closing account groups doesn't narrow and widen the sidebar. %>
+      <div id="sidebar-scroll" data-controller="preserve-scroll" class="px-4 h-full flex flex-col overflow-y-auto [scrollbar-gutter:stable]">
         <% if content_for?(:sidebar) %>
           <%= yield :sidebar %>
         <% else %>
@@ -196,7 +199,7 @@ end %>
     <% if assistant_enabled %>
       <%# DESKTOP - Right sidebar %>
       <%= tag.div class: class_names(
-            "hidden lg:block relative h-full shrink-0 transition-all duration-300 border-divider",
+            "hidden lg:block relative h-full shrink-0 transition-[width] duration-300 border-divider",
             Current.user.show_ai_sidebar? ? [expanded_sidebar_class, "border-l"] : [collapsed_sidebar_class, "border-l-0"],
           ),
           style: "max-width: var(--right-sidebar-width, 400px)",
@@ -224,7 +227,7 @@ end %>
     <%# MOBILE - Bottom Nav %>
     <%= tag.nav class: "lg:hidden fixed bottom-0 left-0 right-0 bg-surface z-10 border-t border-tertiary flex justify-around pb-[env(safe-area-inset-bottom)]",
       data: { viewport_target: "bottomNav" } do %>
-      <% mobile_nav_items.each do |nav_item| %>
+      <% mobile_nav_items.reject { |item| item[:desktop_only] }.each do |nav_item| %>
         <%= render "layouts/shared/nav_item", **nav_item %>
       <% end %>
     <% end %>

@@ -1,0 +1,23 @@
+---
+de:
+  rule_groups:
+    new:
+      title: Neue Regelgruppe
+    edit:
+      title: Gruppe „%{name}“ umbenennen
+    form:
+      name_label: Name
+      name_placeholder: z. B. Lebensmittel
+      hint: Gruppen ordnen nur die Regelliste. Die Regeln laufen weiter von oben nach unten.
+    create:
+      success: Gruppe angelegt
+    update:
+      success: Gruppe umbenannt
+    destroy:
+      success: Gruppe gelöscht. Ihre Regeln bleiben ohne Gruppe an ihrer Stelle.
+    activation:
+      activated: Alle Regeln in „%{name}“ sind eingeschaltet
+      deactivated: Alle Regeln in „%{name}“ sind ausgeschaltet
+      partially_switched:
+        one: 1 Regel konnte nicht umgeschaltet werden. Öffne sie, um den Grund zu sehen.
+        other: "%{count} Regeln konnten nicht umgeschaltet werden. Öffne sie, um den Grund zu sehen."

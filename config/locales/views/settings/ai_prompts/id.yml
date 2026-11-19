@@ -1,0 +1,42 @@
+---
+id:
+  settings:
+    ai_prompts:
+      prompt_field:
+        provider_label: "Penyedia"
+        prompt_label: "Prompt"
+        provider_openai: "OpenAI"
+        provider_anthropic: "Anthropic"
+        reset: "Atur ulang ke default"
+        reset_confirm_title: "Atur ulang ke prompt default?"
+        reset_confirm_body: "Ini akan membuang prompt kustom Anda dan memulihkan instruksi default bawaan."
+        status_custom: "Menggunakan prompt kustom Anda"
+        status_default: "Menggunakan default bawaan"
+        format_risk: 'Prompt %{provider} Anda menghapus contoh {"%{key}": ...}. Setiap permintaan tetap meminta format tersebut, sehingga penguraian biasanya tetap berjalan, namun penyesuaian yang meminta format keluaran berbeda akan merusaknya.'
+      show:
+        page_title: "Prompt AI"
+        disable_ai: "Nonaktifkan Asisten AI"
+        save: "Simpan prompt"
+        save_confirm:
+          title: "Simpan prompt AI kustom?"
+          body: "Penyesuaian prompt kustom menggantikan instruksi sistem bawaan dan pengaman (seperti batasan saran keuangan) untuk keluarga Anda."
+          dont_show_again: "Jangan tampilkan peringatan ini lagi"
+          cancel: "Batal"
+          confirm: "Konfirmasi"
+        main_system_prompt:
+          title: "Prompt Sistem Utama"
+          subtitle: "Instruksi inti yang menentukan perilaku asisten AI di semua percakapan obrolan"
+          label: "Prompt sistem obrolan"
+        transaction_categorizer:
+          title: "Pengategori Transaksi"
+          subtitle: "AI mengkategorikan transaksi Anda secara otomatis berdasarkan kategori yang Anda tentukan"
+        merchant_detector:
+          title: "Pendeteksi Merchant"
+          subtitle: "AI mengidentifikasi dan melengkapi data transaksi dengan informasi merchant"
+        insight_dig_in:
+          title: "Telusuri Wawasan"
+          subtitle: "Pesan obrolan pertama saat Anda menelusuri wawasan bersama AI"
+          label: "Pesan penelusuran"
+      update:
+        success: "Prompt AI diperbarui"
+        multiple_errors: "Beberapa prompt terlalu panjang (maksimum %{count} karakter)"

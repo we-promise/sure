@@ -33,6 +33,9 @@ gem "lookbook", "2.3.11"
 
 gem "hotwire_combobox"
 
+# Standards-based browser push encryption and VAPID signing
+gem "web-push", "~> 3.1", require: "web_push"
+
 # Background Jobs
 gem "connection_pool", "~> 2.5" # pin to 2.x; 3.0 breaks sidekiq 8.x
 gem "sidekiq"
@@ -45,7 +48,7 @@ gem "rack-mini-profiler"
 gem "sentry-ruby"
 gem "sentry-rails"
 gem "sentry-sidekiq"
-gem "posthog-ruby"
+gem "posthog-rails", "~> 3.26.0", require: false
 gem "logtail-rails"
 if ENV["SKYLIGHT_ENABLED"] == "true"
   gem "skylight", group: :development, require: false
@@ -95,7 +98,7 @@ gem "rubyzip", "~> 3.4"
 gem "pdf-reader", "~> 2.12"
 
 # OpenID Connect, OAuth & SAML authentication
-gem "omniauth", "~> 2.1"
+gem "omniauth", "~> 2.2"
 gem "omniauth-rails_csrf_protection", ">= 2.0"
 gem "omniauth_openid_connect"
 gem "omniauth-google-oauth2"
@@ -109,6 +112,9 @@ gem "after_commit_everywhere", "~> 1.0"
 # AI
 gem "ruby-openai"
 gem "anthropic", "~> 1.0"
+# AI transports (app/models/ai/transport). RubyLLM's API changes between minor releases, so
+# Gemfile.lock holds the version the AI tests run against; a contract test checks the API Sure uses.
+gem "ruby_llm", "~> 2.1"
 gem "opentelemetry-sdk", "~> 1.13"
 gem "opentelemetry-exporter-otlp", "~> 0.36"
 
@@ -147,6 +153,8 @@ end
 group :test do
   gem "capybara"
   gem "selenium-webdriver"
+  gem "minitest", "~> 6.1"
+  gem "minitest-mock"
   gem "mocha"
   gem "vcr"
   gem "webmock"

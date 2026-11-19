@@ -185,6 +185,17 @@ class BillsController < ApplicationController
     # A pending suggestion is the one thing that changes what the drawer
     # should offer, so it is worth the one query.
     @drawer_suggestion = @current_occurrence&.allocations&.suggested&.first
+
+    # The summary's verb only reaches the cycle the drawer is scoped to. When
+    # that is the next open cycle, a past payment still needs a route in, so
+    # name the most recent settled cycle for the secondary action. Allocations
+    # are required: a paid row with none has nothing to unlink or review.
+    @latest_paid_occurrence = @series.recurring_occurrences
+                                     .paid
+                                     .where(id: RecurringAllocation.confirmed.select(:recurring_occurrence_id))
+                                     .order(due_on: :desc)
+                                     .first
+
     render :drawer, layout: false
   end
 
@@ -464,15 +475,9 @@ class BillsController < ApplicationController
     # payments alike). Inactive series ride along so their leftover open
     # occurrences can render as Dormant instead of haunting Past Due.
     def payable_series_ids
-      debt_accounts = Account.where(accountable_type: %w[CreditCard Loan]).select(:id)
-
       Current.family.recurring_transactions
              .where(status: %w[active inactive])
-             .where("amount > 0")
-             .merge(
-               RecurringTransaction.where(destination_account_id: nil)
-                                   .or(RecurringTransaction.where(destination_account_id: debt_accounts))
-             )
+             .obligations(%w[CreditCard Loan])
              .accessible_by(Current.user)
              .select(:id)
     end

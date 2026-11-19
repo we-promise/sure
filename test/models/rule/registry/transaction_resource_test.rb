@@ -7,8 +7,7 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
 
   test "auto categorization is available when Jev is the only categorization provider" do
     rule = build_rule(action_type: "auto_categorize")
-    @family.stubs(:resolved_categorization_provider).returns(Provider::Jev.allocate)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    use_ai_routes(categorize: %w[jev/jev-latest], detect_merchants: [])
 
     keys = rule.registry.action_executors.map(&:key)
 
@@ -19,8 +18,7 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
 
   test "existing auto categorization actions stay displayable when no provider is configured" do
     rule = build_rule(action_type: "auto_categorize")
-    @family.stubs(:resolved_categorization_provider).returns(nil)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    use_no_ai
 
     keys = rule.registry.action_executors.map(&:key)
 
@@ -30,8 +28,7 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
 
   test "new auto categorization actions are hidden when no provider is configured" do
     rule = build_rule(action_type: "exclude_transaction")
-    @family.stubs(:resolved_categorization_provider).returns(nil)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    use_no_ai
 
     keys = rule.registry.action_executors.map(&:key)
 
@@ -40,8 +37,7 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
 
   test "auto merchant detection is available when an LLM provider is configured" do
     rule = build_rule(action_type: "exclude_transaction")
-    @family.stubs(:resolved_categorization_provider).returns(nil)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(Provider::Anthropic.allocate)
+    use_ai_routes(categorize: [])
 
     keys = rule.registry.action_executors.map(&:key)
 
@@ -51,8 +47,7 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
 
   test "the matcher and Bayes are offered without any provider" do
     rule = build_rule(action_type: "exclude_transaction")
-    @family.stubs(:resolved_categorization_provider).returns(nil)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    use_no_ai
 
     keys = rule.registry.action_executors.map(&:key)
 
@@ -62,8 +57,7 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
 
   test "get_executor! refuses an auto action that is not offered" do
     rule = build_rule(action_type: "exclude_transaction")
-    @family.stubs(:resolved_categorization_provider).returns(nil)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    use_no_ai
 
     assert_raises(Rule::Registry::UnsupportedActionError) { rule.registry.get_executor!("auto_categorize") }
     assert_raises(Rule::Registry::UnsupportedActionError) { rule.registry.get_executor!("unknown") }
@@ -80,17 +74,16 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
     assert_raises(Rule::Registry::UnsupportedConditionError) { rule.registry.get_filter!("unknown") }
   end
 
-  test "looking up an ordinary action does not check the AI providers" do
+  test "looking up an ordinary action does not ask the router" do
     rule = build_rule(action_type: "exclude_transaction")
-    @family.expects(:resolved_categorization_provider).never
-    Provider::Registry.expects(:preferred_llm_provider).never
+    Ai.expects(:available?).never
 
     assert_instance_of Rule::ActionExecutor::ExcludeTransaction, rule.actions.first.executor
   end
 
-  test "an existing auto action is looked up without checking the providers" do
+  test "an existing auto action is looked up without asking the router" do
     rule = build_rule(action_type: "auto_categorize")
-    @family.expects(:resolved_categorization_provider).never
+    Ai.expects(:available?).never
 
     assert_instance_of Rule::ActionExecutor::AutoCategorize, rule.actions.first.executor
   end

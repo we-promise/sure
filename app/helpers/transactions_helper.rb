@@ -2,10 +2,12 @@ module TransactionsHelper
   # @param exclude [Array<String>] filter keys to leave out (e.g. the account
   #   tab doesn't apply to the account activity feed, which is already scoped
   #   to one account)
+  # @param balance_updates [Boolean] offer the filter that shows a linked
+  #   account's synced balance updates (account activity feed only)
   # @return [Array<Hash>] the filters offered above the transaction list, each
   #   with the key its partial is named for, a translated label and an icon
-  def transaction_search_filters(exclude: [])
-    [
+  def transaction_search_filters(exclude: [], balance_updates: false)
+    filters = [
       { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },
       { key: "date_filter", label: t("transactions.search.filters.date"), icon: "calendar" },
       { key: "type_filter", label: t("transactions.search.filters.type"), icon: "tag" },
@@ -16,7 +18,25 @@ module TransactionsHelper
       { key: "merchant_filter", label: t("transactions.search.filters.merchant"), icon: "store" },
       { key: "ai_filter", label: t("transactions.search.filters.ai"), icon: "sparkles" },
       { key: "attachment_filter", label: t("transactions.search.filters.attachment"), icon: "paperclip" }
-    ].reject { |filter| exclude.include?(filter[:key]) }
+    ]
+
+    if manual_reconciliation_filter_available?
+      filters.insert(4, { key: "reconcile_status_filter", label: t("transactions.search.filters.reconcile_status"), icon: "check-circle" })
+    end
+
+    if balance_updates
+      filters << { key: "balance_updates_filter", label: t("transactions.search.filters.balance_updates"), icon: "scale" }
+    end
+
+    filters.reject { |filter| exclude.include?(filter[:key]) }
+  end
+
+  # Whether the reconciliation filter is worth offering. The setting alone is
+  # not enough: the filter only matches manual accounts, so it would return an
+  # empty list for a user with no accessible manual account.
+  def manual_reconciliation_filter_available?
+    Current.family&.manual_reconciliation? &&
+      (Current.user ? Current.user.accessible_accounts.manual.exists? : Current.family.accounts.manual.exists?)
   end
 
   # @param label [String] a stored investment_activity_label such as "Sweep In"
@@ -59,6 +79,30 @@ module TransactionsHelper
   # @return [Boolean] whether to render this entry inside its split group
   def in_split_group?(entry, params_grouped)
     entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
+  end
+
+  # Single source of truth for how each reconciled_status renders — used by
+  # both the transaction row/detail badge (_reconcile_badge.html.erb) and the
+  # bulk-reconcile selection-bar menu (_selection_bar.html.erb), so the two
+  # can't silently drift out of sync.
+  RECONCILE_STATUS_PRESENTATION = {
+    "unreconciled" => { tone: :neutral, icon: "circle", text_class: "text-secondary" },
+    "cleared" => { tone: :warning, icon: "circle-dot", text_class: "text-warning" },
+    "reconciled" => { tone: :success, icon: "check-circle", text_class: "text-success" }
+  }.freeze
+
+  def reconcile_status_tone(status)
+    RECONCILE_STATUS_PRESENTATION.fetch(status, RECONCILE_STATUS_PRESENTATION["unreconciled"])[:tone]
+  end
+
+  def reconcile_status_icon(status)
+    RECONCILE_STATUS_PRESENTATION.fetch(status, RECONCILE_STATUS_PRESENTATION["unreconciled"])[:icon]
+  end
+
+  # Foreground token for the compact, icon-only indicator rendered in the
+  # transaction list row, where there is no room for a labelled pill.
+  def reconcile_status_text_class(status)
+    RECONCILE_STATUS_PRESENTATION.fetch(status, RECONCILE_STATUS_PRESENTATION["unreconciled"])[:text_class]
   end
 
   # Files whose content shapes a cached transaction row; see
@@ -123,7 +167,12 @@ module TransactionsHelper
       view_ctx,
       in_split_group,
       split_parent,
+      # The "Transfer?" hint is drawn inside the cached row.
+      @transfer_hint_transaction_ids&.include?(transaction.id) || false,
       can_annotate_account?(entry.account),
+      Current.family&.manual_reconciliation?,
+      can_reconcile_account?(entry.account),
+      (manual_account?(entry.account) if transfer.present?),
       counterpart.present? && @accessible_account_ids&.include?(counterpart.id),
       Setting.brand_fetch_logo_size,
       Setting.brand_fetch_client_id.presence&.then { |id| Digest::SHA256.hexdigest(id) },
@@ -166,6 +215,44 @@ module TransactionsHelper
 
     @annotatable_account_ids ||= Account.annotatable_by(Current.user).pluck(:id).to_set
     @annotatable_account_ids.include?(account.id)
+  end
+
+  # Whether the current user may cycle the manual reconciliation status.
+  # TransactionsController#reconcile requires write access (see
+  # require_account_permission! in AccountAuthorizable), so the badge must
+  # only be offered on accounts the user owns or holds full_control on --
+  # otherwise the click is rejected and the status never advances. Matches
+  # the "write" predicate rather than the annotate one, since reconciling is
+  # not an annotation. Memoized per request so list rows don't query per row.
+  def can_reconcile_account?(account)
+    return false unless Current.user
+
+    @reconcilable_account_ids ||= Account.writable_by(Current.user).pluck(:id).to_set
+    @reconcilable_account_ids.include?(account.id)
+  end
+
+  # Memoized per request so reading the row cache key does not run one
+  # account-provider query per transfer row.
+  def manual_account?(account)
+    return false unless account
+
+    @manual_account_cache ||= {}
+    @manual_account_cache.fetch(account.id) do
+      @manual_account_cache[account.id] = account.manual?
+    end
+  end
+
+  # A matched transfer cannot be bulk edited like a normal entry: its date,
+  # category and merchant belong to the pair or to the outflow leg. The
+  # checkbox is offered only where manual reconciliation is available, and
+  # Edit then exposes the safe fields (name, notes, tags, reconciliation).
+  def bulk_reconcilable_transfer?(entry)
+    transaction = entry.entryable
+
+    transaction&.transfer.present? &&
+      Current.family&.manual_reconciliation? &&
+      manual_account?(entry.account) &&
+      can_reconcile_account?(entry.account)
   end
 
   # The dashboard drill-down filters by account id, so its filter chips name
@@ -368,5 +455,14 @@ module TransactionsHelper
     JSON.pretty_generate(value)
   rescue StandardError
     value.to_s
+  end
+
+  # A pending transfer match as the viewer may see it from `transaction`'s
+  # row. The accounts and transactions pages set @accessible_account_ids;
+  # a view that does not, such as the turbo stream that redraws a match,
+  # looks the viewer's accessible accounts up once per request.
+  def pending_transfer_match(transaction)
+    @transfer_match_visible_account_ids ||= (@accessible_account_ids || accessible_accounts.pluck(:id)).to_set
+    Transfer::PendingMatch.new(transaction, visible_account_ids: @transfer_match_visible_account_ids)
   end
 end

@@ -43,6 +43,9 @@
             <%= t("bills.detail.rule_learned_tolerance", percent: number_to_percentage(hints[:learned_pct], precision: 1, format: "%n%")) %>
           </p>
         <% end %>
+        <% if series.one_off? %>
+          <p class="text-xs text-secondary"><%= t("bills.detail.once_kind_hint") %></p>
+        <% end %>
       </div>
 
       <%# What it has actually cost: the shape over twelve months, then the figures. %>
@@ -54,7 +57,7 @@
 
         <div class="px-3 py-3 space-y-2">
           <% if analytics %>
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid <%= series.one_off? ? "grid-cols-2" : "grid-cols-3" %> gap-2">
               <div>
                 <p class="text-xs text-secondary"><%= t("bills.detail.average") %></p>
                 <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(analytics[:average]) %></p>
@@ -62,10 +65,12 @@
                   <%= t("bills.detail.range", min: format_money(analytics[:lowest]), max: format_money(analytics[:highest])) %>
                 </p>
               </div>
-              <div>
-                <p class="text-xs text-secondary"><%= t("bills.detail.annualized") %></p>
-                <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(analytics[:annualized]) %></p>
-              </div>
+              <% unless series.one_off? %>
+                <div>
+                  <p class="text-xs text-secondary"><%= t("bills.detail.annualized") %></p>
+                  <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(analytics[:annualized]) %></p>
+                </div>
+              <% end %>
               <div>
                 <p class="text-xs text-secondary"><%= t("bills.detail.ytd") %></p>
                 <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(analytics[:ytd]) %></p>
@@ -144,13 +149,16 @@
 
   <%# Settled cycles with what paid them: "did I pay it that month" and "which
       transaction paid it" in one list, rather than a cycle list and a payment
-      list that mostly repeat each other. %>
+      list that mostly repeat each other. Every row opens its cycle's payment
+      drawer, which is the only place a payment can be unlinked. %>
   <% if history.any? %>
     <%= render DS::Disclosure.new(title: t("bills.detail.history")) do %>
       <div class="bg-container-inset rounded-lg divide-y divide-subdued">
         <% history.each do |occurrence| %>
           <% payments = occurrence.allocations.select(&:allocation_confirmed?) %>
-          <div class="flex items-center justify-between gap-3 px-3 py-2">
+          <%= link_to recurring_occurrence_path(occurrence),
+                data: { turbo_frame: :drawer, turbo_prefetch: false },
+                class: "flex items-center justify-between gap-3 px-3 py-2 hover:bg-surface-hover focus-ring -outline-offset-2" do %>
             <div class="min-w-0">
               <p class="text-sm text-primary"><%= l(occurrence.due_on, format: :long) %></p>
               <p class="text-xs text-secondary truncate">
@@ -162,10 +170,13 @@
                 <% end %>
               </p>
             </div>
-            <p class="text-sm text-primary privacy-sensitive shrink-0">
-              <%= format_money(occurrence.confirmed_allocated_money) %>
-            </p>
-          </div>
+            <span class="flex items-center gap-1.5 shrink-0">
+              <span class="text-sm text-primary privacy-sensitive">
+                <%= format_money(occurrence.confirmed_allocated_money) %>
+              </span>
+              <%= icon("chevron-right", size: "sm", class: "text-subdued") %>
+            </span>
+          <% end %>
         <% end %>
       </div>
     <% end %>

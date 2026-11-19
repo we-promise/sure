@@ -182,7 +182,9 @@
             <%# A monthly bill's monthly equivalent is its own amount, so the
                 second line said "$5.99" under "$5.99". It only carries
                 information for the other cadences. %>
-            <% if monthly != amount %>
+            <%# A one-off's monthly equivalent is zero, which would read as
+                "$0/mo" under the real amount. %>
+            <% if !series.one_off? && monthly != amount %>
               <p class="text-xs text-secondary"><%= t(".monthly_equivalent", amount: format_money(monthly)) %></p>
             <% end %>
           <% end %>
