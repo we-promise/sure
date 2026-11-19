@@ -40,15 +40,15 @@ class Security::Price::Importer
     # than backfilled from a future price.
     advanced_first_price_on = nil
 
-    if prev_price_value.blank?
-      # Filter for valid rows BEFORE picking the earliest — otherwise a
-      # single listing-day / halt-day row with a nil or zero price would
-      # cause us to fall through to the MissingStartPriceError bail even
-      # when plenty of valid prices exist later in the window.
-      earliest_provider_price = provider_prices.values
-        .select { |p| p.price.present? && p.price.to_f > 0 }
-        .min_by(&:date)
+    # Filter for valid rows BEFORE picking the earliest — otherwise a
+    # single listing-day / halt-day row with a nil or zero price would
+    # cause us to fall through to the MissingStartPriceError bail even
+    # when plenty of valid prices exist later in the window.
+    earliest_provider_price = provider_prices.values
+      .select { |p| p.price.present? && p.price.to_f > 0 }
+      .min_by(&:date)
 
+    if prev_price_value.blank?
       if earliest_provider_price
         Rails.logger.info(
           "#{security.ticker}: no provider price on or before #{start_date}; " \
@@ -87,7 +87,11 @@ class Security::Price::Importer
       is_provisional = db_price&.provisional
 
       # Choose price and currency from the same source to avoid mismatches
-      chosen_price, chosen_currency = if clear_cache || is_provisional
+      # A cache clear replaces only the stored prices the provider covers;
+      # stored history before its first price is kept.
+      replace_db_price = clear_cache && earliest_provider_price.present? && date >= earliest_provider_price.date
+
+      chosen_price, chosen_currency = if replace_db_price || is_provisional
         # For provisional/cache clear: only use provider price, let gap-fill handle missing
         # This ensures stale DB values don't persist when provider has no weekend data
         [ provider_price_value, provider_currency ]
