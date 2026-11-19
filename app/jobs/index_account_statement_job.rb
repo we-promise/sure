@@ -8,8 +8,14 @@ class IndexAccountStatementJob < ApplicationJob
   def perform(statement_id, uploader_id = nil)
     statement = AccountStatement.find_by(id: statement_id)
     return unless statement
-    return if uploader_id && !User.find_by(id: uploader_id)&.ai_enabled?
-    return unless Ai.available?(:embed, family: statement.family)
+
+    family = statement.family
+    uploader = User.find_by(id: uploader_id) if uploader_id.present?
+    return if uploader_id.present? && !statement.ai_indexing_allowed?(uploader)
+    return unless Ai.available?(:embed, family:)
+    # A job with no recorded uploader can't re-check their switch; with nobody in the family still
+    # opted in, sending the statement to a provider would ignore a later "AI off".
+    return if uploader.nil? && family.users.none?(&:ai_enabled?)
 
     return if statement.index_in_vector_store!
     return if statement.indexed_in_vector_store?

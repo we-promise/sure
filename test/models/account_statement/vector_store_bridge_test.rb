@@ -359,4 +359,27 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
   test "the job tolerates a statement deleted before it runs" do
     assert_nothing_raised { IndexAccountStatementJob.new.perform(SecureRandom.uuid) }
   end
+
+  test "a legacy job without an uploader does not index once AI is off for the family" do
+    statement = build_statement
+    statement.save!
+    User.any_instance.stubs(:ai_enabled?).returns(false)
+    Family.any_instance.expects(:upload_document).never
+
+    IndexAccountStatementJob.perform_now(statement.id)
+
+    assert_not statement.indexed_in_vector_store?, "a skipped upload must leave the row visibly non-indexed"
+  end
+
+  test "the job re-checks the uploader's switch before it uploads" do
+    statement = build_statement
+    statement.save!
+    uploader = users(:family_admin)
+    uploader.update!(ai_enabled: false)
+    Family.any_instance.expects(:upload_document).never
+
+    IndexAccountStatementJob.perform_now(statement.id, uploader.id)
+
+    assert_not statement.indexed_in_vector_store?
+  end
 end

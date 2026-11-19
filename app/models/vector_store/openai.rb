@@ -8,6 +8,14 @@
 # - Removing a file, or the store, deletes it from the Files API too, where it would otherwise
 #   stay after the document or the family is gone.
 class VectorStore::Openai < VectorStore::Base
+  # The backend that accepted a document can differ from the one configured now. Callers that
+  # must reach the original store (an indexing poll, deleting a family's store) use this instead
+  # of the global adapter.
+  def self.from_config
+    endpoint = Ai::Config.current.routes_for(:embed).map(&:endpoint).find(&:vector_store?)
+    new(endpoint:) if endpoint&.api_key
+  end
+
   def initialize(endpoint:)
     @client = Ai::Transport::Http.openai_client(endpoint)
   end
@@ -21,7 +29,22 @@ class VectorStore::Openai < VectorStore::Base
 
   def delete_store(store_id:)
     with_response do
-      file_ids(store_id).each { |file_id| delete_file(file_id) }
+      # Try every file, but keep the store (and its attachments) when any deletion fails so a
+      # retry can still find the file ids and finish the cleanup.
+      failed = file_ids(store_id).reject do |file_id|
+        begin
+          delete_file(file_id)
+          true
+        rescue StandardError => e
+          Rails.logger.warn("[VectorStore::Openai] couldn't delete file #{file_id}: #{e.class}")
+          false
+        end
+      end
+
+      if failed.any?
+        raise VectorStore::Error, "couldn't delete #{failed.size} file(s) from store #{store_id}: #{failed.first(20).join(', ')}"
+      end
+
       client.vector_stores.delete(id: store_id)
     end
   end
@@ -37,7 +60,7 @@ class VectorStore::Openai < VectorStore::Base
       begin
         client.vector_store_files.create(vector_store_id: store_id, parameters: { file_id: file_id })
       rescue => e
-        delete_file(file_id)
+        delete_file(file_id) rescue nil
         raise e
       end
 
@@ -60,7 +83,7 @@ class VectorStore::Openai < VectorStore::Base
 
   def remove_file(store_id:, file_id:)
     with_response do
-      client.vector_store_files.delete(vector_store_id: store_id, id: file_id)
+      detach_file(store_id, file_id)
       delete_file(file_id)
     end
   end
@@ -101,13 +124,19 @@ class VectorStore::Openai < VectorStore::Base
       ids
     end
 
-    # A file already gone is fine; anything else is logged and left, so the rest still go.
+    # A retry can find the file already detached (the first attempt failed in the Files API).
+    def detach_file(store_id, file_id)
+      client.vector_store_files.delete(vector_store_id: store_id, id: file_id)
+    rescue Faraday::ResourceNotFound
+      nil
+    end
+
+    # A file already gone is success. Every other failure must reach the caller: otherwise a
+    # document row is destroyed (or a store deleted) while its file is still in the Files API.
     def delete_file(file_id)
       client.files.delete(id: file_id)
     rescue Faraday::ResourceNotFound
       nil
-    rescue => e
-      Rails.logger.warn("[VectorStore::Openai] couldn't delete file #{file_id}: #{e.class}")
     end
 
     # 200 characters at most, the extension kept: OpenAI tells a file's type by it.

@@ -2,11 +2,16 @@ module Family::VectorSearchable
   extend ActiveSupport::Concern
 
   included do
+    # Remember which backend created the store before the dependent destroy removes the documents
+    # that recorded it; the store itself is deleted only after the family deletion commits.
+    before_destroy :remember_vector_store_backend
     has_many :family_documents, dependent: :destroy
-    # The store and its files go with the family: on OpenAI they would otherwise stay in the
-    # Files API. Only once the deletion commits: a rolled-back one keeps the family and its store.
     after_destroy_commit :delete_vector_store
   end
+
+  # Ask for more candidates than we will show: a withheld hit must not use up the caller's limit.
+  SEARCH_CANDIDATE_FACTOR = 3
+  SEARCH_CANDIDATE_LIMIT = 50
 
   def ensure_vector_store!
     return vector_store_id if vector_store_id.present?
@@ -18,6 +23,7 @@ module Family::VectorSearchable
     return nil unless response.success?
 
     if update(vector_store_id: response.data[:id])
+      @vector_store_backend = VectorStore.backend_name(adapter)
       vector_store_id
     else
       adapter.delete_store(store_id: response.data[:id]) rescue nil
@@ -36,52 +42,37 @@ module Family::VectorSearchable
     response = adapter.search(
       store_id: vector_store_id,
       query: query,
-      max_results: max_results,
+      max_results: [ SEARCH_CANDIDATE_FACTOR * max_results, SEARCH_CANDIDATE_LIMIT ].min,
       family: self,
       user: user
     )
 
     return [] unless response.success?
 
-    user ? readable_documents(response.data, user) : tracked_documents(response.data)
+    hits = user ? readable_documents(response.data, user, max_results:) : tracked_documents(response.data, max_results:)
+    hits.first(max_results)
   end
 
-  def readable_documents(results, user)
+  def readable_documents(results, user, max_results: nil)
     file_ids = results.filter_map { |result| result[:file_id] }.uniq
     return results if file_ids.empty?
 
-    # FamilyDocument#readable_by decides what's withheld. A hit with no row is withheld too, and
-    # logged: the store holds a file Sure has lost track of, and no row says who may read it.
-    withheld = family_documents.where(provider_file_id: file_ids)
-                               .where.not(id: family_documents.readable_by(user).select(:id))
-                               .pluck(:provider_file_id)
-                               .to_set
-
-    untracked = file_ids - family_documents.where(provider_file_id: file_ids).pluck(:provider_file_id)
-    if untracked.any?
-      DebugLogEntry.capture(
-        category: "documents",
-        level: "warn",
-        message: "Vector store returned #{untracked.size} file(s) with no family_documents row",
-        source: "Family#readable_documents",
-        family: self,
-        metadata: { provider_file_ids: untracked.first(20) }
-      )
-    end
-
-    withheld.merge(untracked)
-    return results if withheld.empty?
-
-    results.reject { |result| withheld.include?(result[:file_id]) }
+    # An allowlist from one query: a hit is shown only with a row that is readable right now.
+    # Untracked and restricted rows are both absent, so neither can slip through a second look.
+    readable = family_documents.readable_by(user).where(provider_file_id: file_ids)
+                               .pluck(:provider_file_id).to_set
+    allowed = results.select { |result| result[:file_id].nil? || readable.include?(result[:file_id]) }
+    max_results ? allowed.first(max_results) : allowed
   end
 
   # Without a user (MCP, the tool's own call): every hit Sure has a row for.
-  def tracked_documents(results)
+  def tracked_documents(results, max_results: nil)
     file_ids = results.filter_map { |result| result[:file_id] }.uniq
     return results if file_ids.empty?
 
     tracked = family_documents.where(provider_file_id: file_ids).pluck(:provider_file_id).to_set
-    results.select { |result| result[:file_id].nil? || tracked.include?(result[:file_id]) }
+    allowed = results.select { |result| result[:file_id].nil? || tracked.include?(result[:file_id]) }
+    max_results ? allowed.first(max_results) : allowed
   end
 
   def upload_document(file_content:, filename:, metadata: {})
@@ -115,8 +106,8 @@ module Family::VectorSearchable
     )
   end
 
-  # The row that makes an uploaded file findable, and readable only by who may. When it can't be
-  # written the file is removed from the store again, so nothing is searchable without one.
+  # Only a persistence failure removes the uploaded file: the poll enqueue happens after commit
+  # and handles its own failures, so a committed row never loses the file it points at.
   def create_document_row!(adapter, store_id, file_id, **attributes)
     family_documents.create!(**attributes)
   rescue StandardError
@@ -146,14 +137,34 @@ module Family::VectorSearchable
   def delete_vector_store
     return if vector_store_id.blank?
 
-    adapter = vector_store_adapter
-    response = adapter&.delete_store(store_id: vector_store_id)
-    Rails.logger.warn("[Family] couldn't delete vector store for family #{id}") if response && !response.success?
+    adapter = vector_store_adapter_for(@vector_store_backend)
+    unless adapter
+      Rails.logger.warn("[Family] no #{@vector_store_backend || 'configured'} vector store adapter to delete store #{vector_store_id} for family #{id}")
+      return
+    end
+
+    response = adapter.delete_store(store_id: vector_store_id)
+    Rails.logger.warn("[Family] couldn't delete vector store for family #{id}") unless response.success?
   rescue StandardError => error
     Rails.logger.warn("[Family] couldn't delete vector store for family #{id}: #{error.class}")
   end
 
   private
+
+    def remember_vector_store_backend
+      @vector_store_backend = family_documents.where("metadata->>'vector_store' IS NOT NULL")
+                                              .order(created_at: :desc)
+                                              .pick(Arel.sql("metadata->>'vector_store'"))
+    end
+
+    def vector_store_adapter_for(backend)
+      return vector_store_adapter if backend.blank?
+      return VectorStore::Openai.from_config if backend == "openai"
+      return VectorStore::Pgvector.new if backend == "pgvector" && VectorStore::Pgvector.available?
+
+      configured = vector_store_adapter
+      configured if configured && VectorStore.backend_name(configured) == backend
+    end
 
     def vector_store_adapter
       VectorStore.adapter

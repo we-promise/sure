@@ -63,6 +63,54 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
     assert_requested delete
   end
 
+  test "remove_file fails when the Files API deletion fails, so its row can't be dropped" do
+    stub_json(:delete, "/vector_stores/vs_abc123/files/file-xyz", { deleted: true })
+    stub_request(:delete, "#{BASE}/files/file-xyz").to_return(status: 500, body: "boom")
+
+    assert_not @adapter.remove_file(store_id: "vs_abc123", file_id: "file-xyz").success?
+  end
+
+  test "remove_file tolerates an already detached file on retry" do
+    stub_request(:delete, "#{BASE}/vector_stores/vs_abc123/files/file-xyz").to_raise(Faraday::ResourceNotFound)
+    delete = stub_json(:delete, "/files/file-xyz", { deleted: true })
+
+    assert @adapter.remove_file(store_id: "vs_abc123", file_id: "file-xyz").success?
+    assert_requested delete
+  end
+
+  test "a file already gone from the Files API counts as removed" do
+    stub_json(:delete, "/vector_stores/vs_abc123/files/file-xyz", { deleted: true })
+    stub_request(:delete, "#{BASE}/files/file-xyz").to_raise(Faraday::ResourceNotFound)
+
+    assert @adapter.remove_file(store_id: "vs_abc123", file_id: "file-xyz").success?
+  end
+
+  test "delete_store leaves the store for a retry when a file can't be deleted" do
+    stub_store_files
+    stub_json(:delete, "/files/file-1", { deleted: true })
+    stub_request(:delete, "#{BASE}/files/file-2").to_return(status: 500, body: "boom")
+    store = stub_json(:delete, "/vector_stores/vs_abc123", { deleted: true })
+
+    response = @adapter.delete_store(store_id: "vs_abc123")
+
+    assert_not response.success?
+    assert_includes response.error.message, "file-2"
+    assert_not_requested store
+  end
+
+  test "delete_store can finish on a retry after a file deletion failed" do
+    stub_store_files
+    stub_json(:delete, "/files/file-1", { deleted: true })
+    stub_request(:delete, "#{BASE}/files/file-2")
+      .to_return({ status: 500, body: "boom" }, { status: 200, headers: JSON_HEADERS, body: { deleted: true }.to_json })
+    store = stub_json(:delete, "/vector_stores/vs_abc123", { deleted: true })
+
+    assert_not @adapter.delete_store(store_id: "vs_abc123").success?
+    assert_not_requested store
+    assert @adapter.delete_store(store_id: "vs_abc123").success?
+    assert_requested store
+  end
+
   test "delete_store deletes every file it holds, then the store" do
     stub_request(:get, "#{BASE}/vector_stores/vs_abc123/files?limit=100")
       .to_return(status: 200, headers: JSON_HEADERS, body: { data: [ { id: "file-1" } ], has_more: true }.to_json)
@@ -112,5 +160,11 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
   private
     def stub_json(method, path, body)
       stub_request(method, "#{BASE}#{path}").to_return(status: 200, headers: JSON_HEADERS, body: body.to_json)
+    end
+
+    def stub_store_files
+      stub_request(:get, "#{BASE}/vector_stores/vs_abc123/files?limit=100")
+        .to_return(status: 200, headers: JSON_HEADERS,
+                   body: { data: [ { id: "file-1" }, { id: "file-2" } ], has_more: false }.to_json)
     end
 end
