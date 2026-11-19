@@ -269,6 +269,18 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_income, income_totals.category_totals.find { |ct| ct.category.id == @income_category.id }.total
   end
 
+  test "a split Sweep In transaction stays out of income" do
+    sweep = create_transaction(account: @checking_account, amount: -500, category: @income_category)
+    sweep.transaction.update!(investment_activity_label: "Sweep In")
+
+    before = IncomeStatement.new(@family).income_totals(period: Period.last_30_days).total
+    sweep.split!([ { name: "Part 1", amount: -300, category_id: @income_category.id }, { name: "Part 2", amount: -200, category_id: @income_category.id } ])
+    after = IncomeStatement.new(@family).income_totals(period: Period.last_30_days).total
+
+    assert_equal 1000, before
+    assert_equal before, after
+  end
+
   test "totals_for scopes totals to a period and optional account ids" do
     income_statement = IncomeStatement.new(@family)
     period = Period.last_30_days
