@@ -1,6 +1,10 @@
 ---
 es:
   activerecord:
+    attributes:
+      rule:
+        new_rule_group_name: Nuevo grupo
+        rule_group: Grupo
     errors:
       models:
         rule:
@@ -8,3 +12,35 @@ es:
           conflicting_note_actions: "Una regla no puede reemplazar y añadir una línea a las notas de la transacción a la vez"
           duplicate_actions: La regla no puede tener acciones duplicadas %{types}
           nested_conditions: Las condiciones compuestas no se pueden anidar
+          split_not_alone: Una regla de división no puede tener otras acciones
+        rule/action:
+          attributes:
+            value:
+              invalid_config: debe ser una configuración de división válida
+              invalid_split_count: debe tener entre %{min} y %{max} divisiones
+              split_name_required: a la división n.º %{index} le falta el nombre
+              split_name_too_long: el nombre de la división n.º %{index} es demasiado largo (máximo 255 caracteres)
+              split_name_invalid: el nombre de la división n.º %{index} contiene caracteres no válidos
+              split_type_invalid: el tipo de la división n.º %{index} debe ser fijo o porcentaje
+              split_share_invalid: la parte de la división n.º %{index} debe ser un número positivo
+              split_category_invalid: la categoría de la división n.º %{index} no pertenece a esta familia
+              split_merchant_invalid: el comercio de la división n.º %{index} no pertenece a esta familia
+              split_tags_invalid: la división n.º %{index} tiene una etiqueta que no pertenece a esta familia
+              percentages_must_total_100: los porcentajes deben sumar 100 (suman %{total})
+              fixed_requires_exact_amount_condition: las divisiones de importe fijo necesitan una condición de la regla que coincida con un importe exacto de transacción (p. ej., Importe = 42.00); si no, las partes no pueden sumar con seguridad el total de cada transacción que coincida
+              fixed_shares_must_equal_condition_amount: las partes de la división deben sumar %{amount}, el importe exacto que exige la condición de esta regla
+        rule/condition:
+          attributes:
+            value:
+              regex_invalid: no es una expresión regular válida
+              regex_too_complex: es demasiado compleja para ejecutarla con seguridad
+              regex_too_long: es demasiado larga (el máximo es de %{count} caracteres)
+              regex_backreference: no puede usar referencias inversas (\1 a \9)
+  rule:
+    actions:
+      set_transaction_merchant:
+        not_accessible: Comercio de una cuenta a la que no tienes acceso
+        unassigned: "%{name} (ya no asignado)"
+        unavailable: Comercio ya no disponible
+    conditions:
+      unsupported_label: No compatible (%{type})
