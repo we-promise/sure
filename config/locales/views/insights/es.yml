@@ -37,6 +37,7 @@ es:
       header_new: Nuevos
       acknowledge_aria: "Entendido: %{title}"
     types:
+      account_release: Liberación
       spending_anomaly: Gasto
       cash_flow_warning: Flujo de caja
       net_worth_milestone: Patrimonio neto
@@ -58,6 +59,11 @@ es:
         other: Últimos %{count} días
       date_range: "%{from} a %{to}"
     figures:
+      released: disponible ahora
+      released_in:
+        one: libre en %{count} día
+        other: libre en %{count} días
+      renews_on: "se renueva el %{date}"
       vs_previous_three_months: frente a los tres meses anteriores
       today: hoy
       on_pace: al ritmo previsto
@@ -74,6 +80,7 @@ es:
         one: "%{count} cargo"
         other: "%{count} cargos"
     actions:
+      account_release: Ir a la cuenta
       spending_anomaly: Ver transacciones de %{category}
       cash_flow_warning: Revisar transacciones recurrentes
       net_worth_milestone: Ver informe de patrimonio neto
@@ -86,6 +93,10 @@ es:
       loan_payment_change: Ver préstamo
       bank_fees: Ver comisiones
     titles:
+      account_release:
+        upcoming: "%{account} se libera pronto"
+        released: "%{account} ya está disponible"
+        renewal: "%{account} se renueva pronto"
       spending_anomaly:
         above: El gasto en %{category} va en aumento
         below: El gasto en %{category} va a la baja
@@ -109,6 +120,10 @@ es:
         down: La cuota de %{account} va a bajar
       bank_fees: Comisiones en %{account}
     templates:
+      account_release:
+        upcoming: "%{balance} en %{account} estará disponible el %{date}."
+        released: "%{balance} en %{account} está disponible desde el %{date}. Indica una nueva fecha si lo reinviertes o marca la cuenta como disponible."
+        renewal_notice: "%{account} (%{balance}) se renueva automáticamente el %{date}. Para retirar el dinero, cancela antes de esa fecha."
       spending_anomaly:
         above: Vas camino de gastar %{projected_spend} en %{category} este mes, aproximadamente un %{deviation_pct}% más que tu promedio mensual reciente de %{baseline_spend}.
         below: Vas camino de gastar %{projected_spend} en %{category} este mes, aproximadamente un %{deviation_pct}% menos que tu promedio mensual reciente de %{baseline_spend}.
