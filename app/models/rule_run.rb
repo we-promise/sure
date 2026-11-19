@@ -1,7 +1,7 @@
 class RuleRun < ApplicationRecord
   belongs_to :rule
 
-  validates :execution_type, inclusion: { in: %w[manual scheduled] }
+  validates :execution_type, inclusion: { in: %w[manual scheduled immediate] }
   validates :status, inclusion: { in: %w[pending success failed] }
   validates :executed_at, presence: true
   validates :transactions_queued, numericality: { greater_than_or_equal_to: 0 }
@@ -51,26 +51,54 @@ class RuleRun < ApplicationRecord
       self.transactions_modified += modified
       self.transactions_awaiting_ai = [ transactions_awaiting_ai - handled, 0 ].max
     end
+
+    # The last AI answer can be the last outstanding part of an immediate run.
+    offer_job_results if transactions_awaiting_ai.zero?
+  end
+
+  # Offers the result of an immediate run through the sync toast, like
+  # Family::SyncCompleteEvent. A full-page refresh would wipe forms that are
+  # still open, such as the drawer the person just edited in; the toast waits
+  # until they are done.
+  # Best-effort: the rules already ran, so a failed broadcast must not fail
+  # (and retry) the job that called it, which would repeat its AI work.
+  def self.offer_immediate_result(family)
+    family.broadcast_replace_to(
+      family,
+      target: "sync-toast",
+      partial: "shared/notifications/sync_toast"
+    )
+  rescue StandardError => e
+    Rails.logger.warn("RuleRun.offer_immediate_result failed for family #{family.id}: #{e.class}: #{e.message}")
+    nil
   end
 
   # Thread-safe method to complete a job and update the run
   def complete_job!(modified_count: 0)
+    drained = false
+
     save_locked do
+      drained = pending_jobs_count == 1
       self.transactions_modified += modified_count
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
 
       # Preserve a previously recorded failure while still draining pending jobs.
       self.status = "success" if pending_jobs_count <= 0 && !failed?
     end
+
+    # A Sidekiq retry of a job that failed before finds nothing left to
+    # drain, so its changes are offered on their own.
+    offer_job_results if pending_jobs_count.zero? && (drained || modified_count.positive?)
   end
 
   def fail_job!(error:, source:, transaction_ids: [])
     should_log = false
+    drained = false
     current_error_message = "#{error.class}: #{error.message}"
 
     save_locked do
       should_log = !failed?
-
+      drained = pending_jobs_count == 1
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
       self.status = "failed"
       existing_error_messages = error_message.to_s.split("\n").reject(&:blank?)
@@ -78,6 +106,9 @@ class RuleRun < ApplicationRecord
     end
 
     capture_failure_debug_log(error:, source:, transaction_ids:) if should_log
+    # Earlier jobs of the run may already have changed transactions. A retry
+    # of a job that already failed drains nothing, so it offers nothing again.
+    offer_job_results if drained
   end
 
   private
@@ -95,6 +126,15 @@ class RuleRun < ApplicationRecord
     rescue StandardError
       restore_attributes
       raise
+    end
+
+    # The jobs of an immediate run with AI actions offer what they changed once
+    # the last one is done; ApplyImmediateRulesJob offers the run's other changes.
+    # Awaited AI answers are part of that, so the toast waits for the run to finish.
+    def offer_job_results
+      return unless finished? && execution_type == "immediate" && transactions_modified.positive?
+
+      self.class.offer_immediate_result(rule.family)
     end
 
     def capture_failure_debug_log(error:, source:, transaction_ids:)
