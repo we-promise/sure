@@ -18,6 +18,11 @@
               <%= column.cell(row, index) %>
             <% end %>
           <% end %>
+          <% if (detail = row_detail_content(row)) %>
+            <tr id="<%= row_detail_id(index) %>" hidden>
+              <td colspan="<%= columns.size %>" class="px-4 pb-4"><%= detail %></td>
+            </tr>
+          <% end %>
         <% end %>
       </tbody>
     </table>
