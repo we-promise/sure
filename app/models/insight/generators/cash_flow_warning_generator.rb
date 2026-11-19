@@ -75,8 +75,13 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
   end
 
   private
+    # Money reachable this month (Account::Liquidity), not "every deposit
+    # account": a term deposit locked past the horizon cannot cover a dip.
+    # Insights only run for families with preview features, so no gate here.
     def cash_accounts
-      shared_accounts.visible.where(accountable_type: "Depository", currency: family.currency)
+      shared_accounts.visible
+                     .immediate_assets_on(Account.liquidity_today_for(family))
+                     .where(currency: family.currency)
     end
 
     # Projected occurrences of known recurring transactions within the horizon.

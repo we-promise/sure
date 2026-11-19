@@ -59,6 +59,21 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
     assert_includes instructions, "Uncategorized"
   end
 
+  test "session context names a renewal date for an auto renewing deposit" do
+    chat = chats(:one)
+    Setting.stubs(:llm_context_window).returns(128_000)
+    chat.user.family.accounts.create!(
+      name: "Rolling deposit", balance: 1000, currency: "USD", owner: chat.user,
+      accountable: Depository.new(subtype: "cd"), available_on: Date.current - 1.month,
+      auto_renew: true, renewal_term_months: 12
+    )
+
+    instructions = Assistant.config_for(chat)[:instructions]
+
+    assert_match(/Rolling deposit: .*locked, renews automatically on \d{4}-\d{2}-\d{2}/, instructions)
+    assert_no_match(/Rolling deposit: .*locked until/, instructions)
+  end
+
   test "session context collapses to counts for large account rosters" do
     chat = chats(:one)
     user = chat.user

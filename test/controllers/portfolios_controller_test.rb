@@ -202,7 +202,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :success
 
-    desktop = css_select("ul li a").map { |link| link["href"] }
+    desktop = css_select("nav ul li a").map { |link| link["href"] }
     mobile = css_select("nav[data-viewport-target=bottomNav] a").map { |link| link["href"] }
 
     assert_includes desktop, portfolio_path
