@@ -22,14 +22,15 @@ class Holding::CurrentForInvestmentAccounts
       INNER JOIN accounts ON accounts.id = latest_holdings.account_id
       WHERE latest_holdings.account_id IN (:account_ids)
         AND accounts.id IN (:account_ids)
-        AND latest_holdings.currency = accounts.currency
         AND latest_holdings.account_id NOT IN (
           SELECT provider_holdings.account_id
           FROM holdings provider_holdings
           WHERE provider_holdings.account_id IN (:account_ids)
             AND provider_holdings.account_provider_id IS NOT NULL
         )
-      ORDER BY latest_holdings.account_id, latest_holdings.security_id, latest_holdings.date DESC
+      ORDER BY latest_holdings.account_id, latest_holdings.security_id,
+               (latest_holdings.currency = accounts.currency) DESC,
+               latest_holdings.date DESC, latest_holdings.id DESC
     )
   SQL
 

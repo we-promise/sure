@@ -90,6 +90,17 @@ class Holding::CurrentForInvestmentAccountsTest < ActiveSupport::TestCase
     assert_equal [ usd_holding.id ], described_query.pluck(:id)
   end
 
+  # Holding::ForwardCalculator writes `currency: price.currency`, so a security
+  # priced in another currency produces holdings that are never in the account's.
+  # Filtering on the account currency dropped those positions from investment
+  # views altogether rather than converting them.
+  test "keeps a security held only in a currency other than the account's" do
+    security = Security.create!(ticker: "ASML", name: "ASML")
+    native = create_holding_for_security(security, date: Date.current, currency: "EUR")
+
+    assert_equal [ native.id ], described_query.pluck(:id)
+  end
+
   test "omits a security whose latest holding has zero quantity" do
     security = Security.create!(ticker: "AAPL", name: "Apple")
     create_holding_for_security(security, date: 1.day.ago.to_date, qty: 5)
