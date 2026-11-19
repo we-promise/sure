@@ -2052,8 +2052,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.datetime "updated_at", null: false
     t.index ["insight_id"], name: "index_push_deliveries_on_insight_id"
     t.index ["status", "updated_at"], name: "index_push_deliveries_on_status_and_updated_at"
-    t.index ["subscription_type", "subscription_id"], name: "index_push_deliveries_on_subscription"
     t.index ["subscription_type", "subscription_id", "insight_id", "insight_version"], name: "index_push_deliveries_on_channel_insight_version", unique: true
+    t.index ["subscription_type", "subscription_id"], name: "index_push_deliveries_on_subscription"
     t.check_constraint "insight_id IS NULL AND insight_version IS NULL OR insight_id IS NOT NULL AND insight_version IS NOT NULL AND insight_version > 0", name: "chk_push_deliveries_insight_version"
     t.check_constraint "provider_attempts >= 0", name: "chk_push_deliveries_provider_attempts"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'skipped'::character varying, 'rejected'::character varying, 'failed'::character varying, 'enqueue_failed'::character varying]::text[])", name: "chk_push_deliveries_status"
