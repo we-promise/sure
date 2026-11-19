@@ -699,4 +699,13 @@ class CreditCardTest < ActiveSupport::TestCase
     def materialize_balances(account)
       Balance::Materializer.new(account, strategy: :forward).materialize_balances
     end
+
+    test "next annual fee date rolls into next year and clamps short months" do
+      card = accounts(:credit_card).credit_card
+      card.update!(annual_fee_month: 2, annual_fee_day: 30)
+
+      assert_equal Date.new(2027, 2, 28), card.next_annual_fee_date(as_of: Date.new(2026, 11, 17))
+      assert_equal Date.new(2028, 2, 29), card.next_annual_fee_date(as_of: Date.new(2027, 3, 1))
+      assert_equal 103, card.days_until_annual_fee(as_of: Date.new(2026, 11, 17))
+    end
 end

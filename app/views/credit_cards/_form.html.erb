@@ -34,6 +34,18 @@
                                         min: 0 %>
       </div>
 
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <%= credit_card_form.select :annual_fee_month,
+                                      options_for_select((1..12).map { |m| [ I18n.t("date.month_names")[m], m ] }, credit_card_form.object.annual_fee_month),
+                                      { include_blank: true, label: t("credit_cards.form.annual_fee_month") } %>
+          <%= credit_card_form.select :annual_fee_day,
+                                      options_for_select(credit_card_day_of_month_options, credit_card_form.object.annual_fee_day),
+                                      { include_blank: true, label: t("credit_cards.form.annual_fee_day") } %>
+        </div>
+        <p class="text-secondary text-xs"><%= t("credit_cards.form.annual_fee_date_description") %></p>
+      </div>
+
       <%# The two days that make up the statement cycle. Only the close day is
           load-bearing -- without it there is no telling which charge belongs to
           which statement -- so the due day is allowed to stand on its own for a

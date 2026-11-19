@@ -47,7 +47,7 @@ class Family::DataImporter
     interest_rate rate_type term_months start_date down_payment initial_balance
     insurance_rate insurance_rate_type day_count_convention principal_only_transfers
   ].freeze
-  CREDIT_CARD_DETAIL_ATTRIBUTES = %w[apr annual_fee minimum_payment available_credit due_day statement_close_day expiration_date].freeze
+  CREDIT_CARD_DETAIL_ATTRIBUTES = %w[apr annual_fee annual_fee_month annual_fee_day minimum_payment available_credit due_day statement_close_day expiration_date].freeze
 
   def self.accountable_class_for(type)
     ACCOUNTABLE_TYPE_CLASSES[type.to_s]

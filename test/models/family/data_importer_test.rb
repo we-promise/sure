@@ -82,6 +82,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
         subtype: "credit_card",
         apr: 19.9,
         annual_fee: 45,
+        annual_fee_month: 9,
+        annual_fee_day: 14,
         minimum_payment: 25,
         available_credit: 2_650,
         due_day: 5,
@@ -95,6 +97,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     card = @family.accounts.find_by!(name: "Round Trip Card").accountable
     assert_equal BigDecimal("19.9"), card.apr
     assert_equal BigDecimal("45"), card.annual_fee
+    assert_equal [ 9, 14 ], [ card.annual_fee_month, card.annual_fee_day ]
     assert_equal BigDecimal("25"), card.minimum_payment
     assert_equal BigDecimal("2650"), card.available_credit
     assert_equal 5, card.due_day

@@ -1,0 +1,55 @@
+<%= content_for :page_title, t(".title") %>
+<%= content_for :page_actions do %>
+  <%= render DS::Link.new(text: t(".detect"), icon: "search", variant: "outline", href: detect_annual_fees_path, method: :post) %>
+<% end %>
+
+<% yearly = @summary.yearly %>
+<% upcoming = @summary.upcoming %>
+<% next_fee = @summary.next_fee %>
+
+<div class="space-y-4">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+    <%= render "annual_fees/total_card", title: t(".per_year"), total: yearly, testid: "annual-fees-yearly" %>
+    <%= render "annual_fees/total_card", title: t(".next_60_days"), total: upcoming, testid: "annual-fees-upcoming" %>
+    <%= summary_card title: t(".next_fee") do %>
+      <% if next_fee %>
+        <%= l(next_fee.next_date, format: :long) %>
+        <span class="block text-sm text-secondary privacy-sensitive"><%= next_fee.card.account.name %> · <%= format_money(next_fee.card.annual_fee_money) %></span>
+      <% else %>
+        <%= t(".none") %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if @summary.rows.any? %>
+    <%= render DS::Table.new(rows: @summary.rows, label: t(".title"), data: { testid: "annual-fees-table" }) do |table| %>
+      <% table.with_column(t(".card")) do |row| %>
+        <%= link_to row.card.account.name, account_path(row.card.account, tab: "overview"), class: "text-primary hover:underline" %>
+      <% end %>
+      <% table.with_column(t(".fee"), numeric: true, class: "privacy-sensitive") do |row| %>
+        <% if row.card.annual_fee.present? %>
+          <%= format_money(row.card.annual_fee_money) %>
+        <% else %>
+          <span class="text-subdued"><%= t(".unknown") %></span>
+        <% end %>
+      <% end %>
+      <% table.with_column(t(".next_charge")) do |row| %>
+        <% if row.next_date && row.fee? %>
+          <%= l(row.next_date, format: :long) %> · <%= t(".in_days", count: row.days_until) %>
+        <% elsif row.next_date %>
+          <%= l(row.next_date, format: :long) %>
+        <% else %>
+          <span class="text-subdued"><%= t(".no_date") %></span>
+        <% end %>
+      <% end %>
+      <% table.with_column(t(".actions"), numeric: true) do |row| %>
+        <% if can_edit_card?(row.card) %>
+          <%= link_to t(".edit"), edit_credit_card_path(row.card.account), data: { turbo_frame: :modal }, class: "text-sm text-primary underline" %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <p class="px-4 py-6 text-sm text-secondary text-center"><%= t(".empty") %></p>
+  <% end %>
+  <p class="text-xs text-secondary"><%= t(".hint") %></p>
+</div>
