@@ -262,4 +262,26 @@ class Provider::TiingoTest < ActiveSupport::TestCase
     assert_instance_of Provider::Tiingo::Error, result.error
     assert_match "Could not determine currency", result.error.message
   end
+
+  # The test environment caches in a null store, so the usage readers need a real
+  # RedisCacheStore to notice a counter they cannot read back. The per-run namespace
+  # keeps runs sharing one Redis from reading each other's counts.
+  test "usage reports the request counter on a real Redis cache" do
+    store = ActiveSupport::Cache::RedisCacheStore.new(
+      url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
+      namespace: "test:tiingo:#{SecureRandom.hex(8)}"
+    )
+    Rails.stubs(:cache).returns(store)
+
+    provider = Provider::Tiingo.new("test_api_key")
+    # Two distinct symbols: a symbol is counted once a month.
+    provider.send(:track_symbol, "AAPL")
+    provider.send(:track_symbol, "MSFT")
+
+    assert_equal 2, provider.usage.data.used
+  ensure
+    month = Date.current.strftime("%Y-%m")
+    store&.delete("tiingo:symbol_count:#{month}")
+    %w[AAPL MSFT].each { |symbol| store&.delete("tiingo:symbol:#{month}:#{symbol}") }
+  end
 end

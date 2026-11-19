@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Provider::MansaTest < ActiveSupport::TestCase
+  STOCK_URL = %r{\Ahttps://mansaapi\.com/api/v1/markets/exchanges/[^/]+/stocks/MTNN}.freeze
+
   setup do
     @provider = Provider::Mansa.new("test_api_key")
     @provider.stubs(:enforce_daily_limit!)
@@ -340,6 +342,62 @@ class Provider::MansaTest < ActiveSupport::TestCase
     assert_match(/Ticker 'NOTAREALTICKER' not found on NGX\./, error.message)
     assert_match(/NOT_FOUND/, error.message)
     assert_no_match(/=>/, error.message) # would appear in a raw Hash#to_s dump
+  end
+
+  # The test environment caches in a null store, so the usage readers need a real
+  # RedisCacheStore to notice a counter they cannot read back. The per-run namespace
+  # keeps runs sharing one Redis from reading each other's counts.
+  test "usage reports the request counter on a real Redis cache" do
+    store = ActiveSupport::Cache::RedisCacheStore.new(
+      url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
+      namespace: "test:mansa:#{SecureRandom.hex(8)}"
+    )
+    Rails.stubs(:cache).returns(store)
+
+    provider = Provider::Mansa.new("test_api_key")
+    2.times { provider.send(:enforce_daily_limit!) }
+
+    assert_equal 2, provider.usage.data.used
+  ensure
+    store&.delete(provider&.send(:daily_cache_key))
+  end
+
+  test "every attempt of a request is counted against the daily limit, including retries" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.unstub(:enforce_daily_limit!)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+
+    stub_request(:get, STOCK_URL)
+      .to_raise(Faraday::TimeoutError).then
+      .to_raise(Faraday::TimeoutError).then
+      .to_return(status: 200, body: { success: true, data: { ticker: "MTNN", price: 815 }, meta: { exchange: "NGX", currency: "NGN" } }.to_json)
+
+    assert @provider.fetch_security_price(symbol: "MTNN", exchange_operating_mic: "XNSA", date: Date.current).success?
+
+    assert_requested :get, STOCK_URL, times: 3
+    assert_equal 3, Rails.cache.read("mansa:daily:#{Date.current}")
+  end
+
+  test "a retry that would exceed the daily limit is refused before reaching Mansa" do
+    store = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(store)
+    @provider.unstub(:enforce_daily_limit!)
+    # The budget is checked before the interval throttle, so the refused retry
+    # never sleeps: only the first attempt is throttled.
+    @provider.expects(:throttle_request).once
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    store.write("mansa:daily:#{Date.current}", 99)
+
+    stub_request(:get, STOCK_URL).to_raise(Faraday::TimeoutError)
+
+    result = @provider.fetch_security_price(symbol: "MTNN", exchange_operating_mic: "XNSA", date: Date.current)
+
+    assert_not result.success?
+    assert_kind_of Provider::Mansa::RateLimitError, result.error
+    # The first attempt is counted (99 -> 100) and reaches the wire; the retry is counted
+    # past the limit (100 -> 101) and refused before it
+    assert_requested :get, STOCK_URL, times: 1
+    assert_equal 101, store.read("mansa:daily:#{Date.current}")
   end
 
   private

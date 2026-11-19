@@ -590,7 +590,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
                       message: {
                         role: "assistant",
                         tool_calls: [
-                          { id: "call_1", type: "function", function: { name: "sure_health_check", arguments: "{}" } }
+                          { id: "call_1", type: "function", function: { name: "sure_health_check", arguments: '{"status":"ok"}' } }
                         ]
                       }
                     }
@@ -712,7 +712,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
                 status: 200,
                 headers: { "Content-Type" => "application/json" },
                 body: { id: "resp_1", model: "gpt-4.1", status: "completed",
-                        output: [ { type: "function_call", id: "fc_1", call_id: "call_1", name: "sure_health_check", arguments: "{}" } ] }.to_json
+                        output: [ { type: "function_call", id: "fc_1", call_id: "call_1", name: "sure_health_check", arguments: '{"status":"ok"}' } ] }.to_json
               )
 
     result = @probe.function_calling(
