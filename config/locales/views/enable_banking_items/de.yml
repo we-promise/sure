@@ -15,7 +15,7 @@ de:
       success: Mit deiner Bank verbunden. Deine Konten werden abgeglichen.
       unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal.
     complete_account_setup:
-      all_skipped: Alle Konten wurden übersprungen. Du kannst sie später auf der Konten-Seite einrichten.
+      all_skipped: Alle Konten wurden übersprungen. Verknüpfe eines später mit einem Konto, damit es synchronisiert wird.
       no_accounts: Keine Konten zum Einrichten verfügbar.
       success: "%{count} Konten wurden erfolgreich angelegt!"
     create:
@@ -111,6 +111,7 @@ de:
       header_subtitle: Wähl die passende Kontoart für deine importierten Konten
       historical_data_range: 'Zeitraum der Historie:'
       psd2_savings_notice: 'Hinweis: Einige regulierte französische Sparkonten (Livret A, PEL, LEP, LDDS) sind über Open Banking (PSD2) nur eingeschränkt oder gar nicht verfügbar. Wenn ein Sparkonto fehlt, kannst du es manuell hinzufügen.'
-      sync_start_date_help: Wähl, wie weit zurück die Transaktionshistorie geholt werden soll. Verfügbar sind maximal 2 Jahre.
+      skip_notice: 'Übersprungene Konten merkt sich Sure: Sie werden nicht mehr importiert, bis du sie mit einem Konto verknüpfst.'
+      sync_start_date_help: Optional. Leer lassen, um so viel Historie zu importieren, wie deine Bank liefert; wie weit das zurückreicht, hängt von der Bank ab. Wählst du ein Datum, werden ältere Transaktionen nicht importiert.
       sync_start_date_label: 'Transaktionen synchronisieren ab:'
       title: Enable-Banking-Konten einrichten
