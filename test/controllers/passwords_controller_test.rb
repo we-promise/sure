@@ -26,7 +26,7 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "changing the password revokes every other session and keeps the current one" do
-    patch password_path, params: { user: { password_challenge: user_password_test, password: "newtestpassword817983172", password_confirmation: "newtestpassword817983172" } }
+    patch password_path, params: { user: { password_challenge: user_password_test, password: "NewSecure1!", password_confirmation: "NewSecure1!" } }
 
     assert_redirected_to root_path
     assert_not Session.exists?(@other_session.id)
@@ -37,7 +37,7 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     oauth_app = Doorkeeper::Application.create!(name: "Sure Mobile", redirect_uri: "https://client.example.com/callback", scopes: "read_write")
     access_token = Doorkeeper::AccessToken.create!(application: oauth_app, resource_owner_id: @user.id, expires_in: 2.hours, scopes: "read_write", use_refresh_token: true)
 
-    patch password_path, params: { user: { password_challenge: user_password_test, password: "newtestpassword817983172", password_confirmation: "newtestpassword817983172" } }
+    patch password_path, params: { user: { password_challenge: user_password_test, password: "NewSecure1!", password_confirmation: "NewSecure1!" } }
 
     assert_redirected_to root_path
     assert access_token.reload.revoked?, "a mobile or OAuth token must not outlive a password change"
