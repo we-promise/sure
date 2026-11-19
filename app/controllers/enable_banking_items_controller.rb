@@ -73,10 +73,11 @@ class EnableBankingItemsController < ApplicationController
     end
 
     @new_connection = params[:new_connection] == "true"
+    @country_code = requested_country_code
 
     begin
       provider = @enable_banking_item.enable_banking_provider
-      response = provider.get_aspsps(country: @enable_banking_item.country_code)
+      response = provider.get_aspsps(country: @country_code)
       raw_aspsps = response[:aspsps] || response["aspsps"] || []
 
       # Sort: non-beta alphabetically, then beta alphabetically
@@ -93,6 +94,7 @@ class EnableBankingItemsController < ApplicationController
   # Initiate authorization for a selected bank
   def authorize
     aspsp_name = params[:aspsp_name]
+    country_code = requested_country_code
     psu_type   = params[:psu_type].presence || "personal"
 
     unless aspsp_name.present?
@@ -101,12 +103,12 @@ class EnableBankingItemsController < ApplicationController
     end
 
     begin
-      pending_connection = pending_connection_for(aspsp_name) if params[:new_connection] == "true"
+      pending_connection = pending_connection_for(aspsp_name, country_code) if params[:new_connection] == "true"
       target_item = if params[:new_connection] == "true"
         pending_connection || Current.family.enable_banking_items.create!(
           name: "Enable Banking Connection",
           aspsp_name: aspsp_name,
-          country_code: @enable_banking_item.country_code,
+          country_code: country_code,
           application_id: @enable_banking_item.application_id,
           client_certificate: @enable_banking_item.client_certificate
         )
@@ -206,7 +208,7 @@ class EnableBankingItemsController < ApplicationController
   # Does NOT create a new item - that happens in authorize when user selects a bank
   def new_connection
     # Redirect to select_bank with a flag indicating this is for a new connection
-    redirect_to select_bank_enable_banking_item_path(@enable_banking_item, new_connection: true), data: { turbo_frame: "modal" }
+    redirect_to select_bank_enable_banking_item_path(@enable_banking_item, new_connection: true, country_code: requested_country_code), data: { turbo_frame: "modal" }
   end
 
   # Re-authorize an expired session
@@ -547,14 +549,14 @@ class EnableBankingItemsController < ApplicationController
     # reused instead. Other banks keep their own connection. Only attempts
     # started in this browser session qualify: two browsers of one family
     # sharing a pending connection could both complete on it.
-    def pending_connection_for(aspsp_name)
+    def pending_connection_for(aspsp_name, country_code)
       Current.family.enable_banking_items.active
         .where(id: pending_oauth_states.values)
         .where(
           aspsp_name: aspsp_name,
           session_id: nil,
           application_id: @enable_banking_item.application_id,
-          country_code: @enable_banking_item.country_code,
+          country_code: country_code,
           client_certificate: @enable_banking_item.client_certificate
         )
         .where.missing(:enable_banking_accounts)
@@ -607,6 +609,18 @@ class EnableBankingItemsController < ApplicationController
     def pending_oauth_states
       pending = session[OAUTH_STATE_SESSION_KEY]
       pending.is_a?(Hash) ? pending.to_h : {}
+    end
+
+    # A new connection can live in a different country than the item whose
+    # credentials it copies, so the caller may choose one. Unknown values fall
+    # back to the item's own country.
+    # Only a new connection can use another country. Existing-item flows keep the
+    # item's own country, since they authorize against that item.
+    def requested_country_code
+      return @enable_banking_item.country_code unless action_name == "new_connection" || params[:new_connection] == "true"
+
+      code = params[:country_code].to_s.strip.upcase
+      EnableBankingItem::COUNTRY_CODES.include?(code) ? code : @enable_banking_item.country_code
     end
 
     def set_enable_banking_item
