@@ -683,7 +683,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
       assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                     minimum: 1
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
@@ -704,13 +704,62 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
     assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                   count: 0
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
     refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
   ensure
     Setting["plaid_client_id"] = nil
     Setting["plaid_secret"] = nil
+  end
+
+  test "GET show warns when encryption keys are auto-derived from a known compromised secret" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  # Explicit keys are not derived from SECRET_KEY_BASE, so the banner's
+  # "encryption keys are not actually secret" does not apply to them.
+  test "GET show hides compromised secret warning when encryption keys are set explicitly" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  test "GET show hides compromised secret warning when encryption keys are not explicitly configured" do
+    # The "not configured at all" warning takes priority; don't show both.
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  test "GET show hides compromised secret warning in managed mode" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
   end
 
   test "GET connect_form renders Interactive Brokers panel" do
@@ -742,7 +791,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
       assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                     minimum: 1
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
@@ -759,7 +808,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
       assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                     count: 0
       refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
@@ -776,7 +825,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
     assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                   count: 0
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
     assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
@@ -792,7 +841,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
       assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                     minimum: 1
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       refute_includes response.body, I18n.t("wise_items.provider_panel.encryption_warning.title")

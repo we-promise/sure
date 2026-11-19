@@ -46,12 +46,15 @@ class Provider::TwelveData < Provider
 
       limit = parsed.dig("plan_daily_limit")
       used = parsed.dig("daily_usage")
-      remaining = limit - used
+
+      unless used.is_a?(Numeric) && limit.is_a?(Numeric) && limit.positive?
+        raise Error, "Twelve Data returned no usable usage figures"
+      end
 
       UsageData.new(
         used: used,
         limit: limit,
-        utilization: used / limit * 100,
+        utilization: (used.to_f / limit * 100).round(1),
         plan: parsed.dig("plan_category"),
       )
     end

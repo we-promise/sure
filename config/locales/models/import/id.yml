@@ -1,0 +1,18 @@
+---
+id:
+  activerecord:
+    attributes:
+      import:
+        col_sep: Pemisah kolom
+        col_seps:
+          comma: Koma (,)
+          semicolon: Titik koma (;)
+        currency: Mata Uang
+        number_format: Format Angka
+    errors:
+      models:
+        import:
+          duplicate_headers: "Header CSV dinormalisasi menjadi kolom duplikat: %{columns}"
+          attributes:
+            raw_file_str:
+              invalid_csv_format: bukan format CSV yang valid
