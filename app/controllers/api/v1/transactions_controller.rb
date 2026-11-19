@@ -1,34 +1,3 @@
-  before_action :ensure_write_permission, only: [ :update, :destroy ]
-      @entry.apply_immediate_rules_later
-    rule_input = @entry.rule_input_snapshot
-    updated = false
-
-        updated = true
-
-    # After the commit, so the enqueue runs here and not in a deferred
-    # after-commit callback once the response is already rendered.
-    @entry.apply_immediate_rules_later(changed_from: rule_input) if updated
-    end
-
-    # Reading needs access to the account. Deleting, or changing anything
-    # outside the annotate fields, needs the write tier (AccountPolicy#update?);
-    # a member in the annotate tier may only change the AccountShare annotate
-    # fields (notes, category, merchant, tags), the same split the web UI
-    # applies in TransactionsController#permitted_entry_params. A refused request is a 403,
-    # not a silently trimmed update, so the client learns nothing was applied.
-    def ensure_write_permission
-      level = action_name == "update" && annotate_only_update? ? :annotate : :write
-
-      require_api_account_permission!(@entry.account, level, resource: "transaction")
-    end
-
-    # Judged on the permitted params, not raw params: keys outside
-    # transaction_params are ignored on update for every role (account_id
-    # included), so they cannot widen what an annotate-tier member changes.
-    def annotate_only_update?
-      transaction_params.except(
-        *AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES
-      ).empty?
 # frozen_string_literal: true
 
 class Api::V1::TransactionsController < Api::V1::BaseController
@@ -39,6 +8,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
+  before_action :ensure_write_permission, only: [ :update, :destroy ]
 
   def index
     family = current_resource_owner.family
@@ -142,6 +112,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.mark_user_modified! if user_modified_requested?
       @entry.sync_account_later
+      @entry.apply_immediate_rules_later
 
       @transaction = @entry.transaction
       render :show, status: :created
@@ -185,6 +156,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     return render_validation_error("Unknown category id") if unknown_category_id?
     return render_validation_error("Unknown merchant id") if unknown_merchant_id?
 
+    rule_input = @entry.rule_input_snapshot
+    updated = false
+
     Entry.transaction do
       if @entry.update(entry_params_for_update)
         sync_needed = @entry.saved_changes_affect_balances?
@@ -202,6 +176,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         @entry.mark_user_modified! if user_modified_requested?
 
         @transaction = @entry.transaction
+        updated = true
         render :show
       else
         render json: {
@@ -212,6 +187,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         raise ActiveRecord::Rollback
       end
     end
+
+    # After the commit, so the enqueue runs here and not in a deferred
+    # after-commit callback once the response is already rendered.
+    @entry.apply_immediate_rules_later(changed_from: rule_input) if updated
 
   rescue => e
     Rails.logger.error "TransactionsController#update error: #{e.message}"
@@ -250,6 +229,27 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def set_transaction
       load_accessible_transaction(params[:id])
+    end
+
+    # Reading needs access to the account. Deleting, or changing anything
+    # outside the annotate fields, needs the write tier (AccountPolicy#update?);
+    # a member in the annotate tier may only change the AccountShare annotate
+    # fields (notes, category, merchant, tags), the same split the web UI
+    # applies in TransactionsController#permitted_entry_params. A refused request is a 403,
+    # not a silently trimmed update, so the client learns nothing was applied.
+    def ensure_write_permission
+      level = action_name == "update" && annotate_only_update? ? :annotate : :write
+
+      require_api_account_permission!(@entry.account, level, resource: "transaction")
+    end
+
+    # Judged on the permitted params, not raw params: keys outside
+    # transaction_params are ignored on update for every role (account_id
+    # included), so they cannot widen what an annotate-tier member changes.
+    def annotate_only_update?
+      transaction_params.except(
+        *AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES
+      ).empty?
     end
 
     def ensure_read_scope

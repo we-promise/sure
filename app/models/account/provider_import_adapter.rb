@@ -1,30 +1,3 @@
-      # A deleted provider entry stays deleted. Its external_id was tombstoned
-      # when it was destroyed, so a re-walked payload or long sync window
-      # must not resurrect it.
-      if ProviderImportTombstone.tombstoned?(account: account, source: source, external_id: external_id)
-        Rails.logger.info("ProviderImportAdapter: skipping tombstoned #{source} transaction #{external_id} for account #{account.id}")
-        return nil
-      end
-
-
-      # An automatically excluded stale pending (see Entry.auto_exclude_stale_pending)
-      # that the provider now delivers as booked under the same id becomes a normal
-      # entry again. Entries the user excluded are never touched. An import_locked
-      # entry that is not user_modified keeps its pending flag below, so it stays
-      # excluded rather than being re-excluded on every sync.
-      if entry.persisted? && !incoming_pending && entry.auto_excluded_pending? &&
-          (entry.user_modified? || !entry.import_locked?)
-        entry.update!(excluded: false) # also drops the mark (Entry callback)
-      end
-
-      # Coins arriving in a wallet are its deposits (GoalPledge.deposit_trade?).
-      # After commit, because a wallet writes the trade inside its own
-      # transaction. A re-imported trade is skipped by the reconciler once
-      # stamped.
-      if GoalPledge.deposit_trade?(entry) && account_linked_to_any_goal?
-        GoalPledge::Reconciler.run_after_commit(entry)
-      end
-
 class Account::ProviderImportAdapter
   SCHEDULED_MATCH_WINDOW_DAYS = 7
 
@@ -71,6 +44,14 @@ class Account::ProviderImportAdapter
     raise ArgumentError, "source is required" if source.blank?
 
     Account.transaction do
+      # A deleted provider entry stays deleted. Its external_id was tombstoned
+      # when it was destroyed, so a re-walked payload or long sync window
+      # must not resurrect it.
+      if ProviderImportTombstone.tombstoned?(account: account, source: source, external_id: external_id)
+        Rails.logger.info("ProviderImportAdapter: skipping tombstoned #{source} transaction #{external_id} for account #{account.id}")
+        return nil
+      end
+
       # Find or initialize by both external_id AND source
       # This allows multiple providers to sync same account with separate entries
       entry = account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
@@ -87,6 +68,16 @@ class Account::ProviderImportAdapter
       # Determine early whether the incoming transaction is pending — needed by both
       # the protection check (pending→booked bypass) and the auto-claim path below.
       incoming_pending = extra.is_a?(Hash) && Transaction.pending_extra?(extra.with_indifferent_access)
+
+      # An automatically excluded stale pending (see Entry.auto_exclude_stale_pending)
+      # that the provider now delivers as booked under the same id becomes a normal
+      # entry again. Entries the user excluded are never touched. An import_locked
+      # entry that is not user_modified keeps its pending flag below, so it stays
+      # excluded rather than being re-excluded on every sync.
+      if entry.persisted? && !incoming_pending && entry.auto_excluded_pending? &&
+          (entry.user_modified? || !entry.import_locked?)
+        entry.update!(excluded: false) # also drops the mark (Entry callback)
+      end
 
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===
       # Check persisted Transaction entries for protection flags before making changes.
@@ -778,6 +769,15 @@ class Account::ProviderImportAdapter
       )
 
       entry.save!
+
+      # Coins arriving in a wallet are its deposits (GoalPledge.deposit_trade?).
+      # After commit, because a wallet writes the trade inside its own
+      # transaction. A re-imported trade is skipped by the reconciler once
+      # stamped.
+      if GoalPledge.deposit_trade?(entry) && account_linked_to_any_goal?
+        GoalPledge::Reconciler.run_after_commit(entry)
+      end
+
       entry
     end
   end
