@@ -68,6 +68,25 @@ class Insight::Generators::NegativePositionGeneratorTest < ActiveSupport::TestCa
     end
   end
 
+  test "an acknowledged warning comes back when another position's first date moves" do
+    @family.users.update_all(ai_enabled: false)
+    users(:family_admin).update!(preferences: { "preview_features_enabled" => true })
+    oversell_msft
+    msft = Account::NegativePosition.new(securities(:msft), 3.days.ago.to_date, -3.to_d)
+    aapl = Account::NegativePosition.new(securities(:aapl), 2.days.ago.to_date, -1.to_d)
+    Account.any_instance.stubs(:negative_positions).returns([ msft, aapl ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    @family.insights.find_by!(dedup_key: "negative_position:#{@account.id}").acknowledge!
+
+    generator = Insight::Generators::NegativePositionGenerator.new(@family)
+    assert generator.send(:acknowledged_unchanged?, generator.generate.first)
+
+    Account.any_instance.stubs(:negative_positions).returns([ msft, aapl.with(first_date: 1.day.ago.to_date) ])
+
+    generator = Insight::Generators::NegativePositionGenerator.new(@family)
+    assert_not generator.send(:acknowledged_unchanged?, generator.generate.first)
+  end
+
   # The provider's holdings are the truth there; the reverse calculator can
   # carry a broker's short position back into rows without a provider id.
   test "ignores linked accounts" do
