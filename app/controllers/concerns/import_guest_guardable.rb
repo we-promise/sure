@@ -5,12 +5,20 @@ module ImportGuestGuardable
   extend ActiveSupport::Concern
 
   private
-    # The background import reads the file, account and choices as they are,
-    # so once it is published (Import#claim_for_publish!) nothing changes them.
-    def require_changeable_import
-      return if @import.changeable_now?
-
-      redirect_to import_path(@import), alert: t("imports.published_locked")
+    # around_action for the actions that change an import. The background
+    # import reads the file, account and choices as they are, so the edit
+    # holds the lock a publish takes (Import#with_publish_lock) and runs only
+    # while the import is still changeable.
+    def lock_changeable_import
+      @import.with_publish_lock do
+        if @import.reload.changeable?
+          yield
+        else
+          redirect_to import_path(@import), alert: t("imports.published_locked")
+        end
+      end
+    rescue Import::PublishBusyError
+      redirect_to import_path(@import), alert: t("imports.publish_busy")
     end
 
     def require_import_editable!

@@ -57,6 +57,20 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal :guest_categories_or_tags, error.reason
   end
 
+  test "a publish while an edit holds the import refuses with a try-again error" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    Import.stubs(:publish_lock_wait).returns(0)
+    # A connection of its own: the test's pinned one would share the session.
+    other = Import.connection.class.new(Import.connection_db_config.configuration_hash)
+    other.execute(Import.sanitize_sql_array([ "SELECT pg_advisory_lock(?, hashtext(?))", Import::PUBLISH_LOCK_NAMESPACE, import.id.to_s ]))
+
+    assert_raises(Import::PublishBusyError) { import.publish_later(user: users(:family_admin)) }
+    assert import.reload.pending?
+  ensure
+    other&.disconnect!
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

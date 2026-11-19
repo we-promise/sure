@@ -1,6 +1,9 @@
 class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   AlreadyPublishedError = Class.new(StandardError)
+  # A wizard edit or a publish holds the import (#with_publish_lock).
+  PublishBusyError = Class.new(StandardError)
+  PUBLISH_LOCK_NAMESPACE = 4015
   # reason is :accounts or :rules (see #publish_refusal_for).
   class PublishNotAllowedError < StandardError
     MESSAGE_KEYS = {
@@ -284,11 +287,41 @@ class Import < ApplicationRecord
   end
 
   # Re-checks the import and its publisher, and marks it importing, under
-  # the row lock, so a second publish finds it importing. Edits check the
-  # status under the same lock (ImportGuestGuardable) and a statement's
-  # account change takes it too (PdfImport#assign_account!).
+  # the publish lock wizard edits hold and the row lock a statement's
+  # account change takes (PdfImport#assign_account!), so a second publish
+  # finds it importing and no edit writes after the claim.
   # Returns the status and publisher it replaced, as read under the lock.
   def claim_for_publish!(user)
+    with_publish_lock { claim_under_row_lock!(user) }
+  end
+
+  # Serialises a wizard edit (ImportGuestGuardable) with a publish, so an
+  # edit that checked the status can't write after the import is claimed.
+  # A session-level advisory lock rather than a row lock: a transaction
+  # around the edit would join the edit's own and could commit half of a
+  # failed one. It gives up after a few seconds with PublishBusyError.
+  def with_publish_lock
+    connection = self.class.lease_connection
+    key = [ PUBLISH_LOCK_NAMESPACE, id.to_s ]
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + self.class.publish_lock_wait
+    until connection.select_value(self.class.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?, hashtext(?))", *key ]))
+      raise PublishBusyError, "Import #{id} is being changed or published" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      sleep 0.05
+    end
+
+    begin
+      yield
+    ensure
+      release_publish_lock(connection, key)
+    end
+  end
+
+  def self.publish_lock_wait
+    5
+  end
+
+  def claim_under_row_lock!(user)
     with_lock do
       raise AlreadyPublishedError, "Import #{id} is #{status}" unless changeable?
       raise MaxRowCountExceededError if row_count_exceeded?
@@ -303,15 +336,21 @@ class Import < ApplicationRecord
     end
   end
 
+  # An unlock that can't run (an aborted transaction, a broken connection)
+  # would leave the lock with the pooled connection; discarding the
+  # connection ends its session, which releases it.
+  def release_publish_lock(connection, key)
+    connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_unlock(?, hashtext(?))", *key ]))
+  rescue StandardError
+    connection.throw_away!
+    raise
+  end
+  private :claim_under_row_lock!, :release_publish_lock
+
   # A job that never got queued leaves nothing to finish the import, so it
   # goes back to how the claim found it and can be published again.
   def release_publish_claim!(previous)
     with_lock { update!(previous) if importing? }
-  end
-
-  # Whether the import is still changeable, read under the row lock.
-  def changeable_now?
-    with_lock { changeable? }
   end
 
   # Whether the web wizard may still change the import: one published is

@@ -288,6 +288,7 @@ es:
         ndjson_invalid: Debe ser un NDJSON válido con al menos un registro
   imports:
     published_locked: Esta importación ya se ha publicado y no se puede cambiar.
+    publish_busy: Esta importación se está cambiando o publicando ahora mismo. Inténtalo de nuevo en un momento.
     configuration_locked: Los datos de esta importación ya están en Sure, así que sus archivos y opciones no se pueden cambiar. Vuelve a intentarlo para terminarla o elimínala para empezar de nuevo.
     mapping_labels:
       account_type: Tipo de cuenta

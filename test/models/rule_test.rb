@@ -687,16 +687,28 @@ class RuleTest < ActiveSupport::TestCase
     assert rule.errors.of_kind?(:user, :invalid)
   end
 
-  test "an owner's rules go with them when they are removed or move family" do
+  test "a member's rules go with them when they are removed or move family" do
     member = users(:family_member)
     removed = owned_rule(member, "Removed probe")
     member.destroy!
     assert_not Rule.exists?(removed.id)
 
-    mover = families(:dylan_family).users.create!(email: "mover@example.com", password: user_password_test, role: "member", first_name: "Mo", last_name: "Ver")
+    mover = family_user("mover@example.com", "member")
     moved = owned_rule(mover, "Moved probe")
     mover.transfer_to_family!(Family.create!(name: "Elsewhere"), role: "member")
     assert_not Rule.exists?(moved.id)
+  end
+
+  test "an admin's rules stay, acting on the whole family, when the admin is removed or moves family" do
+    leaver = family_user("leaving-admin@example.com", "admin")
+    removed = owned_rule(leaver, "Admin removed probe")
+    leaver.destroy!
+    assert_nil removed.reload.user_id
+
+    mover = family_user("moving-admin@example.com", "admin")
+    moved = owned_rule(mover, "Admin moved probe")
+    mover.transfer_to_family!(Family.create!(name: "Elsewhere"), role: "admin")
+    assert_nil moved.reload.user_id
   end
 
   test "a change of owner re-takes an email rule's baseline" do
@@ -756,5 +768,9 @@ class RuleTest < ActiveSupport::TestCase
         conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: name } ],
         actions_attributes: actions
       )
+    end
+
+    def family_user(email, role)
+      families(:dylan_family).users.create!(email: email, password: user_password_test, role: role, first_name: "Some", last_name: "One")
     end
 end

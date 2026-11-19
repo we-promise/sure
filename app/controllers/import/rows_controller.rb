@@ -3,7 +3,7 @@ class Import::RowsController < ApplicationController
 
   before_action :set_import_row
   before_action :require_import_editable!, only: :update
-  before_action :require_changeable_import, only: :update
+  around_action :lock_changeable_import, only: :update
 
   def update
     @row.update_and_sync(row_params)

@@ -37,8 +37,8 @@ class User < ApplicationRecord
   has_many :sso_audit_logs, dependent: :nullify
   has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
-  # A rule acts for its owner, so it goes with them.
-  has_many :rules, dependent: :destroy
+  has_many :rules
+  before_destroy :hand_over_rules
   has_many :shared_accounts, through: :account_shares, source: :account
   has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
   has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy
@@ -449,11 +449,16 @@ class User < ApplicationRecord
     UserPurgeJob.perform_later(self)
   end
 
+  # A rule acts for its owner. When they leave the family, an admin's rules
+  # stay and act on the whole family, as they did; a member's go with them.
+  def hand_over_rules
+    admin? ? rules.update_all(user_id: nil, updated_at: Time.current) : rules.destroy_all
+  end
+
   def transfer_to_family!(new_family, role: self.role)
     transaction do
       lock!
-      # Their rules act for them in the family they leave.
-      rules.destroy_all
+      hand_over_rules
 
       accounts_to_move = owned_accounts.order(:id).to_a
       provider_items_to_move = provider_items_for_transfer(accounts_to_move)
