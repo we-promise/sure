@@ -313,6 +313,23 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert Account.find(account_id).cost_basis_fifo?
   end
 
+  test "an export without a known cost basis method imports as average" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: { id: "old-account-1", name: "Older", balance: "100", currency: "USD", accountable_type: "Investment", accountable: {} }
+      },
+      {
+        type: "Account",
+        data: { id: "old-account-2", name: "Newer", balance: "100", currency: "USD", cost_basis_method: "some-future-method", accountable_type: "Investment", accountable: {} }
+      }
+    ])
+
+    account_ids = Family::DataImporter.new(@family, ndjson).import![:account_ids]
+
+    assert_equal %w[average average], Account.where(id: account_ids).pluck(:cost_basis_method)
+  end
+
   test "imports a manual availability with its release fields" do
     ndjson = build_ndjson([
       {
