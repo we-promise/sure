@@ -73,17 +73,70 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     @family.send(:delete_vector_store)
   end
 
-  test "a poll by another store than the one that accepted the document errors instead of calling it ready" do
+  test "an unavailable backend that accepted the document errors instead of calling it ready" do
     @document.update_column(:metadata, { "vector_store" => "openai" })
     @adapter.expects(:file_status).never
-    VectorStore.stubs(:backend_name).returns("pgvector")
+    VectorStore::Openai.stubs(:from_config).returns(nil)
 
     VectorStore::IndexStatusJob.perform_now(@document)
 
     assert_equal "error", @document.reload.status
+    assert_match(/openai/, @document.metadata["error"])
+  end
+
+  test "polls with the backend that accepted the document, not the configured one" do
+    @document.update_column(:metadata, { "vector_store" => "openai" })
+    openai = mock("openai_adapter")
+    openai.expects(:file_status).with(store_id: "vs_abc123", file_id: "file-xyz")
+          .returns(VectorStore::Response.new(success?: true, data: { status: "ready" }, error: nil))
+    VectorStore::Openai.stubs(:from_config).returns(openai)
+    @adapter.expects(:file_status).never
+
+    VectorStore::IndexStatusJob.perform_now(@document)
+
+    assert_equal "ready", @document.reload.status
+  end
+
+  # A second poll can finish the index while an older one is between its HTTP call and its write.
+  test "a late error poll cannot overwrite a document already ready" do
+    expect_concurrent_status("ready", "error", error: "bad file")
+
+    VectorStore::IndexStatusJob.perform_now(@document)
+
+    assert_equal "ready", @document.reload.status
+  end
+
+  test "a late poll-cap failure cannot overwrite a document already ready" do
+    expect_concurrent_status("ready", "processing")
+
+    VectorStore::IndexStatusJob.perform_now(@document, VectorStore::IndexStatusJob::MAX_POLLS)
+
+    assert_equal "ready", @document.reload.status
+  end
+
+  test "a rejected requeue leaves the document processing and recoverable" do
+    expect_status("processing")
+    enqueuer = stub("job_enqueuer")
+    enqueuer.stubs(:perform_later).raises(StandardError, "queue down")
+    VectorStore::IndexStatusJob.stubs(:set).returns(enqueuer)
+
+    assert_nothing_raised { VectorStore::IndexStatusJob.perform_now(@document) }
+    assert_equal "processing", @document.reload.status
+
+    VectorStore::IndexStatusJob.unstub(:set)
+    assert_enqueued_with(job: VectorStore::IndexStatusJob) { @document.poll_index_later }
   end
 
   private
+    def expect_concurrent_status(concurrent_status, reported_status, error: nil)
+      adapter = stub("vector_store_adapter")
+      adapter.define_singleton_method(:file_status) do |**_args|
+        @document.update_column(:status, concurrent_status)
+        VectorStore::Response.new(success?: true, data: { status: reported_status, error: }.compact, error: nil)
+      end
+      VectorStore::Registry.stubs(:adapter).returns(adapter)
+    end
+
     def expect_status(status, error: nil)
       @adapter.expects(:file_status).with(store_id: "vs_abc123", file_id: "file-xyz")
               .returns(VectorStore::Response.new(success?: true, data: { status:, error: }.compact, error: nil))

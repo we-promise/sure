@@ -476,9 +476,13 @@ class AccountStatement < ApplicationRecord
     # switch, checked here because Ai::Consent checks the switch only for chat and bills, and
     # again by the job before anything is sent. A PDF import indexes without it: starting one is
     # asking for AI (ProcessPdfJob).
+    def ai_indexing_allowed?(user)
+      user.present? && user.ai_enabled? && Ai.available?(:embed, family:, user:)
+    end
+
     def index_in_vector_store_later
       user = Current.user
-      return unless user&.ai_enabled? && Ai.available?(:embed, family:, user:)
+      return unless ai_indexing_allowed?(user)
 
       IndexAccountStatementJob.perform_later(id, user.id)
     end
