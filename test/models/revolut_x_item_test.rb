@@ -75,17 +75,24 @@ class RevolutXItemTest < ActiveSupport::TestCase
     assert_nil revolut_x_items(:awaiting_api_key).revolut_x_provider
   end
 
-  test "classifies fiat by Revolut X asset_type, then by the USD/EUR/GBP default" do
+  test "classifies fiat by Revolut X asset_type, then by ISO numeric in currencies.yml" do
     item = revolut_x_items(:one)
     item.update!(raw_payload: { "currencies" => {
-      "BTC" => { "asset_type" => "crypto" },
-      "CHF" => { "asset_type" => "fiat" }
+      "USD" => { "asset_type" => "fiat" },
+      "EUR" => { "asset_type" => "fiat" },
+      "GBP" => { "asset_type" => "fiat" },
+      "BTC" => { "asset_type" => "crypto" }
     } })
 
-    assert item.fiat_currency?("CHF")
-    assert_not item.fiat_currency?("BTC")
-    assert item.fiat_currency?("eur")
-    assert_not item.fiat_currency?("SOL")
+    %w[USD eur CZK IDR TRY EGP czk].each { |code| assert item.fiat_currency?(code), "#{code} should be fiat" }
+    %w[BTC DOGE USDT SOL].each { |code| assert_not item.fiat_currency?(code), "#{code} should not be fiat" }
+  end
+
+  test "Revolut X asset_type wins over currencies.yml" do
+    item = revolut_x_items(:one)
+    item.update!(raw_payload: { "currencies" => { "CZK" => { "asset_type" => "crypto" } } })
+
+    assert_not item.fiat_currency?("CZK")
   end
 
   test "sets Revolut X institution defaults" do
