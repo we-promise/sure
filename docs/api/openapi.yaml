@@ -668,6 +668,7 @@ components:
       - classification
       - account_type
       - status
+      - exclude_from_reports
       - created_at
       - updated_at
       properties:
@@ -703,6 +704,10 @@ components:
           - draft
           - disabled
           - pending_deletion
+        exclude_from_reports:
+          type: boolean
+          readOnly: true
+          description: Whether this account is excluded from financial reports
         institution_name:
           type: string
           nullable: true
