@@ -303,9 +303,14 @@ class Portfolio::FlowClassifier
       return nil unless transfer
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id
-      return nil if Transaction.find_by(id: counterpart_id)&.pending?
+      # One read of the other leg: its account and date from the entry, and its
+      # pending flag from the transaction, so the two can't disagree.
+      account_id, date, extra = Entry
+        .joins("JOIN transactions ON transactions.id = entries.entryable_id")
+        .where(entryable_type: "Transaction", entryable_id: counterpart_id)
+        .pick(:account_id, :date, "transactions.extra")
+      return nil if Transaction.pending_extra?(extra)
 
-      account_id, date = Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id, :date)
       [ account_id&.to_s, date ]
     end
 
