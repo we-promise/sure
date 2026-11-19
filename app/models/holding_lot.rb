@@ -8,11 +8,43 @@ class HoldingLot < ApplicationRecord
   belongs_to :source_entry, class_name: "Entry", optional: true
   belongs_to :origin_security, class_name: "Security", optional: true
 
+  # A cost per unit is stored with 15 digits before the point, as a
+  # holding's cost basis is, so it stays below 10^15.
+  MAX_UNIT_COST = BigDecimal("1e15")
+
   scope :derived, -> { where.not(source_entry_id: nil) }
   scope :opening, -> { where(source_entry_id: nil) }
 
+  validates :manual_total_cost, numericality: { greater_than_or_equal_to: 0, less_than: BigDecimal("1e15") }, allow_nil: true
+  validate :manual_unit_cost_fits, if: :manual_total_cost
+
   def opening?
     source_entry_id.nil?
+  end
+
+  # What the user says the parcel cost when it was acquired, in the account's
+  # currency. The calculators spread it over the acquiring trade's quantity,
+  # so it holds through later splits and sales.
+  def set_manual_total_cost!(total)
+    update!(manual_total_cost: total)
+  end
+
+  def unlock_cost!
+    update!(manual_total_cost: nil)
+  end
+
+  def manual_cost?
+    !manual_total_cost.nil?
+  end
+
+  # The places the cost editor shows a saved total to: the currency's, or as
+  # many as the column keeps when the total needs them, so saving the form
+  # unchanged keeps it.
+  def manual_total_cost_precision
+    places = Money::Currency.new(currency).default_precision
+    return places if manual_total_cost.nil? || manual_total_cost.round(places) == manual_total_cost
+
+    self.class.columns_hash["manual_total_cost"].scale
   end
 
   class << self
@@ -57,14 +89,27 @@ class HoldingLot < ApplicationRecord
       lots.filter_map { |key, qty| key if held[key] == qty }.to_set
     end
 
-    # Moves lots to another security with their trades. Lots are never merged:
-    # derived lots keep their own rows, and an opening lot moves only where the
-    # target has none, since the target's own is restated over the moved units
-    # at the next materialization.
+    # Moves lots to another security with their trades. Derived lots keep
+    # their own rows. An opening lot moved onto a position with its own is
+    # merged into it: the quantities add, and the cost stays only where both
+    # sides know it and agree, in the same currency, since one figure cannot
+    # stand for two different ones. An opening lot with no units (a clamp
+    # records one) has no cost to weigh, so it is dropped rather than merged;
+    # moved onto one, the units keep their own cost and the lot is no longer a
+    # clamp. The merged lot keeps the target's origin until the next
+    # materialization, which restates it from the latest provider snapshot.
     def move!(derived:, opening:, to:)
       derived.update_all(security_id: to.id, updated_at: Time.current)
       opening.find_each do |lot|
-        if where(account_id: lot.account_id, security_id: to.id).opening.exists?
+        target = where(account_id: lot.account_id, security_id: to.id).opening.first
+        if target && lot.qty.zero?
+          lot.delete
+        elsif target&.qty&.zero?
+          target.update_columns(qty: lot.qty, unit_cost: lot.unit_cost, currency: lot.currency, clamped: false, updated_at: Time.current)
+          lot.delete
+        elsif target
+          unit_cost = target.unit_cost if lot.unit_cost && lot.unit_cost == target.unit_cost && lot.currency == target.currency
+          target.update_columns(qty: target.qty + lot.qty, unit_cost: unit_cost, updated_at: Time.current)
           lot.delete
         else
           lot.update_columns(security_id: to.id, updated_at: Time.current)
@@ -72,4 +117,13 @@ class HoldingLot < ApplicationRecord
       end
     end
   end
+
+  private
+    # The calculators divide the total by the acquiring trade's quantity.
+    def manual_unit_cost_fits
+      qty = source_entry&.trade&.qty
+      return unless qty&.positive?
+
+      errors.add(:manual_total_cost, :less_than, count: MAX_UNIT_COST * qty) if manual_total_cost / qty >= MAX_UNIT_COST
+    end
 end

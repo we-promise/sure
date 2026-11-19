@@ -492,6 +492,13 @@ class ReportsController < ApplicationController
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
+        # Buys/sells move value between cash and holdings; keep cash income and fees, decided by label as Portfolio::FlowClassifier does.
+        # A qty-0 trade also stays unless its label marks it as a movement (internal, external or transfer).
+        .where(
+          "trades.investment_activity_label IN (?) OR (trades.qty = 0 AND (trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)))",
+          Portfolio::FlowClassifier::INCOME_LABELS + Portfolio::FlowClassifier::FEE_LABELS,
+          Portfolio::FlowClassifier::INTERNAL_LABELS + Portfolio::FlowClassifier::EXTERNAL_LABELS + [ Portfolio::FlowClassifier::TRANSFER_LABEL ]
+        )
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
         .includes(entry: :account, category: :parent)
       trades = exclude_tax_advantaged_accounts(trades)
