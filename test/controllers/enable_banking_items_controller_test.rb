@@ -35,6 +35,75 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/DE89370400440532013000/, @response.body, "Only the last four digits should be shown") # pipelock:ignore IBAN
   end
 
+  test "select_bank lists banks for the requested country" do
+    Provider::EnableBanking.any_instance.expects(:get_aspsps).with(country: "AT").returns(aspsps: [])
+
+    get select_bank_enable_banking_item_url(@item, new_connection: true, country_code: "at")
+
+    assert_response :success
+  end
+
+  test "select_bank ignores the requested country unless it is for a new connection" do
+    Provider::EnableBanking.any_instance.expects(:get_aspsps).with(country: "DE").returns(aspsps: [])
+
+    get select_bank_enable_banking_item_url(@item, country_code: "AT")
+
+    assert_response :success
+  end
+
+  test "authorize keeps the item's country when it is not for a new connection" do
+    Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(aspsps: [ { name: "Test Bank", country: "DE" } ])
+
+    get select_bank_enable_banking_item_url(@item)
+
+    assert_select "form[action='#{authorize_enable_banking_item_path(@item)}'] input[name=country_code][value=DE]"
+  end
+
+  test "select_bank falls back to the item's country for an unknown country" do
+    Provider::EnableBanking.any_instance.expects(:get_aspsps).with(country: "DE").returns(aspsps: [])
+
+    get select_bank_enable_banking_item_url(@item, country_code: "ZZ")
+
+    assert_response :success
+  end
+
+  test "select_bank passes the requested country on to authorize" do
+    Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(aspsps: [ { name: "Test Bank", country: "AT" } ])
+
+    get select_bank_enable_banking_item_url(@item, new_connection: true, country_code: "AT")
+
+    assert_select "form[action='#{authorize_enable_banking_item_path(@item)}'] input[name=country_code][value=AT]"
+  end
+
+  test "new_connection forwards the requested country to select_bank" do
+    post new_connection_enable_banking_item_url(@item), params: { country_code: "AT" }
+
+    assert_redirected_to select_bank_enable_banking_item_url(@item, new_connection: true, country_code: "AT")
+  end
+
+  test "authorize creates a new connection in the requested country" do
+    stub_authorization_start
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      post authorize_enable_banking_item_url(@item),
+           params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true", country_code: "AT" }
+    end
+
+    created = @family.enable_banking_items.where.not(id: @item.id).order(:created_at).last
+    assert_equal "AT", created.country_code
+    assert_equal "DE", @item.reload.country_code
+  end
+
+  test "authorize keeps the item's country when the requested country is invalid" do
+    stub_authorization_start
+
+    post authorize_enable_banking_item_url(@item),
+         params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true", country_code: "ZZ" }
+
+    created = @family.enable_banking_items.where.not(id: @item.id).order(:created_at).last
+    assert_equal "DE", created.country_code
+  end
+
   test "select_bank exposes ASPSP BIC in the searchable data attribute" do
     Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
       aspsps: [
