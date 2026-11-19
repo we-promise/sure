@@ -234,7 +234,7 @@ class RulesTest < ApplicationSystemTestCase
     rent = create_exclude_rule("Rent", group: group)
 
     visit rules_path
-    find("input[type='search']").fill_in(with: "rent")
+    find("input[name='q']").fill_in(with: "rent")
 
     assert_selector "[data-sortable-list-id='#{rent.id}']"
     assert_no_selector "[data-sortable-list-id='rule:#{groceries.id}']"
