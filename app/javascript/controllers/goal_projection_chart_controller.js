@@ -453,9 +453,13 @@ export default class extends Controller {
     if (targetLabel) {
       // On an overdue goal Today sits on the right edge too; a target near the
       // top of the scale would put the two labels on top of each other, so the
-      // target label moves below its line.
-      if (todayLabel && this._boxesOverlap(targetLabel.node().getBBox(), todayLabel.node().getBBox())) {
-        targetLabel.attr("y", targetY + 16);
+      // target label ends just left of Today instead. It stays above its line:
+      // below it is where a near-miss shortfall label goes.
+      if (todayLabel) {
+        const todayBox = todayLabel.node().getBBox();
+        if (this._boxesOverlap(targetLabel.node().getBBox(), todayBox)) {
+          targetLabel.attr("x", todayBox.x - 6);
+        }
       }
       // Painted after the plot lines so its halo masks the ones crossing it.
       targetLabel.raise();

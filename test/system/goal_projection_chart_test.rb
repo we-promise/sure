@@ -91,6 +91,18 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
   end
 
+  test "on an overdue goal just short of its target the moved target label clears the shortfall label" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, saved: 9_900, target_date: TODAY, history_from: TODAY - 90.days)
+
+      today_label = chart_texts.find { |t| t["text"] == "Today" }
+      assert today_label, "premise: the Today label is drawn"
+      label = target_label
+      assert_not boxes_overlap?(label, today_label), "Target and Today overlap: #{label.inspect} #{today_label.inspect}"
+      assert_not boxes_overlap?(label, shortfall_label), "Target and shortfall overlap: #{label.inspect} #{shortfall_label.inspect}"
+    end
+  end
+
   test "a window of daily ticks keeps the label of every month it covers" do
     travel_to Date.new(2027, 1, 25) do
       # The setup session is three months old by now.
