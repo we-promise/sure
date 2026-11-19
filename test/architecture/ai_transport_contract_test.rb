@@ -227,7 +227,7 @@ class AiTransportContractTest < ActiveSupport::TestCase
     endpoint = ai_endpoint(name: "plain", base_url: "https://llm.example.test/v1")
     transport = Ai::Transport::Base.new(endpoint)
     model = ai_model(name: "ocr", endpoint:, capabilities: %i[ocr])
-    request = Ai::Transport::Base::OcrRequest.new(feature: :extract_pdf, model:, pages: [ Ai::Attachment.png("png") ])
+    request = Ai::Transport::Base::OcrRequest.new(feature: :extract_pdf, model:, pages: [ Ai::Attachment.png("png", filename: "page.png") ])
 
     assert_not transport.ocr?
     assert_raises(Ai::Error::Refused) { transport.ocr(request) }

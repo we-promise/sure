@@ -254,7 +254,9 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end
 
     assert result.passing?
-    assert_equal 2048, requests.sole.max_tokens
+    # The transport reads the limit from the model; Request#max_tokens is only for callers
+    # that override it, so the probe's synthetic model must carry the production limit.
+    assert_equal 2048, requests.sole.model.max_output_tokens
   end
 
   test "PDF vision probe sends the page as an image on a compatible server" do

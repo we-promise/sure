@@ -95,10 +95,10 @@ class AiTransportOcrTest < ActiveSupport::TestCase
     assert_raises(Ai::Error::InvalidOutput) { ocr(local_model(ocr_prompt: "markdown")) }
   end
 
-  test "an endpoint that needs static headers refuses OCR before sending the page" do
-    endpoint = ai_endpoint(name: "ocr", base_url: "http://ocr.local:8080/v1", extra_headers: { "X-Gateway-Key" => "secret" })
-    model = ai_model(name: "unlimited-ocr-2", endpoint:, capabilities: %i[ocr vision])
-    stub = stub_request(:post, CHAT_URL)
+  test "an endpoint that needs static headers refuses native OCR before sending the page" do
+    endpoint = ai_endpoint(name: "mistral", preset: :mistral, base_url: nil, extra_headers: { "X-Gateway-Key" => "secret" })
+    model = ai_model(name: "mistral-ocr-latest", endpoint:, capabilities: %i[ocr])
+    stub = stub_request(:post, "https://api.mistral.ai/v1/ocr")
 
     assert_raises(Ai::Error::Refused) { ocr(model, pages: @pages.first(1)) }
     assert_not_requested stub
@@ -115,7 +115,7 @@ class AiTransportOcrTest < ActiveSupport::TestCase
   test "a malformed Cohere OCR answer is InvalidOutput, not text for the generation" do
     endpoint = ai_endpoint(name: "cohere", preset: :cohere, base_url: nil)
     model = ai_model(name: "parse-v5.0", endpoint:, capabilities: %i[ocr])
-    stub_json("https://api.cohere.com/v2/parse", { pages: [ { index: 0, markdown: { content: "Impact page" } } ],
+    stub_json("https://api.cohere.com/v2/parse", { pages: [ { index: 0, markdown: { content: 42 } } ],
                                                     meta: { billed_units: { pages: 1 } } })
 
     assert_raises(Ai::Error::InvalidOutput) { ocr(model, pages: @pages.first(1)) }
@@ -132,7 +132,7 @@ class AiTransportOcrTest < ActiveSupport::TestCase
     recording = ->(&configure) { context.call { |config| configure.call(config).tap { timeouts << config.request_timeout } } }
 
     Ai::CallContext.stub(:now, -> { clock[0] }) do
-      RubyLLM.stub(:context, recording) { ocr(local_model) }
+      RubyLLM.stub(:context, recording) { ocr(local_model(max_retries: 1), pages: @pages.first(1)) }
     end
 
     assert_equal [ 60, 15 ], timeouts.map(&:round)
@@ -146,7 +146,7 @@ class AiTransportOcrTest < ActiveSupport::TestCase
       { status: 200, headers: JSON_HEADERS,
         body: { model: "mistral-ocr-latest", pages: [ { index: 0, markdown: "BAC statement" } ] }.to_json }
     )
-    endpoint = ai_endpoint(name: "mistral", preset: :mistral, base_url: nil)
+    endpoint = ai_endpoint(name: "mistral", preset: :mistral, base_url: nil, max_retries: 1)
     model = ai_model(name: "mistral-ocr-latest", endpoint:, capabilities: %i[ocr])
     timeouts = []
     context = RubyLLM.method(:context)
@@ -160,8 +160,8 @@ class AiTransportOcrTest < ActiveSupport::TestCase
   end
 
   private
-    def local_model(ocr_prompt: "markdown")
-      endpoint = ai_endpoint(name: "ocr", base_url: "http://ocr.local:8080/v1", location: :local)
+    def local_model(ocr_prompt: "markdown", max_retries: 0)
+      endpoint = ai_endpoint(name: "ocr", base_url: "http://ocr.local:8080/v1", location: :local, max_retries:)
       ai_model(name: "unlimited-ocr-2", endpoint:, capabilities: %i[ocr vision], ocr_prompt:)
     end
 

@@ -52,7 +52,7 @@ module Pdf::PageImages
       runs(wanted).each_with_index do |(first, last), index|
         prefix = File.join(dir, "run-#{index}", "page")
         Dir.mkdir(File.dirname(prefix))
-        render_run(executable, input, prefix, first:, last:, dpi:, limits:).each { by_page.merge!(_1) }
+        by_page.merge!(render_run(executable, input, prefix, first:, last:, dpi:, limits:))
       end
 
       missing = wanted - by_page.keys

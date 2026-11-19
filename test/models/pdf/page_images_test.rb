@@ -174,7 +174,7 @@ class Pdf::PageImagesTest < ActiveSupport::TestCase
     # A stand-in that writes a real-enough PNG for each page of its -f/-l run, and logs the run.
     def recording_pdftoppm(dir)
       one = png_file(dir)
-      fake_pdftoppm(dir, "echo \"$*\" >> #{command_log(dir)}; f=$4; l=$6; prefix=$9; while [ \"$f\" -le \"$l\" ]; do cp #{one} \"$prefix-$f.png\"; f=$((f + 1)); done")
+      fake_pdftoppm(dir, "echo \"$*\" >> #{command_log(dir)}; f=$5; l=$7; prefix=$9; while [ \"$f\" -le \"$l\" ]; do cp #{one} \"$prefix-$f.png\"; f=$((f + 1)); done")
     end
 
     def png_file(dir)
