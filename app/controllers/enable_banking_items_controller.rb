@@ -614,7 +614,11 @@ class EnableBankingItemsController < ApplicationController
     # A new connection can live in a different country than the item whose
     # credentials it copies, so the caller may choose one. Unknown values fall
     # back to the item's own country.
+    # Only a new connection can use another country. Existing-item flows keep the
+    # item's own country, since they authorize against that item.
     def requested_country_code
+      return @enable_banking_item.country_code unless action_name == "new_connection" || params[:new_connection] == "true"
+
       code = params[:country_code].to_s.strip.upcase
       EnableBankingItem::COUNTRY_CODES.include?(code) ? code : @enable_banking_item.country_code
     end

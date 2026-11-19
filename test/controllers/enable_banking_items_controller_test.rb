@@ -43,6 +43,22 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "select_bank ignores the requested country unless it is for a new connection" do
+    Provider::EnableBanking.any_instance.expects(:get_aspsps).with(country: "DE").returns(aspsps: [])
+
+    get select_bank_enable_banking_item_url(@item, country_code: "AT")
+
+    assert_response :success
+  end
+
+  test "authorize keeps the item's country when it is not for a new connection" do
+    Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(aspsps: [ { name: "Test Bank", country: "DE" } ])
+
+    get select_bank_enable_banking_item_url(@item)
+
+    assert_select "form[action='#{authorize_enable_banking_item_path(@item)}'] input[name=country_code][value=DE]"
+  end
+
   test "select_bank falls back to the item's country for an unknown country" do
     Provider::EnableBanking.any_instance.expects(:get_aspsps).with(country: "DE").returns(aspsps: [])
 
