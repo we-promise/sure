@@ -114,6 +114,30 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal "not-a-number", row.amount
   end
 
+  test "clearing a reading releases only the reconciliation marks it wrote" do
+    first = create_transaction(account: @account, date: @date, amount: 50, name: "First coffee")
+    second = create_transaction(account: @account, date: @date, amount: 12, name: "Second book")
+    other_import = PdfImport.create!(family: @family, account: @account, account_statement: @statement,
+                                     date_format: @family.date_format, status: :pending)
+
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "First") ] })
+    @import.generate_rows_from_extracted_data
+    other_import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -12, name: "Second") ] })
+    other_import.generate_rows_from_extracted_data
+
+    assert first.reload.statement_reconciled?
+    assert second.reload.statement_reconciled?
+
+    @import.clear_reading!
+
+    assert_not first.reload.statement_reconciled?, "the discarded reading's mark is released"
+    assert second.reload.statement_reconciled?, "another import's mark on the same statement stays"
+
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "First") ] })
+    @import.generate_rows_from_extracted_data
+    assert first.reload.statement_reconciled?, "the replacement reading writes its own mark"
+  end
+
   test "reassigning the account re-judges the rows and releases the old reconciliation" do
     other = @family.accounts.create!(
       name: "Second Checking", balance: 0, currency: "USD", accountable: Depository.new

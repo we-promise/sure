@@ -1,6 +1,11 @@
 class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
+  # A second publish (or a reread) already owns the record: the caller should
+  # refresh rather than queue another job. Subclasses RuntimeError so existing
+  # callers that treat an unpublishable import as a runtime failure still do.
+  AlreadyClaimedError = Class.new(RuntimeError)
+  EnqueueFailedError = Class.new(StandardError)
 
   # A hard-killed worker (OOM, SIGKILL during deploy) loses its in-flight job
   # permanently, wedging the record in importing/reverting with no UI recourse.
@@ -247,13 +252,30 @@ class Import < ApplicationRecord
   def publish_later
     raise MaxRowCountExceededError if row_count_exceeded?
 
+    previous_status = nil
     with_lock do
-      raise "Import is not publishable" unless publishable? && !importing?
+      # complete means a competing request finished publishing between the
+      # controller's check and this claim; importing means another job owns it.
+      raise AlreadyClaimedError, "Import is already claimed" if importing? || complete?
+      raise "Import is not publishable" unless publishable?
 
-      update! status: :importing
+      previous_status = status
+      # A reread's token must not survive into a publish: a delayed reread job
+      # would otherwise find its claim again once this publish sets importing.
+      update! status: :importing, reread_token: nil
     end
 
-    ImportJob.perform_later(self)
+    enqueued = begin
+      ImportJob.perform_later(self)
+    rescue StandardError => e
+      release_publish_claim!(previous_status)
+      raise EnqueueFailedError, e.message
+    end
+
+    return enqueued if enqueued
+
+    release_publish_claim!(previous_status)
+    raise EnqueueFailedError, "Import job could not be enqueued"
   end
 
   # Whether publishing would change existing records even when the dry run
@@ -605,6 +627,14 @@ class Import < ApplicationRecord
   end
 
   private
+    # Only give the claim back if this attempt still owns it. A reread or a
+    # later publish that took over in the meantime keeps its own claim.
+    def release_publish_claim!(previous_status)
+      with_lock do
+        update!(status: previous_status) if importing? && reread_token.nil?
+      end
+    end
+
     # Hook for import types that also maintain state outside their own rows and
     # entries -- PdfImport records statement reconciliation on entries it did
     # not create, and destroying its own entries does not unwind that. Runs

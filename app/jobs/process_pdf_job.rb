@@ -9,22 +9,25 @@ class ProcessPdfJob < ApplicationJob
     Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}, error_class=#{err.class.name})")
   end
 
-  # reread: "Read again as…" claimed the import; the previous reading is cleared here, not before
-  # the job was queued.
-  def perform(pdf_import, reread: false)
+  # reread: "Read again as…" claimed the import with reread_token; the previous
+  # reading is cleared here, under the lock that verifies that claim.
+  def perform(pdf_import, reread: false, reread_token: nil)
     return unless pdf_import.is_a?(PdfImport)
     if reread
-      return unless pdf_import.importing?
-
-      pdf_import.clear_reading!
+      return if reread_token.blank?
+      return unless pdf_import.clear_reading!(reread_token: reread_token)
     end
     return reset_processing_claim(pdf_import) unless pdf_import.pdf_uploaded?
     return if pdf_import.status.in?(%w[complete failed])
     return reset_processing_claim(pdf_import) if pdf_import.ai_processed? && (!pdf_import.statement_with_transactions? || pdf_import.rows_count > 0)
 
-    pdf_import.update!(status: :importing)
+    pdf_import.update!(status: :importing, reread_token: nil)
 
     Ai::CallContext.job("pdf_import:#{pdf_import.id}") { process(pdf_import) }
+  rescue Ai::Error::Base, Pdf::PageImages::Error => e
+    # discard_on below must not retire a job whose failed status is unrecorded.
+    record_failed_status(pdf_import, e)
+    raise
   end
 
   private
@@ -138,7 +141,21 @@ class ProcessPdfJob < ApplicationJob
       document_type.in?(Ai::PdfReading::STATEMENT_TYPES)
     end
 
+    # process itself records its failure; this covers an error raised before it
+    # starts. A job whose claim was already released must not fail a newer one.
+    def record_failed_status(pdf_import, error)
+      return unless pdf_import.is_a?(PdfImport)
+
+      pdf_import.with_lock do
+        pdf_import.update!(status: :failed, error: sanitize_error_message(error)) if pdf_import.importing?
+      end
+    rescue StandardError => update_error
+      Rails.logger.error("Failed to record ProcessPdfJob failure: #{update_error.message}")
+    end
+
     def reset_processing_claim(pdf_import)
-      pdf_import.with_lock { pdf_import.update!(status: :pending) if pdf_import.importing? && pdf_import.updated_at <= 30.minutes.ago }
+      pdf_import.with_lock do
+        pdf_import.update!(status: :pending, reread_token: nil) if pdf_import.importing? && pdf_import.updated_at <= 30.minutes.ago
+      end
     end
 end

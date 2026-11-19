@@ -154,11 +154,12 @@ class PdfImportTest < ActiveSupport::TestCase
     rows = import.rows_count
     ProcessPdfJob.stubs(:perform_later).raises(StandardError, "queue offline")
 
-    assert_not import.reread!("auto")
+    assert_equal :enqueue_failed, import.reread!("auto")
 
     assert import.reload.pending?
     assert_equal rows, import.rows_count
     assert import.ai_processed?
+    assert_nil import.reread_token
   end
 
   test "reading again a way this file can't be read changes nothing" do
