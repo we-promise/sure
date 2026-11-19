@@ -174,15 +174,9 @@ module Family::AutoTransferMatchable
     # entry dates.
     def sync_principal_only_loan_accounts(transfers)
       transfers.each do |transfer|
-        next unless principal_only_loan_transfer?(transfer)
+        next unless transfer.principal_only_loan_transfer?
 
         transfer.sync_account_later
-      end
-    end
-
-    def principal_only_loan_transfer?(transfer)
-      [ transfer.from_account, transfer.to_account ].compact.any? do |account|
-        account.loan? && account.loan.amortizable? && account.loan.principal_only_transfers?
       end
     end
 
