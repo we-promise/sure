@@ -301,7 +301,7 @@ class Provider::EnableBanking
       OpenSSL::PKey::RSA.new(certificate_pem)
     rescue OpenSSL::PKey::RSAError => e
       Rails.logger.error "Enable Banking: Failed to parse private key: #{e.message}"
-      raise EnableBankingError.new("Invalid private key in certificate: #{e.message}", :invalid_certificate)
+      raise EnableBankingError.new("Invalid private key: #{e.message}", :invalid_certificate)
     end
 
     def generate_jwt
