@@ -5,8 +5,9 @@ module IbkrAccount::DataHelpers
   # or trade quantity is that face value; its multiplier (0.01) relates the two.
   # Sure counts a bond in units of 100 face, the unit its price is quoted per,
   # so the price reads as IBKR quotes it and quantity x price is its value. A
-  # Flex Query without the Multiplier field gets IBKR's bond multiplier, and so
-  # does a row whose value contradicts the multiplier it reports.
+  # Flex Query without the Multiplier field is no different: the row's value
+  # decides between a unit of 1 and of 0.01, and 0.01 (IBKR's bond multiplier)
+  # is the fallback when the row has no value to decide with.
   BOND_MULTIPLIER = BigDecimal("0.01")
 
   # How far, in orders of magnitude, a bond's implied unit factor may sit from
@@ -141,7 +142,8 @@ module IbkrAccount::DataHelpers
         .filter_map { |v| parse_decimal(v) }.find { |v| !v.zero? }
       return nil unless quantity && price && value && !quantity.zero? && !price.zero?
 
-      value.abs / (quantity.abs * price.abs)
+      factor = value.abs / (quantity.abs * price.abs)
+      factor.finite? ? factor : nil
     end
 
     def asset_category(row)
