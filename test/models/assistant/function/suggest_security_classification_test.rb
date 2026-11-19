@@ -92,10 +92,10 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
     assert_match(/by hand/i, result[:skipped].first[:reason])
   end
 
-  # `propose!` updates an existing proposal in place, and the model's
-  # manual/locked veto runs on create only. So once a proposal exists, the
-  # tool's own pre-check is what keeps a re-proposal from reviving it after
-  # the user answered the security by hand.
+  # `propose!` updates an existing proposal in place. The model runs its
+  # manual/locked veto on every save that leaves a proposal pending, and the
+  # tool checks the same veto first, so a re-proposal does not revive a
+  # proposal after the user answered the security by hand.
   test "re-proposing for a security classified by hand since is skipped" do
     @function.call("proposals" => [ { "ticker" => "AAPL", "asset_class" => "equity" } ])
     existing = Security::ClassificationProposal.sole
@@ -146,10 +146,14 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
       security: other, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD"
     )
 
-    # The first ticker refuses at write time; the second must still land.
-    Security::ClassificationProposal.stubs(:propose!).raises(
-      ActiveRecord::RecordInvalid.new(Security::ClassificationProposal.new)
-    ).then.returns(Security::ClassificationProposal.new)
+    # The first ticker refuses at write time; the second must still land, and
+    # it must be the second security that reaches the write.
+    answer = { asset_class: "equity", asset_sub_class: "stock", sector: nil, region: nil, rationale: nil }
+    writes = sequence("writes")
+    Security::ClassificationProposal.expects(:propose!).with(security: @security, family: @family, **answer)
+      .in_sequence(writes).raises(ActiveRecord::RecordInvalid.new(Security::ClassificationProposal.new))
+    Security::ClassificationProposal.expects(:propose!).with(security: other, family: @family, **answer)
+      .in_sequence(writes).returns(Security::ClassificationProposal.new)
 
     result = @function.call("proposals" => [
       { "ticker" => "AAPL", "asset_class" => "equity", "asset_sub_class" => "stock" },
@@ -180,6 +184,57 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
 
     assert_equal 1, result[:recorded]
     assert_equal london, Security::ClassificationProposal.sole.security
+  end
+
+  # A listing stored under a legacy code is the same venue as its ISO MIC,
+  # as `Security` treats it everywhere else.
+  test "a held listing stored under a legacy exchange code is matched by its MIC" do
+    xetra = Security.create!(ticker: "SAP9", exchange_operating_mic: "XETR", country_code: "DE")
+    xetra.update_column(:exchange_operating_mic, "GER")
+    accounts(:investment).holdings.create!(
+      security: xetra, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD"
+    )
+
+    result = @function.call("proposals" => [ { "ticker" => "SAP9", "exchange_operating_mic" => "XETR", "region" => "europe" } ])
+
+    assert_equal 1, result[:recorded], result[:skipped].inspect
+    assert_equal xetra, Security::ClassificationProposal.sole.security
+  end
+
+  # MCP passes arguments straight through, so a field that is not text is
+  # refused here rather than coerced into a string by the model.
+  test "a field that is not text is skipped, with a reason" do
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "sector" => [ "Technology" ] } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/sector/, result[:skipped].first[:reason])
+  end
+
+  # A position the user has sold out of is history, not a holding.
+  test "a security the user has sold out of is refused" do
+    sold = Security.create!(ticker: "SOLD9", exchange_operating_mic: "XNAS", country_code: "US")
+    accounts(:investment).holdings.create!(security: sold, date: 3.days.ago.to_date, qty: 5, price: 10, amount: 50, currency: "USD")
+    accounts(:investment).holdings.create!(security: sold, date: Date.current, qty: 0, price: 10, amount: 0, currency: "USD")
+
+    result = @function.call("proposals" => [ { "ticker" => "SOLD9", "region" => "north_america" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_match(/not held/i, result[:skipped].first[:reason])
+  end
+
+  # Chat reuses one function instance across tool rounds, so what the user
+  # holds and may see is read on every call, not once.
+  test "holdings are read again on every call" do
+    other = Security.create!(ticker: "GONE9", exchange_operating_mic: "XNAS", country_code: "US")
+    holding = accounts(:investment).holdings.create!(security: other, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    assert_equal 1, @function.call("proposals" => [ { "ticker" => "GONE9", "region" => "north_america" } ])[:recorded]
+
+    holding.destroy!
+    result = @function.call("proposals" => [ { "ticker" => "GONE9", "region" => "europe" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_match(/not held/i, result[:skipped].first[:reason])
   end
 
   test "an exchange that does not match the held listing is skipped" do

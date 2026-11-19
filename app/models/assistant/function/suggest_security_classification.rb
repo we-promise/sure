@@ -13,7 +13,9 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
 
         This records a PROPOSAL for the user to review and approve. It does not
         classify anything. Nothing you send here changes a figure the user sees
-        until they approve it.
+        until they approve it. The app cannot list or approve proposals yet, so
+        tell the user what you proposed and that it is recorded for later
+        review; do not send them looking for a review screen.
 
         Propose only what you can justify from the instrument itself -- its name,
         ticker, exchange and type. Say why in `rationale`, for the person who
@@ -75,9 +77,14 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
     )
   end
 
+  TEXT_FIELDS = %w[ticker exchange_operating_mic asset_class asset_sub_class sector region rationale].freeze
+
   def call(params = {})
     recorded = 0
     skipped = []
+    # Read on every call: chat reuses one instance across tool rounds, and an
+    # account share revoked between rounds must take effect.
+    held = held_securities
 
     Array(params["proposals"]).each do |entry|
       unless entry.is_a?(Hash)
@@ -85,8 +92,17 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
         next
       end
 
+      # MCP passes arguments straight through, and the model would coerce an
+      # array into a string that passes its checks.
+      not_text = TEXT_FIELDS.reject { |field| entry[field].nil? || entry[field].is_a?(String) }
+      if not_text.any?
+        skipped << { ticker: entry["ticker"].is_a?(String) ? entry["ticker"] : nil,
+                     reason: "#{not_text.to_sentence} must be text" }
+        next
+      end
+
       ticker = entry["ticker"].to_s
-      mic = entry["exchange_operating_mic"].presence
+      mic = Security.canonical_exchange_operating_mic(entry["exchange_operating_mic"].presence)
       # Resolved within the user's own holdings rather than across the whole
       # `securities` table. This tool is registered in `function_classes`, which
       # also serves `/mcp`, so an external caller must not be able to queue a
@@ -96,8 +112,10 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
       # exchanges is two securities. Picking one would attach the proposal to
       # whichever row the database returned, and approval would classify the
       # wrong global security.
-      matches = held_securities.select { |s| s.ticker.casecmp?(ticker) }
-      matches = matches.select { |s| s.exchange_operating_mic.to_s.casecmp?(mic) } if mic
+      matches = held.select { |s| s.ticker.casecmp?(ticker) }
+      # Compared as canonical MICs, so a listing stored under a legacy code
+      # (GER for XETR) is the same venue, as `Security` treats it elsewhere.
+      matches = matches.select { |s| Security.canonical_exchange_operating_mic(s.exchange_operating_mic) == mic } if mic
 
       if matches.empty?
         skipped << { ticker: ticker, reason: "not held by this family" }
@@ -141,11 +159,12 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
   end
 
   private
-    # Holdings in accounts this user may see, so the tool cannot reveal or act
-    # on a position held only in another member's private account.
+    # Current positions in accounts this user may see, so the tool cannot
+    # reveal or act on a position held only in another member's private
+    # account, or on one the user has sold out of. `Account#current_holdings`
+    # decides what is held now, provider snapshot included.
     def held_securities
-      @held_securities ||= Security.where(
-        id: Holding.where(account_id: user.accessible_accounts.visible.select(:id)).select(:security_id)
-      ).to_a
+      security_ids = user.accessible_accounts.visible.flat_map { |account| account.current_holdings.pluck(:security_id) }
+      Security.where(id: security_ids.uniq).to_a
     end
 end
