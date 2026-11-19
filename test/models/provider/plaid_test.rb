@@ -227,7 +227,7 @@ class Provider::PlaidTest < ActiveSupport::TestCase
   end
 
   test "rejects webhook tokens signed with an unsupported algorithm" do
-    provider, jwk, body = verified_webhook_setup
+    provider, jwk, _key, body = verified_webhook_setup
 
     token = JWT.encode(
       { iat: Time.current.to_i, request_body_sha256: Digest::SHA256.hexdigest(body) },
