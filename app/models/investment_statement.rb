@@ -271,7 +271,8 @@ class InvestmentStatement
     end
 
     issues.sort_by do |issue|
-      [ DATA_QUALITY_KINDS.index(issue.kind), issue.security.ticker.to_s, issue.security.id.to_s, issue.holding&.account_id.to_s ]
+      [ DATA_QUALITY_KINDS.index(issue.kind), issue.security.ticker.to_s, issue.security.id.to_s, issue.holding&.account_id.to_s,
+        issue.holding&.id.to_s ]
     end
   end
 
@@ -867,9 +868,11 @@ class InvestmentStatement
     # recorded after as_of cannot make a past check look fresh.
     def latest_price_dates(as_of)
       @latest_price_dates ||= {}
+      # Real quotes only: the price importer carries the last quote forward
+      # through recent days as provisional rows, which would hide an old one.
       @latest_price_dates[as_of] ||= Security::Price
         .where(security_id: current_holdings.map(&:security_id).uniq)
-        .where(date: ..as_of)
+        .where(date: ..as_of, provisional: false)
         .group(:security_id)
         .maximum(:date)
     end

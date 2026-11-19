@@ -1900,9 +1900,11 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     @statement.current_holdings.to_a
 
     queries = capture_sql_queries { @statement.data_quality_issues(as_of: Date.current) }
-    # Three: the cost-basis preload, the latest prices, and one settings read
-    # for the enabled securities providers, which is cached after the first.
-    assert_operator queries.size, :<=, 3, "expected the cost-basis preload, latest prices and settings queries only, got:\n#{queries.join("\n")}"
+    # Four: the cost-basis preload, the read of which accounts use FIFO (these
+    # holdings have no buy on record, so Holding.preload_avg_costs asks), the
+    # latest prices, and one settings read for the enabled securities
+    # providers, which is cached after the first.
+    assert_operator queries.size, :<=, 4, "expected the cost-basis preload, FIFO accounts, latest prices and settings queries only, got:\n#{queries.join("\n")}"
   end
 
   # With a securities provider configured, a healthy link is not flagged, so
@@ -1964,6 +1966,47 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     today = @statement.data_quality_issues(as_of: Date.current).select { |i| i.kind == :stale_price }
     assert_equal [ [ "MASK", as_of + 3.days ], [ "RCNT", as_of + 3.days ] ], today.map { |i| [ i.security.ticker, i.detail ] },
       "asked about today, the same statement reads the newer prices"
+  end
+
+  # The price importer carries the last quote forward through recent days and
+  # marks those rows provisional. Freshness is the last real quote, so a run
+  # of carried-forward rows does not hide an old one.
+  test "data_quality_issues measures freshness from real quotes, not carried-forward ones" do
+    account = create_investment_account(balance: 5000)
+    as_of = Date.current
+    carried = Security.create!(ticker: "CARRY", name: "Carried forward")
+    Security::Price.create!(security: carried, date: as_of - 10.days, price: 10, currency: "USD")
+    (0..2).each do |days_ago|
+      Security::Price.create!(security: carried, date: as_of - days_ago.days, price: 10, currency: "USD", provisional: true)
+    end
+    Holding.create!(account: account, security: carried, date: as_of, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+
+    stale = @statement.data_quality_issues(as_of: as_of).select { |i| i.kind == :stale_price }
+
+    assert_equal [ [ "CARRY", as_of - 10.days ] ], stale.map { |i| [ i.security.ticker, i.detail ] }
+  end
+
+  # One account can hold the same security in two currencies. Without a cost
+  # basis both are flagged, tied on everything but the holding, so the
+  # holding id settles their order whatever order they arrive in.
+  test "data_quality_issues orders one account's two holdings of a security by holding id" do
+    account = create_investment_account(balance: 5000)
+    security = Security.create!(ticker: "TWOCCY", name: "Two currencies")
+    Security::Price.create!(security: security, date: Date.current, price: 10, currency: "USD")
+    holdings = %w[USD CAD].map do |currency|
+      Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 10, amount: 10, currency: currency)
+    end
+    expected = holdings.map(&:id).sort_by(&:to_s)
+    # Only a provider import keeps both currencies as current holdings, so
+    # the statement is handed both directly, in each order.
+    Holding.preload_avg_costs(holdings)
+
+    [ holdings, holdings.reverse ].each do |order|
+      statement = InvestmentStatement.new(@family, user: nil)
+      statement.stubs(:holdings_with_avg_costs).returns(order)
+      ids = statement.data_quality_issues.select { |i| i.kind == :missing_cost_basis && i.security == security }.map { |i| i.holding.id }
+      assert_equal expected, ids
+    end
   end
 
   # Issues tied on kind and ticker still come out in one order whatever order
