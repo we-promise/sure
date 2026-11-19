@@ -41,6 +41,15 @@ class AccountStatement::EquityGrantReaderTest < ActiveSupport::TestCase
     assert_equal [ [ Date.new(2026, 6, 15), 55 ], [ Date.new(2026, 9, 15), 7 ] ], other.vests.reload.map { |v| [ v.vest_date, v.units ] }
   end
 
+  test "grants with neither an ID nor a grant date stay separate" do
+    untitled = ->(units) { { "ticker" => "ACME", "grant_type" => "rsu", "vests" => [ { "vest_date" => "2026-03-15", "units" => units } ] } }
+    use_provider("grants" => [ untitled.call(10), untitled.call(20) ])
+
+    2.times { reader.read! }
+
+    assert_equal [ 10, 20 ], @account.equity_grants.order(:created_at).map { |grant| grant.vests.sole.units }
+  end
+
   test "an answer without a grants list changes nothing" do
     grant = @account.equity_grants.create!(ticker: "ACME", grant_identifier: "RS9")
     grant.vests.create!(vest_date: Date.new(2026, 3, 15), units: 60, source: "statement", account_statement: @statement)

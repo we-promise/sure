@@ -41,7 +41,7 @@ class EquityVestsController < ApplicationController
     end
 
     def grants_tab_path
-      account_path(@account, tab: "grants")
+      account_path(@account, tab: EquityGrantsController::TAB)
     end
 
     def vest_params

@@ -111,7 +111,7 @@ class AccountStatement::EquityGrantReader
         grants.each do |row|
           next unless row.is_a?(Hash) && row["ticker"].present?
 
-          grant = find_or_build_grant(row)
+          grant = find_or_build_grant(row, retained_ids)
           grant.update!(
             ticker: row["ticker"],
             grant_type: EquityGrant::GRANT_TYPES.include?(row["grant_type"]) ? row["grant_type"] : "rsu",
@@ -133,13 +133,19 @@ class AccountStatement::EquityGrantReader
       count
     end
 
-    def find_or_build_grant(row)
+    # A grant is matched by its ID, else by ticker and grant date. One with
+    # neither is only matched to a grant this same statement created, and
+    # never to one already matched in this read, so unrelated grants of the
+    # same ticker aren't merged.
+    def find_or_build_grant(row, retained_ids)
       identifier = row["grant_identifier"].to_s.strip.presence
-      if identifier
-        account.equity_grants.find_or_initialize_by(grant_identifier: identifier)
-      else
-        account.equity_grants.find_or_initialize_by(grant_identifier: nil, ticker: row["ticker"].to_s.strip.upcase, grant_date: parse_date(row["grant_date"]))
-      end
+      return account.equity_grants.find_or_initialize_by(grant_identifier: identifier) if identifier
+
+      ticker = row["ticker"].to_s.strip.upcase
+      grant_date = parse_date(row["grant_date"])
+      scope = account.equity_grants.where(grant_identifier: nil, ticker: ticker, grant_date: grant_date).where.not(id: retained_ids)
+      scope = scope.where(account_statement: statement) if grant_date.nil?
+      scope.order(:created_at).first || account.equity_grants.build(ticker: ticker, grant_date: grant_date)
     end
 
     # A vest another statement, a CSV or the user created is left as it is.

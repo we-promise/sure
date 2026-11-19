@@ -1,7 +1,7 @@
 require "csv"
 
 # Imports vests from a CSV, one row per vest, grouping them into grants by
-# grant ID (or by ticker and grant date). Headers are matched loosely (case,
+# grant ID (or by ticker and grant date; a row needs one or the other). Headers are matched loosely (case,
 # spaces and common synonyms). Importing the same file again updates the same
 # vests rather than adding new ones.
 class EquityGrant::CsvImport
@@ -70,6 +70,10 @@ class EquityGrant::CsvImport
       raise ArgumentError, I18n.t("equity_grants.csv_import.date_unreadable", value: values[:vest_date]) if values[:vest_date].present? && vest_date.nil?
       return false if vest_date.nil? || units.nil? || units <= 0
 
+      if values[:grant_identifier].blank? && parse_date(values[:grant_date]).nil?
+        raise ArgumentError, I18n.t("equity_grants.csv_import.grant_key_missing")
+      end
+
       grant = find_or_build_grant(values, ticker)
       grant.ticker = ticker
       grant.grant_type = values[:grant_type].to_s.downcase.presence_in(EquityGrant::GRANT_TYPES) || grant.grant_type || "rsu"
@@ -113,9 +117,9 @@ class EquityGrant::CsvImport
       nil
     end
 
-    # Reads "1,234.56", "1.234,56", "(300.00)" and "-300". The last of "," or
-    # "." is the decimal separator when both appear; a lone "," followed by
-    # exactly two digits is a decimal comma.
+    # Reads "1,234.56", "1.234,56", "12,5", "(300.00)" and "-300". The last of
+    # "," or "." is the decimal separator when both appear. A single "," is a
+    # decimal comma unless exactly three digits follow it ("1,234").
     def parse_number(value)
       return nil if value.blank?
 
@@ -127,7 +131,7 @@ class EquityGrant::CsvImport
       if text.include?(",") && text.include?(".")
         decimal = text.rindex(",") > text.rindex(".") ? "," : "."
         text = text.delete(decimal == "," ? "." : ",").tr(",", ".")
-      elsif text.match?(/,\d{2}\z/)
+      elsif text.count(",") == 1 && !text.match?(/,\d{3}\z/)
         text = text.tr(",", ".")
       else
         text = text.delete(",")

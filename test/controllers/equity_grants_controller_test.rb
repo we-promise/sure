@@ -72,6 +72,18 @@ class EquityGrantsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a document already uploaded to another account is reported" do
+    Ai.stubs(:availability).returns(Ai::Availability.available(:extract_pdf))
+    content = "%PDF-1.4\n%elsewhere\n"
+    AccountStatement.create_from_upload!(family: @account.family, account: accounts(:depository),
+                                         file: uploaded_file(filename: "grant.pdf", content_type: "application/pdf", content: content))
+
+    assert_no_enqueued_jobs(only: EquityGrantDocumentReadJob) do
+      post upload_account_equity_grants_url(@account), params: { files: [ uploaded_file(filename: "grant.pdf", content_type: "application/pdf", content: content) ] }
+    end
+    assert_match "Already uploaded to another account, so not read here: grant.pdf", flash[:notice]
+  end
+
   test "uploading is refused when PDF import isn't available" do
     Ai.stubs(:availability).returns(Ai::Availability.unavailable(:extract_pdf, :not_configured))
     file = uploaded_file(filename: "grant.pdf", content_type: "application/pdf", content: "%PDF-1.4\n%example\n")

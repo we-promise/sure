@@ -60,18 +60,24 @@ class EquityGrantsController < ApplicationController
 
     queued = 0
     rejected = []
+    elsewhere = []
     files.each do |file|
       prepared = AccountStatement.prepare_upload!(file)
       statement = AccountStatement.create_from_prepared_upload!(family: Current.family, account: @account, prepared_upload: prepared)
       queued += queue_read(statement)
     rescue AccountStatement::DuplicateUploadError => e
-      queued += queue_read(e.statement) if e.statement.account_id == @account.id
+      if e.statement.account_id == @account.id
+        queued += queue_read(e.statement)
+      else
+        elsewhere << file.original_filename.to_s
+      end
     rescue AccountStatement::InvalidUploadError, ActiveRecord::RecordInvalid
       rejected << file.original_filename.to_s
     end
 
     notice = t(".queued", count: queued)
     notice += " " + t(".rejected", files: rejected.join(", ")) if rejected.any?
+    notice += " " + t(".elsewhere", files: elsewhere.join(", ")) if elsewhere.any?
     redirect_to grants_tab_path, notice: notice
   end
 

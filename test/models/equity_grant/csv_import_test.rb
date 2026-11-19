@@ -25,6 +25,21 @@ class EquityGrant::CsvImportTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1234.56"), @account.equity_grants.first.vests.first.net_proceeds
   end
 
+  test "a lone comma is a decimal comma unless three digits follow" do
+    import("grant_id,ticker,vest_date,units,units_withheld\nRS1,ACME,2026-03-15,\"1,234\",\"12,5\"\n")
+
+    vest = @account.equity_grants.first.vests.first
+    assert_equal [ BigDecimal("1234"), BigDecimal("12.5") ], [ vest.units, vest.units_withheld ]
+  end
+
+  test "a row with neither a grant ID nor a grant date is reported" do
+    result = import("ticker,vest_date,units\nACME,2026-03-15,60\nACME,2026-06-15,40\n")
+
+    assert_equal 0, result.created
+    assert_equal 2, result.errors.size
+    assert_equal 0, @account.equity_grants.count
+  end
+
   test "reports a date it can't read instead of dropping the row silently" do
     result = import("grant_id,ticker,vest_date,units\nRS1,ACME,13/45/2026,60\n")
 
