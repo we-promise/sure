@@ -31,6 +31,14 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
   end
 
+  # Opening the account groups makes the list scroll; reserving the scrollbar's
+  # space keeps the sidebar from shifting sideways when it appears.
+  test "the sidebar keeps room for its scrollbar" do
+    get root_url
+
+    assert_select "#sidebar-scroll[class*='[scrollbar-gutter:stable]']"
+  end
+
   test "show points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
     create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
@@ -62,6 +70,36 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "click->clickable-row#open", row["data-action"]
     assert_equal account_path(@account), account_link["href"]
+  end
+
+  test "index shows the excluded-from-reports indicator with its explanation" do
+    @account.update!(exclude_from_reports: true)
+
+    get accounts_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    frame = doc.at_css("turbo-frame##{dom_id(@account)}")
+    text = I18n.t("accounts.account.excluded_from_reports_indicator")
+    panel = frame.css("[role='tooltip']").find { |node| node.text.strip == text }
+    assert panel, "expected a tooltip panel with the indicator text"
+    assert_nil panel.at_css("svg"), "the tooltip panel should show text, not the icon"
+
+    trigger = frame.at_css("[aria-describedby='#{panel["id"]}']")
+    assert_equal "button", trigger.name
+    assert_equal eye_off_icon_paths, trigger.css("svg path").map { |path| path["d"] }, "the trigger should be the eye-off icon"
+  end
+
+  test "index omits the excluded-from-reports indicator for included accounts" do
+    @account.update!(exclude_from_reports: false)
+
+    get accounts_url
+
+    assert_response :success
+    frame = Nokogiri::HTML::Document.parse(response.body).at_css("turbo-frame##{dom_id(@account)}")
+    text = I18n.t("accounts.account.excluded_from_reports_indicator")
+    assert_empty frame.css("[role='tooltip']").select { |node| node.text.strip == text }
+    assert_not_includes frame.text, text
   end
 
   test "index localizes the Plaid add accounts action" do
@@ -578,6 +616,79 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(valuation)}", count: 0
   end
 
+  test "show hides balance updates on a linked account by default" do
+    account = accounts(:connected)
+    transaction = create_transaction(account: account, name: "Linked Transaction")
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "##{dom_id(transaction)}"
+    assert_select "##{dom_id(balance_update)}", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 1
+    assert_select "input[type=checkbox][name=?]:not([checked])", "q[balance_updates]"
+  end
+
+  test "show lists balance updates on a linked account when the preference is on" do
+    account = accounts(:connected)
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date, name: "Manual balance update")
+    @user.update_show_balance_updates(true)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}", text: /Synced balance/
+    # Nothing left to switch in the filter: it shows as on, and points to Preferences.
+    assert_select "input[type=checkbox][name=?][checked][disabled]", "q[balance_updates]"
+    assert_select "#account-activity-filters li", count: 0
+  end
+
+  test "the activity filter shows balance updates for one view without saving the preference" do
+    account = accounts(:connected)
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account), params: { q: { balance_updates: "show", search: "Valuation" } }
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}"
+    assert_select "#account-activity-filters li", count: 2
+    assert_select "#account-activity-filters li", text: /Synced balances/
+    assert_not @user.reload.show_balance_updates?
+  end
+
+  test "clearing the balance updates badge hides them again and keeps the other filters" do
+    account = accounts(:connected)
+
+    delete clear_filter_account_url(account), params: {
+      q: { balance_updates: "show", search: "Valuation" },
+      param_key: "balance_updates",
+      param_value: "show"
+    }
+
+    assert_redirected_to account_url(account, q: { search: "Valuation" }, tab: "activity", page: nil, per_page: nil)
+  end
+
+  test "show lists balance updates on a manual account without offering the filter" do
+    balance_update = create_valuation(account: @account, date: 2.days.ago.to_date)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}"
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 0
+  end
+
+  test "show omits the balance updates filter on a linked account without any" do
+    account = accounts(:connected)
+    account.entries.balance_updates.destroy_all
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 0
+  end
+
   test "show renders a badge for each active filter" do
     get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
 
@@ -878,6 +989,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       entryable: Transaction.new
     )
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -888,6 +1000,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     accounts(:credit_card).credit_card.update!(statement_close_day: 25, due_day: 5, apr: nil, minimum_payment: nil)
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -900,6 +1013,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     accounts(:credit_card).credit_card.update!(statement_close_day: 25, due_day: 5, apr: 18.99, minimum_payment: nil)
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -919,6 +1033,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -941,6 +1056,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -963,10 +1079,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
-      assert_match I18n.t("credit_cards.tabs.overview.remaining_due", amount: Money.new(60, "USD").format), response.body
+      # The bill card shows what is still owed on the statement: 100 less the 40 paid.
+      # Scoped to that card, since the APR card also renders a balance.
+      bill_card = Nokogiri::HTML(response.body)
+        .css("[data-testid=credit-card-summary-grid] > div:first-child")
+        .first
+      assert_includes bill_card.text, Money.new(60, "USD").format
       assert_match I18n.t("credit_cards.tabs.overview.status_partial"), response.body
     end
   end
@@ -986,14 +1108,15 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
       assert_match I18n.t("credit_cards.tabs.overview.charges"), response.body
-      assert_match I18n.t("credit_cards.tabs.overview.payments_credits"), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.payments_applied"), response.body
       assert_match Money.new(100, "USD").format, response.body
       assert_match Money.new(40, "USD").format, response.body
-      assert_match I18n.t("credit_cards.tabs.overview.closes_on", date: I18n.l(Date.new(2026, 11, 10), format: :long)), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.closes_on_days", date: I18n.l(Date.new(2026, 11, 10), format: :long), count: 25), response.body
     end
   end
 
@@ -1016,6 +1139,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       )
       open_due = series.recurring_occurrences.open_status.minimum(:due_on)
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -1044,6 +1168,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       manual: true
     )
 
+    materialize_balances(account)
     get account_url(account, tab: "overview")
 
     assert_response :success
@@ -1061,10 +1186,11 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
-      assert_select "span.text-destructive", text: I18n.t("credit_cards.due.overdue", count: 9)
+      assert_select "span.text-destructive", text: I18n.t("credit_cards.tabs.overview.due_overdue_days", date: I18n.l(Date.new(2026, 10, 21), format: :long), count: 9)
     end
   end
 
@@ -1077,11 +1203,12 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # of THIS month -- not the 26th of next, which is the statement still
     # building and not yet owed.
     travel_to Date.new(2026, 10, 16) do
+      materialize_balances(accounts(:credit_card))
       get account_url(accounts(:credit_card), tab: "overview")
 
       assert_response :success
       assert_match I18n.l(Date.new(2026, 10, 26), format: :long), response.body
-      assert_match I18n.t("credit_cards.due.in_days", count: 10), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.due_on_days", date: I18n.l(Date.new(2026, 10, 26), format: :long), count: 10), response.body
     end
   end
 
@@ -1100,6 +1227,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -1126,6 +1254,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -1137,6 +1266,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "credit card overview asks for a cycle when none is set" do
     sign_in users(:family_admin)
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -1940,6 +2070,17 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
       Account::LogoFetcher::Icon.new(key:, source:, name:, body:, size:, content_type: "image/png", extension: "png")
+    end
+
+    # The Overview reads the account's balance records, which sync builds from
+    # the entries. Tests build them after creating entries directly.
+    def materialize_balances(account)
+      Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    end
+
+    # Lucide SVGs carry no icon-name class, so an icon is identified by its path data.
+    def eye_off_icon_paths
+      Nokogiri::HTML::DocumentFragment.parse(ApplicationController.helpers.icon("eye-off")).css("path").map { |path| path["d"] }
     end
 
     # #3630. Links a shared and an unshared account to +item+ through two fresh

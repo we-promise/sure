@@ -14,6 +14,8 @@ class Security < ApplicationRecord
   MIC_ALIASES = {
     "WAR" => "XWAR",
     "GER" => "XETR", # Yahoo search code for Xetra, stored before it was mapped
+    # Yahoo search codes for Canadian venues, stored before they were mapped
+    "VAN" => "XTSX", "CNQ" => "XCNQ", "NEO" => "NEOE",
     # Raw EODHD codes that Provider::Eodhd still accepts for rows stored before it mapped them
     "F" => "XFRA", "BR" => "XBRU", "LS" => "XLIS", "VI" => "XWBO", "IR" => "XDUB",
     "BE" => "XBER", "DU" => "XDUS", "HM" => "XHAM", "HA" => "XHAN", "MU" => "XMUN", "STU" => "XSTU"

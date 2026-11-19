@@ -17,8 +17,13 @@ es:
       new: Nueva etiqueta
       tags: Etiquetas
       delete_all: Eliminar todas
+    menu:
+      label: Editar etiquetas
     new:
       new: Nueva etiqueta
+    summary:
+      add: Añadir etiquetas
+      title: 'Etiquetas: %{names}'
     tag:
       delete: Eliminar
       edit: Editar
