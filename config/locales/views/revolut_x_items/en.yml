@@ -1,0 +1,24 @@
+---
+en:
+  revolut_x_items:
+    revolut_x_item:
+      sync_status:
+        no_accounts: No accounts found
+        all_synced:
+          one: "%{count} account synced"
+          other: "%{count} accounts synced"
+        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
+  revolut_x_item:
+    syncer:
+      checking_credentials: Checking credentials...
+      credentials_invalid: Revolut X API key missing or invalid. Add the API key Revolut X issued for this connection's public key.
+      importing_accounts: Importing accounts from Revolut X...
+      checking_configuration: Checking account configuration...
+      accounts_need_setup:
+        one: "%{count} account needs setup"
+        other: "%{count} accounts need setup"
+      processing_accounts: Processing account data...
+      processing_failed:
+        one: "%{count} Revolut X account failed to sync"
+        other: "%{count} Revolut X accounts failed to sync"
+      calculating_balances: Calculating balances...

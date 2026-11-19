@@ -1,0 +1,8 @@
+one:
+  revolut_x_item: one
+  name: Revolut X
+  account_id: default
+  account_type: exchange
+  currency: USD
+  current_balance: 1234.50
+  extra: {}

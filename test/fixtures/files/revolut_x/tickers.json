@@ -1,0 +1,35 @@
+{
+  "data": [
+    {
+      "symbol": "BTC/USD",
+      "bid": "119950.00",
+      "ask": "120050.00",
+      "mid": "120000.00",
+      "index_price": "119995.50",
+      "last_price": "119980.00",
+      "low_24h": "115000.00",
+      "high_24h": "122500.00",
+      "price_change_24h": "2480.00",
+      "volume_24h": "135.42000000",
+      "quote_volume_24h": "16250400.00",
+      "region": "EEA"
+    },
+    {
+      "symbol": "BTC/GBP",
+      "bid": "89950.00",
+      "ask": "90050.00",
+      "mid": "90000.00",
+      "index_price": "89995.50",
+      "last_price": "89980.00",
+      "low_24h": "87000.00",
+      "high_24h": "92000.00",
+      "price_change_24h": "1980.00",
+      "volume_24h": "110.50000000",
+      "quote_volume_24h": "9945000.00",
+      "region": "UK"
+    }
+  ],
+  "metadata": {
+    "timestamp": 1785313433816
+  }
+}

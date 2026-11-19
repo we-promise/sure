@@ -15,6 +15,7 @@ class ProviderConnectionStatus
     { key: "coinbase", type: "CoinbaseItem", association: :coinbase_items, accounts: :coinbase_accounts },
     { key: "binance", type: "BinanceItem", association: :binance_items, accounts: :binance_accounts },
     { key: "kraken", type: "KrakenItem", association: :kraken_items, accounts: :kraken_accounts },
+    { key: "revolut_x", type: "RevolutXItem", association: :revolut_x_items, accounts: :revolut_x_accounts },
     { key: "coinspot", type: "CoinspotItem", association: :coinspot_items, accounts: :coinspot_accounts },
     { key: "onchain_wallet", type: "OnchainWalletItem", association: :onchain_wallet_items, accounts: :onchain_wallet_accounts },
     { key: "coinstats", type: "CoinstatsItem", association: :coinstats_items, accounts: :coinstats_accounts },
