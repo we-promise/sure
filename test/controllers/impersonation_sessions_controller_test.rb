@@ -143,4 +143,14 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "rejected", impersonator_session.reload.status
     assert_redirected_to root_path
   end
+
+  test "a user who is neither party gets a 404 on complete and the session stays open" do
+    sign_in users(:family_admin)
+    impersonator_session = impersonation_sessions(:in_progress)
+
+    put complete_impersonation_session_path(impersonator_session)
+
+    assert_response :not_found
+    assert_equal "in_progress", impersonator_session.reload.status
+  end
 end
