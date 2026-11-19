@@ -192,15 +192,15 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       # Check categories.csv
       categories_csv = zip.read("categories.csv")
-      assert categories_csv.include?("name,color,parent_category,lucide_icon")
+      assert categories_csv.include?(%q("name","color","parent_category","lucide_icon"))
 
       # Check merchants.csv
       merchants_csv = zip.read("merchants.csv")
-      assert merchants_csv.include?("name,color,website_url")
+      assert merchants_csv.include?(%q("name","color","website_url"))
 
       # Check rules.csv
       rules_csv = zip.read("rules.csv")
-      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions,group")
+      assert rules_csv.include?(%q("name","resource_type","active","effective_date","conditions","actions","group"))
     end
   end
 
@@ -1303,6 +1303,100 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert ndjson_content.include?(@rule.name)
       refute ndjson_content.include?(other_rule.name)
     end
+  end
+
+  test "quotes every field so a locale separator inside text cannot start an unguarded cell" do
+    @account.entries.create!(
+      name: "Rent;=1+1",
+      notes: "a\t=1+1|@SUM(1)",
+      amount: 5,
+      currency: "USD",
+      date: Date.parse("2024-05-16"),
+      entryable: Transaction.new
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      csv = zip.read("transactions.csv")
+      assert_includes csv, %q("Rent;=1+1")
+      assert_includes csv, %Q("a\t=1+1|@SUM(1)")
+      assert csv.lines.first.start_with?(%q("date","account_name")), "header cells are quoted too"
+      assert_equal "Rent;=1+1", CSV.parse(csv, headers: true).find { |row| row["name"].start_with?("Rent") }["name"]
+    end
+  end
+
+  test "rule import keeps names that differ only by a leading apostrophe separate" do
+    exported = nil
+    Zip::File.open_buffer(@exporter.generate_export) { |zip| exported = CSV.parse(zip.read("rules.csv"), headers: true) }
+    template = exported.find { |row| row["name"] == "Test Rule" }
+    csv = CSV.generate do |out|
+      out << exported.headers
+      [ "=Rule", "'=Rule" ].each do |name|
+        out << exported.headers.map { |header| header == "name" ? name : template[header] }
+      end
+    end
+
+    import = @other_family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    assert_equal [ "'=Rule", "=Rule" ], import.rows.reload.map(&:name).sort
+  end
+
+  test "rules named with and without a leading apostrophe survive export and a committed import" do
+    category = @family.categories.create!(name: "Rule Target", color: "#FF0000")
+    other_category = @family.categories.create!(name: "Rule Other", color: "#00FF00")
+    [ [ "=Rule", "first", category ], [ "'=Rule", "second", other_category ] ].each do |name, value, target|
+      rule = @family.rules.build(name: name, resource_type: "transaction", active: true)
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: value)
+      rule.actions.build(action_type: "set_transaction_category", value: target.id)
+      rule.save!
+    end
+
+    csv = nil
+    Zip::File.open_buffer(@exporter.generate_export) { |zip| csv = zip.read("rules.csv") }
+    target_category = @other_family.categories.create!(name: "Rule Target", color: "#FF0000")
+    @other_family.categories.create!(name: "Rule Other", color: "#00FF00")
+    import = @other_family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    rules = @other_family.rules.where(name: [ "'=Rule", "''=Rule" ]).index_by(&:name)
+    assert_equal [ "''=Rule", "'=Rule" ], rules.keys.sort
+    assert_equal [ "first" ], rules["'=Rule"].conditions.map(&:value)
+    assert_equal [ "second" ], rules["''=Rule"].conditions.map(&:value)
+    assert_equal target_category.id, rules["'=Rule"].actions.first.value
+  end
+
+  test "rule operands spell escaped category names exactly as the other CSVs do" do
+    budget = @family.categories.create!(name: "=Budget", color: "#FF0000")
+    rule = @family.rules.build(name: "Budget Rule", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_category", operator: "=", value: budget.id)
+    rule.actions.build(action_type: "set_transaction_category", value: budget.id)
+    rule.save!
+    @account.entries.create!(
+      name: "Budget purchase", amount: 9, currency: "USD", date: Date.parse("2024-05-16"),
+      entryable: Transaction.new(category: budget)
+    )
+
+    files = {}
+    ndjson = nil
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      %w[categories transactions rules].each { |name| files[name] = zip.read("#{name}.csv") }
+      ndjson = zip.read("all.ndjson")
+    end
+
+    rule_row = CSV.parse(files["rules"], headers: true).find { |row| row["name"] == "Budget Rule" }
+    assert_equal "'=Budget", JSON.parse(rule_row["conditions"]).first["value"]
+    assert_equal "'=Budget", JSON.parse(rule_row["actions"]).first["value"]
+    assert_includes ndjson, '"=Budget"', "all.ndjson keeps the raw name"
+
+    [ [ "CategoryImport", "categories" ], [ "RuleImport", "rules" ] ].each do |type, file|
+      import = @other_family.imports.create!(type: type, raw_file_str: files[file], col_sep: ",")
+      import.generate_rows_from_csv
+      import.send(:import!)
+    end
+
+    assert_equal 1, @other_family.categories.where(name: "'=Budget").count
+    imported = @other_family.rules.find_by!(name: "Budget Rule")
+    assert_equal "'=Budget", @other_family.categories.find(imported.actions.first.value).name
   end
 
   # CSV formula injection (CWE-1236) -------------------------------------------
