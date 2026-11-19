@@ -17,10 +17,16 @@ class PlaidAccount::Processor
   # Processing the account is the first step and if it fails, we halt the entire processor
   # Each subsequent step can fail independently, but we continue processing the rest of the steps
   def process
-    process_account!
-    process_transactions
-    process_investments
+    account, balance_info = process_account!
+    transactions_ok = process_transactions
+    investments_ok = process_investments
     process_liabilities
+
+    anchor_account!(
+      account,
+      balance_info,
+      reuse_explained_anchor: transactions_ok && investments_ok
+    )
   end
 
   private
@@ -105,51 +111,59 @@ class PlaidAccount::Processor
           )
         end
 
-        # Create or update the current balance anchor valuation for event-sourced ledger
-        # Note: This is a partial implementation. In the future, we'll introduce HoldingValuation
-        # to properly track the holdings vs. cash breakdown, but for now we're only tracking
-        # the total balance in the current anchor. The cash_balance field on the account model
-        # is still being used for the breakdown.
-        #
-        # One lock across the whole of it, as in IbkrAccount::Processor: which
-        # snapshot the account follows is decided by the anchor's date, and a
-        # sync running beside this one can move that anchor between any two of
-        # these writes. The currency, the anchor and the cash split are settled
-        # together, and follow the same snapshot. The manager is called directly;
-        # the Anchorable wrapper queues the sync, which belongs after the lock.
-        result = nil
-        account.with_lock do
-          manager = Account::CurrentBalanceManager.new(account)
-          behind_anchor = manager.has_current_anchor? && manager.current_date > balance_date
+        [ account, { balance: balance, cash_balance: cash_balance, balance_date: balance_date } ]
+      end
+    end
 
-          # A snapshot dated behind the anchor is a correction to a day gone
-          # by: the cached balance and cash describe now and stay as they are,
-          # in the denomination they were written in.
-          if !behind_anchor && account.currency != plaid_account.currency
-            account.update!(currency: plaid_account.currency)
-          end
+    def anchor_account!(account, balance_info, reuse_explained_anchor:)
+      balance = balance_info[:balance]
+      cash_balance = balance_info[:cash_balance]
+      balance_date = balance_info[:balance_date]
 
-          result = manager.set_current_balance(balance, date: balance_date, apply_provider_adjustment: true)
-          raise BalanceError, "Failed to set current balance: #{result.error}" unless result.success?
+      account.with_lock do
+        manager = Account::CurrentBalanceManager.new(account)
+        behind_anchor = manager.has_current_anchor? && manager.current_date > balance_date
 
-          account.update!(cash_balance: account.provider_cash_balance(cash_balance)) unless result.historical?
+        if !behind_anchor && account.currency != plaid_account.currency
+          account.update!(currency: plaid_account.currency)
         end
 
-        account.sync_later
+        result = manager.set_current_balance(
+          balance,
+          date: balance_date,
+          reuse_explained_anchor: reuse_explained_anchor,
+          apply_provider_adjustment: true
+        )
+        raise BalanceError, "Failed to set current balance: #{result.error}" unless result.success?
+
+        account.update!(cash_balance: account.provider_cash_balance(cash_balance)) unless result.historical?
       end
+
+      account.sync_later
+    rescue BalanceError => e
+      report_exception(e)
+      raise
     end
 
     def process_transactions
       PlaidAccount::Transactions::Processor.new(plaid_account).process
+      true
     rescue => e
       report_exception(e)
+      false
     end
 
     def process_investments
       PlaidAccount::Investments::TransactionsProcessor.new(plaid_account, security_resolver: security_resolver).process
-      PlaidAccount::Investments::HoldingsProcessor.new(plaid_account, security_resolver: security_resolver).process
+      PlaidAccount::Investments::HoldingsProcessor.new(
+        plaid_account,
+        security_resolver: security_resolver,
+        currency: plaid_account.currency
+      ).process
+      true
     rescue => e
       report_exception(e)
+      false
     end
 
     def process_liabilities

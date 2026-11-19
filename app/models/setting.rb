@@ -72,12 +72,19 @@ class Setting < RailsSettings::Base
     brand_fetch_high_res_logos ? BRAND_FETCH_LOGO_SIZE_HIGH_RES : BRAND_FETCH_LOGO_SIZE_STANDARD
   end
 
-  # Transforms a stored Brandfetch URL to use the current logo size setting
+  # Transforms a stored Brandfetch URL to use the current logo size and client
+  # id. Stored URLs keep the client id they were generated with, so without
+  # this a changed id in Self-Hosting settings would leave them broken.
   def self.transform_brand_fetch_url(url)
     return url unless url.present? && url.match?(BRAND_FETCH_URL_PATTERN)
 
     size = brand_fetch_logo_size
-    url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
+    url = url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
+
+    client_id = brand_fetch_client_id
+    return url if client_id.blank?
+
+    url.sub(/\?c=[^&]*/) { "?c=#{client_id}" }
   end
 
   def self.brand_fetch_icon_url(identifier, fallback: "lettermark", namespace: nil, width: nil, height: nil)
@@ -110,6 +117,7 @@ class Setting < RailsSettings::Base
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
   field :realie_api_key, type: :string, default: ENV["REALIE_API_KEY"]
   field :chimnie_api_key, type: :string, default: ENV["CHIMNIE_API_KEY"]
+  field :terrascoutx_api_key, type: :string, default: ENV["TERRASCOUTX_API_KEY"]
 
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
@@ -129,6 +137,7 @@ class Setting < RailsSettings::Base
       rentcast_api_key
       realie_api_key
       chimnie_api_key
+      terrascoutx_api_key
       openai_access_token
       anthropic_access_token
       jev_api_key

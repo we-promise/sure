@@ -183,7 +183,7 @@ class RulesController < ApplicationController
     def auto_categorize_estimate(scope, transaction_count: nil)
       family = scope.is_a?(Rule) ? scope.family : scope
       count = transaction_count || scope.affected_resource_count
-      model = family.categorization_model_name
+      model = Ai.plan(:categorize, family:)&.model&.name
       return [ nil, nil ] if model.blank?
 
       cost = LlmUsage.estimate_auto_categorize_cost(
@@ -246,7 +246,7 @@ class RulesController < ApplicationController
 
     def rule_params
       params.require(:rule).permit(
-        :resource_type, :effective_date, :active, :name, :stop_processing,
+        :resource_type, :effective_date, :active, :name, :stop_processing, :apply_immediately,
         :rule_group_id, :new_rule_group_name,
         conditions_attributes: [
           :id, :condition_type, :operator, :value, :_destroy,

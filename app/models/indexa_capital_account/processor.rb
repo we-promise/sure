@@ -15,8 +15,10 @@ class IndexaCapitalAccount::Processor
 
     Rails.logger.info "IndexaCapitalAccount::Processor - Processing account #{indexa_capital_account.id} -> Sure account #{account.id}"
 
-    # Update account balance FIRST (before processing transactions/holdings/activities)
-    update_account_balance(account)
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
+    anchor_balance = update_account_balance(account)
 
     # Process holdings
     holdings_count = indexa_capital_account.raw_holdings_payload&.size || 0
@@ -33,11 +35,22 @@ class IndexaCapitalAccount::Processor
     activities_count = indexa_capital_account.raw_activities_payload&.size || 0
     Rails.logger.info "IndexaCapitalAccount::Processor - Activities payload has #{activities_count} items"
 
+    activities_ok = true
     if indexa_capital_account.raw_activities_payload.present?
       Rails.logger.info "IndexaCapitalAccount::Processor - Processing activities..."
-      IndexaCapitalAccount::ActivitiesProcessor.new(indexa_capital_account).process
+      activities = IndexaCapitalAccount::ActivitiesProcessor.new(indexa_capital_account).process
+      activities_ok = activities[:failed].zero?
     else
       Rails.logger.warn "IndexaCapitalAccount::Processor - No activities payload to process"
+    end
+
+    if anchor_balance
+      account.set_current_balance(
+        anchor_balance,
+        date: date,
+        reuse_explained_anchor: activities_ok,
+        apply_provider_adjustment: true
+      )
     end
 
     # Trigger immediate UI refresh so entries appear in the activity feed
@@ -64,9 +77,7 @@ class IndexaCapitalAccount::Processor
       )
       account.save!
 
-      # Create or update the current balance anchor valuation for linked accounts
-      # This is critical for reverse sync to work correctly
-      account.set_current_balance(total_balance, apply_provider_adjustment: true)
+      total_balance
     end
 
     def calculate_total_balance

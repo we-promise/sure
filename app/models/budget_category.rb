@@ -23,6 +23,8 @@ class BudgetCategory < ApplicationRecord
 
   validates :budget_id, uniqueness: { scope: :category_id }
 
+  NEAR_LIMIT_PERCENT = 90
+
   monetize :budgeted_spending, :available_to_spend, :avg_monthly_expense, :median_monthly_expense, :actual_spending,
            :rolled_over_amount
 
@@ -47,6 +49,13 @@ class BudgetCategory < ApplicationRecord
   end
 
   class << self
+    # The near-limit test on spending outside bills, shared with
+    # Budget#near_limit? so a budget and its lines warn alike.
+    def near_limit_outside_bills?(spent:, bills_paid:, available:)
+      unplanned = spent - bills_paid
+      unplanned.positive? && unplanned / (available + unplanned) * 100 >= NEAR_LIMIT_PERCENT
+    end
+
     def uncategorized
       new(
         id: Digest::UUID.uuid_v5(Digest::UUID::URL_NAMESPACE, "uncategorized"),
@@ -160,6 +169,13 @@ class BudgetCategory < ApplicationRecord
 
   def actual_spending
     budget.budget_category_actual_spending(self)
+  end
+
+  # The part of actual_spending that paid bills inside the budget period.
+  # Unlike bills_reserved it counts a parent's subcategories, as
+  # actual_spending does.
+  def bills_paid
+    budget.budget_category_bills_paid(self)
   end
 
   # The toggle is a standing choice about the envelope, and the comment on
@@ -367,8 +383,18 @@ class BudgetCategory < ApplicationRecord
     actual_spending.to_d.positive?
   end
 
+  # Close to the limit for spending outside bills. Fixed charges that land
+  # early fill the envelope without using anything up: a line whose gym fee
+  # and medical plan are its whole budget sits at 100% on day 5 with nothing
+  # left to watch. So the spending outside bills is measured against what the
+  # bills paid so far leave of the envelope. Without bills that is the plain
+  # share of the envelope spent. The percent check comes first only to skip
+  # the bills query for lines nowhere near the limit. For a subcategory
+  # sharing its parent's budget, available_to_spend is the shared pool, so the
+  # measure is approximate there.
   def near_limit?
-    !over_budget? && percent_of_budget_spent >= 90
+    !over_budget? && percent_of_budget_spent >= NEAR_LIMIT_PERCENT &&
+      self.class.near_limit_outside_bills?(spent: actual_spending, bills_paid: bills_paid, available: available_to_spend)
   end
 
   # Returns hash with suggested daily spending info or nil if not applicable
@@ -425,7 +451,7 @@ class BudgetCategory < ApplicationRecord
 
         total = occurrences.reduce(Money.new(0, currency)) do |sum, occurrence|
           begin
-            sum + occurrence.remaining_amount_money.exchange_to(currency)
+            sum + occurrence.remaining_spending_money.exchange_to(currency)
           rescue Money::ConversionError
             unconvertible += 1
             sum

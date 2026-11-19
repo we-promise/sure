@@ -464,9 +464,10 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     search = Transaction::Search.new(@family)
     totals = search.totals
 
+    # Still counted as a transaction, but its amount is left out of the
+    # totals: at 1 it read as $100 (#3640).
     assert_equal 1, totals.count
-    # Should use rate of 1 when exchange rate is missing
-    assert_equal Money.new(100, "USD"), totals.expense_money # EUR 100 * 1
+    assert_equal Money.new(0, "USD"), totals.expense_money
     assert_equal Money.new(0, "USD"), totals.income_money
   end
 
@@ -518,6 +519,22 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal "EUR", totals_eur.expense_money.currency.iso_code
   end
 
+  # An amount with no rate is left out of the totals. A rate stored after the
+  # first render must reach them, or the totals stay short once the
+  # missing-rate notice has gone.
+  test "totals include an amount once its rate is stored after the first render" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    krw = @family.accounts.create!(name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, amount: 130_000, currency: "KRW", category: categories(:food_and_drink), kind: "standard")
+
+    before = Transaction::Search.new(@family, filters: {}).totals.expense_money
+
+    ExchangeRate.create!(from_currency: "KRW", to_currency: "USD", date: Date.current, rate: 0.00075)
+    after = Transaction::Search.new(@family.reload, filters: {}).totals.expense_money
+
+    assert_equal Money.new(97.5, "USD"), after - before, "the KRW expense at its new rate"
+  end
+
   test "totals is served from cache when nothing has changed" do
     cache = ActiveSupport::Cache::MemoryStore.new
     Rails.stubs(:cache).returns(cache)
@@ -530,7 +547,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     key2 = search2.cache_key_base
 
     assert_equal key1, key2
-    assert_not_nil cache.read("transaction_search_totals/v4/#{key2}")
+    assert_not_nil cache.read("transaction_search_totals/v4/#{ExchangeRate::CONVERSION_CACHE_VERSION}/#{key2}")
     assert_equal result1, search2.totals
   end
 

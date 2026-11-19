@@ -28,6 +28,7 @@ class Account < ApplicationRecord
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
   has_many :holding_lots
+  has_many :holding_lot_disposals
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
   has_many :goal_accounts, dependent: :destroy
@@ -74,6 +75,7 @@ class Account < ApplicationRecord
 
   def reload(*)
     @scheduled_entry_flows = nil
+    @current_holdings_total = nil
     super
   end
 
@@ -82,6 +84,8 @@ class Account < ApplicationRecord
   end
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
+  # Which lots a sale consumes: pro rata (the default) or oldest first.
+  enum :cost_basis_method, { average: "average", fifo: "fifo" }, prefix: :cost_basis, validate: true
 
   VISIBLE_STATUSES = %w[draft active].freeze
   HISTORICAL_STATUSES = (VISIBLE_STATUSES + %w[disabled]).freeze
@@ -159,6 +163,14 @@ class Account < ApplicationRecord
       )
     SQL
   }
+
+  # SHA-256 of a set of account ids, in id order, joined by commas. An
+  # aggregate over no rows still yields one value, the hash of "". Insight
+  # generators store it with a total and Insight.about_shared_accounts
+  # recomputes it on read, so both share this one expression.
+  ID_SET_DIGEST_SQL = Arel.sql(<<~SQL.squish)
+    encode(sha256(convert_to(coalesce(string_agg(accounts.id::text, ',' ORDER BY accounts.id), ''), 'UTF8')), 'hex')
+  SQL
 
   # Accounts a user can write to (owned or shared with full_control)
   WRITABLE_BY_CONDITION = "accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')".freeze
@@ -733,6 +745,12 @@ class Account < ApplicationRecord
       manual?
   end
 
+  # Only an account linked to a goal can hold a goal pledge, so callers use
+  # this to skip pledge reconciliation for every other account.
+  def linked_to_goal?
+    goal_accounts.exists?
+  end
+
   # True when the account has no live sync provider attached. Mirrors the
   # `Account.manual` scope so per-instance checks don't drift from the query.
   def manual?
@@ -845,6 +863,11 @@ class Account < ApplicationRecord
     clear_attribute_changes(restored.keys)
   end
 
+  def current_holdings_total
+    # A holding with no exchange rate is left out rather than counted 1:1.
+    @current_holdings_total ||= current_holdings.sum { |h| h.amount_in_account_currency(unconvertible: 0) }
+  end
+
   def current_holdings
     if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
       holdings
@@ -918,6 +941,31 @@ class Account < ApplicationRecord
             .standard
             .distinct
             .order(:ticker)
+  end
+
+  NegativePosition = Data.define(:security, :first_date, :lowest_qty)
+
+  # Securities whose calculated position dropped below zero on some day, for
+  # example after a sale without its purchase or after deleting a purchase.
+  # The holdings tab shows them instead of hiding the gap.
+  # Linked accounts are left out entirely: their provider's holdings are the
+  # truth, so a negative quantity there (reported, or carried back by the
+  # reverse calculator) is a short position, not missing data.
+  def negative_positions
+    return [] if linked?
+
+    rows = holdings
+      .joins(:security)
+      .merge(Security.standard)
+      .where(account_provider_id: nil)
+      .where("holdings.qty < 0")
+      .group(:security_id)
+      .pluck(:security_id, Arel.sql("MIN(holdings.date)"), Arel.sql("MIN(holdings.qty)"))
+    return [] if rows.empty?
+
+    securities = Security.where(id: rows.map(&:first)).index_by(&:id)
+    rows.map { |security_id, first_date, lowest_qty| NegativePosition.new(securities[security_id], first_date, lowest_qty) }
+        .sort_by { |position| [ position.first_date, position.security.ticker, position.security.id ] }
   end
 
   # The balance type determines which "component" of balance is being tracked.
@@ -1034,6 +1082,16 @@ class Account < ApplicationRecord
     Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: e.record.errors.full_messages.join(", "))
   rescue Account::CurrentBalanceManager::InvalidOperation => e
     Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: e.message)
+  end
+
+  # Whether the activity feed hides balance updates unless asked to show them.
+  #
+  # A linked account gets one from almost every daily sync, and users can't add
+  # their own there, so they bury the transactions they sit between. Property,
+  # vehicle, loan and other non-cash accounts are valued by those entries, so
+  # they keep showing them.
+  def hides_balance_updates_by_default?
+    linked? && balance_type != :non_cash
   end
 
   def owned_by?(user)

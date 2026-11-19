@@ -1,12 +1,15 @@
-<%# locals: (account:, url:, logo: true) %>
+<%# locals: (account:, url:, logo: true, turbo: account.persisted?) %>
 <%# `logo: false` hides the icon block for forms whose controller does not
-    save it (properties). %>
+    save it (properties). With `turbo`, the form submits through Turbo inside
+    the modal: an edit saved from an account's page returns to that page as a
+    morphing refresh (its scroll position kept), and errors re-render in the
+    modal. New accounts and the property wizard post the page as before. %>
 
 <% if @error_message.present? %>
   <%= render DS::Alert.new(message: @error_message, variant: :error) %>
 <% end %>
 
-<%= styled_form_with model: account, url: url, scope: :account, data: { turbo: false }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
+<%= styled_form_with model: account, url: url, scope: :account, data: (turbo ? {} : { turbo: false }), class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
   <div class="grow space-y-2">
     <%= form.hidden_field :accountable_type %>
     <%= form.hidden_field :return_to, value: params[:return_to] %>
@@ -48,6 +51,15 @@
         <%= form.text_field :provider_balance_adjustment_reason,
             label: t(".provider_balance_adjustment_reason_label"),
             placeholder: t(".provider_balance_adjustment_reason_placeholder") %>
+      </div>
+    <% end %>
+
+    <% if account.persisted? && account.supports_trades? %>
+      <div class="space-y-1">
+        <%= form.select :cost_basis_method,
+            Account.cost_basis_methods.keys.map { |method| [ t(".cost_basis_methods.#{method}"), method ] },
+            { label: t(".cost_basis_method_label") } %>
+        <p class="text-secondary text-sm"><%= t(".cost_basis_method_hint") %></p>
       </div>
     <% end %>
 
