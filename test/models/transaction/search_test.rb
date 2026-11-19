@@ -382,6 +382,42 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(200, "USD"), totals.income_money  # $200
   end
 
+  test "totals excludes scheduled (future-dated) transactions by default" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard", date: Date.current)
+    create_transaction(account: @checking_account, amount: 5000, kind: "standard", date: 3.days.from_now.to_date)
+
+    search = Transaction::Search.new(@family)
+    totals = search.totals
+
+    assert_equal 1, totals.count
+    assert_equal 1, totals.excluded_scheduled_count
+    assert_equal Money.new(100, "USD"), totals.expense_money
+  end
+
+  test "totals includes scheduled transactions when an explicit end_date filter is set" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard", date: Date.current)
+    create_transaction(account: @checking_account, amount: 5000, kind: "standard", date: 3.days.from_now.to_date)
+
+    search = Transaction::Search.new(@family, filters: { end_date: 10.days.from_now.to_date.to_s })
+    totals = search.totals
+
+    assert_equal 2, totals.count
+    assert_equal 0, totals.excluded_scheduled_count
+    assert_equal Money.new(5100, "USD"), totals.expense_money
+  end
+
+  test "totals includes scheduled transactions when start_date is after today" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard", date: Date.current)
+    create_transaction(account: @checking_account, amount: 200, kind: "standard", date: 10.days.from_now.to_date)
+
+    search = Transaction::Search.new(@family, filters: { start_date: 1.day.from_now.to_date.to_s })
+    totals = search.totals
+
+    assert_equal 1, totals.count
+    assert_equal 0, totals.excluded_scheduled_count
+    assert_equal Money.new(200, "USD"), totals.expense_money
+  end
+
   test "totals handles multi-currency transactions with exchange rates" do
     # Create EUR transaction
     eur_entry = create_transaction(
@@ -428,9 +464,10 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     search = Transaction::Search.new(@family)
     totals = search.totals
 
+    # Still counted as a transaction, but its amount is left out of the
+    # totals: at 1 it read as $100 (#3640).
     assert_equal 1, totals.count
-    # Should use rate of 1 when exchange rate is missing
-    assert_equal Money.new(100, "USD"), totals.expense_money # EUR 100 * 1
+    assert_equal Money.new(0, "USD"), totals.expense_money
     assert_equal Money.new(0, "USD"), totals.income_money
   end
 
@@ -482,6 +519,22 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal "EUR", totals_eur.expense_money.currency.iso_code
   end
 
+  # An amount with no rate is left out of the totals. A rate stored after the
+  # first render must reach them, or the totals stay short once the
+  # missing-rate notice has gone.
+  test "totals include an amount once its rate is stored after the first render" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    krw = @family.accounts.create!(name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, amount: 130_000, currency: "KRW", category: categories(:food_and_drink), kind: "standard")
+
+    before = Transaction::Search.new(@family, filters: {}).totals.expense_money
+
+    ExchangeRate.create!(from_currency: "KRW", to_currency: "USD", date: Date.current, rate: 0.00075)
+    after = Transaction::Search.new(@family.reload, filters: {}).totals.expense_money
+
+    assert_equal Money.new(97.5, "USD"), after - before, "the KRW expense at its new rate"
+  end
+
   test "totals is served from cache when nothing has changed" do
     cache = ActiveSupport::Cache::MemoryStore.new
     Rails.stubs(:cache).returns(cache)
@@ -494,7 +547,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     key2 = search2.cache_key_base
 
     assert_equal key1, key2
-    assert_not_nil cache.read("transaction_search_totals/v3/#{key2}")
+    assert_not_nil cache.read("transaction_search_totals/v4/#{ExchangeRate::CONVERSION_CACHE_VERSION}/#{key2}")
     assert_equal result1, search2.totals
   end
 
@@ -976,6 +1029,47 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     assert_includes confirmed_ids, confirmed.entryable.id
     assert_not_includes pending_ids, confirmed.entryable.id
+  end
+
+  test "reconcile_status filter matches the selected manual reconciliation statuses" do
+    unreconciled = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    cleared = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    reconciled = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+
+    cleared.update!(reconciled_status: "cleared")
+    reconciled.update!(reconciled_status: "reconciled")
+
+    cleared_ids = Transaction::Search.new(@family, filters: { reconcile_status: [ "cleared" ] }).transactions_scope.pluck(:id)
+    assert_includes cleared_ids, cleared.entryable.id
+    assert_not_includes cleared_ids, unreconciled.entryable.id
+    assert_not_includes cleared_ids, reconciled.entryable.id
+
+    cleared_or_reconciled_ids = Transaction::Search.new(@family, filters: { reconcile_status: [ "cleared", "reconciled" ] }).transactions_scope.pluck(:id)
+    assert_includes cleared_or_reconciled_ids, cleared.entryable.id
+    assert_includes cleared_or_reconciled_ids, reconciled.entryable.id
+    assert_not_includes cleared_or_reconciled_ids, unreconciled.entryable.id
+  end
+
+  test "reconcile_status filter is a no-op when blank" do
+    entry = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+
+    ids = Transaction::Search.new(@family, filters: { reconcile_status: [] }).transactions_scope.pluck(:id)
+
+    assert_includes ids, entry.entryable.id
+  end
+
+  test "reconcile_status filter excludes synced accounts even though they default to unreconciled" do
+    manual_entry = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    synced_account = accounts(:connected)
+    synced_entry = create_transaction(account: synced_account, amount: 100, kind: "standard")
+
+    assert_equal "unreconciled", manual_entry.reconciled_status
+    assert_equal "unreconciled", synced_entry.reconciled_status
+
+    ids = Transaction::Search.new(@family, filters: { reconcile_status: [ "unreconciled" ] }).transactions_scope.pluck(:id)
+
+    assert_includes ids, manual_entry.entryable.id
+    assert_not_includes ids, synced_entry.entryable.id
   end
 
   # Regression for https://github.com/we-promise/sure/issues/3174

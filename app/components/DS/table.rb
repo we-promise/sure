@@ -15,15 +15,17 @@ class DS::Table < DesignSystemComponent
   # markup or return a String: Rails' `capture` drops any other return value,
   # so a bare Integer renders as an empty cell (call `to_s` on it).
   renders_many :columns, ->(header, **options, &cell) do
-    DS::Table::Column.new(header, cell: cell, sticky: sticky_header, **options)
+    DS::Table::Column.new(header, cell: cell, sticky: sticky_header, inset: inset, **options)
   end
 
-  attr_reader :rows, :inset, :sticky_header, :label, :row_class, :row_opts, :opts
+  attr_reader :rows, :inset, :sticky_header, :label, :row_class, :row_opts, :row_detail, :opts
 
   # @param rows [Enumerable] the records, one table row each
   # @param inset [Boolean] frame the table in container-inset, for a table that
   #   sits inside a card the way a list group does. A table on the page
   #   background is a card of its own.
+  #   Its header row takes the frame's container-inset, so the two read as one
+  #   surface.
   # @param sticky_header [Boolean] cap the height and keep the header row in view
   #   while the body scrolls under it, for long tables such as a loan schedule
   # @param label [String, nil] accessible name for the scroll area. Makes it a
@@ -35,14 +37,25 @@ class DS::Table < DesignSystemComponent
   # @param row_opts [Proc, nil] called with each row, returns extra attributes for
   #   its <tr>, e.g. a `clickable-row` controller so a click anywhere on the row
   #   opens the link in its name cell
+  # @param row_detail [Proc, nil] called with each row, returns markup for a
+  #   hidden row rendered straight after it and spanning every column, or nil
+  #   for none. A control in the row reveals it by pointing aria-controls at
+  #   #row_detail_id, e.g. a holding's per-account positions. Requires an `id:`,
+  #   which prefixes the detail ids so two tables on a page cannot collide.
   # @param opts [Hash] forwarded to the outer element; :class merges with the base classes
-  def initialize(rows:, inset: false, sticky_header: false, label: nil, row_class: nil, row_opts: nil, **opts)
+  def initialize(rows:, inset: false, sticky_header: false, label: nil, row_class: nil, row_opts: nil, row_detail: nil, **opts)
+    raise ArgumentError, "DS::Table needs an id: when given row_detail" if row_detail && opts[:id].blank?
+    # The id prefixes the detail ids that aria-controls names, and a space
+    # there reads as a second id.
+    raise ArgumentError, "DS::Table's id must not contain whitespace when given row_detail" if row_detail && opts[:id].to_s.match?(/\s/)
+
     @rows = rows
     @inset = inset
     @sticky_header = sticky_header
     @label = label
     @row_class = row_class
     @row_opts = row_opts
+    @row_detail = row_detail
     @opts = opts
   end
 
@@ -80,5 +93,15 @@ class DS::Table < DesignSystemComponent
 
   def row_attributes(row)
     row_opts&.call(row) || {}
+  end
+
+  def row_detail_content(row)
+    row_detail&.call(row).presence
+  end
+
+  # The detail row's id, prefixed with the table's own id so two tables on a
+  # page cannot collide.
+  def row_detail_id(index)
+    "#{opts[:id]}-detail-#{index}"
   end
 end

@@ -3,14 +3,13 @@ id:
   invitations:
     accept_choice:
       create_account: Buat akun baru
+      existing_account_hint: Sudah punya akun? Akun yang sudah ada tidak dapat bergabung dengan keluarga lain melalui undangan.
       joined_household: Anda telah bergabung dengan keluarga.
       message: "%{inviter} telah mengundang Anda untuk bergabung sebagai %{role}."
-      sign_in_existing: Saya sudah memiliki akun
       title: Bergabung dengan %{family}
     create:
-      existing_user_added: Pengguna telah ditambahkan ke keluarga Anda.
-      existing_user_has_family_data: Pengguna tersebut sudah memiliki keluarga yang memiliki rekening. Mereka perlu menghapus atau mentransfer rekening tersebut sebelum bergabung dengan keluarga Anda.
       failure: Tidak dapat mengirim undangan
+      own_email: Anda tidak dapat mengundang diri sendiri.
       success: Undangan berhasil dikirim
     destroy:
       failure: Terjadi masalah saat menghapus undangan.

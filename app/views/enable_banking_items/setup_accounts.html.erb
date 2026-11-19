@@ -31,6 +31,7 @@
                   <li><strong><%= label %></strong></li>
                 <% end %>
               </ul>
+              <p class="text-xs text-secondary mt-2"><%= t(".skip_notice") %></p>
             </div>
           </div>
         </div>
@@ -55,13 +56,13 @@
               <p class="text-sm text-primary mb-3">
                 <strong><%= t(".historical_data_range") %></strong>
               </p>
+              <%= form.label :sync_start_date, t(".sync_start_date_label"), class: "block text-sm text-secondary mb-1" %>
               <%= form.date_field :sync_start_date,
-                    label: t(".sync_start_date_label"),
-                    value: @enable_banking_item.sync_start_date || 3.months.ago.to_date,
-                    min: 2.years.ago.to_date,
+                    value: @enable_banking_item.sync_start_date,
                     max: Date.current,
-                    class: "w-full max-w-xs rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary",
-                    help_text: t(".sync_start_date_help") %>
+                    aria: { describedby: "sync_start_date_help" },
+                    class: "w-full max-w-xs rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
+              <p id="sync_start_date_help" class="text-xs text-secondary mt-1"><%= t(".sync_start_date_help") %></p>
             </div>
           </div>
         </div>

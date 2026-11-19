@@ -1,6 +1,8 @@
 require "test_helper"
 
 class McpControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   MCP_PROTOCOL_VERSION = "2025-06-18"
 
   setup do
@@ -170,6 +172,17 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "env-var token works for a user whose email row is still legacy plaintext" do
+    store_legacy_plaintext_email(@user)
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+    end
+  end
+
   test "returns 401 and warns when env-var token matches but MCP_USER_EMAIL finds no user" do
     with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => "nonexistent@example.com") do # pipelock:ignore
       Rails.logger.expects(:warn).with(regexp_matches(/MCP_USER_EMAIL/)).once
@@ -222,13 +235,13 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   # -- Notifications (requests without id) --
 
-  test "notifications receive no response body" do
+  test "notifications are accepted with 202 and no body, as MCP's Streamable HTTP transport requires" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_notification("notifications/initialized").to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
-      assert response.body.blank?, "Notification must not produce a response body"
+      assert_response :accepted
+      assert_equal "", response.body, "Notification must not produce a response body"
     end
   end
 
@@ -238,19 +251,113 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       post "/mcp", params: jsonrpc_notification("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
-      assert response.body.blank?, "Notification-style tools/call must not execute or respond"
+      assert_response :accepted
+      assert_equal "", response.body, "Notification-style tools/call must not execute or respond"
     end
   end
 
-  test "unknown notification method still returns no content" do
+  test "an unknown notification method is accepted with no body too" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_notification("notifications/unknown").to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
-      assert response.body.blank?
+      assert_response :accepted
+      assert_equal "", response.body
     end
+  end
+
+  test "the handshake's notifications/initialized, sent with the negotiated session, is accepted" do
+    with_mcp_cache do
+      with_mcp_env do
+        post "/mcp", params: jsonrpc_request("initialize").to_json, headers: mcp_headers(@token)
+        assert_response :ok
+        session_id = response.headers["Mcp-Session-Id"]
+
+        post "/mcp", params: jsonrpc_notification("notifications/initialized").to_json,
+             headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => MCP_PROTOCOL_VERSION, "Mcp-Session-Id" => session_id)
+
+        assert_response :accepted
+        assert_equal "", response.body
+      end
+    end
+  end
+
+  # -- Unsupported methods --
+
+  test "GET /mcp returns 405 Method Not Allowed instead of 404" do
+    with_mcp_env do
+      get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream")
+
+      assert_response :method_not_allowed
+      assert_equal "POST", response.headers["Allow"]
+    end
+  end
+
+  test "DELETE /mcp returns 405 Method Not Allowed instead of 404" do
+    with_mcp_env do
+      delete "/mcp", headers: mcp_headers(@token)
+
+      assert_response :method_not_allowed
+      assert_equal "POST", response.headers["Allow"]
+    end
+  end
+
+  test "GET /mcp with an expired session id returns 404" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+        Rails.cache.delete("mcp:session:#{session_id}")
+
+        get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream", "Mcp-Session-Id" => session_id)
+
+        assert_response :not_found
+      end
+    end
+  end
+
+  test "DELETE /mcp with an expired session id returns 404" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+        Rails.cache.delete("mcp:session:#{session_id}")
+
+        delete "/mcp", headers: mcp_headers(@token).merge("Mcp-Session-Id" => session_id)
+
+        assert_response :not_found
+      end
+    end
+  end
+
+  test "GET /mcp with a valid session id returns 405" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+
+        get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream", "Mcp-Session-Id" => session_id)
+
+        assert_response :method_not_allowed
+        assert_equal "POST", response.headers["Allow"]
+      end
+    end
+  end
+
+  test "DELETE /mcp with a valid session id returns 405" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+
+        delete "/mcp", headers: mcp_headers(@token).merge("Mcp-Session-Id" => session_id)
+
+        assert_response :method_not_allowed
+        assert_equal "POST", response.headers["Allow"]
+      end
+    end
+  end
+
+  test "GET /mcp without a token still returns 401" do
+    get "/mcp", headers: { "Accept" => "text/event-stream" }
+
+    assert_response :unauthorized
   end
 
   # -- initialize --
@@ -442,6 +549,21 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/list omits rule write tools for a guest" do
+    with_guest_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+
+      assert_includes tool_names, "get_rules"
+      %w[create_rule update_rule apply_rule preview_rule].each do |name|
+        assert_not_includes tool_names, name
+      end
+    end
+  end
+
   # -- tools/call --
 
   test "tools/call rejects a preview tool for a user without preview features" do
@@ -456,6 +578,66 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       body = JSON.parse(response.body)
       assert_equal(-32602, body["error"]["code"])
       assert_includes body["error"]["message"], "list_account_statements"
+    end
+  end
+
+  test "tools/call creates a rule for an admin" do
+    with_mcp_env do
+      assert_difference "Rule.count", 1 do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "create_rule", arguments: rule_arguments }, id: 7).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_nil JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "tools/call rejects create_rule for a guest" do
+    with_guest_mcp_env do
+      assert_no_difference "Rule.count" do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "create_rule", arguments: rule_arguments }, id: 7).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_equal(-32602, JSON.parse(response.body)["error"]["code"])
+    end
+  end
+
+  test "tools/call rejects apply_rule for a guest" do
+    # The rule matches a transaction the guest can see, so the preview lists
+    # it and issues a token, and one in an account the guest cannot reach,
+    # whose category would change if the apply ran.
+    shared = accounts(:credit_card)
+    shared.account_shares.create!(user: family_guest, permission: "read_only")
+    hidden = accounts(:depository)
+    assert_not Account.accessible_by(family_guest).exists?(hidden.id)
+    create_transaction(account: shared, name: "Guest reach coffee")
+    hidden_entry = create_transaction(account: hidden, name: "Guest reach coffee", category: categories(:food_and_drink))
+    target = @user.family.categories.create!(name: "Guest rule target")
+
+    rule = @user.family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Guest reach coffee" } ],
+      actions_attributes: [ { action_type: "set_transaction_category", value: target.id } ]
+    )
+    # Preview tokens are bound to the user who previewed, so the guest needs its
+    # own. It is issued directly because MCP does not offer preview_rule to a
+    # guest.
+    token = Assistant::Function::PreviewRule.new(family_guest).call("rule_id" => rule.id)[:preview][:preview_token]
+    assert token, "a preview of a saved rule should issue a token"
+
+    with_guest_mcp_env do
+      perform_enqueued_jobs(only: RuleJob) do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "apply_rule", arguments: { rule_id: rule.id, preview_token: token } }, id: 8).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_equal categories(:food_and_drink).id, hidden_entry.transaction.reload.category_id, "apply_rule recategorised a transaction the guest cannot reach"
+      assert_not rule.reload.active, "apply_rule activated the rule for a guest"
+      assert_equal(-32602, JSON.parse(response.body).dig("error", "code"))
     end
   end
 
@@ -716,6 +898,17 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
     end
 
+    def with_guest_mcp_env(&block)
+      with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => family_guest.email, &block) # pipelock:ignore
+    end
+
+    def rule_arguments
+      {
+        conditions: [ { condition_type: "transaction_name", operator: "like", value: "zxq" } ],
+        actions: [ { action_type: "set_transaction_category", value: categories(:food_and_drink).id } ]
+      }
+    end
+
     def with_mcp_cache
       original_cache = Rails.cache
       Rails.cache = ActiveSupport::Cache::MemoryStore.new
@@ -729,6 +922,12 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         "Content-Type" => "application/json",
         "Authorization" => "Bearer #{token}"
       }
+    end
+
+    def initialize_mcp_session
+      post "/mcp", params: jsonrpc_request("initialize").to_json, headers: mcp_headers(@token)
+      assert_response :ok
+      response.headers["Mcp-Session-Id"]
     end
 
     def jsonrpc_request(method, params = {}, id: 1)

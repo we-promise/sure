@@ -3,6 +3,19 @@ require "test_helper"
 class TransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
+  test "with_any_tag returns transactions carrying any of the tags, each once" do
+    travel = families(:dylan_family).tags.create!(name: "Travel")
+    work = families(:dylan_family).tags.create!(name: "Work")
+    other = families(:dylan_family).tags.create!(name: "Other")
+    hotel = create_transaction(name: "Hotel", tags: [ travel ]).transaction
+    laptop = create_transaction(name: "Laptop", tags: [ work ]).transaction
+    lunch = create_transaction(name: "Airport lunch", tags: [ travel, work ]).transaction
+    create_transaction(name: "Rent", tags: [ other ])
+    create_transaction(name: "Untagged")
+
+    assert_equal [ hotel, laptop, lunch ].map(&:id).sort, Transaction.with_any_tag([ travel.id, work.id ]).pluck(:id).sort
+  end
+
   test "pending? is true when extra.simplefin.pending is truthy" do
     transaction = Transaction.new(extra: { "simplefin" => { "pending" => true } })
 
@@ -478,6 +491,39 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
   end
 
+  test "merge_tag_changes! keeps a tag written after the picker's copy was loaded" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+    stale_copy = Transaction.find(transaction.id)
+    stale_copy.tag_ids # load the tags the picker saw
+    rule_tag = transaction.entry.account.family.tags.create!(name: "Added by a rule")
+
+    transaction.update!(tag_ids: [ tags(:one).id, rule_tag.id ])
+    stale_copy.merge_tag_changes!([ tags(:two).id ], [], available_tags: Tag.where(id: [ tags(:two).id, tags(:one).id, rule_tag.id ]))
+
+    assert_equal [ tags(:one).id, tags(:two).id, rule_tag.id ].sort, transaction.reload.tag_ids.sort
+  end
+
+  test "merge_tag_changes! removes only the tags the picker took off" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id, tags(:two).id ])
+
+    transaction.merge_tag_changes!([ tags(:two).id ], [ tags(:one).id, tags(:two).id ], available_tags: Tag.all)
+
+    assert_equal [ tags(:two).id ], transaction.reload.tag_ids
+  end
+
+  test "replace_tags! sets exactly the available tags under the row lock" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+
+    assert_queries_match(/FOR UPDATE/) do
+      transaction.replace_tags!([ tags(:two).id, tags(:one).id ], available_tags: Tag.where(id: tags(:two).id))
+    end
+
+    assert_equal [ tags(:two).id ], transaction.reload.tag_ids
+  end
+
   test "name_suggestions_for ranks names and each name's category by frequency" do
     family = families(:dylan_family)
     account = accounts(:depository)
@@ -569,6 +615,196 @@ class TransactionTest < ActiveSupport::TestCase
     assert_empty scope.category_from("ai", since: 1.minute.from_now).pluck(:id)
     assert_equal [ ai_guess.id ], scope.category_from("ai", metadata: { confidence: 0.9 }).pluck(:id)
     assert_empty scope.category_from("ai", metadata: { confidence: 0.5 }).pluck(:id)
+  end
+
+
+  test "a category changed away from the AI's and back again is no longer the AI's" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    assert Transaction.where(id: transaction.id).category_from("ai").exists?, "precondition: the AI's category"
+
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+
+    assert_not Transaction.where(id: transaction.id).category_from("ai").exists?
+  end
+
+  test "an automatic categorizer's own change keeps its claim" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "bayes", metadata: { locked_by_bayes: true })
+
+    assert Transaction.where(id: transaction.id).category_from("bayes", metadata: { locked_by_bayes: true }).exists?
+  end
+
+  test "an automatic categorizer setting its category again reclaims it" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    assert Transaction.where(id: transaction.id).category_from("ai").exists?
+  end
+
+  test "a category changed away from the AI's and back again stays in the AI history" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+    family = transaction.entry.account.family
+
+    assert_includes Transaction::Search.new(family, filters: { ai_status: [ "history" ] }).transactions_scope.ids, transaction.id
+    assert_not_includes Transaction::Search.new(family, filters: { ai_status: [ "current" ] }).transactions_scope.ids, transaction.id
+  end
+
+  test "clearing the AI cache keeps a lock on a category the user changed away from and back" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.lock_attr!(:category_id)
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+
+    transaction.reload.clear_ai_cache
+
+    assert transaction.reload.locked?(:category_id)
+  end
+
+  test "a category merge ends a claim the AI recorded on the category merged into" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    # A claim recorded before category changes ended claims: the category moved on without it.
+    transaction.update_column(:category_id, categories(:food_and_drink).id)
+
+    Transaction.reassign_category!(Transaction.where(id: transaction.id), categories(:income).id)
+
+    assert_equal categories(:income), transaction.reload.category
+    assert_not Transaction.where(id: transaction.id).category_from("ai").exists?
+  end
+
+  test "clearing the AI cache locks the transaction before its enrichments" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.update!(category: categories(:food_and_drink))
+    statements = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, payload| statements << payload[:sql] }
+
+    begin
+      transaction.reload.clear_ai_cache
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+    lock_at = statements.index { |sql| sql.match?(/FROM "transactions".*FOR UPDATE/m) }
+    delete_at = statements.index { |sql| sql.match?(/DELETE FROM "data_enrichments"/) }
+    assert lock_at, "locks the transaction"
+    assert delete_at, "deletes the AI's enrichments"
+    assert_operator lock_at, :<, delete_at
+  end
+
+  test "clearing the AI cache of a transaction deleted since it was loaded clears nothing" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    stale = Transaction.find(transaction.id)
+    Transaction.where(id: transaction.id).delete_all
+
+    assert_equal 0, stale.clear_ai_cache
+  end
+
+  test "clearing Bayes' locks keeps a lock on a category the user changed away from and back" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "bayes", metadata: { locked_by_bayes: true })
+    transaction.lock_attr!(:category_id)
+
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+    transaction.lock_attr!(:category_id)
+    transaction.entry.account.family.clear_bayes_locks!
+
+    assert transaction.reload.locked?(:category_id)
+  end
+
+  # A tag can only be applied once to a transaction, so a writer handed the
+  # same tag twice must store it once rather than fail on the unique index.
+  test "assigning a repeated tag id stores it once" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+
+    transaction.update!(tag_ids: [ tag.id, tag.id, tag.id.upcase ])
+
+    assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
+  end
+
+  # The dedupe above relies on the uuid cast downcasing a non-canonical id
+  # (ActiveRecord's PostgreSQL OID::Uuid#format_uuid), so pin that, and an
+  # assignment made only of case variants of one id.
+  test "an id differing only in case is the same tag" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+
+    assert_equal tag.id, Tag.type_for_attribute(:id).cast(tag.id.upcase)
+
+    transaction.update!(tag_ids: [ tag.id.upcase, tag.id.downcase ])
+
+    assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
+  end
+
+  # Rails' ids writer drops blanks before it casts, so the dedupe must not cast a
+  # malformed id to a blank: the writer would then discard it and clear the tags
+  # instead of refusing the unknown id.
+  test "a malformed tag id still raises and leaves the tags in place" do
+    transaction = transactions(:transfer_out)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+    before_ids = transaction.reload.tag_ids.sort
+
+    assert_raises(ActiveRecord::RecordNotFound) { transaction.tag_ids = [ "not-a-uuid" ] }
+
+    assert_equal before_ids, transaction.reload.tag_ids.sort
+  end
+
+  test "a malformed tag id beside a valid one still raises" do
+    transaction = transactions(:transfer_out)
+    transaction.update!(tag_ids: [ tags(:two).id ])
+
+    assert_raises(ActiveRecord::RecordNotFound) { transaction.tag_ids = [ tags(:one).id, "not-a-uuid" ] }
+
+    assert_equal [ tags(:two).id ], transaction.reload.tag_ids
+  end
+
+  # A blank and a malformed id both cast to nil, so deduping on the cast alone
+  # would keep the blank, drop the malformed id, and clear the tags.
+  test "a malformed tag id after a blank one still raises" do
+    transaction = transactions(:transfer_out)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+
+    assert_raises(ActiveRecord::RecordNotFound) { transaction.tag_ids = [ "", "not-a-uuid" ] }
+
+    assert_equal [ tags(:one).id ], transaction.reload.tag_ids
+  end
+
+  test "a blank tag id is still ignored" do
+    transaction = transactions(:transfer_out)
+
+    transaction.update!(tag_ids: [ "", tags(:one).id, "" ])
+
+    assert_equal [ tags(:one).id ], transaction.reload.tag_ids
+  end
+
+  test "assigning a repeated tag stores it once" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+
+    transaction.tags = [ tag, tag ]
+
+    assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
+  end
+
+  test "a new transaction built with a repeated tag saves it once" do
+    tag = tags(:one)
+    entry = accounts(:depository).entries.create!(
+      name: "Repeated tag", amount: 10, currency: "USD", date: Date.current,
+      entryable: Transaction.new(tags: [ tag, tag ])
+    )
+
+    assert_equal [ tag.id ], entry.transaction.taggings.pluck(:tag_id)
   end
 
   private
