@@ -994,6 +994,25 @@ class Account < ApplicationRecord
     account_shares.any?
   end
 
+  # SQL twin of #ownership_percentage_for, for queries over the accounts table
+  # (the chart series and the sidebar sparkline key). +viewer_sql+ is a SQL
+  # expression for the viewer's uuid (a quoted literal or a cast bind); NULL
+  # means no viewer, who sees the whole account. Keep in step with
+  # #ownership_percentage_for; OwnershipParityTest pins them to the same figure.
+  def self.viewer_percentage_sql(viewer_sql)
+    <<~SQL.squish
+      CASE
+        WHEN #{viewer_sql} IS NULL THEN 100
+        WHEN accounts.owner_id = #{viewer_sql} THEN accounts.ownership_percentage
+        ELSE COALESCE(
+          (SELECT s.ownership_percentage FROM account_shares s
+           WHERE s.account_id = accounts.id AND s.user_id = #{viewer_sql}),
+          100
+        )
+      END
+    SQL
+  end
+
   # Percentage (0-100) of this account that +user+ counts towards their own net
   # worth. The owner's share lives on the account; co-owners' shares live on
   # their AccountShare. Anyone else (or no user) sees the full account.

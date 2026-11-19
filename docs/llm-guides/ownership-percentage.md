@@ -86,9 +86,9 @@ Rules:
   descriptions state this.
 
 The share is computed in Ruby (`Account#ownership_percentage_for`,
-`owned_balance_for`) and in SQL (`ChartSeriesBuilder#viewer_fraction_sql`, and the
-percentage column of `AccountableSparkline.identity_columns`).
-`test/models/ownership_parity_test.rb` pins the first two to the same figure,
+`owned_balance_for`) and in SQL (`Account.viewer_percentage_sql`, the one fragment behind both
+`ChartSeriesBuilder#viewer_fraction_sql` and `AccountableSparkline.identity_columns`).
+`test/models/ownership_parity_test.rb` pins Ruby and that fragment to the same figure,
 with two shared accounts at different percentages; change them together.
 
 ## Permissions

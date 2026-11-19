@@ -55,6 +55,14 @@ class OwnershipParityTest < ActiveSupport::TestCase
                           "balance sheet row #{account.name}, #{viewer.email}"
         end
 
+        # The fragment the sparkline key reads, with a quoted viewer id.
+        shares = Account.where(id: accounts.map(&:id))
+          .pluck(:id, Arel.sql(Account.viewer_percentage_sql(Account.connection.quote(viewer.id)))).to_h
+        accounts.each do |account|
+          assert_in_delta account.ownership_percentage_for(viewer), shares[account.id], 0.001,
+                          "sparkline key percentage #{account.name}, #{viewer.email}"
+        end
+
         assert_in_delta accounts.sum { |a| a.owned_balance_for(viewer) },
                         chart_balance(accounts, user: viewer), 0.01,
                         "chart over both accounts, #{viewer.email}, pair #{i}"

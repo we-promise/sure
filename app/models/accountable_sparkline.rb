@@ -14,17 +14,13 @@ class AccountableSparkline
   end
 
   # Per account: its identity (id and any provider link) and the share the
-  # current user counts, read in the same query as the rows. Same rule as
-  # Account#ownership_percentage_for.
+  # current user counts (Account.viewer_percentage_sql), read in the same
+  # query as the rows.
   def self.identity_columns
     viewer = Account.connection.quote(Current.user.id)
     [
       :id, :plaid_account_id, :simplefin_account_id, Arel.sql("account_providers.id"),
-      Arel.sql(<<~SQL.squish)
-        CASE WHEN accounts.owner_id = #{viewer} THEN accounts.ownership_percentage
-        ELSE COALESCE((SELECT s.ownership_percentage FROM account_shares s
-                       WHERE s.account_id = accounts.id AND s.user_id = #{viewer}), 100) END
-      SQL
+      Arel.sql(Account.viewer_percentage_sql(viewer))
     ]
   end
 

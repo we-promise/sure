@@ -71,18 +71,7 @@ class Balance::ChartSeriesBuilder
     # (see Account#ownership_percentage_for). Without one, accounts count in full.
     # Exposes the factor as selected_accounts.viewer_fraction.
     def viewer_fraction_sql
-      <<~SQL.squish
-        CASE
-          WHEN CAST(:viewer_id AS uuid) IS NULL THEN 1
-          WHEN accounts.owner_id = CAST(:viewer_id AS uuid) THEN accounts.ownership_percentage / 100.0
-          ELSE COALESCE(
-            (SELECT s.ownership_percentage / 100.0
-             FROM account_shares s
-             WHERE s.account_id = accounts.id AND s.user_id = CAST(:viewer_id AS uuid)),
-            1
-          )
-        END AS viewer_fraction
-      SQL
+      "(#{Account.viewer_percentage_sql("CAST(:viewer_id AS uuid)")}) / 100.0 AS viewer_fraction"
     end
 
     def interval
