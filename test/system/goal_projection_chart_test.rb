@@ -59,6 +59,48 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       assert_equal "Target · $10,000", label["text"]
       assert_operator label["x"], :>=, 0
       assert_operator label["x"] + label["width"], :<=, svg_width
+      assert_in_delta target_line_right, label["x"] + label["width"], 12, "the target label must end at the target line's right end"
+    end
+  end
+
+  test "the target label is painted above the plot lines" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, saved: 3_000, pace: 330)
+
+      order = page.evaluate_script(<<~JS)
+        (() => {
+          const kids = Array.from(document.querySelector("[data-controller='goal-projection-chart'] svg").children);
+          const label = kids.findIndex((n) => n.tagName === "text" && n.textContent.startsWith("Target"));
+          const lastPath = kids.map((n) => n.tagName).lastIndexOf("path");
+          return { label, lastPath };
+        })()
+      JS
+      assert_operator order["lastPath"], :>=, 0, "premise: plot paths drawn"
+      assert_operator order["label"], :>, order["lastPath"], "a line drawn after the label paints over its halo"
+    end
+  end
+
+  test "on an overdue goal the target label stays clear of the Today label" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, saved: 3_000, target_date: TODAY, history_from: TODAY - 90.days)
+
+      today_label = chart_texts.find { |t| t["text"] == "Today" }
+      assert today_label, "premise: the Today label is drawn at desktop width"
+      assert_operator today_label["x"] + today_label["width"], :>, svg_width - 60, "premise: Today sits at the right edge"
+      assert_not boxes_overlap?(target_label, today_label), "Target and Today overlap: #{target_label.inspect} #{today_label.inspect}"
+    end
+  end
+
+  test "a window of daily ticks keeps the label of every month it covers" do
+    travel_to Date.new(2027, 1, 25) do
+      # The setup session is three months old by now.
+      sign_in @user
+      visit_goal(target: 10_000, target_date: Date.new(2027, 2, 1))
+      resize_chart(428)
+
+      assert_operator raw_x_ticks, :>=, 6, "premise: d3 returns daily ticks for an eight-day window"
+      labels = x_labels.map { |l| l["text"] }
+      assert_equal [ "Jan 2027", "Feb 2027" ], labels
     end
   end
 
@@ -167,6 +209,8 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       assert_x_labels_clear(labels)
       assert_operator labels.size, :<, raw_x_ticks, "some labels must be dropped to fit"
       assert_operator labels.size, :>=, 2, "thinning must not empty the axis"
+      months = labels.map { |l| d = Date.strptime(l["text"], "%b %Y"); d.year * 12 + d.month }
+      assert_equal 1, months.each_cons(2).map { |a, b| b - a }.uniq.size, "kept labels must advance by a regular interval: #{labels.map { |l| l["text"] }}"
     end
   end
 
@@ -196,12 +240,19 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       page.execute_script(<<~JS)
         window.__chartErrors = [];
         window.addEventListener("error", (e) => window.__chartErrors.push(String(e.message)));
-        document.querySelector("[data-controller='goal-projection-chart']").style.width = "120px";
       JS
-      wait_for_settled_chart
+      # Narrow the plot to 60% of one date label, so no label fits between
+      # ticks. The margins are read at a narrow width, where the y-axis is gone.
+      label_width = x_labels.map { |l| l["right"] - l["left"] }.max
+      resize_chart(200)
+      margins = svg_width - (target_line_right - target_line_left)
+      width = (margins + label_width * 0.6).floor
+      resize_chart(width)
 
-      assert_equal 120, svg_width, "premise: the chart redrew at 120 px"
-      assert_operator x_labels.size, :>=, 1
+      assert_equal width, svg_width, "premise: the chart redrew at #{width} px"
+      label = x_labels.first
+      assert label, "the axis must keep a label"
+      assert_operator label["right"] - label["left"], :>, target_line_right - target_line_left, "premise: one date label is wider than the plot"
       assert_empty page.evaluate_script("window.__chartErrors")
     end
   end
@@ -215,6 +266,7 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     # Chrome will not size a window below 500 px, so a phone is emulated.
     # The chart redraws from its ResizeObserver at the new width.
     def on_phone
+      skip "phone emulation needs the Chrome DevTools protocol" unless page.driver.browser.respond_to?(:execute_cdp)
       @phone = true
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 390, height: 844, deviceScaleFactor: 1, mobile: true)
       wait_for_settled_chart
@@ -367,6 +419,27 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
         Number(Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg line"))
           .find((l) => l.getAttribute("y1") === l.getAttribute("y2") && l.getAttribute("stroke-dasharray") === "3 3")
           .getAttribute("y1"))
+      JS
+    end
+
+    def resize_chart(width)
+      page.execute_script("document.querySelector(\"[data-controller='goal-projection-chart']\").style.width = '#{width}px'")
+      wait_for_settled_chart
+    end
+
+    def target_line_left
+      target_line_attr("x1")
+    end
+
+    def target_line_right
+      target_line_attr("x2")
+    end
+
+    def target_line_attr(name)
+      page.evaluate_script(<<~JS)
+        Number(Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg line"))
+          .find((l) => l.getAttribute("y1") === l.getAttribute("y2") && l.getAttribute("stroke-dasharray") === "3 3")
+          .getAttribute("#{name}"))
       JS
     end
 

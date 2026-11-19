@@ -39,6 +39,7 @@ export default class extends Controller {
   };
 
   connect() {
+    this._connected = true;
     this._resize = this._draw.bind(this);
     window.addEventListener("resize", this._resize);
     // Container may have 0 width on initial connect (Turbo restoration,
@@ -72,9 +73,18 @@ export default class extends Controller {
     };
     document.addEventListener("turbo:render", this._onTurboRender);
     document.addEventListener("turbo:frame-load", this._onTurboRender);
+
+    // Date labels are measured to thin the axis; measure again once the page
+    // font has replaced the fallback.
+    if (document.fonts?.status === "loading") {
+      document.fonts.ready.then(() => {
+        if (this._connected) this._draw();
+      });
+    }
   }
 
   disconnect() {
+    this._connected = false;
     window.removeEventListener("resize", this._resize);
     this._observer?.disconnect();
     this._themeObserver?.disconnect();
@@ -82,6 +92,10 @@ export default class extends Controller {
       document.removeEventListener("turbo:render", this._onTurboRender);
       document.removeEventListener("turbo:frame-load", this._onTurboRender);
     }
+  }
+
+  _boxesOverlap(a, b) {
+    return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
   }
 
   _draw() {
@@ -269,6 +283,7 @@ export default class extends Controller {
       });
     }
 
+    let targetLabel = null;
     if (targetAmount > 0) {
       svg
         .append("line")
@@ -282,8 +297,9 @@ export default class extends Controller {
 
       // Always on the right, in full, above the line. The y-axis gutter is
       // sized for short tick labels and cannot hold it. The halo keeps the
-      // projection line from running through the text.
-      svg
+      // projection line from running through the text; it is raised above the
+      // plot lines once they are drawn.
+      targetLabel = svg
         .append("text")
         .attr("x", margin.left + innerWidth - 4)
         .attr("y", targetY - 6)
@@ -422,8 +438,9 @@ export default class extends Controller {
       .attr("stroke", containerBg)
       .attr("stroke-width", 2);
 
+    let todayLabel = null;
     if (innerWidth >= 320) {
-      svg
+      todayLabel = svg
         .append("text")
         .attr("x", x(today))
         .attr("y", margin.top - 4)
@@ -431,6 +448,17 @@ export default class extends Controller {
         .attr("font-size", 12)
         .attr("fill", textSecondary)
         .text(this.todayLabelValue);
+    }
+
+    if (targetLabel) {
+      // On an overdue goal Today sits on the right edge too; a target near the
+      // top of the scale would put the two labels on top of each other, so the
+      // target label moves below its line.
+      if (todayLabel && this._boxesOverlap(targetLabel.node().getBBox(), todayLabel.node().getBBox())) {
+        targetLabel.attr("y", targetY + 16);
+      }
+      // Painted after the plot lines so its halo masks the ones crossing it.
+      targetLabel.raise();
     }
 
     // Full 4-digit year so the terminal "Jan 2027" reads as the year, not
@@ -451,29 +479,31 @@ export default class extends Controller {
       .attr("font-size", 12)
       .attr("fill", textSecondary)
       .text((d) => tickFmt(d));
-    // d3 treats the tick count as a hint and can return nearly twice as many
-    // (nine quarterly ticks for a two-year goal when asked for five). When the
-    // widest label plus a gap is wider than the closest pair of ticks, keep
-    // every k-th tick, so the labels thin to a regular interval. The first
-    // tick is always kept, so the axis never goes blank.
-    const LABEL_GAP_PX = 12;
-    const labelNodes = tickGroup.selectAll("text").nodes();
-    const widest = d3.max(labelNodes, (n) => n.getComputedTextLength());
-    if (ticks.length >= 2 && Number.isFinite(widest) && widest > 0) {
-      const minSpacing = d3.min(d3.pairs(ticks), ([a, b]) => x(b) - x(a));
-      const stride = minSpacing > 0 ? Math.ceil((widest + LABEL_GAP_PX) / minSpacing) : ticks.length;
-      if (stride > 1) {
-        labelNodes.forEach((n, i) => {
-          if (i % stride !== 0) n.remove();
-        });
-      }
-    }
-    // De-dupe adjacent equal tick labels (e.g. multiple "May '26" on a
-    // short window where d3.ticks oversamples).
+    // De-dupe adjacent equal tick labels first (daily ticks on a short window
+    // all read "Jan 2027"), so the thinning below can't drop the only tick of
+    // a month in favour of repeats of another.
     const tickNodes = tickGroup.selectAll("text").nodes();
     for (let i = tickNodes.length - 1; i > 0; i--) {
       if (tickNodes[i].textContent === tickNodes[i - 1].textContent) {
         tickNodes[i].remove();
+      }
+    }
+    // d3 treats the tick count as a hint and can return nearly twice as many
+    // (nine quarterly ticks for a two-year goal when asked for five). When the
+    // widest label plus a gap is wider than the closest pair of labels, keep
+    // every k-th label, so they thin to a regular interval. The first label
+    // is always kept, so the axis never goes blank.
+    const LABEL_GAP_PX = 12;
+    const labelNodes = tickGroup.selectAll("text").nodes();
+    const widest = d3.max(labelNodes, (n) => n.getComputedTextLength());
+    if (labelNodes.length >= 2 && Number.isFinite(widest) && widest > 0) {
+      const positions = labelNodes.map((n) => Number(n.getAttribute("x")));
+      const minSpacing = d3.min(d3.pairs(positions), ([a, b]) => b - a);
+      const stride = minSpacing > 0 ? Math.ceil((widest + LABEL_GAP_PX) / minSpacing) : labelNodes.length;
+      if (stride > 1) {
+        labelNodes.forEach((n, i) => {
+          if (i % stride !== 0) n.remove();
+        });
       }
     }
 
