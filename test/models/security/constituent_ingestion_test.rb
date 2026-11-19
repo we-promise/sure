@@ -191,6 +191,92 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     end
   end
 
+  # The rest of the answer is still good: a holdings block it cannot read must
+  # not cost the fund its name and sector.
+  test "an EODHD holdings block it cannot read still imports the fund's name and sector" do
+    old_stamp = stored_fund_set
+
+    @security.stubs(:price_data_provider).returns(
+      eodhd_answering(false, general: { "Name" => "Vanguard Total World", "Sector" => "Financial Services" })
+    )
+    @security.import_provider_details(clear_cache: true, include_constituents: true)
+
+    @security.reload
+    assert_equal "Vanguard Total World", @security.name
+    assert_equal "Financial Services", @security.sector
+    assert_equal %w[AAA], @security.constituents.pluck(:ticker)
+    assert_equal old_stamp, @security.constituents_fetched_at
+  end
+
+  # A count with no list is an answer this cannot read, not an empty fund.
+  test "an EODHD holdings count with no list keeps the stored set and its stamp" do
+    old_stamp = stored_fund_set
+
+    @security.stubs(:price_data_provider).returns(eodhd_answering(nil, holdings_count: 503))
+    @security.import_provider_details(clear_cache: true, include_constituents: true)
+
+    assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker)
+    assert_equal old_stamp, @security.constituents_fetched_at
+  end
+
+  # Entries dropped by the parser are part of the support trail too.
+  test "an EODHD holding that is not a hash is logged and the rest are stored" do
+    holdings = { "MSFT.US" => { "Code" => "MSFT", "Name" => "Microsoft", "Assets_%" => "5" }, "BAD.US" => "garbage" }
+
+    assert_difference -> { holdings_log_count }, 1 do
+      @security.stubs(:price_data_provider).returns(eodhd_answering(holdings))
+      @security.import_provider_details(clear_cache: true, include_constituents: true)
+    end
+
+    assert_equal %w[MSFT], @security.reload.constituents.pluck(:ticker)
+    assert_equal "malformed_entry", last_holdings_log.metadata["reason"]
+  end
+
+  # A Code that is not a string is not a ticker. The map key carries the same
+  # ticker with an exchange suffix, so that is used instead.
+  test "an EODHD holding whose Code is not a string is stored under its map key" do
+    holdings = { "MSFT.US" => { "Code" => [ "MSFT" ], "Name" => "Microsoft", "Assets_%" => "5" } }
+
+    @security.stubs(:price_data_provider).returns(eodhd_answering(holdings))
+    @security.import_provider_details(clear_cache: true, include_constituents: true)
+
+    assert_equal %w[MSFT], @security.reload.constituents.pluck(:ticker)
+  end
+
+  # A well-shaped list none of whose rows can be stored says nothing about
+  # the fund, so it must not replace the set stored before.
+  test "a list whose every row is refused keeps the stored set and its stamp" do
+    old_stamp = stored_fund_set
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
+    provider.stubs(:fetch_security_info).returns(
+      provider_success_response(info(constituents: [ constituent("NEG", "Short", -1), constituent("NEG2", "Short", -2) ]))
+    )
+    @security.stubs(:price_data_provider).returns(provider)
+
+    @security.import_provider_details(clear_cache: true, include_constituents: true)
+
+    assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker)
+    assert_equal old_stamp, @security.constituents_fetched_at
+    assert_match "could not be read", last_holdings_log.message
+  end
+
+  # The provider is read once per import, so the holdings are stamped with
+  # the provider that supplied them even if the default changes mid-import.
+  test "the stamp names the provider that answered when the default changes mid-import" do
+    first = capable_provider("first")
+    first.stubs(:class).returns(Provider::Eodhd)
+    first.stubs(:fetch_security_info).returns(provider_success_response(info(constituents: [ constituent("MSFT", "Microsoft", 10) ])))
+    second = capable_provider("second")
+    second.stubs(:class).returns(Provider::YahooFinance)
+    second.stubs(:fetch_security_info).returns(provider_success_response(info(constituents: [ constituent("MSFT", "Microsoft", 10) ])))
+    @security.stubs(:price_data_provider).returns(first).then.returns(second)
+
+    @security.import_provider_details(include_constituents: true)
+
+    assert_equal "eodhd", @security.reload.constituents_fetched_from
+  end
+
   # The other side of the boundary: null, {} and [] are EODHD saying the fund
   # lists nothing, which replaces the stored set with nothing and stamps it.
   test "an EODHD holdings value of null, {} or [] clears the stored set and stamps the fund" do
@@ -569,8 +655,15 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_equal %w[AAA aaa], @security.reload.constituents.order(:weight).reverse.map(&:ticker)
   end
 
+  test "a ticker that is not a string skips that row and stores the rest" do
+    import(info(constituents: [ { ticker: [ "MSFT" ], name: "Microsoft", weight: 5 }, constituent("NVDA", "Nvidia", 4) ]))
+
+    assert_equal %w[NVDA], @security.reload.constituents.pluck(:ticker)
+    assert_equal "non_string_ticker", last_holdings_log.metadata["reason"]
+  end
+
   test "the skipped row is logged with the fund, its ticker and the raw entry" do
-    import(info(constituents: [ constituent("AAA", "Short", -1) ]))
+    import(info(constituents: [ constituent("AAA", "Short", -1), constituent("BBB", "Long", 5) ]))
 
     log = last_holdings_log
     assert_equal "warn", log.level
@@ -632,8 +725,10 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
       @security.constituents_fetched_at
     end
 
-    def eodhd_answering(holdings)
-      body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => holdings } }.to_json
+    def eodhd_answering(holdings, general: {}, holdings_count: nil)
+      etf_data = { "Holdings" => holdings }
+      etf_data["Holdings_Count"] = holdings_count if holdings_count
+      body = { "General" => { "Type" => "ETF" }.merge(general), "ETF_Data" => etf_data }.to_json
       provider = Provider::Eodhd.new("test_api_key")
       provider.stubs(:enforce_daily_limit!)
       provider.stubs(:throttle_request)

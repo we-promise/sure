@@ -254,35 +254,38 @@ class Provider::Eodhd < Provider
   #
   # EODHD keys the holdings hash by a suffixed ticker ("AAPL.US") and carries the
   # bare one in `Code`. The bare ticker is what matches anything in `securities`,
-  # so the key is used only as a fallback for a malformed entry.
+  # so the key is used only when `Code` is missing or not a string.
   #
   # An absent block (null) or an empty map or list means the fund lists nothing.
-  # Any other shape, `false` or a blank string included, or a non-empty map
-  # whose entries are all malformed, is a response this cannot read and raises:
-  # answered as "no holdings", it would replace the fund's stored set with
-  # nothing and stamp it as asked.
+  # A block this cannot read returns UNREADABLE_CONSTITUENTS rather than raising,
+  # so the name, sector and classification in the same answer still land:
+  # `false` or a blank string, a list missing although `Holdings_Count` is
+  # positive, or a map with no readable entry. Answered as "no holdings" any of
+  # these would replace the fund's stored set with nothing and stamp it.
+  #
+  # Malformed entries are passed through rather than dropped here, so the
+  # importer logs them with the rows it skips.
   def etf_constituents(parsed)
-    holdings = parsed.dig("ETF_Data", "Holdings")
-    return nil if holdings.nil? || holdings == {} || holdings == []
-    raise Error, "Unexpected holdings format from fundamentals API" unless holdings.is_a?(Hash)
+    etf_data = parsed["ETF_Data"]
+    return nil unless etf_data.is_a?(Hash)
 
-    readable = holdings.filter_map do |key, holding|
-      next unless holding.is_a?(Hash)
+    holdings = etf_data["Holdings"]
+    if holdings.nil? || holdings == {} || holdings == []
+      return etf_data["Holdings_Count"].to_s.to_i.positive? ? UNREADABLE_CONSTITUENTS : nil
+    end
+    return UNREADABLE_CONSTITUENTS unless holdings.is_a?(Hash)
 
-      ticker = holding["Code"].presence || key.to_s.split(".").first
-      next if ticker.blank?
+    entries = holdings.map do |key, holding|
+      next holding unless holding.is_a?(Hash)
 
+      code = holding["Code"]
+      ticker = code.is_a?(String) && code.present? ? code : key.to_s.split(".").first
       { ticker: ticker, name: holding["Name"].presence, weight: holding["Assets_%"] }
     end
 
-    # A non-empty holdings block that yields no readable entry is an answer this
-    # cannot read. Returned as nil it is answered as "no holdings": the stored
-    # set wiped and the fund stamped, and the gate would not ask again. Fail
-    # instead, so the stored set survives and the next sync asks again. A partial
-    # read (some entries malformed) still returns the readable subset.
-    raise Error, "Holdings block has no readable entries from fundamentals API" if readable.empty?
+    return UNREADABLE_CONSTITUENTS if entries.none? { |entry| entry.is_a?(Hash) && entry[:ticker].present? }
 
-    readable
+    entries
   end
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)
