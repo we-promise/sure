@@ -420,6 +420,79 @@ class EntryTest < ActiveSupport::TestCase
     assert entry.saved_changes_affect_balances?
   end
 
+  test "reconcile_pending_duplicates excludes a pending with one unambiguous booked match" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 3.days.ago.to_date, amount: 25)
+    create_transaction(account: account, date: 1.day.ago.to_date, amount: 25)
+
+    Entry.reconcile_pending_duplicates(account: account)
+
+    assert pending.reload.excluded?
+  end
+
+  test "reconcile_pending_duplicates keeps both same-amount pendings when only one booked" do
+    account = accounts(:depository)
+    first = create_pending(account, date: 3.days.ago.to_date, amount: 20)
+    second = create_pending(account, date: 2.days.ago.to_date, amount: 20)
+    create_transaction(account: account, date: 1.day.ago.to_date, amount: 20)
+
+    Entry.reconcile_pending_duplicates(account: account)
+
+    assert_not first.reload.excluded?
+    assert_not second.reload.excluded?
+  end
+
+  test "reconcile_pending_duplicates suggests no fuzzy match when the exact match is ambiguous" do
+    account = accounts(:depository)
+    first = create_pending(account, date: 3.days.ago.to_date, amount: 5)
+    second = create_pending(account, date: 2.days.ago.to_date, amount: 5)
+    first.update!(name: "Starbucks Store")
+    second.update!(name: "Starbucks Store")
+    create_transaction(account: account, date: 1.day.ago.to_date, amount: 5, name: "Starbucks Store")
+
+    Entry.reconcile_pending_duplicates(account: account)
+
+    assert_nil first.reload.transaction.extra["potential_posted_match"]
+    assert_nil second.reload.transaction.extra["potential_posted_match"]
+  end
+
+  test "reconcile_pending_duplicates suggests no fuzzy match when two bookings match exactly" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 3.days.ago.to_date, amount: 5)
+    pending.update!(name: "Starbucks Store")
+    create_transaction(account: account, date: 2.days.ago.to_date, amount: 5, name: "Starbucks Store")
+    create_transaction(account: account, date: 1.day.ago.to_date, amount: 5, name: "Card payment")
+
+    Entry.reconcile_pending_duplicates(account: account)
+
+    assert_not pending.reload.excluded?
+    assert_nil pending.transaction.extra["potential_posted_match"]
+  end
+
+  test "reconcile_pending_duplicates ignores a booked entry from another provider" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 3.days.ago.to_date, amount: 30)
+    pending.update_columns(source: "simplefin")
+    booked = create_transaction(account: account, date: 1.day.ago.to_date, amount: 30)
+    booked.update_columns(source: "lunchflow")
+
+    Entry.reconcile_pending_duplicates(account: account)
+
+    assert_not pending.reload.excluded?
+  end
+
+  test "reconcile_pending_duplicates does not suggest a fuzzy match from another provider" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 3.days.ago.to_date, amount: 30)
+    pending.update_columns(source: "simplefin")
+    booked = create_transaction(account: account, date: 2.days.ago.to_date, amount: 33)
+    booked.update_columns(source: "lunchflow")
+
+    Entry.reconcile_pending_duplicates(account: account)
+
+    assert_nil pending.reload.transaction.extra["potential_posted_match"]
+  end
+
   test "balance update scopes split reconciliations from every other entry" do
     account = accounts(:connected)
     account.entries.destroy_all
@@ -432,4 +505,12 @@ class EntryTest < ActiveSupport::TestCase
     assert_equal [ transaction, opening_anchor, current_anchor ].map(&:id).sort,
       account.entries.excluding_balance_updates.pluck(:id).sort
   end
+
+  private
+    def create_pending(account, date:, amount:)
+      create_transaction(
+        account: account, date: date, amount: amount,
+        entryable: Transaction.new(extra: { "simplefin" => { "pending" => true } })
+      )
+    end
 end
