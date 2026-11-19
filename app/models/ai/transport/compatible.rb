@@ -58,16 +58,41 @@ class Ai::Transport::Compatible < Ai::Transport::Base
     def run_ocr(request) = OCR_PRESETS.key?(endpoint.preset) ? ocr_by_page(request) : ocr_through_chat(request)
 
     def ocr_by_page(request)
+      # RubyLLM's OCR entry point takes no per-request headers (as with embed): a gateway that
+      # needs one would get the page without it, so refuse before sending.
+      refuse_static_headers!
       texts = request.pages.map do |page|
-        result = attempt do
+        attempt do
           mapping_errors do
-            ruby_llm_context.ocr(RubyLLM::Attachment.new(StringIO.new(page.data), filename: page.filename),
-                                 model: request.model.name, provider: endpoint.preset, assume_model_exists: true)
+            ocr = ruby_llm_context(timeout: within_budget(endpoint.timeout_seconds)).ocr(
+              RubyLLM::Attachment.new(StringIO.new(page.data), filename: page.filename),
+              model: request.model.name, provider: endpoint.preset, assume_model_exists: true
+            )
+            checked_ocr_page!(ocr, page)
           end
         end
-        result.markdown.to_s
       end
       OcrResponse.new(texts:, usage: Ai::Tokens.new)
+    end
+
+    # One page image per request, so page 0 is the page asked for. Providers that answer with a
+    # different page, or with a Markdown field that isn't text, didn't transcribe it: a malformed
+    # 200 is InvalidOutput, not an empty page for the generation to accept.
+    def checked_ocr_page!(ocr, page)
+      answered = Array(ocr&.pages).find { _1.index.to_i == 0 }
+      raise Ai::Error::InvalidOutput, "the OCR response omitted #{page.filename}" unless answered
+
+      markdown = answered.markdown
+      raise Ai::Error::InvalidOutput, "the OCR response for #{page.filename} has malformed Markdown" unless markdown.is_a?(String)
+
+      text = markdown.strip
+      raise Ai::Error::InvalidOutput, "the OCR response for #{page.filename} has no Markdown" if text.empty?
+
+      text
+    rescue Ai::Error::Base
+      raise
+    rescue NoMethodError, TypeError, KeyError, IndexError
+      raise Ai::Error::InvalidOutput, "the OCR response isn't the expected shape"
     end
 
     # A vision model that transcribes, with its own prompt folder (Model#ocr_prompt): its
@@ -77,30 +102,36 @@ class Ai::Transport::Compatible < Ai::Transport::Base
     def ocr_through_chat(request)
       prompt = Ai::Prompt.for(:extract_pdf, default: "ocr_#{request.model.ocr_prompt || "markdown"}", route: nil, family: nil,
                                             locale: nil, locals: { pages: request.pages.size })
-      chat = ruby_llm_chat(request.model)
       max_tokens = request.model.max_output_tokens
-      chat.with_max_output_tokens(max_tokens) if max_tokens
-      files = ruby_llm_attachments(request.pages)
-      if prompt.input.strip.present?
-        files.each { chat.add_message(role: :user, content: prompt.input.strip, attachments: [ _1 ]) }
-        chat.add_message(role: :user, content: prompt.instructions.strip)
-      else
-        chat.add_message(role: :user, content: prompt.instructions.strip, attachments: files)
+      # Build the chat inside the attempt: every retry gets what's left of the call's budget, and
+      # fresh attachments (the last attempt consumed the previous ones' IO).
+      message = attempt do
+        mapping_errors do
+          chat = ruby_llm_chat(request.model, timeout: within_budget(endpoint.timeout_seconds))
+          chat.with_max_output_tokens(max_tokens) if max_tokens
+          files = ruby_llm_attachments(request.pages)
+          if prompt.input.strip.present?
+            files.each { chat.add_message(role: :user, content: prompt.input.strip, attachments: [ _1 ]) }
+            chat.add_message(role: :user, content: prompt.instructions.strip)
+          else
+            chat.add_message(role: :user, content: prompt.instructions.strip, attachments: files)
+          end
+          chat.generate
+        end
       end
-
-      message = attempt { mapping_errors { chat.generate } }
       # A transcription cut at the output limit is missing rows, which can still net to the
       # printed balances: unusable, so Auto reads another way.
       raise Ai::Error::InvalidOutput, "the transcription stopped at the output limit" if cut_at_limit?(message.finish_reason)
 
-      OcrResponse.new(texts: [ message.content.to_s.gsub(SPECIAL_TOKENS, "").strip ], usage: Ai::Tokens.from_ruby_llm(message.tokens))
+      OcrResponse.new(texts: [ message.content.to_s.gsub(SPECIAL_TOKENS, "").strip ],
+                      usage: Ai::Tokens.from_ruby_llm(message.tokens), finish_reason: message.finish_reason)
     end
 
-    # A gateway that routes or authenticates by a static header would get the document without it.
+    # A gateway that routes or authenticates by a static header would get the request without it.
     def refuse_static_headers!
       return if Ai::Transport::Http.headers(endpoint).empty?
 
-      raise Ai::Error::Refused, "embedding requests can't carry the endpoint's static headers yet"
+      raise Ai::Error::Refused, "embedding and OCR requests can't carry the endpoint's static headers yet"
     end
 
     # One vector, with the model's dimensions. RubyLLM 2.1.1's embed takes no headers

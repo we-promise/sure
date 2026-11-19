@@ -123,8 +123,8 @@ module Ai::Transport::RubyLlmAdapter
       raise unless refused_by_ruby_llm?(error)
 
       raise scrubbed(Ai::Error::Refused.new(error.message))
-    rescue NoMethodError, TypeError => error
-      # RubyLLM parsing a 200 that isn't the API's shape (`{}`, an HTML page); in Sure's own code it's a bug.
+    rescue NoMethodError, TypeError, KeyError, IndexError => error
+      # RubyLLM parsing a 200 that isn't the API's shape (`{}`, a missing field); in Sure's own code it's a bug.
       raise unless raised_in_ruby_llm?(error)
 
       raise Ai::Error::InvalidOutput, "the response isn't the expected shape"
@@ -168,7 +168,7 @@ module Ai::Transport::RubyLlmAdapter
         when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError
           # The provider's own message only: a diagnostic field elsewhere in the body can quote an
           # earlier "image input is not supported" and turn a retryable 503 into a refusal.
-          Ai::Error.for_status(status || 500, error.message)
+          Ai::Error.for_status(status || 500, error.message, body:)
         when RubyLLM::CancelledError then Ai::Error::Cancelled
         when RubyLLM::ModelNotFoundError then Ai::Error::ModelMissing   # not a RubyLLM::Error
         end

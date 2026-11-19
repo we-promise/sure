@@ -34,6 +34,12 @@ class Ai::PdfReading
     def flagged? = !passed?
   end
 
+  # The OCR text layer, and the pages no route could transcribe: those rows can still net to the
+  # printed balances, so an extraction from this text is flagged incomplete.
+  Transcription = Data.define(:pages, :untranscribed_pages) do
+    def text = pages.join("\n")
+  end
+
   attr_reader :content, :filename, :family, :user
 
   # What the route can do before a file is chosen, for the "Read as" options: each way with why
@@ -82,12 +88,12 @@ class Ai::PdfReading
   def extract(read_as: :auto, start: nil, cancelled: nil)
     attempts = []
     best = nil
-    each_way(read_as, start:, attempts:, keep: -> { best }) do |way, units, source|
+    each_way(read_as, start:, attempts:, cancelled:, keep: -> { best }) do |way, units, source, untranscribed_pages|
       result = Ai::Generations::ExtractBankStatement.new(units:, content:, filename:, family:, user:).call(plan:, cancelled:)
       result.value!
 
       checks = Ai::Generations::ExtractBankStatement.checks(result.value, source:, balances: printed_balances(source))
-                                                    .with(complete: result.skipped.empty? && result.remaining.empty?)
+                                                    .with(complete: result.skipped.empty? && result.remaining.empty? && untranscribed_pages.blank?)
       outcome = Outcome.new(value: result.value, way:, model: result.route&.model&.name, checks:, usage: result.usage, attempts:)
       attempts << { way:, checks: checks.to_h }
       return outcome unless checks.worth_another_way? || balances_unknown?(checks, source)
@@ -103,7 +109,7 @@ class Ai::PdfReading
   # CLASSIFY_BATCHES, until one says it's a statement. Otherwise the first batch's answer stands.
   def read(read_as: :auto, cancelled: nil)
     attempts = []
-    each_way(read_as, attempts:) do |way, units, _source|
+    each_way(read_as, attempts:, cancelled:) do |way, units, _source|
       first = nil
       usage = nil
       CLASSIFY_BATCHES.times do
@@ -146,7 +152,7 @@ class Ai::PdfReading
     # `keep` answers whether an extraction is already in hand: an outage on a later way (a 5xx, a
     # timeout, an unreachable server) then ends the search with that extraction, flagged, rather
     # than failing the import. With nothing in hand the outage is raised to the caller.
-    def each_way(read_as, attempts:, start: nil, keep: -> { nil })
+    def each_way(read_as, attempts:, start: nil, cancelled: nil, keep: -> { nil })
       order(read_as, start:).each do |way|
         reason = reason_for(way)
         if reason
@@ -155,8 +161,10 @@ class Ai::PdfReading
         end
 
         begin
-          units, source = units_for(way)
-          yield way, units, source
+          units, source, untranscribed_pages = units_for(way, cancelled:)
+          yield way, units, source, untranscribed_pages
+        rescue Ai::Error::Cancelled
+          raise   # a cancellation ends the whole import, not just this way
         rescue *NEXT_WAY => error
           attempts << { way:, error: error.is_a?(Ai::Error::Unavailable) ? error.reason : error.class.name.demodulize }
         rescue Pdf::PageImages::Error => error
@@ -174,10 +182,12 @@ class Ai::PdfReading
     end
 
     # A scan nothing on the route can read is `no_text_layer`; otherwise the last
-    # way's reason.
+    # way's reason. A failed renderer's code stays on the error for the admin's status page.
     def raise_unavailable(attempts)
-      reason = text_layer? ? attempts.filter_map { _1[:error] }.last || ways.values.compact.first : :no_text_layer
-      raise Ai::Error::Unavailable, reason || :no_way_to_read
+      render_error = attempts.filter_map { _1[:render_error] }.last
+      reason = text_layer? ? attempts.filter_map { _1[:error] }.last || ways.values.compact.first :
+               render_error ? :unreadable : :no_text_layer
+      raise Ai::Error::Unavailable.new(reason || :no_way_to_read, code: render_error)
     end
 
     def reason_for(way)
@@ -193,19 +203,22 @@ class Ai::PdfReading
 
         :unreadable unless page_count
       when :ocr
-        return :needs_ocr_route unless ocr_route
+        return :needs_ocr_route unless ocr_routes.any?
 
         :unreadable unless page_count
       end
     end
 
-    # [units, the text the model reads or nil].
-    def units_for(way)
+    # [units, the text the model reads or nil, pages no OCR route could read].
+    def units_for(way, cancelled: nil)
       case way
       when :pdf then [ [ Ai::PdfReading::Unit.pdf(page_count || 1) ], nil ]
       when :text then text_units(text_pages)
       when :images then [ (1..page_count).map { Ai::PdfReading::Unit.page(_1) }, nil ]
-      when :ocr then text_units(transcribe)
+      when :ocr
+        transcription = transcribe(cancelled:)
+        units, source = text_units(transcription.pages)
+        [ units, source, transcription.untranscribed_pages ]
       end
     end
 
@@ -228,21 +241,62 @@ class Ai::PdfReading
     end
 
     # One OCR request per page: a local OCR model takes ~45 s a page on CPU, so each request
-    # keeps within the endpoint's timeout, and Mistral and Cohere bill per page anyway.
-    def transcribe
-      route = ocr_route
-      # Marked down by another worker since reason_for(:ocr) found it: this way ends, before rendering.
-      raise Ai::Error::Unavailable, :needs_ocr_route unless route
+    # keeps within the endpoint's timeout, and Mistral and Cohere bill per page anyway. A page a
+    # route can't read goes to the next route; a page no route can read is left blank and counted,
+    # so Auto can still extract from the rest and flag the result incomplete.
+    def transcribe(cancelled: nil)
+      return @transcription if @transcription
 
-      (1..page_count).map do |page|
-        png = Pdf::PageImages.render(content, pages: page..page).first
-        request = Ai::Transport::Base::OcrRequest.new(feature: :extract_pdf, family:, model: route.model,
-                                                      pages: [ Ai::Attachment.png(png, filename: "page-#{page}.png") ])
-        route.transport.ocr(request).text
+      routes = ocr_routes
+      # Marked down by another worker since reason_for(:ocr) found it: this way ends, before rendering.
+      raise Ai::Error::Unavailable, :needs_ocr_route if routes.empty?
+
+      untranscribed = []
+      pages = (1..page_count).map do |number|
+        raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
+
+        text, = transcribe_page(number, routes, cancelled:)
+        untranscribed << number unless text
+        text || ""
       end
+      transcription = Transcription.new(pages:, untranscribed_pages: untranscribed)
+      # A scan whose every page failed is no text layer: don't cache it, so Auto can try another
+      # way (and a later call can retry) rather than reusing an empty transcription.
+      @transcription = transcription if pages.any?(&:present?)
+      transcription
+    end
+
+    # [the page's text, or nil when every route refused or couldn't read it].
+    def transcribe_page(number, routes, cancelled:)
+      png = Pdf::PageImages.render(content, pages: [ number ]).first
+      routes.each do |route|
+        next if Ai::DownMarks.down?(route)
+        raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
+
+        begin
+          request = Ai::Transport::Base::OcrRequest.new(feature: :extract_pdf, family:, model: route.model,
+                                                        pages: [ Ai::Attachment.png(png, filename: "page-#{number}.png") ])
+          text = route.transport.ocr(request).text.to_s.strip
+          return [ text, nil ] if text.present?
+
+          Rails.logger.warn("[Ai::PdfReading] OCR page #{number}: #{route.model.name} returned no text")
+        rescue *NEXT_WAY => error
+          # A refusal or unusable answer ends this route's try at this page, not the whole way.
+          Rails.logger.warn("[Ai::PdfReading] OCR page #{number} on #{route.model.name}: #{error.class.name}: #{error.message}")
+        end
+      end
+      [ nil, :unreadable ]
     end
 
     def text_routes = plan.routes.select { _1.model.capable?(:structured_output) }
+
+    # The first live OCR route, then any others: one model's refusal at a page needn't lose it.
+    def ocr_routes
+      primary = ocr_route
+      return [] unless primary
+
+      [ primary, *plan.routes.select { _1.model.capable?(:ocr) && _1 != primary && !Ai::DownMarks.down?(_1) } ]
+    end
 
     def ocr_route = plan.routes.find { _1.model.capable?(:ocr) && !Ai::DownMarks.down?(_1) }
 

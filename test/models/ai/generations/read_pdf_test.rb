@@ -41,8 +41,7 @@ class Ai::Generations::ReadPdfTest < ActiveSupport::TestCase
   end
 
   test "page images are rendered and sent for the batch's own pages only, even when they aren't contiguous" do
-    Pdf::PageImages.expects(:render).with("%PDF", pages: 2..2).returns(%w[png2])
-    Pdf::PageImages.expects(:render).with("%PDF", pages: 4..4).returns(%w[png4])
+    Pdf::PageImages.expects(:render).with("%PDF", pages: [ 2, 4 ]).returns(%w[png2 png4])
 
     attachments = generation([ Ai::PdfReading::Unit.page(2), Ai::PdfReading::Unit.page(4) ]).attachments
 

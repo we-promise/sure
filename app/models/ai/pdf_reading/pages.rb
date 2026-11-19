@@ -39,13 +39,11 @@ module Ai::PdfReading::Pages
     case way
     when :pdf then [ Ai::Attachment.pdf(content, filename:) ]
     when :images
-      # One render per run of consecutive pages: a page between two of the batch's is never
-      # rendered, so it can't fail the batch (a page too large, say).
+      # A batch can hold pages that aren't contiguous (2 and 4): pass the exact numbers, so a
+      # page between two of the batch's is never rendered or can fail it (a page too large, say).
       wanted = items.flat_map { (_1.first_page.._1.last_page).to_a }.uniq.sort
-      wanted.slice_when { |a, b| b != a + 1 }.flat_map do |run|
-        Pdf::PageImages.render(content, pages: run.first..run.last).each_with_index.map do |png, i|
-          Ai::Attachment.png(png, filename: "page-#{run.first + i}.png")
-        end
+      Pdf::PageImages.render(content, pages: wanted).zip(wanted).map do |png, page|
+        Ai::Attachment.png(png, filename: "page-#{page}.png")
       end
     else []
     end

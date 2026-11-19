@@ -299,6 +299,81 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_raises(Ai::Error::Unavailable) { reader.send(:transcribe) }
   end
 
+  test "two OCR routes fail over a page, cache the transcription, and flag pages neither read" do
+    skip_without_pdftoppm
+    calls = []
+    requests = stub_ai(:extract_pdf) do |request|
+      case request
+      when Ai::Transport::Base::OcrRequest
+        page = request.pages.first.filename
+        calls << [ request.model.name, page ]
+        raise Ai::Error::UnsupportedInput, "image input is not supported" if request.model.name == "unlimited-ocr-2" && page == "page-1.png"
+        raise Ai::Error::UnsupportedInput, "image input is not supported" if page == "page-3.png"
+
+        "1 February Cardpayment 24.50"
+      else
+        next { document_type: "bank_statement", summary: nil, extracted_data: nil } if request.schema_name == "document_analysis"
+
+        statement([ [ "2019-02-01", -24.5 ] ], opening: 0.0, closing: 24.5)
+      end
+    end
+
+    with_reading_routes(text_model, ocr_model, backup_ocr_model) do
+      reader = reading(blank_pdf(pages: 3))
+      reader.read(read_as: :ocr)
+      outcome = reader.extract(read_as: :ocr)
+
+      assert_equal :ocr, outcome.way
+      assert_equal false, outcome.checks.complete, "page 3 had no transcription"
+      assert_includes outcome.checks.failed, :complete
+    end
+
+    assert_equal [
+      [ "unlimited-ocr-2", "page-1.png" ], [ "parse-v5.0", "page-1.png" ],
+      [ "unlimited-ocr-2", "page-2.png" ],
+      [ "unlimited-ocr-2", "page-3.png" ], [ "parse-v5.0", "page-3.png" ]
+    ], calls, "classification and extraction share one transcription"
+    assert_equal 5, requests.grep(Ai::Transport::Base::OcrRequest).size
+  end
+
+  test "OCR checks cancellation between pages" do
+    skip_without_pdftoppm
+    checks = 0
+    requests = stub_ai(:extract_pdf, returns: "a page")
+
+    with_reading_routes(text_model, ocr_model) do
+      reader = reading(@scan)
+      error = assert_raises(Ai::Error::Cancelled) do
+        reader.send(:transcribe, cancelled: -> { (checks += 1) == 3 })
+      end
+
+      assert_equal "cancelled", error.message
+    end
+    assert_equal 1, requests.grep(Ai::Transport::Base::OcrRequest).size
+  end
+
+  test "OCR pages no route can read are an empty text layer, not an error" do
+    skip_without_pdftoppm
+    stub_ai(:extract_pdf) { raise Ai::Error::UnsupportedInput, "image input is not supported" }
+
+    with_reading_routes(text_model, ocr_model) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(@scan).extract(read_as: :ocr) }
+
+      assert_equal :no_text_layer, error.reason
+    end
+  end
+
+  test "a scan nothing can render keeps the renderer's code on the unavailable error" do
+    stub_ai(:extract_pdf)
+    Pdf::PageImages.stubs(:render).raises(Pdf::PageImages::Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary))
+
+    with_reading_routes(vision_model) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(@scan).extract }
+
+      assert_equal :missing_binary, error.code
+    end
+  end
+
   private
     def reading(content) = Ai::PdfReading.new(content:, family: @family, filename: "statement.pdf")
 
@@ -318,6 +393,11 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     def ocr_model
       endpoint = Ai::Config::Endpoint.new(name: :ocr, protocol: :compatible, base_url: "http://ocr.local:8080/v1", location: :local)
       Ai::Config::Model.new(endpoint:, name: "unlimited-ocr-2", capabilities: %i[ocr vision], ocr_prompt: "unlimited_ocr_2")
+    end
+
+    def backup_ocr_model
+      endpoint = Ai::Config::Endpoint.new(name: :ocr_backup, protocol: :compatible, base_url: "http://ocr-backup.local:8080/v1", location: :local)
+      Ai::Config::Model.new(endpoint:, name: "parse-v5.0", capabilities: %i[ocr vision], ocr_prompt: "markdown")
     end
 
     def with_reading_routes(*models, &block)

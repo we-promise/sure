@@ -81,6 +81,7 @@ class AiTransportOcrTest < ActiveSupport::TestCase
     assert_equal "ocr.ai", events.sole.name
     assert_equal [ "page-1.png", "page-2.png" ], payload[:request][:attachments].map { _1[:filename] }
     assert_equal({ texts: 1, characters: 21 }, payload[:output])
+    assert_equal "stop", payload[:finish_reason]
     assert_not_includes payload.to_s, "ACME"
   end
 
@@ -92,6 +93,70 @@ class AiTransportOcrTest < ActiveSupport::TestCase
     stub_json(CHAT_URL, chat_answer("| Date | Amount |\n| 1 Feb | 24.50 |").tap { _1[:choices].first[:finish_reason] = "length" })
 
     assert_raises(Ai::Error::InvalidOutput) { ocr(local_model(ocr_prompt: "markdown")) }
+  end
+
+  test "an endpoint that needs static headers refuses OCR before sending the page" do
+    endpoint = ai_endpoint(name: "ocr", base_url: "http://ocr.local:8080/v1", extra_headers: { "X-Gateway-Key" => "secret" })
+    model = ai_model(name: "unlimited-ocr-2", endpoint:, capabilities: %i[ocr vision])
+    stub = stub_request(:post, CHAT_URL)
+
+    assert_raises(Ai::Error::Refused) { ocr(model, pages: @pages.first(1)) }
+    assert_not_requested stub
+  end
+
+  test "a native OCR answer for another page, or without Markdown, is InvalidOutput" do
+    endpoint = ai_endpoint(name: "mistral", preset: :mistral, base_url: nil)
+    model = ai_model(name: "mistral-ocr-latest", endpoint:, capabilities: %i[ocr])
+    stub_json("https://api.mistral.ai/v1/ocr", { model: model.name, pages: [ { index: 1, markdown: "another page" } ] })
+
+    assert_raises(Ai::Error::InvalidOutput) { ocr(model, pages: @pages.first(1)) }
+  end
+
+  test "a malformed Cohere OCR answer is InvalidOutput, not text for the generation" do
+    endpoint = ai_endpoint(name: "cohere", preset: :cohere, base_url: nil)
+    model = ai_model(name: "parse-v5.0", endpoint:, capabilities: %i[ocr])
+    stub_json("https://api.cohere.com/v2/parse", { pages: [ { index: 0, markdown: { content: "Impact page" } } ],
+                                                    meta: { billed_units: { pages: 1 } } })
+
+    assert_raises(Ai::Error::InvalidOutput) { ocr(model, pages: @pages.first(1)) }
+  end
+
+  test "a retried chat OCR request gets only the time left in the call's budget" do
+    clock = [ 0.0 ]
+    stub_request(:post, CHAT_URL).to_return(
+      lambda { |_| clock[0] += 45; { status: 503, headers: JSON_HEADERS, body: { error: { message: "busy" } }.to_json } },
+      { status: 200, headers: JSON_HEADERS, body: chat_answer("ACME PAYROLL 2,500.00").to_json }
+    )
+    timeouts = []
+    context = RubyLLM.method(:context)
+    recording = ->(&configure) { context.call { |config| configure.call(config).tap { timeouts << config.request_timeout } } }
+
+    Ai::CallContext.stub(:now, -> { clock[0] }) do
+      RubyLLM.stub(:context, recording) { ocr(local_model) }
+    end
+
+    assert_equal [ 60, 15 ], timeouts.map(&:round)
+  end
+
+  test "a retried native OCR request gets only the time left in the call's budget" do
+    clock = [ 0.0 ]
+    url = "https://api.mistral.ai/v1/ocr"
+    stub_request(:post, url).to_return(
+      lambda { |_| clock[0] += 45; { status: 503, headers: JSON_HEADERS, body: { error: { message: "busy" } }.to_json } },
+      { status: 200, headers: JSON_HEADERS,
+        body: { model: "mistral-ocr-latest", pages: [ { index: 0, markdown: "BAC statement" } ] }.to_json }
+    )
+    endpoint = ai_endpoint(name: "mistral", preset: :mistral, base_url: nil)
+    model = ai_model(name: "mistral-ocr-latest", endpoint:, capabilities: %i[ocr])
+    timeouts = []
+    context = RubyLLM.method(:context)
+    recording = ->(&configure) { context.call { |config| configure.call(config).tap { timeouts << config.request_timeout } } }
+
+    Ai::CallContext.stub(:now, -> { clock[0] }) do
+      RubyLLM.stub(:context, recording) { ocr(model, pages: @pages.first(1)) }
+    end
+
+    assert_equal [ 60, 15 ], timeouts.map(&:round)
   end
 
   private

@@ -13,10 +13,11 @@ module Ai::Error
 
   # Raised by `call!` on a feature that resolves unavailable.
   class Unavailable < Base
-    attr_reader :reason
+    attr_reader :reason, :code
 
-    def initialize(reason)
+    def initialize(reason, code: nil)
       @reason = reason
+      @code = code
       super("AI unavailable: #{reason}")
     end
   end
@@ -77,7 +78,12 @@ module Ai::Error
       elsif matches?(text, NO_CREDIT) then NoCredit
       else Refused
       end
-    when 500..599 then matches?(text, UNSUPPORTED_INPUT) ? UnsupportedInput : Upstream
+    when 500..599
+      # Only the provider's own message says the model refused an image. A client gem's
+      # `message`, and a gateway's other fields, can quote an earlier refusal from a diagnostic;
+      # neither may turn a retryable 503 into a refusal.
+      message_text = provider_message(body) || (body.nil? ? message : nil)
+      matches?(message_text.to_s, UNSUPPORTED_INPUT) ? UnsupportedInput : Upstream
     else Refused
     end
   end
@@ -119,5 +125,13 @@ module Ai::Error
   end
 
   def matches?(text, patterns) = patterns.any? { text.match?(_1) }
-  private_class_method :status_and_body, :matches?
+
+  # The provider's `error.message`, when the body is a JSON object. Not the whole body: a
+  # gateway may put an earlier provider message in another field as a diagnostic.
+  def provider_message(body)
+    parsed = body.is_a?(String) ? (JSON.parse(body) rescue nil) : body
+    error = parsed.is_a?(Hash) ? parsed["error"] || parsed[:error] : nil
+    error["message"] || error[:message] if error.is_a?(Hash)
+  end
+  private_class_method :status_and_body, :matches?, :provider_message
 end
