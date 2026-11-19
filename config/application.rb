@@ -31,6 +31,13 @@ module Sure
     # Explicit source of truth for the session cookie name (also used by Codespaces).
     config.session_store :cookie_store, key: SESSION_COOKIE_KEY
 
+    # Pages are server-rendered HTML that compresses ~15x, and the Docker image
+    # serves Puma directly, so without this every page crossed the network
+    # uncompressed unless a reverse proxy happened to compress it. A proxy that
+    # does compress leaves an already-encoded response alone. Not in
+    # development, where rack-mini-profiler has to inject into the HTML.
+    config.middleware.insert_before ActionDispatch::Static, Rack::Deflater unless Rails.env.development?
+
     # TODO: This is here for incremental adoption of localization.  This can be removed when all translations are implemented.
     config.i18n.fallbacks = true
 
