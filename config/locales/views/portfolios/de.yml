@@ -10,13 +10,14 @@ de:
         account: Konto
         accounts: Konten
         avg_cost: Ø Kosten
-        cost_basis: Kostenbasis
+        cost_basis_per_share: Kostenbasis je Anteil
         day_change: Tag
         qty: Menge
         security: Wertpapier
         unrealized: Unrealisierter G/V
         value: Wert
         weight: Gewichtung
+      day_change_partial: "%{covered} von %{total} Positionen"
       label: Bestände
       missing_cost_basis: Keine Kostenbasis
       missing_cost_basis_hint: Mindestens eine Position hat keine bekannte Kostenbasis. Durchschnittskosten und Rendite berücksichtigen nur Positionen mit bekannter Kostenbasis.

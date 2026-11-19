@@ -1,6 +1,11 @@
 <%# locals: (row:) %>
 
-<%# A holding's positions, one per account, each opening the holding drawer. %>
+<%# A holding's positions, one per account, each opening the holding drawer.
+    The row's missing-cost-basis badge explains itself only on hover, so the
+    explanation is repeated here as text a keyboard or touch user can read. %>
+<% if row.missing_cost_basis %>
+  <p class="px-3 py-2 text-xs text-secondary"><%= t("portfolios.holdings.missing_cost_basis_hint") %></p>
+<% end %>
 <%= render DS::Table.new(rows: row.positions, inset: true, label: t("portfolios.holdings.positions_caption", ticker: row.ticker), data: { portfolio_positions: row.ticker }) do |table| %>
   <% table.with_column(t("portfolios.holdings.columns.account")) { |holding| holding.account.name } %>
 
@@ -9,7 +14,7 @@
   <%# avg_cost, not the raw column: the statement preloads the trade-history
       fallback for every holding, so a position whose basis is computed shows
       it here too. %>
-  <% table.with_column(t("portfolios.holdings.columns.cost_basis"), numeric: true, class: "text-secondary privacy-sensitive") do |holding| %>
+  <% table.with_column(t("portfolios.holdings.columns.cost_basis_per_share"), numeric: true, class: "text-secondary privacy-sensitive") do |holding| %>
     <% if holding.avg_cost %>
       <%= format_money(holding.avg_cost) %>
     <% else %>

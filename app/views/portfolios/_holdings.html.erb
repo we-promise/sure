@@ -42,7 +42,7 @@
         <%= render DS::FilledIcon.new(variant: :text, text: row.name, size: "md", rounded: true) %>
       <% end %>
       <div class="min-w-0 space-y-0.5 text-left">
-        <%= tag.p row.name, class: "break-words" %>
+        <%= tag.p row.name, class: "wrap-anywhere" %>
         <div class="flex items-center gap-2">
           <%= tag.p row.ticker, class: "text-secondary text-xs uppercase" %>
           <% if row.missing_cost_basis %>
@@ -67,15 +67,14 @@
 
   <% table.with_column(header.call(t("portfolios.holdings.columns.weight"), "weight"), numeric: true, aria_sort: holdings_aria_sort("weight", **sorting)) do |row| %>
     <div class="flex justify-end items-center gap-2">
-      <%= render "shared/progress_circle", progress: row.weight %>
+      <%= render DS::ProgressRing.new(percent: row.weight, size: 16, stroke_width: 2, show_percent: false) %>
       <%= number_to_percentage(row.weight, precision: 1) %>
     </div>
   <% end %>
 
   <% table.with_column(header.call(t("portfolios.holdings.columns.unrealized"), "return"), numeric: true, aria_sort: holdings_aria_sort("return", **sorting)) do |row| %>
     <% if row.unrealized %>
-      <%= tag.p format_money(row.unrealized.value), class: "privacy-sensitive", style: "color: #{row.unrealized.color};" %>
-      <%= tag.p "(#{row.unrealized.percent_formatted})", class: "text-xs privacy-sensitive", style: "color: #{row.unrealized.color};" %>
+      <%= render "shared/trend_figure", trend: row.unrealized %>
     <% else %>
       <p class="text-secondary">—</p>
       <p class="text-xs text-secondary"><%= t("portfolios.holdings.no_cost_basis") %></p>
@@ -84,8 +83,10 @@
 
   <% table.with_column(header.call(t("portfolios.holdings.columns.day_change"), "day_change"), numeric: true, aria_sort: holdings_aria_sort("day_change", **sorting)) do |row| %>
     <% if row.day_change %>
-      <%= tag.p format_money(row.day_change.value), class: "privacy-sensitive", style: "color: #{row.day_change.color};" %>
-      <%= tag.p "(#{row.day_change.percent_formatted})", class: "text-xs privacy-sensitive", style: "color: #{row.day_change.color};" %>
+      <%= render "shared/trend_figure",
+                 trend: row.day_change,
+                 note: (t("portfolios.holdings.day_change_partial", covered: row.day_change_positions, total: row.positions.size) if row.day_change_partial?),
+                 note_data: { day_change_partial: true } %>
     <% else %>
       <p class="text-secondary">—</p>
     <% end %>

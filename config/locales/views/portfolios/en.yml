@@ -10,13 +10,14 @@ en:
         account: Account
         accounts: Accounts
         avg_cost: Avg cost
-        cost_basis: Cost basis
+        cost_basis_per_share: Cost basis per share
         day_change: Day
         qty: Qty
         security: Security
         unrealized: Unrealised P&L
         value: Value
         weight: Weight
+      day_change_partial: "%{covered} of %{total} positions"
       label: Holdings
       missing_cost_basis: No cost basis
       missing_cost_basis_hint: At least one position has no known cost basis. The average cost and return cover only the positions that have one.

@@ -396,6 +396,56 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-portfolio-positions='AAPL'] td", text: ApplicationController.helpers.format_money(aapl_cost)
   end
 
+  test "holdings table renders its figures with design-system parts in the page's locale" do
+    second = create_second_aapl_account(qty: 20, price: 215)
+    statement = InvestmentStatement.new(@family, user: @user)
+    row = statement.holdings_table_rows.find { |r| r.ticker == "AAPL" }
+    assert row.unrealized, "precondition: AAPL has a return to show"
+
+    get portfolio_path(locale: "de")
+    assert_response :success
+
+    aapl = "#portfolio-holdings tr[data-portfolio-holding='AAPL']"
+    # DS::ProgressRing: a decorative svg the adjacent percentage labels, not
+    # the legacy partial's hard-coded gray track.
+    assert_select "#{aapl} svg[aria-hidden='true'] circle", minimum: 2
+    assert_select "#{aapl} circle.text-gray-300", count: 0
+    expected = I18n.with_locale(:de) { ApplicationController.helpers.number_to_percentage(row.unrealized.percent, precision: 1) }
+    assert_select "#{aapl} [data-trend-percent]", text: "(#{expected})"
+    assert_match ",", expected, "precondition: German writes a decimal comma"
+    assert_select "#{aapl} p.wrap-anywhere", text: row.name
+    assert_select "[data-portfolio-positions='AAPL'] th", text: I18n.t("portfolios.holdings.columns.cost_basis_per_share", locale: :de)
+    assert second
+  end
+
+  # The row's warning badge explains itself on hover only through its title,
+  # so the explanation is also visible text in the row's details.
+  test "a row without a full cost basis explains it in its details as visible text" do
+    unknown = Security.create!(ticker: "NOBASIS", name: "Without basis")
+    Holding.create!(account: accounts(:investment), security: unknown, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+
+    get portfolio_path
+    assert_response :success
+
+    toggle = css_select("#portfolio-holdings tr[data-portfolio-holding='NOBASIS'] button[aria-controls]").first
+    assert_select "tr##{toggle["aria-controls"]} p", text: I18n.t("portfolios.holdings.missing_cost_basis_hint")
+  end
+
+  test "a day change that covers only some positions says how many" do
+    security = Security.create!(ticker: "HALF", name: "Half covered")
+    second_broker = @family.accounts.create!(name: "Second broker", balance: 900, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    Holding.create!(account: accounts(:investment), security: security, date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD")
+    Holding.create!(account: accounts(:investment), security: security, date: Date.current, qty: 1, price: 120, amount: 120, currency: "USD")
+    Holding.create!(account: second_broker, security: security, date: Date.current, qty: 9, price: 100, amount: 900, currency: "USD")
+
+    get portfolio_path
+    assert_response :success
+
+    assert_select "tr[data-portfolio-holding='HALF'] [data-day-change-partial]",
+      text: I18n.t("portfolios.holdings.day_change_partial", covered: 1, total: 2)
+    assert_select "tr[data-portfolio-holding='AAPL'] [data-day-change-partial]", count: 0
+  end
+
   test "the page's query count is bounded and does not grow with holdings" do
     build_portfolio(accounts: 10, securities: 6)
     baseline = capture_sql_queries { get portfolio_path }
