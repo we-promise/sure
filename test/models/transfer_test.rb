@@ -208,7 +208,18 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "standard", transfer.inflow_transaction.reload.kind
   end
 
-  test "reject! keeps a transfer kind that predates a pending match" do
+  test "reject! resets the transfer kinds a pending match applied" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.apply_kinds!
+
+    transfer.reject!
+
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
+  test "reject! keeps a transfer kind that predates a pending match when the family confirms matches first" do
+    families(:dylan_family).update!(require_transfer_match_confirmation: true)
     transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
     transfer.outflow_transaction.update!(kind: "funds_movement")
 

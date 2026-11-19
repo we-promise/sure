@@ -3,9 +3,10 @@
 # UnmatchTransfer — unlinks a transfer between two of the family's
 # transactions, confirmed or pending, so a wrong match can be undone (e.g. a
 # card payment paired with the account that funded it rather than the one that
-# paid it). Both transactions stay in the ledger; a confirmed transfer's
-# become standard transactions again (a pending match never changed their
-# kinds, so those stay). Balances don't change.
+# paid it). Both transactions stay in the ledger and lose the transfer's
+# kinds, becoming standard transactions again (a pending match in a family
+# that confirms matches first never changed their kinds, so those stay; see
+# Transfer#kinds_applied?). Balances don't change.
 #
 # By default it rejects the pairing (Transfer#reject!, the Reject button), so
 # auto-match won't suggest it again. reject: false only unlinks
@@ -96,7 +97,8 @@ class Assistant::Function::UnmatchTransfer < Assistant::Function
     end
     return error("not_found", "The transfer was already unlinked, or you can no longer write to its accounts.") unless unmatched
 
-    # A pending match never changed the kinds, so report what they are now.
+    # Report the kinds as they are now: unlinking may have kept them (see
+    # Transfer#kinds_applied?).
     kinds = Transaction.where(id: [ snapshot[:outflow][:id], snapshot[:inflow][:id] ]).pluck(:id, :kind).to_h
     snapshot[:outflow][:kind_after] = kinds[snapshot[:outflow][:id]]
     snapshot[:inflow][:kind_after] = kinds[snapshot[:inflow][:id]]

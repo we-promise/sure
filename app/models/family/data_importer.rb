@@ -1127,11 +1127,14 @@ class Family::DataImporter
           transfer.status = transfer_status_for(data["status"])
           transfer.notes = data["notes"]
         end
-        # Transfer kinds only apply once a transfer is confirmed (see Transfer#confirm!)
         if transfer.confirmed?
           apply_transfer_transaction_kinds!(transfer)
           # Restores a user's explicit choice over the destination's default kind.
           transfer.update_investment_contribution!(truthy?(data["investment_contribution"])) unless data["investment_contribution"].nil?
+        elsif transfer.kinds_applied? && transfer.match_kinds_only?
+          # A pending match takes its kinds as an auto-match would, unless the
+          # family confirms matches first (Transfer#kinds_applied?).
+          transfer.apply_kinds!
         end
         increment_summary("Transfer", transfer.previously_new_record? ? :created : :updated)
       end
