@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class RedbarkItemsController < ApplicationController
+  include SafeReturnPath
+
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_redbark_item, only: [ :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
@@ -221,34 +223,6 @@ class RedbarkItemsController < ApplicationController
     end
 
     # Only allow internal relative paths in return_to
-    def safe_return_to_path
-      return nil if params[:return_to].blank?
-
-      return_to = params[:return_to].to_s.strip
-      return nil unless return_to.start_with?("/")
-      return nil if return_to[1] == "/" || return_to[1] == "\\"
-      return nil if return_to.include?("\\") || return_to.match?(/[[:cntrl:]]/)
-      return nil if encoded_path_separator?(return_to)
-
-      uri = URI.parse(return_to)
-      return nil unless uri.relative?
-
-      Rails.application.routes.recognize_path(uri.path, method: :get)
-
-      return_to
-    rescue URI::InvalidURIError, ActionController::RoutingError
-      nil
-    end
-
-    def encoded_path_separator?(return_to)
-      encoded_second_character = return_to[1, 3]
-      return false unless encoded_second_character&.start_with?("%")
-
-      decoded = URI.decode_www_form_component(encoded_second_character)
-      decoded == "/" || decoded == "\\"
-    rescue ArgumentError
-      true
-    end
 
     def redbark_item_params
       params.require(:redbark_item).permit(
