@@ -757,6 +757,7 @@ Rails.application.routes.draw do
       get :sparkline
       patch :toggle_active
       patch :toggle_exclude_from_reports
+      patch :reconcile_all
       patch :set_default
       patch :remove_default
       get :select_provider

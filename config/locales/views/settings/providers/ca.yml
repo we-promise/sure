@@ -62,8 +62,8 @@ ca:
         application_id_placeholder_new: Introdueix l'ID d'aplicació
         application_id_placeholder_update: Introdueix el nou ID per actualitzar
         callback_url_instruction: Per a l'URL de retorn de trucada, fes servir %{callback_url}.
-        client_certificate_label: Certificat de client (amb clau privada)
-        keep_client_certificate_hint: "Deixa-ho en blanc per mantenir el certificat actual"
+        client_certificate_label: Clau privada (.pem)
+        keep_client_certificate_hint: "Deixa-ho en blanc per mantenir la clau privada actual"
         config_locked_message: Desconnecta tots els bancs vinculats abans de canviar
           aquestes credencials.
         config_locked_title: Configuració bloquejada
@@ -82,8 +82,7 @@ ca:
         session_expired_reconnect: Sessió expirada — reconnecta
         session_expires: 'La sessió expira: %{date}'
         step_1_html: Ves a %{link} i obtén les teves credencials de desenvolupador.
-        step_2: Tria el teu país i enganxa l'ID d'aplicació + certificat de client
-          a sota.
+        step_2: Tria el teu país i enganxa l'ID d'aplicació + clau privada a sota.
         step_3: Desa, després utilitza Afegeix connexió per enllaçar el teu banc.
         sync: Sincronitza
         syncing: Sincronitzant
