@@ -1041,7 +1041,7 @@ DEPENDENCIES
   websocket-driver (~> 0.8)
 
 RUBY VERSION
-   ruby 3.4.9p82
+   ruby 3.4.13p195
 
 BUNDLED WITH
    2.6.7
