@@ -13,6 +13,7 @@ class RevolutXAccount::Processor
 
     RevolutXAccount::HoldingsProcessor.new(revolut_x_account).process
     process_account!(account)
+    RevolutXAccount::TransactionsProcessor.new(revolut_x_account).process
     account.ensure_opening_anchor_precedes_entries
   end
 
