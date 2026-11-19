@@ -30,6 +30,9 @@ class Security::ClassificationProposal < ApplicationRecord
   # screen. Bounded so one entry cannot store megabytes in front of them.
   validates :sector, length: { maximum: 255 }
   validates :rationale, length: { maximum: 2000 }
+  # Postgres refuses a NUL in a text column, so it is an invalid answer here
+  # rather than an error at the INSERT.
+  validate :text_has_no_nul
   # On every save that leaves the proposal pending, not on create only:
   # `propose!` revives an existing row through `update!`, and that path must
   # meet the same veto. An approval or a rejection is not a new proposal, so
@@ -58,13 +61,18 @@ class Security::ClassificationProposal < ApplicationRecord
   #
   # Two first proposals for one pair can both miss `find_by`; the loser's
   # INSERT hits the unique index, and it replaces the winner's row instead.
+  #
+  # The row is replaced under its lock, which reloads it: `update!` writes
+  # only changed columns, so a copy read before another proposal added a
+  # sector would see nil over nil and leave that sector in place.
   def self.propose!(security:, family:, **attrs)
+    attrs.assert_valid_keys(*ANSWER_COLUMNS)
     answer = ANSWER_COLUMNS.index_with(nil).merge(attrs)
     attempts = 0
 
     begin
       existing = find_by(security: security, family: family)
-      return existing.tap { |p| p.update!(status: "pending", **answer) } if existing
+      return existing.tap { |p| p.with_lock { p.update!(status: "pending", **answer) } } if existing
 
       # A savepoint, so the unique violation does not poison a caller's
       # transaction before the retry reads the winner's row.
@@ -181,6 +189,12 @@ class Security::ClassificationProposal < ApplicationRecord
       return if asset_sub_class.blank? || asset_class.present?
 
       errors.add(:asset_sub_class, "needs an asset class beside it")
+    end
+
+    def text_has_no_nul
+      %i[sector rationale].each do |column|
+        errors.add(column, "must not contain a NUL character") if public_send(column)&.include?("\0")
+      end
     end
 
     def security_is_open_to_a_proposal

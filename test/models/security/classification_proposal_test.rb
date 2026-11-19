@@ -106,6 +106,34 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
     assert_not proposal.valid?
   end
 
+  # The replacement reads the row it overwrites under a lock. A copy read
+  # before another proposal added a sector would leave that sector in place:
+  # only changed columns are written, and nil over nil is no change.
+  test "a replacement clears an answer written since its row was read" do
+    proposal = propose(region: "europe")
+    stale = Security::ClassificationProposal.find(proposal.id)
+    Security::ClassificationProposal.where(id: proposal.id).update_all(sector: "Technology")
+    Security::ClassificationProposal.stubs(:find_by).returns(stale)
+
+    propose(region: "north_america")
+
+    proposal.reload
+    assert_equal "north_america", proposal.region
+    assert_nil proposal.sector
+  end
+
+  test "a proposal naming a column it does not answer is refused" do
+    assert_raises(ArgumentError) { propose(region: "europe", status: "approved") }
+    assert_equal 0, Security::ClassificationProposal.count
+  end
+
+  # Postgres refuses a NUL in a text column, so it is refused as invalid
+  # rather than failing at the INSERT.
+  test "a proposal with a NUL in its sector or rationale is refused" do
+    assert_raises(ActiveRecord::RecordInvalid) { propose(sector: "Tech\0nology") }
+    assert_raises(ActiveRecord::RecordInvalid) { propose(region: "europe", rationale: "Listed\0 in Europe") }
+  end
+
   test "a proposal answering a single field is enough" do
     assert Security::ClassificationProposal.new(
       security: @security, family: @family, region: "europe"
@@ -213,6 +241,9 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
   # really lands where the approval said nothing (industry), so the approved
   # columns surviving is precedence at work, not a skipped refresh.
   test "an approved classification survives a provider refresh that disagrees" do
+    # Approval saves the security, and a configured Brandfetch would fetch a
+    # logo in that save, which this test is not about.
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
     propose(asset_class: "fixed_income", asset_sub_class: "bond", sector: "Technology").approve!
 
     provider = capable_provider
