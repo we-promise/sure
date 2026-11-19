@@ -291,16 +291,17 @@ module Family::AutoTransferMatchable
       leg_ids = [ match.inflow_transaction_id, match.outflow_transaction_id ]
 
       Transfer.uncached do
-        return false unless exact_pair_under_lock?(match)
-
-        # Lock every transfer holding either leg first. A confirm that holds a
-        # row lock (AutoMatchesController#bulk_update) finishes before this
-        # returns.
+        # Locks are taken transfers, then transactions, then entries: the order
+        # a confirm takes them (AutoMatchesController#bulk_update locks the
+        # transfer, then saves its transactions, which touch their entries), so
+        # the two can't deadlock. A confirm holding the transfer finishes first.
         locked_ids = Transfer.where(inflow_transaction_id: leg_ids)
           .or(Transfer.where(outflow_transaction_id: leg_ids))
           .order(:id)
           .lock
           .pluck(:id)
+
+        return false unless exact_pair_under_lock?(match)
 
         # A new statement, so its snapshot sees what committed while the locks
         # were awaited: a confirmed status, a changed kind, an attached fee.
@@ -315,9 +316,12 @@ module Family::AutoTransferMatchable
       end
     end
 
-    # Locks both entries and re-reads them: still opposite amounts in one currency.
+    # Locks both legs (transactions, then their entries) and re-reads them:
+    # still opposite amounts in one currency.
     def exact_pair_under_lock?(match)
-      entries = Entry.where(entryable_type: "Transaction", entryable_id: [ match.inflow_transaction_id, match.outflow_transaction_id ])
+      leg_ids = [ match.inflow_transaction_id, match.outflow_transaction_id ]
+      Transaction.where(id: leg_ids).order(:id).lock.pluck(:id)
+      entries = Entry.where(entryable_type: "Transaction", entryable_id: leg_ids)
         .order(:id).lock.to_a.index_by(&:entryable_id)
       inflow = entries[match.inflow_transaction_id]
       outflow = entries[match.outflow_transaction_id]

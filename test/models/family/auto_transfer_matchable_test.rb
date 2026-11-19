@@ -661,6 +661,28 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_operator lock_at, :<, select_at
   end
 
+  # Bulk confirmation locks the transfer, then saves its transactions, which
+  # touch their entries. Displacement takes its locks in the same order, so
+  # the two can't deadlock on one guess.
+  test "displacement locks transfers before transactions before entries" do
+    pending_cross_currency_guess
+    create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+
+    locks = []
+    callback = lambda do |*, payload|
+      sql = payload[:sql]
+      next unless sql.include?("FOR UPDATE")
+
+      locks << (sql[/FROM "(transfers|transactions|entries)"/, 1] || sql[/FROM (transfers|transactions|entries)\b/, 1])
+    end
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      @family.auto_match_transfers!
+    end
+
+    first_lock = locks.compact.uniq
+    assert_equal %w[transfers transactions entries], first_lock, "locks taken in order: #{locks.inspect}"
+  end
+
   test "a pair that stopped being exact after selection does not displace the guess" do
     outflow, guess = pending_cross_currency_guess
     real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
