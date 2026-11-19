@@ -122,4 +122,47 @@ class PlaidAccount::Investments::BalanceCalculatorTest < ActiveSupport::TestCase
     assert_equal 1000, cash_balance
     assert_equal 10112, imported_holdings_value + cash_balance
   end
+
+  test "brokerage cash and imported holdings add up to the balance when a holding has no price" do
+    @plaid_account.update!(
+      current_balance: 1500,
+      raw_holdings_payload: {
+        transactions: [],
+        holdings: [
+          {
+            security_id: "valued_without_price",
+            institution_price: nil,
+            institution_value: 1000,
+            quantity: 10,
+            iso_currency_code: "USD"
+          },
+          {
+            security_id: "no_price_or_value",
+            institution_price: nil,
+            institution_value: nil,
+            quantity: 5,
+            iso_currency_code: "USD"
+          }
+        ],
+        securities: []
+      }
+    )
+
+    security_resolver = PlaidAccount::Investments::SecurityResolver.new(@plaid_account)
+    security_resolver.stubs(:resolve).with(plaid_security_id: "valued_without_price").returns(
+      OpenStruct.new(security: securities(:aapl), brokerage_cash?: false)
+    )
+    security_resolver.stubs(:resolve).with(plaid_security_id: "no_price_or_value").returns(
+      OpenStruct.new(security: securities(:msft), brokerage_cash?: false)
+    )
+
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: security_resolver).process
+    cash_balance = PlaidAccount::Investments::BalanceCalculator.new(@plaid_account, security_resolver: security_resolver).cash_balance
+    imported_holdings = @plaid_account.current_account.holdings.where(date: Date.current)
+
+    assert_equal [ securities(:aapl) ], imported_holdings.map(&:security)
+    assert_equal 100, imported_holdings.first.price
+    assert_equal 500, cash_balance
+    assert_equal 1500, imported_holdings.sum(:amount) + cash_balance
+  end
 end
