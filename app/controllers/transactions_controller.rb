@@ -5,12 +5,11 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 
-  helper_method :new_transaction_idempotency_key
+  helper_method :new_transaction_idempotency_key, :offer_create_rule?
 
   def show
     super
     assign_mark_recurring_state
-    assign_create_rule_state
   end
 
   def new
@@ -210,7 +209,6 @@ class TransactionsController < ApplicationController
       @entry.reload
 
       assign_mark_recurring_state
-      assign_create_rule_state
 
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
@@ -244,7 +242,7 @@ class TransactionsController < ApplicationController
               dom_id(@entry, :create_rule),
               partial: "transactions/create_rule",
               locals: { entry: @entry }
-            ) if can_edit_entry? && !@entry.split_child?),
+            ) if offer_create_rule?),
             turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
@@ -256,7 +254,6 @@ class TransactionsController < ApplicationController
       end
     else
       assign_mark_recurring_state
-      assign_create_rule_state
       render :show, status: :unprocessable_entity
     end
   end
@@ -591,17 +588,9 @@ class TransactionsController < ApplicationController
       @mark_recurring_button_class = blocked ? "disabled:opacity-50" : nil
     end
 
-    def assign_create_rule_state
-      return unless can_edit_entry? && !@entry.split_child?
-
-      merchant = @entry.transaction.merchant
-      rule_name = merchant&.name || @entry.name
-
-      @create_rule_href = if merchant
-        new_rule_path(resource_type: "transaction", name: rule_name, merchant_id: merchant.id)
-      else
-        new_rule_path(resource_type: "transaction", name: rule_name)
-      end
+    # Guests cannot open the rule form, so they get no link to it.
+    def offer_create_rule?
+      can_edit_entry? && !@entry.split_child? && !Current.user.guest?
     end
 
     def accessible_transactions

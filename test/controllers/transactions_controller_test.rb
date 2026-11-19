@@ -132,6 +132,41 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:netflix).name, merchant_id: merchants(:netflix).id)
   end
 
+  test "create rule link prefills the transaction category as the rule action" do
+    category = categories(:food_and_drink)
+    entry = create_transaction(account: accounts(:depository), name: "Payee String", merchant: merchants(:netflix), category: category)
+
+    get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "a[href=?]", new_rule_path(
+      resource_type: "transaction",
+      name: merchants(:netflix).name,
+      merchant_id: merchants(:netflix).id,
+      action_type: "set_transaction_category",
+      action_value: category.id
+    )
+  end
+
+  test "create rule link picks up a category set by an update" do
+    category = categories(:food_and_drink)
+    entry = create_transaction(account: accounts(:depository), name: "Payee String")
+
+    patch transaction_url(entry), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: entry.entryable_id, category_id: category.id } }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[target='#{dom_id(entry, :create_rule)}']" do
+      assert_select "a[href=?]", new_rule_path(
+        resource_type: "transaction",
+        name: "Payee String",
+        action_type: "set_transaction_category",
+        action_value: category.id
+      )
+    end
+  end
+
   test "create rule link falls back to the transaction name without a merchant" do
     entry = create_transaction(account: accounts(:depository), name: "Payee String")
 
@@ -163,6 +198,16 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "a[href^='#{rules_path}']", false
+  end
+
+  test "create rule link is hidden for guests" do
+    @entry.account.update!(owner: family_guest)
+    sign_in family_guest
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "##{dom_id(@entry, :create_rule)}", false
   end
 
   test "create rule link is hidden without edit permission" do
