@@ -360,8 +360,10 @@ class Provider::Eodhd < Provider
     # attempt ran, even when midnight falls between the reservation and the
     # failure.
     def count_request_attempt!(url = nil)
-      throttle_request
+      # Check the budget first so an over-quota attempt fails fast instead of
+      # sleeping the full interval before being refused.
       reserve_daily_limit!(cost: url ? billing_cost_for(url.to_s) : (@request_cost || 1))
+      throttle_request
     end
 
     def reserve_daily_limit!(cost: 1)
@@ -376,6 +378,7 @@ class Provider::Eodhd < Provider
     # plain request on this instance is not billed at a stale higher cost.
     def reset_request_cost!
       @request_cost = nil
+      @last_counted_on = nil
     end
 
     # EODHD bills a fundamentals request as 10 API calls; everything else is one.

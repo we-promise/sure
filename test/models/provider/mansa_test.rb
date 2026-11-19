@@ -382,6 +382,9 @@ class Provider::MansaTest < ActiveSupport::TestCase
     store = ActiveSupport::Cache::MemoryStore.new
     Rails.stubs(:cache).returns(store)
     @provider.unstub(:enforce_daily_limit!)
+    # The budget is checked before the interval throttle, so the refused retry
+    # never sleeps: only the first attempt is throttled.
+    @provider.expects(:throttle_request).once
     Faraday::Retry::Middleware.any_instance.stubs(:sleep)
     store.write("mansa:daily:#{Date.current}", 99)
 

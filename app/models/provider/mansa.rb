@@ -258,10 +258,11 @@ class Provider::Mansa < Provider
           exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed ]
         })
         # After the retry middleware, so every attempt — not only the first —
-        # is throttled and counted against the daily request limit.
+        # is counted against the daily request limit and throttled. The limit is
+        # checked first so an over-quota attempt fails fast instead of sleeping.
         faraday.use RateLimitable::BeforeEachAttempt, ->(_env) {
-          throttle_request
           enforce_daily_limit!
+          throttle_request
         }
 
         faraday.request :json

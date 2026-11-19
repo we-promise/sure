@@ -509,6 +509,8 @@ class Provider::EodhdTest < ActiveSupport::TestCase
 
       assert_requested :get, FUNDAMENTALS_URL, query: hash_including("fmt" => "json"), times: 3
       assert_equal 30, store.read("eodhd:daily:#{Date.current}")
+      # The per-request state is cleared once the request finishes
+      assert_nil @provider.instance_variable_get(:@last_counted_on)
     end
   end
 
@@ -517,6 +519,9 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     with_fresh_cache(store) do
       store.write("eodhd:daily:#{Date.current}", 5)
       @provider.unstub(:count_request_attempt!)
+      # The budget is checked before the interval throttle, so the refused retry
+      # never sleeps: only the first attempt is throttled.
+      @provider.expects(:throttle_request).once
       Faraday::Retry::Middleware.any_instance.stubs(:sleep)
       stub_request(:get, FUNDAMENTALS_URL)
         .with(query: hash_including("fmt" => "json"))
