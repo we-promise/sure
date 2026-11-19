@@ -119,6 +119,9 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
   # closing balances read from the text layer (AccountStatement::TextMetadataParser), when found.
   def self.checks(value, source: nil, balances: {})
     rows = Array(value[:transactions]).reject { _1[:amount].to_f.zero? }
+    year = period_year(value[:statement_period])
+    dated = rows.map { _1.merge(date: normal_date(_1[:date], year:)) }
+    invalid_date = dated.any? { _1[:date].nil? }
     opening = balances[:opening_balance] || value[:opening_balance]
     closing = balances[:closing_balance] || value[:closing_balance]
     reconciles = unless opening.nil? || closing.nil?
@@ -127,18 +130,19 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
     # Whitespace goes, so "1 February" reads as "1february", except between two digits, where it
     # keeps the numbers apart: "120.00 -100.00" is two amounts, neither of them 20.00.
     text = source&.downcase&.gsub(/(?<=\d)\s+(?=\d)/, "|")&.gsub(/\s+/, "")
-    return Checks.new(reconciles:, amounts_in_source: nil, dates_anchored: nil) if text.blank? || rows.empty?
+    return Checks.new(reconciles:, amounts_in_source: nil, dates_anchored: invalid_date ? 0.0 : nil) if text.blank? || rows.empty?
 
-    dates = rows.flat_map { |row| printed_dates(row[:date]).map { [ _1, row[:date] ] } }.uniq
-    Checks.new(reconciles:, amounts_in_source: rows.all? { |row| text.match?(amount_pattern(row[:amount])) },
-               dates_anchored: (rows.count { date_anchored?(_1, dates, text) } / rows.size.to_f).round(2))
+    dates = dated.flat_map { |row| printed_dates(row[:date]).map { [ _1, row[:date] ] } }.uniq
+    Checks.new(reconciles:, amounts_in_source: dated.all? { |row| text.match?(amount_pattern(row[:amount])) },
+               dates_anchored: invalid_date ? 0.0 : (dated.count { date_anchored?(_1, dates, text) } / dated.size.to_f).round(2))
   end
 
   # The value in the shape PdfImport#extracted_data holds.
   def self.statement(value)
+    year = period_year(value[:statement_period])
     {
       transactions: Array(value[:transactions]).map do |row|
-        { date: normal_date(row[:date]), amount: row[:amount]&.to_f, name: row[:description], category: row[:category], notes: row[:reference] }
+        { date: normal_date(row[:date], year:), amount: row[:amount]&.to_f, name: row[:description], category: row[:category], notes: row[:reference] }
       end,
       period: { start_date: normal_date(value.dig(:statement_period, :start_date)), end_date: normal_date(value.dig(:statement_period, :end_date)) },
       account_holder: value[:account_holder], account_number: value[:account_number], bank_name: value[:bank_name],
@@ -148,10 +152,20 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
 
   class << self
     private
-      def normal_date(text)
-        Date.parse(text.to_s).iso8601 if text.present?
-      rescue Date::Error
+      # A batch can print "1 February" or "02/01" without the year; the statement period's year
+      # is the only one available there. Anything that still isn't a date is rejected.
+      def normal_date(text, year: nil)
+        string = text.to_s.strip
+        return if string.blank?
+
+        string = "#{string} #{year}" if year && !string.match?(/(?<!\d)\d{4}(?!\d)/)
+        Date.parse(string).iso8601
+      rescue ArgumentError
         nil
+      end
+
+      def period_year(period)
+        [ period&.[](:start_date), period&.[](:end_date) ].filter_map { normal_date(_1) }.first&.year
       end
 
       # Some occurrence of the row's amount has, as the last date printed in the DATE_WINDOW
