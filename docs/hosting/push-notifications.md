@@ -185,11 +185,11 @@ contacting the provider, so an interrupted worker still consumes its attempt;
 other rejections are terminal. Each send has connection and read timeouts and a
 five-minute provider TTL.
 
-The existing insight generation pass also recovers enqueue failures or pending
-claims abandoned for more than 15 minutes that are still eligible. Records that
-are no longer eligible become skipped. It does not replay terminal results
-or turn old insights into a backlog. Recovery runs when generation next runs;
-there is no additional scheduler. A provider acceptance followed by a process
+`RecoverPushDeliveriesJob` runs every 15 minutes (`config/schedule.yml`) and
+re-enqueues enqueue failures and pending claims abandoned for more than 15
+minutes that are still eligible. Records that are no longer eligible become
+skipped. It does not replay terminal results or turn old insights into a
+backlog. A provider acceptance followed by a process
 crash before the database update can still result in a duplicate send. Stable
 notification tags collapse ordinary duplicate presentations where the browser
 supports them; this is not an exactly-once transport guarantee.

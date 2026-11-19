@@ -22,14 +22,14 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     assert_equal 1, PushDelivery.where(subscription: @subscription, insight: @insight).count
   end
 
-  test "an enqueue failure can be recovered by a later generation pass" do
+  test "an enqueue failure is recovered by the recovery sweep" do
     DeliverWebPushNotificationJob.stubs(:perform_later).returns(false)
     delivery = enqueue_delivery
     assert_equal "enqueue_failed", delivery.reload.status
     delivery.update_columns(created_at: 2.days.ago)
     DeliverWebPushNotificationJob.unstub(:perform_later)
     assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
-      PushDelivery.retry_enqueue_failures_for(@insight.family)
+      RecoverPushDeliveriesJob.perform_now
     end
     assert_equal "pending", delivery.reload.status
     @client.expects(:deliver).returns(:accepted)
@@ -185,7 +185,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     assert_equal "failed", delivery.reload.status
     assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
       DeliverWebPushNotificationJob.perform_now(push_delivery_id: delivery.id)
-      PushDelivery.retry_enqueue_failures_for(@insight.family)
+      RecoverPushDeliveriesJob.perform_now
       PushDelivery.enqueue_insight_deliveries(@insight)
     end
     assert_equal "failed", delivery.reload.status
@@ -200,7 +200,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
 
     travel 16.minutes do
       assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
-        PushDelivery.retry_enqueue_failures_for(@insight.family)
+        RecoverPushDeliveriesJob.perform_now
       end
       DeliverWebPushNotificationJob.perform_now(push_delivery_id: delivery.id)
     end
@@ -208,7 +208,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     assert_equal "failed", delivery.reload.status
     assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
       DeliverWebPushNotificationJob.perform_now(push_delivery_id: delivery.id)
-      PushDelivery.retry_enqueue_failures_for(@insight.family)
+      RecoverPushDeliveriesJob.perform_now
     end
   end
 
@@ -223,7 +223,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     end
 
     travel 16.minutes do
-      PushDelivery.retry_enqueue_failures_for(@insight.family)
+      RecoverPushDeliveriesJob.perform_now
       replacement_job = DeliverWebPushNotificationJob.new(push_delivery_id: delivery.id)
       4.times { replacement_job.perform_now }
     end
@@ -236,7 +236,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     delivery.update!(enqueued_at: 1.hour.ago)
     @client.expects(:deliver).once.with do |**_arguments|
       assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
-        PushDelivery.retry_enqueue_failures_for(@insight.family)
+        RecoverPushDeliveriesJob.perform_now
         DeliverWebPushNotificationJob.perform_now(push_delivery_id: delivery.id)
       end
       true
@@ -268,7 +268,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     clear_enqueued_jobs
     travel 16.minutes do
       assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
-        PushDelivery.retry_enqueue_failures_for(@insight.family)
+        RecoverPushDeliveriesJob.perform_now
       end
       assert_equal "pending", delivery.reload.status
       assert_operator delivery.enqueued_at, :>, 1.minute.ago
@@ -281,7 +281,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
   test "recovery preserves a recent pending claim without queueing it twice" do
     delivery = enqueue_delivery
     assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
-      PushDelivery.retry_enqueue_failures_for(@insight.family)
+      RecoverPushDeliveriesJob.perform_now
     end
     assert_equal "pending", delivery.reload.status
   end
@@ -292,7 +292,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
       insight_version: @insight.notification_version)
     assert_nil delivery.enqueued_at
     assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
-      PushDelivery.retry_enqueue_failures_for(@insight.family)
+      RecoverPushDeliveriesJob.perform_now
     end
     assert_equal "pending", delivery.reload.status
     assert_not_nil delivery.enqueued_at
@@ -305,7 +305,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     @client.expects(:deliver).never
     travel 16.minutes do
       assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
-        PushDelivery.retry_enqueue_failures_for(@insight.family)
+        RecoverPushDeliveriesJob.perform_now
         DeliverWebPushNotificationJob.perform_now(push_delivery_id: delivery.id)
       end
     end
@@ -319,7 +319,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
       delivery.update!(status: terminal_status, enqueued_at: 1.day.ago)
       @client.expects(:deliver).never
       assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
-        PushDelivery.retry_enqueue_failures_for(@insight.family)
+        RecoverPushDeliveriesJob.perform_now
         PushDelivery.enqueue_insight_deliveries(@insight)
         DeliverWebPushNotificationJob.perform_now(push_delivery_id: delivery.id)
       end
@@ -343,11 +343,11 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     assert_equal "pending", delivery.reload.status
     assert_equal 0, delivery.provider_attempts
     travel 16.minutes do
-      assert_no_enqueued_jobs { PushDelivery.retry_enqueue_failures_for(@insight.family) }
+      assert_no_enqueued_jobs { RecoverPushDeliveriesJob.perform_now }
       assert_equal "pending", delivery.reload.status
       WebPush::Client.stubs(:configured?).returns(true)
       assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
-        PushDelivery.retry_enqueue_failures_for(@insight.family)
+        RecoverPushDeliveriesJob.perform_now
       end
     end
   end
@@ -357,12 +357,12 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     delivery = enqueue_delivery
     assert_equal "enqueue_failed", delivery.reload.status
     WebPush::Client.stubs(:configured?).returns(false)
-    PushDelivery.retry_enqueue_failures_for(@insight.family)
+    RecoverPushDeliveriesJob.perform_now
     assert_equal "enqueue_failed", delivery.reload.status
     WebPush::Client.stubs(:configured?).returns(true)
     DeliverWebPushNotificationJob.unstub(:perform_later)
     assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
-      PushDelivery.retry_enqueue_failures_for(@insight.family)
+      RecoverPushDeliveriesJob.perform_now
     end
   end
 

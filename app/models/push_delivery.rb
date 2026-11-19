@@ -68,18 +68,8 @@ class PushDelivery < ApplicationRecord
     end
   end
 
-  # The generator is the outbox recovery trigger. Failed or abandoned claims
-  # are retried; terminal provider outcomes stay put.
-  def self.retry_enqueue_failures_for(family)
-    apns.joins("INNER JOIN push_subscriptions ON push_subscriptions.id = push_deliveries.subscription_id")
-      .joins("INNER JOIN users ON users.id = push_subscriptions.user_id")
-      .where(users: { family_id: family.id }).recoverable.find_each(&:recover!)
-
-    web_push.joins("INNER JOIN web_push_subscriptions ON web_push_subscriptions.id = push_deliveries.subscription_id")
-      .joins("INNER JOIN users ON users.id = web_push_subscriptions.user_id")
-      .where(users: { family_id: family.id }).recoverable.find_each(&:recover!)
-  end
-
+  # Swept by RecoverPushDeliveriesJob every CLAIM_TIMEOUT: failed enqueues and
+  # abandoned claims are retried; terminal provider outcomes stay put.
   scope :recoverable, -> {
     where(status: :enqueue_failed).or(
       where(status: :pending).where("enqueued_at IS NULL OR enqueued_at < ?", CLAIM_TIMEOUT.ago)
@@ -152,7 +142,7 @@ class PushDelivery < ApplicationRecord
   # The channel could not attempt (for example the client went unavailable
   # between claim and deliver). Hand back the whole reservation so an outage
   # cannot exhaust the budget without provider IO, and clear the queue claim
-  # so the next generation pass can re-enqueue immediately.
+  # so the next recovery sweep can re-enqueue it.
   def release_attempt!(attempt)
     with_lock do
       next false unless current_attempt?(attempt)

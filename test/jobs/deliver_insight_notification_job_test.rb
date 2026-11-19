@@ -191,7 +191,7 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
 
     Apns::Client.expects(:new).never
     assert_no_enqueued_jobs only: DeliverInsightNotificationJob do
-      PushDelivery.retry_enqueue_failures_for(@insight.family)
+      RecoverPushDeliveriesJob.perform_now
       PushDelivery.enqueue_insight_deliveries(@insight)
       DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
     end
