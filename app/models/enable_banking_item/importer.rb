@@ -987,9 +987,13 @@ class EnableBankingItem::Importer
         ids_by_row = external_ids_by_row(existing_transactions + all_transactions)
         superseded_rows = content_pairs(existing_transactions, all_transactions, ids_by_row, ids_by_row).map(&:first)
         superseded_set = Set.new.compare_by_identity.merge(superseded_rows)
-        fetched_ids = all_transactions.map { |row| ids_by_row[row] }.compact.to_set
+        stored_by_id = existing_transactions.group_by { |row| ids_by_row[row] }
+        fetched_by_id = all_transactions.group_by { |row| ids_by_row[row] }
         existing_transactions.each do |row|
-          next if superseded_set.include?(row) || !fetched_ids.include?(ids_by_row[row])
+          id = ids_by_row[row]
+          next if id.blank? || superseded_set.include?(row)
+          next unless stored_by_id[id].one? && fetched_by_id[id]&.one?
+          next unless redelivered_correction?(row, fetched_by_id[id].first)
 
           superseded_rows << row
           superseded_set << row
@@ -1205,6 +1209,21 @@ class EnableBankingItem::Importer
     # transaction_id can still be told apart by entry_reference.
     def external_ids_by_row(rows)
       rows.zip(EnableBankingEntry::Processor.external_ids_for(rows)).to_h
+    end
+
+    # A fetched row sharing a stored row's id is a corrected redelivery only when
+    # nothing marks it as another movement. A pending row never replaces a booked
+    # one. Rows without an entry_reference can share an id through a reused
+    # transaction_id alone, so they must also share a date.
+    def redelivered_correction?(stored_row, fetched_row)
+      return false if pending_row?(fetched_row) && !pending_row?(stored_row)
+
+      stored_reference = stored_row.with_indifferent_access[:entry_reference].to_s
+      fetched_reference = fetched_row.with_indifferent_access[:entry_reference].to_s
+      return stored_reference == fetched_reference if stored_reference.present? || fetched_reference.present?
+
+      stored_date = row_date(stored_row)
+      stored_date.present? && stored_date == row_date(fetched_row)
     end
 
     def merge_transaction_rows(existing_transactions, retained_transactions, fetched_transactions, ids_by_row)
