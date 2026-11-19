@@ -1,5 +1,5 @@
 class DeliverInsightNotificationJob < ApplicationJob
-  queue_as :scheduled
+  queue_as :high_priority
   # The persisted delivery owns the total budget; ActiveJob only schedules
   # backoff. Sidekiq must not start a separate retry chain.
   sidekiq_options retry: false

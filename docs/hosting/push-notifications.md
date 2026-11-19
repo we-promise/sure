@@ -22,7 +22,7 @@ and Sidekiq workers:
 Base64 does not encrypt the signing key. Do not embed it in the iOS app, logs, or
 repository. Configure the same shared Rails Redis cache on web and worker
 processes; a process-local memory/null cache cannot coordinate these diagnostics.
-Workers must consume the existing `scheduled` queue and reach the sandbox and
+Workers must consume the existing `scheduled` and `high_priority` queues and reach the sandbox and
 production APNs endpoints over HTTP/2/TLS. No additional gem or database migration
 is needed for the System Health diagnostic.
 
@@ -114,7 +114,7 @@ worker processes and across deploys. Never commit the private key. Rotating the
 pair requires a new browser subscription; Enable this device replaces an old-key
 subscription when the browser is next enabled.
 
-The application must be served over HTTPS, and workers must consume `scheduled`.
+The application must be served over HTTPS, and workers must consume `high_priority` and `scheduled`.
 Allow outbound TLS on port 443 to the browser push services: `fcm.googleapis.com`,
 `updates.push.services.mozilla.com`, subdomains of `push.apple.com`, and subdomains
 of `notify.windows.com`. Registration accepts only those HTTPS destinations,
