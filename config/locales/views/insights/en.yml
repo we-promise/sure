@@ -42,7 +42,6 @@ en:
       net_worth_milestone: Net worth
       subscription_audit: Subscriptions
       savings_rate_change: Savings rate
-      negative_position: "Holdings"
       idle_cash: Idle cash
       budget_at_risk: Budget
       budget_on_track: Budget
@@ -80,7 +79,6 @@ en:
       net_worth_milestone: View net worth report
       subscription_audit: Review recurring transactions
       savings_rate_change: View those months' transactions
-      negative_position: "Review holdings"
       idle_cash: Go to account
       budget: View budget
       maintained_goal_depleted: View reserve
@@ -100,7 +98,6 @@ en:
       savings_rate_change:
         up: Your savings rate improved over the last three months
         down: Your savings rate dropped over the last three months
-      negative_position: "Holdings in %{account} went below zero"
       idle_cash: Idle cash in %{account}
       budget_at_risk:
         one: One category needs attention in your budget
@@ -125,7 +122,6 @@ en:
         up: From %{from_month} to %{to_month} your savings rate against your typical monthly income was %{current_rate}%, up %{change_pp} percentage points from %{previous_rate}% in the three months before.
         down: From %{from_month} to %{to_month} your savings rate against your typical monthly income was %{current_rate}%, down %{change_pp} percentage points from %{previous_rate}% in the three months before.
         down_negative: "From %{from_month} to %{to_month} you spent more than you earned: your savings rate fell to %{current_rate}%, from %{previous_rate}% in the three months before."
-      negative_position: "In %{account}, %{security} (%{ticker}) went below zero on %{date}, down to %{qty}. A purchase or transfer is probably missing. Positions affected: %{count}."
       idle_cash: "%{account} holds %{balance} with no activity in the last %{idle_days} days."
       budget_at_risk:
         over: "%{categories} went over budget this month. You've used %{budget_spent_pct}% of your total budget so far."

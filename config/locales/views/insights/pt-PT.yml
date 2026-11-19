@@ -30,7 +30,6 @@ pt-PT:
       net_worth_milestone: Património líquido
       subscription_audit: Subscrições
       savings_rate_change: Taxa de poupança
-      negative_position: "Posições"
       idle_cash: Dinheiro parado
       budget_at_risk: Orçamento
       budget_on_track: Orçamento
@@ -61,7 +60,6 @@ pt-PT:
       net_worth_milestone: Ver relatório de património líquido
       subscription_audit: Rever transações recorrentes
       savings_rate_change: Ver as transações desses meses
-      negative_position: "Rever posições"
       idle_cash: Ir para a conta
       budget: Ver orçamento
       maintained_goal_depleted: Ver reserva
@@ -78,7 +76,6 @@ pt-PT:
       savings_rate_change:
         up: A sua taxa de poupança melhorou nos últimos três meses
         down: A sua taxa de poupança caiu nos últimos três meses
-      negative_position: "As posições em %{account} ficaram abaixo de zero"
       idle_cash: Dinheiro parado em %{account}
       budget_at_risk:
         one: Uma categoria precisa de atenção no seu orçamento
@@ -98,7 +95,6 @@ pt-PT:
         up: De %{from_month} a %{to_month} a sua taxa de poupança face ao seu rendimento mensal habitual foi de %{current_rate}%, mais %{change_pp} pontos percentuais do que os %{previous_rate}% dos três meses anteriores.
         down: De %{from_month} a %{to_month} a sua taxa de poupança face ao seu rendimento mensal habitual foi de %{current_rate}%, menos %{change_pp} pontos percentuais do que os %{previous_rate}% dos três meses anteriores.
         down_negative: "De %{from_month} a %{to_month} gastou mais do que ganhou: a sua taxa de poupança caiu para %{current_rate}%, face aos %{previous_rate}% dos três meses anteriores."
-      negative_position: "Em %{account}, %{security} (%{ticker}) ficou abaixo de zero a %{date}, até %{qty}. Provavelmente falta uma compra ou transferência; posições afetadas: %{count}."
       idle_cash: "%{account} detém %{balance} sem atividade nos últimos %{idle_days} dias."
       budget_at_risk:
         over: "%{categories} excederam o orçamento este mês. Utilizou %{budget_spent_pct}% do orçamento total até agora."

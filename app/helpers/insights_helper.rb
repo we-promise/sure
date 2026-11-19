@@ -11,7 +11,6 @@ module InsightsHelper
     # Same shield the reserve panel uses on the goal page, so the two read as
     # the same object seen from two places.
     "maintained_goal_depleted" => "shield-alert",
-    "negative_position" => "alert-triangle",
     "bill_not_covered" => "calendar-x",
     "loan_payment_change" => "landmark",
     "bank_fees" => "receipt"
@@ -76,8 +75,6 @@ module InsightsHelper
       facts["amount"] && [ facts["amount"], t("insights.figures.days_overdue", count: facts["days_overdue"].to_i) ]
     when "idle_cash"
       facts["balance"] && [ facts["balance"], t("insights.figures.idle_days", count: facts["idle_days"].to_i) ]
-    when "negative_position"
-      facts["qty"] && [ facts["qty"], facts["ticker"] ]
     when "budget_at_risk"
       # Not budget_spent_pct: this card's headline is "N categories need
       # attention", and total consumption ("14% of budget") reads as reassurance
@@ -136,9 +133,6 @@ module InsightsHelper
     when "maintained_goal_depleted"
       goal = insight.family.goals.find_by(id: metadata["goal_id"])
       goal && { text: t("insights.actions.maintained_goal_depleted"), href: goal_path(goal) }
-    when "negative_position"
-      account = insight.family.accounts.visible.find_by(id: metadata["account_id"])
-      account && { text: t("insights.actions.negative_position"), href: account_path(account, tab: "holdings") }
     end
   end
 
@@ -208,7 +202,7 @@ module InsightsHelper
       :negative
     when "loan_payment_change"
       metadata["new_payment"].to_f < metadata["previous_payment"].to_f ? :positive : :warning
-    when "budget_at_risk", "maintained_goal_depleted", "bank_fees", "negative_position"
+    when "budget_at_risk", "maintained_goal_depleted", "bank_fees"
       # Warning, not negative: the reserve is short, not overdrawn, and red is
       # reserved here for money actually going the wrong side of zero.
       :warning
