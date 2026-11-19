@@ -8219,9 +8219,10 @@ paths:
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport). MonarchImport
-                    imports are created in the web app; requesting one here returns
-                    422 unsupported_type.
+                  description: Import type (defaults to TransactionImport when omitted).
+                    MonarchImport imports are created in the web app; requesting one
+                    here returns 422 unsupported_type. Any other type returns 422
+                    invalid_import_type.
                 account_id:
                   type: string
                   format: uuid
@@ -8333,9 +8334,10 @@ paths:
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport). MonarchImport
-                    imports are created in the web app; requesting one here returns
-                    422 unsupported_type.
+                  description: Import type (defaults to TransactionImport when omitted).
+                    MonarchImport imports are created in the web app; requesting one
+                    here returns 422 unsupported_type. Any other type returns 422
+                    invalid_import_type.
                 account_id:
                   type: string
                   format: uuid

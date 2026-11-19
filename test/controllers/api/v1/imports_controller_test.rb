@@ -89,6 +89,28 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unsupported_type", JSON.parse(response.body)["error"]
   end
 
+  test "refuses to create an import of an unknown type" do
+    assert_no_difference -> { @family.imports.count } do
+      post api_v1_imports_url,
+        params: { type: "TradesImport", raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test Transaction" },
+        headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "invalid_import_type", response_data["error"]
+    assert_equal "type must be one of: #{(Import::TYPES - %w[MonarchImport]).join(', ')}", response_data["message"]
+  end
+
+  test "creates a transaction import when no type is given" do
+    post api_v1_imports_url,
+      params: { raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test Transaction" },
+      headers: api_headers(@api_key)
+
+    assert_response :created
+    assert_equal "TransactionImport", JSON.parse(response.body)["data"]["type"]
+  end
+
   test "should list imports" do
     get api_v1_imports_url, headers: api_headers(@api_key)
     assert_response :success

@@ -3,6 +3,10 @@
 class Api::V1::ImportsController < Api::V1::BaseController
   include Pagy::Backend
 
+  # Monarch is a known type refused with its own error: only the web import
+  # flow collects what it needs.
+  CREATABLE_TYPES = (Import::TYPES - %w[MonarchImport]).freeze
+
   # Ensure proper scope authorization
   before_action :ensure_read_scope, only: [ :index, :show, :rows, :preflight ]
   before_action :ensure_write_scope, only: [ :create ]
@@ -66,8 +70,13 @@ class Api::V1::ImportsController < Api::V1::BaseController
     family = current_resource_owner.family
 
     # 1. Determine type and validate
-    type = params[:type].to_s
-    type = "TransactionImport" unless Import::TYPES.include?(type)
+    type = params[:type].to_s.presence || "TransactionImport"
+    unless Import::TYPES.include?(type)
+      return render json: {
+        error: "invalid_import_type",
+        message: "type must be one of: #{CREATABLE_TYPES.join(', ')}"
+      }, status: :unprocessable_entity
+    end
     return create_sure_import(family) if type == "SureImport"
 
     # A Monarch import combines two exports and per-account choices, which

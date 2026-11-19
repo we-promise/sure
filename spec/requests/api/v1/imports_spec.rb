@@ -139,8 +139,9 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: Import::TYPES - %w[MonarchImport],
-            description: 'Import type (defaults to TransactionImport). MonarchImport imports are created in the web app; requesting one here returns 422 unsupported_type.'
+            enum: Api::V1::ImportsController::CREATABLE_TYPES,
+            description: 'Import type (defaults to TransactionImport when omitted). MonarchImport imports are created in the web app; ' \
+                         'requesting one here returns 422 unsupported_type. Any other type returns 422 invalid_import_type.'
           },
           account_id: {
             type: :string,
