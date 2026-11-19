@@ -668,6 +668,7 @@ components:
       - classification
       - account_type
       - status
+      - exclude_from_reports
       - archived
       - created_at
       - updated_at
@@ -704,6 +705,10 @@ components:
           - draft
           - disabled
           - pending_deletion
+        exclude_from_reports:
+          type: boolean
+          readOnly: true
+          description: Whether this account is excluded from financial reports
         archived:
           type: boolean
           description: 'Archived: left out of account pickers and the sidebar; still
