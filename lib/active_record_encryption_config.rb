@@ -70,7 +70,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 10
+  CURRENT_BACKFILL_VERSION = 11
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -124,6 +124,7 @@ module ActiveRecordEncryptionConfig
     sophtron_items: [ "SophtronItem", %i[user_id access_key raw_payload raw_institution_payload raw_customer_payload raw_job_payload] ],
     trade_republic_items: [ "TradeRepublicItem", %i[phone_number session_blob pending_login_state] ],
     trading212_items: [ "Trading212Item", %i[api_key api_secret raw_instruments_payload] ],
+    tricount_items: [ "TricountItem", %i[sharing_tokens session_token] ],
     up_items: [ "UpItem", %i[access_token raw_payload raw_institution_payload] ],
     wise_items: [ "WiseItem", %i[token raw_payload sca_private_key] ],
     plaid_accounts: [ "PlaidAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload] ],
@@ -151,6 +152,7 @@ module ActiveRecordEncryptionConfig
     sophtron_accounts: [ "SophtronAccount", %i[raw_payload raw_transactions_payload] ],
     trade_republic_accounts: [ "TradeRepublicAccount", %i[raw_positions_payload raw_timeline_payload] ],
     trading212_accounts: [ "Trading212Account", %i[raw_positions_payload raw_orders_payload raw_dividends_payload raw_transactions_payload] ],
+    tricount_accounts: [ "TricountAccount", %i[raw_payload raw_transactions_payload] ],
     up_accounts: [ "UpAccount", %i[raw_payload raw_transactions_payload] ],
     wise_accounts: [ "WiseAccount", %i[raw_payload raw_transactions_payload] ],
     api_keys: [ "ApiKey", %i[display_key] ],
