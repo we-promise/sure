@@ -72,7 +72,9 @@ class Ai::Transport::Base
 
   # The transcription, one text per request page when the server reads pages one at a time, or
   # one text for them all, and the summed usage (RubyLLM 2.1.1 reports none for `ocr`).
-  OcrResponse = Data.define(:texts, :usage) do
+  OcrResponse = Data.define(:texts, :usage, :finish_reason) do
+    def initialize(texts:, usage:, finish_reason: nil) = super
+
     def text = texts.join("\n\n")
     def to_event = { texts: texts.size, characters: texts.sum(&:size) }
   end
@@ -123,9 +125,14 @@ class Ai::Transport::Base
     end
   end
 
+  # Whether this transport can transcribe at all: a route can name an OCR model on a transport
+  # that only judges or generates, and reaching `run_ocr` would raise NotImplementedError.
+  def ocr? = self.class.instance_method(:run_ocr).owner != Ai::Transport::Base
+
   # Transcribes an OcrRequest's pages and returns an OcrResponse, or raises an Ai::Error. A
   # local OCR model takes ~45 s a page on CPU, so the budget is the timeout per page.
   def ocr(request)
+    raise Ai::Error::Refused, "#{self.class.name} doesn't transcribe pages" unless ocr?
     raise Ai::Error::Refused, "#{request.model.name} isn't an OCR model" unless request.model.capable?(:ocr)
     raise Ai::Error::Refused, "OCR reads page images" unless request.pages.all?(&:image?)
 
@@ -282,6 +289,8 @@ class Ai::Transport::Base
         payload[:usage] = result.usage if result.respond_to?(:usage)
         if result.is_a?(Response)
           payload[:json_mode] = result.json_mode
+        end
+        if result.is_a?(Response) || result.is_a?(OcrResponse)
           payload[:finish_reason] = result.finish_reason&.to_s
         end
         result

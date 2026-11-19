@@ -3,12 +3,13 @@
 # the worker's memory, and it only does that when it's hardened:
 #
 # - an empty environment, so the worker's API keys and database URL never reach poppler;
-# - its own process group, killed with every child after `timeout` seconds;
+# - its own process group, killed and reaped with every child after `timeout` seconds;
 # - CPU and address-space limits;
-# - a page range, so pages are rendered only when a batch needs them (no page limit);
+# - only the requested pages, so a batch that skips a page never renders it (no page limit);
 # - each page's size checked before rendering, from its MediaBox (a page-size bomb would
 #   allocate gigabytes), and after: a page poppler can't allocate comes back as a 1x1 PNG with
-#   exit status 0, and would be sent to the model as the page.
+#   exit status 0, and would be sent to the model as the page. The page numbers poppler wrote
+#   are checked too, so a partial render isn't sent as a complete batch.
 #
 # It still runs as the worker's user with its file access; confining that needs a sandbox
 # (bubblewrap, a separate container).
@@ -33,63 +34,92 @@ module Pdf::PageImages
 
   def page_count(content) = readable { reader(content).page_count }
 
-  # PNGs of `pages` (a 1-based Range; every page by default), in order.
+  # PNGs of `pages` (a 1-based Range or a list of page numbers; every page by default), in
+  # order. Consecutive pages share one child; a gap is never rendered.
   def render(content, pages: nil, dpi: DPI, binary: "pdftoppm", **limits)
     limits = LIMITS.merge(limits)
     pdf = reader(content)
-    first, last = range_for(readable { pdf.page_count }, pages)
-    check_size!(pdf, first:, last:, dpi:)
+    wanted = pages_for(readable { pdf.page_count }, pages)
+    check_size!(pdf, numbers: wanted, dpi:)
 
     executable = binary.include?("/") ? binary : ENV.fetch("PATH", "").split(":").map { File.join(_1, binary) }.find { File.executable?(_1) }
     raise Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary) unless executable
 
     Dir.mktmpdir do |dir|
-      pdf = File.join(dir, "input.pdf")
-      File.binwrite(pdf, content)
-      pid = Process.spawn({}, executable, "-png", "-r", dpi.to_s, "-f", first.to_s, "-l", last.to_s, pdf, File.join(dir, "page"),
-                          unsetenv_others: true, pgroup: true, chdir: dir, in: File::NULL, out: File::NULL, err: File::NULL,
-                          rlimit_cpu: limits[:cpu_seconds], rlimit_as: limits[:memory])
-      status = nil
-      begin
-        status = wait(pid, limits[:timeout])
-      ensure
-        kill_group(pid) unless status   # interrupted from outside (a probe's deadline): poppler doesn't outlive it
-      end
-      raise Error.new("pdftoppm took longer than #{limits[:timeout]}s", code: :timeout) unless status
-      unless status.success?
-        raise Error.new("pdftoppm failed (#{status.signaled? ? "signal #{status.termsig}" : "exit #{status.exitstatus}"})", code: :failed)
+      input = File.join(dir, "input.pdf")
+      File.binwrite(input, content)
+      by_page = {}
+      runs(wanted).each_with_index do |(first, last), index|
+        prefix = File.join(dir, "run-#{index}", "page")
+        Dir.mkdir(File.dirname(prefix))
+        render_run(executable, input, prefix, first:, last:, dpi:, limits:).each { by_page.merge!(_1) }
       end
 
-      pngs = Dir[File.join(dir, "page-*.png")].sort_by { _1[/-(\d+)\.png\z/, 1].to_i }.map { File.binread(_1) }
-      if pngs.size != last - first + 1
-        raise Error.new("pdftoppm rendered #{pngs.size} of #{last - first + 1} pages", code: :failed)
+      missing = wanted - by_page.keys
+      if missing.any?
+        rendered = wanted.size - missing.size
+        raise Error.new("pdftoppm rendered #{rendered} of #{wanted.size} pages (missing #{missing.join(", ")})", code: :failed)
       end
 
-      pngs.each_with_index do |png, i|
+      wanted.map do |number|
+        png = by_page.fetch(number)
         width, height = png.byteslice(16, 8).to_s.unpack("NN")
         if width.to_i < MIN_SIDE || height.to_i < MIN_SIDE
-          raise Error.new("pdftoppm rendered page #{first + i} as #{width.to_i}x#{height.to_i}", code: :blank_page)
+          raise Error.new("pdftoppm rendered page #{number} as #{width.to_i}x#{height.to_i}", code: :blank_page)
         end
+
+        png
       end
     end
   end
 
-  def range_for(count, pages)
-    first = [ pages&.first || 1, 1 ].max
-    last = [ pages&.last || count, count ].min
-    raise Error.new("no pages #{pages} in a #{count}-page PDF", code: :unreadable) if first > last
+  def pages_for(count, pages)
+    numbers = case pages
+    when nil then (1..count).to_a
+    when Integer then [ pages ]
+    else pages.to_a
+    end.select { _1.is_a?(Integer) && _1.between?(1, count) }.uniq.sort
+    raise Error.new("no pages #{pages} in a #{count}-page PDF", code: :unreadable) if numbers.empty?
 
-    [ first, last ]
+    numbers
+  end
+
+  def runs(numbers) = numbers.chunk_while { |previous, number| number == previous + 1 }.map { [ _1.first, _1.last ] }
+
+  # One pdftoppm child, its output keyed by the absolute page number from the filename.
+  def render_run(executable, input, prefix, first:, last:, dpi:, limits:)
+    pid = begin
+      Process.spawn({}, executable, "-png", "-r", dpi.to_s, "-f", first.to_s, "-l", last.to_s, input, prefix,
+                    unsetenv_others: true, pgroup: true, chdir: File.dirname(prefix), in: File::NULL, out: File::NULL, err: File::NULL,
+                    rlimit_cpu: limits[:cpu_seconds], rlimit_as: limits[:memory])
+    rescue SystemCallError => error
+      raise Error.new("could not start pdftoppm: #{error.message}", code: :failed)
+    end
+
+    status = nil
+    begin
+      status = wait(pid, limits[:timeout])
+    ensure
+      kill_group(pid) unless status   # a timeout, or an interruption from outside: poppler doesn't outlive it
+    end
+    raise Error.new("pdftoppm took longer than #{limits[:timeout]}s", code: :timeout) unless status
+    unless status.success?
+      raise Error.new("pdftoppm failed (#{status.signaled? ? "signal #{status.termsig}" : "exit #{status.exitstatus}"})", code: :failed)
+    end
+
+    Dir[File.join(File.dirname(prefix), "#{File.basename(prefix)}-*.png")].to_h do |path|
+      [ path[/-(\d+)\.png\z/, 1].to_i, File.binread(path) ]
+    end
   end
 
   # From the pages' MediaBox, read by pdf-reader, which already parses every upload in process
   # for its text layer. A file it can't open is refused before poppler sees it.
-  def check_size!(pdf, first:, last:, dpi:)
-    (first..last).each_with_index do |number, i|
-      box = readable { pdf.page(number).rectangles[:MediaBox] }   # the page asked for only, not every page object   # resolved, even when the PDF stores it as a reference
+  def check_size!(pdf, numbers:, dpi:)
+    numbers.each do |number|
+      box = readable { pdf.page(number).rectangles[:MediaBox] }   # resolved, even when the PDF stores it as a reference
       pixels = (box.width.abs * dpi / 72.0) * (box.height.abs * dpi / 72.0)
       if pixels > MAX_PIXELS
-        raise Error.new("page #{first + i} would be #{(pixels / 1e6).round} million pixels at #{dpi} dpi", code: :too_large)
+        raise Error.new("page #{number} would be #{(pixels / 1e6).round} million pixels at #{dpi} dpi", code: :too_large)
       end
     end
   end
@@ -102,7 +132,7 @@ module Pdf::PageImages
     raise Error.new("unreadable PDF: #{error.message}", code: :unreadable)
   end
 
-  # The child's status, or nil after killing its whole process group.
+  # The child's status, or nil once its deadline has passed; the caller kills and reaps it.
   def wait(pid, timeout)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
     loop do
@@ -112,7 +142,6 @@ module Pdf::PageImages
 
       sleep 0.02
     end
-    kill_group(pid)
     nil
   end
 
@@ -122,5 +151,5 @@ module Pdf::PageImages
   rescue Errno::ESRCH, Errno::ECHILD
     nil
   end
-  private_class_method :range_for, :check_size!, :reader, :readable, :wait, :kill_group
+  private_class_method :pages_for, :runs, :render_run, :check_size!, :reader, :readable, :wait, :kill_group
 end

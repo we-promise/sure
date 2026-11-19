@@ -197,7 +197,7 @@ class AiHealth
           raise_unsupported_provider!(provider)
           config = config_endpoint(provider:, base_url: endpoint, api_key: access_token)
           route_model = Ai::Config::Model.new(endpoint: config, name: model, capabilities: %i[structured_output vision documents],
-                                              max_output_tokens: PDF_MAX_RESPONSE_TOKENS)
+                                              max_output_tokens: production_pdf_output_tokens(provider:, endpoint:, model:))
           plan = Ai::Plan.new(feature: :extract_pdf, lane: :prompt, routes: [ Ai::Route.new(feature: :extract_pdf, model: route_model) ])
           units =
             if processing_mode == :text then [ Ai::PdfReading::Unit.text(Pdf::TextExtractor.pages(SyntheticPdf.bytes).join("\n"), page: 1) ]
@@ -212,6 +212,21 @@ class AiHealth
           end
           raise Failure, :invalid_response unless SyntheticPdf.valid_result?(value)
         end
+      end
+
+      # The probe must fit what the production `extract_pdf` route asks of the same model, not
+      # an arbitrary smaller answer: a route's own output limit is part of the request it makes.
+      # An ad-hoc probe of a server Sure hasn't configured keeps the conservative fallback.
+      def production_pdf_output_tokens(provider:, endpoint:, model:)
+        plan = Ai::Router.new(family: nil).resolve(:extract_pdf)
+        return PDF_MAX_RESPONSE_TOKENS unless plan.is_a?(Ai::Plan)
+
+        configured = configured_endpoint(provider.to_sym)
+        names = [ "#{configured&.name}/#{model}", model ]
+        route = plan.routes.find { names.include?("#{_1.model.endpoint.name}/#{_1.model.name}") && _1.model.name == model } ||
+                plan.routes.find { _1.model.name == model } || plan.routes.first
+        limit = route&.model&.max_output_tokens.to_i
+        limit.positive? ? limit : PDF_MAX_RESPONSE_TOKENS
       end
 
       def run(component:, provider_key:, endpoint: nil, model: nil, credential: nil, dimensions: nil, verification: nil)
