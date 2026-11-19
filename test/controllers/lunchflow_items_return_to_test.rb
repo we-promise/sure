@@ -53,6 +53,26 @@ class LunchflowItemsReturnToTest < ActionDispatch::IntegrationTest
     assert_equal new_account_path, cancel_href_for("https://evil.example/accounts")
   end
 
+  test "a backslash past the second character is rejected" do
+    assert_equal new_account_path, cancel_href_for("/accounts\\evil.example")
+  end
+
+  test "a control character past the second character is rejected" do
+    assert_equal new_account_path, cancel_href_for("/acc\tounts")
+  end
+
+  test "a malformed percent-encoding after the slash is rejected" do
+    assert_equal new_account_path, cancel_href_for("/%zzevil.example")
+  end
+
+  test "a return path that does not route is rejected" do
+    assert_equal new_account_path, cancel_href_for("/no-such-route-here")
+  end
+
+  test "a routable return path with a query string is kept" do
+    assert_equal "/accounts?tab=manual", cancel_href_for("/accounts?tab=manual")
+  end
+
   test "linking redirects to a rejected return path's fallback instead of off the site" do
     assert_difference "AccountProvider.count", 1 do
       post link_existing_account_lunchflow_items_url, params: {
