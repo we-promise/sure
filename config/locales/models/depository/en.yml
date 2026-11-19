@@ -1,0 +1,14 @@
+---
+en:
+  activerecord:
+    attributes:
+      depository:
+        fixed_return_frequency: Interest payment frequency
+        fixed_return_rate: Interest rate
+        fixed_return_start_date: Interest start date
+    errors:
+      models:
+        depository:
+          attributes:
+            fixed_return_start_date:
+              in_the_future: can't be in the future

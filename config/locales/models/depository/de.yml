@@ -1,0 +1,14 @@
+---
+de:
+  activerecord:
+    attributes:
+      depository:
+        fixed_return_frequency: Häufigkeit der Zinszahlung
+        fixed_return_rate: Zinssatz
+        fixed_return_start_date: Zinsbeginn
+    errors:
+      models:
+        depository:
+          attributes:
+            fixed_return_start_date:
+              in_the_future: darf nicht in der Zukunft liegen
