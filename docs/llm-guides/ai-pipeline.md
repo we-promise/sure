@@ -102,8 +102,9 @@ flowchart LR
 - **A new feature is a row in `Ai::Routes::MATRIX`**, with `sends:` keys described in
   `config/locales/models/ai/en.yml`, and its key is permanent once released. Regenerate the table
   below with `bin/rails ai:routes_doc`; `ai_routing_matrix_test` fails when it's stale.
-- **Consent:** chat and bills need the user's own AI switch (`users.ai_enabled`); nothing else
-  needs consent yet.
+- **Consent:** check each feature's Consent row in `Ai::Routes::MATRIX` above: chat, bills, PDF
+  import, embedding and document search are user-level, while the category and merchant features
+  are family-level. `Ai::Consent` currently enforces the user switch only for chat and bills.
 - **An AI tool declares its feature** (`ai_feature :extract_pdf` on an `Assistant::Function`), so
   chat and MCP list it only while the feature is available.
 - **`Ai::Config` is built in each process from its own ENV**, so give the web and the worker
@@ -325,11 +326,16 @@ flowchart LR
   never leaves it in a provider's Files API; the preset's inline limit
   (`Ai::Config::Endpoint::PDF_LIMITS`) sends a bigger PDF another way. Indexing is separate: with
   OpenAI's vector store, a statement's search copy is uploaded to the Files API (purpose
-  `assistants`) and stays there until the document is removed.
+  `assistants`), and Sure tries to delete it when the document is removed.
 - **Files never enter a `.ai` event.** Events record each file's name and size.
 - **A new way of reading** is a key in `Ai::PdfReading::WAYS`, a reason in `reason_for`, units in
   `units_for`, a "Read as" label in `config/locales/views/imports/en.yml`, and a row in
   `test/models/ai/pdf_reading_test.rb`.
+- **Classification batches are capped; extraction batches aren't.** `Ai::PdfReading#read` reads up
+  to `CLASSIFY_BATCHES` (3) text batches to decide whether a document is a statement, and a
+  document it never recognizes as one isn't extracted. `ExtractBankStatement` then batches all the
+  pages of a statement with no page cap, so extraction can span a long statement without every
+  page necessarily being read.
 - **Never drop an extraction.** One that fails its checks is kept and flagged for review. A
   statement without printed balances can't be reconciled: it's flagged as unchecked, and Auto
   stops at the first way that passes the other checks, since no other way could do better.

@@ -27,9 +27,11 @@ class Ai::Generations::ReadPdf < Ai::Generation
     additionalProperties: false
   }.freeze)
 
-  # The first batch is enough to say what a document is. No answer at all (no slice fitted) is
+  # A statement page answered after a cover page is the answer to keep: splitting a batch can
+  # classify both, and by then there is no retry left. No answer at all (no slice fitted) is
   # unusable, so Auto reads another way rather than classify the file as nothing.
   def merge_values(values)
-    values.first || raise(Ai::Error::InvalidOutput, "no batch of the document was answered")
+    values.find { Ai::PdfReading::STATEMENT_TYPES.include?(_1[:document_type].to_s) } || values.first ||
+      raise(Ai::Error::InvalidOutput, "no batch of the document was answered")
   end
 end

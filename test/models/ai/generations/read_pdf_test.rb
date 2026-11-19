@@ -41,13 +41,30 @@ class Ai::Generations::ReadPdfTest < ActiveSupport::TestCase
   end
 
   test "page images are rendered and sent for the batch's own pages only, even when they aren't contiguous" do
-    Pdf::PageImages.expects(:render).with("%PDF", pages: 2..2).returns(%w[png2])
-    Pdf::PageImages.expects(:render).with("%PDF", pages: 4..4).returns(%w[png4])
+    Pdf::PageImages.expects(:render).with("%PDF", pages: [ 2, 4 ]).returns(%w[png2 png4])
 
     attachments = generation([ Ai::PdfReading::Unit.page(2), Ai::PdfReading::Unit.page(4) ]).attachments
 
     assert_equal %w[page-2.png page-4.png], attachments.map(&:filename)
     assert_equal %w[png2 png4], attachments.map(&:data)
+  end
+
+  test "a statement classified in a later piece wins over a cover page" do
+    stub_ai(:extract_pdf) do |request|
+      raise Ai::Error::ContextTooLong, "too long" if request.input.include?("PAGE ONE") && request.input.include?("PAGE TWO")
+
+      if request.input.include?("PAGE ONE")
+        { document_type: "other", summary: "cover", extracted_data: nil }
+      else
+        { document_type: "bank_statement", summary: "statement", extracted_data: nil }
+      end
+    end
+    units = [ Ai::PdfReading::Unit.text("PAGE ONE", page: 1), Ai::PdfReading::Unit.text("PAGE TWO", page: 2) ]
+
+    result = generation(units).call(batches: 1)
+
+    assert result.success?
+    assert_equal "bank_statement", result.value[:document_type]
   end
 
   test "no batch answered is unusable, not a document of no type" do

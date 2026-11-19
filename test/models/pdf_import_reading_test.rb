@@ -63,17 +63,55 @@ class PdfImportReadingTest < ActiveSupport::TestCase
     @import.stubs(:pdf_reading).returns(stub(ways: { images: nil }))
     row = @import.rows.create!(source_row_number: 1, date: "01/15/2024", amount: "-50.00", name: "Coffee Shop", currency: "USD")
 
-    assert_enqueued_with(job: ProcessPdfJob, args: [ @import, { reread: true } ]) { assert @import.reread!("images") }
+    assert_enqueued_with(job: ProcessPdfJob) { assert @import.reread!("images") }
+    token = enqueued_jobs.last[:args].last["reread_token"]
 
     @import.reload
     assert_equal "images", @import.read_as
     assert_equal "importing", @import.status
+    assert_equal token, @import.reread_token
     assert Import::Row.exists?(row.id), "kept until the job starts"
-    @import.clear_reading!
+    assert @import.clear_reading!(reread_token: token)
     assert_not Import::Row.exists?(row.id)
     assert_equal 0, @import.reload.rows.count
     assert_nil @import.ai_summary
     assert_nil @import.extraction_checks
+    assert_nil @import.reread_token
+  end
+
+  test "a delayed reread cannot clear a newer claim or a publish" do
+    @import.stubs(:pdf_uploaded?).returns(true)
+    @import.stubs(:pdf_reading).returns(stub(ways: { images: nil }))
+    row = @import.rows.create!(source_row_number: 1, date: "01/15/2024", amount: "-50.00", name: "Coffee Shop", currency: "USD")
+    assert @import.reread!("images")
+    old_token = @import.reload.reread_token
+
+    @import.update!(status: :pending, reread_token: nil)
+    newer_token = SecureRandom.uuid
+    @import.update!(status: :importing, reread_token: newer_token)
+    assert_not @import.clear_reading!(reread_token: old_token), "an older attempt loses to the newer reread"
+    assert Import::Row.exists?(row.id)
+
+    @import.update!(reread_token: nil) # a publish took the claim
+    assert_not @import.clear_reading!(reread_token: old_token)
+    assert_not @import.clear_reading!(reread_token: newer_token)
+    assert Import::Row.exists?(row.id), "the published rows are not a stale reread's to clear"
+  end
+
+  test "a reread that can't be queued restores its way and keeps the previous reading" do
+    reading = { "transactions" => [ { "date" => "2024-01-15", "amount" => "-50.00", "name" => "Coffee Shop" } ] }
+    @import.update!(read_as: "auto", extracted_data: reading)
+    @import.stubs(:pdf_uploaded?).returns(true)
+    @import.stubs(:pdf_reading).returns(stub(ways: { images: nil }))
+    ProcessPdfJob.stubs(:perform_later).raises(StandardError, "queue down")
+
+    assert_equal :enqueue_failed, @import.reread!("images")
+
+    @import.reload
+    assert @import.pending?
+    assert_equal "auto", @import.read_as
+    assert_equal reading, @import.extracted_data
+    assert_nil @import.reread_token
   end
 
   test "reading again is refused once anything is published" do

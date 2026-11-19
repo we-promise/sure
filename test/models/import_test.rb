@@ -3,6 +3,38 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  test "publish_later releases the claim when enqueueing raises" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    ImportJob.stubs(:perform_later).raises(StandardError, "queue down")
+
+    assert_raises(Import::EnqueueFailedError) { import.publish_later }
+
+    assert import.reload.pending?, "the failed enqueue must not block a retry"
+  end
+
+  test "publish_later releases the claim when enqueueing returns nothing" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    ImportJob.stubs(:perform_later).returns(nil)
+
+    assert_raises(Import::EnqueueFailedError) { import.publish_later }
+
+    assert import.reload.pending?
+  end
+
+  test "publish_later invalidates a reread claim when it takes the publish claim" do
+    import = imports(:pdf_with_rows)
+    import.update!(status: :pending, reread_token: "old-attempt")
+    import.stubs(:publishable?).returns(true)
+
+    assert_enqueued_with(job: ImportJob) { import.publish_later }
+
+    import.reload
+    assert import.importing?
+    assert_nil import.reread_token, "a delayed reread must not find its claim on a published import"
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

@@ -29,7 +29,15 @@ class Ai::ErrorTest < ActiveSupport::TestCase
 
     assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, message)
     assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { "error" => { "code" => 500, "message" => message } })
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { "error" => { "message" => message } }.to_json)
     assert_operator Ai::Error::UnsupportedInput, :<, Ai::Error::Refused
+  end
+
+  test "a gateway diagnostic quoting an earlier image refusal doesn't make a 5xx a refusal" do
+    body = { error: { message: "Service unavailable" }, detail: "earlier: image input is not supported" }
+
+    assert_equal Ai::Error::Upstream, Ai::Error.for_status(503, "the server responded with status 503", body:)
+    assert_equal Ai::Error::Upstream, Ai::Error.for_status(503, "the server responded with status 503", body: body.to_json)
   end
 
   test "a spent balance is NoCredit, however the provider says it" do

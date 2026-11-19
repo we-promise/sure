@@ -124,7 +124,67 @@ class Pdf::PageImagesTest < ActiveSupport::TestCase
     end
   end
 
+  test "a sparse list renders only those pages, as two runs" do
+    Dir.mktmpdir do |dir|
+      binary = recording_pdftoppm(dir)
+
+      pages = Pdf::PageImages.render(blank_pdf(pages: 5), pages: [ 4, 2 ], binary:)
+
+      assert_equal 2, pages.size
+      assert pages.all? { _1.start_with?("\x89PNG".b) }
+      assert_equal [ "-f 2 -l 2", "-f 4 -l 4" ], File.readlines(command_log(dir)).map { _1[/-f \d+ -l \d+/] }
+    end
+  end
+
+  test "an exclusive range stops before its last page" do
+    Dir.mktmpdir do |dir|
+      binary = recording_pdftoppm(dir)
+
+      pages = Pdf::PageImages.render(blank_pdf(pages: 5), pages: 2...4, binary:)
+
+      assert_equal 2, pages.size
+      assert_equal [ "-f 2 -l 3" ], File.readlines(command_log(dir)).map { _1[/-f \d+ -l \d+/] }
+    end
+  end
+
+  test "a render missing one of the asked-for pages fails instead of sending the others" do
+    Dir.mktmpdir do |dir|
+      one = png_file(dir)
+      binary = fake_pdftoppm(dir, "cp #{one} \"$9-1.png\"")
+
+      error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(blank_pdf(pages: 2), pages: 1..2, binary:) }
+
+      assert_equal :failed, error.code
+      assert_match "missing 2", error.message
+    end
+  end
+
+  test "a renderer that can't be started keeps a coded error" do
+    Process.stubs(:spawn).raises(Errno::EAGAIN, "resource temporarily unavailable")
+
+    error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(statement("bac_ocr"), binary: "/nonexistent/pdftoppm") }
+
+    assert_equal :failed, error.code
+    assert_match "could not start pdftoppm", error.message
+  end
+
   private
+    def command_log(dir) = File.join(dir, "commands")
+
+    # A stand-in that writes a real-enough PNG for each page of its -f/-l run, and logs the run.
+    def recording_pdftoppm(dir)
+      one = png_file(dir)
+      fake_pdftoppm(dir, "echo \"$*\" >> #{command_log(dir)}; f=$5; l=$7; prefix=$9; while [ \"$f\" -le \"$l\" ]; do cp #{one} \"$prefix-$f.png\"; f=$((f + 1)); done")
+    end
+
+    def png_file(dir)
+      File.join(dir, "page.png").tap do |path|
+        png = Base64.decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==").dup
+        png[16, 8] = [ 32, 32 ].pack("NN")   # bytes 16-23 are IHDR's width and height
+        File.binwrite(path, png)
+      end
+    end
+
     def skip_without_pdftoppm
       skip "pdftoppm isn't installed (poppler-utils)" unless system("pdftoppm", "-v", out: File::NULL, err: File::NULL)
     end

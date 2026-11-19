@@ -230,7 +230,19 @@ class AiTransportContractTest < ActiveSupport::TestCase
     assert_raises(Ai::Error::InvalidOutput) { probe(:compatible, :chat) }
   end
 
+  test "a transport without OCR refuses before reaching a missing run_ocr" do
+    endpoint = ai_endpoint(name: "plain", base_url: "https://llm.example.test/v1")
+    transport = Ai::Transport::Base.new(endpoint)
+    model = ai_model(name: "ocr", endpoint:, capabilities: %i[ocr])
+    request = Ai::Transport::Base::OcrRequest.new(feature: :extract_pdf, model:, pages: [ Ai::Attachment.png("png", filename: "page.png") ])
+
+    assert_not transport.ocr?
+    assert_raises(Ai::Error::Refused) { transport.ocr(request) }
+    assert Ai::Transport.for(endpoint).ocr?, "the compatible transport transcribes"
+  end
+
   test "an embedding endpoint with static headers is refused, since RubyLLM can't send them" do
+
     model_endpoint = ai_endpoint(name: "embed", base_url: "https://llm.example.test/v1", extra_headers: { "X-Gateway-Key" => "k" })
 
     assert_raises(Ai::Error::Refused) { Ai::Transport.for(model_endpoint).probe(ai_model(endpoint: model_endpoint), :embedding) }

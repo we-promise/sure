@@ -48,6 +48,12 @@ class ImportsController < ApplicationController
     @import.publish_later
 
     redirect_to import_path(@import), notice: t(".started")
+  rescue Import::EnqueueFailedError
+    redirect_to import_path(@import), alert: t(".enqueue_failed")
+  rescue Import::AlreadyClaimedError
+    # Another publish or a reread got the row lock first; its job is the one
+    # that will publish, so this request must not enqueue a second one.
+    redirect_to import_path(@import), alert: t(".already_claimed")
   rescue Import::MaxRowCountExceededError
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
   end
@@ -65,8 +71,13 @@ class ImportsController < ApplicationController
   def reread
     import_params = params[:import]
     read_as = import_params.is_a?(ActionController::Parameters) ? import_params[:read_as].to_s : ""
-    if @import.is_a?(PdfImport) && PdfImport::READ_AS.include?(read_as) && @import.reread!(read_as)
+    result = @import.is_a?(PdfImport) && PdfImport::READ_AS.include?(read_as) && @import.reread!(read_as)
+
+    case result
+    when true
       redirect_to import_path(@import), notice: t("imports.pdf_import.reread.success")
+    when :enqueue_failed
+      redirect_to import_path(@import), alert: t("imports.pdf_import.reread.enqueue_failed")
     else
       redirect_to import_path(@import), alert: t("imports.pdf_import.reread.not_allowed")
     end

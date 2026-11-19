@@ -31,12 +31,31 @@ class FamilyDocument < ApplicationRecord
             .where(status: "ready")
   }
 
-  # Watches an asynchronous index until it settles (VectorStore::IndexStatusJob).
-  after_create_commit -> { VectorStore::IndexStatusJob.perform_later(self) }, if: -> { status == "processing" }
+  # Watches an asynchronous index until it settles (VectorStore::IndexStatusJob). The enqueue runs
+  # after commit, so a queue failure must not fail the insert: the row and its file are already in
+  # the store and can be polled again.
+  after_create_commit :poll_index_later, if: -> { status == "processing" }
 
-  # A copy found already uploaded but still `processing` may have lost its poll (the queue was
-  # down when it was created): polling again is harmless.
-  def poll_index_later = (VectorStore::IndexStatusJob.perform_later(self) if status == "processing")
+  # Recovery for a copy still `processing` whose poll was lost (the queue was down when it was
+  # created, or a requeue was rejected): polling again is harmless.
+  def self.requeue_index_polls = where(status: "processing").find_each(&:poll_index_later)
+
+  def poll_index_later
+    return false unless status == "processing"
+
+    VectorStore::IndexStatusJob.perform_later(self)
+    true
+  rescue StandardError => e
+    DebugLogEntry.capture(
+      category: "documents",
+      level: "warn",
+      message: "Couldn't queue an index poll for an uploaded document: #{e.class}",
+      source: "FamilyDocument#poll_index_later",
+      family: family,
+      metadata: { family_document_id: id }
+    )
+    false
+  end
 
   def mark_ready!
     update!(status: "ready")

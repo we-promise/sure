@@ -241,6 +241,24 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_equal "text-model", request.model.name
   end
 
+  test "a PDF probe asks for the output limit of the production extract_pdf route" do
+    endpoint = Ai::Config::Endpoint.new(name: :openai, protocol: :compatible, base_url: "https://limit.example.test/v1", api_key: "limit-token")
+    model = Ai::Config::Model.new(endpoint:, name: "limited-model", capabilities: %i[structured_output vision documents],
+                                 max_output_tokens: 2048)
+    config = AiTestHelper.build_ai_config([ model ], { extract_pdf: [ "openai/limited-model" ] }, vector_store_backend: :pgvector)
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
+
+    result = Ai::Config.with(config) do
+      @probe.pdf_text_extraction(provider: :openai, endpoint: "https://limit.example.test/v1", access_token: "limit-token",
+                                 model: "limited-model", openai_compatible: true)
+    end
+
+    assert result.passing?
+    # The transport reads the limit from the model; Request#max_tokens is only for callers
+    # that override it, so the probe's synthetic model must carry the production limit.
+    assert_equal 2048, requests.sole.model.max_output_tokens
+  end
+
   test "PDF vision probe sends the page as an image on a compatible server" do
     skip "pdftoppm isn't installed (poppler-utils)" unless system("pdftoppm", "-v", out: File::NULL, err: File::NULL)
     requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))

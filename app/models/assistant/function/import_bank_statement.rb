@@ -105,6 +105,23 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     availability = Ai.availability(:extract_pdf, family:, user:)
     return ai_unavailable(availability) unless availability.available?
 
+    # Two live drafts from one statement could both publish overlapping rows as
+    # new transactions. Reuse the waiting draft instead of leaving another one
+    # to publish on top of it.
+    live_draft = family.imports.find_by(
+      type: "TransactionImport", source_pdf_import_id: pdf_import.id, account_id: account.id,
+      status: %w[pending importing complete]
+    )
+    if live_draft
+      return {
+        success: false,
+        error: "draft_already_exists",
+        import_id: live_draft.id,
+        message: "This statement already has a draft for that account (import #{live_draft.id}). " \
+                 "Review or publish that draft before extracting it again."
+      }
+    end
+
     read_as = params["read_as"].presence_in(PdfImport::READ_AS) || "auto"   # omitted is Auto, as the tool says
     reading = Ai::PdfReading.new(content: pdf_import.pdf_file_content, filename: pdf_import.pdf_filename, family:, user:)
     outcome = reading.extract(read_as: read_as.to_sym, start: PdfImport.last_passing_way(account:, model: reading.model&.name))
@@ -126,6 +143,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       type: "TransactionImport",
       account: account,
       raw_file_str: csv_content,
+      source_pdf_import_id: pdf_import.id,
       date_col_label: "date",
       amount_col_label: "amount",
       name_col_label: "name",

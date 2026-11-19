@@ -44,12 +44,12 @@ class PdfImport < Import
 
         previous_status = pdf_import.status
         if previous_status == "reverting"
-          pdf_import.update!(status: :revert_failed, error: Import.interrupted_error_message)
+          pdf_import.update!(status: :revert_failed, error: Import.interrupted_error_message, reread_token: nil)
         elsif pdf_import.data_committed?
-          pdf_import.update!(status: :complete, error: nil)
+          pdf_import.update!(status: :complete, error: nil, reread_token: nil)
           needs_sync = true
         else
-          pdf_import.update!(status: :pending)
+          pdf_import.update!(status: :pending, reread_token: nil)
         end
 
         DebugLogEntry.capture(
@@ -120,7 +120,7 @@ class PdfImport < Import
     with_lock do
       return false unless presumed_lost?
 
-      update!(status: :pending)
+      update!(status: :pending, reread_token: nil)
     end
 
     true
@@ -168,7 +168,8 @@ class PdfImport < Import
             # Set by id rather than association so activerecord-import writes the
             # column directly on the recursive insert.
             reconciled_at: reconciled_at,
-            reconciled_by_statement_id: account_statement&.id
+            reconciled_by_statement_id: account_statement&.id,
+            reconciled_by_import_id: id
           )
         )
       end
@@ -228,14 +229,16 @@ class PdfImport < Import
   end
 
   def process_with_ai_later
-    return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing) }
+    # Clearing the token is part of taking the claim: a reread job delayed in
+    # the queue must not find its old attempt still owning this processing run.
+    return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing, reread_token: nil) }
 
     begin
       ProcessPdfJob.perform_later(self)
       true
     rescue StandardError => e
       Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name} - #{e.message}")
-      reload.with_lock { update!(status: :pending) }
+      reload.with_lock { update!(status: :pending, reread_token: nil) }
       false
     end
   end
@@ -283,8 +286,9 @@ class PdfImport < Import
   end
 
   # "Read again as…": a badly read statement, read another way without changing the config. The
-  # import is claimed under its row lock, as publishing claims it, and the previous reading stays
-  # until ProcessPdfJob starts (#clear_reading!), so a job that can't be queued loses nothing.
+  # import is claimed under its row lock with an attempt-specific token, as publishing claims it,
+  # and the previous reading stays until ProcessPdfJob starts (#clear_reading!), so a job that
+  # can't be queued loses nothing.
   def reread!(read_as)
     read_as = read_as.to_s
     raise ArgumentError, "unknown way #{read_as}" unless READ_AS.include?(read_as)
@@ -292,31 +296,50 @@ class PdfImport < Import
     return false if read_as != "auto" && pdf_reading.ways[read_as.to_sym]   # this file can't be read that way
 
     previous = nil
-    claimed = with_lock do
+    token = with_lock do
       next false unless rereadable?
 
-      previous = status
-      update!(read_as:, status: :importing)
+      previous = { status:, read_as: self.read_as }
+      attempt = SecureRandom.uuid
+      update!(read_as:, status: :importing, reread_token: attempt)
+      attempt
     end
-    return false unless claimed
+    return false unless token
 
     queued = begin
-      ProcessPdfJob.perform_later(self, reread: true)
+      ProcessPdfJob.perform_later(self, reread: true, reread_token: token)
     rescue StandardError => e
       Rails.logger.error("Failed to enqueue PDF reread for import #{id}: #{e.class.name}")
       false
     end
-    with_lock { update!(status: previous) } unless queued
-    queued.present?
+    return true if queued
+
+    # Restore only while this attempt still owns the claim. A job that has
+    # started reading owns the import now; its way must not change underneath it.
+    with_lock do
+      update!(status: previous[:status], read_as: previous[:read_as], reread_token: nil) if importing? && reread_token == token
+    end
+    :enqueue_failed
   end
 
-  # When a reread's job starts: the previous reading goes, rows and all.
-  def clear_reading!
+  # When a reread's job starts and still holds its own claim: the previous
+  # reading goes, rows and all. A delayed job from an earlier attempt returns
+  # false, leaving a newer reread or a publish intact.
+  def clear_reading!(reread_token: nil)
     with_lock do
+      return false if reread_token.present? && !(importing? && self.reread_token == reread_token)
+
+      # Another import on the same statement may rely on marks it wrote itself.
+      # Only this reading's marks go; its replacement re-judges the statement
+      # and writes its own when it generates rows.
+      Entry.where(reconciled_by_import_id: id).update_all(
+        reconciled_at: nil, reconciled_by_statement_id: nil, reconciled_by_import_id: nil, updated_at: Time.current
+      )
       rows.delete_all
       self.class.reset_counters(id, :rows)
       update!(ai_summary: nil, document_type: nil, extracted_data: nil, extraction_checks: nil, read_with: nil, read_model: nil,
-              error: nil)
+              error: nil, reread_token: nil)
+      true
     end
   end
 
@@ -585,6 +608,7 @@ class PdfImport < Import
       Entry.where(id: entries.map(&:id)).update_all(
         reconciled_at: at,
         reconciled_by_statement_id: account_statement&.id,
+        reconciled_by_import_id: id,
         updated_at: at
       )
     end
@@ -613,6 +637,7 @@ class PdfImport < Import
       Entry.reconciled_by_statement(account_statement).where(account_id: account_scope_id).update_all(
         reconciled_at: nil,
         reconciled_by_statement_id: nil,
+        reconciled_by_import_id: nil,
         updated_at: Time.current
       )
     end
