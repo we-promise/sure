@@ -84,6 +84,10 @@ pt-PT:
       attachments: Anexos
       exclude: Excluir
       exclude_description: As transações excluídas serão removidas dos cálculos de orçamentação e dos relatórios.
+      auto_excluded_title: "Excluída automaticamente"
+      auto_excluded_stale_pending: "Em %{date}, a sincronização bancária excluiu esta transação pendente porque não foi lançada no prazo de %{days} dias."
+      auto_excluded_posted_match: "Em %{date}, a sincronização bancária excluiu esta transação pendente porque a sua versão lançada chegou como uma transação separada."
+      auto_excluded_other: "Em %{date}, a sincronização bancária excluiu esta transação."
       activity_type: Tipo de Atividade
       activity_type_description: Tipo de atividade de investimento (Compra, Venda, Dividendo, etc.). Detetado automaticamente ou definido manualmente.
       one_time_title: "%{type} pontual"
