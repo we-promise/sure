@@ -1,0 +1,69 @@
+---
+en:
+  equity_grants:
+    create:
+      created: Grant added
+    update:
+      updated: Grant updated
+    destroy:
+      deleted: Grant deleted
+    tab:
+      add_grant: Add grant
+      add_grant_title: Add a grant
+      add_vest: Add vest
+      add_vest_hint: For a repeating schedule, set how many months apart and how many vests; each gets the same number of units.
+      add_vest_title: Add vests
+      count: Number of vests
+      csv_file: CSV file
+      csv_hint: "One row per vest. Columns: grant_id, ticker, grant_date, total_units, vest_date, units. Optional: units_withheld, net_proceeds."
+      csv_template: Download a template
+      default_ticker: Ticker for rows without one
+      delete: Delete
+      delete_grant_confirm: Delete this grant and all its vests?
+      document_files: Grant documents or vest confirmations (PDF)
+      documents_description: Upload grant agreements, award summaries or release confirmations as PDFs and the AI provider reads the grants and their vesting schedules. Uploads also appear on the Statements tab.
+      documents_no_ai: Reading PDFs needs an AI provider (Settings → AI). Without one, import a CSV or add grants by hand.
+      documents_title: Add from documents
+      empty_description: Track stock grants (RSUs or options) and their vesting schedules to see what vests next and what it's worth. Upload grant documents, import a CSV, or add a grant below.
+      empty_title: No grants yet
+      estimated_value: Value now
+      every_months: Every N months
+      grant: Grant
+      grant_date: Grant date
+      grant_identifier: Grant ID
+      grant_types:
+        option: Options
+        rsu: RSUs
+      granted: Granted
+      grants_title: Grants
+      import_csv: Import CSV
+      net_proceeds: Net proceeds
+      next_12_months: Vesting in the next 12 months
+      next_vest: Next vest
+      past_title: Past vests
+      read_existing: Read documents already uploaded to this account
+      ticker: Ticker
+      type: Type
+      units:
+        one: "%{count} unit"
+        other: "%{count} units"
+      units_heading: Units
+      unvested: Unvested value
+      unvested_heading: Unvested
+      upcoming_title: Upcoming vests
+      upload_and_read: Upload and read
+      value_note: Values use the latest stored share price and don't include taxes. They don't change this account's balance.
+      vest_date: Vest date
+      vested: Vested
+      vests:
+        one: "%{count} vest"
+        other: "%{count} vests"
+      withheld: Withheld
+  equity_vests:
+    create:
+      created:
+        one: Vest added
+        other: "%{count} vests added"
+      invalid: Enter a valid vest date
+    destroy:
+      deleted: Vest deleted

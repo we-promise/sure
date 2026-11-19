@@ -1,0 +1,21 @@
+---
+en:
+  investment_documents:
+    csv_imported: "Imported %{created} rows, skipped %{skipped}."
+    csv_missing: Choose a CSV file under 2 MB.
+    no_files: Choose at least one PDF.
+    queued:
+      zero: Nothing to read. Reading PDFs needs an AI provider, and only PDFs can be read.
+      one: Reading 1 document. Refresh in a minute to see the results.
+      other: "Reading %{count} documents. Refresh in a minute or two to see the results."
+    rejected: "Not uploaded: %{files}."
+  investment_csv_import:
+    malformed: "The CSV couldn't be read: %{message}"
+    row_error: "Row %{row}: %{message}"
+    ticker_missing: A ticker is required (in the file or the ticker field).
+    too_many_rows: "The CSV has more than %{max} rows."
+  account_statements:
+    investment_reader:
+      no_account: The statement isn't linked to an account.
+      no_provider: No AI provider that can read documents is configured.
+      not_pdf: Only PDF statements can be read.

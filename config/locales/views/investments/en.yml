@@ -57,6 +57,9 @@ en:
       utma:
         short: UTMA
         long: UTMA Custodial Account
+      stock_plan:
+        short: Stock plan
+        long: Employer stock plan (RSUs, options)
       # United Kingdom
       isa:
         short: ISA

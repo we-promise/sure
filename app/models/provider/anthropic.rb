@@ -273,6 +273,23 @@ class Provider::Anthropic < Provider
     end
   end
 
+  # Structured data from a PDF, shaped by the caller's JSON schema. Used for
+  # investment contributions and equity grants read from uploaded statements.
+  def extract_document_data(pdf_content:, tool_name:, schema:, instructions:, model: "", family: nil)
+    with_provider_response do
+      DocumentExtractor.new(
+        client: client,
+        model: model.presence || @default_model,
+        pdf_content: pdf_content,
+        tool_name: tool_name,
+        schema: schema,
+        instructions: instructions,
+        family: family,
+        max_tokens: default_max_tokens
+      ).extract
+    end
+  end
+
   def chat_response(
     prompt,
     model:,
