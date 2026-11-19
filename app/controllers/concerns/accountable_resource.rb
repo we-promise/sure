@@ -213,7 +213,7 @@ module AccountableResource
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
-        :institution_name, :institution_domain, :notes, :exclude_from_reports, :hidden,
+        :institution_name, :institution_domain, :notes, :exclude_from_reports, :archived,
         :enable_category_matcher, :cost_basis_method, :logo,
         accountable_attributes: self.class.permitted_accountable_attributes
       )

@@ -119,7 +119,7 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     response_body = JSON.parse(response.body)
     assert_equal account.id, response_body["id"]
     assert_equal account.status, response_body["status"]
-    assert_equal false, response_body["hidden"]
+    assert_equal false, response_body["archived"]
     assert_equal account.balance_money.format, response_body["balance"]
     assert_equal money_cents(account.balance_money), response_body["balance_cents"]
     assert_equal account.cash_balance_money.format, response_body["cash_balance"]
@@ -133,14 +133,14 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal account.updated_at.iso8601, response_body["updated_at"]
   end
 
-  test "should still return hidden accounts and flag them" do
+  test "should still return archived accounts and flag them" do
     account = accounts(:depository)
-    account.update!(hidden: true)
+    account.update!(archived: true)
 
     get "/api/v1/accounts/#{account.id}", headers: api_headers(@api_key)
 
     assert_response :success
-    assert_equal true, JSON.parse(response.body)["hidden"]
+    assert_equal true, JSON.parse(response.body)["archived"]
   end
 
   test "should return 404 for unknown account on show" do

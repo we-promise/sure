@@ -100,6 +100,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.integer "account_providers_count", default: 0, null: false
     t.uuid "accountable_id"
     t.string "accountable_type"
+    t.boolean "archived", default: false, null: false
     t.decimal "balance", precision: 19, scale: 4
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
     t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
@@ -110,7 +111,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.boolean "enable_category_matcher", default: true, null: false
     t.boolean "exclude_from_reports", default: false, null: false
     t.uuid "family_id", null: false
-    t.boolean "hidden", default: false, null: false
     t.uuid "import_id"
     t.string "institution_domain"
     t.string "institution_name"

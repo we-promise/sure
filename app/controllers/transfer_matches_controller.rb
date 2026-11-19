@@ -5,9 +5,9 @@ class TransferMatchesController < ApplicationController
     # Preloaded for the logo selects, which call Account#logo_url per option.
     writable_accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
       .includes(:account_providers, logo_attachment: :blob).to_a
-    # Hidden accounts are left out of the select for a new counterpart, but an
-    # existing transaction on a hidden account can still be matched.
-    @accounts = writable_accounts.reject(&:hidden?)
+    # Archived accounts are left out of the select for a new counterpart, but
+    # an existing transaction on an archived account can still be matched.
+    @accounts = writable_accounts.reject(&:archived?)
     @candidate_entries = writable_candidate_entries(writable_accounts)
   end
 

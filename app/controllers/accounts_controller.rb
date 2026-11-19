@@ -3,7 +3,7 @@ class AccountsController < ApplicationController
   include FilterClearable
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
-  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports toggle_hidden destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports toggle_archived destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
@@ -285,11 +285,11 @@ class AccountsController < ApplicationController
     redirect_to accounts_path
   end
 
-  # Toggles the hidden flag for the whole family. A hidden account keeps
+  # Toggles the archived flag for the whole family. An archived account keeps
   # syncing and counting in reports; it is only left out of the sidebar and
   # the account pickers.
-  def toggle_hidden
-    @account.update!(hidden: !@account.hidden?)
+  def toggle_archived
+    @account.update!(archived: !@account.archived?)
     redirect_back_or_to accounts_path
   end
 

@@ -360,8 +360,8 @@ class TransfersController < ApplicationController
     end
 
     # Runs as a before_action, before `new` and `create` assign
-    # @from_account_id, so the source is also read from the request. A hidden
-    # source account stays selectable when the transfer starts from it.
+    # @from_account_id, so the source is also read from the request. An
+    # archived source account stays selectable when the transfer starts from it.
     def set_accounts
       source_account_id = @from_account_id.presence ||
         params[:from_account_id].presence ||

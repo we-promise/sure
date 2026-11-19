@@ -433,7 +433,7 @@ RSpec.configure do |config|
           },
           AccountDetail: {
             type: :object,
-            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status hidden created_at updated_at],
+            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status archived created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
@@ -446,7 +446,7 @@ RSpec.configure do |config|
               account_type: { type: :string, nullable: true },
               subtype: { type: :string, nullable: true },
               status: { type: :string, enum: %w[active draft disabled pending_deletion] },
-              hidden: { type: :boolean, description: 'Hidden from account pickers and the sidebar; still included in reports' },
+              archived: { type: :boolean, description: 'Archived: left out of account pickers and the sidebar; still included in net worth and reports' },
               institution_name: { type: :string, nullable: true },
               institution_domain: { type: :string, nullable: true },
               created_at: { type: :string, format: :'date-time' },

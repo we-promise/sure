@@ -22,17 +22,17 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_no_match disabled_account.name, response.body
   end
 
-  test "the new transfer form offers a hidden account only when the transfer starts from it" do
-    hidden = accounts(:depository)
-    hidden.update!(hidden: true)
+  test "the new transfer form offers an archived account only when the transfer starts from it" do
+    archived = accounts(:depository)
+    archived.update!(archived: true)
 
     get new_transfer_url
     assert_response :success
-    assert_select "[role=option][data-value=?]", hidden.id, count: 0
+    assert_select "[role=option][data-value=?]", archived.id, count: 0
 
-    get new_transfer_url(from_account_id: hidden.id)
+    get new_transfer_url(from_account_id: archived.id)
     assert_response :success
-    assert_select "[role=option][data-value=?]", hidden.id
+    assert_select "[role=option][data-value=?]", archived.id
   end
 
   test "can create transfers" do

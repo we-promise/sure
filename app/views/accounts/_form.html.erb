@@ -99,10 +99,10 @@
 
         <div class="flex items-center justify-between gap-2">
           <div>
-            <%= form.label :hidden, t(".hidden_label"), class: "text-sm" %>
-            <p id="account_hidden_hint" class="text-xs text-secondary"><%= t(".hidden_hint") %></p>
+            <%= form.label :archived, t(".archived_label"), class: "text-sm" %>
+            <p id="account_archived_hint" class="text-xs text-secondary"><%= t(".archived_hint") %></p>
           </div>
-          <%= form.toggle :hidden, aria: { describedby: "account_hidden_hint" } %>
+          <%= form.toggle :archived, aria: { describedby: "account_archived_hint" } %>
         </div>
       </div>
     </details>

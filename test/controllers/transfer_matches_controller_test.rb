@@ -25,18 +25,18 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[role=option][data-value=?]", hidden_inflow.id, count: 0
   end
 
-  test "new still offers a candidate on a hidden account but not the hidden account as a new counterpart" do
-    hidden = accounts(:investment)
-    hidden.update!(hidden: true)
+  test "new still offers a candidate on an archived account but not the archived account as a new counterpart" do
+    archived = accounts(:investment)
+    archived.update!(archived: true)
 
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
-    inflow = create_transaction(amount: -100, account: hidden, name: "Old account inflow")
+    inflow = create_transaction(amount: -100, account: archived, name: "Old account inflow")
 
     get new_transaction_transfer_match_path(outflow_entry)
 
     assert_response :success
     assert_select "[role=option][data-value=?]", inflow.id
-    assert_select "[role=option][data-value=?]", hidden.id, count: 0
+    assert_select "[role=option][data-value=?]", archived.id, count: 0
   end
 
   test "new shows account logos and preselects the closest candidate and first account" do

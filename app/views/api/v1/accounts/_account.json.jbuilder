@@ -14,7 +14,7 @@ json.classification account.classification
 json.account_type account.accountable_type&.underscore
 json.subtype account.subtype
 json.status account.status
-json.hidden account.hidden?
+json.archived account.archived?
 json.institution_name account.institution_name
 json.institution_domain account.institution_domain
 json.created_at account.created_at.iso8601
