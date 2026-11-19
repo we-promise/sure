@@ -92,7 +92,7 @@ class Provider::Mansa < Provider
 
   def usage
     with_provider_response do
-      used = Rails.cache.read(daily_cache_key).to_i
+      used = Rails.cache.read(daily_cache_key, raw: true).to_i
 
       UsageData.new(
         used: used,

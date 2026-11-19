@@ -464,4 +464,27 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     assert_equal 1, Rails.cache.read("eodhd:daily:2026-08-21")
     assert_equal 5, Rails.cache.read("eodhd:daily:2026-08-22")
   end
+
+  # The test environment caches in a null store, so the usage readers need a real
+  # RedisCacheStore to notice a counter they cannot read back. The per-run namespace
+  # keeps runs sharing one Redis from reading each other's counts.
+  test "usage reports the request counter on a real Redis cache" do
+    store = ActiveSupport::Cache::RedisCacheStore.new(
+      url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
+      namespace: "test:eodhd:#{SecureRandom.hex(8)}"
+    )
+    Rails.stubs(:cache).returns(store)
+
+    stub_request(:get, %r{/api/user}).to_return(
+      status: 200,
+      body: { apiRequests: 0, dailyRateLimit: 100_000, subscriptionType: "free" }.to_json
+    )
+
+    provider = Provider::Eodhd.new("test_api_key")
+    2.times { provider.send(:enforce_daily_limit!) }
+
+    assert_equal 2, provider.usage.data.used
+  ensure
+    store&.delete(provider&.send(:daily_cache_key))
+  end
 end

@@ -209,6 +209,7 @@ de:
         type: Typ
         status: Status
         reconcile_status: Abgleich
+        reconcile_status_hint: Nur manuelle Konten werden einbezogen.
         amount: Betrag
         category: Kategorie
         tag: Tag
@@ -364,6 +365,7 @@ de:
         overview: Übersicht
         reconciled_status_hint: Gilt nur für manuell erfasste Konten (kein Bank-Sync).
         reconciled_status_label: Abgleichsstatus
+        transfer_fields_hint: Bei Übertragungen bleiben Datum und Händler unverändert. Die Kategorie gilt nur für Übertragungsabflüsse, die sie zulassen.
         save: Speichern
         tags_label: Tags
         transactions_section: Transaktionen

@@ -142,6 +142,30 @@ class Transaction::Search
       end
       query.where(id: matching_ids)
     end
+
+    # Filters by the manual reconciled_status enum (see Entry#reconciled_status).
+    # Scoped to manual accounts — every entry defaults to "unreconciled"
+    # regardless of account type, but the UI/update paths only ever
+    # show/change this for accounts with no live bank sync. Without this
+    # scope, selecting "Unreconciled" would also match every synced
+    # transaction in the family.
+    #
+    # Unlike apply_status_filter (bank-sync pending/confirmed), this is a
+    # user-controlled flag, so any subset of the three values is meaningful —
+    # there's no "all selected = no filter" shortcut.
+    #
+    # Shared with EntrySearch (the account activity page), so `query` need not
+    # be rooted on Transaction. `family` scopes the manual-account subquery.
+    def apply_reconcile_status_filter(query, reconcile_statuses, family)
+      valid_statuses = Array(reconcile_statuses) & Entry.reconciled_statuses.keys
+      return query if valid_statuses.empty?
+      raise ArgumentError, "family is required to filter by reconcile status" if family.nil?
+
+      # Subquery rather than pluck(:id) — avoids loading every manual
+      # account id into Ruby, consistent with the writable-accounts scoping
+      # in Transactions::BulkUpdatesController#create.
+      query.where(entries: { account_id: family.accounts.manual.select(:id), reconciled_status: valid_statuses })
+    end
   end
   # Automatic-categorization provenance filter values (used by the view)
   AI_STATUSES = %w[current history].freeze
@@ -221,7 +245,7 @@ class Transaction::Search
       query = self.class.apply_type_filter(query, types)
       query = apply_status_filter(query, status)
       query = apply_unread_filter(query)
-      query = apply_reconcile_status_filter(query, reconcile_status)
+      query = self.class.apply_reconcile_status_filter(query, reconcile_status, family)
       query = self.class.apply_merchant_filter(query, merchants)
       query = self.class.apply_tag_filter(query, tags)
       query = apply_ai_status_filter(query, ai_status)
@@ -431,27 +455,5 @@ class Transaction::Search
       return query unless unread_filter?
 
       query.merge(Entry.unread_by(user))
-    end
-
-    # Filters by the manual reconciled_status enum (see Entry#reconciled_status).
-    # Scoped to manual accounts — every entry defaults to "unreconciled"
-    # regardless of account type, but the UI/update paths only ever
-    # show/change this for accounts with no live bank sync. Without this
-    # scope, selecting "Unreconciled" would also match every synced
-    # transaction in the family.
-    #
-    # Unlike apply_status_filter (bank-sync pending/confirmed), this is a
-    # user-controlled flag, so any subset of the three values is meaningful —
-    # there's no "all selected = no filter" shortcut.
-    def apply_reconcile_status_filter(query, reconcile_statuses)
-      return query unless reconcile_statuses.present?
-
-      valid_statuses = reconcile_statuses & Entry.reconciled_statuses.keys
-      return query if valid_statuses.empty?
-
-      # Subquery rather than pluck(:id) — avoids loading every manual
-      # account id into Ruby, consistent with the writable-accounts scoping
-      # in Transactions::BulkUpdatesController#create.
-      query.where(entries: { account_id: family.accounts.manual.select(:id), reconciled_status: valid_statuses })
     end
 end

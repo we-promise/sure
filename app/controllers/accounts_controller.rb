@@ -4,7 +4,7 @@ class AccountsController < ApplicationController
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
   before_action :note_unread_as_of, only: :show
-  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports reconcile_all destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
@@ -18,11 +18,6 @@ class AccountsController < ApplicationController
           .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
-    @reconciliation_indicators = if Current.family.manual_reconciliation?
-      Account::ReconciliationIndicator.for_accounts(@manual_accounts)
-    else
-      {}
-    end
     @financekit_accounts = Current.family.accounts
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
       .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
@@ -109,7 +104,11 @@ class AccountsController < ApplicationController
       Account::ReconciliationIndicator.for_accounts([ @account ])[@account.id]
     end
     @q = activity_search_params
-    entries = @account.entries.excluding_split_parents.search(@q, family).reverse_chronological.includes(:entryable)
+    # The account and its provider links are preloaded once for every row: a
+    # balance update's label depends on whether the account is linked.
+    entries = @account.entries.excluding_split_parents.search(@q.except(:balance_updates), family).reverse_chronological
+      .includes(:entryable, account: [ :account_providers, :plaid_account, :simplefin_account ])
+    entries = entries.excluding_balance_updates unless show_balance_updates?
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -288,6 +287,29 @@ class AccountsController < ApplicationController
     redirect_to accounts_path
   end
 
+  # Sets one reconciliation status for every transaction on a manually entered
+  # account. Statement reconciliation columns stay as they are.
+  def reconcile_all
+    return head :not_found unless Current.family.manual_reconciliation?
+
+    status = params[:reconciled_status].to_s
+
+    unless Entry.reconciled_statuses.key?(status)
+      redirect_to account_path(@account), alert: t("accounts.reconcile_all.invalid_status")
+      return
+    end
+
+    unless @account.manual?
+      redirect_to account_path(@account), alert: t("accounts.reconcile_all.not_manual_account")
+      return
+    end
+
+    updated = Entry.set_reconciled_status_for_account!(@account, status)
+
+    redirect_back_or_to account_path(@account),
+      notice: t("accounts.reconcile_all.success", count: updated, status: t("transactions.reconcile.statuses.#{status}"))
+  end
+
   def set_default
     unless @account.eligible_for_transaction_default?
       redirect_to accounts_path, alert: t("accounts.set_default.depository_only")
@@ -458,11 +480,24 @@ class AccountsController < ApplicationController
 
     def activity_search_params
       q = params.fetch(:q, {}).permit(
-        :search, :start_date, :end_date, :amount, :amount_operator,
+        :search, :start_date, :end_date, :amount, :amount_operator, :balance_updates,
         categories: [], tags: [], merchants: [], types: [], status: [], reconcile_status: []
       )
+      # Manual reconciliation only applies to accounts without a live sync.
+      # Ignore a stale or crafted filter on a synced account page.
+      q.delete(:reconcile_status) unless @account&.manual?
       q.delete(:amount_operator) unless q[:amount].present?
       q
+    end
+
+    # Balance updates appear in the feed unless the account hides them by
+    # default (see Account#hides_balance_updates_by_default?). The user can
+    # keep them shown in Settings > Preferences, or show them for one view
+    # with the activity Filter menu (q[balance_updates]=show).
+    def show_balance_updates?
+      !@account.hides_balance_updates_by_default? ||
+        Current.user.show_balance_updates? ||
+        @q[:balance_updates] == "show"
     end
 
     # Shares the "per page" preference with TransactionsController's
