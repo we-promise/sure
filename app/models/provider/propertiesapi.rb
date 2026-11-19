@@ -11,7 +11,7 @@ class Provider::Propertiesapi < Provider
 
   # A cap on how many lookups Sure makes, not on what they cost: past a paid
   # plan's included lookups, each one is charged at the plan's overage rate.
-  # It matches the one-time trial of 50 lookups a new account gets.
+  # It matches the 50 lookups a new account gets to start (10 free a month follow).
   # Override with PROPERTIESAPI_MAX_REQUESTS_PER_MONTH.
   MAX_REQUESTS_PER_MONTH = 50
 

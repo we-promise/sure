@@ -255,7 +255,7 @@ en:
         usage: "%{used} of %{limit} monthly requests used"
       propertiesapi_settings:
         title: PropertiesAPI
-        description: Enter your PropertiesAPI key to use the Zestimate shown on a US home's public Zillow page as its value. PropertiesAPI is an independent paid service, not affiliated with Zillow. New accounts get a one-time trial of 50 free lookups. A free account is never charged automatically; after the trial, lookups need prepaid credits or a paid plan. Sure caps lookups at 50 per month, shared between adding properties and valuation refreshes; change the cap with the PROPERTIESAPI_MAX_REQUESTS_PER_MONTH environment variable. The cap limits how many lookups Sure makes, not what they cost.
+        description: Enter your PropertiesAPI key to use the Zestimate shown on a US home's public Zillow page as its value. PropertiesAPI is an independent service, not affiliated with Zillow. New accounts get 50 lookups to start, then 10 free every month, with no card, and a free account is never charged automatically; beyond that, lookups need prepaid credits or a paid plan. Sure caps lookups at 50 per month, shared between adding properties and valuation refreshes; change the cap with the PROPERTIESAPI_MAX_REQUESTS_PER_MONTH environment variable. The cap limits how many lookups Sure makes, not what they cost.
         env_configured_message: Successfully configured through the PROPERTIESAPI_API_KEY environment variable.
         label: API Key
         placeholder: Enter your PropertiesAPI key here

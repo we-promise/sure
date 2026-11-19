@@ -34,7 +34,7 @@ en:
         location_mismatch: PropertiesAPI matched a home in a different ZIP code. Please double-check the address.
         no_valuation: Zillow does not show a Zestimate for this home, so there is no value to import.
         unauthorized: PropertiesAPI rejected the API key. Check the key in Settings → Self-Hosting.
-        no_credits: Your PropertiesAPI account has no lookups left. Add prepaid credits or choose a paid plan in your PropertiesAPI dashboard.
+        no_credits: Your PropertiesAPI account has no lookups left. Free accounts get 10 more on the 1st of each month (UTC); to look up more now, add prepaid credits or choose a paid plan in your PropertiesAPI dashboard.
         spend_limit_reached: Your PropertiesAPI account reached the monthly spending limit you set. Raise or remove the limit in your PropertiesAPI dashboard, or wait for the billing period to reset.
         payment_disputed: PropertiesAPI paused live lookups on your plan because a payment was disputed or refunded. Contact PropertiesAPI support to resolve it.
         payment_required: PropertiesAPI declined the lookup for a billing reason. Check your PropertiesAPI dashboard.
