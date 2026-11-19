@@ -91,8 +91,8 @@ class Family::DataImporter
 
   # account_targets maps source account IDs to existing accounts that the
   # import's records go into instead of accounts it creates.
-  # user: who imports, so the rules they bring are restricted to them
-  # (Rule#restrict_to_editor).
+  # user: who imports; it decides who the rules it brings act for
+  # (#assign_rule_owner).
   def initialize(family, ndjson_content, import_session: nil, import: nil, account_targets: {}, user: nil)
     @family = family
     @user = user
@@ -1618,13 +1618,16 @@ class Family::DataImporter
           build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
 
-        # After the rebuild, so a switch-off alone keeps the rule's scope
-        # (Rule#only_switched_off?), and before the save validates against it.
-        assign_rule_restriction(rule, data)
-        # A transfer target the rule can't write here (an account the file
-        # doesn't hold, or one its user can't write) holds the rule rather
-        # than failing the whole import.
-        hold_for_review(rule) if rule.actions.any? { |action| unwritable_transfer_target?(action) }
+        assign_rule_owner(rule, data)
+        # A transfer target the owner can't write here (an account the file
+        # doesn't hold, or one only someone else can write) drops that action
+        # rather than failing the whole import.
+        drop_unwritable_transfer_actions(rule)
+        if rule.actions.reject(&:marked_for_destruction?).empty?
+          rule.persisted? ? rule.destroy! : nil
+          increment_summary("Rule", :skipped)
+          next
+        end
 
         left_group_id = rule.rule_group_id_was if rule.will_save_change_to_rule_group_id? && rule.rule_group.nil?
 
@@ -1658,31 +1661,25 @@ class Family::DataImporter
       items.drop(index + 1).take_while { |item| !item.group? && session_rule_ids.include?(item.rule.id) }.last&.rule
     end
 
-    # An exported restriction stays with its user. If that user isn't in this
-    # family the rule comes in switched off and waiting for an admin's review
-    # (Rule#review_required), rather than acting on the whole family. Older exports carry no key, so an
-    # existing rule keeps its restriction. A non-admin importer replaces
-    # whatever the file says with themselves (Rule#restrict_to_editor).
-    def assign_rule_restriction(rule, data)
-      if data.key?("restricted_to")
-        rule.restricted_to = data["restricted_to"].presence && @family.users.find_by(email: data["restricted_to"])
-        hold_for_review(rule) if data["restricted_to"].present? && rule.restricted_to.nil?
+    # A non-admin's import makes them the owner of every rule it brings. An
+    # admin's keeps the owner the export names, when they are in this family,
+    # and otherwise owns the rule. Older exports name no owner, so a rule
+    # already here keeps its own.
+    def assign_rule_owner(rule, data)
+      return rule.user = @user if @user && !@user.admin?
+      return if !data.key?("owner") && rule.persisted?
+
+      rule.user = (data["owner"].presence && @family.users.find_by(email: data["owner"])) || @user
+    end
+
+    def drop_unwritable_transfer_actions(rule)
+      rule.actions.each do |action|
+        next unless action.action_type == "set_as_transfer_or_payment" && action.value.present?
+        next if action.executor.actionable?(action.value)
+
+        action.mark_for_destruction
+        increment_summary("Rule", :dropped_actions)
       end
-      hold_for_review(rule) if data["review_required"]
-      # A session records who opened it; without them (removed since, gone
-      # to another family, or a session from before creators were recorded)
-      # nobody can be restricted.
-      hold_for_review(rule) if @import_session && @user.nil?
-      rule.restrict_to_editor(@user)
-    end
-
-    def unwritable_transfer_target?(action)
-      action.action_type == "set_as_transfer_or_payment" && action.value.present? && !action.executor.actionable?(action.value)
-    end
-
-    def hold_for_review(rule)
-      rule.active = false
-      rule.review_required = true
     end
 
     def find_or_create_rule_group(name)

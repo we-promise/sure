@@ -7,25 +7,17 @@ class Rule < ApplicationRecord
 
   belongs_to :family
   belongs_to :rule_group, optional: true
-  # Set when a non-admin saves or switches on the rule (#restrict_to_editor):
-  # every run then keeps to accounts that user may change (#permitted_accounts).
-  # Null rules act on the whole family.
-  belongs_to :restricted_to, class_name: "User", optional: true
+  # The person the rule acts for. A rule changes only transactions in
+  # accounts its owner may change (#permitted_accounts); an admin's rule, or
+  # one with no owner (made before rules had one, or by the app itself), acts
+  # on the whole family.
+  belongs_to :user, optional: true
   has_many :conditions, dependent: :destroy
   has_many :actions, dependent: :destroy
   has_many :rule_runs, dependent: :destroy
 
   accepts_nested_attributes_for :conditions, allow_destroy: true
   accepts_nested_attributes_for :actions, allow_destroy: true
-
-  # The non-admin who started the current run (Rule::Runner), or whose run a
-  # count previews. Not stored. An admin's run reaches the whole family, so
-  # setting an admin leaves it unset.
-  attr_reader :run_by
-
-  def run_by=(user)
-    @run_by = user&.admin? ? nil : user
-  end
 
   # A name typed into the form's "new group" field. The rule joins that group,
   # which is created unless the family already has one with that name.
@@ -39,6 +31,8 @@ class Rule < ApplicationRecord
   # the same moment before anyone reordered them.
   scope :ordered, -> { order(:position, :created_at, :id) }
   scope :applied_immediately, -> { where(active: true, apply_immediately: true) }
+
+  validate :owner_in_family, if: -> { user && will_save_change_to_user_id? }
 
   validates :resource_type, presence: true, if: -> { resource_type.to_s.valid_encoding? }
   # A NUL or invalid encoding is reported by DatabaseTextValidator instead.
@@ -99,13 +93,6 @@ class Rule < ApplicationRecord
   # save then skips its own, which would run the query again and, on a timeout,
   # switch off a rule that has its baseline. Reset at the start of every save.
   before_save :reset_notification_baseline_taken
-  # Only an admin may switch a held rule back on: that is the review it waits
-  # for. The editor is whoever the save is for (#restrict_to_editor).
-  validate :switched_on_by_admin_when_held, if: -> {
-    review_required? && will_save_change_to_active?(to: true) && @editor && !@editor.admin?
-  }
-  # Switching a rule on is the review a released rule waits for.
-  before_save -> { self.review_required = false }, if: -> { review_required? && active? }
 
   def notification_baseline_taken_in_this_save?
     @notification_baseline_taken == true
@@ -279,8 +266,7 @@ class Rule < ApplicationRecord
   # Creates a categorization rule for the Quick Categorize Wizard.
   # Returns the saved rule, or nil if a duplicate or invalid rule already exists.
   def self.create_from_grouping(family, grouping_key, category, transaction_type: nil, user: nil)
-    rule = family.rules.build(name: grouping_key, resource_type: "transaction", active: true)
-    rule.restrict_to_editor(user)
+    rule = family.rules.build(name: grouping_key, resource_type: "transaction", active: true, user: user)
     rule.conditions.build(condition_type: "transaction_name", operator: "like", value: grouping_key)
     rule.conditions.build(condition_type: "transaction_type", operator: "=", value: transaction_type) if transaction_type.present?
     rule.actions.build(action_type: "set_transaction_category", value: category.id.to_s)
@@ -292,16 +278,12 @@ class Rule < ApplicationRecord
 
   # Calculates total unique resources affected across multiple rules
   # This handles overlapping rules by deduplicating transaction IDs
-  # user: who would run them, as Rule::Runner limits a member's run.
-  def self.total_affected_resource_count(rules, user: nil)
+  def self.total_affected_resource_count(rules)
     return 0 if rules.empty?
 
     # Collect all unique transaction IDs matched by any rule
     transaction_ids = Set.new
     rules.each do |rule|
-      next if rule.review_required?
-
-      rule.run_by = user
       transaction_ids.merge(rule.matching_scope.pluck(:id))
     rescue Rule::SafeRegex::TimeoutError
       next
@@ -350,45 +332,6 @@ class Rule < ApplicationRecord
     end
   end
 
-  # Called by every path that saves or switches on a rule for a user. An
-  # admin's edit keeps a restriction a member left; widening the rule to the
-  # family is a separate admin action (RulesController#widen).
-  def restrict_to_editor(user)
-    @editor = user
-    return if user.nil? || user.admin? || only_switched_off?
-
-    self.restricted_to = user
-  end
-
-  # Switching a rule off changes nothing it does, so it keeps its scope.
-  def only_switched_off?
-    !active? && changed == [ "active" ] && [ conditions, actions ].none? { |records| records.any?(&:changed_for_autosave?) }
-  end
-
-  # Users whose access bounds what the rule changes.
-  def restricting_users
-    [ restricted_to, run_by ].compact.uniq
-  end
-
-  # Family accounts the rule may change: those each restricting user may
-  # annotate when every action only annotates (AccountShare::ANNOTATE_*), or
-  # write otherwise. The whole family when nobody restricts it.
-  def permitted_accounts
-    accounts_permitted_to(restricting_users, annotation_only? ? :annotate : :write)
-  end
-
-  # Family accounts every given user may change at the level (:annotate or :write).
-  def accounts_permitted_to(users, level)
-    users.reduce(family.accounts) do |accounts, user|
-      allowed = level == :annotate ? family.accounts.annotatable_by(user) : family.accounts.writable_by(user)
-      accounts.where(id: allowed.select(:id))
-    end
-  end
-
-  def annotation_only?
-    actions.any? && actions.all?(&:annotation?)
-  end
-
   # Runs the "apply immediately" rules for transactions a person just created
   # or changed (web, bulk edit, API, assistant). Families without such rules
   # enqueue nothing. Best-effort: the change is already saved and the nightly
@@ -410,9 +353,31 @@ class Rule < ApplicationRecord
     nil
   end
 
-  # user: who asked for the run (see Rule::Runner).
-  def apply_later(ignore_attribute_locks: false, user: nil)
-    RuleJob.perform_later(self, ignore_attribute_locks: ignore_attribute_locks, user: user)
+  # Only its owner or an admin may change, switch or run a rule.
+  def manageable_by?(person)
+    person.present? && (person.admin? || (user_id.present? && user_id == person.id))
+  end
+
+  # Whether the rule is limited to what its owner may change.
+  def restricted?
+    user.present? && !user.admin?
+  end
+
+  # Family accounts the rule may change: those its owner may annotate when
+  # every action only annotates (AccountShare::ANNOTATE_*), or write
+  # otherwise. The whole family when it isn't restricted.
+  def permitted_accounts
+    return family.accounts unless restricted?
+
+    annotation_only? ? family.accounts.annotatable_by(user) : family.accounts.writable_by(user)
+  end
+
+  def annotation_only?
+    actions.any? && actions.all?(&:annotation?)
+  end
+
+  def apply_later(ignore_attribute_locks: false)
+    RuleJob.perform_later(self, ignore_attribute_locks: ignore_attribute_locks)
   end
 
   def primary_condition_title
@@ -578,12 +543,12 @@ class Rule < ApplicationRecord
       end
     end
 
-    def switched_on_by_admin_when_held
-      errors.add(:base, :held_for_review)
+    def owner_in_family
+      errors.add(:user, :invalid) unless user.family_id == family_id
     end
 
     def note_match_criteria_change
-      @match_criteria_changed = will_save_change_to_effective_date? || will_save_change_to_restricted_to_id? ||
+      @match_criteria_changed = will_save_change_to_effective_date? || will_save_change_to_user_id? ||
         (association(:conditions).target.any?(&:match_criteria_changing?) && condition_criteria_changing?)
     end
 

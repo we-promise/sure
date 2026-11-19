@@ -9,7 +9,7 @@ class ImportsController < ApplicationController
   before_action :require_guest_writable_created_accounts!, only: %i[revert destroy]
   before_action :reject_guest_new_categories_or_tags!, only: :publish
   # A statement import's account can move until its data lands (PdfImport#reassignable?).
-  around_action :lock_changeable_import, only: %i[update apply_template], unless: -> { @import.is_a?(PdfImport) }
+  before_action :require_changeable_import, only: %i[update apply_template], unless: -> { @import.is_a?(PdfImport) }
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -54,8 +54,6 @@ class ImportsController < ApplicationController
     redirect_back_or_to import_path(@import), alert: e.message
   rescue Import::AlreadyPublishedError
     redirect_to import_path(@import), alert: t("imports.published_locked")
-  rescue Import::PublishBusyError
-    redirect_to import_path(@import), alert: t("imports.publish_busy")
   end
 
   # Statement imports only: what became of each extracted transaction. Without it

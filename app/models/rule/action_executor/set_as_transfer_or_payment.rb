@@ -3,15 +3,12 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     "select"
   end
 
-  # The form offers what the rule will allow once saved: a member editing it
-  # restricts it to themselves (Rule#restrict_to_editor), an admin keeps its
-  # restriction.
   def options
-    rule.accounts_permitted_to(option_users, :write).alphabetically.pluck(:name, :id)
+    target_accounts.alphabetically.pluck(:name, :id)
   end
 
   def options_cache_key
-    option_users.map(&:id)
+    rule.restricted? ? [ rule.user_id ] : []
   end
 
   # A saved target the editor can't pick keeps a label, without the name of
@@ -53,14 +50,9 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
   private
     # The action writes an entry into the target, so it must be an account
-    # every user bounding the rule can write.
+    # the rule's owner can write (the whole family for an unrestricted rule).
     def target_accounts
-      rule.accounts_permitted_to(rule.restricting_users, :write)
-    end
-
-    def option_users
-      editor = Current.user unless Current.user.nil? || Current.user.admin?
-      editor ? [ editor ] : rule.restricting_users
+      rule.restricted? ? family.accounts.writable_by(rule.user) : family.accounts
     end
 
     def build_transfer(target_account, entry)

@@ -31,81 +31,39 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_equal 1, @rule.rule_runs.count
   end
 
-  test "a member's apply leaves transactions in accounts the member cannot write" do
-    member = users(:family_member)
-    writable = create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
-    unshared = create_transaction(account: accounts(:investment), name: "ZXQ Coffee Bar")
-    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
-
-    result = perform_enqueued_jobs(only: RuleJob) do
-      Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
-    end
-
-    assert result[:success], result.inspect
-    assert_equal @category, writable.entryable.reload.category
-    assert_nil unshared.entryable.reload.category
-  end
-
-  test "a member activating a family-wide rule restricts it to the member" do
-    member = users(:family_member)
-    create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
-    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
-
-    result = Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
-
-    assert result[:success], result.inspect
-    assert_equal member, @rule.reload.restricted_to
-  end
-
-  test "a member's apply reports what the member's run will change" do
-    member = users(:family_member)
-    create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
-    create_transaction(account: accounts(:investment), name: "ZXQ Coffee Bar")
-    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
-
-    result = Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
-
-    assert_equal 1, result[:applied_to]
-  end
-
-  test "a member re-applying an active family-wide rule keeps it family-wide and runs within their accounts" do
-    member = users(:family_member)
-    @rule.update!(active: true)
-    writable = create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
-    unshared = create_transaction(account: accounts(:investment), name: "ZXQ Coffee Bar")
-    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
-    assert token
-
-    result = perform_enqueued_jobs(only: RuleJob) do
-      Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
-    end
-
-    assert result[:success], result.inspect
-    assert_nil @rule.reload.restricted_to
-    assert_equal @category, writable.entryable.reload.category
-    assert_nil unshared.entryable.reload.category
-  end
-
-  test "a preview stops being valid when the rule's restriction changes" do
+  test "a member can't apply a rule they don't own" do
     create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
     token = preview_token
-    @rule.update_column(:restricted_to_id, users(:family_member).id)
 
-    result = @fn.call("rule_id" => @rule.id, "preview_token" => token)
+    result = Assistant::Function::ApplyRule.new(users(:family_member)).call("rule_id" => @rule.id, "preview_token" => token)
 
-    assert_equal "preview_stale", result[:error]
+    assert_equal "not_manageable", result[:error]
+    assert_not @rule.reload.active?
   end
 
-  test "a member can't switch on a rule held for review" do
+  test "a member's own rule changes only accounts they can write" do
     member = users(:family_member)
-    create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
-    @rule.update_column(:review_required, true)
+    @rule.update!(user: member)
+    writable = create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
+    unshared = create_transaction(account: accounts(:investment), name: "ZXQ Coffee Bar")
     token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
 
-    result = Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
+    result = perform_enqueued_jobs(only: RuleJob) do
+      Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
+    end
 
-    assert_equal "held_for_review", result[:error]
-    assert_not @rule.reload.active?
+    assert result[:success], result.inspect
+    assert_equal 1, result[:applied_to]
+    assert_equal @category, writable.entryable.reload.category
+    assert_nil unshared.entryable.reload.category
+  end
+
+  test "a preview stops being valid when the rule's owner changes" do
+    create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
+    token = preview_token
+    @rule.update_column(:user_id, users(:family_member).id)
+
+    assert_equal "preview_stale", @fn.call("rule_id" => @rule.id, "preview_token" => token)[:error]
   end
 
   # Activating a rule with an email action records its current matches as
@@ -209,7 +167,7 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     )
     assert_equal "preview_required", @fn.call("rule_id" => other_rule.id, "preview_token" => token)[:error]
 
-    other_user = users(:family_member)
+    other_user = @family.users.create!(email: "other-admin@example.com", password: user_password_test, role: "admin", first_name: "Other", last_name: "Admin")
     assert_equal "preview_required",
       Assistant::Function::ApplyRule.new(other_user).call("rule_id" => @rule.id, "preview_token" => token)[:error]
 

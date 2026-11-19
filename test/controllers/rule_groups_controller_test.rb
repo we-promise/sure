@@ -90,24 +90,16 @@ class RuleGroupsControllerTest < ActionDispatch::IntegrationTest
     assert_not rule.reload.active?
   end
 
-  test "a member switching on a group restricts its rules to the member" do
-    rule = create_rule(group: @group, active: false)
+  test "a member switching a group switches only their own rules" do
+    own = create_rule(group: @group, active: false)
+    own.update!(user: users(:family_member))
+    other = create_rule(group: @group, active: false)
     sign_in users(:family_member)
 
     patch activation_rule_group_url(@group, active: true)
 
-    assert rule.reload.active?
-    assert_equal users(:family_member), rule.restricted_to
-  end
-
-  test "a member can't switch on a held rule through its group" do
-    rule = create_rule(group: @group, active: false)
-    rule.update_column(:review_required, true)
-    sign_in users(:family_member)
-
-    patch activation_rule_group_url(@group, active: true)
-
-    assert_not rule.reload.active?
+    assert own.reload.active?
+    assert_not other.reload.active?
   end
 
   test "groups of another family are not found" do

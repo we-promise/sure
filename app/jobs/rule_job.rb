@@ -10,13 +10,12 @@ class RuleJob < ApplicationJob
   # active rule above this one again).
   discard_on Rule::SafeRegex::TimeoutError
 
-  def perform(rule, ignore_attribute_locks: false, execution_type: "manual", user: nil)
+  def perform(rule, ignore_attribute_locks: false, execution_type: "manual")
     runner = Rule::Runner.new(
       rule.family,
       rules: [ rule ],
       execution_type: execution_type,
-      ignore_attribute_locks: ignore_attribute_locks,
-      user: user
+      ignore_attribute_locks: ignore_attribute_locks
     )
     rule_runs = runner.run
 

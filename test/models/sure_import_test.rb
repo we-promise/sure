@@ -8,58 +8,6 @@ class SureImportTest < ActiveSupport::TestCase
     @import = @family.imports.create!(type: "SureImport")
   end
 
-  test "rules it imports are restricted to the member who published it" do
-    member = users(:family_member)
-    attach_ndjson({ type: "Rule", data: { id: "rule-1", name: "Published by member", resource_type: "transaction", active: true, actions: [ { action_type: "exclude_transaction" } ] } }.to_json)
-    @import.update!(published_by: member)
-
-    @import.import!
-
-    assert_equal member, @family.rules.find_by!(name: "Published by member").restricted_to
-  end
-
-  test "preflight runs under the publish lock" do
-    attach_ndjson({ type: "Tag", data: { id: "tag-1", name: "Locked" } }.to_json)
-    held = nil
-    @import.define_singleton_method(:validate_sure_preflight!) do
-      held = Import.connection.select_value(Import.sanitize_sql_array([ <<~SQL.squish, Import::PUBLISH_LOCK_NAMESPACE, id.to_s ])).positive?
-        SELECT count(*) FROM pg_locks
-        WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted AND objsubid = 2
-          AND classid = ? AND objid::bigint = (hashtext(?)::bigint & 4294967295)
-      SQL
-    end
-
-    @import.publish_later(user: users(:family_admin))
-
-    assert held
-  end
-
-  test "rules from a session whose creator has left the family wait for review" do
-    member = users(:family_member)
-    session = @family.import_sessions.create!(created_by: member, expected_chunks: 1)
-    member.update_columns(family_id: families(:empty).id, role: "admin")
-    @import.update_columns(import_session_id: session.id, sequence: 1, checksum: "0" * 64)
-    attach_ndjson({ type: "Rule", data: { id: "rule-1", name: "From a leaver", resource_type: "transaction", active: true, actions: [ { action_type: "exclude_transaction" } ] } }.to_json)
-
-    @import.reload.import!(import_session: session)
-
-    rule = @family.rules.find_by!(name: "From a leaver")
-    assert rule.review_required?
-    assert_not rule.active?
-  end
-
-  test "publishing takes the publish lock once" do
-    attach_ndjson({ type: "Tag", data: { id: "tag-1", name: "Once" } }.to_json)
-    locks = 0
-    counter = ->(*, payload) { locks += 1 if payload[:sql].match?(/pg_(try_)?advisory_lock\(/) }
-
-    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
-      @import.publish_later(user: users(:family_admin))
-    end
-
-    assert_equal 1, locks
-  end
-
   test "writes_rules? reads the stored record counts instead of the file" do
     attach_ndjson({ type: "Rule", data: { id: "rule-1", name: "Counted", resource_type: "transaction", actions: [ { action_type: "exclude_transaction" } ] } }.to_json)
     import = SureImport.find(@import.id)
@@ -73,6 +21,25 @@ class SureImportTest < ActiveSupport::TestCase
     @import.expects(:writes_rules?).never
 
     assert_nil @import.publish_refusal_for(users(:family_admin))
+  end
+
+  test "rules a member publishes are theirs" do
+    member = users(:family_member)
+    attach_ndjson({ type: "Rule", data: { id: "rule-1", name: "Published by member", resource_type: "transaction", active: true, actions: [ { action_type: "exclude_transaction" } ] } }.to_json)
+    @import.update!(published_by: member)
+
+    @import.import!
+
+    assert_equal member, @family.rules.find_by!(name: "Published by member").user
+  end
+
+  test "a failed preflight leaves an import another request has published" do
+    attach_ndjson({ type: "Tag", data: { id: "tag-1", name: "Racing" } }.to_json)
+    @import.stubs(:sure_preflight).returns(stub(valid?: false, error_message: "bad file"))
+    SureImport.where(id: @import.id).update_all(status: "importing")
+
+    assert_raises(SureImport::PreflightError) { @import.send(:validate_sure_preflight!) }
+    assert @import.reload.importing?
   end
 
   test "dry_run reflects attached ndjson content" do

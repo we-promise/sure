@@ -204,6 +204,8 @@ class GuestReadOnlyConfigTest < ActionDispatch::IntegrationTest
     get tags_path
     assert_select "a[href=?]", edit_tag_path(tags(:one))
 
+    # A member manages the rules they own (Rule#manageable_by?).
+    rules(:one).update!(user: users(:family_member))
     get rules_path
     assert_select "a[href=?]", edit_rule_path(rules(:one))
     assert_select "input[type=checkbox][name=?]:not([disabled])", "rule[active]"

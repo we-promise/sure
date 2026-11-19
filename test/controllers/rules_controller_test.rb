@@ -695,181 +695,64 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to rules_url
   end
 
-  test "a rule a member applies changes only transactions in accounts the member can write" do
-    sign_in users(:family_member)
-    writable = create_transaction(account: accounts(:depository), name: "SecretProbe one")
-    read_only = create_transaction(account: accounts(:credit_card), name: "SecretProbe two")
-    unshared = create_transaction(account: accounts(:investment), name: "SecretProbe three")
-    rule = @user.family.rules.create!(
-      resource_type: "transaction",
-      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "SecretProbe" } ],
-      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ]
-    )
-
-    perform_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
-
-    assert_equal "Renamed", writable.reload.name
-    assert_equal "SecretProbe two", read_only.reload.name
-    assert_equal "SecretProbe three", unshared.reload.name
-  end
-
-  test "rules a member applies all at once change only transactions in accounts the member can write" do
-    sign_in users(:family_member)
+  test "a rule a member creates is theirs and changes only accounts they can write" do
+    member = users(:family_member)
     writable = create_transaction(account: accounts(:depository), name: "SecretProbe one")
     unshared = create_transaction(account: accounts(:investment), name: "SecretProbe three")
-    @user.family.rules.create!(
-      resource_type: "transaction",
-      active: true,
-      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "SecretProbe" } ],
-      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ]
-    )
-
-    perform_enqueued_jobs(only: ApplyAllRulesJob) { post apply_all_rules_url }
-
-    assert_equal "Renamed", writable.reload.name
-    assert_equal "SecretProbe three", unshared.reload.name
-  end
-
-  test "a rule an admin applies still changes every account in the family" do
-    unshared = create_transaction(account: accounts(:investment), name: "SecretProbe three")
-    rule = @user.family.rules.create!(
-      resource_type: "transaction",
-      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "SecretProbe" } ],
-      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ]
-    )
-
-    perform_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
-
-    assert_equal "Renamed", unshared.reload.name
-  end
-
-  test "a rule a member saves is restricted to the member, and stays so when an admin edits it" do
-    sign_in member = users(:family_member)
-    post rules_url, params: { rule: {
-      name: "Member rule",
-      resource_type: "transaction",
-      conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "member probe" } },
-      actions_attributes: { "0" => { action_type: "exclude_transaction" } }
-    } }
-    rule = @user.family.rules.find_by!(name: "Member rule")
-    assert_equal member, rule.restricted_to
-
-    sign_in @user
-    patch rule_url(rule), params: { rule: { name: "Member rule, edited" } }
-    assert_equal member, rule.reload.restricted_to
-  end
-
-  test "a member editing a family-wide rule restricts it to the member" do
-    rule = @user.family.rules.create!(resource_type: "transaction", name: "Family rule", actions_attributes: [ { action_type: "exclude_transaction" } ])
-    assert_nil rule.restricted_to
-
-    sign_in users(:family_member)
-    patch rule_url(rule), params: { rule: { name: "Family rule, edited" } }
-
-    assert_equal users(:family_member), rule.reload.restricted_to
-  end
-
-  test "a rule an admin saves stays family-wide" do
-    post rules_url, params: { rule: {
-      name: "Admin rule",
-      resource_type: "transaction",
-      actions_attributes: { "0" => { action_type: "exclude_transaction" } }
-    } }
-
-    assert_nil @user.family.rules.find_by!(name: "Admin rule").restricted_to
-  end
-
-  test "a member switching on a family-wide rule restricts it to the member" do
-    rule = @user.family.rules.create!(resource_type: "transaction", actions_attributes: [ { action_type: "exclude_transaction" } ])
-    sign_in users(:family_member)
-
-    post apply_rule_url(rule)
-
-    assert rule.reload.active?
-    assert_equal users(:family_member), rule.restricted_to
-  end
-
-  test "rules show who they are restricted to, and an admin can widen one to the family" do
-    member = users(:family_member)
-    rule = @user.family.rules.create!(resource_type: "transaction", restricted_to: member, actions_attributes: [ { action_type: "exclude_transaction" } ])
-
-    get rules_url
-    assert_includes response.body, I18n.t("rules.rule.restricted_to", name: member.display_name)
-
-    patch widen_rule_url(rule)
-    assert_redirected_to rules_url
-    assert_nil rule.reload.restricted_to
-  end
-
-  test "a member cannot widen a rule to the family" do
-    member = users(:family_member)
-    rule = @user.family.rules.create!(resource_type: "transaction", restricted_to: member, actions_attributes: [ { action_type: "exclude_transaction" } ])
     sign_in member
 
-    patch widen_rule_url(rule)
-
-    assert_equal member, rule.reload.restricted_to
-  end
-
-  test "a member switching a family-wide rule off leaves it family-wide" do
-    rule = @user.family.rules.create!(resource_type: "transaction", active: true, actions_attributes: [ { action_type: "exclude_transaction" } ])
-    sign_in users(:family_member)
-
-    patch rule_url(rule), params: { rule: { active: "0" } }
-
-    assert_not rule.reload.active?
-    assert_nil rule.restricted_to
-  end
-
-  test "the confirm page counts what the member's run would change" do
-    create_transaction(account: accounts(:depository), name: "Confirm probe")
-    create_transaction(account: accounts(:investment), name: "Confirm probe")
-    rule = @user.family.rules.create!(resource_type: "transaction",
-      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Confirm probe" } ],
-      actions_attributes: [ { action_type: "exclude_transaction" } ])
-    sign_in users(:family_member)
-
-    get confirm_rule_url(rule)
-
-    assert_includes response.body, I18n.t("rules.confirm.apply_notice_html", count: 1, resource: "transactions")
-  end
-
-  test "a member re-applying an active family-wide rule keeps it family-wide and runs within their accounts" do
-    unshared = create_transaction(account: accounts(:investment), name: "SecretProbe three")
-    rule = @user.family.rules.create!(resource_type: "transaction", active: true,
-      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "SecretProbe" } ],
-      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ])
-    sign_in users(:family_member)
+    post rules_url, params: { rule: {
+      name: "Member rule", resource_type: "transaction",
+      conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "SecretProbe" } },
+      actions_attributes: { "0" => { action_type: "set_transaction_name", value: "Renamed" } }
+    } }
+    rule = @user.family.rules.find_by!(name: "Member rule")
+    assert_equal member, rule.user
 
     perform_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
 
-    assert_nil rule.reload.restricted_to
+    assert_equal "Renamed", writable.reload.name
     assert_equal "SecretProbe three", unshared.reload.name
   end
 
-  test "rules waiting for review say so" do
-    @user.family.rules.create!(resource_type: "transaction", review_required: true, actions_attributes: [ { action_type: "exclude_transaction" } ])
+  test "a member can't change, run or delete a rule they don't own" do
+    rule = @user.family.rules.create!(resource_type: "transaction", name: "Admin rule", user: @user, actions_attributes: [ { action_type: "exclude_transaction" } ])
+    sign_in users(:family_member)
+
+    patch rule_url(rule), params: { rule: { active: "1", name: "Changed" } }
+    assert_no_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
+    delete rule_url(rule)
+
+    assert_equal I18n.t("rules.not_manageable"), flash[:alert]
+    rule.reload
+    assert_equal "Admin rule", rule.name
+    assert_not rule.active?
+  end
+
+  test "only an admin can set a rule's owner" do
+    rule = @user.family.rules.create!(resource_type: "transaction", name: "Owned", user: users(:family_member), actions_attributes: [ { action_type: "exclude_transaction" } ])
+
+    patch rule_url(rule), params: { rule: { user_id: @user.id } }
+    assert_equal @user, rule.reload.user
+
+    sign_in users(:family_member)
+    patch rule_url(rule), params: { rule: { user_id: users(:family_member).id, name: "Mine" } }
+    assert_equal @user, rule.reload.user
+  end
+
+  test "only an admin can run or delete every rule" do
+    sign_in users(:family_member)
+
+    assert_no_enqueued_jobs(only: ApplyAllRulesJob) { post apply_all_rules_url }
+    assert_no_difference("Rule.count") { delete destroy_all_rules_url }
+  end
+
+  test "the rules list says whose accounts a member's rule changes" do
+    @user.family.rules.create!(resource_type: "transaction", user: users(:family_member), actions_attributes: [ { action_type: "exclude_transaction" } ])
 
     get rules_url
 
-    assert_includes response.body, ERB::Util.html_escape(I18n.t("rules.rule.review_required"))
-  end
-
-  test "only an admin can switch on a rule held for review" do
-    rule = @user.family.rules.create!(resource_type: "transaction", review_required: true, actions_attributes: [ { action_type: "exclude_transaction" } ])
-    sign_in users(:family_member)
-
-    patch rule_url(rule), params: { rule: { active: "1" } }
-    post apply_rule_url(rule)
-
-    assert_equal I18n.t("activerecord.errors.models.rule.held_for_review"), flash[:alert]
-    assert_not rule.reload.active?
-    assert rule.review_required?
-
-    sign_in @user
-    patch rule_url(rule), params: { rule: { active: "1" } }
-    assert rule.reload.active?
-    assert_not rule.review_required?
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("rules.rule.restricted_to", name: users(:family_member).display_name))
   end
 
   test "guest cannot create rule" do

@@ -303,7 +303,6 @@ en:
   imports:
     configuration_locked: "This import's data is already in Sure, so its files and choices can't change. Try again to finish it, or delete it to start over."
     published_locked: "This import has been published, so it can't be changed."
-    publish_busy: "This import is being changed or published right now. Try again in a moment."
     mapping_labels:
       account_type: "Account Type"
       account: "Account"

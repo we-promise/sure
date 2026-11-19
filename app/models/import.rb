@@ -1,12 +1,6 @@
 class Import < ApplicationRecord
-  include SessionAdvisoryLockable
-
   MaxRowCountExceededError = Class.new(StandardError)
   AlreadyPublishedError = Class.new(StandardError)
-  PublishLockInTransaction = Class.new(StandardError)
-  # Another request holds the publish lock (a publish or a wizard step).
-  PublishBusyError = Class.new(StandardError)
-  PUBLISH_LOCK_NAMESPACE = 4015
   # reason is :accounts or :rules (see #publish_refusal_for).
   class PublishNotAllowedError < StandardError
     MESSAGE_KEYS = {
@@ -290,49 +284,34 @@ class Import < ApplicationRecord
   end
 
   # Re-checks the import and its publisher, and marks it importing, under
-  # the publish lock and the row lock: edits take the publish lock
-  # (ImportGuestGuardable) and a statement's account change the row lock
-  # (PdfImport#assign_account!), so none lands between the check and the
-  # publish, and a second publish finds it importing.
+  # the row lock, so a second publish finds it importing. Edits check the
+  # status under the same lock (ImportGuestGuardable) and a statement's
+  # account change takes it too (PdfImport#assign_account!).
   # Returns the status and publisher it replaced, as read under the lock.
   def claim_for_publish!(user)
-    with_publish_lock do
-      check_before_publish_claim!
-      with_lock do
-        raise AlreadyPublishedError, "Import #{id} is #{status}" unless changeable?
-        raise MaxRowCountExceededError if row_count_exceeded?
-        raise "Import is not publishable" unless publishable?
+    with_lock do
+      raise AlreadyPublishedError, "Import #{id} is #{status}" unless changeable?
+      raise MaxRowCountExceededError if row_count_exceeded?
+      raise "Import is not publishable" unless publishable?
 
-        refusal = user && publish_refusal_for(user)
-        raise PublishNotAllowedError.new(refusal) if refusal
+      refusal = user && publish_refusal_for(user)
+      raise PublishNotAllowedError.new(refusal) if refusal
 
-        previous = { status: status, published_by_id: published_by_id }
-        update!(status: :importing, published_by: user)
-        previous
-      end
+      previous = { status: status, published_by_id: published_by_id }
+      update!(status: :importing, published_by: user)
+      previous
     end
-  end
-
-  # Checks a subclass runs under the publish lock before the claim, outside
-  # its row-lock transaction so what they write stays (SureImport's preflight).
-  def check_before_publish_claim!
   end
 
   # A job that never got queued leaves nothing to finish the import, so it
   # goes back to how the claim found it and can be published again.
   def release_publish_claim!(previous)
-    with_publish_lock do
-      with_lock { update!(previous) if importing? }
-    end
+    with_lock { update!(previous) if importing? }
   end
 
-  def with_publish_lock(&)
-    with_session_advisory_lock(PUBLISH_LOCK_NAMESPACE, error: PublishLockInTransaction, wait: self.class.publish_lock_wait, busy: PublishBusyError, &)
-  end
-
-  # How long a request waits for the publish lock before asking to try again.
-  def self.publish_lock_wait
-    5
+  # Whether the import is still changeable, read under the row lock.
+  def changeable_now?
+    with_lock { changeable? }
   end
 
   # Whether the web wizard may still change the import: one published is
@@ -614,9 +593,9 @@ class Import < ApplicationRecord
   # Why the user may not publish this import, or nil: :accounts when it
   # writes into an account they can't write, :rules when it writes rules and
   # they are not an admin, :guest_categories_or_tags when a guest's import
-  # would add categories or tags. Imports are family records any member can reach,
-  # so importing rules stays an admin's job; the importer also restricts them
-  # to a non-admin publisher or session creator (Family::DataImporter).
+  # would add categories or tags. Imports are family records any member can
+  # reach, so importing rules stays an admin's job (Family::DataImporter
+  # decides who the imported rules act for).
   def publish_refusal_for(user)
     return :accounts unless accounts_writable_by?(user)
     return :rules if !user&.admin? && writes_rules?

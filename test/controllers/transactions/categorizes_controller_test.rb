@@ -438,22 +438,15 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
       assert rule.conditions.any? { |c| c.condition_type == "transaction_type" && c.value == "expense" }
     end
 
-    test "a rule a member creates while categorizing is restricted to the member" do
+    test "a rule a member creates while categorizing is theirs" do
       entry = create_transaction(account: @account, name: "Member grouping")
       sign_in member = users(:family_member)
 
       post transactions_categorize_url,
-        params: {
-          position: 0,
-          grouping_key: "Member grouping",
-          entry_ids: [ entry.id ],
-          all_entry_ids: [ entry.id ],
-          category_id: @category.id,
-          create_rule: "1"
-        },
+        params: { position: 0, grouping_key: "Member grouping", entry_ids: [ entry.id ], all_entry_ids: [ entry.id ], category_id: @category.id, create_rule: "1" },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
-      assert_equal member, @family.rules.find_by!(name: "Member grouping").restricted_to
+      assert_equal member, @family.rules.find_by!(name: "Member grouping").user
     end
 
     test "a guest categorizing creates no rule" do

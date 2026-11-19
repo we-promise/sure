@@ -2,11 +2,12 @@ class RulesController < ApplicationController
   include StreamExtensions
 
   before_action :require_non_guest!, except: %i[index]
-  before_action :require_admin!, only: :widen
-  before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm, :widen ]
+  # Running or deleting every rule reaches rules other people own.
+  before_action :require_admin!, only: %i[destroy_all confirm_all apply_all]
+  before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index
-    @rules = Current.family.rules.includes(:restricted_to, :actions, conditions: :sub_conditions).ordered.to_a
+    @rules = Current.family.rules.includes(:user, :actions, conditions: :sub_conditions).ordered.to_a
     Rule.share_option_lists(@rules)
     @layout = Rule::Layout.new(Current.family, rules: @rules)
     @list_filter = Rule::ListFilter.new(@rules)
@@ -26,6 +27,7 @@ class RulesController < ApplicationController
   def new
     @rule = Current.family.rules.build(
       resource_type: params[:resource_type].presence_in(Rule::SUPPORTED_RESOURCE_TYPES) || "transaction",
+      user: Current.user
     )
 
     if params[:name].present?
@@ -46,7 +48,7 @@ class RulesController < ApplicationController
   end
 
   def create
-    @rule = Current.family.rules.build(rule_params)
+    @rule = Current.family.rules.build(rule_params.reverse_merge(user_id: Current.user.id))
 
     if save_rule
       redirect_to confirm_rule_path(@rule, reload_on_close: true)
@@ -56,8 +58,6 @@ class RulesController < ApplicationController
   end
 
   def apply
-    # Re-applying an active rule keeps its scope; the run stays the member's.
-    @rule.restrict_to_editor(Current.user) unless @rule.active?
     @rule.update!(active: true)
 
     # The rule stayed off, so running it now would only repeat the slow query.
@@ -66,14 +66,11 @@ class RulesController < ApplicationController
       return
     end
 
-    @rule.apply_later(ignore_attribute_locks: true, user: Current.user)
+    @rule.apply_later(ignore_attribute_locks: true)
     redirect_back_or_to rules_path, notice: "#{@rule.resource_type.humanize} rule activated"
-  rescue ActiveRecord::RecordInvalid => e
-    redirect_back_or_to rules_path, alert: e.record.errors.full_messages.to_sentence
   end
 
   def confirm
-    @rule.run_by = Current.user
     @active_rules_above_count = @rule.active_rules_above.count
     # Compute provider, model, and cost estimation for auto-categorize actions
     if @rule.actions.any? { |a| a.action_type == "auto_categorize" }
@@ -103,13 +100,6 @@ class RulesController < ApplicationController
     end
   end
 
-  # A member's rule acts only on accounts the member may change; an admin can
-  # make it act on the whole family.
-  def widen
-    @rule.update!(restricted_to: nil)
-    redirect_back_or_to rules_path, notice: t(".success")
-  end
-
   def destroy
     @rule.destroy
     redirect_to rules_path, notice: t(".success")
@@ -135,7 +125,7 @@ class RulesController < ApplicationController
 
   def confirm_all
     @rules = Current.family.rules
-    @total_affected_count = Rule.total_affected_resource_count(@rules, user: Current.user)
+    @total_affected_count = Rule.total_affected_resource_count(@rules)
 
     # Compute AI cost estimation if any rule has auto_categorize action
     if @rules.any? { |r| r.actions.any? { |a| a.action_type == "auto_categorize" } }
@@ -147,7 +137,7 @@ class RulesController < ApplicationController
   end
 
   def apply_all
-    ApplyAllRulesJob.perform_later(Current.family, user: Current.user)
+    ApplyAllRulesJob.perform_later(Current.family)
     redirect_back_or_to rules_path, notice: t("rules.apply_all.success")
   end
 
@@ -160,7 +150,6 @@ class RulesController < ApplicationController
     # A group typed into the form may be created by another request at the
     # same moment; the save then rolls back, and saving again finds it.
     def save_rule
-      @rule.restrict_to_editor(Current.user)
       @rule.save
     rescue ActiveRecord::RecordNotUnique
       raise unless @rule.rule_group&.new_record?
@@ -254,14 +243,21 @@ class RulesController < ApplicationController
       raise
     end
 
+    # Only a rule's owner or an admin may change or run it (Rule#manageable_by?).
     def set_rule
       @rule = Current.family.rules.find(params[:id])
+      return if @rule.manageable_by?(Current.user)
+
+      respond_to do |format|
+        format.html { redirect_back_or_to rules_path, alert: t("rules.not_manageable") }
+        format.any { head :forbidden }
+      end
     end
 
     def rule_params
       params.require(:rule).permit(
         :resource_type, :effective_date, :active, :name, :stop_processing, :apply_immediately,
-        :rule_group_id, :new_rule_group_name,
+        :rule_group_id, :new_rule_group_name, *(Current.user.admin? ? [ :user_id ] : []),
         conditions_attributes: [
           :id, :condition_type, :operator, :value, :_destroy,
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]

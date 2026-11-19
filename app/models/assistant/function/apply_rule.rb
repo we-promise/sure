@@ -60,6 +60,7 @@ class Assistant::Function::ApplyRule < Assistant::Function
   def call(params = {})
     rule = find_rule(params["rule_id"])
     return error("not_found", "No rule with id '#{params["rule_id"]}'.") unless rule
+    return not_manageable_error unless rule.manageable_by?(user)
 
     if rule.actions.any? { |a| BLOCKED_ACTION_TYPES.include?(a.action_type) }
       return error("ai_action", "This rule has an AI-backed action; apply it in Settings > Rules, which shows the cost estimate.")
@@ -82,13 +83,7 @@ class Assistant::Function::ApplyRule < Assistant::Function
       # previewed with no matches would then compare equal and be activated.
       current = rule.matching_scope.count
       unchanged = definition_digest(rule) == token["definition"] && current == token["match_count"]
-      if unchanged
-        rule.restrict_to_editor(user) unless rule.active?
-        rule.update!(active: true)
-        # What the user's run will change (Rule::Runner).
-        rule.run_by = user
-        current = rule.matching_scope.count
-      end
+      rule.update!(active: true) if unchanged
     end
 
     unless unchanged
@@ -110,7 +105,7 @@ class Assistant::Function::ApplyRule < Assistant::Function
       )
     end
 
-    rule.apply_later(ignore_attribute_locks: override_locked, user: user)
+    rule.apply_later(ignore_attribute_locks: override_locked)
 
     {
       success: true,
@@ -121,9 +116,5 @@ class Assistant::Function::ApplyRule < Assistant::Function
     }
   rescue Rule::SafeRegex::TimeoutError
     regex_timeout_error(rule, "Nothing was applied.")
-  rescue ActiveRecord::RecordInvalid => e
-    raise unless e.record.errors.of_kind?(:base, :held_for_review)
-
-    error("held_for_review", "This rule is switched off until an admin reviews it; only an admin can switch it on.")
   end
 end

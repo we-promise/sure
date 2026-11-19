@@ -5,20 +5,12 @@ module ImportGuestGuardable
   extend ActiveSupport::Concern
 
   private
-    # around_action for actions that change an import. It holds the lock a
-    # publish takes (Import#claim_for_publish!), so a change and a publish
-    # can't interleave, and refuses once the import is published: the
-    # background import reads the file, account and choices as they are.
-    def lock_changeable_import
-      @import.with_publish_lock do
-        if @import.reload.changeable?
-          yield
-        else
-          redirect_to import_path(@import), alert: t("imports.published_locked")
-        end
-      end
-    rescue Import::PublishBusyError
-      redirect_to import_path(@import), alert: t("imports.publish_busy")
+    # The background import reads the file, account and choices as they are,
+    # so once it is published (Import#claim_for_publish!) nothing changes them.
+    def require_changeable_import
+      return if @import.changeable_now?
+
+      redirect_to import_path(@import), alert: t("imports.published_locked")
     end
 
     def require_import_editable!

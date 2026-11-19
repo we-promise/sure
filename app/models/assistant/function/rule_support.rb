@@ -97,6 +97,10 @@ module Assistant::Function::RuleSupport
 
   private
     # Finds a rule in the user's family. Returns nil for unknown or foreign ids.
+    def not_manageable_error
+      error("not_manageable", "Only the person this rule acts for, or an admin, can change or apply it.")
+    end
+
     def find_rule(id)
       return nil unless valid_uuid?(id)
 
@@ -106,9 +110,6 @@ module Assistant::Function::RuleSupport
     # Replaces the rule's conditions and actions with the given definition and
     # returns a list of problems. The rule is not saved. A key that is absent
     # leaves that part of the rule unchanged.
-    # Every create, update and draft preview goes through here, so the rule
-    # carries the user's restriction (Rule#restrict_to_editor) before it is
-    # validated, counted or saved.
     def assign_definition(rule, params)
       problems = []
 
@@ -153,9 +154,6 @@ module Assistant::Function::RuleSupport
         end
       end
 
-      # After the changes, so a switch-off alone keeps the rule's scope, and
-      # before validation, which checks a transfer target against it.
-      rule.restrict_to_editor(user)
       problems
     end
 
@@ -436,7 +434,7 @@ module Assistant::Function::RuleSupport
     # What the rule would do, independent of timestamps and display names.
     def definition_digest(rule)
       definition = {
-        restricted_to: rule.restricted_to_id,
+        owner: rule.user_id,
         effective_date: rule.effective_date&.iso8601,
         conditions: rule.conditions.reject(&:marked_for_destruction?).select { |c| c.parent_id.nil? }
                         .map { |c| digest_condition(c) }.sort_by(&:to_json),

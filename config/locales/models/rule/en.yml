@@ -12,7 +12,6 @@ en:
           duplicate_actions: "Rule cannot have duplicate actions %{types}"
           nested_conditions: "Compound conditions cannot be nested"
           split_not_alone: "A split rule cannot have other actions"
-          held_for_review: "This rule is waiting for an admin's review. Only an admin can switch it on."
         rule/action:
           attributes:
             value:

@@ -12,9 +12,6 @@
 # Inactive rules above are skipped because they don't run nightly either.
 # ignore_attribute_locks only applies to the requested rules.
 #
-# A run a member starts (user:) keeps to accounts that member may change, on
-# top of each rule's own restriction (Rule#permitted_accounts).
-#
 # With transaction_ids every rule, including the active rules above, only
 # looks at those transactions ("apply immediately" after a manual or API
 # change). Rules that match none of them are skipped without a RuleRun, so
@@ -36,10 +33,9 @@ class Rule::Runner
     Digest::MD5.hexdigest("rule_runner:#{family_id}").to_i(16) % (2**62)
   end
 
-  def initialize(family, rules:, execution_type:, ignore_attribute_locks: false, transaction_ids: nil, user: nil)
+  def initialize(family, rules:, execution_type:, ignore_attribute_locks: false, transaction_ids: nil)
     @family = family
     @transaction_ids = transaction_ids&.map(&:to_s)
-    @user = user
     @rule_ids = rules.map(&:id).to_set
     @execution_type = execution_type
     @ignore_attribute_locks = ignore_attribute_locks
@@ -52,8 +48,6 @@ class Rule::Runner
   # Returns the RuleRun records created, one per executed rule.
   def run
     return [] if rule_ids.empty?
-    # A queued run whose user has left the family since acts for no one.
-    return [] if user && user.family_id != family.id
 
     rule_runs = nil
     acquired = with_family_lock { rule_runs = run_rules }
@@ -63,21 +57,16 @@ class Rule::Runner
   end
 
   private
-    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :transaction_ids, :user
+    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :transaction_ids
 
     def run_rules
       rule_runs = []
       remaining_ids = rule_ids.dup
 
-      family.rules.ordered.includes(:family, :restricted_to, :actions, conditions: :sub_conditions).each do |rule|
+      family.rules.ordered.includes(:family, :actions, conditions: :sub_conditions).each do |rule|
         break if remaining_ids.empty?
 
-        rule.run_by = user
-
-        # A released rule waits for an admin to switch it on (Rule#review_required).
         if remaining_ids.delete?(rule.id)
-          next if rule.review_required?
-
           rule_runs << execute(rule, ignore_attribute_locks: ignore_attribute_locks)
         elsif rule.active?
           rule_runs << execute(rule, ignore_attribute_locks: false, skip_action_types: deferred_action_types)

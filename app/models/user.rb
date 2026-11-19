@@ -37,8 +37,8 @@ class User < ApplicationRecord
   has_many :sso_audit_logs, dependent: :nullify
   has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
-  has_many :restricted_rules, class_name: "Rule", foreign_key: :restricted_to_id, inverse_of: :restricted_to
-  before_destroy :release_restricted_rules!
+  # A rule acts for its owner, so it goes with them.
+  has_many :rules, dependent: :destroy
   has_many :shared_accounts, through: :account_shares, source: :account
   has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
   has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy
@@ -449,17 +449,11 @@ class User < ApplicationRecord
     UserPurgeJob.perform_later(self)
   end
 
-  # A rule restricted to a user who leaves the family is switched off and no
-  # longer restricted, and no run uses it until an admin switches it on
-  # (Rule#review_required).
-  def release_restricted_rules!
-    restricted_rules.update_all(active: false, restricted_to_id: nil, review_required: true, updated_at: Time.current)
-  end
-
   def transfer_to_family!(new_family, role: self.role)
     transaction do
       lock!
-      release_restricted_rules!
+      # Their rules act for them in the family they leave.
+      rules.destroy_all
 
       accounts_to_move = owned_accounts.order(:id).to_a
       provider_items_to_move = provider_items_for_transfer(accounts_to_move)

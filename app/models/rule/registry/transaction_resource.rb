@@ -41,7 +41,7 @@ class Rule::Registry::TransactionResource < Rule::Registry
 
   def resource_scope
     scope = family.transactions.visible.with_entry.merge(Entry.excluding_split_parents).where(entry: { date: rule.effective_date.. })
-    rule.restricting_users.any? ? scope.where(entries: { account_id: rule.permitted_accounts.select(:id) }) : scope
+    rule.restricted? ? scope.where(entries: { account_id: rule.permitted_accounts.select(:id) }) : scope
   end
 
   def condition_filters

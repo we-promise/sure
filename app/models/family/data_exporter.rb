@@ -188,9 +188,10 @@ class Family::DataExporter
 
         # Only export rules belonging to this family, in run order so an
         # import recreates them in the same order
-        # The CSV has no column for a restriction (Rule#restricted_to), so a
-        # restricted rule would come back family-wide; all.ndjson carries it.
-        @family.rules.where(restricted_to_id: nil).includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
+        # The CSV has no column for a rule's owner, so a rule limited to a
+        # member (Rule#restricted?) would come back acting on the whole
+        # family; all.ndjson carries it.
+        @family.rules.includes(:user, :rule_group, conditions: :sub_conditions, actions: []).ordered.reject(&:restricted?).each do |rule|
           csv << [
             rule.name,
             rule.resource_type,
@@ -586,7 +587,7 @@ class Family::DataExporter
       end
 
       # Export rules with versioned schema, in run order
-      @family.rules.includes(:rule_group, :restricted_to, conditions: :sub_conditions, actions: []).ordered.each do |rule|
+      @family.rules.includes(:rule_group, :user, conditions: :sub_conditions, actions: []).ordered.each do |rule|
         lines << {
           type: "Rule",
           version: 1,
@@ -802,8 +803,7 @@ class Family::DataExporter
         effective_date: rule.effective_date&.iso8601,
         position: rule.position,
         stop_processing: rule.stop_processing,
-        restricted_to: rule.restricted_to&.email,
-        review_required: rule.review_required,
+        owner: rule.user&.email,
         apply_immediately: rule.apply_immediately,
         group: rule.rule_group&.name,
         conditions: rule.conditions.where(parent_id: nil).map { |condition| serialize_condition(condition) },

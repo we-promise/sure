@@ -10,7 +10,7 @@ class Assistant::Function::CreateRuleTest < ActiveSupport::TestCase
     @category = categories(:food_and_drink)
   end
 
-  test "a rule a member creates is restricted to the member, and so is its preview" do
+  test "a rule a member creates is theirs, and so is its preview" do
     member = users(:family_member)
     create_transaction(account: accounts(:depository), name: "ZXQ Member Cafe")
     create_transaction(account: accounts(:investment), name: "ZXQ Member Cafe")
@@ -19,12 +19,11 @@ class Assistant::Function::CreateRuleTest < ActiveSupport::TestCase
       "actions" => [ { "action_type" => "set_transaction_category", "value" => @category.id } ]
     }
 
-    draft = Assistant::Function::PreviewRule.new(member).call(definition)
-    assert_equal 1, draft[:preview][:match_count]
+    assert_equal 1, Assistant::Function::PreviewRule.new(member).call(definition)[:preview][:match_count]
 
     result = Assistant::Function::CreateRule.new(member).call(definition.merge("name" => "Member cafe"))
     assert result[:success], result.inspect
-    assert_equal member, @family.rules.find(result[:rule][:id]).restricted_to
+    assert_equal member, @family.rules.find(result[:rule][:id]).user
   end
 
   test "saves the rule inactive and returns a preview" do

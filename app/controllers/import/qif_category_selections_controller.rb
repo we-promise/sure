@@ -5,7 +5,7 @@ class Import::QifCategorySelectionsController < ApplicationController
 
   before_action :set_import
   before_action :require_import_editable!, only: :update
-  around_action :lock_changeable_import, only: :update
+  before_action :require_changeable_import, only: :update
 
   def show
     valid_formats         = @import.valid_date_formats_with_preview

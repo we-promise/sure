@@ -31,14 +31,6 @@ class ImportTest < ActiveSupport::TestCase
     assert_raises(Import::AlreadyPublishedError) { import.publish_later(user: users(:family_admin)) }
   end
 
-  test "the publish lock refuses to run inside a caller's transaction" do
-    import = imports(:transaction)
-
-    Import.transaction do
-      assert_raises(Import::PublishLockInTransaction) { import.with_publish_lock { flunk "ran inside a transaction" } }
-    end
-  end
-
   test "a failed enqueue puts the import back as it was in the database" do
     import = imports(:transaction)
     import.stubs(:publishable?).returns(true)
@@ -63,28 +55,6 @@ class ImportTest < ActiveSupport::TestCase
 
     error = assert_raises(Import::PublishNotAllowedError) { import.publish_later(user: guest) }
     assert_equal :guest_categories_or_tags, error.reason
-  end
-
-  test "the publish lock is released when setting it up fails after taking it" do
-    import = imports(:transaction)
-    import.stubs(:backend_pid).raises(ActiveRecord::QueryCanceled, "canceled")
-
-    assert_raises(ActiveRecord::QueryCanceled) { import.with_publish_lock { flunk "ran without a lock session" } }
-
-    held = Import.connection.select_value(Import.sanitize_sql_array([ <<~SQL.squish, Import::PUBLISH_LOCK_NAMESPACE, import.id.to_s ]))
-      SELECT count(*) FROM pg_locks
-      WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted AND objsubid = 2
-        AND classid = ? AND objid::bigint = (hashtext(?)::bigint & 4294967295)
-    SQL
-    assert_equal 0, held
-  end
-
-  test "the publish lock gives up instead of waiting for good" do
-    import = imports(:transaction)
-    Import.stubs(:publish_lock_wait).returns(0)
-    Import.lease_connection.stubs(:select_value).with(regexp_matches(/pg_try_advisory_lock/)).returns(false)
-
-    assert_raises(Import::PublishBusyError) { import.with_publish_lock { flunk "ran without the lock" } }
   end
 
   test "publish skips imports in terminal statuses" do

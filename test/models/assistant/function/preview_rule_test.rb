@@ -140,9 +140,8 @@ class Assistant::Function::PreviewRuleTest < ActiveSupport::TestCase
     assert_equal "invalid_arguments", @fn.call(definition.merge("rule_id" => rule.id))[:error]
   end
 
-  # A member's own draft is restricted to the member (Rule#restrict_to_editor), so this
-  # previews a saved family-wide rule.
-  test "counts the whole family for a family-wide rule but samples only accounts the user can see" do
+  # A member's own draft acts for them, so this previews a saved family rule.
+  test "counts the whole family for a family rule but samples only accounts the user can see" do
     create_transaction(name: "ZXQ Coffee Shop", account: accounts(:other_asset))
     visible = create_transaction(name: "ZXQ Coffee Bar", account: accounts(:depository))
     rule = @family.rules.create!(resource_type: "transaction", **rule_attributes)

@@ -5,7 +5,7 @@ class Import::UploadsController < ApplicationController
 
   before_action :set_import
   before_action :require_import_editable!, only: :update
-  around_action :lock_changeable_import, only: :update
+  before_action :require_changeable_import, only: :update
 
   def show
   end
