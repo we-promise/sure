@@ -46,6 +46,11 @@ module Provider::SecurityConcept
   end
   Price = Data.define(:symbol, :date, :price, :currency, :exchange_operating_mic)
 
+  # `SecurityInfo#constituents` when the provider sent a holdings block it
+  # cannot read. Distinct from nil, which means the fund lists nothing: an
+  # unreadable block keeps the stored holdings and leaves the fund unstamped.
+  UNREADABLE_CONSTITUENTS = :unreadable
+
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     raise NotImplementedError, "Subclasses must implement #search_securities"
   end

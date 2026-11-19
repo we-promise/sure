@@ -122,9 +122,13 @@ class Provider::YourProvider < Provider
     end
   end
 
-  # Required if fetch_security_info returns sector or industry: the importers
-  # only ask a provider for a classification when it declares it can answer.
-  # Defaults to false.
+  # Return true when fetch_security_info answers a classification worth a
+  # request of its own: the importers then ask for it even when the security
+  # already has a name and logo, and only then may `kind` set the asset class
+  # and claim `provider` as its source. Sector and industry returned anyway are
+  # stored either way. Return false when the call is costly or often refused:
+  # Alpha Vantage returns sector and industry, but OVERVIEW is premium, so it
+  # declares false. Defaults to false.
   def supplies_classification?
     true
   end
@@ -195,7 +199,14 @@ All methods must return these exact types (wrapped in `with_provider_response`):
 ```ruby
 SecurityConcept::Security    = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency)
 SecurityConcept::SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
-                                            :sector, :industry, :constituents) # these three default to nil
+                                            :sector, :industry, :constituents, :fund_weights) do
+  # sector, industry, constituents and fund_weights are optional and default
+  # to nil; the initialize override is what supplies the defaults
+  def initialize(symbol:, name:, links:, logo_url:, description:, kind:, exchange_operating_mic:,
+                 sector: nil, industry: nil, constituents: nil, fund_weights: nil)
+    super
+  end
+end
 SecurityConcept::Price       = Data.define(:symbol, :date, :price, :currency, :exchange_operating_mic)
 ```
 
