@@ -84,14 +84,14 @@ module Api
       end
 
       def login
-        user = User.find_by_email_with_legacy_fallback(params[:email])
+        user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
         unless local_login_permitted_for?(user)
           render json: { error: "Local login is disabled. Please use SSO." }, status: :forbidden
           return
         end
 
-        if user&.authenticate(params[:password])
+        if user
           unless user.active?
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return

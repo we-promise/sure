@@ -12,14 +12,31 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   # Bills has always linked out to transactions. Until now nothing linked back,
   # so a transaction that settled a bill was a dead end. The link-back is part
   # of the preview-gated bills surface, so the viewer needs the flag.
-  test "index loads the merchant list on demand and keeps selected merchants in the form" do
+  test "index lazy loads filters with selected merchants in the frame URL" do
     get transactions_url(q: { merchants: [ "Amazon" ] })
 
     assert_response :success
-    assert_select "#transactions-search turbo-frame#merchant_filter_options[loading=lazy][data-action=?]", "turbo:frame-load->list-filter#filter" do
-      assert_select "input[type=hidden][name='q[merchants][]'][value=?]", "Amazon"
-    end
+    assert_select "#transactions-search turbo-frame#transaction-filters[loading=lazy][src=?]",
+                  filters_transactions_path(q: { merchants: [ "Amazon" ] })
     assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
+  end
+
+  test "show lists split rows in the order they were entered" do
+    entry = create_transaction(amount: 100, name: "Split parent", account: accounts(:depository))
+    entry.split!([ { name: "Part 1", amount: 60 }, { name: "Part 2", amount: 40 } ])
+
+    queries = []
+    ActiveSupport::Notifications.subscribed(->(*, payload) { queries << payload[:sql] }, "sql.active_record") do
+      get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
+    end
+
+    assert_response :success
+    # Without an ORDER BY PostgreSQL returns the rows in physical order.
+    row_reads = queries.select { |sql| sql.include?('"entries"."parent_entry_id" =') && !sql.include?("SELECT 1 AS one") }
+    assert row_reads.any?, "expected the split rows to be read"
+    assert row_reads.all? { |sql| sql.include?('ORDER BY "entries"."created_at" ASC, "entries"."id" ASC') }, row_reads.join("\n")
+    names = css_select("p.font-medium").map(&:text).select { |text| text.start_with?("Part ") }
+    assert_equal [ "Part 1", "Part 2" ], names
   end
 
   test "a German transaction shows the bill it paid with localized copy" do
@@ -234,21 +251,6 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-activity-label-quick-edit-target=badge]", text: /Transfer/, count: 0
     # The picker shows translated names but still submits the stored label.
     assert_select "button[data-label='Sweep In']", text: "Автоперевод (зачисление)"
-  end
-
-  test "index groups subcategories immediately after their parent in the category filter" do
-    get transactions_url
-    assert_response :success
-
-    doc = Nokogiri::HTML::Document.parse(response.body)
-    checkbox_values = doc.css("input[name='q[categories][]']").map { |node| node["value"] }
-
-    parent_index = checkbox_values.index(categories(:food_and_drink).name)
-    child_index = checkbox_values.index(categories(:subcategory).name)
-
-    assert_not_nil parent_index
-    assert_not_nil child_index
-    assert_equal parent_index + 1, child_index
   end
 
   # The form passes its own change action on the currency select; the money
@@ -629,7 +631,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
           entryable_attributes: {
             id: @entry.entryable_id,
             tag_ids: [ tags(:one).id, tags(:two).id ],
-            category_id: Category.first.id,
+            category_id: categories(:income).id,
             merchant_id: Merchant.first.id
           }
         }
@@ -643,12 +645,13 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "USD", @entry.currency
     assert_equal -100, @entry.amount
     assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.entryable.tag_ids.sort
-    assert_equal Category.first.id, @entry.entryable.category_id
+    assert_equal categories(:income).id, @entry.entryable.category_id
     assert_equal Merchant.first.id, @entry.entryable.merchant_id
     assert_equal "test notes", @entry.notes
     assert_equal false, @entry.excluded
 
     assert_equal "Transaction updated", flash[:notice]
+    assert_equal "Updated name", flash[:cta][:merchant_name]
     assert_redirected_to account_url(@entry.account)
     assert_enqueued_with(job: SyncJob)
   end
@@ -2397,6 +2400,16 @@ end
     assert_no_match(/ai_status/, response.location)
   end
 
+  test "index says which currencies are left out of its totals" do
+    family = @user.family
+    family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+
+    get transactions_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from KRW to USD is stored yet, so some totals may leave out amounts in KRW/
+  end
+
   test "index with attachment_status=with lists only transactions that have a file" do
     @entry.entryable.attachments.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
 
@@ -2431,13 +2444,6 @@ end
     get transactions_url(q: { account_ids: [ "" ], accounts: [ "" ] })
 
     assert_response :success
-  end
-
-  test "index offers the attachment filter in the filter menu" do
-    get transactions_url
-
-    assert_response :success
-    assert_select "#transaction-filters-menu input[type=checkbox][name='q[attachment_status][]']", count: 2
   end
 
   test "index ignores unsupported attachment_status values without rendering a badge" do

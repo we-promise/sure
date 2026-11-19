@@ -271,6 +271,54 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert_operator ranges.first.last - ranges.last.first, :>=, 120.days
   end
 
+  test "the chunked history import stays within the Bridge limit after a fall DST change" do
+    Time.use_zone("America/Los_Angeles") do
+      travel_to Time.zone.parse("2026-11-15 12:00") do
+        link_simplefin_account("sf_dst_1")
+        provider, ranges = recording_provider(account_id: "sf_dst_1")
+
+        SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_with_chunked_history)
+
+        assert_operator ranges.size, :>, 1
+        ranges.each { |from, to| assert_operator to - from, :<=, 45 * 86_400 }
+      end
+    end
+  end
+
+  test "the default chunked lookback is reachable within the request cap across a DST change" do
+    Time.use_zone("America/Los_Angeles") do
+      travel_to Time.zone.parse("2026-03-07 12:00") do
+        provider, ranges = recording_provider
+        Rails.logger.stubs(:info)
+        Rails.logger.expects(:info).with(regexp_matches(/reached target start date/)).once
+        importer = SimplefinItem::Importer.new(@item, simplefin_provider: provider)
+        # Every chunk adds one transaction, so only the cap or the target ends the walk.
+        calls = 0
+        importer.define_singleton_method(:count_linked_transactions) { (calls += 1) / 2 }
+
+        importer.send(:import_with_chunked_history)
+
+        assert_equal 8, ranges.size
+        assert_equal 8 * 45 * 86_400, ranges.first.last - ranges.last.first
+        ranges.each { |from, to| assert_operator to - from, :<=, 45 * 86_400 }
+      end
+    end
+  end
+
+  test "a regular sync stays within the Bridge limit after a fall DST change" do
+    Time.use_zone("America/Los_Angeles") do
+      travel_to Time.zone.parse("2026-11-15 12:00") do
+        @item.stubs(:last_synced_at).returns(500.days.ago)
+        provider, ranges = recording_provider
+
+        SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_regular_sync)
+
+        assert_operator ranges.size, :>, 1
+        ranges.each { |from, to| assert_operator to - from, :<=, 45 * 86_400 }
+      end
+    end
+  end
+
   private
 
     # A provider that records each dated request's range. Without an account_id

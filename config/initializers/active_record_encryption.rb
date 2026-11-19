@@ -10,8 +10,73 @@ require Rails.root.join("lib/active_record_encryption_config").to_s
 # `User.find_by(email:)` stop matching not-yet-backfilled rows entirely.
 # Both default to false upstream and are meant exactly for this transition
 # period; see https://guides.rubyonrails.org/active_record_encryption.html.
-Rails.application.config.active_record.encryption.support_unencrypted_data = true
-Rails.application.config.active_record.encryption.extend_queries = true
+#
+# Gated on ActiveRecordEncryptionConfig.backfill_completed? (see #3214)
+# instead of being unconditional: leaving this on forever means a plaintext
+# value that lands in an encrypted column later - a bug, a bad migration, a
+# manual DB edit - would be silently accepted instead of raising, quietly
+# undermining the integrity guarantee encryption exists to provide. The flag
+# it checks is a versioned Setting, flipped by security:backfill_encryption
+# only on a clean (zero-failure), non-dry-run completion, and defaults to
+# "not complete" (fallback enabled) whenever it can't be read - fresh
+# installs, pre-migration boots, or DB errors - so this preserves the
+# original crash-safe behavior for anyone who hasn't backfilled yet.
+#
+# MUST stay a plain, synchronous call here (not deferred into
+# after_initialize or any other lazy hook): ActiveRecord's own
+# "active_record_encryption.configuration" railtie initializer registers an
+# ActiveSupport.on_load(:active_record_encryption) callback that snapshots
+# Rails.application.config.active_record.encryption.* into the real,
+# long-lived ActiveRecord::Encryption.config object the FIRST time anything
+# touches ActiveRecord::Base's connection (verified empirically: it's the
+# ActiveRecord::Base.connection call inside backfill_completed? itself that
+# fires this, since establishing a connection pulls in AR's encrypted-type
+# machinery). That same connection touch also fires the separate
+# ActiveSupport.on_load(:active_record) hook AR's railtie uses to decide,
+# ONCE, whether to install ExtendedDeterministicQueries/
+# ExtendedDeterministicUniquenessValidator support - based on whatever
+# extend_queries was at that moment (still unset, since this all happens
+# before this statement gets to set it). Setting
+# Rails.application.config.active_record.encryption.* afterwards (below) is
+# necessary for anything that reads it directly, but insufficient on its
+# own for either of these: ActiveRecord::Encryption.config is patched
+# directly so the encryption engine picks up the right value regardless of
+# exactly when the snapshot fired, and install_support is called directly
+# (idempotent - Module#prepend/include are no-ops if already applied) so
+# deterministic queries/uniqueness validations against legacy plaintext
+# rows actually work when extend_queries ends up true, instead of silently
+# never getting the query-rewriting support installed. Deferring the whole
+# block into after_initialize does NOT fix any of this - the snapshot
+# always happens before after_initialize runs (also verified empirically) -
+# and reading `Setting` (an autoloaded app/* constant) directly here isn't
+# possible in the first place: Rails autoloading isn't available yet while
+# config/initializers/*.rb are still being evaluated. See the comment on
+# ActiveRecordEncryptionConfig.backfill_completed? (lib/
+# active_record_encryption_config.rb) for why it reads the `settings` table
+# via raw SQL instead.
+#
+# The same premature-snapshot problem also applies to the actual encryption
+# keys (primary_key/deterministic_key/key_derivation_salt) configured further
+# below in this file: they're resolved from ENV/SECRET_KEY_BASE/credentials
+# AFTER the backfill_completed? call above already fired the snapshot, so
+# Rails.application.config.active_record.encryption.* alone would again be
+# necessary-but-insufficient - see ActiveRecordEncryptionConfig.apply_keys!,
+# used below, which patches ActiveRecord::Encryption.config directly for the
+# keys exactly like support_unencrypted_data/extend_queries are patched here.
+# (Rails credentials configured in config/application.rb are unaffected: that
+# file loads before this initializer runs, so its assignment lands in the
+# Rails config before backfill_completed?'s snapshot ever fires.)
+encryption_fallback_enabled = !ActiveRecordEncryptionConfig.backfill_completed?
+Rails.application.config.active_record.encryption.support_unencrypted_data = encryption_fallback_enabled
+Rails.application.config.active_record.encryption.extend_queries = encryption_fallback_enabled
+if defined?(ActiveRecord::Encryption)
+  ActiveRecord::Encryption.config.support_unencrypted_data = encryption_fallback_enabled
+  ActiveRecord::Encryption.config.extend_queries = encryption_fallback_enabled
+  if encryption_fallback_enabled
+    ActiveRecord::Encryption::ExtendedDeterministicQueries.install_support
+    ActiveRecord::Encryption::ExtendedDeterministicUniquenessValidator.install_support
+  end
+end
 
 # KNOWN LIMITATION: extend_queries does not reliably extend deterministic
 # lookups to match legacy plaintext data for attributes that combine
@@ -105,23 +170,21 @@ end
 
 # If all environment variables are present, use them (works for both managed and self-hosted)
 if ActiveRecordEncryptionConfig.complete_env?
-  Rails.application.config.active_record.encryption.primary_key = primary_key
-  Rails.application.config.active_record.encryption.deterministic_key = deterministic_key
-  Rails.application.config.active_record.encryption.key_derivation_salt = key_derivation_salt
+  ActiveRecordEncryptionConfig.apply_keys!(
+    primary_key: primary_key, deterministic_key: deterministic_key, key_derivation_salt: key_derivation_salt
+  )
 elsif Rails.application.config.app_mode.self_hosted? && !Rails.application.credentials.active_record_encryption.present?
   # For self-hosted instances without credentials or env vars, auto-generate keys
   # Use SECRET_KEY_BASE as the seed for deterministic key generation
   # This ensures keys are consistent across container restarts
-  secret_base = Rails.application.secret_key_base
-
-  # Generate deterministic keys from the secret base
-  primary_key = Digest::SHA256.hexdigest("#{secret_base}:primary_key")[0..63]
-  deterministic_key = Digest::SHA256.hexdigest("#{secret_base}:deterministic_key")[0..63]
-  key_derivation_salt = Digest::SHA256.hexdigest("#{secret_base}:key_derivation_salt")[0..63]
-
-  # Configure Active Record encryption
-  Rails.application.config.active_record.encryption.primary_key = primary_key
-  Rails.application.config.active_record.encryption.deterministic_key = deterministic_key
-  Rails.application.config.active_record.encryption.key_derivation_salt = key_derivation_salt
+  ActiveRecordEncryptionConfig.apply_keys!(**ActiveRecordEncryptionConfig.derived_keys(Rails.application.secret_key_base))
 end
 # If none of the above conditions are met, credentials from application.rb will be used
+
+# During a key rotation, data encrypted with the keys derived from an old
+# SECRET_KEY_BASE stays readable through a previous scheme. Set on the live
+# engine config: the snapshot described above has already fired, and
+# `previous=` only appends, so setting the Rails config as well would add
+# every scheme twice if the snapshot ran later.
+previous_schemes = ActiveRecordEncryptionConfig.previous_schemes
+ActiveRecord::Encryption.config.previous = previous_schemes if previous_schemes.any?

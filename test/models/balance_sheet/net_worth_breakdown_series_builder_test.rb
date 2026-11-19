@@ -108,6 +108,20 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilderTest < ActiveSupport::TestCase
     assert_not_equal before, after
   end
 
+  # An account with no rate is left out of the series. A rate stored later,
+  # by the market data import or a provider lookup on the balance sheet,
+  # must reach the chart as it reaches the totals beside it.
+  test "cache key changes when an exchange rate is stored" do
+    period = Period.last_30_days
+    before = BalanceSheet::NetWorthBreakdownSeriesBuilder.new(@family).send(:cache_key, period)
+    travel 1.second do
+      ExchangeRate.create!(from_currency: "KRW", to_currency: @family.currency, date: Date.current, rate: 0.00075)
+    end
+    after = BalanceSheet::NetWorthBreakdownSeriesBuilder.new(@family.reload).send(:cache_key, period)
+
+    assert_not_equal before, after
+  end
+
   test "cache key changes through the account deletion lifecycle and does not revert" do
     period = Period.last_30_days
 

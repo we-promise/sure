@@ -6,6 +6,9 @@ class SimplefinItem::Importer
   # SimpleFIN Bridge refuses a request whose date range is longer than this
   # ("Requested date range exceeds recommended range of 45 days").
   MAX_REQUEST_DAYS = 45
+  # The Bridge measures the limit in elapsed time. `n.days` keeps the wall-clock
+  # time across a DST change, which makes a window 45 days plus an hour long.
+  MAX_REQUEST_SECONDS = MAX_REQUEST_DAYS * 86_400
 
   attr_reader :simplefin_item, :simplefin_provider, :sync
 
@@ -400,8 +403,8 @@ class SimplefinItem::Importer
       #   We do NOT use the small initial lookback (7 days) here, because that
       #   would clip the very first chunk to ~1 week and prevent further history.
       user_start_date = simplefin_item.sync_start_date
-      implied_max_lookback_days = chunk_size_days * max_requests
-      default_start_date = implied_max_lookback_days.days.ago
+      # Measured in elapsed time like each chunk, so the cap always reaches it.
+      default_start_date = Time.current - (MAX_REQUEST_SECONDS * max_requests)
       target_start_date = user_start_date ? user_start_date.beginning_of_day : default_start_date
 
       # Enforce maximum 1-year lookback since SimpleFIN rarely provides more than 90 days
@@ -431,7 +434,7 @@ class SimplefinItem::Importer
         chunk_count += 1
 
         # Calculate chunk start date - always use exactly chunk_size_days to stay within limits
-        chunk_start_date = chunk_end_date - chunk_size_days.days
+        chunk_start_date = chunk_end_date - (chunk_size_days * 86_400)
 
         # Don't go back further than the target start date
         if chunk_start_date < target_start_date
@@ -588,7 +591,7 @@ class SimplefinItem::Importer
       windows = []
       window_start = start_date
       while window_start < end_date
-        window_end = [ window_start + MAX_REQUEST_DAYS.days, end_date ].min
+        window_end = [ window_start + MAX_REQUEST_SECONDS, end_date ].min
         windows << [ window_start, window_end ]
         window_start = window_end
       end

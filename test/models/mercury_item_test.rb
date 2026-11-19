@@ -88,9 +88,51 @@ class MercuryItemTest < ActiveSupport::TestCase
     assert_instance_of MercuryItem::Syncer, syncer
   end
 
-  test "declares token as encrypted" do
+  test "declares token and raw payloads as encrypted" do
     skip "Encryption not configured" unless MercuryItem.encryption_ready?
 
-    assert_includes MercuryItem.encrypted_attributes.map(&:to_s), "token"
+    encrypted = Array(MercuryItem.encrypted_attributes).map(&:to_s)
+    assert_includes encrypted, "token"
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_institution_payload"
+  end
+
+  # base_url decides where the app sends this connection's credentials, so a
+  # value pointing anywhere else is refused at save time and ignored at read
+  # time. Both layers matter: rows can be written by console or raw SQL.
+  test "refuses a base_url that is not the provider's own host" do
+    [
+      "https://evil.example.com/api/v1",
+      "http://169.254.169.254/",
+      "https://localhost/api/v1"
+    ].each do |value|
+      @mercury_item.base_url = value
+
+      assert_not @mercury_item.valid?, "#{value} must be refused"
+      assert_includes @mercury_item.errors.attribute_names, :base_url
+    end
+  end
+
+  test "a value that slipped past validation is not used" do
+    @mercury_item.update_column(:base_url, "https://evil.example.com/api/v1")
+
+    assert_equal Provider::Mercury::DEFAULT_BASE_URL, @mercury_item.reload.effective_base_url
+  end
+
+  # Rows saved before the allow-list existed may hold a value it now refuses.
+  # The read-time fallback already keeps them safe, so they must not make every
+  # later save of the row fail (status changes during a sync, a rename).
+  test "a stored value the allow-list refuses does not block unrelated saves" do
+    @mercury_item.update_column(:base_url, "https://evil.example.com/api/v1")
+
+    assert @mercury_item.reload.update(name: "Renamed")
+    assert_equal Provider::Mercury::DEFAULT_BASE_URL, @mercury_item.effective_base_url
+  end
+
+  test "an allowed alternative host is kept" do
+    @mercury_item.base_url = "https://api-sandbox.mercury.com/api/v1"
+
+    assert @mercury_item.valid?
+    assert_equal "https://api-sandbox.mercury.com/api/v1", @mercury_item.effective_base_url
   end
 end

@@ -92,6 +92,10 @@ class Entry < ApplicationRecord
   # Once included again, a later exclusion (by hand or by a rule) is not the sync's.
   after_save :forget_auto_exclusion, if: -> { saved_change_to_excluded?(to: false) }
 
+  # Split rows in the order they were entered. Without an ORDER BY PostgreSQL
+  # returns them in physical order, which shifts as rows are rewritten.
+  scope :in_split_order, -> { order(:created_at, :id) }
+
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
   }
@@ -154,6 +158,28 @@ class Entry < ApplicationRecord
       )
     SQL
   }
+
+  # Balance updates: reconciliation valuations. On linked accounts most of them
+  # are the provider's daily balance, kept as a waypoint by
+  # Account::CurrentBalanceManager#preserve_anchor_as_reconciliation_if_stale.
+  # Opening and current anchors are not included.
+  scope :balance_updates, -> {
+    where(entryable_type: "Valuation", entryable_id: Valuation.reconciliation.select(:id))
+  }
+
+  scope :excluding_balance_updates, -> {
+    where(<<~SQL.squish)
+      entries.entryable_type != 'Valuation'
+      OR NOT EXISTS (
+        SELECT 1 FROM valuations v
+        WHERE v.id = entries.entryable_id AND v.kind = 'reconciliation'
+      )
+    SQL
+  }
+
+  # The entries in `ids` and the children of any of them that was split, which
+  # stand in for their excluded parent wherever money is counted.
+  scope :with_split_children, ->(ids) { where(id: ids).or(where(parent_entry_id: ids)) }
 
   # Future-dated entries haven't happened yet, so "actual" reporting (budgets,
   # income statement, insights) should not count them until their date

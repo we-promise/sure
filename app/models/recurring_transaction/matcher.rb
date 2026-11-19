@@ -417,16 +417,12 @@ class RecurringTransaction
       def amount_score(series, expected, actual)
         return 0.30 if (actual - expected).abs < BigDecimal("0.01")
 
-        tolerance_pct = [ series.amount_tolerance_pct, learned_tolerance(series) ].max
+        tolerance_pct = series.effective_amount_tolerance_pct
         band = expected.abs * (tolerance_pct / BigDecimal("100"))
         distance = (actual - expected).abs
         return nil if band.zero? || distance > band
 
         (0.25 - (distance / band) * 0.10).round(4)
-      end
-
-      def learned_tolerance(series)
-        BigDecimal((series.matcher_hints["learned_tolerance_pct"] || 0).to_s)
       end
 
       # 0.20 on the due date, decaying linearly to 0.05 at the window edge.
