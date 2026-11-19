@@ -124,6 +124,26 @@ RSpec.describe 'API V1 Users', type: :request do
   end
 
   path '/api/v1/users/me' do
+    get 'Get current user' do
+      tags 'Users'
+      description 'Returns the authenticated user together with the resolved number formatting rules ' \
+                  'they should use for amounts. Requires read scope.'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+
+      response '200', 'current user returned' do
+        schema '$ref' => '#/components/schemas/CurrentUserResponse'
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        let(:'X-Api-Key') { 'invalid-key' }
+
+        run_test!
+      end
+    end
+
     delete 'Delete account' do
       tags 'Users'
       description 'Permanently deactivates the current user account and all associated data. ' \

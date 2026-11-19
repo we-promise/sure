@@ -27,7 +27,7 @@
                     <% end %>
                   </span>
                   <span class="text-xs text-secondary">
-                    <%= eba.currency %> • <%= t(".balance") %>: <%= number_to_currency((eba.current_balance || 0), unit: eba.currency) %>
+                    <%= eba.currency %> • <%= t(".balance") %>: <%= format_money(eba.current_balance || 0, currency: eba.currency, unit: eba.currency) %>
                   </span>
                 </div>
               </label>

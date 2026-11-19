@@ -36,12 +36,19 @@ module Localize
       locale_sym = locale.to_sym
       return unless I18n.available_locales.include?(locale_sym)
 
-      # Auto-save detected locale to user profile (once per user, not per session)
-      if Current.user.present? && Current.user.locale.blank?
+      # Auto-save detected locale to user profile (once per user, not per session).
+      # API requests must not change the saved preference.
+      if persist_detected_locale? && Current.user.present? && Current.user.locale.blank?
         Current.user.update_column(:locale, locale_sym.to_s)
       end
 
       locale_sym
+    end
+
+    # Web requests persist the language detected from Accept-Language. API
+    # clients send their own header, so that value must stay per-request.
+    def persist_detected_locale?
+      true
     end
 
     def accept_language_top_locale

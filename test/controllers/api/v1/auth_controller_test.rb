@@ -288,6 +288,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal user.email, response_data["user"]["email"]
     assert_equal user.ui_layout, response_data["user"]["ui_layout"]
     assert_equal user.ai_enabled?, response_data["user"]["ai_enabled"]
+    assert_equal "language", response_data["user"]["amount_format"]["key"]
 
     # OAuth token assertions
     assert response_data["access_token"].present?
@@ -793,6 +794,44 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
   test "should require authentication when enabling ai" do
     patch "/api/v1/auth/enable_ai", headers: { "Content-Type" => "application/json" }
+
+    assert_response :unauthorized
+  end
+
+  test "sso exchange returns the user amount format" do
+    user = users(:family_admin)
+    user.update!(amount_format: "indian")
+    code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso:#{code}", {
+      access_token: "access-token",
+      refresh_token: "refresh-token",
+      token_type: "Bearer",
+      expires_in: 3600,
+      created_at: Time.current.to_i,
+      user_id: user.id
+    }, expires_in: 5.minutes)
+
+    post "/api/v1/auth/sso_exchange", params: { code: code }
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal user.id, body.dig("user", "id")
+    assert_equal "indian", body.dig("user", "amount_format", "key")
+    assert_equal "indian", body.dig("user", "amount_format", "grouping")
+  end
+
+  test "sso exchange rejects a code whose user no longer exists" do
+    code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso:#{code}", {
+      access_token: "access-token",
+      refresh_token: "refresh-token",
+      token_type: "Bearer",
+      expires_in: 3600,
+      created_at: Time.current.to_i,
+      user_id: SecureRandom.uuid
+    }, expires_in: 5.minutes)
+
+    post "/api/v1/auth/sso_exchange", params: { code: code }
 
     assert_response :unauthorized
   end

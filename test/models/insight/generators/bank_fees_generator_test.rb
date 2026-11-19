@@ -102,7 +102,8 @@ class Insight::Generators::BankFeesGeneratorTest < ActiveSupport::TestCase
     fee(@checking, 8, 20.days.ago)
     fee(@checking, 1, 100.days.ago)
 
-    assert_equal "$16.00", generate_for(@checking).facts[:amount]
+    # Insight amounts follow the family locale, not the active request locale.
+    assert_equal "16,00 $", generate_for(@checking).facts[:amount]
   end
 
   # Transfer fees create the category in the locale of whoever made the

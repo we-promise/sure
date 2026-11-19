@@ -1778,6 +1778,59 @@ class UserTest < ActiveSupport::TestCase
     assert_equal({}, @user.reload.manual_account_order)
   end
 
+  test "amount format defaults to language" do
+    user = users(:family_member)
+
+    assert_equal "language", user.amount_format
+    assert_equal "language", user.effective_amount_format
+  end
+
+  test "amount format accepts every supported override" do
+    User::AMOUNT_FORMATS.each do |format|
+      @user.amount_format = format
+
+      assert @user.valid?, "expected #{format} to be valid: #{@user.errors.full_messages.to_sentence}"
+      assert_equal format, @user.effective_amount_format
+    end
+  end
+
+  test "amount format rejects unknown values" do
+    @user.amount_format = "roman"
+
+    assert_not @user.valid?
+    assert_includes @user.errors[:amount_format], "is not included in the list"
+  end
+
+  test "amount format normalizes blank values to language" do
+    @user.amount_format = ""
+    assert_equal "language", @user.amount_format
+    assert @user.valid?
+
+    @user.amount_format = nil
+    assert_equal "language", @user.amount_format
+    assert @user.valid?
+  end
+
+  test "amount format persists language for blank values" do
+    @user.update!(amount_format: "indian")
+
+    @user.amount_format = ""
+    assert @user.save!
+    assert_equal "language", @user.reload.amount_format
+
+    @user.update!(amount_format: "european")
+    @user.amount_format = nil
+    assert @user.save!
+    assert_equal "language", @user.reload.amount_format
+  end
+
+  test "effective amount format falls back to language for an unknown stored value" do
+    @user.update_column(:amount_format, "language")
+    @user.stubs(:amount_format).returns("roman")
+
+    assert_equal "language", @user.effective_amount_format
+  end
+
   test "reports biggest expenses limit defaults to 10 and only returns an offered choice" do
     @user.update_columns(preferences: {})
     assert_equal 10, @user.reports_biggest_expenses_limit

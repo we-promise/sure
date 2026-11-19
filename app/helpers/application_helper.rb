@@ -203,7 +203,16 @@ module ApplicationHelper
   def format_money(number_or_money, options = {})
     return nil unless number_or_money
 
-    Money.new(number_or_money).format(options)
+    options = options.dup
+    currency = options.delete(:currency) || Money.default_currency
+    Money.new(number_or_money, currency).format(options)
+  rescue Money::Currency::UnknownCurrencyError
+    # Provider payloads can carry codes that are missing from
+    # config/currencies.yml. Show the amount with the raw code rather than
+    # failing the whole setup page.
+    amount = number_or_money.is_a?(Money) ? number_or_money.amount : number_or_money
+    fallback_options = options.except(:amount_format, :indian_grouping)
+    number_to_currency(amount, fallback_options.merge(unit: fallback_options[:unit].presence || currency, format: "%n %u"))
   end
 
   # Format each native-currency total independently, preserving order and transfer exclusions.
