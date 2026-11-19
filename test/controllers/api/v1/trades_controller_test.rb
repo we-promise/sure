@@ -1159,7 +1159,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not Trade.exists?(trade.id)
   end
-  
+
 
   test "a sale that names its lot reports the acquiring trade, in show and index" do
     @investment_account.update!(cost_basis_method: "fifo")
