@@ -1,6 +1,9 @@
 ---
 de:
   trades:
+    sale_limit:
+      exceeds_holding: "%{qty} %{ticker} können nicht verkauft werden: Das Konto hält am %{date} nur %{available} Stück."
+      exceeds_later_holding: "%{qty} %{ticker} können nicht verkauft werden: An diesem Datum sind höchstens %{available} Stück möglich, sonst fällt der Bestand am %{date} unter null."
     form:
       account: Überweisungskonto (optional)
       account_prompt: Konto suchen
@@ -21,6 +24,9 @@ de:
       dividend_requires_security: Für Dividenden ist ein Wertpapier erforderlich
       fee: Transaktionsgebühr
       trade_requires_security: Für Käufe und Verkäufe ist ein Wertpapier (Ticker) nötig
+      held_security: "%{name} (%{ticker}), %{qty} Stück im Bestand"
+      held_security_prompt: Bestand wählen
+      held_security_hint: Nicht dabei? Lege zuerst den Kauf an.
     header:
       buy: Kaufen
       sell: Verkaufen

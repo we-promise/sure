@@ -145,9 +145,14 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
-  # The below-zero warning speaks wherever the holdings tab is translated.
-  def test_negative_position_keys_exist_wherever_the_holdings_tab_is_translated
+  # The sale picker and the sale limit speak wherever the trade form is
+  # translated, and the below-zero warning wherever the holdings tab is.
+  def test_sale_limit_keys_exist_wherever_their_siblings_are_translated
     {
+      "trades.form.trade_requires_security" => %w[
+        trades.form.held_security trades.form.held_security_prompt trades.form.held_security_hint
+        trades.sale_limit.exceeds_holding trades.sale_limit.exceeds_later_holding
+      ],
       "holdings.index.new_holding" => %w[
         holdings.index.negative_position holdings.index.negative_positions_hint holdings.index.negative_positions_title
       ]

@@ -329,7 +329,7 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
         model: {
           type: "sell",
           date: Date.current,
-          ticker: "AAPL (NYSE)",
+          ticker: "AAPL|XNAS",
           qty: 10,
           price: 20,
           fee: 9.95,
@@ -412,7 +412,7 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
       post trades_url(account_id: @entry.account_id), params: {
         model: {
           type: "sell",
-          ticker: "AAPL (NYSE)",
+          ticker: "AAPL|XNAS",
           date: Date.current,
           currency: "USD",
           qty: 10,
@@ -428,6 +428,98 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Entry created", flash[:notice]
     assert_enqueued_with job: SyncJob
     assert_redirected_to account_url(created_entry.account)
+  end
+
+  test "the sale form lists what the account holds, with the quantity" do
+    get new_trade_url(account_id: @entry.account_id, type: "sell")
+
+    assert_response :success
+    assert_select "turbo-frame#sale_holdings select[name='model[security_id]'] option[value=?]", securities(:aapl).id, text: "Apple (AAPL), 10 held"
+    assert_select "input[name='model[manual_ticker]']", count: 0
+  end
+
+  test "the sale form lists holdings on the chosen date" do
+    get new_trade_url(account_id: @entry.account_id, type: "sell", date: 1.month.ago.to_date.iso8601)
+
+    assert_response :success
+    assert_select "input[name='model[date]'][value=?]", 1.month.ago.to_date.iso8601
+    assert_select "select[name='model[security_id]'] option[value=?]", securities(:aapl).id, count: 0
+  end
+
+  test "the sale form ignores an overlong date instead of failing" do
+    get new_trade_url(account_id: @entry.account_id, type: "sell", date: "2" * 129)
+
+    assert_response :success
+  end
+
+  test "a sale larger than the holding is refused and the sale form shows why" do
+    assert_no_difference [ "Entry.count", "Trade.count" ] do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: {
+          type: "sell",
+          date: Date.current,
+          security_id: securities(:aapl).id,
+          qty: 11,
+          price: 20,
+          currency: "USD"
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "holds only 10", response.body
+    assert_select "form[data-trade-type='sell']"
+    assert_select "select[name='model[security_id]'] option[selected][value=?]", securities(:aapl).id
+    assert_select "input[name='model[qty]'][value='11.0']"
+  end
+
+  test "the sale picker only accepts a security the account holds" do
+    assert_no_difference "Entry.count" do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: { type: "sell", date: Date.current, security_id: securities(:msft).id, qty: 1, price: 20, currency: "USD" }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "the sale picker accepts a security bought with a future date" do
+    security = Security.create!(ticker: "FUTBUY", name: "Future Buy")
+    account = Account.find(@entry.account_id)
+    account.entries.create!(
+      name: "Buy", date: 2.days.from_now.to_date, amount: 500, currency: "USD",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+
+    assert_difference "Trade.count", 1 do
+      post trades_url(account_id: account.id), params: {
+        model: { type: "sell", date: 3.days.from_now.to_date, security_id: security.id, qty: 5, price: 100, currency: "USD" }
+      }
+    end
+  end
+
+  test "picking a holding from the sale picker records the sale" do
+    assert_difference "Trade.count", 1 do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: { type: "sell", date: Date.current, security_id: securities(:aapl).id, qty: 4, price: 20, currency: "USD" }
+      }
+    end
+
+    assert_equal securities(:aapl), Trade.order(:created_at).last.security
+  end
+
+  test "editing a buy into a sale larger than the holding is refused" do
+    patch trade_url(@entry), params: {
+      entry: {
+        currency: "USD",
+        nature: "inflow",
+        entryable_attributes: { id: @entry.entryable_id, qty: 10, price: 20 }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_match "holds only 0", response.body
+    assert @entry.reload.trade.qty.positive?
   end
 
   test "unlock clears protection flags on user-modified entry" do

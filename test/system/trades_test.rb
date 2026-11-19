@@ -40,15 +40,14 @@ class TradesTest < ApplicationSystemTestCase
 
   test "can create sell transaction" do
     qty = 10
-    aapl = @account.holdings.find { |h| h.security.ticker == "AAPL" }
 
     open_new_trade_modal
 
     select "Sell", from: "Type"
     assert_selector "turbo-frame#modal form[data-trade-type='sell']"
 
-    fill_in "Ticker symbol", with: "AAPL"
-    fill_in "Date", with: Date.current
+    # A sale picks from what the account holds, with the quantity held.
+    select "Apple (AAPL), 10 held", from: "Ticker symbol"
     fill_in "Quantity", with: qty
     fill_in "model[price]", with: 215.33
 

@@ -1,0 +1,340 @@
+require "test_helper"
+
+class Trade::SaleLimitTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
+  setup do
+    @account = families(:empty).accounts.create!(
+      name: "Brokerage",
+      balance: 10_000,
+      cash_balance: 10_000,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    @security = Security.create!(ticker: "SLTEST", name: "Sale Limit Test")
+  end
+
+  test "allows a sale up to the quantity held" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+
+    sale = build_sale(qty: 10, date: Date.current)
+
+    assert Trade::SaleLimit.new(sale).validate
+    assert_empty sale.errors
+  end
+
+  test "blocks a sale larger than the quantity held and names what is available" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+
+    sale = build_sale(qty: 12, date: Date.current)
+    limit = Trade::SaleLimit.new(sale)
+
+    assert_not limit.validate
+    assert_equal 10, limit.available_qty
+    assert_includes sale.errors.full_messages.to_sentence, "holds only 10"
+  end
+
+  test "blocks a sale of a security the account never held" do
+    sale = build_sale(qty: 1, date: Date.current)
+
+    assert_not Trade::SaleLimit.new(sale).validate
+  end
+
+  test "a back-dated sale may not push a later day below zero" do
+    create_trade(@security, account: @account, qty: 10, date: 10.days.ago.to_date, price: 100)
+    create_trade(@security, account: @account, qty: -8, date: 2.days.ago.to_date, price: 100)
+
+    # Ten are held on the sale date, but only two are left after the later sale.
+    too_many = build_sale(qty: 5, date: 5.days.ago.to_date)
+    assert_not Trade::SaleLimit.new(too_many).validate
+    assert_includes too_many.errors.full_messages.to_sentence, "at most 2"
+
+    assert Trade::SaleLimit.new(build_sale(qty: 2, date: 5.days.ago.to_date)).validate
+  end
+
+  test "counts a split the way the holdings do" do
+    create_trade(@security, account: @account, qty: 10, date: 10.days.ago.to_date, price: 100)
+    Security::Split.create!(security: @security, ex_date: 5.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+
+    assert Trade::SaleLimit.new(build_sale(qty: 20, date: Date.current)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: 21, date: Date.current)).validate
+  end
+
+  test "an edited sale is checked without its own earlier quantity" do
+    create_trade(@security, account: @account, qty: 10, date: 10.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -4, date: 2.days.ago.to_date, price: 100)
+
+    sale.entryable.qty = -10
+    assert Trade::SaleLimit.new(sale).validate
+
+    sale.entryable.qty = -11
+    assert_not Trade::SaleLimit.new(sale).validate
+  end
+
+  test "making an oversold sale smaller is not blocked" do
+    create_trade(@security, account: @account, qty: 5, date: 10.days.ago.to_date, price: 100)
+    # Imported data can already be oversold; editing it down must stay possible.
+    sale = create_trade(@security, account: @account, qty: -8, date: 2.days.ago.to_date, price: 100)
+
+    sale.entryable.qty = -7
+    assert Trade::SaleLimit.new(sale).validate
+
+    sale.reload
+    sale.notes = "checked"
+    assert Trade::SaleLimit.new(sale).validate
+  end
+
+  test "moving a sale to another date is checked again" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -10, date: 2.days.ago.to_date, price: 100)
+
+    sale.date = 8.days.ago.to_date
+
+    assert_not Trade::SaleLimit.new(sale).validate
+  end
+
+  test "turning a buy into a sale is checked" do
+    buy = create_trade(@security, account: @account, qty: 3, date: 2.days.ago.to_date, price: 100)
+
+    buy.entryable.qty = -3
+
+    assert_not Trade::SaleLimit.new(buy).validate
+  end
+
+  test "units moved out under any label are checked, not only sales" do
+    %w[Transfer Sweep\ Out].each do |label|
+      outflow = build_sale(qty: 5, date: Date.current)
+      outflow.entryable.investment_activity_label = label
+
+      assert_not Trade::SaleLimit.new(outflow).validate, label
+    end
+  end
+
+  test "a back-dated sale before a split is compared in the units of its date" do
+    create_trade(@security, account: @account, qty: 10, date: 10.days.ago.to_date, price: 100)
+    Security::Split.create!(security: @security, ex_date: 5.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+    create_trade(@security, account: @account, qty: -16, date: 2.days.ago.to_date, price: 50)
+
+    # 20 after the split minus 16 leaves 4, which is 2 in pre-split units.
+    assert Trade::SaleLimit.new(build_sale(qty: 2, date: 7.days.ago.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: 3, date: 7.days.ago.to_date)).validate
+  end
+
+  test "a back-dated sale of the whole position before a 2-for-3 reverse split is allowed" do
+    create_trade(@security, account: @account, qty: 30, date: 10.days.ago.to_date, price: 100)
+    Security::Split.create!(security: @security, ex_date: 5.days.ago.to_date, numerator: 2, denominator: 3, source: "manual")
+
+    # 20 are held after the split, which is 30 in the units of the sale date.
+    assert Trade::SaleLimit.new(build_sale(qty: 30, date: 7.days.ago.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: 31, date: 7.days.ago.to_date)).validate
+  end
+
+  test "two future-dated sales cannot count the same units" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    create_trade(@security, account: @account, qty: -10, date: 1.day.from_now.to_date, price: 100)
+
+    assert_not Trade::SaleLimit.new(build_sale(qty: 10, date: 2.days.from_now.to_date)).validate
+    # Today's sale is limited by tomorrow's: only what tomorrow leaves over may go.
+    assert_not Trade::SaleLimit.new(build_sale(qty: 1, date: Date.current)).validate
+  end
+
+  test "a future-dated purchase covers a sale dated after it" do
+    create_trade(@security, account: @account, qty: 4, date: 2.days.from_now.to_date, price: 100)
+
+    assert Trade::SaleLimit.new(build_sale(qty: 4, date: 3.days.from_now.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: 4, date: 1.day.from_now.to_date)).validate
+  end
+
+  # A trade dated after an announced split is written in post-split units.
+  test "a future-dated reverse split converts the trades after it" do
+    create_trade(@security, account: @account, qty: 100, date: 5.days.ago.to_date, price: 10)
+    Security::Split.create!(security: @security, ex_date: 3.days.from_now.to_date, numerator: 1, denominator: 10, source: "manual")
+    create_trade(@security, account: @account, qty: -5, date: 4.days.from_now.to_date, price: 100)
+
+    # 5 after the split is 50 before it, so 50 of the 100 are left to sell.
+    assert Trade::SaleLimit.new(build_sale(qty: 50, date: 1.day.from_now.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: 51, date: 1.day.from_now.to_date)).validate
+  end
+
+  test "names the day that binds after a reverse split, in units on the sale date" do
+    create_trade(@security, account: @account, qty: 100, date: 5.days.ago.to_date, price: 10)
+    create_trade(@security, account: @account, qty: -50, date: 1.day.from_now.to_date, price: 10)
+    Security::Split.create!(security: @security, ex_date: 2.days.from_now.to_date, numerator: 1, denominator: 10, source: "manual")
+    create_trade(@security, account: @account, qty: -4, date: 3.days.from_now.to_date, price: 100)
+
+    # 4 after the split are 40 before it, so 100 - 50 - 40 leaves 10.
+    limit = Trade::SaleLimit.new(build_sale(qty: 60, date: Date.current))
+
+    assert_not limit.validate
+    assert_equal 10, limit.available_qty
+    assert_equal 3.days.from_now.to_date, limit.send(:limiting_day).first
+  end
+
+  test "a future-dated forward split converts the trades after it" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    Security::Split.create!(security: @security, ex_date: 3.days.from_now.to_date, numerator: 2, denominator: 1, source: "manual")
+    create_trade(@security, account: @account, qty: -10, date: 4.days.from_now.to_date, price: 50)
+
+    # 20 after the split minus 10 leaves 10, which is 5 before it.
+    assert Trade::SaleLimit.new(build_sale(qty: 5, date: 1.day.from_now.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: 6, date: 1.day.from_now.to_date)).validate
+  end
+
+  test "prepare locks the account for a sale" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    @account.expects(:lock!).once
+
+    assert_not Trade::SaleLimit.prepare(build_sale(qty: 11, date: Date.current)).validate
+  end
+
+  # Moving a purchase later can take a concurrently checked sale below zero.
+  test "prepare locks the account when a purchase moves" do
+    purchase = create_trade(@security, account: @account, qty: 3, date: 2.days.ago.to_date, price: 100)
+    purchase.date = 1.day.ago.to_date
+    @account.expects(:lock!).once
+
+    Trade::SaleLimit.prepare(purchase)
+  end
+
+  test "prepare takes no lock for an ordinary transaction" do
+    entry = create_transaction(account: @account, amount: 10, date: 2.days.ago.to_date)
+    entry.notes = "x"
+    @account.expects(:lock!).never
+
+    Trade::SaleLimit.prepare(entry)
+  end
+
+  test "an edit compares with the stored sale, not the one loaded before the lock" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -8, date: 2.days.ago.to_date, price: 100)
+    sale.reload
+    # Another request shrinks the sale to 4 after this one loaded it at 8.
+    Trade.where(id: sale.entryable.id).update_all(qty: -4)
+    sale.entryable.qty = -7
+
+    assert Trade::SaleLimit.new(sale).checks?
+  end
+
+  test "a bulk edit checks sales against the batch's final state, whatever the row order" do
+    purchase = create_trade(@security, account: @account, qty: 10, date: 3.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -10, date: 2.days.ago.to_date, price: 100)
+    new_date = 4.days.ago.to_date
+
+    # The sale comes first: on its own it would find nothing held on the new date.
+    # (The custom row order would also reach the scheduling query, which has its own.)
+    EntryScheduledSyncJob.stubs(:schedule_for_entries)
+    Entry.where(id: [ sale.id, purchase.id ])
+      .order(Arel.sql(ActiveRecord::Base.sanitize_sql_array([ "entries.id = ? DESC", sale.id ])))
+      .bulk_update!({ date: new_date })
+
+    assert_equal [ new_date, new_date ], [ purchase.reload.date, sale.reload.date ]
+  end
+
+  test "a bulk edit that oversells rolls back the whole batch" do
+    purchase = create_trade(@security, account: @account, qty: 10, date: 3.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -10, date: 2.days.ago.to_date, price: 100)
+
+    note = create_transaction(account: @account, amount: 10, date: 2.days.ago.to_date)
+
+    # Moving the sale before its purchase refuses it, and the other row stays as it was.
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Entry.where(id: [ note.id, sale.id ]).bulk_update!({ date: 4.days.ago.to_date })
+    end
+    assert_equal [ 2.days.ago.to_date, 2.days.ago.to_date, 3.days.ago.to_date ],
+      [ sale.reload.date, note.reload.date, purchase.reload.date ]
+  end
+
+  test "linked accounts never refuse a sale, because the provider's holdings stay the truth" do
+    # A sale recorded on a linked account only raises the days before it, so it
+    # cannot take any day below zero, even when the provider already shows 0.
+    @account.stubs(:linked?).returns(true)
+
+    assert Trade::SaleLimit.new(build_sale(qty: 10, date: Date.current)).validate
+  end
+
+  test "save checks under an account lock and writes nothing when refused" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    @account.expects(:lock!).twice
+
+    assert Trade::SaleLimit.save(build_sale(qty: 6, date: Date.current))
+    assert_no_difference "Entry.count" do
+      assert_not Trade::SaleLimit.save(build_sale(qty: 6, date: Date.current))
+    end
+  end
+
+  # Another request moved the sale to an earlier date while this one raised
+  # its quantity. The save writes only the quantity, so the check has to use
+  # the stored date.
+  test "save checks the date another request stored meanwhile" do
+    create_trade(@security, account: @account, qty: 4, date: 10.days.ago.to_date, price: 100)
+    create_trade(@security, account: @account, qty: 6, date: 6.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -4, date: 1.day.ago.to_date, price: 100)
+
+    entry = Entry.find(sale.id)
+    entry.entryable.qty = -10
+    Entry.where(id: sale.id).update_all(date: 8.days.ago.to_date)
+
+    assert_not Trade::SaleLimit.save(entry)
+    assert_equal(-4, Trade.find(entry.entryable_id).qty)
+  end
+
+  test "save keeps this request's own date change" do
+    create_trade(@security, account: @account, qty: 4, date: 10.days.ago.to_date, price: 100)
+    create_trade(@security, account: @account, qty: 6, date: 6.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -4, date: 8.days.ago.to_date, price: 100)
+
+    entry = Entry.find(sale.id)
+    entry.date = 1.day.ago.to_date
+    entry.entryable.qty = -10
+
+    assert Trade::SaleLimit.save(entry)
+    assert_equal 1.day.ago.to_date, entry.reload.date
+  end
+
+  test "save takes no lock on a linked account" do
+    @account.stubs(:linked?).returns(true)
+    @account.expects(:lock!).never
+
+    assert Trade::SaleLimit.save(build_sale(qty: 10, date: Date.current))
+  end
+
+  # The holdings round the position to 18 places at each split. A sale of the
+  # whole position before two uneven splits leaves exactly zero there, so the
+  # limit, walking the splits the same way, allows it.
+  test "follows the holdings' rounding at each split" do
+    create_trade(@security, account: @account, qty: 1, date: 10.days.ago.to_date, price: 100)
+    Security::Split.create!(security: @security, ex_date: 8.days.ago.to_date, numerator: 1, denominator: 3, source: "manual")
+    Security::Split.create!(security: @security, ex_date: 6.days.ago.to_date, numerator: 3, denominator: 1, source: "manual")
+
+    assert Trade::SaleLimit.new(build_sale(qty: 1, date: 9.days.ago.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: BigDecimal("1.000000000000000001"), date: 9.days.ago.to_date)).validate
+  end
+
+  # A trade dated far ahead must not make the check walk every day up to it.
+  test "checks a sale next to a trade dated far in the future" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    create_trade(@security, account: @account, qty: 1, date: Date.new(9999, 12, 31), price: 100)
+
+    limit = Trade::SaleLimit.new(build_sale(qty: 10, date: Date.current))
+
+    assert limit.validate
+    assert_operator limit.send(:positions_with_sale).size, :<, 10
+  end
+
+  private
+    def build_sale(qty:, date:)
+      @account.entries.new(
+        name: "Sell",
+        date: date,
+        amount: -qty * 100,
+        currency: "USD",
+        entryable: Trade.new(
+          security: @security,
+          qty: -qty,
+          price: 100,
+          currency: "USD",
+          investment_activity_label: "Sell"
+        )
+      )
+    end
+end

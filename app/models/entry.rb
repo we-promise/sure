@@ -901,6 +901,7 @@ class Entry < ApplicationRecord
       # account_id => earliest of old/new date, for entries whose date moved
       sync_windows = {}
       rescheduled_ids = []
+      sale_limits = []
 
       transaction do
         # Lock before reading membership. A concurrent match cannot then turn a
@@ -986,7 +987,12 @@ class Entry < ApplicationRecord
             if attrs.present?
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
               attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
-              entry.update! attrs
+              entry.assign_attributes(attrs)
+              # Moving a sale to another date can take the position below zero.
+              # Sales are checked once the whole batch is saved, so a purchase
+              # moved together with its sale counts whatever the row order.
+              sale_limits << Trade::SaleLimit.prepare(entry)
+              entry.save!
               entry.transaction.record_category_usage! if entry.transaction?
               changed = true
               lockable_change = attrs.except(:reconciled_status).present?
@@ -1019,6 +1025,11 @@ class Entry < ApplicationRecord
             end
             updated_count += 1
           end
+        end
+
+        # All or nothing: one refused sale rolls back every entry in the batch.
+        sale_limits.each do |limit|
+          raise ActiveRecord::RecordInvalid, limit.entry unless limit.validate
         end
       end
 

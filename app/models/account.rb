@@ -920,11 +920,88 @@ class Account < ApplicationRecord
             .order(:ticker)
   end
 
+  # Standard securities the account holds at the end of +date+, with their
+  # quantity, for the sale picker. On a linked account, the provider snapshot
+  # on or before the date as a whole (as current_holdings does). Otherwise
+  # the position is calculated from the trades, as Trade::SaleLimit does, so
+  # a purchase entered a moment ago counts before the sync has written its
+  # holdings. For a date after today, trades dated between today and that
+  # date are added, so a sale can follow a future-dated purchase.
+  def held_securities_on(date)
+    cutoff = [ date, Date.current ].min
+    provider_rows = holdings.where.not(account_provider_id: nil).where(date: ..cutoff)
+    snapshot_date = provider_rows.maximum(:date) if linked?
+
+    positions = if snapshot_date
+      provider_rows.where(date: snapshot_date).group(:security_id).sum(:qty).transform_values(&:to_d)
+    elsif linked?
+      # No provider snapshot yet: the latest calculated row per security.
+      holdings.where(
+        id: holdings.where(account_provider_id: nil).where(date: ..cutoff)
+          .select("DISTINCT ON (holdings.security_id) holdings.id")
+          .order("holdings.security_id, holdings.date DESC, holdings.id")
+      ).group(:security_id).sum(:qty).transform_values(&:to_d)
+    else
+      calculated_positions_on(cutoff)
+    end
+
+    if date > Date.current
+      future = Trade.joins(:entry)
+        .where(entries: { account_id: id, date: Date.current.next_day..date })
+        .group(:security_id, "entries.date").sum(:qty)
+      splits = Security::Split
+        .where(security_id: positions.keys | future.keys.map(&:first), ex_date: Date.current.next_day..date)
+        .group_by(&:security_id)
+
+      # Today's position and each future trade, in units of +date+, so a split
+      # in between scales them the way the sale limit does.
+      in_date_units = lambda do |security_id, qty, day|
+        ratio = splits.fetch(security_id, []).select { |split| split.ex_date > day }.map(&:ratio).reduce(Rational(1), :*)
+        Security::Split.scale(qty, ratio)
+      end
+
+      positions = positions.to_h { |security_id, qty| [ security_id, in_date_units.(security_id, qty, Date.current) ] }
+      future.each do |(security_id, day), qty|
+        positions[security_id] = positions.fetch(security_id, 0) + in_date_units.(security_id, qty.to_d, day)
+      end
+    end
+
+    held = positions.select { |_, qty| qty.positive? }
+    Security.standard.where(id: held.keys)
+      .map { |security| [ security, held[security.id] ] }
+      .sort_by { |security, _| [ (security.name.presence || security.ticker).downcase, security.id ] }
+  end
+
+  # The calculated position of every security at the end of +date+ (today or
+  # earlier), from the account's trades.
+  #
+  # Quantities only, walked the way Holding::ForwardCalculator does (a split
+  # scales the position at the open of its ex-date, before that day's trades),
+  # but without prices, so opening the sale picker converts no currencies.
+  def calculated_positions_on(date)
+    cache = Holding::PortfolioCache.new(self)
+    positions = cache.get_securities.to_h { |security| [ security.id, 0.to_d ] }
+
+    start_date.upto(date) do |day|
+      positions.each_key do |security_id|
+        ratio = cache.get_split_ratio(security_id, day)
+        positions[security_id] = Security::Split.scale(positions[security_id], ratio) if ratio
+      end
+      cache.get_trades(date: day).each do |entry|
+        security_id = entry.entryable.security_id
+        positions[security_id] = positions.fetch(security_id, 0.to_d) + entry.entryable.qty.to_d
+      end
+    end
+
+    positions
+  end
+  private :calculated_positions_on
+
   NegativePosition = Data.define(:security, :first_date, :lowest_qty)
 
-  # Securities whose calculated position dropped below zero on some day, for
-  # example after a sale without its purchase or after deleting a purchase.
-  # The holdings tab shows them instead of hiding the gap.
+  # Securities whose calculated position dropped below zero on some day. A
+  # sale entered by hand cannot do that, but an import, a provider sync or
+  # deleting a purchase can, and the holdings tab says so instead of hiding it.
   # Linked accounts are left out entirely: their provider's holdings are the
   # truth, so a negative quantity there (reported, or carried back by the
   # reverse calculator) is a short position, not missing data.

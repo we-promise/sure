@@ -20,7 +20,7 @@ class Trade::CreateForm
   SUPPORTED_TYPES = (ACTIVITY_LABELS.keys + TRANSFER_TYPES).freeze
 
   attr_accessor :account, :date, :amount, :currency, :qty,
-                :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id
+                :price, :fee, :ticker, :manual_ticker, :security_id, :type, :transfer_account_id
 
   # Either creates a trade, transaction, or transfer based on type
   # Returns the model, regardless of success or failure
@@ -42,6 +42,15 @@ class Trade::CreateForm
   private
     # Users can either look up a ticker from a provider or enter a manual, "offline" ticker (that we won't fetch prices for)
     def security
+      # The sale picker sends the id of a security the account holds or has
+      # bought (a purchase dated in the future has no holding yet); only those
+      # can be picked this way. The sale limit checks the quantity.
+      if security_id.present?
+        traded = Trade.joins(:entry).where(entries: { account_id: account.id }).select(:security_id)
+        return Security.standard.where(id: account.holdings.select(:security_id))
+          .or(Security.standard.where(id: traded)).find_by(id: security_id)
+      end
+
       parsed = ticker.present? ? Security.parse_combobox_id(ticker) : { ticker: manual_ticker }
       return nil if parsed[:ticker].blank?
 
@@ -84,7 +93,7 @@ class Trade::CreateForm
         )
       )
 
-      if trade_entry.save
+      if Trade::SaleLimit.save(trade_entry)
         trade_entry.lock_saved_attributes!
         account.sync_later
       end

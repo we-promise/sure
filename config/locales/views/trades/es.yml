@@ -1,6 +1,9 @@
 ---
 es:
   trades:
+    sale_limit:
+      exceeds_holding: "No puedes vender %{qty} %{ticker}: la cuenta solo tiene %{available} el %{date}."
+      exceeds_later_holding: "No puedes vender %{qty} %{ticker}: en esta fecha se pueden vender como máximo %{available}; si no, la posición queda por debajo de cero el %{date}."
     api_errors:
       activity_label_must_match_type: investment_activity_label debe ser %{label} cuando type es %{type}
       invalid_activity_label: Etiqueta de actividad de inversión no válida
@@ -26,6 +29,9 @@ es:
       type_interest: Interés
       dividend_requires_security: Se requiere un valor para los dividendos
       trade_requires_security: Se requiere un valor (símbolo) para las operaciones de compra y venta
+      held_security: "%{name} (%{ticker}), %{qty} en cartera"
+      held_security_prompt: "Elige una posición"
+      held_security_hint: "¿No aparece? Añade primero la compra."
     trade:
       scheduled: Programada
       scheduled_tooltip: 'Con fecha futura: no afectará a tu saldo hasta entonces'

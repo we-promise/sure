@@ -10,6 +10,82 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
+  test "held_securities_on calculates the position from the trades on that day" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    held = Security.create!(ticker: "HELD", name: "Held")
+    sold = Security.create!(ticker: "SOLD", name: "Sold")
+    buy(account, held, 5, 6.days.ago.to_date)
+    buy(account, sold, 2, 6.days.ago.to_date)
+    buy(account, sold, -2, 5.days.ago.to_date)
+
+    assert_equal [ [ held, 5 ] ], account.held_securities_on(5.days.ago.to_date)
+  end
+
+  # The sync that writes holdings runs later; the picker must not wait for it.
+  test "held_securities_on counts a purchase made today before the sync" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "NEWBUY", name: "New Buy")
+    buy(account, security, 3, Date.current)
+
+    assert_empty account.holdings
+    assert_equal [ [ security, 3 ] ], account.held_securities_on(Date.current)
+  end
+
+  test "held_securities_on takes a linked account's provider snapshot as a whole" do
+    account = accounts(:investment)
+    provider = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+    account.holdings.create!(security: securities(:aapl), date: 6.days.ago.to_date, qty: 7, price: 200, amount: 1400, currency: "USD", account_provider: provider)
+    account.holdings.create!(security: securities(:msft), date: 5.days.ago.to_date, qty: 3, price: 400, amount: 1200, currency: "USD", account_provider: provider)
+    account.holdings.create!(security: securities(:aapl), date: 5.days.ago.to_date, qty: 5, price: 200, amount: 1000, currency: "USD")
+
+    # The newer snapshot no longer lists AAPL, so it is not offered.
+    assert_equal [ [ securities(:msft), 3 ] ], account.held_securities_on(5.days.ago.to_date)
+  end
+
+  test "held_securities_on adds purchases dated after today for a future date" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "FUTBUY", name: "Future Buy")
+    account.entries.create!(
+      name: "Buy", date: 2.days.from_now.to_date, amount: 500, currency: "USD",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+
+    assert_empty account.held_securities_on(1.day.from_now.to_date)
+    assert_equal [ [ security, 5 ] ], account.held_securities_on(3.days.from_now.to_date)
+  end
+
+  test "held_securities_on converts a future split before adding later trades" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "SPLITFUT", name: "Split Future")
+    account.entries.create!(
+      name: "Buy", date: 1.day.from_now.to_date, amount: 1000, currency: "USD",
+      entryable: Trade.new(security: security, qty: 10, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+    Security::Split.create!(security: security, ex_date: 2.days.from_now.to_date, numerator: 2, denominator: 1, source: "manual")
+    account.entries.create!(
+      name: "Sell", date: 3.days.from_now.to_date, amount: -750, currency: "USD",
+      entryable: Trade.new(security: security, qty: -15, price: 50, currency: "USD", investment_activity_label: "Sell")
+    )
+
+    # 10 bought before a 2-for-1 split are 20 after it; selling 15 leaves 5.
+    assert_equal [ [ security, 5 ] ], account.held_securities_on(4.days.from_now.to_date)
+  end
+
+  test "held_securities_on applies a past split without looking up prices" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "EUR", accountable: Investment.new)
+    security = Security.create!(ticker: "SPLITPAST", name: "Split Past")
+    buy(account, security, 10, 6.days.ago.to_date)
+    Security::Split.create!(security: security, ex_date: 4.days.ago.to_date, numerator: 3, denominator: 1, source: "manual")
+    buy(account, security, -5, 4.days.ago.to_date)
+
+    Holding::PortfolioCache.any_instance.expects(:get_price).never
+    ExchangeRate.expects(:find_or_fetch_rate).never
+
+    # 10 become 30 at the open of the ex-date, before that day's sale of 5.
+    assert_equal [ [ security, 25 ] ], account.held_securities_on(2.days.ago.to_date)
+    assert_empty account.held_securities_on(7.days.ago.to_date)
+  end
+
   test "negative_positions lists calculated positions below zero" do
     account = accounts(:investment)
     msft = securities(:msft)
@@ -1556,6 +1632,14 @@ class AccountTest < ActiveSupport::TestCase
   end
 
   private
+    def buy(account, security, qty, date)
+      account.entries.create!(
+        name: qty.positive? ? "Buy" : "Sell", date: date, amount: qty * 100, currency: "USD",
+        entryable: Trade.new(security: security, qty: qty, price: 100, currency: "USD",
+                             investment_activity_label: qty.positive? ? "Buy" : "Sell")
+      )
+    end
+
     def create_loan_with_start_date(start_date, opening_balance_date)
       Account.create_and_sync(
         {

@@ -1,5 +1,8 @@
 uk:
   trades:
+    sale_limit:
+      exceeds_holding: "Не можна продати %{qty} %{ticker}: на рахунку лише %{available} станом на %{date}."
+      exceeds_later_holding: "Не можна продати %{qty} %{ticker}: на цю дату можна продати щонайбільше %{available}, інакше позиція стане від'ємною %{date}."
     form:
       account: Рахунок для переказу (необов'язково)
       account_prompt: Пошук рахунку
@@ -20,6 +23,9 @@ uk:
       type_interest: Відсотки
       dividend_requires_security: Для дивідендів потрібен цінний папір
       trade_requires_security: Для угод купівлі-продажу потрібен цінний папір (тикер)
+      held_security: "%{name} (%{ticker}), у наявності %{qty}"
+      held_security_prompt: "Виберіть позицію"
+      held_security_hint: "Немає у списку? Спершу додайте купівлю."
     header:
       buy: Купівля
       sell: Продаж
