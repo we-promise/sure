@@ -10,11 +10,10 @@ module ProviderTestHelper
   # A provider mock that DECLARES it can answer for classification and for a
   # fund's constituents.
   #
-  # Both fetches are gated on the provider's own declaration, so a bare
-  # `mock("provider")` is an INCAPABLE provider: it is never asked, and a test
-  # expecting that fetch fails. That is the right default -- most of the real
-  # providers supply neither -- but it means a test that wants the fetch to
-  # happen has to say so, which is what this is for.
+  # Both gates call the provider's own declaration, and a bare
+  # `mock("provider")` has no stub for it, so a test that reaches a gate with
+  # one fails on an unexpected invocation. Most real providers answer false,
+  # so a test has to say which side it means, which is what this is for.
   #
   # Pass `classification:` or `constituents:` false to build the incapable side
   # of a boundary deliberately.

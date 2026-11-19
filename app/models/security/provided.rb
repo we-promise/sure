@@ -289,7 +289,10 @@ module Security::Provided
   # terms: it rides the same `fetch_security_info` call, and the importers pass
   # it because its gate closes after one successful answer.
   def import_provider_details(clear_cache: false, include_classification: false, include_constituents: false)
-    unless price_data_provider.present?
+    # Read once: the default provider can change while the request is in
+    # flight, and the stamps must name the provider that actually answered.
+    provider = price_data_provider
+    unless provider.present?
       Rails.logger.warn("No provider configured for Security.import_provider_details")
       return
     end
@@ -303,18 +306,18 @@ module Security::Provided
     # nothing is known yet:
     # - `supplies_classification?` first: a provider with no sector to give
     #   never fills the columns below, so without it the gate never closes.
-    # - No source and no sector or industry: an ETF the type map leaves without
-    #   a source, or cash and crypto that carry a `default` source and no
-    #   sector, are not asked again for an answer no provider has.
+    # - No source: cash and crypto carry a `default` source, which no provider
+    #   improves on. A sector alone does not close the gate, since it leaves
+    #   the asset class unanswered.
     # - Not yet asked of this provider: an answer that holds nothing (a bond,
     #   an ETF with no sector) is stamped with the provider that gave it, so
     #   that provider is asked once. A failed answer is not stamped, so it is
     #   retried. The stamp is compared with the provider resolved now, so an
     #   assigned provider changing and the enabled default changing (for a
     #   security with no `price_provider`) both open the gate.
-    provider_key = self.class.provider_key_for(price_data_provider)
-    wants_classification = include_classification && price_data_provider.supplies_classification? &&
-      !classification_locked? && classification_source.blank? && sector.blank? && industry.blank? &&
+    provider_key = self.class.provider_key_for(provider)
+    wants_classification = include_classification && provider.supplies_classification? &&
+      !classification_locked? && classification_source.blank? &&
       (classification_fetched_at.nil? || classification_fetched_from != provider_key)
 
     # Keyed on the TIMESTAMP, not on whether constituents are present. Most
@@ -337,11 +340,11 @@ module Security::Provided
     #
     # A forced refresh (`clear_cache`) asks again too: a fund's holdings change
     # as it rebalances, and the stamp otherwise closes the gate for good.
-    wants_constituents = include_constituents && price_data_provider.supplies_constituents? &&
+    wants_constituents = include_constituents && provider.supplies_constituents? &&
       (clear_cache || constituents_fetched_at.nil? || constituents_fetched_from != provider_key)
 
     unless has_metadata && !wants_classification && !wants_constituents && !clear_cache
-      response = price_data_provider.fetch_security_info(
+      response = provider.fetch_security_info(
         symbol: ticker,
         exchange_operating_mic: exchange_operating_mic
       )
@@ -351,7 +354,7 @@ module Security::Provided
         # compares the stamp under its own lock with the one this import read
         # before asking. Reloading first would make another import's set look
         # like this one's, and replace it.
-        store_constituents(response.data.constituents) if wants_constituents
+        store_constituents(response.data.constituents, provider) if wants_constituents
         # `with_lock` re-reads the row, so precedence is checked against what
         # it holds now: a manual classification, a sector or a lock written
         # while the provider was answering is not overwritten.
@@ -362,23 +365,24 @@ module Security::Provided
           attrs[:name]        = response.data.name    if response.data.name.present?
           attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
           attrs[:website_url] = response.data.links   if response.data.links.present?
-          attrs.merge!(classification_attributes_from(response.data))
+          attrs.merge!(classification_attributes_from(response.data, classifies: provider.supplies_classification?))
           stored = attrs.empty? || update(attrs)
           # Recorded only when the answer was stored. `update` runs the model's
           # validations, and a row can hold a value they now refuse; stamping
-          # anyway would close the gate on an answer that never landed.
-          if wants_classification && stored
+          # anyway would close the gate on an answer that never landed. A lock
+          # set while the provider answered rejects the answer the same way.
+          if wants_classification && stored && !classification_locked?
             update_columns(classification_fetched_at: Time.current, classification_fetched_from: provider_key)
           end
         end
       else
-        Rails.logger.warn("Failed to fetch security info for #{ticker} from #{price_data_provider.class.name}: #{response.error.message}")
+        Rails.logger.warn("Failed to fetch security info for #{ticker} from #{provider.class.name}: #{response.error.message}")
         DebugLogEntry.capture(
           category: "security_metadata_fetch",
           level: "warn",
           message: "Failed to get security info",
           source: self.class.name,
-          provider: price_data_provider,
+          provider: provider,
           metadata: {
             security_id: self.id,
             ticker: ticker,
@@ -462,10 +466,26 @@ module Security::Provided
   # A row the table would refuse is skipped and logged, not raised: one bad row
   # would roll the whole fund back unstamped and stop both market data
   # importers at this fund on every run.
-  def store_constituents(list)
-    return unless price_data_provider&.supplies_constituents?
+  #
+  # An answer that says nothing about the fund leaves the stored set and the
+  # stamp alone, so the next sync asks again: a holdings block the provider's
+  # parser could not read, or a non-empty list none of whose rows can be
+  # stored.
+  def store_constituents(list, provider = price_data_provider)
+    return unless provider&.supplies_constituents?
+
+    if list == Provider::SecurityConcept::UNREADABLE_CONSTITUENTS
+      log_unreadable_constituents(provider)
+      return
+    end
 
     rows, skipped = constituent_rows_from(list)
+
+    if rows.empty? && Array(list).any?
+      skipped.each { |reason, entry| log_skipped_constituent(reason, entry, provider) }
+      log_unreadable_constituents(provider)
+      return
+    end
 
     # One DELETE and one INSERT rather than a statement or two per holding: a
     # world tracker lists thousands, and this runs inside the account sync.
@@ -487,11 +507,11 @@ module Security::Provided
       Security::Constituent.where(security_id: id).delete_all
       Security::Constituent.insert_all!(rows.map { |row| row.merge(security_id: id) }) if rows.any?
       update_columns(constituents_fetched_at: Time.current,
-                     constituents_fetched_from: self.class.provider_key_for(price_data_provider))
+                     constituents_fetched_from: self.class.provider_key_for(provider))
       true
     end
 
-    skipped.each { |reason, entry| log_skipped_constituent(reason, entry) } if replaced
+    skipped.each { |reason, entry| log_skipped_constituent(reason, entry, provider) } if replaced
   end
 
   # Splits a provider list into rows the table will accept and [reason, entry]
@@ -514,7 +534,8 @@ module Security::Provided
         next
       end
 
-      ticker = (entry[:ticker] || entry["ticker"]).to_s.strip
+      raw_ticker = entry[:ticker] || entry["ticker"]
+      ticker = raw_ticker.is_a?(String) ? raw_ticker.strip : ""
       name = (entry[:name] || entry["name"]).to_s.strip.presence
       raw_weight = entry[:weight] || entry["weight"]
       weight = begin
@@ -525,7 +546,8 @@ module Security::Provided
       weight = :non_numeric if weight.is_a?(BigDecimal) && !weight.finite?
 
       # Postgres refuses a NUL in a text column, as it would the rows below.
-      reason = if ticker.blank? then "blank_ticker"
+      reason = if !raw_ticker.nil? && !raw_ticker.is_a?(String) then "non_string_ticker"
+      elsif ticker.blank? then "blank_ticker"
       elsif ticker.include?("\0") || name&.include?("\0") then "nul_character"
       elsif weight == :non_numeric then "non_numeric_weight"
       elsif weight&.negative? then "negative_weight"
@@ -560,13 +582,13 @@ module Security::Provided
   # Records a fund holding the provider reported in a form that cannot be
   # stored, so a skip stays traceable: the reason, the holding's ticker, and its
   # shape. The metadata runs through `without_nul` for the same jsonb reason.
-  def log_skipped_constituent(reason, entry)
+  def log_skipped_constituent(reason, entry, provider = price_data_provider)
     DebugLogEntry.capture(
       category: "security_holdings",
       level: "warn",
       message: "Skipped a fund holding the provider reported in a form that cannot be stored",
       source: "Security#store_constituents",
-      provider: price_data_provider,
+      provider: provider,
       # Without NULs: the metadata column is jsonb, which refuses them as the
       # constituents table does, and the entry is logged because it is malformed.
       metadata: without_nul(
@@ -576,6 +598,19 @@ module Security::Provided
         reason: reason,
         entry: entry.is_a?(Hash) ? entry.to_h : entry
       )
+    )
+  end
+
+  # Records an answer whose holdings could not be read, so a fund whose stored
+  # set did not change, and is asked again, stays traceable.
+  def log_unreadable_constituents(provider)
+    DebugLogEntry.capture(
+      category: "security_holdings",
+      level: "warn",
+      message: "Kept a fund's stored holdings: the provider's holdings could not be read",
+      source: "Security#store_constituents",
+      provider: provider,
+      metadata: { security_id: id, security_ticker: ticker }
     )
   end
 
@@ -591,7 +626,7 @@ module Security::Provided
     end
   end
   private :store_constituents, :constituent_rows_from, :constituent_weight_limit,
-    :constituent_weight_scale, :log_skipped_constituent, :without_nul
+    :constituent_weight_scale, :log_skipped_constituent, :log_unreadable_constituents, :without_nul
 
   # A provider's type says what the wrapper is, not what it holds. "Common
   # stock" is an equity whatever else is true of it, so it maps. An ETF or a
@@ -621,8 +656,11 @@ module Security::Provided
 
   # The provider is the second-weakest writer: it may fill what nothing has
   # answered, and may replace a `default`, but never a `manual` classification,
-  # and never anything at all on a locked security.
-  def classification_attributes_from(data)
+  # and never anything at all on a locked security. Only a provider that
+  # classifies may claim the classification: an instrument type from one that
+  # does not (Twelve Data) would stamp `provider` as the source and keep a
+  # capable provider from ever being asked.
+  def classification_attributes_from(data, classifies: true)
     return {} if classification_locked?
 
     kind = data.kind.to_s.downcase
@@ -646,7 +684,7 @@ module Security::Provided
     attrs[:sector] = provided_sector if provided_sector.present? && sector.blank?
     attrs[:industry] = data.industry if data.industry.present? && industry.blank?
 
-    return attrs unless classification_source.in?([ nil, "default" ])
+    return attrs unless classifies && classification_source.in?([ nil, "default" ])
 
     if mapped_class.present?
       attrs[:asset_class] = mapped_class
@@ -681,7 +719,8 @@ module Security::Provided
     return nil if weights[:leveraged_or_inverse]
 
     classes = weights[:asset_class] || {}
-    return nil if classes.values.any? { |percent| percent < -10 || percent > 110 }
+    tolerance = Provider::Eodhd::FUND_WEIGHT_TOLERANCE
+    return nil if classes.values.any? { |percent| percent < -tolerance || percent > 100 + tolerance }
 
     weights[:category_asset_class].presence || dominant_fund_weight(classes.except("liquidity"))
   end

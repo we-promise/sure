@@ -14,8 +14,10 @@ class Provider::SecurityCapabilityTest < ActiveSupport::TestCase
 
   # Either field is a classification: a provider that returns only an industry
   # still has to be asked.
-  BUILDS_CLASSIFICATION = /^\s*(sector|industry):/
-  BUILDS_CONSTITUENTS = /^\s*constituents:/
+  # A keyword at the start of a line or after `(` or `,`, so a provider that
+  # passes it on the same line as `SecurityInfo.new(` is still seen.
+  BUILDS_CLASSIFICATION = /(?:^|[(,])\s*(sector|industry):/
+  BUILDS_CONSTITUENTS = /(?:^|[(,])\s*constituents:/
 
   # Read the sector from a metadata answer, but are never asked for one alone:
   # Alpha Vantage's OVERVIEW is a premium function, so asking on a free key
@@ -63,6 +65,24 @@ class Provider::SecurityCapabilityTest < ActiveSupport::TestCase
 
     assert_empty overclaiming,
                  "these providers declare constituents they never build: #{overclaiming.join(", ")}"
+  end
+
+  # The source check above can only see what the regex matches, so the one
+  # provider that returns holdings is also checked through its answer.
+  test "a provider whose answer carries holdings declares that it supplies them" do
+    provider = Provider::Eodhd.new("test_api_key")
+    provider.stubs(:enforce_daily_limit!)
+    provider.stubs(:throttle_request)
+    body = { "General" => { "Type" => "ETF" },
+             "ETF_Data" => { "Holdings" => { "MSFT.US" => { "Code" => "MSFT", "Assets_%" => "5" } } } }
+    provider.stubs(:client).returns(client = mock)
+    client.stubs(:get).returns(stub(body: body.to_json))
+
+    response = provider.fetch_security_info(symbol: "VT", exchange_operating_mic: "ARCX")
+
+    assert response.success?
+    assert_equal [ "MSFT" ], response.data.constituents.map { |entry| entry[:ticker] }
+    assert provider.supplies_constituents?
   end
 
   test "a provider whose classification costs a premium request is not asked for one" do

@@ -254,35 +254,38 @@ class Provider::Eodhd < Provider
   #
   # EODHD keys the holdings hash by a suffixed ticker ("AAPL.US") and carries the
   # bare one in `Code`. The bare ticker is what matches anything in `securities`,
-  # so the key is used only as a fallback for a malformed entry.
+  # so the key is used only when `Code` is missing or not a string.
   #
   # An absent block (null) or an empty map or list means the fund lists nothing.
-  # Any other shape, `false` or a blank string included, or a non-empty map
-  # whose entries are all malformed, is a response this cannot read and raises:
-  # answered as "no holdings", it would replace the fund's stored set with
-  # nothing and stamp it as asked.
+  # A block this cannot read returns UNREADABLE_CONSTITUENTS rather than raising,
+  # so the name, sector and classification in the same answer still land:
+  # `false` or a blank string, a list missing although `Holdings_Count` is
+  # positive, or a map with no readable entry. Answered as "no holdings" any of
+  # these would replace the fund's stored set with nothing and stamp it.
+  #
+  # Malformed entries are passed through rather than dropped here, so the
+  # importer logs them with the rows it skips.
   def etf_constituents(parsed)
-    holdings = parsed.dig("ETF_Data", "Holdings")
-    return nil if holdings.nil? || holdings == {} || holdings == []
-    raise Error, "Unexpected holdings format from fundamentals API" unless holdings.is_a?(Hash)
+    etf_data = parsed["ETF_Data"]
+    return nil unless etf_data.is_a?(Hash)
 
-    readable = holdings.filter_map do |key, holding|
-      next unless holding.is_a?(Hash)
+    holdings = etf_data["Holdings"]
+    if holdings.nil? || holdings == {} || holdings == []
+      return etf_data["Holdings_Count"].to_s.to_i.positive? ? UNREADABLE_CONSTITUENTS : nil
+    end
+    return UNREADABLE_CONSTITUENTS unless holdings.is_a?(Hash)
 
-      ticker = holding["Code"].presence || key.to_s.split(".").first
-      next if ticker.blank?
+    entries = holdings.map do |key, holding|
+      next holding unless holding.is_a?(Hash)
 
+      code = holding["Code"]
+      ticker = code.is_a?(String) && code.present? ? code : key.to_s.split(".").first
       { ticker: ticker, name: holding["Name"].presence, weight: holding["Assets_%"] }
     end
 
-    # A non-empty holdings block that yields no readable entry is an answer this
-    # cannot read. Returned as nil it is answered as "no holdings": the stored
-    # set wiped and the fund stamped, and the gate would not ask again. Fail
-    # instead, so the stored set survives and the next sync asks again. A partial
-    # read (some entries malformed) still returns the readable subset.
-    raise Error, "Holdings block has no readable entries from fundamentals API" if readable.empty?
+    return UNREADABLE_CONSTITUENTS if entries.none? { |entry| entry.is_a?(Hash) && entry[:ticker].present? }
 
-    readable
+    entries
   end
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)
@@ -465,7 +468,8 @@ class Provider::Eodhd < Provider
       fund_data = {} unless fund_data.is_a?(Hash)
       general = parsed["General"].is_a?(Hash) ? parsed["General"] : {}
 
-      [ general["Category"], fund_data["Category"], fund_data["Fund_Category"] ].find { |value| value.is_a?(String) && value.present? }
+      [ general["Category"], general["Fund_Category"], fund_data["Category"], fund_data["Fund_Category"] ]
+        .find { |value| value.is_a?(String) && value.present? }
     end
 
     # Every net percentage in the allocation, mapped or not ("Other" counts too).
@@ -481,12 +485,24 @@ class Provider::Eodhd < Provider
 
     # Sums each entry's percentage into its mapped bucket. With no mapping the
     # provider's own label is the bucket (sectors are free text).
+    #
+    # Rows come in three shapes: keyed by label (ETF_Data), a list under a
+    # group, or indexed ("0", "1") either at the top level or under a group
+    # (MutualFund_Data). An indexed or listed row names itself in Name or Type.
     def sum_fund_weights(section, mapping, value_keys)
       entries =
         case section
         when Hash
           section.flat_map do |label, value|
-            value.is_a?(Array) ? value.filter_map { |row| [ row["Name"] || row["Type"], row ] if row.is_a?(Hash) } : [ [ label, value ] ]
+            if value.is_a?(Array)
+              named_fund_rows(value)
+            elsif value.is_a?(Hash) && value.values.any? { |child| child.is_a?(Hash) }
+              named_fund_rows(value.values)
+            elsif value.is_a?(Hash) && label.to_s.match?(/\A\d+\z/)
+              named_fund_rows([ value ])
+            else
+              [ [ label, value ] ]
+            end
           end
         else
           []
@@ -501,6 +517,10 @@ class Provider::Eodhd < Provider
 
         totals[bucket] += percent.to_f
       end.to_h
+    end
+
+    def named_fund_rows(rows)
+      rows.filter_map { |row| [ row["Name"] || row["Type"], row ] if row.is_a?(Hash) }
     end
 
     # Cache key for tracking daily API usage

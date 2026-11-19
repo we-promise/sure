@@ -76,9 +76,11 @@ class FundConstituentIngestionTest < ActiveSupport::TestCase
       )
     end
     # The fund must be reached first, or the stock is priced before anything
-    # raises and the test proves nothing.
-    assert_equal [ fund.id, stock.id ], account.trades.pluck(:security_id).uniq,
-                 "precondition: the fund is not first in the importer's loop"
+    # raises and the test proves nothing. Neither query that builds the
+    # importer's windows orders its rows, so the order is set here.
+    windows = Security::Price::ImportWindows.new(account).to_h
+    assert_equal [ fund.id, stock.id ].sort, windows.keys.sort, "precondition: both securities need a price window"
+    Security::Price::ImportWindows.any_instance.stubs(:to_h).returns(windows.slice(fund.id, stock.id))
 
     provider = capable_provider("provider")
     provider.stubs(:class).returns(Provider::TwelveData)
