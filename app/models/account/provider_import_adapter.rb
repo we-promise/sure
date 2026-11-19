@@ -118,7 +118,7 @@ class Account::ProviderImportAdapter
             # not revert a user edit the way overwriting name/category/notes
             # would. Only blank columns are filled, unlike the unprotected path
             # below: a protected entry's stored value is never replaced.
-            if counterparty
+            if counterparty && !entry.import_locked?
               counterparty.each do |attribute, value|
                 entry.transaction[attribute] = value if entry.transaction[attribute].blank?
               end
@@ -429,10 +429,8 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name (e.g., "plaid", "simplefin")
   # @param website_url [String, nil] Optional merchant website
   # @param logo_url [String, nil] Optional merchant logo URL
-  # @param iban [String, nil] Optional counterparty IBAN, used only as a fallback lookup
-  #   against the importing family's own merchants
   # @return [Merchant, nil] The merchant object or nil if data is insufficient
-  def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil, iban: nil)
+  def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil)
     return nil unless provider_merchant_id.present? && name.present?
 
     # First try to find by provider_merchant_id (stable identifier derived from normalized name)
