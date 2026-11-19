@@ -14,6 +14,7 @@ es:
       service_down_label: Servicio caído
       service_down_desc: La API de Lunch Flow puede no estar disponible temporalmente
       check_provider_settings: Revisar ajustes de proveedores
+      unexpected_error: Se ha producido un error inesperado. Inténtalo de nuevo más tarde.
     setup_required:
       title: Configuración de Lunch Flow necesaria
       api_key_not_configured: Clave de API no configurada
@@ -62,8 +63,20 @@ es:
       status_never: Nunca sincronizado
       status_with_summary: Sincronizado hace %{timestamp} • %{summary}
       syncing: Sincronizando...
+      sync_status:
+        no_accounts: No se han encontrado cuentas
+        synced:
+          one: "%{count} cuenta sincronizada"
+          other: "%{count} cuentas sincronizadas"
+        partial_setup:
+          one: "%{linked} sincronizadas, %{unlinked} pendiente de configurar"
+          other: "%{linked} sincronizadas, %{unlinked} pendientes de configurar"
       total: Total
       unlinked: Desvinculadas
+    subtype_select:
+      placeholder:
+        subtype: Selecciona un subtipo
+        type: Selecciona un tipo
     select_accounts:
       accounts_selected: cuentas seleccionadas
       api_error: 'Error de API: %{message}'
@@ -103,6 +116,7 @@ es:
       fetch_failed: Error al obtener las cuentas
       no_accounts_to_setup: No hay cuentas para configurar
       no_api_key: La clave API de Lunch Flow no está configurada. Por favor, comprueba los ajustes de conexión.
+      page_title: Configurar cuentas de Lunch Flow
       account_types:
         skip: Omitir esta cuenta
         depository: Cuenta corriente o de ahorro
@@ -160,6 +174,7 @@ es:
       creation_failed: 'Error al crear las cuentas: %{error}'
       no_accounts: No hay cuentas para configurar.
       success: Se han creado %{count} cuenta(s) con éxito.
+      unexpected_error: Se ha producido un error inesperado
     sync:
       success: Sincronización iniciada
     update:
