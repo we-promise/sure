@@ -95,9 +95,7 @@ class Api::V1::FamilyExportsControllerTest < ActionDispatch::IntegrationTest
   test "creates a family export from an empty JSON request" do
     [ "", "{}" ].each do |body|
       assert_difference("@family.family_exports.count") do
-        post api_v1_family_exports_url,
-             headers: api_headers(@api_key).merge("Content-Type" => "application/json"),
-             env: { "RAW_POST_DATA" => body }
+        post api_v1_family_exports_url, params: body, headers: api_headers(@api_key).merge("Content-Type" => "application/json")
       end
 
       assert_response :accepted
