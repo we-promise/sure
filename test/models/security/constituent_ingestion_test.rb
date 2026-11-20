@@ -178,8 +178,9 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
   end
 
   # End to end through EODHD's own parser: a holdings value that is blank but
-  # not an empty block is a failed answer, so the stored set and its stamp stay.
-  test "an EODHD holdings value of false or a blank string keeps the stored set and its stamp" do
+  # not an empty block is a failed answer, so the stored set stays. The fund is
+  # still stamped as asked, so it is not fetched again on every sync.
+  test "an EODHD holdings value of false or a blank string keeps the stored set and is stamped" do
     [ false, "", "   " ].each do |holdings|
       old_stamp = stored_fund_set
 
@@ -187,7 +188,7 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
       @security.import_provider_details(clear_cache: true, include_constituents: true)
 
       assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker), "#{holdings.inspect} wiped the stored set"
-      assert_equal old_stamp, @security.constituents_fetched_at, "#{holdings.inspect} moved the stamp"
+      assert_operator @security.constituents_fetched_at, :>, old_stamp, "#{holdings.inspect} was left unstamped, so every sync would ask again"
     end
   end
 
@@ -205,18 +206,18 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_equal "Vanguard Total World", @security.name
     assert_equal "Financial Services", @security.sector
     assert_equal %w[AAA], @security.constituents.pluck(:ticker)
-    assert_equal old_stamp, @security.constituents_fetched_at
+    assert_operator @security.constituents_fetched_at, :>, old_stamp
   end
 
   # A count with no list is an answer this cannot read, not an empty fund.
-  test "an EODHD holdings count with no list keeps the stored set and its stamp" do
+  test "an EODHD holdings count with no list keeps the stored set and is stamped" do
     old_stamp = stored_fund_set
 
     @security.stubs(:price_data_provider).returns(eodhd_answering(nil, holdings_count: 503))
     @security.import_provider_details(clear_cache: true, include_constituents: true)
 
     assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker)
-    assert_equal old_stamp, @security.constituents_fetched_at
+    assert_operator @security.constituents_fetched_at, :>, old_stamp
   end
 
   # Entries dropped by the parser are part of the support trail too.
@@ -244,8 +245,10 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
   end
 
   # A well-shaped list none of whose rows can be stored says nothing about
-  # the fund, so it must not replace the set stored before.
-  test "a list whose every row is refused keeps the stored set and its stamp" do
+  # the fund, so it must not replace the set stored before. It is stamped, and
+  # logged once with the refusals counted, rather than once per row on every
+  # sync.
+  test "a list whose every row is refused keeps the stored set, is stamped and logs once" do
     old_stamp = stored_fund_set
     provider = capable_provider("provider")
     provider.stubs(:class).returns(Provider::TwelveData)
@@ -254,11 +257,14 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     )
     @security.stubs(:price_data_provider).returns(provider)
 
-    @security.import_provider_details(clear_cache: true, include_constituents: true)
+    assert_difference -> { holdings_log_count }, 1 do
+      @security.import_provider_details(clear_cache: true, include_constituents: true)
+    end
 
     assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker)
-    assert_equal old_stamp, @security.constituents_fetched_at
+    assert_operator @security.constituents_fetched_at, :>, old_stamp
     assert_match "could not be read", last_holdings_log.message
+    assert_equal({ "negative_weight" => 2 }, last_holdings_log.metadata["skipped"])
   end
 
   # The provider is read once per import, so the holdings are stamped with
@@ -386,7 +392,7 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
 
     assert_equal 3, @security.reload.constituents.count,
                  "a zero-weight holding aborted the whole import"
-    assert_in_delta 0.6, @security.look_through_weights["MSFT"].to_f, 0.000001
+    assert_in_delta 0.6, @security.look_through_weights[[ "MSFT", nil ]].to_f, 0.000001
   end
 
   # ----------------------------------------------------- provider capability
@@ -643,16 +649,47 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_equal "Padded Inc", @security.reload.constituents.find_by!(ticker: "AAA").name
   end
 
-  # Duplicates are compared as the uniqueness validation compares them: after
-  # the strip, and case-sensitively. `securities` compares tickers without
-  # case, so a reader resolving these rows to securities sees `AAA` and `aaa`
-  # as one instrument; merging them is that reader's decision, not storage's.
-  test "a padded ticker is stored stripped, and tickers differing in case are both kept" do
-    assert_no_difference -> { holdings_log_count } do
+  # Tickers are stripped and upcased, as `securities` compares them without
+  # case: `AAA` and `aaa` on one exchange are one holding, and the second is
+  # logged as a duplicate rather than stored beside the first.
+  test "a padded ticker is stored stripped and upcased, and a ticker differing only in case is a duplicate" do
+    assert_difference -> { holdings_log_count }, 1 do
       import(info(constituents: [ constituent(" AAA ", "Padded", 5), constituent("aaa", "Lower", 3) ]))
     end
 
-    assert_equal %w[AAA aaa], @security.reload.constituents.order(:weight).reverse.map(&:ticker)
+    assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker)
+    assert_equal "duplicate_ticker", last_holdings_log.metadata["reason"]
+  end
+
+  # EODHD keys a holding "TICKER.EXCHANGE" and a ticker can hold a dot.
+  test "an EODHD holding keyed with a dotted ticker keeps the whole ticker and its exchange" do
+    holdings = {
+      "BRK.B.US" => { "Name" => "Berkshire Hathaway B", "Assets_%" => "2" },
+      "7203.TSE" => { "Code" => "7203", "Exchange" => "TSE", "Name" => "Toyota", "Assets_%" => "1" },
+      "7203.KO" => { "Code" => "7203", "Name" => "Other 7203", "Assets_%" => "1" }
+    }
+
+    @security.stubs(:price_data_provider).returns(eodhd_answering(holdings))
+    @security.import_provider_details(clear_cache: true, include_constituents: true)
+
+    stored = @security.reload.constituents.order(:ticker, :exchange).pluck(:ticker, :exchange)
+    assert_equal [ [ "7203", "KO" ], [ "7203", "TSE" ], [ "BRK.B", "US" ] ], stored
+  end
+
+  # A write the pre-checks did not foresee must not cost the fund its name, nor
+  # escape into the importer's loop.
+  test "a failure storing the holdings is logged and the rest of the answer still lands" do
+    Security::Constituent.stubs(:insert_all!).raises(ActiveRecord::StatementInvalid, "PG::CharacterNotInRepertoire")
+
+    assert_nothing_raised do
+      import(Provider::SecurityConcept::SecurityInfo.new(
+        symbol: "AAPL", name: "Fund Name", links: nil, logo_url: nil, description: nil,
+        kind: nil, exchange_operating_mic: "XNAS", constituents: [ constituent("AAA", "A", 5) ]
+      ))
+    end
+
+    assert_equal "Fund Name", @security.reload.name
+    assert_equal "Failed to store a fund's holdings", last_holdings_log.message
   end
 
   test "a ticker that is not a string skips that row and stores the rest" do
