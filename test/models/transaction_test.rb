@@ -733,6 +733,31 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
   end
 
+  # Another writer can tag the transaction between this copy loading its tags
+  # and saving: the copy then inserts a tagging the unique index refuses. The
+  # write must re-read the tags and succeed, not fail the whole request.
+  test "a tag another writer added meanwhile is stored once without raising" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+    transaction.tags.load
+    Tagging.create!(tag: tag, taggable: Transaction.find(transaction.id))
+
+    assert_nothing_raised { transaction.update!(tag_ids: [ tag.id ]) }
+
+    assert_equal [ tag.id ], Tagging.where(taggable: transaction).pluck(:tag_id)
+  end
+
+  test "a tag another writer added meanwhile is stored once through tags= too" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+    transaction.tags.load
+    Tagging.create!(tag: tag, taggable: Transaction.find(transaction.id))
+
+    assert_nothing_raised { transaction.update!(tags: [ tag ]) }
+
+    assert_equal [ tag.id ], Tagging.where(taggable: transaction).pluck(:tag_id)
+  end
+
   # The dedupe above relies on the uuid cast downcasing a non-canonical id
   # (ActiveRecord's PostgreSQL OID::Uuid#format_uuid), so pin that, and an
   # assignment made only of case variants of one id.
