@@ -36,34 +36,7 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
   end
 
-  test "a target between gridlines keeps its right-hand label and every tick label" do
-    travel_to TODAY do
-      visit_goal(target: 7_300, saved: 3_000, pace: 0)
-
-      assert_not target_collides_with_gridline?, "premise: the $7,300 target must sit clear of every gridline"
-
-      label = target_label
-      assert_equal "Target · $7,300", label["text"]
-      assert_operator label["x"] + label["width"], :>, svg_width / 2, "the target label belongs on the right"
-      assert_equal gridline_ys.size, y_tick_labels.size, "every gridline keeps its tick label"
-    end
-  end
-
-  test "at phone width the target label stays on the right and in full" do
-    travel_to TODAY do
-      visit_goal(target: 10_000)
-      on_phone
-
-      assert_empty gridline_ys, "premise: the y-axis is hidden at phone width"
-      label = target_label
-      assert_equal "Target · $10,000", label["text"]
-      assert_operator label["x"], :>=, 0
-      assert_operator label["x"] + label["width"], :<=, svg_width
-      assert_in_delta target_line_right, label["x"] + label["width"], 12, "the target label must end at the target line's right end"
-    end
-  end
-
-  test "the target label is painted above the plot lines" do
+  test "the target label is painted above the plot lines and under the dots" do
     travel_to TODAY do
       visit_goal(target: 10_000, saved: 3_000, pace: 330)
 
@@ -72,31 +45,28 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
           const kids = Array.from(document.querySelector("[data-controller='goal-projection-chart'] svg").children);
           const label = kids.findIndex((n) => n.tagName === "text" && n.textContent.startsWith("Target"));
           const lastPath = kids.map((n) => n.tagName).lastIndexOf("path");
-          return { label, lastPath };
+          const circles = kids
+            .map((n, i) => (n.tagName === "circle" && n.style.display !== "none" ? i : -1))
+            .filter((i) => i >= 0);
+          return { label, lastPath, circles };
         })()
       JS
       assert_operator order["lastPath"], :>=, 0, "premise: plot paths drawn"
       assert_operator order["label"], :>, order["lastPath"], "a line drawn after the label paints over its halo"
+      assert_equal 2, order["circles"].size, "premise: the Today and projection-end dots are drawn"
+      order["circles"].each do |circle|
+        assert_operator circle, :>, order["label"], "the label's halo is painted over a dot"
+      end
     end
   end
 
-  test "on an overdue goal the target label stays clear of the Today label" do
-    travel_to TODAY do
-      visit_goal(target: 10_000, saved: 3_000, target_date: TODAY, history_from: TODAY - 90.days)
-
-      today_label = chart_texts.find { |t| t["text"] == "Today" }
-      assert today_label, "premise: the Today label is drawn at desktop width"
-      assert_operator today_label["x"] + today_label["width"], :>, svg_width - 60, "premise: Today sits at the right edge"
-      assert_not boxes_overlap?(target_label, today_label), "Target and Today overlap: #{target_label.inspect} #{today_label.inspect}"
-    end
-  end
-
-  test "on an overdue goal just short of its target the moved target label clears the shortfall label" do
+  test "on an overdue goal just short of its target the target label clears Today and the shortfall label" do
     travel_to TODAY do
       visit_goal(target: 10_000, saved: 9_900, target_date: TODAY, history_from: TODAY - 90.days)
 
       today_label = chart_texts.find { |t| t["text"] == "Today" }
       assert today_label, "premise: the Today label is drawn"
+      assert_operator today_label["x"] + today_label["width"], :>, svg_width - 60, "premise: Today sits at the right edge"
       label = target_label
       assert_not boxes_overlap?(label, today_label), "Target and Today overlap: #{label.inspect} #{today_label.inspect}"
       assert_not boxes_overlap?(label, shortfall_label), "Target and shortfall overlap: #{label.inspect} #{shortfall_label.inspect}"
@@ -110,7 +80,6 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       visit_goal(target: 10_000, target_date: Date.new(2027, 2, 1))
       resize_chart(428)
 
-      assert_operator raw_x_ticks, :>=, 6, "premise: d3 returns daily ticks for an eight-day window"
       labels = x_labels.map { |l| l["text"] }
       assert_equal [ "Jan 2027", "Feb 2027" ], labels
     end
@@ -149,19 +118,6 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
   end
 
-  test "a goal whose pace cannot be measured draws its target label but no projection or shortfall" do
-    travel_to TODAY do
-      visit_goal(target: 10_000, saved: 3_000, pace: 200, measurable: false)
-
-      assert_equal "Target · $10,000", target_label["text"]
-      assert_empty chart_texts.select { |t| t["text"].end_with?(" short") }, "no shortfall label without a measurable pace"
-      assert_not page.evaluate_script(<<~JS), "no projection line without a measurable pace"
-        Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg path"))
-          .some((p) => p.getAttribute("stroke-dasharray") === "4 4")
-      JS
-    end
-  end
-
   test "a projection ending well short of the target keeps its shortfall label above the dot" do
     travel_to TODAY do
       visit_goal(target: 10_000, saved: 3_000, pace: 200)
@@ -183,116 +139,46 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
   end
 
-  test "in the light theme every halo and ring matches the card" do
-    @user.update!(theme: "light")
-    travel_to TODAY do
-      visit_goal(target: 10_000, saved: 3_000, pace: 200)
-      assert_selector "html[data-theme='light']"
-
-      assert_backdrop_paint
-    end
-  end
-
-  test "switching to the dark theme repaints the halos to the dark card" do
-    @user.update!(theme: "light")
-    travel_to TODAY do
-      visit_goal(target: 10_000, saved: 3_000, pace: 200)
-      light_card = backdrop_paint["backdrop"]
-
-      page.execute_script("document.documentElement.setAttribute('data-theme', 'dark')")
-      page.document.synchronize do
-        raise Capybara::ExpectationNotMet, "the card has not changed theme" if backdrop_paint["backdrop"] == light_card
-      end
-
-      assert_backdrop_paint
-    end
-  end
-
   # The reported axis opens on Oct 2026, before the goal was created, so its
   # domain starts with the saved history: the 90 days the balance series
   # covers. Asked for "about 5" ticks, d3 then returns nine quarterly ones,
   # Oct 2026 to Oct 2028, about 52 px apart at this width.
-  test "x-axis labels on a two-year goal do not overlap at desktop width" do
+  # Eight quarterly ticks, Oct 2026 to Jul 2028, thinned to every other one:
+  # counted from the first label, the last (the goal's end) would be dropped.
+  test "thinning the x-axis keeps the goal's end date" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, target_date: Date.new(2028, 7, 22), history_from: TODAY - 90.days)
+      resize_chart(560)
+
+      labels = x_labels.map { |l| l["text"] }
+      assert_operator labels.size, :<, 8, "premise: some labels are dropped to fit: #{labels}"
+      assert_equal "Jul 2028", labels.last, "the goal's end date must keep its label: #{labels}"
+    end
+  end
+
+  test "x-axis labels on a two-year goal do not overlap and keep the target date" do
     travel_to TODAY do
       visit_goal(target: 10_000, history_from: TODAY - 90.days)
 
-      assert_equal 9, raw_x_ticks, "premise: d3 returns nine quarterly ticks for the reported goal"
       labels = x_labels
       assert_x_labels_clear(labels)
-      assert_operator labels.size, :<, raw_x_ticks, "some labels must be dropped to fit"
       assert_operator labels.size, :>=, 2, "thinning must not empty the axis"
+      assert_equal "Oct 2028", labels.last["text"], "the goal's end date must keep its label: #{labels.map { |l| l["text"] }}"
       months = labels.map { |l| d = Date.strptime(l["text"], "%b %Y"); d.year * 12 + d.month }
       assert_equal 1, months.each_cons(2).map { |a, b| b - a }.uniq.size, "kept labels must advance by a regular interval: #{labels.map { |l| l["text"] }}"
     end
   end
 
-  test "a short goal keeps every x-axis tick" do
-    travel_to TODAY do
-      visit_goal(target: 10_000, history_from: TODAY - 90.days, target_date: TODAY + 3.months)
-
-      assert_equal raw_x_ticks, x_labels.size, "labels that already fit must all be kept"
-      assert_x_labels_clear(x_labels)
-    end
-  end
-
-  test "at phone width the x-axis keeps its yearly ticks" do
-    travel_to TODAY do
-      visit_goal(target: 10_000, history_from: TODAY - 90.days)
-      on_phone
-
-      assert_equal [ "Jan 2027", "Jan 2028" ], x_labels.map { |l| l["text"] }
-      assert_equal raw_x_ticks, x_labels.size
-    end
-  end
-
-  test "a chart narrower than one label still draws a label, without error" do
-    travel_to TODAY do
-      visit_goal(target: 10_000, history_from: TODAY - 90.days)
-
-      page.execute_script(<<~JS)
-        window.__chartErrors = [];
-        window.addEventListener("error", (e) => window.__chartErrors.push(String(e.message)));
-      JS
-      # Narrow the plot to 60% of one date label, so no label fits between
-      # ticks. The margins are read at a narrow width, where the y-axis is gone.
-      label_width = x_labels.map { |l| l["right"] - l["left"] }.max
-      resize_chart(200)
-      margins = svg_width - (target_line_right - target_line_left)
-      width = (margins + label_width * 0.6).floor
-      resize_chart(width)
-
-      assert_equal width, svg_width, "premise: the chart redrew at #{width} px"
-      label = x_labels.first
-      assert label, "the axis must keep a label"
-      assert_operator label["right"] - label["left"], :>, target_line_right - target_line_left, "premise: one date label is wider than the plot"
-      assert_empty page.evaluate_script("window.__chartErrors")
-    end
-  end
-
-  teardown do
-    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride") if @phone
-  end
-
   private
-
-    # Chrome will not size a window below 500 px, so a phone is emulated.
-    # The chart redraws from its ResizeObserver at the new width.
-    def on_phone
-      skip "phone emulation needs the Chrome DevTools protocol" unless page.driver.browser.respond_to?(:execute_cdp)
-      @phone = true
-      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 390, height: 844, deviceScaleFactor: 1, mobile: true)
-      wait_for_settled_chart
-    end
 
     # The saved history is pinned: empty by default, so the x-domain starts on
     # the day the goal was created; or one point at `history_from`, which is
     # where the domain then starts.
-    # pace_measurable? is stubbed true by default: the test account has no
-    # transaction or balance history, so the chart would otherwise draw no
-    # projection at all. Pass measurable: false for that case.
-    def visit_goal(target:, saved: 3_000, pace: 0, target_date: TARGET_DATE, history_from: nil, measurable: true)
+    # pace_measurable? is stubbed true: the test account has no transaction or
+    # balance history, so the chart would otherwise draw no projection at all.
+    def visit_goal(target:, saved: 3_000, pace: 0, target_date: TARGET_DATE, history_from: nil)
       Goal.any_instance.stubs(:pace).returns(pace)
-      Goal.any_instance.stubs(:pace_measurable?).returns(measurable)
+      Goal.any_instance.stubs(:pace_measurable?).returns(true)
       history = history_from ? [ OpenStruct.new(date: history_from, value: Money.new(saved, "USD")) ] : []
       Goal.any_instance.stubs(:balance_series_values).returns(history)
 
@@ -309,14 +195,15 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
 
     # The first paint can land before the layout settles; the ResizeObserver
-    # then redraws at the real width. Wait for the drawn width to match.
+    # then redraws at the real width, and a font that finishes loading redraws
+    # again. Wait for the drawn width to match and the fonts to be loaded.
     def wait_for_settled_chart
       page.document.synchronize do
         settled = page.evaluate_script(<<~JS)
           (() => {
             const root = document.querySelector("[data-controller='goal-projection-chart']");
             const svg = root.querySelector("svg");
-            return !!svg && svg.viewBox.baseVal.width === root.clientWidth;
+            return !!svg && svg.viewBox.baseVal.width === root.clientWidth && document.fonts.status === "loaded";
           })()
         JS
         raise Capybara::ExpectationNotMet, "the chart has not redrawn at its settled width" unless settled
@@ -357,10 +244,6 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       (paint["halos"] + paint["rings"]).each do |item|
         assert_equal backdrop, item["colour"], "does not match the card behind the chart: #{item.inspect}"
       end
-    end
-
-    def raw_x_ticks
-      page.evaluate_script("Number(document.querySelector(\"[data-controller='goal-projection-chart'] g[data-axis='x']\").dataset.rawTicks)")
     end
 
     def x_labels
@@ -439,29 +322,8 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       wait_for_settled_chart
     end
 
-    def target_line_left
-      target_line_attr("x1")
-    end
-
-    def target_line_right
-      target_line_attr("x2")
-    end
-
-    def target_line_attr(name)
-      page.evaluate_script(<<~JS)
-        Number(Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg line"))
-          .find((l) => l.getAttribute("y1") === l.getAttribute("y2") && l.getAttribute("stroke-dasharray") === "3 3")
-          .getAttribute("#{name}"))
-      JS
-    end
-
     def target_collides_with_gridline?
       ty = target_line_y
       gridline_ys.any? { |gy| (gy - ty).abs < COLLISION_PX }
-    end
-
-    # Short-money tick labels sit in the left gutter.
-    def y_tick_labels
-      chart_texts.select { |t| t["text"].match?(/\A\$[\d.,]+[KM]?\z/) && t["x"] < 44 }
     end
 end

@@ -74,13 +74,13 @@ export default class extends Controller {
     document.addEventListener("turbo:render", this._onTurboRender);
     document.addEventListener("turbo:frame-load", this._onTurboRender);
 
-    // Date labels are measured to thin the axis; measure again once the page
-    // font has replaced the fallback.
-    if (document.fonts?.status === "loading") {
-      document.fonts.ready.then(() => {
-        if (this._connected) this._draw();
-      });
-    }
+    // Date labels are measured to thin the axis and place the labels; measure
+    // again whenever a font finishes loading, including one the chart's own
+    // text starts loading after the first draw.
+    this._onFontsLoaded = () => {
+      if (this._connected) this._draw();
+    };
+    document.fonts?.addEventListener("loadingdone", this._onFontsLoaded);
   }
 
   disconnect() {
@@ -88,6 +88,7 @@ export default class extends Controller {
     window.removeEventListener("resize", this._resize);
     this._observer?.disconnect();
     this._themeObserver?.disconnect();
+    document.fonts?.removeEventListener("loadingdone", this._onFontsLoaded);
     if (this._onTurboRender) {
       document.removeEventListener("turbo:render", this._onTurboRender);
       document.removeEventListener("turbo:frame-load", this._onTurboRender);
@@ -255,7 +256,11 @@ export default class extends Controller {
       .attr("height", innerHeight);
     const plotClip = `url(#${clipId})`;
 
+    // A gridline this close to the target line loses its tick label.
     const COLLISION_PX = 18;
+    // A point label sits this far above its dot, or this far below it.
+    const LABEL_ABOVE_PX = 8;
+    const LABEL_BELOW_PX = 16;
     const targetY = targetAmount > 0 ? y(targetAmount) : null;
     const yTicks = yAxisVisible ? y.ticks(3) : [];
 
@@ -284,6 +289,7 @@ export default class extends Controller {
     }
 
     let targetLabel = null;
+    let projectionDot = null;
     if (targetAmount > 0) {
       svg
         .append("line")
@@ -374,7 +380,7 @@ export default class extends Controller {
         .attr("stroke-dasharray", "4 4")
         .attr("d", line);
 
-      svg
+      projectionDot = svg
         .append("circle")
         .attr("cx", x(target))
         .attr("cy", y(projectionEnd))
@@ -383,14 +389,9 @@ export default class extends Controller {
         .attr("stroke", containerBg)
         .attr("stroke-width", 2);
 
-      // Suppress the projection-end label when it would visually collide
-      // with the target label above. In a barely-on-track case the dot
-      // already conveys "you'll hit the target". duplicating "$2.4K"
-      // beside "Target · $2,400" adds noise.
       const projDotY = y(projectionEnd);
-      const collidesWithTargetLabel = targetAmount > 0 && Math.abs(projDotY - y(targetAmount)) < 18;
 
-      if (innerWidth >= 320 && !(willHit && collidesWithTargetLabel)) {
+      if (innerWidth >= 320) {
         // Server-rendered labels: projection_end_label is the full-format
         // currency for the on-track endpoint, projection_shortfall_label
         // is the "$X short" string when we fall short.
@@ -398,15 +399,10 @@ export default class extends Controller {
           ? data.projection_end_label
           : (data.projection_shortfall_label ? `${data.projection_shortfall_label} short` : "");
         if (labelText) {
-          // Only a shortfall gets here with a collision (an on-track label
-          // was suppressed above): its dot sits just under the target line,
-          // and both labels end at the right edge. Above the dot it would
-          // overlap the target label, so it goes below instead.
-          const labelY = collidesWithTargetLabel ? projDotY + 16 : projDotY - 8;
-          svg
+          const pointLabel = svg
             .append("text")
             .attr("x", x(target) - 8)
-            .attr("y", labelY)
+            .attr("y", projDotY - LABEL_ABOVE_PX)
             .attr("text-anchor", "end")
             .attr("font-size", 12)
             .attr("fill", textSecondary)
@@ -415,6 +411,15 @@ export default class extends Controller {
             .attr("stroke-width", 4)
             .attr("stroke-linejoin", "round")
             .text(labelText);
+          // Both labels end at the right edge, so a dot near the target line
+          // puts this one on top of the target label: measured, not guessed
+          // from the gap between the two lines. An on-track end label is
+          // dropped (the dot already says the target is hit, and "$2.4K"
+          // beside "Target · $2,400" is noise); a shortfall goes below its dot.
+          if (targetLabel && this._boxesOverlap(pointLabel.node().getBBox(), targetLabel.node().getBBox())) {
+            if (willHit) pointLabel.remove();
+            else pointLabel.attr("y", projDotY + LABEL_BELOW_PX);
+          }
         }
       }
     }
@@ -429,7 +434,7 @@ export default class extends Controller {
       .attr("stroke-width", 1)
       .attr("stroke-dasharray", "2 4");
 
-    svg
+    const todayDot = svg
       .append("circle")
       .attr("cx", x(today))
       .attr("cy", y(currentAmount))
@@ -461,8 +466,11 @@ export default class extends Controller {
           targetLabel.attr("x", todayBox.x - 6);
         }
       }
-      // Painted after the plot lines so its halo masks the ones crossing it.
+      // Painted after the plot lines so its halo masks the ones crossing it,
+      // and under the dots, which its halo would otherwise cut into.
       targetLabel.raise();
+      projectionDot?.raise();
+      todayDot.raise();
     }
 
     // Full 4-digit year so the terminal "Jan 2027" reads as the year, not
@@ -471,7 +479,7 @@ export default class extends Controller {
     const tickFmt = d3.timeFormat("%b %Y");
     const tickCount = Math.min(5, Math.max(2, Math.round(innerWidth / 80)));
     const ticks = x.ticks(tickCount);
-    const tickGroup = svg.append("g").attr("data-axis", "x").attr("data-raw-ticks", ticks.length);
+    const tickGroup = svg.append("g").attr("data-axis", "x");
     tickGroup
       .selectAll("text")
       .data(ticks)
@@ -495,8 +503,9 @@ export default class extends Controller {
     // d3 treats the tick count as a hint and can return nearly twice as many
     // (nine quarterly ticks for a two-year goal when asked for five). When the
     // widest label plus a gap is wider than the closest pair of labels, keep
-    // every k-th label, so they thin to a regular interval. The first label
-    // is always kept, so the axis never goes blank.
+    // every k-th label, so they thin to a regular interval. Counted back from
+    // the last label, which is always kept: it is the goal's end date, and it
+    // also keeps the axis from going blank.
     const LABEL_GAP_PX = 12;
     const labelNodes = tickGroup.selectAll("text").nodes();
     const widest = d3.max(labelNodes, (n) => n.getComputedTextLength());
@@ -506,7 +515,7 @@ export default class extends Controller {
       const stride = minSpacing > 0 ? Math.ceil((widest + LABEL_GAP_PX) / minSpacing) : labelNodes.length;
       if (stride > 1) {
         labelNodes.forEach((n, i) => {
-          if (i % stride !== 0) n.remove();
+          if ((labelNodes.length - 1 - i) % stride !== 0) n.remove();
         });
       }
     }
