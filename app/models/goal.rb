@@ -970,6 +970,10 @@ class Goal < ApplicationRecord
   # static chart annotations (target line, projection-end / shortfall,
   # pending-pledge badge) so the Stimulus controller only has to render
   # strings server-side rather than build them with its own Intl calls.
+  #
+  # `today` is read once and handed to the saved history, the milestones and
+  # the projection end value, so those three agree on the day. `status` and
+  # `required_monthly` still read the clock for themselves.
   def projection_payload
     today = Date.current
     series_values = balance_series_values(today)
@@ -1027,26 +1031,28 @@ class Goal < ApplicationRecord
   MILESTONE_HORIZON_MONTHS = 600
 
   # The quarter, half and three-quarter marks on the way to the target. One
-  # already saved past is `reached`; one ahead is dated by the whole months
-  # it takes at the current pace, the arithmetic the "on track" callout
-  # uses, and undated when the pace is not measurable or not positive, or the
-  # mark is more than MILESTONE_HORIZON_MONTHS away. The reference date is handed in: the
-  # projection payload passes the one it stamps as `today`.
+  # already saved past is `reached`; one ahead is dated by when the projection
+  # line reaches it: months of 30.44 days at the current pace, the arithmetic
+  # projection_end_amount uses, rounded up to the day. A mark is undated when
+  # the pace is not measurable or not positive; when the goal is not saving
+  # toward a finish line (paused, archived, completed, or a reserve); when it
+  # falls after the target date; and, for a goal with no target date, when it
+  # is more than MILESTONE_HORIZON_MONTHS away. The reference date is handed
+  # in: the projection payload passes the one it stamps as `today`.
   def milestones(as_of:)
     target = target_amount.to_d
     return [] unless target.positive?
 
     saved = current_balance.to_d
     monthly = pace.to_d
+    datable = !(paused? || archived? || completed? || maintained?) && pace_measurable? && monthly.positive?
 
     MILESTONE_PERCENTS.map do |percent|
       amount = target * percent / 100
       reached = saved >= amount
-      months = ((amount - saved) / monthly).ceil if !reached && pace_measurable? && monthly.positive?
-      date = as_of >> months if months && months <= MILESTONE_HORIZON_MONTHS
-      # The chart stops at the target date, so a milestone the pace reaches
-      # only after it is left undated rather than dated centuries out.
-      date = nil if date && target_date && date > target_date
+      months = (amount - saved) / monthly if !reached && datable
+      date = (as_of + (months * 30.44).ceil) if months
+      date = nil if date && (target_date ? date > target_date : months > MILESTONE_HORIZON_MONTHS)
 
       {
         percent: percent, amount: amount.to_f, reached: reached, date: date&.to_s,
@@ -1059,7 +1065,7 @@ class Goal < ApplicationRecord
   # the JS calculation so the server can pre-format the chart annotation
   # without re-rendering after each Stimulus draw. Measured from the
   # payload's own `today`, so the end value and the line agree on the day.
-  def projection_end_amount(as_of: Date.current)
+  def projection_end_amount(as_of:)
     return current_balance.to_d if target_date.nil? || !pace_measurable?
     months = ((target_date - as_of).to_f / 30.44).clamp(0.0, Float::INFINITY)
     projected = current_balance.to_d + (pace.to_d * months)

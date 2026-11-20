@@ -1447,7 +1447,7 @@ class GoalTest < ActiveSupport::TestCase
   # --- Milestones ---------------------------------------------------------------
 
   # Target 1,000, 400 saved, 50 a month: 25% (250) is passed; 50% (500) is
-  # ceil(100 / 50) = 2 months out, 75% (750) ceil(350 / 50) = 7.
+  # 100 / 50 = 2 months of 30.44 days out (61 days), 75% (750) 7 (214 days).
   def milestone_goal(pace: 50)
     goal = @family.goals.create!(name: "Milestones", target_amount: 1_000, currency: "USD") do |g|
       g.goal_accounts.build(account: Account.create!(family: @family, accountable: Depository.new,
@@ -1465,7 +1465,7 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal [ 25, true, nil ], m.values_at(:percent, :reached, :date)
   end
 
-  test "each milestone ahead is dated by the whole months it takes at the current pace" do
+  test "each milestone ahead is dated by when the projection line reaches it" do
     list = milestone_goal.milestones(as_of: Date.new(2026, 3, 15))
 
     assert_equal [ [ 50, false, "2026-05-15" ], [ 75, false, "2026-10-15" ] ],
@@ -1473,11 +1473,12 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal [ 250.0, 500.0, 750.0 ], list.map { |m| m[:amount] }
   end
 
-  test "a part month counts as a whole one, and the label names the month" do
-    # At 60 a month, 50% is 100 / 60 = 1.67 months out and 75% is 5.83: both round up.
+  test "a part month is counted in days, and the label names the month" do
+    # At 60 a month, 50% is 100 / 60 = 1.67 months out (50.7 days, so 51) and
+    # 75% is 5.83 (177.6 days, so 178).
     list = milestone_goal(pace: 60).milestones(as_of: Date.new(2026, 3, 15))
 
-    assert_equal [ "2026-05-15", "2026-09-15" ], list.drop(1).map { |m| m[:date] }
+    assert_equal [ "2026-05-05", "2026-09-09" ], list.drop(1).map { |m| m[:date] }
     assert_equal "50% · May 2026", list[1][:label]
     assert_nil list[0][:label]
   end
@@ -1537,7 +1538,7 @@ class GoalTest < ActiveSupport::TestCase
     # it is 60.10 away, so 601.
     goal = milestone_goal(pace: BigDecimal("0.1"))
     goal.stubs(:current_balance).returns(BigDecimal("440"))
-    assert_equal "2076-03-15", goal.milestones(as_of: Date.new(2026, 3, 15))[1][:date]
+    assert_equal "2076-03-16", goal.milestones(as_of: Date.new(2026, 3, 15))[1][:date]
 
     goal.stubs(:current_balance).returns(BigDecimal("439.9"))
     assert_nil goal.milestones(as_of: Date.new(2026, 3, 15))[1][:date]
@@ -1548,6 +1549,40 @@ class GoalTest < ActiveSupport::TestCase
     goal.stubs(:target_date).returns(Date.new(2026, 10, 15))
 
     assert_equal "2026-10-15", goal.milestones(as_of: Date.new(2026, 3, 15))[2][:date]
+  end
+
+  # The projection line counts months as 30.44 days, so a milestone dated by
+  # whole calendar months could sit on or before the target date while the
+  # line had not yet reached it.
+  test "a milestone is dated by the projection's own months, not calendar months" do
+    goal = milestone_goal(pace: 100)
+    goal.stubs(:target_date).returns(Date.new(2026, 2, 28))
+
+    # 50% (500) is 1 month away: 30.44 days from Jan 31 is Mar 3, after the
+    # target date, where the line reaches 400 + 100 * 28 / 30.44 = 492.
+    assert_nil goal.milestones(as_of: Date.new(2026, 1, 31))[1][:date]
+    assert_operator goal.projection_end_amount(as_of: Date.new(2026, 1, 31)), :<, 500
+  end
+
+  test "a goal that is not saving toward a finish line dates no milestone" do
+    { paused?: true, archived?: true, completed?: true, maintained?: true }.each do |state, value|
+      goal = milestone_goal
+      goal.stubs(state).returns(value)
+
+      list = goal.milestones(as_of: Date.new(2026, 3, 15))
+
+      assert_equal [ nil, nil ], list.drop(1).map { |m| m[:date] }, "#{state} should date no milestone"
+      assert_equal [ true, false, false ], list.map { |m| m[:reached] }, "#{state} still reports what is reached"
+    end
+  end
+
+  # The horizon stands in for a target date; a goal with one is bounded by it.
+  test "a goal with a far target date dates a milestone past the horizon that falls before it" do
+    goal = milestone_goal(pace: BigDecimal("0.5"))
+    goal.stubs(:target_date).returns(Date.new(2096, 3, 15))
+
+    # 75% (750) is 350 / 0.5 = 700 months away, past 600 but before the target date.
+    assert_not_nil goal.milestones(as_of: Date.new(2026, 3, 15))[2][:date]
   end
 
   test "a goal without a target has no milestones" do
@@ -1745,7 +1780,7 @@ class GoalTest < ActiveSupport::TestCase
     payload = goal.projection_payload
     assert_nil payload[:avg_monthly]
     assert_nil payload[:projection_shortfall_label]
-    assert_equal goal.current_balance.to_d, goal.projection_end_amount
+    assert_equal goal.current_balance.to_d, goal.projection_end_amount(as_of: Date.current)
   end
 
   test "under a year of balance history is not read as growth from zero" do
@@ -1903,7 +1938,7 @@ class GoalTest < ActiveSupport::TestCase
     # The measured half has a pace of its own (300/mo); the projection still
     # claims nothing beyond today's balance.
     assert_equal 300, mixed.pace.to_d
-    assert_equal mixed.current_balance.to_d, mixed.projection_end_amount
+    assert_equal mixed.current_balance.to_d, mixed.projection_end_amount(as_of: Date.current)
 
     # Fixed slices: `cash` is already claimed in full by the goal above.
     measured = goal_on([ cash, valued ], target_amount: 500_000, name: "Measured", allocated: 100)
