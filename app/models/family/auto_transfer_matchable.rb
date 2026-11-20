@@ -127,9 +127,13 @@ module Family::AutoTransferMatchable
       # runs that each displace a guess the other wants would otherwise lock the
       # same rows in opposite orders and deadlock. A run that finds the lock held
       # is skipped rather than queued behind it: the run holding it already
-      # matches what this one would, and waiting could stall a caller that holds
-      # row locks of its own.
-      next unless lock_auto_match_transfers!
+      # covers its own account but not a pair only this run would see, and
+      # waiting could stall a caller that holds row locks of its own. So the
+      # skipped run queues a family-wide one for shortly after.
+      unless lock_auto_match_transfers!
+        AutoMatchTransfersJob.set(wait: 1.minute).perform_later(self)
+        next
+      end
 
       # Exclude already matched transfers. Cross-currency FX-tolerance matching is
       # restricted to provider-linked accounts ONLY on this automatic path -- a
@@ -310,7 +314,11 @@ module Family::AutoTransferMatchable
         # inserted as any exact match is, without locking its legs.
         return true if locked_ids.empty?
 
-        return false unless exact_pair_under_lock?(match)
+        # The guesses' own legs are locked too: a leg can be edited (its kind
+        # changed) without the transfer row lock, and the re-read below must
+        # see what such an edit committed.
+        guess_leg_ids = Transfer.where(id: locked_ids).pluck(:inflow_transaction_id, :outflow_transaction_id).flatten
+        return false unless exact_pair_under_lock?(match, also_lock: guess_leg_ids)
 
         # A new statement, so its snapshot sees what committed while the locks
         # were awaited: a confirmed status, a changed kind, an attached fee.
@@ -329,19 +337,24 @@ module Family::AutoTransferMatchable
       end
     end
 
-    # Locks both legs (transactions, then their entries) and re-reads them:
-    # still opposite amounts in one currency, and neither excluded since the
-    # candidate query read it.
-    def exact_pair_under_lock?(match)
+    # Locks both legs, and any other transactions in `also_lock` (transactions,
+    # then their entries, each in id order) and re-reads the pair: still
+    # opposite amounts in one currency, neither excluded, and not categorized
+    # apart since the candidate query read it.
+    def exact_pair_under_lock?(match, also_lock: [])
       leg_ids = [ match.inflow_transaction_id, match.outflow_transaction_id ]
-      Transaction.where(id: leg_ids).order(:id).lock.pluck(:id)
-      entries = Entry.where(entryable_type: "Transaction", entryable_id: leg_ids)
+      lock_ids = (leg_ids + also_lock).compact.uniq
+      categories = Transaction.where(id: lock_ids).order(:id).lock.pluck(:id, :category_id).to_h
+      entries = Entry.where(entryable_type: "Transaction", entryable_id: lock_ids)
         .order(:id).lock.to_a.index_by(&:entryable_id)
       inflow = entries[match.inflow_transaction_id]
       outflow = entries[match.outflow_transaction_id]
+      inflow_category = categories[match.inflow_transaction_id]
+      outflow_category = categories[match.outflow_transaction_id]
 
       inflow.present? && outflow.present? &&
         !inflow.excluded? && !outflow.excluded? &&
+        (inflow_category.nil? || outflow_category.nil? || inflow_category == outflow_category) &&
         inflow.currency == outflow.currency &&
         inflow.amount.negative? && inflow.amount == -outflow.amount
     end

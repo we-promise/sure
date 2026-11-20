@@ -3,6 +3,7 @@ require "test_helper"
 class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   include EntriesTestHelper
   include LedgerTestingHelper
+  include ActiveJob::TestHelper
 
   setup do
     @family = families(:dylan_family)
@@ -726,6 +727,52 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
       @family.auto_match_transfers!
     end
     assert_not Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "a run skipped because the family's lock is held queues a family-wide retry" do
+    @family.stubs(:lock_auto_match_transfers!).returns(false)
+
+    assert_enqueued_with(job: AutoMatchTransfersJob, args: [ @family ]) do
+      @family.auto_match_transfers!(account: @depository)
+    end
+  end
+
+  test "a pair recategorized apart after selection does not displace the guess" do
+    outflow, guess = pending_cross_currency_guess
+    outflow.entryable.update!(category: categories(:food_and_drink))
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+    candidates = @family.transfer_match_candidates(include_rejected: false, displace_pending_cross_currency: true).to_a
+    assert candidates.any? { |row| row.inflow_transaction_id == real_inflow.entryable_id && row.outflow_transaction_id == outflow.entryable_id }
+
+    # Categorized as income between the candidate query and the insert.
+    real_inflow.entryable.update_columns(category_id: categories(:income).id)
+    @family.stubs(:transfer_match_candidates).returns(candidates)
+
+    @family.auto_match_transfers!
+
+    assert Transfer.exists?(guess.id)
+    assert_not Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  # A guess's own legs can be edited (a kind change) without its transfer row
+  # lock, so they are locked before the guess is re-read.
+  test "displacement locks the guess's legs before re-reading it" do
+    _outflow, guess = pending_cross_currency_guess
+    create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+
+    locked_transaction_ids = []
+    callback = lambda do |*, payload|
+      sql = payload[:sql]
+      next unless sql.include?("FOR UPDATE") && sql.match?(/FROM "?transactions"?/)
+
+      locked_transaction_ids.concat(Array(payload[:type_casted_binds]).flatten)
+    end
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      @family.auto_match_transfers!
+    end
+
+    assert_includes locked_transaction_ids, guess.inflow_transaction_id,
+      "the guess's inflow leg is locked: #{locked_transaction_ids.inspect}"
   end
 
   test "auto-matching takes the family's lock before it selects candidates" do
