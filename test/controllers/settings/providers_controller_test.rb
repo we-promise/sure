@@ -691,7 +691,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_equal Settings::ProvidersController::FAMILY_PANEL_KEYS.sort, types.keys.sort
     types.each do |key, type|
       model = type.constantize
-      assert_includes model.included_modules, Syncable, "#{key} syncs a model that cannot sync"
+      assert model.method_defined?(:sync_later), "#{key} syncs a model that cannot sync"
       assert_equal "#{key}_items", model.table_name, "#{key} syncs another provider's model"
     end
   end
