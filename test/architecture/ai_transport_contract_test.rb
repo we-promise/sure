@@ -242,7 +242,6 @@ class AiTransportContractTest < ActiveSupport::TestCase
   end
 
   test "an embedding endpoint with static headers is refused, since RubyLLM can't send them" do
-
     model_endpoint = ai_endpoint(name: "embed", base_url: "https://llm.example.test/v1", extra_headers: { "X-Gateway-Key" => "k" })
 
     assert_raises(Ai::Error::Refused) { Ai::Transport.for(model_endpoint).probe(ai_model(endpoint: model_endpoint), :embedding) }

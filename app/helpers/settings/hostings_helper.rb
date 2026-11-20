@@ -24,9 +24,10 @@ module Settings::HostingsHelper
   def categorization_shadow_summary(family)
     comparisons = family.categorization_comparisons
     disagreements = comparisons.disagreements.order(created_at: :desc).limit(5).to_a
+    sampled, agreement = comparisons.sample_and_agreement
     {
-      sampled: comparisons.count,
-      agreement: comparisons.agreement_rate,
+      sampled:,
+      agreement:,
       disagreements:,
       names: Ai::Comparison.category_names(disagreements, family)
     }

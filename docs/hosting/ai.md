@@ -308,7 +308,7 @@ Behavior:
 - Values are stringified: nested JSON objects/arrays become Ruby inspect-style strings, not valid JSON. Header values must be plain strings.
 - User headers merge over the client's managed headers — setting `Authorization` here would override the access token.
 - Unset, blank, malformed, or non-object JSON is ignored with an error in the logs; chat keeps working. The raw value is never logged.
-- These headers are NOT sent to embedding or AI-health-probe calls — those build separate clients. Static headers are sent on OpenAI vector-store calls, which use the same client builder. A gateway requiring the header on the other endpoints is not supported.
+- Static headers are sent on OpenAI vector-store calls and on configured OpenAI health probes (model list, chat and tool checks), which use the same client builder. Embedding calls still refuse a static-header endpoint: RubyLLM can't send headers there. A gateway that requires the header only on embeddings is not supported.
 - ENV-only: there is no settings-page equivalent. The value is re-read every time a provider client is built (nothing is cached), but updating the environment requires restarting the app.
 
 ## Local LLM Setup (Ollama)

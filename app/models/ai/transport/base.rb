@@ -174,11 +174,15 @@ class Ai::Transport::Base
     def run_embed(request) = raise(NotImplementedError, "#{self.class.name} doesn't embed")
     def run_ocr(request) = raise(NotImplementedError, "#{self.class.name} doesn't read pages")
 
-    # A flat vector for a single text, wrapped; every component a finite number; the dimensions
-    # the model promised.
-    def checked_vectors!(model, vectors)
+    # A flat vector for a single text, wrapped; one vector per input text; every component a
+    # finite number; the dimensions the model promised. Count them here too: RubyLLM's check
+    # misses a single-text request, and an extra vector would be stored against the wrong text.
+    def checked_vectors!(model, vectors, expected:)
       vectors = Array(vectors)
       vectors = [ vectors ] if vectors.first.is_a?(Numeric)
+      unless vectors.size == expected
+        raise Ai::Error::InvalidOutput, "expected #{expected} vectors, got #{vectors.size}"
+      end
       unless vectors.all? { |vector| vector.is_a?(Array) && vector.all? { _1.is_a?(Numeric) && _1.finite? } }
         raise Ai::Error::InvalidOutput, "the embedding has components that aren't finite numbers"
       end

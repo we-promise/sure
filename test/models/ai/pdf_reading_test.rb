@@ -206,6 +206,8 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
       outcome = reading(@scan).extract(read_as: :ocr)
 
       assert outcome.checks.reconciles, "the printed closing balance, not the model's"
+      assert_equal 0.0, outcome.value[:opening_balance], "the validated balances are kept for the import"
+      assert_equal 2550.5, outcome.value[:closing_balance], "not the model's 2575.0"
     end
   end
 

@@ -51,7 +51,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
                                                                                   assume_model_exists: true)
         end
       end
-      vectors = checked_vectors!(request.model, embedding.vectors)
+      vectors = checked_vectors!(request.model, embedding.vectors, expected: request.texts.size)
       EmbedResponse.new(vectors:, usage: Ai::Tokens.from_ruby_llm(embedding.tokens))
     end
 
@@ -144,7 +144,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
         ruby_llm_context(timeout:).embed(Ai::Transport::Base::PROBE_EMBEDDING_INPUT, model: model.name, provider: ruby_llm_provider,
                                                                        assume_model_exists: true)
       end
-      checked_vectors!(model, embedding.vectors).first.size
+      checked_vectors!(model, embedding.vectors, expected: 1).first.size
     end
 
     # OpenRouter keeps its own RubyLLM provider: only it round-trips reasoning_details

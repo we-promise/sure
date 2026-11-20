@@ -16,15 +16,16 @@ class Ai::Comparison < ApplicationRecord
   scope :disagreements, -> { where(agreed: false) }
   scope :chronological, -> { order(:created_at) }
 
-  # Share of compared items where both routes gave the same answer, as a percentage; nil with
-  # none. Both declining to answer counts as agreement.
-  def self.agreement_rate
-    # One query, so both counts come from the same snapshot while shadow jobs insert rows.
+  # Sample size and share of agreement, as a percentage, from one query so a shadow job
+  # inserting a row can't give the rate a different sample than the panel reports. Nil rate
+  # with no samples; both declining to answer counts as agreement.
+  def self.sample_and_agreement
     total, agreed = pick(Arel.sql("COUNT(*)"), Arel.sql("COUNT(*) FILTER (WHERE agreed)"))
-    return nil if total.to_i.zero?
-
-    (agreed.to_f / total * 100).round(2)
+    total = total.to_i
+    [ total, total.zero? ? nil : (agreed.to_f / total * 100).round(2) ]
   end
+
+  def self.agreement_rate = sample_and_agreement.last
 
   def primary_endpoint = primary_route.to_h["endpoint"]
   def shadow_endpoint = shadow_route.to_h["endpoint"]

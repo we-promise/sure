@@ -92,9 +92,14 @@ class Ai::PdfReading
       result = Ai::Generations::ExtractBankStatement.new(units:, content:, filename:, family:, user:).call(plan:, cancelled:)
       result.value!
 
-      checks = Ai::Generations::ExtractBankStatement.checks(result.value, source:, balances: printed_balances(source))
+      balances = printed_balances(source)
+      # The checks reconcile against the balances printed in the text layer. Keep those values in
+      # the retained extraction too: PdfImport#extract_transactions stores them as the statement's
+      # balances, and the model's own figures can be wrong even when the rows reconcile.
+      value = balances.empty? ? result.value : result.value.merge(balances)
+      checks = Ai::Generations::ExtractBankStatement.checks(value, source:, balances:)
                                                     .with(complete: result.skipped.empty? && result.remaining.empty? && untranscribed_pages.blank?)
-      outcome = Outcome.new(value: result.value, way:, model: result.route&.model&.name, checks:, usage: result.usage, attempts:)
+      outcome = Outcome.new(value:, way:, model: result.route&.model&.name, checks:, usage: result.usage, attempts:)
       attempts << { way:, checks: checks.to_h }
       return outcome unless checks.worth_another_way? || balances_unknown?(checks, source)
 

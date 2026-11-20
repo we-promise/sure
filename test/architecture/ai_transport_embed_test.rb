@@ -41,6 +41,18 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     assert_raises(Ai::Error::InvalidOutput) { embed([ "only" ]) }
   end
 
+  test "a single-text probe with extra vectors is InvalidOutput" do
+    # RubyLLM skips its own count check when the input is a string, so this guard is the only
+    # thing stopping an extra vector from being treated as the probe's answer.
+    stub_embeddings(rows([ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ]))
+
+    endpoint = ai_endpoint(name: "embed", base_url: "http://embed.local:8081/v1", location: :local)
+    model = ai_model(name: "nomic-embed-text", endpoint:, capabilities: %i[embedding], embedding_dimensions: 3)
+
+    error = assert_raises(Ai::Error::InvalidOutput) { Ai::Transport.for(endpoint).probe(model, :embedding) }
+    assert_match(/expected 1 vectors, got 2/, error.message)
+  end
+
   test "maps a 401 and retries a 503" do
     stub_request(:post, URL).to_return(status: 401, headers: JSON_HEADERS, body: { error: { message: "bad key" } }.to_json)
     assert_raises(Ai::Error::Unauthorized) { embed([ "x" ]) }
