@@ -324,7 +324,9 @@ module Security::Provided
   # prices, not a page view; `#show` makes no provider call at all. It keeps
   # the narrow gate because the user asked for prices, not for classification.
   def import_provider_details(clear_cache: false, include_classification: false)
-    unless price_data_provider.present?
+    # Resolved once: each call re-reads the enabled providers and the registry.
+    provider = price_data_provider
+    unless provider.present?
       Rails.logger.warn("No provider configured for Security.import_provider_details")
       return
     end
@@ -347,13 +349,13 @@ module Security::Provided
     #   retried. The stamp is compared with the provider resolved now, so an
     #   assigned provider changing and the enabled default changing (for a
     #   security with no `price_provider`) both open the gate.
-    classification_provider_key = self.class.provider_key_for(price_data_provider)
-    wants_classification = include_classification && price_data_provider.supplies_classification? &&
+    classification_provider_key = self.class.provider_key_for(provider)
+    wants_classification = include_classification && provider.supplies_classification? &&
       !classification_locked? && classification_source.blank? &&
       (classification_fetched_at.nil? || classification_fetched_from != classification_provider_key)
 
     unless has_metadata && !wants_classification && !clear_cache
-      response = price_data_provider.fetch_security_info(
+      response = provider.fetch_security_info(
         symbol: ticker,
         exchange_operating_mic: exchange_operating_mic
       )
@@ -369,24 +371,27 @@ module Security::Provided
           attrs[:name]        = response.data.name    if response.data.name.present?
           attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
           attrs[:website_url] = response.data.links   if response.data.links.present?
-          attrs.merge!(classification_attributes_from(response.data, classifies: price_data_provider.supplies_classification?))
+          attrs.merge!(classification_attributes_from(response.data, classifies: provider.supplies_classification?))
           stored = attrs.empty? || update(attrs)
-          # Recorded only when the answer was stored. `update` runs the model's
-          # validations, and a row can hold a value they now refuse; stamping
-          # anyway would close the gate on an answer that never landed. A lock
-          # set while the provider answered rejects the answer the same way.
-          if wants_classification && stored && !classification_locked?
+          # `update` runs the model's validations, and a row can hold a value
+          # they now refuse (a legacy region, a ticker clash). Its answer is
+          # stamped anyway, with the refusal logged for support: an unstamped
+          # row is asked again on every sync, and each ask costs a provider
+          # request. A lock set while the provider answered rejects the answer
+          # instead, and closes the gate on its own.
+          if wants_classification && !classification_locked?
+            log_refused_classification(provider, errors.full_messages) unless stored
             update_columns(classification_fetched_at: Time.current, classification_fetched_from: classification_provider_key)
           end
         end
       else
-        Rails.logger.warn("Failed to fetch security info for #{ticker} from #{price_data_provider.class.name}: #{response.error.message}")
+        Rails.logger.warn("Failed to fetch security info for #{ticker} from #{provider.class.name}: #{response.error.message}")
         DebugLogEntry.capture(
           category: "security_metadata_fetch",
           level: "warn",
           message: "Failed to get security info",
           source: self.class.name,
-          provider: price_data_provider,
+          provider: provider,
           metadata: {
             security_id: self.id,
             ticker: ticker,
@@ -485,6 +490,18 @@ module Security::Provided
   # classifies may claim the classification: an instrument type from one that
   # does not (Twelve Data) would stamp `provider` as the source and keep a
   # capable provider from ever being asked.
+  def log_refused_classification(provider, messages)
+    DebugLogEntry.capture(
+      category: "security_metadata_fetch",
+      level: "warn",
+      message: "Security details refused by validation",
+      source: self.class.name,
+      provider: provider,
+      metadata: { security_id: id, ticker: ticker, errors: messages }
+    )
+  end
+  private :log_refused_classification
+
   def classification_attributes_from(data, classifies: true)
     return {} if classification_locked?
 
