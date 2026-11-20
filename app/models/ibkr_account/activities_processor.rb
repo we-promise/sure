@@ -329,8 +329,8 @@ class IbkrAccount::ActivitiesProcessor
       )
     end
 
-    # A trade that counts a bond in another unit than the bond's other rows was
-    # carried into the bond's unit, which the trade's price shows.
+    # A trade quoted in another unit than per 100 face was carried into it,
+    # which the trade's price shows.
     def capture_bond_unit_disagreements
       disagreements = bond_unit_disagreements(:trades)
       return if disagreements.empty?
@@ -338,7 +338,7 @@ class IbkrAccount::ActivitiesProcessor
       DebugLogEntry.capture(
         category: "provider_sync",
         level: "warn",
-        message: "IBKR bond trades counted in another unit than the bond's other rows",
+        message: "IBKR bond trades quoted in another unit than per 100 face",
         source: self.class.name,
         provider_key: "ibkr",
         account_provider: @ibkr_account.account_provider,

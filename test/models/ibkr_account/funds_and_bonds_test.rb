@@ -6,6 +6,23 @@ require "test_helper"
 class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
   BOND_TICKER = "BOND:SURCO 3 1/2 06/15/30:900003".freeze
 
+  # The bond as a later sync reports it: 10,000 face at 98.50% of par, and a
+  # sale of 5,000 of it, both with IBKR's 0.01 multiplier.
+  BOND_POSITION = {
+    "asset_category" => "BOND", "conid" => "900003", "security_id" => "XX0000000037", "security_id_type" => "ISIN",
+    "symbol" => "SURCO 3 1/2 06/15/30", "description" => "SURCO 3 1/2 06/15/30", "position" => "10000",
+    "multiplier" => "0.01", "mark_price" => "98.50", "position_value" => "9850.00", "currency" => "EUR",
+    "fx_rate_to_base" => "1", "cost_basis_price" => "97.25", "cost_basis_money" => "9725.00",
+    "report_date" => "2026-05-20", "side" => "Long"
+  }.freeze
+
+  BOND_SALE = {
+    "asset_category" => "BOND", "trade_id" => "9106", "transaction_id" => "9106a", "conid" => "900003",
+    "symbol" => "SURCO 3 1/2 06/15/30", "quantity" => "-5000", "multiplier" => "0.01", "trade_price" => "98.00",
+    "proceeds" => "4900.00", "currency" => "EUR", "fx_rate_to_base" => "1", "buy_sell" => "SELL",
+    "trade_date" => "2026-05-15", "ib_commission" => "0", "ib_commission_currency" => "EUR"
+  }.freeze
+
   fixtures :families, :ibkr_items, :ibkr_accounts, :accounts, :securities
 
   setup do
@@ -162,37 +179,37 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("9850"), bond.amount
   end
 
-  test "a bond price quoted per unit, not per 100 face, is counted per unit" do
-    # positionValue = position x markPrice, so the face value is the quantity.
+  test "a bond price quoted per unit, not per 100 face, is carried into 100 face at the same value" do
+    # positionValue = position x markPrice, so the face value is the quantity,
+    # and the price is carried to per 100 face: 0.985 a unit is 98.50.
     per_unit_position!
 
     process!
 
     bond = holding_for(BOND_TICKER)
-    assert_equal BigDecimal("10000"), bond.qty
+    assert_equal BigDecimal("100"), bond.qty
+    assert_equal BigDecimal("98.5"), bond.price
     assert_equal BigDecimal("9850"), bond.amount
+    assert_equal BigDecimal("97.25"), bond.cost_basis
   end
 
-  # One bond security has one unit. The position says 10,000 units at 0.985; the
-  # trade, whose value says 100 face at 97.25, is carried into that unit: the
-  # same 9,725 bought, as 10,000 units at 0.9725.
-  test "a bond's trade follows the unit its open position implies" do
+  # A bond is always counted per 100 face, whatever its position says, so its
+  # trades and its position share a unit in every sync.
+  test "a bond's trade is counted per 100 face whatever unit its open position is quoted in" do
     per_unit_position!
 
     process!
 
     trade = @account.entries.find_by!(external_id: "ibkr_trade_9102")
-    assert_equal BigDecimal("10000"), trade.entryable.qty
-    assert_equal BigDecimal("0.9725"), trade.entryable.price
+    assert_equal BigDecimal("100"), trade.entryable.qty
+    assert_equal BigDecimal("97.25"), trade.entryable.price
     assert_equal BigDecimal("9730"), trade.amount
 
-    entry = holding_for(BOND_TICKER)
-    assert_equal BigDecimal("0.9725"), entry.cost_basis
+    assert_equal BigDecimal("97.25"), holding_for(BOND_TICKER).cost_basis
   end
 
-  test "a bond's position follows the unit it implies when its trade is quoted per unit" do
-    # The position says 100 units at 98.50 (the fixture); this trade says
-    # 10,000 face at 0.9725 a unit, so it is 100 units at 97.25 in the position's.
+  test "a trade quoted per unit is carried into 100 face" do
+    # This trade says 10,000 face at 0.9725 a unit: 100 units at 97.25.
     trade = @statement[:trades].find { |row| row["asset_category"] == "BOND" }
     trade.merge!("multiplier" => "1", "trade_price" => "0.9725")
 
@@ -204,7 +221,7 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("100"), holding_for(BOND_TICKER).qty
   end
 
-  test "a position and a trade of one bond that disagree on the unit reverse to nothing before the purchase" do
+  test "a position quoted per unit and a trade per 100 face reverse to nothing before the purchase" do
     per_unit_position!
 
     process!
@@ -214,15 +231,15 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_no_units_before_the_purchase(bond)
 
     on_trade_day = @account.holdings.find_by!(security: bond, date: Date.new(2026, 4, 2))
-    assert_equal BigDecimal("10000"), on_trade_day.qty
+    assert_equal BigDecimal("100"), on_trade_day.qty
     # The trade's price is the day's price; units x price is what was paid.
     assert_equal BigDecimal("9725"), on_trade_day.amount
 
     today = @account.holdings.where(security: bond).order(:date).last
-    assert_equal BigDecimal("10000"), today.qty
+    assert_equal BigDecimal("100"), today.qty
   end
 
-  test "a bond's holding history stays in one unit when the position is per 100 face and the trade per unit" do
+  test "a trade quoted per unit leaves the holding history in one unit with a position per 100 face" do
     trade = @statement[:trades].find { |row| row["asset_category"] == "BOND" }
     trade.merge!("multiplier" => "1", "trade_price" => "0.9725")
 
@@ -236,27 +253,27 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("9725"), on_trade_day.amount
   end
 
-  test "rows of one bond that disagree on the unit are reported" do
+  test "a row quoted in another unit than per 100 face is reported" do
     per_unit_position!
 
     process!
 
-    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond trades counted in another unit than the bond's other rows")
+    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions quoted in another unit than per 100 face")
     assert_equal "warn", entry.level
     bond = entry.metadata["bonds"].sole
     assert_equal BOND_TICKER, bond["ticker"]
-    assert_equal "1.0", bond["unit_factor"]
-    assert_equal [ "0.01" ], bond["row_unit_factors"]
-    assert_nil DebugLogEntry.find_by(provider_key: "ibkr", message: "IBKR bond positions counted in another unit than the bond's other rows")
+    assert_equal "0.01", bond["unit_factor"]
+    assert_equal [ "1.0" ], bond["row_unit_factors"]
+    assert_nil DebugLogEntry.find_by(provider_key: "ibkr", message: "IBKR bond trades quoted in another unit than per 100 face")
   end
 
-  test "rows of one bond that agree on the unit report nothing" do
-    assert_no_difference -> { DebugLogEntry.where(provider_key: "ibkr", message: [ "IBKR bond trades counted in another unit than the bond's other rows", "IBKR bond positions counted in another unit than the bond's other rows" ]).count } do
+  test "rows quoted per 100 face report nothing" do
+    assert_no_difference -> { DebugLogEntry.where(provider_key: "ibkr", message: [ "IBKR bond trades quoted in another unit than per 100 face", "IBKR bond positions quoted in another unit than per 100 face" ]).count } do
       process!
     end
   end
 
-  test "two lots of one bond that disagree on the unit are carried into one, at 0.01 on a tie" do
+  test "two lots of one bond quoted in different units are carried into one" do
     # 10,000 face at 98.50 per 100 face (the fixture), plus 5,000 at 1.01 a unit.
     lot = @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
     @statement[:open_positions] << lot.merge(
@@ -271,12 +288,12 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("14900"), bond.amount
     assert_in_delta 14675, bond.qty * bond.cost_basis, 0.01
 
-    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions counted in another unit than the bond's other rows")
+    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions quoted in another unit than per 100 face")
     assert_equal [ "1.0" ], entry.metadata["bonds"].sole["row_unit_factors"]
     assert_equal "0.01", entry.metadata["bonds"].sole["unit_factor"]
   end
 
-  test "a short bond position, which is not imported, does not decide the unit" do
+  test "a short bond position, which is not imported, is not reported" do
     short = @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
     @statement[:open_positions].delete(short)
     @statement[:open_positions] << short.merge(
@@ -287,6 +304,7 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("100"), @account.entries.find_by!(external_id: "ibkr_trade_9102").entryable.qty
     assert_equal BigDecimal("97.25"), @account.entries.find_by!(external_id: "ibkr_trade_9102").entryable.price
+    assert_nil DebugLogEntry.find_by(provider_key: "ibkr", message: "IBKR bond positions quoted in another unit than per 100 face")
   end
 
   test "a bond sold since has no position and counts in the unit its trades imply" do
@@ -305,7 +323,7 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal("97.25"), BigDecimal("98") ], [ buy.price, sell.price ]
   end
 
-  test "a bond with trades that disagree on the unit and no position counts in the unit most of them imply" do
+  test "trades of one bond quoted in different units, with no position, are carried into one" do
     @statement[:open_positions].reject! { |row| row["asset_category"] == "BOND" }
     template = @statement[:trades].find { |row| row["asset_category"] == "BOND" }
     # Two trades per 100 face (the fixture's and the next), one per unit.
@@ -454,6 +472,60 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     end
   end
 
+  # A sync imports only its own window: the trades already stored are not
+  # imported again, and are not rescaled. So a bond's unit must come from the
+  # row alone, or one window would count a bond in another unit than the last.
+  test "a later window counts a bond in the unit of the earlier one" do
+    per_unit_position!
+    per_unit_trade!
+    process!
+
+    next_window!(
+      positions: [ bond_position(position: "5000", mark_price: "98.50", position_value: "4925.00", cost_basis_price: "97.25") ],
+      trades: [ bond_sale(quantity: "-5000", trade_price: "98.00", proceeds: "4900.00") ]
+    )
+    process!
+    materialize!
+
+    buy = @account.entries.find_by!(external_id: "ibkr_trade_9102").entryable
+    sale = @account.entries.find_by!(external_id: "ibkr_trade_9106").entryable
+    assert_equal [ BigDecimal("100"), BigDecimal("97.25") ], [ buy.qty, buy.price ]
+    assert_equal [ BigDecimal("-50"), BigDecimal("98") ], [ sale.qty, sale.price ]
+
+    bond = Security.find_by!(ticker: BOND_TICKER)
+    assert_no_units_before_the_purchase(bond)
+    assert_equal BigDecimal("100"), @account.holdings.find_by!(security: bond, date: Date.new(2026, 4, 2)).qty
+    assert_equal BigDecimal("50"), @account.holdings.where(security: bond).order(:date).last.qty
+  end
+
+  test "a later window with only a sale quoted per unit is counted per 100 face like the purchase" do
+    process!
+
+    next_window!(positions: [], trades: [ bond_sale(quantity: "-5000", trade_price: "0.98", proceeds: "4900.00", multiplier: "1") ])
+    process!
+
+    sale = @account.entries.find_by!(external_id: "ibkr_trade_9106")
+    assert_equal [ BigDecimal("-50"), BigDecimal("98") ], [ sale.entryable.qty, sale.entryable.price ]
+    assert_equal BigDecimal("-4900"), sale.amount
+    assert_equal BigDecimal("50"), @account.trades.joins(:security).where(securities: { ticker: BOND_TICKER }).sum(:qty)
+  end
+
+  test "a bond first imported by its trades only and later by its position is in one unit" do
+    @statement[:open_positions].reject! { |row| row["asset_category"] == "BOND" }
+    process!
+
+    per_unit = bond_position(multiplier: "1", mark_price: "0.985", cost_basis_price: "0.9725")
+    next_window!(positions: [ per_unit ], trades: [])
+    process!
+    materialize!
+
+    assert_equal BigDecimal("100"), @account.entries.find_by!(external_id: "ibkr_trade_9102").entryable.qty
+    bond = Security.find_by!(ticker: BOND_TICKER)
+    today = @account.holdings.where(security: bond).order(:date).last
+    assert_equal [ BigDecimal("100"), BigDecimal("98.5"), BigDecimal("9850") ], [ today.qty, today.price, today.amount ]
+    assert_no_units_before_the_purchase(bond)
+  end
+
   private
 
     def process!
@@ -477,6 +549,28 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     def per_unit_position!
       @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
         .merge!("multiplier" => "1", "mark_price" => "0.985", "cost_basis_price" => "0.9725")
+    end
+
+    # The next sync's report: only the given bond positions and trades, a
+    # later report date, and what IBKR sends in every window left as it was.
+    def next_window!(positions:, trades:)
+      @statement[:open_positions] = positions
+      @statement[:trades] = trades
+      @statement[:cash_transactions] = []
+      @statement[:report_date] = Date.new(2026, 5, 20)
+    end
+
+    def bond_position(overrides = {})
+      BOND_POSITION.merge(overrides.stringify_keys)
+    end
+
+    def bond_sale(overrides = {})
+      BOND_SALE.merge(overrides.stringify_keys)
+    end
+
+    def per_unit_trade!
+      @statement[:trades].find { |row| row["asset_category"] == "BOND" }
+        .merge!("multiplier" => "1", "trade_price" => "0.9725")
     end
 
     def bond_rows(statement)

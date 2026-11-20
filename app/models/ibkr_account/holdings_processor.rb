@@ -111,8 +111,8 @@ class IbkrAccount::HoldingsProcessor
     # Each lot is valued at its own mark: a group holds every lot of one asset,
     # which for an unlisted position can span conids that IBKR marks separately.
     # price is the weighted average that amount and quantity imply. A bond lot
-    # that counts in another unit than its bond's other rows has its prices
-    # carried into that unit, so its value stays what IBKR reports.
+    # quoted in another unit than per 100 face has its prices carried into it,
+    # so its value stays what IBKR reports.
     def valid_lots(rows)
       total_quantity = BigDecimal("0")
       total_cost = BigDecimal("0")
@@ -226,8 +226,8 @@ class IbkrAccount::HoldingsProcessor
       )
     end
 
-    # A position that counts a bond in another unit than the bond's other rows
-    # was carried into the bond's unit, which the holding's price shows.
+    # A position quoted in another unit than per 100 face was carried into it,
+    # which the holding's price shows.
     def capture_bond_unit_disagreements
       disagreements = bond_unit_disagreements(:positions)
       return if disagreements.empty?
@@ -235,7 +235,7 @@ class IbkrAccount::HoldingsProcessor
       DebugLogEntry.capture(
         category: "provider_sync",
         level: "warn",
-        message: "IBKR bond positions counted in another unit than the bond's other rows",
+        message: "IBKR bond positions quoted in another unit than per 100 face",
         source: self.class.name,
         provider_key: "ibkr",
         account_provider: @ibkr_account.account_provider,
