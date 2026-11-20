@@ -387,6 +387,18 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Dividend", sub_div.entryable.investment_activity_label
   end
 
+  test "processes card purchases as outflows and refunds and payments as inflows" do
+    process_activities(
+      build_cash_activity(id: "purchase_001", type: "POSDEBIT", amount: -32.73, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "refund_001", type: "POSCREDIT", amount: 10.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "payment_001", type: "PAYMENT", amount: 500.00, settlement_date: Date.current.to_s)
+    )
+
+    assert_equal 32.73, snaptrade_entry("purchase_001").amount.to_f
+    assert_equal(-10.00, snaptrade_entry("refund_001").amount.to_f)
+    assert_equal(-500.00, snaptrade_entry("payment_001").amount.to_f)
+  end
+
   test "processes cash FEE and TAX as positive outflow and INTEREST as negative inflow" do
     process_activities(
       build_cash_activity(id: "fee_001", type: "FEE", amount: -25.00, settlement_date: Date.current.to_s),

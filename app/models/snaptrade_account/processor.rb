@@ -63,6 +63,13 @@ class SnaptradeAccount::Processor
       total_balance = calculate_total_balance
       cash_balance = calculate_cash_balance
 
+      # SnapTrade reports a card's debt as a negative balance; Sure stores what's
+      # owed on a liability as a positive one.
+      if account.liability?
+        total_balance = -total_balance
+        cash_balance = -cash_balance
+      end
+
       Rails.logger.debug "SnaptradeAccount::Processor - Balance update: total=#{total_balance}, cash=#{cash_balance}"
 
       # Update the cached fields on the account

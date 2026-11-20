@@ -1001,6 +1001,39 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
 
   # === Full Account Sync Integration ===
 
+  test "processor stores a card's negative SnapTrade balance as a positive amount owed" do
+    card = @family.accounts.create!(
+      name: "Test Card",
+      balance: 0,
+      currency: "USD",
+      accountable: CreditCard.new
+    )
+    @snaptrade_account.ensure_account_provider!(card)
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("-1455.44"),
+      cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        {
+          "id" => "card_purchase",
+          "type" => "POSDEBIT",
+          "amount" => "-32.73",
+          "description" => "Safeway",
+          "settlement_date" => Date.current.to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    card.reload
+    assert_equal BigDecimal("1455.44"), card.balance
+    assert_equal BigDecimal("1455.44"), card.cash_balance
+    assert_equal BigDecimal("32.73"), card.entries.find_by!(external_id: "card_purchase").amount
+  end
+
   test "processor synchronizes balances, holdings, and activities end-to-end without cash distortion" do
     security = securities(:aapl)
 
