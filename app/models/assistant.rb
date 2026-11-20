@@ -38,16 +38,21 @@ module Assistant
     Function::SuggestSecurityClassification
   ].freeze
 
-  # Guests may view family configuration but not change it, so these tools are
-  # left out of a guest's registry (chat and MCP alike). A classification
-  # proposal replaces the family's pending one for that security, so a guest
-  # could otherwise overwrite a member's.
+  # Guests may view family configuration (tags, categories, rules) but not
+  # change it, so these tools are left out of a guest's registry (chat and MCP
+  # alike). PreviewRule writes nothing, but it issues the token ApplyRule needs,
+  # and the web blocks guests from a rule's confirmation page too. A
+  # classification proposal is a family-level write as well.
   FAMILY_CONFIG_FUNCTION_CLASSES = [
     Function::CreateTag,
     Function::UpdateTag,
     Function::CreateCategory,
     Function::UpdateCategory,
     Function::DeleteCategory,
+    Function::CreateRule,
+    Function::UpdateRule,
+    Function::ApplyRule,
+    Function::PreviewRule,
     Function::SuggestSecurityClassification
   ].freeze
 
