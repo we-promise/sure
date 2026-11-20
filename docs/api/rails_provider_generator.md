@@ -84,7 +84,7 @@ This single command generates:
 - ✅ Simple manual panel view for provider settings
 - ✅ Controller with CRUD actions and Turbo Stream support
 - ✅ Routes
-- ✅ Bank sync wiring: the settings controller's `FAMILY_PANELS` entry and sync maps, and a `provider_summary` case
+- ✅ Bank sync wiring: the adapter's `declares_connection` (with its `panel:`), the settings controller's `family_panel_items` entry, and a `provider_summary` case
 
 The generated item partial renders the provider's logo with `ProviderLogo`. That reads the
 provider's `Provider::Metadata::REGISTRY` entry, which the generator does not create, so add
@@ -478,7 +478,7 @@ controller's Turbo Streams replace:
 A simple controller with CRUD actions. The panel's forms post from the page (a
 connection row or the drawer), and `render_provider_panel` answers their updates and
 errors in place: it replaces the panel root named by the provider's `FAMILY_PANELS`
-entry, or redirects when the request isn't from Turbo. A new connection reloads Bank sync:
+entry (from the adapter's `panel:` declaration), or redirects when the request isn't from Turbo. A new connection reloads Bank sync:
 
 ```ruby
 class MyBankItemsController < ApplicationController
@@ -553,8 +553,9 @@ end
 
 **File:** `app/controllers/settings/providers_controller.rb` (updated)
 - Adds `@my_bank_items` instance variable
-- Adds a `FAMILY_PANELS` entry, so Bank sync lists My Bank and opens its panel in the
-  drawer. `FAMILY_PANEL_KEYS` also keeps it out of the global provider forms.
+- `FAMILY_PANELS` lists My Bank because the adapter declares `panel: { title: "My Bank" }`,
+  so Bank sync shows it and opens its panel in the drawer. `FAMILY_PANEL_KEYS` also keeps
+  it out of the global provider forms.
 - Adds `my_bank` to `family_panel_items`, which with the adapter's `declares_connection`
   (from which `PANEL_SYNCABLE_TYPES` is derived) gives its connection row a sync status
   and a working Sync button.
@@ -784,10 +785,12 @@ end
 
 ### Panel Not Showing
 
-1. Check that `FAMILY_PANELS` in `settings/providers_controller.rb` lists the provider:
+1. Check that the adapter declares its panel, which puts it in `FAMILY_PANELS`:
    ```ruby
-   { key: "my_bank", title: "My Bank", turbo_id: "my_bank", partial: "my_bank_panel" }
+   declares_connection key: "my_bank", panel: { title: "My Bank" }
    ```
+   The generator writes this line only into an adapter it creates. When the adapter
+   already existed or `--skip-adapter` was passed, it prints the line to add instead.
 
 2. Check that the instance variable is set:
    ```ruby
@@ -803,7 +806,7 @@ end
 
 2. Check the panel root ID matches:
    - View: `<div id="my_bank-providers-panel">`
-   - `FAMILY_PANELS`: `turbo_id: "my_bank"`, which `render_provider_panel` replaces as `my_bank-providers-panel`
+   - The panel's `turbo_id`, which defaults to the key (`my_bank`) and which `render_provider_panel` replaces as `my_bank-providers-panel`
 
 ### Encryption Not Working
 

@@ -3,7 +3,7 @@ class Provider::Trading212Adapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("Trading212Account", self)
-  declares_connection key: "trading212"
+  declares_connection key: "trading212", panel: { title: "Trading 212" }
 
   def self.supported_account_types
     %w[Investment]

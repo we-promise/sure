@@ -4,7 +4,7 @@ class Provider::RedbarkAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("RedbarkAccount", self)
-  declares_connection key: "redbark"
+  declares_connection key: "redbark", panel: { title: "Redbark" }
 
   # Define which account types this provider supports
   def self.supported_account_types
