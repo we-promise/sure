@@ -482,16 +482,16 @@ class Security < ApplicationRecord
       # `match.country_code`, which is the listing country, and those do
       # classify.
       return if offline?
+      # A fund's listing country says nothing about what it holds, so its
+      # region comes from the provider's breakdown of its holdings, or not at
+      # all. It does not follow a country correction either: a region that
+      # equals the old listing's may have come from the holdings, and nothing
+      # records which.
+      return if asset_sub_class.in?(%w[etf mutual_fund])
 
       derived = REGIONS.dig(country_code.to_s.upcase, "region")
 
       if region.blank?
-        # A fund's listing country says nothing about what it holds, so its
-        # region comes from the provider's breakdown of its holdings, or not
-        # at all. A region already derived from the listing still follows a
-        # country correction below.
-        return if asset_sub_class.in?(%w[etf mutual_fund])
-
         self.region = derived
       elsif country_code_changed? && !region_changed? && region == REGIONS.dig(country_code_was.to_s.upcase, "region")
         # The country the region was read from has been corrected, and the
