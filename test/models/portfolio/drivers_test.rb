@@ -187,6 +187,32 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
     assert_equal 1, drivers.to_h[:suppressed_days]
   end
 
+  # One journal out and two in, same security and quantity, same day. Only
+  # one arrival can be the departure, so the other five shares are capital
+  # that arrived. Read as two internal moves they landed in the market
+  # driver, and the drivers still reconciled, so only the attribution was
+  # wrong.
+  test "a second journal in is an external flow, not market, when one journal out cannot explain it" do
+    arrival = create_portfolio_account(family: @family)
+    second_arrival = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 500, closing: 500
+    lay_balance account: @account, date: @day_two, opening: 500, closing: 0, market_flow: -500
+    [ arrival, second_arrival ].each do |account|
+      lay_balance account: account, date: @day_one, opening: 0, closing: 0
+      lay_balance account: account, date: @day_two, opening: 0, closing: 500, market_flow: 500
+    end
+    security_journal account: @account, date: @day_two, qty: -5, price: 100
+    security_journal account: arrival, date: @day_two, qty: 5, price: 100
+    security_journal account: second_arrival, date: @day_two, qty: 5, price: 100
+
+    drivers = drivers_for(account_ids: [ @account.id, arrival.id, second_arrival.id ])
+
+    assert_equal BigDecimal("500"), drivers.external_net, "five shares arrived from outside"
+    assert_equal BigDecimal("0"), drivers.market, "none of the change was the market's"
+    assert_equal BigDecimal("500"), drivers.change
+    assert drivers.reconciles?
+  end
+
   test "an empty scope reports zeroes rather than raising" do
     drivers = drivers_for(account_ids: [])
 
