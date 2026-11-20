@@ -554,6 +554,37 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
     assert_nil Loan::PrincipalPayments.for(account.loan, entries: Balance::SyncCache.new(account).entries)
   end
 
+  test "applies_to? holds for a manual loan anchored at its origination" do
+    account = create_loan_account(entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 20_000 }
+    ])
+
+    assert Loan::PrincipalPayments.applies_to?(account.loan)
+  end
+
+  test "applies_to? is false for a loan the replay must not walk" do
+    provider = create_loan_account(entries: [ { type: "opening_anchor", date: OPENING_DATE, balance: 20_000 } ])
+    provider.stubs(:manual?).returns(false)
+    provider.loan.stubs(:account).returns(provider)
+    assert_not Loan::PrincipalPayments.applies_to?(provider.loan), "provider-owned"
+
+    later_anchor = create_loan_account(start_date: OPENING_DATE - 1.year,
+      entries: [ { type: "opening_anchor", date: OPENING_DATE, balance: 20_000 } ])
+    assert_not Loan::PrincipalPayments.applies_to?(later_anchor.loan), "anchored after origination"
+
+    other_amount = create_loan_account(entries: [ { type: "opening_anchor", date: OPENING_DATE, balance: 19_000 } ])
+    assert_not Loan::PrincipalPayments.applies_to?(other_amount.loan), "anchor balance differs from the original balance"
+
+    no_anchor = create_loan_account(entries: [ { type: "current_anchor", date: Date.current, balance: 20_000 } ])
+    assert_not Loan::PrincipalPayments.applies_to?(no_anchor.loan), "no opening anchor"
+
+    no_terms = create_account_with_ledger(account: { type: Loan, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: OPENING_DATE, balance: 20_000 } ])
+    assert_not Loan::PrincipalPayments.applies_to?(no_terms.loan), "not amortizable"
+
+    assert_not Loan::PrincipalPayments.applies_to?(nil)
+  end
+
   private
     def principal_payments(account)
       Loan::PrincipalPayments.for(account.loan, entries: Balance::SyncCache.new(account).entries)

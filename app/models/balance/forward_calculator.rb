@@ -82,8 +82,11 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
 
         # A windowed cache would hand the loan replay only the window's
         # entries, so it would charge interest the earlier payments covered.
-        if loan_principal_replayed?
-          Rails.logger.info("Loan principal is replayed from origination, falling back to full recalculation")
+        # This holds whatever the preview says today: a toggle since the prior
+        # balance was persisted would mix a replayed series with an unreplayed
+        # window, in either direction.
+        if loan_ledger_replayable?
+          Rails.logger.info("Loan ledger is replayed from origination, falling back to full recalculation")
           @fell_back = true
           return opening_starting_balances
         end
