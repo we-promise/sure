@@ -419,7 +419,8 @@ class HoldingTest < ActiveSupport::TestCase
     end
 
     assert_equal 2, rate_lookups, "one lookup for USD to CHF and one for USD to EUR on the holdings' date"
-    assert_equal [ BigDecimal("18") ] * 3 + [ BigDecimal("16") ] * 2, batch.map { |holding| holding.avg_cost&.amount }
+    expected = holdings.to_h { |holding| [ holding.id, holding.currency == "CHF" ? BigDecimal("18") : BigDecimal("16") ] }
+    assert_equal expected, batch.to_h { |holding| [ holding.id, holding.avg_cost&.amount ] }
   end
 
   # A pair and date with no stored rate is looked up once per batch too, and
