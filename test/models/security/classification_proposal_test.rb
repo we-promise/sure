@@ -325,10 +325,9 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
     assert proposal.reload.pending?
   end
 
-  # The security must already HOLD the columns this proposal leaves alone, or the
+  # The security must already hold the columns this proposal leaves alone, or the
   # test proves nothing: asserting `asset_class` is nil when it was nil anyway
-  # passes whether or not the blank values are stripped. An earlier version of
-  # this test did exactly that and survived removing `compact_blank`.
+  # passes whether or not the blank values are stripped.
   test "a proposal that only answers the region does not blank the columns it left alone" do
     @security.update!(
       asset_class: "equity", asset_sub_class: "stock",
@@ -494,7 +493,7 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
     assert proposal.reload.rejected?
   end
 
-  # -------------------------------------------------- the review's findings
+  # ------------------------------------------------- validation and re-proposals
 
   # `proposed_attributes` writes a sub-class only beside a class, so a
   # sub-class alone was valid, approvable, marked approved and wrote nothing.
