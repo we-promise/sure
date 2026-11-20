@@ -448,7 +448,7 @@ class Family::DataImporter
     def importable_integer(value, range)
       integer = Integer(value.to_s, exception: false)
       integer if integer && range.cover?(integer)
-      end
+    end
 
     # What the property form edits. Provider links (avm_*) are left out: the
     # restored family has to link its own provider. A missing or null value
