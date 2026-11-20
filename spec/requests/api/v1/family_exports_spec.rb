@@ -57,9 +57,6 @@ RSpec.describe "Api::V1::FamilyExports", type: :request do
 
       response "202", "family export queued" do
         schema "$ref" => "#/components/schemas/FamilyExportResponse"
-        # Sent without a JSON content type, like the Minitest request: Rails
-        # wraps an empty JSON request into family_export: {}, which create rejects.
-        let(:'Content-Type') { nil }
         run_test!
       end
 
