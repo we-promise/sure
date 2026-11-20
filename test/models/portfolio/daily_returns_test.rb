@@ -1127,6 +1127,57 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
                  "the journal is a flow OR a market move, never both"
   end
 
+  # Five shares leave one account by journal while the other account buys
+  # five of the same with its own cash, labelled Transfer. The purchase is not
+  # where the journalled shares went, so the portfolio lost 500 to a
+  # withdrawal and nothing to the market. Read as one internal move, the
+  # 2,500 -> 2,000 drop was a 20% loss.
+  test "a cash purchase mirroring a journal out does not hide the withdrawal" do
+    buyer = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    lay_balance account: buyer, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: buyer, date: @day_two, opening: 1_000, closing: 1_000
+    security_journal account: @account, date: @day_two, qty: -5, price: 100
+    buyer.entries.create!(
+      name: "Transfer in", date: @day_two, amount: 500, currency: buyer.currency,
+      entryable: Trade.new(security: security_under_test, qty: 5, price: 100,
+                           currency: buyer.currency, investment_activity_label: "Transfer")
+    )
+
+    series = daily_returns(account_ids: [ @account.id, buyer.id ])
+    second = series.rows.last
+
+    assert_equal BigDecimal("-500"), second.external_flow, "the journalled shares left the portfolio"
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, series.returns.last.last.to_f, 0.000001
+  end
+
+  # One leg out and two legs in on the same day, the same security and
+  # quantity. Only one of the arrivals can be the departure; with no telling
+  # which, every leg is a flow, so the second five shares are capital that
+  # arrived rather than a 100% market gain.
+  test "one journal out does not cancel two journals in" do
+    second_account = create_portfolio_account(family: @family)
+    third_account = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 500, closing: 500
+    lay_balance account: @account, date: @day_two, opening: 500, closing: 0, market_flow: -500
+    [ second_account, third_account ].each do |account|
+      lay_balance account: account, date: @day_one, opening: 0, closing: 0
+      lay_balance account: account, date: @day_two, opening: 0, closing: 500, market_flow: 500
+    end
+    security_journal account: @account, date: @day_two, qty: -5, price: 100
+    security_journal account: second_account, date: @day_two, qty: 5, price: 100
+    security_journal account: third_account, date: @day_two, qty: 5, price: 100
+
+    series = daily_returns(account_ids: [ @account.id, second_account.id, third_account.id ])
+    second = series.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow, "the out and one in net to zero; the other five shares arrived"
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, series.returns.last.last.to_f, 0.000001
+  end
+
   # The journal predicate is a fragment with a quoted label in it, like the
   # classifier's CASE, so it is spliced in after the binds rather than scanned
   # with them. A `:word` inside it would otherwise be read as a bind and raise.
