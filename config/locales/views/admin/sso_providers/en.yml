@@ -101,6 +101,8 @@ en:
         provisioning_title: "User Provisioning"
         default_role_label: "Default Role for New Users"
         default_role_help: "Role assigned to users created via just-in-time (JIT) SSO account provisioning. Defaults to Member."
+        treat_email_as_verified_label: "Treat emails from this provider as verified"
+        treat_email_as_verified_help: "New accounts and invitations require the provider to confirm the user's email (email_verified, or xms_edov for Microsoft Entra ID). Turn this on only for a provider whose users cannot set or change their own email address, such as a company directory you manage. Off by default."
         role_guest: "Guest"
         role_member: "Member"
         role_admin: "Admin"
