@@ -484,6 +484,11 @@ module Security::Provided
 
   FUND_DOMINANT_WEIGHT = 90
 
+  # Percentage points a provider's fund breakdown may stray outside 0..100
+  # before it is read as a short or leveraged position rather than rounding:
+  # settlement and TBA rolls leave long-only funds a few percent short on cash.
+  FUND_WEIGHT_TOLERANCE = 10
+
   # The provider is the second-weakest writer: it may fill what nothing has
   # answered, and may replace a `default`, but never a `manual` classification,
   # and never anything at all on a locked security. Only a provider that
@@ -512,7 +517,7 @@ module Security::Provided
     mapped_class, mapped_sub_class = ASSET_CLASS_FROM_PROVIDER_KIND[kind]
     if fund_sub_class
       mapped_class = fund_asset_class(weights)
-      mapped_sub_class = fund_sub_class if mapped_class
+      mapped_sub_class = fund_sub_class
     end
     # World_Regions and Sector_Weights describe only the fund's equity
     # sleeve, so they speak for the fund only when equity is what it holds.
@@ -532,6 +537,12 @@ module Security::Provided
       attrs[:asset_class] = mapped_class
       attrs[:asset_sub_class] = mapped_sub_class
       attrs[:classification_source] = "provider"
+    elsif fund_sub_class && asset_sub_class.blank?
+      # The wrapper is known even when its holdings settle no class (a 60/40
+      # fund, a Yahoo-priced ETF with no breakdown). The sub-class alone is
+      # not a classification, so the source stays unclaimed, but it keeps the
+      # listing country from setting the fund's region.
+      attrs[:asset_sub_class] = fund_sub_class
     end
 
     # A stock keeps the region its listing country gives it: a provider's
@@ -539,12 +550,12 @@ module Security::Provided
     # or Medtronic (Irish-domiciled, US-run) to Europe.
     #
     # A fund's listing or domicile country (Ireland, Luxembourg) says nothing
-    # about what it holds, so a classified fund's region is the dominant
+    # about what it holds, so a fund's region is the dominant
     # region of its equity holdings, or none: a world ETF, a bond fund or a
     # commodity fund has its listing region cleared. The provider replaces
     # the region only while it is still the one the listing implies, so a
     # region someone set by hand stays.
-    if fund_sub_class && mapped_class &&
+    if fund_sub_class &&
         (region.blank? || region == Security::REGIONS.dig(country_code.to_s.upcase, "region"))
       attrs[:region] = (dominant_fund_weight(weights[:equity_region]) if equity_fund)
     end
@@ -561,7 +572,7 @@ module Security::Provided
     return nil if weights[:leveraged_or_inverse]
 
     classes = weights[:asset_class] || {}
-    tolerance = Provider::Eodhd::FUND_WEIGHT_TOLERANCE
+    tolerance = FUND_WEIGHT_TOLERANCE
     return nil if classes.values.any? { |percent| percent < -tolerance || percent > 100 + tolerance }
 
     weights[:category_asset_class].presence || dominant_fund_weight(classes.except("liquidity"))

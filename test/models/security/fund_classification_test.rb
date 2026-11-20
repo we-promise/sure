@@ -44,6 +44,31 @@ class Security::FundClassificationTest < ActiveSupport::TestCase
     assert_nil @security.classification_source
   end
 
+  # The wrapper is known even when nothing settles the class, and it keeps the
+  # listing country from setting the fund's region.
+  test "a fund with no class answer still gets its sub-class and loses its listing region" do
+    import(info(kind: "ETF"))
+
+    assert_nil @security.reload.asset_class
+    assert_equal "etf", @security.asset_sub_class
+    assert_nil @security.classification_source, "a sub-class alone is not a classification"
+    assert_nil @security.region
+
+    @security.update!(name: "Vanguard FTSE All-World")
+    assert_nil @security.reload.region, "the listing region was put back on a later save"
+  end
+
+  # A region derived from the listing still follows a corrected listing
+  # country, fund or not; only a blank region stays blank for a fund.
+  test "a fund's listing region follows a country correction" do
+    @security.update!(asset_sub_class: "etf", classification_source: "manual")
+    assert_equal "europe", @security.region
+
+    @security.update!(country_code: "US")
+
+    assert_equal "north_america", @security.reload.region
+  end
+
   test "a world ETF does not keep the region of the exchange it is listed on" do
     import(info(kind: "ETF", fund_weights: {
       asset_class: { "equity" => 99.6 },
@@ -100,7 +125,8 @@ class Security::FundClassificationTest < ActiveSupport::TestCase
     })), security: sh)
 
     assert_nil sh.reload.asset_class
-    assert_equal "north_america", sh.region
+    assert_equal "etf", sh.asset_sub_class
+    assert_nil sh.region, "an inverse ETF's listing says nothing about its exposure"
   end
 
   test "a fund whose category says leveraged or inverse is left unclassified" do
@@ -161,14 +187,14 @@ class Security::FundClassificationTest < ActiveSupport::TestCase
     assert_nil aggg.sector
   end
 
-  test "an unclassified fund keeps its listing region rather than its equity sleeve's" do
+  test "an unclassified fund takes neither its listing region nor its equity sleeve's" do
     import(info(kind: "ETF", fund_weights: eodhd_weights(
       "Asset_Allocation" => { "Stock US" => { "Net_Assets_%" => "60.0" }, "Bond" => { "Net_Assets_%" => "40.0" } },
       "World_Regions" => { "North America" => { "Equity_%" => "100" } }
     )))
 
     assert_nil @security.reload.asset_class
-    assert_equal "europe", @security.region
+    assert_nil @security.region
   end
 
   # Accenture, Medtronic, Eaton: US-listed and US-run, incorporated in Ireland.
