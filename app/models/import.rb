@@ -256,7 +256,7 @@ class Import < ApplicationRecord
     with_lock do
       # complete means a competing request finished publishing between the
       # controller's check and this claim; importing means another job owns it.
-      raise AlreadyClaimedError, "Import is already claimed" if importing? || complete?
+      raise AlreadyClaimedError, "Import is already claimed" if importing? || reverting? || complete?
       raise "Import is not publishable" unless publishable?
 
       previous_status = status

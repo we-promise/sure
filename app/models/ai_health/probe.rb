@@ -224,7 +224,7 @@ class AiHealth
         configured = configured_endpoint(provider.to_sym)
         names = [ "#{configured&.name}/#{model}", model ]
         route = plan.routes.find { names.include?("#{_1.model.endpoint.name}/#{_1.model.name}") && _1.model.name == model } ||
-                plan.routes.find { _1.model.name == model } || plan.routes.first
+                plan.routes.find { _1.model.name == model }
         limit = route&.model&.max_output_tokens.to_i
         limit.positive? ? limit : PDF_MAX_RESPONSE_TOKENS
       end

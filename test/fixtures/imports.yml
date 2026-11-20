@@ -27,7 +27,7 @@ pdf_processed:
 
 pdf_with_rows:
   family: dylan_family
-  account: checking
+  account: depository
   type: PdfImport
   status: pending
   ai_summary: "Bank statement with extracted transactions"

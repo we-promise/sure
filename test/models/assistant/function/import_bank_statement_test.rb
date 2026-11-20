@@ -40,6 +40,19 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_equal 1, @user.family.imports.where(type: "TransactionImport", source_pdf_import_id: @import.id).count
   end
 
+  test "a row-generation failure rolls the draft back so a retry can recreate it" do
+    stub_ai(:extract_pdf, returns: statement)
+    TransactionImport.any_instance.stubs(:generate_rows_from_csv).raises(StandardError, "bad row")
+
+    assert_raises(StandardError) { @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id) }
+    assert_equal 0, @user.family.imports.where(type: "TransactionImport", source_pdf_import_id: @import.id).count,
+                 "no empty draft is left to block the retry"
+
+    TransactionImport.any_instance.unstub(:generate_rows_from_csv)
+    retry_result = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+    assert retry_result[:success], retry_result[:message]
+  end
+
   test "read_as reads it the way asked, and says when the extraction failed its checks" do
     requests = stub_ai(:extract_pdf, returns: statement(closing: 1.0))
 

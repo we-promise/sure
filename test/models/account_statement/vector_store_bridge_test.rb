@@ -363,6 +363,7 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
   test "a legacy job without an uploader does not index once AI is off for the family" do
     statement = build_statement
     statement.save!
+    use_ai_routes
     User.any_instance.stubs(:ai_enabled?).returns(false)
     Family.any_instance.expects(:upload_document).never
 
@@ -376,10 +377,22 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
     statement.save!
     uploader = users(:family_admin)
     uploader.update!(ai_enabled: false)
+    use_ai_routes
     Family.any_instance.expects(:upload_document).never
 
     IndexAccountStatementJob.perform_now(statement.id, uploader.id)
 
     assert_not statement.indexed_in_vector_store?
+  end
+
+  test "a legacy job with an opted-in uploader reaches the upload" do
+    statement = build_statement
+    statement.save!
+    uploader = users(:family_admin)
+    uploader.update!(ai_enabled: true)
+    use_ai_routes
+    Family.any_instance.expects(:upload_document).once.returns(FamilyDocument.new)
+
+    IndexAccountStatementJob.perform_now(statement.id, uploader.id)
   end
 end

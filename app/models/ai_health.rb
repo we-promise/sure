@@ -156,7 +156,7 @@ class AiHealth
       # vision, and Anthropic's check sends the PDF itself.
       pdf_model = safely(nil) { Ai::Config.current.routes_for(:extract_pdf).map(&:model).find { _1.capable?(:structured_output) } }
       @pdf_processing_capable = pdf_model.present?
-      @pdf_text_extraction_capable = @pdf_processing_capable && @effective_llm_protocol == :openai
+      @pdf_text_extraction_capable = @pdf_processing_capable
       @pdf_vision_processing_capable = pdf_model.present? && pdf_model.capable?(:vision)
 
       @openai_endpoint = redact_endpoint(openai_uri_base.presence || OPENAI_DEFAULT_ENDPOINT)

@@ -119,8 +119,8 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
   # closing balances read from the text layer (AccountStatement::TextMetadataParser), when found.
   def self.checks(value, source: nil, balances: {})
     rows = Array(value[:transactions]).reject { _1[:amount].to_f.zero? }
-    year = period_year(value[:statement_period])
-    dated = rows.map { _1.merge(date: normal_date(_1[:date], year:)) }
+    period = value[:statement_period]
+    dated = rows.map { _1.merge(date: normal_date(_1[:date], period:)) }
     invalid_date = dated.any? { _1[:date].nil? }
     opening = balances[:opening_balance] || value[:opening_balance]
     closing = balances[:closing_balance] || value[:closing_balance]
@@ -139,10 +139,10 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
 
   # The value in the shape PdfImport#extracted_data holds.
   def self.statement(value)
-    year = period_year(value[:statement_period])
+    period = value[:statement_period]
     {
       transactions: Array(value[:transactions]).map do |row|
-        { date: normal_date(row[:date], year:), amount: row[:amount]&.to_f, name: row[:description], category: row[:category], notes: row[:reference] }
+        { date: normal_date(row[:date], period:), amount: row[:amount]&.to_f, name: row[:description], category: row[:category], notes: row[:reference] }
       end,
       period: { start_date: normal_date(value.dig(:statement_period, :start_date)), end_date: normal_date(value.dig(:statement_period, :end_date)) },
       account_holder: value[:account_holder], account_number: value[:account_number], bank_name: value[:bank_name],
@@ -152,21 +152,32 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
 
   class << self
     private
-      # A batch can print "1 February" or "02/01" without the year; the statement period's year
-      # is the only one available there. Anything that still isn't a date is rejected.
-      def normal_date(text, year: nil)
+      # A batch can print "1 February" or "02/01" without the year. Resolve it against the whole
+      # statement period: for a December-to-January statement, "1 January" belongs to the closing
+      # year, not the opening one. When the period doesn't identify a single year for the date,
+      # leave it unresolved so the checks flag it rather than guessing.
+      def normal_date(text, period: nil)
         string = text.to_s.strip
         return if string.blank?
+        return Date.parse(string).iso8601 if string.match?(/(?<!\d)\d{4}(?!\d)/)
 
-        string = "#{string} #{year}" if year && !string.match?(/(?<!\d)\d{4}(?!\d)/)
-        Date.parse(string).iso8601
+        year = year_for(string, period)
+        return if year.nil?
+
+        Date.parse("#{string} #{year}").iso8601
       rescue ArgumentError
         nil
       end
 
-      def period_year(period)
-        date = [ period&.[](:start_date), period&.[](:end_date) ].filter_map { normal_date(_1) }.first
-        Date.iso8601(date).year if date
+      def year_for(string, period)
+        bounds = [ period&.[](:start_date), period&.[](:end_date) ].filter_map { normal_date(_1) }.map { Date.iso8601(_1) }.uniq
+        years = bounds.map(&:year).uniq
+        return years.first if years.size == 1
+        return if bounds.size != 2
+
+        matches = years.filter_map { |year| Date.parse("#{string} #{year}") rescue nil }
+                       .select { |date| date.between?(*bounds.minmax) }.uniq
+        matches.first.year if matches.size == 1
       end
 
       # Some occurrence of the row's amount has, as the last date printed in the DATE_WINDOW

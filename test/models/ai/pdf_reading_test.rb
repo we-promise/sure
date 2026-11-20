@@ -336,6 +336,31 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_equal 5, requests.grep(Ai::Transport::Base::OcrRequest).size
   end
 
+  test "an OCR timeout fails over to the backup route instead of ending the way" do
+    skip_without_pdftoppm
+    calls = []
+    stub_ai(:extract_pdf) do |request|
+      if request.is_a?(Ai::Transport::Base::OcrRequest)
+        calls << request.model.name
+        raise Ai::Error::Timeout, "slow" if request.model.name == "unlimited-ocr-2"
+
+        "1 February Cardpayment 24.50"
+      else
+        next { document_type: "bank_statement", summary: nil, extracted_data: nil } if request.schema_name == "document_analysis"
+
+        statement([ [ "2019-02-01", -24.5 ] ], opening: 0.0, closing: 24.5)
+      end
+    end
+
+    with_reading_routes(text_model, ocr_model, backup_ocr_model) do
+      outcome = reading(blank_pdf(pages: 1)).extract(read_as: :ocr)
+
+      assert_equal :ocr, outcome.way
+      assert outcome.value.present?, "the backup OCR route produced the reading"
+    end
+    assert_equal %w[unlimited-ocr-2 parse-v5.0], calls, "the timeout ended this route's try, not the OCR way"
+  end
+
   test "OCR checks cancellation between pages" do
     skip_without_pdftoppm
     checks = 0

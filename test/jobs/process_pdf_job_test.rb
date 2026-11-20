@@ -142,6 +142,16 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal I18n.t("imports.pdf_import.errors.unavailable.not_configured"), @import.error
   end
 
+  test "a failure to record the failed status propagates so the job retry isn't discarded" do
+    @import.update!(status: :importing)
+    @import.stubs(:update!).raises(StandardError, "database down")
+
+    error = assert_raises(StandardError) do
+      ProcessPdfJob.new.send(:record_failed_status, @import, Ai::Error::NoCredit.new("No credit", status: 400))
+    end
+    assert_equal "database down", error.message, "a generic error isn't swallowed by discard_on(Ai::Error::Base)"
+  end
+
   test "a provider's error shows its own message, as Provider::Error did, not the class name" do
     attach_pdf!(@import)
     @import.expects(:process_with_ai).once.raises(Ai::Error::NoCredit.new("Your credit balance is too low to access the Anthropic API.", status: 400))

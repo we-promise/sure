@@ -25,7 +25,8 @@ class ProcessPdfJob < ApplicationJob
 
     Ai::CallContext.job("pdf_import:#{pdf_import.id}") { process(pdf_import) }
   rescue Ai::Error::Base, Pdf::PageImages::Error => e
-    # discard_on below must not retire a job whose failed status is unrecorded.
+    # discard_on below must not retire a job whose failed status is unrecorded. A failed write
+    # raises a different error, so the job is retried instead of discarded.
     record_failed_status(pdf_import, e)
     raise
   end
@@ -144,13 +145,15 @@ class ProcessPdfJob < ApplicationJob
     # process itself records its failure; this covers an error raised before it
     # starts. A job whose claim was already released must not fail a newer one.
     def record_failed_status(pdf_import, error)
-      return unless pdf_import.is_a?(PdfImport)
+      return true unless pdf_import.is_a?(PdfImport)
 
       pdf_import.with_lock do
         pdf_import.update!(status: :failed, error: sanitize_error_message(error)) if pdf_import.importing?
       end
+      true
     rescue StandardError => update_error
       Rails.logger.error("Failed to record ProcessPdfJob failure: #{update_error.message}")
+      raise update_error   # not an Ai::Error, so discard_on can't retire this job
     end
 
     def reset_processing_claim(pdf_import)
