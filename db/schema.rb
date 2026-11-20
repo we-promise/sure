@@ -2678,9 +2678,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
   create_table "sso_identity_blocks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "identity_label", null: false
+    t.text "legacy_digest_key"
     t.string "provider", null: false
-    t.string "uid_digest", null: false
+    t.string "uid"
+    t.string "uid_digest"
     t.datetime "updated_at", null: false
+    t.index ["provider", "uid"], name: "index_sso_identity_blocks_on_provider_and_uid", unique: true, where: "(uid IS NOT NULL)"
     t.index ["provider", "uid_digest"], name: "index_sso_identity_blocks_on_provider_and_uid_digest", unique: true
   end
 

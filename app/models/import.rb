@@ -917,6 +917,15 @@ class Import < ApplicationRecord
         # raw_file_str might have invalid encoding, continue to detection
       end
 
+      # An upload arrives as binary. Bytes that form valid UTF-8 are UTF-8: text
+      # in a single-byte encoding almost never does, while rchardet can misread a
+      # mostly-ASCII UTF-8 file (one "®" among plain rows reads as EUC-JP).
+      as_utf8 = raw_file_str.dup.force_encoding(Encoding::UTF_8)
+      if as_utf8.valid_encoding?
+        self.raw_file_str = as_utf8
+        return
+      end
+
       # Detect encoding using rchardet
       begin
         require "rchardet"
