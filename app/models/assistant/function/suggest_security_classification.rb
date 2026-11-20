@@ -199,18 +199,20 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
   private
     # Securities among `tickers` held now in accounts this user may see, so
     # the tool cannot reveal or act on a position held only in another
-    # member's private account, or one the user has sold out of: each
-    # account's latest row per security, in any currency, as `get_holdings`
-    # reads them, and non-zero. One query for the batch.
+    # member's private account, or one the user has sold out of. "Held now" is
+    # the portfolio's definition (Holding::CurrentForInvestmentAccounts): a
+    # linked account's latest provider snapshot, so a security the provider
+    # stopped reporting is not held, and otherwise each security's latest row
+    # in the account's currency; non-zero either way.
     def held_securities(tickers)
       return [] if tickers.empty?
 
-      accounts = user.accessible_accounts.visible.where(accountable_type: Assistant::Function::GetHoldings::SUPPORTED_ACCOUNT_TYPES)
-      latest = Holding.where(account: accounts)
-        .select("DISTINCT ON (account_id, security_id) id")
-        .order(:account_id, :security_id, date: :desc)
+      account_ids = user.accessible_accounts.visible
+        .where(accountable_type: Assistant::Function::GetHoldings::SUPPORTED_ACCOUNT_TYPES)
+        .pluck(:id)
+      held = Holding::CurrentForInvestmentAccounts.new(account_ids).relation.select(:security_id)
 
-      Security.where(id: Holding.where(id: latest).where.not(qty: 0).select(:security_id))
+      Security.where(id: held)
         .where("UPPER(securities.ticker) IN (?)", tickers.uniq)
         .to_a
     end

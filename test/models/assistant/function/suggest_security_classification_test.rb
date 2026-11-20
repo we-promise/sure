@@ -242,10 +242,11 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
     assert_equal "already classified by a data provider", result[:skipped].first[:reason]
   end
 
-  # `get_holdings` lists a position in any currency, so the two tools agree.
-  test "a position held in a currency other than the account's is held" do
+  # A provider reports a position in the security's currency, not the
+  # account's, and that row is the holding.
+  test "a provider position in a currency other than the account's is held" do
     euro = Security.create!(ticker: "EURO9", exchange_operating_mic: "XETR", country_code: "DE")
-    accounts(:investment).holdings.create!(security: euro, date: Date.current, qty: 1, price: 10, amount: 10, currency: "EUR")
+    provider_holding(euro, qty: 1, currency: "EUR")
 
     result = @function.call("proposals" => [ { "ticker" => "EURO9", "region" => "europe" } ])
 
@@ -303,6 +304,36 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
 
     assert_equal 0, result[:recorded]
     assert_match(/not held/i, result[:skipped].first[:reason])
+  end
+
+  # A linked account's holdings are its provider's latest snapshot. A security
+  # the provider stopped reporting is not held, though its last row is positive.
+  test "a security dropped from the provider's latest snapshot is refused" do
+    dropped = Security.create!(ticker: "DROP9", exchange_operating_mic: "XNAS", country_code: "US")
+    kept = Security.create!(ticker: "KEPT9", exchange_operating_mic: "XNAS", country_code: "US")
+    provider_holding(dropped, qty: 5, imported_on: 2.days.ago.to_date)
+    provider_holding(kept, qty: 5)
+
+    result = @function.call("proposals" => [ { "ticker" => "DROP9", "region" => "north_america" }, { "ticker" => "KEPT9", "region" => "north_america" } ])
+
+    assert_equal 1, result[:recorded], result[:skipped].inspect
+    assert_equal [ { ticker: "DROP9", reason: "not held by this family" } ], result[:skipped]
+  end
+
+  # One snapshot can carry a row per currency: any non-zero row holds the
+  # security, and zero rows in every currency do not.
+  test "a provider snapshot's rows in several currencies hold a security only when one is non-zero" do
+    open_one = Security.create!(ticker: "TIE9", exchange_operating_mic: "XNAS", country_code: "US")
+    all_zero = Security.create!(ticker: "ZERO9", exchange_operating_mic: "XNAS", country_code: "US")
+    provider_holding(open_one, qty: 0, currency: "USD")
+    provider_holding(open_one, qty: 5, currency: "EUR")
+    provider_holding(all_zero, qty: 0, currency: "USD")
+    provider_holding(all_zero, qty: 0, currency: "EUR")
+
+    result = @function.call("proposals" => [ { "ticker" => "TIE9", "region" => "north_america" }, { "ticker" => "ZERO9", "region" => "north_america" } ])
+
+    assert_equal 1, result[:recorded], result[:skipped].inspect
+    assert_equal [ { ticker: "ZERO9", reason: "not held by this family" } ], result[:skipped]
   end
 
   # Chat reuses one function instance across tool rounds, so what the user
@@ -381,4 +412,18 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
 
     assert_not_includes Assistant.function_classes(guest.reload), Assistant::Function::SuggestSecurityClassification
   end
+
+  private
+    # A holding imported from a provider on `imported_on`, which makes the
+    # investment account a linked one: its holdings are then its latest
+    # provider snapshot.
+    def provider_holding(security, qty:, currency: "USD", imported_on: Date.current)
+      @account_provider ||= begin
+        item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+        AccountProvider.create!(account: accounts(:investment), provider: item.coinstats_accounts.create!(name: "Brokerage", currency: "USD"))
+      end
+      accounts(:investment).holdings.create!(
+        security: security, date: imported_on, qty: qty, price: 10, amount: qty * 10, currency: currency, account_provider: @account_provider
+      ).tap { |holding| holding.update_columns(updated_at: imported_on.to_time) }
+    end
 end
