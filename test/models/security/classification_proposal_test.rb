@@ -575,6 +575,26 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
     assert_equal "commodity", winner.reload.asset_class
   end
 
+  # A caller that read the security before a provider classified it must not
+  # record a proposal: the check runs again under the security's lock.
+  test "proposing only while open refuses a security classified since the caller read it" do
+    stale = Security.find(@security.id)
+    @security.update_columns(asset_class: "equity", asset_sub_class: "stock", classification_source: "provider")
+
+    assert_nil Security::ClassificationProposal.propose!(
+      security: stale, family: @family, open_sources: [ nil, "default" ], asset_class: "fixed_income"
+    )
+    assert_not Security::ClassificationProposal.exists?(security: @security, family: @family)
+  end
+
+  test "proposing only while open still records an unclassified security" do
+    proposal = Security::ClassificationProposal.propose!(
+      security: @security, family: @family, open_sources: [ nil, "default" ], asset_class: "equity"
+    )
+
+    assert proposal&.pending?
+  end
+
   private
     def propose(**attrs)
       Security::ClassificationProposal.propose!(

@@ -68,21 +68,42 @@ class Security::ClassificationProposal < ApplicationRecord
   # The row is replaced under its lock, which reloads it: `update!` writes
   # only changed columns, so a copy read before another proposal added a
   # sector would see nil over nil and leave that sector in place.
-  def self.propose!(security:, family:, **attrs)
+  #
+  # With `open_sources`, the proposal is recorded only while the security's
+  # classification_source is still one of them, re-read under the security's
+  # row lock (taken after the proposal's, as #approve! does), so a provider
+  # answer that lands after the caller read the security is not proposed
+  # over. Returns nil then.
+  def self.propose!(security:, family:, open_sources: nil, **attrs)
     attrs.assert_valid_keys(*ANSWER_COLUMNS)
     answer = ANSWER_COLUMNS.index_with(nil).merge(attrs)
+    still_open = lambda do
+      open_sources.nil? ||
+        Security.where(id: security.id).lock.pick(:classification_source).in?(open_sources)
+    end
     attempts = 0
 
     begin
       existing = find_by(security: security, family: family)
       if existing
-        existing.with_lock { existing.update!(answer) if existing.pending? }
-        return existing
+        refused = false
+        existing.with_lock do
+          if still_open.call
+            existing.update!(answer) if existing.pending?
+          else
+            refused = true
+          end
+        end
+        return refused ? nil : existing
       end
 
       # A savepoint, so the unique violation does not poison a caller's
       # transaction before the retry reads the winner's row.
-      transaction(requires_new: true) { create!(security: security, family: family, **answer) }
+      transaction(requires_new: true) do
+        next nil unless still_open.call
+
+        create!(security: security, family: family, **answer)
+      end
     rescue ActiveRecord::RecordNotUnique
       attempts += 1
       retry if attempts == 1
