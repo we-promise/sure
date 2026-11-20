@@ -72,6 +72,15 @@ class BitcoinWalletAccount::SyncLifecycleTest < ActiveSupport::TestCase
     assert_equal two.id, @wallet.sync_later(parent_sync: second).id
   end
 
+  test "a request without a parent does not borrow a parent's pending read" do
+    parent = @wallet.onchain_wallet_item.syncs.create!
+    owned = @wallet.sync_later(parent_sync: parent)
+    own = @wallet.sync_later
+    refute_equal owned.id, own.id
+    assert_nil own.parent_id
+    assert_equal own.id, @wallet.sync_later.id
+  end
+
   test "source changes during a running wallet sync receive a follow-up read" do
     current = @wallet.syncs.create!(status: "syncing")
     @wallet.sources_changed!

@@ -62,11 +62,12 @@ class BitcoinWalletAccount < ApplicationRecord
   end
 
   private
-    # Running reads cannot absorb source edits; independent parents must each
-    # retain a child whose completion they can observe.
+    # Running reads cannot absorb source edits; independent parents, and a
+    # request without one, must each retain a child whose completion they can
+    # observe.
     def coalescible_syncs(parent_sync: nil)
       scope = syncs.visible.pending
-      parent_sync ? scope.where(parent_id: [ nil, parent_sync.id ]) : scope
+      parent_sync ? scope.where(parent_id: [ nil, parent_sync.id ]) : scope.where(parent_id: nil)
     end
 
     # Restrict tracking to a manual same-family Crypto account and a BTC
