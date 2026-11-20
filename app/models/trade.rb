@@ -61,7 +61,7 @@ class Trade < ApplicationRecord
 
   validate :exchange_rate_must_be_valid
   validate :lot_source_entry_must_be_a_lot_choice, if: -> { lot_source_entry_id_changed? && lot_source_entry_id }
-  before_validation :drop_lot_source_entry, if: -> { lot_source_entry_id && qty && !disposal? }
+  before_validation :drop_lot_source_entry, if: -> { lot_source_entry_id && !lot_source_entry_id_changed? && qty && !disposal? }
 
   # Trade types for categorization
   def buy?
@@ -283,7 +283,8 @@ class Trade < ApplicationRecord
     end
 
     # Only a disposal names a lot: an edit that turns it into a buy or an
-    # internal movement lets the lot go.
+    # internal movement lets the stored lot go. A lot named in the same edit
+    # is left for lot_source_entry_must_be_a_lot_choice to refuse.
     def drop_lot_source_entry
       self.lot_source_entry_id = nil
     end
