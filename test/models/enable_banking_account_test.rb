@@ -189,6 +189,12 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_equal "NL91ABNA0417164300", linked_account.reload.iban # pipelock:ignore IBAN
   end
 
+  test "normalizes iban by stripping dots, dashes, and other punctuation on sync" do
+    @account.update!(iban: "nl91.abna-0417/1643:00'")
+
+    assert_equal "NL91ABNA0417164300", @account.reload.iban # pipelock:ignore IBAN
+  end
+
   test "propagates the iban without logging it in plaintext to data_enrichments" do
     linked_account = accounts(:depository)
     AccountProvider.create!(provider: @account, account: linked_account)

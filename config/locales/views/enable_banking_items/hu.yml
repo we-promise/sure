@@ -114,3 +114,5 @@ hu:
       psd2_savings_notice: "Megjegyzés: Egyes szabályozott francia megtakarítási számlákhoz (Livret A, PEL, LEP, LDDS) korlátozott vagy semmilyen hozzáférés nem áll rendelkezésre az Open Banking (PSD2) révén. Ha egy megtakarítási számla hiányzik, manuálisan is hozzáadhatod."
     update:
       success: Az Enable Banking konfiguráció frissítve.
+    entry:
+      bank_note: "Bank: %{name}"

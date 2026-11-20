@@ -1,9 +1,17 @@
 class Transaction < ApplicationRecord
-  include Entryable, Transferable, Ruleable, Splittable
+  include Entryable, Transferable, Ruleable, Splittable, Encryptable
+
+  # Counterparty data from a provider sync. Only the last four characters of
+  # a third party's IBAN or account reference are kept, so nothing that
+  # identifies their account sits at rest. When the full IBAN belongs to
+  # another account of the same family, the link is kept instead
+  # (counterparty_own_account). See Account::ProviderImportAdapter.
+  COUNTERPARTY_ATTRIBUTES = %i[counterparty_iban_last4 counterparty_reference_last4 counterparty_own_account_id].freeze
 
   belongs_to :category, optional: true
   belongs_to :merchant, optional: true
   belongs_to :transfer, optional: true
+  belongs_to :counterparty_own_account, class_name: "Account", optional: true
 
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
@@ -627,6 +635,18 @@ class Transaction < ApplicationRecord
           pending_transaction = pending_entry.entryable
           if pending_transaction.is_a?(Transaction) && pending_transaction.category_id.present?
             tx_attrs[:category_id] = pending_transaction.category_id
+          end
+        end
+
+        # Counterparty identifiers: some banks send them only on the pending
+        # row. Fill blank posted columns only, even on a protected entry, as
+        # the provider sync does (no UI field a user could have edited).
+        pending_transaction = pending_entry.entryable
+        if pending_transaction.is_a?(Transaction)
+          COUNTERPARTY_ATTRIBUTES.each do |attribute|
+            if posted_tx[attribute].blank? && pending_transaction[attribute].present?
+              tx_attrs[attribute] = pending_transaction[attribute]
+            end
           end
         end
 

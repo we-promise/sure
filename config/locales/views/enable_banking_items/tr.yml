@@ -122,3 +122,5 @@ tr:
       title: Enable Banking Hesaplarınızı Kurun
     update:
       success: Enable Banking yapılandırması güncellendi.
+    entry:
+      bank_note: "Banka: %{name}"

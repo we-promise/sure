@@ -80,6 +80,21 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert_equal [], children.last.transaction.tags
   end
 
+  test "split! children inherit the parent's counterparty identifiers" do
+    @entry.transaction.update!(counterparty_iban_last4: "3201", counterparty_reference_last4: "NT-1", counterparty_own_account_id: accounts(:connected).id)
+
+    children = @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    children.each do |child|
+      assert_equal "3201", child.transaction.reload.counterparty_iban_last4
+      assert_equal "NT-1", child.transaction.counterparty_reference_last4
+      assert_equal accounts(:connected), child.transaction.counterparty_own_account
+    end
+  end
+
   test "split! rejects when amounts don't sum to parent" do
     splits = [
       { name: "Part 1", amount: 60, category_id: nil },

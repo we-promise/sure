@@ -755,6 +755,7 @@ class Entry < ApplicationRecord
           category_id: split_attrs[:category_id],
           merchant_id: split_attrs[:merchant_id].presence || entryable.try(:merchant_id),
           tag_ids: split_attrs[:tag_ids] || [],
+          **Transaction::COUNTERPARTY_ATTRIBUTES.index_with { |attribute| entryable.try(attribute) },
           kind: entryable.try(:kind)
         )
         if lock_attributes

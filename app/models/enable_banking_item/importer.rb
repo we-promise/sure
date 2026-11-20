@@ -1027,43 +1027,63 @@ class EnableBankingItem::Importer
 
     # Collapse rows the API returns more than once for the same movement.
     #
-    # Two real same-day payments, with no transaction_id or a shared one (it is
-    # not guaranteed unique), can match on every content field and differ only
+    # Rows are first grouped by content (#build_transaction_base_key). Two real
+    # same-day payments, with no transaction_id or a shared one (it is not
+    # guaranteed unique), can match on every content field and differ only
     # in entry_reference, which Enable Banking documents as the per-account
-    # identifier of a booked entry. Booked rows with distinct references
-    # therefore stay apart, while pending and reference-less copies of the same
-    # content still collapse into them.
+    # identifier of a booked entry, or only in the counterparty IBAN. Such a
+    # group is split again:
+    #
+    # - by counterparty IBAN, when at least two DIFFERENT non-blank IBANs
+    #   appear in it. A group where the IBAN is simply absent on some rows
+    #   (e.g. a pending row settling into a booked row that gained account
+    #   data later) still collapses to one, otherwise the pending and booked
+    #   copies of the same transaction would both survive.
+    # - by entry_reference, when at least two booked rows with distinct
+    #   references remain. Pending and reference-less copies of that content
+    #   are dropped then: they can't be attributed to one of the booked rows.
     def deduplicate_api_transactions(transactions)
-      reference_groups = transactions.each_with_object(Set.new) do |tx, groups|
-        tx = tx.with_indifferent_access
-        groups.add(build_transaction_content_key(tx)) if distinct_booked_reference?(tx)
+      normalized = transactions.map(&:with_indifferent_access)
+
+      # Sorted so a blank-IBAN row in an already-split group (below) aliases
+      # to a stable bucket regardless of array order.
+      distinct_ibans_by_base_key = normalized.group_by { |tx| build_transaction_base_key(tx) }
+        .transform_values { |group| group.filter_map { |tx| counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) }.uniq.sort }
+
+      keyed_with_index = normalized.each_with_index.group_by do |tx, _index|
+        base_key = build_transaction_base_key(tx)
+        if distinct_ibans_by_base_key[base_key].size >= 2
+          iban = counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator])
+          if iban
+            "#{base_key}\x1F#{iban}"
+          else
+            # A blank-IBAN row can't be attributed to any ONE of the >=2
+            # distinct real transactions sharing this content pattern --
+            # picking one (e.g. alphabetically) risks silently merging it
+            # into the wrong transaction (or dropping it if it's actually a
+            # third, distinct payee that also lacks IBAN data), which is
+            # worse than the alternative. It's kept apart from both real
+            # IBAN buckets in its own shared bucket instead: if there turn
+            # out to be several such ambiguous rows, they still collapse
+            # into each other (the "several blank rows can never be told
+            # apart, so nothing is lost by merging them" case), but never
+            # into a bucket with a known, different counterparty.
+            "#{base_key}\x1Fambiguous"
+          end
+        else
+          base_key
+        end
       end
 
-      seen = {}
       duplicates_removed = 0
 
-      result = transactions.select do |tx|
-        tx = tx.with_indifferent_access
-        key = build_transaction_content_key(tx)
+      result = keyed_with_index.values.flat_map do |group|
+        reference_groups = group.select { |tx, _index| distinct_booked_reference?(tx) }.group_by { |tx, _index| tx[:entry_reference] }
+        subgroups = reference_groups.size >= 2 ? reference_groups.values : [ group ]
 
-        if reference_groups.include?(key)
-          # Prefer booked rows over their otherwise identical pending/ID-less
-          # copies, regardless of which appears first in the response.
-          unless distinct_booked_reference?(tx)
-            duplicates_removed += 1
-            next false
-          end
-          key = [ key, tx[:entry_reference] ]
-        end
-
-        if seen[key]
-          duplicates_removed += 1
-          false
-        else
-          seen[key] = true
-          true
-        end
-      end
+        duplicates_removed += group.size - subgroups.size
+        subgroups.map { |subgroup| duplicate_group_representative(subgroup) }
+      end.sort_by { |_tx, index| index }.map(&:first)
 
       if duplicates_removed > 0
         Rails.logger.info(
@@ -1075,23 +1095,68 @@ class EnableBankingItem::Importer
       result
     end
 
+    # Keeps the richest row of a duplicate group -- a booked row with its own
+    # entry_reference, then BOOK over PDNG -- rather than whichever row the
+    # API happened to return first. Status ranks above IBAN presence:
+    # picking a still-pending row over a settled one just because it had
+    # richer account data would leave the transaction permanently stuck
+    # pending (PENDING_PROVIDERS-gated balances/analytics exclude it) on
+    # every future sync. Instead, when the representative lacks counterparty
+    # data that a sibling in the same group carries (some ASPSPs drop it once
+    # a transaction settles), that data is merged into the representative's
+    # own fields. This merges the full set of fields
+    # EnableBankingEntry::Processor reads for the counterparty (the account
+    # hash carrying the IBAN, the additional_identification fallback it uses
+    # when there's no IBAN, and the agent hash it reads the bank name from),
+    # and any of the three the representative lacks is filled in even when it
+    # has some data already (e.g. an IBAN but no bank name).
+    def duplicate_group_representative(group)
+      representative, index = group.min_by do |tx, index|
+        [
+          distinct_booked_reference?(tx) ? 0 : 1,
+          tx[:status].to_s == "BOOK" ? 0 : 1,
+          index
+        ]
+      end
+
+      account_key, agent_key, additional_key = counterparty_field_keys(representative[:credit_debit_indicator])
+      missing_keys = [ account_key, agent_key, additional_key ].select { |key| representative[key].blank? }
+
+      if missing_keys.any?
+        donor = group.map(&:first).find do |tx|
+          missing_keys.any? { |key| tx[key].present? }
+        end
+
+        if donor
+          fields_to_merge = missing_keys.each_with_object({}) do |key, hash|
+            hash[key] = donor[key] if donor[key].present?
+          end
+          representative = representative.merge(fields_to_merge) if fields_to_merge.any?
+        end
+      end
+
+      [ representative, index ]
+    end
+
     def distinct_booked_reference?(tx)
       tx[:entry_reference].present? && !EnableBankingEntry::Processor.pending_payload?(tx)
     end
 
-    # Build the content key for deduplication. Different entry_reference values
-    # can share it; deduplicate_api_transactions decides whether they stay apart.
+    # Base composite key for deduplication, deliberately WITHOUT counterparty
+    # IBAN or entry_reference -- see #deduplicate_api_transactions for how
+    # both split a group further.
+    #
     # transaction_id is included as one component — not a standalone key —
     # because the Enable Banking API docs state it is not guaranteed to be
     # unique. credit_debit_indicator (CRDT/DBIT) is included because
     # transaction_amount.amount is always positive — without it, a payment
     # and a same-day refund of the same amount would produce identical keys.
-    # status (BOOK/PDNG) is intentionally excluded: the same logical transaction
-    # may appear as PDNG then BOOK across imports and must not create duplicates.
-    # Identical real operations share this key; their booked references tell
-    # them apart (EnableBankingEntry::Processor.external_ids_for gives rows
-    # sharing a transaction_id their own ids).
-    def build_transaction_content_key(tx)
+    # status (BOOK/PDNG) is intentionally excluded: the same logical
+    # transaction may appear as PDNG then BOOK across imports and must not
+    # create duplicates. Identical real operations share this key; their
+    # booked references tell them apart (EnableBankingEntry::Processor.external_ids_for
+    # gives rows sharing a transaction_id their own ids).
+    def build_transaction_base_key(tx)
       date = tx[:booking_date].presence || tx[:value_date].presence || tx[:transaction_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
       currency = tx.dig(:transaction_amount, :currency).presence || tx[:currency]
@@ -1103,6 +1168,26 @@ class EnableBankingItem::Importer
       direction = tx[:credit_debit_indicator]
 
       [ date, amount, currency, creditor, debtor, remittance_key, tid, direction ].map(&:to_s).join("\x1F")
+    end
+
+    def counterparty_iban_for_content_key(tx, direction)
+      account_key, = counterparty_field_keys(direction)
+      # Normalized the same way EnableBankingEntry::Processor stores it:
+      # without this, two representations of the same duplicate transaction
+      # with differently-formatted IBANs (spaces/punctuation vs none) would
+      # produce different content keys and defeat the dedup this key exists for.
+      IbanNormalizable.normalize(tx.dig(account_key, :iban))
+    end
+
+    # Mirrors EnableBankingEntry::Processor#counterparty_account_info's own
+    # direction-based key selection, so the fields merged here during
+    # dedup are exactly the fields that processor later reads.
+    def counterparty_field_keys(direction)
+      if direction == "CRDT"
+        [ :debtor_account, :debtor_agent, :debtor_account_additional_identification ]
+      else
+        [ :creditor_account, :creditor_agent, :creditor_account_additional_identification ]
+      end
     end
 
     class PaginationTruncatedError < StandardError; end

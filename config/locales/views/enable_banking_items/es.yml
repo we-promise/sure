@@ -115,3 +115,5 @@ es:
       title: Selecciona tu banco
     update:
       success: Configuración de Enable Banking actualizada.
+    entry:
+      bank_note: "Banco: %{name}"

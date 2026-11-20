@@ -269,4 +269,26 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
     assert_equal 1, stored.size
     assert_equal "settled_ref", stored.first.with_indifferent_access[:entry_reference]
   end
+  test "fetch_and_store_transactions skips the snapshot write when a refetch changes nothing" do
+    @importer.stubs(:include_pending?).returns(false)
+    recent_booking_date = 5.days.ago.to_date.iso8601
+    stored_tx = {
+      entry_reference: "tx_ref",
+      transaction_id: "tx_id",
+      booking_date: recent_booking_date,
+      transaction_amount: { amount: "10.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+      status: "BOOK"
+    }
+    @enable_banking_account.update!(raw_transactions_payload: [ stored_tx ])
+    @enable_banking_account.reload
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [ stored_tx.deep_dup ], false ])
+    @enable_banking_account.expects(:upsert_enable_banking_transactions_snapshot!).never
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+  end
 end

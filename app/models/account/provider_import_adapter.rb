@@ -40,6 +40,23 @@ class Account::ProviderImportAdapter
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
+    # counterparty_iban/counterparty_reference describe a third party's own
+    # bank account. Popped out of `extra` before any of the jsonb merging
+    # below, so they never land in a column: only their last four characters
+    # are stored, plus a link when the IBAN is another account of this family.
+    # A nil value from a caller that always sends the keys
+    # (EnableBankingEntry::Processor) means "no counterparty data in this
+    # payload" and never clears what an earlier sync captured; a caller that
+    # omits the keys (every other provider) leaves the columns untouched.
+    counterparty = nil
+    if extra.is_a?(Hash)
+      extra = extra.with_indifferent_access
+      if extra.key?(:counterparty_iban) || extra.key?(:counterparty_reference)
+        counterparty = counterparty_attributes(iban: extra[:counterparty_iban], reference: extra[:counterparty_reference], currency: currency)
+      end
+      extra = extra.except(:counterparty_iban, :counterparty_reference)
+    end
+
     Account.transaction do
       # Find or initialize by both external_id AND source
       # This allows multiple providers to sync same account with separate entries
@@ -86,10 +103,28 @@ class Account::ProviderImportAdapter
           # same branch: an entry that is both user_modified and import_locked reaches
           # here (determine_skip_reason reports user_modified first) but is excluded
           # from that refresh, so this is the only thing that clears its pending flag.
-          if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
-            if entry.transaction.pending?
-              entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
+          if skip_reason == "user_modified" && entry.entryable.is_a?(Transaction)
+            updated_extra = entry.transaction.extra
+
+            if !incoming_pending && entry.transaction.pending?
+              updated_extra = clear_pending_flags_from_extra(updated_extra)
             end
+
+            if updated_extra != entry.transaction.extra
+              entry.transaction.extra = updated_extra
+            end
+
+            # The counterparty columns have no form field, so filling them does
+            # not revert a user edit the way overwriting name/category/notes
+            # would. Only blank columns are filled, unlike the unprotected path
+            # below: a protected entry's stored value is never replaced.
+            if counterparty && !entry.import_locked?
+              counterparty.each do |attribute, value|
+                entry.transaction[attribute] = value if entry.transaction[attribute].blank?
+              end
+            end
+
+            entry.transaction.save! if entry.transaction.changed?
           end
           # Refresh the provider's own namespaces on a protected entry. Without this
           # a user-modified entry keeps whatever payload it was created with, and a
@@ -251,6 +286,20 @@ class Account::ProviderImportAdapter
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
       apply_provider_extra(entry, extra, replace_extra_namespaces)
 
+      # Unlike the protected path above, a payload with an IBAN replaces all
+      # three columns, so a corrected IBAN wins. Without an IBAN only the
+      # reference is updated: some ASPSPs drop the IBAN once a pending
+      # transaction is booked and send only a non-IBAN account id, and
+      # clearing here would lose what an earlier sync captured.
+      if counterparty && entry.entryable.is_a?(Transaction)
+        if counterparty[:counterparty_iban_last4].present?
+          entry.transaction.assign_attributes(counterparty)
+        elsif counterparty[:counterparty_reference_last4].present?
+          entry.transaction.counterparty_reference_last4 = counterparty[:counterparty_reference_last4]
+        end
+        entry.transaction.save! if entry.transaction.changed?
+      end
+
       # Auto-detect investment activity labels for investment accounts
       detected_label = investment_activity_label
       if account.investment? && detected_label.nil? && entry.entryable.is_a?(Transaction)
@@ -380,7 +429,7 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name (e.g., "plaid", "simplefin")
   # @param website_url [String, nil] Optional merchant website
   # @param logo_url [String, nil] Optional merchant logo URL
-  # @return [ProviderMerchant, nil] The merchant object or nil if data is insufficient
+  # @return [Merchant, nil] The merchant object or nil if data is insufficient
   def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil)
     return nil unless provider_merchant_id.present? && name.present?
 
@@ -1130,6 +1179,23 @@ class Account::ProviderImportAdapter
   end
 
   private
+    COUNTERPARTY_LAST_CHARACTERS = 4
+
+    def counterparty_attributes(iban:, reference:, currency:)
+      iban = IbanNormalizable.normalize(iban)
+      {
+        counterparty_iban_last4: iban&.last(COUNTERPARTY_LAST_CHARACTERS),
+        counterparty_reference_last4: reference.to_s.strip.last(COUNTERPARTY_LAST_CHARACTERS).presence,
+        counterparty_own_account_id: iban && Account.own_account_id_for(own_accounts_by_iban[iban], currency: currency)
+      }
+    end
+
+    # Account#iban is encrypted without determinism, so it cannot be looked up
+    # by value; the family's few IBANs are decrypted once per adapter instead.
+    def own_accounts_by_iban
+      @own_accounts_by_iban ||= Account.own_accounts_by_iban(account.family, excluding: account)
+    end
+
 
     # The latest earlier holding of the security the provider reports. A
     # remapped row records that security in provider_security_id; an

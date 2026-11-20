@@ -429,4 +429,23 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_includes posted_tx.tags, reimbursable
     assert_equal "Lunch with client", @posted_entry.reload.notes
   end
+  test "fills blank posted counterparty identifiers from the pending transaction" do
+    @pending_entry.transaction.update!(counterparty_iban_last4: "3201", counterparty_reference_last4: "NT-1", counterparty_own_account_id: accounts(:connected).id)
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    posted_tx = @posted_entry.transaction.reload
+    assert_equal "3201", posted_tx.counterparty_iban_last4
+    assert_equal "NT-1", posted_tx.counterparty_reference_last4
+    assert_equal accounts(:connected), posted_tx.counterparty_own_account
+  end
+
+  test "keeps the posted transaction's own counterparty iban on merge" do
+    @pending_entry.transaction.update!(counterparty_iban_last4: "3201")
+    @posted_entry.transaction.update!(counterparty_iban_last4: "3000")
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal "3000", @posted_entry.transaction.reload.counterparty_iban_last4
+  end
 end
