@@ -21,6 +21,16 @@ class PortfoliosHelperTest < ActionView::TestCase
                  holdings_sort_link("value", active_sort: "value", active_dir: "desc")
   end
 
+  # A named period is not carried: Periodable saves a `period` param as the
+  # user's default, so a sort link would re-save it, overwriting a default
+  # changed meanwhile in another tab. The page shows the default anyway.
+  test "a holdings header link does not carry a named period" do
+    controller.params.merge!(period: "last_year")
+
+    assert_equal portfolio_path(sort: "value", dir: "asc"),
+                 holdings_sort_link("value", active_sort: "value", active_dir: "desc")
+  end
+
   test "only the active holdings column carries an aria-sort value" do
     assert_equal "ascending", holdings_aria_sort("name", active_sort: "name", active_dir: "asc")
     assert_equal "descending", holdings_aria_sort("name", active_sort: "name", active_dir: "desc")

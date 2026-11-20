@@ -84,21 +84,34 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     assert_operator cards.index(lower), :<, cards.index(upper)
   end
 
-  # The cards keep the order the rest of the app lists accounts in (the
-  # database's collation, as Account.alphabetically uses), where an accented
-  # name sits with its letter rather than after "z".
-  test "the account cards follow the database's name order" do
+  # The cards are ordered by name with accents and case set aside, so an
+  # accented name sits with its letter rather than after "z", whatever the
+  # test database's collation.
+  test "the account cards sort an accented name with its letter" do
     names = [ "Zebra brokerage", "Épargne", "Fidelity" ]
-    accounts = names.map do |name|
+    names.each do |name|
       @family.accounts.create!(name: name, balance: 100, currency: "USD", accountable: Investment.new, owner: @user)
     end
     @statement = InvestmentStatement.new(@family, user: @user)
 
     cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
 
-    expected = @family.accounts.where(id: accounts.map(&:id)).alphabetically.map(&:name)
-    assert_equal [ "Épargne", "Fidelity", "Zebra brokerage" ], expected, "precondition: the database collation places É with E"
-    assert_equal expected, cards.select { |card| names.include?(card.name) }.map(&:name)
+    assert_equal [ "Épargne", "Fidelity", "Zebra brokerage" ], cards.select { |card| names.include?(card.name) }.map(&:name)
+  end
+
+  # Names with no Latin approximation keep their characters, so two distinct
+  # names sort by name, not by id.
+  test "the account cards keep non-Latin names apart" do
+    ids = { "甲" => "11111111-0000-4000-8000-000000000000", "乙" => "99999999-0000-4000-8000-000000000000" }
+    ids.each do |name, id|
+      @family.accounts.create!(id: id, name: name, balance: 100, currency: "USD", accountable: Investment.new, owner: @user)
+    end
+    @statement = InvestmentStatement.new(@family, user: @user)
+
+    cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
+
+    # 乙 (U+4E59) before 甲 (U+7532) by name, although 甲 has the lower id.
+    assert_equal [ "乙", "甲" ], cards.select { |card| ids.key?(card.name) }.map(&:name)
   end
 
   # The statement's query has no order of its own, so the tiebreak must not

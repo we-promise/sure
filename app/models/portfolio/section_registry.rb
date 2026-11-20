@@ -111,13 +111,14 @@ class Portfolio::SectionRegistry
     # They are the statement's own records rather than a second query: the
     # holdings section's weights load the same accounts through the
     # statement, and the page reads them once. So they are sorted here, by
-    # name with its accents and case set aside, as Account.alphabetically's
-    # collation places them (an accented name sits with its letter, not
-    # after "z"); id settles same-named cards.
+    # name with its accent marks and case set aside (an accented name sits
+    # with its letter, not after "z"). Only combining marks are dropped, so a
+    # name with no Latin form keeps its characters; id settles same-named
+    # cards.
     def accounts_for_cards
       @accounts_for_cards ||= begin
         accounts = statement.investment_accounts.to_a.sort_by do |account|
-          [ ActiveSupport::Inflector.transliterate(account.name.to_s).downcase, account.id ]
+          [ account.name.to_s.unicode_normalize(:nfkd).gsub(/\p{Mn}/, "").downcase, account.id ]
         end
         ActiveRecord::Associations::Preloader.new(records: accounts, associations: CARD_PRELOADS).call
         accounts

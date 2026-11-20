@@ -1,15 +1,16 @@
 module PortfoliosHelper
   # Where a holdings column header links: the same column flips direction,
   # another column opens on its natural direction (names ascending, figures
-  # descending). The page's period goes with it, since a custom range lives
-  # only in the request.
+  # descending). A custom range goes with it, since it lives only in the
+  # request. A named period does not: Periodable saves a `period` param as the
+  # user's default, and the page shows that default anyway.
   def holdings_sort_link(key, active_sort:, active_dir:)
     next_dir = if active_sort == key
       active_dir == "asc" ? "desc" : "asc"
     else
       key == "name" ? "asc" : "desc"
     end
-    period = params.slice(:start_date, :end_date, :period).permit(:start_date, :end_date, :period).to_h.compact_blank
+    period = params.slice(:start_date, :end_date).permit(:start_date, :end_date).to_h.compact_blank
     portfolio_path(**period.symbolize_keys, sort: key, dir: next_dir)
   end
 
