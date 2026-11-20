@@ -135,7 +135,7 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     get settings_preferences_url
     assert_select "[data-controller='web-push']", count: 1
     # The opt in covers iOS too, so it is not part of the browser card.
-    assert_select "input[name='user[push_budget_warnings_enabled]']", count: 1
+    assert_select "#user_push_budget_warnings_enabled", count: 1
     assert_select "[data-controller='web-push'] input[name='user[push_budget_warnings_enabled]']", count: 0
   end
 
