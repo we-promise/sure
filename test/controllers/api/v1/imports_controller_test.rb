@@ -99,7 +99,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     response_data = JSON.parse(response.body)
     assert_equal "invalid_import_type", response_data["error"]
-    assert_equal "type must be one of: #{(Import::TYPES - %w[MonarchImport]).join(', ')}", response_data["message"]
+    assert_equal "type must be one of: #{Import::TYPES.join(', ')}", response_data["message"]
   end
 
   test "creates a transaction import when no type is given" do
