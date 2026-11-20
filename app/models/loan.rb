@@ -26,6 +26,15 @@ class Loan < ApplicationRecord
   # An annual percentage, matching the bound the rate-change input declares.
   MAX_INTEREST_RATE = 100
 
+  # The end of the fixed period in force and the balance projected for it.
+  TermEnd = Data.define(:date, :balance)
+
+  # Recorded changes to the contract. Saved with the loan and validated by
+  # #term_changes_must_be_valid, which reports a row's error as the loan's own
+  # so the account form can show it.
+  has_many :term_changes, class_name: "Loan::TermChange", inverse_of: :loan,
+           dependent: :delete_all, autosave: true, validate: false
+
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
   # The form caps the date picker at today; this is the same bound where a
   # crafted request cannot skip it. A loan drawn down in the future has no
@@ -65,6 +74,8 @@ class Loan < ApplicationRecord
   # which needs the projection this engine does not yet carry.
   def monthly_payment
     return nil if term_months.nil? || interest_rate.nil? || rate_type.nil? || rate_type != FIXED_RATE_TYPE
+    # A recorded term change gives a fixed loan more than one repayment too.
+    return nil if term_changes?
     # Non-positive, not just zero: `amortizable?` rejects both, so anything that
     # slips past here would fall through to a nil schedule instead of a payment.
     return Money.new(0, account.currency) if original_balance.amount <= 0 || term_months <= 0
@@ -110,18 +121,44 @@ class Loan < ApplicationRecord
     rate_changes = variable_rates
     return false if rate_changes.empty?
 
-    loan_origination_date = start_date
-    unless loan_origination_date.present?
-      # Do not call `account` here. Loan validations can run before a separate
-      # Account is attached; caching that missing has_one result leaves the
-      # later persisted Loan unable to see its Account through the association.
-      loan_account = association(:account).target || association(:account).scope.first
-      return false unless loan_account
-
-      loan_origination_date = loan_account.first_valuation&.date || loan_account.opening_anchor_date
-    end
-
+    loan_origination_date = origination_date_for_validation
     loan_origination_date.present? && rate_changes.any? { |date, _rate| date < loan_origination_date }
+  end
+
+  # #origination_date, for a validation. Nil when there is no account to read
+  # it from yet.
+  private def origination_date_for_validation
+    return start_date if start_date.present?
+
+    loan_account = account_for_validation
+    return nil unless loan_account
+
+    loan_account.first_valuation&.date || loan_account.opening_anchor_date
+  end
+
+  # The loan's account, for a validation. Nil before one is attached.
+  #
+  # Do not call `account` in a validation. Loan validations can run before a
+  # separate Account is attached; caching that missing has_one result leaves
+  # the later persisted Loan unable to see its Account through the
+  # association.
+  private def account_for_validation
+    association(:account).target || association(:account).scope.first
+  end
+
+  # Whether the repayment can differ from one payment to the next: the rate
+  # can move, or a term change is recorded. Such a loan has no single monthly
+  # payment, only the one in force on a date.
+  def repayment_varies?
+    variable_rate_type? || term_changes?
+  end
+
+  # Whether the loan's balance comes from the ledger replay, which takes
+  # interest out of a payment before principal: the replay can run for this
+  # loan and the family has the preview on. A sync is background work with no
+  # `Current.user`, so the family rollup is the right preview check.
+  def principal_replay_active?
+    account.present? && account.family.preview_features_enabled? && PrincipalPayments.applies_to?(self)
   end
 
   # Whether this loan's rate can move over its life. The one place the answer
@@ -260,9 +297,21 @@ class Loan < ApplicationRecord
   # check can load the Account and its first valuation, but only for a variable
   # loan that has recorded rate changes and no start date; every other loan
   # answers from its own attributes.
+  #
+  # Assigned term change rows count as a change even when they equal the
+  # stored ones. A loan is saved before its account on create, when the term
+  # change checks that need the account cannot run. The form's create and a
+  # family import outside a chunked session run them through
+  # #term_changes_fit_account?; for a loan created any other way they run on
+  # the first form save, whatever it changes. The assignment counts until the
+  # loan has saved once: a later save of the account in the same request must
+  # not save the loan again, which would clear the saved changes
+  # `lock_saved_attributes!` reads.
   def changed_for_autosave?
-    super || invalid_rate_changes.present? || rate_changes_precede_origination?
+    super || invalid_rate_changes.present? || rate_changes_precede_origination? || @term_changes_assigned == true
   end
+
+  after_save { @term_changes_assigned = false }
 
   # Form rows, in a shape the form can render without parsing anything.
   #
@@ -276,6 +325,269 @@ class Loan < ApplicationRecord
   def rate_change_rows
     variable_rates.map { |date, rate| { effective_date: date.iso8601, rate: rate.to_s("F") } } +
       Array(invalid_rate_changes)
+  end
+
+  # Term change rows the form submitted that could not be read, kept for the
+  # same reason as #invalid_rate_changes.
+  attr_reader :invalid_term_changes
+
+  # Term change rows the form submitted with a date an earlier row in the
+  # same submit already has. Refused and kept for the form, so neither row
+  # is lost.
+  attr_reader :duplicate_term_changes
+
+  validate :term_changes_must_be_valid
+
+  # The recorded term changes as they will be after a save, oldest first: rows
+  # the form removed are left out and rows it added are in.
+  def active_term_changes
+    term_changes.reject(&:marked_for_destruction?).select(&:effective_date).sort_by(&:effective_date)
+  end
+
+  # Whether a recorded change moves the schedule. A row that records only
+  # when a fixed period ends does not.
+  def term_changes?
+    term_changes.any? { |change| !change.marked_for_destruction? && change.effective_date && change.changes_schedule? }
+  end
+
+  # The term changes the schedule follows, oldest first.
+  def schedule_term_changes
+    active_term_changes.select(&:changes_schedule?)
+  end
+
+  # The day the terms in force on `as_of` stop being fixed: the end date of
+  # the latest term change with one that has taken effect, or the day the
+  # next fixed period starts when that comes first (an early renewal). Only
+  # a row with an end date of its own starts a period: a payment the lender
+  # announced after an extra repayment leaves the period running. Nil when
+  # no end date is recorded, or when that day has passed and the terms that
+  # followed are not recorded yet.
+  def current_term_end_date(as_of: Date.current)
+    periods = active_term_changes.select(&:term_end_date)
+    end_date = periods.reverse_each.find { |row| row.effective_date <= as_of }&.term_end_date
+    return nil if end_date.nil? || end_date < as_of
+
+    next_period = periods.find { |row| row.effective_date > as_of }
+    [ end_date, next_period&.effective_date ].compact.min
+  end
+
+  # Where the loan stands when the terms in force stop being fixed: that date
+  # and what the projection leaves owing on it, a repayment due that day
+  # included. Nil without a recorded end date or without a balance to
+  # project. `projection`, when given, is this loan's for the same `as_of`.
+  def current_term_end(as_of: Date.current, projection: nil)
+    date = current_term_end_date(as_of: as_of)
+    return nil if date.nil?
+
+    balance = (projection || payoff_projection(as_of: as_of)).balance_on(date)
+    balance && TermEnd.new(date: date, balance: balance)
+  end
+
+  # Replaces the loan's term changes with the form's rows, as #rate_changes=
+  # does for rate changes. Keyed by effective date: a stored row with the same
+  # date is updated and the others are removed on save. Two rows with one
+  # date in the same submit are refused.
+  #
+  # The form sends a bare `term_change_rows[]` sentinel, so removing every row
+  # still calls this with an empty array and clears them.
+  def term_change_rows=(rows)
+    invalid = []
+    duplicates = []
+
+    parsed = Array(rows).each_with_object({}) do |row, acc|
+      # The form's blank sentinel is a String; an import can carry anything.
+      next unless row.is_a?(Hash) || row.is_a?(ActionController::Parameters)
+
+      values = TERM_CHANGE_ROW_FIELDS.index_with { |field| row[field].presence || row[field.to_s].presence }
+      next if values.values.all?(&:blank?)
+
+      begin
+        date = parse_term_change_date(values[:effective_date])
+        term_end_date = parse_term_change_date(values[:term_end_date]) if values[:term_end_date].present?
+        amounts = TermChange::AMOUNTS.index_with { |amount| parse_term_change_amount(values[amount]) }
+          .merge(term_end_date: term_end_date)
+        if acc.key?(date)
+          duplicates << values.transform_values(&:to_s)
+        else
+          acc[date] = amounts
+        end
+      rescue ArgumentError, TypeError, Date::Error, FloatDomainError
+        invalid << values.transform_values(&:to_s)
+      end
+    end
+
+    # Assigned twice before a save, the second call starts from the stored
+    # rows again rather than from the first call's removals.
+    association(:term_changes).reset if @term_changes_assigned
+    @term_changes_assigned = true
+    @invalid_term_changes = invalid
+    @duplicate_term_changes = duplicates
+
+    stored = term_changes.index_by(&:effective_date)
+    parsed.each do |date, attributes|
+      (stored.delete(date) || term_changes.build(effective_date: date)).assign_attributes(attributes)
+    end
+    stored.each_value(&:mark_for_destruction)
+
+    @term_changes_dirty = term_changes.any? do |change|
+      change.new_record? || change.changed? || change.marked_for_destruction?
+    end
+    # The balance follows the schedule, and the schedule reads only the date
+    # and the amounts. A fixed-until date on its own moves neither.
+    @schedule_term_changes_dirty = term_changes.any? do |change|
+      if change.new_record? || change.marked_for_destruction?
+        change.changes_schedule?
+      else
+        (change.changed & TERM_CHANGE_SCHEDULE_ATTRIBUTES).any?
+      end
+    end
+    @amortization_schedule = nil
+    @insurance = nil
+  end
+
+  # Form rows for the term changes, invalid ones included, so a rejected save
+  # redisplays what was typed. A whole amount is shown without its ".0".
+  def term_change_rows
+    active_term_changes.map do |change|
+      {
+        effective_date: change.effective_date.iso8601,
+        **TermChange::AMOUNTS.index_with { |amount| change[amount]&.to_s("F")&.delete_suffix(".0") },
+        term_end_date: change.term_end_date&.iso8601
+      }
+    end + Array(duplicate_term_changes) + Array(invalid_term_changes)
+  end
+
+  TERM_CHANGE_ROW_FIELDS = ([ :effective_date ] + TermChange::AMOUNTS + [ :term_end_date ]).freeze
+  TERM_CHANGE_SCHEDULE_ATTRIBUTES = ([ :effective_date ] + TermChange::AMOUNTS).map(&:to_s).freeze
+
+  # ISO 8601 only, as for rate changes, and a date the column can hold.
+  private def parse_term_change_date(value)
+    date = Date.iso8601(value.to_s)
+    raise ArgumentError, "date out of range" unless TermChange::DATE_RANGE.cover?(date)
+
+    date
+  end
+
+  private def parse_term_change_amount(value)
+    return nil if value.blank?
+
+    amount = BigDecimal(value.to_s)
+    raise ArgumentError, "not a finite amount" unless amount.finite?
+    # Refused here, not by the model: the form would print an amount such as
+    # 1e400000000 back in full.
+    raise ArgumentError, "amount out of range" unless amount.abs < TermChange::AMOUNT_LIMIT
+
+    # To the column's scale, so the validations judge the amount that would be
+    # stored: an extra repayment of 0.00001 is stored as zero.
+    amount.round(TermChange::AMOUNT_SCALE)
+  end
+
+  # True while assigned rows wait for a save, or a term change is why the
+  # last validation failed. A form that comes back after a rejected submit
+  # opens the section on them.
+  def unsaved_term_changes?
+    @term_changes_dirty == true || invalid_term_changes.present? || duplicate_term_changes.present? ||
+      @term_change_refused == true
+  end
+
+  # A row that could not be read, then two rows with one date, then the first
+  # row that is invalid on its own, dated too early for the loan or fixed
+  # until after the end of its term, then the checks that read the schedule
+  # (#term_change_schedule_refusal). Checked when rows were assigned or the
+  # start date moves, which can leave a stored row outside the loan's term;
+  # any other save has nothing new to check and skips the query.
+  private def term_changes_must_be_valid
+    @term_change_refused = false
+    refusal = term_change_refusal
+    return if refusal.nil?
+
+    @term_change_refused = true
+    errors.add(:base, refusal)
+  end
+
+  # A loan being created is saved before its account, and two of the checks
+  # read the account: the origination date of a loan without a start date,
+  # and the schedule a payment is measured against. Account.create_and_sync
+  # asks again here once the account and its opening balance exist. False,
+  # with the error on the loan, when a row is refused.
+  def term_changes_fit_account?
+    return true if active_term_changes.empty?
+
+    forget_account_reads
+    refusal = term_change_refusal(recheck: true)
+    # The check read the account through its own copy of the record, inside
+    # a creation that a refusal rolls back. Neither is kept.
+    forget_account_reads
+    return true if refusal.nil?
+
+    @term_change_refused = true
+    errors.add(:base, refusal)
+    false
+  end
+
+  private def forget_account_reads
+    association(:account).reset
+    @amortization_schedule = nil
+    @insurance = nil
+  end
+
+  # The error key or message for the first term change that cannot be saved.
+  # `recheck` reads the stored rows although none was assigned.
+  private def term_change_refusal(recheck: false)
+    return :invalid_term_change if invalid_term_changes.present?
+    return :duplicate_term_change_date if duplicate_term_changes.present?
+    return unless recheck || @term_changes_assigned || will_save_change_to_start_date?
+
+    origin = origination_date_for_validation
+    maturity = origin >> term_months if origin.present? && term_months.to_i.between?(1, Simulator::MAX_PERIODS)
+    active_term_changes.each do |change|
+      # A fixed period cannot outlast the loan's term. A year typed wrong is
+      # the usual cause, and the chart would stretch to hold it.
+      return :term_change_fixed_past_maturity if maturity && change.term_end_date && change.term_end_date > maturity
+
+      if origin.present?
+        # The balance on the day the loan began is its opening balance, so a
+        # change that day has nothing to change. A row that records only the
+        # end of the period the loan opened with is dated that day.
+        return :term_change_not_after_origination if change.changes_schedule? && change.effective_date <= origin
+        return :term_change_before_origination if change.effective_date < origin
+      end
+      return change.errors.full_messages.first if (change.new_record? || change.changed?) && change.invalid?
+    end
+
+    term_change_schedule_refusal
+  end
+
+  # The checks that read the schedule.
+  #
+  # A payment below the interest would let the balance grow. The schedule
+  # would charge interest on that growth and the ledger replay would not, so
+  # the two could not agree.
+  #
+  # The schedule ends on its last payment: the last of the term, or an earlier
+  # one that repaid the loan. It does not read a row dated after that, nor an
+  # extra repayment once the loan is repaid (by a balance confirmed at zero,
+  # or by that day's payment), so such a row is refused instead of stored
+  # without effect.
+  private def term_change_schedule_refusal
+    return if active_term_changes.empty?
+    # The schedule reads the account, which a loan being created does not
+    # have yet. #term_changes_fit_account? asks again once it does.
+    return unless account_for_validation
+    # A loan saved before its account existed can still hold that absence.
+    association(:account).reset if association(:account).target.nil?
+
+    schedule = amortization_schedule
+    return if schedule.blank?
+    return :term_change_payment_below_interest if schedule.lender_payment_below_interest?
+
+    last_payment_date = schedule.payments.last&.date
+    return :term_change_after_last_payment if last_payment_date && active_term_changes.last.effective_date > last_payment_date
+    return :term_change_repayment_after_payoff if schedule.repayment_after_payoff?
+
+    # Only a balance confirmed for the last payment date can leave the loan
+    # owing: the final payment otherwise settles whatever is left.
+    :term_change_balance_after_last_payment if last_payment_date && schedule.payoff_date.nil?
   end
 
   def amortization_schedule
@@ -313,8 +625,9 @@ class Loan < ApplicationRecord
     end
   end
 
-  # The balance replay reads these columns. A save without a sync leaves the
-  # stored rows on the old calculation until the next scheduled sync.
+  # The balance replay reads these columns, and the term changes through the
+  # schedule. A save without a sync leaves the stored rows on the old
+  # calculation until the next scheduled sync.
   BALANCE_INPUTS = (SCHEDULE_INPUTS + INSURANCE_INPUTS + %i[initial_balance principal_only_transfers]).freeze
 
   # `lock_saved_attributes!` saves the loan a second time in the same
@@ -322,10 +635,11 @@ class Loan < ApplicationRecord
   # that second save, so remember the input change until the commit runs.
   after_update :remember_balance_input_change
   after_update_commit :sync_balance_after_change, if: :balance_inputs_changed?
+  after_commit :forget_term_change_edits
   after_rollback :forget_balance_input_change
 
   private def remember_balance_input_change
-    return unless BALANCE_INPUTS.any? { |input| saved_change_to_attribute?(input) }
+    return unless @schedule_term_changes_dirty || BALANCE_INPUTS.any? { |input| saved_change_to_attribute?(input) }
 
     @balance_inputs_changed = true
   end
@@ -353,11 +667,25 @@ class Loan < ApplicationRecord
 
   private def forget_balance_input_change
     @balance_inputs_changed = false
+    forget_term_change_edits
+  end
+
+  # Assigned rows stop being edits once the save commits, whether or not it
+  # queued a sync.
+  private def forget_term_change_edits
+    @term_changes_dirty = false
+    @schedule_term_changes_dirty = false
   end
 
   def reload(*)
     @amortization_schedule = nil
     @insurance = nil
+    @term_changes_assigned = false
+    @term_changes_dirty = false
+    @schedule_term_changes_dirty = false
+    @term_change_refused = false
+    @invalid_term_changes = nil
+    @duplicate_term_changes = nil
     super
   end
 
@@ -378,12 +706,10 @@ class Loan < ApplicationRecord
   # its parts, so with no premium the two figures are the same figure. Nil when
   # there is no schedule to read an interest figure from, because a cost
   # without interest in it would understate the loan rather than decline to
-  # answer.
+  # answer. Nil too when the schedule ends with the loan still owing.
   def total_cost
-    schedule = amortization_schedule
-    return nil if schedule.nil?
-
-    schedule.total_paid + total_insurance
+    total_paid = amortization_schedule&.total_paid
+    total_paid && total_paid + total_insurance
   end
 
   # How far into the term the loan is, measured from origination rather than

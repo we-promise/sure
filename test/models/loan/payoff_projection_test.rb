@@ -162,6 +162,39 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_not matured.payoff_projection(as_of: Date.new(2040, 1, 1)).applicable?
   end
 
+  test "the balance on a date is what the last repayment on or before it leaves" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+    projection = loan.payoff_projection(as_of: @today)
+    first, second = projection.payments.first(2)
+
+    assert_equal projection.current_balance, projection.balance_on(@today)
+    assert_equal projection.current_balance, projection.balance_on(first[:payment_date] - 1)
+    assert_equal first[:ending_balance], projection.balance_on(first[:payment_date]).amount
+    assert_equal first[:ending_balance], projection.balance_on(second[:payment_date] - 1).amount
+    assert_equal BigDecimal("0"), projection.balance_on(projection.payoff_date + 1.year).amount
+    assert_nil projection.balance_on(@today - 1), "a projection does not cover the past"
+  end
+
+  test "a settled loan owes nothing on a later date, and a balance with nothing to project it with is unknown" do
+    cleared = build_loan(term_months: 24)
+    cleared.account.update!(balance: 0)
+    assert_equal BigDecimal("0"), cleared.payoff_projection(as_of: @today).balance_on(@today + 1.year).amount
+
+    # Past its last scheduled repayment with a balance still owing.
+    matured = build_loan(term_months: 24)
+    as_of = Date.new(2040, 1, 1)
+    assert_nil matured.payoff_projection(as_of: as_of).balance_on(as_of + 1.year)
+
+    unamortizable = build_loan(term_months: 24, rate_type: "")
+    assert_nil unamortizable.payoff_projection(as_of: @today).balance_on(@today + 1.year)
+
+    no_balance = build_loan(term_months: 24)
+    no_balance.account.update_column(:balance, nil)
+    assert_nil no_balance.reload.payoff_projection(as_of: @today).balance_on(@today + 1.year),
+               "a balance not recorded yet is unknown, not zero"
+  end
+
   # Two reasons a projection does not apply, which the Extra repayments tab
   # words differently: nothing is owed, or something is owed with no
   # scheduled repayment left to pay it. Both sides of zero.

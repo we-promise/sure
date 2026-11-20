@@ -65,6 +65,8 @@ en:
           scheduled: Original schedule
           projected: Projected from today
           today: Today
+          term_end: End of fixed period
+          aria_term_end: The fixed period ends %{date}, with a projected balance of %{balance}.
           interactive_chart: interactive chart
           no_payoff: not on the current repayment
           aria_description: Loan balance chart. Recorded balance %{current_balance}. Original scheduled payoff %{scheduled_payoff_date}. Projected payoff from today's balance %{projected_payoff_date}.

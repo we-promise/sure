@@ -5,6 +5,7 @@ class LoansController < ApplicationController
     :id, :subtype, :rate_type, :interest_rate, :term_months, :initial_balance, :start_date,
     :down_payment, :insurance_rate, :insurance_rate_type, :day_count_convention,
     :principal_only_transfers,
-    { rate_changes: [ :effective_date, :rate ] }
+    { rate_changes: [ :effective_date, :rate ] },
+    { term_change_rows: [ :effective_date, :extra_repayment, :balance, :payment, :term_end_date ] }
   )
 end

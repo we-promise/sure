@@ -14,6 +14,10 @@ class Loan
   #              amount on top of every repayment. Drawn only when the page
   #              was given one; without it the payload is exactly as above.
   #
+  #   term_end   not a series: the day the loan's current terms stop being
+  #              fixed and the balance the projection leaves owing on it, for
+  #              a marker. Only when the loan has that day recorded.
+  #
   # The picked period governs the x-domain, and it means what it means on
   # every other chart: 1Y is the last year, YTD the current calendar year,
   # clamped so no window opens before the loan does. Under "All" the domain
@@ -96,6 +100,7 @@ class Loan
         scheduled_payoff_date: schedule.payoff_date&.iso8601,
         projected_payoff_date: projection.payoff_date&.iso8601,
         **extra_payoff,
+        **term_end_marker,
         # The figures the cards beside the chart quote. nil when the projection
         # cannot run or never clears the balance, so a card is not shown for a
         # comparison that does not exist.
@@ -122,6 +127,18 @@ class Loan
       # the loan. No key at all without an extra projection.
       def extra_payoff
         extra_projection ? { extra_payoff_date: extra_projection.payoff_date&.iso8601 } : {}
+      end
+
+      # The marker for the end of the current fixed period. No key at all
+      # without one recorded, so the payload of every other loan is unchanged.
+      def term_end_marker
+        term_end ? { term_end: { date: term_end.date.iso8601, balance: term_end.balance.amount.to_f } } : {}
+      end
+
+      def term_end
+        return @term_end if defined?(@term_end)
+
+        @term_end = loan.current_term_end(as_of: as_of, projection: projection)
       end
 
       def schedule
@@ -157,11 +174,12 @@ class Loan
 
       # The whole life reaches far enough to hold every line: the contract's
       # payoff and the projection's, whichever is later, and never before today.
-      # A window ends where the period does, but never past that and never on
-      # its start.
+      # It also holds the end of the fixed period, which can fall after a loan
+      # that is paid off early. A window ends where the period does, but never
+      # past that and never on its start.
       def domain_end
         @domain_end ||= begin
-          whole_life_end = [ schedule.payoff_date, projection.payoff_date, as_of ].compact.max
+          whole_life_end = [ schedule.payoff_date, projection.payoff_date, term_end&.date, as_of ].compact.max
           whole_life? ? whole_life_end : [ [ period.end_date, whole_life_end ].min, domain_start + 1 ].max
         end
       end
@@ -248,6 +266,7 @@ class Loan
             today: I18n.t("UI.account.chart.loan.today"),
             interactive_chart: I18n.t("UI.account.chart.loan.interactive_chart")
           )
+          .merge(term_end ? { term_end: I18n.t("UI.account.chart.loan.term_end") } : {})
       end
 
       # Every series the chart draws is named here, with its payoff date, the
@@ -267,6 +286,13 @@ class Loan
           description = [ description, I18n.t(
             "UI.account.chart.loan.aria_extra_payoff",
             date: long_date(extra_projection.payoff_date, I18n.t("UI.account.chart.loan.no_payoff"))
+          ) ].join(" ")
+        end
+
+        if term_end
+          description = [ description, I18n.t(
+            "UI.account.chart.loan.aria_term_end",
+            date: I18n.l(term_end.date, format: :long), balance: term_end.balance.format
           ) ].join(" ")
         end
 

@@ -1,8 +1,29 @@
 ---
 en:
   activerecord:
+    attributes:
+      loan/term_change:
+        balance: Confirmed balance
+        effective_date: Effective date
+        extra_repayment: Extra repayment
+        payment: Payment
+        term_end_date: Fixed until
     errors:
       models:
         loan:
+          duplicate_term_change_date: Two term change rows have the same date. Combine them into one row; a row can carry an extra repayment and a new payment together.
           invalid_rate_change: Rate change rows need both an effective date and a rate.
+          invalid_term_change: Term change rows need an effective date, amounts that are numbers and, if given, a valid fixed-until date.
           rate_change_before_origination: A rate change cannot take effect before the loan originated.
+          term_change_after_last_payment: A term change cannot be dated after the last payment on the schedule. Date it on or before that payment.
+          term_change_balance_after_last_payment: A balance confirmed for the last payment of the term must be zero, because no payments are left to repay it. Lengthen the loan's term to record it.
+          term_change_before_origination: A term change cannot take effect before the loan originated.
+          term_change_fixed_past_maturity: The fixed-until date of a term change cannot be after the end of the loan's term.
+          term_change_not_after_origination: A term change that moves the balance or the payment must take effect after the day the loan originated.
+          term_change_payment_below_interest: A term change's payment must at least cover the interest of its period.
+          term_change_repayment_after_payoff: An extra repayment is dated after the loan is repaid, by the last payment or by a balance of zero. Date it before then, or remove it.
+        loan/term_change:
+          records_nothing: A term change needs an extra repayment, a confirmed balance, a payment or a fixed-until date.
+          balance_change_in_the_future: An extra repayment or a confirmed balance cannot be dated in the future.
+          term_ends_before_it_starts: The fixed-until date must be after the effective date.
+          two_balance_changes: A term change takes an extra repayment or a confirmed balance, not both.

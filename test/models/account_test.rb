@@ -372,6 +372,27 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal 8_000, today_valuation.amount
   end
 
+  # The loan is saved before the account, so its own validation cannot read
+  # the schedule the payment is measured against.
+  test "create_and_sync refuses a loan whose term change payment does not cover the interest" do
+    start_date = Date.current - 2.years
+    attributes = {
+      family: @family, owner: @admin, name: "Mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
+      accountable_attributes: {
+        initial_balance: 300_000, rate_type: "fixed", interest_rate: 5, term_months: 360, start_date: start_date,
+        term_change_rows: [ { effective_date: (Date.current - 1.year).iso8601, payment: "10" } ]
+      }
+    }
+
+    error = assert_no_difference [ "Account.count", "Loan.count", "Loan::TermChange.count", "Entry.count" ] do
+      assert_raises(ActiveRecord::RecordInvalid) { Account.create_and_sync(attributes, skip_initial_sync: true) }
+    end
+
+    assert_kind_of Account, error.record
+    assert error.record.new_record?
+    assert_includes error.record.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_payment_below_interest")
+  end
+
   test "create_and_sync leaves the opening anchor alone when the opening balance date is today" do
     Account.any_instance.stubs(:sync_later)
 
