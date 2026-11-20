@@ -30,6 +30,10 @@ class WebPushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
 
   test "registers for the current session in self hosted mode without a backlog" do
     Rails.application.config.stubs(:app_mode).returns("self_hosted".inquiry)
+    # Any request also auto-syncs a family whose last sync is not from today
+    # (AutoSync), which enqueues two jobs. The fixture sync is stamped when the
+    # fixtures load, so whether that fires depended on the clock.
+    @user.family.update!(auto_sync_on_login: false)
     assert_no_enqueued_jobs do
       assert_difference "WebPushSubscription.count", 1 do
         post "/web_push_subscriptions", params: @attributes, as: :json
