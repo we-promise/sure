@@ -1,6 +1,18 @@
 require "test_helper"
 
 class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
+  TraceObservation = Struct.new(:log) do
+    def generation(**attributes) = tap { log << [ :generation, attributes ] }
+    def end(**attributes) = log << [ :end, attributes ]
+  end
+
+  TraceClient = Struct.new(:log) do
+    def trace(**attributes)
+      log << [ :trace, attributes ]
+      TraceObservation.new(log)
+    end
+  end
+
   setup do
     @user = users(:family_admin)
     @function = Assistant::Function::SearchFamilyFiles.new(@user)
@@ -309,18 +321,25 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal 1, result[:result_count]
   end
 
-  test "a failing search says so, and isn't traced by the tool: the query's embedding is" do
+  test "a failing search says so, and emits no tool-level trace" do
     @user.family.update!(vector_store_id: "vs_test123")
     adapter = mock
     adapter.expects(:search).raises(StandardError, "Search unavailable")
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    traces = []
+    subscriber = Ai::Instrumentation::LangfuseSubscriber.new(client: TraceClient.new(traces))
+    subscription = ActiveSupport::Notifications.subscribe(/\.ai\z/, subscriber)
 
     result = @function.call("query" => "tax return")
 
     assert_equal false, result[:success]
     assert_equal "search_failed", result[:error]
     assert_equal "An error occurred while searching documents: Search unavailable", result[:message]
-    assert_not @function.respond_to?(:create_langfuse_trace, true)
+    trace_names = traces.select { _1.first == :trace }.map { _1.last[:name] }
+    assert_empty trace_names.grep(/\Asearch_family_files\./), "the tool itself must not emit a trace"
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscription) if subscription
   end
 
   test "a search route whose model can't embed falls back to metadata search, saying the router's reason" do
