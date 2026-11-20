@@ -47,9 +47,8 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
       "the cards must be exactly the statement's investment accounts"
   end
 
-  # The cards are the statement's own records, so the associations their
-  # logos read have to be preloaded onto those records, not left to load per
-  # card.
+  # The associations the card logos read are preloaded with the cards, not
+  # left to load once per card.
   test "the account cards come with everything their logos read preloaded" do
     logoed = accounts(:investment)
     logoed.logo.attach(io: StringIO.new("logo"), filename: "logo.png", content_type: "image/png")
@@ -84,9 +83,8 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     assert_operator cards.index(lower), :<, cards.index(upper)
   end
 
-  # The cards are ordered by name with accents and case set aside, so an
-  # accented name sits with its letter rather than after "z", whatever the
-  # test database's collation.
+  # The cards read names through NameSortKey, as the sidebar does, so an
+  # accented name sits with its letter rather than after "z".
   test "the account cards sort an accented name with its letter, whatever its case" do
     names = [ "Zebra brokerage", "Épargne", "Fidelity", "acme brokerage" ]
     names.each do |name|
@@ -99,8 +97,8 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     assert_equal [ "acme brokerage", "Épargne", "Fidelity", "Zebra brokerage" ], cards.select { |card| names.include?(card.name) }.map(&:name)
   end
 
-  # Names with no Latin approximation keep their characters, so two distinct
-  # names sort by name, not by id.
+  # Names with no Latin form keep their characters, so two distinct names
+  # sort by name, not by id.
   test "the account cards keep non-Latin names apart" do
     ids = { "甲" => "11111111-0000-4000-8000-000000000000", "乙" => "99999999-0000-4000-8000-000000000000" }
     ids.each do |name, id|
@@ -114,10 +112,84 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     assert_equal [ "乙", "甲" ], cards.select { |card| ids.key?(card.name) }.map(&:name)
   end
 
-  # The statement's query has no order of its own, so the tiebreak must not
-  # lean on whatever order its rows arrive in: feed them in descending id.
+  # The cards follow the viewing user's sidebar order, whichever they chose:
+  # names through NameSortKey, balances in the family's currency (Æble's 140
+  # EUR is 280 USD, so it sorts above Bravo's 250), manual positions first
+  # and the rest after them by name.
+  test "the account cards follow the user's account order" do
+    ExchangeRate.stubs(:rates_for).returns({ "EUR" => 2 })
+    balances = { "Zulu brokerage" => [ 300, "USD" ], "Æble brokerage" => [ 140, "EUR" ],
+                 "Bravo brokerage" => [ 250, "USD" ], "écu brokerage" => [ 50, "USD" ] }
+    created = balances.to_h do |name, (balance, currency)|
+      [ name, @family.accounts.create!(name: name, balance: balance, currency: currency, accountable: Investment.new, owner: @user) ]
+    end
+    @user.update_manual_account_order("investment", [ created["Zulu brokerage"].id, created["écu brokerage"].id ])
+
+    {
+      "name_asc" => [ "Æble brokerage", "Bravo brokerage", "écu brokerage", "Zulu brokerage" ],
+      "name_desc" => [ "Zulu brokerage", "écu brokerage", "Bravo brokerage", "Æble brokerage" ],
+      "balance_asc" => [ "écu brokerage", "Bravo brokerage", "Æble brokerage", "Zulu brokerage" ],
+      "balance_desc" => [ "Zulu brokerage", "Æble brokerage", "Bravo brokerage", "écu brokerage" ],
+      "manual" => [ "Zulu brokerage", "écu brokerage", "Æble brokerage", "Bravo brokerage" ]
+    }.each do |order, expected|
+      @user.update!(default_account_order: order)
+      @statement = InvestmentStatement.new(@family, user: @user)
+
+      cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
+
+      assert_equal expected, cards.select { |card| balances.key?(card.name) }.map(&:name), order
+    end
+  end
+
+  # Manual positions count within an account group, and the cards hold two
+  # (Investment and Crypto), so they run group by group as the sidebar lists
+  # them, each group's saved positions first, rather than interleaving.
+  test "manual card order keeps each account group together" do
+    names = [ "Zed brokerage", "Yak brokerage", "Bee coin", "Ant coin" ]
+    created = names.to_h do |name|
+      accountable = name.end_with?("coin") ? Crypto.new : Investment.new
+      [ name, @family.accounts.create!(name: name, balance: 100, currency: "USD", accountable: accountable, owner: @user) ]
+    end
+    @user.update_manual_account_order("investment", [ created["Zed brokerage"].id, created["Yak brokerage"].id ])
+    @user.update_manual_account_order("crypto", [ created["Bee coin"].id, created["Ant coin"].id ])
+    @user.update!(default_account_order: "manual")
+    @statement = InvestmentStatement.new(@family, user: @user)
+
+    cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
+
+    assert_equal names, cards.select { |card| names.include?(card.name) }.map(&:name)
+  end
+
+  # A balance the database holds as NULL (validations keep it out of forms,
+  # not out of the column) sorts as 0 rather than failing the page.
+  test "a card with no balance sorts as zero" do
+    empty = @family.accounts.create!(name: "Empty brokerage", balance: 100, currency: "USD", accountable: Investment.new, owner: @user)
+    empty.update_column(:balance, nil)
+    small = @family.accounts.create!(name: "Small brokerage", balance: 1, currency: "USD", accountable: Investment.new, owner: @user)
+    @user.update!(default_account_order: "balance_asc")
+    @statement = InvestmentStatement.new(@family, user: @user)
+
+    cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
+
+    assert_operator cards.index(empty), :<, cards.index(small)
+  end
+
+  # The cards are the statement's own records, sorted in memory, not a second
+  # accounts query: each card is the very record the statement loaded.
+  test "the account cards are the statement's own records" do
+    loaded = @statement.investment_accounts.to_a
+
+    cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
+
+    assert_not_empty cards
+    assert cards.all? { |card| loaded.any? { |account| account.equal?(card) } }, "a card was loaded again rather than taken from the statement"
+  end
+
+  # Same-named cards are ordered by id, not by the order rows come back in:
+  # they are inserted in descending id and the statement returns them that
+  # way too, so neither storage order nor statement order is id order.
   test "account cards with the same name are ordered by id whatever order the statement returns" do
-    same = %w[b d f].map do |digit|
+    same = %w[f d b].map do |digit|
       @family.accounts.create!(id: "#{digit * 8}-0000-4000-8000-000000000000", name: "Same brokerage", balance: 100,
                                currency: "USD", accountable: Investment.new, owner: @user)
     end
@@ -125,7 +197,7 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
 
     cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
 
-    assert_equal same.map(&:id), cards.map(&:id)
+    assert_equal same.map(&:id).sort, cards.map(&:id)
   end
 
   test "orders sections by the user's saved order, appending anything it omits" do

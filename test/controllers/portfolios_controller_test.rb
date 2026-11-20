@@ -43,6 +43,26 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal "last_30_days", @user.reload.default_period
   end
 
+  # The rendered Value header is what a user clicks: a custom range rides
+  # along, since it lives only in the request; a named period does not,
+  # since Periodable saves it as the user's default and the page shows that.
+  test "the holdings Value header keeps a custom range and leaves a named period out" do
+    @user.update!(default_period: "last_30_days")
+
+    get portfolio_path(start_date: "2026-01-01", end_date: "2026-06-30")
+    value_href = css_select("a[href*='sort=value']").first&.[]("href")
+    assert value_href, "the Value header link is missing"
+    query = Rack::Utils.parse_query(URI(value_href).query)
+    assert_equal({ "start_date" => "2026-01-01", "end_date" => "2026-06-30", "sort" => "value" }, query.except("dir"))
+
+    get portfolio_path(period: "last_90_days")
+    assert_equal "last_90_days", @user.reload.default_period, "the named period must be saved for the link to leave it out"
+    value_href = css_select("a[href*='sort=value']").first&.[]("href")
+    assert value_href, "the Value header link is missing"
+    query = Rack::Utils.parse_query(URI(value_href).query)
+    assert_equal({ "sort" => "value" }, query.except("dir"))
+  end
+
   # The fixture family holds AAPL in accounts(:investment), so both sections
   # have something to show.
   test "renders the hub with its holdings and accounts sections" do

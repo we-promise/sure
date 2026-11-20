@@ -24,7 +24,8 @@ class AccountOrder
       sql_order: "balance DESC"
     },
     # Per-user drag-and-drop order, stored in users.preferences. SQL callers
-    # fall back to alphabetical; BalanceSheet applies the stored order.
+    # fall back to alphabetical; #sort applies the stored order for the
+    # sidebar and the portfolio's account cards.
     "manual" => {
       label: "Manual (drag to reorder)",
       label_short: "Manual",
@@ -55,6 +56,22 @@ class AccountOrder
     key == "manual"
   end
 
+  # Puts accounts in this order, as the sidebar lists them. Each account
+  # answers name and id; the balance orders read `balance` (the balance in the
+  # family's currency; a NULL balance counts as 0) and the manual order reads
+  # `manual_order`, the user's saved ids by account group. Array#sort_by isn't stable, so the id settles
+  # ties and the order stays fixed between renders.
+  def sort(accounts, manual_order: {}, balance: :converted_balance.to_proc)
+    case key
+    when "name_asc" then sort_by_name(accounts)
+    when "name_desc" then sort_by_name(accounts).reverse
+    when "balance_asc" then sort_by_balance(accounts, balance)
+    when "balance_desc" then sort_by_balance(accounts, balance).reverse
+    when "manual" then sort_manually(accounts, manual_order)
+    else accounts
+    end
+  end
+
   class << self
     def all
       ORDERS.keys.map { |key| new(key) }
@@ -68,4 +85,27 @@ class AccountOrder
       new("name_asc")
     end
   end
+
+  private
+    def sort_by_name(accounts)
+      accounts.sort_by { |account| [ NameSortKey.for(account.name), account.id ] }
+    end
+
+    def sort_by_balance(accounts, balance)
+      accounts.sort_by { |account| [ balance.call(account) || 0, account.id ] }
+    end
+
+    # Groups run in the sidebar's order (Accountable::TYPES), since saved
+    # positions count within a group. In each, accounts the user has dragged
+    # into place come first, in their saved position; accounts added since
+    # then follow alphabetically.
+    def sort_manually(accounts, manual_order)
+      positions = manual_order.values.flat_map { |ids| ids.each_with_index.to_a }.to_h
+
+      accounts.sort_by do |account|
+        position = positions[account.id]
+        group = Accountable::TYPES.index(account.accountable_type) || Accountable::TYPES.size
+        [ group, position ? 0 : 1, position || 0, NameSortKey.for(account.name), account.id.to_s ]
+      end
+    end
 end

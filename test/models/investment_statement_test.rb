@@ -1710,7 +1710,23 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     rows = @statement.holdings_table_rows(sort: "weight", dir: "desc")
 
     assert_equal 1, rows.map(&:weight).uniq.size, "precondition: the weights round to the same figure"
+    # Zeta, the larger value, has the later name, so a name tiebreak would put
+    # it last when descending and first when ascending: value decides both.
     assert_equal %w[ZZZ AAA], rows.map(&:ticker)
+    assert_equal %w[AAA ZZZ], @statement.holdings_table_rows(sort: "weight", dir: "asc").map(&:ticker)
+  end
+
+  # Names sort with accents and case set aside, so an accented name sits with
+  # its letter, in the Security column and in the tiebreak.
+  test "holdings_table_rows sorts an accented name with its letter" do
+    account = create_investment_account(balance: 10_000)
+    { "ZEB" => "Zebra Corp", "EPA" => "Épargne Fund", "APL" => "apple Inc" }.each do |ticker, name|
+      security = Security.create!(ticker: ticker, name: name)
+      Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD")
+    end
+
+    assert_equal %w[APL EPA ZEB], @statement.holdings_table_rows(sort: "name", dir: "asc").map(&:ticker)
+    assert_equal %w[APL EPA ZEB], @statement.holdings_table_rows(sort: "value", dir: "desc").map(&:ticker), "equal values tie by name"
   end
 
   # A row's positions are listed largest first, in the family's currency.
@@ -1722,12 +1738,17 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     # would list it second.
     small = Holding.create!(account: first, security: security, date: Date.current, qty: 5, price: 20, amount: 100, currency: "USD")
     large = Holding.create!(account: second, security: security, date: Date.current, qty: 2, price: 250, amount: 500, currency: "USD")
+    # A euro position: 400 is the smallest raw amount, but 800 in the family's
+    # dollars, so ordering by raw amount would list it last.
+    third = create_investment_account(balance: 10_000, currency: "EUR")
+    euro = Holding.create!(account: third, security: security, date: Date.current, qty: 4, price: 100, amount: 400, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 2)
 
-    [ [ small, large ], [ large, small ] ].each do |order|
+    [ [ small, euro, large ], [ large, euro, small ] ].each do |order|
       statement = InvestmentStatement.new(@family, user: nil)
       statement.stubs(:holdings_with_avg_costs).returns(order)
       row = statement.holdings_table_rows.find { |r| r.security == security }
-      assert_equal [ large.id, small.id ], row.positions.map(&:id)
+      assert_equal [ euro.id, large.id, small.id ], row.positions.map(&:id)
     end
   end
 
