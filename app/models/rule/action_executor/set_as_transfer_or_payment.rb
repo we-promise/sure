@@ -7,10 +7,20 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     family.accounts.alphabetically.pluck(:name, :id)
   end
 
+  def claimed_attributes
+    [ :transfer ]
+  end
+
+  def actionable?(value)
+    family.accounts.exists?(id: value)
+  end
+
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     target_account = family.accounts.find_by_id(value)
     return 0 unless target_account
     scope = transaction_scope.with_entry
+    # Checked once per run, not per transaction.
+    reconcile_pledges = target_account.linked_to_goal?
 
     count_modified_resources(scope) do |txn|
       entry = txn.entry
@@ -18,22 +28,12 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
         transfer = build_transfer(target_account, entry)
         Transfer.transaction do
           transfer.save!
-
-          # Use DESTINATION (inflow) account for kind, matching Transfer::Creator logic
-          destination_account = transfer.inflow_transaction.entry.account
-          outflow_kind = Transfer.kind_for_account(destination_account)
-          outflow_attrs = { kind: outflow_kind }
-
-          if outflow_kind == "investment_contribution"
-            category = destination_account.family.investment_contributions_category
-            outflow_attrs[:category] = category if category.present? && transfer.outflow_transaction.category_id.blank?
-          end
-
-          transfer.outflow_transaction.update!(outflow_attrs)
-          transfer.inflow_transaction.update!(kind: "funds_movement")
+          transfer.confirm!
         end
 
         transfer.sync_account_later
+        # An outflow's new counterpart is a deposit on the target account.
+        GoalPledge::Reconciler.run_after_commit(transfer.inflow_transaction.entry) if reconcile_pledges && entry.amount.positive?
       end
     end
   end

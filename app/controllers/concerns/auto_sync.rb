@@ -7,6 +7,7 @@ module AutoSync
 
   private
     def sync_family
+      Current.family.request_plaid_transactions_refreshes_later(source: "AutoSync")
       Current.family.sync_later
     end
 

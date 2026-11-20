@@ -37,6 +37,15 @@ class QuestradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("questrade_items.default_name"), @family.questrade_items.order(:created_at).last.name
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post questrade_items_url,
+         params: { questrade_item: { name: "Business Questrade", refresh_token: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "questrade-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Refresh token can't be blank")
+  end
+
   # ---------------------------------------------------------------------------
   # update
   # ---------------------------------------------------------------------------
@@ -66,6 +75,17 @@ class QuestradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_providers_path
     assert_equal "Renamed Questrade", @questrade_item.name
     assert_equal original_token, @questrade_item.refresh_token
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch questrade_item_url(@questrade_item),
+          params: { questrade_item: { name: "Renamed Questrade", refresh_token: "" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "questrade-providers-panel"
+    assert_includes response.body, %(id="questrade-providers-panel")
+    assert_equal "Renamed Questrade", @questrade_item.reload.name
   end
 
   # ---------------------------------------------------------------------------
@@ -184,6 +204,44 @@ class QuestradeItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to accounts_path
+  end
+
+  test "complete_account_setup ignores hostless return_to and falls back to accounts" do
+    questrade_account = @questrade_item.questrade_accounts.create!(
+      name: "Margin (11111111)",
+      questrade_account_id: "11111111",
+      account_type: "Margin",
+      currency: "CAD",
+      current_balance: 3000
+    )
+
+    post complete_account_setup_questrade_item_url(@questrade_item), params: {
+      return_to: "///evil.com",
+      accounts: {
+        questrade_account.id.to_s => { account_type: "investment", balance: "3000" }
+      }
+    }
+
+    assert_redirected_to accounts_path
+  end
+
+  test "complete_account_setup keeps a routable same-site return_to" do
+    questrade_account = @questrade_item.questrade_accounts.create!(
+      name: "Margin (11111111)",
+      questrade_account_id: "11111111",
+      account_type: "Margin",
+      currency: "CAD",
+      current_balance: 3000
+    )
+
+    post complete_account_setup_questrade_item_url(@questrade_item), params: {
+      return_to: "/accounts?tab=manual",
+      accounts: {
+        questrade_account.id.to_s => { account_type: "investment", balance: "3000" }
+      }
+    }
+
+    assert_redirected_to "/accounts?tab=manual"
   end
 
   test "complete_account_setup redirects with alert when no accounts provided" do

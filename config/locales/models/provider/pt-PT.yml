@@ -1,0 +1,17 @@
+---
+pt-PT:
+  providers:
+    property_valuation:
+      not_configured: Este serviço de dados de imóveis não está configurado.
+      missing_fields: Indique um nome e um endereço completo nos EUA (rua, cidade, estado e código postal).
+      preview_expired: Esta pré-visualização de imóvel expirou — pesquise novamente o endereço.
+    rentcast:
+      errors:
+        no_valuation: A RentCast não devolveu uma estimativa de valor para este endereço.
+        not_found: A RentCast não encontrou um imóvel que corresponda a este endereço.
+    realie:
+      errors:
+        no_property: A Realie não devolveu um imóvel para este endereço.
+        no_valuation: A Realie não devolveu uma avaliação para este imóvel.
+        not_found: A Realie não encontrou um imóvel que corresponda a este endereço.
+        location_mismatch: A Realie encontrou um imóvel numa cidade ou código postal diferentes. Verifique novamente o endereço.

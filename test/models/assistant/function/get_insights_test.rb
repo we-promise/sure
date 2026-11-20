@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Assistant::Function::GetInsightsTest < ActiveSupport::TestCase
+  include InsightTestHelper
+
   setup do
     @user = users(:family_admin)
     @family = @user.family
@@ -77,5 +79,29 @@ class Assistant::Function::GetInsightsTest < ActiveSupport::TestCase
     result = Assistant::Function::GetInsights.new(users(:empty)).call
 
     assert_empty result[:insights]
+  end
+
+  test "include_acknowledged still hides insights about accounts not everyone can see" do
+    insight = @family.insights.create!(
+      insight_type: "idle_cash", priority: "low", status: "dismissed", title: "Idle", body: "body",
+      metadata: { "account_id" => accounts(:connected).id }, dedup_key: "idle_cash:private",
+      generated_at: Time.current
+    )
+
+    ids = @fn.call("include_acknowledged" => true)[:insights].map { |i| i[:id] }
+
+    assert_not_includes ids, insight.id
+  end
+
+  test "hides a household total once access to its accounts changes, acknowledged or not" do
+    total = household_total(@family)
+    acknowledged = household_total(@family, status: "dismissed", dedup_key: "savings_rate_change:old")
+
+    accounts(:depository).unshare_with!(users(:family_member))
+
+    assert_not_includes @fn.call[:insights].map { |i| i[:id] }, total.id
+    included_ids = @fn.call("include_acknowledged" => true)[:insights].map { |i| i[:id] }
+    assert_not_includes included_ids, total.id
+    assert_not_includes included_ids, acknowledged.id
   end
 end

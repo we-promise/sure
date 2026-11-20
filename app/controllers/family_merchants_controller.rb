@@ -1,4 +1,8 @@
 class FamilyMerchantsController < ApplicationController
+  include AiFeatureGuard
+
+  before_action :require_non_guest!, except: %i[index]
+  requires_ai :enhance_merchants, only: :enhance
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index
@@ -28,9 +32,9 @@ class FamilyMerchantsController < ApplicationController
     @unlinked_merchants = ProviderMerchant.where(id: recently_unlinked_ids - assigned_ids).alphabetically
 
     @enhanceable_count = @all_provider_merchants.where(website_url: [ nil, "" ]).count
-    @llm_available = Provider::Registry.get_provider(:openai).present?
+    @llm_available = Ai.available?(:enhance_merchants, family: Current.family, user: Current.user)
 
-    @pagy_family_merchants, @family_merchants = pagy(family_scope, page_param: :family_page, limit: safe_per_page)
+    @pagy_family_merchants, @family_merchants = pagy(family_scope.with_attached_logo, page_param: :family_page, limit: safe_per_page)
     @pagy_provider_merchants, @provider_merchants = pagy(provider_scope, page_param: :provider_page, limit: safe_per_page)
 
     render layout: "settings"
@@ -47,9 +51,20 @@ class FamilyMerchantsController < ApplicationController
       respond_to do |format|
         format.html { redirect_to family_merchants_path, notice: t(".success") }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+        format.json { render json: merchant_json(@family_merchant), status: :created }
       end
     else
-      render :new, status: :unprocessable_entity
+      respond_to do |format|
+        # No explicit format.turbo_stream branch: Turbo's form submissions send an
+        # Accept header that prefers turbo-stream, but forcing that format here would
+        # lock the response's Content-Type to turbo-stream while still rendering the
+        # plain :new HTML template — Turbo's client then sees a turbo-stream
+        # Content-Type with no <turbo-stream> tags in the body and does nothing.
+        # Leaving turbo-stream undeclared lets Rails' content negotiation fall back to
+        # format.html below, which renders :new with the correct text/html type.
+        format.html { render :new, status: :unprocessable_entity }
+        format.json { render json: { errors: @family_merchant.errors.full_messages }, status: :unprocessable_entity }
+      end
     end
   end
 
@@ -58,26 +73,25 @@ class FamilyMerchantsController < ApplicationController
 
   def update
     if @merchant.is_a?(ProviderMerchant)
-      if merchant_params[:name].present? && merchant_params[:name] != @merchant.name
-        # Name changed — convert ProviderMerchant to FamilyMerchant for this family only
+      # A ProviderMerchant is shared by every family whose transactions use it,
+      # so changing its name or website converts it to a FamilyMerchant for this
+      # family only; editing the shared row would change it for all of them.
+      if provider_merchant_customized?
         @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, merchant_params)
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
           format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
         end
       else
-        # Only website changed — update the ProviderMerchant directly
-        @merchant.update!(merchant_params.slice(:website_url))
-        @merchant.generate_logo_url_from_website!
         respond_to do |format|
-          format.html { redirect_to family_merchants_path, notice: t(".success") }
-          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+          format.html { redirect_to updated_merchant_return_path, notice: t(".success") }
+          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, updated_merchant_return_path) }
         end
       end
     elsif @merchant.update(merchant_params)
       respond_to do |format|
-        format.html { redirect_to family_merchants_path, notice: t(".success") }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+        format.html { redirect_to updated_merchant_return_path, notice: t(".success") }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, updated_merchant_return_path) }
       end
     else
       render :edit, status: :unprocessable_entity
@@ -99,9 +113,9 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def enhance
-    cache_key = "enhance_provider_merchants:#{Current.family.id}"
+    cache_key = EnhanceProviderMerchantsJob.lock_key(Current.family)
 
-    already_running = !Rails.cache.write(cache_key, true, expires_in: 10.minutes, unless_exist: true)
+    already_running = !Rails.cache.write(cache_key, true, expires_in: EnhanceProviderMerchantsJob::LOCK_TTL, unless_exist: true)
 
     if already_running
       return redirect_to family_merchants_path, alert: t(".already_running")
@@ -112,7 +126,7 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def merge
-    @merchants = all_family_merchants
+    @merchants = all_family_merchants.with_attached_logo
   end
 
   def perform_merge
@@ -152,10 +166,32 @@ class FamilyMerchantsController < ApplicationController
       @family_merchant = @merchant # For backwards compatibility with views
     end
 
+    def provider_merchant_customized?
+      name_changed = merchant_params[:name].present? && merchant_params[:name] != @merchant.name
+      website_changed = merchant_params.key?(:website_url) &&
+        merchant_params[:website_url].to_s.strip != @merchant.website_url.to_s
+
+      name_changed || website_changed
+    end
+
+    def updated_merchant_return_path
+      safe_return_to(params[:return_to]) || family_merchants_path
+    end
+
     def merchant_params
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color, :website_url)
+      params.require(key).permit(:name, :color, :website_url, :logo, :remove_logo)
+    end
+
+    def merchant_json(merchant)
+      merchant.as_json(only: %i[id name]).merge(
+        html: render_to_string(
+          partial: "DS/merchant_select/option",
+          formats: [ :html ],
+          locals: { merchant: merchant, selected: true, view_helpers: helpers }
+        )
+      )
     end
 
     def all_family_merchants

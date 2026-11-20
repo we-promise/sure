@@ -1,0 +1,35 @@
+<div id="<%= dom_id(onchain_wallet_item) %>" class="space-y-2">
+  <% onchain_wallet_item.grouped_accounts.each do |(chain, address), accounts| %>
+    <div class="flex items-center justify-between gap-3 p-3 border border-primary rounded-lg">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="flex items-center justify-center h-8 w-8 rounded-full bg-surface-inset shrink-0">
+          <%= icon "wallet", size: "sm", class: "text-primary" %>
+        </div>
+        <div class="min-w-0">
+          <p class="font-medium text-primary truncate">
+            <%= accounts.first.chain_label %> · <%= accounts.first.truncated_address %>
+          </p>
+          <p class="text-xs text-secondary">
+            <% if onchain_wallet_item.syncing? %>
+              <%= t("onchain_wallet_items.onchain_wallet_item.syncing") %>
+            <% else %>
+              <%= t("onchain_wallet_items.onchain_wallet_item.assets_tracked", count: accounts.size) %>
+            <% end %>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1 shrink-0">
+        <%= render DS::Button.new(
+              variant: :icon,
+              size: :sm,
+              icon: "refresh-cw",
+              href: sync_onchain_wallet_item_path(onchain_wallet_item),
+              method: :post,
+              title: t("onchain_wallet_items.onchain_wallet_item.sync"),
+              disabled: onchain_wallet_item.syncing?
+            ) %>
+      </div>
+    </div>
+  <% end %>
+</div>

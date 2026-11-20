@@ -1,6 +1,9 @@
 ---
 zh-TW:
   insights:
+    notification:
+      title: 新的財務洞察
+      body: 開啟 Sure 以查看最新的洞察。
     index:
       title: 洞察
       subtitle: 您財務狀況的近期動態，每晚更新。
@@ -40,7 +43,7 @@ zh-TW:
         other: 過去 %{count} 天
       date_range: '%{from} 至 %{to}'
     figures:
-      vs_previous: 相較上月
+      vs_previous_three_months: 相較之前三個月
       today: 今天
       on_pace: 依目前進度
       of_budget: 佔預算
@@ -56,7 +59,7 @@ zh-TW:
       cash_flow_warning: 檢視定期交易
       net_worth_milestone: 查看淨資產報表
       subscription_audit: 檢視定期交易
-      savings_rate_change: 查看該月份的交易
+      savings_rate_change: 查看這幾個月的交易
       idle_cash: 前往帳戶
       budget: 查看預算
     titles:
@@ -69,8 +72,8 @@ zh-TW:
       net_worth_milestone: 淨資產里程碑：%{milestone}
       subscription_audit: '%{name} 還在使用中嗎？'
       savings_rate_change:
-        up: 您在%{month}的儲蓄率提高了
-        down: 您在%{month}的儲蓄率下降了
+        up: 您近三個月的儲蓄率提高了
+        down: 您近三個月的儲蓄率下降了
       idle_cash: '%{account} 有閒置現金'
       budget_at_risk:
         one: 您的預算中有一個分類需要注意
@@ -86,9 +89,9 @@ zh-TW:
       net_worth_milestone: 您的淨資產已越過 %{milestone}，目前為 %{net_worth}。
       subscription_audit: '%{name}（%{amount}）自預期的 %{expected_on} 之後就沒有再出現。可能已經取消，或是扣款時間改變了。'
       savings_rate_change:
-        up: 您在%{month}存下了收入的 %{current_rate}%，比前一個月的 %{previous_rate}% 高出 %{change_pp} 個百分點。
-        down: 您在%{month}存下了收入的 %{current_rate}%，比前一個月的 %{previous_rate}% 低了 %{change_pp} 個百分點。
-        down_negative: 您在%{month}的支出超過收入：儲蓄率從前一個月的 %{previous_rate}% 降到 %{current_rate}%。
+        up: "%{from_month}至%{to_month}，以您平常的月收入計算，儲蓄率為 %{current_rate}%，比之前三個月的 %{previous_rate}% 高出 %{change_pp} 個百分點。"
+        down: "%{from_month}至%{to_month}，以您平常的月收入計算，儲蓄率為 %{current_rate}%，比之前三個月的 %{previous_rate}% 低了 %{change_pp} 個百分點。"
+        down_negative: "%{from_month}至%{to_month}，您的支出超過收入：儲蓄率從之前三個月的 %{previous_rate}% 降到 %{current_rate}%。"
       idle_cash: '%{account} 有 %{balance}，且在過去 %{idle_days} 天內沒有任何活動。'
       budget_at_risk:
         over: '%{categories} 這個月已超出預算。您目前已使用總預算的 %{budget_spent_pct}%。'

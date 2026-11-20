@@ -28,9 +28,7 @@ module VectorStore::Embeddable
     end
 
     def extract_pdf_text(file_content)
-      io = StringIO.new(file_content)
-      reader = PDF::Reader.new(io)
-      reader.pages.map(&:text).join("\n\n")
+      Pdf::TextExtractor.pages(file_content).join("\n\n")
     rescue => e
       Rails.logger.error("VectorStore::Embeddable PDF extraction error: #{e.message}")
       nil
@@ -135,18 +133,18 @@ module VectorStore::Embeddable
     end
 
     def embedding_model
-      ENV.fetch("EMBEDDING_MODEL", "nomic-embed-text")
+      VectorStore.embedding_model
     end
 
     def embedding_dimensions
-      ENV.fetch("EMBEDDING_DIMENSIONS", "1024").to_i
+      VectorStore.embedding_dimensions
     end
 
     def embedding_uri_base
-      ENV["EMBEDDING_URI_BASE"].presence || ENV["OPENAI_URI_BASE"].presence || "https://api.openai.com/v1/"
+      VectorStore.embedding_uri_base
     end
 
     def embedding_access_token
-      ENV["EMBEDDING_ACCESS_TOKEN"].presence || ENV["OPENAI_ACCESS_TOKEN"].presence
+      VectorStore.embedding_access_token
     end
 end

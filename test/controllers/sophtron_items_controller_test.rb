@@ -2,6 +2,8 @@ require "test_helper"
 
 class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
   setup do
+    # Exercise controller jobs independently of the daily login sync.
+    families(:dylan_family).update!(auto_sync_on_login: false)
     sign_in @user = users(:family_admin)
     @item = @user.family.sophtron_items.create!(
       name: "Sophtron",
@@ -181,6 +183,8 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "[FILTERED]", filtered_params[:captcha_input]
   end
 
+  # The drawer and connection rows post from the page; a new connection still
+  # moves on to accounts rather than re-rendering the panel.
   test "create verifies credentials and persists provisioned customer id" do
     stub_request(:get, "https://api.sophtron.com/api/Institution/HealthCheckAuth")
       .to_return(status: 200, body: "")
@@ -199,12 +203,46 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
           user_id: "developer-user",
           access_key: Base64.strict_encode64("secret-key")
         }
-      }
+      }, as: :turbo_stream
     end
 
     item = @user.family.sophtron_items.find_by!(name: "New Sophtron")
     assert_equal "cust-new", item.customer_id
     assert_redirected_to accounts_path
+  end
+
+  test "invalid create outside a frame redirects instead of rendering a missing template" do
+    assert_no_difference "SophtronItem.count" do
+      post sophtron_items_url, params: { sophtron_item: { name: "New Sophtron", user_id: "", access_key: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post sophtron_items_url,
+         params: { sophtron_item: { name: "New Sophtron", user_id: "", access_key: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "sophtron-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("can't be blank")
+  end
+
+  # The connection row posts from the page. Leaving for Accounts closed the row
+  # the save came from.
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    stub_request(:get, "https://api.sophtron.com/api/Institution/HealthCheckAuth")
+      .to_return(status: 200, body: "")
+
+    patch sophtron_item_url(@item),
+          params: { sophtron_item: { name: "Renamed Sophtron" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "sophtron-providers-panel"
+    assert_includes response.body, %(id="sophtron-providers-panel")
+    assert_equal "Renamed Sophtron", @item.reload.name
   end
 
   test "connection_status renders MFA challenge when Sophtron asks for security answers" do
@@ -642,6 +680,8 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "manual sync starts Sophtron refresh and renders MFA challenge" do
+    # Keep the fixture sync on yesterday to cover runs that cross midnight.
+    families(:dylan_family).syncs.update_all(created_at: 1.day.ago)
     @item.update!(user_institution_id: "ui-1")
     sophtron_account = @item.sophtron_accounts.create!(
       account_id: "acct-1",

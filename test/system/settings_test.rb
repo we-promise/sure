@@ -52,11 +52,15 @@ class SettingsTest < ApplicationSystemTestCase
   test "can update self hosting settings" do
     sign_in users(:sure_support_staff)
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    Provider::Registry.stubs(:get_provider).with(:openai).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:anthropic).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
-    Provider::Registry.stubs(:get_provider).with(:github).returns(stub(fetch_latest_release_notes: nil))
+    Provider::Registry.stubs(:get_provider).with(:chimnie).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:terrascoutx).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:github).returns(stub(fetch_latest_release_notes: nil, fetch_release_notes: nil))
     open_settings_from_sidebar
     assert_selector "li", text: "Self-Hosting"
     click_link "Self-Hosting", match: :first
@@ -78,6 +82,107 @@ class SettingsTest < ApplicationSystemTestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     open_settings_from_sidebar
     assert_no_selector "li", text: I18n.t("settings.settings_nav.payment_label")
+  end
+
+  # Escape is also the settings nav's hotkey back to the page before settings.
+  test "Escape closes an open dialog instead of leaving settings" do
+    visit settings_api_keys_path
+    click_on I18n.t("settings.api_keys.index.revoke_key"), match: :first
+    assert_selector "dialog#confirm-dialog[open]"
+
+    page.send_keys(:escape)
+
+    assert_no_selector "dialog#confirm-dialog[open]"
+    assert_current_path settings_api_keys_path
+  end
+
+  test "searching settings finds a setting by its own text and opens its page with the keyboard" do
+    visit settings_profile_path
+
+    fill_in I18n.t("settings.settings_search.placeholder"), with: "two-fa"
+
+    mfa_title = I18n.t("settings.securities.show.mfa_title")
+    assert_selector "[role=option][aria-selected=true]", text: mfa_title
+    assert_selector "[role=option][aria-selected=true]", text: I18n.t("settings.settings_nav.security_label")
+    assert_selector "[role=option][aria-selected=true][href*='#:~:text='][data-turbo=false]"
+
+    page.send_keys(:enter)
+
+    assert_current_path settings_security_path
+    assert_selector "h2", text: mfa_title
+  end
+
+  test "settings search lists what a setting is called, not the text that describes it" do
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: "two-fa"
+    assert_selector "[data-settings-search-target=results] [role=option]", text: I18n.t("settings.securities.show.mfa_title")
+
+    search.fill_in with: I18n.t("settings.securities.show.mfa_description")
+    assert_selector "[data-settings-search-target=empty]", text: I18n.t("settings.settings_search.no_results")
+    assert_no_selector "[data-settings-search-target=results] [role=option]"
+  end
+
+  test "settings search finds the name of a toggle but not its description" do
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: I18n.t("settings.preferences.show.investment_contributions_as_spending")
+    assert_selector "[data-settings-search-target=results] [role=option]", text: I18n.t("settings.preferences.show.investment_contributions_as_spending")
+
+    search.fill_in with: I18n.t("settings.preferences.show.investment_contributions_as_spending_hint")
+    assert_selector "[data-settings-search-target=empty]"
+  end
+
+  test "settings search names a preview toggle without its badge" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: I18n.t("settings.preferences.show.personal_budgets")
+    assert_selector "[data-settings-search-target=results] [data-slot=title]", exact_text: I18n.t("settings.preferences.show.personal_budgets")
+  end
+
+  test "settings search skips the body of a closed disclosure but keeps its summary" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: I18n.t("settings.securities.show.disable_mfa")
+    assert_selector "[data-settings-search-target=results] [role=option]", text: I18n.t("settings.securities.show.disable_mfa")
+
+    search.fill_in with: I18n.t("settings.securities.show.disable_mfa_password_label")
+    assert_selector "[data-settings-search-target=empty]"
+  end
+
+  test "settings search lists pages first when their name matches and reports when nothing matches" do
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: "sec"
+    assert_selector "[role=option][aria-selected=true]", text: I18n.t("settings.settings_nav.security_label")
+
+    search.fill_in with: "zzzz"
+    assert_selector "[data-settings-search-target=empty]", text: I18n.t("settings.settings_search.no_results")
+    assert_no_selector "[data-settings-search-target=results] [role=option]"
+  end
+
+  test "slash focuses settings search and Escape clears it before leaving the field" do
+    visit settings_profile_path
+
+    # Selenium treats a lone "/" as a file path, so send the keydown directly.
+    page.execute_script('document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "/", bubbles: true }))')
+    assert_selector "input[type=search]:focus"
+
+    page.send_keys("tags")
+    assert_selector "[data-settings-search-target=item]:not(.hidden)", text: I18n.t("settings.settings_nav.tags_label")
+
+    page.send_keys(:escape)
+    assert_field I18n.t("settings.settings_search.placeholder"), with: ""
+    assert_current_path settings_profile_path
+    assert_selector "nav", text: I18n.t("settings.settings_nav.tags_label")
   end
 
   test "does not show admin settings to non-admin users" do

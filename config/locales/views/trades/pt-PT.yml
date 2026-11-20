@@ -1,0 +1,67 @@
+---
+pt-PT:
+  trades:
+    form:
+      account: Conta de transferência (opcional)
+      account_prompt: Pesquisar conta
+      amount: Montante
+      fee: Comissão da transação
+      holding: Símbolo do ticker
+      holding_optional: Símbolo do ticker (opcional)
+      price: Preço por ação
+      qty: Quantidade
+      submit: Adicionar transação
+      ticker_placeholder: AAPL
+      type: Tipo
+      type_buy: Compra
+      type_sell: Venda
+      type_deposit: Depósito
+      type_withdrawal: Levantamento
+      type_dividend: Dividendo
+      type_interest: Juros
+      dividend_requires_security: O título é obrigatório para dividendos
+      trade_requires_security: É necessário um título (ticker) para negociações de compra e venda
+    header:
+      buy: Compra
+      sell: Venda
+      dividend: Dividendo
+      interest: Juros
+      contribution: Contribuição
+      exchange: Troca
+      fee: Comissão
+      other: Outro
+      reinvestment: Reinvestimento
+      sweep_in: Transferência interna (entrada)
+      sweep_out: Transferência interna (saída)
+      transfer: Transferência
+      withdrawal: Levantamento
+      current_market_price_label: Preço de Mercado Atual
+      overview: Visão geral
+      purchase_price_label: Preço de Compra
+      purchase_qty_label: Quantidade de Compra
+      symbol_label: Símbolo
+      total_return_label: Ganho/perda não realizado
+    new:
+      title: Nova transação
+    show:
+      additional: Adicional
+      amount_label: Montante
+      buy: Compra
+      category_label: Categoria
+      cost_per_share_label: Custo por Ação
+      date_label: Data
+      delete: Eliminar
+      fee_label: Comissão da transação
+      delete_subtitle: Esta ação é irreversível
+      delete_title: Eliminar Negociação
+      details: Detalhes
+      provider_disabled_warning: "Atualizações de preço suspensas — o serviço %{provider} está desativado. Reative-o nas Definições ou remapeie a posição para outro serviço."
+      exclude_subtitle: Esta negociação não será incluída nos relatórios e cálculos
+      exclude_title: Excluir das análises
+      no_category: Sem categoria
+      note_label: Nota
+      note_placeholder: Adicione notas adicionais aqui...
+      quantity_label: Quantidade
+      sell: Venda
+      settings: Definições
+      type_label: Tipo

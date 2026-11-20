@@ -42,6 +42,7 @@ lv:
       default: "%d.%m.%Y."
       long: "%Y. gada %e. %B"
       short: "%e. %B"
+      short_with_year: "%Y. gada %-d. %b"
     month_names:
     -
     - janvārī

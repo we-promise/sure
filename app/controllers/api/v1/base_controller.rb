@@ -24,6 +24,10 @@ class Api::V1::BaseController < ApplicationController
   before_action :force_json_format
   # Use our custom authentication that supports both OAuth and API keys
   before_action :authenticate_request!
+  # Localize registers this before API authentication in ApplicationController.
+  # Resolve the family zone only after the API identity has populated Current.
+  skip_around_action :switch_timezone
+  around_action :switch_timezone
   before_action :check_api_key_rate_limit
   before_action :log_api_access
 
@@ -217,6 +221,41 @@ class Api::V1::BaseController < ApplicationController
       authorize_scope!(:read)
     end
 
+    # Guests are read-only by design, so API credentials they hold must not
+    # change family-wide configuration either.
+    def reject_guest_writes!
+      return true unless current_resource_owner&.guest?
+
+      render_json({ error: "forbidden", message: "Guests cannot modify family configuration" }, status: :forbidden)
+      false
+    end
+
+    # Account-level authorization for API writes. The token scope says what the
+    # KEY may do; this says what its owner may do to this account, which
+    # `Account.accessible_by` does not (it admits read-only shares). Renders a
+    # 403 { error: "forbidden", message: } and returns false when the owner of
+    # the credentials lacks `level` (:write, :annotate or :owner, see
+    # AccountPolicy#permits?); returns true otherwise. A visible-but-not-writable
+    # account is a 403, never a 404: the caller can already read it.
+    #
+    # `resource:` names the record being changed ("transaction", "trade") and
+    # yields "You do not have permission to delete|change this <resource>",
+    # choosing the verb from the action, so pass it only from update and
+    # destroy on an existing record. Without it the message is the
+    # account-level "You do not have write access to this account".
+    def require_api_account_permission!(account, level = :write, resource: nil)
+      return true if AccountPolicy.new(current_resource_owner, account).permits?(level)
+
+      message = if resource
+        "You do not have permission to #{action_name == 'destroy' ? 'delete' : 'change'} this #{resource}"
+      else
+        "You do not have write access to this account"
+      end
+
+      render_json({ error: "forbidden", message: message }, status: :forbidden)
+      false
+    end
+
     # Consistent JSON response method
     def render_json(data, status: :ok)
       render json: data, status: status
@@ -266,6 +305,15 @@ class Api::V1::BaseController < ApplicationController
 
     def handle_invalid_filter(exception)
       render_validation_error(exception.message)
+    end
+
+    # A strict YYYY-MM-DD date, or nil when the value is missing or invalid.
+    def parse_date(value)
+      return unless value.is_a?(String) && value.match?(/\A\d{4}-\d{2}-\d{2}\z/)
+      date = Date.iso8601(value)
+      date if date.year.positive?
+    rescue Date::Error
+      nil
     end
 
     def parse_date_param(key)

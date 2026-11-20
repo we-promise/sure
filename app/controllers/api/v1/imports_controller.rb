@@ -6,6 +6,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
   # Ensure proper scope authorization
   before_action :ensure_read_scope, only: [ :index, :show, :rows, :preflight ]
   before_action :ensure_write_scope, only: [ :create ]
+  before_action :reject_guest_family_config_import!, only: [ :create ]
   before_action :set_import_with_rows, only: [ :show ]
   before_action :set_import, only: [ :rows ]
 
@@ -69,9 +70,32 @@ class Api::V1::ImportsController < Api::V1::BaseController
     type = "TransactionImport" unless Import::TYPES.include?(type)
     return create_sure_import(family) if type == "SureImport"
 
+    # A Monarch import combines two exports and per-account choices, which
+    # only the web import flow collects.
+    if type == "MonarchImport"
+      return render json: {
+        error: "unsupported_type",
+        message: "Monarch imports need per-account choices that only the web app collects. Use the import flow in the web app."
+      }, status: :unprocessable_entity
+    end
+
     # 2. Build the import object with permitted config attributes
     @import = family.imports.build(import_config_params.merge(type: type))
-    @import.account_id = params[:account_id] if params[:account_id].present?
+
+    # The target account must be one the API user can write to.
+    if params[:account_id].present?
+      account = visible_import_account
+      unless account
+        return render json: {
+          error: "validation_failed",
+          message: "Import could not be created",
+          errors: [ "Account not found" ]
+        }, status: :unprocessable_entity
+      end
+      return unless require_api_account_permission!(account)
+
+      @import.account = account
+    end
 
     # 3. Attach the uploaded file if present (with validation)
     if params[:file].present?
@@ -119,6 +143,10 @@ class Api::V1::ImportsController < Api::V1::BaseController
       # For API simplicity, if enough info is provided, we might want to trigger processing
 
       if @import.configured? && params[:publish] == "true"
+        if current_resource_owner.guest? && @import.creates_categories_or_tags?
+          return render_json({ error: "forbidden", message: "Guests cannot create categories or tags", import_id: @import.id }, status: :forbidden)
+        end
+
         @import.publish_later
       end
 
@@ -137,6 +165,12 @@ class Api::V1::ImportsController < Api::V1::BaseController
   end
 
   def preflight
+    if params[:account_id].present?
+      account = visible_import_account
+      raise ActiveRecord::RecordNotFound unless account
+      return unless require_api_account_permission!(account)
+    end
+
     preflight_result = Import::Preflight.new(family: current_resource_owner.family, params: preflight_params).call
     render json: preflight_result.payload, status: preflight_result.status
   rescue ActiveRecord::RecordNotFound
@@ -161,6 +195,12 @@ class Api::V1::ImportsController < Api::V1::BaseController
   end
 
   private
+
+    def reject_guest_family_config_import!
+      return true unless Import::FAMILY_CONFIG_TYPES.include?(params[:type].to_s)
+
+      reject_guest_writes!
+    end
 
     def set_import
       @import = import_scope.find(params[:id])
@@ -213,6 +253,18 @@ class Api::V1::ImportsController < Api::V1::BaseController
         :amount_type_inflow_value,
         :rows_to_skip
       )
+    end
+
+    # The import's target account, when the API user can see it. Unknown,
+    # malformed, cross-family and unshared ids all give nil, so the response
+    # does not reveal which accounts exist; a visible account the user cannot
+    # write to is then a 403, as in the rest of the API.
+    def visible_import_account
+      return unless valid_uuid?(params[:account_id])
+
+      current_resource_owner.family.accounts
+        .accessible_by(current_resource_owner)
+        .find_by(id: params[:account_id])
     end
 
     def preflight_params

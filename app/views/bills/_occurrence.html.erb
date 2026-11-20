@@ -1,0 +1,100 @@
+<%# locals: (occurrence:, suggestion: nil) %>
+<% series = occurrence.recurring_transaction %>
+<% expected = occurrence.resolved_expected_amount_money %>
+<% paid = occurrence.confirmed_allocated_money %>
+<% lead_tone = series.autopay? ? "text-secondary" : "text-primary" %>
+
+<%# SCAN. What is this, and does it need me?
+    Everything past that question lives one tap deeper, in the drawer.
+
+    An autopaying bill is still worth seeing and still counts toward the total,
+    but it recedes so the rows that want something from you carry the weight.
+    It recedes through lead_tone, on the name and the amount: opacity on the
+    whole row took the secondary text below 3:1 in light mode. %>
+<%# Same recipe as a transaction row: p-3 growing to p-4, no hover tint, the
+    name underlining under the pointer, and clickable-row sending a click on any
+    bare part of the row (padding, the empty verb slot) to the drawer link. %>
+<div class="flex items-center gap-3 @lg:gap-4 p-3 @lg:p-4"
+     data-controller="clickable-row"
+     data-action="click->clickable-row#open">
+  <%# The bulk of the row is the inspect control. Only the trailing verb sits
+      outside it, so there are no anchors inside anchors. The link has no
+      padding of its own, so its ring is pushed out into the row's: clear of
+      the date and the amount, and still inside the row. %>
+  <%# Names the cycle it was opened from. Without it the drawer falls back to
+      the series' current occurrence, so opening a settled row described the
+      NEXT one and reported it unpaid. %>
+  <%= link_to bill_path(series, display: "drawer", occurrence: occurrence.id),
+        data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
+        class: "flex items-center gap-3 @lg:gap-4 min-w-0 flex-1 rounded-lg focus-ring outline-offset-4" do %>
+    <%# A date rail, and only a date. It used to print "Overdue" beside a
+        subline already reading "14 days overdue", which spent the row's one
+        piece of temporal context saying the same word twice. The colour still
+        carries the state; the rail now carries the date the state is about.
+
+        Every section has it, so the avatars line up down the stacked card.
+        Only from @lg. Below it the subline leads with the same date, in the
+        same colour. %>
+    <div class="hidden @lg:block w-14 shrink-0 text-xs <%= occurrence.overdue? ? "text-destructive font-medium" : "text-secondary" %>">
+      <%= bills_rail_date(occurrence) %>
+    </div>
+
+    <%= render "bills/series_avatar", series: series %>
+
+    <div class="min-w-0 flex-1">
+      <p class="<%= lead_tone %> text-sm font-medium truncate hover:underline">
+        <%= series.display_name %>
+      </p>
+      <%# Says WHY this row needs a look, when it does, among the bill's other
+          facts. The schedule is always on it, which is also what tells
+          subscription tiers with one name and one amount apart. %>
+      <p class="text-xs text-secondary truncate">
+        <span class="@lg:hidden <%= "text-destructive" if occurrence.overdue? %>"><%= bills_row_date(occurrence) %> &middot;</span>
+        <%= bills_row_subline(occurrence, suggestion: suggestion) %>
+      </p>
+      <% if series.notes.present? %>
+        <p class="text-xs text-secondary truncate"><%= series.notes %></p>
+      <% end %>
+    </div>
+
+    <%# One amount, and it is the one the next decision turns on. Payment state
+        used to be printed twice: a coloured subline on the left and a figure
+        on the right. %>
+    <div class="shrink-0 text-right min-w-0">
+      <p class="text-sm font-medium <%= lead_tone %> privacy-sensitive whitespace-nowrap">
+        <% if occurrence.paid? %>
+          <%= format_money(paid) %>
+        <% elsif occurrence.partially_paid? %>
+          <%= format_money(occurrence.remaining_amount_money) %>
+        <% else %>
+          <%= "~" if occurrence_amount_estimated?(occurrence) %><%= format_money(expected) %>
+        <% end %>
+      </p>
+      <% if occurrence.paid? %>
+        <p class="text-xs text-success"><%= occurrence.overpaid? ? t("bills.paid_over_short") : t("bills.paid_label") %></p>
+      <% elsif occurrence.partially_paid? %>
+        <%# The subline says Partial and stops there. It used to add "$1,612.50
+            remaining", the same arithmetic printed twice, and that was
+            squeezing the bill's name out of the row. %>
+        <p class="text-xs text-secondary"><%= t("bills.remaining_label") %></p>
+      <% elsif occurrence_amount_estimated?(occurrence) && series.has_amount_variance? %>
+        <%# Only from @lg: on a phone the range squeezed the name to "PG&E
+            Ele…". The ~ already says estimate, and the drawer has the range. %>
+        <p class="hidden @lg:block text-xs text-secondary privacy-sensitive">
+          <%= t("bills.amount_range",
+                min: format_money(series.expected_amount_min_money),
+                max: format_money(series.expected_amount_max_money)) %>
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# The verb's slot. From @lg every row reserves it, verb or not, so the
+      amounts share one right edge. It fits the widest English verb, Review
+      match (about 130px). min-w rather than w, so a longer locale widens the
+      slot instead of overflowing it. Below @lg there is no verb: tapping the
+      row opens the drawer, which spells it out. %>
+  <div class="hidden @lg:flex shrink-0 min-w-36 justify-end">
+    <%= render "bills/row_action", occurrence: occurrence, suggestion: suggestion %>
+  </div>
+</div>

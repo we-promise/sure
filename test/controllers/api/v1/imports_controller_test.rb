@@ -78,6 +78,17 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "refuses to create a Monarch import" do
+    assert_no_difference -> { @family.imports.count } do
+      post api_v1_imports_url,
+        params: { type: "MonarchImport", raw_file_content: "Date,Balance,Account\n2024-01-01,1.00,Checking\n" },
+        headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "unsupported_type", JSON.parse(response.body)["error"]
+  end
+
   test "should list imports" do
     get api_v1_imports_url, headers: api_headers(@api_key)
     assert_response :success
@@ -558,13 +569,15 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should preserve Sure import and return preflight errors when auto publish fails preflight" do
-    @family.categories.create!(
-      name: "Groceries",
-      color: "#407706",
-      lucide_icon: "shopping-basket"
-    )
     ndjson_content = [
-      { type: "Category", data: { id: "category_1", name: "Groceries" } }
+      { type: "Transaction", data: {
+        id: "transaction_1",
+        account_id: "missing_account",
+        date: "2024-01-15",
+        amount: "42.50",
+        name: "Orphaned transaction",
+        currency: "USD"
+      } }
     ].map(&:to_json).join("\n")
 
     assert_difference("Import.count") do
@@ -580,7 +593,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     json_response = JSON.parse(response.body)
     assert_equal "preflight_failed", json_response["error"]
-    assert_includes json_response["errors"].join("\n"), "Category name \"Groceries\" already exists"
+    assert_includes json_response["errors"].join("\n"), "references missing account_id"
 
     import = Import.find(json_response["import_id"])
     assert_equal "failed", import.status
@@ -708,6 +721,43 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[date amount name], data["headers"]
     assert_empty data["missing_required_headers"]
     assert_empty data["errors"]
+  end
+
+  test "should not preflight against an account the user cannot write" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Member Read-Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    preflight = ->(account) do
+      post preflight_api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: account.id
+           },
+           headers: api_headers(member_key)
+    end
+
+    # Not shared with the member: answered like an unknown id.
+    preflight.call(accounts(:investment))
+    assert_response :not_found
+
+    # Shared read only: visible, but not writable.
+    preflight.call(accounts(:credit_card))
+    assert_response :forbidden
+    assert_equal "forbidden", JSON.parse(response.body)["error"]
+
+    preflight.call(accounts(:depository))
+    assert_response :success
   end
 
   test "should report missing required CSV headers during preflight" do
@@ -869,6 +919,15 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_not response_data.key?("errors")
   end
 
+  test "should reject Monarch imports in preflight" do
+    post preflight_api_v1_imports_url,
+         params: { type: "MonarchImport", raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test Transaction" },
+         headers: api_headers(@read_only_api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "invalid_import_type", JSON.parse(response.body)["error"]
+  end
+
   test "should reject import types excluded from preflight" do
     assert_no_difference("Import.count") do
       post preflight_api_v1_imports_url,
@@ -946,7 +1005,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_empty data["errors"]
   end
 
-  test "should preflight Sure import taxonomy collisions in strict mode" do
+  test "should reuse an existing Sure import taxonomy match by name instead of blocking preflight (#3113)" do
     @family.tags.create!(name: "Reviewed", color: "#12B76A")
     ndjson_content = [
       { type: "Tag", data: { id: "tag_1", name: "Reviewed" } }
@@ -963,8 +1022,9 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     data = JSON.parse(response.body)["data"]
-    assert_equal false, data["valid"]
-    assert_equal "existing_taxonomy_collision", data["errors"].first["code"]
+    assert_equal true, data["valid"]
+    assert_empty data["errors"]
+    assert data["warnings"].any? { |warning| warning.include?("already exists in this family and will be reused") }
   end
 
   test "should report invalid Sure import accountable type during preflight" do
@@ -1297,7 +1357,22 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     json_response = JSON.parse(response.body)
-    assert_includes json_response["errors"], "Account must belong to your family"
+    assert_equal [ "Account not found" ], json_response["errors"]
+  end
+
+  test "should not create import for unknown or malformed account id" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    [ SecureRandom.uuid, "not-a-uuid" ].each do |account_id|
+      assert_no_difference("Import.count") do
+        post api_v1_imports_url,
+             params: { raw_file_content: csv_content, account_id: account_id },
+             headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity
+      assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
+    end
   end
 
   test "should reject file upload exceeding max size" do
@@ -1374,6 +1449,45 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
            headers: api_headers(@api_key)
     end
 
+    assert_response :created
+  end
+
+  test "should not create import for account the user cannot write" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Member Read-Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    create_import = ->(account) do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: account.id
+           },
+           headers: api_headers(member_key)
+    end
+
+    # Not shared with the member: answered like an unknown id.
+    assert_no_difference("Import.count") { create_import.call(accounts(:investment)) }
+    assert_response :unprocessable_entity
+    assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
+
+    # Shared read only: visible, but not writable.
+    assert_no_difference("Import.count") { create_import.call(accounts(:credit_card)) }
+    assert_response :forbidden
+    assert_equal "forbidden", JSON.parse(response.body)["error"]
+
+    assert_difference("Import.count", 1) { create_import.call(accounts(:depository)) }
     assert_response :created
   end
 

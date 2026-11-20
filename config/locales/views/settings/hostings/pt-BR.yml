@@ -21,10 +21,12 @@ pt-BR:
         title: Self-Hosting
         danger_zone: Zona de Perigo
         clear_cache: Limpar cache de dados
-        clear_cache_warning: Limpar o cache de dados removerá todas as taxas de câmbio, preços de ativos, saldos de contas e outros dados. Isso não excluirá contas, transações, categorias ou outros dados do usuário.
+        clear_cache_warning: "Limpar o cache de dados recalcula os saldos e as posições das contas da sua família e recarrega as taxas de câmbio e os preços de ativos que elas usam. Apenas os saldos e as posições da sua família são excluídos; as taxas de câmbio e os preços de ativos são compartilhados com as outras famílias desta instância e também são atualizados para elas. Isso não excluirá contas, transações, categorias ou outros dados do usuário."
+        clear_cache_warning_without_provider: "Limpar o cache de dados recalcula os saldos e as posições das contas da sua família. Nenhum provedor de taxas de câmbio ou de preços de ativos está configurado, então as taxas de câmbio e os preços salvos são mantidos. Isso não excluirá contas, transações, categorias ou outros dados do usuário."
         confirm_clear_cache:
           title: Limpar cache de dados?
-          body: Tem certeza de que deseja limpar o cache de dados? Isso removerá todas as taxas de câmbio, preços de ativos, saldos de contas e outros dados. Esta ação não pode ser desfeita.
+          body: "Tem certeza de que deseja limpar o cache de dados? Os saldos e as posições das contas da sua família serão recalculados, e as taxas de câmbio e os preços de ativos que elas usam serão recarregados. Apenas os saldos e as posições da sua família são excluídos; as taxas de câmbio e os preços de ativos são compartilhados com as outras famílias desta instância e também são atualizados para elas. Esta ação não pode ser desfeita."
+          body_without_provider: "Tem certeza de que deseja limpar o cache de dados? Os saldos e as posições das contas da sua família serão recalculados. Nenhum provedor de taxas de câmbio ou de preços de ativos está configurado, então as taxas de câmbio e os preços salvos são mantidos. Esta ação não pode ser desfeita."
       provider_selection:
         title: Seleção de Provedor
         description: Escolha qual serviço usar para buscar taxas de câmbio e preços de ativos. O Yahoo Finance é gratuito e não requer uma chave de API. O Twelve Data requer uma chave de API gratuita, mas pode oferecer maior cobertura de dados.
@@ -35,10 +37,10 @@ pt-BR:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
       brand_fetch_settings:
-        description: Insira o Client ID fornecido pelo Brand Fetch
+        description: Insira o Client ID fornecido pelo Brandfetch
         label: Client ID
         placeholder: Insira seu Client ID aqui
-        title: Configurações do Brand Fetch
+        title: Configurações do Brandfetch
       openai_settings:
         description: Insira o token de acesso e configure opcionalmente um provedor compatível com OpenAI personalizado
         env_configured_message: Configurado com sucesso através de variáveis de ambiente.
@@ -46,8 +48,10 @@ pt-BR:
         access_token_placeholder: Insira seu token de acesso aqui
         uri_base_label: URL Base da API (Opcional)
         uri_base_placeholder: "https://api.openai.com/v1 (padrão)"
+        uri_base_local_help: "Para um modelo no seu próprio computador, informe o endpoint compatível com OpenAI, por exemplo Ollama em http://localhost:11434/v1, ou http://ollama:11434/v1 quando o Sure e o Ollama rodam como serviços do Docker Compose."
         model_label: Modelo (Opcional)
         model_placeholder: "gpt-4.1 (padrão)"
+        model_required_help: "Obrigatório quando você define uma URL base da API: informe o nome do modelo usado pelo seu servidor, como llama3.1 para o Ollama."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

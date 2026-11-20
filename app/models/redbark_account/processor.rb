@@ -3,10 +3,13 @@
 class RedbarkAccount::Processor
   include RedbarkAccount::DataHelpers
 
-  attr_reader :redbark_account
+  attr_reader :redbark_account, :as_of
 
-  def initialize(redbark_account)
+  # `as_of` is the sync's own date, injected by the caller rather than read
+  # here: a detected rate change is keyed by it (we-promise/sure#3891).
+  def initialize(redbark_account, as_of: Date.current)
     @redbark_account = redbark_account
+    @as_of = as_of
   end
 
   def process
@@ -15,19 +18,36 @@ class RedbarkAccount::Processor
 
     Rails.logger.info "RedbarkAccount::Processor - Processing account #{redbark_account.id} -> Sure account #{account.id}"
 
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     # Update account balance FIRST (before processing transactions/holdings/activities)
-    update_account_balance(account)
+    anchor_balance = update_account_balance(account)
 
     # Process transactions
     transactions_count = redbark_account.raw_transactions_payload&.size || 0
     Rails.logger.info "RedbarkAccount::Processor - Transactions payload has #{transactions_count} items"
 
+    transactions_ok = true
     if redbark_account.raw_transactions_payload.present?
       Rails.logger.info "RedbarkAccount::Processor - Processing transactions..."
-      RedbarkAccount::Transactions::Processor.new(redbark_account).process
+      transactions_ok = RedbarkAccount::Transactions::Processor.new(redbark_account).process[:success]
     else
       Rails.logger.warn "RedbarkAccount::Processor - No transactions payload to process"
     end
+
+    if anchor_balance
+      account.set_current_balance(
+        anchor_balance,
+        date: date,
+        reuse_explained_anchor: transactions_ok
+      )
+    end
+
+    # A loan's rate, read from what the bank reported. After transactions, so a
+    # failure here cannot cost the user their entries; a raise would be caught
+    # by RedbarkItem#process_accounts and logged per account.
+    RedbarkAccount::LoanDetailsProcessor.new(redbark_account, as_of: as_of).process
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     account.broadcast_sync_complete
@@ -51,10 +71,17 @@ class RedbarkAccount::Processor
       end
 
       # Banking sign convention:
-      # - CreditCard and Loan accounts may need sign inversion
-      # Provider returns negative for positive balance, so we negate it
+      # CreditCard and Loan balances are signed differently depending on the
+      # upstream source (Fiskil/CDR — AU — reports the amount owed as a
+      # negative balance; Plaid — US/CA — reports it as positive). The
+      # provider-specific rule and the DebugLogEntry captured for an
+      # unrecognised provider live on RedbarkAccount#normalized_liability_balance.
       if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
-        balance = -balance
+        balance = redbark_account.normalized_liability_balance(
+          accountable_type: account.accountable_type,
+          balance: balance,
+          account: account
+        )
       end
 
       Rails.logger.info "RedbarkAccount::Processor - Balance update: #{balance}"
@@ -66,8 +93,6 @@ class RedbarkAccount::Processor
       )
       account.save!
 
-      # Create or update the current balance anchor valuation for linked accounts
-      # This is critical for reverse sync to work correctly
-      account.set_current_balance(balance)
+      balance
     end
 end

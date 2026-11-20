@@ -35,6 +35,7 @@ hu:
       date: Dátum
       description: Leírás
       description_placeholder: Tranzakció leírása
+      description_placeholder_optional: "Hagyd üresen a kategória/kereskedő nevének használatához, vagy előbb válassz egyet"
       expense: Kiadás
       income: Bevétel
       merchant_label: Kereskedő
@@ -123,7 +124,6 @@ hu:
     mark_recurring_title: Ismétlődő tranzakció
     potential_duplicate_title: Lehetséges duplikátum észlelve
     potential_duplicate_description: Ez a függőben lévő tranzakció megegyezhet az alábbi közzétett tranzakcióval. Ha igen, egyesítsd őket a kettős könyvelés elkerülése érdekében.
-    merge_duplicate: Igen, egyesítsd őket
     keep_both: Nem, mindkettőt tartsd meg
     split_parent_row:
       split_label: "Felosztva"

@@ -195,7 +195,10 @@ class Provider::YahooFinance < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      cache_key = "search_#{symbol}_#{country_code}_#{exchange_operating_mic}"
+      # The cached values are Security Data objects. Rails treats an entry that no
+      # longer fits the class (TypeError: struct size differs) as an error, not a
+      # miss, so bump the version here whenever Security's members change.
+      cache_key = "search_v2_#{symbol}_#{country_code}_#{exchange_operating_mic}"
       if cached_result = get_cached_result(cache_key)
         cached_result
       else
@@ -219,6 +222,12 @@ class Provider::YahooFinance < Provider
             country_code: ::Security::EXCHANGES.dig(mic, "country") || map_country_code(quote["exchDisp"])
           )
         end
+
+        # Yahoo's search-suggest index has gaps for some instruments its own chart/quote
+        # backend still serves fine -- notably managed funds identified by codes like
+        # Australian APIR codes (e.g. VAN0111AU). When the index has nothing, try the
+        # query as a literal symbol against the chart endpoint before giving up.
+        securities = direct_symbol_fallback(symbol) if securities.empty?
 
         securities = deduplicate_dual_listings(securities) unless exchange_operating_mic.present?
 
@@ -567,11 +576,39 @@ class Provider::YahooFinance < Provider
     # MIC code to its Yahoo-specific symbol suffix, the default currency when
     # Yahoo omits one, and an optional dual-listing group with a preference
     # rank (lower = preferred).  Adding a new market is a one-line hash entry.
+    # A MIC missing here means the symbol is sent to Yahoo bare, which for any
+    # non-US listing is a 404: the security then accumulates failed fetches and
+    # never gets a price, with nothing telling the user why.
     EXCHANGE_CONFIG = {
       "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
       "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },
       "XBOG" => { yahoo_suffix: ".CL", default_currency: "COP" },
-      "XIDX" => { yahoo_suffix: ".JK", default_currency: "IDR" }
+      "XIDX" => { yahoo_suffix: ".JK", default_currency: "IDR" },
+      # Europe. Yahoo quotes London in pence (GBp), which
+      # normalize_currency_and_price already converts.
+      "XETR" => { yahoo_suffix: ".DE", default_currency: "EUR" }, # Xetra
+      "XFRA" => { yahoo_suffix: ".F",  default_currency: "EUR" }, # Frankfurt floor
+      "XMUN" => { yahoo_suffix: ".MU", default_currency: "EUR" }, # Munich
+      "XSTU" => { yahoo_suffix: ".SG", default_currency: "EUR" }, # Stuttgart
+      "XLON" => { yahoo_suffix: ".L",  default_currency: "GBP" },
+      "XPAR" => { yahoo_suffix: ".PA", default_currency: "EUR" },
+      "XAMS" => { yahoo_suffix: ".AS", default_currency: "EUR" },
+      "XBRU" => { yahoo_suffix: ".BR", default_currency: "EUR" },
+      "XLIS" => { yahoo_suffix: ".LS", default_currency: "EUR" },
+      "XMAD" => { yahoo_suffix: ".MC", default_currency: "EUR" },
+      "XMIL" => { yahoo_suffix: ".MI", default_currency: "EUR" },
+      "XSWX" => { yahoo_suffix: ".SW", default_currency: "CHF" },
+      "XSTO" => { yahoo_suffix: ".ST", default_currency: "SEK" },
+      "XCSE" => { yahoo_suffix: ".CO", default_currency: "DKK" },
+      "XHEL" => { yahoo_suffix: ".HE", default_currency: "EUR" },
+      "XOSL" => { yahoo_suffix: ".OL", default_currency: "NOK" },
+      "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }, # Vienna
+      # Canada. Yahoo writes share classes and units with a dash, not a dot:
+      # CSH.UN is CSH-UN.TO and CCL.B is CCL-B.TO.
+      "XTSE" => { yahoo_suffix: ".TO", default_currency: "CAD", share_class_separator: "-" }, # Toronto
+      "XTSX" => { yahoo_suffix: ".V",  default_currency: "CAD", share_class_separator: "-" }, # TSX Venture
+      "XCNQ" => { yahoo_suffix: ".CN", default_currency: "CAD", share_class_separator: "-" }, # CSE
+      "NEOE" => { yahoo_suffix: ".NE", default_currency: "CAD", share_class_separator: "-" }  # Cboe Canada (NEO)
     }.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
@@ -594,11 +631,17 @@ class Provider::YahooFinance < Provider
     end
 
     # Appends the Yahoo Finance symbol suffix for exchanges that require one
-    # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols pass through.
+    # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols keep a
+    # single suffix.  Where the exchange sets a share_class_separator, a dot
+    # in the ticker becomes that separator (XTSE: CSH.UN → CSH-UN.TO).
     def normalize_symbol(symbol, exchange_operating_mic)
-      suffix = EXCHANGE_CONFIG.dig(exchange_operating_mic, :yahoo_suffix)
-      return symbol if suffix.nil? || symbol.end_with?(suffix)
-      "#{symbol}#{suffix}"
+      config = EXCHANGE_CONFIG[exchange_operating_mic]
+      suffix = config&.dig(:yahoo_suffix)
+      return symbol if suffix.nil?
+
+      base = symbol.delete_suffix(suffix)
+      base = base.tr(".", config[:share_class_separator]) if config[:share_class_separator]
+      "#{base}#{suffix}"
     end
 
     # Returns the default currency for a Yahoo exchange name (e.g. "NSE" → "INR")
@@ -627,6 +670,69 @@ class Provider::YahooFinance < Provider
 
       return securities if dominated.empty?
       securities.reject { |s| dominated.include?(s.object_id) }
+    end
+
+    # Symbols Yahoo's search-suggest index simply doesn't carry (e.g. Australian
+    # APIR-coded managed funds like "VAN0111AU") still resolve fine against the
+    # chart endpoint used elsewhere in this class for price data. When the normal
+    # search returns nothing, treat the raw query as a literal symbol and see if
+    # Yahoo's chart backend recognizes it -- synthesizing a single search result
+    # from the chart's `meta` block if so, rather than reporting no match at all.
+    #
+    # Only attempted for query shapes that plausibly ARE a ticker (no spaces,
+    # reasonable length): a full-name search like "Vanguard High Growth Index"
+    # would just waste a request here since it was never going to resolve as a
+    # literal symbol either.
+    def direct_symbol_fallback(query)
+      symbol = query.to_s.strip.upcase
+      return [] if symbol.blank? || symbol.include?(" ") || !symbol.match?(/\A[A-Z0-9.\-]{1,20}\z/)
+
+      # Require an exchange-qualified symbol (e.g. "VAN0111AU.AX"), not a bare
+      # one (e.g. "XYZ"). A bare ticker missing from Yahoo's search index would
+      # normally mean "no match" -- but the chart endpoint resolves bare tickers
+      # too, and some of those are real, unrelated securities (e.g. "XYZ" is
+      # NYSE-listed Block, Inc.), which would surface as a surprising spurious
+      # match for what the user actually typed. A plain, indexable ticker like
+      # that already resolves via the primary search above; this fallback exists
+      # for suffixed, non-US-style symbols the index has gaps for.
+      return [] unless symbol.match?(/\A[A-Z0-9\-]+\.[A-Z0-9\-]+\z/)
+
+      throttle_request
+      data = fetch_authenticated_chart(symbol, { "interval" => "1d", "range" => "5d" })
+      return [] if data.dig("chart", "error").present?
+
+      meta = data.dig("chart", "result", 0, "meta")
+      return [] if meta.blank?
+
+      # "YHD" is Yahoo's generic placeholder exchange, used for many instruments
+      # (like managed funds) that aren't tied to a real exchange in Yahoo's data.
+      # map_exchange_mic maps "YHD" to "XNAS" (NASDAQ) as a guess for regular
+      # search results, on the assumption an unrecognized US-style ticker is
+      # probably NASDAQ-listed -- that assumption doesn't hold here, since this
+      # fallback exists specifically for non-US instruments the search index
+      # missed (e.g. an Australian managed fund). Leave the MIC nil instead of
+      # applying that guess. Security::Resolver already treats a blank MIC as
+      # "unknown", not as one that fails to match.
+      yahoo_exchange = meta["exchangeName"]
+      mic = yahoo_exchange == "YHD" ? nil : map_exchange_mic(yahoo_exchange)
+
+      [
+        Security.new(
+          symbol: meta["symbol"] || symbol,
+          name: meta["longName"] || meta["shortName"] || symbol,
+          logo_url: nil,
+          exchange_operating_mic: mic,
+          country_code: mic.present? ? ::Security::EXCHANGES.dig(mic, "country") : nil,
+          currency: meta["currency"]
+        )
+      ]
+    rescue => e
+      # Best-effort only: this fallback exists purely to find something the
+      # primary search missed. Any failure here (auth, rate limit, network,
+      # malformed response) should degrade to "no fallback match" rather than
+      # turn an otherwise-successful (if empty) search into an error response.
+      Rails.logger.warn("Yahoo Finance direct symbol fallback failed for #{symbol}: #{e.class} - #{e.message}")
+      []
     end
 
     # ================================
@@ -714,7 +820,7 @@ class Provider::YahooFinance < Provider
 
     def fetch_currency_pair_data(from, to, start_date, end_date)
       symbol = "#{from}#{to}=X"
-      fetch_chart_data(symbol, start_date, end_date) do |timestamp, close_rate|
+      fetch_chart_data(symbol, start_date, end_date, currency: to) do |timestamp, close_rate|
         Rate.new(
           date: Time.at(timestamp).utc.to_date,
           from: from,
@@ -726,7 +832,7 @@ class Provider::YahooFinance < Provider
 
     def fetch_inverse_currency_pair_data(from, to, start_date, end_date)
       symbol = "#{to}#{from}=X"
-      rates = fetch_chart_data(symbol, start_date, end_date) do |timestamp, close_rate|
+      rates = fetch_chart_data(symbol, start_date, end_date, currency: from) do |timestamp, close_rate|
         Rate.new(
           date: Time.at(timestamp).utc.to_date,
           from: from,
@@ -742,19 +848,37 @@ class Provider::YahooFinance < Provider
     # If Yahoo returns a stale-crumb error (200 OK with Unauthorized body),
     # clears the crumb cache and retries once with fresh credentials.
     def fetch_authenticated_chart(symbol, params)
-      cookie, crumb = fetch_cookie_and_crumb
-      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-        params.each { |k, v| req.params[k] = v }
-        req.params["crumb"] = crumb
+      # The /v8/finance/chart endpoint does NOT require cookie/crumb auth, and
+      # Yahoo rate-limits AUTHENTICATED chart requests far more aggressively than
+      # anonymous ones (verified live: cookie+crumb => 429, same symbol/IP with
+      # no auth => 200). Use the plain client for price/chart data. Cookie+crumb
+      # remains scoped to quoteSummary (fetch_security_info), which needs it.
+      begin
+        response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+          params.each { |k, v| req.params[k] = v }
+        end
+        data = JSON.parse(response.body)
+        needs_auth = data.dig("chart", "error", "code") == "Unauthorized"
+      rescue Faraday::UnauthorizedError
+        # Hard HTTP 401 (raised by client's :raise_error) -- fall through to the
+        # authenticated retry below, same as a soft Unauthorized body code.
+        needs_auth = true
       end
-      data = JSON.parse(response.body)
 
-      if data.dig("chart", "error", "code") == "Unauthorized"
+      # Rare fallback: if Yahoo demands auth for a specific symbol (a hard 401
+      # or a 200 OK with an Unauthorized body), retry once with FRESH cookie+
+      # crumb. Clear any cached crumb first so a stale-but-shape-valid one
+      # isn't reused.
+      if needs_auth
         clear_crumb_cache
         cookie, crumb = fetch_cookie_and_crumb
-        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-          params.each { |k, v| req.params[k] = v }
-          req.params["crumb"] = crumb
+        begin
+          response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+            params.each { |k, v| req.params[k] = v }
+            req.params["crumb"] = crumb
+          end
+        rescue Faraday::UnauthorizedError
+          raise AuthenticationError, "Yahoo Finance authentication failed after crumb refresh"
         end
         data = JSON.parse(response.body)
         if data.dig("chart", "error", "code") == "Unauthorized"
@@ -765,7 +889,9 @@ class Provider::YahooFinance < Provider
       data
     end
 
-    def fetch_chart_data(symbol, start_date, end_date, &block)
+    # `currency` is what the quote must be in. Yahoo leaves it blank on some
+    # scaled crosses: RUBGEL=X is GEL per 100 RUB, a 100x error once inverted.
+    def fetch_chart_data(symbol, start_date, end_date, currency:, &block)
       period1 = start_date.to_time.utc.to_i
       period2 = end_date.end_of_day.to_time.utc.to_i
 
@@ -786,6 +912,19 @@ class Provider::YahooFinance < Provider
         chart_data = data.dig("chart", "result", 0)
         return nil unless chart_data
 
+        quote_currency = chart_data.dig("meta", "currency")
+        unless quote_currency&.casecmp?(currency)
+          DebugLogEntry.capture(
+            category: "exchange_rates",
+            level: "warn",
+            message: "Yahoo Finance quote for #{symbol} is in #{quote_currency.presence || "no currency"}, not #{currency}; ignored",
+            source: self.class.name,
+            provider_key: "yahoo_finance",
+            metadata: { symbol: symbol, expected_currency: currency, quote_currency: quote_currency }
+          )
+          return nil
+        end
+
         timestamps = chart_data.dig("timestamp") || []
         quotes = chart_data.dig("indicators", "quote", 0) || {}
         closes = quotes["close"] || []
@@ -800,6 +939,15 @@ class Provider::YahooFinance < Provider
 
         results.sort_by(&:date)
       rescue Faraday::Error, JSON::ParserError => e
+        Rails.logger.warn("#{self.class.name}: fetch_chart_data failed for #{symbol}: #{e.class}: #{e.message}")
+        DebugLogEntry.capture(
+          category: "provider_chart_fetch",
+          level: "warn",
+          message: "Yahoo Finance fetch_chart_data failed",
+          source: self.class.name,
+          provider_key: "yahoo_finance",
+          metadata: { symbol: symbol, exception_class: e.class.name, exception_message: e.message }
+        )
         nil
       end
     end
@@ -811,7 +959,7 @@ class Provider::YahooFinance < Provider
           interval: retry_interval,
           interval_randomness: 0.5,
           backoff_factor: 2,
-          retry_statuses: [ 429 ],
+          retry_statuses: [ 429, 500, 502, 503, 504 ],
           exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
         })
 
@@ -975,7 +1123,7 @@ class Provider::YahooFinance < Provider
           interval: retry_interval,
           interval_randomness: 0.5,
           backoff_factor: 2,
-          retry_statuses: [ 429 ],
+          retry_statuses: [ 429, 500, 502, 503, 504 ],
           exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
         })
 
@@ -1085,10 +1233,16 @@ class Provider::YahooFinance < Provider
         "XNAS" # Yahoo default, assume NASDAQ
       when "TSE", "TOR"
         "XTSE" # Toronto Stock Exchange
-      when "CVE"
+      when "CVE", "VAN"
         "XTSX" # TSX Venture Exchange
+      when "CNQ"
+        "XCNQ" # Canadian Securities Exchange
+      when "NEO"
+        "NEOE" # Cboe Canada (NEO)
       when "LSE", "LON"
         "XLON" # London Stock Exchange
+      when "GER"
+        "XETR" # Xetra
       when "FRA"
         "XFRA" # Frankfurt Stock Exchange
       when "PAR"

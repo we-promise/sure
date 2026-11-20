@@ -1,0 +1,4 @@
+<span class="font-mono text-xs"><%= row.family_id %></span>
+<% if row.synthetic_demo %>
+  <%= render DS::Pill.new(label: t("admin.system_health.hosted_usage.synthetic_demo"), tone: :warning, marker: false) %>
+<% end %>

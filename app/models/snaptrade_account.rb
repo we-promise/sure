@@ -9,6 +9,9 @@ class SnaptradeAccount < ApplicationRecord
     encrypts :raw_holdings_payload
     encrypts :raw_activities_payload
     encrypts :raw_balances_payload
+    # Not deterministic: never looked up by value, and a brokerage account
+    # number is exactly the kind of field worth keeping opaque at rest.
+    encrypts :account_number
   end
 
   belongs_to :snaptrade_item
@@ -212,7 +215,9 @@ class SnaptradeAccount < ApplicationRecord
       units = parse_decimal(data[:units]) || BigDecimal("0")
       price = parse_decimal(data[:price]) || BigDecimal("0")
 
-      units * price
+      # Valued as the holding is (Processor#calculate_holdings_value), so a
+      # flagged option cancels at contract value.
+      units * price * contract_multiplier(extract_symbol_data(data))
     end
   end
 

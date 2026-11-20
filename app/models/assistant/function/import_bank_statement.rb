@@ -1,6 +1,8 @@
 require "csv"
 
 class Assistant::Function::ImportBankStatement < Assistant::Function
+  self.ai_feature = :extract_pdf
+
   class << self
     def name
       "import_bank_statement"
@@ -92,21 +94,18 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       }
     end
 
-    # Extract transactions from the PDF using the configured LLM provider.
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # extract_bank_statement (PR #1985).
+    availability = Ai.availability(:extract_pdf, family:, user:)
+    return ai_unavailable(availability) unless availability.available?
+
+    # The first provider in extract_pdf's route. Settings can clear the last key between the
+    # availability check and this lookup, so a missing provider is the same refusal
+    # (PdfImport::AiProcessor#route_provider refuses the same way).
     provider = Provider::Registry.preferred_llm_provider
-    unless provider
-      return {
-        success: false,
-        error: "provider_not_configured",
-        message: "AI provider is not configured"
-      }
-    end
+    return ai_unavailable(Ai::Availability.unavailable(:extract_pdf, :not_configured)) unless provider
 
     response = provider.extract_bank_statement(
       pdf_content: pdf_import.pdf_file_content,
-      model: openai_model,
+      model: model_for(provider),
       family: family
     )
 
@@ -169,6 +168,11 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
 
   private
 
+    # The refusal every AI gate on this path returns: the router's reason and its message.
+    def ai_unavailable(availability)
+      { success: false, error: "ai_unavailable", reason: availability.reason.to_s, message: availability.message_for(user) }
+    end
+
     def generate_csv(transactions)
       CSV.generate do |csv|
         csv << %w[date amount name category notes]
@@ -184,7 +188,9 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       end
     end
 
-    def openai_model
-      ENV["OPENAI_MODEL"].presence || Provider::Openai::DEFAULT_MODEL
+    # Only OpenAI takes the OpenAI model setting; other providers (Anthropic)
+    # resolve their own default when given nil.
+    def model_for(provider)
+      Provider::Openai.effective_model if provider.is_a?(Provider::Openai)
     end
 end

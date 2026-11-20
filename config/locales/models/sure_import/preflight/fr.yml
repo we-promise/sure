@@ -1,0 +1,9 @@
+---
+fr:
+  sure_import:
+    preflight:
+      missing_reference: 'Ligne %{line} : %{type} référence un %{field} manquant (%{value}).'
+      provider_merchant_diff: 'Ligne %{line} : le ProviderMerchant %{name} existe déjà avec des valeurs différentes pour %{fields}. Le marchand existant sera conservé.'
+      skipped_missing_merchant_reference: 'Ligne %{line} : %{type} fait référence à un marchand (%{value}) absent de cet export. Cela peut arriver avec un export réalisé avant que les marchands attribués par les fournisseurs soient inclus dans les exports Sure. L''élément sera importé sans ce marchand.'
+      skipped_missing_reference: 'Ligne %{line} : %{type} référence un %{field} manquant (%{value}). Elle sera ignorée pendant l''import.'
+      skipped_unnamed_recurring: 'Ligne %{line} : %{type} n''a pas de nom et fait référence à un marchand (%{value}) absent de cet export. L''élément sera ignoré lors de l''import.'

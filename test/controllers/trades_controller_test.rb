@@ -1,11 +1,87 @@
 require "test_helper"
 
 class TradesControllerTest < ActionDispatch::IntegrationTest
-  include EntryableResourceInterfaceTest
+  include EntryableResourceInterfaceTest, EntriesTestHelper
+  include GoalPledgeTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
     @entry = entries(:trade)
+  end
+
+  # The header used to read the amount's sign and call every trade a buy or a
+  # sell, so an inbound transfer — Questrade journals one, and so do the
+  # self-custody wallets — was shown as a purchase it never was.
+  test "the header calls a labelled trade what it is, not a buy or a sell" do
+    @entry.trade.update!(investment_activity_label: "Transfer")
+
+    get trade_url(@entry)
+
+    assert_response :success
+    # Scoped to the header's own line: "Buy" also appears in the quick-edit
+    # picker further down the page.
+    assert_select "span.text-secondary.text-sm", text: I18n.t("trades.header.transfer")
+    assert_select "span.text-secondary.text-sm", text: I18n.t("trades.header.buy"), count: 0
+  end
+
+  test "the German header localizes supported provider activity labels" do
+    @user.update!(locale: "de")
+
+    translations = {
+      "Buy" => "Kaufen",
+      "Contribution" => "Einlage",
+      "Dividend" => "Dividende",
+      "Exchange" => "Umtausch",
+      "Fee" => "Gebühr",
+      "Interest" => "Zinsen",
+      "Other" => "Sonstige",
+      "Reinvestment" => "Reinvestition",
+      "Sell" => "Verkaufen",
+      "Sweep In" => "Sweep In",
+      "Sweep Out" => "Sweep Out",
+      "Transfer" => "Überweisung",
+      "Withdrawal" => "Entnahme"
+    }
+
+    assert_equal Trade::ACTIVITY_LABELS.sort, translations.keys.sort
+
+    translations.each do |activity_label, translation|
+      key = activity_label.parameterize(separator: "_")
+
+      assert_equal translation,
+                   I18n.t("trades.header.#{key}", locale: :de, fallback: false, default: nil)
+
+      @entry.trade.update!(investment_activity_label: activity_label)
+
+      get trade_url(@entry)
+
+      assert_response :success
+      assert_select "span.text-secondary.text-sm", text: translation
+    end
+  end
+
+  test "an unlabelled trade still reads from the amount" do
+    @entry.trade.update!(investment_activity_label: nil)
+
+    get trade_url(@entry)
+
+    assert_response :success
+    expected = @entry.amount.positive? ? I18n.t("trades.header.buy") : I18n.t("trades.header.sell")
+    assert_select "span.text-secondary.text-sm", text: expected
+  end
+
+  # A label this view has no wording for must not blank the line out.
+  test "an unknown label falls back rather than rendering nothing" do
+    @entry.trade.update!(investment_activity_label: "Sweep In")
+    I18n.backend.store_translations(:en, trades: { header: { sweep_in: nil } })
+
+    get trade_url(@entry)
+
+    assert_response :success
+    expected = @entry.amount.positive? ? I18n.t("trades.header.buy") : I18n.t("trades.header.sell")
+    assert_select "span.text-secondary.text-sm", text: expected
+  ensure
+    I18n.reload!
   end
 
   test "updates trade entry" do
@@ -51,6 +127,56 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to @entry.account
+  end
+
+  # A deposit or withdrawal books an entry on the other account too, so that
+  # account needs write permission, not just the investment account.
+  test "a withdrawal cannot book into an account the member may only read" do
+    sign_in_as_member_with_writable_investment
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      post trades_url(account_id: @investment.id), params: {
+        model: { type: "withdrawal", date: Date.current, amount: 10, currency: "USD", transfer_account_id: accounts(:credit_card).id }
+      }
+    end
+
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "a deposit cannot draw from another member's private account" do
+    sign_in_as_member_with_writable_investment
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      post trades_url(account_id: @investment.id), params: {
+        model: { type: "deposit", date: Date.current, amount: 10, currency: "USD", transfer_account_id: accounts(:connected).id }
+      }
+    end
+
+    assert_response :not_found
+  end
+
+  test "a member can still book a withdrawal into an account shared with full control" do
+    sign_in_as_member_with_writable_investment
+
+    assert_difference -> { Transfer.count } => 1 do
+      post trades_url(account_id: @investment.id), params: {
+        model: { type: "withdrawal", date: Date.current, amount: 10, currency: "USD", transfer_account_id: accounts(:depository).id }
+      }
+    end
+
+    assert_redirected_to @investment
+  end
+
+  test "the transfer account picker only offers accounts the member may write to" do
+    sign_in_as_member_with_writable_investment
+
+    get new_trade_url(account_id: @investment.id, type: "withdrawal")
+
+    assert_response :success
+    assert_select "input[type=hidden][name='model[transfer_account_id]']"
+    assert_select "[role=option][data-value='#{accounts(:depository).id}']"
+    assert_select "[role=option][data-value='#{accounts(:credit_card).id}']", count: 0
+    assert_select "[role=option][data-value='#{accounts(:connected).id}']", count: 0
   end
 
   test "creates withdrawal entry" do
@@ -410,4 +536,84 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert @entry.trade.locked_attributes.key?("investment_activity_label"), "investment_activity_label should be locked"
     assert @entry.protected_from_sync?, "Entry should be protected from sync"
   end
+
+  test "the drawer offers the lot choice only on a fifo sale" do
+    account, buy, sale = lot_choice_account
+    lot_select = "select[name='entry[entryable_attributes][lot_source_entry_id]']"
+
+    get trade_url(sale)
+    assert_select lot_select, count: 0
+
+    account.update!(cost_basis_method: "fifo")
+    get trade_url(sale)
+    assert_select "#{lot_select} option[value='#{buy.id}']", count: 1
+
+    get trade_url(buy)
+    assert_select lot_select, count: 0
+  end
+
+  test "naming a lot on a sale saves it and restates the account" do
+    account, buy, sale = lot_choice_account(method: "fifo")
+
+    patch trade_url(sale), params: { entry: { entryable_attributes: { id: sale.entryable_id, lot_source_entry_id: buy.id } } }
+
+    assert_redirected_to account_url(account)
+    assert_enqueued_with job: SyncJob
+    assert_equal buy.id, sale.trade.reload.lot_source_entry_id
+  end
+
+  test "naming another account's lot on a sale is refused" do
+    _account, _buy, sale = lot_choice_account(method: "fifo")
+    other = families(:empty).accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Investment.new, cost_basis_method: "fifo")
+    theirs = create_trade(sale.trade.security, account: other, qty: 5, price: 10, date: 3.days.ago.to_date)
+
+    patch trade_url(sale), params: { entry: { entryable_attributes: { id: sale.entryable_id, lot_source_entry_id: theirs.id } } }
+
+    assert_response :unprocessable_entity
+    assert_nil sale.trade.reload.lot_source_entry_id
+  end
+
+  # we-promise/sure#4226: a deposit with no "from" account books a standalone
+  # inflow on the investment account, which must resolve its pledge.
+  test "an unlinked deposit resolves the account's open transfer pledge" do
+    investment = accounts(:investment)
+    pledge = open_transfer_pledge(investment, amount: 250)
+
+    post trades_url(account_id: investment.id), params: {
+      model: { type: "deposit", date: Date.current, amount: 250, currency: "USD" }
+    }
+
+    entry = investment.entries.order(:created_at).last
+    assert_equal entry.transaction.id, pledge.reload.matched_transaction_id
+  end
+
+  test "an unlinked withdrawal leaves the pledge open" do
+    investment = accounts(:investment)
+    pledge = open_transfer_pledge(investment, amount: 250)
+
+    post trades_url(account_id: investment.id), params: {
+      model: { type: "withdrawal", date: Date.current, amount: 250, currency: "USD" }
+    }
+
+    assert_equal "open", pledge.reload.status
+  end
+
+  private
+    def lot_choice_account(method: "average")
+      account = accounts(:investment)
+      account.update!(cost_basis_method: method)
+      security = Security.create!(ticker: "LOTN", name: "LOTN")
+      buy = create_trade(security, account: account, qty: 40, price: 20, date: 3.days.ago.to_date)
+      sale = create_trade(security, account: account, qty: -10, price: 25, date: 1.day.ago.to_date)
+      [ account, buy, sale ]
+    end
+
+    # family_member gets the investment account with full control; fixtures
+    # already share depository with full control and credit_card read-only,
+    # and leave connected private to family_admin.
+    def sign_in_as_member_with_writable_investment
+      @investment = accounts(:investment)
+      @investment.account_shares.create!(user: users(:family_member), permission: "full_control")
+      sign_in users(:family_member)
+    end
 end

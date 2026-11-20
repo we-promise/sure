@@ -44,6 +44,7 @@ fr-FR:
       default: "%d/%m/%Y"
       long: "%-d %B %Y"
       short: "%-d %b"
+      short_with_year: "%-d %b %Y"
     month_names:
     -
     - janvier
@@ -134,7 +135,7 @@ fr-FR:
       other_than: doit être différent de %{count}
       present: doit être vide
       required: doit exister
-      taken: n'est pas disponible
+      taken: est déjà utilisé(e)
       too_long:
         one: est trop long (pas plus d'un caractère)
         other: est trop long (pas plus de %{count} caractères)

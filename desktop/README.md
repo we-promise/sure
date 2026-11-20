@@ -31,18 +31,23 @@ npm run tauri build -- --target universal-apple-darwin
 
 ## Publishing a release
 The desktop build runs automatically as part of the normal Sure `v*` release.
-The version comes from `.sure-version` and must match the release tag; it is
+The version comes from the release tag and is written to generated `.sure-version`; it is
 stamped into `desktop/package.json` and `desktop/src-tauri/tauri.conf.json`
 only while building. The universal `.dmg` is attached to that same GitHub
 Release—there is no separate desktop action, tag, or version.
 
 ## Installing an unsigned build (end users)
-The published `.dmg` is **not code-signed**, so macOS Gatekeeper blocks the first
-launch. To open it:
-1. Drag Sure to Applications and try to open it; dismiss the warning.
+The published `.dmg` is only ad-hoc signed (no Developer ID, not notarized), so
+macOS Gatekeeper blocks the first launch. To open it:
+1. Drag Sure to Applications and open it from there, not from the mounted disk
+   image; dismiss the warning.
 2. **System Settings → Privacy & Security**, scroll down, click **Open Anyway**,
    and confirm. (On macOS 15 Sequoia the old right-click→Open shortcut is gone;
    this Settings path is the way.)
+3. If your server is on your local network (for example `http://192.168.x.x:3000`),
+   click **Allow** when macOS asks whether Sure may find devices on your local
+   network. If you declined, turn Sure on under **System Settings → Privacy &
+   Security → Local Network**.
 
 If macOS instead says the app is "damaged", the download was quarantined — strip
 it once in Terminal:
@@ -57,6 +62,40 @@ cd desktop/src-tauri
 cargo test
 ```
 
+## Reports and downloads
+
+Files your Sure server sends as downloads (CSV exports, statements, transaction
+attachments, the import sample CSV) are saved in the macOS Downloads folder,
+even when the app could display them. When a download finishes or fails, Sure
+shows its usual message in the window, or in the main window when the download
+came from a window that closed itself. A native notification is also sent when
+that window is not in front, and replaces the message when the window is hidden
+or the server is too old to provide it (allow Sure notifications in System
+Settings to see them). The notification uses the message's text in Sure's
+language, and is in English only with a server too old to provide the message.
+Repeated downloads get a numbered filename.
+
+Print Report opens a separate Sure window using the current signed-in session,
+then the native print dialog once the report has loaded. Print it, or choose
+PDF → Save as PDF. Close the report window to return to the app.
+
+Other links that open a new window follow the same rule: pages of your Sure
+server open in a separate Sure window with your session, and other websites
+open in your default browser. Only the main window has the desktop
+integrations: notifications and SSO in your browser. Downloads are only
+accepted from pages of your saved servers.
+
+To verify changes to this flow, run `npm run build` in `desktop`, then
+`cargo test --locked` in `desktop/src-tauri`. In the desktop app, export a
+report CSV twice and check both files in Downloads. Download a statement PDF
+and a transaction attachment, check that the app page stays in place, and open
+Print Report to save a PDF. Open a CSV statement with its view link (the eye
+icon on an account's statements): the file is saved in Downloads, no empty Sure
+window stays open, and the message appears in the main window.
+Open an external link (for example the Discord help icon) and check that it
+opens in your browser. Repeat against a server mounted under a URL prefix, if
+applicable.
+
 ## Deep links
 Registered scheme: `sure://{host}[:port]/{path}` → opens the app to that
 server/page. Example: `open "sure://localhost:3000/accounts"`. (Works from the
@@ -67,6 +106,7 @@ No Apple Developer credentials are needed to build/run locally. To ship a
 distributable, signed, notarized `.dmg`, add:
 1. An **Apple Developer ID Application** certificate in your login keychain.
 2. Tauri signing config in `src-tauri/tauri.conf.json` under `bundle.macOS`:
+   replace the ad-hoc `"signingIdentity": "-"` with
    `"signingIdentity": "Developer ID Application: <NAME> (<TEAMID>)"`,
    `"hardenedRuntime": true`, and an `entitlements` plist if needed.
 3. Notarization after build:

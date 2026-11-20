@@ -14,6 +14,10 @@ fr:
       state_region_label: État/Région
       state_region_placeholder: CA
       title: Saisir la propriété manuellement
+    avm_providers:
+      chimnie: Chimnie
+      realie: Realie
+      rentcast: RentCast
     balances:
       market_value_label: Valeur marchande estimée
       market_value_tooltip: La valeur marchande estimée de votre propriété. Ce numéro
@@ -24,6 +28,7 @@ fr:
       title: Saisir la propriété manuellement
     edit:
       edit: Modifier %{account}
+      title: Saisir le bien manuellement
     form:
       address_line1: Adresse
       address_line1_placeholder: 123, rue de la Paix
@@ -42,7 +47,40 @@ fr:
       subtype_prompt: Sélectionnez le type de propriété
       year_built: Année de construction
       year_built_placeholder: '2000'
+    form_tabs:
+      address: Adresse
+      overview: Vue d'ensemble
+      value: Valeur
+    link_valuation:
+      link_failed: "%{provider} n'a pas pu estimer ce bien, qui n'a donc pas été lié. Vérifiez que l'adresse est correcte, puis réessayez."
+      linked: Lié à %{provider} ; la valeur du bien a été mise à jour.
+      not_linkable: Ce bien ne peut pas être lié à ce fournisseur. Vérifiez que son adresse est complète et située dans un pays pris en charge, et que la devise du compte correspond à celle du fournisseur.
     new:
+      avm_attribution_chimnie: Données d'estimation fournies par Chimnie. Contient des données OS © Crown copyright and database right, des données Royal Mail © Royal Mail copyright and database right et des données HM Land Registry © Crown copyright and database right, sous licence Open Government Licence v3.0.
+      avm_confidence:
+        high: Élevée
+        low: Faible
+        medium: Moyenne
+      avm_county_label: Comté (facultatif)
+      avm_description: Saisissez un nom pour le bien et son adresse. %{provider} recherchera pour vous les caractéristiques du bien et sa valeur de marché estimée.
+      avm_option: Ajouter via %{provider}
+      avm_postcode_label: Code postal
+      avm_preview_back: Retour
+      avm_preview_confidence: Confiance
+      avm_preview_confirm: Ajouter le bien
+      avm_preview_description: 'Voici ce que %{provider} a trouvé. Vérifiez les informations avant d''ajouter le bien : rien n''a encore été créé.'
+      avm_preview_no_record: "%{provider} n'a trouvé aucune fiche de bien à cette adresse : la valeur affichée est donc une estimation fondée sur le quartier. Vérifiez l'adresse avant de continuer."
+      avm_preview_range: Fourchette d'estimation
+      avm_preview_title: Confirmer les informations du bien
+      avm_preview_uprn: UPRN
+      avm_submit: Rechercher le bien
+      avm_title: Ajouter un bien via %{provider}
+      avm_town_label: Ville
+      avm_uk_only: "%{provider} ne prend en charge que les biens résidentiels situés au Royaume-Uni."
+      avm_uprn_help: L'UPRN (Unique Property Reference Number, jusqu'à 12 chiffres) identifie chaque adresse au Royaume-Uni. Vous le trouverez sur findmyaddress.co.uk de GeoPlace ou auprès de votre conseil local. %{provider} l'utilise pour estimer gratuitement le bien.
+      avm_uprn_label: UPRN
+      avm_uprn_placeholder: '100023336956'
+      avm_us_only: "%{provider} ne prend en charge que les biens situés aux États-Unis."
       next: Suivant
       title: Saisir les détails de la propriété
     overview:
@@ -64,6 +102,10 @@ fr:
       subtype_prompt: Sélectionnez le type
       year_built_label: Année de construction (facultatif)
       year_built_placeholder: '1990'
+    refresh_valuation:
+      not_configured: "%{provider} n'est pas configuré. Ajoutez sa clé API dans Paramètres → Auto-hébergement pour actualiser cette estimation."
+      not_linked: Ce bien n'est lié à aucun fournisseur d'estimation.
+      queued: L'actualisation de l'estimation a démarré. La nouvelle valeur apparaîtra sous peu.
     subtypes:
       agri_land:
         long: Terrain agricole
@@ -75,7 +117,7 @@ fr:
         long: Propriété commerciale
         short: Commercial
       plot:
-        long: Terrain / Terrain
+        long: Terrain / Parcelle
         short: Terrain
       rented:
         long: Propriété louée
@@ -83,9 +125,13 @@ fr:
     tabs:
       overview:
         edit_account_details: Modifier les détails du compte
+        link_valuation: Mettre à jour la valeur automatiquement avec %{provider}
+        link_valuation_description: La valeur de ce bien n'est mise à jour que manuellement.
         living_area: Surface habitable
         market_value: Valeur marchande
         purchase_price: Prix d'achat
+        refresh_valuation: Actualiser l'estimation
         trend: Tendance
         unknown: Inconnu
+        valuation_source: Estimé par %{provider}, dernière mise à jour le %{date}
         year_built: Année de construction

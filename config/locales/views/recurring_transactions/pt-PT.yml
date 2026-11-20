@@ -1,0 +1,56 @@
+---
+pt-PT:
+  recurring_transactions:
+    title: Transações Recorrentes
+    upcoming: Próximas Transações Recorrentes
+    projected: Projetado
+    recurring: Recorrente
+    expected_today: "Prevista hoje"
+    expected_in:
+      one: "Prevista em %{count} dia"
+      other: "Prevista em %{count} dias"
+    day_of_month: Dia %{day} do mês
+    identify_patterns: Identificar Padrões
+    cleanup_stale: Limpar transações obsoletas
+    settings:
+      enable_label: Ativar Transações Recorrentes
+      enable_description: Deteta automaticamente padrões de transações recorrentes e apresenta as próximas transações previstas.
+    settings_updated: Definições de transações recorrentes atualizadas
+    info:
+      title: Deteção Automática de Padrões
+      manual_description: Pode identificar padrões manualmente ou limpar transações recorrentes obsoletas usando os botões acima.
+      automatic_description: "A identificação automática também é executada após:"
+      triggers:
+        - Importações de CSV concluídas (transações, negociações, contas, etc.)
+        - Qualquer sincronização de serviço concluída (Plaid, SimpleFIN, etc.)
+    identified: Identificados %{count} padrões de transações recorrentes
+    cleaned_up: Limpadas %{count} transações recorrentes obsoletas
+    marked_inactive: Transação recorrente marcada como inativa
+    marked_active: Transação recorrente marcada como ativa
+    deleted: Transação recorrente eliminada
+    confirm_delete: Tem a certeza de que pretende eliminar esta transação recorrente?
+    marked_as_recurring: Transação marcada como recorrente
+    already_exists: Já existe uma transação recorrente manual para este padrão
+    creation_failed: Falha ao criar a transação recorrente. Verifique os detalhes da transação e tente novamente.
+    unexpected_error: Ocorreu um erro ao criar a transação recorrente
+    amount_range: "Intervalo: %{min} a %{max}"
+    empty:
+      title: Nenhuma transação recorrente encontrada
+      description: Clique em "Identificar Padrões" para detectar automaticamente transações recorrentes do seu histórico.
+    table:
+      merchant: Designação
+      amount: Montante
+      expected_day: Dia Previsto
+      next_date: Próxima Data
+      last_occurrence: Última Ocorrência
+      status: Estado
+      actions: Ações
+    status:
+      active: Ativa
+      inactive: Inativa
+    badges:
+      manual: Manual
+    transfer_marked_as_recurring: Transferência marcada como recorrente
+    transfer_already_exists: Já existe uma transferência recorrente para este par de contas
+    transfer_creation_failed: Falha ao criar a transferência recorrente. Verifique os detalhes da transferência e tente novamente.
+    transfer_feature_disabled: As transações recorrentes estão desativadas para esta família

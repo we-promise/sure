@@ -9,6 +9,7 @@ class Investment < ApplicationRecord
   SUBTYPES = {
     # === United States ===
     "brokerage" => { short: "Brokerage", long: "Brokerage", region: "us", tax_treatment: :taxable },
+    "cash_management" => { short: "CMA", long: "Cash Management Account", region: "us", tax_treatment: :taxable },
     "401k" => { short: "401(k)", long: "401(k)", region: "us", tax_treatment: :tax_deferred },
     "roth_401k" => { short: "Roth 401(k)", long: "Roth 401(k)", region: "us", tax_treatment: :tax_exempt },
     "403b" => { short: "403(b)", long: "403(b)", region: "us", tax_treatment: :tax_deferred },
@@ -65,6 +66,7 @@ class Investment < ApplicationRecord
     "indian_equity" => { short: "Indian Equity", long: "Indian Equity", region: "in", tax_treatment: :taxable },
     "indian_etf" => { short: "Indian ETF", long: "Indian ETF", region: "in", tax_treatment: :taxable },
     # Fixed-income / small-savings
+    "epf" => { short: "EPF", long: "Employees' Provident Fund", region: "in", tax_treatment: :tax_advantaged },
     "ppf" => { short: "PPF", long: "Public Provident Fund", region: "in", tax_treatment: :tax_exempt },
     "ssy" => { short: "SSY", long: "Sukanya Samriddhi Yojana", region: "in", tax_treatment: :tax_exempt },
     "nsc" => { short: "NSC", long: "National Savings Certificate", region: "in", tax_treatment: :tax_advantaged },

@@ -8,6 +8,60 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     ensure_tailwind_build
   end
 
+
+  # The status pill beside this bar was already amber for a depleted reserve
+  # while the bar itself stayed neutral: the same goal reported as needing
+  # attention and not, an inch apart.
+  #
+  # Counted rather than matched: a fixture goal is already off its pace, so
+  # the markup is on the page either way and a presence check passes without
+  # the fix.
+  test "the goals card bars a depleted reserve in warning colour" do
+    bar = /h-full bg-warning rounded-full/
+
+    get plan_url
+    before = response.body.scan(bar).size
+
+    family = @user.family
+    account = Account.create!(family: family, accountable: Depository.new,
+                              name: "Reserve pot", currency: family.currency, balance: 1_000)
+    family.goals.create!(name: "Precaution", target_amount: 6_000,
+                         currency: family.currency, kind: "maintained") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+
+    get plan_url
+
+    assert_response :success
+    assert_equal before + 1, response.body.scan(bar).size,
+                 "the depleted reserve's bar stayed neutral"
+  end
+
+  # The budget pill follows the same near-limit rule as each budget line.
+  test "the budget card keeps a budget filled by bills out of the near-limit state" do
+    assert_equal I18n.t("reports.budget_performance.status.good"), budget_pill(bills_paid: 950)
+  end
+
+  test "the budget card marks a budget near its limit by spending outside bills" do
+    assert_equal I18n.t("reports.budget_performance.status.warning"), budget_pill(bills_paid: 0)
+  end
+
+  test "goals missing an exchange rate share one warning line" do
+    2.times do |i|
+      account = @user.family.accounts.create!(name: "Euro reserve #{i}", accountable: Depository.new,
+                                             currency: "EUR", balance: 100)
+      @user.family.goals.create!(name: "Trip #{i}", target_amount: 1_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account)
+      end
+    end
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get plan_url
+
+    assert_response :success
+    assert_equal 1, response.body.scan(I18n.t("plans.goals_card.currency_warning", count: 2, currencies: "EUR")).size
+  end
+
   test "redirects users without preview access to budgets" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
 
@@ -64,6 +118,20 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("plans.budget_card.empty_body"), response.body
     assert_select "a[href=?]", edit_budget_path(Budget.date_to_param(Date.current))
   end
+
+  private
+    # The budget card's status pill for a 1,000 budget with 950 spent.
+    def budget_pill(bills_paid:)
+      budgets(:one).update!(budgeted_spending: 1_000)
+      Budget.any_instance.stubs(:actual_spending).returns(950)
+      Budget.any_instance.stubs(:bills_paid).returns(bills_paid)
+
+      get plan_url
+
+      assert_response :success
+      labels = %w[good warning over].map { |status| I18n.t("reports.budget_performance.status.#{status}") }
+      css_select("span[title]").map { |span| span["title"] }.find { |title| labels.include?(title) }
+    end
 end
 
 class PlansControllerHouseholdSwitchingTest < ActionDispatch::IntegrationTest

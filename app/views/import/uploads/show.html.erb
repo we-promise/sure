@@ -46,6 +46,36 @@
       </span>
     </div>
   </div>
+<% elsif @import.is_a?(MonarchImport) %>
+  <div class="space-y-4 mx-auto max-w-md">
+    <div class="text-center space-y-2">
+      <h1 class="text-3xl text-primary font-medium"><%= t(".monarch_title") %></h1>
+      <p class="text-secondary text-sm"><%= t(".monarch_description") %></p>
+    </div>
+
+    <%= render DS::Alert.new(variant: :info, title: t(".monarch_export_title")) do %>
+      <ol class="list-decimal pl-4 space-y-1">
+        <li><%= t(".monarch_export_step_settings_html",
+                  link: link_to(t(".monarch_export_settings_link"), "https://app.monarch.com/settings/data",
+                                target: "_blank", rel: "noopener noreferrer", class: "text-link underline")) %></li>
+        <li><%= t(".monarch_export_step_download") %></li>
+        <li><%= t(".monarch_export_step_upload") %></li>
+      </ol>
+      <p class="text-secondary">
+        <%= t(".monarch_export_help_html",
+              link: link_to(t(".monarch_export_help_link"), "https://help.monarch.com/hc/en-us/articles/15526600975764-Downloading-Transaction-or-Account-History",
+                            target: "_blank", rel: "noopener noreferrer", class: "text-link underline")) %>
+      </p>
+    <% end %>
+
+    <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-4" do |form| %>
+      <%= form.file_field :balances_file, label: t(".monarch_balances_label"), accept: ".csv,text/csv", required: true %>
+      <%= form.file_field :transactions_file, label: t(".monarch_transactions_label"), accept: ".csv,text/csv" %>
+      <p class="text-xs text-secondary"><%= t(".monarch_transactions_hint") %></p>
+
+      <%= form.submit t(".monarch_upload_button"), disabled: @import.complete? %>
+    <% end %>
+  </div>
 <% elsif @import.is_a?(QifImport) %>
   <%# ── QIF upload – fixed format, account required ── %>
   <div class="space-y-4 mx-auto max-w-md">
@@ -58,7 +88,7 @@
       <%= form.select :account_id,
             Current.user.accessible_accounts.visible.alphabetically.pluck(:name, :id),
             { label: t(".qif_account_label"), include_blank: t(".qif_account_placeholder"), selected: @import.account_id },
-            required: true %>
+            required: false %>
 
       <label for="import_import_file" class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-target="uploadArea">
         <div class="flex flex-col items-center justify-center pt-5 pb-6">
@@ -159,10 +189,12 @@
       <% end %>
     </div>
 
-    <div class="flex justify-center">
-      <span class="text-secondary text-sm">
-        <%= link_to t(".download_sample_csv"), "/imports/#{@import.id}/upload/sample_csv", class: "text-primary underline", data: { turbo: false } %> <%= t(".to_see_format") %>
-      </span>
-    </div>
+    <% if @import.respond_to?(:csv_template) %>
+      <div class="flex justify-center">
+        <span class="text-secondary text-sm">
+          <%= link_to t(".download_sample_csv"), "/imports/#{@import.id}/upload/sample_csv", class: "text-primary underline", data: { turbo: false } %> <%= t(".to_see_format") %>
+        </span>
+      </div>
+    <% end %>
   </div>
 <% end %>

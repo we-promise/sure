@@ -33,6 +33,26 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
   let(:'X-Api-Key') { api_key.plain_key }
 
+  let(:read_only_transaction) do
+    owner = family.users.create!(
+      email: 'api-owner@example.com',
+      password: 'password123',
+      password_confirmation: 'password123'
+    )
+    shared_account = Account.create!(
+      family: family,
+      owner: owner,
+      name: 'Shared Checking',
+      balance: 1000,
+      currency: 'USD',
+      accountable: Depository.new
+    )
+    shared_account.account_shares.create!(user: user, permission: 'read_only', include_in_finances: true)
+    shared_account.entries.create!(
+      name: 'Shared transaction', amount: 10, currency: 'USD', date: Date.current, entryable: Transaction.new
+    ).transaction
+  end
+
   let(:account) do
     Account.create!(
       family: family,
@@ -176,6 +196,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
               external_id: { type: :string, description: 'Optional external idempotency key scoped to account and source' },
               source: { type: :string, description: 'Optional source namespace for external_id. Requires external_id and defaults to api when external_id is provided' },
+              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes' },
               tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' }
             },
             required: %w[account_id date amount name]
@@ -252,7 +273,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - missing required fields' do
+      response '422', 'validation error - missing required fields, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -320,7 +341,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 type: :array,
                 items: { type: :string, format: :uuid },
                 description: 'Array of tag IDs to assign. Omit to preserve existing tags; use [] to clear all tags.'
-              }
+              },
+              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes' }
             }
           }
         }
@@ -341,10 +363,26 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
+      response '403', 'account is shared with you without permission to change this transaction' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_transaction.id }
+
+        run_test!
+      end
+
       response '404', 'transaction not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '422', 'validation error - malformed tag_ids, or a tag, category or merchant id the family cannot use' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { transaction: { tag_ids: [ SecureRandom.uuid ] } } }
 
         run_test!
       end
@@ -359,6 +397,14 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
       response '200', 'transaction deleted' do
         schema '$ref' => '#/components/schemas/DeleteResponse'
+
+        run_test!
+      end
+
+      response '403', 'account is shared with you without full control' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_transaction.id }
 
         run_test!
       end

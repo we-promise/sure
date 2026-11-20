@@ -24,7 +24,8 @@ class UpAccount::Transactions::Processor
     up_account.raw_transactions_payload.each_with_index do |transaction_data, index|
       result = UpEntry::Processor.new(
         transaction_data,
-        up_account: up_account
+        up_account: up_account,
+        category_matcher: category_matcher
       ).process
 
       if result.nil?
@@ -57,6 +58,22 @@ class UpAccount::Transactions::Processor
 
   private
 
+    # A single category matcher reused across this account's transactions, built from
+    # the family's existing categories.
+    def category_matcher
+      @category_matcher ||= UpAccount::Transactions::CategoryMatcher.new(family_categories)
+    end
+
+    # The family's existing categories. Importing transactions is intentionally
+    # non-destructive with respect to the family's category structure: we do NOT
+    # bootstrap Sure's defaults here. A family that has no categories (deliberately
+    # cleared, or pre-onboarding) simply gets uncategorised transactions, and matching
+    # resumes once the user sets up categories through the normal UI flow. Returns []
+    # when the account isn't linked (each entry is skipped before the matcher is used).
+    def family_categories
+      @family_categories ||= up_account.current_account&.family&.categories&.to_a || []
+    end
+
     # Extract the Up transaction id from raw data, or "unknown".
     def transaction_id(transaction_data)
       transaction_data.try(:[], :id) || transaction_data.try(:[], "id") || "unknown"
@@ -81,7 +98,7 @@ class UpAccount::Transactions::Processor
       stale_pending_entries = account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(source: "up")
-        .where("(transactions.extra -> 'up' ->> 'pending')::boolean = true")
+        .where(Transaction.pending_sql("transactions", providers: [ "up" ]))
       stale_pending_entries = stale_pending_entries.where.not(external_id: current_pending_external_ids) if current_pending_external_ids.any?
 
       count = stale_pending_entries.count

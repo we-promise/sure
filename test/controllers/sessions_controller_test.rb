@@ -20,7 +20,43 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     OmniAuth.config.mock_auth[:openid_connect] = nil
   end
 
-  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil)
+  def with_origin_check
+    original = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+    yield
+  ensure
+    ActionController::Base.allow_forgery_protection = original
+  end
+
+  def with_codespaces_origin_check(&block)
+    with_env_overrides(
+      CODESPACES: "true",
+      GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: "app.github.dev",
+      CODESPACE_NAME: "shiny-guide-6vj6x5qpjf5wpv",
+      PORT: "3000"
+    ) do
+      Rails.env.stubs(:development?).returns(true)
+      host! "shiny-guide-6vj6x5qpjf5wpv-3000.app.github.dev"
+      https!
+      with_origin_check(&block)
+    end
+  end
+
+  def stub_provider(name)
+    ProviderLoader.stubs(:load_providers).returns([
+      { name: name, strategy: "openid_connect", issuer: "https://idp.example", label: "IdP" }
+    ])
+  end
+
+  def stub_discovery(end_session_endpoint)
+    body = { "end_session_endpoint" => end_session_endpoint }.to_json
+    response = OpenStruct.new(success?: true, body: body)
+    connection = mock
+    connection.stubs(:get).returns(response)
+    Faraday.stubs(:new).returns(connection)
+  end
+
+  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil, id_token: nil)
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
       uid: uid,
@@ -29,8 +65,89 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
         name: name,
         first_name: first_name,
         last_name: last_name
-      }.compact
+      }.compact,
+      credentials: id_token ? { id_token: id_token } : {}
     })
+  end
+
+  test "codespaces accepts its localhost preview origin with a valid CSRF token" do
+    with_codespaces_origin_check do
+      get new_session_url
+      token = css_select("input[name=authenticity_token]").first["value"]
+
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test, authenticity_token: token },
+        headers: { "Origin" => "https://localhost:3000" }
+
+      assert_redirected_to root_url
+      assert Session.exists?(user_id: @user.id)
+    end
+  end
+
+  test "codespaces still requires a valid CSRF token" do
+    with_codespaces_origin_check do
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test },
+        headers: { "Origin" => "https://localhost:3000" }
+
+      assert_response :unprocessable_content
+    end
+  end
+
+  test "codespaces still rejects unrelated origins" do
+    with_codespaces_origin_check do
+      get new_session_url
+      token = css_select("input[name=authenticity_token]").first["value"]
+
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test, authenticity_token: token },
+        headers: { "Origin" => "https://attacker.example" }
+
+      assert_response :unprocessable_content
+    end
+  end
+
+  test "codespaces rejects a mismatched forwarded host with a valid CSRF token" do
+    with_codespaces_origin_check do
+      host! "other-codespace-3000.app.github.dev"
+      get new_session_url
+      token = css_select("input[name=authenticity_token]").first["value"]
+
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test, authenticity_token: token },
+        headers: { "Origin" => "https://localhost:3000" }
+
+      assert_response :unprocessable_content
+    end
+  end
+
+  test "codespaces rejects a mismatched localhost port with a valid CSRF token" do
+    with_codespaces_origin_check do
+      get new_session_url
+      token = css_select("input[name=authenticity_token]").first["value"]
+
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test, authenticity_token: token },
+        headers: { "Origin" => "https://localhost:3001" }
+
+      assert_response :unprocessable_content
+    end
+  end
+
+  test "ordinary local development keeps standard same-origin validation" do
+    Rails.env.stubs(:development?).returns(true)
+
+    with_origin_check do
+      host! "localhost:3000"
+      get new_session_url
+      token = css_select("input[name=authenticity_token]").first["value"]
+
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test, authenticity_token: token },
+        headers: { "Origin" => "http://localhost:3000" }
+
+      assert_redirected_to root_url
+    end
   end
 
   test "login page" do
@@ -72,10 +189,88 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "password sign-in leaves a pending invitation for the user's address unaccepted" do
+    invitation = Invitation.create!(
+      email: "invitee-before-signup@example.com",
+      role: "member",
+      family: @user.family,
+      inviter: @user
+    )
+    invitation.update_columns(email: @user.email)
+
+    get new_session_url(invitation: invitation.token)
+    post sessions_url, params: { email: @user.email, password: user_password_test }
+
+    assert_redirected_to root_url
+    assert_nil invitation.reload.accepted_at
+    assert_equal "admin", @user.reload.role
+  end
+
+  test "does not issue a session when user is deleted before row locking" do
+    @user.stubs(:with_lock).raises(ActiveRecord::RecordNotFound)
+    User.stubs(:authenticate_by_email).returns(@user)
+
+    assert_no_difference("Session.count") do
+      post sessions_url, params: { email: @user.email, password: user_password_test }
+    end
+
+    assert_redirected_to new_session_url
+    assert cookies[:session_token].blank?
+  end
+
+  test "signs in a user whose email row is still legacy plaintext" do
+    email = store_legacy_plaintext_email(@user)
+
+    post sessions_url, params: { email: email.upcase, password: user_password_test }
+
+    assert_redirected_to root_url
+    assert Session.exists?(user_id: @user.id)
+  end
+
+  test "rejects a bad password for a user whose email row is still legacy plaintext" do
+    email = store_legacy_plaintext_email(@user)
+
+    assert_no_difference "Session.count" do
+      post sessions_url, params: { email: email, password: "bad" }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "fails to sign in with bad password" do
     post sessions_url, params: { email: @user.email, password: "bad" }
     assert_response :unprocessable_entity
     assert_equal "Invalid email or password.", flash[:alert]
+  end
+
+  test "rejects fresh login for a deactivated user even with correct password" do
+    # @user (family_admin) has a pre-existing fixture session (sessions.yml),
+    # unrelated to this login attempt — clear it so the later assertion
+    # actually proves no *new* session was created.
+    @user.sessions.destroy_all
+
+    # update_column bypasses the deactivation business rules (e.g. an admin
+    # can't self-deactivate while other family members exist) since we're
+    # testing the auth-layer guard, not User#deactivate itself.
+    @user.update_column(:active, false)
+
+    post sessions_url, params: { email: @user.email, password: user_password_test }
+
+    assert_response :unprocessable_entity
+    assert_equal "This account has been deactivated. Please contact an administrator.", flash[:alert]
+    assert_not Session.exists?(user_id: @user.id)
+  end
+
+  test "an existing session stops working once the user is deactivated" do
+    @user.sessions.destroy_all # Clean up the fixture session so the count below is exact
+    sign_in @user
+    assert Session.exists?(user_id: @user.id)
+
+    @user.update_column(:active, false)
+
+    get root_url
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id), "stale session should be destroyed, not just skipped"
   end
 
   test "redirects when local login is disabled" do
@@ -95,6 +290,19 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
 
     post sessions_url, params: { email: super_admin.email, password: user_password_test }
+
+    assert_redirected_to root_path
+    assert Session.exists?(user_id: super_admin.id)
+  end
+
+  test "allows the super admin override for a user whose email row is still legacy plaintext" do
+    super_admin = users(:sure_support_staff)
+    email = store_legacy_plaintext_email(super_admin)
+
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+
+    post sessions_url, params: { email: email, password: user_password_test }
 
     assert_redirected_to root_path
     assert Session.exists?(user_id: super_admin.id)
@@ -156,6 +364,20 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil Session.find_by(id: session_record.id)
   end
 
+  test "rejects a deactivated MFA-enabled user before starting the MFA challenge" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    @user.update_column(:active, false)
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+
+    assert_response :unprocessable_entity
+    assert_equal "This account has been deactivated. Please contact an administrator.", flash[:alert]
+    assert_nil session[:mfa_user_id]
+    assert_not Session.exists?(user_id: @user.id)
+  end
+
   test "redirects to MFA verification when MFA enabled" do
     @user.setup_mfa!
     @user.enable_mfa!
@@ -186,6 +408,45 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert Session.exists?(user_id: @user.id)
+  end
+
+  test "rejects an SSO identity that an administrator permanently removed" do
+    oidc_identity = oidc_identities(:bob_google)
+    SsoIdentityBlock.block_all!(OidcIdentity.where(id: oidc_identity.id), identity_label: @user.email)
+    @user.sessions.destroy_all
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    assert_difference -> { SsoAuditLog.by_event("login_failed").count }, 1 do
+      get "/auth/openid_connect/callback"
+    end
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
+    assert_equal "removed_identity", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
+  end
+
+  test "rejects OIDC login for a deactivated user" do
+    oidc_identity = oidc_identities(:bob_google)
+    @user.sessions.destroy_all # Clear the fixture session so the later assertion is exact
+    @user.update_column(:active, false)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    get "/auth/openid_connect/callback"
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
   end
 
   test "redirects to MFA when user has MFA and uses OIDC" do
@@ -522,6 +783,115 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert first_token.revoked_at.present?, "Expected first token to be revoked"
   end
 
+  test "mobile SSO rejects a user deactivated between the initial check and token issuance" do
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-011",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    # Simulate deactivation landing after openid_connect's initial active?
+    # check but before handle_mobile_sso_callback actually mints a token —
+    # SsoAuditLog.log_login! runs in that window in the real flow, so hook
+    # the deactivation there.
+    SsoAuditLog.stubs(:log_login!).with do |**kwargs|
+      kwargs[:user].update_column(:active, false)
+      true
+    end
+
+    assert_no_difference [ "Doorkeeper::AccessToken.count", "MobileDevice.count" ] do
+      get "/auth/openid_connect/callback"
+    end
+
+    redirect_url = @response.redirect_url
+    params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
+    assert_equal "account_deactivated", params["error"]
+    assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
+  end
+
+  test "mobile SSO rejects a user purged between the initial check and token issuance" do
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-012",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    # Same window as the deactivation race above, but the row disappears
+    # entirely (async purge) instead of merely flipping active: false — the
+    # reload fast-path must treat RecordNotFound the same as inactive rather
+    # than letting it fall through to StoreLocation's generic 404.
+    SsoAuditLog.stubs(:log_login!).with do |**kwargs|
+      kwargs[:user].stubs(:reload).raises(ActiveRecord::RecordNotFound)
+      true
+    end
+
+    assert_no_difference [ "Doorkeeper::AccessToken.count", "MobileDevice.count" ] do
+      get "/auth/openid_connect/callback"
+    end
+
+    redirect_url = @response.redirect_url
+    params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
+    assert_equal "account_deactivated", params["error"]
+    assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
+  end
+
+  test "mobile SSO refuses to issue a token for a deactivated user" do
+    oidc_identity = oidc_identities(:bob_google)
+    @user.update_column(:active, false)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-010",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    assert_no_difference [ "Doorkeeper::AccessToken.count", "MobileDevice.count" ] do
+      get "/auth/openid_connect/callback"
+    end
+
+    redirect_url = @response.redirect_url
+    params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
+    assert_equal "account_deactivated", params["error"]
+    assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
+  end
+
   test "mobile SSO redirects MFA user with error" do
     @user.setup_mfa!
     @user.enable_mfa!
@@ -768,11 +1138,274 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     Rails.cache = original_cache
   end
 
+  test "desktop SSO exchange refuses a code minted before the user was removed" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    verifier = SecureRandom.hex(32)
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+    oidc_identity = oidc_identities(:bob_google)
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+    setup_omniauth_mock(provider: oidc_identity.provider, uid: oidc_identity.uid, email: @user.email, name: "Bob Dylan")
+
+    get "/auth/desktop/openid_connect", params: { code_challenge: challenge }
+    get "/auth/openid_connect/callback"
+    code = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)["code"]
+    assert code.present?
+
+    # The removal lands after the code was minted. Nothing revoked the session
+    # this exchange is about to create, because it does not exist yet.
+    oidc_identity.user.update_column(:active, false)
+
+    assert_no_difference -> { oidc_identity.user.sessions.count } do
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
+    end
+    assert_redirected_to new_session_path
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "desktop SSO exchange rejects a deactivated MFA-enabled user before starting the MFA challenge" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all # Clear the fixture session so the later assertion is exact
+
+    verifier = SecureRandom.hex(32)
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+    oidc_identity = oidc_identities(:bob_google)
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+    setup_omniauth_mock(provider: oidc_identity.provider, uid: oidc_identity.uid, email: @user.email, name: "Bob Dylan")
+
+    get "/auth/desktop/openid_connect", params: { code_challenge: challenge }
+    get "/auth/openid_connect/callback"
+    code = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)["code"]
+
+    @user.update_column(:active, false)
+
+    post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
+
+    assert_redirected_to new_session_path
+    assert_nil session[:mfa_user_id]
+    assert_not Session.exists?(user_id: @user.id)
+  ensure
+    Rails.cache = original_cache
+  end
+
   test "desktop_sso_start rejects a missing PKCE code_challenge" do
     Rails.configuration.x.auth.stubs(:sso_providers).returns([
       { name: "openid_connect", strategy: "openid_connect", label: "Google" }
     ])
     get "/auth/desktop/openid_connect"
     assert_redirected_to new_session_path
+  end
+
+  test "a session inactive past the timeout is rejected and destroyed" do
+    sign_in @user
+    session_record = Session.order(created_at: :desc).first
+    session_record.update_column(:updated_at, Session::INACTIVITY_TIMEOUT.ago - 1.day)
+
+    get root_url
+    assert_redirected_to new_session_url
+    assert_not Session.exists?(session_record.id)
+  end
+
+  test "an active session is touched at most once per touch interval" do
+    sign_in @user
+    session_record = Session.order(created_at: :desc).first
+    recent_activity = 5.minutes.ago
+    session_record.update_column(:updated_at, recent_activity)
+
+    get root_url
+    assert_response :success
+    session_record.reload
+    assert_in_delta recent_activity, session_record.updated_at, 10.seconds
+  end
+
+  # create_session_for refuses a deactivated user, so the OIDC callback cannot
+  # mint one either. Nothing covered that, and the identity record survives
+  # deactivation, so it is worth pinning down.
+  test "a deactivated user cannot sign in again through their SSO identity" do
+    oidc_identity = oidc_identities(:bob_google)
+    @user.sessions.destroy_all
+    @user.update_column(:active, false)
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    get "/auth/openid_connect/callback"
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
+  end
+
+  # `?return_to=` is written into the session by StoreLocation on any request,
+  # including unauthenticated ones, so it is a pre-auth value a real browser
+  # can actually carry into the sign-in POST. Writing to `session` directly
+  # from an integration test does NOT reach the next request, so a sentinel
+  # seeded that way would make these assertions vacuous.
+  test "signing in discards pre-auth session state so a fixated session cannot survive" do
+    get new_session_url(return_to: "/transactions")
+    assert_equal "/transactions", session[:return_to], "the sentinel must really be in the pre-auth session"
+
+    sign_in @user
+
+    assert_nil session[:return_to], "pre-auth session state must not survive sign-in"
+  end
+
+  # Both flags come from the framework: httponly is set where the cookie is
+  # written, and samesite from action_dispatch.cookies_same_site_protection,
+  # which also gets a `; secure` from ActionDispatch::SSL wherever force_ssl
+  # is on. Nothing in this app sets them per-cookie, so this guards against a
+  # config change quietly dropping them rather than against a regression here.
+  test "the session cookie is HttpOnly and SameSite=Lax" do
+    sign_in @user
+
+    # Set-Cookie is an array and Rails' own _sure_session cookie carries the
+    # same flags, so a regex over the joined header matches across cookie
+    # boundaries and passes even when session_token has neither. Isolate the
+    # one cookie under test.
+    session_cookie = Array(response.headers["Set-Cookie"])
+      .flat_map { |header| header.to_s.split("\n") }
+      .find { |cookie| cookie.start_with?("session_token=") }
+
+    assert session_cookie, "the sign-in response must set a session_token cookie"
+    assert_match(/;\s*httponly/i, session_cookie)
+    assert_match(/;\s*samesite=lax/i, session_cookie)
+  end
+
+  test "OIDC logout hints survive the session rotation, also after MFA" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    oidc_identity = oidc_identities(:bob_google)
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "id-token-for-rp-logout"
+    )
+
+    get "/auth/openid_connect/callback"
+    assert_redirected_to verify_mfa_path
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    post verify_mfa_path, params: { code: totp.now }
+    assert_redirected_to root_path
+
+    assert_equal "id-token-for-rp-logout", session[:id_token_hint]
+    assert_equal oidc_identity.provider, session[:sso_login_provider]
+    assert_nil session[:mfa_user_id]
+  end
+
+  test "signing in with a second provider does not keep the first provider's logout token" do
+    @user.sessions.destroy_all
+    first = oidc_identities(:bob_google)
+    second = @user.oidc_identities.create!(provider: "other_idp", uid: "other-idp-uid-1")
+
+    setup_omniauth_mock(
+      provider: first.provider,
+      uid: first.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "id-token-minted-by-the-first-provider"
+    )
+    get "/auth/openid_connect/callback"
+    assert_equal "id-token-minted-by-the-first-provider", session[:id_token_hint]
+
+    # The second provider issues no id_token. Carrying the first one over would
+    # hand its token to the second provider's end-session endpoint at logout.
+    setup_omniauth_mock(
+      provider: second.provider,
+      uid: second.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+    get "/auth/openid_connect/callback"
+
+    assert_equal second.provider, session[:sso_login_provider]
+    assert_nil session[:id_token_hint], "a stale hint must not be paired with a new provider"
+  end
+
+  # Seeding id_token_hint by assigning to `session` from the test would never
+  # reach the app. The OIDC callback is the only thing that really sets it, so
+  # this drives the real abandoned-OIDC flow: the user starts an SSO sign-in,
+  # is parked at the MFA prompt, gives up and signs in with their password.
+  test "a local sign-in does not inherit OIDC logout hints left by an abandoned SSO attempt" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    oidc_identity = oidc_identities(:bob_google)
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "id-token-from-the-abandoned-attempt"
+    )
+
+    get "/auth/openid_connect/callback"
+    assert_redirected_to verify_mfa_path
+    assert_equal "id-token-from-the-abandoned-attempt", session[:id_token_hint],
+      "the OIDC attempt must really leave its hints behind for this to test anything"
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    assert_redirected_to verify_mfa_path
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    post verify_mfa_path, params: { code: totp.now }
+    assert_redirected_to root_path
+
+    assert_nil session[:id_token_hint], "a local sign-in must not inherit SSO logout hints"
+    assert_nil session[:sso_login_provider]
+  end
+
+  # The end_session_endpoint comes out of the provider's discovery document, so
+  # the app does not choose it. Forwarding the ID token to an http:// endpoint
+  # would put the user's claims in a cleartext URL.
+  test "federated logout is skipped when the provider advertises a cleartext endpoint" do
+    oidc_identity = oidc_identities(:bob_google)
+    stub_provider(oidc_identity.provider)
+    stub_discovery("http://idp.example/logout")
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider, uid: oidc_identity.uid,
+      email: @user.email, name: "Bob Dylan", id_token: "an-id-token"
+    )
+    get "/auth/openid_connect/callback"
+
+    delete session_path(Session.order(:created_at).last)
+
+    assert_no_match(/an-id-token/, response.location.to_s, "the token must not travel over http")
+    assert_no_match(%r{^http://idp\.example}, response.location.to_s)
+  end
+
+  test "federated logout still runs for an https endpoint" do
+    oidc_identity = oidc_identities(:bob_google)
+    stub_provider(oidc_identity.provider)
+    stub_discovery("https://idp.example/logout")
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider, uid: oidc_identity.uid,
+      email: @user.email, name: "Bob Dylan", id_token: "an-id-token"
+    )
+    get "/auth/openid_connect/callback"
+
+    delete session_path(Session.order(:created_at).last)
+
+    assert_match(%r{^https://idp\.example/logout}, response.location.to_s)
+    assert_match(/an-id-token/, response.location.to_s)
   end
 end

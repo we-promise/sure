@@ -1,5 +1,5 @@
 class ProcessPdfJob < ApplicationJob
-  queue_as :medium_priority
+  queue_as :ai_low_priority
 
   discard_on(Provider::Error) do |job, err|
     Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}, error_class=#{err.class.name})")
@@ -66,6 +66,8 @@ class ProcessPdfJob < ApplicationJob
     end
 
     def upload_to_vector_store(pdf_import, document_type:)
+      return unless Ai.available?(:embed, family: pdf_import.family)
+
       file_content = pdf_import.pdf_file_content
 
       family_document = pdf_import.family.upload_document(

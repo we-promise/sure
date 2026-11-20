@@ -1,6 +1,9 @@
 ---
 zh-CN:
   budgets:
+    switcher:
+      aria_label: 切换预算
+      household: 家庭
     budget_donut:
       spent: 已花费
       new_budget: 新预算
@@ -35,6 +38,14 @@ zh-CN:
     name:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
+    available_cash:
+      heading: 手头现金
+      subtitle: 独立于上述计划之外，不属于计划的一部分。
+      available: 现金可用额
+      earmarked: 已专款划拨给目标
+      free: 真正可用额
+      goals_link: 查看目标
+      currency_warning: "%{currencies} 余额未包含在内，因为尚未提供转换为 %{currency} 的汇率。"
     show:
       categories:
         amount: 金额
@@ -64,17 +75,43 @@ zh-CN:
       no_source: 未找到可复制的上一个预算
       already_initialized: 此预算已设置过
   budget_categories:
+    bills_reserved: "%{amount} 已被账单预留"
+    bills_reserved_unconvertible:
+      one: 1 笔账单未预留，无可用汇率
+      other: "%{count} 笔账单未预留，无可用汇率"
     allocation_progress:
       budget_exceeded_html: '预算超出 <span class="text-red-500 privacy-sensitive">%{amount}</span>'
       left_to_allocate: 待分配
       over_set: 超过 100%
       percent_set: 已设置 %{percent}
+    budget_category:
+      rolled_over: "+%{amount} 已结转"
     budget_category_form:
       monthly_average: 月均 %{amount}
+      rollover_label: 结转
+      rollover_title: 将此分类未使用的资金结转到下个月
       shared_placeholder: 共享
       shared_title: 留空以共享父级预算
     confirm_button:
       confirm: 确认
+    move:
+      button_title: 从该分类调拨资金
+      cancel: 取消
+      dialog_title: 调拨资金
+      no_destination: 这是当前唯一可以调拨资金的信封——分类不能与其父级或子级分类相互调拨。
+      submit: 调拨
+      amount_label: 金额
+      available: "%{amount} 可用"
+      from_label: 调出
+      to_label: 调入
+      success: 资金已调拨。
+      errors:
+        different_budgets: 两个分类必须属于同一个预算。
+        insufficient_funds: 超过了该分类已分配的金额。
+        non_positive_amount: 请输入大于零的金额。
+        parent_child: 无法在分类与其子分类之间调拨资金——请直接调整子分类。
+        same_category: 请选择不同的分类以调入资金。
+        uncategorized: 未分类不是真正的信封，资金无法调入或调出。
     no_categories:
       oops: 哎呀！
       no_categories_message: 您还没有为交易创建或分配任何支出分类。
@@ -91,6 +128,7 @@ zh-CN:
       overspent: 超支
       left: 剩余
       budgeted: 预算
+      rolled_over: 已结转
       monthly_average_spending: 月均支出
       monthly_median_spending: 月度中位支出
       recent_transactions: 最近交易

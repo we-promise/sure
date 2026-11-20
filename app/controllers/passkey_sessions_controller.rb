@@ -59,7 +59,7 @@ class PasskeySessionsController < ApplicationController
       )
     end
 
-    complete_sign_in(user)
+    return render_invalid unless complete_sign_in(user)
 
     render json: { redirect_url: root_path }
   rescue WebAuthn::Error, ActionController::BadRequest, ActionController::ParameterMissing
@@ -81,7 +81,9 @@ class PasskeySessionsController < ApplicationController
       session.delete(:mfa_user_id)
 
       @session = create_session_for(user)
-      flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+      return false unless @session
+
+      true
     end
 
     def render_invalid

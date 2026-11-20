@@ -21,8 +21,6 @@ hu:
           trial_expiring_soon: "7 napon belül lejár"
           trial_trialing: "Próbaidőn"
           submit: "Szűrés"
-        summary:
-          trials_expiring_7_days: "A következő 7 napban lejáró próbaidők"
         table:
           user: "Felhasználó"
           trial_ends_at: "Próbaidő vége"

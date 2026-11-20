@@ -38,7 +38,7 @@ ca:
       set_up_accounts: Configura comptes
       setup_needed: Cal configuració
       setup_needed_description:
-        one: 1 compte importat d'Enable Banking necessita configuració
+        one: "%{count} compte importat d'Enable Banking necessita configuració"
         other: "%{count} comptes importats d'Enable Banking necessiten configuració"
       syncing: Sincronitzant...
       update: Actualitza

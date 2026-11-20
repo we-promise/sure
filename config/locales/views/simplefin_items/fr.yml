@@ -48,6 +48,11 @@ fr:
       step_3: Cliquez sur "Mettre à jour" pour restaurer l'accès
       title: Mettre à jour la connexion SimpleFIN
       update: Mise à jour
+    institution_summary:
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+      none: Aucune institution connectée
     link_existing_account:
       errors:
         different_provider: Ce compte est lié à un autre fournisseur. Détachez-le
@@ -61,6 +66,8 @@ fr:
       setup_token: Jeton de configuration
       setup_token_placeholder: collez votre jeton de configuration SimpleFIN
       title: Connecter SimpleFIN
+    rate_limited:
+      daily_refresh: Vous avez atteint la limite quotidienne d'actualisation de SimpleFIN. Réessayez après l'actualisation de la passerelle (jusqu'à 24 heures).
     reconciled_status:
       message:
         one: "%{count} transaction en attente en doublon réconciliée"
@@ -180,6 +187,17 @@ fr:
       message:
         one: "%{count} transaction en attente depuis plus de %{days} jours"
         other: "%{count} transactions en attente depuis plus de %{days} jours"
+    stale_sync:
+      last_successful: La dernière synchronisation réussie remonte à %{count} jours. Votre connexion SimpleFIN requiert peut-être votre attention.
+      no_transactions: Aucune nouvelle transaction depuis %{count} jours. Vérifiez dans votre tableau de bord SimpleFIN que vos connexions bancaires sont actives.
+    sync_status:
+      no_accounts: Aucun compte trouvé
+      partial_setup:
+        one: "%{linked} synchronisés, %{unlinked} à configurer"
+        other: "%{linked} synchronisés, %{unlinked} à configurer"
+      synced:
+        one: "%{count} compte synchronisé"
+        other: "%{count} comptes synchronisés"
     update:
       errors:
         blank_token: Veuillez entrer un jeton de configuration SimpleFIN.

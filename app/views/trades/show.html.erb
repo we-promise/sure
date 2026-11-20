@@ -26,7 +26,6 @@
               data: { controller: "auto-submit-form" } do |f| %>
           <%= f.date_field :date,
                 label: t(".date_label"),
-                max: Date.current,
                 disabled: @entry.linked?,
                 "data-auto-submit-form-target": "auto" %>
           <% if trade.qty.zero? %>
@@ -42,7 +41,7 @@
             <div class="flex items-center gap-2">
               <%= f.select :nature,
                             [[t(".buy"), "outflow"], [t(".sell"), "inflow"]],
-                            { container_class: "w-1/3", label: t(".type_label"), selected: @entry.amount.positive? ? "outflow" : "inflow" },
+                            { container_class: "w-1/3", label: t(".type_label"), selected: trade.buy? ? "outflow" : "inflow" },
                             { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? } %>
               <%= f.fields_for :entryable do |ef| %>
                 <%= ef.number_field :qty,
@@ -70,6 +69,20 @@
                     min: 0,
                     step: "any",
                     disabled: @entry.linked? %>
+            <% end %>
+          <% end %>
+        <% end %>
+        <% lot_choices = trade.lot_choices.includes(:entryable).to_a %>
+        <% if lot_choices.any? %>
+          <%= styled_form_with model: @entry,
+                url: trade_path(@entry),
+                class: "mt-2",
+                data: { controller: "auto-submit-form" } do |f| %>
+            <%= f.fields_for :entryable do |ef| %>
+              <%= ef.select :lot_source_entry_id,
+                    lot_choices.map { |lot| [ t(".lot_option", date: l(lot.date, format: :long), qty: format_quantity(lot.trade.qty, exact: true), price: lot.trade.price_money.format), lot.id ] },
+                    { label: t(".lot_label"), include_blank: t(".lot_oldest_first") },
+                    { "data-auto-submit-form-target": "auto" } %>
             <% end %>
           <% end %>
         <% end %>

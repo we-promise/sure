@@ -2,6 +2,8 @@
 en:
   models:
     coinstats_item:
+      wallet_linker:
+        no_tokens_found: No tokens found for wallet
       syncer:
         importing_wallets: Importing crypto accounts from CoinStats...
         checking_configuration: Checking CoinStats account configuration...

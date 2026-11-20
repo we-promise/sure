@@ -21,8 +21,6 @@ es:
           trial_expiring_soon: Caduca en 7 días
           trial_trialing: En periodo de prueba
           submit: Filtrar
-        summary:
-          trials_expiring_7_days: Pruebas que caducan en los próximos 7 días
         table:
           user: Usuario
           trial_ends_at: La prueba finaliza
@@ -32,12 +30,44 @@ es:
           session_count: Número de sesiones
           never: Nunca
           role: Rol
+          family: Familia / grupo
+          keep_current_family: Mantener la familia/grupo actual
+          create_new_family_option: "+ Crear nueva familia/grupo"
+          new_family_name: Nombre de la nueva familia/grupo
+          new_family_name_placeholder: Introduce un nombre para crear una nueva familia/grupo
+          new_family_moniker: Tipo de la nueva familia/grupo
+          set_password: Establecer nueva contraseña
+          password_placeholder: Déjalo en blanco para mantener la actual
+          actions: Acciones
+        family_monikers:
+          family: Familia
+          group: Grupo
+        actions:
+          manage_user: Gestionar usuario
+          update: Actualizar usuario
+          delete_user: Eliminar usuario
+          self_edit_warning: Si cambias tu propio rol, cambiarán tus privilegios de administración.
+          self_update_confirm: "¿Seguro que quieres actualizar el rol o la familia de tu propia cuenta?"
+          last_super_admin_role_locked: No puedes cambiar el rol porque eres el último superadministrador del sistema.
+        delete_confirm: "¿Seguro que quieres eliminar este usuario? Esta acción no se puede deshacer."
+        delete_confirm_last_user: "¿Seguro que quieres eliminar este usuario? Es el último usuario de su familia/grupo, así que también se eliminarán la familia/grupo y todos sus datos. Esta acción no se puede deshacer."
+        remove: Eliminar usuario
         role_descriptions_title: Descripción de los roles
+        removed_sso_identities:
+          title: Identidades de SSO eliminadas
+          description: Estas identidades no pueden crear ni volver a conectar una cuenta. Vuelve a permitir una identidad solo si se eliminó por error.
+          allow_again: Volver a permitir
+          confirm: "¿Permitir de nuevo que %{email} inicie sesión o cree una cuenta mediante SSO?"
         roles:
           guest: Invitado
           member: Miembro
           admin: Administrador
           super_admin: Superadministrador
+        auth_types:
+          sso: SSO
+          local: Local
+          local_and_sso: Local + SSO
+          sso_provider_tooltip: 'Proveedor de SSO: %{providers}'
         role_descriptions:
           guest: Experiencia centrada en el asistente con permisos restringidos intencionadamente para flujos de introducción.
           member: Acceso de usuario básico. Pueden gestionar sus propias cuentas, transacciones y ajustes.
@@ -48,6 +78,42 @@ es:
           expires: Caduca el %{date}
           delete: Eliminar
           delete_all: Eliminar todas
+        unused_families:
+          title: Familias / grupos sin usar
+          family_id: 'ID de familia: %{id}'
+          delete: Eliminar familia sin usar
+          delete_confirm: "¿Seguro que quieres eliminar esta familia/grupo sin usar? Esta acción no se puede deshacer."
+          empty: No hay familias/grupos sin usar.
       update:
+        success_role: Rol del usuario actualizado correctamente.
+        success_password: Contraseña del usuario actualizada correctamente.
+        success_role_and_password: Rol y contraseña del usuario actualizados correctamente.
+        success_family: Pertenencia del usuario a la familia/grupo actualizada correctamente.
         success: Rol de usuario actualizado correctamente.
-        failure: Error al actualizar el rol de usuario.
+        failure: No se han podido actualizar los datos del usuario (rol o pertenencia a la familia/grupo).
+        family_required: Selecciona una familia/grupo existente o introduce un nombre para crear una nueva.
+        password_and_family_conflict: No se pueden actualizar a la vez la contraseña y la pertenencia a la familia/grupo.
+        password_disabled: No se puede establecer una contraseña porque los usuarios solo pueden iniciar sesión con SSO.
+        password_too_short: La contraseña debe tener al menos 8 caracteres.
+        password_missing_case: La contraseña debe incluir mayúsculas y minúsculas.
+        password_missing_number: La contraseña debe incluir al menos un número.
+        password_missing_special: La contraseña debe incluir al menos un carácter especial.
+        last_super_admin_error: No se puede degradar al último superadministrador del sistema.
+      destroy:
+        success: Acceso del usuario revocado y eliminación definitiva programada.
+        failure: No se ha podido eliminar al usuario.
+        cannot_remove_self: No puedes eliminar tu propia cuenta desde aquí.
+        cannot_remove_last_super_admin: No puedes eliminar al último superadministrador activo.
+        confirmation_mismatch: El correo electrónico no coincide. No se ha eliminado al usuario.
+      deletion:
+        title: Eliminar usuario definitivamente
+        warning: Esto revoca el acceso de inmediato y programa la eliminación definitiva del usuario y de sus datos. No se puede deshacer.
+        instruction: Escribe %{email} para confirmar.
+        email_label: Correo electrónico del usuario
+        cancel: Cancelar
+        submit: Eliminar usuario definitivamente
+    families:
+      destroy:
+        family_has_active_subscription: La familia/grupo tiene una suscripción activa y no se puede eliminar hasta que se cancele.
+        family_has_users: La familia/grupo todavía tiene usuarios y no se puede eliminar.
+        success: Familia/grupo eliminada correctamente.

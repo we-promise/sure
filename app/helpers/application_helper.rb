@@ -1,6 +1,12 @@
 module ApplicationHelper
   include Pagy::Frontend
 
+  # Whether an AI feature (a key in Ai::Routes::MATRIX) can run for the current family and user,
+  # so a view shows its AI affordance only then.
+  def ai_feature_available?(feature)
+    Ai.available?(feature, family: Current.family, user: Current.user)
+  end
+
   def product_name
     Rails.configuration.x.product_name
   end
@@ -12,6 +18,14 @@ module ApplicationHelper
   def styled_form_with(**options, &block)
     options[:builder] = StyledFormBuilder
     form_with(**options, &block)
+  end
+
+  # Masks a sensitive identifier (IBAN, account number, ...) down to its last
+  # 4 characters for display, e.g. "•••1234". Returns nil for blank input.
+  def mask_last4(value)
+    return nil if value.blank?
+
+    "•••#{value.to_s.last(4)}"
   end
 
   # Locale-aware ordinal label for integers.
@@ -55,6 +69,11 @@ module ApplicationHelper
     end
   end
 
+  # The chevron for a DS::Disclosure summary_content slot; it turns as the disclosure opens.
+  def disclosure_chevron
+    icon "chevron-right", size: "sm", class: "[details[open]>summary_&]:rotate-90 motion-safe:transition-transform motion-safe:duration-150"
+  end
+
   # Convert alpha (0-1) to 8-digit hex (00-FF)
   def hex_with_alpha(hex, alpha)
     alpha_hex = (alpha * 255).round.to_s(16).rjust(2, "0")
@@ -87,6 +106,25 @@ module ApplicationHelper
     item.merge(preview: true)
   end
 
+  # Bills is only meaningful while recurring detection is on, since a family that has
+  # turned it off has nothing to list. Returns nil so the entry drops out of the
+  # `Array#compact` nav list entirely rather than leading to an empty page. The
+  # subsystem also ships as a preview feature, so the entry is preview-gated on
+  # top: hidden without the flag, violet-dotted with it.
+  def bills_nav_item
+    return nil if Current.family.nil? || Current.family.recurring_transactions_disabled?
+
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.bills"),
+        path: bills_path,
+        icon: "receipt",
+        icon_custom: false,
+        active: page_active?(bills_path)
+      }
+    )
+  end
+
   # Budgets and Goals share one nav slot. Preview users get the "Plan" hub
   # entry fronting both (it stays lit while browsing either subpage, since
   # page_active? is a path-prefix match and /budgets · /goals don't share
@@ -112,6 +150,24 @@ module ApplicationHelper
         active: page_active?(budgets_path)
       }
     end
+  end
+
+  # The family-wide investment hub. Preview-gated (hidden entirely without the
+  # flag) and desktop-only: the bottom bar already carries five entries at the
+  # width it has, and the hub is a wide, multi-section page. `desktop_only`
+  # is filtered out of the mobile bar in the layout, the mirror of the
+  # `mobile_only` flag the Assistant entry uses.
+  def portfolio_nav_item
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.portfolio"),
+        path: portfolio_path,
+        icon: "briefcase",
+        icon_custom: false,
+        active: page_active?(portfolio_path),
+        desktop_only: true
+      }
+    )
   end
 
   # Wrapper around I18n.l to support custom date formats
@@ -150,6 +206,7 @@ module ApplicationHelper
     Money.new(number_or_money).format(options)
   end
 
+  # Format each native-currency total independently, preserving order and transfer exclusions.
   def totals_by_currency(collection:, money_method:, separator: " | ", negate: false)
     collection.group_by(&:currency)
               .transform_values { |item| calculate_total(item, money_method, negate) }
@@ -182,7 +239,7 @@ module ApplicationHelper
   end
 
   def assistant_icon
-    type = ENV["ASSISTANT_TYPE"].presence || Current.family&.assistant_type.presence || "builtin"
+    type = Current.family&.effective_assistant_type || "builtin"
     type == "external" ? "claw" : "ai"
   end
 
@@ -196,8 +253,14 @@ module ApplicationHelper
   def markdown(text)
     return "" if text.blank?
 
+    # filter_html drops raw HTML present in the input. It is not redundant with
+    # the sanitize below: `div`, `span`, `class` and `style` have to stay on
+    # that allow-list for footnotes, code blocks and table alignment, so
+    # without this a chat message could ship `<div class="fixed inset-0">` and
+    # cover the app.
     renderer = Redcarpet::Render::HTML.new(
       hard_wrap: true,
+      filter_html: true,
       link_attributes: { target: "_blank", rel: "noopener noreferrer" }
     )
 
@@ -214,7 +277,16 @@ module ApplicationHelper
       footnotes: true
     )
 
-    markdown.render(text).html_safe
+    # The second layer, for the markup the renderer itself produces: a markdown
+    # link carries whatever scheme the author wrote, so `[x](javascript:...)`
+    # survives filter_html and only the allow-list drops it (CWE-79). Every tag
+    # the extensions above generate has to be on it: `u` (underline), `q`
+    # (quote), `mark`, `del`, `sup`, and `style` for table column alignment.
+    sanitize(
+      markdown.render(text),
+      tags: %w[p br strong em u q a img ul ol li h1 h2 h3 h4 h5 h6 pre code blockquote table thead tbody tr th td span div sup sub del mark ins hr dl dt dd],
+      attributes: %w[href target rel class id src alt title style]
+    )
   end
 
   # Generate the callback URL for Enable Banking OAuth (used in views and controller).
@@ -226,19 +298,28 @@ module ApplicationHelper
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
   end
 
-  # Formats quantity with adaptive precision based on the value size.
+  # The redirect URI registered on the TrueLayer app. TRUELAYER_REDIRECT_URI
+  # overrides it for instances behind a proxy that doesn't forward the
+  # public host; it must exactly match one registered on the TrueLayer app.
+  def truelayer_callback_url
+    ENV["TRUELAYER_REDIRECT_URI"].presence || callback_truelayer_items_url
+  end
+
+  # Formats a holding quantity with adaptive precision based on the value size.
   # Shows more decimal places for small quantities (common with crypto).
   #
   # @param qty [Numeric] The quantity to format
-  # @param max_precision [Integer] Maximum precision for very small numbers
+  # @param exact [Boolean] Show the full stored precision, without rounding
   # @return [String] Formatted quantity with appropriate precision
-  def format_quantity(qty)
+  def format_quantity(qty, exact: false)
     return "0" if qty.nil? || qty.zero?
 
     abs_qty = qty.abs
 
-    precision = if abs_qty >= 1
-      1     # "10.5"
+    precision = if exact
+      18    # Preserve the full stored precision for crypto quantities
+    elsif abs_qty >= 1
+      1     # "10.4"
     elsif abs_qty >= 0.01
       2     # "0.52"
     elsif abs_qty >= 0.0001
@@ -266,6 +347,7 @@ module ApplicationHelper
       normalized.downcase
     end
 
+    # Exclude transfers while preserving the original group currency even when its total is zero.
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries
       # Only Entry objects have entryable transactions, Account objects don't
@@ -274,7 +356,8 @@ module ApplicationHelper
         i.entryable.is_a?(Transaction) &&
         i.entryable.transfer?
       end
-      total = items.sum(&money_method)
+      # Keep the group's currency when every entry is excluded from the total.
+      total = items.sum(Money.new(0, item.first.currency), &money_method)
       negate ? -total : total
     end
 end

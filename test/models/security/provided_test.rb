@@ -5,6 +5,7 @@ class Security::ProvidedTest < ActiveSupport::TestCase
 
   setup do
     @security = securities(:aapl)
+    Security.instance_variable_set(:@logged_keyless_substitutions, nil)
   end
 
   # --- search_provider ---
@@ -33,6 +34,7 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     )
 
     Security.stubs(:providers).returns([ provider_a, provider_b ])
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data", "yahoo_finance" ])
 
     results = Security.search_provider("AAPL")
 
@@ -125,6 +127,34 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal "GOOG", results.first.ticker
   end
 
+  test "search_provider invokes technical_failure for a provider that errors" do
+    bad_provider = mock("bad_provider")
+    bad_provider.stubs(:class).returns(Provider::YahooFinance)
+    bad_provider.expects(:search_securities).with("XMAW").raises(StandardError, "rate limited")
+
+    Security.stubs(:providers).returns([ bad_provider ])
+
+    failed_providers = []
+    results = Security.search_provider("XMAW", technical_failure: ->(provider) { failed_providers << provider })
+
+    assert_equal [], results
+    assert_equal [ bad_provider ], failed_providers
+  end
+
+  test "search_provider does not invoke technical_failure when a provider genuinely finds nothing" do
+    provider = mock("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
+    provider.expects(:search_securities).with("NOPE").returns(provider_success_response([]))
+
+    Security.stubs(:providers).returns([ provider ])
+
+    failure_called = false
+    results = Security.search_provider("NOPE", technical_failure: ->(_provider) { failure_called = true })
+
+    assert_equal [], results
+    refute failure_called
+  end
+
   # --- price_data_provider ---
 
   test "price_data_provider returns assigned provider" do
@@ -177,6 +207,49 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal "twelve_data", entry.provider_key
   end
 
+  # --- find_or_fetch_price ---
+
+  test "find_or_fetch_price logs a debug entry when the provider fetch fails" do
+    provider = mock("provider")
+    provider.stubs(:fetch_security_price).returns(
+      provider_error_response(Provider::Error.new("the server responded with status 404"))
+    )
+    @security.stubs(:price_data_provider).returns(provider)
+
+    result = nil
+    assert_difference "DebugLogEntry.count", 1 do
+      result = @security.find_or_fetch_price(date: 5.days.ago.to_date)
+    end
+
+    assert_nil result
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "security_price_fetch", entry.category
+    assert_equal "warn", entry.level
+    assert_equal @security.id, entry.metadata["security_id"]
+    assert_equal "the server responded with status 404", entry.metadata["provider_error"]
+  end
+
+  test "find_or_fetch_price only logs once per security per day (deduped)" do
+    # Test env runs with a null cache store, which would make the dedupe a
+    # no-op and let this test pass vacuously — swap in a real one just for
+    # this test so the dedupe logic is actually exercised.
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    provider = mock("provider")
+    provider.stubs(:fetch_security_price).returns(
+      provider_error_response(Provider::Error.new("boom"))
+    ).twice
+    @security.stubs(:price_data_provider).returns(provider)
+
+    assert_difference "DebugLogEntry.count", 1 do
+      @security.find_or_fetch_price(date: 5.days.ago.to_date)
+      @security.find_or_fetch_price(date: 6.days.ago.to_date)
+    end
+  ensure
+    Rails.cache = original_cache
+  end
+
   # --- provider_status ---
 
   test "provider_status returns provider_unavailable when assigned provider disabled" do
@@ -196,6 +269,165 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal :ok, @security.provider_status
   end
 
+  # --- keyless fallback ---
+
+  test "providers falls back to Yahoo Finance when no enabled provider can be built" do
+    yahoo = stub_yahoo_finance
+    Rails.logger.stubs(:info)
+    Rails.logger.expects(:info).with(regexp_matches(/twelve_data can't be built; using yahoo_finance/)).once
+
+    without_securities_keys([ "twelve_data" ]) do
+      assert_equal [ yahoo ], Security.providers
+    end
+  end
+
+  test "no fallback when a Twelve Data key is present" do
+    Provider::Registry.expects(:yahoo_finance).never
+    Rails.logger.stubs(:info)
+    Rails.logger.expects(:info).with(regexp_matches(/can't be built/)).never
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+
+    with_env_overrides("TWELVE_DATA_API_KEY" => "test-key") do
+      assert_equal [ Provider::TwelveData ], Security.providers.map(&:class)
+    end
+  end
+
+  test "the substitute keeps the default's position" do
+    yahoo = stub_yahoo_finance
+
+    without_securities_keys([ "twelve_data", "binance_public" ]) do
+      providers = Security.providers
+
+      assert_equal yahoo, providers.first
+      assert_equal [ Provider::YahooFinance, Provider::BinancePublic ], providers.map(&:class)
+    end
+  end
+
+  test "only one substitute" do
+    yahoo = stub_yahoo_finance
+
+    without_securities_keys([ "twelve_data", "tiingo" ]) do
+      assert_equal [ yahoo ], Security.providers
+    end
+  end
+
+  test "no substitute when the unbuildable provider is not first" do
+    Provider::Registry.expects(:yahoo_finance).never
+    Rails.logger.stubs(:info)
+    Rails.logger.expects(:info).with(regexp_matches(/can't be built/)).never
+
+    without_securities_keys([ "mfapi", "twelve_data" ]) do
+      assert_equal [ Provider::Mfapi ], Security.providers.map(&:class)
+    end
+  end
+
+  test "the substitution is logged once per process" do
+    stub_yahoo_finance
+    messages = []
+    Rails.logger.stubs(:info).with { |message| messages << message }
+
+    without_securities_keys([ "twelve_data" ]) do
+      3.times { Security.providers }
+    end
+
+    assert_equal 1, messages.grep(/twelve_data can't be built/).size
+  end
+
+  test "no substitute when Yahoo is explicitly enabled" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([ search_result("AAPL") ]))
+
+    without_securities_keys([ "twelve_data", "yahoo_finance" ]) do
+      assert_equal [ yahoo ], Security.providers
+      assert_equal [ "yahoo_finance" ], Security.search_provider("AAPL").map(&:price_provider)
+    end
+  end
+
+  test "no fallback when the enabled list is explicitly empty" do
+    Provider::Registry.expects(:yahoo_finance).never
+
+    without_securities_keys([]) do
+      assert_equal [], Security.providers
+    end
+  end
+
+  test "search under the fallback stamps no price_provider" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([ search_result("AAPL") ]))
+
+    without_securities_keys([ "twelve_data" ]) do
+      results = Security.search_provider("AAPL")
+
+      assert_equal [ "AAPL" ], results.map(&:ticker)
+      assert_nil results.first.price_provider
+      option = results.first.to_combobox_option
+      assert_equal "AAPL|XNAS|", option.id
+    end
+  end
+
+  test "search under the fallback stores a Yahoo-suffixed listing by its bare ticker" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([
+      search_result("SAP.DE", mic: "XETR", country_code: "DE", currency: "EUR"),
+      search_result("BRK.B", mic: "XNYS")
+    ]))
+
+    without_securities_keys([ "twelve_data" ]) do
+      results = Security.search_provider("SAP").to_h { |s| [ s.exchange_operating_mic, s.ticker ] }
+
+      assert_equal({ "XETR" => "SAP", "XNYS" => "BRK.B" }, results)
+    end
+  end
+
+  test "an explicitly enabled Yahoo keeps its suffixed ticker" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([
+      search_result("SAP.DE", mic: "XETR", country_code: "DE", currency: "EUR")
+    ]))
+
+    without_securities_keys([ "twelve_data", "yahoo_finance" ]) do
+      assert_equal [ "SAP.DE" ], Security.search_provider("SAP").map(&:ticker)
+    end
+  end
+
+  test "a keyless provider beside the substitute keeps its stamp" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([ search_result("AAPL") ]))
+    mfapi = mock("mfapi")
+    mfapi.stubs(:class).returns(Provider::Mfapi)
+    mfapi.stubs(:search_securities).returns(provider_success_response([ search_result("AAPLMF") ]))
+    Provider::Registry.stubs(:mfapi).returns(mfapi)
+
+    without_securities_keys([ "twelve_data", "mfapi" ]) do
+      assert_equal [ yahoo, mfapi ], Security.providers
+
+      stamps = Security.search_provider("AAPL").to_h { |s| [ s.ticker, s.price_provider ] }
+      assert_equal({ "AAPL" => nil, "AAPLMF" => "mfapi" }, stamps)
+    end
+  end
+
+  test "an assigned twelve_data security stays unavailable under the fallback" do
+    stub_yahoo_finance
+    @security.update!(price_provider: "twelve_data")
+
+    without_securities_keys([ "twelve_data" ]) do
+      assert_nil @security.price_data_provider
+      assert_equal :provider_unavailable, @security.provider_status
+    end
+  end
+
+  test "the setting and configuration health are unchanged under the fallback" do
+    yahoo = stub_yahoo_finance
+    Setting.securities_providers = "twelve_data"
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+
+    with_env_overrides("TWELVE_DATA_API_KEY" => nil, "SECURITIES_PROVIDERS" => nil, "SECURITIES_PROVIDER" => nil) do
+      assert_equal [ yahoo ], Security.providers
+      assert_equal [ "twelve_data" ], Setting.enabled_securities_providers
+      assert_equal :not_configured, ConfigurationHealth.new.securities.status
+    end
+  end
+
   # --- rank_search_results ---
 
   # Helper to build unsaved Security objects for ranking tests
@@ -210,6 +442,27 @@ class Security::ProvidedTest < ActiveSupport::TestCase
 
   def rank(results, query, country_code = nil)
     Security.send(:rank_search_results, results, query, country_code)
+  end
+
+  def stub_yahoo_finance
+    yahoo = mock("yahoo_finance")
+    yahoo.stubs(:class).returns(Provider::YahooFinance)
+    Provider::Registry.stubs(:yahoo_finance).returns(yahoo)
+    yahoo
+  end
+
+  def without_securities_keys(enabled, &block)
+    Setting.stubs(:enabled_securities_providers).returns(enabled)
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+    Setting.stubs(:tiingo_api_key).returns(nil)
+    with_env_overrides("TWELVE_DATA_API_KEY" => nil, "TIINGO_API_KEY" => nil, &block)
+  end
+
+  def search_result(symbol, mic: "XNAS", country_code: "US", currency: "USD")
+    Provider::SecurityConcept::Security.new(
+      symbol: symbol, name: symbol, logo_url: nil,
+      exchange_operating_mic: mic, country_code: country_code, currency: currency
+    )
   end
 
   test "ranking: AAPL exact match ranks above AAPL-prefixed and unrelated" do
@@ -315,5 +568,65 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     # "Tesla Inc" contains "TESLA" → tier 2, US preferred
     assert_equal "TSLA", ranked[0].ticker
     assert_equal "US", ranked[0].country_code, "US Tesla should rank first for US user"
+  end
+
+  test "ranking: a valid ISIN query ranks results carrying that ISIN first" do
+    other = build_result(ticker: "SGLDX", name: "Other gold fund", country_code: "GB")
+    match = build_result(ticker: "SGLD", name: "Invesco Physical Gold", country_code: "GB", exchange_operating_mic: "XLON")
+    match.search_isin = "IE00B579F325"
+    other_isin = build_result(ticker: "IE00B579F325", name: "Ticker equals query", country_code: "US")
+    other_isin.search_isin = "IE00B4ND3602"
+
+    ranked = rank([ other, other_isin, match ], "ie00b579f325", "US")
+
+    assert_equal "SGLD", ranked.first.ticker
+  end
+
+  test "ranking: an ISIN-shaped query with a bad check digit is not treated as an ISIN" do
+    wrong = build_result(ticker: "AAA", name: "Wrong")
+    wrong.search_isin = "IE00B579F326"
+    exact_ticker = build_result(ticker: "IE00B579F326", name: "Ticker match")
+
+    ranked = rank([ wrong, exact_ticker ], "IE00B579F326")
+
+    assert_equal "IE00B579F326", ranked.first.ticker
+  end
+
+  test "ranking: results without an ISIN are unaffected by an ISIN query" do
+    a = build_result(ticker: "ZZZ", name: "Zed")
+    b = build_result(ticker: "AAA", name: "Aye")
+
+    assert_equal %w[AAA ZZZ], rank([ a, b ], "IE00B579F325").map(&:ticker)
+  end
+
+  test "search_provider carries the provider ISIN through and tolerates providers without one" do
+    with_isin = mock("with_isin")
+    without_isin = mock("without_isin")
+    with_isin.stubs(:class).returns(Provider::Eodhd)
+    without_isin.stubs(:class).returns(Provider::YahooFinance)
+
+    with_isin.expects(:search_securities).with("IE00B579F325").returns(provider_success_response([
+      Provider::SecurityConcept::Security.new(
+        symbol: "SGLD", name: "Invesco Physical Gold", logo_url: nil,
+        exchange_operating_mic: "XLON", country_code: "GB", currency: "GBP", isin: "IE00B579F325"
+      )
+    ]))
+    without_isin.expects(:search_securities).with("IE00B579F325").returns(provider_success_response([
+      Provider::SecurityConcept::Security.new(
+        symbol: "IE00B579F325.SG", name: "Invesco Physical Gold", logo_url: nil,
+        exchange_operating_mic: "XSTU", country_code: "DE"
+      )
+    ]))
+
+    Security.stubs(:providers).returns([ without_isin, with_isin ])
+    # Yahoo is listed because it is enabled, not standing in for a keyless
+    # provider, so its ticker keeps the exchange suffix.
+    Setting.stubs(:enabled_securities_providers).returns([ "yahoo_finance", "eodhd" ])
+
+    results = Security.search_provider("IE00B579F325")
+
+    assert_equal [ "SGLD", "IE00B579F325.SG" ], results.map(&:ticker)
+    assert_equal "IE00B579F325", results.first.to_combobox_option.isin
+    assert_nil results.last.to_combobox_option.isin
   end
 end

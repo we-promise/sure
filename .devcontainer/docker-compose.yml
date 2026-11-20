@@ -54,7 +54,12 @@ services:
     restart: unless-stopped
   
   db:
-    image: postgres:16
+    # pgvector build, as docs/hosting/ai.md prescribes for the pgvector
+    # provider ("instead of `postgres:16` (drop-in replacement)"). Plain
+    # postgres:16 has no `vector` extension, so VectorStore::Pgvector
+    # .available? returns false and Imports -> New renders no upload option at
+    # all -- document and PDF import cannot be exercised in the devcontainer.
+    image: pgvector/pgvector:pg16-trixie
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:

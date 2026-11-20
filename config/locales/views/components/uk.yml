@@ -10,8 +10,8 @@ uk:
         labels:
           adjustments: "Коригування"
           buys: "Покупки"
-          change_in_brokerage_cash: "Зміна готівки в брокерському рахунку"
-          change_in_holdings_market: "Зміна в активах (ринкова цінова активність)"
+          change_in_brokerage_cash: "Зміна вільних коштів на брокерському рахунку"
+          change_in_holdings_market: "Зміна вартості активів (рух ринкових цін)"
           change_in_holdings_trades: "Зміна в активах (покупки/продажі)"
           charges: "Списання"
           end_balance: "Кінцевий баланс"
@@ -33,7 +33,7 @@ uk:
           adjustments: "Ручні звірки або інші коригування"
           adjustments_asset: "Ручні коригування вартості або оцінки"
           buys: "Покупки криптовалюти протягом дня"
-          change_in_brokerage_cash: "Чиста зміна готівки від депозитів, зняття та торгів"
+          change_in_brokerage_cash: "Чиста зміна коштів унаслідок поповнень, зняття та угод"
           change_in_holdings_market: "Зміна вартості активів через рух ринкових цін"
           change_in_holdings_trades: "Вплив на активи від купівлі та продажу цінних паперів"
           charges: "Нові списання, зроблені протягом дня"
@@ -63,17 +63,19 @@ uk:
         no_data_available: "Дані недоступні"
         title:
           balance: "Баланс"
-          cash_value: "Готівкова вартість"
+          cash_value: "Вільні кошти"
           debt_balance: "Борговий баланс"
           estimated_property_value: "Оціночна вартість нерухомості"
           estimated_vehicle_value: "Оціночна вартість транспортного засобу"
           holdings_value: "Вартість активів"
           remaining_principal_balance: "Залишок основної суми боргу"
           total_account_value: "Загальна вартість рахунку"
+          total_gains: Загальний прибуток
         views:
-          cash: "Готівка"
+          cash: "Грошові кошти"
           holdings: "Активи"
           total_value: "Загальна вартість"
+          gains: Прибуток / ROI
         vs_available_history: "проти доступної історії"
       activity_date:
         balance_tooltip: "Баланс на кінець дня, після всіх транзакцій та коригувань"
@@ -88,7 +90,7 @@ uk:
         destructive: "Помилка"
     pill:
       aria_label: "%{label}"
-      default_label: "Попередній перегляд"
+      default_label: "Бета"
     dialog:
       close: "Закрити"
     popover:
@@ -97,6 +99,9 @@ uk:
       trigger_label: "Більше інформації"
     link:
       opens_in_new_tab: "(відкриється в новій вкладці)"
+    icon_picker:
+      no_matching_icons: Немає відповідних іконок
+      search_placeholder: Пошук іконок...
   provider_sync_summary:
     title: "Підсумок синхронізації"
     last_sync: "Остання синхронізація: %{time_ago} тому"
@@ -108,7 +113,7 @@ uk:
       institutions: "Установи: %{count}"
     transactions:
       title: "Транзакції"
-      seen: "Переглянуто: %{count}"
+      seen: "Отримано: %{count}"
       imported: "Імпортовано: %{count}"
       updated: "Оновлено: %{count}"
       skipped: "Пропущено: %{count}"
@@ -116,6 +121,8 @@ uk:
       protected:
         one: "%{count} запис захищено (не перезаписано)"
         other: "%{count} записів захищено (не перезаписано)"
+        few: '%{count} записи захищено (не перезаписано)'
+        many: '%{count} записів захищено (не перезаписано)'
       view_protected: "Переглянути захищені записи"
     skip_reasons:
       excluded: "Виключено"
@@ -132,7 +139,7 @@ uk:
       skipped: "Пропущено: %{count}"
       fetching: "Отримання активності з брокерського рахунку..."
     health:
-      title: "Здоров'я"
+      title: "Стан"
       view_error_details: "Переглянути деталі помилки"
       rate_limited: "Обмеження швидкості %{time_ago}"
       recently: "нещодавно"
@@ -140,25 +147,37 @@ uk:
       pending_reconciled:
         one: "%{count} дублікат незавершеної транзакції звірено"
         other: "%{count} дублікатів незавершених транзакцій звірено"
+        few: '%{count} дублікати незавершених транзакцій звірено'
+        many: '%{count} дублікатів незавершених транзакцій звірено'
       view_reconciled: "Переглянути звірені транзакції"
       duplicate_suggestions:
         one: "%{count} можливий дублікат потребує перевірки"
         other: "%{count} можливих дублікатів потребують перевірки"
+        few: '%{count} можливі дублікати потребують перевірки'
+        many: '%{count} можливих дублікатів потребують перевірки'
       view_duplicate_suggestions: "Переглянути запропоновані дублікати"
       stale_pending:
         one: "%{count} застаріла незавершена транзакція (виключено з бюджетів)"
         other: "%{count} застарілих незавершених транзакцій (виключено з бюджетів)"
+        few: '%{count} застарілі незавершені транзакції (виключено з бюджетів)'
+        many: '%{count} застарілих незавершених транзакцій (виключено з бюджетів)'
       view_stale_pending: "Переглянути зачеплені рахунки"
       stale_pending_count:
         one: "%{count} транзакція"
         other: "%{count} транзакцій"
+        few: '%{count} транзакції'
+        many: '%{count} транзакцій'
       stale_unmatched:
         one: "%{count} незавершена транзакція потребує ручної перевірки"
         other: "%{count} незавершених транзакцій потребують ручної перевірки"
+        few: '%{count} незавершені транзакції потребують ручної перевірки'
+        many: '%{count} незавершених транзакцій потребують ручної перевірки'
       view_stale_unmatched: "Переглянути транзакції, що потребують перевірки"
       stale_unmatched_count:
         one: "%{count} транзакція"
         other: "%{count} транзакцій"
+        few: '%{count} транзакції'
+        many: '%{count} транзакцій'
       data_warnings: "Попередження щодо даних: %{count}"
       notices: "Повідомлення: %{count}"
       view_data_quality: "Переглянути деталі якості даних"

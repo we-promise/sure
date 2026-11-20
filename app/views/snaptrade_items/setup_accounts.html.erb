@@ -78,13 +78,13 @@
                 accountable_type: params[:accountable_type]
               )
             else
-              oauth_authorize_snaptrade_items_path(
+              snaptrade_authorize_path(
                 item_id: @snaptrade_item.id,
                 accountable_type: params[:accountable_type],
                 return_to: params[:return_to]
               )
             end
-            brokerage_connect_frame = @snaptrade_item.oauth_configured? ? "_top" : "drawer"
+            brokerage_connect_frame = @snaptrade_item.oauth_configured? ? "_top" : snaptrade_authorize_frame
           %>
           <%= render DS::Link.new(
             text: t("snaptrade_items.setup_accounts.try_again", default: "Connect Brokerage"),
@@ -135,7 +135,7 @@
                         <%= number_to_currency(snaptrade_account.current_balance || 0, unit: Money::Currency.new(snaptrade_account.currency || "USD").symbol) %>
                       </p>
                       <% if snaptrade_account.account_number.present? %>
-                        <p class="text-xs text-secondary"><%= t("snaptrade_items.setup_accounts.account_number", default: "Account:") %> •••<%= snaptrade_account.account_number.last(4) %></p>
+                        <p class="text-xs text-secondary"><%= t("snaptrade_items.setup_accounts.account_number", default: "Account:") %> <%= mask_last4(snaptrade_account.account_number) %></p>
                       <% end %>
                     </label>
                   </div>

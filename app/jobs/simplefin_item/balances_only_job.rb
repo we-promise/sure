@@ -23,19 +23,11 @@ class SimplefinItem::BalancesOnlyJob < ApplicationJob
     # Leaving last_synced_at nil ensures the next full sync uses the
     # chunked-history path to fetch historical transactions.
 
-    # Refresh the SimpleFin card on Providers/Accounts pages so badges and statuses update without a full reload
+    # Refresh Providers/Accounts pages so badges and statuses update without a manual reload
     begin
-      card_html = ApplicationController.render(
-        partial: "simplefin_items/simplefin_item",
-        formats: [ :html ],
-        locals: { simplefin_item: item }
-      )
-      target_id = ActionView::RecordIdentifier.dom_id(item)
-      Turbo::StreamsChannel.broadcast_replace_to(item.family, target: target_id, html: card_html)
-
       # Broadcast a refresh signal instead of rendered HTML. Each user's browser
       # re-fetches via their own authenticated request, so the manual accounts
-      # list is correctly scoped to the current user.
+      # list and the SimpleFIN card are scoped to the current user (#3630).
       item.family.broadcast_refresh
     rescue => e
       Rails.logger.warn("SimpleFin BalancesOnlyJob broadcast failed: #{e.class} - #{e.message}")

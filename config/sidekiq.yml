@@ -1,7 +1,15 @@
-concurrency: <%= ENV.fetch("RAILS_MAX_THREADS") { 3 } %>
+# RAILS_MAX_THREADS is the worker's total, and also its DB pool.
+concurrency: <%= ENV.fetch("RAILS_MAX_THREADS") { 3 }.to_i - ENV.fetch("RAILS_AI_MAX_THREADS") { 1 }.to_i %>
 queues:
   - [scheduled, 10] # For cron-like jobs (e.g. "daily market data sync")
   - [high_priority, 4]
   - [medium_priority, 2]
   - [low_priority, 1]
   - [default, 1]
+
+# AI jobs can hold a thread for minutes on slow models, so they get their own
+# capsule and can't starve syncs. Strict order: chat (ai_high_priority) first.
+capsules:
+  ai:
+    concurrency: <%= ENV.fetch("RAILS_AI_MAX_THREADS") { 1 } %>
+    queues: [ai_high_priority, ai_low_priority]

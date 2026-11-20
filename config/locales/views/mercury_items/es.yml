@@ -75,6 +75,7 @@ es:
       connection_name_label: Nombre de la conexión
       connection_name_placeholder: Cuenta corriente de empresa
       default_connection_name: Conexión Mercury
+      disconnect: Desconectar
       disconnect_confirm: ¿Desconectar %{name}?
       instructions:
         copy_token_html: Copia el <strong>token completo</strong> (incluido el prefijo <code>secret-token:</code>) y añádelo abajo como una conexión con nombre

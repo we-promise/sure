@@ -6,17 +6,39 @@ class Account::Syncer
   end
 
   def perform_sync(sync)
+    # This syncer is shared by every account type, and only investment and
+    # crypto accounts keep lot books, so only their syncs record the method.
+    if account.accountable_type.in?(%w[Investment Crypto])
+      sync.update!(data: (sync.data || {}).merge("cost_basis_method" => account.cost_basis_method))
+    end
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)
     apply_provider_balance_overrides
+    report_anchor_dated_away_from_holdings
   end
 
   def perform_post_sync
     account.family.auto_match_transfers!(account: account)
+    restate_if_cost_basis_method_changed
   end
 
   private
+    # A method saved while this run was calculating left its figures on the
+    # old one, and the form's sync_later folded into this run. Once it has
+    # completed, a new sync restates them. Post-sync also runs after a failed
+    # sync; that one queues nothing, since each failure would queue another,
+    # and the next sync to complete restates the figures.
+    def restate_if_cost_basis_method_changed
+      latest = account.syncs.ordered.first
+      return unless latest&.completed?
+
+      used = latest.data&.dig("cost_basis_method")
+      return if used.nil? || used == Account.where(id: account.id).pick(:cost_basis_method)
+
+      account.sync_later
+    end
+
     def materialize_balances(window_start_date: nil)
       strategy = account.linked? ? :reverse : :forward
       Balance::Materializer.new(account, strategy: strategy, window_start_date: window_start_date).materialize_balances
@@ -34,6 +56,67 @@ class Account::Syncer
     rescue => e
       Rails.logger.error("Error syncing market data for account #{account.id}: #{e.message}")
       Sentry.capture_exception(e)
+    end
+
+    # A provider that dates its holdings itself, but whose balance is anchored
+    # on the day of the sync, leaves the two a day apart; the reverse
+    # calculator reads the difference as cash, on every day, in the amount of
+    # the day's move (#3815 in IBKR, #3874 in Plaid). Nothing fails, so the only
+    # place it can show is here, once every provider has written.
+    #
+    # The log records changes, compared with the account's latest entry from
+    # this check: a new or different gap is a warning, a steady one adds
+    # nothing, and the dates lining up again is noted, so a gap that later
+    # returns is a new finding rather than one already on record.
+    def report_anchor_dated_away_from_holdings
+      return unless account.linked? && account.has_current_anchor?
+
+      newest_holding = account.holdings.where.not(account_provider_id: nil).order(date: :desc).first
+      return if newest_holding.nil?
+
+      holdings_date = newest_holding.date
+      anchor_date = account.current_anchor_date
+      gap_days = (anchor_date - holdings_date).to_i
+      last_gap = last_reported_anchor_gap
+
+      if gap_days.zero?
+        return if last_gap.nil? || last_gap.zero?
+
+        record_anchor_gap(newest_holding, anchor_date, holdings_date, 0, level: "info",
+                          message: "Balance anchor and newest provider holding are dated alike again")
+      else
+        return if last_gap == gap_days
+
+        record_anchor_gap(newest_holding, anchor_date, holdings_date, gap_days, level: "warn",
+                          message: "Balance anchor dated #{gap_days.abs} day(s) #{gap_days.positive? ? 'after' : 'before'} the newest provider holding")
+      end
+    rescue => e
+      Rails.logger.error("Error checking anchor date for account #{account.id}: #{e.class} - #{e.message}")
+      Sentry.capture_exception(e)
+    end
+
+    def last_reported_anchor_gap
+      DebugLogEntry
+        .where(account: account, category: "provider_sync", source: self.class.name)
+        .order(created_at: :desc)
+        .pick(Arel.sql("metadata->>'gap_days'"))
+        &.to_i
+    end
+
+    def record_anchor_gap(newest_holding, anchor_date, holdings_date, gap_days, level:, message:)
+      account_provider = newest_holding.account_provider
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: level,
+        message: message,
+        source: self.class.name,
+        provider_key: account_provider&.provider_type&.delete_suffix("Account")&.underscore,
+        account: account,
+        account_provider: account_provider,
+        family: account.family,
+        metadata: { anchor_date: anchor_date.to_s, holdings_date: holdings_date.to_s, gap_days: gap_days }
+      )
     end
 
     def apply_provider_balance_overrides

@@ -40,8 +40,20 @@ de:
       status_never: Noch nie synchronisiert
       status_with_summary: "Zuletzt vor %{timestamp} synchronisiert • %{summary}"
       syncing: Wird synchronisiert...
+      sync_status:
+        no_accounts: Keine Konten gefunden
+        synced:
+          one: "%{count} Konto synchronisiert"
+          other: "%{count} Konten synchronisiert"
+        partial_setup:
+          one: "%{linked} synchronisiert, %{unlinked} muss eingerichtet werden"
+          other: "%{linked} synchronisiert, %{unlinked} müssen eingerichtet werden"
       total: Gesamt
       unlinked: Nicht verknüpft
+    subtype_select:
+      placeholder:
+        subtype: Untertyp auswählen
+        type: Typ auswählen
     select_accounts:
       accounts_selected: Konten ausgewählt
       api_error: "API-Fehler: %{message}"
@@ -84,6 +96,7 @@ de:
       fetch_failed: "Konten konnten nicht geladen werden"
       no_accounts_to_setup: "Keine Konten zum Einrichten"
       no_api_key: "Der Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte prüfe deine Verbindungseinstellungen."
+      page_title: Lunch‑Flow-Konten einrichten
       account_types:
         skip: Dieses Konto überspringen
         depository: Giro- oder Sparkonto
@@ -121,10 +134,23 @@ de:
           ira: Traditionelles IRA
           roth_ira: Roth IRA
           angel: Business Angel
+          "non-registered": Nicht registriertes Anlagekonto
+          fhsa: FHSA (Sparkonto für den ersten Immobilienkauf)
+          rdsp: RDSP (registrierter Sparplan für Menschen mit Behinderung)
+          dpsp: DPSP (aufgeschobener Gewinnbeteiligungsplan)
+          prpp: PRPP (gemeinschaftlicher registrierter Altersvorsorgeplan)
+          lif: LIF (lebenslanger Einkommensfonds)
+          lrif: LRIF (gebundener Altersvorsorge-Einkommensfonds)
+          prif: PRIF (vorgeschriebener registrierter Altersvorsorge-Einkommensfonds)
+          rlif: RLIF (beschränkter lebenslanger Einkommensfonds)
+          assurance_vie: Assurance Vie
         loan:
           mortgage: Hypothek
           student: Studienkredit
           auto: Autokredit
+          home_equity: Eigenheimkredit
+          line_of_credit: Kreditlinie
+          business: Unternehmenskredit
           other: Sonstiges Darlehen
       balance: Saldo
       cancel: Abbrechen
@@ -143,6 +169,7 @@ de:
       success:
         one: "%{count} Konto erfolgreich angelegt."
         other: "%{count} Konten erfolgreich angelegt."
+      unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal.
     sync:
       success: Synchronisierung gestartet
     update:
@@ -160,6 +187,7 @@ de:
       service_down_label: Dienst nicht erreichbar
       title: Fehler bei der Lunch-Flow-Verbindung
       unable_to_connect: Die Verbindung zu Lunch Flow kam nicht zustande
+      unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es später noch einmal.
     setup_required:
       api_key_description: Bevor du Lunch-Flow-Konten verknüpfen kannst, musst du deinen Lunch-Flow-API-Key hinterlegen.
       api_key_not_configured: API-Key nicht hinterlegt

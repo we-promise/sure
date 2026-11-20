@@ -14,6 +14,7 @@ en:
       service_down_label: Service Down
       service_down_desc: Lunch Flow API may be temporarily unavailable
       check_provider_settings: Check Provider Settings
+      unexpected_error: An unexpected error occurred. Please try again later.
     setup_required:
       title: Lunch Flow Setup Required
       api_key_not_configured: API Key Not Configured
@@ -62,8 +63,20 @@ en:
       status_never: Never synced
       status_with_summary: "Last synced %{timestamp} ago • %{summary}"
       syncing: Syncing...
+      sync_status:
+        no_accounts: No accounts found
+        synced:
+          one: "%{count} account synced"
+          other: "%{count} accounts synced"
+        partial_setup:
+          one: "%{linked} synced, %{unlinked} needs setup"
+          other: "%{linked} synced, %{unlinked} need setup"
       total: Total
       unlinked: Unlinked
+    subtype_select:
+      placeholder:
+        subtype: Select subtype
+        type: Select type
     select_accounts:
       accounts_selected: accounts selected
       api_error: "API error: %{message}"
@@ -103,6 +116,7 @@ en:
       fetch_failed: "Failed to Fetch Accounts"
       no_accounts_to_setup: "No Accounts to Set Up"
       no_api_key: "Lunch Flow API key is not configured. Please check your connection settings."
+      page_title: Set Up Lunch Flow Accounts
       account_types:
         skip: Skip this account
         depository: Checking or Savings Account
@@ -160,6 +174,7 @@ en:
       creation_failed: "Failed to create accounts: %{error}"
       no_accounts: "No accounts to set up."
       success: "Successfully created %{count} account(s)."
+      unexpected_error: An unexpected error occurred
     sync:
       success: Sync started
     update:

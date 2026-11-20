@@ -1,6 +1,9 @@
 # Projects the family's combined cash (Depository) balance forward 30 days by
 # layering known recurring transactions on top of a statistical daily-spend
 # baseline, and warns when the projected balance dips below the threshold.
+# Bills subsystem: projects from materialized occurrences rather than one
+# projected entry per series, so non-monthly bills are counted at their real
+# frequency and partial payments shrink the projection.
 class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
   produces "cash_flow_warning"
 
@@ -62,7 +65,8 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         # bucket of the low point are material; display values live in `facts`.
         metadata: {
           negative: low_point.negative?,
-          projected_low_bucket: (round(low_point, 0).to_i / 250) * 250
+          projected_low_bucket: (round(low_point, 0).to_i / 250) * 250,
+          accounts_digest: shared_accounts_digest
         },
         period: Period.custom(start_date: Date.current, end_date: Date.current + HORIZON_DAYS),
         dedup_key: "cash_flow_warning:#{month_token}"
@@ -72,7 +76,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
 
   private
     def cash_accounts
-      family.accounts.visible.where(accountable_type: "Depository", currency: family.currency)
+      shared_accounts.visible.where(accountable_type: "Depository", currency: family.currency)
     end
 
     # Projected occurrences of known recurring transactions within the horizon.
@@ -89,11 +93,29 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
     # (IdentifyRecurringTransactionsJob) — it doesn't clear out ones already
     # identified, so this keeps using that last-known set rather than silently
     # degrading to the flatter median-only baseline.
+    Obligation = Data.define(:date, :amount)
+
+    # Occurrence rows instead of one projected entry per series: a weekly
+    # bill contributes every hit inside the horizon (the single-projection
+    # version silently under-counted it fourfold), and partially paid
+    # occurrences contribute only what actually remains.
     def upcoming_recurring_entries
-      family.recurring_transactions
-        .expected_soon
-        .where(destination_account_id: nil)
-        .filter_map(&:projected_entry)
-        .select { |e| e.currency == family.currency && e.date <= Date.current + HORIZON_DAYS }
+      occurrences = family.recurring_occurrences
+        .open_status
+        .joins(:recurring_transaction)
+        .where(recurring_transactions: { status: :active, destination_account_id: nil })
+        .merge(shared_recurring_transactions)
+        .where("recurring_transactions.amount > 0")
+        .where(currency: family.currency)
+        .where(due_on: Date.current..(Date.current + HORIZON_DAYS))
+        .includes(:recurring_transaction)
+        .to_a
+
+      # remaining_amount reads the confirmed-allocation sum, and this runs
+      # nightly for every family: one grouped query instead of one SUM per
+      # occurrence in the horizon.
+      RecurringOccurrence.preload_confirmed_allocated(occurrences)
+
+      occurrences.map { |occurrence| Obligation.new(date: occurrence.due_on, amount: occurrence.remaining_amount) }
     end
 end

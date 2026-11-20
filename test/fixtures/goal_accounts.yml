@@ -6,10 +6,16 @@ vacation_italy_connected:
   goal: vacation_italy
   account: connected
 
+# Fixed slices, not whole-account links: three goals each claiming the whole of
+# `depository` is the very state GoalAccount#whole_account_link_must_be_exclusive
+# forbids, and it left the reference data unable to survive an archive/restore
+# round trip. Only `vacation_italy` claims the account in full.
 emergency_fund_depository:
   goal: emergency_fund
   account: depository
+  allocated_amount: 1000
 
 car_paydown_depository:
   goal: car_paydown
   account: depository
+  allocated_amount: 1000

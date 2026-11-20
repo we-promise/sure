@@ -1,7 +1,7 @@
 # A proactive, typed observation about a family's finances, produced nightly
 # by GenerateInsightsJob. The financial logic lives in Insight::Generators::*;
-# the LLM (when configured) only writes the `body` prose from pre-computed
-# numbers, so rows are safe to render verbatim.
+# the `body` prose is an i18n template filled with pre-computed numbers, so
+# rows are safe to render verbatim.
 #
 # Status semantics: `read` and `acknowledged` are user actions; `expired` is the
 # system's — set when a signal stops being generated (the condition cleared).
@@ -9,13 +9,20 @@
 # "Acknowledged" rather than "dismissed" because that is what the state has
 # always actually meant. GenerateInsightsJob resurfaces a row whose bucketed
 # metadata changes materially even if the user acknowledged the stale version,
-# and 6 of 8 generators scope `dedup_key` to a month, so acknowledging July's
+# and most generators scope `dedup_key` to a month, so acknowledging July's
 # budget card says nothing about August's. The contract is: acknowledgement
 # covers the numbers you saw; new numbers are a new insight. The DB value stays
 # `"dismissed"` (and the `dismissed_at` column keeps its name) so this needed no
 # migration — only the vocabulary the code and the UI speak was wrong.
 class Insight < ApplicationRecord
   belongs_to :family
+  has_many :push_deliveries, dependent: :destroy
+
+  # A new insight, or a new notification_version (GenerateInsightsJob bumps it
+  # when the signal materially changes), is one event for push recipients. They
+  # are recorded in the save's transaction and enqueued once it commits.
+  after_save -> { PushDelivery.record_for_insight!(self) }, if: :new_notification_version?
+  after_commit -> { PushDelivery.enqueue_insight_deliveries(self) }, on: [ :create, :update ], if: :new_notification_version?
 
   TYPES = %w[
     spending_anomaly
@@ -26,6 +33,11 @@ class Insight < ApplicationRecord
     idle_cash
     budget_at_risk
     budget_on_track
+    maintained_goal_depleted
+    bill_not_covered
+    loan_payment_change
+    bank_fees
+    fixed_commitments_ratio
   ].freeze
 
   # How many the dashboard widget shows. Shared so PagesController (first render)
@@ -42,11 +54,74 @@ class Insight < ApplicationRecord
   validates :dedup_key, uniqueness: { scope: :family_id }
 
   # Everything the user hasn't acknowledged; what the feed renders.
-  scope :visible, -> { where(status: [ :active, :read ]) }
+  scope :visible, -> { where(status: [ :active, :read ]).about_shared_accounts }
+
+  # The feed is shared by the whole family, so an insight that names an
+  # account (metadata account_id) shows only while every active member can
+  # see that account. Generators already skip other accounts; this read-time
+  # check also covers rows written before access changed (a share revoked, a
+  # member joined, the account moved, hidden or deleted), which would
+  # otherwise stay in the feed until the next nightly run expires them.
+  # Nothing is written, so the row reappears as it was if access is restored.
+  #
+  # A total (metadata accounts_digest) names no single account, so it shows
+  # only while its digest still matches the set every active member can open
+  # now; otherwise its figures may include an account someone lost.
+  #
+  # The id is cast to uuid (not the column to text) so the lookup stays a
+  # primary-key probe; the CASE keeps a malformed value from raising.
+  scope :about_shared_accounts, -> {
+    shared_account = Account.visible.accessible_by_all_active_members
+      .where("accounts.family_id = insights.family_id")
+      .where(<<~SQL.squish)
+        accounts.id = CASE
+          WHEN insights.metadata->>'account_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          THEN (insights.metadata->>'account_id')::uuid
+        END
+      SQL
+    current_digest = Account.accessible_by_all_active_members
+      .where("accounts.family_id = insights.family_id")
+      .select(Account::ID_SET_DIGEST_SQL)
+
+    where("NOT (insights.metadata ? 'account_id')").or(where(shared_account.arel.exists))
+      .where("NOT (insights.metadata ? 'accounts_digest') OR insights.metadata->>'accounts_digest' = (#{current_digest.to_sql})")
+      .about_shared_recurring_transactions
+  }
+
+  # A recurring series can move to another account after its insight was
+  # written, so the stored account_id may be stale. An insight that names a
+  # series (metadata recurring_transaction_id) also checks the series' current
+  # account: it shows only while that series exists and has no account or one
+  # every active member can see.
+  scope :about_shared_recurring_transactions, -> {
+    shared_account = Account.visible.accessible_by_all_active_members
+      .where("accounts.id = recurring_transactions.account_id")
+    current_series = RecurringTransaction
+      .where("recurring_transactions.family_id = insights.family_id")
+      .where(<<~SQL.squish)
+        recurring_transactions.id = CASE
+          WHEN insights.metadata->>'recurring_transaction_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          THEN (insights.metadata->>'recurring_transaction_id')::uuid
+        END
+      SQL
+      .where("recurring_transactions.account_id IS NULL OR EXISTS (#{shared_account.to_sql})")
+    where("NOT (insights.metadata ? 'recurring_transaction_id')").or(where(current_series.arel.exists))
+  }
+
   scope :ordered, -> {
     order(Arel.sql("CASE insights.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END"))
       .order(generated_at: :desc)
   }
+
+  # The one push policy, read by every channel: high-priority insights, plus
+  # near-limit (medium) budget warnings for users who opt in. Tenancy and
+  # shared-account visibility mirror the feed.
+  def notifies?(user)
+    return false unless active? && user.active? && user.family_id == family_id && user.preview_features_enabled?
+    return false unless priority_high? || (insight_type == "budget_at_risk" && priority_medium? && user.push_budget_warnings_enabled?)
+
+    Insight.about_shared_accounts.exists?(id)
+  end
 
   def mark_read!
     return unless active?
@@ -69,4 +144,9 @@ class Insight < ApplicationRecord
 
     update!(status: :read, dismissed_at: nil, read_at: read_at || Time.current)
   end
+
+  private
+    def new_notification_version?
+      previously_new_record? || saved_change_to_notification_version?
+    end
 end

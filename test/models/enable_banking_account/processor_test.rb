@@ -27,6 +27,41 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 1500.0, @account.reload.cash_balance
   end
 
+  test "promotes the importer's evidence to balance_verified once the anchor is written" do
+    @enable_banking_account.update!(balance_evidence_verified: true, balance_verified: false)
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    assert @enable_banking_account.reload.balance_verified?
+  end
+
+  test "an unverified balance clears balance_verified when it becomes the anchor" do
+    @enable_banking_account.update!(balance_evidence_verified: false, balance_verified: true)
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    assert_not @enable_banking_account.reload.balance_verified?
+  end
+
+  test "keeps balance_verified when no balance was fetched and the anchor stays as it is" do
+    @enable_banking_account.update_columns(current_balance: nil, balance_evidence_verified: false, balance_verified: true)
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    assert @enable_banking_account.reload.balance_verified?
+  end
+
+  test "clears balance_verified when the balance never becomes the anchor" do
+    @enable_banking_account.update!(balance_evidence_verified: true, balance_verified: true)
+    Account.any_instance.stubs(:set_current_balance).raises(StandardError, "boom")
+
+    assert_raises(StandardError) do
+      EnableBankingAccount::Processor.new(@enable_banking_account).process
+    end
+
+    assert_not @enable_banking_account.reload.balance_verified?
+  end
+
   test "updates account currency" do
     @enable_banking_account.update!(currency: "USD")
 
@@ -224,9 +259,145 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 50000.0, loan_account.reload.cash_balance
   end
 
+  test "excludes pending entries older than 8 days and marks the exclusion as automatic" do
+    stale = create_pending_entry(external_id: "eb_stale_pending", date: 10.days.ago.to_date, amount: 42)
+    recent = create_pending_entry(external_id: "eb_recent_pending", date: 3.days.ago.to_date, amount: 43)
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    assert stale.reload.excluded?
+    assert stale.auto_excluded_pending?
+    assert_not recent.reload.excluded?
+  end
+
+  test "an automatically excluded pending is re-activated when the same id is delivered as booked" do
+    stale = create_pending_entry(external_id: "eb_hold", date: 10.days.ago.to_date, amount: 80)
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+    assert stale.reload.excluded?
+
+    Account::ProviderImportAdapter.new(@account).import_transaction(
+      external_id: "eb_hold", amount: 80, currency: @account.currency, date: Date.current,
+      name: "Hotel", source: "enable_banking", extra: { "enable_banking" => { "pending" => false } }
+    )
+
+    stale.reload
+    assert_not stale.excluded?
+    assert_not stale.transaction.pending?
+    assert_not stale.auto_excluded_pending?
+  end
+
+  test "excluding or re-including an auto-excluded pending by hand ends its automatic state" do
+    stale = create_pending_entry(external_id: "eb_toggle", date: 10.days.ago.to_date, amount: 82)
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+    assert stale.reload.auto_excluded_pending?
+
+    stale.update!(excluded: false)
+    stale.update!(excluded: true)
+
+    assert_not stale.reload.auto_excluded_pending?
+    Account::ProviderImportAdapter.new(@account).import_transaction(
+      external_id: "eb_toggle", amount: 82, currency: @account.currency, date: Date.current,
+      name: "Hotel", source: "enable_banking", extra: { "enable_banking" => { "pending" => false } }
+    )
+    assert stale.reload.excluded?
+  end
+
+  test "excluding an already auto-excluded pending by hand ends its automatic state" do
+    stale = create_pending_entry(external_id: "eb_stale_page", date: 10.days.ago.to_date, amount: 85)
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+    assert stale.reload.auto_excluded_pending?
+
+    # The user excludes it from a page loaded before the sync did.
+    stale.update!(excluded: true)
+
+    assert_not stale.reload.auto_excluded_pending?
+    Account::ProviderImportAdapter.new(@account).import_transaction(
+      external_id: "eb_stale_page", amount: 85, currency: @account.currency, date: Date.current,
+      name: "Hotel", source: "enable_banking", extra: { "enable_banking" => { "pending" => false } }
+    )
+    assert stale.reload.excluded?
+  end
+
+  test "excluding by hand clears the mark even when the transaction was loaded before the sync" do
+    stale = create_pending_entry(external_id: "eb_preloaded", date: 10.days.ago.to_date, amount: 86)
+    loaded = Entry.includes(:entryable).find(stale.id)
+    loaded.entryable.extra # loaded before the sync writes the mark
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+    assert stale.reload.auto_excluded_pending?
+
+    loaded.update!(excluded: true)
+
+    assert_not stale.reload.auto_excluded_pending?
+  end
+
+  test "a pending the user excluded stays excluded when it books" do
+    stale = create_pending_entry(external_id: "eb_user_excluded", date: 10.days.ago.to_date, amount: 81)
+    stale.update!(excluded: true)
+
+    Account::ProviderImportAdapter.new(@account).import_transaction(
+      external_id: "eb_user_excluded", amount: 81, currency: @account.currency, date: Date.current,
+      name: "Hotel", source: "enable_banking", extra: { "enable_banking" => { "pending" => false } }
+    )
+
+    assert stale.reload.excluded?
+  end
+
+  test "an import-locked auto-excluded pending stays excluded when it books" do
+    stale = create_pending_entry(external_id: "eb_locked", date: 10.days.ago.to_date, amount: 83)
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+    stale.reload.update_columns(import_locked: true)
+
+    Account::ProviderImportAdapter.new(@account).import_transaction(
+      external_id: "eb_locked", amount: 83, currency: @account.currency, date: Date.current,
+      name: "Hotel", source: "enable_banking", extra: { "enable_banking" => { "pending" => false } }
+    )
+
+    assert stale.reload.excluded?
+    assert stale.auto_excluded_pending?
+  end
+
+  test "excludes a pending entry once its booked twin exists" do
+    pending = create_pending_entry(external_id: "eb_pending", date: 3.days.ago.to_date, amount: 25)
+    @account.entries.create!(
+      name: "Coffee", date: 1.day.ago.to_date, amount: 25, currency: @account.currency,
+      external_id: "eb_booked", source: "enable_banking",
+      entryable: Transaction.new(extra: { "enable_banking" => { "pending" => false } })
+    )
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    assert pending.reload.excluded?
+  end
+
+  test "skips the pending cleanup when importing transactions failed" do
+    stale = create_pending_entry(external_id: "eb_partial", date: 10.days.ago.to_date, amount: 84)
+    EnableBankingAccount::Transactions::Processor.any_instance.stubs(:process).raises(StandardError, "boom")
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    assert_not stale.reload.excluded?
+  end
+
+  test "pending cleanup failure does not fail processing" do
+    Entry.stubs(:reconcile_pending_duplicates).raises(StandardError, "boom")
+
+    assert_nothing_raised do
+      EnableBankingAccount::Processor.new(@enable_banking_account).process
+    end
+  end
+
   private
     def relink_provider_to(account)
       AccountProvider.find_by(provider: @enable_banking_account)&.destroy
       AccountProvider.create!(account: account, provider: @enable_banking_account)
+    end
+
+    def create_pending_entry(external_id:, date:, amount:)
+      @account.entries.create!(
+        name: "Pending #{external_id}", date: date, amount: amount, currency: @account.currency,
+        external_id: external_id, source: "enable_banking",
+        entryable: Transaction.new(extra: { "enable_banking" => { "pending" => true } })
+      )
     end
 end

@@ -11,20 +11,69 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     Rails.configuration.x.snaptrade = @original
   end
 
-  test "oauth_configured? requires both client id and secret" do
+  test "oauth_configured? needs only the public client id, the redirect flow needs the secret too" do
     assert_not Provider::Snaptrade.oauth_configured?
+    assert_not Provider::Snaptrade.authorization_code_configured?
 
     Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
-    assert_not Provider::Snaptrade.oauth_configured?
+    assert Provider::Snaptrade.oauth_configured?
+    assert_not Provider::Snaptrade.authorization_code_configured?
 
     Rails.configuration.x.snaptrade.oauth_client_secret = "client-secret"
     assert Provider::Snaptrade.oauth_configured?
+    assert Provider::Snaptrade.authorization_code_configured?
+  end
+
+  test "the redirect flow refuses to start without a confidential client" do
+    configure_device_flow_only!
+
+    assert_raises(Provider::Snaptrade::ConfigurationError) do
+      Provider::Snaptrade.authorize_url(redirect_uri: "https://sure.test/cb", state: "s", code_challenge: "c")
+    end
+
+    assert_raises(Provider::Snaptrade::ConfigurationError) do
+      Provider::Snaptrade.exchange_code(code: "c0de", redirect_uri: "https://sure.test/cb", code_verifier: "v")
+    end
   end
 
   # --- helpers ---
   def configure_oauth!
     Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
     Rails.configuration.x.snaptrade.oauth_client_secret = "client-secret"
+  end
+
+  # A deployment that registered only a public OAuth client: device flow only.
+  def configure_device_flow_only!
+    Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
+    Rails.configuration.x.snaptrade.oauth_client_secret = nil
+  end
+
+  def discovery_body
+    {
+      device_authorization_endpoint: "https://api.snaptrade.com/oauth/device_authorization/",
+      token_endpoint: Provider::Snaptrade::TOKEN_URL
+    }.to_json
+  end
+
+  # Each GET to the activities endpoint yields its own request and returns the
+  # next page body. Returns the yielded requests so tests can inspect params.
+  def stub_activity_pages(provider, pages)
+    requests = []
+    connection = mock("faraday")
+    pages.each do |page|
+      request = OpenStruct.new(headers: {}, params: {})
+      requests << request
+      connection.expects(:get)
+        .with("#{Provider::Snaptrade::API_BASE_URL}/api/v1/accounts/acct-1/activities")
+        .yields(request).returns(faraday_response(status: 200, body: page.to_json))
+        .in_sequence(activity_sequence)
+    end
+    provider.stubs(:api_connection).returns(connection)
+    requests
+  end
+
+  def activity_sequence
+    @activity_sequence ||= sequence("activity pages")
   end
 
   def faraday_response(status:, body:)
@@ -177,6 +226,184 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     assert_match "no results array", error.message
   end
 
+  test "get_account_activities follows offset pagination until every page is fetched" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    first_page = Array.new(1000) { |i| { "id" => "a#{i}" } }
+    second_page = [ { "id" => "a1000" }, { "id" => "a1001" } ]
+    requests = stub_activity_pages(provider, [
+      { data: first_page, pagination: { offset: 0, limit: 1000, total: 1002 } },
+      { data: second_page, pagination: { offset: 1000, limit: 1000, total: 1002 } }
+    ])
+
+    response = provider.get_account_activities(account_id: "acct-1", start_date: Date.new(2024, 1, 1))
+
+    assert_equal 1002, response["data"].size
+    assert_equal %w[a0 a1001], [ response["data"].first["id"], response["data"].last["id"] ]
+    assert_equal [ 0, 1000 ], requests.map { |r| r.params[:offset] }
+    assert requests.all? { |r| r.params[:limit] == 1000 && r.params[:startDate] == "2024-01-01" }
+  end
+
+  test "get_account_activities makes a single request when one page holds everything" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    requests = stub_activity_pages(provider, [
+      { data: [ { "id" => "a0" }, { "id" => "a1" } ], pagination: { offset: 0, limit: 1000, total: 2 } }
+    ])
+
+    response = provider.get_account_activities(account_id: "acct-1")
+
+    assert_equal %w[a0 a1], response["data"].map { |a| a["id"] }
+    assert_equal 1, requests.size
+  end
+
+  test "get_account_activities raises when a later page is not a paged body" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    stub_activity_pages(provider, [
+      { data: Array.new(1000) { |i| { "id" => "a#{i}" } }, pagination: { offset: 0, limit: 1000, total: 1500 } },
+      [ { "id" => "b0" } ]
+    ])
+
+    assert_raises(Provider::Snaptrade::ApiError) { provider.get_account_activities(account_id: "acct-1") }
+  end
+
+  test "get_account_activities stops when the server repeats a page" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    page = { data: Array.new(1000) { |i| { "id" => "a#{i}" } } }
+    requests = stub_activity_pages(provider, [ page, page ])
+
+    assert_equal 1000, provider.get_account_activities(account_id: "acct-1")["data"].size
+    assert_equal 2, requests.size
+  end
+
+  test "get_account_activities without a total pages until an empty page" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    requests = stub_activity_pages(provider, [
+      { data: Array.new(500) { |i| { "id" => "a#{i}" } } },
+      { data: Array.new(500) { |i| { "id" => "b#{i}" } } },
+      { data: [] }
+    ])
+
+    assert_equal 1000, provider.get_account_activities(account_id: "acct-1")["data"].size
+    assert_equal [ 0, 500, 1000 ], requests.map { |r| r.params[:offset] }
+  end
+
+  test "get_account_activities without a total stops at a short page or an empty reply" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    requests = stub_activity_pages(provider, [
+      { data: Array.new(1000) { |i| { "id" => "a#{i}" } } },
+      { data: Array.new(300) { |i| { "id" => "b#{i}" } } }
+    ])
+    assert_equal 1300, provider.get_account_activities(account_id: "acct-1")["data"].size
+    assert_equal 2, requests.size
+
+    provider = Provider::Snaptrade.new(fake_item)
+    stub_activity_pages(provider, [ { data: Array.new(1000) { |i| { "id" => "c#{i}" } } }, {} ])
+    assert_equal 1000, provider.get_account_activities(account_id: "acct-1")["data"].size
+  end
+
+  test "get_account_activities raises when a repeated page leaves rows the total reports" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    page = { data: Array.new(1000) { |i| { "id" => "a#{i}" } }, pagination: { offset: 0, limit: 1000, total: 1500 } }
+    stub_activity_pages(provider, [ page, page ])
+
+    assert_raises(Provider::Snaptrade::ApiError) { provider.get_account_activities(account_id: "acct-1") }
+  end
+
+  test "get_account_activities raises when an empty page leaves rows the total reports" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    stub_activity_pages(provider, [
+      { data: Array.new(1000) { |i| { "id" => "a#{i}" } }, pagination: { offset: 0, limit: 1000, total: 1500 } },
+      { data: [], pagination: { offset: 1000, limit: 1000, total: 1500 } }
+    ])
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade").count }, 1 do
+      assert_raises(Provider::Snaptrade::ApiError) { provider.get_account_activities(account_id: "acct-1") }
+    end
+  end
+
+  test "get_account_activities returns an empty account whose total is zero" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    stub_activity_pages(provider, [ { data: [], pagination: { offset: 0, limit: 1000, total: 0 } } ])
+
+    assert_equal [], provider.get_account_activities(account_id: "acct-1")["data"]
+  end
+
+  test "get_account_activities raises at the page cap while the total reports more rows" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    pages = Array.new(3) do |page|
+      { data: Array.new(2) { |i| { "id" => "p#{page}-#{i}" } }, pagination: { offset: page * 2, limit: 2, total: 100 } }
+    end
+    requests = stub_activity_pages(provider, pages)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade").count }, 1 do
+      assert_raises(Provider::Snaptrade::ApiError) do
+        stub_const(Provider::Snaptrade, :ACTIVITIES_PAGE_SIZE, 2) do
+          stub_const(Provider::Snaptrade, :MAX_ACTIVITY_PAGES, 3) do
+            provider.get_account_activities(account_id: "acct-1")
+          end
+        end
+      end
+    end
+    assert_equal 3, requests.size
+  end
+
+  # Reaching the cap needs every page to be full and distinct, so rows are
+  # almost certainly still missing; returning them would move the importer's
+  # sync cursor past the rest.
+  test "get_account_activities raises at the page cap without a total" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    pages = Array.new(3) do |page|
+      { data: Array.new(2) { |i| { "id" => "p#{page}-#{i}" } } }
+    end
+    requests = stub_activity_pages(provider, pages)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade", level: "error").count }, 1 do
+      assert_raises(Provider::Snaptrade::ApiError) do
+        stub_const(Provider::Snaptrade, :ACTIVITIES_PAGE_SIZE, 2) do
+          stub_const(Provider::Snaptrade, :MAX_ACTIVITY_PAGES, 3) do
+            provider.get_account_activities(account_id: "acct-1")
+          end
+        end
+      end
+    end
+    assert_equal 3, requests.size
+  end
+
+  # An empty first page is how a new connection looks while SnapTrade is still
+  # importing it. Raising would end SnaptradeActivitiesFetchJob's polling.
+  test "get_account_activities returns an empty first page even when the total is positive" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    requests = stub_activity_pages(provider, [ { data: [], pagination: { offset: 0, limit: 1000, total: 50 } } ])
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_equal [], provider.get_account_activities(account_id: "acct-1")["data"]
+    end
+    assert_equal 1, requests.size
+  end
+
   test "get_positions filters out instrument kinds the holdings pipeline cannot model" do
     configure_oauth!
     provider = Provider::Snaptrade.new(fake_item)
@@ -184,8 +411,10 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     body = {
       results: [
         { instrument: { kind: "stock", symbol: "AAPL" }, units: "10", price: "1.5" },
-        { instrument: { kind: "option", symbol: "AAPL 240119C00150000" }, units: "2", price: "5.1" },
+        # Kept past expiry (in any zone) until the broker's book settles it
+        { instrument: { kind: "option", symbol: "OPT", expiration_date: Date.yesterday.iso8601 }, units: "2", price: "5.1" },
         { instrument: { kind: "future", symbol: "ESZ4" }, units: "1", price: "10" },
+        { instrument: { kind: "future_option", symbol: "./ESZ4 EW4X4 241115C5800" }, units: "1", price: "10" },
         { instrument: { kind: "cfd", symbol: "CFD1" }, units: "1", price: "10" },
         { instrument: { kind: "somethingnew", symbol: "NEW" }, units: "3", price: "2" }
       ]
@@ -198,7 +427,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
     positions = provider.get_positions(account_id: "acct-1")
 
-    assert_equal %w[AAPL NEW], positions.map { |p| p.dig("instrument", "symbol") }
+    assert_equal %w[AAPL OPT NEW], positions.map { |p| p.dig("instrument", "symbol") }
   end
 
   test "expired token is refreshed before the data call and rotation persisted" do
@@ -297,5 +526,181 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     assert_equal "https://sure.test/return", body["customRedirect"]
     assert_equal "read", body["connectionType"]
     assert_equal "QUESTRADE", body["broker"]
+  end
+
+
+  # --- Device flow (RFC 8628) ---
+
+  test "start_device_authorization posts the public client id to the discovered endpoint" do
+    configure_device_flow_only!
+
+    request = OpenStruct.new(headers: {})
+    connection = mock("faraday")
+    connection.expects(:get).with(Provider::Snaptrade::OAUTH_DISCOVERY_URL)
+      .returns(faraday_response(status: 200, body: discovery_body))
+    connection.expects(:post).with("https://api.snaptrade.com/oauth/device_authorization/").yields(request)
+      .returns(faraday_response(status: 200, body: {
+        device_code: "dev-c0de", user_code: "WXYZ-1234",
+        verification_uri: "https://app.snaptrade.com/device",
+        verification_uri_complete: "https://app.snaptrade.com/device?code=WXYZ-1234",
+        expires_in: 600, interval: 5
+      }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    payload = Provider::Snaptrade.start_device_authorization
+
+    assert_equal "dev-c0de", payload["device_code"]
+    assert_equal "WXYZ-1234", payload["user_code"]
+    body = Rack::Utils.parse_query(request.body)
+    assert_equal "client-id", body["client_id"]
+    assert_equal "read", body["scope"]
+  end
+
+  test "start_device_authorization authenticates a confidential client" do
+    configure_oauth!
+
+    request = OpenStruct.new(headers: {})
+    connection = mock("faraday")
+    connection.expects(:get).returns(faraday_response(status: 200, body: discovery_body))
+    connection.expects(:post).yields(request)
+      .returns(faraday_response(status: 200, body: {
+        device_code: "dev-c0de", user_code: "WXYZ-1234", verification_uri: "https://app.snaptrade.com/device"
+      }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    Provider::Snaptrade.start_device_authorization
+
+    assert_equal "Basic #{Base64.strict_encode64('client-id:client-secret')}", request.headers["Authorization"]
+    assert_nil Rack::Utils.parse_query(request.body)["client_id"]
+  end
+
+  test "start_device_authorization rejects a 2xx that cannot drive the flow" do
+    configure_device_flow_only!
+
+    connection = mock("faraday")
+    connection.expects(:get).returns(faraday_response(status: 200, body: discovery_body))
+    # A device code with nothing to show the user and nowhere to send them
+    # would render a blank drawer the user can only abandon.
+    connection.expects(:post).returns(faraday_response(status: 200, body: { device_code: "dev-c0de" }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    error = assert_raises(Provider::Snaptrade::ApiError) { Provider::Snaptrade.start_device_authorization }
+    assert_match "user_code", error.message
+    assert_match "verification_uri", error.message
+  end
+
+  test "start_device_authorization accepts verification_uri_complete in place of verification_uri" do
+    configure_device_flow_only!
+
+    connection = mock("faraday")
+    connection.expects(:get).returns(faraday_response(status: 200, body: discovery_body))
+    connection.expects(:post).returns(faraday_response(status: 200, body: {
+      device_code: "dev-c0de", user_code: "WXYZ-1234",
+      verification_uri_complete: "https://app.snaptrade.com/device?code=WXYZ-1234"
+    }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    payload = Provider::Snaptrade.start_device_authorization
+
+    assert_equal "dev-c0de", payload["device_code"]
+  end
+
+  test "start_device_authorization raises when the metadata has no device endpoint" do
+    configure_device_flow_only!
+
+    connection = mock("faraday")
+    connection.expects(:get).returns(faraday_response(status: 200, body: { token_endpoint: Provider::Snaptrade::TOKEN_URL }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    error = assert_raises(Provider::Snaptrade::ApiError) { Provider::Snaptrade.start_device_authorization }
+    assert_match "device_authorization_endpoint", error.message
+  end
+
+  test "poll_device_token redeems the device code as a public client" do
+    configure_device_flow_only!
+
+    request = OpenStruct.new(headers: {})
+    connection = mock("faraday")
+    connection.expects(:post).with(Provider::Snaptrade::TOKEN_URL).yields(request)
+      .returns(faraday_response(status: 200, body: { access_token: "at", refresh_token: "rt", expires_in: 900, token_type: "Bearer", scope: "read" }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    payload = Provider::Snaptrade.poll_device_token(device_code: "dev-c0de")
+
+    assert_equal "at", payload["access_token"]
+    # A public client has no secret to authenticate with, so it identifies
+    # itself in the body instead of an Authorization header.
+    assert_nil request.headers["Authorization"]
+    body = Rack::Utils.parse_query(request.body)
+    assert_equal Provider::Snaptrade::DEVICE_CODE_GRANT, body["grant_type"]
+    assert_equal "dev-c0de", body["device_code"]
+    assert_equal "client-id", body["client_id"]
+  end
+
+  test "poll_device_token surfaces authorization_pending as a distinguishable error" do
+    configure_device_flow_only!
+
+    connection = mock("faraday")
+    connection.expects(:post).returns(faraday_response(status: 400, body: { error: "authorization_pending" }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    error = assert_raises(Provider::Snaptrade::AuthenticationError) do
+      Provider::Snaptrade.poll_device_token(device_code: "dev-c0de")
+    end
+    assert_equal "authorization_pending", error.oauth_error
+  end
+
+  test "poll_device_token requires a device code" do
+    configure_device_flow_only!
+
+    assert_raises(ArgumentError) { Provider::Snaptrade.poll_device_token(device_code: "") }
+  end
+
+  # Refresh and revocation are shared by both grants, so they have to work for a
+  # deployment that only ever configured the public client id -- otherwise a
+  # device-authorized item would authorize fine and then fail at its first
+  # token rotation.
+  test "refresh_tokens authenticates a public client in the body and a confidential one with basic auth" do
+    configure_device_flow_only!
+
+    public_request = OpenStruct.new(headers: {})
+    public_connection = mock("faraday")
+    public_connection.expects(:post).yields(public_request)
+      .returns(faraday_response(status: 200, body: { access_token: "at" }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(public_connection)
+
+    Provider::Snaptrade.refresh_tokens(refresh_token: "rt")
+
+    assert_nil public_request.headers["Authorization"]
+    assert_equal "client-id", Rack::Utils.parse_query(public_request.body)["client_id"]
+
+    configure_oauth!
+
+    confidential_request = OpenStruct.new(headers: {})
+    confidential_connection = mock("faraday")
+    confidential_connection.expects(:post).yields(confidential_request)
+      .returns(faraday_response(status: 200, body: { access_token: "at" }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(confidential_connection)
+
+    Provider::Snaptrade.refresh_tokens(refresh_token: "rt")
+
+    assert_equal "Basic #{Base64.strict_encode64('client-id:client-secret')}", confidential_request.headers["Authorization"]
+    assert_nil Rack::Utils.parse_query(confidential_request.body)["client_id"]
+  end
+
+  test "revoke_token works for a public client" do
+    configure_device_flow_only!
+
+    request = OpenStruct.new(headers: {})
+    connection = mock("faraday")
+    connection.expects(:post).with(Provider::Snaptrade::REVOKE_URL).yields(request)
+      .returns(faraday_response(status: 200, body: ""))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    assert Provider::Snaptrade.revoke_token(token: "rt")
+    assert_nil request.headers["Authorization"]
+    body = Rack::Utils.parse_query(request.body)
+    assert_equal "rt", body["token"]
+    assert_equal "client-id", body["client_id"]
   end
 end

@@ -1,25 +1,67 @@
 ---
 nl:
   credit_cards:
+    due:
+      in_days:
+        zero: "Vandaag te betalen"
+        one: "Morgen te betalen"
+        other: "Te betalen over %{count} dagen"
+      overdue:
+        one: "Gisteren te betalen"
+        other: "%{count} dagen achterstallig"
     edit:
       edit: "%{account} bewerken"
     form:
-      annual_fee: Jaarlijkse kosten
-      annual_fee_placeholder: '99'
-      apr: Rentepercentage
-      apr_placeholder: '15.99'
-      available_credit: Beschikbaar krediet
-      available_credit_placeholder: '10000'
-      expiration_date: Vervaldatum
-      minimum_payment: Minimumbetaling
-      minimum_payment_placeholder: '100'
+      annual_fee: "Jaarlijkse kosten"
+      annual_fee_placeholder: "99"
+      apr: "Rentepercentage"
+      apr_placeholder: "15.99"
+      available_credit: "Beschikbaar krediet"
+      available_credit_placeholder: "10000"
+      due_day: "Vervaldag betaling"
+      expiration_date: "Vervaldatum"
+      minimum_payment: "Minimumbetaling"
+      minimum_payment_placeholder: "100"
+      statement_close_day: "Afschrift sluit op"
+      statement_cycle_description: "De dag van de maand waarop uw afschrift sluit en de dag waarop de betaling vervalt. Als deze zijn ingesteld, toont het tabblad Overzicht het bedrag van uw laatste afschrift en wat er voor het volgende wordt opgebouwd. Een gekoppelde kaart vult deze automatisch in en behoudt wat u handmatig heeft ingesteld."
+      sophtron_balance_sign_auto: "Automatisch"
+      sophtron_balance_sign_credit: "Tegoed (de bank is u geld verschuldigd)"
+      sophtron_balance_sign_debt: "Schuld (u bent de bank geld verschuldigd)"
+      sophtron_balance_sign_description: "Gebruik alleen een handmatige instelling als Sophtron een dubbelzinnig teken rapporteert. Automatisch blijft creditcardsaldi omkeren."
+      sophtron_balance_sign_label: "Betekenis van Sophtron-saldo"
+      simplefin_balance_sign_auto: "Automatisch"
+      simplefin_balance_sign_credit: "Tegoed (de bank is u geld verschuldigd)"
+      simplefin_balance_sign_debt: "Schuld (u bent de bank geld verschuldigd)"
+      simplefin_balance_sign_description: "Gebruik alleen een handmatige instelling als SimpleFIN een dubbelzinnig teken rapporteert. Automatisch blijft de transactiegeschiedenis en het saldo van de provider gebruiken."
+      simplefin_balance_sign_label: "Betekenis van SimpleFIN-saldo"
+      treat_balance_as_available_credit_description: "Schakel in als uw bank het saldo van deze kaart rapporteert als resterend beschikbaar krediet in plaats van het verschuldigde bedrag. De schuld wordt dan afgeleid van de kredietlimiet die uw bank rapporteert, of van het veld Beschikbaar krediet als uw bank die niet levert."
+      treat_balance_as_available_credit_label: "Saldo is beschikbaar krediet"
+    tabs:
+      overview:
+        above_minimum: "Dit afschrift bedroeg %{balance}, boven het minimum van %{minimum}. Als u alleen het minimum betaalt, blijft het saldo op de kaart staan tegen dit rentepercentage."
+        annual_percentage_rate: "Jaarlijks rentepercentage"
+        apr: "Rentepercentage"
+        balance_carried_label: "Overgedragen saldo"
+        charges: "Afschrijvingen"
+        estimated_interest_label: "Geschatte rente"
+        monthly_rate_label: "Maandelijkse rente"
+        per_month: "%{amount}/maand"
+        closes_on: "Volgend afschrift sluit op %{date}"
+        credit_toward_next: "Tegoed voor het volgende afschrift"
+        due_on: "Te betalen op %{date}"
+        edit_card_details: "Kaartgegevens bewerken"
+        payments_credits: "Betalingen/tegoeden"
+        remaining_due: "Nog te betalen %{amount}"
+        scheduled_payment: "Geplande betaling van %{amount} op %{date}"
+        since_last_statement: "Sinds laatste afschrift"
+        statement_balance: "Saldo afschrift"
+        status_paid: "Betaald"
+        status_partial: "Deels betaald"
+        multi_currency_unavailable: "Dit afschrift telt posten op die in meer dan één valuta zijn vastgelegd. Die kunnen hier niet worden opgeteld zonder een koers voor elk ervan. De saldi blijven leeg in plaats van geschat."
+        no_cycle_description: "Stel de dag in waarop uw afschrift sluit en de dag waarop de betaling vervalt, dan toont dit tabblad het bedrag van uw laatste afschrift en wat er voor het volgende wordt opgebouwd. Een gekoppelde kaart vult deze meestal voor u in."
+        no_cycle_title: "Geen afschriftcyclus ingesteld"
+        unknown: "Onbekend"
     new:
-      title: Creditcardgegevens invoeren
-    overview:
-      amount_owed: Schuldig bedrag
-      annual_fee: Jaarlijkse kosten
-      apr: Rentepercentage
-      available_credit: Beschikbaar krediet
-      expiration_date: Vervaldatum
-      minimum_payment: Minimumbetaling
-      unknown: Onbekend
+      title: "Creditcardgegevens invoeren"
+    update:
+      sophtron_balance_sign_error: "De betekenis van het Sophtron-saldo kon niet worden toegepast. Uw vorige instelling is behouden. Probeer het opnieuw."

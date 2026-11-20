@@ -4,8 +4,9 @@ class ExchangeRate::Importer
 
   PROVISIONAL_LOOKBACK_DAYS = 5
 
-  def initialize(exchange_rate_provider:, from:, to:, start_date:, end_date:, clear_cache: false)
+  def initialize(exchange_rate_provider:, from:, to:, start_date:, end_date:, clear_cache: false, provider_name: ExchangeRate.provider_name)
     @exchange_rate_provider = exchange_rate_provider
+    @current_provider_name = provider_name
     @from = from
     @to = to
     @start_date = start_date
@@ -58,9 +59,14 @@ class ExchangeRate::Importer
       db_rate_value = db_rates[date]&.rate
       provider_rate_value = provider_rates[date]&.rate
 
+      # A cache clear replaces the stored rates the provider covers, so the
+      # dates it skips carry its last rate forward rather than keep the old
+      # value. Stored history before the provider's first rate is kept.
+      replace_db_rate = clear_cache && earliest_valid_provider_date.present? && date >= earliest_valid_provider_date
+
       chosen_rate = if provider_rate_value.present? && provider_rate_value.to_f > 0
         provider_rate_value
-      elsif db_rate_value.present? && db_rate_value.to_f > 0
+      elsif !replace_db_rate && db_rate_value.present? && db_rate_value.to_f > 0
         db_rate_value
       else
         prev_rate_value
@@ -83,11 +89,14 @@ class ExchangeRate::Importer
     inverse_rates = gapfilled_rates.filter_map do |row|
       next if row[:rate].to_f <= 0
 
+      inverse = inverse_rate(row[:rate])
+      next unless inverse
+
       {
         from_currency: row[:to_currency],
         to_currency: row[:from_currency],
         date: row[:date],
-        rate: (BigDecimal("1") / BigDecimal(row[:rate].to_s)).round(12)
+        rate: inverse
       }
     end
 
@@ -106,13 +115,7 @@ class ExchangeRate::Importer
   end
 
   private
-    attr_reader :exchange_rate_provider, :from, :to, :start_date, :end_date, :clear_cache
-
-    # Resolves the provider name the same way as ExchangeRate::Provided.provider:
-    # ENV takes precedence over the DB Setting to stay consistent in env-configured deployments.
-    def current_provider_name
-      @current_provider_name ||= (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
-    end
+    attr_reader :exchange_rate_provider, :from, :to, :start_date, :end_date, :clear_cache, :current_provider_name
 
     def upsert_rows(rows)
       batch_size = 200
@@ -235,15 +238,26 @@ class ExchangeRate::Importer
         next if existing_inverse_dates.include?(rate.date)
         next if rate.rate.to_f <= 0
 
+        inverse = inverse_rate(rate.rate)
+        next unless inverse
+
         {
           from_currency: to,
           to_currency: from,
           date: rate.date,
-          rate: (BigDecimal("1") / BigDecimal(rate.rate.to_s)).round(12)
+          rate: inverse
         }
       end
 
       upsert_rows(inverse_rows) if inverse_rows.any?
+    end
+
+    # Inverses are stored to 12 decimal places, so a forward rate above 1e12
+    # rounds its inverse to zero. That pair is skipped rather than stored as the
+    # zero rate ExchangeRate.valid_rate? rejects.
+    def inverse_rate(rate)
+      inverse = (BigDecimal("1") / BigDecimal(rate.to_s)).round(12)
+      inverse if ExchangeRate.valid_rate?(inverse)
     end
 
     def all_rates_exist?

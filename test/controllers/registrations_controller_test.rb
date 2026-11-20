@@ -14,9 +14,36 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_url
   end
 
+  # Signing up is a privilege change like signing in, and goes through the
+  # same create_session_for, so the pre-auth session must not survive it.
+  test "create discards pre-auth session state" do
+    get new_registration_url(return_to: "/transactions")
+    assert_equal "/transactions", session[:return_to], "the sentinel must really be in the pre-auth session"
+
+    post registration_url, params: { user: {
+      email: "rotation@example.com",
+      password: "Password1!" } }
+
+    assert_redirected_to root_url
+    assert_nil session[:return_to]
+  end
+
+  test "create rolls back registration when session creation fails" do
+    RegistrationsController.any_instance.stubs(:create_session_for).returns(false)
+
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: {
+        email: "session-failure@example.com",
+        password: "Password1!" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_nil User.find_by(email: "session-failure@example.com")
+  end
+
   test "first user of instance becomes super_admin" do
     # Clear all users to simulate fresh instance
-    User.destroy_all
+    User.connection.disable_referential_integrity { User.delete_all }
 
     assert_difference "User.count", +1 do
       post registration_url, params: { user: {

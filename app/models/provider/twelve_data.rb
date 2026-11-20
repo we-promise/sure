@@ -11,6 +11,11 @@ class Provider::TwelveData < Provider
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 1.0
 
+  # time_series answers can hold years of daily rows and are slow to start, so
+  # they get a 60 s read limit rather than the client's 20 s.
+  # A retry after a timeout is not counted against the per-minute credits.
+  HISTORY_READ_TIMEOUT = 60
+
   # Pattern to detect plan upgrade errors in API responses
   PLAN_UPGRADE_PATTERN = /available starting with (\w+)/i
 
@@ -46,12 +51,15 @@ class Provider::TwelveData < Provider
 
       limit = parsed.dig("plan_daily_limit")
       used = parsed.dig("daily_usage")
-      remaining = limit - used
+
+      unless used.is_a?(Numeric) && limit.is_a?(Numeric) && limit.positive?
+        raise Error, "Twelve Data returned no usable usage figures"
+      end
 
       UsageData.new(
         used: used,
         limit: limit,
-        utilization: used / limit * 100,
+        utilization: (used.to_f / limit * 100).round(1),
         plan: parsed.dig("plan_category"),
       )
     end
@@ -81,6 +89,7 @@ class Provider::TwelveData < Provider
       # Try to fetch the currency pair via the time_series API (consumes 1 credit) - this might not return anything as the API does not provide time series data for all possible currency pairs
       throttle_request
       response = client.get("#{base_url}/time_series") do |req|
+        req.options.timeout = HISTORY_READ_TIMEOUT
         req.params["symbol"] = "#{from}/#{to}"
         req.params["start_date"] = start_date.to_s
         req.params["end_date"] = end_date.to_s
@@ -96,6 +105,7 @@ class Provider::TwelveData < Provider
         Rails.logger.info("#{self.class.name}: Currency pair #{from}/#{to} not available, fetching via time_series/cross API")
         throttle_request(credits: 5)
         response = client.get("#{base_url}/time_series/cross") do |req|
+          req.options.timeout = HISTORY_READ_TIMEOUT
           req.params["base"] = from
           req.params["quote"] = to
           req.params["start_date"] = start_date.to_s
@@ -211,6 +221,7 @@ class Provider::TwelveData < Provider
     with_provider_response do
       throttle_request
       response = client.get("#{base_url}/time_series") do |req|
+        req.options.timeout = HISTORY_READ_TIMEOUT
         req.params["symbol"] = symbol
         req.params["mic_code"] = exchange_operating_mic
         req.params["start_date"] = start_date.to_s
@@ -266,6 +277,9 @@ class Provider::TwelveData < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        faraday.options.open_timeout = 5
+        faraday.options.timeout      = 20
+
         faraday.request(:retry, {
           max: 3,
           interval: 1.0,
@@ -297,7 +311,9 @@ class Provider::TwelveData < Provider
       # charged to the minute the request actually fires in, not a stale minute
       # we slept through (which would undercount the new minute's usage).
       minute_key = "twelve_data:credits:#{Time.current.to_i / 60}"
-      current_count = Rails.cache.read(minute_key).to_i
+      # `increment` stores a raw integer (Redis INCRBY), so it must be read back
+      # with `raw: true`; a plain `read` returns nil on RedisCacheStore.
+      current_count = Rails.cache.read(minute_key, raw: true).to_i
 
       if current_count + credits > max_requests_per_minute
         wait_seconds = 60 - (Time.current.to_i % 60) + 1
@@ -339,7 +355,21 @@ class Provider::TwelveData < Provider
       when Faraday::TooManyRequestsError
         RateLimitError.new("TwelveData rate limit exceeded", details: error.response&.dig(:body))
       when Faraday::Error
-        self.class::Error.new(error.message, details: error.response&.dig(:body))
+        body = error.response&.dig(:body)
+        # Faraday's `raise_error` middleware raises before our own
+        # `JSON.parse(response.body); check_api_error!(parsed)` code runs, so
+        # for any 4xx/5xx we'd otherwise only ever see Faraday's generic
+        # "the server responded with status ..." message — never TwelveData's
+        # actual JSON error body (which is what plan_upgrade_required? needs
+        # to detect plan-tier restrictions). Parse it here instead.
+        parsed_body = begin
+          body.is_a?(String) ? JSON.parse(body) : body
+        rescue JSON::ParserError
+          nil
+        end
+        api_message = parsed_body.is_a?(Hash) ? parsed_body["message"] : nil
+
+        self.class::Error.new(api_message.presence || error.message, details: body)
       else
         self.class::Error.new(error.message)
       end

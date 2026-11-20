@@ -31,6 +31,44 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Name", @item.name
   end
 
+  test "invalid create outside a frame redirects to the providers page with a 303" do
+    assert_no_difference "IndexaCapitalItem.count" do
+      post indexa_capital_items_url, params: { indexa_capital_item: { name: "New Connection" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("activerecord.errors.models.indexa_capital_item.credentials_required"), flash[:alert]
+  end
+
+  test "invalid update outside a frame redirects to the providers page with a 303" do
+    patch indexa_capital_item_url(@item), params: { indexa_capital_item: { name: "" } }
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch indexa_capital_item_url(@item),
+          params: { indexa_capital_item: { name: "Updated Name" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "indexa_capital-providers-panel"
+    assert_includes response.body, %(id="indexa_capital-providers-panel")
+    assert_equal "Updated Name", @item.reload.name
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post indexa_capital_items_url,
+         params: { indexa_capital_item: { name: "New Connection" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "indexa_capital-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("activerecord.errors.models.indexa_capital_item.credentials_required"))
+  end
+
   test "should destroy indexa_capital_item" do
     assert_difference("IndexaCapitalItem.count", 0) do # doesn't delete immediately
       delete indexa_capital_item_url(@item)
@@ -140,5 +178,87 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
         indexa_capital_account_id: ica.id
       }
     end
+  end
+
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    IndexaCapitalItem.any_instance.stubs(:credentials_configured?).returns(false)
+
+    get select_accounts_indexa_capital_items_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("indexa_capital_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
+
+  test "setup_accounts does not offer an ignored account" do
+    indexa_capital_accounts(:pension_plan).ignore!
+
+    get setup_accounts_indexa_capital_item_url(@item)
+
+    assert_response :success
+    assert_select "input[name='account_ids[]'][value=?]", indexa_capital_accounts(:mutual_fund).id
+    assert_select "input[name='account_ids[]'][value=?]", indexa_capital_accounts(:pension_plan).id, count: 0
+  end
+
+  test "complete_account_setup ignores the accounts the user left unchecked" do
+    mutual_fund = indexa_capital_accounts(:mutual_fund)
+    pension_plan = indexa_capital_accounts(:pension_plan)
+
+    assert_difference "Account.count", 1 do
+      post complete_account_setup_indexa_capital_item_url(@item), params: {
+        setup_account_ids: [ mutual_fund.id, pension_plan.id ],
+        account_ids: [ mutual_fund.id ]
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_not_nil mutual_fund.reload.current_account
+    assert_not mutual_fund.ignored?
+    assert pension_plan.reload.ignored?
+    assert_nil pension_plan.current_account
+  end
+
+  test "complete_account_setup with every account unchecked ignores them all" do
+    ids = [ indexa_capital_accounts(:mutual_fund).id, indexa_capital_accounts(:pension_plan).id ]
+    @item.update!(pending_account_setup: true)
+
+    assert_no_difference "Account.count" do
+      post complete_account_setup_indexa_capital_item_url(@item), params: { setup_account_ids: ids }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("indexa_capital_items.complete_account_setup.all_skipped"), flash[:notice]
+    assert @item.indexa_capital_accounts.where(id: ids).all?(&:ignored?)
+    assert_not @item.reload.pending_account_setup?
+  end
+
+  test "select accounts does not fetch or refresh an ignored account" do
+    pension_plan = indexa_capital_accounts(:pension_plan)
+    pension_plan.ignore!
+    Provider::IndexaCapital.any_instance.stubs(:list_accounts).returns([
+      { account_number: "LPYH3MCQ", name: "Mutual Fund", type: "mutual", status: "active", currency: "EUR" },
+      { account_number: "DCU8HWEP", name: "Renamed", type: "pension", status: "active", currency: "EUR" }
+    ])
+    Provider::IndexaCapital.any_instance.expects(:get_account_balance).with(account_number: "LPYH3MCQ").returns(100)
+    Provider::IndexaCapital.any_instance.expects(:get_account_balance).with(account_number: "DCU8HWEP").never
+
+    assert_no_changes -> { pension_plan.reload.attributes } do
+      get select_accounts_indexa_capital_items_url
+    end
+
+    assert_response :success
+    assert_equal 100, indexa_capital_accounts(:mutual_fund).reload.current_balance
+  end
+
+  test "linking an ignored account to an existing Sure account stops ignoring it" do
+    pension_plan = indexa_capital_accounts(:pension_plan)
+    pension_plan.ignore!
+    manual_account = Account.create!(family: @family, name: "Manual Pension", balance: 0, currency: "EUR", accountable: Investment.new)
+
+    post link_existing_account_indexa_capital_items_url, params: { account_id: manual_account.id, indexa_capital_account_id: pension_plan.id }
+
+    assert_equal manual_account, pension_plan.reload.current_account
+    assert_not pension_plan.ignored?
   end
 end

@@ -16,6 +16,7 @@ class Invitation < ApplicationRecord
   validate :no_duplicate_pending_invitation_in_family
   validate :inviter_is_admin
   validate :no_other_pending_invitation, on: :create
+  validate :not_inviting_self, on: :create
 
   before_validation :normalize_email
   before_validation :generate_token, on: :create
@@ -29,35 +30,7 @@ class Invitation < ApplicationRecord
     accepted_at.nil? && expires_at > Time.current
   end
 
-  def accept_for(user)
-    return false if user.blank?
-    return false unless pending?
-    return false unless emails_match?(user)
-    return false if would_orphan_owned_accounts?(user)
-
-    transaction do
-      user.update!(family_id: family_id, role: role.to_s)
-      update!(accepted_at: Time.current)
-      family.auto_share_existing_accounts_with(user)
-    end
-    true
-  end
-
-  def would_orphan_owned_accounts?(user)
-    return false if user.blank?
-    return false if user.family_id.blank?
-    return false if user.family_id == family_id
-
-    user.owned_accounts.where.not(family_id: family_id).exists?
-  end
-
   private
-
-    def emails_match?(user)
-      inv_email = email.to_s.strip.downcase
-      usr_email = user.email.to_s.strip.downcase
-      inv_email.present? && usr_email.present? && inv_email == usr_email
-    end
 
     def generate_token
       loop do
@@ -124,6 +97,13 @@ class Invitation < ApplicationRecord
       end
 
       errors.add(:email, "has already been invited to this family") if exists
+    end
+
+    # The inviter already has an account, and an invitation never moves one.
+    def not_inviting_self
+      return if email.blank? || inviter.nil?
+
+      errors.add(:email, :own_email) if email == inviter.email.to_s.strip.downcase
     end
 
     def inviter_is_admin

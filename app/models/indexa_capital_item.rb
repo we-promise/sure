@@ -1,23 +1,18 @@
 # frozen_string_literal: true
 
 class IndexaCapitalItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
-
-  # Helper to detect if ActiveRecord Encryption is configured for this app
-  def self.encryption_ready?
-    creds_ready = Rails.application.credentials.active_record_encryption.present?
-    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
-    creds_ready || env_ready
-  end
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :password, deterministic: true
     encrypts :api_token, deterministic: true
+    encrypts :username
+    encrypts :document
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
@@ -36,11 +31,6 @@ class IndexaCapitalItem < ApplicationRecord
 
   def syncer
     IndexaCapitalItem::Syncer.new(self)
-  end
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
   end
 
   # Override syncing? to include background activities fetch
@@ -119,9 +109,9 @@ class IndexaCapitalItem < ApplicationRecord
     indexa_capital_accounts.joins(:account_provider)
   end
 
-  # Unlinked accounts (no AccountProvider association)
+  # Unlinked accounts that still need a setup decision (ignored ones are left out)
   def unlinked_indexa_capital_accounts
-    indexa_capital_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
+    indexa_capital_accounts.needs_setup
   end
 
   def sync_status_summary
@@ -143,7 +133,7 @@ class IndexaCapitalItem < ApplicationRecord
   end
 
   def unlinked_accounts_count
-    indexa_capital_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    unlinked_indexa_capital_accounts.count
   end
 
   def total_accounts_count

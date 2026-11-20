@@ -1,7 +1,11 @@
 class Import::CategoryMapping < Import::Mapping
   class << self
     def mappables_by_key(import)
-      unique_values = import.rows.map(&:category).uniq
+      unique_values = if import.is_a?(QifImport)
+        import.row_categories
+      else
+        import.rows.map(&:category).uniq
+      end
 
       # For hierarchical QIF keys like "Home:Home Improvement", look up the child
       # name ("Home Improvement") since category names are unique per family.
@@ -25,7 +29,7 @@ class Import::CategoryMapping < Import::Mapping
   end
 
   def selectable_values
-    family_categories = import.family.categories.alphabetically.map { |category| [ category.name, category.id ] }
+    family_categories = Category::Group.select_options(import.family.categories)
 
     unless key.blank?
       family_categories.unshift [ "Add as new category", CREATE_NEW_KEY ]
@@ -55,10 +59,16 @@ class Import::CategoryMapping < Import::Mapping
       parent_name = parts[0].strip
       child_name  = parts[1].strip
 
-      # Ensure the parent category exists before creating the child.
-      parent = import.family.categories.find_or_create_by!(name: parent_name) do |cat|
-        cat.color = Category::COLORS.sample
-        cat.lucide_icon = Category.suggested_icon(parent_name)
+      # Ensure parent is a top-level category (subcategories cannot have children in Sure).
+      parent = import.family.categories.roots.find_by(name: parent_name)
+
+      if parent.nil?
+        existing = import.family.categories.find_by(name: parent_name)
+        if existing&.subcategory?
+          parent = existing.parent
+        else
+          parent = create_root_category!(parent_name)
+        end
       end
 
       self.mappable = import.family.categories.find_or_create_by!(name: child_name) do |cat|
@@ -75,4 +85,18 @@ class Import::CategoryMapping < Import::Mapping
 
     save!
   end
+
+  private
+    def create_root_category!(name)
+      import.family.categories.roots.create!(name: name) do |cat|
+        cat.color = Category::COLORS.sample
+        cat.lucide_icon = Category.suggested_icon(name)
+      end
+    rescue ActiveRecord::RecordNotUnique
+      import.family.categories.roots.find_by!(name: name)
+    rescue ActiveRecord::RecordInvalid => error
+      raise unless error.record.is_a?(Category) && error.record.errors.of_kind?(:name, :taken)
+
+      import.family.categories.roots.find_by!(name: name)
+    end
 end

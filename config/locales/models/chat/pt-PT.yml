@@ -1,0 +1,9 @@
+---
+pt-PT:
+  chat:
+    errors:
+      rate_limited: "O serviço de IA está a ficar sem limite de requisições neste momento. Tente novamente dentro de alguns minutos."
+      temporarily_unavailable: "O serviço de IA está temporariamente indisponível neste momento. Tente novamente dentro de alguns minutos."
+      misconfigured: "O serviço de IA não está configurado corretamente. Contacte o seu administrador."
+      no_response: "O assistente não respondeu. O worker em segundo plano pode estar em baixo ou a IA pode não estar totalmente configurada. Tente novamente."
+      default: "Falha ao gerar uma resposta. Tente novamente."

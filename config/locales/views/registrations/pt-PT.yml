@@ -1,0 +1,32 @@
+---
+pt-PT:
+  helpers:
+    label:
+      user:
+        invite_code: Código de Convite
+    submit:
+      user:
+        create: Continuar
+  registrations:
+    closed: As inscrições estão atualmente encerradas.
+    create:
+      failure: Houve um problema ao registar.
+      invalid_invite_code: Código de convite inválido, tente novamente.
+      success: Registou-se com sucesso.
+    new:
+      invitation_message: "%{inviter} convidou-o a juntar-se como %{role}"
+      join_family_title: Juntar-se a %{family} %{moniker}
+      role_admin: administrador
+      role_guest: convidado
+      role_member: membro
+      submit: Criar conta
+      title: Crie a sua conta
+      welcome_body: Para começar, tem de se registar para criar uma nova conta.  De seguida
+        poderá configurar definições adicionais dentro da aplicação.
+      welcome_title: Bem-vindo ao Self Hosted %{product_name}!
+      password_placeholder: Introduza a sua palavra-passe
+      password_requirements:
+        length: Mínimo 8 caracteres
+        case: Letras maiúsculas e minúsculas
+        number: Um número (0-9)
+        special: "Um carácter especial (!, @, #, €, %, etc)"

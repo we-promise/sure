@@ -1,11 +1,12 @@
 <%
   # Parameters:
   # - configuration: Provider::Configurable::Configuration object
+  # - provider_setup_encryption_warning: whether to warn before saving credentials
   provider_key = configuration.provider_key.to_s
 
   setup_steps_data =
     if %w[plaid plaid_eu].include?(provider_key)
-      plaid_link = link_to("Plaid Dashboard", "https://dashboard.plaid.com/team/keys", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")
+      plaid_link = link_to("Plaid Dashboard", "https://dashboard.plaid.com/team/keys", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")
       step_1_key = "settings.providers.#{provider_key}_panel.step_1_html"
       [
         t(step_1_key, link: plaid_link),
@@ -16,6 +17,16 @@
 %>
 
 <div class="space-y-4">
+  <% if local_assigns[:provider_setup_encryption_warning] %>
+    <%= render DS::Alert.new(
+          variant: :warning,
+          title: t("settings.providers.provider_setup_encryption_warning.title")
+        ) do %>
+      <p><%= t("settings.providers.provider_setup_encryption_warning.message") %></p>
+      <%= render "settings/encryption_migration_guide" %>
+    <% end %>
+  <% end %>
+
   <% if setup_steps_data %>
     <%= render "settings/providers/setup_steps", steps: setup_steps_data %>
   <% elsif configuration.provider_description.present? %>
@@ -66,5 +77,11 @@
         <%= form.submit t(".save_and_connect") %>
       </div>
     </div>
+  <% end %>
+
+  <% if local_assigns[:provider_setup_encryption_warning] %>
+    <p class="text-xs text-secondary pt-3 border-t border-tertiary">
+      <%= t("settings.providers.drawer_trust_statement_encryption_unconfigured") %>
+    </p>
   <% end %>
 </div>

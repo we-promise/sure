@@ -1,0 +1,8 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Jede Zinsänderung braucht einen Stichtag und einen Zinssatz.
+          rate_change_before_origination: Eine Zinsänderung kann nicht vor dem Beginn des Kredits wirksam werden.

@@ -29,10 +29,9 @@ zh-CN:
     cost_basis_cell:
       unknown: --
       set: 设置
-      set_cost_basis_header: 为 %{ticker}（%{qty} 股）设置成本基础
+      set_cost_basis_header: 为 %{ticker} 设置成本基础
       total_cost_basis_label: 总成本基础
-      or_per_share_label: 或输入每股：
-      per_share: 每股
+      per_share_label: "每股"
       cancel: 取消
       save: 保存
       overwrite_confirm_title: 覆盖成本基础？
@@ -43,10 +42,16 @@ zh-CN:
       unknown: --
       no_cost_basis: 没有成本基础
     index:
+      positions:
+        one: "%{count} 个持仓"
+        other: "%{count} 个持仓"
       average_cost: 平均成本
       holdings: 持仓
       name: 名称
       new_holding: 新活动
+      negative_position: "%{name} (%{ticker})：自 %{date} 起低于零，最低 %{qty}。"
+      negative_positions_hint: "可能缺少一笔买入或转入。请补上，或更正使持仓低于零的交易。"
+      negative_positions_title: "部分持仓低于零"
       no_holdings: 没有可显示的持仓。
       return: 总回报
       weight: 权重

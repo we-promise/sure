@@ -7,6 +7,10 @@ require "rails/all"
 Bundler.require(*Rails.groups)
 
 module Sure
+  # Matches Rails::Application::Finisher#setup_default_session_store for Sure::Application
+  # ("_#{railtie_name.chomp("_application")}_session" → "_sure_session").
+  SESSION_COOKIE_KEY = "_sure_session"
+
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1
@@ -14,7 +18,7 @@ module Sure
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks generators])
+    config.autoload_lib(ignore: %w[assets tasks generators rubocop])
 
     # Configuration for the application, engines, and railties goes here.
     #
@@ -24,8 +28,14 @@ module Sure
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
 
+    # Explicit source of truth for the session cookie name (also used by Codespaces).
+    config.session_store :cookie_store, key: SESSION_COOKIE_KEY
+
     # TODO: This is here for incremental adoption of localization.  This can be removed when all translations are implemented.
     config.i18n.fallbacks = true
+
+    # Exact opt-in: version metadata is authenticated by default.
+    config.public_version_endpoint = ENV["PUBLIC_VERSION_ENDPOINT"] == "true"
 
     config.app_mode = (ENV["SELF_HOSTED"] == "true" || ENV["SELF_HOSTING_ENABLED"] == "true" ? "self_hosted" : "managed").inquiry
 
@@ -34,7 +44,7 @@ module Sure
       config.active_record.encryption = Rails.application.credentials.active_record_encryption
     end
 
-    config.view_component.preview_controller = "LookbooksController"
+    config.view_component.previews.controller = "LookbooksController"
     config.lookbook.preview_display_options = {
       theme: [ "light", "dark" ] # available in view as params[:theme]
     }
@@ -48,8 +58,15 @@ module Sure
       end
     end
 
-    # Enable Rack::Attack middleware for API rate limiting
-    config.middleware.use Rack::Attack
+    # Rack::Attack's own Railtie (lib/rack/attack/railtie.rb in the gem)
+    # already inserts it into the middleware stack — this explicit `use` was
+    # a second, redundant insertion (confirmed via `bin/rails middleware`,
+    # which listed Rack::Attack twice). Since Rack::Attack's counters
+    # increment once per middleware pass, every throttle in
+    # config/initializers/rack_attack.rb was silently firing at half its
+    # documented limit. Removed rather than kept as a second layer, since
+    # nothing in the app relies on it running twice and the halved limits
+    # were undocumented/accidental, not a deliberate stricter policy.
 
     config.x.ui = ActiveSupport::OrderedOptions.new
     default_layout = ENV.fetch("DEFAULT_UI_LAYOUT", "dashboard")
@@ -62,5 +79,11 @@ module Sure
     # Handle OmniAuth/OIDC errors gracefully (must be before OmniAuth middleware)
     require_relative "../app/middleware/omniauth_error_handler"
     config.middleware.use OmniauthErrorHandler
+
+    # Bound a FinanceKit batch upload before Rails reads and parses it; see
+    # the class comment for why the controller's own size check is too late.
+    # Ahead of Rack::MethodOverride, the first middleware that reads a body.
+    require_relative "../app/middleware/financekit_body_limit"
+    config.middleware.insert_before Rack::MethodOverride, FinancekitBodyLimit
   end
 end

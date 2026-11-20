@@ -32,6 +32,95 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "requests liability products only for liability account types" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:products] == [ "investments" ] &&
+        params[:additional_consented_products] == [ "transactions" ]
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      accountable_type: "Investment"
+    )
+  end
+
+  test "does not request liabilities for a depository link" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:products] == [ "transactions" ] &&
+        params[:optional_products].nil? &&
+        params[:additional_consented_products] == [ "investments" ]
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      accountable_type: "Depository"
+    )
+  end
+
+  test "requests liabilities as an optional product for a credit card link" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:products] == [ "transactions" ] &&
+        params[:optional_products] == [ "liabilities" ] &&
+        params[:required_if_supported_products].nil? &&
+        params[:additional_consented_products] == [ "investments" ]
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      accountable_type: "CreditCard"
+    )
+  end
+
+  test "requests liabilities as primary for a loan link" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:products] == [ "liabilities" ] &&
+        params[:optional_products].nil? &&
+        params[:additional_consented_products] == [ "transactions", "investments" ]
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      accountable_type: "Loan"
+    )
+  end
+
+  test "enables account selection for an update link token" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:access_token] == "access-token" &&
+        params[:update] == { account_selection_enabled: true } &&
+        params[:products].nil? &&
+        params[:transactions].nil?
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    result = @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      access_token: "access-token",
+      account_selection_enabled: true
+    )
+
+    assert_equal "response", result
+  end
+
   test "exchanges public token" do
     VCR.use_cassette("plaid/exchange_public_token") do
       public_token = @plaid.create_public_token
@@ -60,6 +149,14 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "requests a transaction refresh" do
+    @plaid.client.expects(:transactions_refresh).with do |request|
+      request.access_token == "access-token"
+    end
+
+    @plaid.refresh_transactions("access-token")
+  end
+
   test "gets item investments" do
     VCR.use_cassette("plaid/get_item_investments") do
       access_token = get_access_token
@@ -80,7 +177,107 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "verifies a webhook token against the JWK published for its kid" do
+    provider, jwk, key, body = verified_webhook_setup
+
+    token = JWT.encode(
+      { iat: Time.current.to_i, request_body_sha256: Digest::SHA256.hexdigest(body) },
+      key, "ES256", { "kid" => jwk.kid }
+    )
+
+    assert_nothing_raised { provider.validate_webhook!(token, body) }
+  end
+
+  test "rejects webhook tokens signed by a key with a matching kid but different bytes" do
+    provider, jwk, = verified_webhook_setup
+    impostor = OpenSSL::PKey::EC.generate("prime256v1")
+
+    token = JWT.encode(
+      { iat: Time.current.to_i, request_body_sha256: Digest::SHA256.hexdigest("{}") },
+      impostor, "ES256", { "kid" => jwk.kid }
+    )
+
+    assert_raises JWT::VerificationError do
+      provider.validate_webhook!(token, "{}")
+    end
+  end
+
+  test "rejects webhook tokens whose body hash does not match the raw body" do
+    provider, jwk, key, body = verified_webhook_setup
+    token = JWT.encode(
+      { iat: Time.current.to_i, request_body_sha256: Digest::SHA256.hexdigest(body) },
+      key, "ES256", { "kid" => jwk.kid }
+    )
+
+    assert_raises JWT::VerificationError do
+      provider.validate_webhook!(token, body + " ")
+    end
+  end
+
+  test "rejects webhook tokens issued more than five minutes ago" do
+    provider, jwk, key, body = verified_webhook_setup
+    token = JWT.encode(
+      { iat: 6.minutes.ago.to_i, request_body_sha256: Digest::SHA256.hexdigest(body) },
+      key, "ES256", { "kid" => jwk.kid }
+    )
+
+    assert_raises JWT::VerificationError do
+      provider.validate_webhook!(token, body)
+    end
+  end
+
+  test "rejects webhook tokens signed with an unsupported algorithm" do
+    provider, jwk, _key, body = verified_webhook_setup(require_key_fetch: false)
+
+    token = JWT.encode(
+      { iat: Time.current.to_i, request_body_sha256: Digest::SHA256.hexdigest(body) },
+      "not-a-real-secret", "HS256", { "kid" => jwk.kid }
+    )
+
+    assert_raises JWT::VerificationError, JWT::DecodeError do
+      provider.validate_webhook!(token, body)
+    end
+  end
+
+  test "accepts a token with an expired exp while the iat age check governs freshness" do
+    provider, jwk, key, body = verified_webhook_setup
+    token = JWT.encode(
+      { iat: Time.current.to_i, exp: 1.minute.ago.to_i, request_body_sha256: Digest::SHA256.hexdigest(body) },
+      key, "ES256", { "kid" => jwk.kid }
+    )
+
+    assert_nothing_raised { provider.validate_webhook!(token, body) }
+  end
+
   private
+    # Pins the webhook verification contract that the jwt gem bump (2.10.3 ->
+    # 3.3.0) rides on: JWKS built from the key Plaid publishes for the token's
+    # kid, ES256 decode with expiration skipped in favor of the iat age check,
+    # and the request-body SHA-256 comparison.
+    def verified_webhook_setup(require_key_fetch: true)
+      key = OpenSSL::PKey::EC.generate("prime256v1")
+      jwk = JWT::JWK.new(key, { use: "sig" })
+      body = '{"webhook_type":"TRANSACTIONS","webhook_code":"INITIAL_UPDATE"}'
+
+      client = mock
+      if require_key_fetch
+        client.expects(:webhook_verification_key_get).with do |request|
+          request.is_a?(Plaid::WebhookVerificationKeyGetRequest) && request.key_id == jwk.kid
+        end.returns(Struct.new(:key).new(jwk.export))
+      else
+        # An unsupported algorithm is rejected at decode time, before any
+        # key fetch happens.
+        client.stubs(:webhook_verification_key_get)
+      end
+
+      config = Plaid::Configuration.new
+      config.server_index = Plaid::Configuration::Environment["sandbox"]
+      provider = Provider::Plaid.new(config)
+      provider.instance_variable_set(:@client, client)
+
+      [ provider, jwk, key, body ]
+    end
+
     def get_access_token
       VCR.use_cassette("plaid/access_token") do
         public_token = @plaid.create_public_token

@@ -1,6 +1,42 @@
 class ExchangeRate < ApplicationRecord
   include Provided
 
+  # Part of the cache key of every cached figure converted into the family
+  # currency. Those keys follow entries and syncs, not the conversion rule, so
+  # a change to the rule bumps this or old figures outlive the deploy.
+  # "fx2": a missing rate leaves an amount out rather than counting it at 1.
+  CONVERSION_CACHE_VERSION = "fx2"
+
   validates :from_currency, :to_currency, :date, :rate, presence: true
   validates :date, uniqueness: { scope: %i[from_currency to_currency] }
+  validate :rate_must_convert_amounts, if: -> { rate.present? }
+
+  # A rate multiplies an amount into another currency, so only a finite,
+  # positive number is usable. A zero turns every converted balance into zero
+  # (we-promise/sure#1187); negative, NaN or infinite rates are just as wrong.
+  #
+  # The chk_exchange_rates_rate_positive database constraint enforces the same
+  # rule for writes that skip validations, such as the importer's upsert_all.
+  def self.valid_rate?(value)
+    number = value.is_a?(Numeric) ? value : BigDecimal(value.to_s)
+    number.finite? && number.positive?
+  rescue ArgumentError, TypeError
+    false
+  end
+
+  # Part of the cache key of figures that depend on which rates are stored: a
+  # rate stored later can complete a total that left an amount out. Keeps the
+  # fractional seconds so a rate stored within the same second as the previous
+  # one still changes the key. Works on a scope too
+  # (`where(to_currency: ...).updated_at_version`). It is deliberately not named
+  # `cache_version`: on a relation that name resolves to Rails' collection
+  # version, which also counts every matching row.
+  def self.updated_at_version
+    maximum(:updated_at)&.to_f
+  end
+
+  private
+    def rate_must_convert_amounts
+      errors.add(:rate, :greater_than, count: 0) unless self.class.valid_rate?(rate)
+    end
 end
