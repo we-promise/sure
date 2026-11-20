@@ -67,7 +67,10 @@ class LunchflowItem::ImporterSyncWindowTest < ActiveSupport::TestCase
     end
 
     def import_transactions(sync_start_date:)
-      LunchflowItem::Importer.new(@item, lunchflow_provider: @provider, sync_start_date: sync_start_date)
+      # A failed fetch also keeps the old resume point, so require success.
+      result = LunchflowItem::Importer.new(@item, lunchflow_provider: @provider, sync_start_date: sync_start_date)
         .send(:fetch_and_store_transactions, @lunchflow_account)
+      assert result[:success], result.inspect
+      result
     end
 end
