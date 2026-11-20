@@ -29,6 +29,8 @@ export default class extends Controller {
   _normalDataPoints = [];
   _settledResize = null;
   _comparisonPoints = [];
+  _comparisonByTime = new Map();
+  _yExtent = [0, 0];
   _d3DragSelectBrush = null;
   _d3DragSelectGroup = null;
   // d3 only nulls a truly zero-width selection, so 1-3px of jitter on a click
@@ -67,6 +69,8 @@ export default class extends Controller {
     this._d3Tooltip = null;
     this._normalDataPoints = [];
     this._comparisonPoints = [];
+    this._comparisonByTime = new Map();
+    this._yExtent = [0, 0];
     this._d3DragSelectBrush = null;
     this._d3DragSelectGroup = null;
 
@@ -96,6 +100,16 @@ export default class extends Controller {
           difference: d.difference,
         }))
       : [];
+
+    this._comparisonByTime = new Map(
+      this._comparisonPoints.map((p) => [p.date.getTime(), p]),
+    );
+    // Both lines share the y scale, so both set its domain. Read once here,
+    // not on every point the line generator scales.
+    this._yExtent = d3.extent(
+      this._normalDataPoints.concat(this._comparisonPoints),
+      this._getDatumValue,
+    );
   }
 
   _rememberInitialContainerSize() {
@@ -150,12 +164,13 @@ export default class extends Controller {
   }
 
   _drawChart() {
-    this._drawTrendline();
-
-    // From two points, as the legend's condition is: one point draws nothing.
+    // Drawn first, so the trendline it sits beside is painted over it. From
+    // two points, as the legend's condition is: one point draws nothing.
     if (this._comparisonPoints.length >= 2) {
       this._drawComparisonLine();
     }
+
+    this._drawTrendline();
 
     if (this.useLabelsValue) {
       this._drawXAxisLabels();
@@ -190,15 +205,18 @@ export default class extends Controller {
       .attr("stroke-opacity", this._isFlatSeries ? 0.4 : 1);
   }
 
-  // Secondary to the trendline, so dashed and in a muted token colour, and
-  // drawn without the trendline's gradient, fill or hover split.
+  // Secondary to the trendline, so dashed and in a muted token colour, with
+  // no gradient or fill. It follows the trendline's hover split and its
+  // flat-series fade, so it never stands out over the primary line.
   _drawComparisonLine() {
+    this._installComparisonSplit();
+
     this._d3Group
       .append("path")
       .datum(this._comparisonPoints)
-      .attr("class", "text-secondary")
       .attr("fill", "none")
-      .attr("stroke", "currentColor")
+      .attr("stroke", `url(#${this.element.id}-comparison-gradient)`)
+      .attr("stroke-opacity", this._isFlatSeries ? 0.4 : 1)
       .attr("stroke-width", 1.5)
       .attr("stroke-dasharray", "4, 4")
       .attr("stroke-linejoin", "round")
@@ -251,8 +269,42 @@ export default class extends Controller {
       .attr("stop-color", "var(--color-gray-400)");
   }
 
+  // The comparison line's own split: the text-secondary token before the
+  // hovered point, faded after it, as the trendline greys after its split.
+  // The stops take currentColor from the gradient's class.
+  _installComparisonSplit() {
+    const gradient = this._d3Svg
+      .append("defs")
+      .append("linearGradient")
+      .attr("id", `${this.element.id}-comparison-gradient`)
+      .attr("class", "text-secondary")
+      .attr("gradientUnits", "userSpaceOnUse")
+      .attr("x1", this._d3XScale.range()[0])
+      .attr("x2", this._d3XScale.range()[1]);
+
+    [
+      ["start-color", "0%", 1],
+      ["split-before", "100%", 1],
+      ["split-after", "100%", 0.4],
+      ["end-color", "100%", 0.4],
+    ].forEach(([name, offset, opacity]) => {
+      gradient
+        .append("stop")
+        .attr("class", name)
+        .attr("offset", offset)
+        .attr("stop-color", "currentColor")
+        .attr("stop-opacity", opacity);
+    });
+  }
+
   _setTrendlineSplitAt(percent) {
     const position = percent * 100;
+
+    this._d3Svg
+      .selectAll(
+        `#${this.element.id}-comparison-gradient .split-before, #${this.element.id}-comparison-gradient .split-after`,
+      )
+      .attr("offset", `${position}%`);
 
     // Update both stops at the split point
     this._d3Svg
@@ -627,9 +679,7 @@ export default class extends Controller {
   // Built as DOM nodes with d3's `.text()`, not as an HTML string, so no
   // label or amount is ever parsed as markup.
   _appendComparisonTooltip(datum) {
-    const point = this._comparisonPoints.find(
-      (p) => p.date.getTime() === datum.date.getTime(),
-    );
+    const point = this._comparisonByTime.get(datum.date.getTime());
     if (!point || !this._d3Tooltip) return;
 
     const difference = point.difference;
@@ -783,11 +833,8 @@ export default class extends Controller {
   }
 
   get _d3YScale() {
-    // The comparison line shares the trendline's y scale, so both lines'
-    // points set its domain.
-    const points = this._normalDataPoints.concat(this._comparisonPoints);
-    const dataMin = d3.min(points, this._getDatumValue);
-    const dataMax = d3.max(points, this._getDatumValue);
+    // Both lines' points, read once per data change (_normalizeDataPoints).
+    const [dataMin, dataMax] = this._yExtent;
 
     // All values identical: fall back to a fixed pad so the line sits centered.
     if (dataMin === dataMax) {

@@ -21,6 +21,15 @@ class AccountChartNetContributionsTest < ApplicationSystemTestCase
     # passes the selector but has no length.
     length = page.evaluate_script("document.querySelector('#lineChart path[stroke-dasharray]').getTotalLength()")
     assert_operator length, :>, 0, "the dashed line has no geometry"
+    # Secondary to the value line, so painted under it: earlier in the group.
+    painted_first = page.evaluate_script(<<~JS)
+      (() => {
+        const dashed = document.querySelector('#lineChart path[stroke-dasharray]');
+        const value = document.querySelector('#lineChart path[stroke*="split-gradient"]');
+        return !!(dashed.compareDocumentPosition(value) & Node.DOCUMENT_POSITION_FOLLOWING);
+      })()
+    JS
+    assert painted_first, "the dashed line must be painted before, so under, the value line"
     assert_selector "[data-net-contributions-legend]", text: I18n.t("UI.account.chart.net_contributions.label")
   end
 

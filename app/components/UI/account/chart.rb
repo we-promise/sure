@@ -226,7 +226,17 @@ class UI::Account::Chart < ApplicationComponent
   # too low for a deposit, too high for a withdrawal, and the gap is off by
   # the same amount. Said under the legend rather than hidden.
   def net_contributions_incomplete?
-    account.net_contributions_incomplete?(period: period)
+    account.net_contributions_incomplete?(period: period, value_dates: series.values.map(&:date))
+  end
+
+  # The chart's data. With the comparison line, the tooltip sets the value
+  # line's percentage beside the difference's, so both are written in the
+  # page's locale (#localized_percent).
+  def chart_data_json
+    data = series.as_json
+    return data.to_json unless show_net_contributions?
+
+    data.merge(values: data[:values].map { |value| value.merge(trend: localized_trend(value[:trend])) }).to_json
   end
 
   # The legend under the chart names both lines. The value line takes its
@@ -296,7 +306,7 @@ class UI::Account::Chart < ApplicationComponent
     def build_net_contributions_comparison
       values_by_date = series.values.index_by(&:date)
 
-      points = account.balance_series(period: period, view: :net_contributions).values.filter_map do |point|
+      points = account.balance_series(period: period, view: :net_contributions, value_series: series).values.filter_map do |point|
         value_point = values_by_date[point.date]
         next unless value_point
 
@@ -317,15 +327,29 @@ class UI::Account::Chart < ApplicationComponent
 
     # The Trend as the tooltip reads it, with its percentage signed and in the
     # page's locale. Zero over zero has no ratio, so no percentage, where
-    # Trend#percent says 0.0. A zero base under a non-zero value stays
-    # infinite: `percent` serializes as null and the formatted text says so.
+    # Trend#percent says 0.0, and neither has a negative base (more taken out
+    # than put in), which Trend would divide by its magnitude. A zero base
+    # under a non-zero value stays infinite: `percent` serializes as null and
+    # the formatted text says so.
     def comparison_difference(trend)
       json = trend.as_json
-      return json.merge(percent: nil, percent_formatted: nil) if trend.previous.zero? && trend.current.zero?
+      return json.merge(percent: nil, percent_formatted: nil) if trend.previous.negative? || (trend.previous.zero? && trend.current.zero?)
       return json unless trend.percent.finite?
 
-      formatted = ActiveSupport::NumberHelper.number_to_percentage(trend.percent, precision: 1, locale: I18n.locale)
+      formatted = localized_percent(trend.percent)
       json.merge(percent_formatted: trend.percent.positive? ? "+#{formatted}" : formatted)
+    end
+
+    # The value line's point trend with its percentage in the page's locale,
+    # unsigned as the tooltip has always shown it.
+    def localized_trend(trend)
+      return trend unless trend.respond_to?(:percent) && trend.percent.finite?
+
+      trend.as_json.merge(percent_formatted: localized_percent(trend.percent))
+    end
+
+    def localized_percent(percent)
+      ActiveSupport::NumberHelper.number_to_percentage(percent, precision: 1, locale: I18n.locale)
     end
 
     # Prefixes positive gains with "+"; other views keep plain Money formatting.

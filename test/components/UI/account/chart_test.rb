@@ -401,6 +401,66 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal "＋∞", last["difference"]["percent_formatted"]
   end
 
+  # More taken out than put in leaves net contributions below zero. The
+  # difference has no meaning as a percentage of a negative base (Trend
+  # divides by its magnitude, which reads a 7,000 gap as +140%), so the
+  # tooltip shows the amount alone.
+  test "negative net contributions leave the difference without a percentage" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 2_000)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+    create_balance(account: account, date: day_one + 1, balance: 2_000, start_cash_balance: 10_000, cash_adjustments: -8_000)
+    create_labelled_transaction account: account, label: nil, amount: 15_000, date: day_one + 1
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+
+    last = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"].last
+    assert_equal "-5000.0", last["value"]["amount"], "net contributions must be negative, or this asserts nothing"
+    assert_equal "7000.0", last["difference"]["value"]["amount"]
+    assert_nil last["difference"]["percent"]
+    assert_nil last["difference"]["percent_formatted"]
+  end
+
+  # The comparison reads the value line's dates from the series the chart
+  # already holds, so a render builds the Total value series once.
+  test "a render builds the total value series once" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 15_400)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+    create_balance(account: account, date: day_one + 1, balance: 15_400, start_cash_balance: 10_000, cash_adjustments: 5_400)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+    builds = 0
+    original = account.method(:balance_series)
+    account.define_singleton_method(:balance_series) do |**kwargs|
+      builds += 1 if kwargs.fetch(:view, :balance).to_s == "balance"
+      original.call(**kwargs)
+    end
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+
+    assert_selector "[data-time-series-chart-comparison-value]"
+    assert_equal 1, builds
+  end
+
+  # The tooltip sets the value's percentage beside the difference's, so both
+  # are written in the page's locale.
+  test "the value line's percentages follow the page's locale beside the comparison's" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 15_400)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+    create_balance(account: account, date: day_one + 1, balance: 15_400, start_cash_balance: 10_000, cash_adjustments: 5_400)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+
+    I18n.with_locale(:de) do
+      render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+    end
+
+    value_trend = JSON.parse(page.find("#lineChart")["data-time-series-chart-data-value"])["values"].last["trend"]
+    difference = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"].last["difference"]
+    assert_equal "54,0%", value_trend["percent_formatted"]
+    assert_equal "+2,7%", difference["percent_formatted"]
+  end
+
   test "net contributions are not drawn on the holdings, cash or gains views" do
     %w[holdings_balance cash_balance gains].each do |view|
       component = UI::Account::Chart.new(account: @account, view: view)

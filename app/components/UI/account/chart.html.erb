@@ -115,7 +115,7 @@
           <% if show_net_contributions? %>
           data-time-series-chart-comparison-value="<%= net_contributions_comparison.to_json %>"
           <% end %>
-          data-time-series-chart-data-value="<%= series.to_json %>"></div>
+          data-time-series-chart-data-value="<%= chart_data_json %>"></div>
         <% else %>
           <div class="w-full h-full flex items-center justify-center">
             <p class="text-secondary text-sm"><%= t("UI.account.chart.no_data_available") %></p>
