@@ -2550,6 +2550,33 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert second.suppressed
   end
 
+  # A position moved between two selected accounts is no contribution, but
+  # with no rate into the accounts' currency the move cannot be valued at all,
+  # so the day is short of a rate like any other: rate_missing makes
+  # Performance withhold the time-weighted figures too, not only the
+  # money-weighted ones. Once the rate exists, nothing is flagged.
+  test "an internal journal with no rate into its account's currency flags a missing rate, not contributions" do
+    source = create_portfolio_account(family: @family, currency: "GBP")
+    destination = create_portfolio_account(family: @family, currency: "GBP")
+    set_rate from: "GBP", to: "USD", date: @day_one, rate: 1.25
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    [ source, destination ].each { |account| lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000 }
+    lay_balance account: source, date: @day_two, opening: 1_000, closing: 560, market_flow: -440
+    lay_balance account: destination, date: @day_two, opening: 1_000, closing: 1_440, market_flow: 440
+    security_journal account: source, date: @day_two, qty: -5, price: 100, currency: "EUR"
+    security_journal account: destination, date: @day_two, qty: 5, price: 100, currency: "EUR"
+    ids = [ source.id, destination.id ]
+
+    second = daily_returns(account_ids: ids).rows.last
+
+    assert second.rate_missing, "the move has no rate into the accounts' currency"
+    assert_not second.contribution_rate_missing, "an internal move contributes nothing"
+
+    set_rate from: "EUR", to: "GBP", date: @day_two, rate: 0.88
+
+    assert_not daily_returns(account_ids: ids).rows.last.rate_missing, "a convertible internal move is not flagged"
+  end
+
   private
     def daily_returns(account_ids: [ @account.id ], start_date: @day_one, end_date: @day_two, currency: @family.currency)
       Portfolio::DailyReturns.new(

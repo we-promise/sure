@@ -534,8 +534,12 @@ class Portfolio::DailyReturns
             -- because the predicate compares `trades` columns, and a trade
             -- with no label makes it NULL; NOT NULL is NULL, which would
             -- drop the row from this check rather than keep it.
+            -- Every journal leg, internal ones included: a move between two
+            -- selected accounts that cannot be converted leaves the day
+            -- unvalued like any other, so the ratios are withheld for it.
+            -- contribution_rate_missing below stays external-only.
             COALESCE(BOOL_OR((#{entry_rate_missing_sql} AND #{fragment(:flow_class_sql)} IS NOT NULL)
-                             OR (#{journal_rate_missing_sql} AND #{external_flow_class_sql})), false) AS flow_rate_missing,
+                             OR #{journal_rate_missing_sql}), false) AS flow_rate_missing,
             COALESCE(BOOL_OR((#{entry_rate_missing_sql} OR #{journal_rate_missing_sql})
                              AND #{external_flow_class_sql}), false) AS contribution_rate_missing,
             -- The journal suppression condition, and it keys on the PRICE rather
