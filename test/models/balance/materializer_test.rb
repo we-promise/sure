@@ -14,6 +14,16 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     )
   end
 
+  # A sync and a lot edit's restatement both take the account row lock before
+  # writing holdings, so they cannot deadlock on each other's rows.
+  test "materializing takes the account row lock before writing holdings" do
+    order = sequence("materialize")
+    Account.any_instance.expects(:lock!).in_sequence(order).returns(true)
+    Holding::Materializer.any_instance.expects(:materialize_holdings).in_sequence(order).returns([])
+
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+  end
+
   test "syncs balances" do
     Holding::Materializer.any_instance.expects(:materialize_holdings).returns([]).once
 

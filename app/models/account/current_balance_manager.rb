@@ -37,9 +37,13 @@ class Account::CurrentBalanceManager
   # as of a statement rather than of this moment. It only applies to a linked
   # account: a manual one has no statement, and its strategies reconcile against
   # today by design.
-  def set_current_balance(balance, date: nil)
+  def set_current_balance(balance, date: nil, reuse_explained_anchor: true)
     if account.linked?
-      set_current_balance_for_linked_account(balance, date || Date.current)
+      set_current_balance_for_linked_account(
+        balance,
+        date || Date.current,
+        reuse_explained_anchor: reuse_explained_anchor
+      )
     else
       result = set_current_balance_for_manual_account(balance)
 
@@ -98,12 +102,12 @@ class Account::CurrentBalanceManager
 
     # Linked accounts manage "current balance" via the special `current_anchor` valuation.
     # This is NOT a user-facing feature, and is primarily used in "processors" while syncing
-    # linked account data (e.g. via Plaid)
+    # linked account data (e.g. via Plaid).
     #
-    # Before overwriting a stale (previous-day) current_anchor, we convert it to a
-    # reconciliation valuation. This preserves the API-reported balance as a historical
-    # waypoint that the ReverseCalculator uses for more accurate balance history.
-    def set_current_balance_for_linked_account(balance, date)
+    # A stale anchor the imported ledger explains moves forward in place. Otherwise it is
+    # preserved as a reconciliation waypoint (#1492, #1484). Gated on
+    # BALANCE_REUSE_EXPLAINED_ANCHOR; when off, every stale anchor is preserved.
+    def set_current_balance_for_linked_account(balance, date, reuse_explained_anchor: true)
       changes_made = false
       error = nil
       historical = false
@@ -124,13 +128,15 @@ class Account::CurrentBalanceManager
           error = result.error
           historical = true
         else
-          # Only a statement that moves the balance forward leaves the previous
-          # anchor behind as a reconciliation. One carrying the anchor's own date
-          # is that same anchor restated, so it is updated rather than duplicated.
-          preserve_anchor_as_reconciliation_if_stale(date) if current_anchor_valuation
+          anchor = current_anchor_valuation
 
-          # Re-check: the memoized value was cleared if the anchor was converted
-          if current_anchor_valuation
+          if anchor && anchor.entry.date < date &&
+              (!reuse_explained_anchor || !ledger_explains?(anchor.entry, balance, date))
+            preserve_anchor_as_reconciliation_if_stale(date)
+            anchor = nil
+          end
+
+          if anchor
             changes_made = update_current_anchor(balance, date)
           else
             create_current_anchor(balance, date)
@@ -159,8 +165,11 @@ class Account::CurrentBalanceManager
       Result.new(success?: result.success?, changes_made?: result.success?, error: result.error_message)
     end
 
+    # Legacy data can still carry more than one anchor row, and the query has no ORDER BY,
+    # so pick the newest deterministically. Ids are random UUIDs: a last-resort tiebreak only.
     def current_anchor_valuation
-      @current_anchor_valuation ||= account.valuations.current_anchor.includes(:entry).first
+      @current_anchor_valuation ||=
+        account.valuations.current_anchor.includes(:entry).max_by { |v| [ v.entry.date, v.entry.created_at, v.entry.id ] }
     end
 
     # If the existing current_anchor is from a previous day, convert it to a
@@ -180,6 +189,37 @@ class Account::CurrentBalanceManager
       # The chained scope (.current_anchor.first) always issues a fresh SQL query,
       # so we don't need to reload the full association.
       @current_anchor_valuation = nil
+    end
+
+    # True when the imported transactions and trades account for the entire move
+    # between the standing anchor and the new reading. Only meaningful for :cash.
+    def ledger_explains?(older_entry, new_balance, date)
+      return false unless Rails.configuration.x.balance.reuse_explained_anchor
+      return false unless account.balance_type == :cash
+      return false unless older_entry.currency == account.currency
+
+      # Ignore entries the anchor already included: its own timestamp is the watermark.
+      # A split child inherits its parent's timestamp; the parent was the flow the anchor
+      # could have seen, and the child rows are created later by the split.
+      flows = account.entries
+        .excluding_pending
+        .excluding_split_parents
+        .where(date: older_entry.date..date)
+        .where.not(entryable_type: "Valuation")
+        .where(
+          "entries.date > :anchor_date OR " \
+          "COALESCE((SELECT pe.created_at FROM entries pe WHERE pe.id = entries.parent_entry_id), entries.created_at) > :anchor_written_at",
+          anchor_date: older_entry.date, anchor_written_at: older_entry.updated_at
+        )
+        .pluck(:currency, :amount)
+
+      return false unless flows.all? { |currency, _| currency == account.currency }
+
+      net = flows.sum { |_, amount| amount }
+      expected = older_entry.amount + (account.asset? ? -net : net)
+      tolerance = BigDecimal(Money::Currency.new(account.currency).step.to_s)
+
+      (expected - new_balance).abs <= tolerance
     end
 
     def create_current_anchor(balance, date)

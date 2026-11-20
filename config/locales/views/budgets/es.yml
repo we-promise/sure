@@ -1,6 +1,9 @@
 ---
 es:
   budgets:
+    switcher:
+      aria_label: Cambiar de presupuesto
+      household: Familia
     budget_donut:
       spent: Gastado
       new_budget: Nuevo presupuesto
@@ -35,6 +38,14 @@ es:
     name:
       custom_range: '%{start} - %{end_date}'
       month_year: '%{month}'
+    available_cash:
+      heading: Efectivo disponible
+      subtitle: Junto al plan de arriba, no forma parte de él.
+      available: Disponible en efectivo
+      earmarked: Ya reservado para objetivos
+      free: Libre de verdad
+      goals_link: Ver objetivos
+      currency_warning: Los saldos en %{currencies} no se incluyen porque aún no hay tipo de cambio a %{currency}.
     show:
       categories:
         amount: Importe
@@ -64,17 +75,43 @@ es:
       no_source: No se ha encontrado ningún presupuesto anterior del que copiar
       already_initialized: Este presupuesto ya se ha configurado
   budget_categories:
+    bills_reserved: "%{amount} reservados por recibos"
+    bills_reserved_unconvertible:
+      one: 1 recibo no está reservado porque no hay tipo de cambio disponible
+      other: "%{count} recibos no están reservados porque no hay tipo de cambio disponible"
     allocation_progress:
       budget_exceeded_html: Presupuesto superado en <span class="text-red-500 privacy-sensitive">%{amount}</span>
       left_to_allocate: por asignar
       over_set: '> 100 % asignado'
       percent_set: '%{percent} asignado'
+    budget_category:
+      rolled_over: "+%{amount} traspasados"
     budget_category_form:
       monthly_average: '%{amount}/mes de media'
+      rollover_label: Traspaso
+      rollover_title: Conservar el dinero no gastado de esta categoría de un mes al siguiente
       shared_placeholder: Compartido
       shared_title: Deja vacío para compartir el presupuesto de la categoría padre
     confirm_button:
       confirm: Confirmar
+    move:
+      button_title: Mover dinero desde esta categoría
+      cancel: Cancelar
+      dialog_title: Mover dinero
+      no_destination: 'Ahora mismo este es el único sobre entre el que se puede mover dinero: una categoría no puede enviar dinero a su propia categoría padre ni a sus subcategorías.'
+      submit: Mover
+      amount_label: Importe
+      available: "%{amount} disponibles"
+      from_label: Desde
+      to_label: A
+      success: Dinero movido.
+      errors:
+        different_budgets: Ambas categorías deben pertenecer al mismo presupuesto.
+        insufficient_funds: Eso es más de lo que tiene asignado esta categoría.
+        non_positive_amount: Introduce un importe mayor que cero.
+        parent_child: No se puede mover dinero entre una categoría y su propia subcategoría; ajusta la subcategoría directamente.
+        same_category: Elige otra categoría a la que mover el dinero.
+        uncategorized: Sin categoría no es un sobre real, así que no se puede mover dinero desde ni hacia él.
     no_categories:
       oops: ¡Vaya!
       no_categories_message: Todavía no has creado ni asignado ninguna categoría de gasto a tus transacciones.
@@ -91,6 +128,7 @@ es:
       overspent: excedido
       left: restante
       budgeted: Presupuestado
+      rolled_over: Traspasado
       monthly_average_spending: Gasto medio mensual
       monthly_median_spending: Gasto mediano mensual
       recent_transactions: Transacciones recientes

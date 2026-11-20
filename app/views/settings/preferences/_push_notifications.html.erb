@@ -1,0 +1,14 @@
+<%= settings_section title: t("push_notifications.title"), subtitle: t("push_notifications.description") do %>
+  <%= form_with url: settings_preferences_path, method: :patch,
+        data: { controller: "auto-submit-form" } do %>
+    <label for="user_push_budget_warnings_enabled" class="flex cursor-pointer items-center justify-between gap-4">
+      <div class="text-sm space-y-1">
+        <p class="font-medium text-primary"><%= t("push_notifications.budget_title") %></p>
+        <p class="text-secondary"><%= t("push_notifications.budget_description") %></p>
+      </div>
+      <%= render DS::Toggle.new(id: "user_push_budget_warnings_enabled",
+            name: "user[push_budget_warnings_enabled]", checked: @user.push_budget_warnings_enabled?,
+            data: { auto_submit_form_target: "auto" }) %>
+    </label>
+  <% end %>
+<% end %>

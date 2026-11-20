@@ -14,10 +14,14 @@ class Balance::Materializer
     @window_start_date = account.materialization_window(window_start_date)
   end
 
-  # Serialize writes to a cash-anchored account and persist holdings and balances atomically.
+  # Persist holdings and balances atomically.
   def materialize_balances
     Balance.transaction do
-      account.lock! if account.accounting_start_date
+      # Every materialization of an account -- a sync, or a lot edit's
+      # restatement -- locks the account row before writing anything, so two of
+      # them serialise in one lock order rather than deadlocking on each other's
+      # holding rows.
+      account.lock!
       materialize_holdings
       calculate_balances
 
