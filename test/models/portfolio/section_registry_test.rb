@@ -87,8 +87,8 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
   # The cards are ordered by name with accents and case set aside, so an
   # accented name sits with its letter rather than after "z", whatever the
   # test database's collation.
-  test "the account cards sort an accented name with its letter" do
-    names = [ "Zebra brokerage", "Épargne", "Fidelity" ]
+  test "the account cards sort an accented name with its letter, whatever its case" do
+    names = [ "Zebra brokerage", "Épargne", "Fidelity", "acme brokerage" ]
     names.each do |name|
       @family.accounts.create!(name: name, balance: 100, currency: "USD", accountable: Investment.new, owner: @user)
     end
@@ -96,7 +96,7 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
 
     cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
 
-    assert_equal [ "Épargne", "Fidelity", "Zebra brokerage" ], cards.select { |card| names.include?(card.name) }.map(&:name)
+    assert_equal [ "acme brokerage", "Épargne", "Fidelity", "Zebra brokerage" ], cards.select { |card| names.include?(card.name) }.map(&:name)
   end
 
   # Names with no Latin approximation keep their characters, so two distinct

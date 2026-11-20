@@ -1718,8 +1718,10 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     first = create_investment_account(balance: 10_000)
     second = create_investment_account(balance: 10_000)
     security = Security.create!(ticker: "SPLIT", name: "Held twice")
-    small = Holding.create!(account: first, security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD")
-    large = Holding.create!(account: second, security: security, date: Date.current, qty: 5, price: 100, amount: 500, currency: "USD")
+    # The larger position by value holds fewer units, so ordering by quantity
+    # would list it second.
+    small = Holding.create!(account: first, security: security, date: Date.current, qty: 5, price: 20, amount: 100, currency: "USD")
+    large = Holding.create!(account: second, security: security, date: Date.current, qty: 2, price: 250, amount: 500, currency: "USD")
 
     [ [ small, large ], [ large, small ] ].each do |order|
       statement = InvestmentStatement.new(@family, user: nil)
