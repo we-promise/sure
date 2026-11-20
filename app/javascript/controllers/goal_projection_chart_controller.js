@@ -215,7 +215,10 @@ export default class extends Controller {
     // so recent progress is visible instead of flattened against zero. The
     // zero seed point is dropped when the axis no longer starts at zero; the
     // area and line are clipped to the plot either way.
-    const windowStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+    // Subtract calendar days, not 90 x 24h, so DST shifts can't move the
+    // boundary off local midnight and drop a value dated on that day.
+    const windowStart = new Date(today);
+    windowStart.setDate(windowStart.getDate() - 90);
     // The target counts toward the lowest value, so a floor never pushes the
     // target line off the plot. Narrow layouts hide the y-axis, so they keep a
     // zero floor instead of showing a baseline with no label.
@@ -695,7 +698,8 @@ export default class extends Controller {
       return `${symbol}${Number((amount / 1_000_000).toFixed(decimals))}M`;
     }
     if (abs >= 1_000) {
-      return `${symbol}${(amount / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+      const decimals = step && step < 1_000 ? 2 : 1;
+      return `${symbol}${Number((amount / 1_000).toFixed(decimals))}K`;
     }
     return `${symbol}${Math.round(amount).toLocaleString()}`;
   }
