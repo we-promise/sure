@@ -446,6 +446,39 @@ class Security::ResolverTest < ActiveSupport::TestCase
     assert_nil no_match.reload.exchange_operating_mic
   end
 
+  test "does not relabel a placeholder another sync claimed for a different exchange meanwhile" do
+    placeholder = Security.create!(ticker: "RACEX", offline: true, offline_reason: "resolution_pending")
+    as_read = Security.find(placeholder.id) # before the other sync's claim committed
+    placeholder.update!(exchange_operating_mic: "XNYS", offline: false, offline_reason: nil)
+
+    Security::Resolver.any_instance.stubs(:pending_placeholder_candidate).returns(as_read)
+    Security.expects(:search_provider).returns([ Security.new(ticker: "RACEX", exchange_operating_mic: "XNAS", country_code: "US") ])
+
+    assert_difference "Security.count", 1 do
+      resolved = Security::Resolver.new("RACEX", exchange_operating_mic: "XNAS").resolve
+
+      refute_equal placeholder, resolved
+      assert_equal "XNAS", resolved.exchange_operating_mic
+    end
+
+    assert_equal "XNYS", placeholder.reload.exchange_operating_mic
+  end
+
+  test "uses a placeholder another sync settled on the same exchange meanwhile" do
+    placeholder = Security.create!(ticker: "RACEY", offline: true, offline_reason: "resolution_pending")
+    as_read = Security.find(placeholder.id) # before the other sync's claim committed
+    placeholder.update!(exchange_operating_mic: "XNAS", offline: false, offline_reason: nil)
+
+    # This sync's own lookup ran before that claim too, so it found no XNAS row.
+    Security.stubs(:find_or_initialize_by_ticker_and_exchange).returns(Security.new(ticker: "RACEY", exchange_operating_mic: "XNAS"))
+    Security::Resolver.any_instance.stubs(:pending_placeholder_candidate).returns(as_read)
+    Security.expects(:search_provider).returns([ Security.new(ticker: "RACEY", exchange_operating_mic: "XNAS", country_code: "US") ])
+
+    assert_no_difference "Security.count" do
+      assert_equal placeholder, Security::Resolver.new("RACEY", exchange_operating_mic: "XNAS", country_code: "US").resolve
+    end
+  end
+
   test "rejects disabled price_provider" do
     db_security = Security.create!(ticker: "GOOG2", exchange_operating_mic: "XNAS", country_code: "US")
 

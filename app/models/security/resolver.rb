@@ -174,7 +174,7 @@ class Security::Resolver
         ticker: match.ticker,
         exchange_operating_mic: match.exchange_operating_mic
       )
-      security = pending_placeholder_for(match) || security if security.new_record?
+      security = claim_pending_placeholder(match) || security if security.new_record?
 
       security.country_code = match.country_code
 
@@ -212,16 +212,40 @@ class Security::Resolver
     # that exchange rather than a second record being created beside it, which
     # would split the position between two securities from sync to sync. A
     # placeholder recorded for another country is left for its own retry.
-    def pending_placeholder_for(match)
-      return nil if match.exchange_operating_mic.blank?
+    #
+    # Securities are shared across families, so two syncs can reach the same
+    # placeholder at once. The claim rechecks it under a row lock: a placeholder
+    # another sync settled on this exchange is used as it is, and one settled on
+    # a different exchange is left alone.
+    def claim_pending_placeholder(match)
+      mic = Security.canonical_exchange_operating_mic(match.exchange_operating_mic)
+      return nil if mic.blank?
 
-      placeholder = Security.find_by_ticker_and_exchange(ticker: match.ticker, match_blank_mic: true)
-      return nil unless placeholder&.offline? && placeholder.offline_reason == "resolution_pending"
-      return nil if placeholder.country_code.present? && match.country_code.present? &&
-        !placeholder.country_code.casecmp?(match.country_code)
+      placeholder = pending_placeholder_candidate(match)
+      return nil unless placeholder && claimable_placeholder?(placeholder, match)
 
-      placeholder.exchange_operating_mic = Security.canonical_exchange_operating_mic(match.exchange_operating_mic)
-      placeholder
+      claimed = placeholder.with_lock do
+        if placeholder.exchange_operating_mic.to_s.upcase == mic
+          true
+        elsif claimable_placeholder?(placeholder, match)
+          placeholder.update!(exchange_operating_mic: mic)
+        else
+          false
+        end
+      end
+
+      placeholder if claimed
+    end
+
+    def pending_placeholder_candidate(match)
+      Security.find_by_ticker_and_exchange(ticker: match.ticker, match_blank_mic: true)
+    end
+
+    def claimable_placeholder?(placeholder, match)
+      placeholder.exchange_operating_mic.blank? &&
+        placeholder.offline? &&
+        placeholder.offline_reason == "resolution_pending" &&
+        (placeholder.country_code.blank? || match.country_code.blank? || placeholder.country_code.casecmp?(match.country_code))
     end
 
     # If a security was marked offline, bring it back online whenever we have
