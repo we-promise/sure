@@ -376,6 +376,31 @@ AI_DEBUG_MODE=true
 - Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
 - AI jobs run one at a time by default (`RAILS_AI_MAX_THREADS=1`), which suits a local model with one slot; see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes) before raising it
 
+### Ollama running on the Docker host
+
+`localhost` inside the Sure containers is the container itself, so `OPENAI_URI_BASE=http://localhost:11434/v1` only works when Sure runs outside Docker. When Sure runs from `compose.example.yml` and Ollama runs natively on the host (the usual setup on macOS, where containers have no GPU access), point Sure at the host instead:
+
+```bash
+OPENAI_URI_BASE=http://host.docker.internal:11434/v1
+```
+
+`compose.example.yml` maps `host.docker.internal` to the host gateway with `extra_hosts` on `web` and `worker`, because the public DNS servers configured there cannot resolve that name. If you use an older compose file, add this to both services:
+
+```yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+```
+
+Ollama must also listen on an address the containers can reach; on Linux hosts set `OLLAMA_HOST=0.0.0.0` for the Ollama service.
+
+**Security:** Ollama has no authentication, and `OLLAMA_HOST=0.0.0.0` makes its API reachable on every network interface, so anyone who can reach port `11434` can use it. Restrict that port with a host firewall so that only the Docker network can connect. Allow the subnet Docker assigned to the `sure_net` network used by `web` and `worker` (it is not a fixed subnet and is usually not `172.17.0.0/16`):
+
+```bash
+docker network inspect <project>_sure_net --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
+```
+
+Replace `<project>` with your Compose project name (by default the name of the directory containing your compose file).
+
 ### Docker Compose Example
 
 ```yaml
