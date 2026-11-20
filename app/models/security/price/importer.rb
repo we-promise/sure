@@ -150,6 +150,10 @@ class Security::Price::Importer
        (provider_first_price_on.blank? || advanced_first_price_on < provider_first_price_on)
       security.update_columns(first_provider_price_on: advanced_first_price_on,
                               first_provider_price_source: provider_key)
+    elsif advanced_first_price_on.nil? && first_price_from_another_provider?
+      # This provider anchored a price at the requested start, so the
+      # history no longer starts on the date another provider found.
+      security.update_columns(first_provider_price_on: nil, first_provider_price_source: nil)
     end
 
     result
@@ -167,6 +171,12 @@ class Security::Price::Importer
     def provider_first_price_on
       source = security.first_provider_price_source
       security.first_provider_price_on if source.blank? || source == provider_key
+    end
+
+    def first_price_from_another_provider?
+      security.first_provider_price_on.present? &&
+        security.first_provider_price_source.present? &&
+        security.first_provider_price_source != provider_key
     end
 
     # The start date sent to the provider API, clamped to the provider's max
