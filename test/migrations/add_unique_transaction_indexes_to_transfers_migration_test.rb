@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require Rails.root.join("db/migrate/20261014081500_add_unique_transaction_indexes_to_transfers")
+require Rails.root.join("db/migrate/20261120080000_add_unique_transaction_indexes_to_transfers")
 
 # The index swap builds concurrently, which cannot run inside a transaction, so
 # these tests commit their DDL and put the schema's index back afterwards.
@@ -10,6 +10,7 @@ class AddUniqueTransactionIndexesToTransfersMigrationTest < ActiveSupport::TestC
 
   INDEX = "index_transfers_on_inflow_transaction_id"
   TEMP_INDEX = "#{INDEX}_new"
+  OUTFLOW_INDEX = "index_transfers_on_outflow_transaction_id"
 
   setup do
     @migration = AddUniqueTransactionIndexesToTransfers.new
@@ -21,6 +22,29 @@ class AddUniqueTransactionIndexesToTransfersMigrationTest < ActiveSupport::TestC
     unless connection.index_name_exists?(:transfers, INDEX)
       connection.add_index :transfers, :inflow_transaction_id, name: INDEX, unique: true
     end
+    unless unique_index?(OUTFLOW_INDEX)
+      connection.remove_index :transfers, name: OUTFLOW_INDEX, if_exists: true
+      connection.add_index :transfers, :outflow_transaction_id, name: OUTFLOW_INDEX, unique: true
+    end
+  end
+
+  # RemoveIndexesCoveredByMultiColumnIndexes drops the single-column inflow
+  # index by name; the swap must still end with a unique one.
+  test "builds the unique inflow index when the single-column index is already gone" do
+    connection.remove_index :transfers, name: INDEX
+
+    @migration.send(:replace_index, :inflow_transaction_id, unique: true)
+
+    assert unique_index?(INDEX)
+    assert_not connection.index_name_exists?(:transfers, TEMP_INDEX)
+  end
+
+  test "down drops the inflow index and makes the outflow index non-unique" do
+    @migration.down
+
+    assert_not connection.index_name_exists?(:transfers, INDEX)
+    assert connection.index_name_exists?(:transfers, OUTFLOW_INDEX)
+    assert_not unique_index?(OUTFLOW_INDEX)
   end
 
   # A run that stopped after dropping the old index but before the rename.
@@ -52,6 +76,10 @@ class AddUniqueTransactionIndexesToTransfersMigrationTest < ActiveSupport::TestC
   private
     def connection
       ActiveRecord::Base.connection
+    end
+
+    def unique_index?(name)
+      connection.indexes(:transfers).find { |index| index.name == name }&.unique || false
     end
 
     def index_oid(name)

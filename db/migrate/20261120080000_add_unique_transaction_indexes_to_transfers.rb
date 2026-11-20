@@ -33,9 +33,12 @@ class AddUniqueTransactionIndexesToTransfers < ActiveRecord::Migration[8.1]
     replace_index :outflow_transaction_id, unique: true
   end
 
-  # The indexes are restored as non-unique; deleted duplicate transfers are not.
+  # Deleted duplicate transfers are not restored. Without uniqueness, a
+  # single-column inflow index is covered by the (inflow, outflow) index, so it
+  # is dropped as RemoveIndexesCoveredByMultiColumnIndexes does; the outflow
+  # index goes back to non-unique.
   def down
-    replace_index :inflow_transaction_id, unique: false
+    remove_index :transfers, name: "index_transfers_on_inflow_transaction_id", if_exists: true, algorithm: :concurrently
     replace_index :outflow_transaction_id, unique: false
   end
 
