@@ -1,0 +1,11 @@
+<%# locals: (trend:, note: nil, note_data: {}) %>
+
+<%#
+  A trend as two stacked lines for a numeric table cell: the signed amount,
+  then its percentage in the page's locale, both in the trend's colour. An
+  optional note, in secondary text, says what the figure leaves out.
+%>
+<%= tag.p format_money(trend.value), class: "privacy-sensitive", style: "color: #{trend.color};" %>
+<%= tag.p "(#{trend.percent.finite? ? number_to_percentage(trend.percent, precision: 1) : trend.percent_formatted})",
+          class: "text-xs privacy-sensitive", style: "color: #{trend.color};", data: { trend_percent: true } %>
+<%= tag.p note, class: "text-xs text-secondary", data: note_data if note.present? %>

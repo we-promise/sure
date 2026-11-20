@@ -475,15 +475,9 @@ class BillsController < ApplicationController
     # payments alike). Inactive series ride along so their leftover open
     # occurrences can render as Dormant instead of haunting Past Due.
     def payable_series_ids
-      debt_accounts = Account.where(accountable_type: %w[CreditCard Loan]).select(:id)
-
       Current.family.recurring_transactions
              .where(status: %w[active inactive])
-             .where("amount > 0")
-             .merge(
-               RecurringTransaction.where(destination_account_id: nil)
-                                   .or(RecurringTransaction.where(destination_account_id: debt_accounts))
-             )
+             .obligations(%w[CreditCard Loan])
              .accessible_by(Current.user)
              .select(:id)
     end
