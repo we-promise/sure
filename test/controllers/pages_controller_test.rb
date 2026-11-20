@@ -404,6 +404,34 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#cashflow-donut-section [data-donut-chart-account-ids-value='#{[ account.id.to_s ].to_json}']"
   end
 
+  test "the currency picker keeps the dashboard in customize mode" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+
+    get root_path(customize: true)
+    assert_response :ok
+
+    eur_link = css_select("a[href*='currency=EUR']").first
+    assert eur_link, "the currency picker lists EUR"
+    assert_includes eur_link["href"], "customize=true", "picking a currency left customize mode"
+  end
+
+  test "dashboard reports account-filtered cash flow rings in the chosen currency" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+    account = @family.accounts.create!(name: "Rings Currency Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    month = Date.current.beginning_of_month
+    paid_on = [ month + 1.day, Date.current ].min
+    ExchangeRate.create!(from_currency: @family.currency, to_currency: "EUR", date: paid_on, rate: 0.5)
+    create_transaction(account: account, name: "Paycheck", amount: -3_000, date: paid_on, category: categories(:income))
+
+    get root_path, params: { currency: "EUR", cashflow_month: month.iso8601, cashflow_account_ids: [ account.id ] }
+
+    assert_response :ok
+    inflows, _outflows = cashflow_donut_rings
+    paycheck = inflows.find { |s| s["id"] == "income_#{categories(:income).id}" }
+    assert_equal 1500.0, paycheck["amount"], "the filtered rings must convert to the dashboard currency like the unfiltered ones"
+    assert_equal "EUR", paycheck["currency"]
+  end
+
   test "the cash flow rings' drill-downs only list confirmed transactions, like the ring amounts" do
     create_transaction(account: @family.accounts.first, name: "Salary", amount: -1_000, category: categories(:income))
     create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
@@ -1136,6 +1164,20 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from KRW to USD is stored yet, so some totals may leave out amounts in KRW/
   end
 
+  test "dashboard names the currencies left out of totals shown in the chosen currency" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+    # KRW has a rate into the family currency but none into EUR; the family's
+    # own USD accounts do convert to EUR.
+    @family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "KRW", to_currency: @family.currency, date: Date.current, rate: 0.00075)
+    ExchangeRate.create!(from_currency: @family.currency, to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    get root_path(currency: "EUR")
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from KRW to EUR is stored yet/
+  end
+
   test "dashboard does not name the currency of an account the member cannot see" do
     @family.accounts.create!(name: "Admin KRW", owner: users(:family_admin), balance: 1_000_000, currency: "KRW", accountable: Depository.new)
     sign_in users(:family_member)
@@ -1407,6 +1449,19 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_cashflow_preview_opt_in checked: true
   end
 
+  test "dashboard passes the chosen currency to the experimental Sankey comparison" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+    @user.update!(preferences: (@user.preferences || {}).merge(
+      "preview_features_enabled" => true,
+      "cashflow_preview_enabled" => true
+    ))
+
+    get root_path(currency: "EUR")
+
+    assert_response :ok
+    assert_select "#cashflow-preview [data-cash-flow-url-value*='currency=EUR']"
+  end
+
   test "dashboard hides the Sankey comparison opt-in without preview features" do
     @user.update!(preferences: (@user.preferences || {}).merge(
       "preview_features_enabled" => false,
@@ -1444,6 +1499,45 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_url(period: "last_30_days")
     assert_equal false, @user.reload.cashflow_preview_enabled?
+  end
+
+  test "dashboard offers a currency picker only when the family has additional currencies" do
+    get root_path
+
+    assert_response :ok
+    assert_select "button[aria-label^='Currency:']", count: 0
+
+    @family.update!(enabled_currencies: [ "EUR" ])
+    get root_path
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: #{@family.currency}']"
+    # A whole-page visit, so the header's links pick the currency up as well.
+    assert_select "a[role='menuitemradio'][href*='currency=EUR']:not([data-turbo-frame])"
+  end
+
+  test "dashboard shows a requested additional currency and keeps it across period picks" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+
+    get root_path(currency: "EUR")
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: EUR']"
+    assert_select "a[role='menuitemradio'][href*='period='][href*='currency=EUR']"
+  end
+
+  test "dashboard falls back to the primary currency when the requested one is not enabled" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+
+    get root_path(currency: "GBP")
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: #{@family.currency}']"
+    assert_select "a[href*='currency=GBP']", count: 0
+
+    get root_path(currency: "not-a-currency")
+
+    assert_response :ok
   end
 
   private

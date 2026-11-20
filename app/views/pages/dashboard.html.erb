@@ -58,10 +58,18 @@
 <% end %>
 
 <%= turbo_frame_tag "dashboard_sections", target: "_top" do %>
-  <%= render "shared/exchange_rate_notes", family: Current.family, classes: "mb-4" %>
+  <%= render "shared/exchange_rate_notes", family: Current.family, currency: @dashboard_currency, classes: "mb-4" %>
 
   <% if accessible_accounts.any? %>
-    <div class="flex items-center justify-end mb-4">
+    <div class="flex items-center justify-end gap-2 mb-4">
+      <%# Offered only when preferences list additional currencies; a lone primary currency has nothing to switch to.
+          A full visit rather than a frame one: the page header's Customize links carry the view params too,
+          and they sit outside this frame, so a frame-only switch would leave them on the old currency. %>
+      <% if @reporting_currencies.many? %>
+        <%# Customize mode is not one of the view params, so carry it too: a full visit would otherwise leave it. %>
+        <%= render UI::CurrencyPicker.new(selected: @balance_sheet.currency, currencies: @reporting_currencies, url: root_path,
+                                          extra_params: @dashboard_view_params.except(:currency).merge(@customizing_dashboard ? { customize: true } : {})) %>
+      <% end %>
       <%# Keeps the widgets' own months and filters; a preset replaces any custom range. %>
       <%= render UI::PeriodPicker.new(selected: @period, url: root_path, frame: "dashboard_sections", extra_params: @dashboard_view_params.except(:start_date, :end_date)) %>
     </div>
@@ -266,7 +274,7 @@
           <% if section[:key] == "cashflow_sankey" && preview_features_enabled? %>
             <%= render "pages/dashboard/cashflow_preview_opt_in" %>
             <% if Current.user.cashflow_preview_enabled? %>
-              <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: section[:locals][:sankey_data] %>
+              <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: section[:locals][:sankey_data], currency: dashboard_currency %>
             <% end %>
           <% end %>
         </div>

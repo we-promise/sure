@@ -84,7 +84,7 @@
       <div class="w-full h-44 privacy-sensitive"
         data-controller="bar-chart"
         data-bar-chart-data-value="<%= money_flow_data[:bars].to_json %>"
-        data-bar-chart-currency-value="<%= Current.family.currency %>"
+        data-bar-chart-currency-value="<%= money_flow_data[:currency] %>"
         data-bar-chart-income-label-value="<%= t(".income") %>"
         data-bar-chart-expense-label-value="<%= t(".expenses") %>">
       </div>

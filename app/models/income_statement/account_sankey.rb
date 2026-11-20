@@ -41,7 +41,7 @@ class IncomeStatement::AccountSankey
     # statement per account keeps the netting identical to the category view.
     def account_flows
       @statement.eligible_accounts.order(:name).filter_map do |account|
-        statement = @statement.family.income_statement(user: @statement.user, accounts: Account.where(id: account.id))
+        statement = @statement.family.income_statement(user: @statement.user, accounts: Account.where(id: account.id), currency: @statement.currency)
         groups = IncomeStatement::CategoryNetting.new(statement, period: @period).groups
         income = groups.sum { |group| side_total(group, :income) }.to_d
         spending = groups.sum { |group| side_total(group, :expense) }.to_d
@@ -129,12 +129,12 @@ class IncomeStatement::AccountSankey
         end
     end
 
-    # [from_account_id, to_account_id, amount in the family currency] for each
+    # [from_account_id, to_account_id, amount in the report currency] for each
     # confirmed transfer between two of the given accounts with either leg in
     # the period (legs can be days apart, so one may fall just outside it).
     # Neither leg may be excluded.
     def transfers_between(account_ids)
-      currency = @statement.family.currency
+      currency = @statement.currency
       legs = Transaction.joins(:entry).where(entries: { account_id: account_ids, excluded: false })
       outflows = legs.where(kind: %w[funds_movement cc_payment])
       in_period = legs.where(entries: { date: @period.start_date..@period.end_date })
