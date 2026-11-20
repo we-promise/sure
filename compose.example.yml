@@ -156,6 +156,11 @@ services:
     command:
       - |
         want=$$PG_MAJOR
+        if [ -f /pgdata/.sure-upgrade-incomplete ]; then
+          echo "ERROR: a 'sure-backup upgrade-postgres' run did not finish. Your data is safe."
+          echo "Run it again for the steps to put the data back: sh sure-backup upgrade-postgres"
+          exit 1
+        fi
         root=""
         if [ -f /pgdata/PG_VERSION ]; then root=$$(cat /pgdata/PG_VERSION)
         elif [ -f /pgdata/data/PG_VERSION ]; then root=$$(cat /pgdata/data/PG_VERSION)

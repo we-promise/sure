@@ -19,6 +19,13 @@ set -u
 DATA_DIR="${1:?usage: db-version-check.sh <volume-dir> <expected-major>}"
 EXPECTED_MAJOR="${2:?usage: db-version-check.sh <volume-dir> <expected-major>}"
 
+# Left by `sure-backup upgrade-postgres` until its restore succeeds.
+if [ -f "${DATA_DIR}/.sure-upgrade-incomplete" ]; then
+  echo "ERROR: a 'sure-backup upgrade-postgres' run did not finish. Your data is safe." >&2
+  echo "Run it again for the steps to put the data back: sh sure-backup upgrade-postgres" >&2
+  exit 1
+fi
+
 root=""
 if [ -f "${DATA_DIR}/PG_VERSION" ]; then
   root=$(cat "${DATA_DIR}/PG_VERSION")
@@ -53,7 +60,9 @@ ERROR: the database volume holds PostgreSQL ${found} data, but
 this setup runs PostgreSQL ${EXPECTED_MAJOR}. Nothing was changed and your
 data is safe.
 
-In the devcontainer, the quickest fix is a fresh development database:
+In the devcontainer, the quickest fix is a fresh development database.
+On the host, remove the containers that use the volume, then the volume:
+  docker rm -f \$(docker ps -aq --filter volume=<project>_postgres-data)
   docker volume rm <project>_postgres-data   # see: docker volume ls
 then rebuild the container and run bin/setup.
 
