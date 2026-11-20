@@ -1582,6 +1582,11 @@ class Family::DataImporter
         require_source_id!("Rule", old_id)
 
         rule = mapped_record(:rules, old_id, @family.rules, record_type: "Rule")
+        owner = rule_owner(rule, data)
+        if owner == :not_found
+          increment_summary("Rule", :owner_not_found)
+          next
+        end
         created = rule.blank?
         rule ||= @family.rules.build
 
@@ -1618,7 +1623,7 @@ class Family::DataImporter
           build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
 
-        assign_rule_owner(rule, data)
+        rule.user = owner unless owner == :unchanged
         # A transfer target the owner can't write here (an account the file
         # doesn't hold, or one only someone else can write) drops that action
         # rather than failing the whole import.
@@ -1661,15 +1666,20 @@ class Family::DataImporter
       items.drop(index + 1).take_while { |item| !item.group? && session_rule_ids.include?(item.rule.id) }.last&.rule
     end
 
-    # A non-admin's import makes them the owner of every rule it brings. An
-    # admin's keeps the owner the export names, when they are in this family,
-    # and otherwise owns the rule. Older exports name no owner, so a rule
-    # already here keeps its own.
-    def assign_rule_owner(rule, data)
-      return rule.user = @user if @user && !@user.admin?
-      return if !data.key?("owner") && rule.persisted?
+    # Who the imported rule acts for. A non-admin's import makes them the
+    # owner of every rule it brings. An admin's keeps the owner the export
+    # names when they are in this family, and otherwise owns the rule, unless
+    # the rule was limited to that person (applies_to "owner_accounts", or no
+    # applies_to in older exports): it has nobody to act for here, and owning
+    # it would widen it to the whole family, so it is skipped (:not_found).
+    # Exports without an owner key leave a rule already here as it is
+    # (:unchanged).
+    def rule_owner(rule, data)
+      return @user if @user && !@user.admin?
+      return :unchanged if !data.key?("owner") && rule.present?
+      return @user if data["owner"].blank?
 
-      rule.user = (data["owner"].presence && @family.users.find_by(email: data["owner"])) || @user
+      @family.users.find_by(email: data["owner"]) || (data["applies_to"] == "family" ? @user : :not_found)
     end
 
     def drop_unwritable_transfer_actions(rule)

@@ -804,6 +804,7 @@ class Family::DataExporter
         position: rule.position,
         stop_processing: rule.stop_processing,
         owner: rule.user&.email,
+        applies_to: rule.restricted? ? "owner_accounts" : "family",
         apply_immediately: rule.apply_immediately,
         group: rule.rule_group&.name,
         conditions: rule.conditions.where(parent_id: nil).map { |condition| serialize_condition(condition) },
