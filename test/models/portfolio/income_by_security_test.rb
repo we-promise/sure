@@ -64,6 +64,25 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
                  "attributed plus unattributed is the total, by construction"
   end
 
+  # Entry#split! copies neither the activity label nor `extra` to the parts;
+  # the classifier already reads the parent's label, so the parts count as
+  # income. The security is on the parent too, so the parts belong to it,
+  # not to the unattributed remainder.
+  test "a split dividend is attributed to the security its parent names" do
+    flat = income_transaction account: @account, date: @mar, amount: 20, extra: { "security_id" => @aapl.id }
+    flat.split!([ { name: "Dividend part one", amount: -15 }, { name: "Dividend part two", amount: -5 } ])
+    nested = income_transaction account: @account, date: @mar + 1, amount: 8, extra: { "security" => { "id" => @msft.id } }
+    nested.split!([ { name: "Dividend part one", amount: -6 }, { name: "Dividend part two", amount: -2 } ])
+    lay_flat_balances cash_by_date: { @mar => 20, @mar + 1 => 8 }
+
+    by_security = income_by_security
+
+    assert_equal BigDecimal(28), by_security.total, "precondition: the parts count as income"
+    assert_equal BigDecimal(20), by_security.amount_for(@aapl.id), "a flat id on the parent"
+    assert_equal BigDecimal(8), by_security.amount_for(@msft.id), "a nested id on the parent"
+    assert_equal BigDecimal(0), by_security.unattributed
+  end
+
   # UUIDs compare as text here, and a provider is free to send them upper-case.
   # Two spellings of one id must be one security, not a row and a remainder.
   test "an upper-case id is the same security" do

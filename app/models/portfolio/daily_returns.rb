@@ -1075,7 +1075,11 @@ class Portfolio::DailyReturns
           COALESCE(
             trades.security_id::text,
             LOWER(NULLIF(transactions.extra->>'security_id', '')),
-            LOWER(NULLIF(transactions.extra->'security'->>'id', ''))
+            LOWER(NULLIF(transactions.extra->'security'->>'id', '')),
+            -- A split part carries neither the label nor `extra`; the
+            -- classifier reads the parent's label, and this its security.
+            LOWER(NULLIF(flow_parent_transactions.extra->>'security_id', '')),
+            LOWER(NULLIF(flow_parent_transactions.extra->'security'->>'id', ''))
           ) AS security_id,
           SUM(-entries.amount * entry_fx.rate * fx.rate) AS income
         FROM entries
