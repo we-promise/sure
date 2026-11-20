@@ -5,4 +5,5 @@ de:
       models:
         loan:
           invalid_rate_change: Jede Zinsänderung braucht einen Stichtag und einen Zinssatz.
+          invalid_rate_schedule_snapshot: Die Zinsänderungen konnten nicht mit dem gespeicherten Zinsplan abgeglichen werden. Lade den Kredit neu und übernimm deine Änderungen erneut.
           rate_change_before_origination: Eine Zinsänderung kann nicht vor dem Beginn des Kredits wirksam werden.

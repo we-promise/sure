@@ -80,6 +80,21 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
     assert_empty schedule, "a rate that had not moved was recorded as a change"
   end
 
+  # The processor's loan can be loaded before another writer records the same
+  # rate. The schedule lock reloads it, so the decision sees that rate in force;
+  # deciding on the stale copy would add a second row for a rate already held.
+  test "a rate another writer recorded after the loan was loaded is not recorded again" do
+    # The processor reads the loan through this cached association.
+    @redbark_account.current_account.accountable
+    Loan.find(@loan.id).enrich_attributes({ variable_rate_schedule: { "2026-03-01" => "7" } }, source: "redbark")
+    detail lendingRate: "0.07"
+
+    process
+
+    assert_equal({ "2026-03-01" => BigDecimal("7") }, rates,
+                 "the rate was decided on a loan loaded before the concurrent write")
+  end
+
   # Rows 4 and 10: a fixed loan's rate does not move, so a bank disagreeing is
   # something to surface rather than something to write.
   test "a different rate on a fixed loan writes nothing and is logged" do

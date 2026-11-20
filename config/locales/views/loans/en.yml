@@ -3,6 +3,7 @@ en:
   loans:
     edit:
       edit: Edit %{account}
+      stale_rate_schedule: This form is out of date. Reload the loan and reapply your changes. Nothing has been saved.
     form:
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
