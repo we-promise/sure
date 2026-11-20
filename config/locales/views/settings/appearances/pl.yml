@@ -21,6 +21,8 @@ pl:
           nadrzędną na liście transakcji. Gdy opcja jest wyłączona, pozycje podrzędne
           pojawiają się jako osobne wiersze.
         split_grouped_title: Grupuj podzielone transakcje
+        show_counterparty_account_title: "Pokazuj dane konta kontrahenta"
+        show_counterparty_account_description: "Pokazuje ostatnie 4 znaki numeru IBAN lub numeru konta kontrahenta w szczegółach transakcji, jeśli Twoje połączenie bankowe je udostępnia. Wyświetla się tylko wtedy, gdy te dane są dostępne."
         auto_generate_transaction_names_title: "Automatycznie generuj nazwy transakcji"
         auto_generate_transaction_names_description: "Jeśli nazwa ręcznie wprowadzonej transakcji pozostanie pusta, zostanie uzupełniona na podstawie wybranej kategorii i kontrahenta (np. „Rozrywka - Netflix”). Nazwa jest nadal wymagana, jeśli nie wybrano żadnego z nich. Dotyczy całego gospodarstwa domowego i tylko nowych transakcji."
         theme_dark: Ciemny

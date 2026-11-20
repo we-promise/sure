@@ -22,6 +22,8 @@ nl:
         dashboard_account_groups_title: "Standaard uitgeklapt"
         dashboard_account_groups_description: "Deze accountsecties zijn standaard uitgeklapt op het dashboard en in de accountzijbalk. U kunt ze op elk moment handmatig inklappen."
         split_grouped_title: "Gesplitste transacties groeperen"
+        show_counterparty_account_title: "Rekeninggegevens van de tegenpartij tonen"
+        show_counterparty_account_description: "Toon de laatste 4 tekens van de IBAN of het rekeningnummer van de tegenpartij bij de details van een transactie, als je bankkoppeling die levert. Verschijnt alleen als die gegevens beschikbaar zijn."
         split_grouped_description: "Toon gesplitste transacties gegroepeerd onder de oorspronkelijke transactie in de transactielijst. Indien uitgeschakeld worden de delen als afzonderlijke rijen getoond."
         auto_generate_transaction_names_title: "Transactienamen automatisch genereren"
         auto_generate_transaction_names_description: "Als de naam van een handmatig ingevoerde transactie leeg blijft, wordt deze ingevuld op basis van de gekozen categorie en handelaar (bijv. \"Entertainment - Netflix\"). Als geen van beide is gekozen, is een naam nog steeds verplicht. Geldt voor het hele huishouden en alleen voor nieuwe transacties."

@@ -64,6 +64,9 @@ it:
       potential_duplicate_title: Possibile duplicato rilevato
       transfer: Bonifico
       account_label: Conto
+      counterparty_account_label: "Conto della controparte"
+      counterparty_iban_label: "IBAN della controparte"
+      counterparty_own_account_label: "Conto proprio"
       amount: Importo
       category_label: Categoria
       date_label: Data

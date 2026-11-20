@@ -1778,6 +1778,20 @@ class UserTest < ActiveSupport::TestCase
     assert_equal({}, @user.reload.manual_account_order)
   end
 
+  test "show_counterparty_account? defaults to true" do
+    user = users(:family_admin)
+    user.update!(preferences: {})
+
+    assert user.show_counterparty_account?
+  end
+
+  test "show_counterparty_account? respects an explicit false preference" do
+    user = users(:family_admin)
+    user.update!(preferences: { "show_counterparty_account" => false })
+
+    assert_not user.show_counterparty_account?
+  end
+
   test "reports biggest expenses limit defaults to 10 and only returns an offered choice" do
     @user.update_columns(preferences: {})
     assert_equal 10, @user.reports_biggest_expenses_limit

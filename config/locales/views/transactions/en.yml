@@ -88,6 +88,9 @@ en:
       potential_duplicate_title: Possible duplicate detected
       transfer: Transfer
       account_label: Account
+      counterparty_account_label: Counterparty account
+      counterparty_iban_label: Counterparty IBAN
+      counterparty_own_account_label: "Own account"
       amount: Amount
       category_label: Category
       date_label: Date

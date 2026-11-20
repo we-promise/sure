@@ -2637,6 +2637,85 @@ end
     assert_not_includes response.body, "action_type=set_transaction_category"
   end
 
+  test "shows the counterparty account when the setting is on and data is present" do
+    @entry.transaction.update!(counterparty_iban_last4: "3000")
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    # The label anchors this to the dedicated counterparty-account row, not
+    # the pre-existing raw-extra debug dump further down the page.
+    assert_match I18n.t("transactions.show.counterparty_iban_label"), response.body
+    # Masked to the last 4 characters by default -- a counterparty's own
+    # account identifier is more sensitive than the user's own account IBAN
+    # (elsewhere shown the same way), so the dedicated row doesn't show it in
+    # full just because Privacy Mode happens to be off.
+    assert_match "•••3000", response.body
+    assert_select "dl dt", text: I18n.t("transactions.show.counterparty_iban_label")
+    assert_select "dl dd.privacy-sensitive", text: "•••3000"
+  end
+
+  test "names the family's own counterparty account" do
+    @entry.transaction.update!(counterparty_iban_last4: "3201", counterparty_own_account: accounts(:connected))
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "dl dt", text: I18n.t("transactions.show.counterparty_own_account_label")
+    assert_select "dl dd a[href=?]", account_path(accounts(:connected)), text: accounts(:connected).name
+  end
+
+  test "keeps a full IBAN an older sync left in extra out of the raw details" do
+    @entry.transaction.update_columns(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match "DE89370400440532013000", response.body # pipelock:ignore IBAN
+  end
+
+  test "hides the counterparty account line when there is no counterparty data" do
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match I18n.t("transactions.show.counterparty_iban_label"), response.body
+    assert_no_match I18n.t("transactions.show.counterparty_account_label"), response.body
+  end
+
+  test "hides the counterparty account when the user has disabled the setting" do
+    @entry.transaction.update!(counterparty_iban_last4: "3000")
+    @user.update!(preferences: { "show_counterparty_account" => false })
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match I18n.t("transactions.show.counterparty_iban_label"), response.body
+    assert_no_match "•••3000", response.body
+  end
+
+  test "hides the counterparty account id when the user has disabled the setting" do
+    @entry.transaction.update!(counterparty_reference_last4: "8877")
+    @user.update!(preferences: { "show_counterparty_account" => false })
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match I18n.t("transactions.show.counterparty_account_label"), response.body
+    assert_no_match "•••8877", response.body
+  end
+
+  test "falls back to the account reference when no iban is present" do
+    @entry.transaction.update!(counterparty_reference_last4: "8877")
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    # A non-IBAN account id must not be presented as an IBAN.
+    assert_match I18n.t("transactions.show.counterparty_account_label"), response.body
+    assert_no_match I18n.t("transactions.show.counterparty_iban_label"), response.body
+    assert_match "•••8877", response.body
+  end
+
   private
     def create_immediate_rule
       @user.family.rules.create!(

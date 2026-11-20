@@ -19,6 +19,8 @@ tr:
           altında gruplandırılmış olarak gösterin. Kapalıyken bölünen alt işlemler
           ayrı satırlar olarak görünür.
         split_grouped_title: Bölünmüş işlemleri grupla
+        show_counterparty_account_title: "Karşı tarafın hesap bilgilerini göster"
+        show_counterparty_account_description: "Banka bağlantınız sağlıyorsa, karşı tarafın IBAN'ının veya hesap numarasının son 4 karakterini işlem ayrıntılarında gösterir. Yalnızca bu veriler mevcut olduğunda görünür."
         auto_generate_transaction_names_title: "İşlem adlarını otomatik oluştur"
         auto_generate_transaction_names_description: "Elle girilen bir işlemin adı boş bırakılırsa, seçilen kategori ve satıcıdan doldurulur (ör. \"Eğlence - Netflix\"). İkisi de seçilmezse ad yine zorunludur. Tüm hane için geçerlidir ve yalnızca yeni işlemleri etkiler."
         theme_dark: Koyu

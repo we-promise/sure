@@ -22,6 +22,8 @@ es:
         dashboard_account_groups_title: Desplegadas por defecto
         dashboard_account_groups_description: Estas secciones de cuentas aparecerán desplegadas en el panel y en la barra lateral de cuentas. Puedes plegarlas a mano cuando quieras.
         split_grouped_title: Agrupar transacciones divididas
+        show_counterparty_account_title: "Mostrar datos de la cuenta de la contraparte"
+        show_counterparty_account_description: "Muestra los últimos 4 caracteres del IBAN o del número de cuenta de la contraparte en los detalles de una transacción, si tu conexión bancaria los proporciona. Solo aparece cuando esos datos están disponibles."
         auto_generate_transaction_names_title: "Generar nombres de transacciones automáticamente"
         auto_generate_transaction_names_description: "Si el nombre de una transacción introducida manualmente se deja en blanco, se rellena con la categoría y el comercio seleccionados (p. ej. «Entretenimiento - Netflix»). Si no se selecciona ninguno, el nombre sigue siendo obligatorio. Se aplica a todo el grupo familiar y solo a transacciones nuevas."
         split_grouped_description: Muestra las transacciones divididas agrupadas bajo su transacción principal en la lista. Si está desactivado, las divisiones aparecen como filas individuales.

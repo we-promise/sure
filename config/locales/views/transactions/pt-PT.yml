@@ -73,6 +73,9 @@ pt-PT:
       potential_duplicate_title: Possível duplicado detetado
       transfer: Transferência
       account_label: Conta
+      counterparty_account_label: "Conta da contraparte"
+      counterparty_iban_label: "IBAN da contraparte"
+      counterparty_own_account_label: "Conta própria"
       amount: Montante
       category_label: Categoria
       date_label: Data
