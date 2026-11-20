@@ -1,5 +1,7 @@
 <%= settings_section title: t("web_push.title"), subtitle: t("web_push.description") do %>
-  <div class="space-y-4"
+  <%# Permanent: a save elsewhere on this page morphs it, and the morph would put
+      back the server's "checking" placeholder over the controller's state. %>
+  <div id="web-push-device" class="space-y-4" data-turbo-permanent
        data-controller="web-push"
        data-web-push-public-key-value="<%= @web_push_public_key %>"
        data-web-push-registrations-value="<%= @web_push_registrations.to_json %>"

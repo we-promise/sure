@@ -12,7 +12,6 @@ async function controller({ endpoint, registrations, subscriptionKey = [1, 2, 3]
   const calls = { permission: 0, subscribe: 0, fetch: 0, unsubscribe: 0 };
   const posts = [];
   const timers = new Map();
-  const morphListeners = new Set();
   let nextTimer = 0;
   const makeSubscription = (url, key) => ({
     endpoint: url,
@@ -47,11 +46,7 @@ async function controller({ endpoint, registrations, subscriptionKey = [1, 2, 3]
     atob,
     clearTimeout: (id) => timers.delete(id),
     setTimeout: (callback) => { const id = ++nextTimer; timers.set(id, callback); return id; },
-    document: {
-      querySelector: () => ({ content: "csrf-token" }),
-      addEventListener: (type, listener) => type === "turbo:morph" && morphListeners.add(listener),
-      removeEventListener: (type, listener) => type === "turbo:morph" && morphListeners.delete(listener),
-    },
+    document: { querySelector: () => ({ content: "csrf-token" }) },
     fetch: async (_url, options) => {
       calls.fetch++;
       if (options.method === "POST" && options.body) posts.push(JSON.parse(options.body));
@@ -71,8 +66,7 @@ async function controller({ endpoint, registrations, subscriptionKey = [1, 2, 3]
   instance.disableTarget = {};
   instance.testTarget = {};
   await instance.connect();
-  const morph = () => Promise.all([ ...morphListeners ].map((listener) => listener()));
-  return { instance, calls, posts, timers, context, morph, morphListeners };
+  return { instance, calls, posts, timers, context };
 }
 
 async function digest(endpoint) {
@@ -89,24 +83,6 @@ test("a rotated endpoint cannot test or disable an unrelated server registration
   assert.equal(instance.testTarget.disabled, true);
   assert.equal(instance.statusTarget.textContent, "disabled");
   assert.deepEqual(calls, { permission: 0, subscribe: 0, fetch: 0, unsubscribe: 0 });
-});
-
-test("a Turbo morph refresh checks the device again instead of staying on checking", async () => {
-  const endpoint = "https://fcm.googleapis.com/local";
-  const { instance, morph, morphListeners } = await controller({ endpoint, registrations: {
-    "local-id": await digest(endpoint),
-  } });
-  assert.equal(instance.statusTarget.textContent, "enabled");
-  // The morph restores the server markup: the checking status and disabled buttons.
-  instance.statusTarget.textContent = "Checking this device...";
-  instance.testTarget.disabled = true;
-  instance.disableTarget.disabled = true;
-  await morph();
-  assert.equal(instance.statusTarget.textContent, "enabled");
-  assert.equal(instance.testTarget.disabled, false);
-  assert.equal(instance.disableTarget.disabled, false);
-  instance.disconnect();
-  assert.equal(morphListeners.size, 0);
 });
 
 test("the local endpoint matches its own record rather than the newest session record", async () => {
