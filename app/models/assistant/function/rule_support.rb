@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Shared plumbing for the rule tools (get_rules, get_rule_options,
-# preview_rule, create_rule, update_rule, apply_rule).
+# preview_rule, create_rule, update_rule, apply_rule, delete_rule).
 #
 # A rule rewrites every matching transaction, and an active rule runs again on
 # every family sync. So the write tools never activate a rule: create_rule and

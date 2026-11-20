@@ -48,7 +48,8 @@ module Assistant
     Function::CreateRule,
     Function::UpdateRule,
     Function::ApplyRule,
-    Function::PreviewRule
+    Function::PreviewRule,
+    Function::DeleteRule
   ].freeze
 
   class << self
@@ -99,6 +100,7 @@ module Assistant
         Function::CreateRule,
         Function::UpdateRule,
         Function::ApplyRule,
+        Function::DeleteRule,
         Function::UpdateTransaction,
         Function::CreateTransaction,
         Function::DeleteTransaction,

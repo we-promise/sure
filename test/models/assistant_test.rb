@@ -37,7 +37,8 @@ class AssistantTest < ActiveSupport::TestCase
       Assistant::Function::CreateRule,
       Assistant::Function::UpdateRule,
       Assistant::Function::ApplyRule,
-      Assistant::Function::PreviewRule
+      Assistant::Function::PreviewRule,
+      Assistant::Function::DeleteRule
     ].each do |fn_class|
       assert_includes admin_classes, fn_class
       assert_not_includes guest_classes, fn_class
