@@ -32,6 +32,32 @@ class RevolutXItemTest < ActiveSupport::TestCase
     assert_not garbage.valid?
   end
 
+  test "rejects a password-encrypted Ed25519 key without prompting for its passphrase" do
+    key = OpenSSL::PKey.generate_key("ED25519")
+    encrypted = @family.revolut_x_items.new(name: "Revolut X", private_key: key.private_to_pem(OpenSSL::Cipher.new("aes-256-cbc"), "secret"))
+    plain = @family.revolut_x_items.new(name: "Revolut X", private_key: key.private_to_pem)
+
+    assert_not encrypted.valid?
+    assert encrypted.errors.added?(:private_key, :invalid)
+    assert plain.valid?
+  end
+
+  test "a failed import is captured to the debug log and re-raised" do
+    item = revolut_x_items(:one)
+    provider = mock
+    provider.stubs(:get_balances).raises(Provider::RevolutX::ApiError, "boom")
+    item.stubs(:revolut_x_provider).returns(provider)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "revolut_x", level: "error").count }, 1 do
+      assert_raises(Provider::RevolutX::ApiError) { item.import_latest_revolut_x_data }
+    end
+
+    log = DebugLogEntry.where(provider_key: "revolut_x").order(:created_at).last
+    assert_equal "Revolut X import failed: boom", log.message
+    assert_equal item.family, log.family
+    assert_equal "Provider::RevolutX::ApiError", log.metadata["error_class"]
+  end
+
   test "rejects an Ed25519 public key, which cannot sign" do
     public_pem = OpenSSL::PKey.generate_key("ED25519").public_to_pem
     item = @family.revolut_x_items.new(name: "Revolut X", private_key: public_pem)

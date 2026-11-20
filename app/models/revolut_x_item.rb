@@ -42,6 +42,15 @@ class RevolutXItem < ApplicationRecord
     RevolutXItem::Importer.new(self, revolut_x_provider: provider).import
   rescue StandardError => e
     Rails.logger.error "RevolutXItem #{id} - Failed to import: #{e.full_message}"
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "Revolut X import failed: #{e.message}",
+      source: self.class.name,
+      provider_key: "revolut_x",
+      family: family,
+      metadata: { revolut_x_item_id: id, error_class: e.class.name }
+    )
     raise
   end
 
@@ -141,7 +150,9 @@ class RevolutXItem < ApplicationRecord
     def signing_key
       return nil if private_key.blank?
 
-      key = OpenSSL::PKey.read(private_key)
+      # The empty passphrase makes an encrypted key fail to parse instead of
+      # OpenSSL prompting for one on the server's terminal.
+      key = OpenSSL::PKey.read(private_key, "")
       key.private_to_der # raises for a public-only key, which cannot sign
       key if key.oid == "ED25519"
     rescue OpenSSL::PKey::PKeyError

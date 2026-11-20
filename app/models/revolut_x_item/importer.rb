@@ -35,7 +35,7 @@ class RevolutXItem::Importer
       "balances" => balances,
       "sub_accounts" => sub_accounts,
       "currencies" => currencies,
-      "imported_at" => Time.current.iso8601
+      "imported_at" => Time.current.iso8601(6)
     })
 
     assets = balances.filter_map { |balance| parse_asset(balance, tickers) }
@@ -80,17 +80,41 @@ class RevolutXItem::Importer
         false
       end
 
-      account.update!(raw_transactions_payload: { "transactions" => stored.merge(fetched), "fetched_at" => now.iso8601 })
-      revolut_x_item.update!(transactions_synced_through: now) if complete
+      commit_transactions(account, fetched, now, complete)
     end
 
+    # Two imports of one item can overlap (sync dedupe only lasts
+    # Sync::VISIBLE_FOR), so the commit runs under the account's row lock,
+    # merges into the rows stored now rather than those read at the start,
+    # and is skipped when a newer import has already committed. fetched_at
+    # keeps microseconds: TransactionsProcessor compares it with
+    # transactions_synced_through to tell a cut walk from a complete one.
+    def commit_transactions(account, fetched, now, complete)
+      account.with_lock do
+        payload = account.raw_transactions_payload.to_h
+        next if payload["fetched_at"].present? && Time.iso8601(payload["fetched_at"]) > now
+
+        account.update!(raw_transactions_payload: {
+          "transactions" => payload.fetch("transactions", {}).merge(fetched),
+          "fetched_at" => now.iso8601(6)
+        })
+        revolut_x_item.update!(transactions_synced_through: now) if complete
+      end
+    end
+
+    # A malformed page raises rather than being skipped, so the walk counts
+    # as cut short and is redone from the same point next sync.
     def fetch_window(start_ms, end_ms)
       cursor = nil
       seen = Set.new
 
       loop do
         page = revolut_x_provider.get_transactions(start_date: start_ms, end_date: end_ms, cursor: cursor, limit: TRANSACTIONS_PAGE_LIMIT).to_h
-        Array(page["data"]).each { |row| yield row if row.is_a?(Hash) && row["id"].present? }
+        rows = page["data"]
+        unless rows.is_a?(Array) && rows.all? { |row| row.is_a?(Hash) && row["id"].present? }
+          raise Provider::RevolutX::ApiError, "malformed transactions page for window #{start_ms}..#{end_ms}"
+        end
+        rows.each { |row| yield row }
 
         cursor = page.dig("metadata", "next_cursor")
         break if cursor.blank?
@@ -119,7 +143,7 @@ class RevolutXItem::Importer
 
     def parse_asset(balance, tickers)
       symbol = balance["currency"].to_s.upcase
-      total = balance["total"].to_d
+      total = parse_total(balance)
       return if symbol.blank? || total.zero?
 
       fiat = revolut_x_item.fiat_currency?(symbol)
@@ -137,6 +161,14 @@ class RevolutXItem::Importer
         "price_usd" => price_usd&.to_s("F"),
         "amount_usd" => price_usd ? (total * price_usd).round(2).to_s("F") : "0"
       }
+    end
+
+    # A missing or non-numeric total raises: read as 0 it would look like a
+    # sold asset and drop the holding.
+    def parse_total(balance)
+      BigDecimal(balance["total"].to_s)
+    rescue ArgumentError, TypeError
+      raise Provider::RevolutX::ApiError, "invalid balance total for #{balance["currency"].inspect}: #{balance["total"].inspect}"
     end
 
     def crypto_usd_price(symbol, tickers)

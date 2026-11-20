@@ -301,6 +301,44 @@ class RevolutXItemsControllerTest < ActionDispatch::IntegrationTest
     assert @existing_item.reload.scheduled_for_deletion?
   end
 
+  test "destroy does not schedule deletion when unlinking an account fails" do
+    RevolutXItem.any_instance.stubs(:unlink_all!).returns([
+      { provider_account_id: SecureRandom.uuid, name: "Revolut X", provider_link_ids: [], error: "boom" }
+    ])
+    RevolutXItem.any_instance.expects(:destroy_later).never
+
+    delete revolut_x_item_url(@existing_item)
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("revolut_x_items.destroy.unlink_failed"), flash[:alert]
+    assert_not @existing_item.reload.scheduled_for_deletion?
+  end
+
+  test "link existing account rejects an account the admin cannot write" do
+    account = account_the_admin_cannot_write
+    revolut_x_account = @second_item.revolut_x_accounts.create!(name: "Business", account_id: "default", account_type: "exchange", currency: "USD")
+
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_revolut_x_items_url, params: {
+        revolut_x_item_id: @second_item.id, account_id: account.id, revolut_x_account_id: revolut_x_account.id
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_nil revolut_x_account.reload.current_account
+  end
+
+  test "select existing account rejects an account the admin cannot write" do
+    account = account_the_admin_cannot_write
+    @second_item.revolut_x_accounts.create!(name: "Business", account_id: "default", account_type: "exchange", currency: "USD")
+
+    get select_existing_account_revolut_x_items_url, params: { revolut_x_item_id: @second_item.id, account_id: account.id }
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
   test "setup accounts shows the balance in the family currency" do
     ensure_tailwind_build
     @family.update!(currency: "EUR")
@@ -358,5 +396,15 @@ class RevolutXItemsControllerTest < ActionDispatch::IntegrationTest
         currency: "USD",
         accountable: Crypto.create!(subtype: "exchange")
       )
+    end
+
+    # The admin only holds a read_only share on a co-member's account, short of
+    # the :write (owner/full_control) the guard demands.
+    def account_the_admin_cannot_write
+      manual_crypto_exchange_account.tap do |account|
+        account.account_shares.destroy_all
+        account.update!(owner: users(:family_member))
+        account.account_shares.create!(user: users(:family_admin), permission: "read_only")
+      end
     end
 end

@@ -13,7 +13,7 @@
           </ul>
         </div>
       <% else %>
-        <%= form_with url: link_existing_account_revolut_x_items_path, method: :post, class: "space-y-4" do %>
+        <%= form_with url: link_existing_account_revolut_x_items_path, method: :post, class: "space-y-4", data: { turbo_frame: "_top" } do %>
           <%= hidden_field_tag :account_id, @account.id %>
           <%= hidden_field_tag :revolut_x_item_id, @revolut_x_item.id %>
 

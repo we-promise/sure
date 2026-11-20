@@ -214,6 +214,59 @@ class RevolutXItem::ImporterTest < ActiveSupport::TestCase
     assert_raises(Provider::RevolutX::AuthenticationError) { import }
   end
 
+  test "a malformed transactions page does not advance the walk and is logged" do
+    synced_through = Time.utc(2025, 2, 20)
+    @item.update!(transactions_synced_through: synced_through)
+    [ { "metadata" => {} }, transactions_page([ { "status" => "completed" } ]) ].each do |page|
+      @provider.stubs(:get_transactions).returns(page)
+
+      assert_difference -> { DebugLogEntry.where(provider_key: "revolut_x").count }, 1 do
+        travel_to(Time.at(NOW_MS / 1000).utc) { import }
+      end
+
+      assert_equal synced_through, @item.reload.transactions_synced_through
+      assert_match "malformed transactions page", DebugLogEntry.where(provider_key: "revolut_x").order(:created_at).last.message
+    end
+  end
+
+  test "a balance total that is missing or not a number fails the import and keeps the stored assets" do
+    import
+    assets = @item.revolut_x_accounts.sole.raw_payload["assets"]
+
+    [ nil, "abc" ].each do |total|
+      @provider.stubs(:get_balances).returns([ { "currency" => "BTC", "total" => total } ])
+
+      assert_raises(Provider::RevolutX::ApiError) { import }
+      assert_equal assets, @item.revolut_x_accounts.sole.reload.raw_payload["assets"]
+    end
+  end
+
+  test "a cut walk in the same second as a complete one is not taken as complete" do
+    complete_at = Time.utc(2025, 3, 1, 0, 0, 0.2r)
+    travel_to(complete_at, with_usec: true) { import }
+
+    @provider.stubs(:get_transactions).raises(Provider::RevolutX::RateLimitError, "Revolut X rate limit exceeded")
+    travel_to(complete_at + 0.5, with_usec: true) { import }
+
+    revolut_x_account = @item.revolut_x_accounts.sole.reload
+    assert_equal complete_at, @item.reload.transactions_synced_through
+    assert_equal complete_at + 0.5, Time.iso8601(revolut_x_account.raw_transactions_payload["fetched_at"])
+    assert_not RevolutXAccount::TransactionsProcessor.new(revolut_x_account).send(:history_complete?)
+  end
+
+  test "an import older than the stored history leaves it untouched" do
+    @provider.stubs(:get_transactions).returns(transactions_page([ row("t1") ]))
+    travel_to(Time.at(NOW_MS / 1000).utc) { import }
+    newer = { "transactions" => { "t9" => row("t9") }, "fetched_at" => Time.at(NOW_MS / 1000 + 60).utc.iso8601(6) }
+    @item.revolut_x_accounts.sole.update!(raw_transactions_payload: newer)
+    synced_through = @item.reload.transactions_synced_through
+
+    travel_to(Time.at(NOW_MS / 1000 + 30).utc) { import }
+
+    assert_equal newer, @item.revolut_x_accounts.sole.reload.raw_transactions_payload
+    assert_equal synced_through, @item.reload.transactions_synced_through
+  end
+
   private
 
     def import

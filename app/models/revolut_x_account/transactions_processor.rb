@@ -4,8 +4,10 @@
 # entries. Coins move units, so every crypto leg becomes a Trade: a buy or
 # sell carries its fiat leg as the amount, and any other movement has no cash
 # side and is an amount-0 Trade priced at that day's stored price (as
-# KrakenAccount::LedgerProcessor records ledger movements). Fiat moving on its
-# own is cash and becomes a Transaction (negative = inflow).
+# KrakenAccount::LedgerProcessor records ledger movements). A crypto-to-crypto
+# swap is a Sell and a Buy when both coins have a price that day, else a
+# Sweep Out and Sweep In, so an unknown value books no gain or loss. Fiat
+# moving on its own is cash and becomes a Transaction (negative = inflow).
 #
 # Amounts are the net leg amounts of the list endpoint; fees are not itemized.
 # import_transaction gives a Contribution the investment_contribution kind,
@@ -29,6 +31,9 @@ class RevolutXAccount::TransactionsProcessor
       process_row(row)
     rescue StandardError => e
       report("Revolut X transaction #{row["id"]} not imported: #{e.message}", row, level: "error")
+      # Writing later rows would put them ahead of this one in the replay
+      # order, so the run stops here and the sync records the failure.
+      raise
     end
   end
 
@@ -118,7 +123,11 @@ class RevolutXAccount::TransactionsProcessor
       if item.fiat_currency?(symbol)
         write_transaction(row, "", amount: inflow ? -qty : qty, currency: symbol, kind: kind, label: cash_label, name: name)
       elsif !pending?(row) # Sure has no pending Trade; it is written once completed.
-        write_unpriced_trade(row, "", symbol: symbol, qty: inflow ? qty : -qty, label: crypto_label, name: name)
+        security = resolve_security(symbol, row)
+        return unless security
+
+        write_unpriced_trade(row, "", security: security, price: stored_price(security, entry_date(row)),
+                             qty: inflow ? qty : -qty, label: crypto_label, name: name)
       end
     end
 
@@ -148,10 +157,30 @@ class RevolutXAccount::TransactionsProcessor
                             label: "Withdrawal", name: "Withdrawal #{format_qty(destination_qty)} #{destination_symbol}")
         end
       elsif !source_fiat && !destination_fiat && here?(source) && here?(destination)
-        write_unpriced_trade(row, "_out", symbol: source_symbol, qty: -source_qty, label: "Sell", name: "Sell #{format_qty(source_qty)} #{source_symbol}")
-        write_unpriced_trade(row, "_in", symbol: destination_symbol, qty: destination_qty, label: "Buy", name: "Buy #{format_qty(destination_qty)} #{destination_symbol}")
+        process_crypto_swap(row, source_symbol, source_qty, destination_symbol, destination_qty)
       else
         report_unmapped(row)
+      end
+    end
+
+    # Both legs are amount-0 Trades priced on the day. Without both prices the
+    # swap's value is unknown, so the pair is a sweep (an internal movement):
+    # a Sell at price 0 would book the whole out leg as a realized loss.
+    def process_crypto_swap(row, source_symbol, source_qty, destination_symbol, destination_qty)
+      date = entry_date(row)
+      out_security = resolve_security(source_symbol, row)
+      in_security = resolve_security(destination_symbol, row)
+      out_price = out_security && stored_price(out_security, date)
+      in_price = in_security && stored_price(in_security, date)
+      out_label, in_label = out_price && in_price ? %w[Sell Buy] : [ "Sweep Out", "Sweep In" ]
+
+      if out_security
+        write_unpriced_trade(row, "_out", security: out_security, price: out_price, qty: -source_qty,
+                             label: out_label, name: "Sell #{format_qty(source_qty)} #{source_symbol}")
+      end
+      if in_security
+        write_unpriced_trade(row, "_in", security: in_security, price: in_price, qty: destination_qty,
+                             label: in_label, name: "Buy #{format_qty(destination_qty)} #{destination_symbol}")
       end
     end
 
@@ -167,11 +196,7 @@ class RevolutXAccount::TransactionsProcessor
     # A crypto movement with no cash side. amount stays 0, because the balance
     # calculator reads a trade's amount as cash; the units and the price on the
     # day carry the value.
-    def write_unpriced_trade(row, suffix, symbol:, qty:, label:, name:)
-      security = resolve_security(symbol, row)
-      return unless security
-
-      price = stored_price(security, entry_date(row))
+    def write_unpriced_trade(row, suffix, security:, price:, qty:, label:, name:)
       write_trade(row, suffix, security: security, qty: qty, amount: 0, currency: family_currency, price: price || 0,
                   label: label, name: name, price_missing: price.nil?)
     end
@@ -304,7 +329,7 @@ class RevolutXAccount::TransactionsProcessor
     end
 
     def entry_date(row)
-      Time.at(row["created_date"].to_i / 1000r).utc.to_date
+      Time.zone.at(row["created_date"].to_i / 1000r).to_date
     end
 
     def external_id(row, suffix)
