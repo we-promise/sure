@@ -76,6 +76,23 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     assert_equal 20, s3.sum(&:qty)
   end
 
+  test "under fifo a shortfall that a split scales to nothing fills nothing" do
+    book = Holding::LotBook.new(method: "fifo")
+    book.apply(nil, BigDecimal("-0.000000000000000001"), source_id: "s1")
+    book.apply(nil, -2, source_id: "s2")
+    book.split(Rational(1, 3))
+    # The position is 2.000000000000000001 short, 0.666666666666666667 after
+    # the split; s1's entry scales to nothing, so all of it is s2's.
+    book.apply(BigDecimal("30"), BigDecimal("0.666666666666666667"), source_id: "cover")
+
+    book.apply(nil, -1, source_id: "s3")
+    book.apply(BigDecimal("10"), 1, source_id: "b2")
+
+    assert_equal [ [ "b2", 1, 10 ] ],
+      book.disposals.select { |d| d.sale_id == "s3" }.map { |d| [ d.lot_source_id, d.qty, d.unit_cost ] }
+    assert_equal 0, book.open_qty
+  end
+
   test "under average the book records no disposals" do
     book = Holding::LotBook.new
     book.apply(BigDecimal("12"), 60, source_id: "first")

@@ -213,15 +213,40 @@ class HoldingLotTest < ActiveSupport::TestCase
       setup_account
       @account.update!(cost_basis_method: "fifo")
       security = priced_security("SPL6", 30)
-      trade(security, -2, 30, 2)
+      sale = trade(security, -2, 30, 2)
       trade(security, -2, 30, 3)
       Security::Split.create!(security: security, ex_date: d(4), numerator: 1, denominator: 3, source: "manual")
       trade(security, 10, 30, 5)
 
       materialize(:forward)
 
+      # The 4 short shares are 1.333333333333333333 after the split, so the
+      # purchase of 10 leaves 8.666666666666666667 open.
+      assert_equal BigDecimal("8.666666666666666667"), holding_qty(security, d(10))
       lots = HoldingLot.where(account: @account, security: security).sum(:qty)
-      assert_equal holding_qty(security, d(10)), lots, "the lots hold what the position holds"
+      assert_equal BigDecimal("8.666666666666666667"), lots, "the lots hold what the position holds"
+      assert_includes HoldingLot.in_partition([ @account.id ], [ security.id ]), [ @account.id, security.id ]
+      assert_includes HoldingLotDisposal.readable_by_sale([ sale.entryable ]).keys, sale.id, "the sale's disposals are read"
+    end
+  end
+
+  test "short sales across a split that does not divide evenly leave reverse-synced lots equal to the position" do
+    travel_to TODAY do
+      setup_account
+      @account.update!(cost_basis_method: "fifo")
+      link_account
+      security = priced_security("SPL7", 30)
+      trade(security, -2, 30, 2)
+      trade(security, -2, 30, 3)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 1, denominator: 3, source: "manual")
+      trade(security, 10, 30, 5)
+      @account.holdings.create!(security: security, date: d(10), qty: BigDecimal("8.666666666666666667"), price: 30,
+        amount: 260, currency: "USD", account_provider: @account_provider)
+
+      materialize(:reverse)
+
+      lots = HoldingLot.where(account: @account, security: security).sum(:qty)
+      assert_equal BigDecimal("8.666666666666666667"), lots, "the lots hold what the position holds"
       assert_includes HoldingLot.in_partition([ @account.id ], [ security.id ]), [ @account.id, security.id ]
     end
   end

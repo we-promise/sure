@@ -128,14 +128,22 @@ class Holding::LotBook
     # so a sale short across a split keeps its unknown cost. Its scaled
     # shortfall keeps its place in the queue, with no disposal to price, so a
     # later acquisition still fills the older shortfall before a newer sale's.
-    @uncovered.map! { |_index, short| [ nil, Security::Split.scale(short, ratio) ] }
-    # The shortfall scales with the position, as the calculators scale it.
-    # Under fifo the queue is that shortfall entry by entry, but each entry
-    # rounds on its own, so the residual is settled from the last entry back:
-    # the queue keeps its order and adds up to the shortfall, and a cover of
-    # the whole shortfall leaves no sliver of an entry queued.
-    @shortfall = Security::Split.scale(@shortfall, ratio)
-    settle_queue(@shortfall - @uncovered.sum(BigDecimal("0")) { |_index, short| short }) if @fifo
+    # Each entry is scaled as the difference of its scaled running totals, so
+    # the queue adds up to exactly the scaled shortfall, as the calculators
+    # scale the position once: a cover of the whole shortfall leaves no sliver
+    # of an entry queued. An entry that scales to nothing is passed over by
+    # #cover without filling anything.
+    scaled_total = BigDecimal("0")
+    total = BigDecimal("0")
+    @uncovered.map! do |_index, short|
+      total += short
+      before = scaled_total
+      scaled_total = Security::Split.scale(total, ratio)
+      [ nil, scaled_total - before ]
+    end
+    # Under fifo every shortfall is queued, so the queue's total is the
+    # shortfall; under average nothing is queued.
+    @shortfall = @fifo ? scaled_total : Security::Split.scale(@shortfall, ratio)
     rescale_lots(Security::Split.scale(open_qty, ratio)) do |lot|
       lot.with(
         qty: Security::Split.scale(lot.qty, ratio),
@@ -287,20 +295,6 @@ class Holding::LotBook
       settle_drift(scaled, target - scaled.sum(BigDecimal("0"), &:qty)) if target.positive?
       @lots, closed = scaled.partition { |lot| lot.qty.positive? }
       @closed.concat(closed.map { |lot| lot.with(qty: BigDecimal("0")) })
-    end
-
-    # The queue counterpart of #settle_drift: no entry gives up more than it
-    # holds, and an entry rounded to nothing leaves the queue.
-    def settle_queue(drift)
-      @uncovered.each_index.reverse_each do |index|
-        break if drift.zero?
-
-        short = @uncovered[index][1]
-        correction = drift.positive? ? drift : -[ short, -drift ].min
-        @uncovered[index][1] = short + correction
-        drift -= correction
-      end
-      @uncovered.reject! { |_index, short| short <= 0 }
     end
 
     # A negative drift can exceed the last lot, which may have rounded to zero,
