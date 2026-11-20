@@ -1,0 +1,106 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: setup_t("title")) do %>
+    <div class="flex items-center gap-2">
+      <%= helpers.icon "building-2", class: "text-primary" %>
+      <span class="text-primary"><%= setup_t("subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with url: complete_path,
+                  method: :post,
+                  local: true,
+                  data: {
+                    controller: "loading-button",
+                    action: "submit->loading-button#showLoading",
+                    loading_button_loading_text_value: setup_t("creating_accounts"),
+                    turbo_frame: "_top"
+                  },
+                  class: "space-y-6" do |form| %>
+
+      <div class="space-y-4">
+        <% if api_error.present? %>
+          <%= render DS::Alert.new(title: setup_t("fetch_failed"), message: api_error, variant: :error) %>
+        <% elsif provider_accounts.empty? %>
+          <%= render DS::EmptyState.new(icon: "check-circle", title: setup_t("no_accounts_to_setup"), description: setup_t("all_accounts_linked")) %>
+        <% else %>
+          <%= render DS::Alert.new(title: setup_t("choose_account_type"), variant: :info) do %>
+            <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
+              <% displayable_account_type_options.each do |label, type| %>
+                <li><strong><%= label %></strong></li>
+              <% end %>
+            </ul>
+          <% end %>
+
+          <% provider_accounts.each do |provider_account| %>
+          <div class="border border-primary rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="font-medium text-primary">
+                  <%= provider_account.name %>
+                </h3>
+              </div>
+            </div>
+
+            <div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="<%= provider_account.id %>">
+              <div data-action="dropdown:select->account-type-selector#updateSubtype">
+                <%= fields :account_types do |types| %>
+                  <%= render DS::Select.new(
+                        form: types,
+                        method: provider_account.id,
+                        items: select_items(account_type_options),
+                        selected: default_account_type(provider_account),
+                        label: setup_t("account_type_label"),
+                        scoped_ids: true
+                      ) %>
+                <% end %>
+              </div>
+
+              <!-- Subtype dropdowns (shown/hidden based on account type) -->
+              <div data-account-type-selector-target="subtypeContainer">
+                <% subtype_options.each do |account_type, subtype_config| %>
+                  <div class="subtype-select hidden" data-type="<%= account_type %>">
+                    <% if subtype_config[:options].present? %>
+                      <%= fields :account_subtypes do |subtypes| %>
+                        <%= render DS::Select.new(
+                              form: subtypes,
+                              method: provider_account.id,
+                              items: select_items(subtype_config[:options]),
+                              selected: default_subtype(provider_account, account_type),
+                              placeholder: subtype_placeholder(account_type),
+                              include_blank: subtype_placeholder(account_type),
+                              label: subtype_config[:label],
+                              scoped_ids: true
+                            ) %>
+                      <% end %>
+                    <% else %>
+                      <p class="text-sm text-secondary"><%= subtype_config[:message] %></p>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="flex gap-3">
+        <%= render DS::Button.new(
+          text: setup_t("create_accounts"),
+          variant: "primary",
+          icon: "plus",
+          type: "submit",
+          class: "flex-1",
+          disabled: api_error.present? || provider_accounts.empty?,
+          data: { loading_button_target: "button" }
+        ) %>
+        <%= render DS::Link.new(
+          text: setup_t("cancel"),
+          variant: "secondary",
+          href: helpers.accounts_path
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

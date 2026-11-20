@@ -1,0 +1,68 @@
+<turbo-frame id="modal">
+<dialog class="w-full h-full bg-transparent text-primary backdrop:bg-overlay pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] lg:p-1" role="dialog" aria-modal="true" aria-labelledby="dialog-title-ID" data-controller="DS--dialog hotkey" data-DS--dialog-auto-open-value="true" data-DS--dialog-reload-on-close-value="false" data-DS--dialog-disable-click-outside-value="false" data-action="click-&gt;DS--dialog#clickOutside" data-hotkey="esc:DS--dialog#close">
+<div class="flex h-full w-full items-center justify-center">
+<div class="flex flex-col bg-container rounded-xl shadow-border-xs mx-3 lg:mx-0 w-full max-h-full lg:max-w-[550px]" data-DS--dialog-target="content">
+<div class="grow py-4 space-y-4 flex flex-col overflow-auto">
+<header class="px-4 flex flex-col gap-2">
+<div class="flex items-center justify-between gap-2">
+<h2 id="dialog-title-ID" class="font-medium text-primary">Set Up Your Brex Accounts</h2>
+<button title="Close" type="button" aria-label="Close" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-md ml-auto shrink-0 justify-center w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11 hover:bg-container-inset-hover" data-action="DS--dialog#close">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-secondary">
+<path d="M18 6 6 18">
+</path>
+<path d="m6 6 12 12">
+</path>
+</svg>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary text-primary">
+<path d="M10 12h4">
+</path>
+<path d="M10 8h4">
+</path>
+<path d="M14 21v-3a2 2 0 0 0-4 0v3">
+</path>
+<path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2">
+</path>
+<path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16">
+</path>
+</svg>
+<span class="text-primary">Choose the correct account types for your imported accounts</span>
+</div>
+</header>
+<div class="px-4 grow">
+<form class="space-y-6" data-controller="loading-button" data-action="submit-&gt;loading-button#showLoading" data-loading-button-loading-text-value="Creating Accounts..." data-turbo-frame="_top" action="/brex_items/UUID/complete_account_setup" accept-charset="UTF-8" method="post">
+<div class="space-y-4">
+<div class="flex flex-col items-center text-center px-4 py-12">
+<div class="mb-4">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-7 h-7 text-secondary">
+<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14">
+</path>
+<path d="m9 11 3 3L22 4">
+</path>
+</svg>
+</div>
+<p class="text-primary font-medium mb-2">No Accounts to Set Up</p>
+<p class="text-secondary text-sm max-w-md">All your Brex accounts have already been set up.</p>
+</div>
+</div>
+<div class="flex gap-3">
+<button type="submit" disabled="disabled" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg flex-1 px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400" data-loading-button-target="button">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-inverse">
+<path d="M5 12h14">
+</path>
+<path d="M12 5v14">
+</path>
+</svg>
+<span class="min-w-0 truncate">Create Accounts</span>
+</button>
+<a class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary bg-gray-200 theme-dark:bg-gray-700 hover:bg-gray-300 theme-dark:hover:bg-gray-600 disabled:bg-gray-200 theme-dark:disabled:bg-gray-600" href="/accounts">Cancel</a>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+</dialog>
+</turbo-frame>
