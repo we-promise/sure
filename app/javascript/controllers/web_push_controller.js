@@ -10,7 +10,16 @@ export default class extends Controller {
     messages: Object,
   };
 
-  async connect() {
+  connect() {
+    // A Turbo morph refresh (a save on this page redirects back here) keeps
+    // this controller but puts back the server's "checking" status and
+    // disabled buttons, so the device is checked again.
+    this.onMorph ||= () => this.check();
+    document.addEventListener("turbo:morph", this.onMorph);
+    return this.check();
+  }
+
+  async check() {
     this.lifecycleGeneration = (this.lifecycleGeneration || 0) + 1;
     const generation = this.lifecycleGeneration;
     const isCurrent = () => generation === this.lifecycleGeneration;
@@ -55,6 +64,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    document.removeEventListener("turbo:morph", this.onMorph);
     this.lifecycleGeneration++;
     this.stopPolling();
   }
