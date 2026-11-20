@@ -14,7 +14,7 @@ en:
         day_change: Day
         qty: Qty
         security: Security
-        unrealized: Unrealised P&L
+        unrealized: Unrealized P&L
         value: Value
         weight: Weight
       day_change_partial: "%{covered} of %{total} positions"

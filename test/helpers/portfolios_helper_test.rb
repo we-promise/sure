@@ -12,6 +12,15 @@ class PortfoliosHelperTest < ActionView::TestCase
     assert_equal portfolio_path(sort: "weight", dir: "desc"), holdings_sort_link("weight", **active)
   end
 
+  # A custom date range lives only in the request, so a header link that
+  # dropped it would reload the page on the user's default period.
+  test "a holdings header link keeps the page's period" do
+    controller.params.merge!(start_date: "2026-01-01", end_date: "2026-06-30", page: "2")
+
+    assert_equal portfolio_path(start_date: "2026-01-01", end_date: "2026-06-30", sort: "value", dir: "asc"),
+                 holdings_sort_link("value", active_sort: "value", active_dir: "desc")
+  end
+
   test "only the active holdings column carries an aria-sort value" do
     assert_equal "ascending", holdings_aria_sort("name", active_sort: "name", active_dir: "asc")
     assert_equal "descending", holdings_aria_sort("name", active_sort: "name", active_dir: "desc")

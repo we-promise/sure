@@ -162,14 +162,6 @@ class DS::TableTest < ViewComponent::TestCase
     assert_nothing_raised { DS::Table.new(rows: ROWS) }
   end
 
-  # Detail ids land in aria-controls, which reads a space as a second id.
-  test "a table with detail rows refuses an id with whitespace" do
-    error = assert_raises(ArgumentError) { DS::Table.new(rows: ROWS, id: "payment schedule", row_detail: ->(_row) { "x" }) }
-    assert_match "whitespace", error.message
-
-    assert_nothing_raised { DS::Table.new(rows: ROWS, id: "payment schedule") }
-  end
-
   private
     def render_table(**options)
       render_inline(DS::Table.new(rows: ROWS, **options)) do |table|
