@@ -232,6 +232,48 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
   end
 
+  test "monthly totals exclude scheduled entries until their date arrives" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    travel_to Date.current.beginning_of_month + 14.days do
+      create_transaction(account: @checking_account, amount: 100, date: Date.current)
+      create_transaction(account: @checking_account, amount: 250, date: Date.tomorrow)
+      period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+      month = Date.current.beginning_of_month
+      statement = IncomeStatement.new(@family)
+
+      assert_equal 100, statement.monthly_income_expense_totals(period: period).fetch(month)[:expense]
+      assert_equal statement.expense_totals(period: period).total,
+                   statement.monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    end
+  end
+
+  test "monthly totals refresh when the family currency changes" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    period = Period.current_month
+    month = Date.current.beginning_of_month
+
+    assert_equal 900, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    @family.update!(currency: "EUR")
+    assert_equal 810, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+  end
+
+  test "monthly totals refresh when an exchange rate changes" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @family.update!(currency: "EUR")
+    rate = ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    period = Period.current_month
+    month = Date.current.beginning_of_month
+
+    assert_equal 810, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    travel 1.second do
+      rate.update!(rate: 0.8)
+      assert_equal 720, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    end
+  end
+
   test "monthly income/expense totals match per-month period totals" do
     # Spread entries over two months
     create_transaction(account: @checking_account, amount: -500, category: @income_category, date: 40.days.ago.to_date)

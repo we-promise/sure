@@ -45,7 +45,7 @@ class IncomeStatement
     @monthly_income_expense_totals ||= {}
     @monthly_income_expense_totals[key] ||= begin
       rows = monthly_totals_query(
-        transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
+        transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
         date_range: period.date_range
       )
 
@@ -427,7 +427,7 @@ class IncomeStatement
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
-        "income_statement", "monthly_totals_query", "v1", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i
+        "income_statement", "monthly_totals_query", "v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key, family.accounts.maximum(:updated_at)&.to_i
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids, group_by_month: true).call }
     end
 
