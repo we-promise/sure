@@ -116,6 +116,18 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 15.99, @recurring_transaction.reload.amount
   end
 
+  # Editing the amount is how a rent rise is declared, so the old price has to
+  # stay in history for anything comparing against an earlier date.
+  test "update keeps the previous amount in the bill's price history" do
+    patch recurring_transaction_url(@recurring_transaction),
+      params: { recurring_transaction: { name: @recurring_transaction.display_name, amount: "17.99" } }
+
+    @recurring_transaction.reload
+    assert_equal 17.99, @recurring_transaction.amount
+    assert_equal 15.99, @recurring_transaction.amount_on(6.months.ago.to_date)
+    assert @recurring_transaction.recurring_price_changes.sole.recorded_by_user?
+  end
+
   test "the amount steps by the currency, never finer than the column" do
     assert_in_delta 0.01, RecurringTransaction.amount_step("USD")
     assert_in_delta 1.0, RecurringTransaction.amount_step("JPY")
