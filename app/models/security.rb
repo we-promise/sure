@@ -127,6 +127,9 @@ class Security < ApplicationRecord
   # and would delete other families' taggings or attach a tag the family does
   # not own.
   has_many :taggings, as: :taggable, dependent: :destroy
+  # One DELETE: a world fund lists thousands of rows, and Security::Constituent
+  # has no callbacks for a per-row destroy to run.
+  has_many :constituents, class_name: "Security::Constituent", dependent: :delete_all
 
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
@@ -382,6 +385,19 @@ class Security < ApplicationRecord
   # after `from` and on or before `to`. 1 when there are none.
   def split_factor_between(from, to)
     splits.where(ex_date: (from + 1)..to).reduce(Rational(1)) { |factor, split| factor * split.ratio }
+  end
+
+  # The fund expanded into what it actually holds, as fractions of the fund,
+  # keyed by [ticker, exchange].
+  #
+  # A whole-fund list (summing to 99 or more) is normalised against its actual
+  # sum, so rounding drift does not under-report every constituent. A partial
+  # list is divided by 100 and its fractions sum to less than 1: the rest of the
+  # fund is unlisted, not the listed names' to carry. The rule lives in
+  # `Security::Constituent.fund_shares`.
+  def look_through_weights
+    rows = constituents.pluck(:ticker, :exchange, :weight).map { |values| Security::Constituent::Row.new(*values) }
+    Security::Constituent.fund_shares(rows).listed
   end
 
   def to_combobox_option

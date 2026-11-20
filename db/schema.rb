@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_20_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2346,6 +2346,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
     t.string "classification_fetched_from"
     t.boolean "classification_locked", default: false, null: false
     t.string "classification_source"
+    t.datetime "constituents_fetched_at"
     t.string "country_code"
     t.datetime "created_at", null: false
     t.string "exchange_acronym"
@@ -2390,6 +2391,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
     t.index ["created_at"], name: "index_security_audit_logs_on_created_at"
     t.index ["event_type"], name: "index_security_audit_logs_on_event_type"
     t.index ["user_id", "created_at"], name: "index_security_audit_logs_on_user_id_and_created_at"
+  end
+
+  create_table "security_constituents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "exchange"
+    t.string "name"
+    t.uuid "security_id", null: false
+    t.string "ticker", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "weight", precision: 9, scale: 6
+    t.index "security_id, ticker, COALESCE(exchange, ''::character varying)", name: "index_security_constituents_on_security_ticker_exchange", unique: true
+    t.index ["security_id"], name: "index_security_constituents_on_security_id"
+    t.check_constraint "weight IS NULL OR weight >= 0::numeric", name: "chk_security_constituents_weight_nonnegative"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3308,6 +3322,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
   add_foreign_key "rules", "families"
   add_foreign_key "rules", "rule_groups", on_delete: :nullify
   add_foreign_key "security_audit_logs", "users", on_delete: :nullify
+  add_foreign_key "security_constituents", "securities", on_delete: :cascade
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify
