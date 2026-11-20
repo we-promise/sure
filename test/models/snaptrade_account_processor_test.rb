@@ -1034,6 +1034,40 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("32.73"), card.entries.find_by!(external_id: "card_purchase").amount
   end
 
+  # A card synced before the sign fix holds its reading as SnapTrade sent it.
+  test "a card's anchor from before the sign fix is turned around, not kept beside the new reading" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-1400.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-1455.44"), cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    card.reload
+    readings = card.entries.where(entryable_type: "Valuation").order(:date).pluck(:amount)
+    assert_equal BigDecimal("1455.44"), card.balance
+    assert readings.none?(&:negative?), "no reading keeps the old sign: #{readings.map(&:to_s)}"
+    assert_includes readings, BigDecimal("1400.00")
+  end
+
+  test "a card in credit keeps its negative anchor" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-20.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("15.00"), cash_balance: BigDecimal("15.00"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    assert_equal BigDecimal("-15.00"), card.reload.balance
+    assert_includes card.entries.where(entryable_type: "Valuation").pluck(:amount), BigDecimal("-20.00")
+  end
+
   test "processor synchronizes balances, holdings, and activities end-to-end without cash distortion" do
     security = securities(:aapl)
 

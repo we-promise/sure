@@ -40,6 +40,7 @@ class SnaptradeAccount::Processor
     end
 
     if anchor_balance
+      correct_pre_sign_fix_anchor(account, anchor_balance)
       account.set_current_balance(
         anchor_balance,
         date: date,
@@ -57,6 +58,18 @@ class SnaptradeAccount::Processor
   end
 
   private
+
+    # Syncs before liability balances were negated stored a card's reading as
+    # SnapTrade sends it, owed as negative. Left alone, that anchor is kept as a
+    # past reconciliation beside the first positive one, and the card's history
+    # shows a jump that never happened. A card in credit reads negative now too,
+    # so only a negative anchor against a positive reading is turned around.
+    def correct_pre_sign_fix_anchor(account, balance)
+      return unless account.liability? && balance.positive?
+
+      anchor = account.entries.where(entryable_type: "Valuation", entryable_id: Valuation.current_anchor.select(:id)).first
+      anchor.update!(amount: -anchor.amount) if anchor&.amount&.negative?
+    end
 
     def update_account_balance(account)
       # Calculate total balance and cash balance from SnapTrade data

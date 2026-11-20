@@ -399,6 +399,22 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal(-500.00, snaptrade_entry("payment_001").amount.to_f)
   end
 
+  test "a card payment with no matched bank side is a transfer, not income" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    @snaptrade_account.reload
+
+    process_activities(
+      build_cash_activity(id: "payment_002", type: "PAYMENT", amount: 500.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "purchase_002", type: "POSDEBIT", amount: -32.73, settlement_date: Date.current.to_s)
+    )
+
+    payment = card.entries.find_by!(external_id: "payment_002", source: "snaptrade")
+    assert_equal(-500.00, payment.amount.to_f)
+    assert_equal "funds_movement", payment.entryable.kind
+    assert_equal "standard", card.entries.find_by!(external_id: "purchase_002", source: "snaptrade").entryable.kind
+  end
+
   test "processes cash FEE and TAX as positive outflow and INTEREST as negative inflow" do
     process_activities(
       build_cash_activity(id: "fee_001", type: "FEE", amount: -25.00, settlement_date: Date.current.to_s),
