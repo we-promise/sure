@@ -98,7 +98,7 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
   test "update rejects a null current password sent as JSON" do
     assert_password_unchanged do
       patch password_path,
-        params: { user: { password_challenge: nil, password: "newtestpassword817983172", password_confirmation: "newtestpassword817983172" } }.to_json,
+        params: { user: { password_challenge: nil, password: "NewSecure1!", password_confirmation: "NewSecure1!" } }.to_json,
         headers: { "CONTENT_TYPE" => "application/json" }
     end
   end
@@ -106,7 +106,7 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
   test "update rejects a current password key sent without a value" do
     assert_password_unchanged do
       patch password_path,
-        params: "user[password_challenge]&user[password]=newtestpassword817983172&user[password_confirmation]=newtestpassword817983172",
+        params: "user[password_challenge]&user[password]=NewSecure1!&user[password_confirmation]=NewSecure1!",
         headers: { "CONTENT_TYPE" => "application/x-www-form-urlencoded" }
     end
   end
