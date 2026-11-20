@@ -218,7 +218,7 @@ class Security::TagsTest < ActiveSupport::TestCase
   test "an id that is not a uuid is refused and changes nothing" do
     existing = @security.taggings.create!(tag: @tag)
 
-    [ [ 123 ], [ "nope" ], [ @second_tag.id, "nope" ] ].each do |bad|
+    [ [ 123 ], [ "nope" ], [ @second_tag.id, "nope" ], [ nil ] ].each do |bad|
       assert_raises(ArgumentError, "for #{bad.inspect}") { @security.set_tags_for(@family, bad) }
     end
 
