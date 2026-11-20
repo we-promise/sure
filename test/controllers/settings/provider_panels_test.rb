@@ -32,6 +32,7 @@ class Settings::ProviderPanelsTest < ActionDispatch::IntegrationTest
 
     { "trade_republic" => "settings.providers.trade_republic_panel.encryption_warning.title",
       "kraken" => "settings.providers.kraken_panel.read_only_title",
+      "revolut_x" => "settings.providers.revolut_x_panel.read_only_title",
       "coinspot" => "settings.providers.coinspot_panel.read_only_title" }.each do |provider_key, title_key|
       get connect_form_settings_providers_path(provider_key: provider_key)
 
@@ -52,7 +53,7 @@ class Settings::ProviderPanelsTest < ActionDispatch::IntegrationTest
     EnableBankingItem.create!(family: family, name: "Expired", country_code: "FI", application_id: "app",
                               client_certificate: "cert", session_id: "expired", session_expires_at: 1.day.ago)
 
-    %w[binance brex coinbase enable_banking kraken mercury].each do |provider_key|
+    %w[binance brex coinbase enable_banking kraken mercury revolut_x].each do |provider_key|
       get connect_form_settings_providers_path(provider_key: provider_key)
 
       assert_response :success

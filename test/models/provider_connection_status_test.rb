@@ -90,6 +90,19 @@ class ProviderConnectionStatusTest < ActiveSupport::TestCase
     assert_equal true, kraken_status[:credentials_configured]
   end
 
+  test "revolut x provider status is included without credential fields" do
+    statuses = ProviderConnectionStatus.for_family(families(:dylan_family))
+    revolut_x_statuses = statuses.select { |status| status[:provider] == "revolut_x" }
+
+    assert_equal 2, revolut_x_statuses.size
+    revolut_x_statuses.each do |status|
+      assert_equal "RevolutXItem", status[:provider_type]
+      refute_includes status.keys, :api_key
+      refute_includes status.keys, :private_key
+    end
+    assert_equal({ true => 1, false => 1 }, revolut_x_statuses.map { |status| status[:credentials_configured] }.tally)
+  end
+
   test "simplefin provider status does not require setup token after partial account sync" do
     family = families(:dylan_family)
     item = SimplefinItem.create!(

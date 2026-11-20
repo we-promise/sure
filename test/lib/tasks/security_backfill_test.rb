@@ -386,7 +386,8 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     10 => "0bcaa72ed675acde5d5ae2ce72305bf73375c0faa5580fe80e3985e88aa4f9e4",
     11 => "e706a4aba7b25ef1ec3d9dacbd6ca489e4abe577b54875ac377a48138890b450",
     12 => "4122d5a8520c242fb5bad505511319806da13ed45996b47df2cb2ee34a4c041f",
-    13 => "72593348d2ae17c23317f826de2e65b983356766c09fa3bcf92af01c26d54aa0"
+    13 => "72593348d2ae17c23317f826de2e65b983356766c09fa3bcf92af01c26d54aa0",
+    14 => "f9841dcd873ae880a8e31e02a30f0b32e7802b650d9685e91ca2d931bec674fc"
   }.freeze
 
   test "backfill manifest changes come with a CURRENT_BACKFILL_VERSION bump" do
@@ -406,11 +407,11 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     %w[
       akahu_items binance_items brex_items coinbase_items coinspot_items coinstats_items
       fio_items ibkr_items indexa_capital_items kraken_items mercury_items monobank_items
-      onchain_wallet_items questrade_items redbark_items snaptrade_items
+      onchain_wallet_items questrade_items redbark_items revolut_x_items snaptrade_items
       sophtron_items trade_republic_items trading212_items up_items wise_items
       akahu_accounts binance_accounts brex_accounts coinspot_accounts fio_accounts ibkr_accounts
       indexa_capital_accounts kraken_accounts monobank_accounts onchain_wallet_accounts
-      questrade_accounts redbark_accounts sophtron_accounts trade_republic_accounts
+      questrade_accounts redbark_accounts revolut_x_accounts sophtron_accounts trade_republic_accounts
       trading212_accounts up_accounts wise_accounts
       api_keys sso_providers sso_identity_blocks
     ].each do |key|

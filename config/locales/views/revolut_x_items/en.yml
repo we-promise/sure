@@ -1,0 +1,88 @@
+---
+en:
+  revolut_x_items:
+    provider_connection:
+      default_name: Revolut X
+      default_description: Link to a Revolut X exchange account
+      name: "Revolut X - %{name}"
+      description: "Link to %{name}"
+    create:
+      default_name: Revolut X
+      success: Revolut X connection created. Next, register its public key.
+    update:
+      success: Successfully updated Revolut X connection.
+    destroy:
+      success: Scheduled Revolut X connection for deletion.
+      unlink_failed: Could not disconnect the Revolut X connection. Try again.
+    select_accounts:
+      select_connection: Choose a Revolut X connection in Provider Settings.
+      no_credentials_configured: Add a Revolut X API key before setting up accounts.
+    link_accounts:
+      select_connection: Choose a Revolut X connection before linking accounts.
+    select_existing_account:
+      title: Link Revolut X Account
+      no_accounts_found: No Revolut X accounts found.
+      wait_for_sync: Wait for Revolut X to finish syncing.
+      check_provider_health: Check that your Revolut X API key is valid.
+      link: Link
+      cancel: Cancel
+    link_existing_account:
+      success: Successfully linked to Revolut X account
+      select_connection: Choose a Revolut X connection before linking accounts.
+      errors:
+        only_manual: Only manual Crypto exchange accounts without an existing provider link can be linked to Revolut X
+        invalid_revolut_x_account: Invalid Revolut X account
+        revolut_x_account_already_linked: This Revolut X account is already linked
+    setup_accounts:
+      title: Import Revolut X Account
+      subtitle: Select the exchange account to track
+      instructions: Revolut X imports one Crypto exchange account per connection, with its crypto holdings and fiat cash.
+      no_accounts: All Revolut X accounts have been imported.
+      accounts_count:
+        one: "%{count} account available"
+        other: "%{count} accounts available"
+      select_all: Select all
+      import_selected: Import Selected
+      cancel: Cancel
+      creating: Importing...
+    complete_account_setup:
+      success:
+        one: "Imported %{count} account"
+        other: "Imported %{count} accounts"
+      none_selected: No accounts selected
+      no_accounts: No accounts to import
+    revolut_x_item:
+      provider_name: Revolut X
+      syncing: Syncing...
+      reconnect: Credentials need updating
+      awaiting_api_key: Waiting for API key
+      deletion_in_progress: Deleting...
+      status_with_summary: "Last synced %{timestamp} ago - %{summary}"
+      status_never: Never synced
+      delete: Delete
+      no_accounts_title: No accounts found
+      no_accounts_message: Your Revolut X exchange account will appear here after syncing.
+      setup_needed: Account ready to import
+      setup_description: Import this Revolut X connection as a Crypto exchange account.
+      setup_action: Import Account
+      import_accounts_menu: Import Account
+      sync_status:
+        no_accounts: No accounts found
+        all_synced:
+          one: "%{count} account synced"
+          other: "%{count} accounts synced"
+        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
+  revolut_x_item:
+    syncer:
+      checking_credentials: Checking credentials...
+      credentials_invalid: Revolut X API key missing or invalid. Add the API key Revolut X issued for this connection's public key.
+      importing_accounts: Importing accounts from Revolut X...
+      checking_configuration: Checking account configuration...
+      accounts_need_setup:
+        one: "%{count} account needs setup"
+        other: "%{count} accounts need setup"
+      processing_accounts: Processing account data...
+      processing_failed:
+        one: "%{count} Revolut X account failed to sync"
+        other: "%{count} Revolut X accounts failed to sync"
+      calculating_balances: Calculating balances...

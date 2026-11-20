@@ -1,0 +1,16 @@
+one:
+  family: dylan_family
+  name: Revolut X
+  api_key: <%= "a1" * 32 %>
+  private_key: <%= OpenSSL::PKey.generate_key("ED25519").private_to_pem.to_json %>
+  status: good
+  institution_name: Revolut X
+  institution_domain: revolut.com
+  institution_url: https://exchange.revolut.com
+  institution_color: "#111827"
+
+awaiting_api_key:
+  family: dylan_family
+  name: Revolut X Bot
+  private_key: <%= OpenSSL::PKey.generate_key("ED25519").private_to_pem.to_json %>
+  status: good

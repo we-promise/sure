@@ -55,6 +55,7 @@ en:
         no_recent_sync: Sync overdue
         reconsent_required: Re-consent required
         login_required: Login required
+        api_key_needed: API key needed
         login_expires_soon: "Login expires in %{time} (%{at})"
         reconsent_needed:
           one: Re-consent needed in 1 day
@@ -84,6 +85,7 @@ en:
         coinbase: Import your Coinbase crypto holdings and track performance.
         binance: Sync your Binance spot balances using a read-only API key.
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.
+        revolut_x: Sync Revolut X balances and transaction history with a signed, read-only API key.
         coinspot: Sync CoinSpot balances, AUD values, transfers, deposits, withdrawals, and order history using a read-only API key.
         onchain_wallet: Track self-custody Bitcoin, EVM, Solana, Cosmos and Polkadot wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
@@ -164,6 +166,44 @@ en:
         api_secret_label: Private Key
         api_secret_placeholder: Paste your Kraken private key
         keep_api_secret_placeholder: Leave blank to keep the existing private key
+        setup_accounts: Setup account
+        syncing: Syncing...
+        sync: Sync
+        disconnect: Disconnect
+        disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+      revolut_x_panel:
+        step1: "Add a connection below. Sure creates an Ed25519 key pair for it, or you can bring your own private key."
+        step2: "Register the connection's public key in Revolut X to get an API key."
+        step3: "Paste the API key into the connection and save. Sync starts once the key is saved."
+        read_only_title: "Read-only exchange sync only"
+        read_only_body: "Sure only sends read requests to Revolut X and never places, changes or cancels orders. It imports balances, holdings and transaction history."
+        default_connection_name: Revolut X
+        add_connection: Add Revolut X connection
+        update_connection: Update connection
+        save_api_key: Save
+        connection_name_label: Connection name
+        connection_name_placeholder: Name of the Revolut X sub-account
+        connection_name_help: "Each Revolut X sub-account needs its own API key and connection. Name the connection after its sub-account."
+        existing_private_key_label: Existing private key (optional)
+        existing_private_key_help: Leave blank and Sure creates a key for this connection. Only paste an Ed25519 key in PEM format.
+        replace_private_key_label: Replace private key
+        replace_private_key_help: Leave blank to keep the existing private key. A new key also needs a new API key from Revolut X.
+        private_key_placeholder: Paste an Ed25519 private key in PEM format
+        api_key_label: API Key
+        api_key_placeholder: Paste the 64-character API key from Revolut X
+        keep_api_key_placeholder: Leave blank to keep the existing API key
+        awaiting_api_key: Waiting for API key
+        public_key:
+          title: Public key
+          description: Revolut X asks for this key when you create the API key. It is safe to share; the private key never leaves Sure.
+          copy: Copy public key
+          copied: Copied
+        register_steps:
+          eyebrow: Register in Revolut X
+          open_app: Open the Revolut X web app and go to Profile, then API keys.
+          add_key: Add a new API key.
+          paste_public_key: Paste the public key above when Revolut X asks for it.
+          copy_api_key: Copy the 64-character API key Revolut X shows, paste it below and save.
         setup_accounts: Setup account
         syncing: Syncing...
         sync: Sync
