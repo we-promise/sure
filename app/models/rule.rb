@@ -408,7 +408,7 @@ class Rule < ApplicationRecord
   # only_entry_id goes with only_id when the caller knows the transaction's
   # entry: entries.entryable_id has no index, so a transaction id alone makes
   # the query read every entry of the family, while the entry's primary key
-  # (on both joins of entries in the resource scope) is a few index lookups.
+  # is a few index lookups (see #pin_entry).
   def matching_scope(only_id: nil, within_ids: nil, only_entry_id: nil)
     scope = registry.resource_scope
     scope = scope.where(id: only_id) if only_id
@@ -436,6 +436,13 @@ class Rule < ApplicationRecord
   end
 
   private
+    # The resource scope joins entries twice, and each join matches on the
+    # unindexed entries.entryable_id: once as "entries", from
+    # family.transactions (Family -> accounts -> Account#transactions, through
+    # entries), and once as "entry", from Entryable.with_entry (which .visible
+    # also uses) in Rule::Registry::TransactionResource#resource_scope. Pinning
+    # only one leaves the other reading every entry of the account, so both are
+    # pinned to the entry's primary key.
     def pin_entry(scope, entry_id)
       scope.where(entries: { id: entry_id }, entry: { id: entry_id })
     end
