@@ -100,7 +100,9 @@ module ProviderItemLifecycleTests
 
       with_memory_cache do
         assert_equal [ "any-account" ], offered_account_ids
-        assert_empty account_flow.select_accounts_result(accountable_type: unsupported_type).available_accounts
+        unsupported = account_flow.select_accounts_result(accountable_type: unsupported_type)
+        assert_equal :empty, unsupported.status
+        assert_empty unsupported.available_accounts
       end
     end
 
