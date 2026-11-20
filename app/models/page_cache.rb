@@ -19,14 +19,19 @@
 # under Setting.page_cache_max_mb together: when a new page would go over it,
 # the pages served longest ago are dropped first. A page bigger than the whole
 # limit is served but never kept.
+#
+# Replacing a page and renewing its expiry hold a lock on its key, so a slower,
+# older build or a renewal can never put back a page that was just replaced.
 class PageCache
-  Served = Data.define(:body, :built_at, :stale)
+  # `kept` is whether the page is in the cache after serving it.
+  Served = Data.define(:body, :built_at, :stale, :kept)
 
   # A served page records its use at most this often, so reading the cache
   # doesn't mean a write on every page view.
   TOUCH_INTERVAL = 1.hour
   # How long a queued rebuild holds its claim; a job that dies frees it then.
   REBUILD_CLAIM_TTL = 30.minutes
+  PAGE_LOCK_NAMESPACE = 4015
 
   class << self
     # `rebuild_later` queues the background rebuild; it is called only when the
@@ -37,8 +42,8 @@ class PageCache
       if entry.nil?
         started_at = Time.current
         body = yield
-        write(key, body, version: version, family: family, user: user, started_at: started_at)
-        return Served.new(body: body, built_at: Time.current, stale: false)
+        kept = write(key, body, version: version, family: family, user: user, started_at: started_at)
+        return Served.new(body: body, built_at: Time.current, stale: false, kept: kept)
       end
 
       stale = entry[:version] != version
@@ -46,7 +51,7 @@ class PageCache
         queue_rebuild(key, rebuild_later)
       end
 
-      Served.new(body: entry[:body], built_at: entry[:built_at], stale: stale)
+      Served.new(body: entry[:body], built_at: entry[:built_at], stale: stale, kept: true)
     end
 
     def current?(key, version:, family:, user:)
@@ -58,28 +63,32 @@ class PageCache
     # slow builder finishing last never replaces a newer page.
     def write(key, body, version:, family:, user:, started_at: Time.current)
       release_rebuild(key)
-      stored = read(key, family: family, user: user, touch: false)
-      return false if stored && stored[:started_at] > started_at
+      kept = with_page_lock(key) do
+        stored = read(key, family: family, user: user, touch: false)
+        next false if stored && stored[:started_at] > started_at
 
-      entry = {
-        family_id: family.id, user_id: user.id, version: version,
-        started_at: started_at.iso8601(6), built_at: Time.current.iso8601(6), body: body
-      }
-      sealed = encryptor_for(family).encrypt_and_sign(entry, purpose: key)
-      bytes = sealed.bytesize
+        entry = {
+          family_id: family.id, user_id: user.id, version: version,
+          started_at: started_at.iso8601(6), built_at: Time.current.iso8601(6), body: body
+        }
+        sealed = encryptor_for(family).encrypt_and_sign(entry, purpose: key)
+        bytes = sealed.bytesize
 
-      if bytes > max_bytes
-        forget(PageCacheEntry.where(page_key: key))
-        return false
+        if bytes > max_bytes
+          forget(PageCacheEntry.where(page_key: key))
+          next false
+        end
+
+        Rails.cache.write(key, sealed, expires_in: Setting.page_cache_ttl)
+        PageCacheEntry.upsert(
+          { page_key: key, family_id: family.id, bytes: bytes, last_used_at: Time.current },
+          unique_by: :page_key
+        )
+        true
       end
 
-      Rails.cache.write(key, sealed, expires_in: Setting.page_cache_ttl)
-      PageCacheEntry.upsert(
-        { page_key: key, family_id: family.id, bytes: bytes, last_used_at: Time.current },
-        unique_by: :page_key
-      )
-      evict_to_fit
-      true
+      evict_to_fit if kept
+      kept
     end
 
     def total_bytes
@@ -105,10 +114,26 @@ class PageCache
 
       # Records the use, at most once per TOUCH_INTERVAL, and renews the cache
       # store's expiry with it: a page kept "for N days unopened" must not
-      # expire N days after it was built while it is still being opened.
+      # expire N days after it was built while it is still being opened. The
+      # store can only renew by writing the page again, so that happens only
+      # while the page read is still the one stored.
       def touch(key, sealed)
         touched = PageCacheEntry.where(page_key: key, last_used_at: ...TOUCH_INTERVAL.ago).update_all(last_used_at: Time.current)
-        Rails.cache.write(key, sealed, expires_in: Setting.page_cache_ttl) if touched.positive?
+        return unless touched.positive?
+
+        with_page_lock(key) do
+          Rails.cache.write(key, sealed, expires_in: Setting.page_cache_ttl) if Rails.cache.read(key) == sealed
+        end
+      end
+
+      # Held until the transaction ends, by every process sharing the database.
+      def with_page_lock(key)
+        PageCacheEntry.transaction do
+          PageCacheEntry.connection.execute(
+            PageCacheEntry.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", PAGE_LOCK_NAMESPACE, key ])
+          )
+          yield
+        end
       end
 
       # A rebuild that can't be queued leaves the stale page served and the

@@ -138,6 +138,21 @@ class PageCacheTest < ActiveSupport::TestCase
     end
   end
 
+  test "renewing a page that was replaced meanwhile never puts the earlier one back" do
+    PageCache.write("page/a", "earlier", version: "v1", family: @family, user: @user)
+    earlier = Rails.cache.read("page/a")
+
+    travel PageCache::TOUCH_INTERVAL + 1.minute do
+      PageCache.write("page/a", "newer", version: "v2", family: @family, user: @user)
+      PageCacheEntry.where(page_key: "page/a").update_all(last_used_at: 1.day.ago)
+
+      PageCache.send(:touch, "page/a", earlier)
+
+      served = PageCache.serve("page/a", version: "v2", family: @family, user: @user, rebuild_later: -> { }) { flunk "kept" }
+      assert_equal "newer", served.body
+    end
+  end
+
   test "a build that began before the stored page's never replaces it" do
     slow_started = Time.current
     travel 1.minute do

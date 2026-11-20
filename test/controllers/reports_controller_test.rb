@@ -449,6 +449,19 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "refresh shows a report too big to keep as built, without building it again" do
+    with_memory_cache do
+      PageCache.stubs(:max_bytes).returns(0)
+
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd, refresh: 1)
+
+      assert_response :ok
+      assert_select "#rebuilt"
+    end
+  end
+
   test "a default period keeps its cached build from one day to the next" do
     with_memory_cache do
       get reports_path(period_type: :all_time)

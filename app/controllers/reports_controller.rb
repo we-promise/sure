@@ -37,8 +37,10 @@ class ReportsController < ApplicationController
       refresh: refresh,
       rebuild_later: -> { RebuildReportJob.perform_later(Current.user, report_query) }
     ) { render_report_body }
-    # A refresh is rebuilt above; drop it from the URL so reloading doesn't rebuild again.
-    return redirect_to(reports_path(request.query_parameters.except("refresh"))) if refresh
+    # A refresh is rebuilt above; drop it from the URL so reloading doesn't
+    # rebuild again. A page too big to keep is shown as built instead, since
+    # the redirect would only build it a second time.
+    return redirect_to(reports_path(request.query_parameters.except("refresh"))) if refresh && served.kept
 
     @report = served.body
     @report_built_at = served.built_at
