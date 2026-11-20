@@ -1,12 +1,14 @@
 require "test_helper"
 
-# Providers already fetch the payload that carries sector and industry — EODHD's
-# `General`, Alpha Vantage's `OVERVIEW`, Yahoo's `assetProfile` — and we throw it
-# away. This carries it through instead, so it costs no additional provider call.
+# Classification comes from the payload providers already return with a
+# security's details (EODHD's `General`, Alpha Vantage's `OVERVIEW`, Yahoo's
+# `assetProfile`). A security that already has its name and logo is still
+# asked once more when it has no classification yet, so classification can
+# cost one details call per security until it is answered.
 #
-# Two things here are load-bearing and neither is the happy path: the skip gate,
-# which decides whether the call happens at all, and the precedence rules, which
-# decide whether what comes back may be written.
+# Two things here are load-bearing and neither is the happy path: the gate,
+# which decides whether the call happens at all, and the precedence rules,
+# which decide whether what comes back may be written.
 class Security::ClassificationIngestionTest < ActiveSupport::TestCase
   include ProviderTestHelper
 
@@ -16,10 +18,8 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
 
   # ------------------------------------------------------------ the skip gate
 
-  # The assertion that fails without the gate change, and the whole reason the
-  # slice is not a no-op. Most securities already have a name and a logo, so
-  # under the old gate they never refetched and classification would have
-  # landed only on newly created ones.
+  # Most securities already have a name and a logo, so a gate that asked only
+  # for missing metadata would classify only newly created ones.
   test "a security with metadata but no classification is still asked, when classification is wanted" do
     @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
     provider = stub_provider(info(sector: "Technology", industry: "Consumer Electronics"))
