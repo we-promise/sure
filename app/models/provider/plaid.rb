@@ -103,7 +103,10 @@ class Provider::Plaid
         access_token: access_token,
         cursor: cursor,
         options: {
-          include_original_description: true
+          include_original_description: true,
+          # Only honored on an Item's first sync, for products initialized after Link
+          # (e.g. credit cards and loans); otherwise Plaid defaults to 90 days.
+          days_requested: MAX_HISTORY_DAYS
         }
       )
 
