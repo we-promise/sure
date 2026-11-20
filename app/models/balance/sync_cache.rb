@@ -44,6 +44,14 @@ class Balance::SyncCache
     valued_holding_qtys(security_id).fetch(date, 0)
   end
 
+  # The ratio of the split of `security_id` going ex on `date`, nil when there
+  # is none. Loaded per security on first ask.
+  def split_ratio(security_id, date)
+    @split_ratios ||= {}
+    @split_ratios[security_id] ||= Security::Split.where(security_id: security_id).to_h { |split| [ split.ex_date, split.ratio ] }
+    @split_ratios[security_id][date]
+  end
+
   def get_entries(date)
     entries_by_date[date]&.select { |e| e.transaction? || e.trade? } || []
   end

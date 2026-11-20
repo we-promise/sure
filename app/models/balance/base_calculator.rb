@@ -199,8 +199,16 @@ class Balance::BaseCalculator
       traded_qty = trades.sum { |e| e.entryable.qty }
       start_qty = sync_cache.valued_holding_qty(security_id, date.prev_day)
       end_qty = sync_cache.valued_holding_qty(security_id, date)
-      # Income booked as a trade (quantity zero) moves no shares, so it does not count against the cancel-out.
-      return false if traded_qty.zero? && start_qty.zero? && end_qty.zero? && trades.all? { |e| e.amount.zero? || e.entryable.qty.zero? }
+      # Trades that moved no cash (the transfers) and income booked as a trade
+      # (quantity zero) do not count against the cancel-out; a buy and a sale
+      # that net to no shares leave it standing.
+      cash_moving_qty = trades.reject { |e| e.amount.zero? || e.entryable.qty.zero? }.sum { |e| e.entryable.qty }
+      return false if traded_qty.zero? && start_qty.zero? && end_qty.zero? && cash_moving_qty.zero?
+
+      # A split goes ex at the open, before the day's trades, so the stored
+      # quantity of the day before is in pre-split shares.
+      ratio = sync_cache.split_ratio(security_id, date)
+      start_qty = Security::Split.scale(start_qty, ratio) if ratio
 
       end_qty - start_qty == traded_qty
     end
