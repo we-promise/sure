@@ -4,6 +4,7 @@ class Provider::IndexaCapitalAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("IndexaCapitalAccount", self)
+  declares_connection key: "indexa_capital"
 
   # Indexa Capital supports index fund and pension plan investments
   def self.supported_account_types

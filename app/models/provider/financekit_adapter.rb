@@ -1,6 +1,7 @@
 class Provider::FinancekitAdapter < Provider::Base
   include Provider::InstitutionMetadata
   Provider::Factory.register("FinancekitAccountLineage", self)
+  declares_connection key: "financekit", accounts: :financekit_account_lineages
 
   def self.supported_account_types
     %w[Depository CreditCard]

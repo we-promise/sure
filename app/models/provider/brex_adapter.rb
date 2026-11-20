@@ -4,6 +4,7 @@ class Provider::BrexAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("BrexAccount", self)
+  declares_connection key: "brex"
 
   def self.supported_account_types
     %w[Depository CreditCard]
