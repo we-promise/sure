@@ -231,7 +231,7 @@ class LunchflowEntry::Processor
       # references, counterparty details). Store it verbatim so the drawer can show it.
       lunchflow[:raw] = data[:raw] if data[:raw].present?
 
-      lunchflow.empty? ? {} : { lunchflow: lunchflow }
+      { lunchflow: lunchflow }
     end
 
     # Check if this transaction is marked as pending
