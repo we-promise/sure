@@ -90,6 +90,7 @@ class RecurringTransaction < ApplicationRecord
   # stops the rest, so a failed regeneration must not cost the bill its
   # history; reconstruct_history! generates the upcoming rows itself.
   after_commit :reconstruct_history_on_activation, on: :update, if: :activated_from_suggestion?
+  after_commit :reconstruct_history_on_resume, on: :update, if: :resumed_declared_bill?
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
@@ -254,6 +255,13 @@ class RecurringTransaction < ApplicationRecord
     saved_change_to_status?(from: "suggested", to: "active") && !restoring_from_export
   end
 
+  # A declared bill paused before its history job ran was skipped by the job,
+  # and nothing else rebuilds it. Resuming queues it again; the backfill is
+  # re-runnable, so a bill that already has its history is unchanged.
+  def resumed_declared_bill?
+    saved_change_to_status?(from: "paused", to: "active") && declared_on.present? && !restoring_from_export
+  end
+
   def declared_active?
     active? && !restoring_from_export
   end
@@ -287,6 +295,12 @@ class RecurringTransaction < ApplicationRecord
   rescue StandardError => e
     Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
     reconstruct_declared_history_now
+  end
+
+  def reconstruct_history_on_resume
+    BackfillRecurringHistoryJob.perform_later(id, Date.current)
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
   end
 
   def reconstruct_declared_history_now

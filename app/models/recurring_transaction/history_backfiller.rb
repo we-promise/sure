@@ -45,10 +45,11 @@ class RecurringTransaction
       # date is still ahead owes nothing before it, even inside the current
       # cycle. The
       # anchor is a scheduled date, so it bounds original_due_on: weekend
-      # adjustment can move the first occurrence's due_on ahead of it. An
-      # anchor already passed is bounded by the cycle, and may not be a first
-      # due date at all (presets and the edit form fill it from the last
-      # payment).
+      # adjustment can move the first occurrence's due_on ahead of it. Only an
+      # anchor after the declaration day is a declared first due date, and it
+      # keeps bounding every later run; an anchor on or before it may come
+      # from the last payment (presets and the edit form fill it so) and is
+      # bounded by the cycle.
       def prune_uncovered_past!
         pruned = 0
 
@@ -59,7 +60,7 @@ class RecurringTransaction
           schedule = series.schedule
           cycle_start = schedule.cycle_for(as_of)&.begin
           declared_on = series.declared_on
-          anchor = series.anchor_date if declared_on && series.manual? && series.anchor_date.present? && series.anchor_date > as_of
+          anchor = series.anchor_date if declared_on && series.manual? && series.anchor_date.present? && series.anchor_date > declared_on
           bounds = [
             (uncovered.where("due_on < ?", cycle_start) if cycle_start),
             (uncovered.where("original_due_on < ?", anchor) if anchor),

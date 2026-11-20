@@ -2211,6 +2211,51 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
   end
 
+  test "a later family backfill keeps the declared anchor's bound after the anchor passes" do
+    series = nil
+    travel_to Date.new(2026, 11, 19) do
+      series = perform_enqueued_jobs(only: BackfillRecurringHistoryJob) do
+        @family.recurring_transactions.create!(
+          name: "CITY WATER", account: @account, amount: 80, currency: "USD",
+          expected_day_of_month: 9, anchor_date: Date.new(2026, 11, 20),
+          last_occurrence_date: Date.new(2026, 10, 9), next_expected_date: Date.new(2026, 12, 9),
+          status: "active", manual: true
+        )
+      end
+      assert_not series.recurring_occurrences.open_status.exists?(original_due_on: Date.new(2026, 11, 9)),
+        "the declaration prunes the date before the bill's first due date"
+    end
+
+    travel_to Date.new(2026, 11, 21) do
+      RecurringTransaction::HistoryBackfiller.new(@family).run!
+
+      assert_not series.recurring_occurrences.open_status.exists?(original_due_on: Date.new(2026, 11, 9)),
+        "a backfill after the anchor has passed still owes nothing before it"
+    end
+  end
+
+  test "resuming a declared bill paused before its history ran rebuilds that history" do
+    past_payments("CITY WATER", 3)
+    series = declare_bill("CITY WATER", run_history: false)
+    series.update!(status: "paused")
+    perform_enqueued_jobs(only: BackfillRecurringHistoryJob)
+    assert_equal 0, confirmed_allocations_for(series), "a paused bill gets no history"
+
+    perform_enqueued_jobs(only: BackfillRecurringHistoryJob) { series.update!(status: "active") }
+
+    assert_equal 3, confirmed_allocations_for(series), "resuming queues the history the pause skipped"
+  end
+
+  test "resuming a bill that was never declared queues no history" do
+    series = @family.recurring_transactions.create!(
+      name: "CITY GAS", account: @account, amount: 40, currency: "USD",
+      expected_day_of_month: 9, last_occurrence_date: Date.current,
+      next_expected_date: Date.current + 1.month, status: "paused", manual: false
+    )
+
+    assert_no_enqueued_jobs(only: BackfillRecurringHistoryJob) { series.update!(status: "active") }
+  end
+
   test "declaring a bill rebuilds its history and generates when the queue is down" do
     past_payments("CITY WATER", 3)
     BackfillRecurringHistoryJob.stubs(:perform_later).raises(StandardError, "queue down")
