@@ -154,6 +154,22 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
     assert_match(/More than one account/, result[:error])
   end
 
+  test "frequency once lands on the current due date, not the original anchor" do
+    series = create_series(name: "Tuition", amount: 500)
+    current_due = series.next_due_date
+    stale_anchor = current_due - 200
+    series.update_columns(anchor_date: stale_anchor)
+
+    result = call_tool(series.id, "frequency" => "once")
+
+    assert result[:updated], result[:error]
+    series.reload
+    assert_equal current_due, series.anchor_date
+    assert_includes series.recurring_occurrences.pluck(:due_on), current_due
+    assert_not_includes series.recurring_occurrences.pluck(:due_on), stale_anchor
+    assert_empty series.recurring_occurrences.where("due_on > ?", current_due)
+  end
+
   test "an unrecognized frequency is rejected before anything saves" do
     series = create_series(name: "Insurance", amount: 60)
 
