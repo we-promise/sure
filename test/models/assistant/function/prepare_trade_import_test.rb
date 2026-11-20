@@ -124,6 +124,47 @@ class Assistant::Function::PrepareTradeImportTest < ActiveSupport::TestCase
     assert_equal 2, result[:valid_rows_count]
   end
 
+  # A time after the date is ignored by the rows, so it must not hide that
+  # every date reads both day first and month first.
+  test "dates with a time after them still say when they read two ways" do
+    csv = "Trade Date,Symbol,Quantity,Price,Currency,Description\n" \
+          "05/03/2026 10:30:00,AAPL,10,150.00,USD,Bought Apple\n" \
+          "06/03/2026 15:00:00,MSFT,-2,410.50,USD,Sold Microsoft\n"
+
+    result = @fn.call("csv_content" => csv, "account_id" => @account.id)
+
+    assert_equal "%d/%m/%Y", result[:date_format]
+    assert_equal true, result[:date_format_ambiguous]
+    assert_equal [ "%m/%d/%Y" ], result[:date_format_alternatives]
+  end
+
+  # Calling again to correct the date format must not leave the first,
+  # wrongly dated import pending beside the corrected one.
+  test "a correction replaces the pending import it names" do
+    first = @fn.call("csv_content" => BROKER_CSV, "account_id" => @account.id)
+
+    second = nil
+    assert_no_difference -> { @family.imports.count } do
+      second = @fn.call("csv_content" => BROKER_CSV, "account_id" => @account.id,
+                        "date_format" => "%m/%d/%Y", "replace_import_id" => first[:import_id])
+    end
+
+    assert_not Import.exists?(first[:import_id])
+    assert_equal "%m/%d/%Y", @family.imports.find(second[:import_id]).date_format
+  end
+
+  test "only a pending trade import of the family can be replaced" do
+    other = imports(:transaction)
+
+    result = nil
+    assert_no_difference -> { Import.count } do
+      result = @fn.call("csv_content" => BROKER_CSV, "account_id" => @account.id, "replace_import_id" => other.id)
+    end
+
+    assert_equal "import_not_found", result[:error]
+    assert Import.exists?(other.id)
+  end
+
   # An unreadable date is reported as an invalid row; it must not also hide
   # that every other date reads two ways.
   test "an unreadable date does not hide that the other dates read two ways" do

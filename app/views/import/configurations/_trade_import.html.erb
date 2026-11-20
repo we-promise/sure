@@ -4,7 +4,7 @@
   <div class="space-y-4">
     <div class="flex items-center gap-4">
       <%= form.select :date_col_label, import.csv_headers, { include_blank: t(".select_column"), label: t(".date_label") }, required: true %>
-      <%= form.select :date_format, Family::DATE_FORMATS, { label: t(".date_format_label")}, label: true, required: true %>
+      <%= form.select :date_format, Family::DATE_FORMATS + Import::CSV_ONLY_DATE_FORMATS, { label: t(".date_format_label")}, label: true, required: true %>
     </div>
 
     <div class="flex items-center gap-4">

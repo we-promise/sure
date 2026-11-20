@@ -23,6 +23,10 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
     "name" => [ "name", "description", "security name" ],
     "account" => [ "account", "account name" ]
   }.freeze
+  # A time of day after a date ("10:30", "T10:30:00Z", " 3:05 PM"), which the
+  # rows ignore. Digits that are not a time (the "26" left when %y reads only
+  # "20" of 2026) are not this.
+  TRAILING_TIME = /\A(?:\s+|T)\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:\s*(?:[AaPp][Mm]|Z|[+-]\d{2}:?\d{2}))?\s*\z/
   MAX_INVALID_ROWS_REPORTED = 20
   SAMPLE_ROWS = 5
 
@@ -49,6 +53,10 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
         it is one of date_format_alternatives. Ask the user to check rows_count
         against the number of trades in their file.
 
+        When you call again to correct a date_format or a column for the same file, pass
+        replace_import_id with the import_id the earlier call returned, so that pending
+        import is replaced instead of left beside the corrected one.
+
         Pass column_mapping to correct a column the detection got wrong, using the
         CSV's own header names. Positive quantities are buys and negative are sells
         unless signage_convention says otherwise. Ask which account to import into
@@ -67,6 +75,7 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
       properties: {
         csv_content: { type: "string", description: "The CSV file's text, header row first" },
         account_id: { type: "string", description: "Account UUID (from get_accounts) to import every row into. Leave out when the CSV has an account column." },
+        replace_import_id: { type: "string", description: "import_id from an earlier call for the same file. That pending import is replaced by this one." },
         column_mapping: {
           type: "object",
           description: "Header name to use for a column, overriding detection",
@@ -93,6 +102,14 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
       return error("account_not_found", "No account with that id is available to this user.") unless account
     end
 
+    replaced = nil
+    if params["replace_import_id"].present?
+      return error("invalid_import_id", "replace_import_id must be an import_id from an earlier call.") unless valid_uuid?(params["replace_import_id"])
+
+      replaced = family.imports.where(type: "TradeImport", status: "pending").find_by(id: params["replace_import_id"])
+      return error("import_not_found", "No pending trade import with that id is available to replace.") unless replaced
+    end
+
     col_sep = params["col_sep"].presence || detect_col_sep(csv_content)
     parsed = Import.parse_csv_str(csv_content, col_sep: col_sep)
     headers = Array(parsed.headers).compact
@@ -107,6 +124,7 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
     date_format_alternatives = params["date_format"].present? ? [] : other_readings(parsed, mapping["date"], date_format)
 
     import = Import.transaction do
+      replaced&.destroy!
       family.imports.create!(
         type: "TradeImport",
         account: account,
@@ -239,11 +257,15 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
     end
 
     # Date.strptime accepts trailing text (05/03/2026 under %d/%m/%y is
-    # 5 March 2020), so a reading must use the whole sample.
+    # 5 March 2020), so a reading must use the whole sample -- except a time
+    # of day after the date, which Import::Row ignores too. Without that,
+    # 05/03/2026 10:30:00 read under no format, and a file of such dates
+    # never reported that it reads both day first and month first.
     def read_all(samples, format)
       samples.map do |sample|
         parts = Date._strptime(sample, format)
-        return nil if parts.nil? || parts.key?(:leftover)
+        return nil if parts.nil?
+        return nil if parts.key?(:leftover) && !parts[:leftover].match?(TRAILING_TIME)
 
         Date.strptime(sample, format)
       end
