@@ -11,8 +11,8 @@ class HoldingPriceChartsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(@holding, :price_chart)}" do
-      assert_select "[data-controller='time-series-chart']"
-      assert_select "select[name='period'] option[selected][value='last_7_days']"
+      assert_select "##{ActionView::RecordIdentifier.dom_id(@holding, :price_chart_line)}[data-controller='time-series-chart']"
+      assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=last_7_days']"
     end
   end
 

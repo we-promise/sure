@@ -103,6 +103,13 @@ class UI::PeriodPickerTest < ViewComponent::TestCase
     links.each { |link| assert_equal "advance", link["data-turbo-action"] }
   end
 
+  test "history: false leaves the address bar alone" do
+    render_inline(UI::PeriodPicker.new(selected: Period.last_30_days, url: "/", frame: "price_chart", history: false))
+
+    assert page.all("a[role='menuitemradio']").any?
+    assert_no_selector "a[data-turbo-action]"
+  end
+
   test "options advance the URL without an explicit frame too" do
     # The account page renders its picker inside the account's own container
     # frame, so those links are frame navigations as well and need the same

@@ -337,7 +337,7 @@ class Security < ApplicationRecord
   # since a security can carry prices in more than one currency. Nil when
   # fewer than two closes fall in the period, as a line needs two points.
   def price_series(period: Period.last_30_days)
-    currency = prices.order(date: :desc).pick(:currency)
+    currency = prices.order(date: :desc, created_at: :desc).pick(:currency)
     return nil unless currency
 
     rows = prices.where(currency: currency, date: period.date_range).pluck(:date, :price)

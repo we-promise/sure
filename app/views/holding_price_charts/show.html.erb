@@ -6,20 +6,18 @@
           <%= render partial: "shared/trend_change", locals: { trend: @series.trend, comparison_label: @comparison_label } %>
         <% end %>
       </div>
-      <%= form_with url: holding_price_chart_path(@holding), method: :get, data: { controller: "auto-submit-form" } do |form| %>
-        <%= form.select :period,
-              Period.as_options,
-              { selected: @period.key },
-              class: "bg-container border border-secondary rounded-lg text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0",
-              autocomplete: "off",
-              aria: { label: t(".period") },
-              data: { "auto-submit-form-target": "auto" } %>
-      <% end %>
+      <%= render UI::PeriodPicker.new(
+            selected: @period,
+            url: holding_price_chart_path(@holding),
+            frame: dom_id(@holding, :price_chart),
+            history: false
+          ) %>
     </div>
 
     <div class="h-48">
       <% if @series %>
-        <div class="w-full h-full"
+        <div id="<%= dom_id(@holding, :price_chart_line) %>"
+             class="w-full h-full"
              data-controller="time-series-chart"
              data-time-series-chart-data-value="<%= @series.to_json %>"></div>
       <% else %>

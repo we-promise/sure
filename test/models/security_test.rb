@@ -444,6 +444,16 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal [ Money.new(9, "EUR"), Money.new(10, "EUR") ], series.values.map(&:value)
   end
 
+  test "price_series follows the most recently stored currency when the latest date has several" do
+    security = Security.create!(ticker: "PSTIE", name: "Price series tie")
+    security.prices.create!(date: 2.days.ago.to_date, price: 8, currency: "USD")
+    security.prices.create!(date: 2.days.ago.to_date, price: 7, currency: "EUR")
+    security.prices.create!(date: 1.day.ago.to_date, price: 9, currency: "USD", created_at: 1.hour.ago)
+    security.prices.create!(date: 1.day.ago.to_date, price: 8, currency: "EUR", created_at: 1.minute.ago)
+
+    assert_equal [ Money.new(7, "EUR"), Money.new(8, "EUR") ], security.price_series.values.map(&:value)
+  end
+
   test "price_series is nil when the period holds fewer than two closes" do
     security = Security.create!(ticker: "PSNO", name: "Price series none")
     assert_nil security.price_series
