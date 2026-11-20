@@ -99,6 +99,10 @@
                       </span>
                     <% end %>
 
+                    <% if transaction.refund? %>
+                      <%= render DS::Pill.new(label: t("transactions.transaction.refund"), tone: :neutral, marker: false, icon: "undo-2") %>
+                    <% end %>
+
                     <%# Manual reconciliation status (manual accounts only) %>
                     <%= render "transactions/reconcile_badge", entry: entry, compact: true %>
 

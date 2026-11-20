@@ -54,6 +54,12 @@ class Account::ProviderImportAdapter
         raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
       end
 
+      # Refund linking locks the transaction row before changing its kind.
+      # Hold that same lock for the rest of the import so the protection and
+      # kind checks below see a classification committed after the find, and
+      # the provider cannot replace a locked kind on save.
+      lock_imported_transaction!(entry)
+
       # Determine early whether the incoming transaction is pending — needed by both
       # the protection check (pending→booked bypass) and the auto-claim path below.
       incoming_pending = extra.is_a?(Hash) && Transaction.pending_extra?(extra.with_indifferent_access)
@@ -145,6 +151,7 @@ class Account::ProviderImportAdapter
           # "Claim" the unprotected duplicate by updating its external_id and source
           # This prevents future duplicate checks from matching it again
           entry = duplicate
+          lock_imported_transaction!(entry)
           entry.assign_attributes(external_id: external_id, source: source)
         end
       end
@@ -174,6 +181,7 @@ class Account::ProviderImportAdapter
           old_pending_external_id = pending_match.external_id
           pending_entry_date      = pending_match.date
           entry = pending_match
+          lock_imported_transaction!(entry)
           entry.assign_attributes(external_id: external_id)
 
           # Clear the pending flag so this entry no longer shows as pending after being claimed
@@ -288,16 +296,23 @@ class Account::ProviderImportAdapter
         # makes budgets and reports count the same payment as an expense on
         # both legs. Deriving it from the transfer also repairs legs an earlier
         # sync already overwrote. An unconfirmed auto-match gets its kinds only
-        # in Transfer#confirm!, so until then the leg keeps its own kind.
-        if auto_kind.present?
+        # in Transfer#confirm!, so until then the leg keeps its own kind. A
+        # refund classification is explicit even when an older or imported row
+        # predates the kind lock, so never replace it with a provider hint.
+        if auto_kind.present? && !entry.transaction.refund? && !entry.transaction.locked?(:kind)
           transfer = matched_transfer_for(entry)
           transfer = nil if transfer&.pending?
           entry.transaction.assign_attributes(kind: transfer ? transfer.kind_for_leg(entry.transaction) : auto_kind)
         end
 
-        # Only while the leg is a contribution: a matched transfer can make it
-        # a plain transfer above, which carries no category.
-        if auto_category.present? && entry.transaction.category_id.blank? && entry.transaction.kind == "investment_contribution"
+        # Categorize only while the leg is still a contribution: a matched
+        # transfer can make it a plain transfer above, which carries no
+        # category. A kind lock or matched transfer can also keep a detected
+        # contribution from becoming an investment contribution, so categorize
+        # the final kind only, while preserving an independently locked
+        # Uncategorized choice.
+        if auto_category.present? && entry.transaction.investment_contribution? &&
+            entry.transaction.category_id.blank? && !entry.transaction.locked?(:category_id)
           entry.transaction.assign_attributes(category: auto_category)
         end
       end
@@ -1146,6 +1161,19 @@ class Account::ProviderImportAdapter
   end
 
   private
+
+    # Provider imports that claim or update an existing transaction take the
+    # same row lock refund classification uses. Reload the entry once the lock
+    # is held so protection flags and locked attributes written by that
+    # classification are visible before any import field is evaluated or
+    # assigned. Called before this import changes anything on the entry so the
+    # reload cannot discard a claim's new external_id/source.
+    def lock_imported_transaction!(entry)
+      return unless entry.persisted? && entry.entryable.is_a?(Transaction)
+
+      entry.transaction.lock!
+      entry.reload
+    end
 
     # The latest earlier holding of the security the provider reports. A
     # remapped row records that security in provider_security_id; an

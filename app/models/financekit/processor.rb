@@ -25,14 +25,25 @@ class Financekit::Processor
       mappings = @item.selected_accounts.includes(financekit_account_lineage: :account)
         .index_by { |mapping| mapping.source_id.downcase }
       predecessor_digest = @item.predecessor_digest
-      capture.each do |part|
+      payloads = capture.map do |part|
         batch = part
         Financekit.require!(part.predecessor_digest == predecessor_digest, "predecessor_conflict", 409)
         data = JSON.parse(part.payload)
         Financekit::Payload.validate_batch!(data, @item)
+        predecessor_digest = part.payload_digest
+        [ part, data ]
+      end
+
+      # Refund linking locks transaction rows in id order. Take every existing
+      # row this capture will touch in that same order before applying any
+      # event, so a capture and a concurrent classification cannot form a
+      # lock cycle mid-capture.
+      lock_capture_transactions!(payloads, mappings)
+
+      payloads.each do |part, data|
+        batch = part
         part.update!(status: "processing")
         data["events"].each { |event| apply_event!(event, mappings, part, counts) }
-        predecessor_digest = part.payload_digest
       end
       applied_at = Time.current
       sync = @item.syncs.create!(status: "completed", completed_at: applied_at,
@@ -77,6 +88,46 @@ class Financekit::Processor
   end
 
   private
+
+    # Identities are keyed by (account, source id). Resolve the ledger rows
+    # this capture already owns and lock them in the order mark_as_refund! and
+    # split/merge use, before the first event takes any per-entry lock.
+    def lock_capture_transactions!(payloads, mappings)
+      source_ids_by_lineage = Hash.new { |hash, key| hash[key] = [] }
+      account_ids = Set.new
+
+      payloads.each do |_part, data|
+        data["events"].each do |event|
+          record = case event["kind"]
+          when "balance_upsert" then event["balance"]
+          when "transaction_upsert" then event["transaction"]
+          when "transaction_tombstone" then event["tombstone"]
+          end
+          next unless record.is_a?(Hash)
+
+          mapping = mappings[record["source_account_id"].to_s.downcase]
+          next if mapping.nil?
+
+          account_ids << mapping.account&.id
+          next if record["source_id"].blank? || event["kind"] == "balance_upsert"
+
+          source_ids_by_lineage[mapping.financekit_account_lineage_id] << record["source_id"]
+        end
+      end
+
+      # Provider imports take the account lock before the transaction lock, so
+      # hold accounts first here; transactions then follow in the same id order
+      # refund linking uses.
+      Account.where(id: account_ids.to_a.compact).order(:id).lock.load
+
+      identity_scope = source_ids_by_lineage.reduce(FinancekitTransaction.none) do |combined, (lineage_id, source_ids)|
+        combined.or(FinancekitTransaction.where(financekit_account_lineage_id: lineage_id, source_id: source_ids.uniq))
+      end
+      entry_ids = identity_scope.where.not(entry_id: nil).pluck(:entry_id)
+      transaction_ids = Entry.where(id: entry_ids, entryable_type: "Transaction").pluck(:entryable_id)
+
+      Transaction.where(id: transaction_ids).order(:id).lock.load
+    end
 
     def apply_event!(event, mappings, batch, counts)
       case event.fetch("kind")
@@ -188,7 +239,7 @@ class Financekit::Processor
       account = mapping.account
       account.with_lock do
         entry = identity.entry
-        entry&.lock!
+        lock_entry_for_update!(entry) if entry
         if entry && protected_entry?(entry)
           settle_edited_pending_entry!(entry, record)
           identity.update!(review_required: true)
@@ -225,7 +276,7 @@ class Financekit::Processor
         counts["settled"] += 1
       elsif entry
         Entry.transaction do
-          entry.lock!
+          lock_entry_for_update!(entry)
           if protected_entry?(entry) || entry.source != "financekit" || entry.account_id != mapping.account.id
             identity.review_required = true
             create_conflict!(mapping, identity, "protected_tombstone")
@@ -278,7 +329,7 @@ class Financekit::Processor
       return unless entry
 
       Entry.transaction do
-        entry.lock!
+        lock_entry_for_update!(entry)
         if protected_entry?(entry) || entry.source != "financekit" || entry.account_id != mapping.account.id
           identity.review_required = true
           create_conflict!(mapping, identity, "protected_source_update")
@@ -305,7 +356,7 @@ class Financekit::Processor
       return unless entry && record["status"] == "booked"
 
       Entry.transaction do
-        entry.lock!
+        lock_entry_for_update!(entry)
         return unless entry.user_modified? && !entry.excluded? && !entry.import_locked?
 
         transaction = entry.transaction
@@ -313,6 +364,13 @@ class Financekit::Processor
           transaction.update!(extra: transaction.extra.deep_merge("financekit" => { "pending" => false }))
         end
       end
+    end
+
+    # Match refund linking, entry edits and splitting: transaction first, entry
+    # second. Reload both before checking protection or changing provider state.
+    def lock_entry_for_update!(entry)
+      entry.transaction.lock! if entry.transaction?
+      entry.lock!
     end
 
     # Balance observations have no source transaction, so the conflict hangs off

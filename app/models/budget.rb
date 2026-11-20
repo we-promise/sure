@@ -383,11 +383,26 @@ class Budget < ApplicationRecord
     return [ { color: "var(--budget-unallocated-fill)", amount: 1, id: unused_segment_id } ] unless allocations_valid?
 
     segments = donut_budget_categories.map do |bc|
-      { color: bc.category.color, amount: budget_category_actual_spending(bc), id: bc.id }
+      { color: bc.category.color, amount: [ budget_category_actual_spending(bc), 0 ].max.to_d, id: bc.id }
     end
 
-    if available_to_spend.positive?
-      segments.push({ color: "var(--budget-unallocated-fill)", amount: available_to_spend, id: unused_segment_id })
+    # The ring is a share of the budget, not of whatever the clamped category
+    # arcs happen to add up to. A negative (refund-only) category is clamped
+    # out above, so scale the remaining arcs down to net spending; otherwise a
+    # refund would inflate every other arc's share.
+    net_spent = actual_spending.to_d
+    segment_total = segments.sum { |segment| segment[:amount] }
+    if net_spent <= 0
+      segments = []
+    elsif segment_total > net_spent
+      scale = net_spent / segment_total
+      segments.each { |segment| segment[:amount] = (segment[:amount] * scale).round(2) }
+    end
+
+    budget_total = (budgeted_spending || 0).to_d
+    unused = [ [ available_to_spend.to_d, budget_total ].min, 0.to_d ].max
+    if unused.positive?
+      segments.push({ color: "var(--budget-unallocated-fill)", amount: unused, id: unused_segment_id })
     end
 
     segments
@@ -408,7 +423,7 @@ class Budget < ApplicationRecord
   # Actuals: How much user has spent on each budget category
   # =============================================================================
   def estimated_spending
-    income_statement.median_expense(interval: "month")
+    [ (income_statement.median_expense(interval: "month") || 0).to_d, 0.to_d ].max
   end
 
   def actual_spending
@@ -448,6 +463,7 @@ class Budget < ApplicationRecord
 
   def percent_of_budget_spent
     return 0 unless budgeted_spending > 0
+    return 0 if actual_spending <= 0
 
     (actual_spending / budgeted_spending.to_f) * 100
   end
@@ -458,7 +474,9 @@ class Budget < ApplicationRecord
   # synthetic line is counted too.
   def bills_paid
     keys = budget_categories.reject(&:subcategory?).map { |bc| category_key(bc) } + [ :uncategorized ]
-    keys.uniq.sum { |key| [ bills_paid_for(key), actual_spending_for(key) ].min }
+    # A refund-only line has negative actual spending and no bills to pay; it
+    # must not reduce the budget's bills-paid total.
+    keys.uniq.sum { |key| [ [ bills_paid_for(key), actual_spending_for(key) ].min, 0 ].max }
   end
 
   # The rule each line follows (BudgetCategory#near_limit?), for the whole budget.
@@ -584,6 +602,12 @@ class Budget < ApplicationRecord
       @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
     end
 
+    def refund_totals_by_category
+      @refund_totals_by_category ||= income_statement.refund_totals(period: period).category_totals.index_by do |ct|
+        ct.category.id || stable_synthetic_key(ct.category)
+      end
+    end
+
     def category_key(budget_category)
       budget_category.category_id || stable_synthetic_key(budget_category.category)
     end
@@ -591,7 +615,8 @@ class Budget < ApplicationRecord
     def actual_spending_for(key)
       expense = expense_totals_by_category[key]&.total || 0
       refund = income_totals_by_category[key]&.total || 0
-      [ expense - refund, 0 ].max
+      marked_refund = refund_totals_by_category[key]&.total || 0
+      [ expense + marked_refund - refund, 0 ].max - marked_refund
     end
 
     def bills_paid_for(key)
@@ -599,7 +624,6 @@ class Budget < ApplicationRecord
                                                            .category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
       @bill_expense_totals_by_category[key]&.total || 0
     end
-
     def stable_synthetic_key(category)
       if category.uncategorized?
         :uncategorized

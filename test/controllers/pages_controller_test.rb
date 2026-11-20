@@ -309,6 +309,11 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       .once
       .returns(fake_income_period_total)
 
+    income_statement.expects(:build_period_total)
+      .with(classification: "expense", period: kind_of(Period), rows: [])
+      .once
+      .returns(fake_expense_period_total)
+
     get root_path
 
     assert_response :ok
@@ -341,6 +346,40 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :ok
     assert_select "[data-controller='sankey-chart']"
+  end
+
+  test "dashboard sankey nets a partial refund without a fictitious subcategory flow" do
+    parent = @family.categories.create!(name: "Refunded shopping", color: "#FF5733")
+    child = @family.categories.create!(name: "Refunded groceries", parent: parent, color: "#33FF57")
+    account = @family.accounts.first
+    create_transaction(account: account, name: "Purchase", amount: 100, category: child)
+    refund = create_transaction(account: account, name: "Return", amount: -30, category: child)
+    refund.transaction.mark_as_refund!
+
+    get root_path
+    assert_response :ok
+
+    data = JSON.parse(css_select("[data-sankey-chart-data-value]").first["data-sankey-chart-data-value"])
+    values = data["nodes"].index_by { |node| node["id"] }
+    assert_equal 70.0, values.fetch("expense_#{parent.id}")["value"]
+    assert_not values.key?("expense_sub_#{child.id}"), "a refunded subcategory must not draw a gross child flow"
+    assert data["nodes"].all? { |node| node["value"] >= 0 }
+  end
+
+  test "cashflow donut scales refund credits to nonnegative arcs" do
+    controller = PagesController.new
+    total = Struct.new(:total, :category, :currency)
+    food = categories(:food_and_drink)
+    income = categories(:income)
+    segments = controller.send(
+      :cashflow_donut_segments,
+      [ total.new(100.to_d, food, "USD"), total.new(-50.to_d, income, "USD") ],
+      "expense", 100.to_d, net_total: 50.to_d
+    )
+
+    assert_equal [ 50.0, 0.0 ], segments.map { |segment| segment[:amount] }
+    assert_equal [ 100.0, -50.0 ], segments.map { |segment| segment[:display_amount] }
+    assert_operator segments.sum { |segment| segment[:amount] }, :<=, 50.0
   end
 
   test "dashboard renders the cash flow rings with unspent income as a muted track on the outflows ring" do
@@ -470,6 +509,36 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes sankey_data.fetch("nodes").map { |node| node.fetch("id") }, "cash_flow_node"
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
+    sankey_data.fetch("links").each do |link|
+      assert_kind_of Numeric, link.fetch("percentage"), "Sankey comparison requires JSON numbers"
+    end
+  end
+
+  test "a refund suppresses only its own parent category subcategories in the sankey" do
+    shopping = @family.categories.create!(name: "Refunded shopping")
+    clothing = @family.categories.create!(name: "Returned clothing", parent: shopping)
+    travel = @family.categories.create!(name: "Travel without refunds")
+    fares = @family.categories.create!(name: "Train fares", parent: travel)
+    account = accounts(:depository)
+    create_transaction(account: account, amount: 100, category: clothing)
+    create_transaction(account: account, amount: -150, category: clothing, kind: "refund")
+    create_transaction(account: account, amount: 200, category: shopping)
+    create_transaction(account: account, amount: 50, category: fares)
+
+    get root_path
+
+    assert_response :ok
+    chart = css_select("[data-controller='sankey-chart']").first
+    data = JSON.parse(chart["data-sankey-chart-data-value"])
+    ids = data.fetch("nodes").pluck("id")
+    assert_includes ids, "expense_sub_#{fares.id}"
+    assert_includes ids, "expense_#{shopping.id}"
+    assert_not_includes ids, "expense_sub_#{clothing.id}"
+    assert_not_includes ids, "income_sub_#{clothing.id}"
+    assert data.fetch("links").all? { |link| link.fetch("value").positive? }
+    data.fetch("links").each do |link|
+      assert_kind_of Numeric, link.fetch("percentage"), "Refund periods must also produce numeric percentages"
+    end
   end
 
   test "dashboard sankey shows investment contributions as invested when they are not spending" do

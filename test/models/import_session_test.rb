@@ -58,6 +58,68 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_source_mapping session, "Transaction", "txn-1", transaction
   end
 
+  test "publishes a refund before its purchase across chunks" do
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    session.attach_chunk!(
+      sequence: 1,
+      client_chunk_id: "entities-and-refund",
+      content: build_ndjson(entity_records + [ {
+        type: "Transaction",
+        data: {
+          id: "txn-refund", account_id: "acct-1", category_id: "cat-1",
+          date: "2024-01-15", amount: "-20.00", currency: "USD", name: "Return",
+          kind: "refund", refund_of_id: "txn-purchase"
+        }
+      } ]),
+      filename: "entities.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    session.attach_chunk!(
+      sequence: 2,
+      client_chunk_id: "purchase",
+      content: build_ndjson([ {
+        type: "Transaction",
+        data: {
+          id: "txn-purchase", account_id: "acct-1", category_id: "cat-1",
+          date: "2024-01-15", amount: "100.00", currency: "USD", name: "Purchase"
+        }
+      } ]),
+      filename: "purchase.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    session.publish
+
+    assert session.reload.complete?, session.error_details.inspect
+    account = @family.accounts.find_by!(name: "Session Checking")
+    refund = account.entries.find_by!(name: "Return").transaction
+    purchase = account.entries.find_by!(name: "Purchase").transaction
+    assert_equal purchase, refund.refund_of
+    assert_not refund.extra.key?(Family::DataImporter::PENDING_REFUND_LINK_KEY)
+  end
+
+  test "pending refund links resolve only for their own import session" do
+    account = @family.accounts.create!(name: "Session refunds", currency: "USD", balance: 0, accountable: Depository.new)
+    purchase = account.entries.create!(name: "Purchase", amount: 100, currency: "USD", date: Date.current,
+                                       entryable: Transaction.new)
+    session_a = @family.import_sessions.create!
+    session_b = @family.import_sessions.create!
+    marker = ->(session, source_id) {
+      { Family::DataImporter::PENDING_REFUND_LINK_KEY => { "session_id" => session.id, "source_id" => source_id } }
+    }
+    refund_a = account.entries.create!(name: "Refund A", amount: -20, currency: "USD", date: Date.current,
+                                       entryable: Transaction.new(kind: "refund", extra: marker.call(session_a, "purchase-a")))
+    refund_b = account.entries.create!(name: "Refund B", amount: -20, currency: "USD", date: Date.current,
+                                       entryable: Transaction.new(kind: "refund", extra: marker.call(session_b, "purchase-b")))
+    session_b.source_mappings.create!(family: @family, source_type: "Transaction", source_id: "purchase-b", target: purchase.transaction)
+
+    Family::DataImporter.resolve_pending_refund_links!(@family, import_session: session_b)
+
+    assert_equal purchase.transaction, refund_b.transaction.reload.refund_of
+    assert_nil refund_a.transaction.reload.refund_of
+    assert refund_a.transaction.extra.key?(Family::DataImporter::PENDING_REFUND_LINK_KEY)
+  end
+
   test "publishing session chunks records readback verification for each chunk" do
     session = @family.import_sessions.create!(expected_chunks: 2)
     session.attach_chunk!(

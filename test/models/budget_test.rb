@@ -147,6 +147,40 @@ class BudgetTest < ActiveSupport::TestCase
     end
   end
 
+  test "donut scales spent and unused segments to the budget after a refund" do
+    family = @family
+    account = family.accounts.create!(name: "Donut checking", currency: "USD", balance: 0, accountable: Depository.new)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    budget.update!(budgeted_spending: 200)
+    purchase_category = family.categories.create!(name: "Donut purchase #{SecureRandom.hex(4)}", color: "#e74c3c")
+    refund_category = family.categories.create!(name: "Donut refund #{SecureRandom.hex(4)}", color: "#3498db")
+    budget.sync_budget_categories
+    budget_category = budget.budget_categories.find_by!(category: purchase_category)
+    budget_category.update!(budgeted_spending: 200)
+
+    create_transaction(account: account, amount: 100, category: purchase_category, date: Date.current)
+    refund = create_transaction(account: account, amount: -50, category: refund_category, date: Date.current)
+    refund.transaction.mark_as_refund!
+
+    budget = Budget.find(budget.id)
+    segments = budget.to_donut_segments_json
+    spent = segments.find { |segment| segment[:id] == budget.budget_categories.find_by!(category: purchase_category).id }
+    unused = segments.find { |segment| segment[:id] == "unused" }
+
+    assert_in_delta 50, spent[:amount], 0.01
+    assert_in_delta 150, unused[:amount], 0.01
+    assert_in_delta 200, segments.sum { |segment| segment[:amount] }, 0.01
+    refund_segment = segments.find { |segment| segment[:id] == budget.budget_categories.find_by!(category: refund_category).id }
+    assert_equal 0, refund_segment[:amount]
+  end
+
+  test "estimated_spending never suggests a negative amount" do
+    budget = Budget.find_or_bootstrap(families(:dylan_family), start_date: Date.current.beginning_of_month)
+    budget.stubs(:income_statement).returns(stub(median_expense: -100))
+
+    assert_equal 0, budget.estimated_spending
+  end
+
   test "actual_spending nets refunds against expenses in same category" do
     family = families(:dylan_family)
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
@@ -266,6 +300,22 @@ class BudgetTest < ActiveSupport::TestCase
     end
   end
 
+  test "bills_paid does not go negative for a refund-only category" do
+    today = (Date.current - 3.months).change(day: 15)
+    home, refunds = %w[Home Refunds].map { |name| @family.categories.create!(name: "Bills paid #{name}", color: "#101010", lucide_icon: "circle") }
+    account = @family.accounts.create!(name: "Bills paid checking", currency: "USD", balance: 0, accountable: Depository.new)
+    budget = @family.budgets.create!(start_date: today.beginning_of_month, end_date: today.end_of_month,
+                                     budgeted_spending: 1_000, expected_income: 2_000, currency: "USD")
+    [ home, refunds ].each { |category| budget.budget_categories.create!(category: category, budgeted_spending: 500, currency: "USD") }
+
+    travel_to today do
+      pay_bill(create_bill(category: home, amount: 995, name: "Insurance", account: account), date: today.change(day: 3))
+      create_transaction(category: refunds, account: account, amount: -100, kind: "refund", date: today.change(day: 4))
+
+      assert_equal 995, Budget.find(budget.id).bills_paid
+    end
+  end
+
   # Uncategorized spending is part of actual_spending, so a bill paid from
   # an uncategorized entry is part of the bills too.
   test "near_limit? counts uncategorized bill payments as bills" do
@@ -319,6 +369,7 @@ class BudgetTest < ActiveSupport::TestCase
     standalone_budget_category.update!(budgeted_spending: 100, currency: family.currency)
 
     budget.stubs(:allocations_valid?).returns(true)
+    budget.stubs(:actual_spending).returns(100)
     budget.stubs(:available_to_spend).returns(200)
     budget.stubs(:budget_category_actual_spending).with(parent_budget_category).returns(63.11)
     budget.stubs(:budget_category_actual_spending).with(standalone_budget_category).returns(25)

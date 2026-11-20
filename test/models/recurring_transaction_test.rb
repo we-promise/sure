@@ -405,6 +405,19 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert matches.all? { |entry| entry.name == "Gym Membership" }
   end
 
+  test "matching_transactions excludes refunds" do
+    recurring = build_recurring(
+      name: "Refund filter #{SecureRandom.hex(4)}", merchant: nil, amount: -100,
+      expected_day_of_month: Date.current.day, last_occurrence_date: Date.current,
+      next_expected_date: Date.current
+    )
+    recurring.save!
+    standard = create_transaction(account: @account, amount: -100, date: Date.current, name: recurring.name)
+    create_transaction(account: @account, amount: -100, date: Date.current, name: recurring.name, kind: "refund")
+
+    assert_equal [ standard.id ], recurring.matching_transactions.map(&:id)
+  end
+
   test "matching_transactions rejects a same-day charge in an off-cycle month" do
     recurring = build_recurring(
       merchant: nil,
@@ -583,6 +596,23 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal 4, recurring.occurrence_count
     # Next expected date should be in the future
     assert recurring.next_expected_date >= Date.current
+  end
+
+  test "create_from_transaction excludes matching refunds from its variance history" do
+    name = "Refund history #{SecureRandom.hex(4)}"
+    seed = @account.entries.create!(
+      date: 2.months.ago.beginning_of_month + 14.days,
+      amount: -1000, currency: "USD", name: name, entryable: Transaction.new
+    )
+    @account.entries.create!(
+      date: 1.month.ago.beginning_of_month + 14.days,
+      amount: -1000, currency: "USD", name: name, entryable: Transaction.new(kind: "refund")
+    )
+
+    recurring = RecurringTransaction.create_from_transaction(seed.entryable)
+
+    assert_equal 1, recurring.occurrence_count
+    assert_equal(-1000, recurring.expected_amount_avg)
   end
 
   test "create_from_transaction with single transaction sets fixed amount" do

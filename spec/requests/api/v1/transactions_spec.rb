@@ -133,8 +133,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
       parameter name: :max_amount, in: :query, type: :number, required: false,
                 description: 'Filter by maximum amount'
       parameter name: :type, in: :query, required: false,
-                description: 'Filter by transaction type',
-                schema: { type: :string, enum: %w[income expense] }
+                description: 'Filter by transaction type; income excludes refunds, expense includes them, refund selects only refunds',
+                schema: { type: :string, enum: %w[income expense refund] }
       parameter name: :search, in: :query, type: :string, required: false,
                 description: 'Search by name, notes, or merchant name'
       parameter name: :account_ids, in: :query, required: false,
@@ -184,6 +184,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         properties: {
           transaction: {
             type: :object,
+            allOf: [ { '$ref' => '#/components/schemas/TransactionRefundInput' } ],
             properties: {
               account_id: { type: :string, format: :uuid, description: 'Account ID (required)' },
               date: { type: :string, format: :date, description: 'Transaction date' },
@@ -274,7 +275,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - missing required fields, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
+      response '422', 'validation error - missing required fields, invalid refund attributes or purchase relationship, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -328,6 +329,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         properties: {
           transaction: {
             type: :object,
+            allOf: [ { '$ref' => '#/components/schemas/TransactionRefundInput' } ],
             properties: {
               date: { type: :string, format: :date },
               amount: { type: :number },
@@ -358,13 +360,13 @@ RSpec.describe 'API V1 Transactions', type: :request do
         }
       end
 
-      response '200', 'transaction updated' do
+      response '200', 'transaction updated, including refund classification or linking' do
         schema '$ref' => '#/components/schemas/Transaction'
 
         run_test!
       end
 
-      response '403', 'account is shared with you without permission to change this transaction' do
+      response '403', 'API key or account does not allow writes (read-only key, or a shared account without permission to change this transaction)' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { read_only_transaction.id }
@@ -380,7 +382,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - unknown nature, an amount or nature change on a transfer, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
+      response '422', 'validation error - unknown nature, an amount or nature change on a transfer, invalid refund attributes or purchase relationship, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { transaction: { tag_ids: [ SecureRandom.uuid ] } } }
