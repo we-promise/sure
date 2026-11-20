@@ -1,24 +1,8 @@
 # frozen_string_literal: true
 
 class BrexItem::AccountFlow < ProviderItem::AccountFlow
-  require_dependency "brex_item/account_flow/setup"
-
-  include Setup
-
-  # Setup is a nested module, so its constant lookup does not see constants
-  # this class inherits.
-  NoApiTokenError = ProviderItem::AccountFlow::NoApiTokenError
-
   SelectionResult = Class.new(superclass::SelectionResult) do
     def brex_item = item
-  end
-
-  SetupResult = Data.define(:created_accounts, :skipped_count, :failed_count) do
-    def created_count = created_accounts.count
-  end
-
-  SetupCompletion = Data.define(:success, :message) do
-    def success? = success
   end
 
   def self.cache_sensitive_params
@@ -31,6 +15,7 @@ class BrexItem::AccountFlow < ProviderItem::AccountFlow
 
   alias_method :brex_item, :item
   alias_method :brex_item_id, :item_id
+  alias_method :unlinked_brex_accounts, :unlinked_provider_accounts
 
   def link_existing_account_result(account:, brex_account_id: nil, provider_account_id: nil)
     super(account: account, provider_account_id: brex_account_id || provider_account_id)
@@ -75,6 +60,22 @@ class BrexItem::AccountFlow < ProviderItem::AccountFlow
       brex_account
     end
 
-    # Setup still calls it by this name.
-    alias_method :upsert_brex_account!, :upsert_provider_account!
+    def provider_account_snapshot_changed?(brex_account, account_data)
+      snapshot = account_data.with_indifferent_access
+      balances = snapshot.slice(:current_balance, :available_balance, :account_limit)
+
+      expected = {
+        account_kind: BrexAccount.kind_for(snapshot),
+        account_status: snapshot[:status],
+        account_type: snapshot[:type],
+        available_balance: BrexAccount.money_to_decimal(balances[:available_balance]),
+        current_balance: BrexAccount.money_to_decimal(balances[:current_balance]),
+        account_limit: BrexAccount.money_to_decimal(balances[:account_limit]),
+        currency: BrexAccount.currency_code_from_money(balances[:current_balance] || balances[:available_balance] || balances[:account_limit]),
+        name: BrexAccount.name_for(snapshot),
+        raw_payload: BrexAccount.sanitize_payload(account_data)
+      }
+
+      expected.any? { |attribute, value| brex_account.public_send(attribute) != value }
+    end
 end

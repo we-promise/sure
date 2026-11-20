@@ -73,7 +73,7 @@ module ProviderItemLifecycleTests
     test "lifecycle: the account flow is the shared flow and keeps its old constants" do
       assert_operator account_flow_class, :<, ProviderItem::AccountFlow
       assert_same ProviderItem::AccountFlow::NoApiTokenError, account_flow_class::NoApiTokenError
-      %i[AccountNotFoundError InvalidAccountNameError AccountAlreadyLinkedError NavigationResult LinkAccountsResult].each do |constant|
+      %i[AccountNotFoundError InvalidAccountNameError AccountAlreadyLinkedError NavigationResult LinkAccountsResult SetupResult SetupCompletion].each do |constant|
         assert_same ProviderItem::AccountFlow.const_get(constant), account_flow_class.const_get(constant)
       end
       assert_equal provider_item.class, account_flow_class.item_class
@@ -190,6 +190,67 @@ module ProviderItemLifecycleTests
           account_flow.link_existing_account!(account: other, provider_account_id: "linked-existing-1")
         end
       end
+    end
+
+    test "lifecycle: setup imports the reported accounts and creates the ones given a supported type" do
+      provider_item.class.any_instance.expects(:sync_later).once
+      account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "setup-1", "setup-2", "setup-3" ]))
+      unsupported_type = (Accountable::TYPES - "Provider::#{provider_item.provider_key.camelize}Adapter".constantize.supported_account_types).first
+
+      assert_difference -> { provider_item.provider_accounts.count }, 3 do
+        assert_nil account_flow.import_accounts_with_user_facing_error
+      end
+      imported = provider_item.provider_accounts.where(account_id: %w[setup-1 setup-2 setup-3]).index_by(&:account_id)
+      assert_equal imported.values.map(&:id).sort, (account_flow.unlinked_provider_accounts.map(&:id) & imported.values.map(&:id)).sort
+
+      result = assert_difference([ "Account.count", "AccountProvider.count" ], 1) do
+        account_flow.complete_setup!(
+          account_types: {
+            imported["setup-1"].id.to_s => selectable_accountable_type,
+            imported["setup-2"].id.to_s => "skip",
+            imported["setup-3"].id.to_s => unsupported_type
+          },
+          account_subtypes: {}
+        )
+      end
+
+      assert_kind_of ProviderItem::AccountFlow::SetupResult, result
+      assert_equal [ imported["setup-1"].reload.account ], result.created_accounts
+      assert_equal selectable_accountable_type, imported["setup-1"].account.accountable_type
+      assert_equal 2, result.skipped_count
+      assert_not_includes account_flow.unlinked_provider_accounts, imported["setup-1"]
+
+      again = assert_no_difference([ "Account.count", "AccountProvider.count" ]) do
+        account_flow.complete_setup!(account_types: { imported["setup-1"].id.to_s => selectable_accountable_type }, account_subtypes: {})
+      end
+      assert_equal [ 0, 0 ], [ again.created_count, again.failed_count ]
+    end
+
+    test "lifecycle: setup keeps the accounts it created when a later one raises" do
+      provider_item.class.any_instance.expects(:sync_later).once
+      account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "raise-1", "raise-2" ]))
+      account_flow.import_accounts_with_user_facing_error
+      first, second = provider_item.provider_accounts.where(account_id: %w[raise-1 raise-2]).order(:account_id).to_a
+      provider_item.provider_accounts.klass.any_instance.stubs(:current_balance).returns(10).then.raises(RuntimeError, "unexpected")
+
+      result = assert_difference([ "Account.count", "AccountProvider.count" ], 1) do
+        account_flow.complete_setup!(
+          account_types: { first.id.to_s => selectable_accountable_type, second.id.to_s => selectable_accountable_type },
+          account_subtypes: {}
+        )
+      end
+
+      assert_equal [ 1, 1 ], [ result.created_count, result.failed_count ]
+      assert first.reload.account_provider.present?
+      assert_nil second.reload.account_provider
+    end
+
+    test "lifecycle: setup leaves an imported account alone when the provider reports it unchanged" do
+      account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "unchanged-1" ]))
+      account_flow.import_accounts_with_user_facing_error
+
+      account_flow_class.any_instance.expects(:upsert_provider_account!).never
+      assert_nil account_flow.import_accounts_with_user_facing_error
     end
 
     test "lifecycle: linking an existing account refuses one already linked elsewhere" do
