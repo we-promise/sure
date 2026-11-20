@@ -1068,6 +1068,34 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_includes card.entries.where(entryable_type: "Valuation").pluck(:amount), BigDecimal("-20.00")
   end
 
+  test "a card's credit anchor from before the sign fix is turned around" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("20.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-10.00"), cash_balance: BigDecimal("-10.00"),
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        {
+          "id" => "card_purchase",
+          "type" => "POSDEBIT",
+          "amount" => "-30.00",
+          "description" => "Safeway",
+          "settlement_date" => (Date.current - 2).to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    card.reload
+    readings = card.entries.where(entryable_type: "Valuation").pluck(:amount)
+    assert_equal BigDecimal("10.00"), card.balance
+    assert_includes readings, BigDecimal("-20.00")
+    assert_not_includes readings, BigDecimal("20.00")
+  end
+
   test "a card that went from credit to owing keeps its negative anchor" do
     card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
     @snaptrade_account.ensure_account_provider!(card)
