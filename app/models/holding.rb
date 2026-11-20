@@ -93,11 +93,23 @@ class Holding < ApplicationRecord
 
     holdings.to_h do |holding|
       open = open_lots[holding.id]&.reject(&:opening?)
-      value = if open&.any? && open.none? { |lot| lot.unit_cost.nil? }
-        Money.new(open.sum { |lot| lot.qty * lot.unit_cost } / open.sum(&:qty), holding.currency)
+      value = if open&.any? && open.none? { |lot| lot.unit_cost.nil? } && open.map(&:currency).uniq.one?
+        mean = Money.new(open.sum { |lot| lot.qty * lot.unit_cost } / open.sum(&:qty), open.first.currency)
+        lots_mean_in(mean, holding)
       end
       [ holding.id, value ]
     end
+  end
+
+  # The lots are costed in the account's currency; a provider can report the
+  # holding in another, so their mean is converted at the holding's date, and
+  # is unknown without a rate.
+  def self.lots_mean_in(mean, holding)
+    return mean if mean.currency.iso_code == holding.currency
+
+    mean.exchange_to(holding.currency, date: holding.date)
+  rescue Money::ConversionError
+    nil
   end
 
   # Each holding's open lots, by holding id, the opening lot first and then by

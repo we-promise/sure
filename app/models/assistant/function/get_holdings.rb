@@ -23,7 +23,8 @@ class Assistant::Function::GetHoldings < Assistant::Function
 
         Each holding's `lots` lists the parcels it is made of, oldest first:
         when each was acquired, how many units are still held and what each
-        unit cost (`opening` is units held before the first recorded trade).
+        unit cost, in the lot's own `currency`, which can differ from the
+        holding's (`opening` is units held before the first recorded trade).
         It is null when the recorded lots do not add up to the holding.
 
         Note on pagination:
@@ -138,6 +139,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
         acquired_on: lot.acquired_on,
         quantity: lot.qty.to_f,
         unit_cost: unit_cost&.amount&.to_f,
+        currency: lot.currency,
         formatted_unit_cost: unit_cost&.format,
         manual_cost: lot.manual_cost?
       }

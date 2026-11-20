@@ -57,6 +57,7 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
     assert_equal [ @first_buy.date, @second_buy.date ], lots.map { |lot| lot[:acquired_on] }
     assert_equal [ 20.0, 40.0 ], lots.map { |lot| lot[:quantity] }
     assert_equal [ 12.0, 20.0 ], lots.map { |lot| lot[:unit_cost] }
+    assert_equal [ "USD", "USD" ], lots.map { |lot| lot[:currency] }, "the numeric cost names its own currency"
     assert_equal [ "$12.00", "$20.00" ], lots.map { |lot| lot[:formatted_unit_cost] }
     assert_equal [ false, false ], lots.map { |lot| lot[:opening] }
   end

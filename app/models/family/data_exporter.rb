@@ -55,6 +55,10 @@ class Family::DataExporter
   end
 
   private
+    def trade_export_batch_size
+      1000
+    end
+
     def generate_version_txt
       <<~TEXT
         export_version: #{EXPORT_VERSION}
@@ -494,29 +498,36 @@ class Family::DataExporter
       # ahead of it, even when an import arrives in chunks.
       lot_total_costs = HoldingLot.derived.joins(:account).where(accounts: { family_id: @family.id })
         .where.not(manual_total_cost: nil).pluck(:source_entry_id, :manual_total_cost).to_h
-      @family.trades.includes(:security, :lot_source_entry, entry: :account)
-        .order(Arel.sql("entries.date ASC, entries.created_at ASC, CASE WHEN trades.qty < 0 THEN 1 ELSE 0 END ASC, entries.id ASC")).each do |trade|
-        lines << {
-          type: "Trade",
-          data: {
-            id: trade.id,
-            entry_id: trade.entry.id,
-            account_id: trade.entry.account_id,
-            security_id: trade.security_id,
-            ticker: trade.security.ticker,
-            security_name: trade.security.name,
-            exchange_operating_mic: trade.security.exchange_operating_mic,
-            date: trade.entry.date,
-            qty: trade.qty,
-            price: trade.price,
-            amount: trade.entry.amount,
-            currency: trade.currency,
-            lot_total_cost: lot_total_costs[trade.entry.id],
-            lot_source_trade_id: trade.lot_source_entry&.entryable_id,
-            created_at: trade.created_at,
-            updated_at: trade.updated_at
-          }
-        }.to_json
+      # Read in bounded batches, each in the replay order of its ids.
+      trade_ids = @family.trades
+        .order(Arel.sql("entries.date ASC, entries.created_at ASC, CASE WHEN trades.qty < 0 THEN 1 ELSE 0 END ASC, entries.id ASC"))
+        .pluck(:id)
+      trade_ids.each_slice(trade_export_batch_size) do |ids|
+        batch = Trade.includes(:security, :lot_source_entry, entry: :account).where(id: ids).index_by(&:id)
+        ids.each do |id|
+          trade = batch[id]
+          lines << {
+            type: "Trade",
+            data: {
+              id: trade.id,
+              entry_id: trade.entry.id,
+              account_id: trade.entry.account_id,
+              security_id: trade.security_id,
+              ticker: trade.security.ticker,
+              security_name: trade.security.name,
+              exchange_operating_mic: trade.security.exchange_operating_mic,
+              date: trade.entry.date,
+              qty: trade.qty,
+              price: trade.price,
+              amount: trade.entry.amount,
+              currency: trade.currency,
+              lot_total_cost: lot_total_costs[trade.entry.id],
+              lot_source_trade_id: trade.lot_source_entry&.entryable_id,
+              created_at: trade.created_at,
+              updated_at: trade.updated_at
+            }
+          }.to_json
+        end
       end
 
       # Export holding snapshots for backup and portfolio verification.

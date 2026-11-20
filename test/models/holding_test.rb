@@ -344,6 +344,25 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal BigDecimal("20"), batch.first.avg_cost&.amount, "the batch's figure"
   end
 
+  # Derived lots are costed in the account's currency, while a provider can
+  # report the position in another. Their mean is converted to the holding's
+  # currency at the holding's date, and is unknown without a rate.
+  test "a fifo holding in another currency than its lots gives their mean converted" do
+    @account.update!(cost_basis_method: "fifo")
+    security = create_security("FIFOX", prices: [ { date: Date.current, price: 30 } ])
+    buy = create_trade(security, account: @account, qty: 10, price: 20, date: Date.current)
+    HoldingLot.create!(account: @account, security: security, source_entry: buy, qty: 10, unit_cost: 20,
+                       currency: "USD", acquired_on: Date.current)
+    holding = @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 30, amount: 300, currency: "CHF")
+
+    assert_nil Holding.find(holding.id).avg_cost, "no USD to CHF rate, so the mean is unknown"
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: Date.current, rate: 0.9)
+    avg_cost = Holding.find(holding.id).avg_cost
+
+    assert_equal [ BigDecimal("18"), "CHF" ], [ avg_cost&.amount, avg_cost&.currency&.iso_code ], "20 USD at 0.9"
+  end
+
   test "the batch leaves a stored cost basis alone and does not query for it" do
     @amzn.update!(cost_basis: 100)
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: Date.current)

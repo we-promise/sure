@@ -36,9 +36,7 @@
                       step: "any",
                       min: 0 %>
                 <p class="text-xs text-secondary"><%= t("holdings.lots.total_cost_hint") %></p>
-                <div class="flex justify-end">
-                  <%= render DS::Button.new(text: t("holdings.lots.save"), type: "submit") %>
-                </div>
+                <%= f.submit t("holdings.lots.save") %>
               <% end %>
               <% if lot.manual_cost? %>
                 <%= render "holdings/lot_unlock", holding: holding, lot: lot %>
