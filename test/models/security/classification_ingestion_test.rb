@@ -190,17 +190,21 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
   # now refuses (`region` has no check constraint). The stamp is written only
   # once the answer is stored, or the gate would close on an answer that never
   # landed.
-  test "an answer the security could not store is not recorded, so the next sync asks again" do
-    @security.update_columns(region: "atlantis")
+  # The refusal is stamped, not retried: an unstamped row is asked again on
+  # every sync, and each ask costs a provider request.
+  test "an answer the security could not store is recorded and logged, so the next sync does not ask again" do
+    @security.update_columns(region: "atlantis", name: "Apple", logo_url: "https://example.com/aapl.png")
     provider = stub_provider(info(sector: "Technology"))
     @security.stubs(:price_data_provider).returns(provider)
 
-    @security.import_provider_details(include_classification: true)
+    assert_difference -> { DebugLogEntry.where(message: "Security details refused by validation").count }, 1 do
+      @security.import_provider_details(include_classification: true)
+    end
 
     assert_nil @security.reload.sector, "precondition: the write was refused"
-    assert_nil @security.classification_fetched_at, "a refused write was recorded as an answer"
+    assert_not_nil @security.classification_fetched_at, "a refused answer was left unrecorded, so every sync would ask again"
 
-    provider.expects(:fetch_security_info).once.returns(provider_success_response(info(sector: "Technology")))
+    provider.expects(:fetch_security_info).never
     @security.import_provider_details(include_classification: true)
   end
 

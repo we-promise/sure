@@ -262,6 +262,27 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     MarketDataImporter.new(mode: :snapshot, clear_cache: true).import_security_prices
   end
 
+  # A position closed before the snapshot range keeps a price window, but the
+  # price loop skips it, so asking for its classification spends a provider
+  # request on a security nobody holds.
+  test "does not ask for classification for a position closed before the snapshot" do
+    security = Security.create!(ticker: "GONE", exchange_operating_mic: "XNAS", name: "Gone", logo_url: "logo")
+    account = Family.create!(name: "Smith", currency: "USD").accounts.create!(
+      name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new
+    )
+    account.entries.create!(name: "Buy", date: 90.days.ago.to_date, amount: 100, currency: "USD",
+                            entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy"))
+    account.entries.create!(name: "Sell", date: 60.days.ago.to_date, amount: 110, currency: "USD",
+                            entryable: Trade.new(security: security, qty: -1, price: 110, currency: "USD", investment_activity_label: "Sell"))
+
+    Security.any_instance.stubs(:import_provider_prices)
+    Security.any_instance.stubs(:import_provider_details)
+    Security.any_instance.expects(:import_provider_details)
+            .with(has_entries(include_classification: true)).never
+
+    MarketDataImporter.new(mode: :snapshot).import_security_prices
+  end
+
   test "keeps a shared security current while another account holds it" do
     security = Security.create!(ticker: "SHARED", exchange_operating_mic: "XNAS")
     first_family = Family.create!(name: "First", currency: "USD")
@@ -296,7 +317,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     account.entries.create!(name: "Buy AAPL", date: 40.days.ago.to_date, amount: 100, currency: "USD", entryable: trade)
     account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD")
 
-    yahoo = mock("yahoo_finance")
+    yahoo = capable_provider("yahoo_finance", classification: false)
     yahoo.stubs(:class).returns(Provider::YahooFinance)
     Provider::Registry.any_instance.stubs(:get_provider).with(:twelve_data).returns(nil)
     Provider::Registry.any_instance.stubs(:get_provider).with(:yahoo_finance).returns(yahoo)

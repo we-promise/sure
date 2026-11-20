@@ -383,8 +383,6 @@ class Provider::Eodhd < Provider
     # is for when its holdings cannot: a commodity-futures ETF holds mostly
     # T-bills as collateral, and an inverse ETF holds a short position plus
     # cash. First match wins, so an inverse commodity fund is inverse.
-    FUND_WEIGHT_TOLERANCE = 10
-
     FUND_CATEGORIES = [
       [ /leverag|inverse/i, :leveraged_or_inverse ],
       [ /equity/i, nil ], # "Equity Precious Metals" (GDX) holds miners, not metal
@@ -421,7 +419,7 @@ class Provider::Eodhd < Provider
       category_answer = FUND_CATEGORIES.find { |pattern, _| category.to_s.match?(pattern) }&.last
       net_keys = %w[Net_Assets_% Net_%]
       # Settlement and TBA rolls leave long-only funds a few percent short on cash.
-      short = fund_net_allocations(fund_data["Asset_Allocation"], net_keys).any? { |percent| percent < -FUND_WEIGHT_TOLERANCE }
+      short = fund_net_allocations(fund_data["Asset_Allocation"], net_keys).any? { |percent| percent < -::Security::Provided::FUND_WEIGHT_TOLERANCE }
 
       weights = {
         asset_class: sum_fund_weights(fund_data["Asset_Allocation"], FUND_ASSET_CLASSES, net_keys),

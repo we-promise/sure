@@ -324,7 +324,9 @@ module Security::Provided
   # prices, not a page view; `#show` makes no provider call at all. It keeps
   # the narrow gate because the user asked for prices, not for classification.
   def import_provider_details(clear_cache: false, include_classification: false)
-    unless price_data_provider.present?
+    # Resolved once: each call re-reads the enabled providers and the registry.
+    provider = price_data_provider
+    unless provider.present?
       Rails.logger.warn("No provider configured for Security.import_provider_details")
       return
     end
@@ -347,13 +349,13 @@ module Security::Provided
     #   retried. The stamp is compared with the provider resolved now, so an
     #   assigned provider changing and the enabled default changing (for a
     #   security with no `price_provider`) both open the gate.
-    classification_provider_key = self.class.provider_key_for(price_data_provider)
-    wants_classification = include_classification && price_data_provider.supplies_classification? &&
+    classification_provider_key = self.class.provider_key_for(provider)
+    wants_classification = include_classification && provider.supplies_classification? &&
       !classification_locked? && classification_source.blank? &&
       (classification_fetched_at.nil? || classification_fetched_from != classification_provider_key)
 
     unless has_metadata && !wants_classification && !clear_cache
-      response = price_data_provider.fetch_security_info(
+      response = provider.fetch_security_info(
         symbol: ticker,
         exchange_operating_mic: exchange_operating_mic
       )
@@ -369,24 +371,27 @@ module Security::Provided
           attrs[:name]        = response.data.name    if response.data.name.present?
           attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
           attrs[:website_url] = response.data.links   if response.data.links.present?
-          attrs.merge!(classification_attributes_from(response.data, classifies: price_data_provider.supplies_classification?))
+          attrs.merge!(classification_attributes_from(response.data, classifies: provider.supplies_classification?))
           stored = attrs.empty? || update(attrs)
-          # Recorded only when the answer was stored. `update` runs the model's
-          # validations, and a row can hold a value they now refuse; stamping
-          # anyway would close the gate on an answer that never landed. A lock
-          # set while the provider answered rejects the answer the same way.
-          if wants_classification && stored && !classification_locked?
+          # `update` runs the model's validations, and a row can hold a value
+          # they now refuse (a legacy region, a ticker clash). Its answer is
+          # stamped anyway, with the refusal logged for support: an unstamped
+          # row is asked again on every sync, and each ask costs a provider
+          # request. A lock set while the provider answered rejects the answer
+          # instead, and closes the gate on its own.
+          if wants_classification && !classification_locked?
+            log_refused_classification(provider, errors.full_messages) unless stored
             update_columns(classification_fetched_at: Time.current, classification_fetched_from: classification_provider_key)
           end
         end
       else
-        Rails.logger.warn("Failed to fetch security info for #{ticker} from #{price_data_provider.class.name}: #{response.error.message}")
+        Rails.logger.warn("Failed to fetch security info for #{ticker} from #{provider.class.name}: #{response.error.message}")
         DebugLogEntry.capture(
           category: "security_metadata_fetch",
           level: "warn",
           message: "Failed to get security info",
           source: self.class.name,
-          provider: price_data_provider,
+          provider: provider,
           metadata: {
             security_id: self.id,
             ticker: ticker,
@@ -479,12 +484,29 @@ module Security::Provided
 
   FUND_DOMINANT_WEIGHT = 90
 
+  # Percentage points a provider's fund breakdown may stray outside 0..100
+  # before it is read as a short or leveraged position rather than rounding:
+  # settlement and TBA rolls leave long-only funds a few percent short on cash.
+  FUND_WEIGHT_TOLERANCE = 10
+
   # The provider is the second-weakest writer: it may fill what nothing has
   # answered, and may replace a `default`, but never a `manual` classification,
   # and never anything at all on a locked security. Only a provider that
   # classifies may claim the classification: an instrument type from one that
   # does not (Twelve Data) would stamp `provider` as the source and keep a
   # capable provider from ever being asked.
+  def log_refused_classification(provider, messages)
+    DebugLogEntry.capture(
+      category: "security_metadata_fetch",
+      level: "warn",
+      message: "Security details refused by validation",
+      source: self.class.name,
+      provider: provider,
+      metadata: { security_id: id, ticker: ticker, errors: messages }
+    )
+  end
+  private :log_refused_classification
+
   def classification_attributes_from(data, classifies: true)
     return {} if classification_locked?
 
@@ -495,7 +517,7 @@ module Security::Provided
     mapped_class, mapped_sub_class = ASSET_CLASS_FROM_PROVIDER_KIND[kind]
     if fund_sub_class
       mapped_class = fund_asset_class(weights)
-      mapped_sub_class = fund_sub_class if mapped_class
+      mapped_sub_class = fund_sub_class
     end
     # World_Regions and Sector_Weights describe only the fund's equity
     # sleeve, so they speak for the fund only when equity is what it holds.
@@ -515,6 +537,12 @@ module Security::Provided
       attrs[:asset_class] = mapped_class
       attrs[:asset_sub_class] = mapped_sub_class
       attrs[:classification_source] = "provider"
+    elsif fund_sub_class && asset_sub_class.blank?
+      # The wrapper is known even when its holdings settle no class (a 60/40
+      # fund, a Yahoo-priced ETF with no breakdown). The sub-class alone is
+      # not a classification, so the source stays unclaimed, but it keeps the
+      # listing country from setting the fund's region.
+      attrs[:asset_sub_class] = fund_sub_class
     end
 
     # A stock keeps the region its listing country gives it: a provider's
@@ -522,12 +550,12 @@ module Security::Provided
     # or Medtronic (Irish-domiciled, US-run) to Europe.
     #
     # A fund's listing or domicile country (Ireland, Luxembourg) says nothing
-    # about what it holds, so a classified fund's region is the dominant
+    # about what it holds, so a fund's region is the dominant
     # region of its equity holdings, or none: a world ETF, a bond fund or a
     # commodity fund has its listing region cleared. The provider replaces
     # the region only while it is still the one the listing implies, so a
     # region someone set by hand stays.
-    if fund_sub_class && mapped_class &&
+    if fund_sub_class &&
         (region.blank? || region == Security::REGIONS.dig(country_code.to_s.upcase, "region"))
       attrs[:region] = (dominant_fund_weight(weights[:equity_region]) if equity_fund)
     end
@@ -544,7 +572,7 @@ module Security::Provided
     return nil if weights[:leveraged_or_inverse]
 
     classes = weights[:asset_class] || {}
-    tolerance = Provider::Eodhd::FUND_WEIGHT_TOLERANCE
+    tolerance = FUND_WEIGHT_TOLERANCE
     return nil if classes.values.any? { |percent| percent < -tolerance || percent > 100 + tolerance }
 
     weights[:category_asset_class].presence || dominant_fund_weight(classes.except("liquidity"))
