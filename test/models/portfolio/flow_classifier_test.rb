@@ -325,6 +325,38 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :internal, scope.classify(out_leg)
   end
 
+  # A leg back into the same account still counts as an opposite leg when
+  # judging whether a move is one to one: with A out 5, B in 5 and A in 5, the
+  # out leg has two candidates, so no leg is internal. Pairing A's out with B's
+  # in alone would leave an internal outflow beside an external inflow, since
+  # B's in sees A's in on its own side.
+  test "a same-account opposite leg makes a security journal ambiguous in both forms" do
+    security = create_portfolio_security
+    out_leg = create_portfolio_trade(account: @brokerage, security: security, qty: -5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+    in_other = create_portfolio_trade(account: @ira, security: security, qty: 5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+    in_same = create_portfolio_trade(account: @brokerage, security: security, qty: 5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+
+    expected = { out_leg.id => :external_outflow, in_other.id => :external_inflow, in_same.id => :external_inflow }
+    assert_equal expected, [ out_leg, in_other, in_same ].index_by(&:id).transform_values { |entry| @family_scope.classify(entry) }
+    assert_equal expected, @family_scope.classify_ids(expected.keys)
+
+    # The lone pair across two accounts is still a move.
+    in_same.update_columns(excluded: true)
+    assert_equal({ out_leg.id => :internal, in_other.id => :internal }, @family_scope.classify_ids([ out_leg.id, in_other.id ]))
+    assert_equal :internal, @family_scope.classify(out_leg)
+
+    # Read as live, the excluded leg makes the day ambiguous again.
+    including = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], include_excluded: true)
+    assert_equal expected, [ out_leg, in_other, in_same ].index_by(&:id).transform_values { |entry| including.classify(entry) }
+    assert_equal expected, including.classify_ids(expected.keys)
+
+    # A lone pair inside one account is not a move between accounts.
+    in_other.update_columns(excluded: true)
+    in_same.update_columns(excluded: false)
+    assert_equal({ out_leg.id => :external_outflow, in_same.id => :external_inflow }, @family_scope.classify_ids([ out_leg.id, in_same.id ]))
+    assert_equal :external_outflow, @family_scope.classify(out_leg)
+  end
+
   # entries.excluded is nullable. #classify reads a NULL as live (excluded? is
   # false), and so does the SQL CASE (WHEN NULL is not taken), so the opposite
   # leg's lookup has to read it the same way; `excluded = false` dropped it and
