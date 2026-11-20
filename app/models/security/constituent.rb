@@ -30,7 +30,10 @@ class Security::Constituent < ApplicationRecord
   belongs_to :security
 
   validates :ticker, presence: true
-  validates :ticker, uniqueness: { scope: [ :security_id, :exchange ] }
+  # The unique index keys on COALESCE(exchange, ''), so a missing exchange and
+  # an empty one are the same venue here too, including a row a bulk insert
+  # stored with "".
+  validate :ticker_unique_on_its_exchange
   # Zero is allowed, and this is not a cosmetic boundary: EODHD reports a
   # rounded `Assets_%` and returns 0 for a position too small to round up to
   # 0.01. Refusing zero would fail that one row, and with it the import that
@@ -59,4 +62,15 @@ class Security::Constituent < ApplicationRecord
     listed = weighted.each_with_object({}) { |row, map| map[[ row.ticker, row.exchange ]] = row.weight / divisor }
     FundShares.new(listed: listed, unlisted: 1 - total / divisor)
   end
+
+  private
+    def ticker_unique_on_its_exchange
+      return if ticker.blank?
+
+      taken = self.class.where(security_id: security_id, ticker: ticker)
+                        .where("COALESCE(exchange, '') = ?", exchange.to_s)
+                        .where.not(id: id)
+                        .exists?
+      errors.add(:ticker, :taken) if taken
+    end
 end
