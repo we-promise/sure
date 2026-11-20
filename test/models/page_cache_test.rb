@@ -67,6 +67,16 @@ class PageCacheTest < ActiveSupport::TestCase
     assert_equal %w[page/small], PageCacheEntry.pluck(:page_key), "the pages already kept stay"
   end
 
+  test "a page the cache store refuses is served but not kept" do
+    Rails.cache.stubs(:write).returns(false)
+
+    served = PageCache.serve("page/a", version: "v1", family: @family, user: @user, rebuild_later: -> { }) { "body" }
+
+    assert_equal "body", served.body
+    assert_not served.kept
+    assert_not PageCacheEntry.exists?(page_key: "page/a")
+  end
+
   test "pages unopened for longer than the keep time are forgotten" do
     PageCache.write("page/old", "old", version: "v1", family: @family, user: @user)
 

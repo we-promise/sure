@@ -79,7 +79,8 @@ class PageCache
           next false
         end
 
-        Rails.cache.write(key, sealed, expires_in: Setting.page_cache_ttl)
+        next false unless Rails.cache.write(key, sealed, expires_in: Setting.page_cache_ttl)
+
         PageCacheEntry.upsert(
           { page_key: key, family_id: family.id, bytes: bytes, last_used_at: Time.current },
           unique_by: :page_key
