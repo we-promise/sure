@@ -340,12 +340,15 @@ class Api::V1::TradesController < Api::V1::BaseController
       qty, price = parse_qty_and_price!(trade_params[:qty], trade_params[:price])
       return if performed?
 
+      fee = parse_fee!(trade_params[:fee])
+      return if performed?
+
       {
         account: account,
         date: trade_params[:date],
         qty: qty,
         price: price,
-        fee: trade_params[:fee].to_d,
+        fee: fee,
         currency: trade_params[:currency].presence || account.currency,
         type: trade_params[:type].to_s.downcase,
         ticker: ticker_value,
@@ -502,6 +505,16 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) unless values.all?(&:positive?)
 
       values
+    end
+
+    # A non-negative fee, zero when absent, or nothing after rendering a 422.
+    def parse_fee!(raw)
+      return 0 if raw.to_s.strip.blank?
+
+      fee = parse_decimal(raw)
+      return render_validation_error("Fee must be a valid number", [ "fee must be a valid non-negative number" ]) if fee.nil? || fee.negative?
+
+      fee
     end
 
     def safe_page_param

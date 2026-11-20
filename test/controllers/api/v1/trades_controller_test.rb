@@ -1081,6 +1081,28 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create refuses a fee that is not a non-negative number instead of storing it as zero" do
+    security = Security.create!(ticker: "BADFEE", name: "Bad Fee Security", country_code: "US")
+    [ "abc", "12abc", "Infinity", "-1" ].each do |fee|
+      assert_no_difference "Entry.count" do
+        post "/api/v1/trades",
+          params: { trade: { account_id: @investment_account.id, type: "buy", date: Date.current, currency: "USD",
+                             qty: 5, price: 100, fee: fee, security_id: security.id } },
+          headers: api_headers(read_write_api_key)
+      end
+
+      assert_response :unprocessable_entity, fee
+      body = JSON.parse(response.body)
+      assert_equal "Fee must be a valid number", body["message"], fee
+      assert_equal [ "fee must be a valid non-negative number" ], body["errors"], fee
+    end
+  end
+
+  test "create stores a numeric fee and treats a blank one as zero" do
+    assert_equal 2, Trade.find(create_buy_trade("GOODFEE", fee: "2")).fee
+    assert_equal 0, Trade.find(create_buy_trade("BLANKFEE", fee: "")).fee
+  end
+
   test "create deposit with zero amount returns 422" do
     post "/api/v1/trades",
       params: { trade: {
