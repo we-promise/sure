@@ -903,6 +903,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     refute_equal "v8", Portfolio::Performance::CACHE_VERSION, "v8 entries were cached before family scoping and the one-day TWR change"
     refute_equal "v9", Portfolio::Performance::CACHE_VERSION, "v9 drivers left a trade's commission in market"
     refute_equal "v10", Portfolio::Performance::CACHE_VERSION, "v10 entries predate income by security, so their income has no by_security"
+    refute_equal "v11", Portfolio::Performance::CACHE_VERSION, "v11 entries converted a foreign journal in one step"
   end
 
   # End to end, with nothing set by hand between the layers. Every other
