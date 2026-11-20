@@ -10550,7 +10550,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or the account
+            is shared with you without write access
           content:
             application/json:
               schema:
@@ -10619,7 +10620,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or the account
+            is shared with you without write access
           content:
             application/json:
               schema:
@@ -11370,6 +11372,12 @@ paths:
                 "$ref": "#/components/schemas/Valuation"
         '422':
           description: validation error - only one of amount/date provided
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: account is shared with you without write access
           content:
             application/json:
               schema:
