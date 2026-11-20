@@ -336,6 +336,15 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  # Bank sync's lists all derive from the declaration, so the generator only checks
+  # it is there.
+  test "warns only when the adapter does not declare its panel" do
+    output = ->(key) { capture_io { Provider::FamilyGenerator.new([ key ]).add_bank_sync_entries }.first }
+
+    assert_includes output.call("gocardless"), "Bank sync will not list gocardless"
+    assert_empty output.call("redbark"), "Redbark's adapter declares its panel"
+  end
+
   # An adapter the generator did not write (it existed, or --skip-adapter) lacks the
   # template's declaration, so the generator has to say what to add.
   test "recognises an adapter that declares its panel" do
@@ -343,34 +352,6 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless"\n), key: "gocardless")
     assert_not Provider::FamilyGenerator.panel_declared?("class Provider::GocardlessAdapter < Provider::Base\nend\n", key: "gocardless")
     assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless_bank", name: "X", panel: true\n), key: "gocardless")
-  end
-
-  # The row's sync status reads family_panel_items. Its Sync button posts a key that
-  # Settings::ProvidersController#sync looks up in PANEL_SYNCABLE_TYPES, which is
-  # derived from the adapter's declaration, so it is not patched here.
-  test "adds the provider to the sync items of the real providers controller" do
-    source = Rails.root.join("app/controllers/settings/providers_controller.rb").read
-    result = Provider::FamilyGenerator.append_family_panel_item(source, key: "gocardless")
-
-    assert_parses result
-    items = result[/def family_panel_items\n\s*\{\n(.*?)\n\s*\}\n/m, 1].lines(chomp: true)
-
-    assert_equal %("gocardless" => @gocardless_items), items.last.squish
-    # The arrows line up with the entry above, however long the longest key is.
-    assert_equal items[-2].index("=>"), items.last.index("=>")
-  end
-
-  test "keeps a space before the arrow when the new key is longer than the column" do
-    result = Provider::FamilyGenerator.append_family_panel_item(<<~RUBY, key: "gocardless_bank_data")
-      def family_panel_items
-        {
-          "up" => @up_items
-        }
-      end
-    RUBY
-
-    assert_parses result
-    assert_includes result, %(    "up" => @up_items,\n    "gocardless_bank_data" => @gocardless_bank_data_items\n  }\n)
   end
 
   test "reserved item columns exclude family but include family_id" do

@@ -336,38 +336,10 @@ class Settings::ProvidersController < ApplicationController
       @health = view_context.provider_health_strip(connected: @connected, needs_attention: @needs_attention)
     end
 
-    # Maps each family panel key to the loaded item collection. Used by
-    # compute_provider_sync_health and build_provider_entries to avoid relying
-    # on instance_variable_get for control flow.
+    # Maps each declared family panel key to the items load_provider_items set
+    # for it, for compute_provider_sync_health.
     def family_panel_items
-      {
-        "akahu"          => @akahu_items,
-        "up"             => @up_items,
-        "monobank"       => @monobank_items,
-        "fio"            => @fio_items,
-        "simplefin"      => @simplefin_items,
-        "lunchflow"      => @lunchflow_items,
-        "redbark"        => @redbark_items,
-        "enable_banking" => @enable_banking_items,
-        "truelayer"      => @truelayer_items,
-        "coinstats"      => @coinstats_items,
-        "wise"           => @wise_items,
-        "mercury"        => @mercury_items,
-        "brex"           => @brex_items,
-        "coinbase"       => @coinbase_items,
-        "binance"        => @binance_items,
-        "kraken"         => @kraken_items,
-        "coinspot"       => @coinspot_items,
-        "onchain_wallet" => @onchain_wallet_items,
-        "snaptrade"      => @snaptrade_items,
-        "questrade"      => @questrade_items,
-        "sharesight"     => @sharesight_items,
-        "ibkr"           => @ibkr_items,
-        "trading212"     => @trading212_items,
-        "trade_republic" => @trade_republic_items,
-        "indexa_capital" => @indexa_capital_items,
-        "sophtron"       => @sophtron_items
-      }
+      FAMILY_PANEL_KEYS.index_with { |key| instance_variable_get(:"@#{key}_items") }
     end
 
     # Returns a hash mapping provider key → { error:, last_synced_at:, stale: }

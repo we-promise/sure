@@ -84,7 +84,7 @@ This single command generates:
 - ✅ Simple manual panel view for provider settings
 - ✅ Controller with CRUD actions and Turbo Stream support
 - ✅ Routes
-- ✅ Bank sync wiring: the adapter's `declares_connection` (with its `name:` and `panel:`) and the settings controller's `family_panel_items` entry
+- ✅ Bank sync wiring: the adapter's `declares_connection` (with its `name:` and `panel:`)
 
 The generated item partial renders the provider's logo with `ProviderLogo`. That reads the
 provider's `Provider::Metadata::REGISTRY` entry, which comes from the adapter's
@@ -560,11 +560,10 @@ end
 - `FAMILY_PANELS` lists My Bank because the adapter declares `name: "My Bank", panel: true`,
   so Bank sync shows it and opens its panel in the drawer. `FAMILY_PANEL_KEYS` also keeps
   it out of the global provider forms.
-- Adds `my_bank` to `family_panel_items`, which with the adapter's `declares_connection`
-  (from which `PANEL_SYNCABLE_TYPES` is derived) gives its connection row a sync status
-  and a working Sync button.
-- `provider_summary` lists a connected My Bank under Your connections from the same
-  `panel:` declaration, so `app/helpers/settings_helper.rb` needs no change.
+- The same `panel:` declaration gives its connection row a sync status and a working
+  Sync button (`family_panel_items` and `PANEL_SYNCABLE_TYPES` are derived from it), and
+  `provider_summary` lists a connected My Bank under Your connections, so
+  `app/helpers/settings_helper.rb` needs no change.
 
 ---
 
