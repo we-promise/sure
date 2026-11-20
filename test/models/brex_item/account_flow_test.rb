@@ -374,6 +374,47 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     end
   end
 
+  test "an account whose transaction fails to commit is not counted as created" do
+    brex_account = @brex_item.brex_accounts.create!(
+      account_id: "setup_commit_fail_1",
+      account_kind: "cash",
+      name: "Setup Commit Fail",
+      currency: "USD",
+      current_balance: 100
+    )
+    Account.stubs(:create_and_sync).returns(accounts(:depository))
+    AccountProvider.stubs(:create!)
+    # The block runs, then the commit fails (as when the connection drops before COMMIT).
+    ActiveRecord::Base.stubs(:transaction).yields.raises(ActiveRecord::ConnectionFailed, "server closed the connection")
+    @brex_item.expects(:sync_later).never
+
+    result = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item).complete_setup!(
+      account_types: { brex_account.id => "Depository" },
+      account_subtypes: {}
+    )
+
+    assert_empty result.created_accounts
+    assert_equal 1, result.failed_count
+  end
+
+  # A preload that started before the token changed must not write the old
+  # token's accounts back after the update has dropped the cache.
+  test "accounts fetched under credentials changed mid-fetch are not cached" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    flow = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item)
+    item_id = @brex_item.id
+    flow.define_singleton_method(:fetch_accounts) do
+      BrexItem.find(item_id).update!(token: "rotated_token")
+      [ { id: "old_token_account", name: "Old token account" } ]
+    end
+
+    assert_equal true, flow.preload_payload[:has_accounts]
+    assert_nil Rails.cache.read(BrexItem::AccountFlow.cache_key(@family, @brex_item))
+  ensure
+    Rails.cache = original_cache
+  end
+
   test "complete setup result returns localized notice" do
     brex_account = @brex_item.brex_accounts.create!(
       account_id: "setup_result_cash_1",
