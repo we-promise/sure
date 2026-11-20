@@ -7,6 +7,8 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
   # lifecycle states owned by detection and the web UI; the API writes only
   # the two it documents.
   WRITABLE_STATUSES = %w[active inactive].freeze
+  DECIMAL_PARAMS = %i[amount expected_amount_min expected_amount_max expected_amount_avg].freeze
+  INTEGER_PARAMS = %i[expected_day_of_month occurrence_count].freeze
 
   before_action :ensure_read_scope, only: %i[index show]
   before_action :ensure_write_scope, only: %i[create update destroy]
@@ -219,6 +221,7 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
       recurring_transaction.errors.add(:last_occurrence_date, :blank) if input[:last_occurrence_date].blank?
       recurring_transaction.errors.add(:next_expected_date, :blank) if input[:next_expected_date].blank?
       validate_status_write_param(recurring_transaction)
+      validate_numeric_write_params(recurring_transaction, recurring_transaction_create_params)
     end
 
     def validate_update_write_params(recurring_transaction)
@@ -227,6 +230,18 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
         recurring_transaction.errors.add(:next_expected_date, :blank)
       end
       validate_status_write_param(recurring_transaction)
+      validate_numeric_write_params(recurring_transaction, recurring_transaction_update_params)
+    end
+
+    # The columns would cast "12abc" to 12, "abc" to 0 and a day of "1.5" to 1.
+    # Blank values fall through to the model's own validations.
+    def validate_numeric_write_params(recurring_transaction, permitted)
+      permitted.slice(*DECIMAL_PARAMS).each do |key, raw|
+        recurring_transaction.errors.add(key, "must be a valid number") if raw.present? && parse_decimal(raw).nil?
+      end
+      permitted.slice(*INTEGER_PARAMS).each do |key, raw|
+        recurring_transaction.errors.add(key, "must be a valid integer") if raw.present? && parse_integer(raw).nil?
+      end
     end
 
     # A blank status falls through to the model's presence validation.

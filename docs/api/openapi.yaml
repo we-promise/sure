@@ -8029,7 +8029,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: missing or invalid content
+          description: missing or invalid content, or a sequence that is not an integer
           content:
             application/json:
               schema:
@@ -9108,7 +9108,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - negative occurrence count
+          description: validation error - negative occurrence count, or an amount,
+            day or count that is not a number
           content:
             application/json:
               schema:
@@ -10765,6 +10766,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TransactionCollection"
+        '422':
+          description: min_amount or max_amount is not a number
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create transaction
       tags:
@@ -10786,8 +10793,9 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Transaction"
         '422':
-          description: validation error - missing required fields, malformed tag_ids,
-            or a tag, category or merchant id the family cannot use
+          description: validation error - missing required fields, an amount that
+            is not a number, malformed tag_ids, or a tag, category or merchant id
+            the family cannot use
           content:
             application/json:
               schema:
@@ -10922,8 +10930,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - malformed tag_ids, or a tag, category or
-            merchant id the family cannot use
+          description: validation error - an amount that is not a number, malformed
+            tag_ids, or a tag, category or merchant id the family cannot use
           content:
             application/json:
               schema:
@@ -11291,7 +11299,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Valuation"
         '422':
-          description: validation error - missing date
+          description: validation error - missing field, or an amount that is not
+            a number
           content:
             application/json:
               schema:
@@ -11386,7 +11395,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Valuation"
         '422':
-          description: validation error - only one of amount/date provided
+          description: validation error - only one of amount/date provided, or an
+            amount that is not a number
           content:
             application/json:
               schema:

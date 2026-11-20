@@ -323,6 +323,13 @@ class Api::V1::BaseController < ApplicationController
       value if value&.finite?
     end
 
+    # A base-10 integer, or nil for anything else. String#to_i would read
+    # "12abc" as 12 and "1.5" as 1; Kernel#Integer alone reads "010" as 8
+    # and "0x10" as 16.
+    def parse_integer(raw)
+      Integer(raw.to_s.strip, 10, exception: false)
+    end
+
     def parse_date_param(key)
       Date.iso8601(params[key].to_s)
     rescue ArgumentError

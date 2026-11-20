@@ -262,6 +262,30 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "create refuses an amount that is not a number and records nothing" do
+    [ "abc", "12abc", "Infinity", "NaN" ].each do |amount|
+      assert_no_difference("@family.entries.valuations.count", amount) do
+        post api_v1_valuations_url,
+             params: { valuation: { account_id: @account.id, amount: amount, date: 3.days.ago.to_date } },
+             headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity, amount
+      body = JSON.parse(response.body)
+      assert_equal "validation_failed", body["error"]
+      assert_equal "amount must be a valid number", body["message"], amount
+    end
+  end
+
+  test "create keeps every digit of a decimal string amount" do
+    post api_v1_valuations_url,
+         params: { valuation: { account_id: @account.id, amount: " 1234.5678 ", date: 3.days.ago.to_date } },
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    assert_equal BigDecimal("1234.5678"), @account.entries.valuations.find_by!(date: 3.days.ago.to_date).amount
+  end
+
   test "should reject create without API key" do
     post api_v1_valuations_url, params: { valuation: { account_id: @account.id } }
     assert_response :unauthorized
@@ -284,6 +308,21 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
 
     response_data = JSON.parse(response.body)
     assert_equal Date.current.to_s, response_data["date"]
+  end
+
+  test "update refuses an amount that is not a number and leaves the valuation as it was" do
+    entry = @valuation.entry
+
+    [ "abc", "12abc", "Infinity" ].each do |amount|
+      assert_no_changes -> { entry.reload.amount }, amount do
+        put api_v1_valuation_url(entry),
+            params: { valuation: { amount: amount, date: entry.date } },
+            headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity, amount
+      assert_equal "amount must be a valid number", JSON.parse(response.body)["message"], amount
+    end
   end
 
   test "should update valuation notes only" do

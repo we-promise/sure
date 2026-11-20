@@ -292,6 +292,38 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
     assert_includes response_data["errors"], "Occurrence count must be greater than or equal to 0"
   end
 
+  test "create refuses amounts that are not numbers and creates nothing" do
+    %i[amount expected_amount_min expected_amount_max expected_amount_avg].each do |key|
+      [ "abc", "12abc", "Infinity" ].each do |value|
+        params = valid_recurring_transaction_params.deep_dup
+        params[:recurring_transaction][key] = value
+
+        assert_no_difference("@family.recurring_transactions.count", "#{key}=#{value}") do
+          post api_v1_recurring_transactions_url, params: params, headers: api_headers(@api_key)
+        end
+
+        assert_response :unprocessable_entity, "#{key}=#{value}"
+        assert_includes JSON.parse(response.body)["errors"], "#{key.to_s.humanize} must be a valid number"
+      end
+    end
+  end
+
+  test "create refuses counts and days that are not whole numbers" do
+    %i[expected_day_of_month occurrence_count].each do |key|
+      [ "1.5", "12abc", "abc" ].each do |value|
+        params = valid_recurring_transaction_params.deep_dup
+        params[:recurring_transaction][key] = value
+
+        assert_no_difference("@family.recurring_transactions.count", "#{key}=#{value}") do
+          post api_v1_recurring_transactions_url, params: params, headers: api_headers(@api_key)
+        end
+
+        assert_response :unprocessable_entity, "#{key}=#{value}"
+        assert_includes JSON.parse(response.body)["errors"], "#{key.to_s.humanize} must be a valid integer"
+      end
+    end
+  end
+
   test "should return conflict when creating duplicate recurring transaction" do
     params = {
       recurring_transaction: {
@@ -328,6 +360,19 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
     response_data = JSON.parse(response.body)
     assert_equal "inactive", response_data["status"]
     assert_equal 16, response_data["expected_day_of_month"]
+  end
+
+  test "update refuses an expected day of month that is not a whole number" do
+    [ "1.5", "12abc", "abc" ].each do |value|
+      assert_no_changes -> { @recurring_transaction.reload.expected_day_of_month }, value do
+        patch api_v1_recurring_transaction_url(@recurring_transaction),
+              params: { recurring_transaction: { expected_day_of_month: value } },
+              headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity, value
+      assert_includes JSON.parse(response.body)["errors"], "Expected day of month must be a valid integer"
+    end
   end
 
   # The API writes "active" onto any writable series, a detected one included.
