@@ -78,8 +78,10 @@ class RecurringTransaction < ApplicationRecord
   attr_accessor :restoring_from_export
 
   # A bill declared by hand is born active, so it never makes the activation
-  # transition below. Ahead of generation, for the same reason activation runs
-  # ahead of regeneration. A restore brings its own occurrences and allocations.
+  # transition below. Its history is queued, not rebuilt in the request: every
+  # route that creates a bill (forms, the API, the assistant) stays fast. Queued
+  # ahead of generation, so a generation failure still leaves the history to
+  # come. A restore brings its own occurrences and allocations.
   after_commit :reconstruct_history_on_declaration, on: :create, if: :declared_active?
   after_commit :generate_occurrences, on: :create
   # Ahead of regeneration: activation changes status, so both run, and with
@@ -211,8 +213,6 @@ class RecurringTransaction < ApplicationRecord
   # A declaration's history pass has already generated, unless the family lock
   # sent it to the job.
   def generate_occurrences
-    return @occurrences_generated = false if @occurrences_generated
-
     OccurrenceGenerator.new(self).generate!
   end
 
@@ -237,7 +237,6 @@ class RecurringTransaction < ApplicationRecord
       # backfiller's, so a pause that committed since this record was read
       # is respected.
       series_scope.find_each { |series| OccurrenceGenerator.new(series).generate! }
-      @occurrences_generated = true
       HistoryBackfiller.new(
         family,
         months: Pipeline::FIRST_RUN_BACKFILL_MONTHS,
@@ -268,21 +267,18 @@ class RecurringTransaction < ApplicationRecord
   # re-runnable by construction. The job carries today's date, so a run that
   # waited reconstructs the same history an immediate one would have.
   def reconstruct_history_on_activation
-    reconstruct_history_or_queue(declared: false)
-  end
-
-  # A declaration also prunes what its schedule placed before the bill
-  # existed, which an activation must not.
-  def reconstruct_history_on_declaration
-    reconstruct_history_or_queue(declared: true)
-  end
-
-  def reconstruct_history_or_queue(declared:)
     as_of = Date.current
-    BackfillRecurringHistoryJob.perform_later(id, as_of, declared) unless reconstruct_history!(as_of: as_of, declared: declared)
+    BackfillRecurringHistoryJob.perform_later(id, as_of, false) unless reconstruct_history!(as_of: as_of)
   rescue StandardError => e
     Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
-    BackfillRecurringHistoryJob.perform_later(id, as_of, declared)
+    BackfillRecurringHistoryJob.perform_later(id, as_of, false)
+  end
+
+  # Always through the job, as of the declaration day. The job also prunes
+  # what the schedule placed before the bill existed, which an activation
+  # must not.
+  def reconstruct_history_on_declaration
+    BackfillRecurringHistoryJob.perform_later(id, Date.current, true)
   end
 
   # Regenerating rebuilds only scheduled, allocation-free, not-yet-due rows;

@@ -1883,7 +1883,9 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     entries = past_payments("CITY WATER", 3)
     latest = entries.max_by(&:date)
 
-    series = RecurringTransaction.create_from_transaction(latest.transaction)
+    series = perform_enqueued_jobs(only: BackfillRecurringHistoryJob) do
+      RecurringTransaction.create_from_transaction(latest.transaction)
+    end
 
     linked = RecurringAllocation.where(entry_id: entries.map(&:id), state: "confirmed").count
     assert_equal 3, linked, "the transaction's own earlier payments must be linked"
@@ -1933,7 +1935,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       next_expected_date: Date.current + 1.month, status: "active", manual: true
     )
     series.restoring_from_export = true
-    series.save!
+    assert_no_enqueued_jobs(only: BackfillRecurringHistoryJob) { series.save! }
 
     assert_equal 0, confirmed_allocations_for(series)
   end
@@ -1944,7 +1946,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     with_family_lock_held_elsewhere(@family.id) do
       assert_enqueued_jobs 1, only: BackfillRecurringHistoryJob do
-        series = declare_bill("CITY WATER")
+        series = declare_bill("CITY WATER", run_history: false)
       end
     end
 
@@ -1986,13 +1988,15 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
   test "declaring a bill whose schedule has already ended leaves no past occurrences" do
     travel_to Date.new(2026, 11, 19) do
-      series = @family.recurring_transactions.create!(
-        name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
-        expected_day_of_month: 9, anchor_date: Date.new(2026, 8, 9),
-        last_occurrence_date: Date.new(2026, 9, 9), next_expected_date: Date.new(2026, 9, 9),
-        end_mode: "on_date", end_on: Date.new(2026, 9, 9),
-        status: "active", manual: true
-      )
+      series = perform_enqueued_jobs(only: BackfillRecurringHistoryJob) do
+        @family.recurring_transactions.create!(
+          name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
+          expected_day_of_month: 9, anchor_date: Date.new(2026, 8, 9),
+          last_occurrence_date: Date.new(2026, 9, 9), next_expected_date: Date.new(2026, 9, 9),
+          end_mode: "on_date", end_on: Date.new(2026, 9, 9),
+          status: "active", manual: true
+        )
+      end
 
       assert_empty series.recurring_occurrences.open_status.where("due_on < ?", Date.current).pluck(:due_on),
         "an ended schedule owes nothing, so its unpaid past rows must be pruned"
@@ -2004,13 +2008,15 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     # the 20th. The plan has no cycle on the 21st, but it was owed after the
     # bill was declared.
     travel_to Date.new(2026, 11, 21) do
-      series = @family.recurring_transactions.create!(
-        name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
-        expected_day_of_month: 22, anchor_date: Date.new(2026, 11, 22),
-        last_occurrence_date: Date.new(2026, 10, 22), next_expected_date: Date.new(2026, 11, 22),
-        weekend_adjust: "before", end_mode: "after_count", end_after_count: 1,
-        status: "active", manual: true
-      )
+      series = perform_enqueued_jobs(only: BackfillRecurringHistoryJob) do
+        @family.recurring_transactions.create!(
+          name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
+          expected_day_of_month: 22, anchor_date: Date.new(2026, 11, 22),
+          last_occurrence_date: Date.new(2026, 10, 22), next_expected_date: Date.new(2026, 11, 22),
+          weekend_adjust: "before", end_mode: "after_count", end_after_count: 1,
+          status: "active", manual: true
+        )
+      end
 
       assert series.recurring_occurrences.exists?(original_due_on: Date.new(2026, 11, 22)),
         "the plan's only payment was scheduled after the declaration and must be kept"
@@ -2072,14 +2078,23 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     series.update!(status: "active")
   end
 
-  test "declaring a bill generates its occurrences once" do
-    generator = RecurringTransaction::OccurrenceGenerator
+  test "declaring a bill queues its history and generates its occurrences in the request" do
     calls = 0
-    generator.any_instance.stubs(:generate!).with { calls += 1 }.returns(nil)
+    RecurringTransaction::OccurrenceGenerator.any_instance.stubs(:generate!).with { calls += 1 }.returns(nil)
+    RecurringTransaction::HistoryBackfiller.any_instance.expects(:run!).never
 
-    declare_bill("CITY WATER")
+    series = nil
+    assert_enqueued_jobs 1, only: BackfillRecurringHistoryJob do
+      series = @family.recurring_transactions.create!(
+        name: "CITY WATER", account: @account, amount: 80, currency: "USD",
+        expected_day_of_month: 9, anchor_date: Date.current.next_month.change(day: 9),
+        last_occurrence_date: Date.current, next_expected_date: Date.current.next_month.change(day: 9),
+        status: "active", manual: true
+      )
+    end
 
-    assert_equal 1, calls, "the declaration's history pass already generates; the create callback must not repeat it"
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id, Date.current, true ])
+    assert_equal 1, calls, "the bill's upcoming occurrences are still generated when it is created"
   end
 
   test "a declared bill keeps a first due date the weekend moved before its anchor" do
@@ -2087,12 +2102,14 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     # is past and unpaid by the Saturday in between. It is the bill's first
     # real obligation, not a cycle before the bill existed.
     travel_to Date.new(2026, 11, 21) do
-      series = @family.recurring_transactions.create!(
-        name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
-        expected_day_of_month: 22, anchor_date: Date.new(2026, 11, 22),
-        last_occurrence_date: Date.new(2026, 10, 22), next_expected_date: Date.new(2026, 11, 22),
-        weekend_adjust: "before", status: "active", manual: true
-      )
+      series = perform_enqueued_jobs(only: BackfillRecurringHistoryJob) do
+        @family.recurring_transactions.create!(
+          name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
+          expected_day_of_month: 22, anchor_date: Date.new(2026, 11, 22),
+          last_occurrence_date: Date.new(2026, 10, 22), next_expected_date: Date.new(2026, 11, 22),
+          weekend_adjust: "before", status: "active", manual: true
+        )
+      end
 
       first = series.recurring_occurrences.find_by(original_due_on: Date.new(2026, 11, 22))
       assert first, "the first occurrence must survive the prune"
@@ -2129,7 +2146,8 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
 
     # Declared through the add-bill path, first due next month on the 9th.
-    def declare_bill(name)
+    # run_history: false leaves the queued history job for the test to run.
+    def declare_bill(name, run_history: true)
       series = RecurringTransaction::DeclaredBill.new(
         family: @family,
         user: users(:family_admin),
@@ -2139,7 +2157,8 @@ class RecurringTransactionTest < ActiveSupport::TestCase
           frequency_preset: "monthly"
         }
       ).build
-      assert RecurringTransaction::DeclaredBill.save(series), series.errors.full_messages.to_sentence
+      save = -> { assert RecurringTransaction::DeclaredBill.save(series), series.errors.full_messages.to_sentence }
+      run_history ? perform_enqueued_jobs(only: BackfillRecurringHistoryJob, &save) : save.call
       series
     end
 
