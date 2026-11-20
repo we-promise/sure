@@ -131,10 +131,25 @@
           </div>
         </div>
 
-        <p class="text-xs text-secondary"><%= income ? t(".income_frequency_hint") : t(".frequency_hint") %></p>
+        <div data-frequency-fields-target="group" data-presets="once" class="hidden">
+          <%= f.date_field :frequency_once_on,
+                label: income ? t(".income_once_on_label") : t(".once_on_label"),
+                value: recurring_transaction.frequency_once_on || recurring_transaction.anchor_date || recurring_transaction.next_expected_date,
+                required: true %>
+          <p class="text-xs text-secondary mt-1"><%= income ? t(".income_once_hint") : t(".once_hint") %></p>
+        </div>
+
+        <div data-frequency-fields-target="group" data-presets="monthly,weekly,biweekly,semimonthly,quarterly,semiannual,annual,interval,custom" class="hidden">
+          <p class="text-xs text-secondary"><%= income ? t(".income_frequency_hint") : t(".frequency_hint") %></p>
+        </div>
       <% else %>
         <%# A new series' day details derive from its first date. %>
-        <p class="text-xs text-secondary"><%= income ? t(".income_frequency_new_hint") : t(".frequency_new_hint") %></p>
+        <div data-frequency-fields-target="group" data-presets="monthly,weekly,biweekly,semimonthly,quarterly,semiannual,annual,interval,custom" class="hidden">
+          <p class="text-xs text-secondary"><%= income ? t(".income_frequency_new_hint") : t(".frequency_new_hint") %></p>
+        </div>
+        <div data-frequency-fields-target="group" data-presets="once" class="hidden">
+          <p class="text-xs text-secondary"><%= income ? t(".income_once_new_hint") : t(".once_new_hint") %></p>
+        </div>
       <% end %>
     </div>
 
