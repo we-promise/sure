@@ -379,6 +379,42 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "a body warmed outside a request is what the page serves" do
+    with_memory_cache do
+      assert ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      assert_not ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd }), "already warm"
+
+      ReportsController.any_instance.expects(:setup_report_data).never
+      get reports_path(period_type: :ytd)
+
+      assert_response :ok
+      assert_select "[data-sortable-list-target=item]"
+    end
+  end
+
+  test "the cached body is rebuilt when the family's entries change" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      assert_response :ok
+
+      @family.entries.first.touch
+      ReportsController.any_instance.expects(:render_report_body).once.returns("<p id=rebuilt></p>")
+      get reports_path(period_type: :ytd)
+
+      assert_select "#rebuilt"
+    end
+  end
+
+  test "each member gets their own cached body" do
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      other = @family.users.where.not(id: @user.id).first
+      assert other, "fixtures need a second member"
+
+      assert ReportsController.warm_body_cache(user: other, query: { period_type: :ytd })
+    end
+  end
+
   test "all time runs from the member's first transaction or trade to today" do
     first = @family.earliest_activity_date
     assert first, "fixtures need a transaction or trade"
@@ -1673,6 +1709,11 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def with_memory_cache
+      Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+      yield
+    end
+
     def biggest_expenses_reports_path(**params)
       reports_path(period_type: :custom, start_date: BIGGEST_MONTH, end_date: BIGGEST_MONTH.end_of_month, **params)
     end

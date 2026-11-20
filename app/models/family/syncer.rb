@@ -25,6 +25,8 @@ class Family::Syncer
 
     Rails.logger.info("Applying rules for family #{family.id}")
     ApplyRulesJob.perform_later(family)
+
+    WarmReportsCacheJob.set(wait: WarmReportsCacheJob::AFTER_SYNC_DELAY).perform_later(family)
   end
 
   # Every `*_items` association whose model is Syncable, found by reflection

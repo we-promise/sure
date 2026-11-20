@@ -62,6 +62,14 @@ class Family::SyncerTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs(only: RuleJob)
   end
 
+  test "warms the reports cache once the sync's rules have had time to run" do
+    freeze_time do
+      assert_enqueued_with(job: WarmReportsCacheJob, args: [ @family ], at: WarmReportsCacheJob::AFTER_SYNC_DELAY.from_now) do
+        Family::Syncer.new(@family).perform_post_sync
+      end
+    end
+  end
+
   # Issue #2925: merchants whose website arrived before Brandfetch was
   # configured get their logo on the next sync.
   test "backfills provider merchant logos after sync" do

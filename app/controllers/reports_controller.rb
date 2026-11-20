@@ -3,6 +3,13 @@ class ReportsController < ApplicationController
 
   SIGN_AGNOSTIC_EXPENSE_KINDS = %w[loan_payment investment_contribution].freeze
 
+  # Bump when the body's markup changes, so a deploy never serves the old one.
+  REPORT_BODY_CACHE_VERSION = 1
+  # Data changes reach the key; this only bounds what an idle cache holds.
+  REPORT_BODY_CACHE_TTL = 7.days
+  # The views warmed after each sync, as their URLs carry them.
+  WARMED_PERIOD_TYPES = %i[monthly quarterly ytd last_6_months all_time].freeze
+
   # Allow API key authentication for exports (for Google Sheets integration)
   # Note: We run authentication_for_export which handles both session and API key auth
   skip_authentication only: :export_transactions
@@ -10,11 +17,11 @@ class ReportsController < ApplicationController
 
   helper_method :filter_tags
 
+  # The report body is served from the cache when it is there (a sync warms
+  # the usual periods, see WarmReportsCacheJob), and otherwise built and kept.
   def index
-    setup_report_data(show_flash: true)
-
-    # Build reports sections for collapsible/reorderable UI
-    @reports_sections = build_reports_sections
+    setup_report_period(show_flash: true)
+    @report_body = Rails.cache.fetch(report_body_cache_key, expires_in: REPORT_BODY_CACHE_TTL) { render_report_body }
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.reports"), nil ] ]
   end
@@ -23,6 +30,22 @@ class ReportsController < ApplicationController
     setup_report_data(show_flash: false)
 
     render layout: "print"
+  end
+
+  # Builds and caches the report body for `user` outside a request, so a
+  # background job can have it ready before anyone opens Reports. `query` is
+  # what the page's URL would carry (period_type, start_date, end_date,
+  # filter_tag_ids). Returns whether it had to build the body.
+  def self.warm_body_cache(user:, query: {})
+    controller = new
+    request = ActionDispatch::Request.new(Rack::MockRequest.env_for("/reports?#{query.to_query}"))
+    request.routes = _routes
+    controller.set_request!(request)
+    controller.set_response!(make_response!(request))
+
+    Current.set(session: Session.new(user: user)) do
+      controller.send(:warm_report_body)
+    end
   end
 
   def update_preferences
@@ -106,7 +129,7 @@ class ReportsController < ApplicationController
   end
 
   private
-    def setup_report_data(show_flash: false)
+    def setup_report_period(show_flash: false)
       @period_type = params[:period_type]&.to_sym || :monthly
       @start_date = parse_date_param(:start_date) || default_start_date
       @end_date = parse_date_param(:end_date) || default_end_date
@@ -120,6 +143,13 @@ class ReportsController < ApplicationController
 
       @tags = Current.family.tags.alphabetically
       @filter_tags = filter_tags
+
+      # Build navigation links for period switching
+      @nav = build_period_navigation
+    end
+
+    def setup_report_data(show_flash: false)
+      setup_report_period(show_flash: show_flash)
 
       # Get aggregated data
       @income_statement = Current.family.income_statement(user: Current.user)
@@ -155,9 +185,47 @@ class ReportsController < ApplicationController
 
       # Flags for view rendering
       @has_accounts = accessible_accounts.any?
+    end
 
-      # Build navigation links for period switching
-      @nav = build_period_navigation
+    def render_report_body
+      setup_report_data(show_flash: false)
+      @reports_sections = build_reports_sections
+
+      render_to_string(partial: "reports/body", formats: [ :html ])
+    end
+
+    def warm_report_body
+      setup_report_period(show_flash: false)
+      key = report_body_cache_key
+      return false if Rails.cache.exist?(key)
+
+      Rails.cache.write(key, render_report_body, expires_in: REPORT_BODY_CACHE_TTL)
+      true
+    end
+
+    # Everything the body is drawn from: the family's data (a completed sync,
+    # any entry, category, tag, account or budget change), what this user may
+    # see and has chosen (their preferences live on the user row), the period
+    # and filters, today's date and the locale. Anything else changing in the
+    # body would need adding here.
+    def report_body_cache_key
+      family = Current.family
+      accounts = accessible_accounts
+      versions = [
+        family.build_cache_key("reports_body", invalidate_on_data_updates: true),
+        family.entries_version,
+        family.tags.maximum(:updated_at)&.to_f,
+        family.budgets.maximum(:updated_at)&.to_f,
+        BudgetCategory.joins(:budget).where(budgets: { family_id: family.id }).maximum(:updated_at)&.to_f,
+        accounts.map(&:id).sort.join(","),
+        accounts.map(&:updated_at).max&.to_f
+      ]
+
+      [
+        "reports_body", REPORT_BODY_CACHE_VERSION, Current.user.cache_key_with_version, I18n.locale, Date.current,
+        @period_type, @start_date, @end_date, filter_tags.map(&:id).sort.join(","),
+        Digest::SHA256.hexdigest(versions.join("|"))
+      ].join("/")
     end
 
     def preferences_params
