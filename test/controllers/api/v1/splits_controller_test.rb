@@ -87,7 +87,7 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "returns 422 when an amount is not a finite number" do
-    [ "not-a-number", "abc", "12abc", "Infinity", "-Infinity", "NaN", "", nil ].each do |amount|
+    [ "not-a-number", "abc", "12abc", "12\u0000abc", "Infinity", "-Infinity", "NaN", "", nil ].each do |amount|
       params = { split: { splits: [ { name: "Bad", amount: amount }, { name: "Rest", amount: @entry.amount.to_s } ] } }
 
       post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json

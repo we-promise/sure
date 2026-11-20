@@ -10451,6 +10451,7 @@ paths:
                         interest, fee)
                     fee:
                       type: number
+                      minimum: 0
                       description: Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)
                     type:
                       type: string
@@ -10563,7 +10564,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: qty or price is not a positive number
+          description: qty or price is not a positive number, or nature is not inflow
+            or outflow
           content:
             application/json:
               schema:
@@ -10583,9 +10585,9 @@ paths:
                     qty:
                       type: number
                       description: Positive quantity. Sending qty, price, type or
-                        nature recomputes the entry amount as qty * price + fee, signed
-                        by the side; what the request leaves out is taken from the
-                        trade.
+                        nature recomputes the entry amount as signed qty * price +
+                        fee, where qty is negative on a sell; what the request leaves
+                        out is taken from the trade.
                     price:
                       type: number
                       description: Positive price per unit
@@ -10922,8 +10924,9 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - malformed tag_ids, or a tag, category or
-            merchant id the family cannot use
+          description: validation error - unknown nature, an amount or nature change
+            on a transfer, malformed tag_ids, or a tag, category or merchant id the
+            family cannot use
           content:
             application/json:
               schema:

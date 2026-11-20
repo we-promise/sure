@@ -379,7 +379,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - malformed tag_ids, or a tag, category or merchant id the family cannot use' do
+      response '422', 'validation error - unknown nature, an amount or nature change on a transfer, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { transaction: { tag_ids: [ SecureRandom.uuid ] } } }
