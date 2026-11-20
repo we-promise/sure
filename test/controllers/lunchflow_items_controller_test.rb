@@ -45,6 +45,16 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     assert lunchflow_items(:one).reload.include_raw_data?
   end
 
+  test "include raw data switch is named and described by its visible text" do
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { name: "Renamed Lunch Flow" } },
+          as: :turbo_stream
+
+    assert_includes response.body, %(id="lunchflow_include_raw_data_label")
+    assert_includes response.body, %(id="lunchflow_include_raw_data_help")
+    assert_match(/role="switch"[^>]*aria-labelledby="lunchflow_include_raw_data_label"[^>]*aria-describedby="lunchflow_include_raw_data_help"/, response.body)
+  end
+
   test "update from the page clears the include raw data setting" do
     lunchflow_items(:one).update!(include_raw_data: true)
 
