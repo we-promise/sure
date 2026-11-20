@@ -40,8 +40,8 @@ id:
             one: "Satu rekening yang Anda coba tambahkan belum terhubung:"
             other: "%{count} rekening yang Anda coba tambahkan belum terhubung:"
         unknown:
-          one: Rekening ini tidak dapat diperiksa terhadap koneksi Anda yang sudah ada. Jika rekening tersebut sama, menambahkan koneksi ini akan menduplikasinya dan dihitung sebagai koneksi Plaid lainnya.
-          other: Rekening-rekening ini tidak dapat diperiksa terhadap koneksi Anda yang sudah ada. Jika rekening tersebut sama, menambahkan koneksi ini akan menduplikasinya dan dihitung sebagai koneksi Plaid lainnya.
+          one: Rekening-rekening ini tidak dapat diperiksa terhadap koneksi Anda yang sudah ada. Jika rekening-rekening tersebut sama, menambahkan koneksi ini akan menduplikasinya dan dihitung sebagai koneksi Plaid lainnya.
+          other: Rekening-rekening ini tidak dapat diperiksa terhadap koneksi Anda yang sudah ada. Jika rekening-rekening tersebut sama, menambahkan koneksi ini akan menduplikasinya dan dihitung sebagai koneksi Plaid lainnya.
       title:
         one: Anda sudah memiliki koneksi untuk lembaga ini
         other: Anda sudah memiliki %{count} koneksi untuk lembaga ini
