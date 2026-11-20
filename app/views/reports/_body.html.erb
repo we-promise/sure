@@ -1,18 +1,17 @@
+<%# locals: (report:, sections:) %>
+<%# `report` is ReportsController#render_report_body, usually from the cache. %>
 <div class="w-full space-y-6 lg:pb-6">
-  <%= render "shared/exchange_rate_notes", family: Current.family %>
+  <%= report[:notes].html_safe %>
 
-  <% if Current.family.transactions.any? %>
+  <% if report[:has_transactions] %>
     <%# Summary Dashboard - Always visible, not collapsible %>
     <section class="@container">
-      <%= render partial: "reports/summary_dashboard", locals: {
-        metrics: @summary_metrics,
-        period_type: @period_type
-      } %>
+      <%= report[:summary].html_safe %>
     </section>
 
     <%# Collapsible & Reorderable Sections %>
     <%= render "shared/reorderable_sections",
-          sections: @reports_sections,
+          sections: sections,
           namespace: "reports",
           url: update_preferences_reports_path,
           i18n_scope: "reports.index" %>

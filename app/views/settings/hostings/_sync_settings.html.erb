@@ -86,6 +86,77 @@
     <% end %>
   </div>
 
+  <div class="flex items-center justify-between gap-4">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".page_cache_days_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".page_cache_days_description", default_days: Setting::PAGE_CACHE_DAYS_DEFAULT) %></p>
+    </div>
+
+    <%= form_with model: Setting.new,
+                        url: settings_hosting_path,
+                        method: :patch,
+                        data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.label :page_cache_days, t(".page_cache_days_label"), class: "sr-only" %>
+      <%= form.number_field :page_cache_days,
+                            value: Setting.page_cache_days,
+                            placeholder: Setting::PAGE_CACHE_DAYS_DEFAULT,
+                            min: Setting::PAGE_CACHE_DAYS_RANGE.min,
+                            max: Setting::PAGE_CACHE_DAYS_RANGE.max,
+                            disabled: ENV["PAGE_CACHE_DAYS"].present?,
+                            class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container text-primary w-24",
+                            data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+
+  <div class="flex items-center justify-between gap-4">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".page_cache_max_mb_label") %></p>
+      <p class="text-secondary text-sm">
+        <%= t(".page_cache_max_mb_description",
+              default_mb: Setting::PAGE_CACHE_MAX_MB_DEFAULT,
+              used: number_to_human_size(PageCache.total_bytes),
+              limit: number_to_human_size(PageCache.max_bytes)) %>
+      </p>
+    </div>
+
+    <%= form_with model: Setting.new,
+                        url: settings_hosting_path,
+                        method: :patch,
+                        data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.label :page_cache_max_mb, t(".page_cache_max_mb_label"), class: "sr-only" %>
+      <%= form.number_field :page_cache_max_mb,
+                            value: Setting.page_cache_max_mb,
+                            placeholder: Setting::PAGE_CACHE_MAX_MB_DEFAULT,
+                            min: Setting::PAGE_CACHE_MAX_MB_RANGE.min,
+                            max: Setting::PAGE_CACHE_MAX_MB_RANGE.max,
+                            disabled: ENV["PAGE_CACHE_MAX_MB"].present?,
+                            class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container text-primary w-24",
+                            data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+
+  <div class="flex items-center justify-between gap-4">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".page_cache_cooldown_minutes_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".page_cache_cooldown_minutes_description", default_minutes: Setting::PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT) %></p>
+    </div>
+
+    <%= form_with model: Setting.new,
+                        url: settings_hosting_path,
+                        method: :patch,
+                        data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.label :page_cache_cooldown_minutes, t(".page_cache_cooldown_minutes_label"), class: "sr-only" %>
+      <%= form.number_field :page_cache_cooldown_minutes,
+                            value: Setting.page_cache_cooldown_minutes,
+                            placeholder: Setting::PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT,
+                            min: Setting::PAGE_CACHE_COOLDOWN_MINUTES_RANGE.min,
+                            max: Setting::PAGE_CACHE_COOLDOWN_MINUTES_RANGE.max,
+                            disabled: ENV["PAGE_CACHE_COOLDOWN_MINUTES"].present?,
+                            class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container text-primary w-24",
+                            data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+
   <% if env_configured %>
     <%= render DS::Alert.new(message: t(".env_configured_message"), variant: :warning) %>
   <% end %>

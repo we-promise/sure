@@ -253,6 +253,36 @@ class Setting < RailsSettings::Base
   # config/schedule.yml entry (22:00 UTC, ~1h after NYSE close) so existing
   # installations see no behavior change unless they actively reconfigure it.
   field :market_data_sync_enabled, type: :boolean, default: ENV.fetch("MARKET_DATA_SYNC_ENABLED", "1") == "1"
+
+  # How long a cached page (the Reports body) is kept when nobody opens it. Any
+  # change to the data it shows rebuilds it sooner whatever this says.
+  PAGE_CACHE_DAYS_DEFAULT = 7
+  PAGE_CACHE_DAYS_RANGE = 1..365
+  field :page_cache_days, type: :integer, default: integer_from_env("PAGE_CACHE_DAYS")
+
+  def self.page_cache_ttl
+    (page_cache_days.presence || PAGE_CACHE_DAYS_DEFAULT).days
+  end
+
+  # The most all cached pages together may take, in megabytes. See PageCache.
+  PAGE_CACHE_MAX_MB_DEFAULT = 100
+  PAGE_CACHE_MAX_MB_RANGE = 1..100_000
+  field :page_cache_max_mb, type: :integer, default: integer_from_env("PAGE_CACHE_MAX_MB")
+
+  def self.page_cache_max_mb_or_default
+    page_cache_max_mb.presence || PAGE_CACHE_MAX_MB_DEFAULT
+  end
+
+  # After its data changes, a cached page is still served while it is rebuilt
+  # in the background, but rebuilt at most once in this many minutes. 0
+  # rebuilds on the first visit after every change.
+  PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT = 60
+  PAGE_CACHE_COOLDOWN_MINUTES_RANGE = 0..10_080
+  field :page_cache_cooldown_minutes, type: :integer, default: integer_from_env("PAGE_CACHE_COOLDOWN_MINUTES")
+
+  def self.page_cache_cooldown
+    (page_cache_cooldown_minutes || PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT).minutes
+  end
   field :market_data_sync_time, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIME", "22:00")
   field :market_data_sync_timezone, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIMEZONE", "UTC")
 

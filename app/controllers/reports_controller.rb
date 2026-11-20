@@ -4,9 +4,7 @@ class ReportsController < ApplicationController
   SIGN_AGNOSTIC_EXPENSE_KINDS = %w[loan_payment investment_contribution].freeze
 
   # Bump when the body's markup changes, so a deploy never serves the old one.
-  REPORT_BODY_CACHE_VERSION = 1
-  # Data changes reach the key; this only bounds what an idle cache holds.
-  REPORT_BODY_CACHE_TTL = 7.days
+  REPORT_BODY_CACHE_VERSION = 4
   # The views warmed after each sync, as their URLs carry them.
   WARMED_PERIOD_TYPES = %i[monthly quarterly ytd last_6_months all_time].freeze
 
@@ -17,11 +15,27 @@ class ReportsController < ApplicationController
 
   helper_method :filter_tags
 
-  # The report body is served from the cache when it is there (a sync warms
-  # the usual periods, see WarmReportsCacheJob), and otherwise built and kept.
+  # The report body is served from PageCache: at once when a build exists, even
+  # one from before the latest data (it is rebuilt in the background then), and
+  # built while the member waits only the first time or on `refresh`.
   def index
     setup_report_period(show_flash: true)
-    @report_body = Rails.cache.fetch(report_body_cache_key, expires_in: REPORT_BODY_CACHE_TTL) { render_report_body }
+    refresh = params[:refresh].present?
+    served = PageCache.serve(
+      report_body_cache_key,
+      version: report_body_version,
+      family: Current.family,
+      user: Current.user,
+      refresh: refresh,
+      rebuild_later: -> { RebuildReportJob.perform_later(Current.user, report_query) }
+    ) { render_report_body }
+    # A refresh is rebuilt above; drop it from the URL so reloading doesn't rebuild again.
+    return redirect_to(reports_path(request.query_parameters.except("refresh"))) if refresh
+
+    @report = served.body
+    @report_built_at = served.built_at
+    @report_stale = served.stale
+    @reports_sections = order_reports_sections(@report[:sections])
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.reports"), nil ] ]
   end
@@ -35,7 +49,8 @@ class ReportsController < ApplicationController
   # Builds and caches the report body for `user` outside a request, so a
   # background job can have it ready before anyone opens Reports. `query` is
   # what the page's URL would carry (period_type, start_date, end_date,
-  # filter_tag_ids). Returns whether it had to build the body.
+  # filter_tag_ids). Returns whether it had to build the body: one already
+  # built from the current data is left alone.
   def self.warm_body_cache(user:, query: {})
     controller = new
     request = ActionDispatch::Request.new(Rack::MockRequest.env_for("/reports?#{query.to_query}"))
@@ -187,45 +202,75 @@ class ReportsController < ApplicationController
       @has_accounts = accessible_accounts.any?
     end
 
+    # The report's figures, rendered: the exchange rate notes, the summary and
+    # each section's content. Section order, which are collapsed and the
+    # section frames are drawn when the page is served, so arranging the page
+    # never invalidates it.
     def render_report_body
       setup_report_data(show_flash: false)
-      @reports_sections = build_reports_sections
+      html = ->(partial, locals) { render_to_string(partial: partial, locals: locals, formats: [ :html ]) }
 
-      render_to_string(partial: "reports/body", formats: [ :html ])
+      {
+        notes: html.call("shared/exchange_rate_notes", { family: Current.family }),
+        has_transactions: Current.family.transactions.any?,
+        summary: html.call("reports/summary_dashboard", { metrics: @summary_metrics, period_type: @period_type }),
+        sections: build_reports_sections.map do |section|
+          section.except(:partial, :locals).merge(html: (html.call(section[:partial], section[:locals]) if section[:visible]))
+        end
+      }
     end
 
     def warm_report_body
       setup_report_period(show_flash: false)
       key = report_body_cache_key
-      return false if Rails.cache.exist?(key)
+      version = report_body_version
+      return false if PageCache.current?(key, version: version, family: Current.family, user: Current.user)
 
-      Rails.cache.write(key, render_report_body, expires_in: REPORT_BODY_CACHE_TTL)
+      PageCache.write(key, render_report_body, version: version, family: Current.family, user: Current.user)
       true
     end
 
-    # Everything the body is drawn from: the family's data (a completed sync,
-    # any entry, category, tag, account or budget change), what this user may
-    # see and has chosen (their preferences live on the user row), the period
-    # and filters, today's date and the locale. Anything else changing in the
-    # body would need adding here.
+    # The query a background rebuild repeats: what this page's URL carried.
+    def report_query
+      params.permit(:period_type, :start_date, :end_date, filter_tag_ids: []).to_h.symbolize_keys
+    end
+
+    # Names the report whatever data it is built from: whose it is (family and
+    # member: PageCache also enforces both on every read), the
+    # member's settings that change its figures, and the period and filters as
+    # the URL gave them. A default period ("this year") keeps its key from one
+    # day to the next, so yesterday's build is served while today's is made.
     def report_body_cache_key
+      [
+        "reports_body", REPORT_BODY_CACHE_VERSION, Current.family.id, Current.user.id, report_member_version, I18n.locale,
+        @period_type, params[:start_date].presence, params[:end_date].presence, filter_tags.map(&:id).sort.join(",")
+      ].join("/")
+    end
+
+    # The member's settings that change a report's figures. Section order and
+    # collapse state are left out: they are applied when the page is served.
+    def report_member_version
+      user = Current.user
+      [ user.reports_biggest_expenses_limit, user.preview_features_enabled?, user.role ].join(",")
+    end
+
+    # Everything the body is drawn from: the family's data (a completed sync,
+    # any entry, category, tag, account or budget change), the accounts this
+    # member may see, the dates the period resolves to and today's date. A
+    # build from a different version is served stale and rebuilt.
+    def report_body_version
       family = Current.family
       accounts = accessible_accounts
-      versions = [
+      Digest::SHA256.hexdigest([
         family.build_cache_key("reports_body", invalidate_on_data_updates: true),
         family.entries_version,
         family.tags.maximum(:updated_at)&.to_f,
         family.budgets.maximum(:updated_at)&.to_f,
         BudgetCategory.joins(:budget).where(budgets: { family_id: family.id }).maximum(:updated_at)&.to_f,
         accounts.map(&:id).sort.join(","),
-        accounts.map(&:updated_at).max&.to_f
-      ]
-
-      [
-        "reports_body", REPORT_BODY_CACHE_VERSION, Current.user.cache_key_with_version, I18n.locale, Date.current,
-        @period_type, @start_date, @end_date, filter_tags.map(&:id).sort.join(","),
-        Digest::SHA256.hexdigest(versions.join("|"))
-      ].join("/")
+        accounts.map(&:updated_at).max&.to_f,
+        @start_date, @end_date, Date.current
+      ].join("|"))
     end
 
     def preferences_params
@@ -309,7 +354,12 @@ class ReportsController < ApplicationController
         }
       ]
 
-      # Order sections according to user preference
+      order_reports_sections(all_sections)
+    end
+
+    # Puts sections in the member's saved order. Kept apart from building them,
+    # so a cached report is reordered when served rather than rebuilt.
+    def order_reports_sections(all_sections)
       section_order = Current.user.reports_section_order
       ordered_sections = section_order.map do |key|
         all_sections.find { |s| s[:key] == key }

@@ -159,8 +159,18 @@
         </div>
       </div>
     <% end %>
+
+    <%# When the report was built. A stale one is being rebuilt in the
+        background; Refresh rebuilds it now, while the member waits. %>
+    <div class="flex items-center gap-2 text-xs text-secondary" data-testid="report-built-at">
+      <span><%= t("reports.index.built_at", time: time_ago_in_words(@report_built_at)) %></span>
+      <% if @report_stale %>
+        <span>· <%= t("reports.index.updating") %></span>
+      <% end %>
+      <span aria-hidden="true">·</span>
+      <%= render DS::Link.new(text: t("reports.index.refresh"), href: reports_path(request.query_parameters.merge(refresh: 1))) %>
+    </div>
   </div>
 <% end %>
 
-<%# Built by ReportsController#render_report_body, usually from the cache. %>
-<%= @report_body.html_safe %>
+<%= render "reports/body", report: @report, sections: @reports_sections %>

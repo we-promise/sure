@@ -392,16 +392,91 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the cached body is rebuilt when the family's entries change" do
+  test "a built body is kept for as many days as the page cache setting says" do
+    Setting.stubs(:page_cache_days).returns(30)
+    store = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(store)
+    store.stubs(:write).returns(true)
+    store.expects(:write).with(regexp_matches(/\Areports_body\//), anything, expires_in: 30.days).returns(true)
+
+    assert ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+  end
+
+  test "after the data changes, the old build is served while a rebuild is queued" do
     with_memory_cache do
       get reports_path(period_type: :ytd)
-      assert_response :ok
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/, count: 0
 
+      travel Setting.page_cache_cooldown + 1.minute do
+        @family.entries.first.touch
+        ReportsController.any_instance.expects(:render_report_body).never
+
+        assert_enqueued_with(job: RebuildReportJob, args: [ @user, { period_type: "ytd" } ]) do
+          get reports_path(period_type: :ytd)
+        end
+        assert_response :ok
+        assert_select "[data-sortable-list-target=item]"
+        assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/
+
+        assert_no_enqueued_jobs(only: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      end
+    end
+  end
+
+  test "a stale build is not rebuilt again within the cooldown" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
       @family.entries.first.touch
-      ReportsController.any_instance.expects(:render_report_body).once.returns("<p id=rebuilt></p>")
+
+      assert_no_enqueued_jobs(only: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/
+    end
+  end
+
+  test "refresh rebuilds the report straight away and drops itself from the URL" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      @family.entries.first.touch
+
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd, refresh: 1)
+      assert_redirected_to reports_path(period_type: :ytd)
+
+      follow_redirect!
+      assert_select "#rebuilt"
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/, count: 0
+    end
+  end
+
+  test "a default period keeps its cached build from one day to the next" do
+    with_memory_cache do
+      get reports_path(period_type: :all_time)
+
+      travel 1.day do
+        ReportsController.any_instance.expects(:render_report_body).never
+        get reports_path(period_type: :all_time)
+
+        assert_response :ok
+        assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/
+      end
+    end
+  end
+
+  test "arranging the sections reorders the cached report rather than rebuilding it" do
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      @user.update!(preferences: (@user.preferences || {}).merge(
+        "reports_section_order" => %w[transactions_breakdown trends_insights],
+        "reports_collapsed_sections" => { "trends_insights" => true }
+      ))
+
+      ReportsController.any_instance.expects(:render_report_body).never
       get reports_path(period_type: :ytd)
 
-      assert_select "#rebuilt"
+      keys = css_select("[data-sortable-list-target=item]").map { |node| node["data-section-key"] }
+      assert_equal %w[transactions_breakdown trends_insights], keys.first(2)
+      assert_select "section[data-section-key=trends_insights] details:not([open])"
     end
   end
 
