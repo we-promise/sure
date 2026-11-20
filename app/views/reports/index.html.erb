@@ -31,10 +31,10 @@
     <%# Period Navigation Tabs %>
     <div class="flex flex-wrap items-center justify-between gap-4">
       <%= render DS::SegmentedControl.new(aria_label: t("reports.index.period_aria", default: "Report period"), class: "max-w-full overflow-x-auto no-scrollbar") do |sc| %>
-        <% %i[monthly quarterly ytd last_6_months custom].each do |ptype| %>
+        <% %i[monthly quarterly ytd last_6_months last_12_months custom].each do |ptype| %>
           <% sc.with_segment(t("reports.index.periods.#{ptype}"),
                active: @period_type == ptype,
-               href: reports_path(period_type: ptype, **reports_filter_params),
+               href: report_view_path(period_type: ptype, start_date: nil, end_date: nil),
                class: "whitespace-nowrap") %>
         <% end %>
       <% end %>
@@ -44,7 +44,13 @@
               button_text: @filter_tags.empty? ? t("reports.index.tag_filter.all") : t("reports.index.tag_filter.selected", count: @filter_tags.size),
               search_label: t("reports.index.tag_filter.search"),
               apply_text: t("reports.index.tag_filter.apply"),
-              hidden_fields: { period_type: @period_type, start_date: @start_date, end_date: @end_date },
+              hidden_fields: {
+                period_type: @period_type,
+                start_date: @start_date,
+                end_date: @end_date,
+                trend_category_ids: @category_selection.selected_values.presence,
+                trend_granularity: trend_granularity_param
+              }.compact,
               url: reports_path,
               form_data: { turbo_action: "advance" }
             } do %>
@@ -70,6 +76,14 @@
           <% Array(values).each do |value| %>
             <%= hidden_field_tag "#{key}[]", value, id: nil %>
           <% end %>
+        <% end %>
+        <% @category_selection.selected_values.each do |value| %>
+          <%= hidden_field_tag "trend_category_ids[]", value, id: nil %>
+        <% end %>
+        <%# Only an explicit choice is forwarded. An automatic default must not
+            become sticky when the next submit shrinks the range. %>
+        <% if trend_granularity_param.present? %>
+          <%= hidden_field_tag :trend_granularity, trend_granularity_param %>
         <% end %>
 
         <div class="flex items-center gap-2">
@@ -101,7 +115,7 @@
               <%= render DS::Link.new(
                 variant: "icon",
                 icon: "chevron-left",
-                href: reports_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end], **reports_filter_params),
+                href: report_view_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end]),
                 aria: { label: t("reports.index.previous_period"), keyshortcuts: "ArrowLeft" },
                 data: { controller: "hotkey", hotkey: "ArrowLeft" },
               ) %>
@@ -118,7 +132,7 @@
                 <%= render DS::Link.new(
                   variant: "icon",
                   icon: "chevron-right",
-                  href: reports_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end], **reports_filter_params),
+                  href: report_view_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end]),
                   aria: { label: t("reports.index.next_period"), keyshortcuts: "ArrowRight" },
                   data: { controller: "hotkey", hotkey: "ArrowRight" },
                 ) %>
@@ -146,7 +160,7 @@
           <%= render DS::Link.new(
             text: t("reports.index.today"),
             variant: "outline",
-            href: reports_path(period_type: @period_type, **reports_filter_params),
+            href: report_view_path(period_type: @period_type, start_date: nil, end_date: nil),
           ) %>
         </div>
       </div>

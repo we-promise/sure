@@ -20,7 +20,8 @@ class ReportsController < ApplicationController
   end
 
   def print
-    setup_report_data(show_flash: false)
+    # The print view does not render the chart, so skip its bucket queries.
+    setup_report_data(show_flash: false, include_trend: false)
 
     render layout: "print"
   end
@@ -99,6 +100,8 @@ class ReportsController < ApplicationController
   def picker
     @period_type = params[:period_type]&.to_sym || :monthly
     @start_date = parse_date_param(:start_date) || Date.current.beginning_of_month
+    @category_selection = category_selection
+    @trend_granularity = trend_granularity
     render partial: "reports/period_picker", locals: {
       period_type: @period_type,
       start_date: @start_date
@@ -106,7 +109,7 @@ class ReportsController < ApplicationController
   end
 
   private
-    def setup_report_data(show_flash: false)
+    def setup_report_data(show_flash: false, include_trend: true)
       @period_type = params[:period_type]&.to_sym || :monthly
       @start_date = parse_date_param(:start_date) || default_start_date
       @end_date = parse_date_param(:end_date) || default_end_date
@@ -129,6 +132,10 @@ class ReportsController < ApplicationController
       @previous_income_totals = @income_statement.income_totals(period: @previous_period)
       @previous_expense_totals = @income_statement.expense_totals(period: @previous_period)
 
+      # Trend chart selection. It scopes the chart only, not the report totals.
+      @category_selection = category_selection
+      @trend_granularity = trend_granularity
+
       # Calculate summary metrics
       @summary_metrics = build_summary_metrics
 
@@ -140,6 +147,7 @@ class ReportsController < ApplicationController
 
       # Transactions breakdown
       @transactions = build_transactions_breakdown
+      @category_trend = include_trend ? build_category_trend : nil
 
       @biggest_expenses_limit = Current.user.reports_biggest_expenses_limit
       @biggest_expenses = build_biggest_expenses(@biggest_expenses_limit)
@@ -186,7 +194,7 @@ class ReportsController < ApplicationController
           key: "trends_insights",
           title: "reports.trends.title",
           partial: "reports/trends_insights",
-          locals: { trends_data: @trends_data },
+          locals: trend_section_locals,
           visible: @has_accounts,
           collapsible: true
         },
@@ -288,6 +296,8 @@ class ReportsController < ApplicationController
         Date.current.beginning_of_year.to_date
       when :last_6_months
         (Date.current.end_of_month + 1.day - 6.months).beginning_of_month.to_date
+      when :last_12_months
+        (Date.current.end_of_month + 1.day - 12.months).beginning_of_month.to_date
       when :custom
         1.month.ago.to_date
       else
@@ -297,7 +307,7 @@ class ReportsController < ApplicationController
 
     def default_end_date
       case @period_type
-      when :monthly, :last_6_months
+      when :monthly, :last_6_months, :last_12_months
         Date.current.end_of_month.to_date
       when :quarterly
         Date.current.end_of_quarter.to_date
@@ -607,6 +617,61 @@ class ReportsController < ApplicationController
 
       # Sort by the chosen key with the specified direction
       result.sort_by(&sort_logic)
+    end
+
+    def category_selection
+      @category_selection ||= Reports::CategorySelection.new(Current.family, params[:trend_category_ids])
+    end
+
+    def trend_granularity
+      @trend_granularity ||= begin
+        requested = params[:trend_granularity]
+        if %w[month year].include?(requested)
+          requested
+        else
+          long_period? ? "year" : "month"
+        end
+      end
+    end
+
+    # Two years of monthly points is still readable. Longer ranges default to
+    # years, and the user can override the choice.
+    def long_period?
+      @start_date.present? && @end_date.present? && @start_date.advance(months: 24) < @end_date
+    end
+
+    # Category trends are a preview. The model scopes only the chart; the
+    # report totals and tables stay unfiltered.
+    def build_category_trend
+      return nil unless preview_features_enabled?
+
+      Reports::CategoryTrend.new(
+        @income_statement,
+        period: @period,
+        selection: category_selection,
+        granularity: trend_granularity,
+        tag_ids: filter_tags.map(&:id)
+      )
+    end
+
+    # Preview users get the trend locals. Building the category options for
+    # everyone costs a query and objects that the view never renders.
+    def trend_section_locals
+      locals = {
+        trends_data: @trends_data,
+        period_type: @period_type,
+        start_date: @start_date,
+        end_date: @end_date,
+        trend_granularity: trend_granularity
+      }
+      return locals unless @category_trend
+
+      locals.merge(
+        category_trend: @category_trend,
+        category_options: category_selection.options,
+        selected_category_values: category_selection.selected_values,
+        selected_category_count: category_selection.selected_count
+      )
     end
 
     def build_investment_metrics
@@ -1360,6 +1425,18 @@ class ReportsController < ApplicationController
           next_end   = next_start + 6.months - 1.day
         end
         at_latest  = @end_date >= Date.current.end_of_month
+      when :last_12_months
+        prev_start = @start_date.beginning_of_month - 12.months
+        prev_end   = prev_start + 12.months - 1.day
+        candidate_start = @start_date.beginning_of_month + 12.months
+        if candidate_start + 12.months >= Date.current.beginning_of_month
+          next_end   = Date.current.end_of_month
+          next_start = (next_end + 1.day - 12.months).beginning_of_month
+        else
+          next_start = candidate_start
+          next_end   = next_start + 12.months - 1.day
+        end
+        at_latest  = @end_date >= Date.current.end_of_month
       else
         return nil
       end
@@ -1381,6 +1458,10 @@ class ReportsController < ApplicationController
         end
       when :last_6_months
         t("reports.index.period_label.last_6_months",
+          start: I18n.l(@start_date, format: :short_month_year),
+          end: I18n.l(@end_date, format: :short_month_year))
+      when :last_12_months
+        t("reports.index.period_label.last_12_months",
           start: I18n.l(@start_date, format: :short_month_year),
           end: I18n.l(@end_date, format: :short_month_year))
       end
