@@ -129,11 +129,14 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
   test "browser notification card is preview gated" do
     get settings_preferences_url
     assert_select "[data-controller='web-push']", count: 0
+    assert_select "input[name='user[push_budget_warnings_enabled]']", count: 0
     user = users(:family_admin)
     user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
     get settings_preferences_url
     assert_select "[data-controller='web-push']", count: 1
-    assert_select "input[name='user[push_budget_warnings_enabled]']"
+    # The opt in covers iOS too, so it is not part of the browser card.
+    assert_select "input[name='user[push_budget_warnings_enabled]']", count: 1
+    assert_select "[data-controller='web-push'] input[name='user[push_budget_warnings_enabled]']", count: 0
   end
 
   test "budget warnings default off and are saved only for this user" do
