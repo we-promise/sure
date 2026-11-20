@@ -58,15 +58,19 @@ class Security::FundClassificationTest < ActiveSupport::TestCase
     assert_nil @security.reload.region, "the listing region was put back on a later save"
   end
 
-  # A region derived from the listing still follows a corrected listing
-  # country, fund or not; only a blank region stays blank for a fund.
-  test "a fund's listing region follows a country correction" do
-    @security.update!(asset_sub_class: "etf", classification_source: "manual")
-    assert_equal "europe", @security.region
+  # A fund's region may have come from its holdings even when it equals its
+  # old listing's, and nothing records which, so a country correction leaves
+  # it alone.
+  test "a fund's holdings-derived region survives a country correction" do
+    us_fund = Security.create!(ticker: "VTI9", exchange_operating_mic: "ARCX", country_code: "US")
+    import(info(kind: "ETF", fund_weights: {
+      asset_class: { "equity" => 99.0 }, equity_region: { "north_america" => 99.0 }
+    }), security: us_fund)
+    assert_equal "north_america", us_fund.reload.region
 
-    @security.update!(country_code: "US")
+    us_fund.update!(country_code: "DE")
 
-    assert_equal "north_america", @security.reload.region
+    assert_equal "north_america", us_fund.reload.region
   end
 
   test "a world ETF does not keep the region of the exchange it is listed on" do
