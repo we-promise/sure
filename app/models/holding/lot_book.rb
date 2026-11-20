@@ -124,12 +124,15 @@ class Holding::LotBook
   # is restated the same way.
   def split(ratio)
     @total_qty = Security::Split.scale(@total_qty, ratio)
-    @shortfall = Security::Split.scale(@shortfall, ratio)
     # A cover after the split is in other shares than the sale it would price,
     # so a sale short across a split keeps its unknown cost. Its scaled
     # shortfall keeps its place in the queue, with no disposal to price, so a
     # later acquisition still fills the older shortfall before a newer sale's.
     @uncovered.map! { |_index, short| [ nil, Security::Split.scale(short, ratio) ] }
+    # Under fifo the queue is the shortfall, entry by entry, so the total is
+    # their sum: scaling the total on its own would round differently and
+    # leave a sliver of an entry queued once the shortfall is filled.
+    @shortfall = @fifo ? @uncovered.sum(BigDecimal("0")) { |_index, short| short } : Security::Split.scale(@shortfall, ratio)
     rescale_lots(Security::Split.scale(open_qty, ratio)) do |lot|
       lot.with(
         qty: Security::Split.scale(lot.qty, ratio),
@@ -243,7 +246,9 @@ class Holding::LotBook
 
     # Moves `qty` of the oldest shortfall onto the acquisition that filled it,
     # at its cost. Each shortfall is queued with its disposal's index, or nil
-    # for a transfer out, which recorded none but is still filled in turn. A
+    # when there is nothing to price: a transfer out, which recorded no
+    # disposal, or a sale whose shortfall was carried across a split, which
+    # keeps its unknown cost. Both are still filled in turn. A
     # covered part leaves its disposal at a lower quantity, which #disposals
     # drops once it reaches zero.
     def cover(qty, source_id, unit_cost)

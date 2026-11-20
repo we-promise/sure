@@ -59,6 +59,23 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     assert_equal [ [ "b2", 1 ] ], book.lots.map { |lot| [ lot.source_id, lot.qty ] }
   end
 
+  test "under fifo a split that does not divide evenly leaves no sliver of an older shortfall queued" do
+    book = Holding::LotBook.new(method: "fifo")
+    book.apply(nil, -2, source_id: "s1")
+    book.apply(nil, -2, source_id: "s2")
+    book.split(Rational(1, 3))
+    # Covers exactly the position's 4/3 short shares.
+    book.apply(BigDecimal("30"), 10, source_id: "cover")
+
+    book.apply(nil, -20, source_id: "s3")
+    book.apply(BigDecimal("10"), 20, source_id: "b2")
+
+    s3 = book.disposals.select { |d| d.sale_id == "s3" }
+    assert_equal %w[cover b2], s3.map(&:lot_source_id),
+      "the later short sale is priced in full, with no unknown-cost sliver left by the split's rounding"
+    assert_equal 20, s3.sum(&:qty)
+  end
+
   test "under average the book records no disposals" do
     book = Holding::LotBook.new
     book.apply(BigDecimal("12"), 60, source_id: "first")
