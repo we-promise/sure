@@ -62,25 +62,30 @@ class SnaptradeAccount::Processor
     # Syncs before liability balances were negated stored a card's reading as
     # SnapTrade sends it: owed as negative, credit as positive. Left alone, that
     # anchor is kept as a past reconciliation beside the first corrected one,
-    # and the card's history shows a jump that never happened. No field tells
-    # an old anchor from a new one, so the sign is judged from the ledger: the
-    # reading less what was imported since is the card's balance on the
-    # anchor's date, and an anchor of the opposite sign is turned around.
+    # and the card's history shows a jump that never happened.
+    #
+    # Such an anchor can only be there on an account's first sync since the
+    # fix, so this runs once per account and is then marked done. Even then the
+    # anchor may have come from another provider already in Sure's signs, so
+    # the ledger decides: the reading less what was imported since is the
+    # card's balance on the anchor's date, and an anchor of the opposite sign
+    # is turned around.
     def correct_pre_sign_fix_anchor(account, balance, date)
-      return unless account.liability?
+      return if snaptrade_account.liability_signs_fixed_at?
 
-      manager = Account::CurrentBalanceManager.new(account)
-      anchor = manager.current_anchor_entry
-      return if anchor.nil? || anchor.amount.zero?
+      if account.liability?
+        manager = Account::CurrentBalanceManager.new(account)
+        anchor = manager.current_anchor_entry
+        net = manager.ledger_net_since(anchor, date) if anchor&.amount&.nonzero?
+        derived = balance - net if net
 
-      net = manager.ledger_net_since(anchor, date)
-      return if net.nil?
+        if derived&.nonzero? && derived.positive? != anchor.amount.positive?
+          # Leaves updated_at alone: it marks which flows the reading had seen.
+          anchor.update_columns(amount: -anchor.amount)
+        end
+      end
 
-      derived = balance - net
-      return if derived.zero? || derived.positive? == anchor.amount.positive?
-
-      # Leaves updated_at alone: it marks which flows the reading had seen.
-      anchor.update_columns(amount: -anchor.amount)
+      snaptrade_account.update_columns(liability_signs_fixed_at: Time.current)
     end
 
     def update_account_balance(account)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_20_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2546,6 +2546,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
     t.jsonb "institution_metadata"
     t.datetime "last_activities_sync"
     t.datetime "last_holdings_sync"
+    t.datetime "liability_signs_fixed_at"
     t.string "name"
     t.string "provider"
     t.jsonb "raw_activities_payload", default: []
