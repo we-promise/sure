@@ -366,7 +366,8 @@ class Holding < ApplicationRecord
       cost_basis_locked: true,
       cost_basis_carried: false,
       cost_basis_locked_qty: qty,
-      cost_basis_locked_unit_cost: value
+      cost_basis_locked_unit_cost: value,
+      cost_basis_locked_at: Time.current
     )
   end
 
@@ -378,7 +379,7 @@ class Holding < ApplicationRecord
   # the user set is theirs and stays, with the rows carried from it. A lock
   # carries only within its currency, so other currencies' locks stay too.
   # A released lock keeps no trace of the quantity and figure it was set for.
-  RELEASED_LOCK = { cost_basis_locked_qty: nil, cost_basis_locked_unit_cost: nil }.freeze
+  RELEASED_LOCK = { cost_basis_locked_qty: nil, cost_basis_locked_unit_cost: nil, cost_basis_locked_at: nil }.freeze
 
   def unlock_cost_basis!
     transaction do

@@ -58,7 +58,7 @@ class Holding::Materializer
     def persist_lots
       rows = @calculator.lots_by_security.flat_map do |security_id, lots|
         explained = lots.any?(&:source_id)
-        lots.map do |lot|
+        stored_lots(lots).map do |lot|
           unit_cost, currency = (lot.source_id || explained) ? [ lot.unit_cost, account.currency ] : provider_unit_cost(security_id)
           lot_row(security_id, lot.source_id, qty: lot.qty, acquired_on: lot.acquired_on, unit_cost: unit_cost, currency: currency)
         end
@@ -84,6 +84,23 @@ class Holding::Materializer
       end
 
       HoldingLotDisposal.store!(account, rows, security_ids: security_ids)
+    end
+
+    # One stored lot per acquisition (and one opening lot per position). A
+    # user's figure can split an acquisition into the units it covers and the
+    # units it does not, each at its own cost; they are stored together at
+    # their quantity-weighted cost, unknown if either piece's is.
+    def stored_lots(lots)
+      lots.group_by(&:source_id).map do |_source_id, pieces|
+        held = pieces.select { |piece| piece.qty.positive? }
+        next (held.first || pieces.first) if held.size <= 1
+
+        qty = held.sum(BigDecimal("0"), &:qty)
+        unit_cost = if held.all?(&:unit_cost)
+          held.sum(BigDecimal("0")) { |piece| piece.qty * piece.unit_cost } / qty
+        end
+        held.first.with(qty: qty, unit_cost: unit_cost)
+      end
     end
 
     def lot_row(security_id, source_entry_id, qty:, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
@@ -262,7 +279,8 @@ class Holding::Materializer
 
     def locked_row_cost_basis(existing, holding)
       locked_qty = existing.cost_basis_locked_qty
-      return existing.cost_basis_locked_unit_cost if locked_qty.nil? || holding.qty <= locked_qty
+      covered = locked_qty.nil? || holding.qty <= locked_qty
+      return existing.cost_basis_locked_unit_cost if covered && !entered_since_lock?(existing)
 
       holding.cost_basis unless holding.cost_basis_unknown
     end
@@ -276,6 +294,7 @@ class Holding::Materializer
       return unless anchor && anchor_qty(anchor) == holding.qty
       # Units beyond those the figure was set for keep their own cost.
       return if anchor.cost_basis_locked_qty && anchor_qty(anchor) > anchor.cost_basis_locked_qty
+      return if entered_since_lock?(anchor)
 
       dates = trade_dates_by_security[holding.security_id]
       next_trade = dates.bsearch { |date| date > anchor.date }
@@ -303,6 +322,23 @@ class Holding::Materializer
 
     # Each security's trade dates, sorted. A qty 0 trade (a dividend or fee)
     # moves no units, as the calculators treat it, so it does not end a carry.
+    # Whether a trade entered after the user set this lock is dated on or
+    # before its date. Equal quantities then hide that some held units are
+    # not the ones the figure was set for, so the calculators' figure, which
+    # restated only the units the lock still covers, is the row's.
+    def entered_since_lock?(lock)
+      return false unless lock.cost_basis_locked_at
+
+      @trades_entered_by_security ||= account.entries.where(entryable_type: "Trade")
+        .joins("INNER JOIN trades ON trades.id = entries.entryable_id")
+        .where.not(trades: { qty: 0 })
+        .pluck("trades.security_id", "entries.date", "entries.created_at")
+        .group_by(&:first)
+      @trades_entered_by_security.fetch(lock.security_id, []).any? do |_, date, created_at|
+        date <= lock.date && created_at > lock.cost_basis_locked_at
+      end
+    end
+
     def trade_dates_by_security
       @trade_dates_by_security ||= account.entries.where(entryable_type: "Trade")
         .joins("INNER JOIN trades ON trades.id = entries.entryable_id")

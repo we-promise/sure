@@ -406,6 +406,7 @@ module TradeRepublicAccount::DataHelpers
             attrs[:cost_basis_carried] = holding.cost_basis_carried
             attrs[:cost_basis_locked_qty] = holding.cost_basis_locked_qty
             attrs[:cost_basis_locked_unit_cost] = holding.cost_basis_locked_unit_cost
+            attrs[:cost_basis_locked_at] = holding.cost_basis_locked_at
           end
 
           mismatched_dates << holding.date if existing.qty != holding.qty || existing.amount != holding.amount

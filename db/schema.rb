@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1203,6 +1203,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
     t.decimal "cost_basis", precision: 19, scale: 4
     t.boolean "cost_basis_carried", default: false, null: false
     t.boolean "cost_basis_locked", default: false, null: false
+    t.datetime "cost_basis_locked_at"
     t.decimal "cost_basis_locked_qty", precision: 34, scale: 18
     t.decimal "cost_basis_locked_unit_cost", precision: 19, scale: 4
     t.string "cost_basis_source"

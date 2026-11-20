@@ -1018,6 +1018,71 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal 175, @account.holdings.find_by!(security: @aapl, date: Date.current).cost_basis&.to_d
   end
 
+  # A figure covers the units it was set for. Units bought and sold by trades
+  # entered after it are neither covered nor relieved from the covered units
+  # alone: a sale takes from every lot.
+  test "a back-dated buy and sale entered after a lock leave the figure on its own remaining units" do
+    create_trade(@aapl, account: @account, qty: 2, price: 100, date: 5.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).set_manual_cost_basis!(150)
+    materialize
+
+    create_trade(@aapl, account: @account, qty: 2, price: 200, date: 4.days.ago.to_date)
+    create_trade(@aapl, account: @account, qty: -2, price: 200, date: 4.days.ago.to_date)
+    materialize
+
+    assert_equal 2, latest_holding.qty
+    assert_equal 175, latest_holding.cost_basis&.to_d, "150 means the figure was spread over the later buy's remaining unit"
+  end
+
+  # A lock set before its time was recorded falls back to the quantity it was
+  # set for, which can split one acquisition into a covered and a kept piece.
+  # Both pieces belong to the same acquisition, so the stored lot is one row.
+  test "a lock that splits one acquisition stores that acquisition as one lot" do
+    create_trade(@aapl, account: @account, qty: 2, price: 100, date: 5.days.ago.to_date)
+    materialize
+    lock_row = @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date)
+    lock_row.set_manual_cost_basis!(150)
+    lock_row.update_columns(cost_basis_locked_at: nil)
+
+    buy = create_trade(@aapl, account: @account, qty: 2, price: 200, date: 4.days.ago.to_date)
+    create_trade(@aapl, account: @account, qty: -1, price: 200, date: 4.days.ago.to_date)
+
+    assert_nothing_raised { materialize }
+
+    lot = HoldingLot.find_by!(account: @account, source_entry_id: buy.id)
+    assert_equal 1.5, lot.qty.to_d
+    assert_in_delta (0.5 * 150 + 1 * 200) / 1.5, lot.unit_cost.to_d, 0.0001, "0.5 units at the figure and 1 at the buy's own price"
+  end
+
+  # A provider position no imported trade touches still takes the user's
+  # figure, and a later split restates it like any other basis.
+  test "a figure on a position with no trades is restated across a later split" do
+    security = Security.create!(ticker: "NOTR", name: "No Trades")
+    (4.days.ago.to_date..Date.current).each do |date|
+      Security::Price.create!(security: security, date: date, price: date < 1.day.ago.to_date ? 200 : 100)
+    end
+    @account.entries.create!(
+      name: "Opening", date: 4.days.ago.to_date, amount: 20000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+    @account.holdings.create!(
+      security: security, date: 3.days.ago.to_date, qty: 10, price: 200, amount: 2000,
+      currency: "USD", cost_basis: 100, cost_basis_source: "provider", account_provider: account_provider
+    )
+    Security::Split.create!(security: security, ex_date: 1.day.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+    @account.holdings.find_by!(security: security, date: 2.days.ago.to_date).set_manual_cost_basis!(150)
+
+    Holding::Materializer.new(@account.reload, strategy: :reverse).materialize_holdings
+
+    assert_equal 75, @account.holdings.find_by!(security: security, date: Date.current).cost_basis&.to_d,
+      "50 means the provider's figure replaced the user's"
+  end
+
   private
 
     def latest_holding

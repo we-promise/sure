@@ -167,6 +167,14 @@ class Holding::ReverseCalculator
       snapshot = starting_portfolio
       positions = Hash.new(0)
       trades.each { |te| positions[te.entryable.security_id] = snapshot[te.entryable.security_id] || 0 }
+      traded = positions.keys
+      # A position no imported trade touches still runs through the replay:
+      # splits restate its units, and a figure the user locked on it applies.
+      snapshot.each do |security_id, qty|
+        next if positions.key?(security_id) || (@security_ids && !@security_ids.include?(security_id))
+
+        positions[security_id] = qty
+      end
       events.reverse_each do |event|
         if event.is_a?(Security::Split)
           next unless positions.key?(event.security_id)
@@ -179,7 +187,7 @@ class Holding::ReverseCalculator
       # The snapshot covers the whole account; a scoped run books only its own.
       baselines = snapshot.merge(positions)
       baselines = baselines.slice(*@security_ids) if @security_ids
-      open_lots(baselines, traded: positions.keys)
+      open_lots(baselines, traded: traded)
 
       with_manual_cost_bases(events).each do |event|
         if event.is_a?(ManualCostBasis)

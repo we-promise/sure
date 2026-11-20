@@ -546,6 +546,7 @@ class Family::DataExporter
             cost_basis_carried: holding.cost_basis_carried,
             cost_basis_locked_qty: holding.cost_basis_locked_qty,
             cost_basis_locked_unit_cost: holding.cost_basis_locked_unit_cost,
+            cost_basis_locked_at: holding.cost_basis_locked_at&.iso8601(6),
             security_locked: holding.security_locked
           }
         }.to_json

@@ -1357,6 +1357,7 @@ class Family::DataImporter
           cost_basis_carried: truthy?(data["cost_basis_carried"]) || false,
           cost_basis_locked_qty: data["cost_basis_locked_qty"]&.to_d,
           cost_basis_locked_unit_cost: data["cost_basis_locked_unit_cost"]&.to_d,
+          cost_basis_locked_at: (Time.zone.parse(data["cost_basis_locked_at"].to_s) if data["cost_basis_locked_at"].present?),
           security_locked: truthy?(data["security_locked"]) || false
         }
 
