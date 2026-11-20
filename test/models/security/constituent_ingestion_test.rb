@@ -643,6 +643,18 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     end
   end
 
+  test "a NUL in an exchange skips that row and stores the rest" do
+    bad = constituent("AAA", "Nul exchange", 4).merge(exchange: "X\u0000NAS")
+
+    assert_difference -> { holdings_log_count }, 1 do
+      import(info(constituents: [ bad, constituent("BBB", "Other", 2) ]))
+    end
+
+    assert_not_nil @security.reload.constituents_fetched_at
+    assert_equal %w[BBB], @security.constituents.pluck(:ticker)
+    assert_equal "nul_character", last_holdings_log.metadata["reason"]
+  end
+
   test "a padded name is stored stripped" do
     import(info(constituents: [ constituent("AAA", "  Padded Inc  ", 5) ]))
 

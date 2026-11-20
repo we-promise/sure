@@ -269,7 +269,9 @@ class Provider::Eodhd < Provider
   # bare one in `Code`. The bare ticker is what matches anything in `securities`,
   # so the key is used only when `Code` is missing or not a string.
   #
-  # An absent block (null) or an empty map or list means the fund lists nothing.
+  # An absent or null ETF_Data block, or an empty Holdings map or list, means
+  # the fund lists nothing. An ETF_Data block that is present but not a map is
+  # unreadable, as below.
   # A block this cannot read returns UNREADABLE_CONSTITUENTS rather than raising,
   # so the name, sector and classification in the same answer still land:
   # `false` or a blank string, a list missing although `Holdings_Count` is
@@ -280,7 +282,8 @@ class Provider::Eodhd < Provider
   # importer logs them with the rows it skips.
   def etf_constituents(parsed)
     etf_data = parsed["ETF_Data"]
-    return nil unless etf_data.is_a?(Hash)
+    return nil if etf_data.nil?
+    return UNREADABLE_CONSTITUENTS unless etf_data.is_a?(Hash)
 
     holdings = etf_data["Holdings"]
     if holdings.nil? || holdings == {} || holdings == []

@@ -148,6 +148,21 @@ class Security::LookThroughTest < ActiveSupport::TestCase
 
   # A delete that skips callbacks (a raw `delete`, a bulk cleanup) must not
   # be refused by the fund's rows.
+  # The unique index reads a missing exchange and an empty one as the same
+  # venue (COALESCE), so the validation must too, in either order, including
+  # a row a bulk insert stored with "".
+  test "a missing exchange and an empty one are the same holding, in either order" do
+    @security.constituents.create!(ticker: "MSFT", exchange: nil, weight: 10)
+    assert_not @security.constituents.new(ticker: "MSFT", exchange: "", weight: 1).valid?
+
+    other = Security.create!(ticker: "VXUS", name: "Total International")
+    Security::Constituent.insert_all!([ { security_id: other.id, ticker: "MSFT", exchange: "", weight: 10 } ])
+    assert_not other.constituents.new(ticker: "MSFT", exchange: nil, weight: 1).valid?
+
+    assert @security.constituents.new(ticker: "MSFT", exchange: "XNAS", weight: 1).valid?,
+      "a named exchange is still a different holding"
+  end
+
   test "deleting a security without callbacks removes its constituents" do
     fund = Security.create!(ticker: "FUND3", name: "Fund")
     fund.constituents.create!(ticker: "MSFT", weight: 60)

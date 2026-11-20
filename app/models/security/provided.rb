@@ -608,7 +608,7 @@ module Security::Provided
       # Postgres refuses a NUL in a text column, as it would the rows below.
       reason = if !raw_ticker.nil? && !raw_ticker.is_a?(String) then "non_string_ticker"
       elsif ticker.blank? then "blank_ticker"
-      elsif ticker.include?("\0") || name&.include?("\0") then "nul_character"
+      elsif ticker.include?("\0") || name&.include?("\0") || exchange&.include?("\0") then "nul_character"
       elsif weight == :non_numeric then "non_numeric_weight"
       elsif weight&.negative? then "negative_weight"
       elsif weight && weight.round(weight_scale) >= weight_limit then "out_of_range_weight"
