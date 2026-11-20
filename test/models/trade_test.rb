@@ -224,6 +224,26 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal looked_up, preloaded
   end
 
+  # Two snapshots on the same day differ only by currency (a security remap can
+  # leave that). Every path settles on the same one, whatever the row order.
+  test "a same-day tie resolves to the account's currency on every path" do
+    account, security = cross_currency_account
+    date = Date.new(2026, 3, 10)
+    usd = account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                                   amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+    eur = account.holdings.create!(security: security, date: date, qty: 5, price: 140,
+                                   amount: BigDecimal(700), currency: "EUR", cost_basis: 90)
+    sale = create_trade(security, account: account, qty: -2, date: Date.new(2026, 3, 12), price: 150, currency: "USD").entryable
+
+    looked_up = Trade.find(sale.id).send(:basis_holding)
+    preloaded = Trade.find(sale.id).tap { |trade| Trade.preload_basis_holdings([ trade ]) }.send(:basis_holding)
+    given = [ [ eur, usd ], [ usd, eur ] ].map do |order|
+      Trade.find(sale.id).tap { |trade| trade.preloaded_holdings = order }.send(:basis_holding)
+    end
+
+    assert_equal [ usd.id ] * 4, [ looked_up, preloaded, *given ].map(&:id)
+  end
+
   test "build_name generates buy trade name" do
     name = Trade.build_name("buy", 10, "AAPL")
     assert_equal "Buy 10.0 shares of AAPL", name

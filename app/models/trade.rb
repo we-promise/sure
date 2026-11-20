@@ -192,6 +192,8 @@ class Trade < ApplicationRecord
   # its security's latest holding on or before the trade date. Loading the
   # accounts' holdings instead reads a row per security per day of their whole
   # history, which on a long-lived brokerage account is hundreds of thousands.
+  # A same-day tie (another currency, as a security remap can leave) resolves
+  # as basis_holding does: the account's currency, then the lower id.
   def self.preload_basis_holdings(trades)
     return if trades.empty?
 
@@ -203,10 +205,11 @@ class Trade < ApplicationRecord
         AS wanted(entry_id, account_id, security_id, date)
       CROSS JOIN LATERAL (
         SELECT holdings.* FROM holdings
+        JOIN accounts ON accounts.id = holdings.account_id
         WHERE holdings.account_id = wanted.account_id
           AND holdings.security_id = wanted.security_id
           AND holdings.date <= wanted.date
-        ORDER BY holdings.date DESC
+        ORDER BY holdings.date DESC, (holdings.currency = accounts.currency) DESC, holdings.id
         LIMIT 1
       ) AS basis
     SQL
@@ -312,20 +315,25 @@ class Trade < ApplicationRecord
     #
     # Uses preloaded holdings when the caller set them, and treats a
     # defined-but-empty preload as authoritative rather than falling back to a
-    # query. `select` + `max_by` rather than `find`, so the answer does not
-    # depend on the order the caller's array happens to be in.
+    # query. The answer never depends on the order the caller's array happens
+    # to be in: two snapshots on the latest date (another currency, as a
+    # security remap can leave) resolve to the account's currency, then the
+    # lower id, the same rule as Trade.preload_basis_holdings.
     # Not memoised: `realized_gain_loss` already is, and a memo here would hold
     # a holding selected before a caller set `@preloaded_holdings`.
     def basis_holding
       if defined?(@preloaded_holdings)
-        (@preloaded_holdings || [])
-          .select { |h| h.security_id == security_id && h.date <= entry.date }
-          .max_by(&:date)
+        candidates = (@preloaded_holdings || []).select { |h| h.security_id == security_id && h.date <= entry.date }
+        latest = candidates.map(&:date).max
+        tied = candidates.select { |h| h.date == latest }
+        tied.one? ? tied.first : tied.min_by { |h| [ h.currency == entry.account.currency ? 0 : 1, h.id ] }
       else
         entry.account.holdings
           .where(security_id: security_id)
           .where("date <= ?", entry.date)
           .order(date: :desc)
+          .order(Arel.sql(Holding.sanitize_sql_array([ "holdings.currency = ? DESC", entry.account.currency ])))
+          .order(:id)
           .first
       end
     end
