@@ -122,6 +122,15 @@ class Provider::Factory
 
     private
 
+      # One adapter that fails to load must not hide every other provider's
+      # declaration (ensure_adapters_loaded skips it the same way).
+      def declaration_for(adapter_name, kind)
+        "Provider::#{adapter_name}".constantize.try(kind)
+      rescue NameError => e
+        Rails.logger.warn("Failed to load adapter: Provider::#{adapter_name} - #{e.message}")
+        nil
+      end
+
       def registry
         @registry ||= {}
       end
@@ -140,7 +149,7 @@ class Provider::Factory
       end
 
       def declarations(kind)
-        adapter_files.filter_map { |adapter_name| "Provider::#{adapter_name}".constantize.try(kind) }
+        adapter_files.filter_map { |adapter_name| declaration_for(adapter_name, kind) }
                      .sort_by { |declaration| declaration[:key] }
       end
 
