@@ -129,10 +129,13 @@ class Holding::LotBook
     # shortfall keeps its place in the queue, with no disposal to price, so a
     # later acquisition still fills the older shortfall before a newer sale's.
     @uncovered.map! { |_index, short| [ nil, Security::Split.scale(short, ratio) ] }
-    # Under fifo the queue is the shortfall, entry by entry, so the total is
-    # their sum: scaling the total on its own would round differently and
-    # leave a sliver of an entry queued once the shortfall is filled.
-    @shortfall = @fifo ? @uncovered.sum(BigDecimal("0")) { |_index, short| short } : Security::Split.scale(@shortfall, ratio)
+    # The shortfall scales with the position, as the calculators scale it.
+    # Under fifo the queue is that shortfall entry by entry, but each entry
+    # rounds on its own, so the residual is settled from the last entry back:
+    # the queue keeps its order and adds up to the shortfall, and a cover of
+    # the whole shortfall leaves no sliver of an entry queued.
+    @shortfall = Security::Split.scale(@shortfall, ratio)
+    settle_queue(@shortfall - @uncovered.sum(BigDecimal("0")) { |_index, short| short }) if @fifo
     rescale_lots(Security::Split.scale(open_qty, ratio)) do |lot|
       lot.with(
         qty: Security::Split.scale(lot.qty, ratio),
@@ -284,6 +287,20 @@ class Holding::LotBook
       settle_drift(scaled, target - scaled.sum(BigDecimal("0"), &:qty)) if target.positive?
       @lots, closed = scaled.partition { |lot| lot.qty.positive? }
       @closed.concat(closed.map { |lot| lot.with(qty: BigDecimal("0")) })
+    end
+
+    # The queue counterpart of #settle_drift: no entry gives up more than it
+    # holds, and an entry rounded to nothing leaves the queue.
+    def settle_queue(drift)
+      @uncovered.each_index.reverse_each do |index|
+        break if drift.zero?
+
+        short = @uncovered[index][1]
+        correction = drift.positive? ? drift : -[ short, -drift ].min
+        @uncovered[index][1] = short + correction
+        drift -= correction
+      end
+      @uncovered.reject! { |_index, short| short <= 0 }
     end
 
     # A negative drift can exceed the last lot, which may have rounded to zero,

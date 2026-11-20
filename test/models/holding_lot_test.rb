@@ -206,6 +206,26 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # Each 2-share short scales to 0.666666666666666667 under a 1-for-3 split,
+  # but the position scales once, to 1.333333333333333333 short.
+  test "short sales across a split that does not divide evenly leave fifo lots equal to the position" do
+    travel_to TODAY do
+      setup_account
+      @account.update!(cost_basis_method: "fifo")
+      security = priced_security("SPL6", 30)
+      trade(security, -2, 30, 2)
+      trade(security, -2, 30, 3)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 1, denominator: 3, source: "manual")
+      trade(security, 10, 30, 5)
+
+      materialize(:forward)
+
+      lots = HoldingLot.where(account: @account, security: security).sum(:qty)
+      assert_equal holding_qty(security, d(10)), lots, "the lots hold what the position holds"
+      assert_includes HoldingLot.in_partition([ @account.id ], [ security.id ]), [ @account.id, security.id ]
+    end
+  end
+
   # Fixtures only ever leave 10^-18; a real gap is far wider and is not
   # rounding, so it stays for in_partition to catch.
   test "the opening lot does not absorb a residual above the bound" do
