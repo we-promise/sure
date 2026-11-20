@@ -35,6 +35,15 @@ class ImportTest < ActiveSupport::TestCase
     assert_nil import.reread_token, "a delayed reread must not find its claim on a published import"
   end
 
+  test "publish_later refuses an import already reverting" do
+    import = imports(:transaction)
+    import.update!(status: :reverting)
+    import.stubs(:publishable?).returns(true)
+
+    assert_raises(Import::AlreadyClaimedError) { import.publish_later }
+    assert import.reload.reverting?, "a second claim must not take over a revert in flight"
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

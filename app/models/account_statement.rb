@@ -409,6 +409,15 @@ class AccountStatement < ApplicationRecord
     pdf_imports.where.not(status: :failed).order(created_at: :desc).first
   end
 
+  # A vault upload isn't an AI action, so indexing it (on an OpenAI store, sending the whole
+  # statement to OpenAI) needs `embed` available to the uploader and the uploader's own AI
+  # switch, checked here because Ai::Consent checks the switch only for chat and bills, and
+  # again by the job before anything is sent. A PDF import indexes without it: starting one is
+  # asking for AI (ProcessPdfJob).
+  def ai_indexing_allowed?(user)
+    user.present? && user.ai_enabled? && Ai.available?(:embed, family:, user:)
+  end
+
   private
 
     # `FamilyDocument#readable_by` filters on the document's own account_id, so a statement that
@@ -469,15 +478,6 @@ class AccountStatement < ApplicationRecord
       changed = @account_link_changed
       @account_link_changed = false
       changed.present?
-    end
-
-    # A vault upload isn't an AI action, so indexing it (on an OpenAI store, sending the whole
-    # statement to OpenAI) needs `embed` available to the uploader and the uploader's own AI
-    # switch, checked here because Ai::Consent checks the switch only for chat and bills, and
-    # again by the job before anything is sent. A PDF import indexes without it: starting one is
-    # asking for AI (ProcessPdfJob).
-    def ai_indexing_allowed?(user)
-      user.present? && user.ai_enabled? && Ai.available?(:embed, family:, user:)
     end
 
     def index_in_vector_store_later

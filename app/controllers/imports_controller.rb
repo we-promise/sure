@@ -4,7 +4,7 @@ class ImportsController < ApplicationController
 
   before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary reread]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel reread]
-  before_action :require_writable_import_accounts!, only: %i[publish revert destroy]
+  before_action :require_writable_import_accounts!, only: %i[publish revert destroy reread]
   before_action :reject_guest_family_config_import!, except: %i[index new show summary]
   before_action :require_guest_writable_created_accounts!, only: %i[revert destroy]
   before_action :reject_guest_new_categories_or_tags!, only: :publish

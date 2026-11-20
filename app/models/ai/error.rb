@@ -131,7 +131,10 @@ module Ai::Error
   def provider_message(body)
     parsed = body.is_a?(String) ? (JSON.parse(body) rescue nil) : body
     error = parsed.is_a?(Hash) ? parsed["error"] || parsed[:error] : nil
-    error["message"] || error[:message] if error.is_a?(Hash)
+    case error
+    when Hash then error["message"] || error[:message]
+    when String then error
+    end
   end
   private_class_method :status_and_body, :matches?, :provider_message
 end

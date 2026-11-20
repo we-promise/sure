@@ -536,6 +536,15 @@ class PdfImport < Import
     base
   end
 
+  # A reread can replace rows that had categories with rows that have none. mapping_steps then
+  # has no category step, so the superclass leaves the old mapping behind and publishing creates
+  # an obsolete category. Drop mappings whose key no longer occurs in the rows.
+  def sync_mappings
+    super
+    keys = rows.where.not(category: [ nil, "" ]).distinct.pluck(:category)
+    mappings.where(type: Import::CategoryMapping.name).where.not(key: keys).destroy_all
+  end
+
   private
     def requested_way = read_as.presence&.to_sym || :auto
 

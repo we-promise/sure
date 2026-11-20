@@ -54,32 +54,28 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
-  test "remove_file detaches the file and deletes it from the Files API" do
-    detach = stub_json(:delete, "/vector_stores/vs_abc123/files/file-xyz", { deleted: true })
+  test "remove_file deletes the file through the Files API" do
     delete = stub_json(:delete, "/files/file-xyz", { deleted: true })
 
     assert @adapter.remove_file(store_id: "vs_abc123", file_id: "file-xyz").success?
-    assert_requested detach
     assert_requested delete
   end
 
   test "remove_file fails when the Files API deletion fails, so its row can't be dropped" do
-    stub_json(:delete, "/vector_stores/vs_abc123/files/file-xyz", { deleted: true })
     stub_request(:delete, "#{BASE}/files/file-xyz").to_return(status: 500, body: "boom")
 
     assert_not @adapter.remove_file(store_id: "vs_abc123", file_id: "file-xyz").success?
   end
 
-  test "remove_file tolerates an already detached file on retry" do
-    stub_request(:delete, "#{BASE}/vector_stores/vs_abc123/files/file-xyz").to_raise(Faraday::ResourceNotFound)
-    delete = stub_json(:delete, "/files/file-xyz", { deleted: true })
+  test "remove_file retries a Files API deletion that previously failed" do
+    stub_request(:delete, "#{BASE}/files/file-xyz")
+      .to_return({ status: 500, body: "boom" }, { status: 200, headers: JSON_HEADERS, body: { deleted: true }.to_json })
 
+    assert_not @adapter.remove_file(store_id: "vs_abc123", file_id: "file-xyz").success?
     assert @adapter.remove_file(store_id: "vs_abc123", file_id: "file-xyz").success?
-    assert_requested delete
   end
 
   test "a file already gone from the Files API counts as removed" do
-    stub_json(:delete, "/vector_stores/vs_abc123/files/file-xyz", { deleted: true })
     stub_request(:delete, "#{BASE}/files/file-xyz").to_raise(Faraday::ResourceNotFound)
 
     assert @adapter.remove_file(store_id: "vs_abc123", file_id: "file-xyz").success?

@@ -30,6 +30,9 @@ class Ai::ErrorTest < ActiveSupport::TestCase
     assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, message)
     assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { "error" => { "code" => 500, "message" => message } })
     assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { "error" => { "message" => message } }.to_json)
+    # Some servers put the message directly under "error" rather than in an object.
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { "error" => message })
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { error: message }.to_json)
     assert_operator Ai::Error::UnsupportedInput, :<, Ai::Error::Refused
   end
 

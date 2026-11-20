@@ -84,6 +84,19 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_equal "2019-02-01", statement[:transactions].sole[:date]
   end
 
+  test "a yearless date in a December-to-January period resolves to the closing year" do
+    extraction = value([ [ "1/1", -24.5 ] ])   # 1 January, printed without a year
+    extraction[:statement_period] = { start_date: "2019-12-01", end_date: "2020-01-31" }
+
+    statement = Ai::Generations::ExtractBankStatement.statement(extraction)
+    assert_equal "2020-01-01", statement[:transactions].sole[:date]
+
+    # An ambiguous date the period can't place is left unresolved, not guessed.
+    ambiguous = value([ [ "1/6", -24.5 ] ])   # 1 June, which fits both years of a two-year period
+    ambiguous[:statement_period] = { start_date: "2019-01-01", end_date: "2020-12-31" }
+    assert_nil Ai::Generations::ExtractBankStatement.statement(ambiguous)[:transactions].sole[:date]
+  end
+
   test "without balances, reconciles can't tell: flagged, with nothing another way could fix" do
     checks = check(value(BAC_ROWS).merge(opening_balance: nil, closing_balance: nil))
 

@@ -82,10 +82,9 @@ class VectorStore::Openai < VectorStore::Base
   end
 
   def remove_file(store_id:, file_id:)
-    with_response do
-      detach_file(store_id, file_id)
-      delete_file(file_id)
-    end
+    # Deleting through the Files API also drops the vector-store attachment. Doing that first
+    # keeps the attachment discoverable if deletion fails, so a retry can find and remove it.
+    with_response { delete_file(file_id) }
   end
 
   def search(store_id:, query:, max_results: 10, **)
@@ -122,13 +121,6 @@ class VectorStore::Openai < VectorStore::Base
         after = ids.last
       end
       ids
-    end
-
-    # A retry can find the file already detached (the first attempt failed in the Files API).
-    def detach_file(store_id, file_id)
-      client.vector_store_files.delete(vector_store_id: store_id, id: file_id)
-    rescue Faraday::ResourceNotFound
-      nil
     end
 
     # A file already gone is success. Every other failure must reach the caller: otherwise a

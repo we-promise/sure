@@ -138,22 +138,26 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # Create a CSV from extracted transactions
     csv_content = generate_csv(result[:transactions])
 
-    # Create a TransactionImport
-    import = family.imports.create!(
-      type: "TransactionImport",
-      account: account,
-      raw_file_str: csv_content,
-      source_pdf_import_id: pdf_import.id,
-      date_col_label: "date",
-      amount_col_label: "amount",
-      name_col_label: "name",
-      category_col_label: "category",
-      notes_col_label: "notes",
-      date_format: "%Y-%m-%d",
-      signage_convention: "inflows_positive"
-    )
+    # A row-generation failure must roll the draft back too, or a retry meets an empty
+    # draft and can only report draft_already_exists.
+    import = family.imports.transaction do
+      created = family.imports.create!(
+        type: "TransactionImport",
+        account: account,
+        raw_file_str: csv_content,
+        source_pdf_import_id: pdf_import.id,
+        date_col_label: "date",
+        amount_col_label: "amount",
+        name_col_label: "name",
+        category_col_label: "category",
+        notes_col_label: "notes",
+        date_format: "%Y-%m-%d",
+        signage_convention: "inflows_positive"
+      )
 
-    import.generate_rows_from_csv
+      created.generate_rows_from_csv
+      created
+    end
 
     {
       success: true,

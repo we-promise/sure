@@ -246,7 +246,12 @@ class Ai::Generation
     # answer them; otherwise items no route could fit or answer are left out.
     def on_routes(routes, slice)
       pending = slice
+      pending_positions = pending ? pending.each_index.to_a : []   # each pending item's original position
       pending_offset = 0
+      # split_on labels answers from pending_offset; translate them back to original positions so
+      # a noncontiguous pending run (a and d left, b and c answered) can't reorder the merge.
+      remap = ->(pairs, base) { pairs.map { |value, at| [ pending_positions[at - base] || at, value ] } }
+      refresh_positions = -> { pending_positions = pending ? pending.map { position_of(_1, slice) } : [] }
       answers = []   # [position, route, value], so a recovered earlier piece keeps its place
       last_error = nil
       transient = false
@@ -287,12 +292,14 @@ class Ai::Generation
 
         begin
           done, pending = split_on(route, pending, pending_offset)
-          answers.concat(done.map { |value, at| [ at, route, value ] })
+          answers.concat(remap.call(done, pending_offset).map { |at, value| [ at, route, value ] })
+          refresh_positions.call
           pending_offset = position_of(pending.first, slice) if pending.any?
           return [ ordered.call, [] ] if pending.empty?
         rescue Interrupted => partial
-          answers.concat(partial.values.map { |value, at| [ at, route, value ] })
+          answers.concat(remap.call(partial.values, pending_offset).map { |at, value| [ at, route, value ] })
           pending = partial.pending
+          refresh_positions.call
           pending_offset = position_of(pending.first, slice) if pending.any?
           failed.call(route, partial.error)
         rescue *Ai::DownMarks::FAILOVER, Ai::Error::InvalidOutput, Ai::Error::ContextTooLong, Ai::Error::UnsupportedInput => error
@@ -306,11 +313,13 @@ class Ai::Generation
       if unusable_on && pending && pending.size > 1 && @down_marks.state(route = unusable_on) == :up
         begin
           done, pending = bisect(route, pending, 1, pending_offset)
-          answers.concat(done.map { |value, at| [ at, route, value ] })
+          answers.concat(remap.call(done, pending_offset).map { |at, value| [ at, route, value ] })
+          refresh_positions.call
           pending_offset = position_of(pending.first, slice) if pending.any?
         rescue Interrupted => partial
-          answers.concat(partial.values.map { |value, at| [ at, route, value ] })
+          answers.concat(remap.call(partial.values, pending_offset).map { |at, value| [ at, route, value ] })
           pending = partial.pending
+          refresh_positions.call
           pending_offset = position_of(pending.first, slice) if pending.any?
           failed.call(route, partial.error)
         rescue *Ai::DownMarks::FAILOVER => error

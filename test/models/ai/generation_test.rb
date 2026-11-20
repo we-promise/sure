@@ -136,6 +136,21 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_equal [ 5, 2, 2, 1 ], requests.map { _1.input.scan("- ID:").size }
   end
 
+  test "a fallback answering a noncontiguous pending run keeps the original item order" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    use_ai_model_settings("openai/gpt-4.1-mini", batch_size: 1)
+    stub_ai(:detect_merchants) do |request|
+      # The first route answers t1 and t2 but can't fit t0 and t3; the fallback answers those two.
+      raise Ai::Error::ContextTooLong, "too long" if request.model.endpoint.name == "gpu" && request.input.match?(/ID: t[03],/)
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = generation(4).call(batches: 1)
+
+    assert_equal %w[t0 t1 t2 t3], answered_ids(result), "t3 must not be merged ahead of t2"
+  end
+
   test "an item no route can fit is skipped and logged, and the items after it still run" do
     use_ai_model_settings(batch_size: 1)
     stub_ai(:detect_merchants) do |request|

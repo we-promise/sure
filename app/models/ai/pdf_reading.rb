@@ -114,7 +114,17 @@ class Ai::PdfReading
       usage = nil
       CLASSIFY_BATCHES.times do
         result = Ai::Generations::ReadPdf.new(units:, content:, filename:, family:, user:).call(batches: 1, plan:, cancelled:)
-        result.value!
+        begin
+          result.value!
+        rescue Ai::Error::Cancelled
+          raise
+        rescue Ai::Error::Base, Pdf::PageImages::Error => error
+          # A lookahead past a generic cover page can fail on its own. The first batch's answer
+          # stands; a failure before any answer ends this way.
+          raise error if first.nil?
+
+          break
+        end
         first ||= result
         usage = [ usage, result.usage ].compact.reduce(:+)
         if STATEMENT_TYPES.include?(result.value[:document_type])
@@ -280,8 +290,9 @@ class Ai::PdfReading
           return [ text, nil ] if text.present?
 
           Rails.logger.warn("[Ai::PdfReading] OCR page #{number}: #{route.model.name} returned no text")
-        rescue *NEXT_WAY => error
-          # A refusal or unusable answer ends this route's try at this page, not the whole way.
+        rescue *NEXT_WAY, Ai::Error::Timeout => error
+          # A refusal, unusable answer or timeout ends this route's try at this page, not the
+          # whole way: a later OCR route may still transcribe it.
           Rails.logger.warn("[Ai::PdfReading] OCR page #{number} on #{route.model.name}: #{error.class.name}: #{error.message}")
         end
       end
