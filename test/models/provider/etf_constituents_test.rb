@@ -36,6 +36,23 @@ class Provider::EtfConstituentsTest < ActiveSupport::TestCase
     assert_nil fetch(body).constituents
   end
 
+  # Only an absent or null ETF_Data block means "not a fund". A block that is
+  # present but not a map is an unreadable answer, as a malformed Holdings
+  # block is, so the fund's stored holdings are kept.
+  test "an ETF_Data block that is present but not a map is unreadable" do
+    [ false, "", "n/a", [ 1 ] ].each do |etf_data|
+      body = { "General" => { "Name" => "Fund", "Type" => "ETF" }, "ETF_Data" => etf_data }.to_json
+
+      assert_equal Provider::SecurityConcept::UNREADABLE_CONSTITUENTS, fetch(body).constituents, "for #{etf_data.inspect}"
+    end
+  end
+
+  test "a null ETF_Data block yields no constituents" do
+    body = { "General" => { "Type" => "Common Stock" }, "ETF_Data" => nil }.to_json
+
+    assert_nil fetch(body).constituents
+  end
+
   test "a fund with an empty holdings block yields no constituents" do
     body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => {} } }.to_json
 
