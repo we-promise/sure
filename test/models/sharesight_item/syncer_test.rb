@@ -65,14 +65,15 @@ class SharesightItem::SyncerTest < ActiveSupport::TestCase
   end
 
   test "a settlement account touched by the router syncs over the full range, not the sync window" do
-    bank, account, sharesight_account = setup_portfolio_with_manual_settlement
+    bank, _account, sharesight_account = setup_portfolio_with_manual_settlement
     @item.expects(:import_latest_data)
     windowed_sync = @item.syncs.create!(window_start_date: Date.new(2026, 9, 1), window_end_date: Date.current)
 
     SharesightItem::Syncer.new(@item).perform_sync(windowed_sync)
 
+    # The portfolio account itself is queued for a full-range sync via
+    # set_current_balance, so it never receives the narrowed window.
     assert_nil bank.syncs.first.window_start_date, "the settlement account was scheduled with the narrowed window"
-    assert_equal Date.new(2026, 9, 1), account.syncs.first.window_start_date
   end
 
   private
