@@ -81,6 +81,16 @@ class BitcoinWalletAccount::SyncLifecycleTest < ActiveSupport::TestCase
     assert_equal own.id, @wallet.sync_later.id
   end
 
+  test "a parent does not adopt a pending read queued without one" do
+    own = @wallet.sync_later
+    parent = @wallet.onchain_wallet_item.syncs.create!
+    owned = @wallet.sync_later(parent_sync: parent)
+    refute_equal own.id, owned.id
+    parent.request_cancel!
+    assert owned.reload.stale?
+    assert own.reload.pending?
+  end
+
   test "source changes during a running wallet sync receive a follow-up read" do
     current = @wallet.syncs.create!(status: "syncing")
     @wallet.sources_changed!
