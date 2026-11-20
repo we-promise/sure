@@ -25,37 +25,6 @@ class Account::CurrentBalanceManager
     end
   end
 
-  def current_anchor_entry
-    current_anchor_valuation&.entry
-  end
-
-  # The sum of the imported transactions and trades the anchor has not seen yet,
-  # through `date`, as entry amounts. Nil when that can't be judged: the account
-  # isn't :cash, or a flow or the anchor is in another currency.
-  def ledger_net_since(older_entry, date)
-    return unless account.balance_type == :cash
-    return unless older_entry.currency == account.currency
-
-    # Ignore entries the anchor already included: its own timestamp is the watermark.
-    # A split child inherits its parent's timestamp; the parent was the flow the anchor
-    # could have seen, and the child rows are created later by the split.
-    flows = account.entries
-      .excluding_pending
-      .excluding_split_parents
-      .where(date: older_entry.date..date)
-      .where.not(entryable_type: "Valuation")
-      .where(
-        "entries.date > :anchor_date OR " \
-        "COALESCE((SELECT pe.created_at FROM entries pe WHERE pe.id = entries.parent_entry_id), entries.created_at) > :anchor_written_at",
-        anchor_date: older_entry.date, anchor_written_at: older_entry.updated_at
-      )
-      .pluck(:currency, :amount)
-
-    return unless flows.all? { |currency, _| currency == account.currency }
-
-    flows.sum { |_, amount| amount }
-  end
-
   def current_date
     if current_anchor_valuation
       current_anchor_valuation.entry.date
@@ -227,7 +196,7 @@ class Account::CurrentBalanceManager
     def ledger_explains?(older_entry, new_balance, date)
       return false unless Rails.configuration.x.balance.reuse_explained_anchor
 
-      net = ledger_net_since(older_entry, date)
+      net = Account::LedgerFlows.new(account).net_since(older_entry, date)
       return false if net.nil?
 
       expected = older_entry.amount + (account.asset? ? -net : net)
