@@ -59,12 +59,16 @@ class Balance::BaseCalculator
     def loan_principal_payments
       return @loan_principal_payments if defined?(@loan_principal_payments)
 
-      @loan_principal_payments = if account.loan? &&
-          account.loan.amortizable? &&
-          account.has_opening_anchor? &&
-          account.family.preview_features_enabled?
-        sync_cache.loan_principal_payments(account.loan)
-      end
+      @loan_principal_payments = (sync_cache.loan_principal_payments(account.loan) if loan_principal_replayed?)
+    end
+
+    # The replay walks the whole ledger from the loan's origination.
+    def loan_principal_replayed?
+      account.loan? &&
+        account.loan.amortizable? &&
+        account.has_opening_anchor? &&
+        account.family.preview_features_enabled? &&
+        Loan::PrincipalPayments.applies_to?(account.loan)
     end
 
     def holdings_value_for_date(date)
