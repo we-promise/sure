@@ -201,6 +201,68 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
     assert_equal xetra, Security::ClassificationProposal.sole.security
   end
 
+  # A person's decision stands: the tool says the proposal was already
+  # reviewed rather than reporting a write that did not happen.
+  test "a security whose proposal was already rejected is skipped as reviewed" do
+    Security::ClassificationProposal.propose!(security: @security, family: @family, asset_class: "equity").reject!
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "asset_class" => "commodity" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_equal "already reviewed (rejected)", result[:skipped].first[:reason]
+    assert Security::ClassificationProposal.sole.rejected?
+  end
+
+  test "a security a provider has classified is skipped" do
+    @security.update!(asset_class: "equity", asset_sub_class: "stock", classification_source: "provider")
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "region" => "north_america" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_equal "already classified by a data provider", result[:skipped].first[:reason]
+  end
+
+  # `get_holdings` lists a position in any currency, so the two tools agree.
+  test "a position held in a currency other than the account's is held" do
+    euro = Security.create!(ticker: "EURO9", exchange_operating_mic: "XETR", country_code: "DE")
+    accounts(:investment).holdings.create!(security: euro, date: Date.current, qty: 1, price: 10, amount: 10, currency: "EUR")
+
+    result = @function.call("proposals" => [ { "ticker" => "EURO9", "region" => "europe" } ])
+
+    assert_equal 1, result[:recorded], result[:skipped].inspect
+  end
+
+  # Two stored rows for one venue (a legacy GER and an ISO XETR) are told
+  # apart by the exact code named.
+  test "an exact stored exchange code is preferred over a legacy row for the same venue" do
+    iso = Security.create!(ticker: "SAP8", exchange_operating_mic: "XETR", country_code: "DE")
+    legacy = Security.create!(ticker: "SAP8", exchange_operating_mic: "XFRA", country_code: "DE")
+    legacy.update_column(:exchange_operating_mic, "GER")
+    [ iso, legacy ].each do |security|
+      accounts(:investment).holdings.create!(security: security, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    end
+
+    result = @function.call("proposals" => [ { "ticker" => "SAP8", "exchange_operating_mic" => "XETR", "region" => "europe" } ])
+
+    assert_equal 1, result[:recorded], result[:skipped].inspect
+    assert_equal iso, Security::ClassificationProposal.sole.security
+  end
+
+  test "an entry without a ticker is skipped as needing one" do
+    result = @function.call("proposals" => [ { "asset_class" => "equity" } ])
+
+    assert_equal [ { ticker: nil, reason: "ticker is required" } ], result[:skipped]
+  end
+
+  test "a batch over the limit is refused whole" do
+    entries = Array.new(Assistant::Function::SuggestSecurityClassification::MAX_PROPOSALS + 1) { { "ticker" => "AAPL", "region" => "north_america" } }
+
+    result = @function.call("proposals" => entries)
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+  end
+
   # MCP passes arguments straight through, so a field that is not text is
   # refused here rather than coerced into a string by the model.
   test "a field that is not text is skipped, with a reason" do

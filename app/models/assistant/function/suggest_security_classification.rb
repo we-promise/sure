@@ -26,8 +26,10 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
         If the user holds the same ticker on more than one exchange, name the
         exchange in `exchange_operating_mic`; otherwise the entry is skipped.
 
-        Securities the user has already classified by hand, or locked, are skipped
-        and reported back in `skipped`.
+        Securities that are already classified (by hand, by a data provider or by
+        an approved proposal), or locked, are skipped and reported back in
+        `skipped`, as is a security whose proposal the user has already approved
+        or rejected. Send at most #{MAX_PROPOSALS} entries per call.
 
         Example:
 
@@ -59,6 +61,7 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
           type: "array",
           description: "One entry per security to propose a classification for",
           minItems: 1,
+          maxItems: MAX_PROPOSALS,
           items: {
             type: "object",
             properties: {
@@ -79,14 +82,33 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
 
   TEXT_FIELDS = %w[ticker exchange_operating_mic asset_class asset_sub_class sector region rationale].freeze
 
+  # Each entry is a validation and a locked write; a batch is a review queue,
+  # not a bulk import.
+  MAX_PROPOSALS = 50
+
+  # Only a security nothing has classified yet is open to a proposal. A
+  # `default` (cash, crypto) is the weakest answer and may be improved on.
+  OPEN_SOURCES = [ nil, "default" ].freeze
+  CLASSIFIED_BY = {
+    "manual" => "already classified by hand",
+    "provider" => "already classified by a data provider",
+    "ai" => "already classified from an approved proposal"
+  }.freeze
+
   def call(params = {})
     recorded = 0
     skipped = []
+    entries = Array(params["proposals"])
+    if entries.size > MAX_PROPOSALS
+      return { recorded: 0, skipped: [ { ticker: nil, reason: "send at most #{MAX_PROPOSALS} proposals per call" } ] }
+    end
+
+    tickers = entries.filter_map { |entry| entry["ticker"].upcase if entry.is_a?(Hash) && entry["ticker"].is_a?(String) }
     # Read on every call: chat reuses one instance across tool rounds, and an
     # account share revoked between rounds must take effect.
-    held = held_securities
+    held = held_securities(tickers)
 
-    Array(params["proposals"]).each do |entry|
+    entries.each do |entry|
       unless entry.is_a?(Hash)
         skipped << { ticker: nil, reason: "each proposal must be an object" }
         next
@@ -101,8 +123,14 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
         next
       end
 
-      ticker = entry["ticker"].to_s
-      mic = Security.canonical_exchange_operating_mic(entry["exchange_operating_mic"].presence)
+      ticker = entry["ticker"].to_s.strip
+      if ticker.empty?
+        skipped << { ticker: nil, reason: "ticker is required" }
+        next
+      end
+
+      requested_mic = entry["exchange_operating_mic"].presence&.upcase
+      mic = Security.canonical_exchange_operating_mic(requested_mic)
       # Resolved within the user's own holdings rather than across the whole
       # `securities` table. This tool is registered in `function_classes`, which
       # also serves `/mcp`, so an external caller must not be able to queue a
@@ -113,9 +141,13 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
       # whichever row the database returned, and approval would classify the
       # wrong global security.
       matches = held.select { |s| s.ticker.casecmp?(ticker) }
-      # Compared as canonical MICs, so a listing stored under a legacy code
-      # (GER for XETR) is the same venue, as `Security` treats it elsewhere.
-      matches = matches.select { |s| Security.canonical_exchange_operating_mic(s.exchange_operating_mic) == mic } if mic
+      # An exact stored code wins; otherwise compared as canonical MICs, so a
+      # listing stored under a legacy code (GER for XETR) is the same venue, as
+      # `Security` treats it elsewhere.
+      if mic
+        exact = matches.select { |s| s.exchange_operating_mic == requested_mic }
+        matches = exact.presence || matches.select { |s| Security.canonical_exchange_operating_mic(s.exchange_operating_mic) == mic }
+      end
 
       if matches.empty?
         skipped << { ticker: ticker, reason: "not held by this family" }
@@ -128,6 +160,11 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
 
       security = matches.first
 
+      unless security.classification_source.in?(OPEN_SOURCES)
+        skipped << { ticker: ticker, reason: CLASSIFIED_BY.fetch(security.classification_source) }
+        next
+      end
+
       # Mapped once, so a field cannot be added to the check and not to the
       # write.
       attributes = {
@@ -136,21 +173,16 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
         rationale: entry["rationale"].presence
       }
 
-      proposal = Security::ClassificationProposal.new(security: security, family: family, **attributes)
-
-      unless proposal.valid?
-        skipped << { ticker: ticker, reason: proposal.errors.full_messages.to_sentence }
-        next
-      end
-
       begin
-        Security::ClassificationProposal.propose!(security: security, family: family, **attributes)
-        recorded += 1
+        proposal = Security::ClassificationProposal.propose!(security: security, family: family, **attributes)
+        if proposal.pending?
+          recorded += 1
+        else
+          skipped << { ticker: ticker, reason: "already reviewed (#{proposal.status})" }
+        end
       rescue ActiveRecord::RecordInvalid => e
-        # The pre-check makes this unlikely, not impossible: `propose!` updates
-        # an existing row, and a validation that depends on persisted state can
-        # refuse there. One security the assistant cannot record must not cost
-        # the user the rest of the batch.
+        # One security the assistant cannot record must not cost the user the
+        # rest of the batch.
         skipped << { ticker: ticker, reason: e.record.errors.full_messages.to_sentence }
       end
     end
@@ -159,12 +191,21 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
   end
 
   private
-    # Current positions in accounts this user may see, so the tool cannot
-    # reveal or act on a position held only in another member's private
-    # account, or on one the user has sold out of. `Account#current_holdings`
-    # decides what is held now, provider snapshot included.
-    def held_securities
-      security_ids = user.accessible_accounts.visible.flat_map { |account| account.current_holdings.pluck(:security_id) }
-      Security.where(id: security_ids.uniq).to_a
+    # Securities among `tickers` held now in accounts this user may see, so
+    # the tool cannot reveal or act on a position held only in another
+    # member's private account, or one the user has sold out of: each
+    # account's latest row per security, in any currency, as `get_holdings`
+    # reads them, and non-zero. One query for the batch.
+    def held_securities(tickers)
+      return [] if tickers.empty?
+
+      accounts = user.accessible_accounts.visible.where(accountable_type: Assistant::Function::GetHoldings::SUPPORTED_ACCOUNT_TYPES)
+      latest = Holding.where(account: accounts)
+        .select("DISTINCT ON (account_id, security_id) id")
+        .order(:account_id, :security_id, date: :desc)
+
+      Security.where(id: Holding.where(id: latest).where.not(qty: 0).select(:security_id))
+        .where("UPPER(securities.ticker) IN (?)", tickers.uniq)
+        .to_a
     end
 end
