@@ -280,6 +280,36 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal "mock", @security.first_provider_price_source
   end
 
+  test "an import that only fills a recent window keeps another provider's first date" do
+    # The provider's history is capped, so the fill starts well after the
+    # requested start and anchors on a stored price. The earlier gap is not
+    # covered, so the date another provider found still describes it.
+    Security::Price.delete_all
+
+    start_date = Date.parse("2018-06-15")
+    end_date   = Date.parse("2020-06-15")
+    window_start = end_date - 10.days
+    @security.update!(first_provider_price_on: Date.parse("2020-01-03"), first_provider_price_source: "yahoo_finance")
+    Security::Price.create!(security: @security, date: window_start - 5.days, price: 40, currency: "USD")
+
+    @provider.stubs(:max_history_days).returns(10)
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: window_start,         price: 50, currency: "USD"),
+      OpenStruct.new(security: @security, date: window_start + 1.day, price: 51, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal Date.parse("2020-01-03"), @security.first_provider_price_on
+    assert_equal "yahoo_finance", @security.first_provider_price_source
+  end
+
   test "an import anchored at the start keeps the current provider's own first date" do
     Security::Price.delete_all
 
