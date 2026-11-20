@@ -703,6 +703,7 @@ class InvestmentStatement
     # the positions whose basis is known, and its weight against the caller's
     # `total` -- which is chosen by #weight_denominator, not here.
     def build_holdings_table_row(security, value, positions, total)
+      positions = positions.sort_by { |holding| [ -convert_to_family_currency(holding.amount, holding.currency), holding.id.to_s ] }
       qty = positions.sum(&:qty)
 
       # Same rule as combined_holding_trend: the return covers the positions
@@ -772,7 +773,9 @@ class InvestmentStatement
     def sort_value(row, sort)
       case sort
       when "value" then row.amount.amount
-      when "weight" then row.weight
+      # Weight is value over one total, rounded for display, so value orders
+      # it without the rounding's ties.
+      when "weight" then row.amount.amount
       when "return" then row.unrealized.value.amount
       when "day_change" then row.day_change.value.amount
       when "name" then row.name.downcase

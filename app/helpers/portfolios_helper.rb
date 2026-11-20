@@ -1,14 +1,16 @@
 module PortfoliosHelper
   # Where a holdings column header links: the same column flips direction,
   # another column opens on its natural direction (names ascending, figures
-  # descending).
+  # descending). The page's period goes with it, since a custom range lives
+  # only in the request.
   def holdings_sort_link(key, active_sort:, active_dir:)
     next_dir = if active_sort == key
       active_dir == "asc" ? "desc" : "asc"
     else
       key == "name" ? "asc" : "desc"
     end
-    portfolio_path(sort: key, dir: next_dir)
+    period = params.slice(:start_date, :end_date, :period).permit(:start_date, :end_date, :period).to_h.compact_blank
+    portfolio_path(**period.symbolize_keys, sort: key, dir: next_dir)
   end
 
   # The aria-sort value for a column header, or nil when it is not the

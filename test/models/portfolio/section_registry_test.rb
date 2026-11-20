@@ -84,6 +84,23 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     assert_operator cards.index(lower), :<, cards.index(upper)
   end
 
+  # The cards keep the order the rest of the app lists accounts in (the
+  # database's collation, as Account.alphabetically uses), where an accented
+  # name sits with its letter rather than after "z".
+  test "the account cards follow the database's name order" do
+    names = [ "Zebra brokerage", "Épargne", "Fidelity" ]
+    accounts = names.map do |name|
+      @family.accounts.create!(name: name, balance: 100, currency: "USD", accountable: Investment.new, owner: @user)
+    end
+    @statement = InvestmentStatement.new(@family, user: @user)
+
+    cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
+
+    expected = @family.accounts.where(id: accounts.map(&:id)).alphabetically.map(&:name)
+    assert_equal [ "Épargne", "Fidelity", "Zebra brokerage" ], expected, "precondition: the database collation places É with E"
+    assert_equal expected, cards.select { |card| names.include?(card.name) }.map(&:name)
+  end
+
   # The statement's query has no order of its own, so the tiebreak must not
   # lean on whatever order its rows arrive in: feed them in descending id.
   test "account cards with the same name are ordered by id whatever order the statement returns" do

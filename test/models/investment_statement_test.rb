@@ -1698,6 +1698,37 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal %w[CCC BBB AAA], @statement.holdings_table_rows(sort: "name", dir: "sideways").map(&:ticker), "an unknown dir keeps a valid sort"
   end
 
+  # Weight is value over one total, rounded to two places, so two values that
+  # round to the same weight still sort by value.
+  test "holdings_table_rows sorts by weight in value order when weights round equal" do
+    account = create_investment_account(balance: 10_000_000)
+    smaller = Security.create!(ticker: "AAA", name: "Alpha")
+    larger = Security.create!(ticker: "ZZZ", name: "Zeta")
+    Holding.create!(account: account, security: smaller, date: Date.current, qty: 1, price: 1000.10, amount: 1000.10, currency: "USD")
+    Holding.create!(account: account, security: larger, date: Date.current, qty: 1, price: 1000.40, amount: 1000.40, currency: "USD")
+
+    rows = @statement.holdings_table_rows(sort: "weight", dir: "desc")
+
+    assert_equal 1, rows.map(&:weight).uniq.size, "precondition: the weights round to the same figure"
+    assert_equal %w[ZZZ AAA], rows.map(&:ticker)
+  end
+
+  # A row's positions are listed largest first, in the family's currency.
+  test "holdings_table_rows lists a row's positions by value, largest first" do
+    first = create_investment_account(balance: 10_000)
+    second = create_investment_account(balance: 10_000)
+    security = Security.create!(ticker: "SPLIT", name: "Held twice")
+    small = Holding.create!(account: first, security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD")
+    large = Holding.create!(account: second, security: security, date: Date.current, qty: 5, price: 100, amount: 500, currency: "USD")
+
+    [ [ small, large ], [ large, small ] ].each do |order|
+      statement = InvestmentStatement.new(@family, user: nil)
+      statement.stubs(:holdings_with_avg_costs).returns(order)
+      row = statement.holdings_table_rows.find { |r| r.security == security }
+      assert_equal [ large.id, small.id ], row.positions.map(&:id)
+    end
+  end
+
   test "holdings_table_rows issues no query per holding" do
     account = create_investment_account(balance: 10_000)
     5.times do |i|

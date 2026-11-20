@@ -5,10 +5,32 @@ es:
       add_account: Añadir una cuenta de inversión
       description: Aquí aparecen, con su saldo, las cuentas de bolsa, de jubilación y de cripto que incluyes en tus finanzas e informes.
       title: No hay cuentas de inversión que mostrar
+    holdings:
+      columns:
+        account: Cuenta
+        accounts: Cuentas
+        avg_cost: Coste medio
+        cost_basis_per_share: Coste base por acción
+        day_change: Día
+        qty: Cant.
+        security: Valor
+        unrealized: P&G no realizadas
+        value: Valor de mercado
+        weight: Peso
+      day_change_partial: "%{covered} de %{total} posiciones"
+      label: Posiciones
+      missing_cost_basis: Sin coste base
+      missing_cost_basis_hint: Al menos una posición no tiene coste base conocido. El coste medio y la rentabilidad solo cubren las posiciones que lo tienen.
+      no_cost_basis: sin coste base
+      open_position: Abrir
+      position_missing_cost_basis_hint: Esta posición no tiene coste base conocido, así que no tiene coste medio y queda fuera de la rentabilidad de la fila.
+      positions_caption: Posiciones en %{ticker} por cuenta
+      toggle_positions: Mostrar posiciones en %{ticker}
     sections:
       accounts: Cuentas
+      holdings: Posiciones
     show:
       section_aria: Sección %{title}. Pulsa Intro o Espacio para cogerla y reordenarla, y luego usa las flechas para moverla.
       sections_aria: Secciones de la cartera
-      subtitle: Tus cuentas de inversión y lo que vale cada una.
+      subtitle: Lo que tienes en tus cuentas de inversión y lo que vale cada cuenta.
       title: Cartera
