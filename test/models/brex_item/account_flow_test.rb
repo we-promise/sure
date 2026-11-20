@@ -404,12 +404,18 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
     flow = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item)
     item_id = @brex_item.id
+    # The token changes in another request: this one has already read the row,
+    # and a write on the raw connection leaves its query cache holding it.
     flow.define_singleton_method(:fetch_accounts) do
-      BrexItem.find(item_id).update!(token: "rotated_token")
+      BrexItem.find_by(id: item_id)
+      BrexItem.connection.raw_connection.exec_params(
+        "UPDATE brex_items SET token = $1 WHERE id = $2",
+        [ BrexItem.type_for_attribute(:token).serialize("rotated_token"), item_id ]
+      )
       [ { id: "old_token_account", name: "Old token account" } ]
     end
 
-    assert_equal true, flow.preload_payload[:has_accounts]
+    assert_equal true, ActiveRecord::Base.cache { flow.preload_payload[:has_accounts] }
     assert_nil Rails.cache.read(BrexItem::AccountFlow.cache_key(@family, @brex_item))
   ensure
     Rails.cache = original_cache
