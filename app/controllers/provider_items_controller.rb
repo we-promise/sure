@@ -9,8 +9,10 @@ class ProviderItemsController < ApplicationController
   ACCOUNT_FLOW_ACTIONS = %i[preload_accounts select_accounts link_accounts select_existing_account link_existing_account].freeze
   SETUP_ACTIONS = %i[setup_accounts complete_account_setup].freeze
 
-  before_action :set_item, only: %i[show edit update destroy sync] + SETUP_ACTIONS
+  # Admin check first, so a non-admin gets the same redirect whether or not the
+  # connection id exists.
   before_action :require_admin!, only: %i[new create edit update destroy sync] + ACCOUNT_FLOW_ACTIONS + SETUP_ACTIONS
+  before_action :set_item, only: %i[show edit update destroy sync] + SETUP_ACTIONS
 
   def self.connection_declaration
     Provider::Factory.connection_declarations.find { |declaration| declaration[:association].to_s == controller_name } ||
