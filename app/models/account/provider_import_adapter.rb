@@ -35,8 +35,11 @@ class Account::ProviderImportAdapter
   # @param name_extra_keys [Hash{String=>Array<String>}] Keys, per namespace, that `name`
   #   was built from. When a protected entry keeps its name, these keep their stored values
   #   too, so the name and the data it came from cannot drift apart.
+  # @param remove_extra_keys [Hash{String=>Array<String>}] Provider-owned keys, per namespace,
+  #   to delete from an import_locked entry's extra. Such entries skip the namespace refresh,
+  #   so this is the only way stale provider data leaves them. The lock is untouched.
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {})
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {}, remove_extra_keys: {})
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -111,6 +114,10 @@ class Account::ProviderImportAdapter
             owned = keep_name_sources(entry, owned, name_extra_keys)
             apply_provider_extra(entry, owned, replace_extra_namespaces)
           end
+
+          # Import-locked entries skip the refresh above, so provider-only keys the
+          # provider asked to drop are removed here. The lock itself is not touched.
+          remove_provider_extra_keys(entry, remove_extra_keys) if entry.import_locked? && skip_reason != "excluded"
 
           record_skip(entry, skip_reason)
           return entry
@@ -1206,6 +1213,32 @@ class Account::ProviderImportAdapter
 
       entry.transaction.extra = existing.except(*replaced).deep_merge(incoming)
       entry.transaction.save!
+    end
+
+    # Deletes the given provider-owned keys from transaction.extra and drops a
+    # namespace left empty. Used for data the provider sends only on request
+    # (Lunch Flow's raw payload), where an omitted key means "no longer stored".
+    #
+    # @param entry [Entry] the entry being imported
+    # @param remove_extra_keys [Hash{String=>Array<String>}] keys to delete, per namespace
+    # @return [void]
+    def remove_provider_extra_keys(entry, remove_extra_keys)
+      return if remove_extra_keys.blank?
+      return unless entry.entryable.is_a?(Transaction) && entry.transaction.persisted?
+
+      existing = entry.transaction.extra
+      return unless existing.is_a?(Hash)
+
+      cleaned = existing.deep_dup
+      remove_extra_keys.each do |namespace, keys|
+        branch = cleaned[namespace.to_s]
+        next unless branch.is_a?(Hash)
+
+        Array(keys).each { |key| branch.delete(key.to_s) }
+        cleaned.delete(namespace.to_s) if branch.empty?
+      end
+
+      entry.transaction.update!(extra: cleaned) unless cleaned == existing
     end
 
     # A protected entry keeps its name, so the values that name was built from have

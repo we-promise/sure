@@ -224,6 +224,54 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not raw.key?("dropped"), "stale raw keys must not survive a sync"
   end
 
+  test "drops stored raw from an import-locked entry once raw is no longer sent" do
+    base_data = {
+      id: "lf_txn_raw_locked",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction",
+      isPending: false
+    }
+
+    entry = LunchflowEntry::Processor.new(
+      base_data.merge(raw: { "reference" => "OLD" }),
+      lunchflow_account: @lunchflow_account
+    ).process
+    entry.update!(import_locked: true)
+
+    LunchflowEntry::Processor.new(base_data, lunchflow_account: @lunchflow_account).process
+
+    entry.reload
+    assert entry.import_locked?, "the import lock must be preserved"
+    assert_nil entry.transaction.extra.dig("lunchflow", "raw")
+    assert_equal false, entry.transaction.extra.dig("lunchflow", "pending")
+  end
+
+  test "keeps raw on an import-locked entry while the provider still sends it" do
+    data = {
+      id: "lf_txn_raw_locked_kept",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction",
+      raw: { "reference" => "KEEP" }
+    }
+
+    entry = LunchflowEntry::Processor.new(data, lunchflow_account: @lunchflow_account).process
+    entry.update!(import_locked: true)
+
+    LunchflowEntry::Processor.new(data, lunchflow_account: @lunchflow_account).process
+
+    entry.reload
+    assert entry.import_locked?
+    assert_equal "KEEP", entry.transaction.extra.dig("lunchflow", "raw", "reference")
+  end
+
   test "generates temporary ID for pending transactions with blank ID" do
     transaction_data = {
       id: "",

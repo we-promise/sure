@@ -67,7 +67,10 @@ class LunchflowEntry::Processor
         extra: extra_metadata,
         # The whole `lunchflow` branch is provider-owned: replacing it (rather than
         # deep-merging) drops raw sub-keys the provider stopped sending.
-        replace_extra_namespaces: [ "lunchflow" ]
+        replace_extra_namespaces: [ "lunchflow" ],
+        # Import-locked entries skip that replacement; drop their stored raw
+        # when this row carries none (setting turned off, or not sent).
+        remove_extra_keys: data[:raw].present? ? {} : { "lunchflow" => [ "raw" ] }
       )
     rescue ArgumentError => e
       # Re-raise validation errors (missing required fields, invalid data)
