@@ -125,8 +125,11 @@ module Family::AutoTransferMatchable
     Transfer.transaction do
       # One run per family at a time, taken before candidates are selected: two
       # runs that each displace a guess the other wants would otherwise lock the
-      # same rows in opposite orders and deadlock.
-      lock_auto_match_transfers!
+      # same rows in opposite orders and deadlock. A run that finds the lock held
+      # is skipped rather than queued behind it: the run holding it already
+      # matches what this one would, and waiting could stall a caller that holds
+      # row locks of its own.
+      next unless lock_auto_match_transfers!
 
       # Exclude already matched transfers. Cross-currency FX-tolerance matching is
       # restricted to provider-linked accounts ONLY on this automatic path -- a
@@ -179,13 +182,15 @@ module Family::AutoTransferMatchable
   end
 
   private
+    # True when this transaction now holds the family's auto-match lock.
     def lock_auto_match_transfers!
       key = Digest::SHA1.hexdigest("auto_match_transfers:#{id}").to_i(16) % (2**63)
-      self.class.connection.exec_query(
-        "SELECT 1 FROM (SELECT pg_advisory_xact_lock($1)) locked",
+      locked = self.class.connection.exec_query(
+        "SELECT pg_try_advisory_xact_lock($1) AS locked",
         "Auto Match Transfers Lock",
         [ ActiveRecord::Relation::QueryAttribute.new("key", key, ActiveRecord::Type::BigInteger.new) ]
-      )
+      ).rows.first&.first
+      ActiveModel::Type::Boolean.new.cast(locked)
     end
 
     # A principal-only loan replays a linked transfer as principal. The balance
@@ -301,6 +306,10 @@ module Family::AutoTransferMatchable
           .lock
           .pluck(:id)
 
+        # Nothing holds either leg, so there is nothing to displace: the pair is
+        # inserted as any exact match is, without locking its legs.
+        return true if locked_ids.empty?
+
         return false unless exact_pair_under_lock?(match)
 
         # A new statement, so its snapshot sees what committed while the locks
@@ -311,13 +320,18 @@ module Family::AutoTransferMatchable
           .each(&:destroy!)
 
         # A blocker the candidate query couldn't see (held in the other role)
-        # still holds a leg, so the pair is not created.
-        Transfer.where(id: locked_ids).none?
+        # still holds a leg, so the pair is not created. A transfer for this
+        # exact pair, committed concurrently, is the match itself:
+        # find_or_create_by! returns it.
+        Transfer.where(id: locked_ids)
+          .where.not(inflow_transaction_id: match.inflow_transaction_id, outflow_transaction_id: match.outflow_transaction_id)
+          .none?
       end
     end
 
     # Locks both legs (transactions, then their entries) and re-reads them:
-    # still opposite amounts in one currency.
+    # still opposite amounts in one currency, and neither excluded since the
+    # candidate query read it.
     def exact_pair_under_lock?(match)
       leg_ids = [ match.inflow_transaction_id, match.outflow_transaction_id ]
       Transaction.where(id: leg_ids).order(:id).lock.pluck(:id)
@@ -327,6 +341,7 @@ module Family::AutoTransferMatchable
       outflow = entries[match.outflow_transaction_id]
 
       inflow.present? && outflow.present? &&
+        !inflow.excluded? && !outflow.excluded? &&
         inflow.currency == outflow.currency &&
         inflow.amount.negative? && inflow.amount == -outflow.amount
     end
@@ -479,7 +494,11 @@ module Family::AutoTransferMatchable
     # With :displace_pending_cross_currency (only auto_match_transfers! sets it), the
     # exact branch does not count a pending cross-currency auto-match suggestion
     # (displaceable_transfer_sql) as holding a leg, so a later exact counterpart is
-    # still offered; find_or_create_transfer! then destroys the guess. The
+    # still offered; find_or_create_transfer! then destroys the guess. Only an
+    # exact pair whose categories would pass the guess's own category check
+    # (one leg uncategorized, or both in one category) displaces it: a
+    # coincidental same-amount purchase and income are no surer a transfer than
+    # the guess they would replace. The
     # cross-currency branch keeps every transfer as a blocker, so a guess never
     # displaces another guess.
     #
@@ -516,12 +535,22 @@ module Family::AutoTransferMatchable
             outflow_candidates.amount = -inflow_candidates.amount
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
+          JOIN transactions exact_inflow_txns ON exact_inflow_txns.id = inflow_candidates.entryable_id
+          JOIN transactions exact_outflow_txns ON exact_outflow_txns.id = outflow_candidates.entryable_id
           LEFT JOIN transfers existing_transfers ON (
             (
               existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
               existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
             ) AND
-            NOT (:displace_pending_cross_currency = TRUE AND #{displaceable_transfer_sql("existing_transfers")})
+            NOT (
+              :displace_pending_cross_currency = TRUE AND
+              #{displaceable_transfer_sql("existing_transfers")} AND
+              (
+                exact_inflow_txns.category_id IS NULL OR
+                exact_outflow_txns.category_id IS NULL OR
+                exact_inflow_txns.category_id = exact_outflow_txns.category_id
+              )
+            )
           )
           LEFT JOIN rejected_transfers ON (
             rejected_transfers.inflow_transaction_id = inflow_candidates.entryable_id AND

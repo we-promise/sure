@@ -646,6 +646,88 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
   end
 
+  # Displacement trusts an exact match more than a guess only when the exact
+  # pair would itself pass the guess's category check.
+  test "a later exact match in a different category does not displace a pending guess" do
+    outflow, guess = pending_cross_currency_guess
+    outflow.entryable.update!(category: categories(:food_and_drink))
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP", category: categories(:income))
+
+    assert_not displacing_candidate?(real_inflow, outflow)
+    @family.auto_match_transfers!
+
+    assert guess.reload.pending?
+    assert_not Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "a later exact match with one uncategorized leg still displaces a pending guess" do
+    outflow, guess = pending_cross_currency_guess
+    outflow.entryable.update!(category: categories(:food_and_drink))
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+
+    @family.auto_match_transfers!
+
+    assert_not Transfer.exists?(guess.id)
+    assert Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "an exact match with no guess holding its legs locks no transactions or entries" do
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -250)
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 250)
+
+    locks = []
+    callback = lambda do |*, payload|
+      sql = payload[:sql]
+      locks << sql if sql.include?("FOR UPDATE") && sql.match?(/FROM "?(transactions|entries)"?/)
+    end
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      @family.auto_match_transfers!
+    end
+
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+    assert_empty locks
+  end
+
+  test "a transfer committed for the exact pair after selection counts as the match" do
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -250)
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 250)
+    candidate = @family.transfer_match_candidates(include_rejected: false, displace_pending_cross_currency: true).to_a
+      .find { |row| row.inflow_transaction_id == inflow.entryable_id && row.outflow_transaction_id == outflow.entryable_id }
+    assert candidate
+
+    # Committed by a concurrent run between the candidate query and the insert.
+    committed = Transfer.create!(inflow_transaction: inflow.entryable, outflow_transaction: outflow.entryable)
+
+    assert_equal committed, @family.send(:find_or_create_transfer!, candidate)
+  end
+
+  test "a pair whose leg was excluded after selection does not displace the guess" do
+    outflow, guess = pending_cross_currency_guess
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+    candidates = @family.transfer_match_candidates(include_rejected: false, displace_pending_cross_currency: true).to_a
+    assert candidates.any? { |row| row.inflow_transaction_id == real_inflow.entryable_id && row.outflow_transaction_id == outflow.entryable_id }
+
+    # Excluded between the candidate query and the insert.
+    real_inflow.update_columns(excluded: true)
+    @family.stubs(:transfer_match_candidates).returns(candidates)
+
+    @family.auto_match_transfers!
+
+    assert Transfer.exists?(guess.id)
+    assert_not Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "auto-matching skips the run when another run holds the family's lock" do
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -250)
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 250)
+    @family.stubs(:lock_auto_match_transfers!).returns(false)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+    assert_not Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
   test "auto-matching takes the family's lock before it selects candidates" do
     pending_cross_currency_guess
 
@@ -655,9 +737,10 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
       @family.auto_match_transfers!
     end
 
-    lock_at = statements.index { |sql| sql.include?("pg_advisory_xact_lock") }
+    lock_at = statements.index { |sql| sql.include?("pg_try_advisory_xact_lock") }
     select_at = statements.index { |sql| sql.include?("transfer_match_candidates") }
-    assert lock_at, "expected a per-family advisory lock"
+    assert lock_at, "expected a per-family advisory lock that doesn't wait"
+    assert select_at, "expected the candidate query to run"
     assert_operator lock_at, :<, select_at
   end
 
