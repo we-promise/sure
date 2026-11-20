@@ -75,6 +75,7 @@ class IncomeStatement::SpendingComparison
   # totals add up to the row total.
   def rows
     @rows ||= begin
+      income_statement.preload_totals([ period, *compared_periods ])
       current = net_by_category(period)
       baseline = comparable? ? baseline_net : {}
 
@@ -213,6 +214,13 @@ class IncomeStatement::SpendingComparison
       baseline_windows.map { |w| net_by_category(w) }.each_with_object({}) do |net, avg|
         net.each { |key, e| (avg[key] ||= { category: e[:category], net: 0 })[:net] += e[:net] / baseline_windows.size }
       end
+    end
+
+    # The periods baseline_net reads totals for.
+    def compared_periods
+      return [] unless comparable?
+
+      in_progress? ? baseline_windows : [ baseline_period ]
     end
 
     def baseline_windows

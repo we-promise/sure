@@ -1262,7 +1262,63 @@ class IncomeStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "preload_totals gives each period the same totals as loading it alone, overlapping ones included" do
+    travel_to(Date.new(2026, 11, 15)) do
+      september = Period.custom(start_date: Date.new(2026, 9, 1), end_date: Date.new(2026, 9, 30))
+      overlapping = Period.custom(start_date: Date.new(2026, 9, 20), end_date: Date.new(2026, 10, 10))
+      october = Period.custom(start_date: Date.new(2026, 10, 1), end_date: Date.new(2026, 10, 31))
+      create_transaction(account: @checking_account, date: Date.new(2026, 9, 5), amount: 120, category: @food_category)
+      create_transaction(account: @checking_account, date: Date.new(2026, 9, 25), amount: 80, category: @groceries_category)
+      create_transaction(account: @checking_account, date: Date.new(2026, 10, 5), amount: -500, category: @income_category)
+      create_transaction(account: @credit_card_account, date: Date.new(2026, 10, 20), amount: 60, category: @food_category)
+      periods = [ september, overlapping, october ]
+
+      expected = periods.map do |period|
+        statement = IncomeStatement.new(@family)
+        [ category_totals(statement.expense_totals(period: period)), category_totals(statement.income_totals(period: period)) ]
+      end
+
+      statement = IncomeStatement.new(@family)
+      statement.preload_totals(periods)
+      IncomeStatement::Totals.expects(:new).never
+
+      actual = periods.map do |period|
+        [ category_totals(statement.expense_totals(period: period)), category_totals(statement.income_totals(period: period)) ]
+      end
+      assert_equal expected, actual
+      assert_equal 200, expected.first.first["Food"]
+    end
+  end
+
+  test "preload_totals shares cache entries with single-period totals" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    cached = Period.custom(start_date: Date.new(2026, 9, 1), end_date: Date.new(2026, 9, 30))
+    uncached = Period.custom(start_date: Date.new(2026, 10, 1), end_date: Date.new(2026, 10, 31))
+    IncomeStatement.new(@family).expense_totals(period: cached)
+
+    # Only the period missing from the cache is queried...
+    preload_sql = totals_sql { IncomeStatement.new(@family).preload_totals([ cached, uncached ]) }
+    assert_equal 1, preload_sql.size
+    assert_includes preload_sql.first, "'2026-10-01'"
+    assert_not_includes preload_sql.first, "'2026-09-01'"
+
+    # ...and a single period then reads what the preload stored.
+    assert_empty totals_sql { IncomeStatement.new(@family).expense_totals(period: uncached) }
+  end
+
   private
+    def category_totals(period_total)
+      period_total.category_totals.reject { |ct| ct.total.zero? }.to_h { |ct| [ ct.category.name, ct.total ] }
+    end
+
+    # The SQL of the IncomeStatement::Totals queries run in the block.
+    def totals_sql(&block)
+      statements = []
+      collect = ->(*, payload) { statements << payload[:sql] if payload[:sql].include?("SUM(entry_count) as transactions_count") }
+      ActiveSupport::Notifications.subscribed(collect, "sql.active_record", &block)
+      statements
+    end
+
     # Adds a 250 grocery expense whose pending flag is +flag+ and asserts every
     # figure is the one without it: totals (Transaction.excluding_pending), the
     # family median and average (FamilyStats) and the category median
