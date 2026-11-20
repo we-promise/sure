@@ -2406,7 +2406,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_090000) do
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id", "security_id"], name: "idx_classification_proposals_on_family_and_security", unique: true
-    t.index ["family_id"], name: "index_security_classification_proposals_on_family_id"
     t.index ["security_id"], name: "index_security_classification_proposals_on_security_id"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'approved'::character varying::text, 'rejected'::character varying::text])", name: "chk_classification_proposals_status"
   end
