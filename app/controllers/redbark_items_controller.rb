@@ -222,8 +222,6 @@ class RedbarkItemsController < ApplicationController
       t("redbark_items.setup_accounts.api_error", message: e.message)
     end
 
-    # Only allow internal relative paths in return_to
-
     def redbark_item_params
       params.require(:redbark_item).permit(
         :name,
