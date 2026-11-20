@@ -94,8 +94,28 @@ class TransactionTest < ActiveSupport::TestCase
     adapter_quoted = Transaction::PENDING_FLAG_FALSE_VALUES.map { |value| Transaction.connection.quote(value) }.join(", ")
 
     assert_equal adapter_quoted, Transaction::PENDING_FLAG_FALSE_VALUES_SQL
-    assert_includes Transaction.pending_sql, "NOT IN (#{adapter_quoted})"
-    assert_includes Transaction::PENDING_CHECK_SQL, "NOT IN (#{adapter_quoted})"
+    assert_includes Transaction.pending_sql("transactions", providers: [ "plaid" ]), "NOT IN (#{adapter_quoted})"
+  end
+
+  # The column holds the rule as the migration that added it wrote it down. A
+  # provider added to PENDING_PROVIDERS needs a migration that redefines it,
+  # or the column misses that provider's pending rows.
+  test "the pending column covers every pending provider" do
+    account = families(:empty).accounts.create! name: "Pending column", balance: 0, currency: "USD", accountable: Depository.new
+
+    Transaction::PENDING_PROVIDERS.each do |provider|
+      transaction = create_transaction(account: account, amount: 10).entryable
+      transaction.update!(extra: { provider => { "pending" => true } })
+
+      assert Transaction.where(id: transaction.id).pick(:pending), "transactions.pending misses #{provider}"
+    end
+  end
+
+  test "SQL for every provider reads the pending column and a subset reads extra" do
+    assert_equal %("transactions".pending), Transaction.pending_sql
+    assert_equal %(NOT ("t".pending)), Transaction.not_pending_sql("t")
+    assert_equal "t.pending", Transaction::PENDING_CHECK_SQL
+    assert_includes Transaction.pending_sql("transactions", providers: [ "monobank" ]), "extra -> 'monobank'"
   end
 
   test "provider-specific SQL only considers the requested pending namespaces" do
@@ -137,8 +157,9 @@ class TransactionTest < ActiveSupport::TestCase
   test "pending SQL quotes the table alias and JSON keys" do
     connection = ActiveRecord::Base.connection
     table_alias = "pending alias"
-    sql = Transaction.pending_sql(table_alias)
+    sql = Transaction.pending_sql(table_alias, providers: Transaction::PENDING_PROVIDERS.first(2))
 
+    assert_equal "#{connection.quote_table_name(table_alias)}.pending", Transaction.pending_sql(table_alias)
     assert_includes sql, "#{connection.quote_table_name(table_alias)}.extra"
     assert_includes sql, "-> #{connection.quote(Transaction::PENDING_PROVIDERS.first)} ->> #{connection.quote('pending')}"
     false_values = Transaction::PENDING_FLAG_FALSE_VALUES.map { |value| connection.quote(value) }.join(", ")
@@ -822,7 +843,8 @@ class TransactionTest < ActiveSupport::TestCase
         "Transaction.excluding_pending" => !Transaction.excluding_pending.exists?(transaction.id),
         "Entry.pending" => Entry.pending.exists?(entry_id),
         "Entry.excluding_pending (pending_check_sql)" => !Entry.excluding_pending.exists?(entry_id),
-        "Transaction.pending_providers_sql" => posted_row.nil?
+        "Transaction.pending_providers_sql" => posted_row.nil?,
+        "transactions.pending" => Transaction.where(id: transaction.id).pick(:pending)
       }
     end
 end
