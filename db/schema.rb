@@ -2394,6 +2394,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_090000) do
     t.index ["user_id", "created_at"], name: "index_security_audit_logs_on_user_id_and_created_at"
   end
 
+  create_table "security_classification_proposals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "asset_class"
+    t.string "asset_sub_class"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.text "rationale"
+    t.string "region"
+    t.string "sector"
+    t.uuid "security_id", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "security_id"], name: "idx_classification_proposals_on_family_and_security", unique: true
+    t.index ["security_id"], name: "index_security_classification_proposals_on_security_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'approved'::character varying::text, 'rejected'::character varying::text])", name: "chk_classification_proposals_status"
+  end
+
   create_table "security_constituents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "exchange"
@@ -3323,6 +3339,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_090000) do
   add_foreign_key "rules", "families"
   add_foreign_key "rules", "rule_groups", on_delete: :nullify
   add_foreign_key "security_audit_logs", "users", on_delete: :nullify
+  add_foreign_key "security_classification_proposals", "families"
+  add_foreign_key "security_classification_proposals", "securities"
   add_foreign_key "security_constituents", "securities", on_delete: :cascade
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade
