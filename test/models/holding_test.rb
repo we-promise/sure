@@ -422,6 +422,47 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal("18") ] * 3 + [ BigDecimal("16") ] * 2, batch.map { |holding| holding.avg_cost&.amount }
   end
 
+  # A pair and date with no stored rate is looked up once per batch too, and
+  # the figure is unknown, with no call to the exchange-rate provider: the
+  # costs are read while a page renders.
+  test "a missing rate is looked up once per pair and date, without the provider" do
+    day = 3.days.ago.to_date
+    ExchangeRate.expects(:provider).never
+    holdings = Array.new(3) do |i|
+      security = create_security("MISS#{i}", prices: [ { date: day, price: 30 } ])
+      create_trade(security, account: @account, qty: 10, price: 20, date: day)
+      @account.holdings.create!(security: security, date: day, qty: 10, price: 30, amount: 300, currency: "CHF")
+    end
+
+    alone = holdings.map { |holding| Holding.find(holding.id).avg_cost }
+    batch = Holding.where(id: holdings.map(&:id)).to_a
+    queries = Holding.uncached { capture_sql_queries { Holding.preload_avg_costs(batch) } }
+
+    assert_equal [ nil ] * 3, alone, "no stored USD to CHF rate"
+    assert_equal [ nil ] * 3, batch.map(&:avg_cost)
+    assert_equal 2, queries.count { |sql| sql.include?('FROM "exchange_rates"') },
+      "one stored-rate lookup (on or before, then after) for the pair and date, not one per holding"
+  end
+
+  # The holding's currency code is normalised before the rate is looked up,
+  # so a lower-case code converts the same way alone and batched.
+  test "a holding with a lower-case currency code converts alone and batched alike" do
+    day = 3.days.ago.to_date
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: day, rate: 0.9)
+    security = create_security("LOWC", prices: [ { date: day, price: 30 } ])
+    create_trade(security, account: @account, qty: 10, price: 20, date: day)
+    holding = @account.holdings.create!(security: security, date: day, qty: 10, price: 30, amount: 300, currency: "CHF")
+    holding.update_column(:currency, "chf")
+
+    alone = Holding.find(holding.id).avg_cost
+    batched = Holding.find(holding.id)
+    Holding.preload_avg_costs([ batched ])
+
+    [ alone, batched.avg_cost ].each do |avg_cost|
+      assert_equal [ BigDecimal("18"), "CHF" ], [ avg_cost&.amount, avg_cost&.currency&.iso_code ]
+    end
+  end
+
   test "the batch leaves a stored cost basis alone and does not query for it" do
     @amzn.update!(cost_basis: 100)
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: Date.current)

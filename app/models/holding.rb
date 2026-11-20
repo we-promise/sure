@@ -88,7 +88,7 @@ class Holding < ApplicationRecord
   # and only while they add up to it (HoldingLot.in_partition). Any other
   # row, or an open lot with no cost, is unknown: the trades' pooled average
   # is the average method's figure, not this one.
-  def self.fifo_avg_costs(holdings, rates: nil)
+  def self.fifo_avg_costs(holdings, rates: {})
     open_lots = open_lots_for(holdings)
 
     holdings.to_h do |holding|
@@ -103,16 +103,18 @@ class Holding < ApplicationRecord
 
   # Lots and the average method are costed in the account's currency; a
   # provider can report the holding in another, so a mean is converted at the
-  # holding's date, and is unknown without a rate. `rates` is a batch's cache,
-  # keyed by currency pair and date, so a page of converted holdings looks
-  # each rate up once (a miss can reach the exchange-rate provider).
-  def self.lots_mean_in(mean, holding, rates = nil)
-    return mean if mean.currency.iso_code == holding.currency
-    return mean.exchange_to(holding.currency, date: holding.date) unless rates
+  # holding's date, and is unknown without a stored rate. The rate comes from
+  # the stored table only (never the provider), since costs are read while a
+  # page renders. `rates` caches lookups, hits and misses, by currency pair
+  # and date; a batch shares one cache, so it looks each pair and date up once.
+  def self.lots_mean_in(mean, holding, rates = {})
+    from = mean.currency.iso_code
+    to = Money::Currency.new(holding.currency).iso_code
+    return mean if from == to
 
-    key = [ mean.currency.iso_code, holding.currency, holding.date ]
-    rate = rates.fetch(key) { rates[key] = ExchangeRate.find_or_fetch_rate(from: key[0], to: key[1], date: key[2])&.rate }
-    rate && mean.exchange_to(holding.currency, date: holding.date, custom_rate: rate)
+    key = [ from, to, holding.date ]
+    rate = rates.fetch(key) { rates[key] = ExchangeRate.find_stored_rate(from: from, to: to, date: holding.date)&.rate }
+    rate && mean.exchange_to(to, date: holding.date, custom_rate: rate)
   rescue Money::ConversionError
     nil
   end
