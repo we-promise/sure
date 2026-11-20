@@ -482,6 +482,10 @@ class Security < ApplicationRecord
       # `match.country_code`, which is the listing country, and those do
       # classify.
       return if offline?
+      # A fund's listing country says nothing about what it holds, so its
+      # region comes from the provider's breakdown of its holdings, or not
+      # at all.
+      return if asset_sub_class.in?(%w[etf mutual_fund])
 
       derived = REGIONS.dig(country_code.to_s.upcase, "region")
 
