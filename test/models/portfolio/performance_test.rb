@@ -357,8 +357,9 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_in_delta 0.0190, with_carried.mwr.to_f, 0.0005
   end
 
-  # A single day: the opening and closing values fall on the same date, so no
-  # time passes and no annual rate exists. Newton would otherwise return its
+  # A single day is one row. The money-weighted figure needs at least two:
+  # the close is dated the day after the last row, so a span exists, but one
+  # day gives Newton too little to solve, and it would otherwise return its
   # 10% starting guess as the answer.
   test "a one day period has no money weighted return" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
@@ -430,10 +431,10 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_in_delta 0.0, result.mwr.to_f, 0.000001, "money leaving the scope is not an investor loss"
   end
 
-  # An account with one day
-  # of balance history supports no return method. Performance applies that to
-  # the whole scope, as it already does for MWR: one such account withholds
-  # every time-weighted figure.
+  # Time-weighted figures need some account in the scope with two or more
+  # balance days. Here the only account has one, so every time-weighted
+  # figure is withheld. An account with one day beside one with more does not
+  # withhold them (see the next test).
   test "time weighted figures are withheld when an account in the scope has one balance day" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_100, market_flow: 100
 
