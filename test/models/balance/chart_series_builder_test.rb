@@ -686,6 +686,32 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal 0, contributions[2] - contributions[1], "and leaves the contributions line where it was"
   end
 
+  # Across three accounts, one journal out and two in, same security and
+  # quantity on one day. Only one arrival can be the departure, so the other
+  # five shares were put in: net contributions rise by their value. Read as
+  # two internal moves, the line stayed flat and the 500 showed as gain.
+  test "a second journal in raises net contributions when one journal out cannot explain it" do
+    family = families(:empty)
+    out_of, into, into_too = Array.new(3) { create_portfolio_account(family: family) }
+    lay_balance account: out_of, date: @day_one, opening: 500, closing: 500
+    lay_balance account: out_of, date: @day_one + 1, opening: 500, closing: 0, market_flow: -500
+    [ into, into_too ].each do |account|
+      lay_balance account: account, date: @day_one, opening: 0, closing: 0
+      lay_balance account: account, date: @day_one + 1, opening: 0, closing: 500, market_flow: 500
+    end
+    security_journal account: out_of, date: @day_one + 1, qty: -5, price: 100
+    security_journal account: into, date: @day_one + 1, qty: 5, price: 100
+    security_journal account: into_too, date: @day_one + 1, qty: 5, price: 100
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ out_of.id, into.id, into_too.id ], currency: "USD",
+      period: Period.custom(start_date: @day_one, end_date: @day_one + 1), interval: "1 day"
+    )
+    amounts = builder.net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal 500, amounts.last - amounts.first, "five shares were put in"
+  end
+
   test "a fee, a buy and a sell leave net contributions unchanged" do
     account = create_portfolio_account(family: families(:empty))
     lay_balance account: account, date: @day_one, opening: 10_000, closing: 10_000
