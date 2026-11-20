@@ -387,7 +387,8 @@ class Security < ApplicationRecord
     splits.where(ex_date: (from + 1)..to).reduce(Rational(1)) { |factor, split| factor * split.ratio }
   end
 
-  # The fund expanded into what it actually holds, as fractions of the fund.
+  # The fund expanded into what it actually holds, as fractions of the fund,
+  # keyed by [ticker, exchange].
   #
   # A whole-fund list (summing to 99 or more) is normalised against its actual
   # sum, so rounding drift does not under-report every constituent. A partial
@@ -395,7 +396,8 @@ class Security < ApplicationRecord
   # fund is unlisted, not the listed names' to carry. The rule lives in
   # `Security::Constituent.fund_shares`.
   def look_through_weights
-    Security::Constituent.fund_shares(constituents.to_a).listed
+    rows = constituents.pluck(:ticker, :exchange, :weight).map { |values| Security::Constituent::Row.new(*values) }
+    Security::Constituent.fund_shares(rows).listed
   end
 
   def to_combobox_option
