@@ -219,6 +219,35 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     refute_equal before_key, performance.cache_key
   end
 
+  # Refreshing prices rebuilds a linked account's balances in place
+  # (HoldingsController#sync_prices runs Balance::Materializer directly),
+  # completing no Sync and writing no account, so only the balance rows
+  # themselves say the figures changed. A rebuild stamps every row it
+  # writes, as the materializer's upsert does.
+  test "cache key changes when the accounts' balances are rebuilt without a sync" do
+    build_textbook_case
+    before_key = performance.cache_key
+
+    travel 1.minute do
+      @account.balances.update_all(updated_at: Time.current)
+    end
+
+    refute_equal before_key, performance.cache_key
+  end
+
+  # A row removed that was not the latest written leaves the latest write
+  # where it was; only the count moves.
+  test "cache key changes when a balance row is removed" do
+    build_textbook_case
+    oldest = @account.balances.order(:date).first
+    oldest.update_columns(updated_at: 1.day.ago)
+    before_key = performance.cache_key
+
+    oldest.delete
+
+    refute_equal before_key, performance.cache_key
+  end
+
   # Two writes inside one second: a key cut to whole seconds would not move,
   # and the figures computed without the second rate would be served on.
   test "cache key changes when a rate is stored within the same second as the previous one" do

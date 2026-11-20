@@ -195,13 +195,24 @@ class Portfolio::Performance
         period.start_date, period.end_date,
         # A rate stored or corrected changes every converted figure, and the
         # rate importers touch no family timestamp.
-        ExchangeRate.updated_at_version
+        ExchangeRate.updated_at_version,
+        balances_version
       ].compact.join("_"),
       invalidate_on_data_updates: true
     )
   end
 
   private
+    # Count and latest write of the accounts' balance rows. A price refresh
+    # (HoldingsController#sync_prices) rebuilds them with Balance::Materializer,
+    # completing no Sync and writing no account, so no other part of the key
+    # moves; the rebuild stamps every row it writes, and the count catches a
+    # row removed.
+    def balances_version
+      count, latest = Balance.where(account_id: account_ids).pick(Arel.sql("COUNT(*), MAX(updated_at)"))
+      "#{count}-#{latest&.to_f || 0}"
+    end
+
     # Loaded once: the ids and the eligibility resolution both read it.
     def accounts
       @accounts ||= @requested_account_ids.empty? ? [] : family.accounts.where(id: @requested_account_ids).to_a
