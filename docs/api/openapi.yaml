@@ -5290,7 +5290,16 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                oneOf:
+                - type: object
+                  required:
+                  - errors
+                  properties:
+                    errors:
+                      type: array
+                      items:
+                        type: string
+                - "$ref": "#/components/schemas/ErrorResponse"
         '403':
           description: 'registration refused: the instance is closed to new registrations,
             or an invite code is required or invalid'
