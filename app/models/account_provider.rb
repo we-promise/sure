@@ -23,6 +23,9 @@ class AccountProvider < ApplicationRecord
   # The Sure account and its holdings are untouched and carry on as manual.
   after_destroy :destroy_onchain_provider_account, if: :onchain_provider?
 
+  # Linking an account the user ignored during setup is how they take it back.
+  after_create :stop_ignoring_provider_account, if: -> { provider.respond_to?(:ignored?) }
+
   # Returns the provider adapter for this connection
   def adapter
     Provider::Factory.create_adapter(provider, account: account)
@@ -41,6 +44,12 @@ class AccountProvider < ApplicationRecord
       return if account.nil? || provider_type == "BitcoinWalletAccount"
 
       errors.add(:account, :bitcoin_wallet) if BitcoinWalletAccount.exists?(account_id: account_id)
+    end
+
+    # Under the provider's row lock, which reloads it: an ignore! that committed
+    # after the provider was loaded is seen, and one still running waits.
+    def stop_ignoring_provider_account
+      provider.with_lock { provider.update!(ignored: false) if provider.ignored? }
     end
 
     def financekit_has_exclusive_writer
