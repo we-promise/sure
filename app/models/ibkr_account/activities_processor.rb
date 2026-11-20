@@ -44,6 +44,7 @@ class IbkrAccount::ActivitiesProcessor
     trades_count = trade_results.count { |r| r[:imported] }
     fee_count    = trade_results.sum   { |r| r[:fees] }
     capture_skipped_trade_types
+    capture_bond_unit_disagreements
 
     @cash_transactions = cash_transactions.map(&:with_indifferent_access)
     @skipped_cash_types = Hash.new(0)
@@ -74,6 +75,7 @@ class IbkrAccount::ActivitiesProcessor
       return { imported: false, fees: 0 } if quantity.nil? || native_price.nil?
 
       quantity *= quantity_multiplier(row)
+      native_price *= price_scale(row)
 
       buy_sell = row[:buy_sell].to_s.upcase
       signed_quantity = buy_sell == "SELL" ? -quantity.abs : quantity.abs
@@ -324,6 +326,24 @@ class IbkrAccount::ActivitiesProcessor
         account_provider: @ibkr_account.account_provider,
         family: @ibkr_account.ibkr_item&.family,
         metadata: { ibkr_account_id: @ibkr_account.id, skipped_cash_transaction_types: @skipped_cash_types }
+      )
+    end
+
+    # A trade that counts a bond in another unit than the bond's other rows was
+    # carried into the bond's unit, which the trade's price shows.
+    def capture_bond_unit_disagreements
+      disagreements = bond_unit_disagreements(:trades)
+      return if disagreements.empty?
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "IBKR bond trades counted in another unit than the bond's other rows",
+        source: self.class.name,
+        provider_key: "ibkr",
+        account_provider: @ibkr_account.account_provider,
+        family: @ibkr_account.ibkr_item&.family,
+        metadata: { ibkr_account_id: @ibkr_account.id, bonds: disagreements }
       )
     end
 

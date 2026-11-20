@@ -5,9 +5,11 @@ module IbkrAccount::DataHelpers
   # or trade quantity is that face value; its multiplier (0.01) relates the two.
   # Sure counts a bond in units of 100 face, the unit its price is quoted per,
   # so the price reads as IBKR quotes it and quantity x price is its value. A
-  # Flex Query without the Multiplier field is no different: the row's value
+  # Flex Query without the Multiplier field is no different: a row's value
   # decides between a unit of 1 and of 0.01, and 0.01 (IBKR's bond multiplier)
-  # is the fallback when the row has no value to decide with.
+  # is the fallback when no row has a value to decide with.
+  #
+  # One bond security has one unit, for every row of it (see bond_unit_factors).
   BOND_MULTIPLIER = BigDecimal("0.01")
 
   # How far, in orders of magnitude, a bond's implied unit factor may sit from
@@ -108,28 +110,109 @@ module IbkrAccount::DataHelpers
       asset_category(row) == "BOND"
     end
 
-    # What one unit of the row's quantity counts as in Sure: a bond's face
-    # value times its unit factor, anything else as IBKR reports it.
-    #
-    # A bond's unit is read from the row's own value, not from its multiplier
-    # alone: IBKR's documentation does not say what the multiplier of a bond is
-    # (0.01 or the generic 1), and trusting a 1 would value a bond 100 times too
-    # high. The factor that makes quantity x price equal the reported value
-    # (positionValue for a position, proceeds or tradeMoney for a trade) is
-    # matched to the reported multiplier, 1 and 0.01. A row with no value to
-    # check against counts per 100 face.
+    # What one unit of the row's quantity counts as in Sure: for a bond, its
+    # face value times the unit factor of the bond's security, for anything
+    # else as IBKR reports it. Every row of one bond security shares that
+    # factor, so the holding, its trades and the prices between them are in one
+    # unit; see #bond_unit_factors and #price_scale.
     def quantity_multiplier(row)
       return BigDecimal("1") unless bond?(row)
 
+      bond_unit_factors.fetch(bond_ticker(row.with_indifferent_access), nil) || row_unit_factor(row) || BOND_MULTIPLIER
+    end
+
+    # What a row's own price is multiplied by to read in its security's unit:
+    # a row that counts differently from its bond (a trade quoted per 100 face
+    # against a position counted per unit, say) keeps its total value, quantity
+    # and price moving together. 1 for any row that agrees with its security,
+    # for one with no value to tell, and for anything but a bond.
+    def price_scale(row)
+      return BigDecimal("1") unless bond?(row)
+
+      own = row_unit_factor(row)
+      shared = bond_unit_factors.fetch(bond_ticker(row.with_indifferent_access), nil)
+      own && shared ? own / shared : BigDecimal("1")
+    end
+
+    # The unit factor each bond security is counted in, by its ticker, decided
+    # once for the whole report so that no row of a security differs from
+    # another. IBKR's documentation does not say what the multiplier of a bond
+    # is (0.01 or the generic 1), and trusting a 1 would value a bond 100 times
+    # too high, so each row's factor is read from its own value (see
+    # #row_unit_factor), then:
+    # - the open position decides, since the holdings must reconcile with
+    #   IBKR's positionValue;
+    # - a bond with no position (one sold since) takes its trades' factor;
+    # - the factor most rows imply wins, and a tie goes to 0.01.
+    # A bond none of whose rows has a value to check counts per 100 face.
+    def bond_unit_factors
+      @bond_unit_factors ||= bond_unit_votes.transform_values do |votes|
+        tally(votes[:positions]) || tally(votes[:trades])
+      end.compact
+    end
+
+    # For each bond whose rows of this kind (:positions or :trades) differ from
+    # the factor it is counted in: its ticker, that factor and the differing
+    # rows' factors. What a debug entry reports.
+    def bond_unit_disagreements(kind)
+      bond_unit_votes.filter_map do |ticker, votes|
+        shared = bond_unit_factors[ticker]
+        others = votes[kind].reject { |factor| factor == shared }
+        { ticker: ticker, unit_factor: shared.to_s("F"), differing_rows: others.size, row_unit_factors: others.uniq.map { |f| f.to_s("F") } } if shared && others.any?
+      end
+    end
+
+    def bond_unit_votes
+      @bond_unit_votes ||= begin
+        votes = Hash.new { |hash, ticker| hash[ticker] = { positions: [], trades: [] } }
+        # A short position is not imported, so it says nothing of the unit.
+        bond_rows(raw_position_rows).select { |row| row[:side].to_s == "Long" }.each { |row| add_vote(votes, row, :positions) }
+        bond_rows(raw_trade_rows).each { |row| add_vote(votes, row, :trades) }
+        votes
+      end
+    end
+
+    def raw_position_rows
+      Array(@ibkr_account.raw_holdings_payload).map(&:with_indifferent_access)
+    end
+
+    def raw_trade_rows
+      Array((@ibkr_account.raw_activities_payload || {}).with_indifferent_access[:trades]).map(&:with_indifferent_access)
+    end
+
+    def bond_rows(rows)
+      rows.select { |row| bond?(row) && bond_ticker(row) }
+    end
+
+    def add_vote(votes, row, kind)
+      factor = row_unit_factor(row)
+      votes[bond_ticker(row)][kind] << factor if factor
+    end
+
+    # The factor with the most votes, a tie going to 0.01; nil with no votes.
+    def tally(factors)
+      return nil if factors.empty?
+
+      counts = factors.tally
+      top = counts.values.max
+      leaders = counts.select { |_, count| count == top }.keys
+      leaders.include?(BOND_MULTIPLIER) ? BOND_MULTIPLIER : leaders.first
+    end
+
+    # The factor one row's own value implies, matched to the multiplier it
+    # reports, 1 and 0.01 -- the one that makes quantity x price equal the
+    # reported value (positionValue for a position, proceeds or tradeMoney for
+    # a trade). Nil for a row with nothing to check it against, or whose value
+    # fits none of them.
+    def row_unit_factor(row)
       data = row.with_indifferent_access
       implied = implied_unit_factor(data)
-      return BOND_MULTIPLIER unless implied
+      return nil unless implied
 
       reported = parse_decimal(data[:multiplier])
       candidates = [ reported, BigDecimal("1"), BOND_MULTIPLIER ].select { |c| c&.positive? }
       best = candidates.min_by { |c| (Math.log10(implied.to_f) - Math.log10(c.to_f)).abs }
-      close = (Math.log10(implied.to_f) - Math.log10(best.to_f)).abs <= BOND_UNIT_TOLERANCE
-      close ? best : BOND_MULTIPLIER
+      best if (Math.log10(implied.to_f) - Math.log10(best.to_f)).abs <= BOND_UNIT_TOLERANCE
     end
 
     # |value| / (|quantity| x |price|) for a position or a trade row, nil when
@@ -150,18 +233,24 @@ module IbkrAccount::DataHelpers
       row.with_indifferent_access[:asset_category].to_s.strip.upcase
     end
 
+    # The ticker a bond's rows are tracked under, nil when the row lacks the
+    # symbol or contract id that names it.
+    def bond_ticker(row)
+      symbol = row[:symbol].to_s.strip.upcase
+      conid = row[:conid].to_s.strip
+      "#{BOND_TICKER_PREFIX}#{symbol}:#{conid}" unless symbol.blank? || conid.blank?
+    end
+
     # Securities are global, so an existing row is reused as it stands. The
     # savepoint keeps a lost create race from aborting the import around it.
     def resolve_bond_security(data)
-      symbol = data[:symbol].to_s.strip.upcase
-      conid = data[:conid].to_s.strip
-      return nil if symbol.blank? || conid.blank?
+      return nil unless bond_ticker(data)
 
-      ticker = "#{BOND_TICKER_PREFIX}#{symbol}:#{conid}"
+      ticker = bond_ticker(data)
       Security.find_by(ticker: ticker) || Security.transaction(requires_new: true) do
         Security.create!(
           ticker: ticker,
-          name: data[:description].to_s.strip.presence || symbol,
+          name: data[:description].to_s.strip.presence || data[:symbol].to_s.strip.upcase,
           offline: true,
           offline_reason: BOND_OFFLINE_REASON
         )

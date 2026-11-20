@@ -39,6 +39,7 @@ class IbkrAccount::HoldingsProcessor
       process_group(group, report_date)
     end
     capture_skipped_positions
+    capture_bond_unit_disagreements
   end
 
   private
@@ -109,7 +110,9 @@ class IbkrAccount::HoldingsProcessor
     #
     # Each lot is valued at its own mark: a group holds every lot of one asset,
     # which for an unlisted position can span conids that IBKR marks separately.
-    # price is the weighted average that amount and quantity imply.
+    # price is the weighted average that amount and quantity imply. A bond lot
+    # that counts in another unit than its bond's other rows has its prices
+    # carried into that unit, so its value stays what IBKR reports.
     def valid_lots(rows)
       total_quantity = BigDecimal("0")
       total_cost = BigDecimal("0")
@@ -129,9 +132,10 @@ class IbkrAccount::HoldingsProcessor
         end
 
         units = row_quantity.abs * quantity_multiplier(row)
+        scale = price_scale(row)
         total_quantity += units
-        total_cost     += units * row_cost_basis
-        total_value    += units * row_price
+        total_cost     += units * row_cost_basis * scale
+        total_value    += units * row_price * scale
       end
 
       return nil if total_quantity.zero?
@@ -219,6 +223,24 @@ class IbkrAccount::HoldingsProcessor
         account_provider: @ibkr_account.account_provider,
         family: @ibkr_account.ibkr_item&.family,
         metadata: { ibkr_account_id: @ibkr_account.id, skipped_position_types: @skipped_positions }
+      )
+    end
+
+    # A position that counts a bond in another unit than the bond's other rows
+    # was carried into the bond's unit, which the holding's price shows.
+    def capture_bond_unit_disagreements
+      disagreements = bond_unit_disagreements(:positions)
+      return if disagreements.empty?
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "IBKR bond positions counted in another unit than the bond's other rows",
+        source: self.class.name,
+        provider_key: "ibkr",
+        account_provider: @ibkr_account.account_provider,
+        family: @ibkr_account.ibkr_item&.family,
+        metadata: { ibkr_account_id: @ibkr_account.id, bonds: disagreements }
       )
     end
 
