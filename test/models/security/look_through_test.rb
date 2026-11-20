@@ -25,11 +25,11 @@ class Security::LookThroughTest < ActiveSupport::TestCase
 
     assert_in_delta 1.0, weights.values.sum.to_f, 0.000001,
                     "the expansion does not add up to the whole fund"
-    assert_in_delta 50.0 / 99.4, weights["MSFT"].to_f, 0.000001
-    assert_in_delta 19.4 / 99.4, weights["TSLA"].to_f, 0.000001
+    assert_in_delta 50.0 / 99.4, weights[[ "MSFT", nil ]].to_f, 0.000001
+    assert_in_delta 19.4 / 99.4, weights[[ "TSLA", nil ]].to_f, 0.000001
 
     naive = 50.0 / 100
-    assert_not_in_delta naive, weights["MSFT"].to_f, 0.000001,
+    assert_not_in_delta naive, weights[[ "MSFT", nil ]].to_f, 0.000001,
                         "dividing by 100 would give the same answer, so this asserts nothing"
   end
 
@@ -42,8 +42,8 @@ class Security::LookThroughTest < ActiveSupport::TestCase
 
     weights = @security.look_through_weights
 
-    assert_in_delta 0.5, weights["MSFT"].to_f, 0.000001, "50 of the fund is half of it, not 50/80"
-    assert_in_delta 0.3, weights["NVDA"].to_f, 0.000001
+    assert_in_delta 0.5, weights[[ "MSFT", nil ]].to_f, 0.000001, "50 of the fund is half of it, not 50/80"
+    assert_in_delta 0.3, weights[[ "NVDA", nil ]].to_f, 0.000001
     assert_in_delta 0.8, weights.values.sum.to_f, 0.000001, "the listed names were scaled up to the whole fund"
   end
 
@@ -77,7 +77,7 @@ class Security::LookThroughTest < ActiveSupport::TestCase
     shares = Security::Constituent.fund_shares([ row("MSFT", "60"), row("NVDA", "39") ])
 
     assert_equal 0, shares.unlisted
-    assert_equal BigDecimal("60") / BigDecimal("99"), shares.listed["MSFT"]
+    assert_equal BigDecimal("60") / BigDecimal("99"), shares.listed[[ "MSFT", nil ]]
     assert_in_delta 1.0, shares.listed.values.sum.to_f, 0.000001
   end
 
@@ -85,8 +85,8 @@ class Security::LookThroughTest < ActiveSupport::TestCase
     shares = Security::Constituent.fund_shares([ row("MSFT", "60"), row("NVDA", "38.99") ])
 
     assert_equal BigDecimal("0.0101"), shares.unlisted
-    assert_equal BigDecimal("0.6"), shares.listed["MSFT"]
-    assert_equal BigDecimal("0.3899"), shares.listed["NVDA"]
+    assert_equal BigDecimal("0.6"), shares.listed[[ "MSFT", nil ]]
+    assert_equal BigDecimal("0.3899"), shares.listed[[ "NVDA", nil ]]
   end
 
   # Overlapping share classes or leverage can push a list past 100. It is
@@ -96,13 +96,13 @@ class Security::LookThroughTest < ActiveSupport::TestCase
     shares = Security::Constituent.fund_shares([ row("MSFT", "60"), row("NVDA", "50") ])
 
     assert_equal 0, shares.unlisted
-    assert_equal BigDecimal("60") / BigDecimal("110"), shares.listed["MSFT"]
+    assert_equal BigDecimal("60") / BigDecimal("110"), shares.listed[[ "MSFT", nil ]]
   end
 
   test "rows without a weight are left out of the split" do
     shares = Security::Constituent.fund_shares([ row("MSFT", "50"), row("CASH", nil), row("NVDA", "30") ])
 
-    assert_equal [ "MSFT", "NVDA" ], shares.listed.keys
+    assert_equal [ [ "MSFT", nil ], [ "NVDA", nil ] ], shares.listed.keys
     assert_equal BigDecimal("0.2"), shares.unlisted
   end
 
@@ -123,10 +123,38 @@ class Security::LookThroughTest < ActiveSupport::TestCase
     assert_not @security.constituents.new(ticker: "OVER", weight: 1000).valid?
   end
 
-  test "a fund with no weighted rows reports a decimal nothing unlisted" do
-    unlisted = Security::Constituent.fund_shares([]).unlisted
-    assert_kind_of BigDecimal, unlisted
-    assert_equal BigDecimal("0"), unlisted
+  # Nothing listed means none of the fund is accounted for, so a reader that
+  # allocates listed plus unlisted still places the whole fund.
+  test "a fund with no weighted rows reports the whole fund unlisted" do
+    shares = Security::Constituent.fund_shares([])
+    assert_kind_of BigDecimal, shares.unlisted
+    assert_equal BigDecimal("1"), shares.unlisted
+    assert_equal({}, shares.listed)
+    assert_not shares.listed.frozen?, "an empty answer must be safe to add to, like any other"
+  end
+
+  # Tickers are not unique across exchanges, so the same code on two venues is
+  # two holdings, each with its own share of the fund.
+  test "the same ticker on two exchanges is two holdings" do
+    @security.constituents.create!(ticker: "7203", exchange: "TSE", weight: 30)
+    @security.constituents.create!(ticker: "7203", exchange: "KO", weight: 20)
+    @security.constituents.create!(ticker: "MSFT", weight: 50)
+
+    weights = @security.look_through_weights
+    assert_equal BigDecimal("0.3"), weights[[ "7203", "TSE" ]]
+    assert_equal BigDecimal("0.2"), weights[[ "7203", "KO" ]]
+    assert_not @security.constituents.new(ticker: "7203", exchange: "TSE", weight: 1).valid?
+  end
+
+  # A delete that skips callbacks (a raw `delete`, a bulk cleanup) must not
+  # be refused by the fund's rows.
+  test "deleting a security without callbacks removes its constituents" do
+    fund = Security.create!(ticker: "FUND3", name: "Fund")
+    fund.constituents.create!(ticker: "MSFT", weight: 60)
+
+    assert_difference -> { Security::Constituent.count }, -1 do
+      fund.delete
+    end
   end
 
   # A bulk insert skips the model's validation, so the column refuses a
@@ -162,8 +190,8 @@ class Security::LookThroughTest < ActiveSupport::TestCase
     hold("TINY", 0)
     hold("NVDA", 40.0)
 
-    assert_in_delta 0.6, @security.look_through_weights["MSFT"].to_f, 0.000001
-    assert_equal 0, @security.look_through_weights["TINY"]
+    assert_in_delta 0.6, @security.look_through_weights[[ "MSFT", nil ]].to_f, 0.000001
+    assert_equal 0, @security.look_through_weights[[ "TINY", nil ]]
   end
 
   test "a fund lists each ticker once, and another fund may list the same ticker" do
