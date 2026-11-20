@@ -16,7 +16,9 @@ the Bank Sync cards and connection rows, and the connection rows in
 `settings/providers/_<x>_panel` — rather than a hand-built badge or the first letter of a
 connection name. A panel's setup form and instructions carry no logo.
 
-Give each new provider a registry entry with a brand domain. Only a provider with no single
+Give each new provider a registry entry with a brand domain: an account provider declares it
+on its adapter (`declares_connection metadata:`), and any other provider adds it to
+`Provider::Metadata::UNDECLARED`. Only a provider with no single
 brand behind it (on-chain wallets) omits the domain and sets `logo_icon` instead.
 Institution logos are a separate concept and belong on accounts through
 `Account#logo_url`, never on a provider.

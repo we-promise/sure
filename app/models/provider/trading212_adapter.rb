@@ -3,7 +3,8 @@ class Provider::Trading212Adapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("Trading212Account", self)
-  declares_connection key: "trading212", panel: { title: "Trading 212" }
+  declares_connection key: "trading212", name: "Trading 212", panel: true,
+                      metadata: { region: "EU", kinds: %w[Investment], maturity: :alpha, logo_text: "T2", logo_color: "#0d9488", domain: "trading212.com" }
 
   def self.supported_account_types
     %w[Investment]

@@ -20,11 +20,11 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   end
 
   # The adapter template calls predicate helpers, which a Struct cannot name.
-  def render_adapter(skip_view:)
+  def render_adapter(skip_view:, banking: true)
     helpers = {
       class_name: "Gocardless", file_name: "gocardless", options: { skip_view: skip_view },
       parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ],
-      banking_provider?: true, investment_provider?: false
+      banking_provider?: banking, investment_provider?: !banking
     }
     context = Object.new
     helpers.each { |name, value| context.define_singleton_method(name) { value } }
@@ -301,7 +301,21 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
       adapter = render_adapter(skip_view: skip_view)
 
       assert_parses adapter
-      assert_includes adapter, %(declares_connection key: "gocardless", panel: { title: "Gocardless" }\n), "skip_view: #{skip_view}"
+      assert_includes adapter, %(declares_connection key: "gocardless", name: "Gocardless", panel: true,\n), "skip_view: #{skip_view}"
+    end
+  end
+
+  # Provider::Metadata::REGISTRY is built from declares_connection metadata:, and every
+  # declared provider needs these fields, so the generated adapter starts with them.
+  test "the generated adapter declares the metadata every provider needs" do
+    { banking: %w[Bank], investment: %w[Investment] }.each do |type, kinds|
+      adapter = render_adapter(skip_view: false, banking: type == :banking)
+      metadata = eval(adapter[/^\s*metadata: (\{.*\})$/, 1].to_s)
+
+      assert_kind_of Hash, metadata, "#{type} adapter has no metadata"
+      %i[region kinds maturity logo_text].each { |field| assert metadata[field].present?, "#{type} metadata has no #{field}" }
+      assert_equal kinds, metadata[:kinds]
+      assert_equal "GO", metadata[:logo_text]
     end
   end
 
@@ -328,6 +342,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
         end
 
         assert_includes output, "Bank sync will not list gocardless", "skip_view: #{skip_view}"
+        assert_includes output, "metadata: {", "skip_view: #{skip_view}"
       end
     end
   end
@@ -338,7 +353,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert Provider::FamilyGenerator.panel_declared?(render_adapter(skip_view: false), key: "gocardless")
     assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless"\n), key: "gocardless")
     assert_not Provider::FamilyGenerator.panel_declared?("class Provider::GocardlessAdapter < Provider::Base\nend\n", key: "gocardless")
-    assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless_bank", panel: { title: "X" }\n), key: "gocardless")
+    assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless_bank", name: "X", panel: true\n), key: "gocardless")
   end
 
   test "returns nil when there is no provider_summary to update" do

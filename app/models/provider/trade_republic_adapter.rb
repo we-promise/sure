@@ -3,7 +3,8 @@ class Provider::TradeRepublicAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("TradeRepublicAccount", self)
-  declares_connection key: "trade_republic", panel: { title: "Trade Republic", turbo_id: "trade-republic" }
+  declares_connection key: "trade_republic", name: "Trade Republic", panel: { turbo_id: "trade-republic" },
+                      metadata: { region: "EU", kinds: %w[Bank Investment], maturity: :beta, logo_text: "TR", logo_color: nil, domain: "traderepublic.com" }
 
   def self.supported_account_types
     %w[Depository Investment]
