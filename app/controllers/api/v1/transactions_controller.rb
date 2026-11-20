@@ -474,7 +474,12 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     def requested_currency
-      transaction_params[:currency].to_s.strip.upcase.presence
+      canonical_currency(transaction_params[:currency])
+    end
+
+    # Entries created before codes were normalized can hold "usd".
+    def canonical_currency(code)
+      code.to_s.strip.upcase.presence
     end
 
     # Entry does not check the code, and one Money does not know would be
@@ -503,7 +508,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def split_financial_fields_changed?
       params.dig(:transaction, :amount).present? ||
-        (requested_currency.present? && requested_currency != @entry.currency) ||
+        (requested_currency.present? && requested_currency != canonical_currency(@entry.currency)) ||
         params.dig(:transaction, :date).present? ||
         params.dig(:transaction, :nature).present?
     end

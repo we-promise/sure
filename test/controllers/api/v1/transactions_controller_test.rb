@@ -834,6 +834,23 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Same currency re-sent", parent.reload.notes
   end
 
+  test "update accepts the current currency on a split parent stored in lower case" do
+    parent = create_transaction(account: @account, amount: 100, currency: "USD", name: "Split parent")
+    parent.split!([ { name: "One", amount: 60 }, { name: "Two", amount: 40 } ])
+    parent.update_column(:currency, "usd")
+
+    patch api_v1_transaction_url(parent.transaction),
+          params: { transaction: { currency: "usd", notes: "Echoed currency" } },
+          headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal "Echoed currency", parent.reload.notes
+
+    patch api_v1_transaction_url(parent.transaction),
+          params: { transaction: { currency: "EUR" } },
+          headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+  end
+
   test "should protect transaction from provider sync when updated with user_modified true" do
     update_params = {
       transaction: {
