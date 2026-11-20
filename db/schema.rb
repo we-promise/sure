@@ -723,6 +723,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
     t.index ["date"], name: "index_entries_on_date"
+    t.index ["entryable_type"], name: "index_entries_on_entryable_type"
     t.index ["entryable_type", "entryable_id"], name: "index_entries_on_entryable_type_and_entryable_id"
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
