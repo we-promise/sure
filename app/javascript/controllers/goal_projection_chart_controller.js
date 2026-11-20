@@ -216,11 +216,17 @@ export default class extends Controller {
     // zero seed point is dropped when the axis no longer starts at zero; the
     // area and line are clipped to the plot either way.
     const windowStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+    // The target counts toward the lowest value, so a floor never pushes the
+    // target line off the plot. Narrow layouts hide the y-axis, so they keep a
+    // zero floor instead of showing a baseline with no label.
     const recentMin = Math.min(
       currentAmount,
+      ...(targetAmount > 0 ? [targetAmount] : []),
       ...rawSavedSeries.filter((p) => p.date >= windowStart).map((p) => p.value)
     );
-    const { floor: yMin, step: yStep } = axisFloor(recentMin, yMax);
+    const { floor: yMin, step: yStep } = yAxisVisible
+      ? axisFloor(recentMin, yMax)
+      : { floor: 0, step: 0 };
     if (yMin > 0 && seedPoint) savedSeries.splice(savedSeries.indexOf(seedPoint), 1);
 
     const x = d3.scaleTime().domain([start, endDate]).range([margin.left, margin.left + innerWidth]);
@@ -272,7 +278,9 @@ export default class extends Controller {
     // With a floor, label from the floor up in even steps so the bottom edge
     // carries a label; otherwise keep d3's default ticks.
     const yTicks = yAxisVisible
-      ? (yMin > 0 ? d3.range(yMin, yMax + yStep / 2, yStep) : y.ticks(3))
+      ? (yMin > 0
+          ? d3.range(yMin, yMax + yStep / 2, yStep).filter((v) => v <= yMax)
+          : y.ticks(3))
       : [];
     const targetCollidesWithTick =
       targetY !== null && yTicks.some((tv) => Math.abs(y(tv) - targetY) < COLLISION_PX);
