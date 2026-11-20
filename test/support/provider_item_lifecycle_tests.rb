@@ -2,12 +2,13 @@
 
 # Lifecycle contract for an account provider on the provider kit. Include it in a
 # test case that defines `provider_item` (a persisted connection with at least
-# one provider account), `other_provider_account` (a provider account that
-# belongs to a different account provider in the same family),
-# `selectable_accountable_type`, `api_accounts_for(account_ids)` (the
-# provider's API payload listing accounts with those ids, each offered for
-# that type) and `provider_api_error` (an error the provider's client raises
-# for an API failure).
+# one provider account, none of them linked to an account yet: the sync and
+# unlink tests create their own links and count the unlinked ones),
+# `other_provider_account` (a provider account that belongs to a different
+# account provider in the same family), `selectable_accountable_type`,
+# `api_accounts_for(account_ids)` (the provider's API payload listing accounts
+# with those ids, each offered for that type) and `provider_api_error` (an
+# error the provider's client raises for an API failure).
 module ProviderItemLifecycleTests
   extend ActiveSupport::Concern
 
