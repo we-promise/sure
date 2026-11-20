@@ -12,6 +12,9 @@
 #   !Type:CCard / !Type:Bank / !Type:Cash / !Type:Oth L  – transactions
 #   !Type:Invst    – investment transactions
 #
+# An optional "!Option:MDY" or "!Option:DMY" line declares whether numeric
+# dates put the month or the day first.
+#
 # Transaction field codes:
 #   D  date        M/ D'YY  or  MM/DD'YYYY
 #   T  amount      may include commas, e.g. "-1,234.56"
@@ -114,6 +117,14 @@ module QifParser
            .map(&:strip)
            .reject { |t| %w[Tag Cat Security Prices].include?(t) }
            .first
+  end
+
+  # Returns "MDY" or "DMY" when the file declares its date order with an
+  # "!Option:MDY" or "!Option:DMY" line, otherwise nil.
+  def self.date_order(content)
+    return nil if content.blank?
+
+    content.b.match(/^!Option:(MDY|DMY)\s*$/i)&.captures&.first&.upcase
   end
 
   # Parses all transactions from the file, excluding the Opening Balance entry.

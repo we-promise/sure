@@ -1494,4 +1494,133 @@ class QifImportTest < ActiveSupport::TestCase
 
     assert_empty formats
   end
+
+  # ── Declared date order (!Option:MDY / !Option:DMY) ─────────────────────────
+
+  MDY_DOT_QIF = <<~QIF
+    !Option:MDY
+    !Type:CCard
+    D6.12.26
+    U69.99
+    T69.99
+    PFirst Purchase
+    ^
+    D6.5.26
+    U169.99
+    T169.99
+    PSecond Purchase
+    ^
+  QIF
+
+  DOT_QIF_WITHOUT_OPTION = <<~QIF
+    !Type:Bank
+    D6.12.20
+    T-10.00
+    PFirst Store
+    ^
+    D6.5.20
+    T-20.00
+    PSecond Store
+    ^
+  QIF
+
+  test "date_order reads the declared date order" do
+    assert_equal "MDY", QifParser.date_order(MDY_DOT_QIF)
+    assert_equal "DMY", QifParser.date_order("!option:dmy\r\n!Type:Bank\r\n")
+    assert_nil QifParser.date_order(DOT_QIF_WITHOUT_OPTION)
+    assert_nil QifParser.date_order(nil)
+  end
+
+  test "generate_rows_from_csv reads month-first dotted dates when the file declares MDY" do
+    @import.update!(raw_file_str: MDY_DOT_QIF)
+    @import.generate_rows_from_csv
+
+    assert_equal "%m.%d.%Y", @import.reload.qif_date_format
+    assert_equal "2026-06-12", @import.rows.find_by(name: "First Purchase").date
+    assert_equal "2026-06-05", @import.rows.find_by(name: "Second Purchase").date
+  end
+
+  test "generate_rows_from_csv reads day-first dates when the file declares DMY" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Option:DMY
+      !Type:Bank
+      D04-06-2020
+      T-10.00
+      PFirst Store
+      ^
+      D01-10-2020
+      T-20.00
+      PSecond Store
+      ^
+    QIF
+    @import.generate_rows_from_csv
+
+    assert_equal "%d-%m-%Y", @import.reload.qif_date_format
+    assert_equal "2020-06-04", @import.rows.find_by(name: "First Store").date
+  end
+
+  test "generate_rows_from_csv keeps day-first dotted dates when no order is declared" do
+    @import.update!(raw_file_str: DOT_QIF_WITHOUT_OPTION)
+    @import.generate_rows_from_csv
+
+    assert_equal "%d.%m.%Y", @import.reload.qif_date_format
+    assert_equal "2020-12-06", @import.rows.find_by(name: "First Store").date
+  end
+
+  test "generate_rows_from_csv detects month-first dotted dates without a declared order" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Type:Bank
+      D7.10.20
+      T-10.00
+      PFirst Store
+      ^
+      D7.25.20
+      T-20.00
+      PSecond Store
+      ^
+    QIF
+    @import.generate_rows_from_csv
+
+    assert_equal "%m.%d.%Y", @import.reload.qif_date_format
+    assert_equal 2, @import.rows.count
+  end
+
+  test "generate_rows_from_csv keeps year-first dates when the file declares an order" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Option:MDY
+      !Type:Bank
+      D2020-06-04
+      T-10.00
+      PFirst Store
+      ^
+    QIF
+    @import.generate_rows_from_csv
+
+    assert_equal "%Y-%m-%d", @import.reload.qif_date_format
+  end
+
+  test "generate_rows_from_csv falls back to all formats when the declared order does not fit the dates" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Option:MDY
+      !Type:Bank
+      D29.03.2021
+      T-10.00
+      PFirst Store
+      ^
+    QIF
+    @import.generate_rows_from_csv
+
+    assert_equal "%d.%m.%Y", @import.reload.qif_date_format
+    assert_equal "2021-03-29", @import.rows.find_by(name: "First Store").date
+  end
+
+  test "valid_date_formats_with_preview offers month-first dotted dates" do
+    @import.update!(raw_file_str: MDY_DOT_QIF)
+    formats = @import.valid_date_formats_with_preview
+
+    mdy = formats.find { |f| f[:format] == "%m.%d.%Y" }
+    assert_equal "MM.DD.YYYY", mdy[:label]
+    assert_equal "2026-06-12", mdy[:preview]
+    assert_includes formats.map { |f| f[:format] }, "%d.%m.%Y"
+  end
 end
