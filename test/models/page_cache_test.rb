@@ -124,4 +124,45 @@ class PageCacheTest < ActiveSupport::TestCase
     assert_operator PageCacheEntry.find_by!(page_key: "page/a").bytes, :<, body.bytesize / 10
     assert_equal body, PageCache.serve("page/a", version: "v1", family: @family, user: @user, rebuild_later: -> { }) { flunk "kept" }.body
   end
+
+  test "opening a page renews how long it is kept" do
+    PageCache.write("page/a", "report", version: "v1", family: @family, user: @user)
+
+    travel Setting.page_cache_ttl - 1.day do
+      PageCache.serve("page/a", version: "v1", family: @family, user: @user, rebuild_later: -> { }) { flunk "kept" }
+    end
+
+    travel Setting.page_cache_ttl + 2.days do
+      served = PageCache.serve("page/a", version: "v1", family: @family, user: @user, rebuild_later: -> { }) { "rebuilt" }
+      assert_equal "report", served.body, "opened a day before it would have expired"
+    end
+  end
+
+  test "a build that began before the stored page's never replaces it" do
+    slow_started = Time.current
+    travel 1.minute do
+      PageCache.write("page/a", "newer", version: "v2", family: @family, user: @user, started_at: Time.current)
+    end
+
+    travel 2.minutes do
+      assert_not PageCache.write("page/a", "older", version: "v1", family: @family, user: @user, started_at: slow_started)
+      served = PageCache.serve("page/a", version: "v2", family: @family, user: @user, rebuild_later: -> { }) { flunk "kept" }
+      assert_equal "newer", served.body
+    end
+  end
+
+  test "a rebuild that can't be queued still serves the stale page and tries again next time" do
+    PageCache.write("page/a", "old", version: "v1", family: @family, user: @user)
+    attempts = 0
+    failing = -> { attempts += 1; raise "queue down" }
+
+    travel Setting.page_cache_cooldown + 1.minute do
+      2.times do
+        served = PageCache.serve("page/a", version: "v2", family: @family, user: @user, rebuild_later: failing) { flunk "stale is served" }
+        assert_equal [ "old", true ], [ served.body, served.stale ]
+      end
+    end
+
+    assert_equal 2, attempts, "the failed attempt released its claim"
+  end
 end

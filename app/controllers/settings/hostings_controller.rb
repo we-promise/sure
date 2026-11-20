@@ -295,11 +295,7 @@ class Settings::HostingsController < ApplicationController
       Setting.jev_model = hosting_params[:jev_model].presence
     end
 
-    {
-      page_cache_days: Setting::PAGE_CACHE_DAYS_RANGE,
-      page_cache_max_mb: Setting::PAGE_CACHE_MAX_MB_RANGE,
-      page_cache_cooldown_minutes: Setting::PAGE_CACHE_COOLDOWN_MINUTES_RANGE
-    }.each do |key, range|
+    Setting::PAGE_CACHE_SETTINGS.each do |key, (range, _default)|
       next unless hosting_params.key?(key) && ENV[key.to_s.upcase].blank?
 
       raw = hosting_params[key].to_s.strip

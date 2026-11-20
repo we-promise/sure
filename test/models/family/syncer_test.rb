@@ -56,18 +56,10 @@ class Family::SyncerTest < ActiveSupport::TestCase
   test "applies rules in one ordered run per family after sync" do
     syncer = Family::Syncer.new(@family)
 
-    assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
+    assert_enqueued_with(job: ApplyRulesJob, args: [ @family, { warm_reports: true } ]) do
       syncer.perform_post_sync
     end
     assert_no_enqueued_jobs(only: RuleJob)
-  end
-
-  test "warms the reports cache once the sync's rules have had time to run" do
-    freeze_time do
-      assert_enqueued_with(job: WarmReportsCacheJob, args: [ @family ], at: WarmReportsCacheJob::AFTER_SYNC_DELAY.from_now) do
-        Family::Syncer.new(@family).perform_post_sync
-      end
-    end
   end
 
   # Issue #2925: merchants whose website arrived before Brandfetch was
@@ -81,7 +73,7 @@ class Family::SyncerTest < ActiveSupport::TestCase
   test "a logo backfill failure does not stop rules from being applied" do
     ProviderMerchant.stubs(:backfill_logos).raises(StandardError, "boom")
 
-    assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
+    assert_enqueued_with(job: ApplyRulesJob, args: [ @family, { warm_reports: true } ]) do
       Family::Syncer.new(@family).perform_post_sync
     end
   end

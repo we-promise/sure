@@ -4,7 +4,15 @@ class ReportsController < ApplicationController
   SIGN_AGNOSTIC_EXPENSE_KINDS = %w[loan_payment investment_contribution].freeze
 
   # Bump when the body's markup changes, so a deploy never serves the old one.
-  REPORT_BODY_CACHE_VERSION = 4
+  REPORT_BODY_CACHE_VERSION = 5
+  # Every parameter the body is built from, as a background rebuild repeats
+  # it and as part of the cache key: the period, the tag and entry filters
+  # and the breakdown's sort. Blank ones are dropped, so a default period
+  # keeps one key.
+  REPORT_BODY_PARAMS = %i[
+    period_type start_date end_date sort_by sort_direction filter_category_id filter_account_id
+    filter_amount_min filter_amount_max filter_date_start filter_date_end
+  ].freeze
   # The views warmed after each sync, as their URLs carry them.
   WARMED_PERIOD_TYPES = %i[monthly quarterly ytd last_6_months all_time].freeze
 
@@ -58,9 +66,18 @@ class ReportsController < ApplicationController
     controller.set_request!(request)
     controller.set_response!(make_response!(request))
 
-    Current.set(session: Session.new(user: user)) do
-      controller.send(:warm_report_body)
+    # Current memoizes the member's accounts, and Current.set doesn't clear
+    # that, so it is reset around each member: a job warming several members
+    # must never build one member's report from another's accounts. Only call
+    # this outside a request.
+    Current.reset
+    Current.session = Session.new(user: user)
+    # The member's locale and time zone, chosen as a request would choose them.
+    controller.send(:switch_locale) do
+      controller.send(:switch_timezone) { controller.send(:warm_report_body) }
     end
+  ensure
+    Current.reset
   end
 
   def update_preferences
@@ -226,13 +243,16 @@ class ReportsController < ApplicationController
       version = report_body_version
       return false if PageCache.current?(key, version: version, family: Current.family, user: Current.user)
 
-      PageCache.write(key, render_report_body, version: version, family: Current.family, user: Current.user)
+      started_at = Time.current
+      PageCache.write(key, render_report_body, version: version, family: Current.family, user: Current.user, started_at: started_at)
       true
     end
 
-    # The query a background rebuild repeats: what this page's URL carried.
     def report_query
-      params.permit(:period_type, :start_date, :end_date, filter_tag_ids: []).to_h.symbolize_keys
+      query = params.permit(*REPORT_BODY_PARAMS, filter_tag_ids: []).to_h.symbolize_keys
+      query[:filter_tag_ids] = filter_tags.map(&:id).sort if filter_tags.any?
+      query.except!(:filter_tag_ids) if filter_tags.none?
+      query.compact_blank.sort.to_h
     end
 
     # Names the report whatever data it is built from: whose it is (family and
@@ -240,11 +260,22 @@ class ReportsController < ApplicationController
     # member's settings that change its figures, and the period and filters as
     # the URL gave them. A default period ("this year") keeps its key from one
     # day to the next, so yesterday's build is served while today's is made.
+    #
+    # The accounts the member may see are part of the name, not the version: a
+    # build from before a change of access is never served, even stale, so a
+    # report can't show an account the member has just lost.
     def report_body_cache_key
       [
         "reports_body", REPORT_BODY_CACHE_VERSION, Current.family.id, Current.user.id, report_member_version, I18n.locale,
-        @period_type, params[:start_date].presence, params[:end_date].presence, filter_tags.map(&:id).sort.join(",")
+        report_access_digest, Digest::SHA256.hexdigest(report_query.to_query)
       ].join("/")
+    end
+
+    def report_access_digest
+      Digest::SHA256.hexdigest([
+        accessible_accounts.map(&:id).sort.join(","),
+        Current.user.finance_accounts.pluck(:id).sort.join(",")
+      ].join("|"))
     end
 
     # The member's settings that change a report's figures. Section order and
@@ -255,20 +286,19 @@ class ReportsController < ApplicationController
     end
 
     # Everything the body is drawn from: the family's data (a completed sync,
-    # any entry, category, tag, account or budget change), the accounts this
-    # member may see, the dates the period resolves to and today's date. A
-    # build from a different version is served stale and rebuilt.
+    # any entry, category, tag or tagging, account or budget change), exchange
+    # rates, the dates the period resolves to and today's date. A build from a
+    # different version is served stale and rebuilt.
     def report_body_version
       family = Current.family
-      accounts = accessible_accounts
       Digest::SHA256.hexdigest([
         family.build_cache_key("reports_body", invalidate_on_data_updates: true),
         family.entries_version,
-        family.tags.maximum(:updated_at)&.to_f,
+        family.tags_version,
+        ExchangeRate.updated_at_version,
         family.budgets.maximum(:updated_at)&.to_f,
         BudgetCategory.joins(:budget).where(budgets: { family_id: family.id }).maximum(:updated_at)&.to_f,
-        accounts.map(&:id).sort.join(","),
-        accounts.map(&:updated_at).max&.to_f,
+        accessible_accounts.map(&:updated_at).max&.to_f,
         @start_date, @end_date, Date.current
       ].join("|"))
     end

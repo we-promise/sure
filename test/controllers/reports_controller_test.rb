@@ -480,6 +480,94 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "warming several members builds each one's report from their own accounts" do
+    member = users(:family_member)
+    @family.accounts.create!(name: "Admin only", balance: 0, currency: "USD", accountable: Depository.new, owner: @user)
+    assert_not_equal @user.accessible_accounts.pluck(:id).sort, member.accessible_accounts.pluck(:id).sort
+
+    seen = {}
+    ReportsController.any_instance.stubs(:render_report_body).with do
+      seen[Current.user.id] = Current.accessible_accounts.map(&:id).sort
+      true
+    end.returns({ notes: "", has_transactions: false, summary: "", sections: [] })
+
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      ReportsController.warm_body_cache(user: member, query: { period_type: :ytd })
+    end
+
+    assert_equal @user.accessible_accounts.pluck(:id).sort, seen[@user.id]
+    assert_equal member.accessible_accounts.pluck(:id).sort, seen[member.id]
+  end
+
+  test "losing access to an account is never answered with a report built before" do
+    member = users(:family_member)
+    sign_in member
+
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      assert_response :ok
+
+      account_shares(:depository_shared_with_member).destroy!
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd)
+
+      assert_select "#rebuilt"
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/, count: 0
+    end
+  end
+
+  test "each sort and filter of the breakdown is its own cached report" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+
+      ReportsController.any_instance.expects(:render_report_body).twice
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd, sort_by: "count", sort_direction: "asc")
+      assert_select "#rebuilt"
+      get reports_path(period_type: :ytd, filter_account_id: accounts(:depository).id)
+      assert_select "#rebuilt"
+    end
+  end
+
+  test "a background rebuild repeats the page's sort and filters" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd, sort_by: "count", filter_account_id: accounts(:depository).id)
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        @family.entries.first.touch
+        assert_enqueued_with(job: RebuildReportJob,
+          args: [ @user, { filter_account_id: accounts(:depository).id, period_type: "ytd", sort_by: "count" } ]) do
+          get reports_path(period_type: :ytd, sort_by: "count", filter_account_id: accounts(:depository).id)
+        end
+      end
+    end
+  end
+
+  test "a report warmed in the background is in the member's own language" do
+    @user.update!(locale: "de")
+
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path(period_type: :ytd)
+      assert_response :ok
+    end
+  end
+
+  test "assigning a tag marks the cached report stale" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        transactions(:one).update!(tag_ids: [ tags(:one).id ])
+        assert_enqueued_with(job: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      end
+    end
+  end
+
   test "each member gets their own cached body" do
     with_memory_cache do
       ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })

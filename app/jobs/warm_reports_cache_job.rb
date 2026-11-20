@@ -1,11 +1,8 @@
 # Builds the Reports views each member most often opens, so they are cached
-# before anyone asks. Enqueued after a family sync, late enough for the rules
-# that sync starts to have run: a body built before a rule recategorises
-# entries would be keyed on stale data and never served.
+# before anyone asks. ApplyRulesJob enqueues it after a family sync, once the
+# sync's rules have run.
 class WarmReportsCacheJob < ApplicationJob
   queue_as :low_priority
-
-  AFTER_SYNC_DELAY = 5.minutes
 
   def perform(family)
     family.users.find_each do |user|

@@ -1,0 +1,25 @@
+<%# locals: (name:, label:, description:) %>
+<%# One page cache number (see Setting::PAGE_CACHE_SETTINGS), saved on change. %>
+<% range, default = Setting::PAGE_CACHE_SETTINGS.fetch(name) %>
+<% from_env = ENV[name.to_s.upcase].present? %>
+<div class="flex items-center justify-between gap-4">
+  <div class="space-y-1">
+    <p class="text-sm"><%= label %></p>
+    <p class="text-secondary text-sm"><%= description %></p>
+  </div>
+
+  <%= form_with model: Setting.new,
+                url: settings_hosting_path,
+                method: :patch,
+                data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+    <%= form.label name, label, class: "sr-only" %>
+    <%= form.number_field name,
+                          value: from_env ? Setting.page_cache_value(name) : Setting.public_send(name),
+                          placeholder: default,
+                          min: range.min,
+                          max: range.max,
+                          disabled: from_env,
+                          class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container text-primary w-24",
+                          data: { auto_submit_form_target: "auto" } %>
+  <% end %>
+</div>

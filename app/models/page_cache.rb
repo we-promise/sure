@@ -35,13 +35,16 @@ class PageCache
       entry = read(key, family: family, user: user) unless refresh
 
       if entry.nil?
+        started_at = Time.current
         body = yield
-        write(key, body, version: version, family: family, user: user)
+        write(key, body, version: version, family: family, user: user, started_at: started_at)
         return Served.new(body: body, built_at: Time.current, stale: false)
       end
 
       stale = entry[:version] != version
-      rebuild_later.call if stale && entry[:built_at] <= Setting.page_cache_cooldown.ago && claim_rebuild(key)
+      if stale && entry[:built_at] <= Setting.page_cache_cooldown.ago && claim_rebuild(key)
+        queue_rebuild(key, rebuild_later)
+      end
 
       Served.new(body: entry[:body], built_at: entry[:built_at], stale: stale)
     end
@@ -50,12 +53,20 @@ class PageCache
       read(key, family: family, user: user, touch: false)&.dig(:version) == version
     end
 
-    # Returns whether the page was kept.
-    def write(key, body, version:, family:, user:)
-      entry = { family_id: family.id, user_id: user.id, version: version, built_at: Time.current.iso8601(6), body: body }
+    # Returns whether the page was kept. `started_at` is when its build began:
+    # a build that began before the stored page's did is from older data, so a
+    # slow builder finishing last never replaces a newer page.
+    def write(key, body, version:, family:, user:, started_at: Time.current)
+      release_rebuild(key)
+      stored = read(key, family: family, user: user, touch: false)
+      return false if stored && stored[:started_at] > started_at
+
+      entry = {
+        family_id: family.id, user_id: user.id, version: version,
+        started_at: started_at.iso8601(6), built_at: Time.current.iso8601(6), body: body
+      }
       sealed = encryptor_for(family).encrypt_and_sign(entry, purpose: key)
       bytes = sealed.bytesize
-      release_rebuild(key)
 
       if bytes > max_bytes
         forget(PageCacheEntry.where(page_key: key))
@@ -76,18 +87,37 @@ class PageCache
     end
 
     def max_bytes
-      Setting.page_cache_max_mb_or_default.megabytes
+      Setting.page_cache_max_mb_in_effect.megabytes
     end
 
     private
       def read(key, family:, user:, touch: true)
-        entry = unseal(Rails.cache.read(key), key: key, family: family)
+        sealed = Rails.cache.read(key)
+        entry = unseal(sealed, key: key, family: family)
         return unless entry && entry[:family_id] == family.id && entry[:user_id] == user.id
 
-        if touch
-          PageCacheEntry.where(page_key: key, last_used_at: ...TOUCH_INTERVAL.ago).update_all(last_used_at: Time.current)
-        end
-        entry.merge(built_at: Time.zone.parse(entry[:built_at]))
+        touch(key, sealed) if touch
+        entry.merge(
+          built_at: Time.zone.parse(entry[:built_at]),
+          started_at: entry[:started_at] ? Time.zone.parse(entry[:started_at]) : Time.zone.parse(entry[:built_at])
+        )
+      end
+
+      # Records the use, at most once per TOUCH_INTERVAL, and renews the cache
+      # store's expiry with it: a page kept "for N days unopened" must not
+      # expire N days after it was built while it is still being opened.
+      def touch(key, sealed)
+        touched = PageCacheEntry.where(page_key: key, last_used_at: ...TOUCH_INTERVAL.ago).update_all(last_used_at: Time.current)
+        Rails.cache.write(key, sealed, expires_in: Setting.page_cache_ttl) if touched.positive?
+      end
+
+      # A rebuild that can't be queued leaves the stale page served and the
+      # claim released, so the next visit tries again.
+      def queue_rebuild(key, rebuild_later)
+        rebuild_later.call
+      rescue StandardError => e
+        release_rebuild(key)
+        Rails.logger.error("[PageCache] could not queue a rebuild of #{key}: #{e.class}: #{e.message}")
       end
 
       def unseal(sealed, key:, family:)
