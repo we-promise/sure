@@ -43,7 +43,8 @@ class SnaptradeAccount::Processor
       account.set_current_balance(
         anchor_balance,
         date: date,
-        reuse_explained_anchor: activities_ok
+        reuse_explained_anchor: activities_ok,
+        apply_provider_adjustment: true
       )
     end
 

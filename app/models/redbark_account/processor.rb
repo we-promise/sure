@@ -40,7 +40,8 @@ class RedbarkAccount::Processor
       account.set_current_balance(
         anchor_balance,
         date: date,
-        reuse_explained_anchor: transactions_ok
+        reuse_explained_anchor: transactions_ok,
+        apply_provider_adjustment: true
       )
     end
 

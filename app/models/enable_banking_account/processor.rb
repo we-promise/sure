@@ -27,7 +27,8 @@ class EnableBankingAccount::Processor
         result = enable_banking_account.current_account.set_current_balance(
           anchor_balance,
           date: date,
-          reuse_explained_anchor: transactions_ok
+          reuse_explained_anchor: transactions_ok,
+          apply_provider_adjustment: true
         )
         raise ProcessingError.new("Failed to set current balance: #{result.error}") unless result.success?
 

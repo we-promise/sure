@@ -45,7 +45,7 @@ class CoinstatsAccount::Processor
 
     # Anchor the reported balance AFTER importing, so the previous reading can be judged
     # against a complete ledger. See Account::CurrentBalanceManager.
-    coinstats_account.current_account.set_current_balance(anchor_balance, date: date) if anchor_balance
+    coinstats_account.current_account.set_current_balance(anchor_balance, date: date, apply_provider_adjustment: true) if anchor_balance
   end
 
   private
