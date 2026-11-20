@@ -736,6 +736,26 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Transaction Name", response_data["name"]
   end
 
+  test "update with only a nature applies it to the stored amount" do
+    entry = create_transaction(account: @account, amount: 40, name: "Nature only")
+
+    [ [ "income", -40 ], [ "inflow", -40 ], [ "expense", 40 ], [ "outflow", 40 ] ].each do |nature, expected|
+      put api_v1_transaction_url(entry.transaction), params: { transaction: { nature: nature } }, headers: api_headers(@api_key)
+
+      assert_response :success, nature
+      assert_equal expected, entry.reload.amount, nature
+    end
+  end
+
+  test "update with only a nature syncs the account when the sign flips" do
+    entry = create_transaction(account: @account, amount: 40, name: "Nature flip")
+
+    assert_enqueued_with(job: SyncJob) do
+      put api_v1_transaction_url(entry.transaction), params: { transaction: { nature: "income" } }, headers: api_headers(@api_key)
+    end
+    assert_response :success
+  end
+
   test "should not sync the account when only notes change" do
     assert_no_enqueued_jobs only: SyncJob do
       put api_v1_transaction_url(@transaction),

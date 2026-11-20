@@ -336,7 +336,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               currency: { type: :string, description: 'Currency code' },
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
-              nature: { type: :string, enum: %w[income expense inflow outflow] },
+              nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Sign of the amount. Without amount, applies to the stored amount.' },
               tag_ids: {
                 type: :array,
                 items: { type: :string, format: :uuid },

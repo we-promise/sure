@@ -599,10 +599,10 @@ RSpec.describe 'API V1 Trades', type: :request do
             type: :object,
             properties: {
               date: { type: :string, format: :date },
-              qty: { type: :number },
-              price: { type: :number },
-              type: { type: :string, enum: %w[buy sell sweep_in sweep_out reinvestment] },
-              nature: { type: :string, enum: %w[inflow outflow] },
+              qty: { type: :number, description: 'Positive quantity. Sending qty, price, type or nature recomputes the entry amount as qty * price + fee, signed by the side; what the request leaves out is taken from the trade.' },
+              price: { type: :number, description: 'Positive price per unit' },
+              type: { type: :string, enum: %w[buy sell sweep_in sweep_out reinvestment], description: 'Side of the trade; takes precedence over nature' },
+              nature: { type: :string, enum: %w[inflow outflow], description: 'inflow is a sell, outflow a buy' },
               name: { type: :string },
               notes: { type: :string },
               currency: { type: :string },
@@ -670,6 +670,15 @@ RSpec.describe 'API V1 Trades', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '422', 'qty or price is not a positive number' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { trade.id }
+        let(:body) { { trade: { price: 'abc' } } }
 
         run_test!
       end

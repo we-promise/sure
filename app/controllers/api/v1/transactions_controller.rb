@@ -402,9 +402,11 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         }.compact_blank
       }
 
-      # Only update amount if provided
+      # A nature without an amount applies to the stored amount.
       if transaction_params[:amount].present?
         entry_params[:amount] = calculate_signed_amount
+      elsif transaction_params[:nature].present?
+        entry_params[:amount] = calculate_signed_amount(@entry.amount)
       end
 
       entry_params.compact
@@ -528,8 +530,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       render :show, status: :ok
     end
 
-    def calculate_signed_amount
-      amount = transaction_params[:amount].to_f
+    def calculate_signed_amount(amount = transaction_params[:amount].to_f)
       nature = transaction_params[:nature]
 
       case nature&.downcase

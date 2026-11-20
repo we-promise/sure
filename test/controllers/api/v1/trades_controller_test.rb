@@ -772,6 +772,101 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Sweep Out", body["investment_activity_label"]
   end
 
+  test "an update with only a type turns a buy into a sell, fee included" do
+    trade = Trade.find(create_buy_trade("UPDTYPE", fee: 2))
+
+    patch api_v1_trade_url(trade.id), params: { trade: { type: "sell" } }, headers: api_headers(read_write_api_key)
+
+    assert_response :ok
+    trade.reload
+    assert_equal(-5, trade.qty)
+    assert_equal 100, trade.price
+    assert_equal(-498, trade.entry.amount)
+    assert_equal "Sell", trade.investment_activity_label
+    assert_equal Trade.build_name("sell", 5, "UPDTYPE"), trade.entry.name
+  end
+
+  test "an update with only a nature sets the side of the trade" do
+    trade = Trade.find(create_buy_trade("UPDNAT"))
+
+    patch api_v1_trade_url(trade.id), params: { trade: { nature: "inflow" } }, headers: api_headers(read_write_api_key)
+
+    assert_response :ok
+    trade.reload
+    assert_equal(-5, trade.qty)
+    assert_equal(-500, trade.entry.amount)
+    assert_equal "Sell", trade.investment_activity_label
+
+    patch api_v1_trade_url(trade.id), params: { trade: { nature: "outflow" } }, headers: api_headers(read_write_api_key)
+
+    assert_response :ok
+    trade.reload
+    assert_equal 5, trade.qty
+    assert_equal 500, trade.entry.amount
+    assert_equal "Buy", trade.investment_activity_label
+  end
+
+  test "an update with only a price stores the price and recomputes the amount" do
+    trade = Trade.find(create_buy_trade("UPDPRICE", fee: 2))
+
+    patch api_v1_trade_url(trade.id), params: { trade: { price: "120.5" } }, headers: api_headers(read_write_api_key)
+
+    assert_response :ok
+    trade.reload
+    assert_equal 5, trade.qty
+    assert_equal BigDecimal("120.5"), trade.price
+    assert_equal BigDecimal("604.5"), trade.entry.amount
+  end
+
+  test "an update with a qty and a price stores both" do
+    trade = Trade.find(create_buy_trade("UPDBOTH"))
+
+    patch api_v1_trade_url(trade.id), params: { trade: { qty: 3, price: 90 } }, headers: api_headers(read_write_api_key)
+
+    assert_response :ok
+    trade.reload
+    assert_equal 3, trade.qty
+    assert_equal 90, trade.price
+    assert_equal 270, trade.entry.amount
+  end
+
+  test "an update with a qty or price that is not a positive number is refused and changes nothing" do
+    trade = Trade.find(create_buy_trade("UPDBAD"))
+
+    [
+      [ { qty: "abc" }, "Quantity and price must be valid numbers" ],
+      [ { price: "abc" }, "Quantity and price must be valid numbers" ],
+      [ { qty: "2", price: "1e" }, "Quantity and price must be valid numbers" ],
+      [ { qty: "0" }, "Quantity and price are required" ],
+      [ { price: "-3" }, "Quantity and price are required" ]
+    ].each do |attrs, message|
+      patch api_v1_trade_url(trade.id), params: { trade: attrs }, headers: api_headers(read_write_api_key)
+
+      assert_response :unprocessable_entity, attrs.inspect
+      assert_equal message, JSON.parse(response.body)["message"], attrs.inspect
+      trade.reload
+      assert_equal 5, trade.qty
+      assert_equal 100, trade.price
+      assert_equal 500, trade.entry.amount
+    end
+  end
+
+  test "a dividend cannot become a buy without a qty and a price" do
+    post "/api/v1/trades",
+      params: { trade: { account_id: @investment_account.id, type: "dividend", date: Date.current,
+                         amount: 25.50, currency: "USD", ticker: "AAPL|XNAS" } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade = Trade.find(JSON.parse(response.body)["id"])
+
+    patch api_v1_trade_url(trade.id), params: { trade: { type: "buy" } }, headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+    trade.reload
+    assert_equal "Dividend", trade.investment_activity_label
+    assert_equal BigDecimal("-25.5"), trade.entry.amount
+  end
+
   test "rejects unsupported cash trade types on update" do
     trade = @investment_account.trades.first
 
@@ -966,6 +1061,24 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     body = JSON.parse(response.body)
     assert_equal "Amount must be a valid number", body["message"]
+  end
+
+  test "create refuses an amount, qty or price with trailing garbage instead of reading its leading digits" do
+    security = Security.create!(ticker: "GARBAGE", name: "Garbage Security", country_code: "US")
+    [
+      [ { type: "deposit", amount: "12abc" }, "Amount must be a valid number" ],
+      [ { type: "buy", qty: "5abc", price: 100, security_id: security.id }, "Quantity and price must be valid numbers" ],
+      [ { type: "buy", qty: 5, price: "Infinity", security_id: security.id }, "Quantity and price must be valid numbers" ]
+    ].each do |attrs, message|
+      assert_no_difference "Entry.count" do
+        post "/api/v1/trades",
+          params: { trade: { account_id: @investment_account.id, date: Date.current, currency: "USD" }.merge(attrs) },
+          headers: api_headers(read_write_api_key)
+      end
+
+      assert_response :unprocessable_entity, attrs.inspect
+      assert_equal message, JSON.parse(response.body)["message"], attrs.inspect
+    end
   end
 
   test "create deposit with zero amount returns 422" do
@@ -1190,7 +1303,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    def create_buy_trade(ticker)
+    def create_buy_trade(ticker, fee: nil)
       security = Security.create!(ticker: ticker, name: "#{ticker} Security", country_code: "US")
       post "/api/v1/trades",
         params: { trade: {
@@ -1199,9 +1312,10 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
           date: Date.current,
           qty: 5,
           price: 100,
+          fee: fee,
           currency: "USD",
           security_id: security.id
-        } },
+        }.compact },
         headers: api_headers(read_write_api_key)
       assert_response :created
       JSON.parse(response.body)["id"]
