@@ -472,6 +472,23 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/skipped/i, flash[:notice])
   end
 
+  test "a non-admin is refused account setup before the connection is looked up" do
+    sign_in users(:family_member)
+
+    get setup_accounts_brex_item_url(SecureRandom.uuid)
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("shared.require_admin"), flash[:alert]
+  end
+
+  test "a non-admin is refused account setup for an existing connection too" do
+    sign_in users(:family_member)
+
+    get setup_accounts_brex_item_url(@existing_item)
+
+    assert_redirected_to accounts_path
+  end
+
   test "complete account setup treats scalar setup params as empty" do
     assert_no_difference "AccountProvider.count" do
       post complete_account_setup_brex_item_url(@second_item), params: {
