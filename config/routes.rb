@@ -14,6 +14,8 @@ Rails.application.routes.draw do
 
     member do
       post :sync
+      get :setup_accounts
+      post :complete_account_setup
     end
   end
 
@@ -81,12 +83,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :brex_items, only: %i[index new create show edit update destroy], concerns: :provider_items do
-    member do
-      get :setup_accounts, to: "brex_items/account_setups#setup_accounts"
-      post :complete_account_setup, to: "brex_items/account_setups#complete_account_setup"
-    end
-  end
+  resources :brex_items, only: %i[index new create show edit update destroy], concerns: :provider_items
 
   resources :coinbase_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do

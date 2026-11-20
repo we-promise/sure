@@ -61,6 +61,10 @@ class ProviderItem::AccountFlow
     raise NotImplementedError, "#{name} must define .cache_sensitive_params"
   end
 
+  def self.adapter_class
+    "Provider::#{provider_key.camelize}Adapter".constantize
+  end
+
   def self.cache_key(family, item)
     "#{provider_key}_accounts_#{family.id}_#{item.id}"
   end
@@ -289,7 +293,7 @@ class ProviderItem::AccountFlow
     end
 
     def adapter_class
-      "Provider::#{provider_key.camelize}Adapter".constantize
+      self.class.adapter_class
     end
 
     def selection_error_payload
