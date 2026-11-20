@@ -18,15 +18,19 @@ class Security::Constituent < ApplicationRecord
   WHOLE_FUND_FROM = BigDecimal("99")
   PERCENT = BigDecimal("100")
 
-  # `listed` maps each ticker to its fraction of the fund; `unlisted` is the
-  # fraction no row names, zero for a whole-fund list.
+  # `listed` maps each holding, as [ticker, exchange], to its fraction of the
+  # fund; `unlisted` is the fraction no row names: zero for a whole-fund list,
+  # and the whole fund when no row carries a usable weight.
   FundShares = Data.define(:listed, :unlisted)
-  NO_SHARES = FundShares.new(listed: {}.freeze, unlisted: BigDecimal("0"))
+
+  # The two columns `.fund_shares` reads, so a reader can pass plucked values
+  # rather than load each row.
+  Row = Data.define(:ticker, :exchange, :weight)
 
   belongs_to :security
 
   validates :ticker, presence: true
-  validates :ticker, uniqueness: { scope: :security_id }
+  validates :ticker, uniqueness: { scope: [ :security_id, :exchange ] }
   # Zero is allowed, and this is not a cosmetic boundary: EODHD reports a
   # rounded `Assets_%` and returns 0 for a position too small to round up to
   # 0.01. Refusing zero would fail that one row, and with it the import that
@@ -49,10 +53,10 @@ class Security::Constituent < ApplicationRecord
   def self.fund_shares(rows)
     weighted = rows.reject { |row| row.weight.nil? }
     total = weighted.sum(&:weight)
-    return NO_SHARES unless total.positive?
+    return FundShares.new(listed: {}, unlisted: BigDecimal("1")) unless total.positive?
 
     divisor = total >= WHOLE_FUND_FROM ? total : PERCENT
-    listed = weighted.each_with_object({}) { |row, map| map[row.ticker] = row.weight / divisor }
+    listed = weighted.each_with_object({}) { |row, map| map[[ row.ticker, row.exchange ]] = row.weight / divisor }
     FundShares.new(listed: listed, unlisted: 1 - total / divisor)
   end
 end

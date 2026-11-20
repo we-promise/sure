@@ -2,7 +2,9 @@ class CreateSecurityClassificationProposals < ActiveRecord::Migration[8.1]
   def change
     create_table :security_classification_proposals, id: :uuid do |t|
       t.references :security, null: false, foreign_key: true, type: :uuid
-      t.references :family, null: false, foreign_key: true, type: :uuid
+      # No index of its own: the unique (family_id, security_id) index below
+      # leads with family_id and serves those lookups.
+      t.references :family, null: false, foreign_key: true, type: :uuid, index: false
 
       # The same four columns `securities` carries, holding what was PROPOSED
       # rather than what is true. Nullable individually: a proposal that can only

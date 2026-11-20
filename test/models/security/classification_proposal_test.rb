@@ -77,13 +77,24 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
 
   # A fresh answer is a fresh question for the person: re-proposing after a
   # rejection puts the replaced proposal back in front of them.
-  test "re-proposing after a rejection makes the proposal pending again" do
+  # A person's decision stands: re-proposing does not reopen a rejection nor
+  # erase an approval, and the caller learns it from `pending?`.
+  test "re-proposing after a rejection leaves the rejection in place" do
     propose(asset_class: "equity").reject!
 
     proposal = propose(asset_class: "commodity")
 
-    assert proposal.reload.pending?, "the new answer stayed hidden behind the old rejection"
-    assert_equal "commodity", proposal.asset_class
+    assert proposal.reload.rejected?, "a re-proposal reopened a rejected proposal"
+    assert_equal "equity", proposal.asset_class
+  end
+
+  test "re-proposing after an approval leaves the approval in place" do
+    propose(asset_class: "equity", asset_sub_class: "stock").approve!
+
+    proposal = propose(asset_class: "commodity")
+
+    assert proposal.reload.approved?, "a re-proposal erased the record of an approval"
+    assert_equal "equity", @security.reload.asset_class
   end
 
   # An empty proposal that was storable and approvable would stamp
@@ -406,6 +417,50 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
   # An unconditional rejection would let a stale reject form from another tab
   # move an already-approved proposal to `rejected` while the security stays
   # "ai" -- the row would then deny a classification that is still in force.
+  test "answering only the class a fund already has keeps its sub-class" do
+    @security.update!(asset_class: "equity", asset_sub_class: "etf", classification_source: "provider")
+
+    assert propose(asset_class: "equity", sector: "Technology").approve!
+
+    assert_equal "etf", @security.reload.asset_sub_class
+  end
+
+  test "a fund approved without a region loses the region its listing implies" do
+    @security.update_columns(country_code: "IE", region: "europe")
+
+    assert propose(asset_class: "equity", asset_sub_class: "etf").approve!
+
+    assert_nil @security.reload.region
+  end
+
+  test "a fund approved without a region keeps a region someone set by hand" do
+    @security.update_columns(country_code: "IE", region: "north_america")
+
+    assert propose(asset_class: "equity", asset_sub_class: "etf").approve!
+
+    assert_equal "north_america", @security.reload.region
+  end
+
+  test "a provider classification written after the proposal is not approved over" do
+    proposal = propose(asset_class: "equity", asset_sub_class: "stock")
+    @security.update_columns(asset_class: "fixed_income", asset_sub_class: "bond", classification_source: "provider",
+                             classification_fetched_at: 1.minute.from_now)
+
+    assert_not proposal.approve!
+    assert_equal "fixed_income", @security.reload.asset_class
+    assert proposal.reload.pending?
+  end
+
+  test "an approval the security cannot store is refused and logged, not raised" do
+    proposal = propose(asset_class: "equity", asset_sub_class: "stock")
+    @security.update_columns(price_provider: "no_such_provider")
+
+    assert_difference -> { DebugLogEntry.where(message: "Classification proposal could not be approved").count }, 1 do
+      assert_not proposal.approve!
+    end
+    assert proposal.reload.pending?
+  end
+
   test "rejecting an already-approved proposal is refused" do
     proposal = propose(asset_class: "equity", asset_sub_class: "stock")
     proposal.approve!
@@ -481,13 +536,12 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
 
   test "re-proposing after the security is classified by hand is refused, and the stored row is unchanged" do
     first = propose(asset_class: "equity")
-    first.reject!
     @security.update!(asset_class: "fixed_income", classification_source: "manual")
 
     assert_raises(ActiveRecord::RecordInvalid) { propose(asset_class: "commodity") }
 
     stored = first.reload
-    assert stored.rejected?
+    assert stored.pending?
     assert_equal "equity", stored.asset_class
   end
 

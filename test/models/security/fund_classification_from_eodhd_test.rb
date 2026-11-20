@@ -35,7 +35,7 @@ class Security::FundClassificationFromEodhdTest < ActiveSupport::TestCase
   test "typical: 60/40" do
     r = run_eodhd(sec("AOR", "ARCX", "US"), "General" => { "Type" => "ETF", "Name" => "AOR", "Category" => "Allocation--50% to 70% Equity" },
       "ETF_Data" => { "Asset_Allocation" => aa("Stock US" => 35, "Stock non-US" => 25, "Bond" => 39, "Cash" => 1) })
-    assert_equal [ nil, nil, "north_america", nil ], r
+    assert_equal [ nil, "etf", nil, nil ], r
   end
 
   test "typical: gold ETF with category" do

@@ -50,8 +50,11 @@ class Security::ClassificationProposal < ApplicationRecord
 
   ANSWER_COLUMNS = %i[asset_class asset_sub_class sector region rationale].freeze
 
-  # Replaces any existing proposal for this pair rather than accumulating, so a
+  # Replaces a pending proposal for this pair rather than accumulating, so a
   # review screen can never show one security twice with two different answers.
+  # A proposal a person has already approved or rejected is left as it is and
+  # returned unchanged: re-proposing must not reopen a rejection, nor erase the
+  # record of an approval. Callers check `pending?` on the result.
   # The unique index on (family_id, security_id) is what makes that a guarantee
   # rather than a convention.
   #
@@ -72,7 +75,10 @@ class Security::ClassificationProposal < ApplicationRecord
 
     begin
       existing = find_by(security: security, family: family)
-      return existing.tap { |p| p.with_lock { p.update!(status: "pending", **answer) } } if existing
+      if existing
+        existing.with_lock { existing.update!(answer) if existing.pending? }
+        return existing
+      end
 
       # A savepoint, so the unique violation does not poison a caller's
       # transaction before the retry reads the winner's row.
@@ -85,8 +91,10 @@ class Security::ClassificationProposal < ApplicationRecord
   end
 
   # Returns false rather than raising when the security has been answered since
-  # the proposal was made -- that window is exactly where a user can pick up the
-  # drawer and classify it by hand, and their answer wins.
+  # the proposal was made -- by hand, or by a provider classifying it after the
+  # proposal was last written -- or when the security cannot store the answer.
+  # That window is exactly where a user can pick up the drawer and classify it
+  # by hand, and their answer wins.
   def approve!
     # `pending?` is checked inside THIS row's lock, not against whatever the
     # in-memory object last read. Checked outside, two requests on one proposal
@@ -109,10 +117,17 @@ class Security::ClassificationProposal < ApplicationRecord
       # is committed now.
       security.with_lock do
         next if security.classification_locked? || security.classification_source == "manual"
+        next if answered_by_provider_since_proposed?
 
         security.update!(proposed_attributes.merge(source_attributes))
         update!(status: "approved")
         approved = true
+      rescue ActiveRecord::RecordInvalid => e
+        # A field the proposal does not touch can make the shared row invalid
+        # (a provider no longer registered). `update!` wrote nothing, so the
+        # approval is refused, the proposal stays pending, and support has a
+        # trail.
+        log_refused_approval(e)
       end
     end
 
@@ -149,11 +164,49 @@ class Security::ClassificationProposal < ApplicationRecord
     # independently. Answering the class therefore writes the sub-class too,
     # blank included, so the pair is always the proposal's own answer rather
     # than half of it over half of someone else's.
+    #
+    # Answering only the class it already has keeps the security's sub-class:
+    # an equity ETF re-proposed as "equity" stays an ETF rather than losing the
+    # sub-class that keeps its listing country out of its region.
+    #
+    # A fund approved without a region loses the region its listing implies,
+    # as a provider's classification of a fund does: a listing or domicile
+    # country says nothing about what the fund holds. A region set any other
+    # way stays.
     def proposed_attributes
       attrs = { sector: sector, region: region }.compact_blank
-      return attrs if asset_class.blank?
+      if asset_class.present?
+        keep_sub_class = asset_sub_class.blank? && asset_class == security.asset_class
+        attrs[:asset_class] = asset_class
+        attrs[:asset_sub_class] = asset_sub_class.presence unless keep_sub_class
+      end
 
-      attrs.merge(asset_class: asset_class, asset_sub_class: asset_sub_class.presence)
+      sub_class = attrs.key?(:asset_sub_class) ? attrs[:asset_sub_class] : security.asset_sub_class
+      if region.blank? && sub_class.in?(%w[etf mutual_fund]) &&
+          security.region.present? && security.region == Security::REGIONS.dig(security.country_code.to_s.upcase, "region")
+        attrs[:region] = nil
+      end
+
+      attrs
+    end
+
+    # A provider stamp newer than the proposal means the security was
+    # classified after the assistant last proposed for it, and the stale
+    # proposal must not replace that answer.
+    def answered_by_provider_since_proposed?
+      security.classification_source == "provider" &&
+        security.classification_fetched_at.present? && security.classification_fetched_at > updated_at
+    end
+
+    def log_refused_approval(error)
+      DebugLogEntry.capture(
+        category: "security_classification",
+        level: "warn",
+        message: "Classification proposal could not be approved",
+        source: self.class.name,
+        family: family,
+        metadata: { proposal_id: id, security_id: security_id, errors: error.record.errors.full_messages }
+      )
     end
 
     # `classification_source` says who set the ASSET classification, and in
@@ -167,9 +220,9 @@ class Security::ClassificationProposal < ApplicationRecord
     # That guard refuses a proposal answering nothing; this one declines to
     # claim the classification for a proposal that answered something else.
     def source_attributes
-      return { classification_locked: false } if asset_class.blank?
+      return {} if asset_class.blank?
 
-      { classification_source: "ai", classification_locked: false }
+      { classification_source: "ai" }
     end
 
     # A proposal with nothing in it would be storable AND approvable, and
