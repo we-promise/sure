@@ -406,10 +406,20 @@ class ProviderItem::AccountFlow
       fetch_and_cache_accounts
     end
 
+    # The list is cached only if the connection's credentials are unchanged
+    # since the fetch began: an update that drops the cache mid-fetch must not
+    # have the old credentials' accounts written back under the same key.
     def fetch_and_cache_accounts
+      credentials = cache_credentials(item)
       available_accounts = fetch_accounts
-      Rails.cache.write(cache_key, available_accounts, expires_in: CACHE_TTL)
+      if cache_credentials(item.class.find_by(id: item.id)) == credentials
+        Rails.cache.write(cache_key, available_accounts, expires_in: CACHE_TTL)
+      end
       available_accounts
+    end
+
+    def cache_credentials(record)
+      record && self.class.cache_sensitive_params.map { |param| record.public_send(param) }
     end
 
     def unlinked_available_accounts
