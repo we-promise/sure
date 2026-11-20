@@ -180,6 +180,48 @@ class Trade < ApplicationRecord
     trades.each { |trade| trade.preloaded_exchange_rates = rates }
   end
 
+  # Set by callers that list many sales: the holdings this sale's basis is read
+  # from. Authoritative once set, so an empty list means there is no position
+  # to measure against, not that one should be looked up.
+  def preloaded_holdings=(value)
+    @preloaded_holdings = value
+    remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+  end
+
+  # Each disposal's basis position, for a whole set in one query: per trade,
+  # its security's latest holding on or before the trade date. Loading the
+  # accounts' holdings instead reads a row per security per day of their whole
+  # history, which on a long-lived brokerage account is hundreds of thousands.
+  # A same-day tie (another currency, as a security remap can leave) resolves
+  # as basis_holding does: the account's currency, then the lower id.
+  def self.preload_basis_holdings(trades)
+    return if trades.empty?
+
+    wanted = [ trades.map { |t| t.entry.id }, trades.map { |t| t.entry.account_id },
+               trades.map(&:security_id), trades.map { |t| t.entry.date } ]
+    holdings = Holding.find_by_sql([ <<~SQL.squish, *wanted ])
+      SELECT basis.*, wanted.entry_id AS basis_for_entry_id
+      FROM unnest(ARRAY[?]::uuid[], ARRAY[?]::uuid[], ARRAY[?]::uuid[], ARRAY[?]::date[])
+        AS wanted(entry_id, account_id, security_id, date)
+      CROSS JOIN LATERAL (
+        SELECT holdings.* FROM holdings
+        JOIN accounts ON accounts.id = holdings.account_id
+        WHERE holdings.account_id = wanted.account_id
+          AND holdings.security_id = wanted.security_id
+          AND holdings.date <= wanted.date
+        ORDER BY holdings.date DESC, (holdings.currency = accounts.currency) DESC, holdings.id
+        LIMIT 1
+      ) AS basis
+    SQL
+
+    # A sale is measured against its holding's average cost, which for a
+    # position without a stored basis is two or more queries each.
+    Holding.preload_avg_costs(holdings)
+
+    by_entry = holdings.index_by { |holding| holding["basis_for_entry_id"] }
+    trades.each { |trade| trade.preloaded_holdings = Array(by_entry[trade.entry.id]) }
+  end
+
   # The currency this disposal's basis is carried in, where it can be answered
   # without a query. `Holding#avg_cost` is Money in the HOLDING's own currency,
   # which is not always the account's, and that is what the proceeds are
@@ -273,20 +315,25 @@ class Trade < ApplicationRecord
     #
     # Uses preloaded holdings when the caller set them, and treats a
     # defined-but-empty preload as authoritative rather than falling back to a
-    # query. `select` + `max_by` rather than `find`, so the answer does not
-    # depend on the order the caller's array happens to be in.
+    # query. The answer never depends on the order the caller's array happens
+    # to be in: two snapshots on the latest date (another currency, as a
+    # security remap can leave) resolve to the account's currency, then the
+    # lower id, the same rule as Trade.preload_basis_holdings.
     # Not memoised: `realized_gain_loss` already is, and a memo here would hold
     # a holding selected before a caller set `@preloaded_holdings`.
     def basis_holding
       if defined?(@preloaded_holdings)
-        (@preloaded_holdings || [])
-          .select { |h| h.security_id == security_id && h.date <= entry.date }
-          .max_by(&:date)
+        candidates = (@preloaded_holdings || []).select { |h| h.security_id == security_id && h.date <= entry.date }
+        latest = candidates.map(&:date).max
+        tied = candidates.select { |h| h.date == latest }
+        tied.one? ? tied.first : tied.min_by { |h| [ h.currency == entry.account.currency ? 0 : 1, h.id ] }
       else
         entry.account.holdings
           .where(security_id: security_id)
           .where("date <= ?", entry.date)
           .order(date: :desc)
+          .order(Arel.sql(Holding.sanitize_sql_array([ "holdings.currency = ? DESC", entry.account.currency ])))
+          .order(:id)
           .first
       end
     end
