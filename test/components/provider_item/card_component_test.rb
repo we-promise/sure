@@ -31,6 +31,24 @@ class ProviderItem::CardComponentTest < ActiveSupport::TestCase
     end
   end
 
+  # Snapshots normalise record ids, so they would accept a delete form aimed at
+  # another connection; check the target before normalising.
+  test "the card's delete form targets its own connection" do
+    html = render_card(user: :family_admin, visible: :all) { |visible| ProviderItem::CardComponent.new(item: @item, visible_accounts: visible) }
+
+    assert_includes html, %(action="/brex_items/#{@item.id}")
+  end
+
+  # #3630: a member shown one of a connection's two accounts must see only that one.
+  test "the card lists only the accounts it is given" do
+    html = render_card(user: :family_member, visible: :linked, linked: true, second_linked: true) do |visible|
+      ProviderItem::CardComponent.new(item: @item, visible_accounts: visible)
+    end
+
+    assert_includes html, "Brex Operating"
+    assert_not_includes html, "Brex Card"
+  end
+
   # The accounts page passes counts, institutions and sync stats precomputed per
   # connection. Values that differ from the model's own show which one the card read.
   test "the card reads the accounts page's precomputed counts over the model's" do
