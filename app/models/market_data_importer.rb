@@ -45,13 +45,16 @@ class MarketDataImporter
     # Details are metadata rather than prices, and import_provider_details skips
     # the provider once a security has them, so every online security keeps them.
     #
-    # Classification is asked only for securities whose prices the loop above
-    # imported: held now, or traded within the snapshot range. This loop also
-    # reaches rows nobody holds (created by a search and never traded, or sold
-    # long ago), and each ask costs a provider request -- one of EODHD's 20 a
-    # day. A security that is later bought is asked by the account importer.
+    # Classification and a fund's holdings are asked only for securities whose
+    # prices the loop above imported: held now, or traded within the snapshot
+    # range. This loop also reaches rows nobody holds (created by a search and
+    # never traded, or sold long ago), and each ask costs a provider request --
+    # one of EODHD's 20 a day. A security that is later bought is asked by the
+    # account importer.
     Security.online.find_each do |security|
-      security.import_provider_details(clear_cache: clear_cache, include_classification: current_ids.include?(security.id))
+      # See Account::MarketDataImporter: one request carries both answers.
+      held = current_ids.include?(security.id)
+      security.import_provider_details(clear_cache: clear_cache, include_classification: held, include_constituents: held)
     end
   end
 

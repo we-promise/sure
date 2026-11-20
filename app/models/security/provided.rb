@@ -323,8 +323,13 @@ module Security::Provided
   # `require_holding_write_permission!` -- a user asking for one holding's
   # prices, not a page view; `#show` makes no provider call at all. It keeps
   # the narrow gate because the user asked for prices, not for classification.
-  def import_provider_details(clear_cache: false, include_classification: false)
-    # Resolved once: each call re-reads the enabled providers and the registry.
+  #
+  # `include_constituents` is the same opt-in for a fund's holdings, on the same
+  # terms: it rides the same `fetch_security_info` call, and the importers pass
+  # it because its gate closes after one successful answer.
+  def import_provider_details(clear_cache: false, include_classification: false, include_constituents: false)
+    # Read once: the default provider can change while the request is in
+    # flight, and the stamps must name the provider that actually answered.
     provider = price_data_provider
     unless provider.present?
       Rails.logger.warn("No provider configured for Security.import_provider_details")
@@ -349,18 +354,55 @@ module Security::Provided
     #   retried. The stamp is compared with the provider resolved now, so an
     #   assigned provider changing and the enabled default changing (for a
     #   security with no `price_provider`) both open the gate.
-    classification_provider_key = self.class.provider_key_for(provider)
+    provider_key = self.class.provider_key_for(provider)
     wants_classification = include_classification && provider.supplies_classification? &&
       !classification_locked? && classification_source.blank? &&
-      (classification_fetched_at.nil? || classification_fetched_from != classification_provider_key)
+      (classification_fetched_at.nil? || classification_fetched_from != provider_key)
 
-    unless has_metadata && !wants_classification && !clear_cache
+    # Keyed on the TIMESTAMP, not on whether constituents are present. Most
+    # securities are not funds, so the provider returns nothing for them -- and a
+    # presence-keyed gate would re-ask every one of those on every sync, for
+    # ever. The timestamp is written whether or not anything came back, which is
+    # what lets "never asked" be told from "asked, nothing there".
+    #
+    # Capability gates the ASK, not the stamp. Gating the stamp instead would
+    # leave this flag true for ever under a provider that cannot answer, and it
+    # is read below as a separate term that `has_metadata` cannot short-circuit,
+    # so every security would be fetched on every sync. With the ask gated, a
+    # nil stamp under an incapable provider is harmless, and the day a capable
+    # one is configured the security is asked once and settles.
+    #
+    # The stamp names the provider that answered and is compared with the one
+    # resolved now, as the classification stamp is, so a different provider
+    # -- assigned, or the enabled default for a security with no
+    # `price_provider` -- is asked once.
+    #
+    # A forced refresh (`clear_cache`) asks again too: a fund's holdings change
+    # as it rebalances, and the stamp otherwise closes the gate for good.
+    wants_constituents = include_constituents && provider.supplies_constituents? &&
+      (clear_cache || constituents_fetched_at.nil? || constituents_fetched_from != provider_key)
+
+    unless has_metadata && !wants_classification && !wants_constituents && !clear_cache
       response = provider.fetch_security_info(
         symbol: ticker,
         exchange_operating_mic: exchange_operating_mic
       )
 
       if response.success?
+        # Before the lock: `with_lock` reloads the row, and `store_constituents`
+        # compares the stamp under its own lock with the one this import read
+        # before asking. Reloading first would make another import's set look
+        # like this one's, and replace it.
+        if wants_constituents
+          begin
+            store_constituents(response.data.constituents, provider)
+          rescue => e
+            # A write the pre-checks missed (an invalid byte sequence Postgres
+            # refuses) must not cost the security its name and classification,
+            # nor stop the sync's remaining securities.
+            log_failed_constituents(provider, e)
+          end
+        end
         # `with_lock` re-reads the row, so precedence is checked against what
         # it holds now: a manual classification, a sector or a lock written
         # while the provider was answering is not overwritten.
@@ -381,7 +423,7 @@ module Security::Provided
           # instead, and closes the gate on its own.
           if wants_classification && !classification_locked?
             log_refused_classification(provider, errors.full_messages) unless stored
-            update_columns(classification_fetched_at: Time.current, classification_fetched_from: classification_provider_key)
+            update_columns(classification_fetched_at: Time.current, classification_fetched_from: provider_key)
           end
         end
       else
@@ -457,6 +499,212 @@ module Security::Provided
     )
     [ importer.import_provider_prices, importer.provider_error ]
   end
+
+  # Replaces the fund's holdings wholesale rather than merging: a constituent
+  # that has left the fund must leave the table with it, and a merge would leave
+  # it behind for ever.
+  #
+  # The timestamp is written even when `list` is nil -- that is the whole point
+  # of the gate above: "asked, nothing there" has to be distinguishable from
+  # "never asked", and only a stamp can say so.
+  #
+  # The delete runs before that, so this must only ever be reached for a
+  # provider that can actually answer. The caller gates the ask on
+  # `supplies_constituents?`, and this guard is a second lock on the same door:
+  # an incapable provider reaching here would wipe a stored set it was never in
+  # a position to replace, and then stamp the emptiness as fact.
+  #
+  # A row the table would refuse is skipped and logged, not raised: one bad row
+  # would roll the whole fund back unstamped and stop both market data
+  # importers at this fund on every run.
+  #
+  # An answer that says nothing about the fund leaves the stored set and the
+  # stamp alone, so the next sync asks again: a holdings block the provider's
+  # parser could not read, or a non-empty list none of whose rows can be
+  # stored.
+  def store_constituents(list, provider = price_data_provider)
+    return unless provider&.supplies_constituents?
+
+    # An unreadable answer keeps the stored set, but is stamped like any
+    # answer: unstamped, the fund would be fetched again on every sync, and
+    # each fetch costs a provider request. One log entry says why.
+    if list == Provider::SecurityConcept::UNREADABLE_CONSTITUENTS
+      log_unreadable_constituents(provider)
+      stamp_constituents(provider)
+      return
+    end
+
+    rows, skipped = constituent_rows_from(list)
+
+    if rows.empty? && Array(list).any?
+      log_unreadable_constituents(provider, skipped: skipped.map(&:first).tally)
+      stamp_constituents(provider)
+      return
+    end
+
+    # One DELETE and one INSERT rather than a statement or two per holding: a
+    # world tracker lists thousands, and this runs inside the account sync.
+    # `constituent_rows_from` has already applied every rule the model and the
+    # column would, so skipping validation here refuses nothing they would
+    # accept. `Security::Constituent` has no callbacks for `delete_all` to skip.
+    #
+    # Securities are shared across families, so two syncs can replace one fund
+    # at once. The row lock makes the second wait, where its DELETE would
+    # otherwise miss the uncommitted rows and its INSERT break the unique
+    # index. Under the lock it reads the stamp again: one written since this
+    # import read it means the other import has stored its answer, and that
+    # set stays. `lock!` is not used: it reloads, and would drop attributes a
+    # failed `update` just left unsaved.
+    replaced = transaction do
+      stamp = self.class.where(id: id).lock.pick(:constituents_fetched_at)
+      next false if stamp && stamp != constituents_fetched_at
+
+      constituents.delete_all
+      Security::Constituent.insert_all!(rows.map { |row| row.merge(security_id: id) }) if rows.any?
+      stamp_constituents(provider)
+      true
+    end
+    constituents.reset
+
+    skipped.each { |reason, entry| log_skipped_constituent(reason, entry, provider) } if replaced
+  end
+
+  # Splits a provider list into rows the table will accept and [reason, entry]
+  # pairs it would refuse. Tickers and exchange codes are stripped and
+  # upcased, so `msft` and `MSFT` are one holding, and a holding is its ticker
+  # on its exchange, as the unique index has it; the first occurrence is the
+  # one kept.
+  #
+  # A weight is checked against the column as well as the model: `BigDecimal`
+  # parses "NaN" and "Infinity" without raising, and a value the model accepts
+  # can still overflow `numeric(9,6)`, so either would have raised out of the
+  # transaction just as an invalid row did.
+  def constituent_rows_from(list)
+    seen = Set.new
+    rows = []
+    skipped = []
+    weight_scale = constituent_weight_scale
+    weight_limit = constituent_weight_limit
+
+    Array(list).each do |entry|
+      unless entry.is_a?(Hash)
+        skipped << [ "malformed_entry", entry ]
+        next
+      end
+
+      raw_ticker = entry[:ticker] || entry["ticker"]
+      ticker = raw_ticker.is_a?(String) ? raw_ticker.strip.upcase : ""
+      raw_exchange = entry[:exchange] || entry["exchange"]
+      exchange = raw_exchange.is_a?(String) ? raw_exchange.strip.upcase.presence : nil
+      name = (entry[:name] || entry["name"]).to_s.strip.presence
+      raw_weight = entry[:weight] || entry["weight"]
+      weight = begin
+        raw_weight.present? ? BigDecimal(raw_weight.to_s) : nil
+      rescue ArgumentError, TypeError
+        :non_numeric
+      end
+      weight = :non_numeric if weight.is_a?(BigDecimal) && !weight.finite?
+
+      # Postgres refuses a NUL in a text column, as it would the rows below.
+      reason = if !raw_ticker.nil? && !raw_ticker.is_a?(String) then "non_string_ticker"
+      elsif ticker.blank? then "blank_ticker"
+      elsif ticker.include?("\0") || name&.include?("\0") || exchange&.include?("\0") then "nul_character"
+      elsif weight == :non_numeric then "non_numeric_weight"
+      elsif weight&.negative? then "negative_weight"
+      elsif weight && weight.round(weight_scale) >= weight_limit then "out_of_range_weight"
+      elsif seen.include?([ ticker, exchange ]) then "duplicate_ticker"
+      end
+
+      if reason
+        skipped << [ reason, entry ]
+      else
+        seen << [ ticker, exchange ]
+        rows << { ticker: ticker, exchange: exchange, name: name, weight: weight }
+      end
+    end
+
+    [ rows, skipped ]
+  end
+
+  # The bound `numeric(precision, scale)` holds, read from the column so the two
+  # cannot drift: Postgres rounds to the scale first, so 999.9999995 overflows.
+  def constituent_weight_limit
+    column = Security::Constituent.columns_hash["weight"]
+    BigDecimal(10)**(column.precision - column.scale)
+  end
+
+  # The scale half of `weight`'s numeric(precision, scale) bound, read from the
+  # column like `constituent_weight_limit` so the two cannot drift apart.
+  def constituent_weight_scale
+    Security::Constituent.columns_hash["weight"].scale
+  end
+
+  # Records a fund holding the provider reported in a form that cannot be
+  # stored, so a skip stays traceable: the reason, the holding's ticker, and its
+  # shape. The metadata runs through `without_nul` for the same jsonb reason.
+  def log_skipped_constituent(reason, entry, provider = price_data_provider)
+    DebugLogEntry.capture(
+      category: "security_holdings",
+      level: "warn",
+      message: "Skipped a fund holding the provider reported in a form that cannot be stored",
+      source: "Security#store_constituents",
+      provider: provider,
+      # Without NULs: the metadata column is jsonb, which refuses them as the
+      # constituents table does, and the entry is logged because it is malformed.
+      metadata: without_nul(
+        security_id: id,
+        security_ticker: ticker,
+        ticker: entry.is_a?(Hash) ? (entry[:ticker] || entry["ticker"]) : nil,
+        reason: reason,
+        entry: entry.is_a?(Hash) ? entry.to_h : entry
+      )
+    )
+  end
+
+  # Records an answer whose holdings could not be read, so a fund whose stored
+  # set did not change stays traceable. `skipped` counts the refused entries by
+  # reason when every one was refused, in one entry rather than one per row.
+  def log_unreadable_constituents(provider, skipped: nil)
+    DebugLogEntry.capture(
+      category: "security_holdings",
+      level: "warn",
+      message: "Kept a fund's stored holdings: the provider's holdings could not be read",
+      source: "Security#store_constituents",
+      provider: provider,
+      metadata: { security_id: id, security_ticker: ticker, skipped: skipped }.compact
+    )
+  end
+
+  def log_failed_constituents(provider, error)
+    DebugLogEntry.capture(
+      category: "security_holdings",
+      level: "error",
+      message: "Failed to store a fund's holdings",
+      source: "Security#store_constituents",
+      provider: provider,
+      metadata: { security_id: id, security_ticker: ticker, error_class: error.class.name, error: error.message }
+    )
+  end
+
+  def stamp_constituents(provider)
+    update_columns(constituents_fetched_at: Time.current,
+                   constituents_fetched_from: self.class.provider_key_for(provider))
+  end
+
+  # Postgres jsonb and the constituents table both refuse NUL bytes, so a
+  # malformed entry carrying one cannot be logged or stored as-is. Strip them
+  # recursively through strings, hashes, and arrays.
+  def without_nul(value)
+    case value
+    when String then value.delete("\0")
+    when Hash then value.to_h { |key, inner| [ without_nul(key), without_nul(inner) ] }
+    when Array then value.map { |inner| without_nul(inner) }
+    else value
+    end
+  end
+  private :store_constituents, :constituent_rows_from, :constituent_weight_limit,
+    :constituent_weight_scale, :log_skipped_constituent, :log_unreadable_constituents, :without_nul,
+    :log_failed_constituents, :stamp_constituents
 
   # A provider's type says what the wrapper is, not what it holds. "Common
   # stock" is an equity whatever else is true of it, so it maps. An ETF or a

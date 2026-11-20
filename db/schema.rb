@@ -2347,6 +2347,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_090000) do
     t.boolean "classification_locked", default: false, null: false
     t.string "classification_source"
     t.datetime "constituents_fetched_at"
+    t.string "constituents_fetched_from"
     t.string "country_code"
     t.datetime "created_at", null: false
     t.string "exchange_acronym"
