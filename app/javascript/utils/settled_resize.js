@@ -27,7 +27,9 @@
 // A chart with fixed margins (a Sankey's 16px extent, an axis column) passes
 // `margins: { left, right }`: only the part between them is stretched, so
 // what sits at the edges stays at its distance from them rather than drift
-// with the stretch and jump back at the end.
+// with the stretch and jump back at the end. Each margin keeps at most
+// `maxMarginShare` of the drawn width (a quarter unless the chart says
+// otherwise), so the part between them always has room to stretch.
 //
 // Text is not stretched with the drawing: each label is scaled back to its
 // normal shape around its anchor, and a label marked
@@ -49,6 +51,7 @@ export default class SettledResize {
       settleMs = 150,
       layoutChanges = () => false,
       margins = { left: 0, right: 0 },
+      maxMarginShare = 1 / 4,
     } = {},
   ) {
     this.element = element;
@@ -56,6 +59,7 @@ export default class SettledResize {
     this.settleMs = settleMs;
     this.layoutChanges = layoutChanges;
     this.margins = margins;
+    this.maxMarginShare = maxMarginShare;
     this.timer = null;
     this.drawnSize = null;
     // Width transitions running around the chart (a sidebar animating): while
@@ -188,8 +192,8 @@ export default class SettledResize {
   // where a drawing at this width would put it (a Sankey spaces its columns
   // evenly between the margins). Measured once per drawing.
   #keptWidthShare({ x, width }) {
-    const left = Math.min(this.margins.left || 0, this.drawnSize.width / 4);
-    const right = Math.min(this.margins.right || 0, this.drawnSize.width / 4);
+    const left = Math.min(this.margins.left || 0, this.drawnSize.width * this.maxMarginShare);
+    const right = Math.min(this.margins.right || 0, this.drawnSize.width * this.maxMarginShare);
     const room = this.drawnSize.width - left - right - width;
     return room > 0 ? Math.min(Math.max((x - left) / room, 0), 1) : 0.5;
   }
@@ -234,8 +238,8 @@ export default class SettledResize {
 
   #horizontalMap(size) {
     const drawn = this.drawnSize;
-    const left = Math.min(this.margins.left || 0, drawn.width / 4);
-    const right = Math.min(this.margins.right || 0, drawn.width / 4);
+    const left = Math.min(this.margins.left || 0, drawn.width * this.maxMarginShare);
+    const right = Math.min(this.margins.right || 0, drawn.width * this.maxMarginShare);
     const inner = drawn.width - left - right;
     const sx = inner > 0 ? Math.max(size.width - left - right, 1) / inner : size.width / drawn.width;
     return { sx, offset: inner > 0 ? left * (1 - sx) : 0 };
