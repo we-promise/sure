@@ -282,17 +282,6 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
-  # provider_summary leaves a key it doesn't know under Available, so a connected
-  # provider only moves to Your connections through its own case.
-  test "adds a provider_summary case to the real settings helper" do
-    source = Rails.root.join("app/helpers/settings_helper.rb").read
-    result = Provider::FamilyGenerator.append_provider_summary_case(source, key: "gocardless")
-
-    assert_parses result
-    assert_includes result[/def provider_summary\b.*?\n  end\n/m],
-                    %(    when "gocardless"\n      return { status: :off } unless @gocardless_items&.any?\n      sync_based_summary(key)\n    else\n      { status: :off }\n)
-  end
-
   # Bank sync lists a provider through FAMILY_PANELS, which reads the adapter's
   # panel: declaration, and every account provider has a panel, so the generated
   # adapter declares one even when the item views are skipped.
@@ -354,10 +343,6 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless"\n), key: "gocardless")
     assert_not Provider::FamilyGenerator.panel_declared?("class Provider::GocardlessAdapter < Provider::Base\nend\n", key: "gocardless")
     assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless_bank", name: "X", panel: true\n), key: "gocardless")
-  end
-
-  test "returns nil when there is no provider_summary to update" do
-    assert_nil Provider::FamilyGenerator.append_provider_summary_case("module Foo\nend\n", key: "gocardless")
   end
 
   # The row's sync status reads family_panel_items. Its Sync button posts a key that

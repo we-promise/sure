@@ -49,10 +49,8 @@ class SettingsHelperTest < ActionView::TestCase
     assert_equal I18n.t("settings.providers.meta.reconsent_required"), summary[:meta]
   end
 
-  # A key provider_summary doesn't handle falls through to { status: :off },
-  # which lists a connected provider under Available. Wise and CoinSpot
-  # shipped that way. One key at a time, so a branch that reads another
-  # provider's items fails too.
+  # An { status: :off } summary lists a connected provider under Available.
+  # One key at a time, so a summary that reads another provider's items fails too.
   test "provider_summary is not off for any connected family panel provider" do
     item = OpenStruct.new(oauth_configured?: true)
 
@@ -64,6 +62,50 @@ class SettingsHelperTest < ActionView::TestCase
     end
 
     assert_empty off
+  end
+
+  # The summary follows the adapter's panel declaration, so a provider the
+  # generator adds needs no case of its own.
+  test "provider_summary summarises a newly declared panel provider from its items" do
+    @gocardless_items = [ OpenStruct.new ]
+
+    stub_const(Settings::ProvidersController, :FAMILY_PANEL_KEYS, Settings::ProvidersController::FAMILY_PANEL_KEYS + [ "gocardless" ]) do
+      assert_equal({ status: :ok, last_synced_at: nil }, provider_summary("gocardless"))
+    end
+    assert_equal({ status: :off }, provider_summary("gocardless"))
+  end
+
+  test "provider_summary is off for a provider whose panel is not declared" do
+    @brex_items = [ OpenStruct.new ]
+    @financekit_items = [ OpenStruct.new ]
+
+    assert_equal({ status: :ok, last_synced_at: nil }, provider_summary("brex"))
+    stub_const(Settings::ProvidersController, :FAMILY_PANEL_KEYS, Settings::ProvidersController::FAMILY_PANEL_KEYS - [ "brex" ]) do
+      assert_equal({ status: :off }, provider_summary("brex"))
+    end
+    assert_equal({ status: :off }, provider_summary("financekit"))
+  end
+
+  # Plaid EU has no panel of its own; its configuration form says whether it is set up.
+  test "provider_summary for plaid_eu follows its configuration, whatever the key's case" do
+    @provider_configurations = [ OpenStruct.new(provider_key: "plaid_eu", configured?: true) ]
+    assert_equal({ status: :ok }, provider_summary(:PLAID_EU))
+
+    @provider_configurations = [
+      OpenStruct.new(provider_key: "plaid", configured?: true),
+      OpenStruct.new(provider_key: "plaid_eu", configured?: false)
+    ]
+    assert_equal({ status: :off }, provider_summary(:PLAID_EU))
+    assert_equal({ status: :ok }, provider_summary("plaid"))
+  end
+
+  test "provider_summary for truelayer asks for re-consent when a connection needs an update" do
+    @truelayer_items = [ OpenStruct.new(connected?: true, requires_update?: true) ]
+
+    summary = provider_summary("truelayer")
+
+    assert_equal :warn, summary[:status]
+    assert_equal I18n.t("settings.providers.meta.reconsent_required"), summary[:meta]
   end
 
   test "provider_summary for trade_republic asks for a new login once a session has expired" do
