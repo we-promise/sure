@@ -1852,6 +1852,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
   end
 
   test "data_quality_issues flags missing cost basis, stale prices and unhealthy providers" do
+    Security.stubs(:providers).returns([ mock("securities_provider") ])
     account = create_investment_account(balance: 5000)
     as_of = Date.current
     fresh = Security.create!(ticker: "FRESH", name: "Fresh")
@@ -1966,6 +1967,66 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     today = @statement.data_quality_issues(as_of: Date.current).select { |i| i.kind == :stale_price }
     assert_equal [ [ "MASK", as_of + 3.days ], [ "RCNT", as_of + 3.days ] ], today.map { |i| [ i.security.ticker, i.detail ] },
       "asked about today, the same statement reads the newer prices"
+  end
+
+  # A provider that syncs holdings writes the position's price on the
+  # holding itself (SimpleFIN, Plaid), often for a security with no price
+  # rows of its own. That holding's date is a real quote date.
+  test "data_quality_issues counts a provider-priced position's own date as a price" do
+    Security.stubs(:providers).returns([ mock("securities_provider") ])
+    account = create_investment_account(balance: 5000)
+    as_of = Date.current
+    item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider_account = item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = account.account_providers.create!(provider: provider_account)
+    synced = Security.create!(ticker: "SYNC", name: "Synced by the provider")
+    manual = Security.create!(ticker: "MANU", name: "No price at all")
+    Holding.create!(account: account, security: synced, date: as_of, qty: 1, price: 123.45, amount: 123.45, currency: "USD",
+                    cost_basis: 8, cost_basis_locked: true, account_provider: account_provider)
+    Holding.create!(account: create_investment_account(balance: 5000), security: manual, date: as_of, qty: 1, price: 10,
+                    amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+
+    stale = @statement.data_quality_issues(as_of: as_of).select { |i| i.kind == :stale_price }.map { |i| i.security.ticker }
+
+    assert_equal %w[MANU], stale, "a holding the calculator priced is not a quote; the provider's is"
+  end
+
+  # A security with no healthy provider is flagged as such; with no prices
+  # because of it, a second stale issue only repeats the same cause.
+  test "data_quality_issues does not also flag a price as stale when the provider is the cause" do
+    account = create_investment_account(balance: 5000)
+    offline = Security.create!(ticker: "OFFL", name: "Offline", offline: true)
+    Holding.create!(account: account, security: offline, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+
+    issues = @statement.data_quality_issues(as_of: Date.current).map { |i| [ i.kind, i.security.ticker ] }
+
+    assert_equal [ [ :provider, "OFFL" ] ], issues
+  end
+
+  test "data_quality_issues reads an as_of given as a time as its date" do
+    Security.stubs(:providers).returns([ mock("securities_provider") ])
+    account = create_investment_account(balance: 5000)
+    fresh = Security.create!(ticker: "FRESH", name: "Fresh")
+    Security::Price.create!(security: fresh, date: Date.current, price: 10, currency: "USD")
+    Holding.create!(account: account, security: fresh, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+
+    assert_empty @statement.data_quality_issues(as_of: Time.current.end_of_day).select { |i| i.kind == :stale_price }
+  end
+
+  # A zero price is a placeholder, not a quote; the price importer skips it
+  # when it picks a price, and so does freshness.
+  test "data_quality_issues ignores zero price rows" do
+    Security.stubs(:providers).returns([ mock("securities_provider") ])
+    account = create_investment_account(balance: 5000)
+    as_of = Date.current
+    placeholder = Security.create!(ticker: "ZERO", name: "Zero placeholder")
+    Security::Price.create!(security: placeholder, date: as_of - 10.days, price: 10, currency: "USD")
+    Security::Price.create!(security: placeholder, date: as_of, price: 0, currency: "USD")
+    Holding.create!(account: account, security: placeholder, date: as_of, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+
+    stale = @statement.data_quality_issues(as_of: as_of).select { |i| i.kind == :stale_price }
+
+    assert_equal [ [ "ZERO", as_of - 10.days ] ], stale.map { |i| [ i.security.ticker, i.detail ] }
   end
 
   # The price importer carries the last quote forward through recent days and

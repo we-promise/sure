@@ -233,18 +233,24 @@ class InvestmentStatement
     sort_holdings_table_rows(rows, sort: sort, dir: dir)
   end
 
+  STALE_PRICE_AFTER_DAYS = 5
+  DATA_QUALITY_KINDS = %i[missing_cost_basis stale_price provider].freeze
+  DataQualityIssue = Data.define(:kind, :holding, :security, :detail)
+
   # Holdings the user should look at before trusting the figures: no cost
   # basis anywhere (Holding#avg_cost is nil: nothing stored and nothing the
-  # trades can compute, by the same rules the holdings tab applies), a price
-  # dated more than STALE_PRICE_AFTER_DAYS before as_of or no price on or
-  # before it, or a provider link that is not healthy. Cash securities are
-  # never flagged. Issues sort by kind, ticker, security and account, so ties
-  # keep their order between requests. The cost bases come from the batched
-  # preload and the price dates from one query, so the list is bounded
-  # regardless of the number of holdings.
-  STALE_PRICE_AFTER_DAYS = 5
-
+  # trades can compute, by the same rules the holdings tab applies), a
+  # provider that is not healthy, or, where the provider is healthy, a last
+  # quote dated more than STALE_PRICE_AFTER_DAYS before as_of or none on or
+  # before it. A quote is a non-zero price row, or the price a provider
+  # wrote on a holding it synced. Cash securities are never flagged. Issues
+  # sort by kind, ticker, security and account, so ties keep their order
+  # between requests. The cost bases come from the batched preload and the
+  # quote dates from two queries, so the list is bounded regardless of the
+  # number of holdings. `as_of` is the price cut-off only; the holdings are
+  # today's.
   def data_quality_issues(as_of: Date.current)
+    as_of = as_of.to_date
     holdings = holdings_with_avg_costs
     return [] if holdings.empty?
 
@@ -261,13 +267,16 @@ class InvestmentStatement
     holdings.map(&:security).uniq.each do |security|
       next if security.cash?
 
-      latest = latest_price_dates(as_of)[security.id]
+      status = security.provider_status
+      if status != :ok
+        issues << DataQualityIssue.new(kind: :provider, holding: nil, security: security, detail: status)
+        next
+      end
+
+      latest = latest_quote_dates(as_of)[security.id]
       if latest.nil? || latest < as_of - STALE_PRICE_AFTER_DAYS
         issues << DataQualityIssue.new(kind: :stale_price, holding: nil, security: security, detail: latest)
       end
-
-      status = security.provider_status
-      issues << DataQualityIssue.new(kind: :provider, holding: nil, security: security, detail: status) unless status == :ok
     end
 
     issues.sort_by do |issue|
@@ -275,8 +284,6 @@ class InvestmentStatement
         issue.holding&.id.to_s ]
     end
   end
-
-  DATA_QUALITY_KINDS = %i[missing_cost_basis stale_price provider].freeze
 
   # Unrealized gains across all holdings, summed in family currency
   def unrealized_gains
@@ -731,8 +738,6 @@ class InvestmentStatement
       def amount_money = amount
     end
 
-    DataQualityIssue = Data.define(:kind, :holding, :security, :detail)
-
     # Builds one rolled-up row of the holdings table for `security`: the summed
     # quantity across `positions`, its average cost and unrealised return over
     # the positions whose basis is known, and its weight against the caller's
@@ -866,15 +871,33 @@ class InvestmentStatement
 
     # Latest price date per held security on or before as_of, so a price
     # recorded after as_of cannot make a past check look fresh.
-    def latest_price_dates(as_of)
-      @latest_price_dates ||= {}
-      # Real quotes only: the price importer carries the last quote forward
-      # through recent days as provisional rows, which would hide an old one.
-      @latest_price_dates[as_of] ||= Security::Price
-        .where(security_id: current_holdings.map(&:security_id).uniq)
+    # The last quote on or before `as_of` per held security: a real price row
+    # (not a provisional one carried forward, nor a zero placeholder, which
+    # the price importer skips too), or the date of a holding a provider
+    # synced with its own price, whichever is later.
+    def latest_quote_dates(as_of)
+      @latest_quote_dates ||= {}
+      @latest_quote_dates[as_of] ||= read_latest_quote_dates(as_of)
+    end
+
+    def read_latest_quote_dates(as_of)
+      security_ids = current_holdings.map(&:security_id).uniq
+      priced = Security::Price
+        .where(security_id: security_ids)
         .where(date: ..as_of, provisional: false)
+        .where("price > 0")
         .group(:security_id)
         .maximum(:date)
+      return priced if current_holdings.none?(&:account_provider_id)
+
+      synced = Holding
+        .where(security_id: security_ids, account_id: current_holdings.map(&:account_id).uniq)
+        .where.not(account_provider_id: nil)
+        .where(date: ..as_of)
+        .where("price > 0")
+        .group(:security_id)
+        .maximum(:date)
+      priced.merge(synced) { |_id, price_date, holding_date| [ price_date, holding_date ].max }
     end
 
     def combined_holding_trend(holdings)
