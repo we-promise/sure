@@ -82,6 +82,7 @@ class RecurringTransaction < ApplicationRecord
   # route that creates a bill (forms, the API, the assistant) stays fast. Queued
   # ahead of generation, so a generation failure still leaves the history to
   # come. A restore brings its own occurrences and allocations.
+  before_create :record_declaration_day, if: :declared_active?
   after_commit :reconstruct_history_on_declaration, on: :create, if: :declared_active?
   after_commit :generate_occurrences, on: :create
   # Ahead of regeneration: activation changes status, so both run, and with
@@ -224,7 +225,7 @@ class RecurringTransaction < ApplicationRecord
   # family-wide on purpose (exact-tier, idempotent, and scoping it would need
   # a parallel Matcher entry point). Returns false only when another pipeline
   # holds the family lock.
-  def reconstruct_history!(as_of: Date.current, declared: false)
+  def reconstruct_history!(as_of: Date.current)
     return true if family.recurring_transactions_disabled?
 
     Pipeline.with_family_lock(family_id) do
@@ -241,8 +242,7 @@ class RecurringTransaction < ApplicationRecord
         family,
         months: Pipeline::FIRST_RUN_BACKFILL_MONTHS,
         series_scope: series_scope,
-        as_of: as_of,
-        declared: declared
+        as_of: as_of
       ).run!
     end
   end
@@ -268,17 +268,23 @@ class RecurringTransaction < ApplicationRecord
   # waited reconstructs the same history an immediate one would have.
   def reconstruct_history_on_activation
     as_of = Date.current
-    BackfillRecurringHistoryJob.perform_later(id, as_of, false) unless reconstruct_history!(as_of: as_of)
+    BackfillRecurringHistoryJob.perform_later(id, as_of) unless reconstruct_history!(as_of: as_of)
   rescue StandardError => e
     Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
-    BackfillRecurringHistoryJob.perform_later(id, as_of, false)
+    BackfillRecurringHistoryJob.perform_later(id, as_of)
   end
 
-  # Always through the job, as of the declaration day. The job also prunes
-  # what the schedule placed before the bill existed, which an activation
-  # must not.
+  # Always through the job, as of the declaration day. declared_on, recorded
+  # on create, lets every backfill prune what the schedule placed before the
+  # bill existed.
   def reconstruct_history_on_declaration
-    BackfillRecurringHistoryJob.perform_later(id, Date.current, true)
+    BackfillRecurringHistoryJob.perform_later(id, Date.current)
+  end
+
+  # A confirmed detection is not a declaration: its past was observed, so it
+  # keeps no declared_on.
+  def record_declaration_day
+    self.declared_on ||= Date.current
   end
 
   # Regenerating rebuilds only scheduled, allocation-free, not-yet-due rows;

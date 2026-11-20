@@ -1938,6 +1938,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs(only: BackfillRecurringHistoryJob) { series.save! }
 
     assert_equal 0, confirmed_allocations_for(series)
+    assert_nil series.reload.declared_on, "a restore keeps the declaration date its export carries, not today"
   end
 
   test "declaring a bill while a pipeline holds the family lock queues the history" do
@@ -1950,7 +1951,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       end
     end
 
-    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id, Date.current, true ])
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id, Date.current ])
     assert_equal 0, confirmed_allocations_for(series), "nothing may run under another session's lock"
 
     # The refused pg_try_advisory_lock is a SELECT the test's query cache
@@ -2000,6 +2001,83 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
       assert_empty series.recurring_occurrences.open_status.where("due_on < ?", Date.current).pluck(:due_on),
         "an ended schedule owes nothing, so its unpaid past rows must be pruned"
+    end
+  end
+
+  test "a family backfill does not bring back what a declaration pruned" do
+    series = nil
+    travel_to Date.new(2026, 11, 19) do
+      series = perform_enqueued_jobs(only: BackfillRecurringHistoryJob) do
+        @family.recurring_transactions.create!(
+          name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
+          expected_day_of_month: 9, anchor_date: Date.new(2026, 8, 9),
+          last_occurrence_date: Date.new(2026, 9, 9), next_expected_date: Date.new(2026, 9, 9),
+          end_mode: "on_date", end_on: Date.new(2026, 9, 9),
+          status: "active", manual: true
+        )
+      end
+    end
+
+    travel_to Date.new(2026, 12, 2) do
+      RecurringTransaction::HistoryBackfiller.new(@family).run!
+
+      assert_empty series.recurring_occurrences.open_status.where("original_due_on < ?", Date.new(2026, 11, 19)).pluck(:due_on),
+        "rows the declaration found not owed must not come back in a later backfill"
+    end
+  end
+
+  test "a family backfill keeps main's prune for a bill with no declaration date" do
+    travel_to Date.new(2026, 11, 19) do
+      series = @family.recurring_transactions.create!(
+        name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
+        expected_day_of_month: 9, anchor_date: Date.new(2026, 8, 9),
+        last_occurrence_date: Date.new(2026, 9, 9), next_expected_date: Date.new(2026, 9, 9),
+        end_mode: "on_date", end_on: Date.new(2026, 9, 9),
+        status: "active", manual: true
+      )
+      series.update_columns(declared_on: nil)
+
+      RecurringTransaction::HistoryBackfiller.new(@family).run!
+
+      assert_equal [ Date.new(2026, 6, 9), Date.new(2026, 7, 9), Date.new(2026, 8, 9), Date.new(2026, 9, 9) ],
+        series.recurring_occurrences.open_status.where("due_on < ?", Date.current).order(:due_on).pluck(:due_on),
+        "a series with no current cycle and no declaration date is skipped, as on main"
+    end
+  end
+
+  test "a family backfill keeps current-cycle rows before a future anchor when nothing was declared" do
+    travel_to Date.new(2026, 11, 20) do
+      series = @family.recurring_transactions.create!(
+        name: "GYM", account: @account, amount: 40, currency: "USD",
+        expected_day_of_month: 15, anchor_date: Date.new(2026, 12, 15),
+        last_occurrence_date: Date.new(2026, 10, 15), next_expected_date: Date.new(2026, 12, 15),
+        status: "active", manual: true
+      )
+      series.update_columns(declared_on: nil)
+
+      RecurringTransaction::HistoryBackfiller.new(@family).run!
+
+      assert series.recurring_occurrences.exists?(original_due_on: Date.new(2026, 11, 15)),
+        "with no declaration date the anchor does not bound the prune, as on main"
+    end
+  end
+
+  test "declaring a bill records the day; a suggestion and its activation do not" do
+    travel_to Date.new(2026, 11, 19) do
+      declared = @family.recurring_transactions.create!(
+        name: "CITY WATER", account: @account, amount: 80, currency: "USD",
+        expected_day_of_month: 9, last_occurrence_date: Date.current,
+        next_expected_date: Date.current + 1.month, status: "active", manual: true
+      )
+      suggestion = @family.recurring_transactions.create!(
+        name: "CITY GAS", account: @account, amount: 40, currency: "USD",
+        expected_day_of_month: 9, last_occurrence_date: Date.current,
+        next_expected_date: Date.current + 1.month, status: "suggested", manual: false
+      )
+      suggestion.update!(status: "active")
+
+      assert_equal Date.new(2026, 11, 19), declared.reload.declared_on
+      assert_nil suggestion.reload.declared_on, "a confirmed detection was not declared"
     end
   end
 
@@ -2093,7 +2171,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       )
     end
 
-    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id, Date.current, true ])
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id, Date.current ])
     assert_equal 1, calls, "the bill's upcoming occurrences are still generated when it is created"
   end
 

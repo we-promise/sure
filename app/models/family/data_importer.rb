@@ -658,6 +658,7 @@ class Family::DataImporter
           trial_ends_on: parse_import_date(data["trial_ends_on"]),
           cancelled_on: parse_import_date(data["cancelled_on"]),
           anchor_date: parse_import_date(data["anchor_date"]),
+          declared_on: parse_import_date(data["declared_on"]),
           end_mode: imported_enum_value(data["end_mode"], RecurringTransaction.end_modes, "never"),
           end_on: parse_import_date(data["end_on"]),
           end_after_count: data["end_after_count"],

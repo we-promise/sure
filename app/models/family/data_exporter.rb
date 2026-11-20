@@ -687,6 +687,7 @@ class Family::DataExporter
         trial_ends_on: recurring_transaction.trial_ends_on,
         cancelled_on: recurring_transaction.cancelled_on,
         anchor_date: recurring_transaction.anchor_date,
+        declared_on: recurring_transaction.declared_on,
         end_mode: recurring_transaction.end_mode,
         end_on: recurring_transaction.end_on,
         end_after_count: recurring_transaction.end_after_count,
