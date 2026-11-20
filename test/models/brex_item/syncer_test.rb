@@ -85,6 +85,34 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
     ], sync.sync_stats["errors"].map { |error| error["message"] }
   end
 
+  test "counts only the linked account's Brex-sourced transactions" do
+    account = @brex_item.family.accounts.create!(name: "Linked Brex Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    AccountProvider.create!(account: account, provider: @brex_item.brex_accounts.first)
+    @brex_item.stubs(:import_latest_brex_data).returns(success: true)
+    @brex_item.stubs(:process_accounts).returns([])
+    @brex_item.stubs(:schedule_account_syncs).returns([])
+    sync = recording_sync(window_start_date: Date.new(2026, 2, 1))
+
+    account.entries.create!(name: "Brex card charge", date: Date.current, amount: 10, currency: "USD", source: "brex", entryable: Transaction.new)
+    account.entries.create!(name: "Manual entry", date: Date.current, amount: 20, currency: "USD", entryable: Transaction.new)
+    account.entries.create!(name: "Second manual entry", date: Date.current, amount: 30, currency: "USD", entryable: Transaction.new)
+
+    @syncer.perform_sync(sync)
+
+    assert_equal 1, sync.sync_stats["tx_imported"]
+    assert_equal 1, sync.sync_stats["tx_seen"]
+  end
+
+  test "tags the Sentry report with the Brex item id" do
+    sync = mock_sync(window_start_date: Date.new(2026, 2, 1))
+    @brex_item.expects(:import_latest_brex_data).raises(RuntimeError, "connection reset")
+    scope = mock("scope")
+    scope.expects(:set_tags).with(brex_item_id: @brex_item.id).once
+    Sentry.expects(:capture_exception).yields(scope)
+
+    assert_raises(BrexItem::Syncer::SafeSyncError) { @syncer.perform_sync(sync) }
+  end
+
   test "raises user safe credential error for Brex auth failures" do
     sync = mock_sync(window_start_date: Date.new(2026, 2, 1))
     @brex_item.expects(:import_latest_brex_data)
@@ -96,6 +124,23 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
     end
 
     assert_equal I18n.t("brex_items.syncer.credentials_invalid"), error.message
+  end
+
+  test "a failed sync records a debug log entry for support" do
+    sync = mock_sync(window_start_date: Date.new(2026, 2, 1))
+    @brex_item.expects(:import_latest_brex_data).raises(RuntimeError, "connection reset")
+    Sentry.stubs(:capture_exception)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "brex").count }, 1 do
+      assert_raises(BrexItem::Syncer::SafeSyncError) { @syncer.perform_sync(sync) }
+    end
+
+    entry = DebugLogEntry.where(provider_key: "brex").recent.first
+    assert_equal "provider_sync_error", entry.category
+    assert_equal "error", entry.level
+    assert_equal "BrexItem::Syncer", entry.source
+    assert_equal @brex_item.family, entry.family
+    assert_equal({ "brex_item_id" => @brex_item.id, "error_class" => "RuntimeError", "error_message" => "connection reset" }, entry.metadata)
   end
 
   test "a rejected token fails the sync and flags the connection" do
