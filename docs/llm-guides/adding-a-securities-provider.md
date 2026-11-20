@@ -194,10 +194,10 @@ All methods must return these exact types (wrapped in `with_provider_response`):
 ```ruby
 SecurityConcept::Security    = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency)
 SecurityConcept::SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
-                                            :sector, :industry) do
-  # sector and industry are optional and default to nil
+                                            :sector, :industry, :fund_weights) do
+  # sector, industry and fund_weights are optional and default to nil
   def initialize(symbol:, name:, links:, logo_url:, description:, kind:, exchange_operating_mic:,
-                 sector: nil, industry: nil)
+                 sector: nil, industry: nil, fund_weights: nil)
     super
   end
 end

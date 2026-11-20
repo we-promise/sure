@@ -76,4 +76,120 @@ class Provider::SecurityClassificationFieldsTest < ActiveSupport::TestCase
     assert_equal "Technology", info.sector
     assert_equal "Consumer Electronics", info.industry
   end
+
+  test "EODHD gives a stock no fund weights" do
+    info = eodhd_info("General" => { "Name" => "Accenture plc", "Type" => "Common Stock", "CountryISO" => "IE" })
+
+    assert_nil info.fund_weights
+  end
+
+  # ETF_Data keys each breakdown by label, with the percentage as a string.
+  test "EODHD reads an ETF's asset classes, regions and sectors from ETF_Data" do
+    info = eodhd_info(
+      "General" => { "Name" => "Vanguard FTSE All-World", "Type" => "ETF", "CountryISO" => "DE" },
+      "ETF_Data" => {
+        "Domicile" => "Ireland",
+        "Asset_Allocation" => {
+          "Cash" => { "Long_%" => "0.3", "Short_%" => "0", "Net_Assets_%" => "0.3" },
+          "NotClassified" => { "Net_Assets_%" => "0.1" },
+          "Stock non-US" => { "Net_Assets_%" => "37.4" },
+          "Other" => { "Net_Assets_%" => "0" },
+          "Stock US" => { "Net_Assets_%" => "62.2" },
+          "Bond" => { "Net_Assets_%" => "0" }
+        },
+        "World_Regions" => {
+          "North America" => { "Equity_%" => "64.1", "Relative_to_Category" => "60.0" },
+          "United Kingdom" => { "Equity_%" => "3.2" },
+          "Europe Developed" => { "Equity_%" => "12.0" },
+          "Japan" => { "Equity_%" => "5.5" },
+          "Asia Emerging" => { "Equity_%" => "9.0" },
+          "Latin America" => { "Equity_%" => "1.0" },
+          "Africa/Middle East" => { "Equity_%" => "1.2" }
+        },
+        "Sector_Weights" => {
+          "Technology" => { "Equity_%" => "26.0" },
+          "Financial Services" => { "Equity_%" => "16.5" }
+        }
+      }
+    )
+
+    weights = info.fund_weights
+    assert_in_delta 99.6, weights[:asset_class]["equity"]
+    assert_in_delta 0.3, weights[:asset_class]["liquidity"]
+    assert_in_delta 0.0, weights[:asset_class]["fixed_income"]
+    assert_in_delta 64.1, weights[:equity_region]["north_america"]
+    assert_in_delta 15.2, weights[:equity_region]["europe"]
+    assert_in_delta 14.5, weights[:equity_region]["asia_pacific"]
+    assert_in_delta 26.0, weights[:equity_sector]["Technology"]
+    assert_nil weights[:category_asset_class]
+    assert_nil weights[:leveraged_or_inverse]
+  end
+
+  # MutualFund_Data groups regions and sectors into lists of rows.
+  test "EODHD reads a fund's asset classes, regions and sectors from MutualFund_Data" do
+    info = eodhd_info(
+      "General" => { "Name" => "Some Index Fund", "Type" => "FUND" },
+      "MutualFund_Data" => {
+        "Asset_Allocation" => {
+          "Cash" => { "Type" => "Cash", "Net_%" => "1.0" },
+          "US Stocks" => { "Type" => "US Stocks", "Net_%" => "97.0" },
+          "Non US Stocks" => { "Type" => "Non US Stocks", "Net_%" => "2.0" },
+          "Bonds" => { "Type" => "Bonds", "Net_%" => "0" }
+        },
+        "World_Regions" => {
+          "Americas" => [ { "Name" => "North America", "Stocks_%" => "98.5" }, { "Name" => "Latin America", "Stocks_%" => "0.5" } ],
+          "Greater Europe" => [ { "Name" => "United Kingdom", "Stocks_%" => "1.0" } ]
+        },
+        "Sector_Weights" => {
+          "Cyclical" => [ { "Type" => "Basic Materials", "Amount_%" => "2.0" } ],
+          "Sensitive" => [ { "Type" => "Technology", "Amount_%" => "30.0" } ]
+        }
+      }
+    )
+
+    weights = info.fund_weights
+    assert_in_delta 99.0, weights[:asset_class]["equity"]
+    assert_in_delta 98.5, weights[:equity_region]["north_america"]
+    assert_in_delta 1.0, weights[:equity_region]["europe"]
+    assert_in_delta 30.0, weights[:equity_sector]["Technology"]
+  end
+
+  test "EODHD reads a fund's category and short positions" do
+    commodity = eodhd_info(
+      "General" => { "Name" => "Invesco DB Commodity Index Tracking Fund", "Type" => "ETF", "Category" => "Commodities Broad Basket" },
+      "ETF_Data" => { "Asset_Allocation" => { "Cash" => { "Net_Assets_%" => "92.0" }, "Other" => { "Net_Assets_%" => "8.0" } } }
+    )
+    assert_equal "commodity", commodity.fund_weights[:category_asset_class]
+    assert_nil commodity.fund_weights[:leveraged_or_inverse]
+
+    money_market = eodhd_info(
+      "General" => { "Name" => "Some Money Market Fund", "Type" => "FUND" },
+      "MutualFund_Data" => { "Fund_Category" => "Money Market-Taxable", "Asset_Allocation" => { "Cash" => { "Net_%" => "97.0" } } }
+    )
+    assert_equal "liquidity", money_market.fund_weights[:category_asset_class]
+
+    leveraged = eodhd_info(
+      "General" => { "Name" => "Some 2x ETF", "Type" => "ETF", "Category" => "Trading--Leveraged Equity" },
+      "ETF_Data" => { "Asset_Allocation" => { "Stock US" => { "Net_Assets_%" => "99.0" } } }
+    )
+    assert leveraged.fund_weights[:leveraged_or_inverse]
+
+    # A short position in a bucket that maps to no class still counts.
+    short = eodhd_info(
+      "General" => { "Name" => "Some Inverse ETF", "Type" => "ETF" },
+      "ETF_Data" => { "Asset_Allocation" => { "Other" => { "Net_Assets_%" => "-100.0" }, "Cash" => { "Net_Assets_%" => "200.0" } } }
+    )
+    assert short.fund_weights[:leveraged_or_inverse]
+  end
+
+  private
+    def eodhd_info(payload)
+      provider = Provider::Eodhd.new("test_api_key")
+      provider.stubs(:enforce_daily_limit!)
+      provider.stubs(:throttle_request)
+      provider.stubs(:client).returns(client = mock)
+      client.stubs(:get).returns(stub(body: payload.to_json))
+
+      provider.fetch_security_info(symbol: "X", exchange_operating_mic: "XNAS").data
+    end
 end
