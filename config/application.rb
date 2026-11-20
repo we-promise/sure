@@ -36,7 +36,17 @@ module Sure
     # uncompressed unless a reverse proxy happened to compress it. A proxy that
     # does compress leaves an already-encoded response alone. Not in
     # development, where rack-mini-profiler has to inject into the HTML.
-    config.middleware.insert_before ActionDispatch::Static, Rack::Deflater unless Rails.env.development?
+    #
+    # After Rack::Sendfile, which every stack has: ActionDispatch::Static is
+    # absent when public_file_server is disabled. Text only (PDFs and images are
+    # already compressed), and never a 206, whose Content-Range counts bytes of
+    # the uncompressed file.
+    unless Rails.env.development?
+      config.middleware.insert_after Rack::Sendfile, Rack::Deflater,
+        include: %w[text/html text/vnd.turbo-stream.html text/css text/plain text/csv text/javascript
+                    application/javascript application/json application/xml image/svg+xml],
+        if: ->(_env, status, _headers, _body) { status != 206 }
+    end
 
     # TODO: This is here for incremental adoption of localization.  This can be removed when all translations are implemented.
     config.i18n.fallbacks = true
