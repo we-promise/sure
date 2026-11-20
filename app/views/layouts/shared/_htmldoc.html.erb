@@ -2,13 +2,16 @@
 <!DOCTYPE html>
 
 <% theme = Current.user&.theme || "system" %>
+<%# Privacy Mode itself is a client-side toggle (see privacy_mode_check); this
+    class carries the user's choice of how it treats charts, see privacy-mode.css. %>
+<% privacy_numbers_only = Current.user.present? && !Current.user.privacy_mode_blur_charts? %>
 
 <html
   lang="en"
   data-theme="<%= theme %>"
   data-controller="theme viewport"
   data-theme-user-preference-value="<%= Current.user&.theme || "system" %>"
-  class="h-[var(--app-height, 100dvh)] text-primary bg-surface overflow-hidden overscroll-none font-sans <%= @os %>">
+  class="h-[var(--app-height, 100dvh)] text-primary bg-surface overflow-hidden overscroll-none font-sans <%= @os %> <%= "privacy-numbers-only" if privacy_numbers_only %>">
   <head>
     <%= render "layouts/shared/head" %>
     <%= yield :head %>
@@ -35,6 +38,7 @@
 
     <%# Custom overrides for browser's confirm API  %>
     <%= render "layouts/shared/confirm_dialog" %>
+    <%= render DS::PrivacyBlurFilter.new %>
 
     <% super_admin_bar_visible = Current.true_user&.super_admin? && show_super_admin_bar? %>
     <% approval_bar_visible = Current.true_user&.impersonated_support_sessions&.initiated&.any? %>

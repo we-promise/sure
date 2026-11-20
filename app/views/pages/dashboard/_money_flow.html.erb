@@ -81,7 +81,7 @@
         <span class="text-xs text-secondary"><%= t(".chart_span", count: money_flow_data[:bars].size) %></span>
       </div>
 
-      <div class="w-full h-44 privacy-sensitive"
+      <div class="w-full h-44 privacy-sensitive-chart"
         data-controller="bar-chart"
         data-bar-chart-data-value="<%= money_flow_data[:bars].to_json %>"
         data-bar-chart-currency-value="<%= Current.family.currency %>"
