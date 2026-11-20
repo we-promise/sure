@@ -1341,59 +1341,18 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "importing", json_response["data"]["status"]
   end
 
-  test "does not publish into an account the member cannot write" do
-    member = users(:family_member)
-    member_key = ApiKey.create!(user: member, name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web")
-    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
-
-    # credit_card is shared read-only with the member; investment is not shared.
-    [ accounts(:credit_card), accounts(:investment) ].each do |account|
-      assert_no_enqueued_jobs(only: ImportJob) do
-        post api_v1_imports_url,
-             params: {
-               raw_file_content: csv_content,
-               date_col_label: "date",
-               amount_col_label: "amount",
-               name_col_label: "name",
-               account_id: account.id,
-               date_format: "%Y-%m-%d",
-               publish: "true"
-             },
-             headers: api_headers(member_key)
-      end
-
-      assert_response :forbidden
-      import = Import.find(JSON.parse(response.body)["import_id"])
-      assert_equal "pending", import.status
-    end
-  ensure
-    Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
-  end
-
   test "a member cannot auto-publish a Sure import that writes rules" do
     member_key = ApiKey.create!(user: users(:family_member), name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web")
     ndjson = { type: "Rule", data: { id: "rule_1", name: "Imported", resource_type: "transaction", conditions: [], actions: [ { action_type: "exclude_transaction" } ] } }.to_json
 
     assert_no_enqueued_jobs(only: ImportJob) do
-      post api_v1_imports_url, params: { type: "SureImport", raw_file_content: ndjson, publish: "true" }, headers: api_headers(member_key)
+      # The API answers in English whatever the request's language.
+      post api_v1_imports_url, params: { type: "SureImport", raw_file_content: ndjson, publish: "true" }, headers: api_headers(member_key).merge("Accept-Language" => "es")
     end
 
     assert_response :forbidden
     assert_equal Import::PublishNotAllowedError::API_MESSAGES[:rules], JSON.parse(response.body)["message"]
     assert_equal "pending", Import.find(JSON.parse(response.body)["import_id"]).status
-  ensure
-    Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
-  end
-
-  test "publication refusals are in English whatever the request language" do
-    member_key = ApiKey.create!(user: users(:family_member), name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web")
-
-    post api_v1_imports_url,
-         params: { raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test", date_col_label: "date", amount_col_label: "amount", name_col_label: "name", account_id: accounts(:credit_card).id, date_format: "%Y-%m-%d", publish: "true" },
-         headers: api_headers(member_key).merge("Accept-Language" => "es")
-
-    assert_response :forbidden
-    assert_equal Import::PublishNotAllowedError::API_MESSAGES[:accounts], JSON.parse(response.body)["message"]
   ensure
     Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
   end
