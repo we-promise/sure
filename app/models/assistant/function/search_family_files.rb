@@ -74,7 +74,9 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     adapter = VectorStore.adapter
     return statement_fallback(query, max_results, reason: "not_configured") unless adapter
 
-    response = adapter.search(store_id: family.vector_store_id, query: query, max_results: max_results, family:, user:)
+    # The same candidate retrieval as Family#search_documents: a restricted hit must not spend the
+    # caller's limit. Keep this tool's explicit provider-error response rather than the family's [].
+    results, response = family.search_document_hits(query, max_results: max_results, user: user)
 
     unless response.success?
       error_msg = response.error&.message
@@ -86,9 +88,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       }
     end
 
-    results = response.data
-
-    Rails.logger.debug("[SearchFamilyFiles] #{results.size} chunk(s) returned")
+    Rails.logger.debug("[SearchFamilyFiles] #{results.size} readable chunk(s) returned")
 
     results.each_with_index do |r, i|
       Rails.logger.debug(
@@ -97,7 +97,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       )
     end
 
-    mapped = family.readable_documents(results, user).map do |result|
+    mapped = results.map do |result|
       { content: result[:content], filename: result[:filename], score: result[:score] }
     end
 

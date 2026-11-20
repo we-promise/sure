@@ -291,7 +291,7 @@ class Ai::Generation
         end
 
         begin
-          done, pending = split_on(route, pending, pending_offset)
+          done, pending = split_pending_runs(route, pending, pending_positions, pending_offset)
           answers.concat(remap.call(done, pending_offset).map { |at, value| [ at, route, value ] })
           refresh_positions.call
           pending_offset = position_of(pending.first, slice) if pending.any?
@@ -359,6 +359,24 @@ class Ai::Generation
       error
     end
 
+    # A pending array can be noncontiguous in the original slice (b and c answered, a and d
+    # left). split_on numbers a whole answer from one offset, so sending [a, d] as one request
+    # would put both values at a's position. Request each contiguous run separately, with the
+    # offset it had in `pending`, so the existing remap still restores original positions.
+    def split_pending_runs(route, pending, positions, offset)
+      return split_on(route, nil, offset) if pending.nil?
+
+      runs, starts, index = [], [], 0
+      while index < pending.size
+        finish = index + 1
+        finish += 1 while finish < pending.size && positions[finish] == positions[finish - 1] + 1
+        runs << pending[index...finish]
+        starts << offset + index
+        index = finish
+      end
+      each_piece(runs, offsets: starts) { |run, at| split_on(route, run, at) }
+    end
+
     # Answers `slice` on one route: in pieces of the route's batch_size when it holds more (a
     # fallback can take fewer items than the route the slice was sized for), halved on overflow.
     # Returns [[value, position] pairs, items it couldn't fit or answer], or raises when nothing
@@ -408,12 +426,12 @@ class Ai::Generation
     # doesn't depend on item order; at the end it raises Interrupted with the answers, so the route
     # can still be bisected, or the error itself when nothing was answered. A failover raises
     # Interrupted at once, with everything still unanswered, or propagates as it is before any answer.
-    def each_piece(pieces, offset = 0)
+    def each_piece(pieces, offset = 0, offsets: nil)
       values, left, unusable = [], [], nil
       at = offset
       pieces.each_with_index do |piece, i|
-        starting_at = at
-        at += piece.size
+        starting_at = offsets ? offsets[i] : at
+        at = starting_at + piece.size
         answered, rest = yield(piece, starting_at)
         values.concat(answered)
         left.concat(rest)

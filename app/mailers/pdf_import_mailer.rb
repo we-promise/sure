@@ -8,6 +8,7 @@ class PdfImportMailer < ApplicationMailer
     @document_type = reading.fetch(:document_type) { @pdf_import.document_type }
     @summary = reading.fetch(:summary) { @pdf_import.ai_summary }
     @failed_checks = Array(reading.fetch(:failed_checks) { @pdf_import.failed_checks })
+    @extractable = @document_type.in?(Ai::PdfReading::STATEMENT_TYPES)
 
     mail(
       to: @user.email,

@@ -161,6 +161,26 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_equal %w[t0 t1 t2 t3], answered_ids(result), "t3 must not be merged ahead of t2"
   end
 
+  test "a fallback with a larger batch_size keeps noncontiguous pending inputs in order" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    use_ai_model_settings("openai/gpt-4.1-mini", batch_size: 2)
+    requests = stub_ai(:detect_merchants) do |request|
+      ids = request.input.scan(/ID: (t\d)/).flatten
+      if request.model.endpoint.name == "gpu" && (ids.include?("t0") || ids.include?("t3"))
+        raise Ai::Error::ContextTooLong, "too long"
+      end
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = generation(4).call(batches: 1)
+
+    assert_equal %w[t0 t1 t2 t3], answered_ids(result)
+    fallback = requests.select { _1.model.endpoint.name == "openai" }
+    assert_equal [ %w[t0], %w[t3] ], fallback.map { _1.input.scan(/ID: (t\d)/).flatten },
+                 "the noncontiguous pending inputs are sent as separate runs"
+  end
+
   test "an item no route can fit is skipped and logged, and the items after it still run" do
     use_ai_model_settings(batch_size: 1)
     stub_ai(:detect_merchants) do |request|

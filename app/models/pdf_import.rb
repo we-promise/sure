@@ -324,7 +324,8 @@ class PdfImport < Import
 
   # When a reread's job starts and still holds its own claim: the previous
   # reading goes, rows and all. A delayed job from an earlier attempt returns
-  # false, leaving a newer reread or a publish intact.
+  # false, leaving a newer reread or a publish intact. The token is kept so a retry after this
+  # cleanup still owns the import; it is released when the job reaches a terminal status.
   def clear_reading!(reread_token: nil)
     with_lock do
       return false if reread_token.present? && !(importing? && self.reread_token == reread_token)
@@ -338,7 +339,7 @@ class PdfImport < Import
       rows.delete_all
       self.class.reset_counters(id, :rows)
       update!(ai_summary: nil, document_type: nil, extracted_data: nil, extraction_checks: nil, read_with: nil, read_model: nil,
-              error: nil, reread_token: nil)
+              error: nil)
       true
     end
   end

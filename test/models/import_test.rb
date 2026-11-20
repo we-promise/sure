@@ -32,7 +32,22 @@ class ImportTest < ActiveSupport::TestCase
 
     import.reload
     assert import.importing?
-    assert_nil import.reread_token, "a delayed reread must not find its claim on a published import"
+    assert_not_equal "old-attempt", import.reread_token, "a delayed reread must not find its claim on a published import"
+  end
+
+  test "publish_later does not release a newer claim when an older enqueue fails" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    newer_token = SecureRandom.uuid
+    ImportJob.stubs(:perform_later)
+              .with { import.reload.update!(status: :importing, reread_token: newer_token); true }
+              .raises(StandardError, "queue down")
+
+    assert_raises(Import::EnqueueFailedError) { import.publish_later }
+
+    import.reload
+    assert import.importing?
+    assert_equal newer_token, import.reread_token
   end
 
   test "publish_later refuses an import already reverting" do

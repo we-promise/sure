@@ -117,6 +117,20 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "a text layer that omits a scanned page keeps the extraction incomplete" do
+    stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
+    Pdf::TextExtractor.stubs(:pages).returns([ "Cardpayment-HighStPetrolStation", "" ])
+    Pdf::PageImages.stubs(:page_count).returns(2)
+
+    with_reading_routes(text_model) do
+      outcome = reading(@bac).extract(read_as: :text)
+
+      assert_equal :text, outcome.way
+      assert_equal false, outcome.checks.complete, "the blank second page may hold transactions"
+      assert outcome.flagged?
+    end
+  end
+
   test "when nothing passes, the best extraction is kept and flagged, never dropped" do
     skip_without_pdftoppm
     missing = BAC_ROWS.drop(1)

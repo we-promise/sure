@@ -2,7 +2,7 @@ require "application_system_test_case"
 
 # PDF reading in the browser: "Read as" on the upload form, the review flag on
 # an extraction that failed its checks, and confirming its publish.
-class PdfImportReadingTest < ApplicationSystemTestCase
+class PdfImportReadingSystemTest < ApplicationSystemTestCase
   include ActiveJob::TestHelper
 
   setup do
