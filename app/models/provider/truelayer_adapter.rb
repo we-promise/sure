@@ -5,7 +5,11 @@ class Provider::TruelayerAdapter < Provider::Base
   Provider::Factory.register("TruelayerAccount", self)
   declares_connection key: "truelayer", name: "TrueLayer", panel: true,
                       metadata: { region: "UK", kinds: %w[Bank], maturity: :alpha, logo_text: "TL", logo_color: "#0f172a", domain: "truelayer.com" },
-                      lists: { settings_page: %i[active ordered], settings_panel: %i[active ordered] }
+                      lists: {
+                        settings_page: %i[active ordered],
+                        settings_panel: %i[active ordered],
+                        accounts_index: ->(items) { items.connected.ordered.with_attached_logo.includes(:truelayer_accounts) }
+                      }
 
   def self.supported_account_types
     %w[Depository CreditCard Loan]

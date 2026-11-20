@@ -798,9 +798,10 @@ end
    The generator writes this declaration only into an adapter it creates. When the adapter
    already existed or `--skip-adapter` was passed, it prints the declaration to add instead.
 
-2. Check that `Family` has the `my_bank_items` association. Bank sync loads the items
-   through it, with the adapter's `lists:` queries or the defaults in
-   `Provider::Base::ITEM_LISTS`.
+2. Check that `Family` has the `my_bank_items` association. Bank sync and `/accounts`
+   load the items through it, with the adapter's `lists:` queries or their defaults
+   (`Provider::Base::ITEM_LISTS`, and for `/accounts` `ordered.with_attached_logo`
+   preloading the accounts association).
 
 ### Form Not Submitting
 

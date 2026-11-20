@@ -9,6 +9,11 @@ class AccountsController < ApplicationController
 
   helper_method :visible_card_accounts
 
+  # The connections /accounts lists, each loaded with its adapter's declared query.
+  INDEX_CONNECTIONS = Provider::Factory.connection_declarations
+    .select { |declaration| declaration[:lists][:accounts_index] }
+    .freeze
+
   def index
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
     @manual_accounts = family.accounts
@@ -26,37 +31,10 @@ class AccountsController < ApplicationController
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
       .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
       .distinct.with_attached_logo.includes(:accountable, account_providers: :provider).order(:name)
-    @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
-    @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
-    @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
-    @redbark_items = visible_provider_items(family.redbark_items.ordered.with_attached_logo.includes(:redbark_accounts))
-    @akahu_items = visible_provider_items(family.akahu_items.ordered.with_attached_logo.includes(:akahu_accounts))
-    @up_items = visible_provider_items(family.up_items.ordered.with_attached_logo.includes(:up_accounts))
-    @monobank_items = visible_provider_items(family.monobank_items.ordered.with_attached_logo.includes(:monobank_accounts))
-    @fio_items = visible_provider_items(family.fio_items.active.ordered.with_attached_logo.includes(:fio_accounts))
-    @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
-    @truelayer_items = visible_provider_items(family.truelayer_items.connected.ordered.with_attached_logo.includes(:truelayer_accounts))
-    @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))
-    @mercury_items = visible_provider_items(family.mercury_items.ordered.with_attached_logo.includes(:mercury_accounts))
-    @brex_items = visible_provider_items(family.brex_items.ordered.with_attached_logo.includes(:accounts, brex_accounts: :account_provider))
-    @coinbase_items = visible_provider_items(family.coinbase_items.ordered.with_attached_logo.includes(:coinbase_accounts, :accounts))
-    @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.with_attached_logo.includes(:snaptrade_accounts))
-    @ibkr_items = visible_provider_items(family.ibkr_items.ordered.with_attached_logo.includes(:ibkr_accounts))
-    @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
-    @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
-    @onchain_wallet_items = visible_provider_items(
-      family.onchain_wallet_items.ordered.includes(:accounts, onchain_wallet_accounts: { account_provider: :account })
-    )
-    @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
-    @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
-    @coinspot_items = visible_provider_items(family.coinspot_items.ordered.with_attached_logo.includes(:coinspot_accounts, :accounts))
-    @trading212_items = visible_provider_items(family.trading212_items.ordered.with_attached_logo.includes(:trading212_accounts)).sort_by(&:created_at)
-    @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
-    @sharesight_items = visible_provider_items(family.sharesight_items.ordered.with_attached_logo.includes(sharesight_accounts: [ :account, :linked_account ])).sort_by(&:created_at)
-    @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
-    @trade_republic_items = visible_provider_items(
-      family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
-    )
+    INDEX_CONNECTIONS.each do |connection|
+      items = connection[:lists][:accounts_index].call(family.public_send(connection[:association]))
+      instance_variable_set(:"@#{connection[:key]}_items", visible_provider_items(items))
+    end
 
     # An on-chain item is admitted as soon as ONE of its accounts is accessible,
     # so the card is told which of them this viewer may actually see. nil is the
@@ -518,35 +496,7 @@ class AccountsController < ApplicationController
     end
 
     def preload_latest_sync_metadata_for_index!
-      items = [
-        @plaid_items,
-        @simplefin_items,
-        @lunchflow_items,
-        @redbark_items,
-        @akahu_items,
-        @up_items,
-        @monobank_items,
-        @fio_items,
-        @enable_banking_items,
-        @truelayer_items,
-        @coinstats_items,
-        @mercury_items,
-        @brex_items,
-        @coinbase_items,
-        @snaptrade_items,
-        @ibkr_items,
-        @indexa_capital_items,
-        @sophtron_items,
-        @binance_items,
-        @kraken_items,
-        @coinspot_items,
-        @trading212_items,
-        @questrade_items,
-        @sharesight_items,
-        @wise_items,
-        @trade_republic_items,
-        @onchain_wallet_items
-      ].flatten.compact
+      items = INDEX_CONNECTIONS.map { |connection| instance_variable_get(:"@#{connection[:key]}_items") }.flatten.compact
 
       accounts = @manual_accounts.to_a + @financekit_accounts.to_a
       items.each do |item|
