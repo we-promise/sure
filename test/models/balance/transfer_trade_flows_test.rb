@@ -408,6 +408,25 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
     assert_equal 0, day.net_market_flows
   end
 
+  test "forward: a split whose ratio doesn't divide the quantity evenly still shows a transfer" do
+    # 3-for-2: 10 post-split shares were stored as 6.666666666666666667 the day before.
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [
+        { date: 2.days.ago.to_date, ticker: "AAPL", qty: BigDecimal("6.666666666666666667"), price: 150, amount: 1000 },
+        { date: transfer_day, ticker: "AAPL", qty: 15, price: 100, amount: 1500 },
+        { date: Date.current, ticker: "AAPL", qty: 15, price: 100, amount: 1500 }
+      ]
+    )
+    Security.find_by!(ticker: "AAPL").splits.create!(ex_date: transfer_day, numerator: 3, denominator: 2, source: "manual")
+    add_trade(account, qty: 5, price: 100)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 500, day.non_cash_inflows
+  end
+
   def add_cash_trade(account, qty:, amount:)
     trade = Trade.new(qty: qty, security: Security.find_by!(ticker: "AAPL"), price: 100, currency: "USD")
     account.entries.create!(name: "Trade", date: transfer_day, amount: amount, currency: "USD", entryable: trade)

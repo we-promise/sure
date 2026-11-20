@@ -1,4 +1,7 @@
 class Balance::BaseCalculator
+  # How far apart two quantities of one position may be across a split's rounding.
+  SPLIT_QTY_TOLERANCE = BigDecimal("1e-12")
+
   attr_reader :account
 
   def initialize(account)
@@ -206,11 +209,12 @@ class Balance::BaseCalculator
       return false if traded_qty.zero? && start_qty.zero? && end_qty.zero? && cash_moving_qty.zero?
 
       # A split goes ex at the open, before the day's trades, so the stored
-      # quantity of the day before is in pre-split shares.
+      # quantity of the day before is in pre-split shares. Scaling it back can
+      # land a unit of the stored scale away from the day's own quantity.
       ratio = sync_cache.split_ratio(security_id, date)
-      start_qty = Security::Split.scale(start_qty, ratio) if ratio
+      return end_qty - start_qty == traded_qty unless ratio
 
-      end_qty - start_qty == traded_qty
+      (end_qty - Security::Split.scale(start_qty, ratio) - traded_qty).abs <= SPLIT_QTY_TOLERANCE
     end
 
     def derive_cash_balance(cash_balance, date)
