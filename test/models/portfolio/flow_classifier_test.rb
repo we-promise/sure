@@ -287,6 +287,44 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_inflow, @family_scope.classify(orphan)
   end
 
+  # A cash-funded Transfer trade is a purchase (#cash_settled?), not the other
+  # leg of a move. Matching it to a journal out of another account hid a real
+  # withdrawal: the shares left the scope while the purchase that happened to
+  # mirror them read as their arrival.
+  test "a cash-funded Transfer trade is not the opposite leg of a security journal in both forms" do
+    security = create_portfolio_security
+    journal_out = create_portfolio_trade(account: @brokerage, security: security, qty: -5, price: 100, label: "Transfer")
+      .tap { |entry| entry.update!(amount: 0) }
+    bought = create_portfolio_trade(account: @ira, security: security, qty: 5, price: 100, label: "Transfer")
+
+    assert_equal :external_outflow, @family_scope.classify(journal_out)
+    assert_equal :internal, @family_scope.classify(bought)
+    assert_equal({ journal_out.id => :external_outflow, bought.id => :internal },
+                 @family_scope.classify_ids([ journal_out.id, bought.id ]))
+  end
+
+  # One leg out can be the other half of one leg in, not of two. When a day
+  # holds more legs on either side than a one-to-one move explains, there is
+  # no telling which pair moved, so every leg is a flow by direction: the
+  # unmatched units are external capital, and the matched ones net to zero.
+  test "a security journal is internal only when it pairs one to one in both forms" do
+    security = create_portfolio_security
+    third = create_portfolio_account(@family, name: "Third")
+    scope = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id, third.id ])
+    out_leg = create_portfolio_trade(account: @brokerage, security: security, qty: -5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+    in_one = create_portfolio_trade(account: @ira, security: security, qty: 5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+    in_two = create_portfolio_trade(account: third, security: security, qty: 5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+
+    expected = { out_leg.id => :external_outflow, in_one.id => :external_inflow, in_two.id => :external_inflow }
+    assert_equal expected, [ out_leg, in_one, in_two ].index_by(&:id).transform_values { |entry| scope.classify(entry) }
+    assert_equal expected, scope.classify_ids(expected.keys)
+
+    # Without the second arrival the pair is a move again.
+    in_two.update_columns(excluded: true)
+    assert_equal({ out_leg.id => :internal, in_one.id => :internal }, scope.classify_ids([ out_leg.id, in_one.id ]))
+    assert_equal :internal, scope.classify(out_leg)
+  end
+
   # entries.excluded is nullable. #classify reads a NULL as live (excluded? is
   # false), and so does the SQL CASE (WHEN NULL is not taken), so the opposite
   # leg's lookup has to read it the same way; `excluded = false` dropped it and

@@ -312,15 +312,27 @@ class Portfolio::FlowClassifier
     # another account. An excluded leg does not count unless include_excluded
     # says to read it as live. entries.excluded is nullable, and a NULL leg is
     # live here as it is to #classify, hence IS NOT TRUE rather than = false.
+    #
+    # Only a journal leg counts: a cash-settled Transfer trade is a purchase or
+    # a sale, so it cannot be where the units went. And the pairing has to be
+    # one to one: exactly one opposite leg, and no other leg on this leg's side,
+    # so one leg out never cancels two in. With more legs than one move
+    # explains every leg is a flow by direction; the matched units then net to
+    # zero and the unmatched ones stay external.
     def security_transfer_counterpart_in_scope?(entry, trade)
-      counterparts = Entry
+      opposite = security_journal_legs(entry, trade.security_id, -trade.qty).where.not(account_id: entry.account_id)
+      same_side = security_journal_legs(entry, trade.security_id, trade.qty).where.not(id: entry.id)
+      opposite.count == 1 && !same_side.exists?
+    end
+
+    def security_journal_legs(entry, security_id, qty)
+      legs = Entry
         .joins("JOIN trades counterpart_trades ON counterpart_trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
         .where(account_id: scope_account_ids.select { |account_id| in_scope_on?(account_id, entry.date) })
-        .where.not(account_id: entry.account_id)
         .where(date: entry.date)
-        .where(counterpart_trades: { security_id: trade.security_id, qty: -trade.qty, investment_activity_label: TRANSFER_LABEL })
-      counterparts = counterparts.where("entries.excluded IS NOT TRUE") unless include_excluded
-      counterparts.exists?
+        .where(counterpart_trades: { security_id: security_id, qty: qty, investment_activity_label: TRANSFER_LABEL })
+        .where("counterpart_trades.qty * entries.amount <= 0")
+      include_excluded ? legs : legs.where("entries.excluded IS NOT TRUE")
     end
 
     # Inside the scope on `date`: one of its accounts, and not past its cut-off.
@@ -364,22 +376,28 @@ class Portfolio::FlowClassifier
         "THEN 'internal' ELSE #{direction_sql} END"
     end
 
+    # The SQL twin of #security_transfer_counterpart_in_scope?: one journal leg
+    # opposite, none beside.
     def security_transfer_counterpart_in_scope_sql
+      opposite = security_journal_legs_sql(qty: "-trades.qty", extra: "AND counterpart_entries.account_id <> entries.account_id")
+      same_side = security_journal_legs_sql(qty: "trades.qty", extra: "AND counterpart_entries.id <> entries.id")
+      "((SELECT COUNT(*) #{opposite}) = 1 AND NOT EXISTS (SELECT 1 #{same_side}))"
+    end
+
+    def security_journal_legs_sql(qty:, extra:)
       <<~SQL.squish
-        EXISTS (
-          SELECT 1
-          FROM entries counterpart_entries
-          JOIN trades counterpart_trades
-            ON counterpart_trades.id = counterpart_entries.entryable_id
-            AND counterpart_entries.entryable_type = 'Trade'
-          WHERE #{in_scope_sql('counterpart_entries.account_id')}
-            AND counterpart_entries.account_id <> entries.account_id
-            AND counterpart_entries.date = entries.date
-            #{"AND counterpart_entries.excluded IS NOT TRUE" unless include_excluded}
-            AND counterpart_trades.security_id = trades.security_id
-            AND counterpart_trades.qty = -trades.qty
-            AND counterpart_trades.investment_activity_label = '#{TRANSFER_LABEL}'
-        )
+        FROM entries counterpart_entries
+        JOIN trades counterpart_trades
+          ON counterpart_trades.id = counterpart_entries.entryable_id
+          AND counterpart_entries.entryable_type = 'Trade'
+        WHERE #{in_scope_sql('counterpart_entries.account_id')}
+          #{extra}
+          AND counterpart_entries.date = entries.date
+          #{"AND counterpart_entries.excluded IS NOT TRUE" unless include_excluded}
+          AND counterpart_trades.security_id = trades.security_id
+          AND counterpart_trades.qty = #{qty}
+          AND counterpart_trades.investment_activity_label = '#{TRANSFER_LABEL}'
+          AND counterpart_trades.qty * counterpart_entries.amount <= 0
       SQL
     end
 
