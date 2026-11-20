@@ -231,17 +231,9 @@ class Api::V1::TradesController < Api::V1::BaseController
       ticker = @trade.security&.ticker
       entry_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", qty, ticker) if ticker.present?
       type_label = Trade::CreateForm::SECURITY_TRADE_LABELS[flat[:type].to_s.downcase]
-      entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || type_label || side_label(@trade.investment_activity_label, is_sell)
+      entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || type_label || @trade.label_for_side(sell: is_sell)
 
       entry_params
-    end
-
-    # A Buy or Sell label follows the side the update sets; any other label,
-    # such as Sweep In or Reinvestment, stays.
-    def side_label(current_label, is_sell)
-      return current_label unless current_label.blank? || %w[Buy Sell].include?(current_label)
-
-      is_sell ? "Sell" : "Buy"
     end
 
     # True for sell: "sell", "sweep_out", or "inflow". False for buy: "buy", "outflow", or blank. Keeps create (buy/sell) and update (type or nature) consistent.
@@ -510,13 +502,6 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) unless values.all?(&:positive?)
 
       values
-    end
-
-    # A finite decimal, or nil for anything else. String#to_d would read "abc"
-    # as 0 and "12abc" as 12.
-    def parse_decimal(raw)
-      value = BigDecimal(raw.to_s.strip, exception: false)
-      value if value&.finite?
     end
 
     def safe_page_param

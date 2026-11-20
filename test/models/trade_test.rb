@@ -339,4 +339,18 @@ class TradeTest < ActiveSupport::TestCase
 
       [ account, security ]
     end
+
+    test "label_for_side follows the side for Buy, Sell and a missing label, and keeps any other activity" do
+      trade = Trade.new(investment_activity_label: "Buy")
+      assert_equal "Sell", trade.label_for_side(sell: true)
+
+      trade.investment_activity_label = "Sell"
+      assert_equal "Buy", trade.label_for_side(sell: false)
+
+      trade.investment_activity_label = nil
+      assert_equal "Sell", trade.label_for_side(sell: true)
+
+      trade.investment_activity_label = "Sweep In"
+      assert_equal "Sweep In", trade.label_for_side(sell: true)
+    end
 end

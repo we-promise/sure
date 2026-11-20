@@ -28,6 +28,9 @@ class Trade < ApplicationRecord
   # excluded, and an ambiguous one is left where the user can see it.
   INTERNAL_MOVEMENT_LABELS = %w[Transfer Sweep\ In Sweep\ Out].freeze
 
+  # The labels that only say which side of the trade it is.
+  SIDE_LABELS = Trade::CreateForm::SECURITY_TRADE_LABELS.values_at("buy", "sell").freeze
+
   # Kept as the provider-facing label for direct wallet transfers. Cost-basis
   # calculations use INTERNAL_MOVEMENT_LABELS so API-created sweeps follow the
   # same ownership-preserving rule.
@@ -213,6 +216,15 @@ class Trade < ApplicationRecord
   # They represent portfolio management, not living expenses
   def excluded_from_budget?
     true
+  end
+
+
+  # The label for this trade once it is on the given side: Buy and Sell
+  # follow the side, any other activity (Sweep In, Reinvestment...) is kept.
+  def label_for_side(sell:)
+    return investment_activity_label if investment_activity_label.present? && SIDE_LABELS.exclude?(investment_activity_label)
+
+    Trade::CreateForm::SECURITY_TRADE_LABELS[sell ? "sell" : "buy"]
   end
 
   private
