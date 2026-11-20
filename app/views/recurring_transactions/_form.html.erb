@@ -61,8 +61,12 @@
       </div>
     <% end %>
 
+    <%# The :logo variant reads each account's logo_url, which checks the
+        stored logo and falls back to the provider's logo; preloaded here so
+        the dropdown costs a fixed number of queries, not a few per account. %>
     <%= f.collection_select :account_id,
-          Current.user.accessible_accounts.visible.alphabetically,
+          Current.user.accessible_accounts.visible.alphabetically
+            .with_attached_logo.includes(account_providers: :provider),
           :id, :name,
           { label: income ? t(".income_account_label") : t(".account_label"), include_blank: t(".account_blank"),
             variant: :logo, searchable: true } %>
