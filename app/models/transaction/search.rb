@@ -227,6 +227,13 @@ class Transaction::Search
     end
   end
 
+  # One rate per (currency, date) of the fx_entry_pairs CTE, into
+  # :target_currency, for totals to join instead of looking each entry's rate up.
+  FX_RATES_JOIN_SQL = <<~SQL.squish.freeze
+    LEFT JOIN (#{ExchangeRate.rates_by_pair_sql(pairs_sql: "SELECT currency, date FROM fx_entry_pairs", to: ":target_currency")}) fxr
+      ON fxr.currency = entries.currency AND fxr.date = entries.date
+  SQL
+
   # Compute totals for the specific search, excluding tax-advantaged accounts
   def totals
     @totals ||= begin
@@ -260,14 +267,19 @@ class Transaction::Search
         tax_advantaged_ids = family.tax_advantaged_account_ids
         scope = scope.where.not(accounts: { id: tax_advantaged_ids }) if tax_advantaged_ids.present?
 
-        # Left out, not counted at 1, when the currency has no rate.
-        rate = ExchangeRate.rate_sql(
-          from: "entries.currency",
-          to: ActiveRecord::Base.connection.quote(family.currency),
-          on: "entries.date"
-        )
+        # Left out, not counted at 1, when the currency has no rate. Each
+        # (currency, date) among these entries is looked up once and joined,
+        # rather than looked up again for every entry that shares it.
+        target_currency = ActiveRecord::Base.connection.quote(family.currency)
+        pairs = scope.unscope(:select, :order)
+                     .where.not(entries: { currency: family.currency })
+                     .select("entries.currency AS currency, entries.date AS date")
+                     .distinct
+        rate = "CASE WHEN entries.currency = #{target_currency} THEN 1 ELSE fxr.rate END"
 
         result = scope
+                  .with(fx_entry_pairs: pairs)
+                  .joins(ActiveRecord::Base.sanitize_sql_array([ FX_RATES_JOIN_SQL, { target_currency: family.currency } ]))
                   .select(
                     ActiveRecord::Base.sanitize_sql_array([
                       "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as expense_total",
