@@ -54,20 +54,26 @@ class SimplefinAccount::Investments::HoldingsProcessor
         # because some brokerages (e.g. Vanguard, Fidelity) use "value" to mean cost basis,
         # which would cause the system to display average cost as current price. (GH #1182)
         qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
-        market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
+        raw_market_value = any_of(simplefin_holding, %w[market_value current_value])
+        market_value = parse_decimal(raw_market_value)
+        # An explicit market_value of 0 (a delisted or worthless position) is a
+        # real value, not a missing one, so it must not fall back to the
+        # purchase price. BalanceCalculator already reads it as-is. Only a
+        # missing or unparseable value falls back. (GH #5337)
+        has_market_value = decimal_value?(raw_market_value)
         raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
         cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, institution_reports_total_basis?)
 
-        # Derive price from market_value when possible; otherwise fall back to any price field
+        # Derive price from market_value when present; otherwise fall back to any price field
         fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
-        price = if qty > 0 && market_value > 0
+        price = if has_market_value && qty > 0
           market_value / qty
         else
           fallback_price || 0
         end
 
         # Compute an amount we can persist (some providers omit market_value)
-        computed_amount = if market_value > 0
+        computed_amount = if has_market_value
           market_value
         elsif qty > 0 && price > 0
           qty * price
@@ -295,6 +301,20 @@ class SimplefinAccount::Investments::HoldingsProcessor
         return v if !v.nil? && v.to_s.strip != ""
       end
       nil
+    end
+
+    def decimal_value?(value)
+      case value
+      when Numeric
+        true
+      when String
+        BigDecimal(value)
+        true
+      else
+        false
+      end
+    rescue ArgumentError
+      false
     end
 
     def parse_decimal(value)
