@@ -37,11 +37,12 @@ class LunchflowItemsController < ApplicationController
         return
       end
 
+      credentials = lunchflow_cache_credentials(credentialed_lunchflow_item)
       accounts_data = lunchflow_provider.get_accounts
       available_accounts = accounts_data[:accounts] || []
 
       # Cache the accounts for 5 minutes
-      Rails.cache.write(cache_key, available_accounts, expires_in: 5.minutes)
+      cache_lunchflow_accounts(cache_key, available_accounts, credentials)
 
       render json: { success: true, has_accounts: available_accounts.any?, cached: false }
     rescue Provider::Lunchflow::LunchflowError => e
@@ -87,12 +88,13 @@ class LunchflowItemsController < ApplicationController
           return
         end
 
+        credentials = lunchflow_cache_credentials(credentialed_lunchflow_item)
         accounts_data = lunchflow_provider.get_accounts
 
         @available_accounts = accounts_data[:accounts] || []
 
         # Cache the accounts for 5 minutes
-        Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
+        cache_lunchflow_accounts(cache_key, @available_accounts, credentials)
       end
 
       # Filter out already linked accounts
@@ -288,12 +290,13 @@ class LunchflowItemsController < ApplicationController
           return
         end
 
+        credentials = lunchflow_cache_credentials(credentialed_lunchflow_item)
         accounts_data = lunchflow_provider.get_accounts
 
         @available_accounts = accounts_data[:accounts] || []
 
         # Cache the accounts for 5 minutes
-        Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
+        cache_lunchflow_accounts(cache_key, @available_accounts, credentials)
       end
 
       if @available_accounts.empty?
@@ -709,6 +712,19 @@ class LunchflowItemsController < ApplicationController
     # The accounts list is cached per connection, under the provider kit's key.
     def lunchflow_accounts_cache_key(lunchflow_item)
       "lunchflow_accounts_#{Current.family.id}_#{lunchflow_item.id}"
+    end
+
+    # The list is cached only if the connection's credentials are unchanged
+    # since the fetch began, as the provider kit's account flow does: an update
+    # that drops the cache mid-fetch must not have the old credentials'
+    # accounts written back under the same key.
+    def cache_lunchflow_accounts(cache_key, accounts, credentials)
+      current = lunchflow_cache_credentials(credentialed_lunchflow_item)
+      Rails.cache.write(cache_key, accounts, expires_in: 5.minutes) if current == credentials
+    end
+
+    def lunchflow_cache_credentials(lunchflow_item)
+      lunchflow_item && Current.family.lunchflow_items.where(id: lunchflow_item.id).pick(:api_key, :base_url)
     end
 
     # The connection whose API key lists accounts, as Provider::LunchflowAdapter.build_provider picks it.

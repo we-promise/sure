@@ -48,6 +48,27 @@ class LunchflowItemsAccountCacheTest < ActionDispatch::IntegrationTest
     assert_nil Rails.cache.read(@key)
   end
 
+  # A fetch that started under the old API key must not write the old key's
+  # accounts back after an update dropped the cache mid-fetch.
+  [
+    [ "preloading", -> { get preload_accounts_lunchflow_items_url, as: :json } ],
+    [ "selecting accounts", -> { get select_accounts_lunchflow_items_url(accountable_type: "Depository") } ],
+    [ "selecting an existing account's link", -> { get select_existing_account_lunchflow_items_url(account_id: accounts(:depository).id) } ]
+  ].each do |action, request|
+    test "#{action} does not cache accounts fetched under an API key changed mid-fetch" do
+      item = @item
+      Provider::Lunchflow.any_instance.unstub(:get_accounts)
+      Provider::Lunchflow.any_instance.stubs(:get_accounts).with do
+        item.update_columns(api_key: "rotated_key")
+        true
+      end.returns(accounts: [ { id: 1, name: "Old key's account" } ])
+
+      instance_exec(&request)
+
+      assert_nil Rails.cache.read(@key)
+    end
+  end
+
   test "renaming the connection keeps its cached accounts" do
     Rails.cache.write(@key, [ { id: 7, name: "Cached account" } ])
 
