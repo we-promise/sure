@@ -40,7 +40,7 @@ class SnaptradeAccount::Processor
     end
 
     if anchor_balance
-      correct_pre_sign_fix_anchor(account, anchor_balance)
+      correct_pre_sign_fix_anchor(account, anchor_balance, date)
       account.set_current_balance(
         anchor_balance,
         date: date,
@@ -63,12 +63,22 @@ class SnaptradeAccount::Processor
     # SnapTrade sends it, owed as negative. Left alone, that anchor is kept as a
     # past reconciliation beside the first positive one, and the card's history
     # shows a jump that never happened. A card in credit reads negative now too,
-    # so only a negative anchor against a positive reading is turned around.
-    def correct_pre_sign_fix_anchor(account, balance)
+    # so a negative anchor is only turned around when the reading less what was
+    # imported since says the card owed money on the anchor's date. That holds
+    # for a stale anchor even with flows missing, and for a card that went from
+    # credit to owing it doesn't.
+    def correct_pre_sign_fix_anchor(account, balance, date)
       return unless account.liability? && balance.positive?
 
-      anchor = account.entries.where(entryable_type: "Valuation", entryable_id: Valuation.current_anchor.select(:id)).first
-      anchor.update!(amount: -anchor.amount) if anchor&.amount&.negative?
+      manager = Account::CurrentBalanceManager.new(account)
+      anchor = manager.current_anchor_entry
+      return unless anchor&.amount&.negative?
+
+      net = manager.ledger_net_since(anchor, date)
+      return if net.nil? || balance - net <= 0
+
+      # Leaves updated_at alone: it marks which flows the reading had seen.
+      anchor.update_columns(amount: -anchor.amount)
     end
 
     def update_account_balance(account)
