@@ -19,6 +19,18 @@ class BackfillSplitPartActivityLabelsMigrationTest < ActiveSupport::TestCase
     assert_equal %w[Dividend Dividend], parts.map { |part| part.reload.investment_activity_label }
   end
 
+  test "touches the relabelled parts' entries so entry-keyed caches rebuild" do
+    parts = split_with_unlabelled_parts(parent_label: "Dividend")
+    entries = parts.map(&:entry)
+    entries.each { |entry| entry.update_columns(updated_at: 1.day.ago) }
+    version_before = @family.entries_cache_version
+
+    run_migration
+
+    assert entries.all? { |entry| entry.reload.updated_at > 1.hour.ago }
+    assert_not_equal version_before, @family.entries_cache_version
+  end
+
   test "keeps a part's own activity label" do
     relabelled, unlabelled = split_with_unlabelled_parts(parent_label: "Dividend")
     relabelled.update_columns(investment_activity_label: "Fee")
