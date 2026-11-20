@@ -374,6 +374,29 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     end
   end
 
+  test "an account whose transaction fails to commit is not counted as created" do
+    brex_account = @brex_item.brex_accounts.create!(
+      account_id: "setup_commit_fail_1",
+      account_kind: "cash",
+      name: "Setup Commit Fail",
+      currency: "USD",
+      current_balance: 100
+    )
+    Account.stubs(:create_and_sync).returns(accounts(:depository))
+    AccountProvider.stubs(:create!)
+    # The block runs, then the commit fails (as when the connection drops before COMMIT).
+    ActiveRecord::Base.stubs(:transaction).yields.raises(ActiveRecord::ConnectionFailed, "server closed the connection")
+    @brex_item.expects(:sync_later).never
+
+    result = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item).complete_setup!(
+      account_types: { brex_account.id => "Depository" },
+      account_subtypes: {}
+    )
+
+    assert_empty result.created_accounts
+    assert_equal 1, result.failed_count
+  end
+
   test "complete setup result returns localized notice" do
     brex_account = @brex_item.brex_accounts.create!(
       account_id: "setup_result_cash_1",
