@@ -36,6 +36,36 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil lunchflow_items(:one).reload.sync_start_date
   end
 
+  test "update from the page saves the include raw data setting" do
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { include_raw_data: "1" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "lunchflow-providers-panel"
+    assert lunchflow_items(:one).reload.include_raw_data?
+  end
+
+  test "update from the page clears the include raw data setting" do
+    lunchflow_items(:one).update!(include_raw_data: true)
+
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { include_raw_data: "0" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "lunchflow-providers-panel"
+    assert_not lunchflow_items(:one).reload.include_raw_data?
+  end
+
+  test "create from the page saves the include raw data setting" do
+    assert_difference -> { Current.family.lunchflow_items.count }, 1 do
+      post lunchflow_items_url,
+           params: { lunchflow_item: { name: "Second Lunch Flow", api_key: "test_key", include_raw_data: "1" } },
+           as: :turbo_stream
+    end
+
+    assert Current.family.lunchflow_items.order(:created_at).last.include_raw_data?
+  end
+
   test "invalid create from the page shows the error in the panel" do
     post lunchflow_items_url,
          params: { lunchflow_item: { name: "Second Lunch Flow", api_key: "" } },

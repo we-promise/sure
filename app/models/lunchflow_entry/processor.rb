@@ -64,7 +64,10 @@ class LunchflowEntry::Processor
         source: "lunchflow",
         merchant: merchant,
         notes: notes,
-        extra: extra_metadata
+        extra: extra_metadata,
+        # The whole `lunchflow` branch is provider-owned: replacing it (rather than
+        # deep-merging) drops raw sub-keys the provider stopped sending.
+        replace_extra_namespaces: [ "lunchflow" ]
       )
     rescue ArgumentError => e
       # Re-raise validation errors (missing required fields, invalid data)
@@ -216,17 +219,19 @@ class LunchflowEntry::Processor
       raise ArgumentError, "Unable to parse transaction date: #{data[:date].inspect}"
     end
 
-    # Build extra metadata hash with pending status
-    # Lunchflow API field: isPending (boolean)
+    # Build extra metadata hash with pending status and the provider's raw object.
+    # Lunchflow API fields: isPending (boolean), raw (provider-specific object).
     def extra_metadata
-      metadata = {}
+      lunchflow = {}
 
       # Store pending status from Lunchflow API when present or when an unidentified hold
-      if data.key?(:isPending) || unidentified_hold?
-        metadata[:lunchflow] = { pending: is_pending? }
-      end
+      lunchflow[:pending] = is_pending? if data.key?(:isPending) || unidentified_hold?
 
-      metadata
+      # Lunchflow's own `raw` object carries the fields it normalised away (bank
+      # references, counterparty details). Store it verbatim so the drawer can show it.
+      lunchflow[:raw] = data[:raw] if data[:raw].present?
+
+      lunchflow.empty? ? {} : { lunchflow: lunchflow }
     end
 
     # Check if this transaction is marked as pending
