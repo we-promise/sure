@@ -61,6 +61,7 @@ class Trade < ApplicationRecord
 
   validate :exchange_rate_must_be_valid
   validate :lot_source_entry_must_be_a_lot_choice, if: -> { lot_source_entry_id_changed? && lot_source_entry_id }
+  before_validation :drop_lot_source_entry, if: -> { lot_source_entry_id && !lot_source_entry_id_changed? && qty && !disposal? }
 
   # Trade types for categorization
   def buy?
@@ -69,6 +70,11 @@ class Trade < ApplicationRecord
 
   def sell?
     qty.negative?
+  end
+
+  # A sale that can name the lot it sold from.
+  def disposal?
+    sell? && !internal_movement?
   end
 
   # A negative quantity that left for another account you own. It looks exactly
@@ -87,7 +93,7 @@ class Trade < ApplicationRecord
   # holds is always among them, so an edit keeps it, and is replayed only
   # while it names a lot that is still open; a new choice must be open by then.
   def lot_choices
-    return Entry.none unless sell? && !internal_movement? && entry&.account&.cost_basis_fifo?
+    return Entry.none unless disposal? && entry&.account&.cost_basis_fifo?
 
     acquisitions = entry.account.entries
       .where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security_id).where("qty > 0").select(:id))
@@ -274,6 +280,13 @@ class Trade < ApplicationRecord
           errors.add(:exchange_rate, "must be greater than 0")
         end
       end
+    end
+
+    # Only a disposal names a lot: an edit that turns it into a buy or an
+    # internal movement lets the stored lot go. A lot named in the same edit
+    # is left for lot_source_entry_must_be_a_lot_choice to refuse.
+    def drop_lot_source_entry
+      self.lot_source_entry_id = nil
     end
 
     def lot_source_entry_must_be_a_lot_choice

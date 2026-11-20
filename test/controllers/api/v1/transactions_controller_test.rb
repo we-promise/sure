@@ -9,7 +9,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
     @family = @user.family
     @account = @family.accounts.first
-    @transaction = @family.transactions.first
+    @transaction = transactions(:one)
 
     # Destroy existing active API keys to avoid validation errors
     @user.api_keys.active.destroy_all
@@ -802,6 +802,42 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       put api_v1_transaction_url(entry.transaction), params: { transaction: { nature: "income" } }, headers: api_headers(@api_key)
     end
     assert_response :success
+  end
+
+  test "update refuses a nature or amount that would break a transfer's legs" do
+    transfer = create_transfer_between_accounts
+    outflow = transfer.outflow_transaction.entry
+    inflow = transfer.inflow_transaction.entry
+
+    [ { nature: "income" }, { amount: 120 }, { amount: 100, nature: "inflow" } ].each do |change|
+      put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: change }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, change.inspect
+      assert_equal 100, outflow.reload.amount, change.inspect
+      assert_equal(-100, inflow.reload.amount, change.inspect)
+    end
+
+    put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: { nature: "outflow", notes: "Rent" } }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal "Rent", outflow.reload.notes
+  end
+
+  test "create and update refuse a nature outside the documented values" do
+    entry = create_transaction(account: @account, amount: 40, name: "Bad nature")
+
+    [ "inlfow", 1, true ].each do |nature|
+      put api_v1_transaction_url(entry.transaction), params: { transaction: { nature: nature } }, headers: api_headers(@api_key), as: :json
+
+      assert_response :unprocessable_entity, nature.inspect
+      assert_equal 40, entry.reload.amount, nature.inspect
+
+      assert_no_difference("@account.entries.count", nature.inspect) do
+        post api_v1_transactions_url,
+             params: { transaction: { account_id: @account.id, name: "Bad", amount: 5, date: Date.current, nature: nature } },
+             headers: api_headers(@api_key), as: :json
+      end
+      assert_response :unprocessable_entity, nature.inspect
+    end
   end
 
   test "should not sync the account when only notes change" do

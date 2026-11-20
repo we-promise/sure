@@ -4,6 +4,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   include Pagy::Backend
   include Api::V1::TransactionLookup
 
+  NATURES = %w[income expense inflow outflow].freeze
+  INVALID_NATURE_MESSAGE = "nature must be one of: #{NATURES.join(", ")}".freeze
+
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
@@ -102,6 +105,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return render_existing_idempotent_entry(existing_entry)
     end
 
+    return render_validation_error(INVALID_NATURE_MESSAGE) if invalid_nature?
     return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
     return render_validation_error("Unknown tag id") if unknown_tag_ids?
     return render_validation_error("Unknown category id") if unknown_category_id?
@@ -154,11 +158,17 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
+    return render_validation_error(INVALID_NATURE_MESSAGE) if invalid_nature?
+    return render_validation_error("amount must be a valid number") if malformed_amount?
+    # The web UI hides amount and nature on a transfer: one leg alone cannot
+    # change them without breaking Transfer#transfer_has_opposite_amounts.
+    if @entry.transaction.transfer && transfer_amount_changed?
+      return render_validation_error("A transfer's amount and nature cannot be changed through one of its transactions")
+    end
     return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
     return render_validation_error("Unknown tag id") if tags_provided? && unknown_tag_ids?
     return render_validation_error("Unknown category id") if unknown_category_id?
     return render_validation_error("Unknown merchant id") if unknown_merchant_id?
-    return render_validation_error("amount must be a valid number") if malformed_amount?
 
     rule_input = @entry.rule_input_snapshot
     updated = false
@@ -531,6 +541,16 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       render :show, status: :ok
     end
 
+    def invalid_nature?
+      nature = transaction_params[:nature]
+      nature.present? && NATURES.exclude?(nature.to_s.downcase)
+    end
+
+    def transfer_amount_changed?
+      amount = entry_params_for_update[:amount]
+      amount.present? && amount != @entry.amount
+    end
+
     # A blank amount is still 0, as it always was; anything else must parse.
     def malformed_amount?
       transaction_params[:amount].present? && parse_decimal(transaction_params[:amount]).nil?
@@ -539,7 +559,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     def calculate_signed_amount(amount = parse_decimal(transaction_params[:amount]) || 0)
       nature = transaction_params[:nature]
 
-      case nature&.downcase
+      case nature.to_s.downcase
       when "income", "inflow"
         -amount.abs  # Income is negative
       when "expense", "outflow"

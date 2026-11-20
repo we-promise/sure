@@ -3,6 +3,8 @@
 class Api::V1::TradesController < Api::V1::BaseController
   include Pagy::Backend
 
+  UPDATE_NATURES = %w[inflow outflow].freeze
+
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_trade, only: [ :show, :update, :destroy ]
@@ -217,11 +219,12 @@ class Api::V1::TradesController < Api::V1::BaseController
       }.compact
 
       type_or_nature = flat[:type].presence || flat[:nature].presence
-      return entry_params unless flat[:qty].present? || flat[:price].present? || type_or_nature
+      return entry_params unless flat.key?(:qty) || flat.key?(:price) || type_or_nature
 
       # Any of qty, price, type or nature rewrites the trade as create builds
-      # it, taking what the request leaves out from the stored trade.
-      qty, price = parse_qty_and_price!(flat[:qty].presence || @trade.qty.abs, flat[:price].presence || @trade.price)
+      # it, taking what the request leaves out from the stored trade. A qty or
+      # price sent blank is invalid, not left out.
+      qty, price = parse_qty_and_price!(flat.fetch(:qty) { @trade.qty.abs }, flat.fetch(:price) { @trade.price })
       return if performed?
 
       is_sell = type_or_nature ? trade_sell_from_type_or_nature?(type_or_nature) : @trade.qty.negative?
@@ -420,6 +423,12 @@ class Api::V1::TradesController < Api::V1::BaseController
     end
 
     def valid_trade_update_semantics?
+      nature = trade_update_params[:nature]
+      if nature.present? && UPDATE_NATURES.exclude?(nature.to_s.downcase)
+        render_validation_error("Invalid nature", [ "nature must be one of: #{UPDATE_NATURES.join(", ")}" ])
+        return false
+      end
+
       type = trade_update_params[:type].to_s.downcase
       label = trade_update_params[:investment_activity_label]
       return true if type.blank?

@@ -806,6 +806,32 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Buy", trade.investment_activity_label
   end
 
+  test "an update refuses a nature other than inflow or outflow" do
+    trade = Trade.find(create_buy_trade("UPDBADNAT"))
+
+    [ "inlfow", "income" ].each do |nature|
+      patch api_v1_trade_url(trade.id), params: { trade: { nature: nature } }, headers: api_headers(read_write_api_key)
+
+      assert_response :unprocessable_entity, nature
+      trade.reload
+      assert_equal 5, trade.qty, nature
+      assert_equal "Buy", trade.investment_activity_label, nature
+    end
+  end
+
+  test "an update refuses a qty or price sent blank" do
+    trade = Trade.find(create_buy_trade("UPDBLANK"))
+
+    [ { qty: "", price: "120" }, { qty: "" }, { price: nil } ].each do |change|
+      patch api_v1_trade_url(trade.id), params: { trade: change }, headers: api_headers(read_write_api_key), as: :json
+
+      assert_response :unprocessable_entity, change.inspect
+      trade.reload
+      assert_equal 5, trade.qty, change.inspect
+      assert_equal 100, trade.price, change.inspect
+    end
+  end
+
   test "an update with only a price stores the price and recomputes the amount" do
     trade = Trade.find(create_buy_trade("UPDPRICE", fee: 2))
 
@@ -1295,6 +1321,22 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_not Trade.exists?(trade.id)
   end
 
+
+  test "a sale that stops being a disposal drops the lot it named" do
+    @investment_account.update!(cost_basis_method: "fifo")
+    security = Security.create!(ticker: "LOTFLIP", name: "LOTFLIP")
+    buy = create_trade(security, account: @investment_account, qty: 40, price: 20, date: 3.days.ago.to_date)
+
+    [ "buy", "sweep_out" ].each do |type|
+      sale = create_trade(security, account: @investment_account, qty: -10, price: 25, date: 1.day.ago.to_date)
+      sale.trade.update!(lot_source_entry: buy)
+
+      patch api_v1_trade_url(sale.entryable_id), params: { trade: { type: type } }, headers: api_headers(read_write_api_key)
+
+      assert_response :ok, type
+      assert_nil sale.trade.reload.lot_source_entry_id, type
+    end
+  end
 
   test "a sale that names its lot reports the acquiring trade, in show and index" do
     @investment_account.update!(cost_basis_method: "fifo")
