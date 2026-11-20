@@ -308,21 +308,24 @@ class Portfolio::FlowClassifier
     end
 
     # A security moved between accounts has no Transfer row; its other leg is
-    # the opposite-quantity Transfer trade on the same security and date in
+    # the opposite-quantity Transfer trade on the same security and date, in
     # another account. An excluded leg does not count unless include_excluded
     # says to read it as live. entries.excluded is nullable, and a NULL leg is
     # live here as it is to #classify, hence IS NOT TRUE rather than = false.
     #
     # Only a journal leg counts: a cash-settled Transfer trade is a purchase or
     # a sale, so it cannot be where the units went. And the pairing has to be
-    # one to one: exactly one opposite leg, and no other leg on this leg's side,
-    # so one leg out never cancels two in. With more legs than one move
-    # explains every leg is a flow by direction; the matched units then net to
-    # zero and the unmatched ones stay external.
+    # one to one: exactly one opposite leg in any account, and no other leg on
+    # this leg's side, so one leg out never cancels two in. An opposite leg in
+    # the same account counts towards that, so it makes the day ambiguous; the
+    # one opposite leg must then be in another account to be the move's other
+    # half. With more legs than one move explains every leg is a flow by
+    # direction; the matched units then net to zero and the unmatched ones
+    # stay external.
     def security_transfer_counterpart_in_scope?(entry, trade)
-      opposite = security_journal_legs(entry, trade.security_id, -trade.qty).where.not(account_id: entry.account_id)
+      opposite_accounts = security_journal_legs(entry, trade.security_id, -trade.qty).where.not(id: entry.id).limit(2).pluck(:account_id)
       same_side = security_journal_legs(entry, trade.security_id, trade.qty).where.not(id: entry.id)
-      opposite.count == 1 && !same_side.exists?
+      opposite_accounts.size == 1 && opposite_accounts.first != entry.account_id && !same_side.exists?
     end
 
     def security_journal_legs(entry, security_id, qty)
@@ -377,11 +380,12 @@ class Portfolio::FlowClassifier
     end
 
     # The SQL twin of #security_transfer_counterpart_in_scope?: one journal leg
-    # opposite, none beside.
+    # opposite (in any account) and in another account, none beside.
     def security_transfer_counterpart_in_scope_sql
-      opposite = security_journal_legs_sql(qty: "-trades.qty", extra: "AND counterpart_entries.account_id <> entries.account_id")
+      opposite = security_journal_legs_sql(qty: "-trades.qty", extra: "AND counterpart_entries.id <> entries.id")
       same_side = security_journal_legs_sql(qty: "trades.qty", extra: "AND counterpart_entries.id <> entries.id")
-      "((SELECT COUNT(*) #{opposite}) = 1 AND NOT EXISTS (SELECT 1 #{same_side}))"
+      "((SELECT COUNT(*) = 1 AND BOOL_AND(counterpart_entries.account_id <> entries.account_id) #{opposite}) " \
+        "AND NOT EXISTS (SELECT 1 #{same_side}))"
     end
 
     def security_journal_legs_sql(qty:, extra:)
