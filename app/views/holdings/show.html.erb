@@ -154,6 +154,11 @@
         </dl>
       </div>
     <% end %>
+    <% dialog.with_section(title: t(".price_history"), open: true) do %>
+      <%= turbo_frame_tag dom_id(@holding, :price_chart), src: holding_price_chart_path(@holding), loading: :lazy do %>
+        <p class="px-3 py-4 text-secondary text-sm animate-pulse"><%= t(".price_history_loading") %></p>
+      <% end %>
+    <% end %>
     <% dialog.with_section(title: t(".history"), open: true) do %>
       <div class="space-y-2">
         <div class="px-3 py-4">

@@ -1,0 +1,7 @@
+---
+fr:
+  holding_price_charts:
+    show:
+      no_data: Aucun historique de prix disponible pour cette période.
+      period: Période du graphique
+      vs_available_history: par rapport à l'historique disponible

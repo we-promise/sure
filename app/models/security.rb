@@ -333,6 +333,19 @@ class Security < ApplicationRecord
     Money.new(@current_price.price, @current_price.currency)
   end
 
+  # Stored closes over the period, in the currency of the latest stored close,
+  # since a security can carry prices in more than one currency. Nil when
+  # fewer than two closes fall in the period, as a line needs two points.
+  def price_series(period: Period.last_30_days)
+    currency = prices.order(date: :desc).pick(:currency)
+    return nil unless currency
+
+    rows = prices.where(currency: currency, date: period.date_range).pluck(:date, :price)
+    return nil if rows.size < 2
+
+    Series.from_raw_values(rows.map { |date, price| { date: date, value: Money.new(price, currency) } })
+  end
+
   # Stores user-supplied closes for a security no provider tracks. See Security::ManualPriceImport.
   def import_manual_prices!(rows, accounts:)
     Security::ManualPriceImport.new(security: self, rows: rows, accounts: accounts).import!
