@@ -677,8 +677,12 @@ class Entry < ApplicationRecord
   # on both the entry and its entryable.
   #
   # @return [void]
+  # The transaction row is locked before the entry is written: auto-matching's
+  # displacement locks transactions, then entries, and the same order here
+  # keeps the two from deadlocking on one leg.
   def unlock_for_sync!
     self.class.transaction do
+      entryable&.lock!
       update!(user_modified: false, import_locked: false, locked_attributes: {})
       entryable&.update!(locked_attributes: {})
     end
