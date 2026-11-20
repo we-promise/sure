@@ -288,6 +288,8 @@ class ReportsController < ApplicationController
         Date.current.beginning_of_year.to_date
       when :last_6_months
         (Date.current.end_of_month + 1.day - 6.months).beginning_of_month.to_date
+      when :all_time
+        Current.family.earliest_activity_date || Date.current.beginning_of_month.to_date
       when :custom
         1.month.ago.to_date
       else
@@ -301,9 +303,7 @@ class ReportsController < ApplicationController
         Date.current.end_of_month.to_date
       when :quarterly
         Date.current.end_of_quarter.to_date
-      when :ytd
-        Date.current
-      when :custom
+      when :ytd, :all_time, :custom
         Date.current
       else
         Date.current.end_of_month.to_date
@@ -333,9 +333,11 @@ class ReportsController < ApplicationController
       end
       net_savings = current_income - current_expenses
 
-      # Calculate percentage changes
-      income_change = calculate_percentage_change(previous_income, current_income)
-      expense_change = calculate_percentage_change(previous_expenses, current_expenses)
+      # Calculate percentage changes. All time has no period before it to compare with.
+      unless @period_type == :all_time
+        income_change = calculate_percentage_change(previous_income, current_income)
+        expense_change = calculate_percentage_change(previous_expenses, current_expenses)
+      end
 
       # Get budget performance for current period
       budget_percent = calculate_budget_performance
