@@ -78,7 +78,8 @@ class CoinstatsItem::Syncer
         warnings: linked_coinstats_accounts.size,
         details: [ {
           message: I18n.t("provider_warnings.limited_investment_data"),
-          severity: "warning"
+          severity: "warning",
+          account_names: linked_coinstats_accounts.filter_map { |account| account.current_account&.name }.uniq
         } ]
       )
     end

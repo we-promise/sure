@@ -234,7 +234,8 @@ class SimplefinItem::Syncer
         warnings: investment_accounts.size,
         details: [ {
           message: I18n.t("provider_warnings.limited_investment_data"),
-          severity: "warning"
+          severity: "warning",
+          account_names: investment_accounts.filter_map { |sfa| sfa.current_account&.name }.uniq
         } ]
       )
     end

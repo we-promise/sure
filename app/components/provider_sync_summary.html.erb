@@ -260,6 +260,14 @@
               <div class="mt-1 pl-2 border-l-2 border-surface-inset space-y-1">
                 <% data_quality_details.each do |detail| %>
                   <p class="text-xs <%= severity_color_class(detail["severity"]) %>"><%= detail["message"] %></p>
+                  <% if detail["account_names"].present? %>
+                    <p class="text-xs text-secondary"><%= t("provider_sync_summary.health.affected_accounts") %>:</p>
+                    <ul class="text-xs text-secondary list-disc pl-4">
+                      <% detail["account_names"].each do |account_name| %>
+                        <li><%= account_name %></li>
+                      <% end %>
+                    </ul>
+                  <% end %>
                 <% end %>
               </div>
             </details>
