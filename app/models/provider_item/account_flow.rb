@@ -412,9 +412,9 @@ class ProviderItem::AccountFlow
     def fetch_and_cache_accounts
       credentials = cache_credentials(item)
       available_accounts = fetch_accounts
-      if cache_credentials(item.class.find_by(id: item.id)) == credentials
-        Rails.cache.write(cache_key, available_accounts, expires_in: CACHE_TTL)
-      end
+      # Uncached: the request's query cache would answer with the old row.
+      current = item.class.uncached { cache_credentials(item.class.find_by(id: item.id)) }
+      Rails.cache.write(cache_key, available_accounts, expires_in: CACHE_TTL) if current == credentials
       available_accounts
     end
 
