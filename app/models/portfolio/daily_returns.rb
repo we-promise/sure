@@ -575,7 +575,10 @@ class Portfolio::DailyReturns
             -- carried pass also reads it, so it never suppresses the day. A
             -- NULL quantity is unknown and does.
             COALESCE(BOOL_OR(#{journal_unpriced_sql}), false) AS journal_unpriced,
-            COALESCE(BOOL_OR(#{journal_unpriced_sql} AND #{external_flow_class_sql}), false) AS contribution_journal_unpriced
+            -- Narrower than journal_unpriced: a partial journal out whose
+            -- leaving units are valued has a known contribution even though
+            -- the units that stayed are unpriced and still suppress the day.
+            COALESCE(BOOL_OR(#{journal_flow_unvalued_sql} AND #{external_flow_class_sql}), false) AS contribution_journal_unpriced
           FROM entries
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
           -- The same active-until window the balances use: a flow dated after
@@ -1080,6 +1083,21 @@ class Portfolio::DailyReturns
                    AND NOT COALESCE((journal_holdings.price > 0 AND journal_fx.rate IS NOT NULL)
                                     OR (#{journal_out_unpriced_sql}
                                         AND journal_holdings.qty = 0
+                                        AND journal_prior.price IS NOT NULL
+                                        AND (journal_prior.price = 0 OR journal_prior_fx.rate IS NOT NULL)), false))))
+      SQL
+    end
+
+    # The journal's own flow has no value: journal_unpriced_sql without its
+    # requirement that an outbound journal emptied the position, since the
+    # units that stayed do not change what left.
+    def journal_flow_unvalued_sql
+      <<~SQL.squish
+        (#{fragment(:journal_predicate)}
+          AND (trades.qty IS NULL
+               OR (trades.qty <> 0
+                   AND NOT COALESCE((journal_holdings.price > 0 AND journal_fx.rate IS NOT NULL)
+                                    OR (#{journal_out_unpriced_sql}
                                         AND journal_prior.price IS NOT NULL
                                         AND (journal_prior.price = 0 OR journal_prior_fx.rate IS NOT NULL)), false))))
       SQL

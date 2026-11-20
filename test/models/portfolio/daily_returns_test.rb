@@ -1285,6 +1285,22 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert second.suppressed
   end
 
+  # The same partial outflow, for net contributions: the 300 that left is
+  # valued, so what was taken out is known even though the units that stayed
+  # are unpriced. Only the suppression is about them.
+  test "an unpriced journal out of part of a position leaves contributions complete" do
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    security_journal account: @account, date: @day_two, qty: -3, price: 0, holding_qty: 2
+
+    second = daily_returns.rows.last
+
+    assert second.suppressed, "the units that stayed still suppress the day"
+    assert_equal BigDecimal("-300"), second.external_flow
+    assert_not second.contribution_journal_unpriced, "the withdrawal's value is known"
+  end
+
   # No earlier row to read a value from: nothing says what left, so the day
   # stays suppressed as before.
   test "an unpriced journal out with no earlier holding row still suppresses the day" do
