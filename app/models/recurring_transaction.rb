@@ -277,8 +277,22 @@ class RecurringTransaction < ApplicationRecord
   # Always through the job, as of the declaration day. declared_on, recorded
   # on create, lets every backfill prune what the schedule placed before the
   # bill existed.
+  #
+  # The bill has committed, so a queue failure must not stop generation or
+  # fail the caller's create. The history is rebuilt in the request instead,
+  # as activation does. If the family lock is held as well, the history
+  # waits for the next backfill (the identify button or the rake task).
   def reconstruct_history_on_declaration
     BackfillRecurringHistoryJob.perform_later(id, Date.current)
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
+    reconstruct_declared_history_now
+  end
+
+  def reconstruct_declared_history_now
+    reconstruct_history!
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
   end
 
   # A confirmed detection is not a declaration: its past was observed, so it

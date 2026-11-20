@@ -2211,6 +2211,20 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
   end
 
+  test "declaring a bill rebuilds its history and generates when the queue is down" do
+    past_payments("CITY WATER", 3)
+    BackfillRecurringHistoryJob.stubs(:perform_later).raises(StandardError, "queue down")
+
+    series = nil
+    assert_nothing_raised do
+      series = declare_bill("CITY WATER", run_history: false)
+    end
+
+    assert_equal 3, confirmed_allocations_for(series), "the history runs in the request when it cannot be queued"
+    assert series.recurring_occurrences.where("due_on >= ?", Date.current).exists?,
+      "the upcoming occurrences are still generated"
+  end
+
   private
     # Monthly charges on the 9th, the most recent one a month ago.
     def past_payments(name, count)
