@@ -405,6 +405,40 @@ class UI::Account::ChartTest < ViewComponent::TestCase
   # difference has no meaning as a percentage of a negative base (Trend
   # divides by its magnitude, which reads a 7,000 gap as +140%), so the
   # tooltip shows the amount alone.
+  # A linked account's value line is trimmed to its first broker activity and
+  # opens there at the balance before that activity, 0 here. The
+  # contributions line counts from the 1,000 actually held before it. Read
+  # against each other at the opening, the tooltip showed -1,000 / -100%: a
+  # history marker, not a loss. Both open at the value line's point, so the
+  # opening difference is nothing and the next point carries the day's gain.
+  test "a linked account's opening point shows no difference against net contributions" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 1_900)
+    account.stubs(:linked?).returns(true)
+    [ [ day_one, 1_000, 1_000, 0, 0 ], [ day_one + 1, 1_000, 1_000, 0, 0 ],
+      [ day_one + 2, 1_000, 1_600, 500, 100 ], [ day_one + 3, 1_600, 1_900, 300, 0 ] ].each do |date, opening, closing, cash, market|
+      account.balances.create!(
+        date: date, currency: "USD", balance: closing, cash_balance: opening + cash, start_cash_balance: opening,
+        start_non_cash_balance: 0, cash_inflows: cash, cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: market, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1
+      )
+    end
+    account.entries.create!(name: "Deposit", date: day_one + 2, amount: -500, currency: "USD", source: "plaid",
+                            entryable: Transaction.new(kind: "standard"))
+    create_labelled_transaction account: account, label: nil, amount: -300, date: day_one + 3
+
+    chart = UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 3), view: "balance")
+    render_inline(chart)
+
+    values = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"]
+    opening, closing = values.first, values.last
+
+    assert_equal [ (day_one + 2).iso8601, (day_one + 3).iso8601 ], values.map { |v| v["date"] }, "trimmed to the first broker activity"
+    assert_equal "0.0", opening["difference"]["value"]["amount"], "the opening is a marker, not a loss"
+    assert_nil opening["difference"]["percent"], "and zero over zero has no percentage"
+    assert_equal "100.0", closing["difference"]["value"]["amount"], "the anchor day's market gain"
+  end
+
   test "negative net contributions leave the difference without a percentage" do
     day_one = Date.new(2026, 3, 2)
     account = create_portfolio_account(families(:empty), balance: 2_000)
