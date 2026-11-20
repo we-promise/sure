@@ -65,3 +65,5 @@ A connection's private key can be replaced from its panel. The old API key stops
 
 **Sync errors**
 Provider sync failures and unpriced assets are captured in Sure's debug log (super admin: **Settings > Debug**).
+
+If Revolut X returns a balance without a readable total, the sync fails and the holdings stay as they were. If it returns a transaction page Sure cannot read, balances still update, but the history is not marked as synced and the next sync fetches the same period again.

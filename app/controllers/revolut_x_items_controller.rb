@@ -30,7 +30,14 @@ class RevolutXItemsController < ApplicationController
   end
 
   def destroy
-    @revolut_x_item.unlink_all!(dry_run: false)
+    # unlink_all! reports a per-account failure on its result instead of
+    # raising; deleting anyway would take still-linked accounts' links with it.
+    unlink_results = @revolut_x_item.unlink_all!(dry_run: false)
+    if unlink_results.any? { |result| result[:error].present? }
+      redirect_to settings_providers_path, alert: t(".unlink_failed")
+      return
+    end
+
     @revolut_x_item.destroy_later
     redirect_to settings_providers_path, notice: t(".success")
   end
@@ -69,6 +76,12 @@ class RevolutXItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    # require_admin! is a family-role check, not an account one: an admin who
+    # neither owns this account nor holds full_control on it still reaches
+    # here. auto_share_with_family! only grants members read_write, so without
+    # this the dialog exposes a co-member's account to be linked.
+    return unless require_account_permission!(@account, :write, redirect_path: accounts_path)
+
     account_flow = account_flow_context
     @revolut_x_item = account_flow[:revolut_x_item]
 
@@ -89,6 +102,11 @@ class RevolutXItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    # Must precede the AccountProvider.create! below: family scoping alone
+    # would let an admin attach a provider to a co-member's account they only
+    # hold read_write on. Same guard as select_existing_account.
+    return unless require_account_permission!(@account, :write, redirect_path: accounts_path)
+
     revolut_x_item = account_flow_context[:revolut_x_item]
 
     unless @account.manual_crypto_exchange?

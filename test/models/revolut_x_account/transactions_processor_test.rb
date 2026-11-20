@@ -63,11 +63,54 @@ class RevolutXAccount::TransactionsProcessorTest < ActiveSupport::TestCase
     assert_equal 1, @account.entries.count
   end
 
-  test "crypto to crypto: an out and an in Trade, both amount 0" do
+  test "crypto to crypto with both prices: an out Sell and an in Buy, both amount 0" do
+    Onchain::SecurityResolver.resolve(symbol: "ETH").prices.create!(date: DATE, price: 2000, currency: "USD")
+    Onchain::SecurityResolver.resolve(symbol: "BTC").prices.create!(date: DATE, price: 40_000, currency: "USD")
+
     process tx("x1", "buy", source: leg("2", "ETH"), destination: leg("0.1", "BTC"))
 
     assert_trade entry("revolut_x_x1_out"), ticker: "CRYPTO:ETH", qty: -2, amount: 0, currency: "USD", label: "Sell"
     assert_trade entry("revolut_x_x1_in"), ticker: "CRYPTO:BTC", qty: 0.1, amount: 0, currency: "USD", label: "Buy"
+    assert_equal 2000, entry("revolut_x_x1_out").entryable.price
+    assert_equal 40_000, entry("revolut_x_x1_in").entryable.price
+  end
+
+  test "crypto to crypto missing a price: a Sweep Out and Sweep In that realize nothing" do
+    Onchain::SecurityResolver.resolve(symbol: "BTC").prices.create!(date: DATE, price: 40_000, currency: "USD")
+
+    process tx("x2", "buy", source: leg("2", "ETH"), destination: leg("0.1", "BTC"))
+
+    out_leg, in_leg = entry("revolut_x_x2_out"), entry("revolut_x_x2_in")
+    assert_trade out_leg, ticker: "CRYPTO:ETH", qty: -2, amount: 0, currency: "USD", label: "Sweep Out"
+    assert_trade in_leg, ticker: "CRYPTO:BTC", qty: 0.1, amount: 0, currency: "USD", label: "Sweep In"
+    assert_equal true, out_leg.entryable.extra.dig("revolut_x", "price_missing")
+    assert_nil in_leg.entryable.extra.dig("revolut_x", "price_missing")
+    assert_nil out_leg.entryable.realized_gain_loss
+  end
+
+  test "the entry date is the day in the current time zone" do
+    late_utc_ms = Time.utc(2023, 11, 14, 23, 30).to_i * 1000
+
+    Time.use_zone("Europe/Prague") do
+      process tx("z1", "receive", source: leg("50", "USD", "revolut"), destination: leg("50", "USD"), created_ms: late_utc_ms)
+    end
+
+    assert_equal Date.new(2023, 11, 15), entry("revolut_x_z1").date
+  end
+
+  test "a row that fails to write stops the run, so no later row is written ahead of it" do
+    Account::ProviderImportAdapter.any_instance.stubs(:import_transaction).raises(ActiveRecord::RecordInvalid)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "revolut_x", level: "error").count }, 1 do
+      assert_raises(ActiveRecord::RecordInvalid) do
+        process(
+          tx("e1", "send", source: leg("300", "USD"), destination: leg("300", "USD", "revolut")),
+          tx("e2", "reward", destination: leg("1", "ETH"), created_ms: CREATED_MS + 60_000)
+        )
+      end
+    end
+
+    assert_nil entry("revolut_x_e2")
   end
 
   test "a buy or sell whose crypto leg is elsewhere, or that is fiat to fiat, creates nothing and is reported" do

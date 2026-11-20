@@ -13,6 +13,7 @@ en:
       success: Successfully updated Revolut X connection.
     destroy:
       success: Scheduled Revolut X connection for deletion.
+      unlink_failed: Could not disconnect the Revolut X connection. Try again.
     select_accounts:
       select_connection: Choose a Revolut X connection in Provider Settings.
       no_credentials_configured: Add a Revolut X API key before setting up accounts.
