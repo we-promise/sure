@@ -555,8 +555,9 @@ end
 - Adds `@my_bank_items` instance variable
 - Adds a `FAMILY_PANELS` entry, so Bank sync lists My Bank and opens its panel in the
   drawer. `FAMILY_PANEL_KEYS` also keeps it out of the global provider forms.
-- Adds `my_bank` to `PANEL_SYNCABLE_TYPES` and `family_panel_items`, which give its
-  connection row a sync status and a working Sync button.
+- Adds `my_bank` to `family_panel_items`, which with the adapter's `declares_connection`
+  (from which `PANEL_SYNCABLE_TYPES` is derived) gives its connection row a sync status
+  and a working Sync button.
 
 **File:** `app/helpers/settings_helper.rb` (updated)
 - Adds a `"my_bank"` case to `provider_summary`, so a connected My Bank is listed under
