@@ -57,6 +57,36 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response_data["transfers"].map { |transfer| transfer["id"] }, @other_transfer.id
   end
 
+  test "lists each transfer's fee amounts" do
+    fee = create_transaction(@account, amount: 2.5, date: Date.parse("2024-01-15"), name: "Transfer fee")
+    @transfer.fee_transactions << fee
+
+    get api_v1_transfers_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    row = JSON.parse(response.body)["transfers"].find { |transfer| transfer["id"] == @transfer.id }
+    assert_equal "2.5", row["source_fee_amount"]
+    assert_equal "0.0", row["destination_fee_amount"]
+  end
+
+  test "listing transfers does not query fees per transfer" do
+    get api_v1_transfers_url, headers: api_headers(@api_key)
+    listed_before = JSON.parse(response.body)["transfers"].size
+    queries_before = count_queries { get api_v1_transfers_url, headers: api_headers(@api_key) }
+
+    3.times do |i|
+      outflow = create_transaction(@account, amount: 10, date: Date.parse("2024-02-0#{i + 1}"), name: "Outflow #{i}")
+      inflow = create_transaction(@destination_account, amount: -10, date: Date.parse("2024-02-0#{i + 1}"), name: "Inflow #{i}")
+      transfer = Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow, status: "confirmed")
+      transfer.fee_transactions << create_transaction(@account, amount: 1, date: Date.parse("2024-02-0#{i + 1}"), name: "Fee #{i}")
+    end
+    queries_after = count_queries { get api_v1_transfers_url, headers: api_headers(@api_key) }
+
+    assert_response :success
+    assert_equal listed_before + 3, JSON.parse(response.body)["transfers"].size
+    assert_equal queries_before, queries_after
+  end
+
   test "permits read write scope" do
     read_write_key = ApiKey.create!(
       user: @user,
@@ -199,6 +229,13 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new(kind: "funds_movement")
       )
       entry.entryable
+    end
+
+    def count_queries(&block)
+      count = 0
+      counter = ->(*, payload) { count += 1 unless payload[:cached] || %w[SCHEMA TRANSACTION].include?(payload[:name]) }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record", &block)
+      count
     end
 
     def api_headers(api_key)

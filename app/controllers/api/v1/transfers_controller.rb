@@ -16,6 +16,7 @@ class Api::V1::TransfersController < Api::V1::BaseController
       page: safe_page_param,
       limit: @per_page
     )
+    @fee_amounts = Transfer.fee_amounts_by_account(@transfers)
 
     render :index
   rescue Api::V1::TransferDecisionFiltering::InvalidFilterError => e
