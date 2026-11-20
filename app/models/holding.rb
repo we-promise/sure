@@ -101,9 +101,9 @@ class Holding < ApplicationRecord
     end
   end
 
-  # The lots are costed in the account's currency; a provider can report the
-  # holding in another, so their mean is converted at the holding's date, and
-  # is unknown without a rate.
+  # Lots and the average method are costed in the account's currency; a
+  # provider can report the holding in another, so a mean is converted at the
+  # holding's date, and is unknown without a rate.
   def self.lots_mean_in(mean, holding)
     return mean if mean.currency.iso_code == holding.currency
 
@@ -197,6 +197,7 @@ class Holding < ApplicationRecord
           ))
         SQL
         Arel.sql("BOOL_OR(accounts.cost_basis_method = 'fifo')"),
+        Arel.sql("MAX(accounts.currency)"),
         *avg_cost_totals_sql(lots: true)
       )
       .index_by(&:first)
@@ -209,13 +210,14 @@ class Holding < ApplicationRecord
     lot_costs = fifo_avg_costs(pending.select { |holding| rows.key?(holding.id) ? rows[holding.id][3] : fifo_account_ids.include?(holding.account_id) })
 
     pending.each do |holding|
-      _id, internal_movement, clamped, _fifo, total_cost, total_qty, rate_missing = rows[holding.id]
+      _id, internal_movement, clamped, _fifo, account_currency, total_cost, total_qty, rate_missing = rows[holding.id]
       value = if clamped
         nil
       elsif lot_costs.key?(holding.id)
         lot_costs[holding.id]
       elsif !internal_movement
-        avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency)
+        mean = avg_cost_from_totals(total_cost, total_qty, rate_missing, account_currency)
+        mean && lots_mean_in(mean, holding)
       end
       holding.preload_avg_cost(value)
     end
@@ -588,6 +590,7 @@ class Holding < ApplicationRecord
 
       total_cost, total_qty, rate_missing = trades.pick(*self.class.avg_cost_totals_sql(account.currency, lots: true))
 
-      self.class.avg_cost_from_totals(total_cost, total_qty, rate_missing, currency)
+      mean = self.class.avg_cost_from_totals(total_cost, total_qty, rate_missing, account.currency)
+      mean && self.class.lots_mean_in(mean, self)
     end
 end

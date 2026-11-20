@@ -1415,6 +1415,31 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
   # Trades are read in bounded batches, not all at once, and still written in
   # replay order: by date, then as entered.
+  # A trade deleted between reading the ids and loading its batch is skipped
+  # rather than failing the export.
+  test "exports the remaining trades when one is deleted mid-export" do
+    account = @family.accounts.create!(name: "Gone Brokerage", balance: 0, currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "GONEX", name: "Gone Security")
+    entries = 2.times.map do |index|
+      account.entries.create!(
+        date: 3.days.ago.to_date, amount: 100, name: "Buy #{index}", currency: "USD",
+        entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+      )
+    end
+    gone = entries.first.entryable_id
+    Trade.stubs(:includes).with { true }.returns(Trade.where.not(id: gone).includes(:security, :lot_source_entry, entry: :account))
+
+    zip_data = @exporter.generate_export
+
+    exported = nil
+    Zip::File.open_buffer(zip_data) do |zip|
+      exported = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .select { |line| line["type"] == "Trade" && line.dig("data", "account_id") == account.id }
+        .map { |line| line.dig("data", "id") }
+    end
+    assert_equal [ entries.last.entryable_id ], exported
+  end
+
   test "exports trades in replay order across batches" do
     account = @family.accounts.create!(name: "Batch Brokerage", balance: 0, currency: "USD", accountable: Investment.new)
     security = Security.create!(ticker: "BTCHX", name: "Batch Security")

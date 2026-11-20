@@ -505,7 +505,9 @@ class Family::DataExporter
       trade_ids.each_slice(trade_export_batch_size) do |ids|
         batch = Trade.includes(:security, :lot_source_entry, entry: :account).where(id: ids).index_by(&:id)
         ids.each do |id|
-          trade = batch[id]
+          # Deleted since the ids were read.
+          next unless (trade = batch[id])
+
           lines << {
             type: "Trade",
             data: {

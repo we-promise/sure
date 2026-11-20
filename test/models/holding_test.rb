@@ -348,19 +348,45 @@ class HoldingTest < ActiveSupport::TestCase
   # report the position in another. Their mean is converted to the holding's
   # currency at the holding's date, and is unknown without a rate.
   test "a fifo holding in another currency than its lots gives their mean converted" do
+    # The holding is three days old, with a different rate today: converting at
+    # today rather than the holding's date gives 10, not 18.
+    day = 3.days.ago.to_date
     @account.update!(cost_basis_method: "fifo")
-    security = create_security("FIFOX", prices: [ { date: Date.current, price: 30 } ])
-    buy = create_trade(security, account: @account, qty: 10, price: 20, date: Date.current)
+    security = create_security("FIFOX", prices: [ { date: day, price: 30 } ])
+    buy = create_trade(security, account: @account, qty: 10, price: 20, date: day)
     HoldingLot.create!(account: @account, security: security, source_entry: buy, qty: 10, unit_cost: 20,
-                       currency: "USD", acquired_on: Date.current)
-    holding = @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 30, amount: 300, currency: "CHF")
+                       currency: "USD", acquired_on: day)
+    holding = @account.holdings.create!(security: security, date: day, qty: 10, price: 30, amount: 300, currency: "CHF")
 
     assert_nil Holding.find(holding.id).avg_cost, "no USD to CHF rate, so the mean is unknown"
 
-    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: Date.current, rate: 0.9)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: day, rate: 0.9)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: Date.current, rate: 0.5)
     avg_cost = Holding.find(holding.id).avg_cost
 
-    assert_equal [ BigDecimal("18"), "CHF" ], [ avg_cost&.amount, avg_cost&.currency&.iso_code ], "20 USD at 0.9"
+    assert_equal [ BigDecimal("18"), "CHF" ], [ avg_cost&.amount, avg_cost&.currency&.iso_code ], "20 USD at the holding's 0.9"
+  end
+
+  # The average method costs trades in the account's currency too, so a
+  # holding reported in another is converted the same way, alone and batched.
+  test "an average-method holding in another currency than its account gives its mean converted" do
+    day = 3.days.ago.to_date
+    security = create_security("AVGX", prices: [ { date: day, price: 30 } ])
+    create_trade(security, account: @account, qty: 10, price: 20, date: day)
+    holding = @account.holdings.create!(security: security, date: day, qty: 10, price: 30, amount: 300, currency: "CHF")
+
+    assert_nil Holding.find(holding.id).avg_cost, "no USD to CHF rate, so the mean is unknown"
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: day, rate: 0.9)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: Date.current, rate: 0.5)
+
+    alone = Holding.find(holding.id).avg_cost
+    batched = Holding.find(holding.id)
+    Holding.preload_avg_costs([ batched ])
+
+    [ alone, batched.avg_cost ].each do |avg_cost|
+      assert_equal [ BigDecimal("18"), "CHF" ], [ avg_cost&.amount, avg_cost&.currency&.iso_code ]
+    end
   end
 
   test "the batch leaves a stored cost basis alone and does not query for it" do
