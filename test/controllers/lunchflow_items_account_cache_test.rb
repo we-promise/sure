@@ -48,6 +48,38 @@ class LunchflowItemsAccountCacheTest < ActionDispatch::IntegrationTest
     assert_nil Rails.cache.read(@key)
   end
 
+  # A fetch that started under the old API key must not write the old key's
+  # accounts back after an update dropped the cache mid-fetch. The key changes
+  # in another request, so this request's query cache still holds the row as
+  # it was read before the fetch.
+  [
+    [ "preloading", -> { get preload_accounts_lunchflow_items_url, as: :json } ],
+    [ "selecting accounts", -> { get select_accounts_lunchflow_items_url(accountable_type: "Depository") } ],
+    [ "selecting an existing account's link", -> { get select_existing_account_lunchflow_items_url(account_id: accounts(:depository).id) } ]
+  ].each do |action, request|
+    test "#{action} does not cache accounts fetched under an API key changed mid-fetch" do
+      item = @item
+      Provider::Lunchflow.any_instance.unstub(:get_accounts)
+      Provider::Lunchflow.any_instance.stubs(:get_accounts).with do
+        rotate_api_key_elsewhere(item, "rotated_key")
+        true
+      end.returns(accounts: [ { id: 1, name: "Old key's account" } ])
+
+      instance_exec(&request)
+
+      assert_nil Rails.cache.read(@key)
+    end
+  end
+
+  test "a list fetched with no API key on record is not cached" do
+    @item.update_columns(api_key: nil)
+
+    accounts = LunchflowItemsController.new.send(:fetch_lunchflow_accounts, Provider::Lunchflow.new("unused"), @item, @key)
+
+    assert_equal [ { id: 1, name: "Everyday" } ], accounts
+    assert_nil Rails.cache.read(@key)
+  end
+
   test "renaming the connection keeps its cached accounts" do
     Rails.cache.write(@key, [ { id: 7, name: "Cached account" } ])
 
@@ -55,4 +87,16 @@ class LunchflowItemsAccountCacheTest < ActionDispatch::IntegrationTest
 
     assert_equal [ { id: 7, name: "Cached account" } ], Rails.cache.read(@key)
   end
+
+  private
+    # Reads the row, as earlier code in the request may, then changes the key
+    # on the raw connection, which leaves Active Record's query cache holding
+    # the old row, as a write from another request would.
+    def rotate_api_key_elsewhere(item, api_key)
+      LunchflowItem.find_by(id: item.id)
+      LunchflowItem.connection.raw_connection.exec_params(
+        "UPDATE lunchflow_items SET api_key = $1 WHERE id = $2",
+        [ LunchflowItem.type_for_attribute(:api_key).serialize(api_key), item.id ]
+      )
+    end
 end
