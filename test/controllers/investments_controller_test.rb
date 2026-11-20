@@ -8,6 +8,12 @@ class InvestmentsControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:investment)
   end
 
+  test "the investment type select is labelled from the locale" do
+    get new_investment_url
+    assert_response :success
+    assert_select "label[for=account_accountable_attributes_subtype]", text: "Investment type"
+  end
+
   test "changing the method starts one sync of the account" do
     assert @account.cost_basis_average?
     Account.any_instance.expects(:sync_later).once
