@@ -147,10 +147,12 @@ class Transaction < ApplicationRecord
   PENDING_FLAG_FALSE_VALUES = (ActiveModel::Type::Boolean::FALSE_VALUES.grep(String) + [ "" ]).uniq.freeze
   PENDING_FLAG_TYPE = ActiveModel::Type::Boolean.new.freeze
 
-  # PENDING_FLAG_FALSE_VALUES as a list of SQL string literals. Built from the
-  # constant alone, so class loading needs no database connection, and shared by
-  # pending_sql and PENDING_CHECK_SQL so the two cannot quote the values
-  # differently.
+  # PENDING_FLAG_FALSE_VALUES as a list of SQL string literals, built from the
+  # constant alone so class loading needs no database connection. Only the
+  # provider-subset form of pending_sql uses it: the all-provider form and
+  # PENDING_CHECK_SQL read transactions.pending, whose expression the
+  # AddPendingToTransactions migration wrote out. Changing the false values or
+  # PENDING_PROVIDERS therefore needs a migration that redefines that column.
   PENDING_FLAG_FALSE_VALUES_SQL = PENDING_FLAG_FALSE_VALUES.map { |value| "'#{value.gsub("'", "''")}'" }.join(", ").freeze
 
   # Canonical reusable SQL form of the pending? decision. Callers that inspect
