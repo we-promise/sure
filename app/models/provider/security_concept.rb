@@ -23,10 +23,12 @@ module Provider::SecurityConcept
   # fields were added.
   #
   # `constituents` is a fund's own holdings -- an array of
-  # `{ticker:, name:, weight:}`, weight being the provider's percentage of fund
-  # assets. Nil for anything that is not a fund, which is most securities, and
-  # nil rather than `[]` so "not a fund" and "a fund we could not read" are the
-  # same answer to the caller: neither is worth asking about again.
+  # `{ticker:, exchange:, name:, weight:}`, weight being the provider's
+  # percentage of fund assets and exchange the provider's own code for the
+  # holding's venue (nil when it gives none). Nil for anything that is not a
+  # fund, which is most securities: a fund's stored holdings are then cleared.
+  # A fund whose holdings block could not be read returns
+  # UNREADABLE_CONSTITUENTS instead, which keeps the stored holdings.
   #
   # `fund_weights` is what a fund or ETF holds, keyed in this application's
   # vocabulary so the provider owns the mapping of its own labels:
@@ -48,7 +50,8 @@ module Provider::SecurityConcept
 
   # `SecurityInfo#constituents` when the provider sent a holdings block it
   # cannot read. Distinct from nil, which means the fund lists nothing: an
-  # unreadable block keeps the stored holdings and leaves the fund unstamped.
+  # unreadable block keeps the stored holdings. The fund is still stamped as
+  # asked, so it is not fetched again on every sync.
   UNREADABLE_CONSTITUENTS = :unreadable
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)

@@ -291,9 +291,18 @@ class Provider::Eodhd < Provider
     entries = holdings.map do |key, holding|
       next holding unless holding.is_a?(Hash)
 
+      # Keys are "TICKER.EXCHANGE"; a ticker can itself hold a dot (BRK.B), so
+      # only the last segment is the exchange.
+      key_ticker, _, key_exchange = key.to_s.rpartition(".")
+      key_ticker, key_exchange = key_exchange, nil if key_ticker.empty?
       code = holding["Code"]
-      ticker = code.is_a?(String) && code.present? ? code : key.to_s.split(".").first
-      { ticker: ticker, name: holding["Name"].presence, weight: holding["Assets_%"] }
+      exchange = holding["Exchange"]
+      {
+        ticker: code.is_a?(String) && code.present? ? code : key_ticker,
+        exchange: exchange.is_a?(String) && exchange.present? ? exchange : key_exchange,
+        name: holding["Name"].presence,
+        weight: holding["Assets_%"]
+      }
     end
 
     return UNREADABLE_CONSTITUENTS if entries.none? { |entry| entry.is_a?(Hash) && entry[:ticker].present? }

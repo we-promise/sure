@@ -393,7 +393,16 @@ module Security::Provided
         # compares the stamp under its own lock with the one this import read
         # before asking. Reloading first would make another import's set look
         # like this one's, and replace it.
-        store_constituents(response.data.constituents, provider) if wants_constituents
+        if wants_constituents
+          begin
+            store_constituents(response.data.constituents, provider)
+          rescue => e
+            # A write the pre-checks missed (an invalid byte sequence Postgres
+            # refuses) must not cost the security its name and classification,
+            # nor stop the sync's remaining securities.
+            log_failed_constituents(provider, e)
+          end
+        end
         # `with_lock` re-reads the row, so precedence is checked against what
         # it holds now: a manual classification, a sector or a lock written
         # while the provider was answering is not overwritten.
@@ -516,16 +525,20 @@ module Security::Provided
   def store_constituents(list, provider = price_data_provider)
     return unless provider&.supplies_constituents?
 
+    # An unreadable answer keeps the stored set, but is stamped like any
+    # answer: unstamped, the fund would be fetched again on every sync, and
+    # each fetch costs a provider request. One log entry says why.
     if list == Provider::SecurityConcept::UNREADABLE_CONSTITUENTS
       log_unreadable_constituents(provider)
+      stamp_constituents(provider)
       return
     end
 
     rows, skipped = constituent_rows_from(list)
 
     if rows.empty? && Array(list).any?
-      skipped.each { |reason, entry| log_skipped_constituent(reason, entry, provider) }
-      log_unreadable_constituents(provider)
+      log_unreadable_constituents(provider, skipped: skipped.map(&:first).tally)
+      stamp_constituents(provider)
       return
     end
 
@@ -546,20 +559,21 @@ module Security::Provided
       stamp = self.class.where(id: id).lock.pick(:constituents_fetched_at)
       next false if stamp && stamp != constituents_fetched_at
 
-      Security::Constituent.where(security_id: id).delete_all
+      constituents.delete_all
       Security::Constituent.insert_all!(rows.map { |row| row.merge(security_id: id) }) if rows.any?
-      update_columns(constituents_fetched_at: Time.current,
-                     constituents_fetched_from: self.class.provider_key_for(provider))
+      stamp_constituents(provider)
       true
     end
+    constituents.reset
 
     skipped.each { |reason, entry| log_skipped_constituent(reason, entry, provider) } if replaced
   end
 
   # Splits a provider list into rows the table will accept and [reason, entry]
-  # pairs it would refuse. Tickers are compared after the strip and
-  # case-sensitively, as `validates :ticker, uniqueness:` compares them, and
-  # the first occurrence of a ticker is the one kept.
+  # pairs it would refuse. Tickers and exchange codes are stripped and
+  # upcased, so `msft` and `MSFT` are one holding, and a holding is its ticker
+  # on its exchange, as the unique index has it; the first occurrence is the
+  # one kept.
   #
   # A weight is checked against the column as well as the model: `BigDecimal`
   # parses "NaN" and "Infinity" without raising, and a value the model accepts
@@ -569,6 +583,8 @@ module Security::Provided
     seen = Set.new
     rows = []
     skipped = []
+    weight_scale = constituent_weight_scale
+    weight_limit = constituent_weight_limit
 
     Array(list).each do |entry|
       unless entry.is_a?(Hash)
@@ -577,7 +593,9 @@ module Security::Provided
       end
 
       raw_ticker = entry[:ticker] || entry["ticker"]
-      ticker = raw_ticker.is_a?(String) ? raw_ticker.strip : ""
+      ticker = raw_ticker.is_a?(String) ? raw_ticker.strip.upcase : ""
+      raw_exchange = entry[:exchange] || entry["exchange"]
+      exchange = raw_exchange.is_a?(String) ? raw_exchange.strip.upcase.presence : nil
       name = (entry[:name] || entry["name"]).to_s.strip.presence
       raw_weight = entry[:weight] || entry["weight"]
       weight = begin
@@ -593,15 +611,15 @@ module Security::Provided
       elsif ticker.include?("\0") || name&.include?("\0") then "nul_character"
       elsif weight == :non_numeric then "non_numeric_weight"
       elsif weight&.negative? then "negative_weight"
-      elsif weight && weight.round(constituent_weight_scale) >= constituent_weight_limit then "out_of_range_weight"
-      elsif seen.include?(ticker) then "duplicate_ticker"
+      elsif weight && weight.round(weight_scale) >= weight_limit then "out_of_range_weight"
+      elsif seen.include?([ ticker, exchange ]) then "duplicate_ticker"
       end
 
       if reason
         skipped << [ reason, entry ]
       else
-        seen << ticker
-        rows << { ticker: ticker, name: name, weight: weight }
+        seen << [ ticker, exchange ]
+        rows << { ticker: ticker, exchange: exchange, name: name, weight: weight }
       end
     end
 
@@ -644,16 +662,33 @@ module Security::Provided
   end
 
   # Records an answer whose holdings could not be read, so a fund whose stored
-  # set did not change, and is asked again, stays traceable.
-  def log_unreadable_constituents(provider)
+  # set did not change stays traceable. `skipped` counts the refused entries by
+  # reason when every one was refused, in one entry rather than one per row.
+  def log_unreadable_constituents(provider, skipped: nil)
     DebugLogEntry.capture(
       category: "security_holdings",
       level: "warn",
       message: "Kept a fund's stored holdings: the provider's holdings could not be read",
       source: "Security#store_constituents",
       provider: provider,
-      metadata: { security_id: id, security_ticker: ticker }
+      metadata: { security_id: id, security_ticker: ticker, skipped: skipped }.compact
     )
+  end
+
+  def log_failed_constituents(provider, error)
+    DebugLogEntry.capture(
+      category: "security_holdings",
+      level: "error",
+      message: "Failed to store a fund's holdings",
+      source: "Security#store_constituents",
+      provider: provider,
+      metadata: { security_id: id, security_ticker: ticker, error_class: error.class.name, error: error.message }
+    )
+  end
+
+  def stamp_constituents(provider)
+    update_columns(constituents_fetched_at: Time.current,
+                   constituents_fetched_from: self.class.provider_key_for(provider))
   end
 
   # Postgres jsonb and the constituents table both refuse NUL bytes, so a
@@ -668,7 +703,8 @@ module Security::Provided
     end
   end
   private :store_constituents, :constituent_rows_from, :constituent_weight_limit,
-    :constituent_weight_scale, :log_skipped_constituent, :log_unreadable_constituents, :without_nul
+    :constituent_weight_scale, :log_skipped_constituent, :log_unreadable_constituents, :without_nul,
+    :log_failed_constituents, :stamp_constituents
 
   # A provider's type says what the wrapper is, not what it holds. "Common
   # stock" is an equity whatever else is true of it, so it maps. An ETF or a
