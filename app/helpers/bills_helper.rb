@@ -39,11 +39,10 @@ module BillsHelper
     date == Date.current ? t("bills.row_today") : bills_upcoming_date(date)
   end
 
-  # One-shot AI features (smart-fill, smart-configure) need both the user's
-  # consent AND a resolvable LLM provider -- an unconfigured self-hosted
-  # install renders no AI affordances at all, following the Rules registry's
-  # conditional-executor precedent.
-  def bills_one_shot_ai_available?
+  # The bills buttons that start a chat (the AI review, the prompt chips) use
+  # chat's own check, since chat doesn't go through the router. Smart-fill and
+  # smart-configure ask the router for `bill_setup` (ai_feature_available?).
+  def bills_ai_chat_available?
     Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider.present?
   end
 
@@ -51,8 +50,10 @@ module BillsHelper
   # period, so the section template can drop a marker between groups without
   # pre-bucketing the rows. Each marker carries its period and the summed
   # obligations due inside it. Dated like the rail, so a snoozed row counts
-  # toward the period it sits in.
-  def bills_pay_period_markers(occurrences, pay_periods)
+  # toward the period it sits in. A period can run past the rows' month, so
+  # the total sums `counted`, which reaches beyond it. A bill with no rate into
+  # `currency` is left out; the month pulse already counts it as unconvertible.
+  def bills_pay_period_markers(occurrences, pay_periods, currency:, counted: occurrences)
     return {} if pay_periods.blank?
 
     seen = Set.new
@@ -63,8 +64,12 @@ module BillsHelper
       period = pay_periods[index]
       markers[occurrence.id] = {
         period: period,
-        due_total: occurrences.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
-                              .sum { |o| o.resolved_expected_amount.abs }
+        due_total: counted.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
+                          .sum do |o|
+                            o.resolved_expected_amount_money.exchange_to(currency).amount.abs
+                          rescue Money::ConversionError
+                            0
+                          end
       }
     end
   end
@@ -94,7 +99,7 @@ module BillsHelper
   def bills_matcher_hints(series)
     {
       aliases: Array(series.matcher_hints["name_aliases"]).compact_blank,
-      learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f,
+      learned_pct: series.learned_amount_tolerance_pct.to_f,
       detected_name: series.merchant_id.blank? ? series.matcher_hints["detected_name"].presence : nil
     }
   end

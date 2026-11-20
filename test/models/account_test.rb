@@ -10,6 +10,51 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
+  test "negative_positions lists calculated positions below zero" do
+    account = accounts(:investment)
+    msft = securities(:msft)
+    # A sale without its purchase, as an import or a deleted buy can leave behind.
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: msft, qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    positions = account.negative_positions
+
+    assert_equal [ msft ], positions.map(&:security)
+    assert_equal 3.days.ago.to_date, positions.first.first_date
+    assert_equal(-3, positions.first.lowest_qty)
+  end
+
+  test "negative_positions ignores linked accounts" do
+    account = accounts(:investment)
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    account.stubs(:linked?).returns(true)
+
+    assert_empty account.negative_positions
+  end
+
+  test "linked cash and investment accounts hide balance updates by default" do
+    assert accounts(:connected).hides_balance_updates_by_default?
+
+    investment = accounts(:investment)
+    investment.stubs(:linked?).returns(true)
+    assert investment.hides_balance_updates_by_default?
+  end
+
+  test "manual accounts and linked non-cash accounts show balance updates" do
+    assert_not accounts(:depository).hides_balance_updates_by_default?
+
+    property = accounts(:property)
+    property.stubs(:linked?).returns(true)
+    assert_not property.hides_balance_updates_by_default?
+  end
+
   test "can destroy" do
     assert_difference "Account.count", -1 do
       @account.destroy
@@ -46,6 +91,16 @@ class AccountTest < ActiveSupport::TestCase
     assert_raises(StandardError) { @account.destroy }
 
     assert_equal "disabled", @account.reload.status
+  end
+
+  test "the failed-destroy restore leaves a status written since the record was loaded" do
+    @account.mark_for_deletion!
+    Account.where(id: @account.id).update_all(status: "active")
+
+    @account.restore_after_failed_destroy
+
+    assert @account.pending_deletion?
+    assert_equal "active", @account.reload.status
   end
 
   test "disable from active is unchanged" do
@@ -979,6 +1034,121 @@ class AccountTest < ActiveSupport::TestCase
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
 
+  test "projected_balance_money nets scheduled entries against an asset account's balance" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date) # expense, decreases balance
+    create_transaction(account: @account, amount: -50, date: 5.days.from_now.to_date) # income, increases balance
+
+    assert_equal Money.new(-150, "USD"), @account.scheduled_entries_total_money
+    assert_equal Money.new(4850, "USD"), @account.projected_balance_money
+  end
+
+  test "projected_balance_money keeps the sign for a liability account (expense increases debt)" do
+    credit_card = accounts(:credit_card)
+    create_transaction(account: credit_card, amount: 200, date: 3.days.from_now.to_date) # expense, increases debt
+
+    assert_equal Money.new(200, "USD"), credit_card.scheduled_entries_total_money
+    assert_equal Money.new(1200, "USD"), credit_card.projected_balance_money
+  end
+
+  test "projected_balance_money ignores transactions on non-cash valuation-only accounts" do
+    property = accounts(:property)
+    create_transaction(account: property, amount: 5000, date: 3.days.from_now.to_date)
+
+    assert_equal Money.new(0, "USD"), property.scheduled_entries_total_money
+    assert_equal property.balance_money, property.projected_balance_money
+  end
+
+  test "scheduled_entries_total_money ignores future-dated valuations and buy/sell trades" do
+    create_valuation(account: @account, amount: 999_999, date: 3.days.from_now.to_date)
+
+    investment = accounts(:investment)
+    create_trade(securities(:aapl), account: investment, qty: 1, price: 100, date: 3.days.from_now.to_date)
+
+    assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
+    assert_equal Money.new(0, "USD"), investment.scheduled_entries_total_money
+  end
+
+  test "scheduled_entries_total_money includes future-dated interest/dividend trades" do
+    investment = accounts(:investment)
+
+    Entry.create!(
+      account: investment,
+      name: "Interest",
+      date: 3.days.from_now.to_date,
+      currency: "USD",
+      amount: -50,
+      entryable: Trade.new(qty: 0, price: 0, currency: "USD", security: securities(:aapl), investment_activity_label: "Interest")
+    )
+
+    assert_equal Money.new(50, "USD"), investment.scheduled_entries_total_money
+    assert_equal investment.balance_money + Money.new(50, "USD"), investment.projected_balance_money
+  end
+
+  test "projected_balance_money equals balance_money when nothing is scheduled" do
+    assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
+    assert_equal @account.balance_money, @account.projected_balance_money
+  end
+
+  test "scheduled_entries_total_money uses custom exchange_rate when present" do
+    eur_account = @family.accounts.create!(
+      name: "EUR Checking",
+      balance: 1000,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    transaction = Transaction.new
+    transaction.exchange_rate = 1.10
+
+    Entry.create!(
+      account: eur_account,
+      name: "Scheduled FX expense",
+      date: 3.days.from_now.to_date,
+      currency: "USD",
+      amount: 100,
+      entryable: transaction
+    )
+
+    # 100 USD × custom_rate 1.10 = 110 EUR, negated because asset
+    assert_equal Money.new(-110, "EUR"), eur_account.scheduled_entries_total_money
+  end
+
+  test "scheduled_entries_total_money drops entries with no available exchange rate instead of using the raw amount" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date, currency: "USD")
+    create_transaction(account: @account, amount: 100, date: 3.days.from_now.to_date, currency: "EUR")
+
+    # The EUR entry has no exchange rate to USD in this test and none can be
+    # fetched -- it must be dropped, not added in as a raw 100, to match how
+    # Balance::SyncCache drops it once the date arrives (see #1143).
+    assert_equal Money.new(-200, "USD"), @account.scheduled_entries_total_money
+  end
+
+  test "scheduled_entries_total_money(through_date:) only sums entries on or before that date" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
+    create_transaction(account: @account, amount: 50, date: 10.days.from_now.to_date)
+
+    assert_equal Money.new(-200, "USD"), @account.scheduled_entries_total_money(through_date: 5.days.from_now.to_date)
+    assert_equal Money.new(-250, "USD"), @account.scheduled_entries_total_money(through_date: 10.days.from_now.to_date)
+  end
+
+  test "scheduled entries are loaded once per instance and reloaded on reload" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
+    create_transaction(account: @account, amount: 50, date: 10.days.from_now.to_date)
+
+    queries = 0
+    counter = ->(*, payload) { queries += 1 if payload[:sql].include?("entries.date >") }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      @account.scheduled_entries_total_money
+      @account.projected_balance_money
+      @account.scheduled_entries_total_money(through_date: 3.days.from_now.to_date)
+      @account.scheduled_entries_total_money(through_date: 10.days.from_now.to_date)
+    end
+    assert_equal 1, queries
+
+    create_transaction(account: @account, amount: 25, date: 5.days.from_now.to_date)
+    assert_equal Money.new(-275, "USD"), @account.reload.scheduled_entries_total_money
+  end
+
   test "history_start_date resolves to the earliest of opening anchor, entries, and balances" do
     account = @family.accounts.create!(
       owner: @admin,
@@ -1198,6 +1368,191 @@ class AccountTest < ActiveSupport::TestCase
 
     accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
     assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
+  end
+
+  test "linked_to_goal? is true only for an account linked to a goal" do
+    account = @family.accounts.create!(name: "Goal savings", balance: 0, currency: "USD", accountable: Depository.new)
+
+    assert_not account.linked_to_goal?
+
+    goals(:vacation_italy).goal_accounts.create!(account: account)
+
+    assert account.linked_to_goal?
+  end
+
+  test "institution_domain is normalized to a bare host" do
+    {
+      "https://www.tbank.ru/" => "tbank.ru",
+      "https://www.krungsri.com/en/personal" => "krungsri.com",
+      "  HTTP://Chase.com:443/?q=1#top " => "chase.com",
+      "www.example.co.uk" => "example.co.uk",
+      "sberbank.ru" => "sberbank.ru"
+    }.each do |input, expected|
+      @account.update!(institution_domain: input)
+      assert_equal expected, @account.read_attribute(:institution_domain), "for #{input.inspect}"
+    end
+
+    @account.update!(institution_domain: "   ")
+    assert_nil @account.read_attribute(:institution_domain)
+  end
+
+  test "logo_url builds a Brandfetch URL from a legacy unnormalized domain" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update_column(:institution_domain, "https://www.tbank.ru/")
+
+    assert_match %r{\Ahttps://cdn\.brandfetch\.io/tbank\.ru/icon/}, @account.logo_url
+  end
+
+  test "an uploaded logo wins over the Brandfetch icon" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png")
+
+    assert_equal Rails.application.routes.url_helpers.rails_blob_path(@account.logo, only_path: true), @account.logo_url
+  end
+
+  test "logo must be a small raster image" do
+    @account.logo = { io: file_fixture("test.txt").open, filename: "logo.txt" }
+    assert_not @account.valid?
+    assert @account.errors.added?(:logo, :invalid_content_type)
+
+    @account.logo = { io: StringIO.new("\x89PNG\r\n\x1a\n".b + "\x00" * Account::LOGO_MAX_SIZE), filename: "logo.png", content_type: "image/png" }
+    assert_not @account.valid?
+    assert @account.errors.added?(:logo, :too_large, max_size: 1)
+  end
+
+  test "choosing Brandfetch shows it while keeping the stored logo" do
+    @account.update!(institution_domain: "tbank.ru", logo_selection: "brandfetch")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png")
+
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    assert_match %r{\Ahttps://cdn\.brandfetch\.io/tbank\.ru/}, @account.logo_url
+    assert @account.logo.attached?
+
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    assert_equal Rails.application.routes.url_helpers.rails_blob_path(@account.logo, only_path: true), @account.logo_url
+  end
+
+  test "choose_logo switches between Brandfetch and the stored logo without deleting it" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+    Account::LogoFetcher.any_instance.expects(:fetch).never
+
+    assert @account.choose_logo("brandfetch")
+    assert @account.reload.logo_brandfetch?
+
+    assert @account.choose_logo("stored")
+    assert @account.reload.logo_automatic?
+    assert @account.logo.attached?
+  end
+
+  test "choose_logo downloads a picked icon by its key" do
+    Account::LogoFetcher.any_instance.expects(:fetch).with(source: "appstore:123").returns(true)
+
+    assert @account.choose_logo("appstore:123")
+  end
+
+  test "removing the stored logo brings back the fallback" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+    assert_equal @account.stored_logo_url, @account.logo_url
+
+    @account.choose_logo("remove")
+
+    assert_equal @account.brandfetch_logo_url, @account.reload.logo_url
+    assert_equal @account.fallback_logo_url, @account.logo_url
+  end
+
+  test "clearing the domain drops an automatic icon but keeps an uploaded one" do
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "tbank.ru.png",
+                         metadata: { "logo_source" => "google", "logo_key" => "google", "logo_auto" => true })
+    @account.update!(institution_domain: "")
+    assert_not @account.reload.logo.attached?
+
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+    @account.update!(institution_domain: "")
+    assert @account.reload.logo.attached?
+  end
+
+  test "stored_logo? matches a favicon key only for the domain it was fetched for" do
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "tbank.ru.png",
+                         metadata: { "logo_source" => "google", "logo_key" => "google" })
+    assert @account.stored_logo?("google")
+
+    @account.institution_domain = "sberbank.ru"
+    assert_not @account.stored_logo?("google")
+  end
+
+  test "a stored logo from before the upload check does not block saves" do
+    # Attached around the validation, as a logo stored before it existed.
+    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new("<svg/>"), filename: "old.svg", content_type: "image/svg+xml")
+    ActiveStorage::Attachment.create!(name: "logo", record: @account, blob: blob)
+    assert @account.reload.logo.attached?
+
+    assert @account.update(name: "Renamed")
+  end
+
+  test "clearing the domain keeps the automatic icon when the provider supplies one" do
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "tbank.ru.png",
+                         metadata: { "logo_source" => "google", "logo_key" => "google", "logo_auto" => true })
+    @account.stubs(:provider).returns(stub(institution_domain: "tbank.ru"))
+
+    assert_enqueued_with(job: AccountLogoFetchJob) { @account.update!(institution_domain: "") }
+    assert @account.reload.logo.attached?
+  end
+
+  test "uploading or removing a logo touches the account" do
+    @account.update_columns(updated_at: 1.day.ago)
+    @account.update!(logo: { io: file_fixture("square-placeholder.png").open, filename: "mine.png", content_type: "image/png" })
+    assert_operator @account.reload.updated_at, :>, 1.hour.ago
+
+    @account.update_columns(updated_at: 1.day.ago)
+    @account.choose_logo("remove")
+    assert_operator @account.reload.updated_at, :>, 1.hour.ago
+  end
+
+  test "choose_logo removes the stored logo" do
+    @account.update!(logo_selection: "brandfetch")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+
+    assert @account.choose_logo("remove")
+    assert_not @account.reload.logo.attached?
+    assert @account.logo_automatic?
+  end
+
+  test "only empty or automatically picked logos are fetched automatically" do
+    @account.update!(institution_domain: "tbank.ru")
+    assert @account.logo_auto_fetchable?
+
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+    assert_not @account.logo_auto_fetchable?, "an uploaded logo stays"
+
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "tbank.ru.png",
+                         metadata: { "logo_source" => "google", "logo_auto" => true })
+    assert @account.logo_auto_fetchable?
+
+    @account.update!(logo_selection: "brandfetch")
+    assert_not @account.logo_auto_fetchable?, "a chosen Brandfetch logo stays"
+
+    @account.update!(logo_selection: "automatic", institution_domain: nil)
+    assert_not @account.logo_auto_fetchable?
+  end
+
+  test "setting or changing the institution domain fetches a logo in the background" do
+    assert_enqueued_with(job: AccountLogoFetchJob, args: [ @account ]) do
+      @account.update!(institution_domain: "tbank.ru")
+    end
+
+    assert_no_enqueued_jobs(only: AccountLogoFetchJob) do
+      @account.update!(name: "Renamed")
+      @account.update!(institution_domain: nil)
+    end
   end
 
   private

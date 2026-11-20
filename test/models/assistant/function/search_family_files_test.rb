@@ -4,6 +4,7 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
   setup do
     @user = users(:family_admin)
     @function = Assistant::Function::SearchFamilyFiles.new(@user)
+    use_ai_routes
   end
 
   test "has correct name" do
@@ -41,14 +42,15 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal "no_documents", result[:error]
   end
 
-  test "returns provider_not_configured when no adapter is available" do
+  test "answers with the router's reason when document search is unavailable" do
     @user.family.update!(vector_store_id: "vs_test123")
-    VectorStore::Registry.stubs(:adapter).returns(nil)
+    use_no_ai
 
     result = @function.call("query" => "tax return")
 
     assert_equal false, result[:success]
-    assert_equal "provider_not_configured", result[:error]
+    assert_equal "ai_unavailable", result[:error]
+    assert_equal "not_configured", result[:reason]
   end
 
   test "returns search results on success" do

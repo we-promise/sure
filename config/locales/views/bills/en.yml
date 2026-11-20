@@ -39,6 +39,7 @@ en:
       around: "around %{date}"
       overview: Overview
       rules: How this bill is matched
+      once_kind_hint: Mark the transaction as one-time to keep it out of your averages.
       rule_named: "%{name}"
       rule_amount_range: "from %{min} to %{max}"
       rule_aliases: "Also matches %{names}"
@@ -75,6 +76,7 @@ en:
       pulse_paid: paid
       pulse_overdue: overdue
       pulse_next_seven: next 7 days
+      pulse_until: until %{date}
       pulse_bar_aria: "%{percent}% of this month's bills paid"
       next_up: Next up
       view_calendar: View calendar
@@ -232,7 +234,8 @@ en:
       empty_month: No bills due this month.
     all:
       search_placeholder: Search bills
-      any_status: Any status
+      current_bills: Current bills
+      dismissed_hidden_description: Dismissed bills are hidden.
       status_filters:
         overdue: Overdue
         due: Due soon

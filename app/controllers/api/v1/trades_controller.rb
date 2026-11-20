@@ -6,13 +6,14 @@ class Api::V1::TradesController < Api::V1::BaseController
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_trade, only: [ :show, :update, :destroy ]
+  before_action :ensure_write_permission, only: [ :update, :destroy ]
 
   def index
     family = current_resource_owner.family
     trades_query = family.trades.visible
 
-    trades_query = apply_filters(trades_query)
-    trades_query = trades_query.includes({ entry: :account }, :security, :category).reverse_chronological
+    trades_query = apply_filters(accessible_trades)
+    trades_query = trades_query.includes({ entry: :account }, :security, :category, :lot_source_entry).reverse_chronological
 
     @pagy, @trades = pagy(
       trades_query,
@@ -39,7 +40,7 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Account ID is required", [ "Account ID is required" ])
     end
 
-    account = current_resource_owner.family.accounts.visible.find(trade_params[:account_id])
+    account = current_resource_owner.family.accounts.writable_by(current_resource_owner).visible.find(trade_params[:account_id])
 
     unless account.supports_trades?
       return render_validation_error(
@@ -99,14 +100,25 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     updatable = build_entry_params_for_update
 
-    if @entry.update(updatable.except(:nature))
-      @entry.lock_saved_attributes!
-      @entry.mark_user_modified!
-      @entry.sync_account_later
-      @trade = @entry.trade
-      render :show
-    else
-      render_validation_error("Trade could not be updated", @entry.errors.full_messages)
+    # The edit and its follow-up writes commit together, as in
+    # TransactionsController#update: if one fails, a retry still finds the
+    # change to make.
+    Entry.transaction do
+      if @entry.update(updatable.except(:nature))
+        # Read before the follow-up writes below reset saved_changes. A request
+        # that changes nothing must not mark the entry user-modified, which would
+        # stop provider imports from updating it.
+        if @entry.saved_changes.any? || @entry.entryable.saved_changes.any?
+          @entry.lock_saved_attributes!
+          @entry.mark_user_modified!
+          @entry.sync_account_later
+        end
+        @trade = @entry.trade
+        render :show
+      else
+        render_validation_error("Trade could not be updated", @entry.errors.full_messages)
+        raise ActiveRecord::Rollback
+      end
     end
   rescue => e
     log_and_render_error("update", e)
@@ -124,12 +136,25 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   private
 
-    def set_trade
+    # Trades on accounts the caller can at least read.
+    def accessible_trades
       family = current_resource_owner.family
-      @trade = family.trades.visible.find(params[:id])
+      family.trades.visible
+        .where(entries: { account_id: family.accounts.accessible_by(current_resource_owner).select(:id) })
+    end
+
+    def set_trade
+      # Load through accessible accounts only: a trade on an account the caller
+      # cannot see is a 404. Write access is checked next (ensure_write_permission).
+      @trade = accessible_trades.find(params[:id])
       @entry = @trade.entry
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Trade not found" }, status: :not_found
+    end
+
+    # A trade the caller can see but not change is a 403, not a 404.
+    def ensure_write_permission
+      require_api_account_permission!(@entry.account, resource: "trade")
     end
 
     def ensure_read_scope
@@ -163,7 +188,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_params
       params.require(:trade).permit(
         :account_id, :date, :qty, :price, :currency,
-        :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id,
+        :security_id, :ticker, :manual_ticker, :investment_activity_label,
         :fee, :type, :amount, :transfer_account_id
       )
     end
@@ -171,7 +196,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_update_params
       params.require(:trade).permit(
         :name, :date, :amount, :currency, :notes, :nature, :type,
-        :qty, :price, :investment_activity_label, :category_id
+        :qty, :price, :investment_activity_label
       )
     end
 
@@ -186,8 +211,7 @@ class Api::V1::TradesController < Api::V1::BaseController
         entryable_type: "Trade",
         entryable_attributes: {
           id: @trade.id,
-          investment_activity_label: flat[:investment_activity_label],
-          category_id: flat[:category_id]
+          investment_activity_label: flat[:investment_activity_label]
         }.compact_blank
       }.compact
 
@@ -390,14 +414,6 @@ class Api::V1::TradesController < Api::V1::BaseController
           return {}
         end
         attrs[:investment_activity_label] = label
-      end
-      if trade_params[:category_id].present?
-        category = current_resource_owner.family.categories.find_by(id: trade_params[:category_id])
-        unless category
-          render_validation_error("Category not found or does not belong to your family", [ "category_id is invalid" ])
-          return {}
-        end
-        attrs[:category_id] = category.id
       end
       attrs
     end

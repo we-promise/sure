@@ -1,0 +1,11 @@
+<%# locals: (bubble:) %>
+<% if bubble %>
+  <div class="flex items-start gap-2 px-1 text-xs text-secondary"
+       data-chat-reservation-target="bubble"
+       data-seconds="<%= bubble[:seconds] %>">
+    <%= icon(bubble[:busy] ? "hourglass" : "circle-check", size: "sm") %>
+    <p>
+      <%= bubble[:busy] ? t("chats.reservation.busy") : t("chats.reservation.ready_html", countdown: tag.span(data: { chat_reservation_target: "countdown" })) %>
+    </p>
+  </div>
+<% end %>

@@ -1,5 +1,6 @@
 class Provider::Anthropic::BillSetupSuggester
   include Provider::Anthropic::Concerns::UsageRecorder
+  include Provider::Anthropic::Concerns::StructuredOutput
 
   TOOL_NAME = "report_bill_setup".freeze
 
@@ -22,7 +23,9 @@ class Provider::Anthropic::BillSetupSuggester
       configure_mode: current_config.present?
     })
 
-    response = client.messages.create(
+    response = create_structured_message(
+      tool_name: TOOL_NAME,
+      operation: "suggest_bill_setup",
       model: model,
       max_tokens: max_tokens,
       system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
@@ -98,6 +101,7 @@ class Provider::Anthropic::BillSetupSuggester
 
         Rules:
         - Infer the cadence from the gaps between the dates, never from the row count.
+          Use "once" only for a single charge with no repeating gap.
         - amount is the typical recent charge as a positive number; when amounts drift,
           prefer the most recent ones.
         - day_of_month is the modal charge day (monthly-style cadences only); weekday
@@ -127,10 +131,10 @@ class Provider::Anthropic::BillSetupSuggester
     end
 
     def extract_input(response)
-      tool_use = Array(response.content).find { |block| block_type(block) == :tool_use }
+      tool_use = Array(response.content).find { |block| structured_block_type(block) == :tool_use }
       raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME} (stop_reason: #{response.stop_reason})" unless tool_use
 
-      input = block_input(tool_use)
+      input = structured_block_input(tool_use)
       input = JSON.parse(input) if input.is_a?(String)
       input.is_a?(Hash) ? input.stringify_keys : {}
     end
@@ -156,14 +160,5 @@ class Provider::Anthropic::BillSetupSuggester
       return nil if normalized.empty? || normalized.casecmp("null").zero?
 
       normalized
-    end
-
-    def block_type(block)
-      raw = block.respond_to?(:type) ? block.type : block[:type] || block["type"]
-      raw.to_s.to_sym
-    end
-
-    def block_input(block)
-      block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
     end
 end

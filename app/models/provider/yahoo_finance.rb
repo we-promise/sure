@@ -195,7 +195,10 @@ class Provider::YahooFinance < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      cache_key = "search_#{symbol}_#{country_code}_#{exchange_operating_mic}"
+      # The cached values are Security Data objects. Rails treats an entry that no
+      # longer fits the class (TypeError: struct size differs) as an error, not a
+      # miss, so bump the version here whenever Security's members change.
+      cache_key = "search_v2_#{symbol}_#{country_code}_#{exchange_operating_mic}"
       if cached_result = get_cached_result(cache_key)
         cached_result
       else
@@ -599,7 +602,13 @@ class Provider::YahooFinance < Provider
       "XCSE" => { yahoo_suffix: ".CO", default_currency: "DKK" },
       "XHEL" => { yahoo_suffix: ".HE", default_currency: "EUR" },
       "XOSL" => { yahoo_suffix: ".OL", default_currency: "NOK" },
-      "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }  # Vienna
+      "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }, # Vienna
+      # Canada. Yahoo writes share classes and units with a dash, not a dot:
+      # CSH.UN is CSH-UN.TO and CCL.B is CCL-B.TO.
+      "XTSE" => { yahoo_suffix: ".TO", default_currency: "CAD", share_class_separator: "-" }, # Toronto
+      "XTSX" => { yahoo_suffix: ".V",  default_currency: "CAD", share_class_separator: "-" }, # TSX Venture
+      "XCNQ" => { yahoo_suffix: ".CN", default_currency: "CAD", share_class_separator: "-" }, # CSE
+      "NEOE" => { yahoo_suffix: ".NE", default_currency: "CAD", share_class_separator: "-" }  # Cboe Canada (NEO)
     }.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
@@ -622,11 +631,17 @@ class Provider::YahooFinance < Provider
     end
 
     # Appends the Yahoo Finance symbol suffix for exchanges that require one
-    # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols pass through.
+    # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols keep a
+    # single suffix.  Where the exchange sets a share_class_separator, a dot
+    # in the ticker becomes that separator (XTSE: CSH.UN → CSH-UN.TO).
     def normalize_symbol(symbol, exchange_operating_mic)
-      suffix = EXCHANGE_CONFIG.dig(exchange_operating_mic, :yahoo_suffix)
-      return symbol if suffix.nil? || symbol.end_with?(suffix)
-      "#{symbol}#{suffix}"
+      config = EXCHANGE_CONFIG[exchange_operating_mic]
+      suffix = config&.dig(:yahoo_suffix)
+      return symbol if suffix.nil?
+
+      base = symbol.delete_suffix(suffix)
+      base = base.tr(".", config[:share_class_separator]) if config[:share_class_separator]
+      "#{base}#{suffix}"
     end
 
     # Returns the default currency for a Yahoo exchange name (e.g. "NSE" → "INR")
@@ -805,7 +820,7 @@ class Provider::YahooFinance < Provider
 
     def fetch_currency_pair_data(from, to, start_date, end_date)
       symbol = "#{from}#{to}=X"
-      fetch_chart_data(symbol, start_date, end_date) do |timestamp, close_rate|
+      fetch_chart_data(symbol, start_date, end_date, currency: to) do |timestamp, close_rate|
         Rate.new(
           date: Time.at(timestamp).utc.to_date,
           from: from,
@@ -817,7 +832,7 @@ class Provider::YahooFinance < Provider
 
     def fetch_inverse_currency_pair_data(from, to, start_date, end_date)
       symbol = "#{to}#{from}=X"
-      rates = fetch_chart_data(symbol, start_date, end_date) do |timestamp, close_rate|
+      rates = fetch_chart_data(symbol, start_date, end_date, currency: from) do |timestamp, close_rate|
         Rate.new(
           date: Time.at(timestamp).utc.to_date,
           from: from,
@@ -874,7 +889,9 @@ class Provider::YahooFinance < Provider
       data
     end
 
-    def fetch_chart_data(symbol, start_date, end_date, &block)
+    # `currency` is what the quote must be in. Yahoo leaves it blank on some
+    # scaled crosses: RUBGEL=X is GEL per 100 RUB, a 100x error once inverted.
+    def fetch_chart_data(symbol, start_date, end_date, currency:, &block)
       period1 = start_date.to_time.utc.to_i
       period2 = end_date.end_of_day.to_time.utc.to_i
 
@@ -894,6 +911,19 @@ class Provider::YahooFinance < Provider
 
         chart_data = data.dig("chart", "result", 0)
         return nil unless chart_data
+
+        quote_currency = chart_data.dig("meta", "currency")
+        unless quote_currency&.casecmp?(currency)
+          DebugLogEntry.capture(
+            category: "exchange_rates",
+            level: "warn",
+            message: "Yahoo Finance quote for #{symbol} is in #{quote_currency.presence || "no currency"}, not #{currency}; ignored",
+            source: self.class.name,
+            provider_key: "yahoo_finance",
+            metadata: { symbol: symbol, expected_currency: currency, quote_currency: quote_currency }
+          )
+          return nil
+        end
 
         timestamps = chart_data.dig("timestamp") || []
         quotes = chart_data.dig("indicators", "quote", 0) || {}
@@ -1203,10 +1233,16 @@ class Provider::YahooFinance < Provider
         "XNAS" # Yahoo default, assume NASDAQ
       when "TSE", "TOR"
         "XTSE" # Toronto Stock Exchange
-      when "CVE"
+      when "CVE", "VAN"
         "XTSX" # TSX Venture Exchange
+      when "CNQ"
+        "XCNQ" # Canadian Securities Exchange
+      when "NEO"
+        "NEOE" # Cboe Canada (NEO)
       when "LSE", "LON"
         "XLON" # London Stock Exchange
+      when "GER"
+        "XETR" # Xetra
       when "FRA"
         "XFRA" # Frankfurt Stock Exchange
       when "PAR"

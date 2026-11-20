@@ -1,0 +1,29 @@
+---
+de:
+  settings:
+    llm_usages:
+      show:
+        col_cost: Kosten
+        col_date: Datum
+        col_model: Modell
+        col_operation: Vorgang
+        col_tokens: Tokens
+        completion: Antwort
+        cost_by_model: Kosten nach Modell
+        cost_by_operation: Kosten nach Vorgang
+        cost_estimates_description: Die Kosten werden anhand der veröffentlichten Anbieterpreise geschätzt, zuletzt geprüft am %{date}. Die tatsächlichen Kosten können abweichen. Die Preise gelten je 1 Million Tokens und unterscheiden sich je Modell. Eigene oder selbst gehostete Modelle zeigen „N/A“ und fließen nicht in die Gesamtkosten ein.
+        cost_estimates_title: Zur Kostenschätzung
+        end_date: Enddatum
+        failed: Fehler
+        filter: Filtern
+        no_usage_data: Für den gewählten Zeitraum liegen keine Nutzungsdaten vor
+        page_title: LLM-Nutzung & Kosten
+        prompt: Prompt
+        recent_usage: Letzte Nutzung
+        start_date: Startdatum
+        subtitle: Behalte deine KI-Nutzung und die geschätzten Kosten im Blick
+        total_cost: Kosten gesamt
+        total_calls: "Aufrufe gesamt"
+        avg_cost_per_call: "Ø Kosten/Aufruf"
+        based_on_calls: "Grundlage sind %{with_cost} von %{total} Aufrufen mit Kostendaten"
+        total_tokens: Tokens gesamt

@@ -1,5 +1,6 @@
 class TransactionsController < ApplicationController
   include EntryableResource
+  include FilterClearable
 
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
@@ -28,7 +29,7 @@ class TransactionsController < ApplicationController
                        .reverse_chronological
                        .includes(
                          { entry: :account },
-                         :category, :merchant, :tags,
+                         :category, { merchant: { logo_attachment: :blob } }, :tags,
                          # Union of #2643 counterpart UI + Skylight category-menu N+1:
                          # - outflow rows need inflow_transaction (to_account) for both
                          #   counterpart display and Transfer#categorizable?/#payment?
@@ -52,6 +53,8 @@ class TransactionsController < ApplicationController
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
+    @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates(@transactions, user: Current.user)
+
     # Preload split parent data
     entry_ids = @transactions.map { |t| t.entry.id }
 
@@ -60,7 +63,7 @@ class TransactionsController < ApplicationController
       split_parent_ids = @transactions.filter_map { |t| t.entry.parent_entry_id }.uniq
       if split_parent_ids.any?
         Entry.where(id: split_parent_ids)
-             .includes(:account, entryable: [ :category, :merchant ])
+             .includes(:account, entryable: [ :category, { merchant: { logo_attachment: :blob } } ])
              .index_by(&:id)
       else
         {}
@@ -94,7 +97,7 @@ class TransactionsController < ApplicationController
       []
     else
       Current.family.recurring_transactions.accessible_by(Current.user)
-                    .where(id: projected_recurring_ids).includes(:merchant).to_a
+                    .where(id: projected_recurring_ids).includes(merchant: { logo_attachment: :blob }).to_a
     end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
@@ -102,24 +105,10 @@ class TransactionsController < ApplicationController
 
   def clear_filter
     updated_params = {
-      "q" => search_params,
+      "q" => without_cleared_filter(search_params),
       "page" => params[:page],
       "per_page" => params[:per_page]
     }
-
-    q_params = updated_params["q"] || {}
-
-    param_key = params[:param_key]
-    param_value = params[:param_value]
-
-    if q_params[param_key].is_a?(Array)
-      q_params[param_key].delete(param_value)
-      q_params.delete(param_key) if q_params[param_key].empty?
-    else
-      q_params.delete(param_key)
-    end
-
-    updated_params["q"] = q_params.presence
 
     # Add flag to indicate filters were explicitly cleared
     updated_params["filter_cleared"] = "1" if updated_params["q"].blank?
@@ -162,6 +151,7 @@ class TransactionsController < ApplicationController
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+      @entry.apply_immediate_rules_later
 
       respond_with_created_entry(@entry)
     else
@@ -183,6 +173,8 @@ class TransactionsController < ApplicationController
   end
 
   def update
+    rule_input = @entry.rule_input_snapshot
+
     if @entry.update(permitted_entry_params)
       sync_needed = @entry.saved_changes_affect_balances?
       transaction = @entry.transaction
@@ -192,7 +184,8 @@ class TransactionsController < ApplicationController
         flash[:cta] = {
           type: "category_rule",
           category_id: transaction.category_id,
-          category_name: transaction.category.name
+          category_name: transaction.category.name,
+          merchant_name: @entry.name
         }
       end
 
@@ -200,6 +193,7 @@ class TransactionsController < ApplicationController
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.sync_account_later if sync_needed
+      @entry.apply_immediate_rules_later(changed_from: rule_input)
 
       notes_changed = @entry.saved_change_to_notes?
 
@@ -212,6 +206,9 @@ class TransactionsController < ApplicationController
         format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
         format.turbo_stream do
           in_split_group = helpers.in_split_group?(@entry, params[:grouped])
+          # The row draws the "Transfer?" hint, and its cache key records
+          # whether it applies, so the hint is worked out as the list does.
+          @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates([ @entry.transaction ], user: Current.user)
           render turbo_stream: [
             turbo_stream.replace(
               dom_id(@entry, :header),
@@ -251,18 +248,25 @@ class TransactionsController < ApplicationController
   def update_tags
     return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
 
+    rule_input = @entry.rule_input_snapshot
+
     # The transaction-row tag picker toggles one tag at a time; the drawer's
-    # multiselect sends the full set.
+    # multiselect sends the full set, plus the set it last saved so only its
+    # own changes apply and tags a rule added meanwhile stay.
     if params[:toggle_tag_id].present?
       @toggled_tag = Current.family.tags.find(params[:toggle_tag_id])
       @entry.transaction.toggle_tag!(@toggled_tag)
+    elsif params.key?(:previous_tag_ids)
+      previous_ids = Array(params[:previous_tag_ids]).reject(&:blank?)
+      @entry.transaction.merge_tag_changes!(tag_ids_param, previous_ids, available_tags: Current.family.tags)
     else
-      @entry.transaction.tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
+      @entry.transaction.replace_tags!(tag_ids_param, available_tags: Current.family.tags)
     end
 
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
+    @entry.apply_immediate_rules_later(changed_from: rule_input)
 
     respond_to do |format|
       # JSON stays first so Accept: */* callers keep the original response.
@@ -447,6 +451,48 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path
   end
 
+  # Advances the manual reconciled_status through unreconciled -> cleared ->
+  # reconciled -> unreconciled. Scoped to manual (unsynced) accounts — synced
+  # accounts already get duplicate-matching (Account::ProviderImportAdapter)
+  # and statement-level reconciliation (AccountStatement).
+  def reconcile
+    return head :not_found unless Current.family.manual_reconciliation?
+
+    transaction = accessible_transactions.includes(entry: :account).find(params[:id])
+    entry = transaction.entry
+
+    return unless require_account_permission!(entry.account)
+
+    unless entry.account.manual?
+      flash[:alert] = t("transactions.reconcile.not_manual_account")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    entry.advance_reconciled_status!
+    flash[:notice] = t("transactions.reconcile.success", status: t("transactions.reconcile.statuses.#{entry.reconciled_status}"))
+
+    redirect_back_or_to transactions_path
+  rescue ActiveRecord::RecordInvalid => e
+    DebugLogEntry.capture(
+      category: "reconciliation",
+      level: "error",
+      message: "Failed to update reconciled_status for transaction #{params[:id]}: #{e.message}",
+      source: "TransactionsController#reconcile",
+      family: Current.family,
+      user: Current.user,
+      account: entry&.account,
+      metadata: {
+        transaction_id: params[:id],
+        entry_id: entry&.id,
+        error_class: e.class.name,
+        error_message: e.message
+      }
+    )
+    flash[:alert] = t("transactions.reconcile.failure")
+    redirect_back_or_to transactions_path
+  end
+
   def mark_as_recurring
     transaction = accessible_transactions.includes(entry: :account).find(params[:id])
 
@@ -525,6 +571,19 @@ class TransactionsController < ApplicationController
       rate_value = rate_obj.is_a?(Numeric) ? rate_obj : rate_obj.rate
 
       render json: { rate: rate_value.to_f, account_currency: account.currency }
+    end
+  end
+
+  def name_suggestions
+    unknown_names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t("transactions.unknown_name", locale: locale) }
+    transactions = Current.family.transactions.merge(Account.accessible_by(Current.user)).where.not(entries: { name: unknown_names })
+    query = params[:q].to_s.strip
+
+    @suggestions = if query.length < Transaction::MIN_LENGTH_FOR_NAME_SUGGESTION
+      names = recent_transaction_names.select { |name| name.downcase.include?(query.downcase) }
+      transactions.name_suggestions_for_names(names)
+    else
+      transactions.name_suggestions_for(query)
     end
   end
 
@@ -710,9 +769,8 @@ class TransactionsController < ApplicationController
         .includes(:account_providers, logo_attachment: :blob)
         .to_a
       @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
-      @merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
+      @merchants = Current.family.available_merchants_for(Current.user).with_attached_logo.alphabetically.to_a
       @tags = Current.family.tags.alphabetically.to_a
-      @recent_transaction_names = recent_transaction_names
     end
 
     # Autocomplete suggestions for the name field, only queried when the
@@ -786,7 +844,7 @@ class TransactionsController < ApplicationController
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
                 categories: [], merchants: [], types: [], tags: [], status: [], ai_status: [],
-                attachment_status: []
+                attachment_status: [], reconcile_status: []
               )
               .to_h
               .compact_blank

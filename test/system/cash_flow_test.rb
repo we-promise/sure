@@ -6,7 +6,7 @@ class CashFlowTest < ApplicationSystemTestCase
   setup do
     @user = users(:family_admin)
     @month = Date.current.beginning_of_month
-    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true, "cashflow_preview_enabled" => true))
     parent = @user.family.categories.create!(name: "Sankey Shopping", color: "#123456")
     child = @user.family.categories.create!(name: "Sankey Groceries", parent: parent)
     account = @user.family.accounts.create!(name: "Sankey checking", currency: "USD", balance: 0, accountable: Depository.new)
@@ -56,6 +56,30 @@ class CashFlowTest < ApplicationSystemTestCase
     assert_equal [ "Sankey Groceries" ], query.dig("q", "categories")
     assert_equal @month.iso8601, query.dig("q", "start_date")
     assert_equal Date.current.iso8601, query.dig("q", "end_date")
+  end
+
+  test "a category without subcategories stays in the category column" do
+    rent = @user.family.categories.create!(name: "Sankey Rent", color: "#654321")
+    create_transaction(account: @account, category: rent, amount: 80, date: @month)
+    # Wide enough for the dashboard chart to keep its subcategory column.
+    page.current_window.resize_to(1920, 1400)
+    sign_in @user
+    assert_selector "#cashflow-preview svg .sankey-link"
+    assert_selector "#cashflow-sankey-chart svg .sankey-link"
+
+    # By datum: the label rule can hide a bar's label at this width. The
+    # first chart of each is the inline one, not the dialog's copy.
+    columns = page.evaluate_script(<<~JS)
+      ["#cashflow-preview [data-controller='preview-sankey-chart']", "#cashflow-sankey-chart [data-controller='sankey-chart']"].map((chart) => {
+        const bars = Array.from(document.querySelector(chart).querySelectorAll("svg g > path:not(.sankey-link)"));
+        const x = (name) => bars.find((bar) => bar.__data__?.name === name)?.__data__.x0;
+        return [x("Sankey Rent"), x("Sankey Shopping"), x("Sankey Groceries")];
+      })
+    JS
+    columns.each do |rent_x, category_x, subcategory_x|
+      assert_equal category_x, rent_x
+      assert_operator rent_x, :<, subcategory_x
+    end
   end
 
   test "bars labels Enter and Space share zoom and transaction actions" do
@@ -161,6 +185,80 @@ class CashFlowTest < ApplicationSystemTestCase
     assert_selector "[data-cash-flow-target='empty']:not([hidden])"
     assert_no_selector "#cashflow-sankey-chart svg .sankey-link"
     assert_no_selector "[data-preview-sankey-chart-target='chart'] svg"
+  end
+
+  test "both charts come back with their controls after a morph refresh" do
+    sign_in @user
+    assert_selector "#cashflow-preview svg .sankey-link"
+    assert_selector "#cashflow-sankey-chart svg .sankey-link"
+    within "#cashflow-preview" do
+      click_button "Largest first"
+    end
+    assert_selector "#cashflow-preview button[data-sort-order='descending'][aria-pressed='true']"
+    assert_selector "#cashflow-preview svg[data-sort-order='descending'] .sankey-link"
+    # By datum rather than label: the label rule can hide a bar's label at
+    # this width, and the legacy chart has no accessible node names.
+    page.execute_script(<<~JS)
+      Array.from(document.querySelectorAll("#cashflow-sankey-chart svg g > path"))
+        .find((bar) => bar.__data__?.name === "Sankey Shopping")
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    JS
+    assert_selector "#cashflow-sankey-chart [data-sankey-chart-target='zoomOutButton']:not([hidden])"
+    # The zoomed view keeps the category and its subcategory: one flow.
+    assert_selector "#cashflow-sankey-chart svg .sankey-link", count: 1
+
+    # The sync toast refreshes the page this way once a background sync
+    # finishes. The morph keeps the chart elements and their controllers but
+    # puts the server markup back around them: no drawing, the controls in
+    # their default state, and the tooltips gone from the body. Both redraws
+    # above have settled, so only the morph can replace the marked drawings.
+    page.execute_script(<<~JS)
+      window.sankeyMorphs = 0;
+      document.addEventListener("turbo:morph", () => { window.sankeyMorphs += 1; });
+      document.querySelectorAll("#cashflow-sankey-chart svg, #cashflow-preview svg")
+        .forEach((svg) => svg.setAttribute("data-stale", ""));
+      Turbo.visit(window.location.href, { action: "replace" });
+    JS
+    assert_selector "body" do
+      page.evaluate_script("window.sankeyMorphs") == 1
+    end
+    assert_no_selector "#cashflow-sankey-chart svg[data-stale], #cashflow-preview svg[data-stale]"
+    assert_selector "#cashflow-sankey-chart svg:not([data-stale]) .sankey-link"
+    assert_selector "#cashflow-preview svg:not([data-stale]) .sankey-link"
+    assert_selector "#cashflow-sankey-chart [data-sankey-chart-target='zoomOutButton']:not([hidden])"
+    assert_selector "#cashflow-preview button[data-sort-order='descending'][aria-pressed='true']"
+
+    find("#cashflow-sankey-chart svg text", text: "Sankey Groceries", match: :first).hover
+    assert_selector ".chart-tooltip:not(.ph-no-capture)", text: "Sankey Groceries"
+
+    # Tracking stopped when the page was cached for the visit and must be
+    # live again: the graph fetched after the morph counts as a display.
+    install_posthog_fake
+    find("#cashflow-preview").scroll_to(:center)
+    assert_event_count "sankey_preview_displayed", 1
+  end
+
+  test "the preview tooltip comes back after a broadcast refresh" do
+    sign_in @user
+    assert_selector "#cashflow-preview svg .sankey-link"
+
+    # A family broadcast_refresh (e.g. at the end of a SimpleFIN sync) arrives
+    # as a refresh stream: Turbo morphs the page without caching it first, so
+    # turbo:before-cache never clears the chart, and the morph drops the
+    # tooltip it appended to the body.
+    page.execute_script(<<~JS)
+      window.sankeyMorphs = 0;
+      document.addEventListener("turbo:morph", () => { window.sankeyMorphs += 1; });
+      document.querySelectorAll("#cashflow-preview svg").forEach((svg) => svg.setAttribute("data-stale", ""));
+      Turbo.session.refresh(window.location.href);
+    JS
+    assert_selector "body" do
+      page.evaluate_script("window.sankeyMorphs") == 1
+    end
+    assert_selector "#cashflow-preview svg:not([data-stale]) .sankey-link"
+
+    find("#cashflow-preview g[aria-label^='Sankey Shopping,'] path", match: :first).hover
+    assert_selector ".chart-tooltip.ph-no-capture", text: "Sankey Shopping"
   end
 
   test "preview displays are counted once and feedback uses PostHog survey question IDs" do

@@ -31,6 +31,15 @@ class Assistant::Function::UpdateCategoryTest < ActiveSupport::TestCase
     assert_equal "#6471eb", @category.reload.color
   end
 
+  test "changing a parent's color also changes its subcategories" do
+    subcategory = @family.categories.create!(name: "Takeout", color: "#000000", parent: @category)
+
+    result = @fn.call("id" => @category.id, "color" => "#6471eb")
+
+    assert result[:success]
+    assert_equal "#6471eb", subcategory.reload.color
+  end
+
   test "updates category icon" do
     result = @fn.call("id" => @category.id, "icon" => "pizza")
 

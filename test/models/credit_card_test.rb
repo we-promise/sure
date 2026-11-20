@@ -288,7 +288,28 @@ class CreditCardTest < ActiveSupport::TestCase
       )
     end
 
+    materialize_balances(account)
     assert_equal 400, card.last_statement_balance_money(as_of: as_of).amount
+  end
+
+  test "a balance update after an unknown closed balance does not invent an adjustment from mixed currencies" do
+    card = statement_card(close_day: 25, due_day: 5)
+    account = card.account
+    as_of = Date.new(2026, 10, 16)
+
+    account.entries.create!(
+      name: "Foreign charge before close", date: Date.new(2026, 9, 11), amount: 100,
+      currency: "EUR", entryable: Transaction.new
+    )
+    charge(account, Date.new(2026, 10, 1), 50)
+    balance_update(account, Date.new(2026, 10, 10), 200)
+
+    summary = card.statement_summary(as_of: as_of, viewer: users(:family_admin))
+
+    assert_nil summary.balance
+    assert_equal 50, summary.charges.amount
+    assert_equal 0, summary.adjustments.amount
+    assert_equal 50, summary.accrued.amount
   end
 
   test "a card with entries in another currency reports no statement rather than a wrong one" do
@@ -308,6 +329,7 @@ class CreditCardTest < ActiveSupport::TestCase
     assert_equal 0, card.accrued_since_last_close_money(as_of: Date.new(2026, 10, 16)).amount
 
     foreign.destroy!
+    materialize_balances(account)
     assert_equal 100, card.last_statement_balance_money(as_of: Date.new(2026, 10, 16)).amount
   end
 
@@ -348,8 +370,262 @@ class CreditCardTest < ActiveSupport::TestCase
     assert_not card.minimum_payment_shortfall?
   end
 
+  test "a balance update before the close replaces the running total instead of adding to it" do
+    card = statement_card(close_day: 16, due_day: 6)
+    account = card.account
+    as_of = Date.new(2026, 10, 16)
+
+    balance_update(account, Date.new(2025, 1, 1), 200)
+    charge(account, Date.new(2026, 9, 1), 600)
+    balance_update(account, Date.new(2026, 10, 1), 800)
+
+    # The 800 already includes the 600 charged, so counting both would show
+    # 1,400 against a debt of 800.
+    assert_equal 800, card.last_statement_balance_money(as_of: as_of).amount
+    assert_equal 0, card.accrued_since_last_close_money(as_of: as_of).amount
+  end
+
+  test "a balance update inside the open cycle is its own adjustment, not a second copy of the charges" do
+    card = statement_card(close_day: 16, due_day: 6)
+    account = card.account
+    as_of = Date.new(2026, 10, 30)
+
+    charge(account, Date.new(2026, 10, 1), 800)
+    charge(account, Date.new(2026, 10, 20), 100)
+    balance_update(account, Date.new(2026, 10, 25), 1_000)
+
+    summary = card.statement_summary(as_of: as_of, viewer: users(:family_admin))
+
+    assert_equal 800, summary.balance.amount
+    assert_equal 800, summary.remaining.amount
+    assert_equal 100, summary.charges.amount
+    assert_equal 0, summary.credits.amount
+    assert_equal 100, summary.adjustments.amount
+    assert_equal 200, summary.accrued.amount
+    assert_equal 1_000, summary.remaining.amount + summary.accrued.amount
+  end
+
+  test "a balance update and a payment inside the open cycle still add up to the debt" do
+    card = statement_card(close_day: 16, due_day: 6)
+    account = card.account
+    as_of = Date.new(2026, 10, 30)
+
+    charge(account, Date.new(2026, 10, 1), 800)
+    charge(account, Date.new(2026, 10, 20), 300)
+    balance_update(account, Date.new(2026, 10, 25), 1_000)
+    charge(account, Date.new(2026, 10, 28), -200)
+
+    summary = card.statement_summary(as_of: as_of, viewer: users(:family_admin))
+
+    # The update drops the open cycle by 100 against what was charged. The
+    # payment settles the closed bill first, so none of it reduces the open cycle.
+    assert_equal 800, summary.balance.amount
+    assert_equal 600, summary.remaining.amount
+    assert_equal 300, summary.charges.amount
+    assert_equal(-200, summary.credits.amount)
+    assert_equal(-100, summary.adjustments.amount)
+    assert_equal 200, summary.accrued.amount
+    assert_equal 800, summary.remaining.amount + summary.accrued.amount
+  end
+
+  test "an opening anchor and reconciliations before the close do not inflate the closed statement" do
+    card = statement_card(close_day: 16, due_day: 6)
+    account = card.account
+    as_of = Date.new(2026, 10, 16)
+
+    balance_update(account, Date.new(2024, 4, 16), 100)
+    charge(account, Date.new(2026, 9, 1), 2_789.51)
+    balance_update(account, Date.new(2026, 10, 12), 2_892.54)
+
+    assert_equal BigDecimal("2892.54"), card.last_statement_balance_money(as_of: as_of).amount
+    assert_equal 0, card.accrued_since_last_close_money(as_of: as_of).amount
+  end
+
+  test "the statement summary reports the remaining amount and partial status" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+    charge(card.account, Date.new(2026, 10, 12), -100)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal 300, summary.balance.amount
+    assert_equal 200, summary.remaining.amount
+    assert_equal 0, summary.charges.amount
+    assert_equal(-100, summary.credits.amount)
+    # The payment settles part of the closed bill, not the open cycle.
+    assert_equal 0, summary.accrued.amount
+    assert_equal Date.new(2026, 10, 26), summary.due_date
+    assert_equal Date.new(2026, 10, 26), summary.last_due_date
+    assert_equal :partial, summary.status
+  end
+
+  test "post-close payments settle the closed bill first and only the surplus reduces new charges" do
+    card = statement_card(close_day: 16, due_day: 6)
+    charge(card.account, Date.new(2026, 10, 1), 800)
+    charge(card.account, Date.new(2026, 10, 20), 300)
+    charge(card.account, Date.new(2026, 10, 25), -1000)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 30), viewer: users(:family_admin))
+
+    assert_equal 800, summary.balance.amount
+    assert_equal 0, summary.remaining.amount
+    assert_equal :paid, summary.status
+    assert_equal 100, summary.accrued.amount
+    assert_equal 100, card.accrued_since_last_close_money(as_of: Date.new(2026, 10, 30)).amount
+  end
+
+  test "the payments applied line is only the surplus that reduced the open cycle" do
+    card = statement_card(close_day: 16, due_day: 6)
+    charge(card.account, Date.new(2026, 10, 1), 800)
+    charge(card.account, Date.new(2026, 10, 20), 300)
+    charge(card.account, Date.new(2026, 10, 25), -1000)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 30), viewer: users(:family_admin))
+
+    assert_equal 200, summary.payments_applied.amount
+    assert_equal 100, summary.accrued.amount
+  end
+
+  test "the statement summary marks a settled statement as paid and moves to the next due date" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+    charge(card.account, Date.new(2026, 10, 20), -300)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 27), viewer: users(:family_admin))
+
+    assert_equal 0, summary.remaining.amount
+    assert_equal :paid, summary.status
+    assert_equal Date.new(2026, 11, 26), summary.due_date
+    assert_equal Date.new(2026, 10, 26), summary.last_due_date
+  end
+
+  test "the statement summary keeps an unpaid passed bill overdue" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 27), viewer: users(:family_admin))
+
+    assert_equal 300, summary.remaining.amount
+    assert_equal :overdue, summary.status
+    assert_equal Date.new(2026, 10, 26), summary.due_date
+  end
+
+  test "a closed statement that is a credit stays a credit rather than being shown as zero" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), -100)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal(-100, summary.balance.amount)
+    assert_equal(-100, summary.remaining.amount)
+    assert_equal 0, summary.accrued.amount
+    assert_equal :no_balance, summary.status
+  end
+
+  test "the statement summary reports no balance when the statement is zero" do
+    card = statement_card(close_day: 10, due_day: 26)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal 0, summary.balance.amount
+    assert_equal 0, summary.remaining.amount
+    assert_equal :no_balance, summary.status
+  end
+
+  test "the statement summary surfaces an overdue open payment instead of the stale hint" do
+    travel_to Date.new(2026, 10, 16) do
+      card = accounts(:credit_card).credit_card
+      card.update!(statement_close_day: 10, due_day: 26)
+      series = scheduled_payment_series(card, source: accounts(:depository), stale: 45.days.ago.to_date)
+
+      assert_operator series.next_expected_date, :<, Date.current
+
+      summary = card.statement_summary(as_of: Date.current, viewer: users(:family_admin))
+      open_due = series.recurring_occurrences.open_status.minimum(:due_on)
+
+      assert_equal series.id, summary.scheduled_payment.payment.id
+      assert_equal open_due, summary.scheduled_payment.due_date
+      assert_operator summary.scheduled_payment.due_date, :>, series.next_expected_date
+      assert_operator summary.scheduled_payment.due_date, :<, Date.current
+    end
+  end
+
+  test "the statement summary hides a scheduled payment the viewer cannot reach" do
+    card = accounts(:credit_card).credit_card
+    card.update!(statement_close_day: 10, due_day: 26)
+    scheduled_payment_series(card, source: accounts(:investment), stale: 45.days.ago.to_date)
+
+    member_summary = card.statement_summary(as_of: Date.current, viewer: users(:family_member))
+    admin_summary = card.statement_summary(as_of: Date.current, viewer: users(:family_admin))
+
+    assert_nil member_summary.scheduled_payment
+    assert admin_summary.scheduled_payment.present?
+  end
+
+  test "the statement summary estimates monthly interest on the remaining balance" do
+    card = statement_card(close_day: 10, due_day: 26)
+    card.update!(apr: 12)
+    charge(card.account, Date.new(2026, 9, 20), 1200)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal 12, summary.estimated_interest.amount
+    assert_equal 1, summary.monthly_rate
+  end
+
+  test "the statement summary rounds interest to the account currency precision" do
+    card = statement_card(close_day: 10, due_day: 26, currency: "KWD")
+    card.update!(apr: 12)
+    charge(card.account, Date.new(2026, 9, 20), 0.40)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal BigDecimal("0.004"), summary.estimated_interest.amount
+    assert_equal "KWD", summary.estimated_interest.currency.iso_code
+  end
+
+  test "the statement summary reports no interest on a zero remaining balance" do
+    card = statement_card(close_day: 10, due_day: 26)
+    card.update!(apr: 12)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal 0, summary.estimated_interest.amount
+  end
+
+  test "the statement summary has no interest estimate without an APR" do
+    card = statement_card(close_day: 10, due_day: 26)
+    card.update!(apr: nil)
+    charge(card.account, Date.new(2026, 9, 20), 1200)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_nil summary.estimated_interest
+  end
+
+  test "the statement summary refuses a remaining amount it cannot total" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+    foreign = card.account.entries.create!(
+      name: "Foreign payment",
+      date: Date.new(2026, 10, 12),
+      amount: -100,
+      currency: "EUR",
+      entryable: Transaction.new
+    )
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_nil summary.remaining
+    assert_nil summary.status
+    assert_nil summary.charges
+    assert_nil summary.credits
+    assert_nil summary.accrued
+    assert foreign.persisted?
+  end
+
   private
-    def statement_card(close_day:, due_day:, minimum_payment: 100)
+    def statement_card(close_day:, due_day:, minimum_payment: 100, currency: "USD")
       card = CreditCard.create!(
         statement_close_day: close_day,
         due_day: due_day,
@@ -362,7 +638,7 @@ class CreditCardTest < ActiveSupport::TestCase
         family: accounts(:credit_card).family,
         name: "Statement Cycle Card",
         balance: 0,
-        currency: "USD",
+        currency: currency,
         classification: "liability",
         status: "active",
         accountable: card
@@ -371,15 +647,56 @@ class CreditCardTest < ActiveSupport::TestCase
       card.reload
     end
 
+    def scheduled_payment_series(card, source:, stale:)
+      series = card.account.family.recurring_transactions.create!(
+        name: "Card payment #{stale}",
+        account: source,
+        destination_account: card.account,
+        amount: 100,
+        currency: "USD",
+        status: "active",
+        bill_type: "transfer",
+        manual: true,
+        dedup_scope: "card-payment-#{card.account.id}-#{stale}",
+        expected_day_of_month: stale.day,
+        last_occurrence_date: stale << 1,
+        next_expected_date: stale
+      )
+
+      series.reload
+    end
+
+    # A balance update states what is owed on that date, as a reconciliation
+    # or the opening balance does.
+    def balance_update(account, date, balance)
+      entry = account.entries.create!(
+        name: "Balance update",
+        date: date,
+        amount: balance,
+        currency: account.currency,
+        entryable: Valuation.new(kind: "reconciliation")
+      )
+      materialize_balances(account)
+      entry
+    end
+
     # Positive amount is a charge on a liability; negative is a payment, which
     # is how ForwardCalculator reads a card's entries.
     def charge(account, date, amount)
-      account.entries.create!(
+      entry = account.entries.create!(
         name: "Statement test entry",
         date: date,
         amount: amount,
         currency: account.currency,
         entryable: Transaction.new
       )
+      materialize_balances(account)
+      entry
+    end
+
+    # The statement reads the account's balance records, which sync builds from
+    # the entries. Tests build them the same way after changing the entries.
+    def materialize_balances(account)
+      Balance::Materializer.new(account, strategy: :forward).materialize_balances
     end
 end

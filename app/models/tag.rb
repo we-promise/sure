@@ -31,6 +31,21 @@ class Tag < ApplicationRecord
     def untagged_name
       I18n.t(UNTAGGED_NAME_KEY)
     end
+
+    # The given tags that are on at least one of the family's transactions, as
+    # a hash keyed by tag id, so a tag list can check each tag without a query
+    # per row (see Category.ids_with_transactions).
+    def ids_with_transactions(family:, tag_ids:)
+      tag_ids = Array(tag_ids).compact
+      return {} if tag_ids.empty?
+
+      family.transactions
+            .joins(:taggings)
+            .where(taggings: { tag_id: tag_ids })
+            .distinct
+            .pluck("taggings.tag_id")
+            .index_with(true)
+    end
   end
 
   # The value the transactions-filter checkbox submits for this tag: the
@@ -40,12 +55,32 @@ class Tag < ApplicationRecord
     persisted? ? name : UNTAGGED_FILTER_VALUE
   end
 
+  # Read-only: Security#set_tags_for is the one writer, so tagging a security
+  # always takes its lock and stays inside the family.
+  def securities
+    Security.where(id: taggings.where(taggable_type: "Security").select(:taggable_id))
+  end
+
   def replace_and_destroy!(replacement)
     transaction do
       raise ActiveRecord::RecordInvalid, "Replacement tag cannot be the same as the tag being destroyed" if replacement == self
 
       if replacement
-        taggings.update_all tag_id: replacement.id
+        # Skip objects that already carry the replacement: moving their row
+        # would tag them twice. Their old row goes with destroy! below. The
+        # type is compared the way index_taggings_unique keys it, with a
+        # missing type folded to '', so the two always agree.
+        taggings.where(<<~SQL, replacement.id).update_all(tag_id: replacement.id)
+          NOT EXISTS (
+            SELECT 1 FROM taggings carried
+            WHERE carried.tag_id = ?
+              AND COALESCE(carried.taggable_type, '') = COALESCE(taggings.taggable_type, '')
+              AND carried.taggable_id = taggings.taggable_id
+          )
+        SQL
+        # A loaded taggings association still lists the moved rows, and
+        # destroy! would delete them by id.
+        taggings.reset
       end
 
       destroy!

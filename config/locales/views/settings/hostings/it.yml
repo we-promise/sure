@@ -25,10 +25,12 @@ it:
         title: Self-Hosting
         danger_zone: Zona pericolosa
         clear_cache: Svuota cache dati
-        clear_cache_warning: Svuotare la cache dei dati rimuoverà tutti i tassi di cambio, i prezzi dei titoli, i saldi dei conti e altri dati. Questo non eliminerà conti, transazioni, categorie o altri dati degli utenti.
+        clear_cache_warning: "Svuotare la cache dei dati ricalcola i saldi e le posizioni dei conti della tua famiglia e ricarica i tassi di cambio e i prezzi dei titoli che utilizzano. Vengono eliminati solo i saldi e le posizioni della tua famiglia; i tassi di cambio e i prezzi dei titoli sono condivisi con le altre famiglie di questa istanza e vengono aggiornati anche per loro. Questo non eliminerà conti, transazioni, categorie o altri dati degli utenti."
+        clear_cache_warning_without_provider: "Svuotare la cache dei dati ricalcola i saldi e le posizioni dei conti della tua famiglia. Non è configurato alcun fornitore di tassi di cambio o di prezzi dei titoli, quindi i tassi di cambio e i prezzi salvati vengono mantenuti. Questo non eliminerà conti, transazioni, categorie o altri dati degli utenti."
         confirm_clear_cache:
           title: Svuotare la cache dei dati?
-          body: Sei sicuro di voler svuotare la cache dei dati? Questo rimuoverà tutti i tassi di cambio, i prezzi dei titoli, i saldi dei conti e altri dati. Questa azione non può essere annullata.
+          body: "Sei sicuro di voler svuotare la cache dei dati? I saldi e le posizioni dei conti della tua famiglia verranno ricalcolati e i tassi di cambio e i prezzi dei titoli che utilizzano verranno ricaricati. Vengono eliminati solo i saldi e le posizioni della tua famiglia; i tassi di cambio e i prezzi dei titoli sono condivisi con le altre famiglie di questa istanza e vengono aggiornati anche per loro. Questa azione non può essere annullata."
+          body_without_provider: "Sei sicuro di voler svuotare la cache dei dati? I saldi e le posizioni dei conti della tua famiglia verranno ricalcolati. Non è configurato alcun fornitore di tassi di cambio o di prezzi dei titoli, quindi i tassi di cambio e i prezzi salvati vengono mantenuti. Questa azione non può essere annullata."
       provider_selection:
         exchange_rate_title: Provider tasso di cambio
         exchange_rate_description: Seleziona un singolo provider per recuperare i tassi di cambio.
@@ -124,8 +126,10 @@ it:
         access_token_placeholder: Inserisci il tuo token di accesso qui
         uri_base_label: URL base API (facoltativo)
         uri_base_placeholder: "https://api.openai.com/v1 (predefinito)"
+        uri_base_local_help: "Per un modello sulla tua macchina, inserisci il suo endpoint compatibile con OpenAI, ad esempio Ollama su http://localhost:11434/v1, oppure http://ollama:11434/v1 se Sure e Ollama girano come servizi Docker Compose."
         model_label: Modello (facoltativo)
         model_placeholder: "gpt-4.1 (predefinito)"
+        model_required_help: "Obbligatorio quando imposti un URL di base dell'API: inserisci il nome del modello usato dal tuo server, ad esempio llama3.1 per Ollama."
         json_mode_label: Modalità JSON
         json_mode_auto: Auto (consigliato)
         json_mode_strict: Strict (ottimo per modelli thinking)

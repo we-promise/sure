@@ -1,20 +1,31 @@
-<%# locals: (transactions:, projected_recurring:, q:, pagy:) %>
+<%# locals: (transactions:, projected_recurring:, q:, pagy:, toolbar: true) %>
 <div id="transactions"
-  data-controller="bulk-select checkbox-toggle drag-and-drop-import"
+  data-controller="bulk-select checkbox-toggle<%= " drag-and-drop-import" if toolbar %>"
   data-bulk-select-singular-label-value="<%= t(".transaction") %>"
   data-bulk-select-plural-label-value="<%= t(".transactions") %>"
   data-bulk-select-selected-label-value="<%= t("transactions.selection_bar.selected") %>"
   data-bulk-select-edit-label-value="<%= t("transactions.selection_bar.edit") %>"
   class="flex flex-col bg-container rounded-xl shadow-border-xs px-3 py-4 lg:p-4 relative group">
 
-  <%= form_with url: imports_path, method: :post, class: "hidden", data: { drag_and_drop_import_target: "form", turbo: false } do |f| %>
-    <%= f.hidden_field "import[type]", value: "TransactionImport" %>
-    <%= f.file_field "import[import_file]", class: "hidden", data: { drag_and_drop_import_target: "input" }, accept: ".csv" %>
+  <% if toolbar %>
+    <%= form_with url: imports_path, method: :post, class: "hidden", data: { drag_and_drop_import_target: "form", turbo: false } do |f| %>
+      <%= f.hidden_field "import[type]", value: "TransactionImport" %>
+      <%= f.file_field "import[import_file]", class: "hidden", data: { drag_and_drop_import_target: "input" }, accept: ".csv" %>
+    <% end %>
+
+    <%= render "imports/drag_drop_overlay", title: t(".drag_drop_title"), subtitle: t(".drag_drop_subtitle") %>
+
+    <%= render "transactions/searches/search" %>
+  <% else %>
+    <div class="flex justify-end mb-4 lg:hidden">
+      <%= render DS::Button.new(
+        variant: :outline,
+        icon: "list-todo",
+        aria: { label: t("transactions.searches.form.toggle_selection_checkboxes") },
+        data: { action: "click->checkbox-toggle#toggle", checkbox_toggle_target: "toggleButton" }
+      ) %>
+    </div>
   <% end %>
-
-  <%= render "imports/drag_drop_overlay", title: t(".drag_drop_title"), subtitle: t(".drag_drop_subtitle") %>
-
-  <%= render "transactions/searches/search" %>
 
   <div id="entry-selection-bar" data-bulk-select-target="selectionBar" class="flex justify-center hidden">
     <%= render "transactions/selection_bar" %>
