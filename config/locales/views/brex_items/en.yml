@@ -265,6 +265,7 @@ en:
       credentials_invalid: Invalid Brex API token or account permissions
       failed: Sync failed. Please try again or contact support.
       import_failed: Brex import failed.
+      import_failed_with_error: "Brex import failed: %{error}"
       importing_accounts: Importing accounts from Brex...
       processing_transactions: Processing transactions...
       transactions_failed:

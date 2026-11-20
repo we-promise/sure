@@ -133,7 +133,9 @@ class ProviderItem::Syncer
 
       errors << sync_error(:account_import_error, :accounts_failed, count: accounts_failed) if accounts_failed.positive?
       errors << sync_error(:transaction_import_error, :transactions_failed, count: transactions_failed) if transactions_failed.positive?
-      errors << sync_error(:import_error, :import_failed) if errors.empty?
+      if errors.empty?
+        errors << (result[:error].present? ? sync_error(:import_error, :import_failed_with_error, error: result[:error]) : sync_error(:import_error, :import_failed))
+      end
       errors
     end
 
