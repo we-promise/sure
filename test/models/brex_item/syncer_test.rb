@@ -95,6 +95,7 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
 
     account.entries.create!(name: "Brex card charge", date: Date.current, amount: 10, currency: "USD", source: "brex", entryable: Transaction.new)
     account.entries.create!(name: "Manual entry", date: Date.current, amount: 20, currency: "USD", entryable: Transaction.new)
+    account.entries.create!(name: "Second manual entry", date: Date.current, amount: 30, currency: "USD", entryable: Transaction.new)
 
     @syncer.perform_sync(sync)
 

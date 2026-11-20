@@ -107,18 +107,13 @@ class MercuryItemsSetupTest < ActionDispatch::IntegrationTest
 
   test "one account failing doesn't undo the others" do
     second = @item.mercury_accounts.create!(account_id: "acc_second", name: "Second", currency: "USD")
-    original = Account.method(:create_and_sync)
-    failing_second = ->(attributes, **options) do
-      raise ActiveRecord::RecordInvalid.new(Account.new) if attributes[:name] == "Second"
+    # A blank name makes the second account invalid, so its creation fails for
+    # real while the first goes through.
+    second.update_column(:name, "")
 
-      original.call(attributes, **options)
-    end
-
-    Account.stub(:create_and_sync, failing_second) do
-      post complete_account_setup_mercury_item_url(@item), params: {
-        account_types: { @account.id => "Depository", second.id => "Depository" }
-      }
-    end
+    post complete_account_setup_mercury_item_url(@item), params: {
+      account_types: { @account.id => "Depository", second.id => "Depository" }
+    }
 
     assert @account.reload.account_provider.present?
     assert_nil second.reload.account_provider
