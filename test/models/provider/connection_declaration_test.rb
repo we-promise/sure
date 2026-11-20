@@ -69,6 +69,17 @@ class Provider::ConnectionDeclarationTest < ActiveSupport::TestCase
     assert_nil adapter.metadata_declaration
   end
 
+  test "an adapter that fails to load leaves the other declarations listed" do
+    expected = Provider::Factory.connection_declarations.map { |declaration| declaration[:key] }
+    files = Provider::Factory.send(:adapter_files)
+    Provider::Factory.stubs(:adapter_files).returns(files + [ "MissingProviderAdapter" ])
+
+    keys = Provider::Factory.connection_declarations.map { |declaration| declaration[:key] }
+
+    assert_includes keys, "brex"
+    assert_equal expected, keys
+  end
+
   test "family connections are listed alphabetically by provider" do
     providers = ProviderConnectionStatus.for_family(families(:dylan_family)).map { |connection| connection[:provider] }
 
