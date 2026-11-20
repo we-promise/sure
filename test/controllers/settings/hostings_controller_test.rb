@@ -327,6 +327,47 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "clear cache texts promise reloaded market data only when a provider is configured" do
+    with_self_hosting do
+      ExchangeRate.stubs(:provider).returns(@provider)
+      get settings_hosting_url
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+
+      ExchangeRate.stubs(:provider).returns(nil)
+      Security.stubs(:provider).returns(nil)
+      get settings_hosting_url
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning_without_provider"))
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.confirm_clear_cache.body_without_provider"))
+      assert_not_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+    end
+  end
+
+  test "shows the clear cache text without provider when no exchange rate provider is set" do
+    Setting.stubs(:exchange_rate_provider).returns(nil)
+    Security.stubs(:provider).returns(nil)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning_without_provider"))
+      end
+    end
+  end
+
+  test "an unknown exchange rate provider does not hide a configured security provider" do
+    ExchangeRate.stubs(:provider).raises(Provider::Registry::Error, "Provider 'nope' not found")
+    Security.stubs(:provider).returns(@provider)
+
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+    end
+  end
+
   test "can update terrascoutx api key when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { terrascoutx_api_key: "terrascoutx-token" } }
@@ -887,6 +928,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     exchange_rate = exchange_rates(:one)
     security_price = holding.security.prices.first
     account_balance = account.balances.create!(date: Date.current, balance: 1000, currency: "USD")
+    Family::MarketDataRefresher.any_instance.expects(:refresh)
 
     with_self_hosting do
       perform_enqueued_jobs(only: DataCacheClearJob) do
@@ -897,8 +939,9 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_hosting_url
     assert_equal I18n.t("settings.hostings.clear_cache.cache_cleared"), flash[:notice]
 
-    assert_not ExchangeRate.exists?(exchange_rate.id)
-    assert_not Security::Price.exists?(security_price.id)
+    # Market data is shared with other families, so it is refreshed rather than deleted
+    assert ExchangeRate.exists?(exchange_rate.id)
+    assert Security::Price.exists?(security_price.id)
     assert_not Holding.exists?(holding.id)
     assert_not Balance.exists?(account_balance.id)
   end
