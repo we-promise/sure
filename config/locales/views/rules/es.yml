@@ -3,6 +3,57 @@ es:
   rules:
     no_action: Sin acción
     no_condition: Sin condición
+    notification_baseline_timed_out: Esta regla sigue desactivada. Comprobar qué transacciones cumple ya tardó demasiado y, sin esa comprobación, enviaría un correo por todas ellas. Simplifica sus condiciones y vuelve a activarla.
+    category_rule_cta:
+      close: Cerrar
+      create_rule: Crear regla
+      description: "¿Categorizar siempre las transacciones similares?"
+      not_today: Hoy no
+      turn_off_suggestions: Desactivar sugerencias de reglas
+      message: Actualizada a %{category_name}
+    classifier_rules:
+      category_classifier: Clasificador de categorías
+      merchant_matcher: Emparejador de comercios
+    filters:
+      search_label: Buscar reglas
+      search_placeholder: Buscar por nombre, condiciones y acciones
+      reset: Restablecer
+      button: Filtrar
+      done: Hecho
+      active_label: Filtros activos
+      remove: Quitar el filtro %{filter}
+      status:
+        label: Estado
+        all: Todos los estados
+        active: Activa
+        inactive: Inactiva
+      action_type:
+        label: Acción
+        all: Todas las acciones
+      condition_type:
+        label: Condición
+        all: Todas las condiciones
+      account:
+        label: Cuenta
+        all: Todas las cuentas
+      group:
+        label: Grupo
+        all: Todos los grupos
+        none: Sin grupo
+    group:
+      rules_count:
+        one: 1 regla
+        other: "%{count} reglas"
+      inactive_count:
+        one: 1 inactiva
+        other: "%{count} inactivas"
+      empty: Aún no hay reglas en este grupo. Elige el grupo en el formulario de una regla.
+      activate_all: Activar todas las reglas
+      deactivate_all: Desactivar todas las reglas
+      rename: Renombrar
+      delete: Eliminar grupo
+      delete_confirm_title: ¿Eliminar el grupo "%{name}"?
+      delete_confirm_body: Las reglas se quedan donde están, sin grupo. No se elimina ninguna regla.
     rule:
       edit: Editar
       re_apply_rule: Volver a aplicar la regla
@@ -17,6 +68,8 @@ es:
       action_label_to: '%{label} a %{value}'
       all_past_and_future: Todas las %{resource} pasadas y futuras
       on_or_after: '%{resource} a partir del %{date}'
+      stop_processing: Parar
+      stop_processing_hint: Las reglas de más abajo no cambian las transacciones que cumple esta regla.
     form:
       rule_name_label: Nombre de la regla (opcional)
       rule_name_placeholder: Introduce un nombre para esta regla
@@ -26,18 +79,37 @@ es:
       all_past_and_future: Todas las %{resource} pasadas y futuras
       starting_from: A partir de
       then: ENTONCES
+      stop_processing_label: No procesar más reglas
+      stop_processing_description: Las reglas que están más abajo en la lista no cambian las transacciones que cumplen esta regla.
+      group_label: Grupo (opcional)
+      group_select_label: Grupo
+      no_group: Sin grupo
+      new_group_label: O un grupo nuevo
+      new_group_placeholder: Nombre del grupo nuevo
+      group_hint: Los grupos solo organizan la lista. Una regla de un grupo se ejecuta en la posición que ocupa el grupo en la lista.
     index:
       page_title: Reglas
       delete_all_rules: Eliminar todas las reglas
       new_rule: Nueva regla
       ai_cost_warning: Las acciones de reglas con IA tienen un coste. Filtra de la forma más precisa posible para evitar costes innecesarios.
       rules_heading: Reglas
+      order_hint: Las reglas se ejecutan de arriba abajo, incluidas las que están dentro de grupos. Cuando una regla asigna un campo a una transacción, las reglas de más abajo no cambian ese campo. Las etiquetas las añaden todas las reglas que coincidan. Arrastra reglas y grupos para cambiar el orden.
+      new_group: Nuevo grupo
+      reorder_group: Mover el grupo %{name}. Pulsa Intro o Espacio para cogerlo y luego usa las flechas para moverlo.
+      filters:
+        no_matches: Ninguna regla coincide con la búsqueda o los filtros.
+        drag_disabled: No se puede reordenar mientras haya una búsqueda o un filtro activo. Restablécelos para cambiar el orden.
+      fold_rule: Plegar o desplegar la regla %{name}
+      reorder_rule: Mover la regla %{name}. Pulsa Intro o Espacio para cogerla y luego usa las flechas para moverla.
       no_rules_title: Todavía no hay reglas
       no_rules_description: Configura reglas para ejecutar acciones sobre tus transacciones y otros datos en cada sincronización de cuentas.
     confirm:
       title: Confirmar cambios
       title_with_name: Confirmar cambios en «%{name}»
       apply_notice_html: Estás a punto de aplicar esta regla a <span class="text-primary font-medium">%{count} %{resource}</span> que cumplen los criterios especificados. Confirma si quieres continuar con este cambio.
+      rules_above_notice:
+        one: La regla activa que tiene encima se ejecuta antes, así que el resultado es el mismo que en la ejecución completa.
+        other: Las %{count} reglas activas que tiene encima se ejecutan antes, así que el resultado es el mismo que en la ejecución completa.
       ai_cost_title: Estimación de coste de IA
       ai_cost_with_estimate_html: 'Se usará IA para categorizar %{count} transacción(es). Coste estimado: <span class="font-semibold">~%{cost} $</span>'
       ai_cost_no_estimate_html: Se usará IA para categorizar %{count} transacción(es).
@@ -47,7 +119,24 @@ es:
       view_usage_history: Ver historial de uso
       confirm_changes: Confirmar cambios
     actions:
+      to_label: a
       value_placeholder: Introduce un valor
+      split:
+        type_fixed: Importe fijo
+        type_percentage: Porcentaje
+        type_label: Tipo de división
+        add_split: Añadir división
+        name_placeholder: Nombre de la división
+        share_label: Importe o porcentaje de la división
+        category_label: Categoría de la división
+        merchant_label: Comercio de la división
+        tags_label: Etiquetas de la división
+        remove_split: Quitar división
+        hint: Las divisiones fijas se restan primero, como importes exactos. Las divisiones porcentuales reparten después lo que quede. Si todas las divisiones usan un importe fijo, añade también una condición que coincida con un importe exacto de transacción (p. ej., Importe = 42.00), ya que todas las transacciones que coincidan necesitan el mismo total para que los importes fijos cuadren. Una regla de división no puede tener otras acciones.
+        fixed_summary_label: fijo
+        summary:
+          one: "%{count} división"
+          other: "%{count} divisiones"
     update:
       success: Regla actualizada
     destroy:
@@ -95,11 +184,28 @@ es:
       confirm_button: Restablecer caché
       success: Se está limpiando la caché de IA. Esto puede tardar unos momentos.
     condition_filters:
+      transaction_additional_detail:
+        label: Detalles adicionales (clave=valor)
       transaction_type:
         income: Ingreso
         expense: Gasto
         transfer: Transferencia
         equal_to: Igual a
+      operators:
+        contains: Contiene
+        does_not_contain: No contiene
+        starts_with: Empieza por
+        ends_with: Termina en
+        matches_regex: Coincide con la expresión regular
+        equal_to: Igual a
+        is_equal_to: Es igual a
+        not_equal_to: Distinto de
+        is_empty: Está vacío
+        is_not_empty: No está vacío
+        greater_than: Mayor que
+        greater_or_equal_to: Mayor o igual que
+        less_than: Menor que
+        less_than_or_equal_to: Menor o igual que
   rule:
     conditions:
       condition_group:
@@ -109,3 +215,5 @@ es:
         any: alguna
         of_the_following_conditions: de las siguientes condiciones
         add_condition: Añadir condición
+      condition:
+        value_placeholder: Introduce un valor
