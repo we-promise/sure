@@ -2489,16 +2489,20 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
   end
 
   # The balance carried the departing units at the previous row's price,
-  # converted at THAT row's date (EUR->GBP 0.9), so the flow is 5 x 100 x 0.9
-  # x 1.25 = 562.5. The journal day's own 0.8 would read 500, and EUR->USD
-  # straight across 550.
+  # converted at THAT row's date (EUR->GBP 0.9 on day zero), and the account
+  # currency then converts at the day before the journal like every other
+  # flow (GBP->USD 1.25 on day one), so the flow is 5 x 100 x 0.9 x 1.25 =
+  # 562.5. The journal day's own 0.8 would read 500, the prior row's
+  # GBP->USD 1.6 would read 720, and EUR->USD straight across 550.
   test "an unpriced journal out of a foreign position converts the previous row through the account's currency" do
     gbp = create_portfolio_account(family: @family, currency: "GBP")
-    set_rate from: "EUR", to: "GBP", date: @day_one, rate: 0.9
+    day_zero = @day_one - 1.day
+    set_rate from: "EUR", to: "GBP", date: day_zero, rate: 0.9
     set_rate from: "EUR", to: "GBP", date: @day_two, rate: 0.8
+    set_rate from: "GBP", to: "USD", date: day_zero, rate: 1.6
     set_rate from: "GBP", to: "USD", date: @day_one, rate: 1.25
     set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
-    gbp.holdings.create!(security: security_under_test, date: @day_one, qty: 5, price: 100, amount: 500, currency: "EUR")
+    gbp.holdings.create!(security: security_under_test, date: day_zero, qty: 5, price: 100, amount: 500, currency: "EUR")
     lay_balance account: gbp, date: @day_one, opening: 1_450, closing: 1_450
     lay_balance account: gbp, date: @day_two, opening: 1_450, closing: 1_000, market_flow: -450
     security_journal account: gbp, date: @day_two, qty: -5, price: 0, currency: "EUR"
@@ -2512,11 +2516,13 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
 
   # A carry is valued from its first priced row, so the same two steps run
   # from that row's date: 5 x 100 x 0.8 (EUR->GBP on day three) x 1.25
-  # (GBP->USD on day two) = 500, where EUR->USD on day two read 550.
+  # (GBP->USD on day two) = 500, where EUR->USD on day two read 550 and the
+  # day before the journal itself (GBP->USD 1.4 on day one) 560.
   test "a carried foreign journal converts through the account's currency" do
     gbp = create_portfolio_account(family: @family, currency: "GBP")
     day_three = @day_two + 1.day
     set_rate from: "EUR", to: "GBP", date: day_three, rate: 0.8
+    set_rate from: "GBP", to: "USD", date: @day_one, rate: 1.4
     set_rate from: "GBP", to: "USD", date: @day_two, rate: 1.25
     set_rate from: "GBP", to: "USD", date: day_three, rate: 1.5
     set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.1

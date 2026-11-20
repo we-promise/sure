@@ -20,7 +20,10 @@
 # so every local component (flows, market, revaluations) is converted at the
 # PREVIOUS day's rate and the fx term is the closing local balance times the
 # rate change. That identity is what lets Portfolio::Drivers report a genuine
-# `unexplained` residual instead of defining one away.
+# `unexplained` residual instead of defining one away. A journal in another
+# currency takes one step first: into the account's currency at the rate of
+# the row it is valued from, as the balance carried it, and only then from
+# the account's currency at the previous day's rate like everything else.
 class Portfolio::DailyReturns
   # One day. `r` is nil until #returns computes it, so a caller reading rows
   # directly cannot mistake a raw component for a return.
