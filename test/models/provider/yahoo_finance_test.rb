@@ -1187,6 +1187,19 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_not Provider::YahooFinance.venue_supported?("XHKG")
   end
 
+  test "venue_supported? accepts every US venue in the exchange list" do
+    us_mics = Security::EXCHANGES.select { |_mic, info| info["country"] == "US" }.keys
+
+    assert_includes us_mics, "XNGS"
+    us_mics.each do |mic|
+      assert Provider::YahooFinance.venue_supported?(mic), "#{mic} should be supported"
+    end
+  end
+
+  test "venue_supported? still refuses a non-US venue with no Yahoo suffix" do
+    assert_not Provider::YahooFinance.venue_supported?("XHKG", ticker: "0005")
+  end
+
   test "venue_supported? accepts US over-the-counter venues" do
     %w[OTCM OOTC PINX XOTC PNK].each do |mic|
       assert Provider::YahooFinance.venue_supported?(mic), "#{mic} should be supported"

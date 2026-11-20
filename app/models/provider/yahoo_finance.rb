@@ -1,10 +1,14 @@
 require "set"
 
 class Provider::YahooFinance < Provider
-  # US venues, which Yahoo looks up without a suffix: the MICs map_exchange_mic
-  # returns for US exchanges, the OTC markets, and the Yahoo codes it passes
-  # through unmapped (PNK for Pink Sheets, BTS for Cboe BZX).
-  UNSUFFIXED_MICS = %w[XNAS XNYS ARCX XASE BATS IEXG OTCM OOTC PINX XOTC PNK BTS].freeze
+  # US venues, which Yahoo looks up without a suffix: every US MIC in
+  # config/exchanges.yml, plus OTC codes that list doesn't carry and the Yahoo
+  # codes map_exchange_mic passes through unmapped (PNK for Pink Sheets, BTS
+  # for Cboe BZX).
+  UNSUFFIXED_MICS = (
+    Security::EXCHANGES.select { |_mic, info| info["country"] == "US" }.keys +
+    %w[OOTC XOTC PNK BTS]
+  ).to_set.freeze
 
   # A ticker already in Yahoo's suffixed form (0005.HK, 7203.T), as Yahoo's own
   # search stores it for venues EXCHANGE_CONFIG doesn't map.
