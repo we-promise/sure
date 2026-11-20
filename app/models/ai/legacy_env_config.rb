@@ -154,7 +154,7 @@ class Ai::LegacyEnvConfig
       model = provider && llm_model(endpoint, provider, name,
                                     context_window: explicit_context_window,
                                     max_output_tokens: positive(env("ANTHROPIC_MAX_TOKENS")) || ANTHROPIC_MAX_TOKENS,
-                                    vision:, documents: vision)
+                                    vision:, documents: vision && anthropic_native?(base_url))
       [ endpoint, model ]
     end
 

@@ -25,6 +25,21 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
 
   DATE_WINDOW = 120
   MIN_DATES_ANCHORED = 0.5
+  DATE_FORMATS = %w[%m/%d %-m/%-d %d/%m %-d/%-m %d.%m %-d.%-m %-d%B %-d%b %B%-d %b%-d %Y-%m-%d].freeze
+  # strftime's %B/%b are English; statements use whichever locale the bank prints. Build the
+  # month names once from Rails' locale data instead of keeping an English-only list.
+  LOCALIZED_MONTH_NAMES = I18n.available_locales.each_with_object({}) do |locale, names|
+    %w[month_names abbr_month_names].each do |key|
+      month_names = I18n.t("date.#{key}", locale:, default: nil)
+      next unless month_names.is_a?(Array)
+
+      month_names.each_with_index do |name, month|
+        next if month.zero? || name.blank?
+
+        (names[month] ||= []) << name.downcase
+      end
+    end
+  end.transform_values(&:uniq).freeze
 
   schema({
     type: "object",
@@ -198,16 +213,20 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
         /(?<!\d)(?<!\d[.,])(?:#{printed_amounts(amount).map { Regexp.escape(_1) }.join("|")})(?!\d)/
       end
 
-      # 2575.0 as "2575.00", "2,575.00" or "2 575.00"; 0.26 also as ".26".
+      # 2575.0 as "2575.00", "2,575.00" or "1.234,56", with spaces between digits normalized to
+      # "|" upstream; 0.26 also as ".26" or ",26". Dot-decimal forms stay first.
       def printed_amounts(amount)
-        plain = format("%.2f", amount.to_f.abs)
-        [ plain, plain.gsub(/(\d)(?=(\d{3})+\.)/, '\1,'), plain.gsub(/(\d)(?=(\d{3})+\.)/, '\1|'), plain.sub(/\A0\./, ".") ].uniq
+        whole, cents = format("%.2f", amount.to_f.abs).split(".")
+        grouped = ->(separator) { whole.gsub(/(?<=\d)(?=(\d{3})+\z)/, separator) }
+        [ "#{whole}.#{cents}", "#{grouped.call(',')}.#{cents}", "#{grouped.call('|')}.#{cents}", (".#{cents}" if whole == "0"),
+          "#{whole},#{cents}", "#{grouped.call('.')},#{cents}", "#{grouped.call('|')},#{cents}", (",#{cents}" if whole == "0") ].compact.uniq
       end
 
-      # 2019-02-01 as "02/01", "2/1", "01/02", "1february", "1feb", "february1"...
+      # 2019-02-01 as "02/01", "2/1", "01/02", "05.01", "1february", "1feb", "5janvier"...
       def printed_dates(date)
         day = Date.iso8601(date.to_s)
-        %w[%m/%d %-m/%-d %d/%m %-d/%-m %-d%B %-d%b %B%-d %b%-d %Y-%m-%d].map { day.strftime(_1).downcase }.uniq
+        localized = LOCALIZED_MONTH_NAMES.fetch(day.month, []).flat_map { |name| [ "#{day.day}#{name}", "#{name}#{day.day}" ] }
+        (DATE_FORMATS.map { day.strftime(_1).downcase } + localized).uniq
       rescue Date::Error
         []
       end

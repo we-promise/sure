@@ -257,10 +257,10 @@ module AiTestHelper
     VCR.configuration.ignore_localhost = ignored unless ignored.nil?
   end
 
-  # True when a live test can run: it's recording or live with its key (and, for a llama.cpp
-  # server, the URL variable it uses), or replaying a cassette.
+  # True when a live test can run: it's recording or live with its key (a nil key needs none),
+  # or replaying a cassette. A llama.cpp server also needs the URL variable it uses.
   def ai_cassette_available?(preset, name, key:, url: (preset.to_s == "llama_cpp" ? "LLAMA_CPP_URL" : nil))
-    return ENV[key].present? && (url.nil? || ENV[url].present?) if AiTestHelper.live_or_recording?
+    return (key.nil? || ENV[key].present?) && (url.nil? || ENV[url].present?) if AiTestHelper.live_or_recording?
 
     Rails.root.join("test/vcr_cassettes/ai/#{preset}/#{name}.yml").exist?
   end

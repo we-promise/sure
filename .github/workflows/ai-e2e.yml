@@ -76,6 +76,11 @@ jobs:
           bin/rails db:create
           bin/rails db:schema:load
 
+      # Running a test path directly skips test:prepare, which builds the stylesheet the
+      # chat system test needs.
+      - name: Prepare assets
+        run: bin/rails test:prepare
+
       # One process: the live calls run one at a time, within the free tiers' rate limits.
       - name: End-to-end tests
         env:

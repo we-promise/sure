@@ -184,7 +184,9 @@ class PdfImportTest < ActiveSupport::TestCase
     import.update!(status: :complete, extraction_checks: { "passed" => false, "reconciles" => false })
     assert import.rereadable?
 
-    import.stubs(:imported_count).returns(3)
+    # The first call saw no entries; one created after it must still close the guard.
+    import.entries.create!(account: accounts(:depository), date: Date.current, name: "Published row",
+                           amount: -1, currency: "USD", entryable: Transaction.new)
     assert_not import.rereadable?
   end
 

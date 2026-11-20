@@ -23,6 +23,24 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_equal true, checks.to_h[:passed]
   end
 
+  test "comma-decimal amounts and thousands grouping are found in the text" do
+    source = "01/02/2025 salary 1.234,56|01/02/2025 card 12,50"
+
+    checks = check(value([ [ "2025-02-01", 1234.56 ], [ "2025-02-01", -12.5 ] ]), source:)
+
+    assert checks.amounts_in_source
+    assert_operator checks.dates_anchored, :>=, 0.5
+  end
+
+  test "dotted and localized dates anchor their amounts" do
+    source = "05.01.2025 fee 12,50|5 janvier fee 12,50"
+
+    checks = check(value([ [ "2025-01-05", -12.5 ], [ "2025-01-05", -12.5 ] ]), source:)
+
+    assert checks.amounts_in_source
+    assert_operator checks.dates_anchored, :>=, 0.5
+  end
+
   test "a flipped sign, a missing row or a merged row fails reconciles" do
     flipped = BAC_ROWS.map { |date, amount| amount == -78.34 ? [ date, 78.34 ] : [ date, amount ] }
     missing = BAC_ROWS - [ [ "2019-02-11", 300.0 ] ]

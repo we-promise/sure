@@ -26,6 +26,12 @@ class AiE2eHelperTest < ActiveSupport::TestCase
     end
   end
 
+  test "the Kilo gateway URL can be overridden for both live suites" do
+    with_env_overrides("KILO_BASE_URL" => "https://gateway.example.test/v1") do
+      assert_equal "https://gateway.example.test/v1", send(:kilo_env)[:OPENAI_URI_BASE]
+    end
+  end
+
   test "the chat system test leaves the browser alone when AI_E2E is unset" do
     with_env_overrides("AI_E2E" => nil) do
       system_test = AiE2eChatSystemTest.new("chat round-trip")

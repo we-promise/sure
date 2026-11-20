@@ -22,6 +22,23 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     assert_equal 7, response.usage.input_tokens
   end
 
+  test "embeddings follow the returned index and reject a bad permutation" do
+    reordered = rows([ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ])
+    reordered[:data].reverse!
+    stub_embeddings(reordered)
+
+    assert_equal [ [ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ] ], embed(%w[first second]).vectors,
+                 "the first text keeps the vector the server indexed 0"
+
+    WebMock.reset!
+    invalid = rows([ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ])
+    invalid[:data].first[:index] = 2
+    stub_embeddings(invalid)
+
+    error = assert_raises(Ai::Error::InvalidOutput) { embed(%w[first second]) }
+    assert_match(/Invalid or duplicate embedding record positions/, error.message)
+  end
+
   test "a single text still comes back as a list of one vector" do
     stub_embeddings(rows([ 0.1, 0.2, 0.3 ]))
 

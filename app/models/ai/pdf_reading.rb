@@ -118,8 +118,8 @@ class Ai::PdfReading
       first = nil
       usage = nil
       CLASSIFY_BATCHES.times do
-        result = Ai::Generations::ReadPdf.new(units:, content:, filename:, family:, user:).call(batches: 1, plan:, cancelled:)
         begin
+          result = Ai::Generations::ReadPdf.new(units:, content:, filename:, family:, user:).call(batches: 1, plan:, cancelled:)
           result.value!
         rescue Ai::Error::Cancelled
           raise
@@ -263,8 +263,9 @@ class Ai::PdfReading
 
     # One OCR request per page: a local OCR model takes ~45 s a page on CPU, so each request
     # keeps within the endpoint's timeout, and Mistral and Cohere bill per page anyway. A page a
-    # route can't read goes to the next route; a page no route can read is left blank and counted,
-    # so Auto can still extract from the rest and flag the result incomplete.
+    # route can't read goes to the next route; a route that times out is skipped for later pages.
+    # A page no route can read is left blank and counted, so Auto can still extract from the rest
+    # and flag the result incomplete.
     def transcribe(cancelled: nil)
       return @transcription if @transcription
 
@@ -273,10 +274,11 @@ class Ai::PdfReading
       raise Ai::Error::Unavailable, :needs_ocr_route if routes.empty?
 
       untranscribed = []
+      timed_out = []
       pages = (1..page_count).map do |number|
         raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
 
-        text, = transcribe_page(number, routes, cancelled:)
+        text, = transcribe_page(number, routes, timed_out:, cancelled:)
         untranscribed << number unless text
         text || ""
       end
@@ -288,10 +290,10 @@ class Ai::PdfReading
     end
 
     # [the page's text, or nil when every route refused or couldn't read it].
-    def transcribe_page(number, routes, cancelled:)
+    def transcribe_page(number, routes, timed_out:, cancelled:)
       png = Pdf::PageImages.render(content, pages: [ number ]).first
       routes.each do |route|
-        next if Ai::DownMarks.down?(route)
+        next if timed_out.include?(route) || Ai::DownMarks.down?(route)
         raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
 
         begin
@@ -303,8 +305,11 @@ class Ai::PdfReading
           Rails.logger.warn("[Ai::PdfReading] OCR page #{number}: #{route.model.name} returned no text")
         rescue *NEXT_WAY, Ai::Error::Timeout => error
           # A refusal, unusable answer or timeout ends this route's try at this page, not the
-          # whole way: a later OCR route may still transcribe it.
-          Rails.logger.warn("[Ai::PdfReading] OCR page #{number} on #{route.model.name}: #{error.class.name}: #{error.message}")
+          # whole way: a later OCR route may still transcribe it. A timed-out route is slow enough
+          # that retrying it on every later page risks the whole job, so skip it for this run.
+          # Never log the provider's message: it can carry account numbers or other identifiers.
+          timed_out << route if error.is_a?(Ai::Error::Timeout)
+          Rails.logger.warn("[Ai::PdfReading] OCR page #{number} on #{route.model.name}: #{error.class.name} (status=#{error.status.inspect})")
         end
       end
       [ nil, :unreadable ]

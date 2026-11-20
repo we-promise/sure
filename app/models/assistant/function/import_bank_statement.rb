@@ -31,8 +31,10 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
 
         If account_id is not provided, you should ask the user which account to import to.
 
-        read_as is optional: leave it out (Auto) unless the user asks for a way, or a statement came
-        out badly and should be read again another way (pdf, images, ocr or text).
+        read_as is optional: leave it out (Auto) unless the user asks for a way. If an earlier
+        extraction came out badly, ask the user to delete its draft import first; publishing or
+        reviewing that draft does not allow a second extraction, and read_as alone won't create one
+        while the draft exists.
       INSTRUCTIONS
     end
   end
@@ -118,7 +120,9 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         error: "draft_already_exists",
         import_id: live_draft.id,
         message: "This statement already has a draft for that account (import #{live_draft.id}). " \
-                 "Review or publish that draft before extracting it again."
+                 "Delete that draft first; reviewing or publishing it does not allow a second extraction, " \
+                 "and read_as alone cannot create another draft while it exists.",
+        available_actions: [ "Ask the user to delete draft import #{live_draft.id}, then call this tool again" ]
       }
     end
 

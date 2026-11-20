@@ -27,7 +27,7 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
     # Kilo's free router, which answers without a key; the release run (ai-e2e.yml) runs only
     # this and Jev. Chat completions with auto JSON mode, as a self-hoster's custom URL gets. It
     # routes to reasoning models, which spend 1024 tokens thinking.
-    "kilo/kilo-auto/free" => { key: "KILO_API_KEY", protocol: :compatible, json_mode: :auto, max_output_tokens: 8192,
+    "kilo/kilo-auto/free" => { key: nil, api_key: "anonymous", protocol: :compatible, json_mode: :auto, max_output_tokens: 8192,
                                base_url: ENV.fetch("KILO_BASE_URL", "https://api.kilo.ai/api/gateway"),
                                extra_headers: { "X-KiloCode-OrganizationId" => ENV.fetch("KILO_ORG_ID", "") } },
     # OpenRouter free tiers, same Stripe-style gateway; auto JSON mode since free-model
@@ -41,6 +41,16 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
     @category = @family.categories.create!(name: "Coffee Shops")
+  end
+
+  test "the free Kilo route needs no named key and uses the anonymous credential" do
+    with_env_overrides("AI_LIVE" => "1", "RECORD_CASSETTES" => nil, "KILO_API_KEY" => nil) do
+      spec = ROUTES.fetch("kilo/kilo-auto/free")
+
+      assert_nil spec[:key]
+      assert ai_cassette_available?("kilo", "generate_categorize_kilo-auto-free", key: spec[:key])
+      assert_equal "anonymous", plan_for(:categorize, "kilo", "kilo-auto/free", spec).routes.first.model.endpoint.api_key
+    end
   end
 
   ROUTES.each do |route_name, spec|
@@ -80,11 +90,13 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
     def skip_without(preset, name, spec)
       return if ai_cassette_available?(preset, name, key: spec[:key])
 
-      skip "no cassette ai/#{preset}/#{name}; record with RECORD_CASSETTES=1 and #{spec[:key]} set"
+      credential = spec[:key] ? "#{spec[:key]} set" : "an anonymous credential"
+      skip "no cassette ai/#{preset}/#{name}; record with RECORD_CASSETTES=1 and #{credential}"
     end
 
     def plan_for(feature, preset, model_name, spec)
-      endpoint = Ai::Config::Endpoint.new(name: preset, api_key: ENV[spec[:key]].presence || "recorded",
+      api_key = spec[:api_key] || ENV[spec[:key]].presence || "recorded"
+      endpoint = Ai::Config::Endpoint.new(name: preset, api_key:,
                                           **spec.slice(:protocol, :preset, :responses_api, :json_mode, :base_url, :location, :extra_headers))
       model = Ai::Config::Model.new(endpoint:, name: model_name, capabilities: %i[structured_output], max_output_tokens: spec.fetch(:max_output_tokens, 1024))
       route = Ai::Route.new(feature:, model:, prompt: Ai::LegacyEnvConfig.prompt_for(feature, endpoint))

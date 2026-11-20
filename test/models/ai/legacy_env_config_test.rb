@@ -80,6 +80,14 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert claude.capable?(:vision, :documents)
   end
 
+  test "a custom Anthropic gateway is trusted with images but not native PDFs" do
+    claude = first_model(build("ANTHROPIC_API_KEY" => "sk-ant", "ANTHROPIC_MODEL" => "claude-haiku-4-5",
+                               "ANTHROPIC_BASE_URL" => "https://gateway.example.test", "LLM_PROVIDER" => "anthropic"), :extract_pdf)
+
+    assert claude.capable?(:vision)
+    assert_not claude.capable?(:documents)
+  end
+
   test "OPENAI_SUPPORTS_PDF_PROCESSING=false keeps PDF import off, as today" do
     config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1",
                    "OPENAI_MODEL" => "qwen3", "OPENAI_SUPPORTS_PDF_PROCESSING" => "false")

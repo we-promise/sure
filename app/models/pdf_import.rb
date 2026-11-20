@@ -282,7 +282,7 @@ class PdfImport < Import
   # "Read again as…" is offered before anything is published: while the rows wait for review,
   # after a failure, or when a flagged reading finished without rows.
   def rereadable?
-    imported_count.zero? && (pending? || failed? || (complete? && extraction_flagged?))
+    !entries.exists? && (pending? || failed? || (complete? && extraction_flagged?))
   end
 
   # "Read again as…": a badly read statement, read another way without changing the config. The

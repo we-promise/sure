@@ -11,6 +11,7 @@
 # test/models/ai/live/openrouter_jev_live_test.rb), and Cohere's `embed-v5.0-fast` for documents.
 module AiE2eHelper
   KILO_URL = "https://api.kilo.ai/api/gateway".freeze
+  def kilo_url = ENV["KILO_BASE_URL"].presence || KILO_URL
   KILO_MODEL = "kilo-auto/free".freeze
   # OpenCode Zen's free Jev, at a TypeSafe-style path, with its anonymous key.
   JEV_URL = "https://opencode.ai/zen/v1/systemone".freeze
@@ -68,7 +69,7 @@ module AiE2eHelper
     def kilo_env
       {
         OPENAI_ACCESS_TOKEN: ENV["KILO_API_KEY"].presence || "anonymous",
-        OPENAI_URI_BASE: KILO_URL,
+        OPENAI_URI_BASE: kilo_url,
         OPENAI_MODEL: KILO_MODEL,
         OPENAI_EXTRA_HEADERS: ({ "X-KiloCode-OrganizationId" => ENV["KILO_ORG_ID"] }.to_json if ENV["KILO_ORG_ID"].present?),
         LLM_CONTEXT_WINDOW: CONTEXT_WINDOW,

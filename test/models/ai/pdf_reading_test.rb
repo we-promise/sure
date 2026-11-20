@@ -307,6 +307,20 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "read keeps the first answer when a lookahead batch cannot render" do
+    units = [ Ai::PdfReading::Unit.text("COVER", page: 1), Ai::PdfReading::Unit.text("TRANSACTIONS", page: 2) ]
+    first = Ai::Result.new(value: { document_type: "other", summary: nil, extracted_data: nil }, remaining: [ units.last ])
+    failing = stub
+    failing.stubs(:call).raises(Pdf::PageImages::Error.new("render failed", code: :unreadable))
+    Ai::Generations::ReadPdf.stubs(:new).returns(stub(call: first), failing)
+    reader = reading(@bac)
+    reader.stubs(:units_for).returns([ units, "COVER\nTRANSACTIONS" ])
+
+    with_reading_routes(text_model.with(batch_size: 1)) do
+      assert_equal "other", reader.read.value[:document_type]
+    end
+  end
+
   test "an OCR route marked down after the check ends that way before any page is rendered" do
     reader = reading(@scan)
     reader.stubs(:ocr_route).returns(nil)
@@ -375,6 +389,58 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
       assert outcome.value.present?, "the backup OCR route produced the reading"
     end
     assert_equal %w[unlimited-ocr-2 parse-v5.0], calls, "the timeout ended this route's try, not the OCR way"
+  end
+
+  test "a timed-out OCR route is skipped on later pages" do
+    skip_without_pdftoppm
+    calls = []
+    stub_ai(:extract_pdf) do |request|
+      if request.is_a?(Ai::Transport::Base::OcrRequest)
+        page = request.pages.first.filename
+        calls << [ request.model.name, page ]
+        raise Ai::Error::Timeout, "slow" if request.model.name == "unlimited-ocr-2"
+
+        "1 February Cardpayment 24.50"
+      else
+        next { document_type: "bank_statement", summary: nil, extracted_data: nil } if request.schema_name == "document_analysis"
+
+        statement([ [ "2019-02-01", -24.5 ] ], opening: 0.0, closing: 24.5)
+      end
+    end
+
+    with_reading_routes(text_model, ocr_model, backup_ocr_model) do
+      reading(blank_pdf(pages: 2)).extract(read_as: :ocr)
+    end
+
+    assert_equal [ [ "unlimited-ocr-2", "page-1.png" ], [ "parse-v5.0", "page-1.png" ],
+                   [ "parse-v5.0", "page-2.png" ] ], calls
+  end
+
+  test "an OCR failover logs the class and status, never the provider's message" do
+    skip_without_pdftoppm
+    warnings = []
+    Rails.logger.stubs(:warn).with { |message| warnings << message; true }
+    stub_ai(:extract_pdf) do |request|
+      if request.is_a?(Ai::Transport::Base::OcrRequest)
+        raise Ai::Error::Refused.new("400: account 12345678 is invalid", status: 400) if request.model.name == "unlimited-ocr-2"
+
+        "1 February Cardpayment 24.50"
+      else
+        next { document_type: "bank_statement", summary: nil, extracted_data: nil } if request.schema_name == "document_analysis"
+
+        statement([ [ "2019-02-01", -24.5 ] ], opening: 0.0, closing: 24.5)
+      end
+    end
+
+    with_reading_routes(text_model, ocr_model, backup_ocr_model) do
+      assert_equal :ocr, reading(blank_pdf(pages: 1)).extract(read_as: :ocr).way
+    end
+
+    warning = warnings.find { _1.include?("unlimited-ocr-2") }
+    assert warning, "the failed route must still be logged"
+    assert_includes warning, "Ai::Error::Refused"
+    assert_includes warning, "status=400"
+    assert_not_includes warning, "12345678"
   end
 
   test "OCR checks cancellation between pages" do
