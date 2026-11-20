@@ -303,9 +303,12 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_outflow, sql[sold_out.id]
   end
 
+  # The legs are in two accounts in scope, so only the security tells them
+  # apart from a pair: dropping the security from the match makes them
+  # internal.
   test "a zero-quantity Transfer trade with no opposite leg in scope takes its direction from the amount" do
     out_leg = cash_only_trade(label: "Transfer", amount: 500)
-    in_leg = cash_only_trade(label: "Transfer", amount: -500, security: create_portfolio_security)
+    in_leg = cash_only_trade(label: "Transfer", amount: -500, security: create_portfolio_security, account: @ira)
 
     sql = @family_scope.classify_ids([ out_leg.id, in_leg.id ])
 
@@ -313,6 +316,16 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_outflow, sql[out_leg.id]
     assert_equal :external_inflow, @family_scope.classify(in_leg)
     assert_equal :external_inflow, sql[in_leg.id]
+  end
+
+  # Zero is not negative, so a zero-quantity external trade with a zero
+  # amount reads as an outflow on both paths (it was an inflow before
+  # quantity 0 took its direction from the amount).
+  test "a zero-quantity external trade with a zero amount is an outflow" do
+    zero = cash_only_trade(label: "Withdrawal", amount: 0)
+
+    assert_equal :external_outflow, @family_scope.classify(zero)
+    assert_equal :external_outflow, @family_scope.classify_ids([ zero.id ])[zero.id]
   end
 
   # The opposite-leg match pairs on qty = -qty, which two qty-0 legs of the
