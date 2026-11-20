@@ -27,6 +27,19 @@ import {
 // shows in full.
 const SAVED_HEADROOM_FACTOR = 2;
 
+// Axis floor and tick step for the y-axis. The floor sits 10% of the visible
+// range below the recent minimum, rounded down to a multiple of the tick step,
+// so the bottom edge is always a labeled tick and the labels stay evenly
+// spaced. Returns floor 0 when there is no useful floor (a new goal, or a
+// floor within one step of zero); the axis then stays anchored at zero as before.
+function axisFloor(recentMin, yMax) {
+  if (!(recentMin > 0) || !(yMax > recentMin)) return { floor: 0, step: 0 };
+  const padded = recentMin - 0.1 * (yMax - recentMin);
+  const step = d3.tickStep(padded, yMax, 3);
+  const floor = Math.floor(padded / step) * step;
+  return floor > 0 ? { floor, step } : { floor: 0, step: 0 };
+}
+
 export default class extends Controller {
   static values = {
     data: Object,
@@ -143,9 +156,12 @@ export default class extends Controller {
     const savedSeries = [];
     // Only seed a (start, 0) point when start_date predates the first
     // contribution. Otherwise the line draws a vertical jump up at the
-    // chart's left edge.
+    // chart's left edge. Kept in a variable so it can be dropped below when
+    // the axis does not start at zero.
+    let seedPoint = null;
     if (!firstContribDate || firstContribDate.getTime() > start.getTime()) {
-      savedSeries.push({ date: start, value: 0 });
+      seedPoint = { date: start, value: 0 };
+      savedSeries.push(seedPoint);
     }
     savedSeries.push(...rawSavedSeries);
     // Always close the saved line at (today, currentAmount) — the projection
@@ -195,8 +211,20 @@ export default class extends Controller {
     const savedMax = d3.max(savedSeries, (d) => d.value) || 0;
     const yMax = Math.min(Math.max(goalBand, savedMax * 1.05), goalBand * SAVED_HEADROOM_FACTOR);
 
+    // Fit the floor to the last 90 days of the saved line (and today's balance),
+    // so recent progress is visible instead of flattened against zero. The
+    // zero seed point is dropped when the axis no longer starts at zero; the
+    // area and line are clipped to the plot either way.
+    const windowStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const recentMin = Math.min(
+      currentAmount,
+      ...rawSavedSeries.filter((p) => p.date >= windowStart).map((p) => p.value)
+    );
+    const { floor: yMin, step: yStep } = axisFloor(recentMin, yMax);
+    if (yMin > 0 && seedPoint) savedSeries.splice(savedSeries.indexOf(seedPoint), 1);
+
     const x = d3.scaleTime().domain([start, endDate]).range([margin.left, margin.left + innerWidth]);
-    const y = d3.scaleLinear().domain([0, yMax]).range([margin.top + innerHeight, margin.top]);
+    const y = d3.scaleLinear().domain([yMin, yMax]).range([margin.top + innerHeight, margin.top]);
 
     const svg = d3
       .select(root)
@@ -241,7 +269,11 @@ export default class extends Controller {
 
     const COLLISION_PX = 18;
     const targetY = targetAmount > 0 ? y(targetAmount) : null;
-    const yTicks = yAxisVisible ? y.ticks(3) : [];
+    // With a floor, label from the floor up in even steps so the bottom edge
+    // carries a label; otherwise keep d3's default ticks.
+    const yTicks = yAxisVisible
+      ? (yMin > 0 ? d3.range(yMin, yMax + yStep / 2, yStep) : y.ticks(3))
+      : [];
     const targetCollidesWithTick =
       targetY !== null && yTicks.some((tv) => Math.abs(y(tv) - targetY) < COLLISION_PX);
 
