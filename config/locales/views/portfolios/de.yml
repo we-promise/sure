@@ -43,6 +43,7 @@ de:
         cash: Bargeld
         crypto: Krypto
         standard: Wertpapiere
+      nested_label: "Woraus %{name} besteht"
       toggle: Zusammensetzung von %{name} ein- oder ausblenden
       total: Gesamt
       value: Wert

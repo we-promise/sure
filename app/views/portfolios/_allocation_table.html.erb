@@ -1,4 +1,4 @@
-<%# locals: (statement:, segments:, by:, parent:, path: "portfolio-allocation-table", depth: 0) %>
+<%# locals: (statement:, segments:, by:, parent:, path: "portfolio-allocation-table", depth: 0, parent_name: nil) %>
 
 <%# One table per level of the drill-down. Only the asset-class ladder nests: a
     row with a level below it gets a toggle that reveals the same table for that
@@ -12,13 +12,14 @@
       rows: segments,
       inset: depth.zero?,
       id: path,
-      label: (t("portfolios.sections.allocation") if depth.zero?),
+      label: depth.zero? ? t("portfolios.sections.allocation") : t("portfolios.allocation.nested_label", name: parent_name),
       row_detail: ->(segment) {
         next if children[segment.id].empty?
 
         render "portfolios/allocation_table", statement: statement, segments: children[segment.id],
                by: allocation_child_grouping(by), parent: allocation_child_parent(by, segment, parent),
-               path: "#{path}-#{segment.id.to_s.parameterize}", depth: depth + 1
+               path: "#{path}-#{segment.id.to_s.parameterize}", depth: depth + 1,
+               parent_name: allocation_segment_name(segment, by)
       }
     ) do |table| %>
   <% table.with_column(t("portfolios.allocation.groupings.#{by}"), row_header: true) do |segment, index| %>

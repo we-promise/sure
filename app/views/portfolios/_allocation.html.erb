@@ -35,8 +35,8 @@
             </div>
           </div>
 
-          <% segments.each do |segment| %>
-            <div id="segment_<%= segment.id %>" class="hidden">
+          <% segments.each_with_index do |segment, index| %>
+            <div id="segment_<%= allocation_segment_key(segment, index) %>" class="hidden">
               <div class="flex flex-col gap-2 items-center">
                 <p class="text-sm text-secondary"><%= allocation_segment_name(segment, active_by) %></p>
                 <p data-donut-chart-target="amount" class="text-3xl font-medium text-primary privacy-sensitive whitespace-nowrap"><%= format_money(segment.amount) %></p>

@@ -42,7 +42,7 @@ module PortfoliosHelper
   def allocation_segments_json(segments, currency:)
     segments.each_with_index.map do |segment, index|
       {
-        id: segment.id,
+        id: allocation_segment_key(segment, index),
         name: segment.name,
         amount: segment.amount.amount.to_f.round(2),
         currency: currency,
@@ -50,6 +50,15 @@ module PortfoliosHelper
         color: allocation_color(index)
       }
     end.to_json
+  end
+
+  # A segment's id in the donut's markup (`segment_<key>` and the arc's
+  # data-segment-id). Ids are stored values, and a sector or security name can
+  # carry spaces or punctuation that break the controller's `#segment_<id>`
+  # selector, so the key is the position plus the parameterised id: CSS-safe,
+  # and unique even when two names parameterise alike.
+  def allocation_segment_key(segment, index)
+    [ index, segment.id.to_s.parameterize.presence ].compact.join("-")
   end
 
   # Segment names arrive as stored keys, not display text -- `equity`,

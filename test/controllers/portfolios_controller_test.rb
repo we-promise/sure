@@ -1,6 +1,7 @@
 require "test_helper"
 
 class PortfoliosControllerTest < ActionDispatch::IntegrationTest
+  include PortfoliosHelper
   include SqlQueryCapture
 
   setup do
@@ -495,7 +496,8 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
 
     mount = css_select("#portfolio-allocation [data-controller='donut-chart']").first
     segments = JSON.parse(mount["data-donut-chart-segments-value"])
-    assert_equal statement.allocation_by(nil).map(&:id), segments.map { |s| s["id"] }
+    assert_equal statement.allocation_by(nil).each_with_index.map { |segment, index| allocation_segment_key(segment, index) },
+                 segments.map { |s| s["id"] }
     assert_in_delta 100.0, segments.sum { |s| s["percentage"] }, 0.2
     assert segments.all? { |s| s["color"].match?(/\A#\h{6}\z/) }
     assert_select "#portfolio-allocation a[aria-current='true'][href=?]", "#{portfolio_path}?by=security"
@@ -584,6 +586,25 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-portfolio-grandchild] [aria-controls]", count: 0
     # The detail rows start hidden; the toggle reveals them.
     assert_select "tr[hidden] #{root}-equity", count: 1
+    # Each nested table is named for the row it opens from.
+    assert_select "#{root}-equity > [role=region][aria-label=?]",
+                  I18n.t("portfolios.allocation.nested_label", name: I18n.t("portfolios.allocation.asset_classes.equity"))
+  end
+
+  # A sector is provider free text, so its id can carry spaces. The donut finds
+  # a segment's hover content by `#segment_<id>`, which only works when the id
+  # in the chart data and in the markup is CSS-safe and the same.
+  test "a sector with spaces in its name keeps its donut hover content reachable" do
+    security = Security.create!(ticker: "CDS9", name: "A retailer", sector: "Consumer Discretionary", offline: true)
+    Holding.create!(account: accounts(:investment), security: security, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+
+    get portfolio_path(by: "sector")
+    assert_response :success
+
+    mount = css_select("#portfolio-allocation [data-controller='donut-chart']").first
+    ids = JSON.parse(mount["data-donut-chart-segments-value"]).map { |s| s["id"] }
+    assert ids.none? { |id| id.match?(/\s/) }, "segment ids must be CSS-safe: #{ids.inspect}"
+    ids.each { |id| assert_select "#portfolio-allocation #segment_#{id}", count: 1 }
   end
 
   # Only the asset-class ladder nests; a flat grouping renders no disclosure.

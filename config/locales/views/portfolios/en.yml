@@ -43,6 +43,7 @@ en:
         cash: Cash
         crypto: Crypto
         standard: Securities
+      nested_label: "What %{name} is made of"
       toggle: Show or hide what %{name} is made of
       total: Total
       value: Value

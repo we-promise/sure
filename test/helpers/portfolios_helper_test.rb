@@ -30,7 +30,7 @@ class PortfoliosHelperTest < ActionView::TestCase
 
     json = JSON.parse(allocation_segments_json([ segment ], currency: "USD"))
 
-    assert_equal [ { "id" => "USD", "name" => "USD", "amount" => 1234.57, "currency" => "USD", "percentage" => 61.2, "color" => Category::COLORS.first } ], json
+    assert_equal [ { "id" => "0-usd", "name" => "USD", "amount" => 1234.57, "currency" => "USD", "percentage" => 61.2, "color" => Category::COLORS.first } ], json
   end
 
   test "a segment's label is translated in its grouping's vocabulary, by id for unclassified" do
