@@ -3,8 +3,10 @@
 # The model part of the provider kit's lifecycle contract: the connection and its
 # accounts on the kit's base classes, the shared syncer, unlinking and destroy.
 # Include it in a test case that defines `provider_item` (a persisted connection
-# with at least one provider account) and `other_provider_account` (a provider
-# account that belongs to a different account provider in the same family).
+# with at least one provider account, none of them linked to an account yet: the
+# sync and unlink tests create their own links and count the unlinked ones) and
+# `other_provider_account` (a provider account that belongs to a different
+# account provider in the same family).
 # ProviderItemLifecycleTests includes it.
 module ProviderItemModelLifecycleTests
   extend ActiveSupport::Concern
