@@ -97,9 +97,9 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
       find("input[role='combobox']").set("Saturday market run")
     end
 
-    # The suggestions request has started and is held, so its response is
-    # guaranteed not to have arrived before the picker is dismissed.
-    assert_selector "html[data-name-search-pending]"
+    # The suggestions request for the full query has started and is held, so
+    # its response is guaranteed not to have arrived before the picker is dismissed.
+    assert_selector "html[data-name-search-pending-query='Saturday market run']"
 
     within "dialog.hw-combobox__dialog" do
       # Dismiss the picker right away, without waiting for the suggestions
@@ -125,9 +125,9 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     find("#entry_name").click
     find("input[role='combobox']").set("Saturday market run")
 
-    # The suggestions request has started and is held, so its response is
-    # guaranteed not to have arrived before the combobox closes.
-    assert_selector "html[data-name-search-pending]"
+    # The suggestions request for the full query has started and is held, so
+    # its response is guaranteed not to have arrived before the combobox closes.
+    assert_selector "html[data-name-search-pending-query='Saturday market run']"
 
     # Click into another field, as on a desktop: the combobox closes without
     # a selection, and the typed description must stay in the field and save.
@@ -146,11 +146,10 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     page.current_window.resize_to(1280, 800)
     open_new_transaction
     find("#entry_name").click
-    find("input[role='combobox']").set("Starb")
-
     # Wait for the suggestions list to open, as in the reporter video:
     # pressing Enter closes the list without picking an option, and the
     # typed description must stay in the field and save.
+    search_starbucks
     assert_selector ".hw-combobox [role='option']", text: "Starbucks"
     find("input[role='combobox']").send_keys(:enter)
     assert_field "entry_name", with: "Starb"
@@ -222,14 +221,17 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
       # search_starbucks.
       page.execute_script(<<~JS)
         delete document.documentElement.dataset.nameSearchPending;
+        delete document.documentElement.dataset.nameSearchPendingQuery;
+        window.nameSearchHoldReleased = false;
         window.__heldNameSearches = [];
         if (!window.nameSearchHoldInstalled) {
           window.nameSearchHoldInstalled = true;
           const originalFetch = window.fetch;
           window.fetch = (url, init) => {
             const requestUrl = new URL(url, window.location.href);
-            if (requestUrl.pathname === "/transactions/name_suggestions") {
+            if (requestUrl.pathname === "/transactions/name_suggestions" && !window.nameSearchHoldReleased) {
               document.documentElement.dataset.nameSearchPending = "true";
+              document.documentElement.dataset.nameSearchPendingQuery = requestUrl.searchParams.get("q");
               return new Promise((resolve) => {
                 window.__heldNameSearches.push(() => resolve(originalFetch(url, init)));
               });
@@ -241,9 +243,13 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     end
 
     def release_name_suggestions
+      # Stop holding first, so any debounced search fired after the release
+      # uses the real fetch instead of joining a queue that is never drained.
       page.execute_script(<<~JS)
+        window.nameSearchHoldReleased = true;
         window.__heldNameSearches.splice(0).forEach((release) => release());
         delete document.documentElement.dataset.nameSearchPending;
+        delete document.documentElement.dataset.nameSearchPendingQuery;
       JS
     end
 
@@ -256,4 +262,3 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
       assert_selector "[data-category-select-target='hiddenInput'][value='#{category&.id}']", visible: :all
     end
 end
-
