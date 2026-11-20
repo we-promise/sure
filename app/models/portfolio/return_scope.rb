@@ -141,7 +141,7 @@ class Portfolio::ReturnScope
       .where(account_id: records.map(&:id), entryable_type: "Trade")
       .joins(QUANTITY_TRADES_JOIN)
       .where("COALESCE(entries.excluded, false) = false")
-      .where("entries.date <= ?", period.end_date)
+      .where("entries.date <= ?", history_end_date_for(period, nil))
       .where(
         "(CAST(:cutoffs AS jsonb) ->> entries.account_id::text) IS NULL " \
         "OR entries.date <= (CAST(:cutoffs AS jsonb) ->> entries.account_id::text)::date",
@@ -161,15 +161,15 @@ class Portfolio::ReturnScope
   # would then withhold a money-weighted return it should quote. FlowClassifier bakes
   # its scope into a fixed ARRAY literal, so the scope cannot vary per row.
   #
-  # Each fragment carries its own account's history end, the earlier of the
-  # period end and its cut-off, as `history_end_date` computes it.
+  # Each fragment carries its own account's history end, the earliest of the
+  # period end, its cut-off and today, as `history_end_date` computes it.
   def self.external_transaction_account_ids(records, period, cutoffs)
     connection = ActiveRecord::Base.connection
 
     fragments = records.map do |account|
       classifier = Portfolio::FlowClassifier.new(scope_account_ids: [ account.id ])
       quoted_id = connection.quote(account.id)
-      quoted_end_date = connection.quote([ period.end_date, cutoffs[account.id.to_s] ].compact.min)
+      quoted_end_date = connection.quote(history_end_date_for(period, cutoffs[account.id.to_s]))
 
       # Values are quoted rather than bound: sanitize_sql_array would scan the
       # classifier's finished CASE for `:name` placeholders, and the CASE
@@ -192,6 +192,16 @@ class Portfolio::ReturnScope
     connection.select_values(fragments.join(" UNION ALL ")).to_set
   end
   private_class_method :external_transaction_account_ids
+
+  # The last day any tracking check reads: the period end, the account's
+  # cut-off when that comes first (a cut-off later than the period end is a
+  # bound, never an extension), and today. A trade or deposit scheduled after
+  # today has not moved the balance, and Portfolio::DailyReturns leaves it
+  # out, so it is not yet a known flow.
+  def self.history_end_date_for(period, cutoff)
+    [ period.end_date, cutoff, Date.current ].compact.min
+  end
+  private_class_method :history_end_date_for
 
   def kind
     @kind ||= begin
@@ -240,11 +250,8 @@ class Portfolio::ReturnScope
   end
 
   private
-    # The last day any tracking check reads: the period end, or the account's
-    # cut-off when that comes first. A cut-off later than the period end is a
-    # bound, never an extension.
     def history_end_date
-      [ period.end_date, active_until_date ].compact.min
+      self.class.send(:history_end_date_for, period, active_until_date)
     end
 
     # Every tracking check reads the same records: the account's live entries

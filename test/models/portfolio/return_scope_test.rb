@@ -434,6 +434,29 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
     assert_kinds :valuation_tracked, cut_off: @day_two, message: "the deposit falls after the cut-off"
   end
 
+  # A trade or deposit scheduled after today has not moved the balance, and
+  # Portfolio::DailyReturns leaves it out, so for a period running past today
+  # it does not make the account's flows known.
+  test "a trade dated after today does not make the account trade tracked" do
+    lay_two_days_before_the_cut_off
+    buy_trade account: @account, date: @day_three, qty: 2, price: 100
+
+    travel_to @day_two do
+      assert_kinds :valuation_tracked, cut_off: nil, message: "the trade is scheduled after today"
+    end
+    assert_kinds :trade_tracked, cut_off: nil, message: "once its day has come, the trade is a known flow"
+  end
+
+  test "a deposit dated after today does not make the account trade tracked" do
+    lay_two_days_before_the_cut_off
+    deposit account: @account, date: @day_three, amount: 500
+
+    travel_to @day_two do
+      assert_kinds :valuation_tracked, cut_off: nil, message: "the deposit is scheduled after today"
+    end
+    assert_kinds :trade_tracked, cut_off: nil, message: "once its day has come, the deposit is a known flow"
+  end
+
   # A valuation entry explains a balance without recording a flow, so it
   # neither makes an account trade tracked nor hides a trade that does. The
   # batch path reads only trades from its entry query; the valuation-only case
