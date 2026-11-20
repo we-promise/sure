@@ -378,9 +378,9 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     trades_on_remapped = @account.trades.where(security: remapped).count
     assert_operator trades_on_remapped, :>, 0
 
-    # Fail the holding write, which runs after the trades have moved back.
-    Holding.any_instance.stubs(:update_columns).raises(ActiveRecord::StatementInvalid, "forced test failure")
-    Holding.any_instance.stubs(:update!).raises(ActiveRecord::StatementInvalid, "forced test failure")
+    # Fail the last step, the lot move, after the holdings and the trades have
+    # already been written back, so the rollback has real writes to undo.
+    HoldingLot.stubs(:move!).raises(ActiveRecord::StatementInvalid, "forced test failure")
 
     assert_error_reported(ActiveRecord::StatementInvalid) do
       post reset_security_holding_path(@holding)
