@@ -2342,6 +2342,37 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert daily_returns.rows.last.contribution_rate_missing
   end
 
+  # An account joining or leaving the scope moves the net contributions line
+  # by its value (composition_flow). With no rate that value converts to
+  # nothing, so the line is short of it on that day.
+  test "an arrival with no rate makes contributions incomplete" do
+    eur = create_portfolio_account(family: @family, currency: "EUR")
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: eur, date: @day_two, opening: 500, closing: 500
+
+    arrival_day = daily_returns(account_ids: [ @account.id, eur.id ]).rows.last
+
+    assert arrival_day.rate_missing
+    assert arrival_day.contribution_rate_missing, "the arriving value the line counts converted to nothing"
+  end
+
+  test "a departure with no rate makes contributions incomplete" do
+    eur = create_portfolio_account(family: @family, currency: "EUR")
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: eur, date: @day_one, opening: 500, closing: 500
+
+    departure_day = Portfolio::DailyReturns.new(
+      account_ids: [ @account.id, eur.id ],
+      currency: @family.currency,
+      period: Period.custom(start_date: @day_one, end_date: @day_two),
+      active_until_dates: { eur.id => @day_one }
+    ).rows.last
+
+    assert departure_day.contribution_rate_missing, "the departing value the line counts converted to nothing"
+  end
+
   # A journal with no quantity is external (no counterpart can match it), so
   # carried to a first priced day in the period it leaves that day's external
   # flow short by units nobody knows. Dated before the period, its own day

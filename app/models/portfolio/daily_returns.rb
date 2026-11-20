@@ -329,7 +329,10 @@ class Portfolio::DailyReturns
         departures_by_date AS (
           SELECT
             (sa.active_until_date + 1)::date AS date,
-            COALESCE(SUM(lb.end_balance * lb.flows_factor * er.rate), 0) AS departed_value
+            COALESCE(SUM(lb.end_balance * lb.flows_factor * er.rate), 0) AS departed_value,
+            -- composition_flow moves the net contributions line, so a value
+            -- carried out at no rate leaves that line short on this day.
+            BOOL_OR(lb.end_balance <> 0 AND sa.currency <> :target_currency AND er.rate IS NULL) AS departure_rate_missing
           FROM scoped_accounts sa
           LEFT JOIN LATERAL (
             SELECT b.end_balance, b.flows_factor
@@ -368,7 +371,8 @@ class Portfolio::DailyReturns
         arrivals_by_date AS (
           SELECT
             fb.date,
-            COALESCE(SUM(fb.start_balance * fb.flows_factor * ar.rate), 0) AS arrived_value
+            COALESCE(SUM(fb.start_balance * fb.flows_factor * ar.rate), 0) AS arrived_value,
+            BOOL_OR(fb.start_balance <> 0 AND sa.currency <> :target_currency AND ar.rate IS NULL) AS arrival_rate_missing
           FROM scoped_accounts sa
           JOIN LATERAL (
             SELECT b.date, b.start_balance, b.flows_factor
@@ -839,8 +843,10 @@ class Portfolio::DailyReturns
           -- Only the deposits and withdrawals external_flow counts. A carry
           -- settles external journals alone, so its missing rate is one; of
           -- what else it repriced from zero, only the external journals' own
-          -- shortfall is.
-          (COALESCE(f.contribution_rate_missing, false) OR COALESCE(cj.carry_rate_missing, false)) AS contribution_rate_missing,
+          -- shortfall is. An account arriving or departing at no rate is one
+          -- too: its value is the composition_flow the line adds.
+          (COALESCE(f.contribution_rate_missing, false) OR COALESCE(cj.carry_rate_missing, false)
+           OR COALESCE(arr.arrival_rate_missing, false) OR COALESCE(dep.departure_rate_missing, false)) AS contribution_rate_missing,
           (COALESCE(f.contribution_journal_unpriced, false)
            OR COALESCE(cj.carry_contribution_incomplete, false)) AS contribution_journal_unpriced,
           COALESCE(arr.arrived_value, 0) AS arrived_value,
