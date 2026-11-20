@@ -50,6 +50,21 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
     assert_equal drawer.format, row[:formatted_average_cost]
   end
 
+  # The account costs trades in USD; a holding reported in CHF gets its mean
+  # converted, so the assistant's figure and its currency agree with the drawer.
+  test "get_holdings gives a holding in another currency its converted average cost" do
+    security = Security.create!(ticker: "CHFG", name: "CHFG")
+    Security::Price.create!(security: security, date: Date.current, price: 30, currency: "CHF")
+    create_trade(security, account: @account, qty: 10, price: 20, date: Date.current)
+    @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 30, amount: 300, currency: "CHF")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: Date.current, rate: 0.9)
+
+    row = @fn.call("accounts" => [ @account.name ])[:holdings].find { |r| r[:ticker] == "CHFG" }
+
+    assert_equal 18.0, row[:average_cost], "20 USD at 0.9"
+    assert_equal Money.new(18, "CHF").format, row[:formatted_average_cost]
+  end
+
   test "get_holdings lists a position's open lots, oldest first" do
     fifo_position
     lots = lot_row[:lots]

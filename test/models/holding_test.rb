@@ -226,13 +226,21 @@ class HoldingTest < ActiveSupport::TestCase
     ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
     create_trade(euro_security, account: euro_account, qty: 4, price: 10, date: Date.current, currency: "USD")
 
+    # a USD account's holding reported in CHF: its USD mean, 20, converts at
+    # the table's rate for the holding's date, 0.9
+    franc_security = create_security("CHFB", prices: [ { date: Date.current, price: 30 } ])
+    create_trade(franc_security, account: @account, qty: 10, price: 20, date: Date.current)
+    franc_holding = @account.holdings.create!(date: Date.current, security: franc_security, qty: 10, price: 30, amount: 300, currency: "CHF")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: Date.current, rate: 0.9)
+
     expected = {
       @amzn => Money.new(BigDecimal("215")),
       @nvda => Money.new(BigDecimal("160")),
       unrated_holding => nil,
       sweep_holding => nil,
       plain_holding => Money.new(BigDecimal("8")),
-      euro_holding => Money.new(BigDecimal("9"), "EUR")
+      euro_holding => Money.new(BigDecimal("9"), "EUR"),
+      franc_holding => Money.new(BigDecimal("18"), "CHF")
     }
     expected.each { |holding, value| assert_cost value, Holding.find(holding.id).avg_cost, holding.ticker }
 
@@ -387,6 +395,31 @@ class HoldingTest < ActiveSupport::TestCase
     [ alone, batched.avg_cost ].each do |avg_cost|
       assert_equal [ BigDecimal("18"), "CHF" ], [ avg_cost&.amount, avg_cost&.currency&.iso_code ]
     end
+  end
+
+  # A page of holdings reported in other currencies than their accounts looks
+  # each rate up once per currency pair and date, not once per holding, so a
+  # page of them stays a fixed number of queries.
+  test "the batch looks up each conversion rate once per currency pair and date" do
+    day = 3.days.ago.to_date
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: day, rate: 0.9)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: day, rate: 0.8)
+
+    holdings = { "CHF" => 3, "EUR" => 2 }.flat_map do |currency, count|
+      Array.new(count) do |i|
+        security = create_security("RT#{currency}#{i}", prices: [ { date: day, price: 30 } ])
+        create_trade(security, account: @account, qty: 10, price: 20, date: day)
+        @account.holdings.create!(security: security, date: day, qty: 10, price: 30, amount: 300, currency: currency)
+      end
+    end
+
+    batch = Holding.where(id: holdings.map(&:id)).to_a
+    rate_lookups = Holding.uncached do
+      capture_sql_queries { Holding.preload_avg_costs(batch) }.count { |sql| sql.include?('FROM "exchange_rates"') }
+    end
+
+    assert_equal 2, rate_lookups, "one lookup for USD to CHF and one for USD to EUR on the holdings' date"
+    assert_equal [ BigDecimal("18") ] * 3 + [ BigDecimal("16") ] * 2, batch.map { |holding| holding.avg_cost&.amount }
   end
 
   test "the batch leaves a stored cost basis alone and does not query for it" do
