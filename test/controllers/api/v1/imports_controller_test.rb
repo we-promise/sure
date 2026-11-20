@@ -1348,23 +1348,29 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     # credit_card is shared read-only with the member; investment is not shared.
     [ accounts(:credit_card), accounts(:investment) ].each do |account|
-      assert_no_enqueued_jobs(only: ImportJob) do
-        post api_v1_imports_url,
-             params: {
-               raw_file_content: csv_content,
-               date_col_label: "date",
-               amount_col_label: "amount",
-               name_col_label: "name",
-               account_id: account.id,
-               date_format: "%Y-%m-%d",
-               publish: "true"
-             },
-             headers: api_headers(member_key)
+      assert_no_difference("Import.count") do
+        assert_no_enqueued_jobs(only: ImportJob) do
+          post api_v1_imports_url,
+               params: {
+                 raw_file_content: csv_content,
+                 date_col_label: "date",
+                 amount_col_label: "amount",
+                 name_col_label: "name",
+                 account_id: account.id,
+                 date_format: "%Y-%m-%d",
+                 publish: "true"
+               },
+               headers: api_headers(member_key)
+        end
       end
 
-      assert_response :forbidden
-      import = Import.find(JSON.parse(response.body)["import_id"])
-      assert_equal "pending", import.status
+      if account == accounts(:credit_card)
+        assert_response :forbidden
+        assert_equal "forbidden", JSON.parse(response.body)["error"]
+      else
+        assert_response :unprocessable_entity
+        assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
+      end
     end
   ensure
     Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
@@ -1388,12 +1394,15 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   test "publication refusals are in English whatever the request language" do
     member_key = ApiKey.create!(user: users(:family_member), name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web")
 
+    ndjson = { type: "Rule", data: { id: "rule_1", name: "Imported", resource_type: "transaction", conditions: [], actions: [ { action_type: "exclude_transaction" } ] } }.to_json
+
     post api_v1_imports_url,
-         params: { raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test", date_col_label: "date", amount_col_label: "amount", name_col_label: "name", account_id: accounts(:credit_card).id, date_format: "%Y-%m-%d", publish: "true" },
+         params: { type: "SureImport", raw_file_content: ndjson, publish: "true" },
          headers: api_headers(member_key).merge("Accept-Language" => "es")
 
     assert_response :forbidden
-    assert_equal Import::PublishNotAllowedError::API_MESSAGES[:accounts], JSON.parse(response.body)["message"]
+    assert_equal Import::PublishNotAllowedError::API_MESSAGES[:rules], JSON.parse(response.body)["message"]
+    assert_equal "pending", Import.find(JSON.parse(response.body)["import_id"]).status
   ensure
     Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
   end
