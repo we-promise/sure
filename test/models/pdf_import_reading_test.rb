@@ -76,7 +76,21 @@ class PdfImportReadingTest < ActiveSupport::TestCase
     assert_equal 0, @import.reload.rows.count
     assert_nil @import.ai_summary
     assert_nil @import.extraction_checks
-    assert_nil @import.reread_token
+    assert_equal token, @import.reread_token, "the active retry must still own the import after cleanup"
+  end
+
+  test "clearing a reread keeps its token so a redelivered job can resume" do
+    @import.stubs(:pdf_uploaded?).returns(true)
+    @import.stubs(:pdf_reading).returns(stub(ways: { images: nil }))
+    @import.rows.create!(source_row_number: 1, date: "01/15/2024", amount: "-50.00", name: "Coffee Shop", currency: "USD")
+    assert @import.reread!("images")
+    token = @import.reload.reread_token
+
+    assert @import.clear_reading!(reread_token: token)
+    import = @import.reload
+    assert_equal 0, import.rows.count
+    assert_equal token, import.reread_token, "cleanup must not strand the active claim"
+    assert_not import.clear_reading!(reread_token: "older-attempt"), "a superseded token is still rejected"
   end
 
   test "a delayed reread cannot clear a newer claim or a publish" do

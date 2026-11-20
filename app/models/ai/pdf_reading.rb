@@ -219,12 +219,13 @@ class Ai::PdfReading
       end
     end
 
-    # [units, the text the model reads or nil, pages no OCR route could read].
+    # [units, the text the model reads or nil, pages nothing read: no OCR route could transcribe
+    # them, or the text layer was empty for a page that may still hold a scan].
     def units_for(way, cancelled: nil)
       case way
-      when :pdf then [ [ Ai::PdfReading::Unit.pdf(page_count || 1) ], nil ]
+      when :pdf then [ [ Ai::PdfReading::Unit.pdf(page_count || 1) ], nil, [] ]
       when :text then text_units(text_pages)
-      when :images then [ (1..page_count).map { Ai::PdfReading::Unit.page(_1) }, nil ]
+      when :images then [ (1..page_count).map { Ai::PdfReading::Unit.page(_1) }, nil, [] ]
       when :ocr
         transcription = transcribe(cancelled:)
         units, source = text_units(transcription.pages)
@@ -234,14 +235,19 @@ class Ai::PdfReading
 
     def text_units(pages)
       limit = chunk_chars
-      units = pages.each_with_index.flat_map do |text, index|
-        next [] if text.strip.empty?
-
-        (0...text.length).step(limit).map { Ai::PdfReading::Unit.text(text[_1, limit], page: index + 1) }
+      units, blank_pages = [], []
+      pages.each_with_index do |text, index|
+        if text.strip.empty?
+          blank_pages << index + 1
+          next
+        end
+        (0...text.length).step(limit).each { units << Ai::PdfReading::Unit.text(text[_1, limit], page: index + 1) }
       end
       raise Ai::Error::Unavailable, :no_text_layer if units.empty?
 
-      [ units, pages.join("\n") ]
+      # A blank text page can be a scan with no text layer. It isn't in skipped or remaining, so
+      # report it here or a mixed PDF would be marked complete with transactions missing.
+      [ units, pages.join("\n"), blank_pages ]
     end
 
     # Half the model's window for one unit, so the prompt and the answer still fit.

@@ -31,27 +31,32 @@ module Family::VectorSearchable
     end
   end
 
-  # `user:` filters the hits down to the documents that user may read; pass it whenever a person
-  # is asking. The store is family-wide, so the filter is applied here, on the way out.
-  def search_documents(query, max_results: 10, user: nil)
-    return [] unless vector_store_id.present?
+  # Ask wider than the caller's limit, then widen again while withheld hits hide readable ones.
+  # A single wide request can still be exhausted by restricted rows, so the retry is bounded by
+  # SEARCH_CANDIDATE_LIMIT rather than by the first candidate count. Returns the hits and the last
+  # adapter response, so a caller that needs the provider error can report it.
+  def search_document_hits(query, max_results:, user: nil)
+    return [ [], nil ] unless vector_store_id.present?
 
     adapter = vector_store_adapter
-    return [] unless adapter
+    return [ [], nil ] unless adapter
 
-    response = adapter.search(
-      store_id: vector_store_id,
-      query: query,
-      max_results: [ SEARCH_CANDIDATE_FACTOR * max_results, SEARCH_CANDIDATE_LIMIT ].min,
-      family: self,
-      user: user
-    )
+    limit = [ SEARCH_CANDIDATE_FACTOR * max_results, SEARCH_CANDIDATE_LIMIT ].min
+    loop do
+      response = adapter.search(store_id: vector_store_id, query:, max_results: limit, family: self, user:)
+      return [ [], response ] unless response.success?
 
-    return [] unless response.success?
+      hits = user ? readable_documents(response.data, user, max_results:) : tracked_documents(response.data, max_results:)
+      enough = hits.size >= max_results || response.data.size < limit || limit >= SEARCH_CANDIDATE_LIMIT
+      return [ hits.first(max_results), response ] if enough
 
-    hits = user ? readable_documents(response.data, user, max_results:) : tracked_documents(response.data, max_results:)
-    hits.first(max_results)
+      limit = [ limit * 2, SEARCH_CANDIDATE_LIMIT ].min
+    end
   end
+
+  # `user:` filters the hits down to the documents that user may read; pass it whenever a person
+  # is asking. The store is family-wide, so the filter is applied here, on the way out.
+  def search_documents(query, max_results: 10, user: nil) = search_document_hits(query, max_results:, user:).first
 
   def readable_documents(results, user, max_results: nil)
     file_ids = results.filter_map { |result| result[:file_id] }.uniq

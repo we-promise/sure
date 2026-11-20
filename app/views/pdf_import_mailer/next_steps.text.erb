@@ -8,7 +8,7 @@
 <%= t(".summary_label") %>
 <%= @summary %>
 
-<% if @document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
+<% if @extractable %>
 <%= t(".transactions_note") %>
 <% if @failed_checks == %w[balances] %>
 
@@ -24,7 +24,7 @@
 <%= t(".next_steps_label") %>
 <%= t(".next_steps_intro") %>
 
-<% if @document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
+<% if @extractable %>
 - <%= t(".option_extract_transactions") %>
 <% end %>
 - <%= t(".option_keep_reference") %>

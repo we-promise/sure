@@ -1721,14 +1721,15 @@ one page image per request) has been tested live; Mistral's hasn't. A llama.cpp 
   [Troubleshooting pgvector and embeddings](#troubleshooting-pgvector-and-embeddings) below.
 - **OpenAI vector store:** documents show *processing* until OpenAI has indexed them, and
   *unreadable* when the index is empty (a scan: OpenAI's file search reads text layers only).
-  Removing a document, or deleting the family, deletes its files from OpenAI's Files API on a
-  best-effort basis: a failed deletion is logged while the local row is removed, and later family
-  cleanup can't find that file in the store. **Files documents removed before this release, or a
-  failed deletion, left behind can't be traced to a row and stay in your OpenAI account**: check
-  the cleanup warnings, then list them in OpenAI's dashboard (Storage → Files, purpose
-  `assistants`). Delete only files you can confirm nothing uses any more: an unfamiliar name
-  doesn't make a file an orphan, as it may belong to a current Sure document or another app. When
-  you can't tell, leave it.
+  Removing a document deletes its file from OpenAI's Files API; if that fails, the local row and
+  the store attachment are kept, so retrying the removal can find and delete the file. Deleting a
+  family removes its store on a best-effort basis: the adapter keeps the store and its attachments
+  when any file deletion fails, but the family's store id is gone, so there is no later retry.
+  **Files left behind by a family deletion, or documents removed before this release, can't be
+  traced to a row and stay in your OpenAI account**: check the cleanup warnings, then list them in
+  OpenAI's dashboard (Storage → Files, purpose `assistants`). Delete only files you can confirm
+  nothing uses any more: an unfamiliar name doesn't make a file an orphan, as it may belong to a
+  current Sure document or another app. When you can't tell, leave it.
 - New statements uploaded directly to the vault are indexed for search only if the uploader's AI
   switch is on (checked again when the indexing job runs). Indexing triggered by an explicit PDF
   import doesn't depend on that switch, and jobs queued before this check was added have no

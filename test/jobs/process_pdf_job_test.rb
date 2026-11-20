@@ -229,6 +229,21 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_not import.ai_processed?
   end
 
+  test "a retry after reread cleanup resumes while the claim is still active" do
+    import = imports(:pdf_with_rows)
+    ProcessPdfJob.any_instance.stubs(:process)
+    import.update!(status: :importing, reread_token: "attempt")
+
+    ProcessPdfJob.perform_now(import, reread: true, reread_token: "attempt")
+    import.reload
+    assert_equal 0, import.rows_count
+    assert_equal "attempt", import.reread_token, "cleanup must not invalidate the active retry"
+
+    ProcessPdfJob.perform_now(import, reread: true, reread_token: "attempt")
+    assert_equal "importing", import.reload.status
+    assert_equal 0, import.rows_count
+  end
+
   test "a reread's failure is recorded before the job is discarded" do
     import = imports(:pdf_with_rows)
     attach_pdf!(import)

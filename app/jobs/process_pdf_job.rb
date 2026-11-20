@@ -10,7 +10,8 @@ class ProcessPdfJob < ApplicationJob
   end
 
   # reread: "Read again as…" claimed the import with reread_token; the previous
-  # reading is cleared here, under the lock that verifies that claim.
+  # reading is cleared here, under the lock that verifies that claim. The token stays until a
+  # terminal status, so a retry after cleanup can resume instead of being rejected as stale.
   def perform(pdf_import, reread: false, reread_token: nil)
     return unless pdf_import.is_a?(PdfImport)
     if reread
@@ -21,7 +22,7 @@ class ProcessPdfJob < ApplicationJob
     return if pdf_import.status.in?(%w[complete failed])
     return reset_processing_claim(pdf_import) if pdf_import.ai_processed? && (!pdf_import.statement_with_transactions? || pdf_import.rows_count > 0)
 
-    pdf_import.update!(status: :importing, reread_token: nil)
+    pdf_import.update!(status: :importing, reread_token: reread ? pdf_import.reread_token : nil)
 
     Ai::CallContext.job("pdf_import:#{pdf_import.id}") { process(pdf_import) }
   rescue Ai::Error::Base, Pdf::PageImages::Error => e
@@ -58,12 +59,12 @@ class ProcessPdfJob < ApplicationJob
       # Statements with extracted rows go to pending for user review/publish
       # Other document types are marked complete (no further action needed)
       final_status = statement_with_transactions?(document_type) && pdf_import.rows_count > 0 ? :pending : :complete
-      pdf_import.update!(status: final_status)
+      pdf_import.update!(status: final_status, reread_token: nil)
     rescue StandardError => e
       sanitized_error = sanitize_error_message(e)
       Rails.logger.error("PDF processing failed for import #{pdf_import.id}: #{e.class.name} - #{sanitized_error}")
       begin
-        pdf_import.update!(status: :failed, error: sanitized_error)
+        pdf_import.update!(status: :failed, error: sanitized_error, reread_token: nil)
       rescue StandardError => update_error
         Rails.logger.error("Failed to update import status: #{update_error.message}")
       end
@@ -148,7 +149,7 @@ class ProcessPdfJob < ApplicationJob
       return true unless pdf_import.is_a?(PdfImport)
 
       pdf_import.with_lock do
-        pdf_import.update!(status: :failed, error: sanitize_error_message(error)) if pdf_import.importing?
+        pdf_import.update!(status: :failed, error: sanitize_error_message(error), reread_token: nil) if pdf_import.importing?
       end
       true
     rescue StandardError => update_error

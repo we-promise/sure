@@ -131,6 +131,27 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_empty result[:results]
   end
 
+  test "an unreadable first hit doesn't hide a readable one at max_results 1" do
+    @user.family.update!(vector_store_id: "vs_test123")
+    @user.family.family_documents.create!(filename: "tax.pdf", provider_file_id: "file-tax", status: "ready")
+    untracked = { content: "secret", filename: "lost.pdf", score: 0.99, file_id: "file-untracked" }
+    readable = { content: "allowed", filename: "tax.pdf", score: 0.8, file_id: "file-tax" }
+    limits = []
+    mock_adapter = mock("vector_store_adapter")
+    mock_adapter.stubs(:search).with do |max_results:, **|
+      limits << max_results
+      true
+    end.returns(VectorStore::Response.new(success?: true, data: [ untracked ] * 3, error: nil),
+                VectorStore::Response.new(success?: true, data: [ untracked ] * 5 + [ readable ], error: nil))
+    VectorStore::Registry.stubs(:adapter).returns(mock_adapter)
+
+    result = @function.call("query" => "income", "max_results" => 1)
+
+    assert_equal true, result[:success]
+    assert_equal "allowed", result[:results].sole[:content]
+    assert_equal [ 3, 6 ], limits, "the pool widens when the first hit is filtered out"
+  end
+
   test "handles search failure gracefully" do
     @user.family.update!(vector_store_id: "vs_test123")
 
@@ -158,7 +179,7 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     mock_adapter.expects(:search).with(
       store_id: "vs_test123",
       query: "test",
-      max_results: 20,
+      max_results: 50,
       family: @user.family,
       user: @user
     ).returns(VectorStore::Response.new(success?: true, data: [], error: nil))
