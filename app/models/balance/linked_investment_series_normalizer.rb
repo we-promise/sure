@@ -137,7 +137,9 @@ class Balance::LinkedInvestmentSeriesNormalizer
   end
 
   def supported_history_start_date
-    [ first_provider_activity_date, stable_provider_holding_start_date ].compact.min
+    return @supported_history_start_date if defined?(@supported_history_start_date)
+
+    @supported_history_start_date = [ first_provider_activity_date, stable_provider_holding_start_date ].compact.min
   end
 
   # True when a point the balance query sampled on `date` is replaced by the

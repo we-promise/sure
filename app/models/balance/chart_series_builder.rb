@@ -91,6 +91,11 @@ class Balance::ChartSeriesBuilder
   # value, and the day's flows arrive on the next point. It does nothing
   # without an `anchor_date`.
   #
+  # `anchor_opening` is that value line point's own amount. The normalizer
+  # sets it (0, or the opening anchor), so it can differ from the balance
+  # actually held; the line is drawn at it on the anchor date, so the two
+  # lines open together, and keeps counting from the balance held.
+  #
   # `dates` defaults to the balance series' own dates; a caller whose value
   # line was reshaped after the query (Account::Chartable) passes that line's
   # dates so the two are drawn on the same points.
@@ -99,7 +104,7 @@ class Balance::ChartSeriesBuilder
   #
   # Accounts that hold trades are assets, so no sign is applied here; the
   # only caller draws this line for them alone (UI::Account::Chart).
-  def net_contributions_series(anchor_date: nil, dates: nil, anchor_before_activity: false)
+  def net_contributions_series(anchor_date: nil, dates: nil, anchor_before_activity: false, anchor_opening: nil)
     dates = (dates || query_data.map(&:date)).sort
     cumulative = net_contributions_by_date(
       anchor_date: anchor_date, through: dates.max, anchor_before_activity: anchor_before_activity
@@ -108,14 +113,15 @@ class Balance::ChartSeriesBuilder
     previous = nil
     values = dates.map do |date|
       amount = cumulative.fetch(date, 0)
-      money = Money.new(amount, currency)
+      drawn = anchor_before_activity && !anchor_opening.nil? && date == anchor_date ? anchor_opening : amount
+      money = Money.new(drawn, currency)
       value = Series::Value.new(
         date: date,
         date_formatted: Series.format_date(date),
         value: money,
         trend: Trend.new(current: money, previous: previous || money, favorable_direction: favorable_direction)
       )
-      previous = money
+      previous = Money.new(amount, currency)
       value
     end
 
@@ -196,7 +202,9 @@ class Balance::ChartSeriesBuilder
     end
 
     def first_balance_date
-      Balance.joins(:account)
+      return @first_balance_date if defined?(@first_balance_date)
+
+      @first_balance_date = Balance.joins(:account)
         .where(account_id: account_ids)
         .where("balances.currency = accounts.currency")
         .minimum(:date)

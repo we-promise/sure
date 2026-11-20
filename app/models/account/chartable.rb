@@ -9,9 +9,15 @@ module Account::Chartable
   # Returns the chart Series for this account over the given period.
   # Supported views: :balance, :cash_balance, :holdings_balance, :gains,
   # :net_contributions.
+  # The net contributions line reads Portfolio::DailyReturns, which covers
+  # accounts that hold trades only; any other account draws its balance.
   def balance_series(period: Period.last_30_days, view: :balance, interval: nil)
     raise ArgumentError, "Invalid view type" unless [ :balance, :cash_balance, :holdings_balance, :gains, :net_contributions ].include?(view.to_sym)
-    return net_contributions_series(period: period, interval: interval) if view.to_sym == :net_contributions
+    if view.to_sym == :net_contributions
+      return net_contributions_series(period: period, interval: interval) if supports_trades?
+
+      view = :balance
+    end
 
     builder = chart_series_builder(period: period, interval: interval)
 
@@ -21,6 +27,8 @@ module Account::Chartable
   # True when a flow the net contributions line counts could not be valued,
   # so the chart can say the line is incomplete.
   def net_contributions_incomplete?(period: Period.last_30_days, interval: nil)
+    return false unless supports_trades?
+
     value_dates = balance_series(period: period, view: :balance, interval: interval).values.map(&:date)
 
     chart_series_builder(period: period, interval: interval)
@@ -127,11 +135,14 @@ module Account::Chartable
       builder = chart_series_builder(period: period, interval: interval)
       value_series = balance_series(period: period, view: :balance, interval: interval)
       value_dates = value_series.values.map(&:date)
-      anchor_date = net_contributions_anchor_date
+      normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil)
+      anchor_date = net_contributions_anchor_date(normalizer)
+      before_activity = value_point_before_activity?(value_series, builder: builder, date: anchor_date, normalizer: normalizer)
       series = builder.net_contributions_series(
         anchor_date: anchor_date,
         dates: value_dates,
-        anchor_before_activity: value_point_before_activity?(value_series, builder: builder, date: anchor_date)
+        anchor_before_activity: before_activity,
+        anchor_opening: (value_series.values.find { |value| value.date == anchor_date }&.value&.amount if before_activity)
       )
 
       Series.new(
@@ -150,17 +161,17 @@ module Account::Chartable
     # normalizer's rule decides, not the point's value, since a reset point
     # can equal the day's close (a flow offset by the market). False when
     # there is no such point.
-    def value_point_before_activity?(value_series, builder:, date:)
+    def value_point_before_activity?(value_series, builder:, date:, normalizer: Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil))
       return false unless date && value_series.values.any? { |value| value.date == date }
 
       builder.balance_series.values.none? { |value| value.date == date } ||
-        Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil).resets_point_on?(date)
+        normalizer.resets_point_on?(date)
     end
 
-    def net_contributions_anchor_date
+    def net_contributions_anchor_date(normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil))
       return unless linked? && balance_type == :investment
 
-      Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(self)
+      normalizer.supported_history_start_date
     end
 
     def normalize_linked_investment_series(series, view: :balance)

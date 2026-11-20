@@ -475,15 +475,30 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { account.balance_series(view: :contributions) }
   end
 
+  # The view arrives from a request parameter, and DailyReturns reads asset
+  # accounts that hold trades only. Any other account draws its balance
+  # instead of raising.
+  test "the net contributions view falls back to the balance for an account that holds no trades" do
+    loan = accounts(:loan)
+    period = Period.last_30_days
+    lay_balance account: loan, date: 2.days.ago.to_date, opening: 1_000, closing: 1_000
+    lay_balance account: loan, date: 1.day.ago.to_date, opening: 1_000, closing: 900, cash_flow: -100
+
+    series = loan.balance_series(period: period, view: :net_contributions)
+
+    assert_equal loan.balance_series(period: period).values.map(&:value), series.values.map(&:value)
+  end
+
   # A linked account's value line is trimmed to its first broker activity,
   # and the normalizer resets its point
   # there to the balance before that day's activity (0, as no opening anchor
-  # sits on that date). The contributions line starts from the balance
+  # sits on that date). The contributions line counts from the balance
   # actually held before that activity (DailyReturns' value_open, 1,000
-  # here) and counts the day's 500 deposit, so from the next point the gap
+  # here) and the day's 500 deposit, so from the next point the gap
   # between the lines is the 100 the market added on the trim day. Opened at
   # the day's close instead, the day's whole change counted as money put in
-  # and the gap read 0.
+  # and the gap read 0. On the anchor point itself the line is drawn at the
+  # value line's own point, so the two do not open 1,000 apart.
   test "a linked account's net contributions count the anchor day's flows, not its market gain" do
     day_one = Date.new(2026, 3, 2)
     account = create_portfolio_account(family: families(:empty))
@@ -502,8 +517,8 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_equal [ day_one + 2, day_one + 3 ], value.values.map(&:date), "the value line is trimmed to the first broker activity"
     assert_equal value.values.map(&:date), contributions.values.map(&:date)
     assert_equal [ 0, 1_900 ], value.values.map { |v| v.value.amount }
-    assert_equal [ 1_000, 1_800 ], contributions.values.map { |v| v.value.amount }
-    assert_equal 100, gaps(value, contributions).last, "the gap is the anchor day's market gain, not 0"
+    assert_equal [ 0, 1_800 ], contributions.values.map { |v| v.value.amount }
+    assert_equal [ 0, 100 ], gaps(value, contributions), "both open at the value line's point; the gap is the anchor day's market gain"
     assert_equal 1_000, contributions.values[1].trend.previous.amount, "the trend follows the line's own opening"
   end
 
@@ -632,8 +647,9 @@ class Account::ChartableTest < ActiveSupport::TestCase
   # On a coarse interval the trim date
   # is not sampled, so the normalizer prepends a synthetic opening point
   # (here 0) to the value line: a point before the day's activity. The
-  # contributions line opens there at the balance actually held before that
-  # activity, 1,000, even where there is history before the trim, and from
+  # contributions line is drawn at that point too and counts from the balance
+  # actually held before that activity, 1,000, even where there is history
+  # before the trim, and from
   # the next point the gap is the anchor day's 100 market gain. Opened at the
   # day's 1,600 close, it would count the gain as money put in.
   test "on a coarse interval a linked account's net contributions open before the anchor day's activity" do
@@ -653,7 +669,7 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_equal day_one + 2, value.values.first.date, "the normalizer prepends the trim date"
     assert_equal value.values.map(&:date), contributions.values.map(&:date)
     assert_equal [ 0, 1_600, 1_900 ], value.values.map { |v| v.value.amount }
-    assert_equal [ 1_000, 1_500, 1_800 ], contributions.values.map { |v| v.value.amount }
+    assert_equal [ 0, 1_500, 1_800 ], contributions.values.map { |v| v.value.amount }
     assert_equal [ 100, 100 ], gaps(value, contributions).drop(1), "the gap is the market's, from the next point"
     assert_equal 1_000, contributions.values[1].trend.previous.amount, "the trend follows the line's own opening"
   end
