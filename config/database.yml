@@ -6,6 +6,12 @@ default: &default
   port: <%= ENV.fetch("DB_PORT") { "5432" } %>
   username: <%= ENV.fetch("POSTGRES_USER") { nil } %>
   password: <%= ENV.fetch("POSTGRES_PASSWORD") { nil } %>
+  # Postgres before 19 enables JIT by default and compiles every query whose
+  # estimated cost exceeds jit_above_cost, on each execution. The app's
+  # per-family queries can cross that estimate while reading few rows, so the
+  # compile time outweighs any gain. This only applies to the app's connections.
+  variables:
+    jit: "off"
 
 development:
   <<: *default
