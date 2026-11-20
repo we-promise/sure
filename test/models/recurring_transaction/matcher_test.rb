@@ -15,6 +15,41 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
   # charge eligible. With two series competing for it, a second run could stack
   # a second allocation on the same charge. What stops it is that the first
   # suggestion has already spoken for the entry's whole amount.
+  test "orphan repair skips refunds and continues to a genuine replacement" do
+    series = create_series(name: "PAYCHECK", amount: -100, day_offset: 0, bill_type: "income")
+    original = create_entry(amount: -100, date: Date.current, name: "PAYCHECK")
+    @matcher.run!
+    allocation = series.recurring_occurrences.order(:due_on).first.allocations.sole
+    original.destroy!
+    refund = create_entry(amount: -100, date: Date.current, name: "PAYCHECK")
+    refund.transaction.reload.mark_as_refund!
+
+    @matcher.repair_orphans!
+    assert_nil allocation.reload.entry_id
+
+    replacement = create_entry(amount: -100, date: Date.current, name: "PAYCHECK POSTED")
+    @matcher.repair_orphans!
+    assert_equal replacement.id, allocation.reload.entry_id
+  end
+
+  test "orphan repair skips a replacement classified as a refund during selection" do
+    series = create_series(name: "REPAIR PAYCHECK", amount: -100, day_offset: 0, bill_type: "income")
+    original = create_entry(amount: -100, date: Date.current, name: "REPAIR PAYCHECK")
+    @matcher.run!
+    allocation = series.recurring_occurrences.order(:due_on).first.allocations.sole
+    original.destroy!
+    replacement = create_entry(amount: -100, date: Date.current, name: "REPAIR PAYCHECK POSTED")
+
+    @matcher.stubs(:repair_identity?).with { |_series, entry|
+      entry.transaction.reload.mark_as_refund! if entry.id == replacement.id
+      true
+    }.returns(true)
+
+    assert_nothing_raised { @matcher.repair_orphans! }
+    assert_nil allocation.reload.entry_id
+    assert replacement.transaction.reload.refund?
+  end
+
   test "repeat runs never stack a second allocation on one charge" do
     create_series(name: "Streaming Service", amount: 15.99, day_offset: 0, dedup_scope: "a")
     create_series(name: "Streaming Service", amount: 15.99, day_offset: 0, dedup_scope: "b")

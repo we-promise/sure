@@ -149,9 +149,16 @@ module Family::AutoTransferMatchable
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
     created_transfers = []
+    candidates = candidates_scope.to_a
 
     Transfer.transaction do
-      candidates_scope.each do |match|
+      # Successfully matched pairs keep their row locks until this outer
+      # transaction commits. Take every candidate leg in one global id order
+      # first so one batch cannot deadlock with another over shared legs.
+      candidate_ids = candidates.flat_map { |match| [ match.inflow_transaction_id, match.outflow_transaction_id ] }.uniq
+      Transaction.where(id: candidate_ids).order(:id).lock.load
+
+      candidates.each do |match|
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
 
@@ -232,6 +239,11 @@ module Family::AutoTransferMatchable
     # rolls back only the failed statement, leaving the outer transaction healthy.
     def find_or_create_transfer!(match)
       Transfer.transaction(requires_new: true) do
+        # Refund linking and splits lock these transaction rows. Take both in
+        # id order before the insert so a concurrent classification cannot land
+        # between the transfer validation and the write.
+        Transaction.where(id: [ match.inflow_transaction_id, match.outflow_transaction_id ])
+          .order(:id).lock.load
         Transfer.find_or_create_by!(
           inflow_transaction_id: match.inflow_transaction_id,
           outflow_transaction_id: match.outflow_transaction_id,
@@ -244,6 +256,10 @@ module Family::AutoTransferMatchable
       # caller skips rather than marking a transaction with no Transfer behind it.
       existing_transfer(match)
     rescue ActiveRecord::RecordInvalid => e
+      # A stale candidate whose leg was classified as a refund between
+      # selection and insert is not a reason to abort the whole batch.
+      return nil if e.record.errors.of_kind?(:base, :refund_links_present)
+
       # The same race surfaces through the per-column uniqueness validation. Re-raise
       # anything that is not a :taken on the transfer's transaction ids...
       raise unless %i[inflow_transaction_id outflow_transaction_id].any? { |attr| e.record.errors.of_kind?(attr, :taken) }
@@ -422,6 +438,15 @@ module Family::AutoTransferMatchable
             inflow_accounts.status IN ('draft', 'active') AND
             outflow_accounts.status IN ('draft', 'active') AND
             existing_transfers.id IS NULL AND
+            NOT EXISTS (
+              SELECT 1 FROM transactions refund_transactions
+              WHERE refund_transactions.id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id)
+                AND refund_transactions.kind = 'refund'
+            ) AND
+            NOT EXISTS (
+              SELECT 1 FROM transactions refund_transactions
+              WHERE refund_transactions.refund_of_id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id)
+            ) AND
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
@@ -507,6 +532,15 @@ module Family::AutoTransferMatchable
             inflow_accounts.status IN ('draft', 'active') AND
             outflow_accounts.status IN ('draft', 'active') AND
             existing_transfers.id IS NULL AND
+            NOT EXISTS (
+              SELECT 1 FROM transactions refund_transactions
+              WHERE refund_transactions.id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id)
+                AND refund_transactions.kind = 'refund'
+            ) AND
+            NOT EXISTS (
+              SELECT 1 FROM transactions refund_transactions
+              WHERE refund_transactions.refund_of_id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id)
+            ) AND
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * COALESCE(
               NULLIF(direct_rates.rate, 0),

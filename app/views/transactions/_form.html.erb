@@ -1,15 +1,16 @@
 <%# locals: (entry:, account_currencies:, manual_accounts:, categories:, merchants:, tags:) %>
 <% auto_generate_names = Current.family.auto_generate_transaction_names? %>
 
-<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: auto_generate_names ? "transaction-form transaction-name-preview category-suggestion" : "transaction-form category-suggestion", action: "formdata->category-suggestion#syncName hw-combobox:selection->category-suggestion#onNameSuggestionSelected turbo:before-cache@document->transaction-form#refreshIdempotencyKey pageshow@window->transaction-form#refreshIdempotencyKeyIfPersisted", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
+<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: auto_generate_names ? "transaction-form transaction-type-tabs transaction-name-preview category-suggestion" : "transaction-form transaction-type-tabs category-suggestion", action: "formdata->category-suggestion#syncName hw-combobox:selection->category-suggestion#onNameSuggestionSelected turbo:before-cache@document->transaction-form#refreshIdempotencyKey pageshow@window->transaction-form#refreshIdempotencyKeyIfPersisted", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
   <% if entry.errors.any? %>
     <%= render "shared/form_errors", model: entry %>
   <% end %>
 
-  <section data-controller="transaction-type-tabs">
-    <%= render "shared/transaction_type_tabs", active_tab: params[:nature] == "inflow" ? "income" : "expense", account_id: params[:account_id] %>
+  <% current_nature = params.dig(:entry, :nature).presence || params[:nature].presence || (@entry.amount&.negative? ? "inflow" : "outflow") %>
+  <section>
+    <%= render "shared/transaction_type_tabs", active_tab: current_nature == "inflow" ? "income" : "expense", account_id: @entry.account_id %>
 
-    <%= f.hidden_field :nature, value: params[:nature] || "outflow", data: { "transaction-type-tabs-target": "natureField" } %>
+    <%= f.hidden_field :nature, value: current_nature, data: { "transaction-type-tabs-target": "natureField" } %>
     <%= f.hidden_field :entryable_type, value: "Transaction" %>
     <%# Anti-double-submit token: a fresh UUID per page load, echoed back on
         submit. TransactionsController#create uses it to recognize a repeat
@@ -45,9 +46,45 @@
     <%= f.money_field :amount,
       label: t(".amount"),
       required: true,
+      value: @entry.amount&.abs,
       container_class: "money-field-wrapper",
       amount_data: { transaction_form_target: "amount", action: "input->transaction-form#onAmountChange" },
       currency_data: { transaction_form_target: "currency", action: "change->transaction-form#onCurrencyChange" } %>
+
+    <% if preview_features_enabled? %>
+      <div class="space-y-3 <%= "hidden" unless current_nature == "inflow" %>"
+           data-transaction-type-tabs-target="inflowOnly">
+        <div class="flex items-center justify-between gap-4">
+          <div class="min-w-0 space-y-1">
+            <p class="text-sm font-medium text-primary"><%= t(".refund_label") %></p>
+            <p class="text-xs text-secondary"><%= t(".refund_hint") %></p>
+          </div>
+          <%= render DS::Toggle.new(
+                id: "entry_refund",
+                name: "entry[refund]",
+                checked: @refund_requested,
+                aria: { label: t(".refund_label") },
+                data: {
+                  "transaction-type-tabs-target": "refundToggle",
+                  action: "change->transaction-type-tabs#toggleRefundFields"
+                }) %>
+        </div>
+
+        <div class="space-y-2 privacy-sensitive <%= "hidden" unless @refund_requested %>"
+             data-transaction-type-tabs-target="refundFields">
+          <%= render DS::Select.new(
+                form: f,
+                method: :refund_of_entry_id,
+                items: Array(@refund_purchases).map { |purchase| { value: purchase.id, label: entry_name_detailed(purchase), object: purchase } },
+                selected: @refund_of_entry_id,
+                include_blank: t(".refund_purchase_none"),
+                placeholder: t(".refund_purchase_none"),
+                searchable: true,
+                label: t(".refund_purchase_label")) %>
+          <p class="text-xs text-secondary"><%= t(".refund_purchase_hint") %></p>
+        </div>
+      </div>
+    <% end %>
 
     <div data-category-suggestion-target="categoryField" data-action="change->category-suggestion#onCategorySelected">
       <%= f.fields_for :entryable do |ef| %>

@@ -60,6 +60,43 @@ class RecurringTransaction
                  .where.not(recurring_transactions: { status: "ended" })
     end
 
+    # Serializes a refund classification with allocation writes. Take the
+    # occurrences that already have confirmed allocations first, in id order,
+    # then the entry advisory lock the Allocator uses. This matches the
+    # Allocator's occurrence-then-entry order and lets a concurrent allocation
+    # either commit before the refund (and be removed) or wait and then fail
+    # its refund validation.
+    def self.lock_refund_classification!(entry)
+      RecurringOccurrence.where(
+        id: RecurringAllocation.where(entry_id: entry.id, state: "confirmed")
+          .select(:recurring_occurrence_id)
+      ).order(:id).lock.load
+
+      lock_entry!(entry)
+    end
+
+    # Removes confirmed allocations attached to an entry that is no longer a
+    # payment, such as one reclassified as a refund. Each affected occurrence
+    # is refreshed so an auto-closed bill reopens when its payment goes away.
+    # Suggested allocations stay: they never count as paid, and the allocation
+    # validation keeps them from being confirmed after the reclassification.
+    # Every occurrence lock is taken before the entry advisory lock inside the
+    # first unallocate!, matching the order above and the Allocator's own.
+    def self.unallocate_entry!(entry)
+      # Read the raw state: the confirmed scope deliberately hides allocations
+      # whose entry is already a refund, and those are exactly the rows to drop.
+      allocations = RecurringAllocation.where(entry_id: entry.id, state: "confirmed")
+        .includes(:recurring_occurrence)
+        .order(:recurring_occurrence_id, :id)
+        .to_a
+      return if allocations.empty?
+
+      allocations.map(&:recurring_occurrence).uniq.sort_by(&:id).each(&:lock!)
+      allocations.each do |allocation|
+        new(allocation.recurring_occurrence).unallocate!(allocation)
+      end
+    end
+
     # What guard_entry_capacity! would leave of each entry for another bill,
     # for many entries in one query. Entries no bill uses yet are omitted.
     # Pass a narrower allocations scope to count only the bills a viewer can
@@ -96,6 +133,18 @@ class RecurringTransaction
       end
       spent_by_counterpart.each { |entry| remaining[entry.id] = 0 }
       remaining
+    end
+
+    # Reattaches an orphaned allocation under the same locks as a new payment:
+    # occurrence first, then the entry advisory lock. Keeps repost repair
+    # serialized with refund classification and blocking.
+    def reattach_orphan!(allocation, entry)
+      occurrence.with_lock do
+        with_entry_lock(entry) do
+          allocation.update!(entry: entry)
+          refresh_close_state!
+        end
+      end
     end
 
     def initialize(occurrence)

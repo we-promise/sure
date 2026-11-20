@@ -180,6 +180,9 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       field_label = find("label", exact_text: label_text)
       container = field_label.ancestor("div.relative")
       container.find("button").click
+      # openMenu removes these classes inside requestAnimationFrame; setting
+      # the search field before that frame lands raises ElementNotInteractable.
+      container.find("[role='listbox']:not(.opacity-0)", visible: true)
       if container.has_selector?("input[type='search']", visible: true)
         container.find("input[type='search']", visible: true).set(record.name)
       end

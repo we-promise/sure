@@ -21,18 +21,23 @@ class Assistant::Function::GetTransactions < Assistant::Function
 
         Filters take exact names: use the values returned by get_accounts,
         get_categories, get_merchants, and get_tags when unsure. Pass
-        types: ["income", "expense"] to exclude transfers between the user's
-        own accounts. Use a small page_size when you only need a few rows.
+        types: ["income", "expense", "refund"] to exclude transfers between
+        the user's own accounts while keeping refunds in the result. Use a
+        small page_size when you only need a few rows.
+
+        Refunds reduce spending and are not earnings. Use types: ["refund"]
+        to find returns. Purchase net costs include only refunds you can access;
+        exchange_rate_missing means the final cost could not be calculated.
 
         Reading a row:
 
-        - `amount` is always POSITIVE. The direction is in `classification`
-          ("income" or "expense"). Summing `amount` without reading
+        - `classification` is "income", "expense", or "refund". A refund row
+          reduces spending and is not earnings. Summing `amount` without reading
           `classification` gives a wrong total.
         - `kind` distinguishes a real expense ("standard") from money moving
           between the user's own accounts ("funds_movement", "cc_payment",
-          "loan_payment", "investment_contribution") and from a one-off
-          ("one_time"). Use it before attributing spend to a category.
+          "loan_payment", "investment_contribution"), a one-off ("one_time"),
+          and a refund ("refund"). Use it before attributing spend to a category.
         - `transfer_account` names the account on the other side of a transfer.
         - `pending` and `excluded` appear only when true; an absent key means
           false. A pending row may still change amount or disappear.
@@ -42,8 +47,9 @@ class Assistant::Function::GetTransactions < Assistant::Function
           Group by it when `merchant` is null.
         - `rail` is how the money moved ("card", "direct_debit", "transfer",
           "withdrawal", "cheque", "fee", "loan_payment", "refund"), read from
-          the label. `rail: "refund"` is the only signal that an inflow is money
-          coming back rather than earnings, since Sure stores no refund link.
+          the label. `rail: "refund"` is only a label hint: the stored refund
+          classification is in `classification`/`kind`/`refund`, and a manually
+          marked refund may have no rail hint.
         - `operation_date` is the date printed in the bank label, present only
           when it differs from `date`. `date` is whatever the provider supplied
           and is often the settlement date, so use `operation_date` when the
@@ -63,6 +69,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
         - `total_results`: The total number of results for the given filters
         - `total_income`: The total income for the given filters
         - `total_expenses`: The total expenses for the given filters
+        - `total_refunds`: The total refunds for the given filters, already deducted from expenses and excluded from income
       INSTRUCTIONS
     end
   end
@@ -119,8 +126,8 @@ class Assistant::Function::GetTransactions < Assistant::Function
         },
         types: {
           type: "array",
-          description: "Filter by kind; [\"income\", \"expense\"] excludes transfers between the user's own accounts",
-          items: { enum: [ "income", "expense", "transfer" ] },
+          description: "Filter by kind; [\"income\", \"expense\", \"refund\"] excludes transfers between the user's own accounts while keeping refunds",
+          items: { enum: [ "income", "expense", "refund", "transfer" ] },
           minItems: 1,
           uniqueItems: true
         },
@@ -211,6 +218,8 @@ class Assistant::Function::GetTransactions < Assistant::Function
 
     totals = search.totals
 
+    refund_details = Transaction::RefundDetails.new(transactions: paginated_transactions, user: user)
+
     normalized_transactions = paginated_transactions.map do |txn|
       entry = txn.entry
       row = {
@@ -221,7 +230,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
         amount: entry.amount.abs,
         currency: entry.currency,
         formatted_amount: entry.amount_money.abs.format,
-        classification: entry.amount < 0 ? "income" : "expense",
+        classification: txn.refund? ? "refund" : entry.classification,
         account: entry.account.name,
         notes: entry.notes,
         category: txn.category&.name,
@@ -229,7 +238,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
         tags: txn.tags.map(&:name),
         is_transfer: txn.transfer?,
         kind: txn.kind
-      }
+      }.merge(refund_details.for(txn))
 
       # Sparse by design: these are false on the large majority of rows, and a
       # `"pending": false` on every line of a 50-row page is pure token cost.
@@ -256,7 +265,8 @@ class Assistant::Function::GetTransactions < Assistant::Function
       page_size: page_size,
       total_pages: pagy.pages,
       total_income: totals.income_money.format,
-      total_expenses: totals.expense_money.format
+      total_expenses: totals.expense_money.format,
+      total_refunds: totals.refund_money.format
     }
   end
 

@@ -78,9 +78,18 @@ class RecurringTransaction
           .where.not(id: RecurringAllocation.where.not(entry_id: nil).select(:entry_id))
           .then { |scope| series.account_id.present? ? scope.where(account_id: series.account_id) : scope }
           .includes(:entryable)
-          .find { |entry| repair_identity?(series, entry) }
+          .find { |entry| !entry.transaction.refund? && repair_identity?(series, entry) }
 
-        allocation.update!(entry: replacement) if replacement
+        if replacement
+          RecurringTransaction::Allocator.new(allocation.recurring_occurrence)
+            .reattach_orphan!(allocation, replacement)
+        end
+      rescue ActiveRecord::RecordInvalid => error
+        # A candidate classified as a refund between selection and update is
+        # not a reason to abort the repair run; the next run will not select it.
+        next if error.record.errors.of_kind?(:entry, :refund_not_allowed)
+
+        raise
       end
     end
 
@@ -190,6 +199,12 @@ class RecurringTransaction
         # Another occurrence already claimed the entry's capacity. Skip the
         # candidate rather than aborting the run.
         true
+      rescue ActiveRecord::RecordInvalid => error
+        # The candidate was collected before it was classified as a refund.
+        # Skip it instead of aborting this run; the next run will not collect it.
+        return false if error.record.errors.of_kind?(:entry, :refund_not_allowed)
+
+        raise
       end
 
       # The hard filters depend on the series and the entry, not the individual
@@ -278,6 +293,7 @@ class RecurringTransaction
               .where(entryable_type: "Transaction")
               .not_excluded_or_split_parent
               .where(date: window_min..window_max)
+              .where.not(transactions: { kind: "refund" })
               .where("transactions.kind NOT IN (?) OR transactions.id IN (?)", Transaction::TRANSFER_KINDS, transfer_destinations.keys)
               .where.not(id: RecurringAllocation.where.not(entry_id: nil).where(state: "confirmed").select(:entry_id))
               .includes(:entryable)

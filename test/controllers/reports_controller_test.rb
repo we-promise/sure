@@ -293,6 +293,27 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "report breakdown and export use dated rate conversion for purchases and refunds" do
+    category = @family.categories.create!(name: "Foreign shopping")
+    date = Date.current - 10.days
+    create_transaction(account: accounts(:depository), amount: 100, currency: "EUR", date: date, category: category)
+    create_transaction(account: accounts(:depository), amount: -20, currency: "EUR", date: date, category: category, kind: "refund")
+    ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "USD", date: date).update!(rate: 1.1)
+    ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "USD", date: Date.current).update!(rate: 1.5)
+
+    get reports_path(period_type: :custom, start_date: date, end_date: Date.current)
+
+    assert_response :ok
+    expense = controller.view_assigns.fetch("transactions").find { |row| row[:category_id] == category.id && row[:type] == "expense" }
+    assert_equal 88, expense.fetch(:total)
+
+    get export_transactions_reports_path(format: :csv, period_type: :custom, start_date: date, end_date: Date.current)
+
+    assert_response :ok
+    expense = controller.view_assigns.fetch("export_data").fetch(:expenses).find { |row| row[:category] == category.name }
+    assert_equal 88, expense.fetch(:total)
+  end
+
   test "index sections keep data-section-key next to the sortable id" do
     get reports_path
     assert_response :ok
@@ -1447,6 +1468,42 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     breakdown = css_select("[data-section-key=transactions_breakdown]").text.squish
     assert_includes breakdown, "#{I18n.t("reports.transactions_breakdown.table.income")}: $10.00"
     assert_includes breakdown, "#{I18n.t("reports.transactions_breakdown.table.expense")}: $100.00"
+  end
+
+  test "breakdown and export exclude future-dated refunds and purchases" do
+    future = Date.current.next_month.beginning_of_month + 2.days
+    future_category = @family.categories.create!(name: "Future category #{SecureRandom.hex(4)}", color: "#123456")
+    create_transaction(account: accounts(:depository), date: future, name: "Future purchase",
+                       amount: 100, category: future_category)
+    refund = create_transaction(account: accounts(:depository), date: future, name: "Future refund",
+                                amount: -40, category: future_category)
+    refund.transaction.mark_as_refund!
+
+    get reports_path(period_type: :monthly, start_date: future.beginning_of_month, end_date: future.end_of_month)
+    assert_response :ok
+    assert_equal "$0.00", summary_value(I18n.t("reports.summary.total_expenses"))
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly,
+                                         start_date: future.beginning_of_month, end_date: future.end_of_month)
+    assert_response :ok
+    assert_no_match(/#{Regexp.escape(future_category.name)}/, response.body)
+  end
+
+  test "the tag filter limits the refund annotation" do
+    travel = @family.tags.create!(name: "Travel refunds")
+    date = TAGGED_MONTH + 9.days
+    tagged = create_transaction(account: accounts(:depository), date: date, name: "Tagged return",
+                                amount: -20, tags: [ travel ])
+    tagged.transaction.mark_as_refund!
+    untagged = create_transaction(account: accounts(:depository), date: date, name: "Other return", amount: -300)
+    untagged.transaction.mark_as_refund!
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ travel.id ])
+
+    assert_response :ok
+    assert_match "#{I18n.t("transactions.summary.refunds")}: $20.00", response.body
+    assert_no_match "#{I18n.t("transactions.summary.refunds")}: $320.00", response.body
   end
 
   test "without a tag filter every transaction is counted" do

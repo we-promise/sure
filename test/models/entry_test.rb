@@ -3,6 +3,21 @@ require "test_helper"
 class EntryTest < ActiveSupport::TestCase
   include EntriesTestHelper, ActiveJob::TestHelper
 
+  test "uncategorized_matching excludes refunds from income and expense previews" do
+    account = accounts(:depository)
+    income = create_transaction(account: account, amount: -10, name: "Preview income")
+    expense = create_transaction(account: account, amount: 10, name: "Preview expense")
+    refund = create_transaction(account: account, amount: -10, name: "Preview refund", kind: "refund")
+
+    income_ids = Entry.uncategorized_matching(account.family.entries, "Preview", "income").map(&:id)
+    expense_ids = Entry.uncategorized_matching(account.family.entries, "Preview", "expense").map(&:id)
+
+    assert_includes income_ids, income.id
+    assert_includes expense_ids, expense.id
+    assert_not_includes income_ids, refund.id
+    assert_not_includes expense_ids, refund.id
+  end
+
   test "chronological ordering uses id as final tie breaker" do
     account = accounts(:depository)
     timestamp = Time.zone.parse("2026-05-05 12:00:00")

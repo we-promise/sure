@@ -73,7 +73,7 @@ class IncomeStatement::Totals
           c.id as category_id,
           c.parent_id as parent_category_id,
           #{classification_sql("at")} as classification,
-          ABS(COALESCE(SUM(#{converted_amount_sql("at")}), 0)) as total,
+          COALESCE(SUM(#{reported_amount_sql("at")}), 0) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -97,7 +97,7 @@ class IncomeStatement::Totals
           c.id as category_id,
           c.parent_id as parent_category_id,
           #{classification_sql("at")} as classification,
-          ABS(COALESCE(SUM(#{converted_amount_sql("at")}), 0)) as total,
+          COALESCE(SUM(#{reported_amount_sql("at")}), 0) as total,
           COUNT(ae.id) as entry_count,
           false as is_uncategorized_investment#{",\n          date_trunc('month', ae.date)::date as month" if @group_by_month}
         FROM (#{@transactions_scope.to_sql}) at
