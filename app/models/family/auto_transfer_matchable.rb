@@ -148,7 +148,9 @@ module Family::AutoTransferMatchable
     created_transfers = []
 
     Transfer.transaction do
-      candidates_scope.each do |match|
+      # Among otherwise equally plausible candidates, a confirmed IBAN match is
+      # tried first (see #iban_confirmed_first).
+      iban_confirmed_first(candidates_scope).each do |match|
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
 
@@ -169,6 +171,54 @@ module Family::AutoTransferMatchable
   end
 
   private
+    # Orders the candidates so that IBAN-confirmed ones are tried first. A
+    # confirmed IBAN (the outflow's counterparty IBAN is the destination
+    # account's own IBAN) is a more precise signal than amount and date
+    # alone, which can be ambiguous with several similar transactions in flight.
+    # It only breaks ties: the date window and every other matching rule stay
+    # the same, and the resulting transfer is created like any other automatic
+    # match. The sort is stable, so inside each group the candidate query's own
+    # order (closest date first) still holds.
+    def iban_confirmed_first(candidates)
+      transaction_ids = candidates.flat_map do |match|
+        [ match.inflow_transaction_id, match.outflow_transaction_id ]
+      end.uniq
+      transactions = Transaction.includes(entry: :account).where(id: transaction_ids).index_by(&:id)
+
+      candidates
+        .each_with_index
+        .sort_by { |match, index| [ iban_confirmed?(match, transactions) ? 0 : 1, index ] }
+        .map(&:first)
+    end
+
+    # True when the import linked the outflow's counterparty to the inflow's
+    # account (its IBAN is that account's own IBAN, see
+    # Account::ProviderImportAdapter). No link on either side always resolves
+    # to false -- this is an additive signal, never a requirement.
+    def iban_confirmed?(match, transactions_by_id)
+      inflow = transactions_by_id[match.inflow_transaction_id]
+      outflow = transactions_by_id[match.outflow_transaction_id]
+      return false unless inflow && outflow
+      return false unless outflow.counterparty_own_account_id.present? &&
+        outflow.counterparty_own_account_id == inflow.entry.account_id
+
+      # The inflow side's own counterparty (who the destination account's bank
+      # says paid it) is a second, independent signal. When it is known, it
+      # must agree with the source account -- matching amount and date, but a
+      # DIFFERENT payer on the destination side, means two distinct
+      # transactions that merely coincide. Blank is not a contradiction: not
+      # every provider supplies it on the inflow side.
+      if inflow.counterparty_own_account_id.present?
+        return inflow.counterparty_own_account_id == outflow.entry.account_id
+      end
+
+      source_iban = outflow.entry.account.iban
+      inflow_iban_last4 = inflow.counterparty_iban_last4
+      return false if source_iban.present? && inflow_iban_last4.present? && source_iban.last(4) != inflow_iban_last4
+
+      true
+    end
+
     # A principal-only loan replays a linked transfer as principal. The balance
     # was materialized before this match existed, so re-sync from the transfer's
     # entry dates.
