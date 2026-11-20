@@ -77,6 +77,27 @@ class YnabImportTest < ActiveSupport::TestCase
     assert_equal "Everyday Expenses", rows.second.category
   end
 
+  test "treats a parenthesized inflow as a magnitude" do
+    import = ynab_import(<<~CSV)
+      Account,Date,Payee,Category Group/Category,Memo,Outflow,Inflow
+      Checking,05/02/2024,Employer,Income: Salary,Parens,,"(25.00)"
+    CSV
+    import.generate_rows_from_csv
+
+    # Still income (-25 in Sure's convention); the parentheses must not flip it to an expense
+    assert_equal BigDecimal("-25"), import.rows.first.signed_amount
+  end
+
+  test "reads accounting parentheses in a single signed Amount column as negative" do
+    import = ynab_import(<<~CSV)
+      Account,Date,Payee,Category Group/Category,Memo,Amount
+      Checking,04/02/2024,Store,Food: Groceries,Weekly,"(50.00)"
+    CSV
+    import.generate_rows_from_csv
+
+    assert_equal BigDecimal("50"), import.rows.first.signed_amount
+  end
+
   test "a single signed Amount column takes precedence over outflow/inflow" do
     import = ynab_import(<<~CSV)
       Account,Date,Payee,Category Group/Category,Memo,Amount
