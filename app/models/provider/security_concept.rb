@@ -21,20 +21,10 @@ module Provider::SecurityConcept
   # defaults `currency:`. This Data has ten implementers; without the
   # defaults every one of them would raise at construction the day these
   # fields were added.
-  #
-  # `fund_weights` is what a fund or ETF holds, keyed in this application's
-  # vocabulary so the provider owns the mapping of its own labels:
-  #   { asset_class: { "equity" => 99.1, ... },       # % of the fund
-  #     equity_region: { "north_america" => 62.0 },   # % of its equity sleeve
-  #     equity_sector: { "Technology" => 24.5 },      # % of its equity sleeve
-  #     category_asset_class: "commodity",            # from the fund's category
-  #     leveraged_or_inverse: true }
-  # Every key is optional. Nil for anything that is not a fund, or when the
-  # provider has no breakdown.
   SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
-                             :sector, :industry, :fund_weights) do
+                             :sector, :industry) do
     def initialize(symbol:, name:, links:, logo_url:, description:, kind:, exchange_operating_mic:,
-                   sector: nil, industry: nil, fund_weights: nil)
+                   sector: nil, industry: nil)
       super
     end
   end
