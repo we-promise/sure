@@ -137,7 +137,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
       isPending: false,
       raw: {
         "reference" => "BANK-REF-1",
-        "counterparty" => { "name" => "Test Merchant", "iban" => "GB33BUKB20201555555555" }
+        "counterparty" => { "name" => "Test Merchant", "type" => "X" }
       }
     }
 
@@ -149,7 +149,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not_nil result
     raw = result.entryable.extra.dig("lunchflow", "raw")
     assert_equal "BANK-REF-1", raw["reference"]
-    assert_equal "GB33BUKB20201555555555", raw.dig("counterparty", "iban")
+    assert_equal "X", raw.dig("counterparty", "type")
   end
 
   test "stores raw payload without pending metadata when isPending is absent" do
