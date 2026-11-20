@@ -65,27 +65,38 @@ class SnaptradeAccount::Processor
     # and the card's history shows a jump that never happened.
     #
     # Such an anchor can only be there on an account's first sync since the
-    # fix, so this runs once per account and is then marked done. Even then the
-    # anchor may have come from another provider already in Sure's signs, so
-    # the ledger decides: the reading less what was imported since is the
-    # card's balance on the anchor's date, and an anchor of the opposite sign
-    # is turned around.
+    # fix, so this runs once per account and is then marked done, under a lock
+    # so overlapping syncs can't both turn it. Even then the anchor may have
+    # come from another provider already in Sure's signs, so the ledger
+    # decides: the reading less what was imported since is the card's balance
+    # on the anchor's date, and an anchor of the opposite sign is turned
+    # around. A loan's balance doesn't move with its transactions, so for one
+    # the reading itself is that balance.
     def correct_pre_sign_fix_anchor(account, balance, date)
       return if snaptrade_account.liability_signs_fixed_at?
 
-      if account.liability?
-        manager = Account::CurrentBalanceManager.new(account)
-        anchor = manager.current_anchor_entry
-        net = manager.ledger_net_since(anchor, date) if anchor&.amount&.nonzero?
-        derived = balance - net if net
+      SnaptradeAccount.transaction do
+        locked = SnaptradeAccount.lock.find(snaptrade_account.id)
+        next if locked.liability_signs_fixed_at?
 
-        if derived&.nonzero? && derived.positive? != anchor.amount.positive?
-          # Leaves updated_at alone: it marks which flows the reading had seen.
-          anchor.update_columns(amount: -anchor.amount)
+        if account.liability?
+          manager = Account::CurrentBalanceManager.new(account)
+          anchor = manager.current_anchor_entry
+          net = anchor_net_since(manager, account, anchor, date) if anchor&.amount&.nonzero?
+          derived = balance - net if net
+
+          if derived&.nonzero? && derived.positive? != anchor.amount.positive?
+            # Leaves updated_at alone: it marks which flows the reading had seen.
+            anchor.update_columns(amount: -anchor.amount)
+          end
         end
-      end
 
-      snaptrade_account.update_columns(liability_signs_fixed_at: Time.current)
+        locked.update_columns(liability_signs_fixed_at: Time.current)
+      end
+    end
+
+    def anchor_net_since(manager, account, anchor, date)
+      account.balance_type == :non_cash ? 0 : manager.ledger_net_since(anchor, date)
     end
 
     def update_account_balance(account)

@@ -1144,6 +1144,39 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_not_includes readings, BigDecimal("20.00")
   end
 
+  test "a sync that finds the correction already done by an overlapping sync leaves the anchor alone" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-1400.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-1455.44"), cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+    processor = SnaptradeAccount::Processor.new(@snaptrade_account.reload)
+    SnaptradeAccount.where(id: @snaptrade_account.id).update_all(liability_signs_fixed_at: Time.current)
+
+    processor.process
+
+    assert_includes card.reload.entries.where(entryable_type: "Valuation").pluck(:amount), BigDecimal("-1400.00")
+  end
+
+  test "a loan's anchor from before the sign fix is turned around" do
+    loan = @family.accounts.create!(name: "Line of credit", balance: 0, currency: "USD", accountable: Loan.new)
+    @snaptrade_account.ensure_account_provider!(loan)
+    loan.set_current_balance(BigDecimal("-100.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-100.00"), cash_balance: BigDecimal("-100.00"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    readings = loan.reload.entries.where(entryable_type: "Valuation").pluck(:amount)
+    assert_equal BigDecimal("100.00"), loan.balance
+    assert readings.none?(&:negative?), "no reading keeps the old sign: #{readings.map(&:to_s)}"
+    assert_not_nil @snaptrade_account.reload.liability_signs_fixed_at
+  end
+
   test "processor synchronizes balances, holdings, and activities end-to-end without cash distortion" do
     security = securities(:aapl)
 
