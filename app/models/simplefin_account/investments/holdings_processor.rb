@@ -58,9 +58,9 @@ class SimplefinAccount::Investments::HoldingsProcessor
         market_value = parse_decimal(raw_market_value)
         # An explicit market_value of 0 (a delisted or worthless position) is a
         # real value, not a missing one, so it must not fall back to the
-        # purchase price. BalanceCalculator already reads it as-is. Only a
-        # missing or unparseable value falls back. (GH #5337)
-        has_market_value = decimal_value?(raw_market_value)
+        # purchase price. BalanceCalculator already reads it as-is. Missing,
+        # unparseable, non-finite or negative values still fall back.
+        has_market_value = decimal_value?(raw_market_value) && !market_value.negative?
         raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
         cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, institution_reports_total_basis?)
 
@@ -304,15 +304,9 @@ class SimplefinAccount::Investments::HoldingsProcessor
     end
 
     def decimal_value?(value)
-      case value
-      when Numeric
-        true
-      when String
-        BigDecimal(value)
-        true
-      else
-        false
-      end
+      return false unless value.is_a?(Numeric) || value.is_a?(String)
+
+      BigDecimal(value.to_s).finite?
     rescue ArgumentError
       false
     end

@@ -345,8 +345,8 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_in_delta 100.0, position[:cost_basis].to_f, 0.01
   end
 
-  test "a missing or unparseable market_value still falls back to purchase_price" do
-    [ nil, "", "n/a" ].each do |raw|
+  test "a missing, unparseable, non-finite or negative market_value still falls back to purchase_price" do
+    [ nil, "", "n/a", "NaN", "-Infinity", "-100.00" ].each do |raw|
       holding = { "id" => "lot-a", "symbol" => "AAPL", "shares" => "2", "purchase_price" => "50.00" }
       holding["market_value"] = raw unless raw.nil?
 
