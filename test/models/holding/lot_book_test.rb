@@ -4,8 +4,8 @@ require "minitest/mock"
 class Holding::LotBookTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
-  # Holding::CostBasisTracker exactly as it stood before the lot book, kept here
-  # as the oracle: under the average method the lot book must give the same
+  # The pre-lot tracker implementation, copied exactly and kept here as the
+  # oracle: under the average method the lot book must give the same
   # figure at every step, to the last digit.
   class ReferenceTracker
     def initialize
@@ -80,6 +80,10 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     end
 
     def settle_opening(*, **); end
+
+    def unpriced?
+      @unknown
+    end
   end
 
   THIRD = BigDecimal("10") / 3
@@ -304,8 +308,10 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     assert_equal 160, book.average_cost, "(150 x 3 + 190 x 1) / 4"
   end
 
-  test "the tracker keeps its public interface" do
-    tracker = Holding::CostBasisTracker.new
+  # The name Holding::CostBasisTracker is gone with this PR: the alias existed
+  # only for the parity suite's oracle, which now lives on the copied class.
+  test "the lot book keeps the tracker's public interface" do
+    tracker = Holding::LotBook.new
     tracker.apply(BigDecimal("100"), BigDecimal("10"))
     tracker.buy(BigDecimal("200"), BigDecimal("10"))
     tracker.sell(BigDecimal("-5"))
@@ -604,7 +610,7 @@ class Holding::LotBookTest < ActiveSupport::TestCase
 
       run = -> { Holding::Materializer.new(@account.reload, strategy: strategy).materialize_holdings }
       if reference
-        Holding::LotBook.stub(:new, -> { ReferenceCalculatorTracker.new }) { run.call }
+        Holding::LotBook.stub(:new, ->(**) { ReferenceCalculatorTracker.new }) { run.call }
       else
         run.call
       end

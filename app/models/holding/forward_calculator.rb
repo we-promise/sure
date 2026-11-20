@@ -9,7 +9,7 @@ class Holding::ForwardCalculator
     # The lots of each security, which also give the weighted-average cost
     # basis, relieving sells so the figure stays correct after a position is
     # fully sold and repurchased.
-    @lot_books = Hash.new { |h, k| h[k] = Holding::LotBook.new }
+    @lot_books = Hash.new { |h, k| h[k] = Holding::LotBook.new(method: account.cost_basis_method) }
     # Securities whose position has taken in a transfer. A coin moved in was
     # acquired at a price nothing here knows, and averaging the purchases alone
     # would apply their price to units that never cost it.
@@ -19,6 +19,11 @@ class Holding::ForwardCalculator
   # Every lot of each security, once #calculate has run.
   def lots_by_security
     lots_from(@lot_books)
+  end
+
+  # What each sale of each security took from which lot, once #calculate has run.
+  def lot_disposals_by_security
+    disposals_from(@lot_books)
   end
 
   def clamped_security_ids
@@ -77,7 +82,7 @@ class Holding::ForwardCalculator
           currency: price.currency,
           amount: qty * price.price,
           cost_basis: cost_basis_for(security_id, price.currency),
-          cost_basis_unknown: @transferred_security_ids.include?(security_id)
+          cost_basis_unknown: cost_unknown?(security_id)
         )
       end.compact
     end
@@ -110,12 +115,14 @@ class Holding::ForwardCalculator
         trade = trade_entry.entryable
         security_id = trade.security_id
         previous_quantity = portfolio[security_id] || 0
+        manual_cost = manual_unit_cost(trade_entry)
 
-        if trade.internal_movement?
+        if trade.internal_movement? && manual_cost.nil?
           # An inbound transfer brings in units at a price nothing here knows, so
-          # it makes the whole position's cost basis unknowable. An outbound
-          # transfer only removes units, so relieve them at the running average
-          # (like a sell) rather than leaving them to contaminate a later buy.
+          # it makes the whole position's cost basis unknowable, unless the user
+          # has said what its lot cost. An outbound transfer only removes units,
+          # so relieve them at the running average (like a sell) rather than
+          # leaving them to contaminate a later buy.
           if trade.qty.positive?
             @transferred_security_ids << security_id
             @lot_books[security_id].add_unknown(trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
@@ -123,7 +130,9 @@ class Holding::ForwardCalculator
             @lot_books[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
           end
         else
-          @lot_books[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
+          price = manual_cost || effective_trade_price(trade, date: trade_entry.date)
+          @lot_books[security_id].apply(price, trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date,
+            lot_source_id: trade.lot_source_entry_id)
         end
 
         portfolio[security_id] = previous_quantity + trade.qty
@@ -156,8 +165,17 @@ class Holding::ForwardCalculator
     # Returns the current cost basis for a security, or nil if nothing is held
     # or the position contains transferred-in units of unknown cost.
     def cost_basis_for(security_id, currency)
-      return nil if @transferred_security_ids.include?(security_id)
+      return nil if cost_unknown?(security_id)
 
       @lot_books[security_id].average_cost
+    end
+
+    # Under fifo a transfer-in or an unpriced buy stops mattering once its lot
+    # is sold, so the book answers; under average either is unknown until the
+    # position closes.
+    def cost_unknown?(security_id)
+      return @lot_books[security_id].unknown_cost? if account.cost_basis_fifo?
+
+      @transferred_security_ids.include?(security_id) || @lot_books[security_id].unpriced?
     end
 end

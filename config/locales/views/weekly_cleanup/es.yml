@@ -1,0 +1,21 @@
+es:
+  weekly_cleanup:
+    chat_title: "Limpieza semanal — semana del %{date}"
+    intro: "Aquí tienes el informe de limpieza semanal. He encontrado %{count} punto(s) que merece la pena revisar. Todo lo que sigue es de solo lectura: no se ha cambiado nada."
+    clean: "Esta semana no hay nada que limpiar: las cuentas están en orden."
+    outro: "Responde aquí si quieres profundizar en alguno de estos puntos. Puedo ayudarte a categorizar, fusionar comercios o revisar los duplicados."
+    detectors:
+      uncategorized_transactions:
+        heading: "Transacciones sin categorizar (últimos 7 días)"
+      stale_imports:
+        heading: "Importaciones atascadas o fallidas"
+      provider_data_gaps:
+        heading: "Problemas de sincronización del proveedor (últimos 7 días)"
+      missing_merchant_info:
+        heading: "Transacciones sin datos del comercio (últimos 7 días)"
+      duplicate_imported_entries:
+        heading: "Posibles movimientos importados duplicados (últimos 30 días)"
+      missing_context:
+        heading: "Gastos importantes sin notas ni recibos (últimos 7 días)"
+      merchant_duplicates:
+        heading: "Comercios duplicados — %{total} comercios, %{clusters} grupos de duplicados (%{coverage}% agrupados)"
