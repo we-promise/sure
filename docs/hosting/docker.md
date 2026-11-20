@@ -49,6 +49,12 @@ This command will do the following:
 
 At this point, you should have `compose.yml` in your directory. It includes an optional `backup` service; see [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks).
 
+#### Use PostgreSQL 19
+
+The example uses PostgreSQL 16. To use PostgreSQL 19 for a new install, set `db.image` to `postgres:19-trixie` and change the database volume mount to `postgres-data:/var/lib/postgresql`. The PostgreSQL 19 image stores its data in a version-specific directory under that mount.
+
+For an existing install, take a backup and keep the original database volume. Restore into a new PostgreSQL 19 volume or use `pg_upgrade` before you switch the app. Use a Sure image with PostgreSQL 19 client tools for backups and restores on PostgreSQL 19. [PostgreSQL major-version upgrade guide](https://www.postgresql.org/docs/19/upgrading.html)
+
 ### Step 3 (required): Configure your environment
 
 `compose.yml` requires a `SECRET_KEY_BASE` you provide yourself — there is no built-in default. This isn't just a Rails formality: `SECRET_KEY_BASE` also seeds the automatic generation of your Active Record encryption keys (used to encrypt provider API tokens/keys and other sensitive data at rest) when you don't set `ACTIVE_RECORD_ENCRYPTION_*` explicitly. A shared or guessable value would mean session cookies can be forged **and** your encryption keys can be computed by anyone. Follow the steps below before starting the app.
@@ -586,7 +592,7 @@ Each backup is a folder under `backups/<version>/<date>-<manual|scheduled>/` wit
 | `restore.sh` | Restores the backup into a new folder (see below) |
 | `SHA256SUMS` | Checksums, verified before every restore |
 
-`db.dump` is written with the PostgreSQL tools in the Sure image (version 17), which older tools can't read. Restore it with `sure-backup` (`restore`, `recover` or `restore.sh`), not with `pg_restore` from the `db` container.
+`db.dump` is written with the PostgreSQL tools in the Sure image. Restore it with `sure-backup` (`restore`, `recover` or `restore.sh`). For a manual restore, use a `pg_restore` version at least as new as the `pg_dump_version` in the manifest. Use a target database server on the same PostgreSQL major version as the backup source or a newer version.
 
 Uploaded files are backed up from the `app-storage` volume. If you store them in S3, Cloudflare R2, Google Cloud Storage or another bucket (`ACTIVE_STORAGE_SERVICE`), they are not in the backup; use your provider's versioning or replication for those.
 

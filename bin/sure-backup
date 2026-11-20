@@ -64,13 +64,15 @@ ensure_deps() {
   # backup services from v0.7.5 working.
   missing=""
   if ! command -v pg_dump >/dev/null 2>&1; then
-    # Prefer the client the Sure image ships (17); dumps it makes need a
-    # pg_restore at least that new. Older Alpine releases only have 16.
-    if apk search -q postgresql17-client 2>/dev/null | grep -qx postgresql17-client; then
-      missing="$missing postgresql17-client"
-    else
-      missing="$missing postgresql16-client~=16"
-    fi
+    # Older Alpine repositories may lack the client used by the Sure image.
+    pg_package=postgresql16-client
+    for major in 19 18 17; do
+      if apk search -q "postgresql${major}-client" 2>/dev/null | grep -qx "postgresql${major}-client"; then
+        pg_package="postgresql${major}-client"
+        break
+      fi
+    done
+    missing="$missing $pg_package"
   fi
   # BusyBox tar lacks --numeric-owner/--exclude semantics we rely on.
   tar --version 2>/dev/null | grep -q "GNU tar" || missing="$missing tar~=1"
@@ -369,6 +371,13 @@ cmd_restore() {
     die "this backup was made with pg_dump ${dump_major}, but this pg_restore is ${client_major}. Restore it from the host with 'sh sure-backup restore', which runs in the Sure image, or with PostgreSQL ${dump_major} client tools."
   fi
 
+  server_version_num=$(psql_value "SHOW server_version_num" postgres)
+  server_major=$((server_version_num / 10000))
+  source_major=$(manifest_value "$dir" postgres_server_version | sed -n 's/^\([0-9][0-9]*\)\..*/\1/p')
+  if [ -n "$source_major" ] && [ "$source_major" -gt "$server_major" ]; then
+    die "this backup is from PostgreSQL ${source_major}, but the target is PostgreSQL ${server_major}. Use PostgreSQL ${source_major} or later."
+  fi
+
   # Checked up front so a missing mount can't leave a half-restored instance.
   if [ -f "${dir}/storage.tar.gz" ] && ! storage_mounted; then
     die "${STORAGE_DIR} is not mounted; cannot restore uploaded files"
@@ -394,7 +403,6 @@ cmd_restore() {
   createdb --maintenance-db=postgres -O "$POSTGRES_USER" "$POSTGRES_DB"
 
   log "Restoring database..."
-  server_major=$(( $(psql_value "SHOW server_version_num" postgres) / 10000 ))
   if [ "$client_major" -le "$server_major" ]; then
     pg_restore --no-owner --role="$POSTGRES_USER" --exit-on-error -d "$POSTGRES_DB" "${dir}/db.dump"
   else

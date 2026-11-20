@@ -2,15 +2,20 @@
 
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version and Gemfile
 ARG RUBY_VERSION=3.4.13
-FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim AS base
+FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim-trixie AS base
 
 # Rails app lives here
 WORKDIR /rails
 
 # Install base packages
 # poppler-utils provides pdftoppm, required for the PDF vision processing path
+# pg_dump must be at least as new as the database server.
 RUN apt-get update -qq \
-    && apt-get install --no-install-recommends -y curl libvips postgresql-client libyaml-0-2 procps libjemalloc2 poppler-utils \
+    && apt-get install --no-install-recommends -y curl \
+    && curl --fail --silent --show-error --location https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/keyrings/postgresql.asc \
+    && echo 'deb [signed-by=/usr/share/keyrings/postgresql.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update -qq \
+    && apt-get install --no-install-recommends -y libvips postgresql-client-19 libyaml-0-2 procps libjemalloc2 poppler-utils \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment
