@@ -305,7 +305,7 @@ export default class extends Controller {
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", textSecondary)
-          .text(this._fmtMoneyShort(tickValue, data.currency));
+          .text(this._fmtMoneyShort(tickValue, data.currency, yStep));
       });
     }
 
@@ -680,7 +680,10 @@ export default class extends Controller {
     }
   }
 
-  _fmtMoneyShort(amount, _currency) {
+  // `step` is the tick spacing when known. Millions need two decimals when the
+  // ticks are closer than 100K, or neighbouring labels round to the same value
+  // (1.02M and 1.04M would both read "1M").
+  _fmtMoneyShort(amount, _currency, step = null) {
     // The server ships `currency_symbol` via projection_payload (resolved
     // through Money.new(0, code).currency.symbol so EUR/GBP/JPY/etc. render
     // with the family-locale-correct glyph). Fall back to "$" if a stale
@@ -688,7 +691,8 @@ export default class extends Controller {
     const symbol = this.dataValue?.currency_symbol || "$";
     const abs = Math.abs(amount);
     if (abs >= 1_000_000) {
-      return `${symbol}${(amount / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+      const decimals = step && step < 100_000 ? 2 : 1;
+      return `${symbol}${Number((amount / 1_000_000).toFixed(decimals))}M`;
     }
     if (abs >= 1_000) {
       return `${symbol}${(amount / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
