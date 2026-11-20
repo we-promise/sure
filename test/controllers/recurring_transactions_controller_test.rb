@@ -258,6 +258,9 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
       "account_providers should be preloaded, not checked one account at a time"
     assert_operator queries.grep(/FROM "active_storage_attachments" WHERE .*"record_id" = \$1 AND/).size, :<=, 1,
       "account logos should be preloaded, not loaded one account at a time"
+    # Account#linked? falls back to the legacy links once account_providers is empty.
+    assert_empty queries.grep(/FROM "(plaid|simplefin)_accounts" WHERE .*"id" = \$1 LIMIT/),
+      "legacy plaid/simplefin links should be preloaded, not loaded one account at a time"
   end
 
   test "add income opens an income dialog, not a bill dialog" do
