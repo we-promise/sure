@@ -184,8 +184,11 @@ class Security < ApplicationRecord
     raise ArgumentError, "save the security before tagging it" unless persisted?
     # An omitted selection leaves the tags alone; an empty list clears them.
     return if tag_ids.nil?
-    unless tag_ids.is_a?(Array) && tag_ids.all? { |id| id.is_a?(String) || id.is_a?(Integer) }
-      raise ArgumentError, "tag_ids must be a list of ids"
+    # Tag ids are uuids: anything that does not cast to one would match no
+    # tag and clear the family's tags, as an empty list does.
+    id_type = Tag.type_for_attribute(:id)
+    unless tag_ids.is_a?(Array) && tag_ids.all? { |id| id.is_a?(String) && (id.blank? || id_type.cast(id)) }
+      raise ArgumentError, "tag_ids must be a list of tag ids"
     end
 
     mine = family.tags.select(:id)

@@ -213,6 +213,18 @@ class Security::TagsTest < ActiveSupport::TestCase
     assert_equal [ existing.id ], Tagging.where(taggable: @security).pluck(:id)
   end
 
+  # Tag ids are uuids: an integer or a malformed string matches no tag, so
+  # accepted it would clear the family's tags exactly as an empty list does.
+  test "an id that is not a uuid is refused and changes nothing" do
+    existing = @security.taggings.create!(tag: @tag)
+
+    [ [ 123 ], [ "nope" ], [ @second_tag.id, "nope" ] ].each do |bad|
+      assert_raises(ArgumentError, "for #{bad.inspect}") { @security.set_tags_for(@family, bad) }
+    end
+
+    assert_equal [ existing.id ], Tagging.where(taggable: @security).pluck(:id)
+  end
+
   test "several new tags are inserted in one statement" do
     inserts = 0
     counter = ->(*, payload) { inserts += 1 if payload[:sql].match?(/\AINSERT INTO "taggings"/) }
