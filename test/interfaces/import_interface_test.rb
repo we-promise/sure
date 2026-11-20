@@ -36,7 +36,7 @@ module ImportInterfaceTest
 
     import.stubs(:publishable?).returns(false)
 
-    assert_raises(RuntimeError, "Import is not publishable") do
+    assert_raises(Import::NotPublishableError) do
       import.publish_later(user: users(:family_admin))
     end
   end

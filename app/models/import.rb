@@ -1,6 +1,7 @@
 class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   AlreadyPublishedError = Class.new(StandardError)
+  NotPublishableError = Class.new(StandardError)
   # A wizard edit or a publish holds the import (#with_publish_lock).
   PublishBusyError = Class.new(StandardError)
   PUBLISH_LOCK_NAMESPACE = 4015
@@ -325,7 +326,7 @@ class Import < ApplicationRecord
     with_lock do
       raise AlreadyPublishedError, "Import #{id} is #{status}" unless changeable?
       raise MaxRowCountExceededError if row_count_exceeded?
-      raise "Import is not publishable" unless publishable?
+      raise NotPublishableError, "Import was uploaded but has rows to fix before it can be published." unless publishable?
 
       refusal = user && publish_refusal_for(user)
       raise PublishNotAllowedError.new(refusal) if refusal

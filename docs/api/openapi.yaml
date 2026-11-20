@@ -8213,7 +8213,9 @@ paths:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/ErrorResponseWithImportId"
         '422':
-          description: validation error or publish rejection
+          description: validation error, or publish rejected (not_publishable, max_row_count_exceeded,
+            preflight_failed); a rejected import is kept pending and its import_id
+            returned
           content:
             application/json:
               schema:

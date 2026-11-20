@@ -1,5 +1,4 @@
 class SureImport < Import
-  NotPublishableError = Class.new(StandardError)
   PreflightError = Class.new(StandardError)
 
   DEFAULT_MAX_NDJSON_SIZE_MB = 10
