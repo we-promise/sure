@@ -1,0 +1,8 @@
+<%# locals: (entry:) %>
+
+<%# Lazy: inside the drawer's closed "Which rules match?" disclosure it loads
+    only once opened. Drawer edits replace it, so an open disclosure reloads
+    with the edited transaction. %>
+<%= turbo_frame_tag dom_id(entry, :matching_rules), src: transaction_matching_rules_path(entry), loading: :lazy do %>
+  <p class="text-xs text-secondary"><%= t("transactions.show.matching_rules_loading") %></p>
+<% end %>

@@ -52,10 +52,13 @@ class Transaction::MatchingRules
     end
   end
 
-  # Attributes matching rules would set that a person set by hand. The nightly
-  # run leaves those alone; only applying a rule by hand overrides them.
+  # Attributes the rules that run would set but that are locked (by a person's
+  # edit, or by the auto-categorizer protecting its pick). The nightly run
+  # leaves those alone; only applying a rule by hand overrides them. Actions
+  # that fill a field without reserving it (AI, Bayes) count too: they skip
+  # locked fields all the same.
   def locked_attributes
-    claims_by_attribute.keys.select do |attribute|
+    reached_actions.flat_map { |action| claimed_attributes(action) }.uniq.select do |attribute|
       (attribute.in?(ENTRY_ATTRIBUTES) ? transaction.entry : transaction).locked?(attribute)
     end
   end
@@ -69,23 +72,35 @@ class Transaction::MatchingRules
       @stopper = rules.find { |rule| rule.active? && rule.stop_processing? }
     end
 
-    # { attribute => [[rule, what it sets], ...] }, in run order, for the
-    # attributes active matching rules set to different values.
+    # The claims of the attributes active matching rules set to different values.
     def conflicting_claims
       @conflicting_claims ||= claims_by_attribute.select { |_attribute, claims| claims.map(&:last).uniq.size > 1 }
     end
 
+    # { attribute => [[rule, what it sets], ...] }, in run order, for the
+    # actions that keep rules below from setting the attribute.
     def claims_by_attribute
-      @claims_by_attribute ||= begin
-        reached_rules = rules.select { |rule| rule.active? && stopped_by(rule).nil? }
-        reached_rules.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |rule, claims|
-          rule.actions.select { |action| reserves_claimed_attributes?(action) }.each do |action|
-            action.claimed_attributes.each do |attribute|
-              claims[attribute] << [ rule, [ action.action_type, action.value ] ]
-            end
-          end
+      @claims_by_attribute ||= reached_actions.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |action, claims|
+        next unless reserves_claimed_attributes?(action)
+
+        claimed_attributes(action).each do |attribute|
+          claims[attribute] << [ action.rule, [ action.action_type, action.value ] ]
         end
       end
+    end
+
+    # The actions of the active matching rules that a stop-processing rule
+    # above does not keep from running, in run order.
+    def reached_actions
+      @reached_actions ||= rules.select { |rule| rule.active? && stopped_by(rule).nil? }.flat_map(&:actions)
+    end
+
+    # An action whose type is no longer supported (e.g. a retired one still
+    # stored) sets nothing, as when the rule runs.
+    def claimed_attributes(action)
+      action.claimed_attributes
+    rescue Rule::Registry::UnsupportedActionError
+      []
     end
 
     # Whether an action keeps rules below from setting its attributes depends
@@ -94,7 +109,7 @@ class Transaction::MatchingRules
     def reserves_claimed_attributes?(action)
       @reserves_claimed_attributes ||= {}
       @reserves_claimed_attributes.fetch([ action.action_type, action.value ]) do |key|
-        @reserves_claimed_attributes[key] = action.reserves_claimed_attributes?
+        @reserves_claimed_attributes[key] = claimed_attributes(action).any? && action.reserves_claimed_attributes?
       end
     end
 

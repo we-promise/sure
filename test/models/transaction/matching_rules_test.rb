@@ -80,6 +80,31 @@ class Transaction::MatchingRulesTest < ActiveSupport::TestCase
     assert_equal [ :category_id ], matching_rules.locked_attributes
   end
 
+  test "reports locks on attributes actions set without reserving them" do
+    rule = @family.rules.build(name: "Bayes", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "starbucks")
+    rule.actions.build(action_type: "bayes_categorize")
+    rule.save!
+    @transaction.lock_attr!(:category_id)
+
+    result = matching_rules
+
+    assert_equal [ :category_id ], result.locked_attributes
+    assert_empty result.conflicts
+  end
+
+  test "an action whose type is no longer supported is skipped and the rule stays listed" do
+    rule = create_rule(name: "Retired", condition_value: "starbucks", category: categories(:income))
+    rule.actions.first.update_column(:action_type, "retired_action")
+    plain = create_rule(name: "Plain", condition_value: "starbucks", category: categories(:food_and_drink))
+
+    result = matching_rules
+
+    assert_equal [ rule, plain ], result.rules
+    assert_empty result.conflicts
+    assert_empty result.locked_attributes
+  end
+
   test "reads the name lock from the entry" do
     rule = @family.rules.build(name: "Rename", resource_type: "transaction", active: true)
     rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "starbucks")

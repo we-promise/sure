@@ -13,6 +13,7 @@ class Transactions::MatchingRulesControllerTest < ActionDispatch::IntegrationTes
 
   test "the drawer loads matching rules lazily inside a closed disclosure" do
     create_rule(name: "Coffee", value: "starbucks", category: categories(:income))
+    create_rule(name: "Coffee again", value: "star", category: categories(:income))
 
     queries = capture_sql_queries do
       get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
@@ -88,13 +89,41 @@ class Transactions::MatchingRulesControllerTest < ActionDispatch::IntegrationTes
     assert_select "[data-testid='matching-rule']", text: /Morning coffee/
   end
 
-  test "says when the category was set by hand" do
+  test "says when the category is locked" do
     create_rule(name: "Coffee", value: "starbucks", category: categories(:income))
     @entry.transaction.lock_attr!(:category_id)
 
     get transaction_matching_rules_url(@entry)
 
-    assert_select "[data-testid='matching-rules-locked']", text: /category/
+    assert_select "[data-testid='matching-rules-locked']", text: /category is locked/
+  end
+
+  test "lists an action whose type is no longer supported by its type" do
+    rule = create_rule(name: "Retired", value: "starbucks", category: categories(:income))
+    rule.actions.first.update_column(:action_type, "retired_action")
+
+    get transaction_matching_rules_url(@entry)
+
+    assert_response :success
+    assert_select "[data-testid='matching-rule']", text: /Retired action/
+  end
+
+  test "drawer edits reload the matching rules frame" do
+    patch transaction_url(@entry), params: {
+      entry: { entryable_type: @entry.entryable_type, entryable_attributes: { id: @entry.entryable_id, category_id: categories(:income).id } }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=replace][target='#{dom_id(@entry, :matching_rules)}'] turbo-frame[loading=lazy][src=?]",
+                  transaction_matching_rules_path(@entry)
+  end
+
+  test "tag edits reload the matching rules frame" do
+    patch tags_transaction_url(@entry), params: { tag_ids: [ tags(:one).id ] }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=replace][target='#{dom_id(@entry, :matching_rules)}'] turbo-frame[loading=lazy][src=?]",
+                  transaction_matching_rules_path(@entry)
   end
 
   test "says so when no rule matches" do

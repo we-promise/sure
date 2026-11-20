@@ -27,7 +27,8 @@ module RulesHelper
 
   # What an action does, as the rule list and the transaction drawer show it:
   # "Set transaction category to Food", "Set transaction name to Coffee", or
-  # the bare label for an action without a chosen value.
+  # the bare label for an action without a chosen value. A stored action whose
+  # type is no longer supported reads as its type.
   def rule_action_summary(action)
     if action.value && action.options
       t("rules.rule.action_label_to", label: action.executor.label, value: action.value_display)
@@ -36,5 +37,7 @@ module RulesHelper
     else
       action.executor.label
     end
+  rescue Rule::Registry::UnsupportedActionError
+    action.action_type.to_s.humanize
   end
 end
