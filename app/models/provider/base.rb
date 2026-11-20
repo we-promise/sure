@@ -38,6 +38,21 @@ class Provider::Base
     []
   end
 
+  # How each list loads a provider's items unless its declaration says otherwise:
+  # the Bank sync page only needs to know which connections exist, and a panel
+  # reads them whole.
+  ITEM_LISTS = {
+    settings_page: ->(items) { items.ordered.select(:id) },
+    settings_panel: ->(items) { items.ordered }
+  }.freeze
+
+  def self.item_list_query(query)
+    return query if query.respond_to?(:call)
+
+    ->(items) { query.reduce(items) { |relation, scope| relation.public_send(scope) } }
+  end
+  private_class_method :item_list_query
+
   # Declares the family connection (the provider's `*_items` record) this adapter
   # serves. Lists that cover every account provider, such as
   # ProviderConnectionStatus::PROVIDERS, are derived from these declarations.
@@ -51,14 +66,20 @@ class Provider::Base
   #   turbo_id: (defaults to key) and auto_open:. The partial is "<key>_panel".
   # @param metadata [Hash, nil] Provider::Metadata attributes (region:, kinds:,
   #   maturity:, logo_text:, logo_color:, domain:, ...)
+  # @param lists [Hash] How a list loads the family's items, overriding ITEM_LISTS:
+  #   scope names applied in order, or a lambda over the family's item relation.
   def self.declares_connection(key:, name:, item_class: "#{key.camelize}Item", accounts: :"#{key}_accounts",
-                               linked_accounts: nil, panel: nil, metadata: nil)
+                               linked_accounts: nil, panel: nil, metadata: nil, lists: {})
+    unknown_lists = lists.keys - ITEM_LISTS.keys
+    raise ArgumentError, "#{key}: unknown lists #{unknown_lists.join(', ')}" if unknown_lists.any?
+
     @connection_declaration = {
       key: key,
       type: item_class,
       association: item_class.underscore.pluralize.to_sym,
       accounts: accounts,
-      linked_accounts: linked_accounts
+      linked_accounts: linked_accounts,
+      lists: ITEM_LISTS.merge(lists.transform_values { |query| item_list_query(query) }).freeze
     }.compact.freeze
     panel_options = panel.is_a?(Hash) ? panel : {}
     @panel_declaration = panel && {

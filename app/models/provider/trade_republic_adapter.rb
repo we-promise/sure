@@ -4,7 +4,11 @@ class Provider::TradeRepublicAdapter < Provider::Base
 
   Provider::Factory.register("TradeRepublicAccount", self)
   declares_connection key: "trade_republic", name: "Trade Republic", panel: { turbo_id: "trade-republic" },
-                      metadata: { region: "EU", kinds: %w[Bank Investment], maturity: :beta, logo_text: "TR", logo_color: nil, domain: "traderepublic.com" }
+                      metadata: { region: "EU", kinds: %w[Bank Investment], maturity: :beta, logo_text: "TR", logo_color: nil, domain: "traderepublic.com" },
+                      lists: {
+                        settings_page: ->(items) { items.active.ordered.includes(:trade_republic_accounts) },
+                        settings_panel: ->(items) { items.active.ordered.includes(:trade_republic_accounts) }
+                      }
 
   def self.supported_account_types
     %w[Depository Investment]

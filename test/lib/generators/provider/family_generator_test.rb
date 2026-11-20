@@ -20,10 +20,10 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   end
 
   # The adapter template calls predicate helpers, which a Struct cannot name.
-  def render_adapter(skip_view:, banking: true)
+  def render_adapter(skip_view:, banking: true, parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ])
     helpers = {
       class_name: "Gocardless", file_name: "gocardless", options: { skip_view: skip_view },
-      parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ],
+      parsed_fields: parsed_fields,
       banking_provider?: banking, investment_provider?: !banking
     }
     context = Object.new
@@ -299,7 +299,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   test "the generated adapter declares the metadata every provider needs" do
     { banking: %w[Bank], investment: %w[Investment] }.each do |type, kinds|
       adapter = render_adapter(skip_view: false, banking: type == :banking)
-      metadata = eval(adapter[/^\s*metadata: (\{.*\})$/, 1].to_s)
+      metadata = eval(adapter[/^\s*metadata: (\{.*\}),?$/, 1].to_s)
 
       assert_kind_of Hash, metadata, "#{type} adapter has no metadata"
       %i[region kinds maturity logo_text].each { |field| assert metadata[field].present?, "#{type} metadata has no #{field}" }
@@ -334,6 +334,22 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
         assert_includes output, "metadata: {", "skip_view: #{skip_view}"
       end
     end
+  end
+
+  # The generated panel counts only connections that have their secret, so the panel
+  # list loads those rather than the default.
+  test "the generated adapter's panel loads only connections that have their secret" do
+    [ false, true ].each do |skip_view|
+      assert_includes render_adapter(skip_view: skip_view),
+                      %(lists: { settings_panel: ->(items) { items.where.not(api_key: [ nil, "" ]) } }\n), "skip_view: #{skip_view}"
+    end
+
+    access_token = render_adapter(skip_view: false, parsed_fields: [
+      { name: "region", type: "string", secret: false, default: "eu" },
+      { name: "access_token", type: "string", secret: true, default: nil }
+    ])
+    assert_includes access_token,
+                    %(lists: { settings_panel: ->(items) { items.where.not(access_token: [ nil, "" ]) } }\n)
   end
 
   # Bank sync's lists all derive from the declaration, so the generator only checks

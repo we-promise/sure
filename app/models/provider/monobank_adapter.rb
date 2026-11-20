@@ -4,7 +4,8 @@ class Provider::MonobankAdapter < Provider::Base
 
   Provider::Factory.register("MonobankAccount", self)
   declares_connection key: "monobank", name: "Monobank", panel: true,
-                      metadata: { region: "UA", kinds: %w[Bank], maturity: :alpha, logo_text: "MB", logo_color: "#111827", domain: "monobank.ua" }
+                      metadata: { region: "UA", kinds: %w[Bank], maturity: :alpha, logo_text: "MB", logo_color: "#111827", domain: "monobank.ua" },
+                      lists: { settings_page: %i[active ordered], settings_panel: %i[active ordered] }
 
   # Sure accountable types that can be created from Monobank accounts. Everything the
   # personal API exposes — cards and jars alike — is a cash account (see

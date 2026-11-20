@@ -212,68 +212,24 @@ class Settings::ProvidersController < ApplicationController
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
     FAMILY_PANELS_BY_KEY = FAMILY_PANELS.index_by { |p| p[:key] }.freeze
 
-    # Maps panel key → ActiveRecord model name for sync health queries, from the
-    # connection each panel's adapter declares.
-    PANEL_SYNCABLE_TYPES = Provider::Factory.connection_declarations
+    # The connection each panel's adapter declares.
+    PANEL_CONNECTIONS = Provider::Factory.connection_declarations
       .select { |declaration| FAMILY_PANEL_KEYS.include?(declaration[:key]) }
-      .to_h { |declaration| [ declaration[:key], declaration[:type] ] }
       .freeze
 
+    # Maps panel key → ActiveRecord model name for sync health queries.
+    PANEL_SYNCABLE_TYPES = PANEL_CONNECTIONS.to_h { |declaration| [ declaration[:key], declaration[:type] ] }.freeze
+
     def load_provider_items(provider_key)
-      case provider_key
-      when "akahu"
-        @akahu_items = Current.family.akahu_items.active.ordered
-      when "up"
-        @up_items = Current.family.up_items.active.ordered
-      when "monobank"
-        @monobank_items = Current.family.monobank_items.active.ordered
-      when "fio"
-        @fio_items = Current.family.fio_items.active.ordered
-      when "simplefin"
-        @simplefin_items = Current.family.simplefin_items.ordered
-      when "lunchflow"
-        @lunchflow_items = Current.family.lunchflow_items.ordered
-      when "redbark"
-        @redbark_items = Current.family.redbark_items.ordered
-      when "enable_banking"
-        @enable_banking_items = Current.family.enable_banking_items.ordered
-      when "truelayer"
-        @truelayer_items = Current.family.truelayer_items.active.ordered
-      when "coinstats"
-        @coinstats_items = Current.family.coinstats_items.ordered
-      when "wise"
-        @wise_items = Current.family.wise_items.active.ordered.includes(:syncs, :wise_accounts)
-      when "mercury"
-        @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
-      when "brex"
-        @brex_items = Current.family.brex_items.active.ordered.includes(:syncs, :brex_accounts)
-      when "coinbase"
-        @coinbase_items = Current.family.coinbase_items.ordered
-      when "binance"
-        @binance_items = Current.family.binance_items.active.ordered
-      when "kraken"
-        @kraken_items = Current.family.kraken_items.active.ordered
-      when "coinspot"
-        @coinspot_items = Current.family.coinspot_items.active.ordered
-      when "onchain_wallet"
-        @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
-      when "snaptrade"
-        @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
-      when "ibkr"
-        @ibkr_items = Current.family.ibkr_items.ordered
-      when "trading212"
-        @trading212_items = Current.family.trading212_items.ordered
-      when "trade_republic"
-        @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
-      when "indexa_capital"
-        @indexa_capital_items = Current.family.indexa_capital_items.ordered
-      when "sophtron"
-        @sophtron_items = Current.family.sophtron_items.ordered
-      when "questrade"
-        @questrade_items = Current.family.questrade_items.active.ordered
-      when "sharesight"
-        @sharesight_items = Current.family.sharesight_items.active.ordered
-      end
+      connection = PANEL_CONNECTIONS.find { |declaration| declaration[:key] == provider_key }
+      load_items(connection, :settings_panel) if connection
+    end
+
+    # Sets @<key>_items to the family's items, loaded with the connection's query
+    # for `list`.
+    def load_items(connection, list)
+      items = Current.family.public_send(connection[:association])
+      instance_variable_set(:"@#{connection[:key]}_items", connection[:lists].fetch(list).call(items))
     end
 
     # Prepares instance vars needed by the show view and partials
@@ -286,34 +242,7 @@ class Settings::ProvidersController < ApplicationController
       end
       @provider_configurations = [] unless Current.user.manages_instance_settings?
 
-      @akahu_items = Current.family.akahu_items.active.ordered
-      @up_items = Current.family.up_items.active.ordered
-      @monobank_items = Current.family.monobank_items.active.ordered
-      # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
-      @simplefin_items = Current.family.simplefin_items.where.not(access_url: [ nil, "" ]).ordered.select(:id)
-      @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
-      @redbark_items = Current.family.redbark_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
-      @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
-      @truelayer_items = Current.family.truelayer_items.active.ordered
-      # Providers page only needs to know whether any Sophtron connections exist with valid credentials
-      @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
-      @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
-      @wise_items = Current.family.wise_items.active.ordered
-      @mercury_items = Current.family.mercury_items.active.ordered
-      @brex_items = Current.family.brex_items.active.ordered
-      @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
-      @snaptrade_items = Current.family.snaptrade_items.ordered
-      @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
-      @trading212_items = Current.family.trading212_items.ordered
-      @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
-      @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
-      @binance_items = Current.family.binance_items.active.ordered
-      @kraken_items = Current.family.kraken_items.active.ordered
-      @coinspot_items = Current.family.coinspot_items.active.ordered
-      @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
-      @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
-      @sharesight_items = Current.family.sharesight_items.active.ordered
-      @fio_items = Current.family.fio_items.active.ordered
+      PANEL_CONNECTIONS.each { |connection| load_items(connection, :settings_page) }
 
       # Wallet uploads are managed on iOS. Only expose linked accounts the
       # current admin can access, including connections that need repair.
@@ -336,7 +265,7 @@ class Settings::ProvidersController < ApplicationController
       @health = view_context.provider_health_strip(connected: @connected, needs_attention: @needs_attention)
     end
 
-    # Maps each declared family panel key to the items load_provider_items set
+    # Maps each declared family panel key to the items prepare_show_context loaded
     # for it, for compute_provider_sync_health.
     def family_panel_items
       FAMILY_PANEL_KEYS.index_with { |key| instance_variable_get(:"@#{key}_items") }

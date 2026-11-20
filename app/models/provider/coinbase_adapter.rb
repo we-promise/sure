@@ -5,7 +5,8 @@ class Provider::CoinbaseAdapter < Provider::Base
   # Register this adapter with the factory
   Provider::Factory.register("CoinbaseAccount", self)
   declares_connection key: "coinbase", name: "Coinbase", panel: true,
-                      metadata: { region: "Global", kinds: %w[Crypto], maturity: :beta, logo_text: "CB", logo_color: "#3b82f6", domain: "coinbase.com" }
+                      metadata: { region: "Global", kinds: %w[Crypto], maturity: :beta, logo_text: "CB", logo_color: "#3b82f6", domain: "coinbase.com" },
+                      lists: { settings_page: %i[ordered] }
 
   # Define which account types this provider supports
   def self.supported_account_types

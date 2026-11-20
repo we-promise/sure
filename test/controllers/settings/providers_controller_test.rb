@@ -717,6 +717,31 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes without_brex.keys, "brex"
   end
 
+  # The page and each panel load a provider's items with the queries its adapter declares.
+  test "Bank sync and each panel load items through the declared list queries" do
+    items_for = ->(connection, list) { connection[:lists].fetch(list).call(families(:dylan_family).public_send(connection[:association])) }
+    connections = Provider::Factory.connection_declarations.select do |connection|
+      Settings::ProvidersController::FAMILY_PANEL_KEYS.include?(connection[:key])
+    end
+    assert_equal Settings::ProvidersController::FAMILY_PANEL_KEYS.sort, connections.map { |connection| connection[:key] }
+
+    get settings_providers_url
+    connections.each do |connection|
+      loaded = @controller.view_assigns["#{connection[:key]}_items"]
+      expected = items_for.call(connection, :settings_page)
+      assert_equal expected.to_sql, loaded.to_sql, connection[:key]
+      assert_equal expected.includes_values, loaded.includes_values, connection[:key]
+    end
+
+    connections.each do |connection|
+      get connect_form_settings_providers_path(provider_key: connection[:key])
+      loaded = @controller.view_assigns["#{connection[:key]}_items"]
+      expected = items_for.call(connection, :settings_panel)
+      assert_equal expected.to_sql, loaded.to_sql, connection[:key]
+      assert_equal expected.includes_values, loaded.includes_values, connection[:key]
+    end
+  end
+
   test "POST sync for a provider without a family panel schedules nothing" do
     Sync.where(syncable_type: "PlaidItem").delete_all
 
