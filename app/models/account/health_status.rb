@@ -1,6 +1,7 @@
 # Data-quality problems on one account, shown next to its sync state on the
 # account page. Each check returns an Issue or nil; a new one is a private
-# `*_issue` method added to `issues`.
+# `*_issue` method added to `issues`. Details stay data (negative positions);
+# UI::Account::HealthStatus formats them for the viewer's family.
 #
 # Computed for the account the viewer opened, so it is only ever shown to
 # someone who can see that account.
@@ -45,19 +46,9 @@ class Account::HealthStatus
       Issue.new(
         severity: :warning,
         message: I18n.t("accounts.health_status.negative_positions.message"),
-        details: positions.map { |position| negative_position_detail(position) },
+        details: positions,
         hint: I18n.t("accounts.health_status.negative_positions.hint"),
         link: { text: I18n.t("accounts.health_status.negative_positions.link"), href: Rails.application.routes.url_helpers.account_path(account, tab: "holdings") }
-      )
-    end
-
-    def negative_position_detail(position)
-      I18n.t(
-        "accounts.health_status.negative_positions.detail",
-        name: position.security.name.presence || position.security.ticker,
-        ticker: position.security.ticker,
-        date: I18n.l(position.first_date),
-        qty: ActiveSupport::NumberHelper.number_to_rounded(position.lowest_qty, precision: 18, strip_insignificant_zeros: true)
       )
     end
 end

@@ -126,7 +126,7 @@ es:
       title: ¿Qué te gustaría añadir?
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): por debajo de cero desde el %{date}, mínimo %{qty}."
+        detail: "%{name} (%{ticker}): por debajo de cero desde el %{date}, mínimo %{qty}"
         hint: "Probablemente falta una compra o un traspaso. Añádela o corrige las operaciones que dejaron la posición por debajo de cero."
         link: Revisar posiciones
         message: "Algunas posiciones quedaron por debajo de cero"

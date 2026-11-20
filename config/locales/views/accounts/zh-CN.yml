@@ -118,7 +118,7 @@ zh-CN:
       title: 您想添加什么？
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker})：自 %{date} 起低于零，最低 %{qty}。"
+        detail: "%{name} (%{ticker})：自 %{date} 起低于零，最低 %{qty}"
         hint: "可能缺少一笔买入或转入。请补上，或更正使持仓低于零的交易。"
         link: "查看持仓"
         message: "部分持仓低于零"

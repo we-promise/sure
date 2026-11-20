@@ -78,7 +78,7 @@ zh-TW:
       title: 您想新增什麼內容？
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker})：自 %{date} 起低於零，最低 %{qty}。"
+        detail: "%{name} (%{ticker})：自 %{date} 起低於零，最低 %{qty}"
         hint: "可能缺少一筆買入或轉入。請補上，或更正使持倉低於零的交易。"
         link: "檢視持股"
         message: "部分持倉低於零"

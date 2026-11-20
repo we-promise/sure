@@ -71,7 +71,7 @@ hu:
       title: Mit szeretnél hozzáadni?
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): %{date} óta nulla alatt, legalacsonyabb %{qty}."
+        detail: "%{name} (%{ticker}): %{date} óta nulla alatt, legalacsonyabb %{qty}"
         hint: "Valószínűleg hiányzik egy vétel vagy átvezetés. Vedd fel, vagy javítsd azokat a tranzakciókat, amelyek nulla alá vitték a pozíciót."
         link: "Pozíciók ellenőrzése"
         message: "Néhány pozíció nulla alá került"

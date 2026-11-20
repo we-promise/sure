@@ -98,7 +98,7 @@ tr:
       depository_only: Yalnızca nakit ve kredi kartı hesapları varsayılan olarak ayarlanabilir.
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): %{date} tarihinden beri sıfırın altında, en düşük %{qty}."
+        detail: "%{name} (%{ticker}): %{date} tarihinden beri sıfırın altında, en düşük %{qty}"
         hint: "Muhtemelen bir alım veya transfer eksik. Ekleyin ya da pozisyonu sıfırın altına düşüren işlemleri düzeltin."
         link: "Varlıkları incele"
         message: "Bazı pozisyonlar sıfırın altına düştü"

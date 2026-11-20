@@ -34,7 +34,7 @@ nb:
       title: Hva vil du legge til?
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): under null fra %{date}, lavest %{qty}."
+        detail: "%{name} (%{ticker}): under null fra %{date}, lavest %{qty}"
         hint: "Sannsynligvis mangler et kjøp eller en overføring. Legg det til, eller rett transaksjonene som tok beholdningen under null."
         link: "Se gjennom beholdningene"
         message: "Noen beholdninger gikk under null"

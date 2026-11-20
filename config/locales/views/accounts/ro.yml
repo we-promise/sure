@@ -36,7 +36,7 @@ ro:
       title: Ce dorești să adaugi?
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): sub zero din %{date}, minim %{qty}."
+        detail: "%{name} (%{ticker}): sub zero din %{date}, minim %{qty}"
         hint: "Probabil lipsește o cumpărare sau un transfer. Adaug-o sau corectează tranzacțiile care au adus poziția sub zero."
         link: "Verifică dețineri"
         message: "Unele poziții au scăzut sub zero"

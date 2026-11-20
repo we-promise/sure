@@ -67,9 +67,7 @@ class Account::HealthStatusTest < ActiveSupport::TestCase
 
     assert_equal :warning, issue.severity
     assert_equal I18n.t("accounts.health_status.negative_positions.message"), issue.message
-    assert_equal 1, issue.details.size
-    assert_match "Microsoft (MSFT)", issue.details.first
-    assert_match "-3", issue.details.first
+    assert_equal [ Account::NegativePosition.new(securities(:msft), 3.days.ago.to_date, -3) ], issue.details
     assert_equal I18n.t("accounts.health_status.negative_positions.hint"), issue.hint
     assert_equal Rails.application.routes.url_helpers.account_path(@account, tab: "holdings"), issue.link[:href]
   end

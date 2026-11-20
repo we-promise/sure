@@ -12,4 +12,15 @@ class UI::Account::HealthStatus < ApplicationComponent
   def render?
     issues.any?
   end
+
+  # Only the negative-positions issue lists details: one Account::NegativePosition each.
+  def detail_text(position)
+    t(
+      "accounts.health_status.negative_positions.detail",
+      name: position.security.name.presence || position.security.ticker,
+      ticker: position.security.ticker,
+      date: helpers.format_date(position.first_date),
+      qty: helpers.format_quantity(position.lowest_qty, exact: true)
+    )
+  end
 end

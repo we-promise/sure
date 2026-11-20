@@ -99,7 +99,7 @@ pl:
         jako domyślne.
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): poniżej zera od %{date}, najniżej %{qty}."
+        detail: "%{name} (%{ticker}): poniżej zera od %{date}, najniżej %{qty}"
         hint: "Prawdopodobnie brakuje zakupu lub przeniesienia. Dodaj je albo popraw transakcje, które sprowadziły pozycję poniżej zera."
         link: "Sprawdź pozycje"
         message: "Niektóre pozycje spadły poniżej zera"

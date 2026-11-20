@@ -97,7 +97,7 @@ ca:
         establir com a predeterminats.
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): per sota de zero des del %{date}, mínim %{qty}."
+        detail: "%{name} (%{ticker}): per sota de zero des del %{date}, mínim %{qty}"
         hint: "Probablement falta una compra o un traspàs. Afegeix-la o corregeix les operacions que han deixat la posició per sota de zero."
         link: "Revisa les posicions"
         message: "Algunes posicions han quedat per sota de zero"

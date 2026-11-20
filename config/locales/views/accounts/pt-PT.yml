@@ -78,7 +78,7 @@ pt-PT:
       title: O que gostaria de adicionar?
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): abaixo de zero desde %{date}, mínimo %{qty}."
+        detail: "%{name} (%{ticker}): abaixo de zero desde %{date}, mínimo %{qty}"
         hint: "Provavelmente falta uma compra ou transferência. Adicione-a ou corrija as operações que deixaram a posição abaixo de zero."
         link: "Rever posições"
         message: "Algumas posições ficaram abaixo de zero"

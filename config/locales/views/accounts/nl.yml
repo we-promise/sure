@@ -118,7 +118,7 @@ nl:
       title: "Wat wilt u toevoegen?"
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): onder nul sinds %{date}, laagste %{qty}."
+        detail: "%{name} (%{ticker}): onder nul sinds %{date}, laagste %{qty}"
         hint: "Waarschijnlijk ontbreekt een aankoop of overboeking. Voeg die toe of corrigeer de transacties die de positie onder nul brachten."
         link: "Posities bekijken"
         message: "Sommige posities zijn onder nul gekomen"

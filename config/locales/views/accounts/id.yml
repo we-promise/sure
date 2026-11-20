@@ -83,7 +83,7 @@ id:
       title: Apa yang ingin Anda tambahkan?
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): di bawah nol sejak %{date}, terendah %{qty}."
+        detail: "%{name} (%{ticker}): di bawah nol sejak %{date}, terendah %{qty}"
         hint: Kemungkinan ada pembelian atau transfer yang belum dicatat. Tambahkan, atau perbaiki transaksi yang membuat posisi di bawah nol.
         link: "Tinjau kepemilikan"
         message: Beberapa posisi berada di bawah nol

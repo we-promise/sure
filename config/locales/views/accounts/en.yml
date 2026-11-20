@@ -137,7 +137,7 @@ en:
       title: What would you like to add?
     health_status:
       negative_positions:
-        detail: "%{name} (%{ticker}): below zero from %{date}, lowest %{qty}."
+        detail: "%{name} (%{ticker}): below zero from %{date}, lowest %{qty}"
         hint: A purchase or transfer is probably missing. Add it, or correct the trades that took the position below zero.
         link: Review holdings
         message: Some positions went below zero
