@@ -374,6 +374,78 @@ class Security::ResolverTest < ActiveSupport::TestCase
     assert_nil resolved.offline_reason, "A confirmed no-match must stop the DB fast-path bypass on later resolves"
   end
 
+  test "settles a blank-exchange resolution_pending placeholder instead of creating a second security" do
+    provider = mock("yahoo_finance")
+    provider.stubs(:class).returns(Provider::YahooFinance)
+    provider.stubs(:search_securities).with("ABCDX")
+      .raises(StandardError, "rate limited")
+      .then.returns(provider_success_response([
+        Provider::SecurityConcept::Security.new(
+          symbol: "ABCDX", name: "ABCD Fund", logo_url: nil,
+          exchange_operating_mic: "XNAS", country_code: "US", currency: "USD"
+        )
+      ]))
+      .then.raises(StandardError, "rate limited")
+
+    Security.stubs(:providers).returns([ provider ])
+    Security.stubs(:provider_for).with("yahoo_finance").returns(provider)
+    Setting.stubs(:enabled_securities_providers).returns([ "yahoo_finance" ])
+
+    # First sync: the search fails, so holdings land on a blank-MIC placeholder.
+    placeholder = Security::Resolver.new("ABCDX").resolve
+    assert_nil placeholder.exchange_operating_mic
+    assert_equal "resolution_pending", placeholder.offline_reason
+
+    assert_no_difference "Security.count" do
+      # Next sync: the search works, and the placeholder becomes the match.
+      resolved = Security::Resolver.new("ABCDX").resolve
+
+      assert_equal placeholder, resolved
+      resolved.reload
+      assert_equal "XNAS", resolved.exchange_operating_mic
+      assert_equal "US", resolved.country_code
+      assert_equal "ABCD Fund", resolved.name
+      refute resolved.offline?
+      assert_nil resolved.offline_reason
+
+      # A later sync finds it in the DB, even while the search is failing again.
+      assert_equal placeholder, Security::Resolver.new("ABCDX").resolve
+    end
+  end
+
+  test "leaves a resolution_pending placeholder from another country alone" do
+    placeholder = Security.create!(ticker: "SHOPX", country_code: "CA", offline: true, offline_reason: "resolution_pending")
+    us_listing = Security.new(ticker: "SHOPX", exchange_operating_mic: "XNYS", country_code: "US")
+
+    Security.expects(:search_provider).returns([ us_listing ])
+
+    assert_difference "Security.count", 1 do
+      resolved = Security::Resolver.new("SHOPX").resolve
+
+      refute_equal placeholder, resolved
+      assert_equal "XNYS", resolved.exchange_operating_mic
+    end
+
+    placeholder.reload
+    assert_nil placeholder.exchange_operating_mic
+    assert_equal "resolution_pending", placeholder.offline_reason
+  end
+
+  test "does not take over a blank-exchange security that is not resolution_pending" do
+    no_match = Security.create!(ticker: "NOMX", offline: true, offline_reason: nil)
+    listing = Security.new(ticker: "NOMX", exchange_operating_mic: "XNAS", country_code: "US")
+
+    Security.expects(:search_provider).returns([ listing ])
+
+    assert_difference "Security.count", 1 do
+      resolved = Security::Resolver.new("NOMX", exchange_operating_mic: "XNAS").resolve
+
+      refute_equal no_match, resolved
+    end
+
+    assert_nil no_match.reload.exchange_operating_mic
+  end
+
   test "rejects disabled price_provider" do
     db_security = Security.create!(ticker: "GOOG2", exchange_operating_mic: "XNAS", country_code: "US")
 

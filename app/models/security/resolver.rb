@@ -174,6 +174,7 @@ class Security::Resolver
         ticker: match.ticker,
         exchange_operating_mic: match.exchange_operating_mic
       )
+      security = pending_placeholder_for(match) || security if security.new_record?
 
       security.country_code = match.country_code
 
@@ -203,6 +204,24 @@ class Security::Resolver
       reactivate_if_provider_available!(security)
 
       security
+    end
+
+    # A failed search leaves a blank-MIC "resolution_pending" placeholder (see
+    # offline_security), and holdings imported meanwhile point at it. When a
+    # later search finds the security on an exchange, the placeholder takes
+    # that exchange rather than a second record being created beside it, which
+    # would split the position between two securities from sync to sync. A
+    # placeholder recorded for another country is left for its own retry.
+    def pending_placeholder_for(match)
+      return nil if match.exchange_operating_mic.blank?
+
+      placeholder = Security.find_by_ticker_and_exchange(ticker: match.ticker, match_blank_mic: true)
+      return nil unless placeholder&.offline? && placeholder.offline_reason == "resolution_pending"
+      return nil if placeholder.country_code.present? && match.country_code.present? &&
+        !placeholder.country_code.casecmp?(match.country_code)
+
+      placeholder.exchange_operating_mic = Security.canonical_exchange_operating_mic(match.exchange_operating_mic)
+      placeholder
     end
 
     # If a security was marked offline, bring it back online whenever we have
