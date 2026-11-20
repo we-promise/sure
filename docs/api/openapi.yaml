@@ -8180,7 +8180,8 @@ paths:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/ErrorResponseWithImportId"
         '422':
-          description: validation error or publish rejection
+          description: validation error, publish rejection, invalid_import_type, or
+            unsupported_type (MonarchImport)
           content:
             application/json:
               schema:
@@ -8213,6 +8214,7 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
+                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
@@ -8220,8 +8222,8 @@ paths:
                   - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport when omitted).
-                    MonarchImport imports are created in the web app; requesting one
-                    here returns 422 unsupported_type. Any other type returns 422
+                    MonarchImport is created in the web app and the API refuses it
+                    with 422 unsupported_type. A type outside this list returns 422
                     invalid_import_type.
                 account_id:
                   type: string
@@ -8328,6 +8330,7 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
+                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
@@ -8335,8 +8338,8 @@ paths:
                   - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport when omitted).
-                    MonarchImport imports are created in the web app; requesting one
-                    here returns 422 unsupported_type. Any other type returns 422
+                    MonarchImport is created in the web app and the API refuses it
+                    with 422 unsupported_type. A type outside this list returns 422
                     invalid_import_type.
                 account_id:
                   type: string
