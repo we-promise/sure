@@ -742,9 +742,13 @@ class TransactionTest < ActiveSupport::TestCase
     transaction.tags.load
     Tagging.create!(tag: tag, taggable: Transaction.find(transaction.id))
 
-    assert_nothing_raised { transaction.update!(tag_ids: [ tag.id ]) }
+    other = tags(:two)
 
-    assert_equal [ tag.id ], Tagging.where(taggable: transaction).pluck(:tag_id)
+    assert_nothing_raised { transaction.update!(tag_ids: [ tag.id, other.id ]) }
+
+    # The tag the other writer did not add is stored too: the retry re-reads
+    # and inserts what is still missing rather than swallowing the conflict.
+    assert_equal [ tag.id, other.id ].sort, Tagging.where(taggable: transaction).pluck(:tag_id).sort
   end
 
   test "a tag another writer added meanwhile is stored once through tags= too" do
@@ -753,9 +757,11 @@ class TransactionTest < ActiveSupport::TestCase
     transaction.tags.load
     Tagging.create!(tag: tag, taggable: Transaction.find(transaction.id))
 
-    assert_nothing_raised { transaction.update!(tags: [ tag ]) }
+    other = tags(:two)
 
-    assert_equal [ tag.id ], Tagging.where(taggable: transaction).pluck(:tag_id)
+    assert_nothing_raised { transaction.update!(tags: [ tag, other ]) }
+
+    assert_equal [ tag.id, other.id ].sort, Tagging.where(taggable: transaction).pluck(:tag_id).sort
   end
 
   # The dedupe above relies on the uuid cast downcasing a non-canonical id
