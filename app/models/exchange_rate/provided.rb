@@ -204,6 +204,17 @@ module ExchangeRate::Provided
       SQL
     end
 
+    # SQL selecting (currency, date, rate) for each pair `pairs_sql` selects
+    # as (currency, date), with the rate into `to` by #rate_sql's rule. A
+    # report joins it instead of calling #rate_sql once per entry, so a pair
+    # many entries share is looked up once.
+    def rates_by_pair_sql(pairs_sql:, to:)
+      <<~SQL.squish
+        SELECT fx_pairs.currency, fx_pairs.date, #{rate_sql(from: "fx_pairs.currency", to: to, on: "fx_pairs.date")} AS rate
+        FROM (#{pairs_sql}) fx_pairs
+      SQL
+    end
+
     # Of `currencies`, those with no stored rate into `to` on any date. #rate_sql
     # leaves these amounts out; #rates_for does too unless the provider
     # supplies a rate.
