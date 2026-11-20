@@ -3,6 +3,8 @@ nl:
   transfer_matches:
     create:
       success: Overboeking aangemaakt
+    dismiss_suggestion:
+      success: "Suggestie genegeerd"
     new:
       header:
         title: Overboeking of betaling koppelen
@@ -15,6 +17,8 @@ nl:
       inflow_transaction: Inkomende transactie
       create_transfer_match: Overboekingskoppeling aanmaken
     matching_fields:
+      dismiss_suggestion: "Komt niet overeen"
+      suggested_account_html: "De IBAN van deze betaling komt overeen met uw rekening <strong>%{name}</strong> — we hebben deze hieronder vooraf geselecteerd."
       select_method: Selecteer een methode om uw transacties te koppelen.
       match_existing_recommended: Bestaande transactie koppelen (aanbevolen)
       create_new_transaction: Nieuwe transactie aanmaken

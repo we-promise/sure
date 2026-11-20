@@ -3,6 +3,8 @@ de:
   transfer_matches:
     create:
       success: Übertragung erstellt
+    dismiss_suggestion:
+      success: "Vorschlag verworfen"
     new:
       header:
         title: Übertragung oder Zahlung zuordnen
@@ -15,6 +17,8 @@ de:
       inflow_transaction: Zugangstransaktion
       create_transfer_match: Übertragungszuordnung erstellen
     matching_fields:
+      dismiss_suggestion: "Passt nicht"
+      suggested_account_html: "Die IBAN dieser Zahlung passt zu deinem Konto <strong>%{name}</strong> – wir haben es unten vorausgewählt."
       select_method: Wähl eine Methode, um deine Transaktionen zuzuordnen.
       match_existing_recommended: Vorhandene Transaktion zuordnen (empfohlen)
       create_new_transaction: Neue Transaktion erstellen

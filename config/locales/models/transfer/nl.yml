@@ -18,5 +18,7 @@ nl:
           opposite_amounts: "Moet tegengestelde bedragen hebben"
           within_days: "Moet binnen %{count} dagen liggen"
   transfer:
+    counterpart_name: "Transfer van %{from_account}"
+    counterpart_name_generic: "Inkomende transfer"
     name: "Transfer naar %{to_account}"
     payment_name: "Betaling naar %{to_account}"

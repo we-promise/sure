@@ -3,6 +3,8 @@ zh-CN:
   transfer_matches:
     create:
       success: 转账已创建
+    dismiss_suggestion:
+      success: "已忽略建议"
     new:
       header:
         title: 匹配转账或付款
@@ -15,6 +17,8 @@ zh-CN:
       inflow_transaction: 流入交易
       create_transfer_match: 创建转账匹配
     matching_fields:
+      dismiss_suggestion: "不匹配"
+      suggested_account_html: "此付款的 IBAN 与您的账户 <strong>%{name}</strong> 匹配，我们已在下方预先选中它。"
       select_method: 选择一种交易匹配方式。
       match_existing_recommended: 匹配现有交易（推荐）
       create_new_transaction: 创建新交易

@@ -6,6 +6,15 @@ class TransferMatchesController < ApplicationController
     @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
       .includes(:account_providers, logo_attachment: :blob)
     @candidate_entries = writable_candidate_entries
+    @suggested_target_account = Current.family.missing_transfer_suggestion_for(@entry, user: Current.user) if @candidate_entries.empty?
+  end
+
+  def dismiss_suggestion
+    return unless require_account_permission!(@entry.account, redirect_path: transactions_path)
+
+    @entry.transaction.dismiss_counterparty_transfer_suggestion!
+
+    redirect_back_or_to transactions_path, notice: t(".success")
   end
 
   def create
