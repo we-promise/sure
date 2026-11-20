@@ -88,8 +88,10 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal expected_false_values, Transaction::PENDING_FLAG_FALSE_VALUES.to_set
   end
 
-  # pending_sql and PENDING_CHECK_SQL share one connection-free literal list;
-  # it must quote exactly as the database adapter would.
+  # The provider-subset form of pending_sql builds its literals without a
+  # connection; they must quote exactly as the database adapter would. The
+  # all-provider form reads transactions.pending (see "the pending column
+  # covers every pending provider").
   test "the shared SQL false-value list matches the adapter's quoting" do
     adapter_quoted = Transaction::PENDING_FLAG_FALSE_VALUES.map { |value| Transaction.connection.quote(value) }.join(", ")
 
