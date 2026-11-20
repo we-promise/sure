@@ -850,4 +850,21 @@ class TransactionTest < ActiveSupport::TestCase
         "Transaction.pending_providers_sql" => posted_row.nil?
       }
     end
+
+  test "a tagging conflict is retried once and a conflict on another index is not" do
+    txn = transactions(:transfer_out)
+    conflict = ActiveRecord::RecordNotUnique.new(%(duplicate key value violates unique constraint "index_taggings_unique"))
+    calls = 0
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      txn.send(:retrying_tagging_conflict) { calls += 1; raise conflict }
+    end
+    assert_equal 2, calls, "one retry, then the second conflict is raised"
+
+    other = ActiveRecord::RecordNotUnique.new(%(duplicate key value violates unique constraint "index_entries_on_account_id_and_external_id"))
+    other_calls = 0
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      txn.send(:retrying_tagging_conflict) { other_calls += 1; raise other }
+    end
+    assert_equal 1, other_calls, "another index's violation is not retried"
+  end
 end

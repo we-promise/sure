@@ -217,4 +217,15 @@ class EnrichableTest < ActiveSupport::TestCase
       refute txn.enrich_attribute(:tag_ids, [ tag.id, tag.id ], source: "rule")
     end
   end
+
+  # tag_ids= also treats ids that differ only in case as one uuid.
+  test "a tag id repeated in another case is not an enrichment" do
+    txn = transactions(:transfer_out)
+    tag = tags(:one)
+    txn.update!(tag_ids: [ tag.id ])
+
+    assert_no_difference "DataEnrichment.count" do
+      refute txn.enrich_attribute(:tag_ids, [ tag.id, tag.id.upcase ], source: "rule")
+    end
+  end
 end

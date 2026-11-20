@@ -76,10 +76,13 @@ module Enrichable
         end
 
         # Normalize arrays for comparison (sort them). Repeats are dropped
-        # because the setters that take arrays (tag_ids=) store each value once.
+        # because the setters that take arrays (tag_ids=) store each value once;
+        # tag ids are compared as uuids, as tag_ids= casts them, so the same id
+        # in another case is no change.
         if current_value.is_a?(Array) && attr_value.is_a?(Array)
           current_values[attr_key] = current_value
-          current_value.uniq.sort == attr_value.uniq.sort
+          normalize = attr_key.to_s == "tag_ids" ? ->(values) { values.map { |v| Tag.type_for_attribute(:id).cast(v) || v } } : :itself.to_proc
+          normalize.call(current_value).uniq.sort == normalize.call(attr_value).uniq.sort
         else
           current_values[attr_key] = current_value
           current_value == attr_value

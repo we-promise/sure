@@ -44,6 +44,25 @@ class TagTest < ActiveSupport::TestCase
     assert_equal [ new_tag ], moved.reload.tags.to_a
   end
 
+  # The retry is bounded: a second conflict is raised, and a unique violation
+  # on another index is never retried.
+  test "replace and destroy retries a tagging conflict once and no other" do
+    old_tag = tags(:one)
+    new_tag = tags(:two)
+
+    persistent = ActiveRecord::RecordNotUnique.new(%(duplicate key value violates unique constraint "index_taggings_unique"))
+    calls = 0
+    old_tag.define_singleton_method(:move_taggings_to) { |_replacement| calls += 1; raise persistent }
+    assert_raises(ActiveRecord::RecordNotUnique) { old_tag.replace_and_destroy!(new_tag) }
+    assert_equal 2, calls, "one retry, then the second conflict is raised"
+
+    other = ActiveRecord::RecordNotUnique.new(%(duplicate key value violates unique constraint "index_tags_on_family_id_and_name"))
+    other_calls = 0
+    old_tag.define_singleton_method(:move_taggings_to) { |_replacement| other_calls += 1; raise other }
+    assert_raises(ActiveRecord::RecordNotUnique) { old_tag.replace_and_destroy!(new_tag) }
+    assert_equal 1, other_calls, "another index's violation is not retried"
+  end
+
   # destroy! removes the taggings association it holds. If a caller loaded it
   # before the merge, that list still names the rows the merge just moved.
   test "replace and destroy keeps the moved rows when the source taggings were loaded first" do
