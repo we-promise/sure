@@ -8,6 +8,9 @@ class ProviderItem::SelectionComponentsTest < ActiveSupport::TestCase
   setup do
     @item = brex_items(:one)
     Current.stubs(:user).returns(users(:family_admin))
+    # The new-account dialogs name the product; pin it so a PRODUCT_NAME set
+    # in the environment does not change the snapshots.
+    Rails.configuration.x.stubs(:product_name).returns("Sure")
     @accounts = [
       { id: "cash_acc_1", name: "Brex Operating", account_kind: "cash", current_balance: { amount: 125_000, currency: "USD" }, status: "ACTIVE" },
       { id: "card_acc_1", name: "", account_kind: "card", status: "ACTIVE" }
@@ -47,6 +50,16 @@ class ProviderItem::SelectionComponentsTest < ActiveSupport::TestCase
     html = ApplicationController.render(partial: "brex_items/api_error", locals: { error_message: "Unauthorized", return_path: "/accounts/new" })
 
     assert_matches_provider_item_snapshot("brex_api_error", html)
+  end
+
+  # Snapshot normalising drops the space between a label and its text, so check
+  # each troubleshooting item's visible text on the raw render.
+  test "the API error dialog keeps a space between each issue and its fix" do
+    html = ApplicationController.render(partial: "brex_items/api_error", locals: { error_message: "Unauthorized", return_path: nil })
+    items = Nokogiri::HTML.fragment(html).css("li").map { |item| item.text.squish }
+
+    assert_includes items, "#{I18n.t("brex_items.api_error.invalid_token_label")} #{I18n.t("brex_items.api_error.invalid_token")}"
+    assert_equal 5, items.count { |item| item.match?(/: \S/) }
   end
 
   test "the API error dialog links to provider settings when there is no return path" do

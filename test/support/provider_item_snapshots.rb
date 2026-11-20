@@ -17,6 +17,7 @@ module ProviderItemSnapshots
   private
     def assert_matches_provider_item_snapshot(name, html)
       path = SNAPSHOT_DIR.join("#{name}.html")
+      assert_generated_id_references_resolve(name, html)
       normalised = normalise_provider_item_html(html)
 
       if !path.exist? && ENV["PROVIDER_ITEM_SNAPSHOTS"] == "write"
@@ -25,6 +26,18 @@ module ProviderItemSnapshots
 
       assert path.exist?, "no snapshot #{path.basename}; record it from the partial before the change"
       assert_equal path.read, normalised, "#{name} differs from its snapshot"
+    end
+
+    # Random ids all normalise to "<prefix>-ID", so a reference that no longer
+    # matches its target would still compare equal. Check, before normalising,
+    # that every generated id an attribute points at exists in the same render.
+    def assert_generated_id_references_resolve(name, html)
+      ids = html.scan(/\bid="([^"]+)"/).flatten
+      html.scan(/\b(?:aria-describedby|aria-labelledby|aria-controls|for)="([^"]+)"/).flatten.flat_map(&:split).each do |reference|
+        next unless reference.match?(/\A#{RANDOM_ID.source}\z/)
+
+        assert_includes ids, reference, "#{name}: #{reference} is referenced but no element has that id"
+      end
     end
 
     def normalise_provider_item_html(html)
