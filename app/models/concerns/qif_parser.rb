@@ -124,7 +124,10 @@ module QifParser
   def self.date_order(content)
     return nil if content.blank?
 
-    content.b.match(/^!Option:(MDY|DMY)\s*$/i)&.captures&.first&.upcase
+    content = normalize_encoding(content)
+    content = normalize_line_endings(content).delete_prefix("\uFEFF")
+
+    content.match(/^!Option:(MDY|DMY)[ \t]*$/i)&.captures&.first&.upcase
   end
 
   # Parses all transactions from the file, excluding the Opening Balance entry.
@@ -553,7 +556,7 @@ module QifParser
     try_parse_date(date_str, date_format: date_format)
   end
 
-  # Extracts all raw date strings from D-fields in transaction sections only.
+  # Extracts all raw date strings from D-fields in every transaction section.
   # Skips metadata sections (Cat, Tag, Security) where D means "description".
   # Used by Import.detect_date_format to sample dates before parsing.
   def self.extract_raw_dates(content)
@@ -562,8 +565,7 @@ module QifParser
     content = normalize_encoding(content)
     content = normalize_line_endings(content)
 
-    transaction_sections = TRANSACTION_TYPES.filter_map { |type| extract_section(content, type) }
-    transaction_sections.flat_map { |section| section.scan(/^D(.+)$/i).flatten }
+    transaction_sections(content).flat_map { |section| section[:content].scan(/^D(.+)$/i).flatten }
                         .map { |d| normalize_qif_date(d) }
                         .compact
   end

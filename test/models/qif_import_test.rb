@@ -1531,6 +1531,23 @@ class QifImportTest < ActiveSupport::TestCase
     assert_nil QifParser.date_order(nil)
   end
 
+  test "date_order reads the declared date order behind a UTF-8 byte order mark" do
+    assert_equal "MDY", QifParser.date_order("\uFEFF" + MDY_DOT_QIF)
+    assert_equal "MDY", QifParser.date_order(("\xEF\xBB\xBF" + MDY_DOT_QIF).b)
+  end
+
+  test "date_order reads the declared date order with CR-only line endings" do
+    assert_equal "MDY", QifParser.date_order(MDY_DOT_QIF.gsub("\n", "\r"))
+  end
+
+  test "generate_rows_from_csv reads month-first dotted dates with CR-only line endings" do
+    @import.update!(raw_file_str: MDY_DOT_QIF.gsub("\n", "\r"))
+    @import.generate_rows_from_csv
+
+    assert_equal "%m.%d.%Y", @import.reload.qif_date_format
+    assert_equal "2026-06-12", @import.rows.find_by(name: "First Purchase").date
+  end
+
   test "generate_rows_from_csv reads month-first dotted dates when the file declares MDY" do
     @import.update!(raw_file_str: MDY_DOT_QIF)
     @import.generate_rows_from_csv
@@ -1612,6 +1629,44 @@ class QifImportTest < ActiveSupport::TestCase
 
     assert_equal "%d.%m.%Y", @import.reload.qif_date_format
     assert_equal "2021-03-29", @import.rows.find_by(name: "First Store").date
+  end
+
+  test "generate_rows_from_csv checks dates in every section against the declared order" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Option:MDY
+      !Type:Bank
+      D04.06.2020
+      T-10.00
+      PFirst Store
+      ^
+      !Type:Bank
+      D29.03.2021
+      T-20.00
+      PSecond Store
+      ^
+    QIF
+    @import.generate_rows_from_csv
+
+    assert_equal "%d.%m.%Y", @import.reload.qif_date_format
+    assert_equal "2020-06-04", @import.rows.find_by(name: "First Store").date
+    assert_equal "2021-03-29", @import.rows.find_by(name: "Second Store").date
+  end
+
+  test "extract_raw_dates reads every transaction section" do
+    content = <<~QIF
+      !Type:Bank
+      D04.06.2020
+      ^
+      !Type:Cat
+      NFood
+      DFood expenses
+      ^
+      !Type:Bank
+      D29.03.2021
+      ^
+    QIF
+
+    assert_equal %w[04.06.2020 29.03.2021], QifParser.extract_raw_dates(content)
   end
 
   test "valid_date_formats_with_preview offers month-first dotted dates" do
