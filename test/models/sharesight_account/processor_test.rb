@@ -107,6 +107,11 @@ class SharesightAccount::ProcessorTest < ActiveSupport::TestCase
 
   test "a fully sold holding leaves current holdings" do
     seed_holding("OLD", qty: 50, price: 40, date: Date.current - 1)
+    # Only the sold holding in the payload: without the zero row, no
+    # holdings are written for today, so current holdings would fall back
+    # to yesterday's row and still list OLD.
+    sold_holding = HOLDINGS.find { |holding| holding.dig("instrument", "code") == "OLD" }
+    @sharesight_account.update!(raw_holdings_payload: [ sold_holding ])
     process
 
     assert_not_includes @account.reload.current_holdings.map { |holding| holding.security.ticker }, "OLD"
