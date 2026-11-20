@@ -1076,6 +1076,44 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert series.values.none? { |v| v.date < manual_start }, "dates before any history are still trimmed"
   end
 
+  # An account whose provider sends only valuations has no provider activity
+  # or holdings to start from, so its own balances are its history, as a
+  # manual account's are. Counted as linked, it added no start of its own
+  # and the trim to the broker's start cut it out.
+  test "an account with only provider valuations keeps its history before a broker's first activity" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+    valued_start = 8.days.ago.to_date
+    broker_start = 3.days.ago.to_date
+
+    valued = create_investment_account(balance: 300)
+    broker = create_investment_account(balance: 1000)
+    (valued_start..Date.current).each { |date| create_balance(valued, date: date, amount: 300) }
+    valued.entries.create!(date: valued_start, name: "Valuation", amount: 300, currency: "USD", source: "plaid",
+                           entryable: Valuation.new(kind: "reconciliation"))
+    (0..10).each do |offset|
+      date = 10.days.ago.to_date + offset
+      create_balance(broker, date: date, amount: date >= broker_start ? 1000 : 0)
+    end
+    broker.entries.create!(date: broker_start, name: "Deposit", amount: -1000, currency: "USD", source: "plaid", entryable: Transaction.new)
+
+    series = @statement.value_series(period: period)
+
+    assert_equal valued_start, series.values.first.date, "the series starts with the valued account's history"
+  end
+
+  # A rate stored after a series was cached (the exchange-rate job backfills
+  # without a sync or an account write) changes every converted figure, so
+  # the cached series must not be served again.
+  test "the series cache key moves when an exchange rate is stored" do
+    period = Period.custom(start_date: 5.days.ago.to_date, end_date: Date.current)
+    before = @statement.send(:series_cache_key, :value, period)
+
+    travel 1.second do
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 2.days.ago.to_date, rate: 1.1)
+      assert_not_equal before, InvestmentStatement.new(@family, user: nil).send(:series_cache_key, :value, period)
+    end
+  end
+
   test "an open older broker keeps its history when a newer broker links" do
     period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
     older_start = 6.days.ago.to_date

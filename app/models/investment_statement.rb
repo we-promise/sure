@@ -431,7 +431,7 @@ class InvestmentStatement
   # Investment accounts
   def investment_accounts
     @investment_accounts ||= begin
-      scope = family.accounts.visible.included_in_reports.where(accountable_type: %w[Investment Crypto])
+      scope = family.accounts.visible.included_in_reports.where(accountable_type: HistoricalScope::INVESTMENT_ACCOUNTABLE_TYPES)
       scope = scope.included_in_finances_for(user) if user
       scope
     end
@@ -489,23 +489,25 @@ class InvestmentStatement
     #   history start, which provider holdings' dates and securities
     #   decide, so deleting or remapping a holding can move the value and
     #   holdings-value charts' first date without a sync.
-    # - the family currency (every kind): every series is converted to it,
-    #   and a profile currency change neither syncs nor writes an account.
-    # - the accounts version (every kind): deleting an account with no
-    #   holdings that was not the most recently updated one leaves
-    #   maximum(:updated_at), the sync time and the holdings version where
-    #   they were before its deletion was scheduled; only the count moves.
+    # - exchange rates (every kind): every series is converted to the family
+    #   currency, and the exchange-rate job stores or backfills a rate
+    #   without a sync or an account write, as the net worth series' keys
+    #   allow for.
     # - the history trim (every kind): it decides the series' first point, and
     #   nothing else in the key moves when only the trim does.
+    #
+    # The family currency and the accounts' status version come from
+    # family.build_cache_key.
     def series_cache_key(kind, period)
       key = [
         "investment_statement_#{kind}_series",
-        # "manual" marks the trim that keeps a manual account's history, so a
-        # series cached under the trim that cut it is not served again.
-        "start-#{series_history_start}-manual",
+        # "own-history" marks the trim that keeps the history of an account
+        # with no provider history (manual, or valuations only), so a series
+        # cached under a trim that cut it is not served again.
+        "start-#{series_history_start}-own-history",
         user&.id,
-        family.currency,
-        accounts_version,
+        ExchangeRate::CONVERSION_CACHE_VERSION,
+        ExchangeRate.updated_at_version,
         shares_version,
         holdings_version,
         period.start_date,
@@ -517,10 +519,6 @@ class InvestmentStatement
 
     # Memoized: one instance builds a key per series kind it is asked for,
     # and the versions need not be re-queried between them.
-    def accounts_version
-      @accounts_version ||= family.accounts_status_version
-    end
-
     def shares_version
       return nil unless user
 
