@@ -39,6 +39,26 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
     assert_equal @security, Security::ClassificationProposal.sole.security
   end
 
+  test "a padded ticker still matches the held security" do
+    result = @function.call("proposals" => [ { "ticker" => " AAPL ", "region" => "north_america" } ])
+
+    assert_equal 1, result[:recorded]
+    assert_equal @security, Security::ClassificationProposal.sole.security
+  end
+
+  test "a security a provider classifies after the tool read it is skipped, not proposed" do
+    # The tool's read of the held securities is from before the provider's
+    # answer landed.
+    @function.stubs(:held_securities).returns([ Security.find(@security.id) ])
+    @security.update_columns(asset_class: "equity", asset_sub_class: "stock", classification_source: "provider")
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "asset_class" => "fixed_income" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_equal [ { ticker: "AAPL", reason: "already classified by a data provider" } ], result[:skipped]
+    assert_not Security::ClassificationProposal.exists?
+  end
+
   # The tool is reachable over /mcp, so the ticker is resolved within the user's
   # own holdings rather than across the table. Otherwise an external caller
   # could queue a proposal against an instrument this family does not hold.
@@ -148,7 +168,7 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
 
     # The first ticker refuses at write time; the second must still land, and
     # it must be the second security that reaches the write.
-    answer = { asset_class: "equity", asset_sub_class: "stock", sector: nil, region: nil, rationale: nil }
+    answer = { open_sources: [ nil, "default" ], asset_class: "equity", asset_sub_class: "stock", sector: nil, region: nil, rationale: nil }
     writes = sequence("writes")
     Security::ClassificationProposal.expects(:propose!).with(security: @security, family: @family, **answer)
       .in_sequence(writes).raises(ActiveRecord::RecordInvalid.new(Security::ClassificationProposal.new))

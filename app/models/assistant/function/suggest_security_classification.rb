@@ -103,7 +103,7 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
       return { recorded: 0, skipped: [ { ticker: nil, reason: "send at most #{MAX_PROPOSALS} proposals per call" } ] }
     end
 
-    tickers = entries.filter_map { |entry| entry["ticker"].upcase if entry.is_a?(Hash) && entry["ticker"].is_a?(String) }
+    tickers = entries.filter_map { |entry| entry["ticker"].strip.upcase if entry.is_a?(Hash) && entry["ticker"].is_a?(String) }
     # Read on every call: chat reuses one instance across tool rounds, and an
     # account share revoked between rounds must take effect.
     held = held_securities(tickers)
@@ -174,8 +174,14 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
       }
 
       begin
-        proposal = Security::ClassificationProposal.propose!(security: security, family: family, **attributes)
-        if proposal.pending?
+        # Eligibility is checked again under the security's lock as the
+        # proposal is written, so a provider answer since the read above wins.
+        proposal = Security::ClassificationProposal.propose!(
+          security: security, family: family, open_sources: OPEN_SOURCES, **attributes
+        )
+        if proposal.nil?
+          skipped << { ticker: ticker, reason: CLASSIFIED_BY.fetch(security.reload.classification_source, "already classified") }
+        elsif proposal.pending?
           recorded += 1
         else
           skipped << { ticker: ticker, reason: "already reviewed (#{proposal.status})" }
