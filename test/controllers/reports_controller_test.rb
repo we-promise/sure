@@ -379,7 +379,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
-  test "all time runs from the family's first transaction or trade to today" do
+  test "all time runs from the member's first transaction or trade to today" do
     first = @family.earliest_activity_date
     assert first, "fixtures need a transaction or trade"
 
@@ -391,6 +391,34 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       start: I18n.l(first, format: :short_month_year), end: I18n.l(Date.current, format: :short_month_year))
     assert_includes @response.body, first.strftime("%b %Y")
     assert_not_includes @response.body, (first - 1.month).strftime("%b %Y")
+  end
+
+  test "all time doesn't start at activity in an account the member can't see" do
+    member = users(:family_member)
+    hidden = @family.accounts.create!(name: "Admin's old account", balance: 0, currency: "USD",
+      accountable: Depository.new, owner: @user)
+    hidden.entries.create!(date: Date.new(2001, 2, 3), name: "Old", amount: 10, currency: "USD", entryable: Transaction.new)
+    assert_not member.finance_accounts.include?(hidden), "the member must not see the account"
+
+    sign_in member
+    get reports_path(period_type: :all_time)
+
+    assert_response :ok
+    assert_not_includes @response.body, "2001-02-03"
+    assert_not_includes @response.body, I18n.l(Date.new(2001, 2, 3), format: :short_month_year)
+  end
+
+  test "all time ignores scheduled entries after today" do
+    @family.entries.where(entryable_type: %w[Transaction Trade]).delete_all
+    account = @family.accounts.first
+    account.entries.create!(date: 1.month.from_now.to_date, name: "Scheduled", amount: 10, currency: "USD", entryable: Transaction.new)
+
+    get reports_path(period_type: :all_time)
+
+    assert_response :ok
+    assert_nil flash[:alert]
+    assert_includes @response.body, I18n.t("reports.index.period_label.all_time",
+      start: I18n.l(Date.current.beginning_of_month, format: :short_month_year), end: I18n.l(Date.current, format: :short_month_year))
   end
 
   test "all time has no previous period to compare with" do

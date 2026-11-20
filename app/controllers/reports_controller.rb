@@ -289,12 +289,22 @@ class ReportsController < ApplicationController
       when :last_6_months
         (Date.current.end_of_month + 1.day - 6.months).beginning_of_month.to_date
       when :all_time
-        Current.family.earliest_activity_date || Date.current.beginning_of_month.to_date
+        earliest_report_activity_date || Date.current.beginning_of_month.to_date
       when :custom
         1.month.ago.to_date
       else
         Date.current.beginning_of_month.to_date
       end
+    end
+
+    # The first transaction or trade in the accounts this member's reports read
+    # (their finance accounts, as IncomeStatement uses), never a scheduled one.
+    # An older entry in an account they can't see must not start All time: its
+    # date would show in the label and the URLs built from it.
+    def earliest_report_activity_date
+      Entry.where(account_id: Current.user.finance_accounts.select(:id), entryable_type: %w[Transaction Trade])
+        .excluding_scheduled
+        .minimum(:date)
     end
 
     def default_end_date
