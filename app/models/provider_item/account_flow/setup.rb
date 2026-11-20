@@ -123,8 +123,10 @@ class ProviderItem::AccountFlow
         )
 
         begin
-          ActiveRecord::Base.transaction do
-            account = Account.create_and_sync(
+          # Counted only once the transaction has committed: a COMMIT that fails
+          # rolls the account back, and the rescue below counts it as failed.
+          account = ActiveRecord::Base.transaction do
+            linked_account = Account.create_and_sync(
               {
                 family: family,
                 name: provider_account.name,
@@ -136,9 +138,10 @@ class ProviderItem::AccountFlow
               skip_initial_sync: true
             )
 
-            AccountProvider.create!(account: account, provider: provider_account)
-            created_accounts << account
+            AccountProvider.create!(account: linked_account, provider: provider_account)
+            linked_account
           end
+          created_accounts << account
         rescue StandardError => e
           failed_count += 1
           Rails.logger.error("#{provider_name} account setup failed for #{provider_account_id}: #{e.class} - #{e.message}")
