@@ -803,8 +803,11 @@ class Portfolio::DailyReturns
                              OR (per_row.zero_qty IS NULL AND (per_row.netted OR per_row.qty_unknown))), false) AS carry_incomplete,
             -- The part of carry_incomplete that is the external journals' own
             -- shortfall: a journal with no quantity (always external, since no
-            -- counterpart can match it) or a netted arrival.
-            COALESCE(BOOL_OR(per_row.qty_unknown OR (per_row.zero_qty IS NULL AND per_row.netted)), false) AS carry_contribution_incomplete
+            -- counterpart can match it) or a netted arrival, short either with
+            -- nothing to measure it by or by what the zero-priced row held.
+            COALESCE(BOOL_OR(per_row.qty_unknown
+                             OR (per_row.netted AND (per_row.zero_qty IS NULL
+                                                     OR per_row.zero_qty > per_row.carried_qty))), false) AS carry_contribution_incomplete
           FROM (
             SELECT
               cj.date,

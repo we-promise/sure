@@ -2375,6 +2375,26 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert second.contribution_journal_unpriced
   end
 
+  # The same shortfall measured by a zero-priced row: the out nets the
+  # arrival to nothing, yet the row still holds the 5 units that came in, so
+  # the carry is short of them and so is net contributions.
+  test "a netted carry the zero priced row shows to be short makes contributions incomplete" do
+    day_three = @day_two + 1.day
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 500, closing: 500
+    lay_balance account: @account, date: @day_two, opening: 500, closing: 0, market_flow: -500
+    lay_balance account: @account, date: day_three, opening: 0, closing: 500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5
+    security_journal account: @account, date: @day_two, qty: -5, price: 0, holding_qty: 5
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 100,
+                              amount: 500, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert third.suppressed, "the netted carry is short of the repriced units"
+    assert third.contribution_journal_unpriced, "the 5 units that arrived are missing from contributions"
+  end
+
   # A journal in from outside, carried to its first priced day, is the flow
   # that day counts; with no rate there it is a contribution left unvalued.
   test "a carried external journal with no rate makes contributions incomplete" do
