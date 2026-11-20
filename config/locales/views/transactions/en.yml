@@ -188,7 +188,8 @@ en:
       show:
         none: No rule matches this transaction.
         conflict: Matching rules set the %{attribute} to different values. The one highest in your rules list wins.
-        locked: The %{attribute} is locked, so the nightly run leaves it alone. Applying a rule by hand still changes it.
+        locked: The %{attribute} is locked, so these rules leave it alone.
+        locked_overridable: The %{attribute} is locked, so the nightly run leaves it alone. Applying a rule by hand still changes it.
         "off": "Off"
         overridden: Overridden
         overridden_hint: A rule above sets the %{attributes} first

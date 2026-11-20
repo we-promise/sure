@@ -95,7 +95,20 @@ class Transactions::MatchingRulesControllerTest < ActionDispatch::IntegrationTes
 
     get transaction_matching_rules_url(@entry)
 
+    assert_select "[data-testid='matching-rules-locked']", text: /category is locked.*Applying a rule by hand/
+  end
+
+  test "does not offer applying by hand for locks only AI or Bayes rules meet" do
+    rule = @family.rules.build(name: "Bayes", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "starbucks")
+    rule.actions.build(action_type: "bayes_categorize")
+    rule.save!
+    @entry.transaction.lock_attr!(:category_id)
+
+    get transaction_matching_rules_url(@entry)
+
     assert_select "[data-testid='matching-rules-locked']", text: /category is locked/
+    assert_select "[data-testid='matching-rules-locked']", text: /Applying a rule by hand/, count: 0
   end
 
   test "lists an action whose type is no longer supported by its type" do

@@ -13,7 +13,7 @@
       <% end %>
       <% @matching_rules.locked_attributes.each do |attribute| %>
         <p class="text-xs text-secondary" data-testid="matching-rules-locked">
-          <%= t(".locked", attribute: attribute_label.(attribute)) %>
+          <%= t(@matching_rules.lock_overridable?(attribute) ? ".locked_overridable" : ".locked", attribute: attribute_label.(attribute)) %>
         </p>
       <% end %>
       <ul class="space-y-2">

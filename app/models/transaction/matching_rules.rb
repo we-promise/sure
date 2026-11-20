@@ -54,13 +54,19 @@ class Transaction::MatchingRules
 
   # Attributes the rules that run would set but that are locked (by a person's
   # edit, or by the auto-categorizer protecting its pick). The nightly run
-  # leaves those alone; only applying a rule by hand overrides them. Actions
-  # that fill a field without reserving it (AI, Bayes) count too: they skip
-  # locked fields all the same.
+  # leaves those alone. Actions that fill a field without reserving it (AI,
+  # Bayes) count too: they skip locked fields all the same.
   def locked_attributes
     reached_actions.flat_map { |action| claimed_attributes(action) }.uniq.select do |attribute|
       (attribute.in?(ENTRY_ATTRIBUTES) ? transaction.entry : transaction).locked?(attribute)
     end
+  end
+
+  # Whether applying a matching rule by hand would still set this locked
+  # attribute. Only actions that set it outright ignore locks then; AI, Bayes
+  # and similar-merchant actions skip locked fields however they run.
+  def lock_overridable?(attribute)
+    claims_by_attribute.key?(attribute)
   end
 
   private

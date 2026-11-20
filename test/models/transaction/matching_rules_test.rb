@@ -91,6 +91,14 @@ class Transaction::MatchingRulesTest < ActiveSupport::TestCase
 
     assert_equal [ :category_id ], result.locked_attributes
     assert_empty result.conflicts
+    assert_not result.lock_overridable?(:category_id), "Bayes and AI actions skip locked fields even when applied by hand"
+  end
+
+  test "a lock on an attribute a rule sets outright gives way when the rule is applied by hand" do
+    create_rule(name: "Coffee", condition_value: "starbucks", category: categories(:income))
+    @transaction.lock_attr!(:category_id)
+
+    assert matching_rules.lock_overridable?(:category_id)
   end
 
   test "an action whose type is no longer supported is skipped and the rule stays listed" do
