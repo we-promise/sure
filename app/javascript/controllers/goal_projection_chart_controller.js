@@ -290,6 +290,10 @@ export default class extends Controller {
 
     let targetLabel = null;
     let projectionDot = null;
+    // The projection-end or shortfall label, and how to clear a label it
+    // collides with: drop an on-track one, move a shortfall below its dot.
+    let pointLabel = null;
+    let clearPointLabel = null;
     if (targetAmount > 0) {
       svg
         .append("line")
@@ -399,7 +403,7 @@ export default class extends Controller {
           ? data.projection_end_label
           : (data.projection_shortfall_label ? `${data.projection_shortfall_label} short` : "");
         if (labelText) {
-          const pointLabel = svg
+          pointLabel = svg
             .append("text")
             .attr("x", x(target) - 8)
             .attr("y", projDotY - LABEL_ABOVE_PX)
@@ -416,9 +420,16 @@ export default class extends Controller {
           // from the gap between the two lines. An on-track end label is
           // dropped (the dot already says the target is hit, and "$2.4K"
           // beside "Target · $2,400" is noise); a shortfall goes below its dot.
+          clearPointLabel = () => {
+            if (willHit) {
+              pointLabel.remove();
+              pointLabel = null;
+            } else {
+              pointLabel.attr("y", projDotY + LABEL_BELOW_PX);
+            }
+          };
           if (targetLabel && this._boxesOverlap(pointLabel.node().getBBox(), targetLabel.node().getBBox())) {
-            if (willHit) pointLabel.remove();
-            else pointLabel.attr("y", projDotY + LABEL_BELOW_PX);
+            clearPointLabel();
           }
         }
       }
@@ -453,6 +464,12 @@ export default class extends Controller {
         .attr("font-size", 12)
         .attr("fill", textSecondary)
         .text(this.todayLabelValue);
+    }
+
+    // A target date close to today puts Today at the right edge too, above a
+    // point label near the top of the scale.
+    if (pointLabel && todayLabel && this._boxesOverlap(pointLabel.node().getBBox(), todayLabel.node().getBBox())) {
+      clearPointLabel();
     }
 
     if (targetLabel) {

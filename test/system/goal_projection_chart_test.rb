@@ -73,6 +73,20 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
   end
 
+  # A target date a week away puts Today at the right edge, beside an end
+  # label that sits near the top of the scale.
+  test "a projection ending a week out keeps its labels clear of the Today label" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, saved: 9_000, pace: 20_000, target_date: TODAY + 7.days, history_from: TODAY - 90.days)
+
+      today_label = chart_texts.find { |t| t["text"] == "Today" }
+      assert today_label, "premise: the Today label is drawn"
+      chart_texts.reject { |t| t["text"] == "Today" }.each do |text|
+        assert_not boxes_overlap?(text, today_label), "#{text["text"].inspect} overlaps Today: #{text.inspect} #{today_label.inspect}"
+      end
+    end
+  end
+
   test "a window of daily ticks keeps the label of every month it covers" do
     travel_to Date.new(2027, 1, 25) do
       # The setup session is three months old by now.
@@ -196,14 +210,18 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
 
     # The first paint can land before the layout settles; the ResizeObserver
     # then redraws at the real width, and a font that finishes loading redraws
-    # again. Wait for the drawn width to match and the fonts to be loaded.
+    # again, after `document.fonts.status` already reads "loaded". So wait for
+    # the drawn width to match, the fonts to be loaded, and the same <svg> to
+    # be found on two checks in a row: a redraw replaces it.
     def wait_for_settled_chart
       page.document.synchronize do
         settled = page.evaluate_script(<<~JS)
           (() => {
             const root = document.querySelector("[data-controller='goal-projection-chart']");
             const svg = root.querySelector("svg");
-            return !!svg && svg.viewBox.baseVal.width === root.clientWidth && document.fonts.status === "loaded";
+            const unchanged = !!svg && window.__settledChartSvg === svg;
+            window.__settledChartSvg = svg;
+            return unchanged && svg.viewBox.baseVal.width === root.clientWidth && document.fonts.status === "loaded";
           })()
         JS
         raise Capybara::ExpectationNotMet, "the chart has not redrawn at its settled width" unless settled
