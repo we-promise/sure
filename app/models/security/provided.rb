@@ -801,8 +801,10 @@ module Security::Provided
     # about what it holds, so a fund's region is the dominant
     # region of its equity holdings, or none: a world ETF, a bond fund or a
     # commodity fund has its listing region cleared. The provider replaces
-    # the region only while it is still the one the listing implies, so a
-    # region someone set by hand stays.
+    # the region only while it is blank or still the one the listing
+    # implies, so a different region someone set by hand stays. One set by
+    # hand to the listing's own region cannot be told from the derived one,
+    # since nothing records where a region came from, and is replaced.
     if fund_sub_class &&
         (region.blank? || region == Security::REGIONS.dig(country_code.to_s.upcase, "region"))
       attrs[:region] = (dominant_fund_weight(weights[:equity_region]) if equity_fund)
