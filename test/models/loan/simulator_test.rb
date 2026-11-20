@@ -176,6 +176,122 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "term changes need the reamortize strategy" do
+    build = ->(strategy, amount) {
+      Loan::Simulator.new(
+        starting_balance: 12_000, accrual_start_date: Date.new(2026, 1, 1),
+        payment_schedule: SCHEDULE, accrual_rate_for: ->(_date) { 6 },
+        currency_precision: 2, payment_strategy: strategy, payment_amount: amount,
+        term_changes: [ { date: Date.new(2026, 3, 15), extra_repayment: 2_000 } ]
+      )
+    }
+
+    assert_raises(ArgumentError) { build.call(:hold, 1_000) }
+    assert_raises(ArgumentError) { build.call(:scheduled, ->(**) { 1_000 }) }
+    assert_nothing_raised { build.call(:reamortize, nil) }
+  end
+
+  test "term changes are applied in date order whatever order they are given in" do
+    changes = [
+      { date: Date.new(2026, 6, 10), extra_repayment: 1_000, payment: 900 },
+      { date: Date.new(2026, 3, 15), extra_repayment: 2_000 }
+    ]
+    run = ->(term_changes) {
+      Loan::Simulator.new(
+        starting_balance: 12_000, accrual_start_date: Date.new(2026, 1, 1),
+        payment_schedule: SCHEDULE, accrual_rate_for: ->(_date) { 6 },
+        currency_precision: 2, term_changes: term_changes
+      ).run
+    }
+
+    assert_equal run.call(changes.reverse).payments, run.call(changes).payments
+  end
+
+  test "a term change before the run opens or after it closes is left out" do
+    plain = run_simulation(starting_balance: 12_000, rate: 6)
+    result = Loan::Simulator.new(
+      starting_balance: 12_000, accrual_start_date: Date.new(2026, 1, 1),
+      payment_schedule: SCHEDULE, accrual_rate_for: ->(_date) { 6 },
+      currency_precision: 2,
+      term_changes: [
+        { date: Date.new(2025, 12, 31), extra_repayment: 2_000 },
+        { date: Date.new(2027, 1, 2), balance: 5_000 }
+      ]
+    ).run
+
+    assert_equal plain.payments, result.payments
+  end
+
+  test "an extra repayment smaller than the currency can express changes nothing" do
+    plain = run_simulation(starting_balance: 12_000, rate: 6)
+    result = Loan::Simulator.new(
+      starting_balance: 12_000, accrual_start_date: Date.new(2026, 1, 1),
+      payment_schedule: SCHEDULE, accrual_rate_for: ->(_date) { 6 },
+      currency_precision: 2, term_changes: [ { date: Date.new(2026, 3, 15), extra_repayment: "0.004" } ]
+    ).run
+
+    assert_equal plain.payments, result.payments
+  end
+
+  test "a term change on the day the run opens is left out" do
+    plain = run_simulation(starting_balance: 12_000, rate: 6)
+    result = Loan::Simulator.new(
+      starting_balance: 12_000, accrual_start_date: Date.new(2026, 1, 1),
+      payment_schedule: SCHEDULE, accrual_rate_for: ->(_date) { 6 },
+      currency_precision: 2, term_changes: [ { date: Date.new(2026, 1, 1), balance: 5_000 } ]
+    ).run
+
+    assert_equal plain.payments, result.payments
+  end
+
+  test "the first period charges the interest it is given" do
+    run = ->(first_period_interest) {
+      Loan::Simulator.new(
+        starting_balance: 12_000, accrual_start_date: Date.new(2026, 1, 1),
+        payment_schedule: SCHEDULE, accrual_rate_for: ->(_date) { 6 },
+        currency_precision: 2, first_period_interest: first_period_interest
+      ).run
+    }
+
+    assert_equal BigDecimal("60"), run.call(nil).payments.first[:interest_payment]
+    assert_equal BigDecimal("12.34"), run.call("12.34").payments.first[:interest_payment]
+    assert_equal BigDecimal("0"), run.call(0).payments.first[:interest_payment]
+    assert_equal run.call(nil).payments[1][:interest_rate], run.call(0).payments[1][:interest_rate]
+    assert_operator run.call(0).payments[1][:interest_payment], :<, run.call(nil).payments[1][:interest_payment]
+  end
+
+  test "a row a term change adjusts says by how much, and no other row carries the key" do
+    result = Loan::Simulator.new(
+      starting_balance: 12_000, accrual_start_date: Date.new(2026, 1, 1),
+      payment_schedule: SCHEDULE, accrual_rate_for: ->(_date) { 6 },
+      currency_precision: 2, term_changes: [ { date: Date.new(2026, 3, 15), extra_repayment: 2_000 } ]
+    ).run
+
+    adjusted = result.payments.select { |row| row.key?(:balance_adjustment) }
+    assert_equal [ Date.new(2026, 4, 1) ], adjusted.map { |row| row[:payment_date] }
+    assert_equal BigDecimal("-2000"), adjusted.first[:balance_adjustment]
+    assert_equal BigDecimal("2000"), adjusted.first[:repaid_after_charge]
+    assert result.payments.one? { |row| row.key?(:repaid_after_charge) }
+    assert_equal BigDecimal("0.005"), adjusted.first[:accrual_factor]
+    assert result.payments.one? { |row| row.key?(:accrual_factor) }
+    assert result.payments.none? { |row| row.key?(:lender_payment) }
+  end
+
+  test "rows a lender's payment is in force for are marked until the payment is re-sized" do
+    result = Loan::Simulator.new(
+      starting_balance: 12_000, accrual_start_date: Date.new(2026, 1, 1),
+      payment_schedule: SCHEDULE, accrual_rate_for: ->(_date) { 6 }, currency_precision: 2,
+      term_changes: [
+        { date: Date.new(2026, 3, 15), payment: 1_100 },
+        { date: Date.new(2026, 6, 15), extra_repayment: 500 }
+      ]
+    ).run
+
+    marked = result.payments.select { |row| row[:lender_payment] }.map { |row| row[:payment_date] }
+    assert_equal [ Date.new(2026, 4, 1), Date.new(2026, 5, 1), Date.new(2026, 6, 1) ], marked
+    assert result.converged?
+  end
+
   test "scheduled needs a callable, and the other strategies need a number" do
     build = ->(strategy, amount) {
       Loan::Simulator.new(

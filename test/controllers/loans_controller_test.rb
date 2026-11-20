@@ -64,6 +64,18 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
                  "the Overview names the premium it adds, and adds it to the Schedule's figure"
   end
 
+  # The form refuses a balance left owing after the last payment. A row stored
+  # before the term was lowered can still leave one, and a total without it
+  # would understate the cost.
+  test "both total cost cards say unknown while a stored row leaves the loan owing" do
+    loan = @account.loan
+    loan.update!(interest_rate: 5, term_months: 12, rate_type: "fixed", start_date: 2.years.ago.to_date)
+    loan.term_changes.create!(effective_date: loan.start_date >> 12, balance: 500)
+
+    get account_path(@account)
+    assert_equal [ "Unknown", "Unknown" ], card_values("Total Cost")
+  end
+
   # A rate saved on a loan with no term has no schedule to project a premium
   # against. The card must still say a policy is recorded rather than vanish,
   # which read as though the save had been lost.
@@ -500,6 +512,438 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_empty @account.loan.reload.variable_rate_schedule
+  end
+
+  test "records term changes submitted through the form" do
+    draw_down_loan_two_years_ago
+    change_date = Date.current - 1.year
+
+    assert_difference "Loan::TermChange.count", 2 do
+      patch loan_path(@account), params: {
+        account: { accountable_attributes: {
+          id: @account.loan.id,
+          term_change_rows: [
+            "",
+            { effective_date: change_date.iso8601, extra_repayment: "20000", balance: "", payment: "" },
+            { effective_date: (change_date + 2.months).iso8601, extra_repayment: "", balance: "", payment: "2500.50" },
+            { effective_date: "", extra_repayment: "", balance: "", payment: "" }
+          ]
+        } }
+      }
+    end
+
+    assert_redirected_to account_path(@account)
+    first, second = @account.loan.reload.active_term_changes
+    assert_equal [ change_date, BigDecimal("20000"), nil, nil ],
+                 [ first.effective_date, first.extra_repayment, first.balance, first.payment ]
+    assert_equal [ change_date + 2.months, nil, nil, BigDecimal("2500.5") ],
+                 [ second.effective_date, second.extra_repayment, second.balance, second.payment ]
+  end
+
+  test "resubmitting the form updates, keeps and removes term changes by date" do
+    draw_down_loan_two_years_ago
+    kept = Date.current - 1.year
+    removed = Date.current - 6.months
+    @account.loan.update!(term_change_rows: [
+      { effective_date: kept.iso8601, extra_repayment: "20000" },
+      { effective_date: removed.iso8601, payment: "2500" }
+    ])
+    kept_id = @account.loan.term_changes.find_by!(effective_date: kept).id
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: {
+        id: @account.loan.id,
+        term_change_rows: [ "", { effective_date: kept.iso8601, extra_repayment: "25000", balance: "", payment: "" } ]
+      } }
+    }
+
+    changes = @account.loan.reload.term_changes
+    assert_equal [ kept_id ], changes.map(&:id), "the stored row is updated in place and the other removed"
+    assert_equal BigDecimal("25000"), changes.first.extra_repayment
+  end
+
+  # The account locks what the form changed so a provider sync cannot
+  # overwrite it. The form always sends the term change sentinel.
+  test "a form save still locks the loan attributes it changed" do
+    draw_down_loan_two_years_ago
+    assert_not @account.loan.locked?(:interest_rate)
+
+    patch loan_path(@account), params: {
+      account: { name: "Renamed", accountable_attributes: { id: @account.loan.id, interest_rate: "4", term_change_rows: [ "" ] } }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert @account.loan.reload.locked?(:interest_rate)
+  end
+
+  # Without the form's blank sentinel the PATCH carries no term_change_rows
+  # key, the writer is never called, and the removed rows stay.
+  test "submitting only the blank sentinel clears the term changes" do
+    draw_down_loan_two_years_ago
+    @account.loan.update!(term_change_rows: [ { effective_date: (Date.current - 1.year).iso8601, payment: "2500" } ])
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: { id: @account.loan.id, term_change_rows: [ "" ] } }
+    }
+
+    assert_empty @account.loan.reload.term_changes
+  end
+
+  test "a form without the term change section leaves stored term changes alone" do
+    draw_down_loan_two_years_ago
+    @account.loan.update!(term_change_rows: [ { effective_date: (Date.current - 1.year).iso8601, payment: "2500" } ])
+
+    patch loan_path(@account), params: {
+      account: { name: "Renamed", accountable_attributes: { id: @account.loan.id, interest_rate: "4" } }
+    }
+
+    assert_equal 1, @account.loan.reload.term_changes.count
+  end
+
+  test "two term change rows with one date are rejected and both come back in the form" do
+    draw_down_loan_two_years_ago
+    day = (Date.current - 1.year).iso8601
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: {
+        id: @account.loan.id,
+        term_change_rows: [
+          "",
+          { effective_date: day, extra_repayment: "750", balance: "", payment: "" },
+          { effective_date: day, extra_repayment: "", balance: "", payment: "2500" }
+        ]
+      } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("activerecord.errors.models.loan.duplicate_term_change_date"), response.body
+    assert_empty @account.loan.reload.term_changes
+    assert_select "input[name='account[accountable_attributes][term_change_rows][][extra_repayment]'][value='750']", count: 1
+    assert_select "input[name='account[accountable_attributes][term_change_rows][][payment]'][value='2500']", count: 1
+  end
+
+  test "an unreadable term change is rejected and comes back in the form" do
+    draw_down_loan_two_years_ago
+    stored = Date.current - 1.year
+    @account.loan.update!(term_change_rows: [ { effective_date: stored.iso8601, payment: "2500" } ])
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: {
+        id: @account.loan.id,
+        term_change_rows: [
+          "",
+          { effective_date: stored.iso8601, extra_repayment: "", balance: "", payment: "2500" },
+          { effective_date: "", extra_repayment: "750", balance: "", payment: "" }
+        ]
+      } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("activerecord.errors.models.loan.invalid_term_change"), response.body
+    assert_equal 1, @account.loan.reload.term_changes.count, "a rejected submission must not alter the stored rows"
+    assert_select "input[name='account[accountable_attributes][term_change_rows][][extra_repayment]'][value='750']", { count: 1 },
+      "the typed row comes back so the form can redisplay it"
+    assert_select "input[name='account[accountable_attributes][term_change_rows][][payment]'][value='2500']", count: 1
+    assert_select "[data-controller='loan-term-changes'] details[open]", { count: 1 },
+      "the section opens on the rejected rows"
+  end
+
+  test "an invalid term change is rejected with its own message" do
+    draw_down_loan_two_years_ago
+
+    {
+      { effective_date: (Date.current + 1).iso8601, payment: "2500" } => "activerecord.errors.models.loan/term_change.in_the_future",
+      { effective_date: (Date.current - 3.years).iso8601, payment: "2500" } => "activerecord.errors.models.loan.term_change_not_after_origination",
+      { effective_date: Date.current.iso8601, extra_repayment: "100", balance: "100" } => "activerecord.errors.models.loan/term_change.two_balance_changes"
+    }.each do |row, message|
+      patch loan_path(@account), params: {
+        account: { accountable_attributes: { id: @account.loan.id, term_change_rows: [ "", row ] } }
+      }
+
+      assert_response :unprocessable_entity, row.inspect
+      assert_includes CGI.unescapeHTML(response.body), I18n.t(message)
+      assert_empty @account.loan.reload.term_changes
+    end
+  end
+
+  test "a rejected form does not save the balance half of the submission" do
+    draw_down_loan_two_years_ago
+
+    assert_no_difference -> { @account.reload.balance } do
+      patch loan_path(@account), params: {
+        account: {
+          balance: "123456",
+          accountable_attributes: {
+            id: @account.loan.id,
+            term_change_rows: [ "", { effective_date: (Date.current + 1).iso8601, payment: "2500" } ]
+          }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "the edit form renders the stored term changes and a row template" do
+    draw_down_loan_two_years_ago
+    stored = Date.current - 1.year
+    @account.loan.update!(term_change_rows: [ { effective_date: stored.iso8601, extra_repayment: "20000", payment: "2500" } ])
+
+    get edit_loan_path(@account)
+
+    assert_response :success
+    rows = "[data-controller='loan-term-changes'] [data-loan-term-changes-target='rows'] [data-term-change-row]"
+    assert_select rows, count: 1
+    assert_select "#{rows} input[type='date'][value='#{stored.iso8601}'][max='#{Date.current.iso8601}']", count: 1
+    assert_select "#{rows} input[name='account[accountable_attributes][term_change_rows][][extra_repayment]'][value='20000']", count: 1
+    assert_select "#{rows} input[name='account[accountable_attributes][term_change_rows][][balance]']:not([value])", count: 1
+    assert_select "input[type='hidden'][name='account[accountable_attributes][term_change_rows][]']", count: 1
+    assert_select "[data-loan-term-changes-target='empty'][hidden]", count: 1
+    assert_select "[data-controller='loan-term-changes'] details:not([open])", count: 1
+    assert_select "#{rows} input[name='account[accountable_attributes][term_change_rows][][extra_repayment]'][min='0.0001'][step='any']", { count: 1 },
+      "an extra repayment is more than zero"
+    assert_select "#{rows} input[name='account[accountable_attributes][term_change_rows][][balance]'][min='0']", count: 1
+    assert_select "button[data-action='loan-term-changes#add'] span", text: I18n.t("loans.form.term_change_add")
+    assert_select "template[data-loan-term-changes-target='template']", count: 1
+  end
+
+  test "the term change section is offered for a fixed loan" do
+    @account.loan.update!(rate_type: "fixed")
+
+    get edit_loan_path(@account)
+
+    assert_select "[data-controller='loan-term-changes'] input[name='account[accountable_attributes][term_change_rows][]']:not([disabled])", count: 1
+    assert_select "[data-loan-term-changes-target='empty']:not([hidden])", count: 1
+  end
+
+  test "a new loan can be created with a term change" do
+    start_date = Date.current - 2.years
+
+    assert_difference "Loan::TermChange.count", 1 do
+      post loans_path, params: {
+        account: {
+          name: "New mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
+          opening_balance_date: start_date.iso8601,
+          accountable_attributes: {
+            subtype: "mortgage", interest_rate: 5, term_months: 360, rate_type: "fixed",
+            initial_balance: 300_000, start_date: start_date.iso8601,
+            term_change_rows: [ "", { effective_date: (Date.current - 1.year).iso8601, extra_repayment: "5000", balance: "", payment: "" } ]
+          }
+        }
+      }
+    end
+
+    assert_redirected_to Account.order(:created_at).last
+  end
+
+  test "a new loan with an invalid term change comes back as the form" do
+    start_date = Date.current - 2.years
+
+    assert_no_difference [ "Account.count", "Loan::TermChange.count" ] do
+      post loans_path, params: {
+        account: {
+          name: "New mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
+          opening_balance_date: start_date.iso8601,
+          accountable_attributes: {
+            subtype: "mortgage", interest_rate: 5, term_months: 360, rate_type: "fixed",
+            initial_balance: 300_000, start_date: start_date.iso8601,
+            term_change_rows: [ "", { effective_date: (Date.current + 1).iso8601, extra_repayment: "5000", balance: "", payment: "" } ]
+          }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan/term_change.in_the_future")
+    assert_select "input[name='account[accountable_attributes][term_change_rows][][extra_repayment]'][value='5000']", count: 1
+  end
+
+  # A loan is saved before its account, and the schedule needs the account, so
+  # the payment is checked once the account and its opening balance exist.
+  test "a new loan with a payment below its period's interest comes back as the form" do
+    start_date = Date.current - 2.years
+    row = { effective_date: (Date.current - 1.year).iso8601, extra_repayment: "", balance: "", payment: "10" }
+
+    assert_no_difference [ "Account.count", "Loan.count", "Loan::TermChange.count", "Entry.count" ] do
+      assert_no_enqueued_jobs only: SyncJob do
+        post loans_path, params: {
+          account: {
+            name: "New mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
+            opening_balance_date: start_date.iso8601,
+            accountable_attributes: {
+              subtype: "mortgage", interest_rate: 5, term_months: 360, rate_type: "fixed",
+              initial_balance: 300_000, start_date: start_date.iso8601, term_change_rows: [ "", row ]
+            }
+          }
+        }
+      end
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan.term_change_payment_below_interest")
+    assert_select "form[action='#{loans_path}']"
+    assert_select "input[name='account[accountable_attributes][id]']", count: 0
+    assert_select "input[name='account[accountable_attributes][term_change_rows][][payment]'][value='10']", count: 1
+  end
+
+  # Without a start date the loan began on its opening balance date, which
+  # only the account knows.
+  test "a new loan without a start date refuses a term change before its opening balance date" do
+    opening_date = Date.current - 2.years
+
+    assert_no_difference [ "Account.count", "Loan::TermChange.count" ] do
+      post loans_path, params: {
+        account: {
+          name: "New mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
+          opening_balance_date: opening_date.iso8601,
+          accountable_attributes: {
+            subtype: "mortgage", interest_rate: 5, term_months: 360, rate_type: "fixed",
+            term_change_rows: [ "", { effective_date: (opening_date - 1.month).iso8601, extra_repayment: "5000", balance: "", payment: "" } ]
+          }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan.term_change_not_after_origination")
+  end
+
+  test "a new loan with a payment that covers its period's interest is created" do
+    start_date = Date.current - 2.years
+
+    assert_difference [ "Account.count", "Loan::TermChange.count" ], 1 do
+      post loans_path, params: {
+        account: {
+          name: "New mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
+          opening_balance_date: start_date.iso8601,
+          accountable_attributes: {
+            subtype: "mortgage", interest_rate: 5, term_months: 360, rate_type: "fixed",
+            initial_balance: 300_000, start_date: start_date.iso8601,
+            term_change_rows: [ "", { effective_date: (Date.current - 1.year).iso8601, extra_repayment: "", balance: "", payment: "1700" } ]
+          }
+        }
+      }
+    end
+
+    assert_redirected_to Account.order(:created_at).last
+  end
+
+  test "a new loan with a term change before its start date comes back as the form" do
+    start_date = Date.current - 2.years
+
+    assert_no_difference [ "Account.count", "Loan::TermChange.count" ] do
+      post loans_path, params: {
+        account: {
+          name: "New mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
+          opening_balance_date: start_date.iso8601,
+          accountable_attributes: {
+            subtype: "mortgage", interest_rate: 5, term_months: 360, rate_type: "fixed",
+            initial_balance: 300_000, start_date: start_date.iso8601,
+            term_change_rows: [ "", { effective_date: (start_date - 1).iso8601, extra_repayment: "5000", balance: "", payment: "" } ]
+          }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan.term_change_not_after_origination")
+  end
+
+  test "the schedule and overview follow a recorded term change" do
+    draw_down_loan_two_years_ago
+    @account.loan.update!(interest_rate: 6, term_months: 120, rate_type: "fixed")
+    get account_path(@account, tab: "schedule")
+    unchanged = schedule_table_cells
+    assert_match I18n.t("loans.tabs.schedule.monthly_payment"), response.body
+
+    change_date = Date.current - 1.year
+    @account.loan.update!(term_change_rows: [ { effective_date: change_date.iso8601, extra_repayment: "100000" } ])
+    schedule = @account.loan.reload.amortization_schedule
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    assert_not_equal unchanged, schedule_table_cells
+    assert_includes response.body, I18n.t("loans.tabs.schedule.term_change", amount: format_money(Money.new(-100_000, "USD")))
+    assert_match "term changes recorded on the loan", response.body
+    assert_match I18n.t("loans.tabs.schedule.opening_payment"), response.body,
+      "a payment that moved must not be labelled as the monthly payment"
+
+    get account_path(@account)
+    assert_equal [ format_money(schedule.payment_in_force(Date.current)) ], card_values(I18n.t("loans.tabs.overview.monthly_payment")),
+      "the overview quotes the payment in force today, not the one the loan opened with"
+  end
+
+  # A held payment after an extra repayment ends the loan sooner, so the date
+  # on the card is no longer the original one.
+  test "the overview names the payoff date for what it is once a term change is recorded" do
+    draw_down_loan_two_years_ago
+    @account.loan.update!(interest_rate: 6, term_months: 120, rate_type: "fixed")
+    get account_path(@account)
+    original = card_values(I18n.t("loans.tabs.overview.original_payoff_date"))
+    assert_equal 1, original.size
+
+    held = @account.loan.reload.amortization_schedule.periodic_payment.amount
+    @account.loan.update!(term_change_rows: [
+      { effective_date: (Date.current - 1.year).iso8601, extra_repayment: "100000", payment: held.to_s("F") }
+    ])
+    get account_path(@account)
+
+    assert_empty card_values(I18n.t("loans.tabs.overview.original_payoff_date"))
+    scheduled = card_values(I18n.t("loans.tabs.overview.scheduled_payoff_date"))
+    assert_equal 1, scheduled.size
+    assert_not_equal original, scheduled
+  end
+
+  # The error can be about a stored row the user did not touch.
+  test "the term change section opens when a stored row is why the save was rejected" do
+    draw_down_loan_two_years_ago
+    stored = Date.current - 1.year
+    @account.loan.update!(term_change_rows: [ { effective_date: stored.iso8601, extra_repayment: "5000" } ])
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: {
+        id: @account.loan.id, start_date: (Date.current - 1.month).iso8601,
+        term_change_rows: [ "", { effective_date: stored.iso8601, extra_repayment: "5000", balance: "", payment: "" } ]
+      } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan.term_change_not_after_origination")
+    assert_select "[data-controller='loan-term-changes'] details[open]", count: 1
+  end
+
+  test "a payment below its period's interest is rejected in the form" do
+    draw_down_loan_two_years_ago
+    @account.loan.update!(interest_rate: 6, term_months: 120, rate_type: "fixed")
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: {
+        id: @account.loan.id,
+        term_change_rows: [ "", { effective_date: (Date.current - 1.year).iso8601, extra_repayment: "", balance: "", payment: "10" } ]
+      } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan.term_change_payment_below_interest")
+    assert_empty @account.loan.reload.term_changes
+  end
+
+  # The form always sends the rows, so a stored payment is measured against a
+  # rate changed in the same save.
+  test "a rate raised in the form is refused when a stored payment no longer covers the interest" do
+    draw_down_loan_two_years_ago
+    @account.loan.update!(interest_rate: 6, term_months: 120, rate_type: "fixed")
+    # 500,000 charges about 2,500 a month at 6% and 10,000 at 24%.
+    row = { effective_date: (Date.current - 1.year).iso8601, extra_repayment: "", balance: "", payment: "6000" }
+    @account.loan.update!(term_change_rows: [ row ])
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: { id: @account.loan.id, interest_rate: 24, term_change_rows: [ "", row ] } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan.term_change_payment_below_interest")
+    assert_equal 6, @account.loan.reload.interest_rate
   end
 
   # Reads the payload off the mounted controller's own data attribute rather

@@ -1601,6 +1601,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
     t.check_constraint "status::text = ANY (ARRAY['succeeded'::character varying::text, 'failed'::character varying::text, 'cancelled'::character varying::text])", name: "chk_llm_usages_status"
   end
 
+  create_table "loan_term_changes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "balance", precision: 19, scale: 4
+    t.datetime "created_at", null: false
+    t.date "effective_date", null: false
+    t.decimal "extra_repayment", precision: 19, scale: 4
+    t.uuid "loan_id", null: false
+    t.decimal "payment", precision: 19, scale: 4
+    t.datetime "updated_at", null: false
+    t.index ["loan_id", "effective_date"], name: "index_loan_term_changes_on_loan_id_and_effective_date", unique: true
+    t.check_constraint "balance IS NULL OR balance >= 0::numeric", name: "chk_loan_term_changes_balance_non_negative"
+    t.check_constraint "extra_repayment IS NOT NULL OR balance IS NOT NULL OR payment IS NOT NULL", name: "chk_loan_term_changes_has_amount"
+    t.check_constraint "extra_repayment IS NULL OR balance IS NULL", name: "chk_loan_term_changes_one_balance_change"
+    t.check_constraint "extra_repayment IS NULL OR extra_repayment > 0::numeric", name: "chk_loan_term_changes_extra_repayment_positive"
+    t.check_constraint "payment IS NULL OR payment >= 0::numeric", name: "chk_loan_term_changes_payment_non_negative"
+  end
+
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "day_count_convention", default: "thirty_360", null: false
@@ -3255,6 +3271,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
   add_foreign_key "kraken_accounts", "kraken_items"
   add_foreign_key "kraken_items", "families"
   add_foreign_key "llm_usages", "families"
+  add_foreign_key "loan_term_changes", "loans", on_delete: :cascade
   add_foreign_key "lunchflow_accounts", "lunchflow_items"
   add_foreign_key "lunchflow_items", "families"
   add_foreign_key "merchants", "families"

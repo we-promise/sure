@@ -31,6 +31,15 @@ en:
       rate_change_rate: Rate
       rate_change_add: Add rate change
       rate_change_remove: Remove
+      term_changes: Term changes
+      term_changes_hint: "Record what your lender changed after the loan started: an extra repayment, a balance they confirmed or a new payment. Leave the payment blank to spread the new balance over the remaining term, or enter your lender's figure. The schedule follows these rows; the loan's balance does not. Also record an extra repayment as a transfer to the loan, and a confirmed balance as a balance update. Each date takes one row."
+      term_changes_empty: No term changes recorded. The schedule runs on the original terms.
+      term_change_effective_date: Effective date
+      term_change_extra_repayment: Extra repayment
+      term_change_balance: Confirmed balance
+      term_change_payment: New payment
+      term_change_add: Add term change
+      term_change_remove: Remove
       start_date: Origination date
       start_date_hint: When the loan was drawn down. A new loan's balance history starts on this date, not the opening balance date. Leave blank to use the opening balance date.
       down_payment: Down payment
@@ -117,6 +126,8 @@ en:
       schedule:
         date: Date
         description: Projected from the original balance, rate and term, starting %{start_date}. Extra payments are not reflected.
+        description_with_term_changes: Projected from the original balance, rate and term, starting %{start_date}, and the term changes recorded on the loan. Other extra payments are not reflected.
+        term_change: "Term change: %{amount}"
         variable_rate_notice: This loan's rate changes over time. The schedule re-amortises at each recorded change, keeping the original payoff date and resizing the repayment; a change that has not been recorded yet will shift these figures.
         opening_payment: Opening Payment
         forecasted_payoff_date: Forecasted Payoff Date
@@ -130,6 +141,7 @@ en:
         remaining_balance: Remaining Balance
         total_cost: Total Cost
         total_interest: Total Interest
+        unknown: Unknown
       overview:
         insurance_rate_only: "%{rate} a year"
         interest_rate: Interest Rate
@@ -143,6 +155,7 @@ en:
         original_payoff_date: Original Payoff Date
         original_principal: Original Loan Amount
         remaining_principal: Remaining Loan Amount
+        scheduled_payoff_date: Scheduled Payoff Date
         total_cost: Total Cost
         total_cost_with_insurance: Total Cost incl. Insurance
         total_insurance: Insurance

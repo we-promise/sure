@@ -42,7 +42,8 @@ class Family::DataImporter
   }.freeze
 
   # What the loan and credit card forms edit, restored on import. The loan's
-  # rate schedule is restored separately (see assign_liability_details).
+  # rate schedule and term changes are restored separately (see
+  # assign_liability_details).
   LOAN_DETAIL_ATTRIBUTES = %w[
     interest_rate rate_type term_months start_date down_payment initial_balance
     insurance_rate insurance_rate_type day_count_convention principal_only_transfers
@@ -148,6 +149,7 @@ class Family::DataImporter
       import_budgets(records["Budget"] || [])
       import_budget_categories(records["BudgetCategory"] || [])
       import_rules(records["Rule"] || [])
+      check_imported_term_changes
     end
 
     recompute_rollover_chains
@@ -326,6 +328,11 @@ class Family::DataImporter
       if accountable.is_a?(Loan) && schedule.is_a?(Hash)
         accountable.rate_changes = schedule.map { |date, rate| { "effective_date" => date, "rate" => rate } }
       end
+
+      # The same for term changes: a row the loan would refuse from its form
+      # is refused here.
+      term_changes = accountable_data["term_changes"]
+      accountable.term_change_rows = term_changes if accountable.is_a?(Loan) && term_changes.is_a?(Array)
     end
 
     def import_accounts(records)
@@ -423,6 +430,24 @@ class Family::DataImporter
     # default, such as the mileage unit.
     def assign_vehicle_details(vehicle, accountable_data)
       vehicle.assign_attributes(accountable_data.slice(*VEHICLE_DETAIL_ATTRIBUTES).compact)
+    end
+
+    # As Account.create_and_sync does once an account has its opening balance:
+    # the term change checks that read the schedule need the account, its
+    # valuations and its origination date, so they run after everything else.
+    # A session imports in chunks that commit one by one, so a loan's opening
+    # history can arrive in a later chunk; its rows are checked on the next
+    # form save instead.
+    def check_imported_term_changes
+      return if @import_session
+
+      @family.accounts.where(id: @created_account_ids, accountable_type: "Loan").includes(:accountable).each do |account|
+        loan = account.accountable
+        next if loan.term_changes_fit_account?
+
+        loan.errors.full_messages.each { |message| account.errors.add(:base, message) }
+        raise ActiveRecord::RecordInvalid.new(account)
+      end
     end
 
     def importable_account_status(status)

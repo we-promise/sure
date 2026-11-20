@@ -388,6 +388,222 @@ class LoanTest < ActiveSupport::TestCase
     assert_not sync.reload.full_resync_requested?
   end
 
+  test "a term change starts a sync, because the replay reads the schedule" do
+    account = build_running_loan_account
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      account.loan.update!(term_change_rows: [ { effective_date: Date.current.iso8601, extra_repayment: "5000" } ])
+    end
+  end
+
+  test "resubmitting the same term changes starts no sync" do
+    account = build_running_loan_account
+    rows = [ { effective_date: Date.current.iso8601, extra_repayment: "5000", balance: "", payment: "" } ]
+    account.loan.update!(term_change_rows: rows)
+    loan = Loan.find(account.loan.id)
+
+    assert_no_difference -> { Sync.where(syncable: account).count } do
+      loan.update!(term_change_rows: rows)
+    end
+  end
+
+  test "changing a stored term change starts a sync" do
+    account = build_running_loan_account
+    account.loan.term_changes.create!(effective_date: Date.current, extra_repayment: 5_000)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      Loan.find(account.loan.id).update!(term_change_rows: [ { effective_date: Date.current.iso8601, extra_repayment: "6000" } ])
+    end
+  end
+
+  test "removing a stored term change starts a sync" do
+    account = build_running_loan_account
+    account.loan.term_changes.create!(effective_date: Date.current, extra_repayment: 5_000)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      Loan.find(account.loan.id).update!(term_change_rows: [])
+    end
+  end
+
+  test "term change rows replace the stored rows by effective date" do
+    loan = build_running_loan_account.loan
+    today = Date.current
+    loan.update!(term_change_rows: [
+      { effective_date: (today - 2).iso8601, extra_repayment: "5000" },
+      { effective_date: (today - 1).iso8601, payment: "900" }
+    ])
+    kept_id = loan.term_changes.find_by!(effective_date: today - 2).id
+
+    loan.update!(term_change_rows: [
+      { "effective_date" => (today - 2).iso8601, "extra_repayment" => "", "balance" => "70000" },
+      { effective_date: today.iso8601, payment: "975" }
+    ])
+
+    changes = loan.reload.active_term_changes
+    assert_equal [ today - 2, today ], changes.map(&:effective_date)
+    assert_equal kept_id, changes.first.id, "a stored row with the same date is updated in place"
+    assert_nil changes.first.extra_repayment, "a blanked amount is cleared"
+    assert_equal BigDecimal("70000"), changes.first.balance
+    assert_equal BigDecimal("975"), changes.last.payment
+  end
+
+  # Both rows came from one submit, so neither replaces the other: the form
+  # comes back with both and the stored rows stay as they were.
+  test "two term change rows with one date are refused" do
+    loan = build_running_loan_account.loan
+    day = (Date.current - 1).iso8601
+
+    loan.term_change_rows = [
+      { effective_date: day, extra_repayment: "5000" },
+      { effective_date: day, payment: "900" }
+    ]
+
+    assert_not loan.valid?
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.duplicate_term_change_date")
+    assert_equal [ "5000", "900" ], loan.term_change_rows.map { |row| row[:extra_repayment].presence || row[:payment] }
+    assert_not loan.save
+    assert_empty loan.reload.term_changes
+  end
+
+  test "term change rows drop the memoised schedule" do
+    loan = build_running_loan_account.loan
+    before = loan.amortization_schedule.total_interest
+
+    loan.term_change_rows = [ { effective_date: (Date.current - 6.months).iso8601, extra_repayment: "20000" } ]
+
+    assert_operator loan.amortization_schedule.total_interest, :<, before,
+                    "the schedule answers with the assigned rows before they are saved"
+  end
+
+  test "assigning term change rows twice starts from the stored rows both times" do
+    loan = build_running_loan_account.loan
+    today = Date.current
+    loan.update!(term_change_rows: [ { effective_date: (today - 1).iso8601, payment: "900" } ])
+
+    loan.term_change_rows = []
+    loan.term_change_rows = [
+      { effective_date: (today - 1).iso8601, payment: "900" },
+      { effective_date: today.iso8601, payment: "950" }
+    ]
+    loan.save!
+
+    assert_equal [ today - 1, today ], loan.reload.active_term_changes.map(&:effective_date)
+  end
+
+  test "an unreadable term change row is kept for the form and blocks the save" do
+    loan = build_running_loan_account.loan
+    loan.update!(term_change_rows: [ { effective_date: Date.current.iso8601, payment: "900" } ])
+
+    [
+      { effective_date: "", payment: "950" },
+      { effective_date: "yesterday", payment: "950" },
+      { effective_date: Date.current.iso8601, payment: "a lot" },
+      { effective_date: Date.current.iso8601, payment: "Infinity" },
+      { effective_date: "-9999999-01-01", payment: "950" },
+      { effective_date: "+9999999-01-01", payment: "950" }
+    ].each do |row|
+      loan.term_change_rows = [ row ]
+
+      assert_not loan.valid?, row.inspect
+      assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.invalid_term_change")
+      assert_includes loan.term_change_rows, { effective_date: row[:effective_date], extra_repayment: "", balance: "", payment: row[:payment] }
+      assert loan.changed_for_autosave?, "the account's autosave must still validate the loan"
+    end
+
+    assert_equal 1, loan.reload.term_changes.count
+  end
+
+  # The columns keep four decimals, so 0.00001 would be stored as zero and
+  # break the database's own check.
+  test "an extra repayment too small to store is rejected, not raised" do
+    loan = build_running_loan_account.loan
+
+    loan.term_change_rows = [ { effective_date: Date.current.iso8601, extra_repayment: "0.00001" } ]
+
+    assert_not loan.valid?
+    assert_not loan.save
+  end
+
+  test "an amount too large to store is kept as typed and blocks the save" do
+    loan = build_running_loan_account.loan
+
+    loan.term_change_rows = [ { effective_date: Date.current.iso8601, extra_repayment: "1e400000000" } ]
+
+    assert_not loan.valid?
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.invalid_term_change")
+    assert_equal "1e400000000", loan.term_change_rows.last[:extra_repayment]
+  end
+
+  test "assigned rows count as a change until the loan has saved" do
+    loan = build_running_loan_account.loan
+    loan = Loan.find(loan.id)
+
+    loan.term_change_rows = []
+    assert loan.changed_for_autosave?, "the save validates the stored rows"
+
+    loan.save!
+    assert_not loan.changed_for_autosave?, "a later save of the account leaves the loan alone"
+  end
+
+  test "an amount is stored to the column's four decimals" do
+    loan = build_running_loan_account.loan
+
+    loan.update!(term_change_rows: [ { effective_date: Date.current.iso8601, extra_repayment: "2500.12345" } ])
+
+    assert_equal BigDecimal("2500.1235"), loan.reload.term_changes.first.extra_repayment
+  end
+
+  test "the replay is active for a replayable loan in a family with the preview on" do
+    account = build_running_loan_account
+    loan = account.loan
+    loan.update!(initial_balance: 80_000)
+    account.entries.create!(name: "Opening", date: loan.start_date, amount: 80_000, currency: "USD",
+                            entryable: Valuation.new(kind: "opening_anchor"))
+    loan = Loan.find(loan.id)
+
+    assert_not loan.principal_replay_active?, "the preview is off"
+
+    account.family.users.each do |user|
+      user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+    end
+    assert Loan.find(loan.id).principal_replay_active?
+
+    Loan.find(loan.id).tap { |unanchored| unanchored.update!(initial_balance: 70_000) }
+    assert_not Loan.find(loan.id).principal_replay_active?, "the anchor is no longer the amount borrowed"
+  end
+
+  test "a term change before the loan began is rejected" do
+    loan = build_running_loan_account.loan
+
+    loan.term_change_rows = [ { effective_date: (Date.current - 2.years).iso8601, payment: "900" } ]
+
+    assert_not loan.valid?
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_not_after_origination")
+  end
+
+  test "moving the start date past a stored term change is rejected" do
+    loan = build_running_loan_account.loan
+    loan.update!(term_change_rows: [ { effective_date: (Date.current - 6.months).iso8601, payment: "900" } ])
+    loan = Loan.find(loan.id)
+
+    loan.start_date = Date.current - 1.month
+
+    assert_not loan.valid?
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_not_after_origination")
+  end
+
+  test "a stored term change does not block saving an unrelated field later" do
+    loan = build_running_loan_account.loan
+    loan.update!(term_change_rows: [ { effective_date: Date.current.iso8601, payment: "900" } ])
+
+    travel_to Date.current - 1.day do
+      loan = Loan.find(loan.id)
+      loan.term_changes.load
+
+      assert loan.update(down_payment: 25_000), "a stored row is not re-validated against today"
+    end
+  end
+
   private
     # A loan imported part way through its life: the principal it was written
     # for is recorded, and the only valuation the account carries is the
@@ -412,7 +628,7 @@ class LoanTest < ActiveSupport::TestCase
       account
     end
 
-    def build_loan_account(balance:, down_payment:)
+    def build_loan_account(balance:, down_payment:, start_date: nil)
       Account.create!(
         family: families(:dylan_family),
         name: "Leveraged #{SecureRandom.hex(3)}",
@@ -420,8 +636,13 @@ class LoanTest < ActiveSupport::TestCase
         currency: "USD",
         accountable: Loan.create!(
           subtype: "mortgage", interest_rate: 5, term_months: 120,
-          rate_type: "fixed", down_payment: down_payment
+          rate_type: "fixed", down_payment: down_payment, start_date: start_date
         )
       )
+    end
+
+    # A loan that began a year ago, so a term change can be dated after it.
+    def build_running_loan_account
+      build_loan_account(balance: 80_000, down_payment: 20_000, start_date: Date.current - 1.year)
     end
 end

@@ -122,6 +122,24 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     assert terms[:monthly_payment_formatted].present?
   end
 
+  # A fixed loan with a recorded term change has more than one repayment too,
+  # and the Overview tab quotes the one in force.
+  test "reports the repayment in force for a fixed-rate loan with a recorded term change" do
+    loan = accounts(:loan).loan
+    base_payment = loan.monthly_payment.amount
+    loan.update!(
+      start_date: Date.current - 2.years,
+      term_change_rows: [ { effective_date: (Date.current - 1.year).iso8601, extra_repayment: "100000" } ]
+    )
+
+    terms = @fn.call[:accounts].find { |a| a[:id] == accounts(:loan).id }[:terms]
+
+    assert_equal "fixed", terms[:rate_type]
+    assert_equal loan.reload.amortization_schedule.payment_in_force(Date.current).amount, terms[:monthly_payment]
+    assert_operator terms[:monthly_payment], :<, base_payment, "the repayment is resized on the lower balance"
+    assert terms[:monthly_payment_formatted].present?
+  end
+
   test "a variable-rate loan with no recorded change reports its base rate and repayment" do
     loan = accounts(:loan).loan
     base_payment = loan.monthly_payment.amount
