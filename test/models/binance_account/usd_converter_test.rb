@@ -24,6 +24,27 @@ class BinanceAccount::UsdConverterTest < ActiveSupport::TestCase
     assert_nil rate_date
   end
 
+  test "zero needs no exchange rate in any target currency" do
+    ExchangeRate.expects(:find_or_fetch_rate).never
+    host = Host.new("AED")
+
+    [ 0, 0.0, 0.to_d ].each do |zero|
+      amount, stale, rate_date = host.send(:convert_from_usd, zero, date: Date.current)
+      assert_equal 0.to_d, amount
+      assert_equal false, stale
+      assert_nil rate_date
+    end
+  end
+
+  test "an incomplete zero valuation still requires an exchange rate" do
+    host = Host.new("AED")
+    ExchangeRate.expects(:find_or_fetch_rate).returns(nil)
+
+    assert_raises(Money::ConversionError) do
+      host.send(:convert_from_usd, 0, valuation_complete: false)
+    end
+  end
+
   test "returns converted amount when exact rate exists" do
     date = Date.new(2026, 3, 28)
     ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: date, rate: 0.92)
@@ -48,15 +69,16 @@ class BinanceAccount::UsdConverterTest < ActiveSupport::TestCase
     assert_equal old_date, rate_date
   end
 
-  test "returns raw USD amount with stale flag when no rate available" do
+  test "raises instead of relabeling raw USD when no rate is available" do
     host = Host.new("EUR")
     ExchangeRate.expects(:find_or_fetch_rate).returns(nil)
 
-    amount, stale, rate_date = host.send(:convert_from_usd, 1000.0, date: Date.new(2026, 3, 28))
-
-    assert_equal 1000.0, amount
-    assert_equal true, stale
-    assert_nil rate_date
+    error = assert_raises(Money::ConversionError) do
+      host.send(:convert_from_usd, 1000.0, date: Date.new(2026, 3, 28))
+    end
+    assert_equal "USD", error.from_currency
+    assert_equal "EUR", error.to_currency
+    assert_equal Date.new(2026, 3, 28), error.date
   end
 
   test "build_stale_extra returns correct hash when stale" do
