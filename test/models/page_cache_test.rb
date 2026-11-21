@@ -1,6 +1,41 @@
 require "test_helper"
 
 class PageCacheTest < ActiveSupport::TestCase
+  # Keeps serialized entries the way RedisCacheStore does, so reads go through
+  # Rails' per-request LocalCache. MemoryStore keeps objects and never reaches it.
+  class SerializingStore < ActiveSupport::Cache::Store
+    prepend ActiveSupport::Cache::Strategy::LocalCache
+
+    def initialize(options = nil)
+      super
+      @data = {}
+    end
+
+    private
+      def read_entry(key, **options)
+        deserialize_entry(read_serialized_entry(key, **options), **options)
+      end
+
+      def read_serialized_entry(key, **)
+        @data[key]
+      end
+
+      def write_entry(key, entry, **options)
+        write_serialized_entry(key, serialize_entry(entry, **options), **options)
+      end
+
+      def write_serialized_entry(key, payload, unless_exist: false, **)
+        return false if unless_exist && @data.key?(key)
+
+        @data[key] = payload
+        true
+      end
+
+      def delete_entry(key, **)
+        !@data.delete(key).nil?
+      end
+  end
+
   setup do
     @family = families(:dylan_family)
     @user = users(:family_admin)
@@ -188,6 +223,46 @@ class PageCacheTest < ActiveSupport::TestCase
     end
   end
 
+  # In production each request reads through Rails' per-request local cache,
+  # which keeps what it first read. These run as a request (with_local_cache)
+  # while another process (around the local cache) replaces the page.
+  test "a request renewing a page it read earlier never puts it back over a newer build" do
+    Rails.stubs(:cache).returns(SerializingStore.new)
+    PageCache.write("page/a", "earlier", version: "v1", family: @family, user: @user)
+
+    travel PageCache::TOUCH_INTERVAL + 1.minute do
+      Rails.cache.with_local_cache do
+        earlier = Rails.cache.read("page/a")
+        in_another_process { PageCache.write("page/a", "newer", version: "v2", family: @family, user: @user) }
+        PageCacheEntry.where(page_key: "page/a").update_all(last_used_at: 1.day.ago)
+
+        PageCache.send(:touch, "page/a", earlier)
+      end
+
+      served = PageCache.serve("page/a", version: "v2", family: @family, user: @user, rebuild_later: -> { }) { flunk "kept" }
+      assert_equal "newer", served.body
+    end
+  end
+
+  test "a request whose build began first never replaces a page another process stored meanwhile" do
+    Rails.stubs(:cache).returns(SerializingStore.new)
+    slow_started = Time.current
+
+    Rails.cache.with_local_cache do
+      assert_nil Rails.cache.read("page/a"), "the request saw no page"
+      travel 1.minute do
+        in_another_process { PageCache.write("page/a", "newer", version: "v2", family: @family, user: @user, started_at: Time.current) }
+      end
+
+      travel 2.minutes do
+        assert_not PageCache.write("page/a", "older", version: "v1", family: @family, user: @user, started_at: slow_started)
+      end
+    end
+
+    served = PageCache.serve("page/a", version: "v2", family: @family, user: @user, rebuild_later: -> { }) { flunk "kept" }
+    assert_equal "newer", served.body
+  end
+
   test "a rebuild that can't be queued still serves the stale page and tries again next time" do
     PageCache.write("page/a", "old", version: "v1", family: @family, user: @user)
     attempts = 0
@@ -202,4 +277,10 @@ class PageCacheTest < ActiveSupport::TestCase
 
     assert_equal 2, attempts, "the failed attempt released its claim"
   end
+
+  private
+    # Another process's cache calls don't go through this request's local cache
+    def in_another_process(&block)
+      Rails.cache.send(:bypass_local_cache, &block)
+    end
 end

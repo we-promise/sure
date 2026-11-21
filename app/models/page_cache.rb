@@ -22,6 +22,8 @@
 #
 # Replacing a page and renewing its expiry hold a lock on its key, so a slower,
 # older build or a renewal can never put back a page that was just replaced.
+# Under the lock the page is read from the shared store, not from what Rails'
+# per-request local cache kept from earlier in the request.
 class PageCache
   # `kept` is whether the page is in the cache after serving it.
   Served = Data.define(:body, :built_at, :stale, :kept)
@@ -64,7 +66,7 @@ class PageCache
     def write(key, body, version:, family:, user:, started_at: Time.current)
       release_rebuild(key)
       kept = with_page_lock(key) do
-        stored = read(key, family: family, user: user, touch: false)
+        stored = read(key, family: family, user: user, touch: false, shared: true)
         next false if stored && stored[:started_at] > started_at
 
         entry = {
@@ -101,8 +103,8 @@ class PageCache
     end
 
     private
-      def read(key, family:, user:, touch: true)
-        sealed = Rails.cache.read(key)
+      def read(key, family:, user:, touch: true, shared: false)
+        sealed = shared ? read_shared(key) : Rails.cache.read(key)
         entry = unseal(sealed, key: key, family: family)
         return unless entry && entry[:family_id] == family.id && entry[:user_id] == user.id
 
@@ -123,8 +125,17 @@ class PageCache
         return unless touched.positive?
 
         with_page_lock(key) do
-          Rails.cache.write(key, sealed, expires_in: Setting.page_cache_ttl) if Rails.cache.read(key) == sealed
+          Rails.cache.write(key, sealed, expires_in: Setting.page_cache_ttl) if read_shared(key) == sealed
         end
+      end
+
+      # Another process may have replaced the page since this request first read
+      # it, so the store itself is read: an empty local cache for the read forgets
+      # what this request kept, and stores without one read the store anyway.
+      def read_shared(key)
+        return Rails.cache.read(key) unless Rails.cache.respond_to?(:with_local_cache)
+
+        Rails.cache.with_local_cache { Rails.cache.read(key) }
       end
 
       # Held until the transaction ends, by every process sharing the database.
