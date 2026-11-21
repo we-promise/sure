@@ -52,4 +52,42 @@ class Money::CurrencyTest < ActiveSupport::TestCase
     expected_step = 1.0 / (10 ** eth.default_precision)
     assert_equal expected_step, eth.step
   end
+
+  # A duplicate YAML key in one of these currencies' blocks silently
+  # resolves to its last value rather than raising, so a copy-paste mistake
+  # across this many similar blocks would carry no parse error to catch it.
+  # Each currency's iso_code/symbol/precision/conversion must come out
+  # exactly as its own entry defines, independent of every other one.
+  #
+  # minor_unit_conversion is each asset's native-chain scale (the same
+  # convention as btc/satoshi and eth/wei above): money_to_minor_units and the
+  # API serializers (balance_cents, amount_cents, etc.) multiply by it
+  # directly, so a wrong factor misreports a balance by orders of magnitude.
+  # Values follow each asset's chain docs (ADA/SOL/ZEC/FIL's native units) or
+  # its contract's decimals (every ERC-20/EVM entry). baby and boden stay at
+  # an 8-decimal placeholder: several distinct tokens share each ticker
+  # across chains, so no single contract's decimals apply.
+  test "the 32 added crypto currencies use their correct precision and conversion" do
+    expected_conversion = {
+      "ada" => 1_000_000,             # lovelace
+      "sol" => 1_000_000_000,         # lamport
+      "zec" => 100_000_000,           # zatoshi
+      "storj" => 100_000_000,         # confirmed 8-decimal ERC-20, not the 18-decimal default
+      "nos" => 1_000_000,             # confirmed 6-decimal SPL mint (nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7)
+      "baby" => 100_000_000,          # unverified -- see note above
+      "boden" => 100_000_000          # unverified -- see note above
+    }
+    default_conversion = 1_000_000_000_000_000_000 # wei -- confirmed on Etherscan for every other entry here
+
+    %w[
+      ada amp avax baby bal band bat boden bond cgld clv comp enj fet fil
+      forth grt knc nkn nos nu ogn pol ren skl sky snx sol storj sushi uni zec
+    ].each do |code|
+      currency = Money::Currency.new(code)
+      assert_equal code.upcase, currency.iso_code, "#{code}: iso_code"
+      assert_equal code.upcase, currency.symbol, "#{code}: symbol"
+      assert_equal 8, currency.default_precision, "#{code}: default_precision"
+      assert_equal expected_conversion.fetch(code, default_conversion), currency.minor_unit_conversion, "#{code}: minor_unit_conversion"
+    end
+  end
 end
