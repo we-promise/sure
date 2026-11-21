@@ -1,0 +1,19 @@
+configured_item:
+  family: dylan_family
+  name: "eToro Connection"
+  status: good
+  scheduled_for_deletion: false
+  pending_account_setup: false
+  api_key: "test_public_key"
+  user_key: "test_user_key"
+  raw_instruments_payload: {}
+
+pending_setup_item:
+  family: dylan_family
+  name: "eToro Setup Pending"
+  status: good
+  scheduled_for_deletion: false
+  pending_account_setup: true
+  api_key: "test_public_key_pending"
+  user_key: "test_user_key_pending"
+  raw_instruments_payload: {}

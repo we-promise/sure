@@ -63,6 +63,55 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
     Security::HealthChecker.check_all
   end
 
+  test "a failed check of a security eToro supplies the prices of neither counts against it nor deletes eToro's prices" do
+    etoro_priced = Security.create!(
+      ticker: "ETORO_ONLY",
+      offline: true,
+      offline_reason: EtoroAccount::PriceHistoryProcessor::OFFLINE_REASON,
+      failed_fetch_count: Security::HealthChecker::MAX_CONSECUTIVE_FAILURES,
+      last_health_check_at: nil
+    )
+    Security::Price.create!(security: etoro_priced, date: Date.current, price: 10, currency: "USD")
+    @provider.stubs(:fetch_security_price).returns(provider_error_response(StandardError.new("No prices found")))
+
+    Security::HealthChecker.check_all
+
+    etoro_priced.reload
+    assert_equal [ true, EtoroAccount::PriceHistoryProcessor::OFFLINE_REASON ], [ etoro_priced.offline?, etoro_priced.offline_reason ]
+    assert_equal 1, etoro_priced.prices.count
+    assert_equal Security::HealthChecker::MAX_CONSECUTIVE_FAILURES, etoro_priced.failed_fetch_count
+    assert_not_nil etoro_priced.last_health_check_at
+  end
+
+  test "a security in a broker's own namespace is never checked" do
+    own = Security.create!(ticker: "ETORO:OWN", offline: true, offline_reason: EtoroAccount::PriceHistoryProcessor::OFFLINE_REASON, last_health_check_at: nil)
+    due = Security.create!(ticker: "etoro:due", offline: true, last_health_check_at: 20.days.ago)
+    @provider.stubs(:fetch_security_price).returns(provider_error_response(StandardError.new("No prices found")))
+
+    Security::HealthChecker.check_all
+
+    assert_nil own.reload.last_health_check_at
+    assert_equal 20.days.ago.to_date, due.reload.last_health_check_at.to_date
+  end
+
+  test "a security eToro supplies the prices of comes online once the price provider has it" do
+    etoro_priced = Security.create!(ticker: "ETORO_FOUND", offline: true, offline_reason: EtoroAccount::PriceHistoryProcessor::OFFLINE_REASON, last_health_check_at: nil)
+    @provider.stubs(:fetch_security_price).returns(provider_success_response(OpenStruct.new(price: 100, date: Date.current, currency: "USD")))
+
+    Security::HealthChecker.check_all
+
+    assert_not etoro_priced.reload.offline?
+  end
+
+  test "a failed check counts against a security online again, whatever eToro left on it" do
+    found = Security.create!(ticker: "ETORO_BACK", offline: false, offline_reason: EtoroAccount::PriceHistoryProcessor::OFFLINE_REASON)
+    @provider.expects(:fetch_security_price).returns(provider_error_response(StandardError.new("No prices found")))
+
+    Security::HealthChecker.new(found).run_check
+
+    assert_equal 1, found.reload.failed_fetch_count
+  end
+
   test "offline security with no health check that fails stays offline" do
     hc = Security::HealthChecker.new(@new_offline_security)
 

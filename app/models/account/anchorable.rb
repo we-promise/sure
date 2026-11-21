@@ -55,7 +55,7 @@ module Account::Anchorable
   end
 
   def history_start_date
-    if linked? && balance_type == :investment
+    if linked_investment?
       Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(self)
     else
       [

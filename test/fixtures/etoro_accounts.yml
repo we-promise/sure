@@ -1,0 +1,11 @@
+main_account:
+  etoro_item: configured_item
+  name: "eToro"
+  etoro_account_id: "etoro_trading_1"
+  account_type: trading
+  currency: USD
+  current_balance: 12000.0000
+  cash_balance: 500.0000
+  raw_positions_payload: []
+  raw_trades_payload: []
+  raw_balance_history_payload: []

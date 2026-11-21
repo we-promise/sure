@@ -67,6 +67,33 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal linked_activity_date, start_date
   end
 
+  test "common_supported_history_start_date ignores sourced reconciliations on unlinked accounts" do
+    linked_account = linked_investment_account
+    linked_activity_date = 20.days.ago.to_date
+    provider_trade(linked_account, linked_activity_date)
+
+    manual_account = families(:empty).accounts.create!(
+      name: "Imported Investment",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    # What an API import session writes for an imported balance update.
+    manual_account.entries.create!(
+      date: 5.days.ago.to_date,
+      name: "Manual value update",
+      amount: 1200,
+      currency: "USD",
+      source: "sure_import_session:#{SecureRandom.uuid}",
+      entryable: Valuation.new(kind: "reconciliation")
+    )
+
+    start_date = Balance::LinkedInvestmentSeriesNormalizer
+      .send(:common_supported_history_start_date, [ linked_account.id, manual_account.id ])
+
+    assert_equal linked_activity_date, start_date
+  end
+
   test "common_supported_history_start_date returns nil when no accounts have provider history" do
     manual_account = families(:empty).accounts.create!(
       name: "Manual Investment",
@@ -614,4 +641,138 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal [ holdings_start_date, Date.current ], normalized.values.map(&:date)
     assert_equal Money.new(5000, "USD"), normalized.values.first.value
   end
+
+  test "provider reconciliations before the first activity count as supported history" do
+    account = linked_investment_account
+    first_reconciliation_date = 20.days.ago.to_date
+    provider_reconciliation(account, first_reconciliation_date, 4000)
+    provider_reconciliation(account, 15.days.ago.to_date, 4200)
+    provider_trade(account, 10.days.ago.to_date)
+
+    assert_equal first_reconciliation_date, Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(account)
+    assert_equal first_reconciliation_date, Balance::LinkedInvestmentSeriesNormalizer
+      .send(:common_supported_history_start_date, [ account.id ])
+  end
+
+  test "reconciliations without a provider source do not count as supported history" do
+    account = linked_investment_account
+    account.entries.create!(
+      date: 20.days.ago.to_date,
+      name: "Rotated anchor",
+      amount: 4000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "reconciliation")
+    )
+    trade_date = 10.days.ago.to_date
+    provider_trade(account, trade_date)
+
+    assert_equal trade_date, Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(account)
+  end
+
+  # A data import tags its valuations with its session, and the account it
+  # made can be linked afterwards; a provider's reconciliation from before
+  # the link still counts.
+  test "valuations a data import recorded do not count as supported history" do
+    account = linked_investment_account
+    account.entries.create!(
+      date: 40.days.ago.to_date,
+      name: "Imported balance",
+      amount: 3000,
+      currency: "USD",
+      source: "#{Family::DataImporter::SESSION_SOURCE_PREFIX}#{SecureRandom.uuid}",
+      entryable: Valuation.new(kind: "reconciliation")
+    )
+    first_reconciliation_date = 20.days.ago.to_date
+    provider_reconciliation(account, first_reconciliation_date, 4000)
+    account.account_providers.update_all(created_at: 10.days.ago)
+
+    assert_equal first_reconciliation_date, Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(account)
+    assert_equal first_reconciliation_date, Balance::LinkedInvestmentSeriesNormalizer
+      .send(:common_supported_history_start_date, [ account.id ])
+  end
+
+  test "a series starting on a provider reconciliation keeps its recorded first value" do
+    account = linked_investment_account
+    first_reconciliation_date = 20.days.ago.to_date
+    provider_reconciliation(account, first_reconciliation_date, 4000)
+    provider_trade(account, first_reconciliation_date)
+
+    raw_series = Series.new(
+      start_date: 30.days.ago.to_date,
+      end_date: Date.current,
+      interval: "1 day",
+      values: [
+        Series::Value.new(date: 30.days.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: first_reconciliation_date, date_formatted: "", value: Money.new(4000, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(4500, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalized = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series).normalize
+
+    assert_equal [ first_reconciliation_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(4000, "USD"), normalized.values.first.value
+  end
+
+  test "coarse sampling past a provider reconciliation adds no synthetic opening point" do
+    account = linked_investment_account
+    first_reconciliation_date = 20.days.ago.to_date
+    provider_reconciliation(account, first_reconciliation_date, 4000)
+    provider_trade(account, 10.days.ago.to_date)
+
+    raw_series = Series.new(
+      start_date: 30.days.ago.to_date,
+      end_date: Date.current,
+      interval: "1 week",
+      values: [
+        Series::Value.new(date: 30.days.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: 16.days.ago.to_date, date_formatted: "", value: Money.new(4100, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(4500, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalized = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series).normalize
+
+    assert_equal [ 16.days.ago.to_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(4100, "USD"), normalized.values.first.value
+  end
+
+  private
+
+    def linked_investment_account
+      account = families(:empty).accounts.create!(
+        name: "Linked Investment",
+        balance: 0,
+        currency: "USD",
+        accountable: Investment.new
+      )
+      coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+      coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+      account.account_providers.create!(provider: coinstats_account)
+      account
+    end
+
+    def provider_reconciliation(account, date, amount)
+      account.entries.create!(
+        date: date,
+        name: "Reconciliation",
+        amount: amount,
+        currency: "USD",
+        source: "etoro",
+        entryable: Valuation.new(kind: "reconciliation")
+      )
+    end
+
+    def provider_trade(account, date)
+      account.entries.create!(
+        date: date,
+        name: "Trade",
+        amount: 100,
+        currency: "USD",
+        source: "etoro",
+        entryable: Transaction.new
+      )
+    end
 end

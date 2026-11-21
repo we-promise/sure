@@ -26,6 +26,13 @@ module Account::Linkable
     account_providers.any? || plaid_account.present? || simplefin_account.present?
   end
 
+  # A linked investment account's history is the one its provider reports:
+  # its series starts where that history does and ends on the reported
+  # figures (see Balance::LinkedInvestmentSeriesNormalizer).
+  def linked_investment?
+    linked? && balance_type == :investment
+  end
+
   # An "offline" or "unlinked" account is one where the user tracks values and
   # adds transactions manually, without the help of a data provider
   def unlinked?
