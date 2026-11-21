@@ -32,7 +32,10 @@ class Holding::PortfolioCache
     end
   end
 
-  def get_price(security_id, date, source: nil)
+  # In the account's currency. Without an exchange rate the price is returned
+  # as it is, still labelled with the account's currency, or nil with
+  # `converted_only`.
+  def get_price(security_id, date, source: nil, converted_only: false)
     security = @security_cache[security_id]
     raise SecurityNotFound.new(security_id, account.id) unless security
 
@@ -52,6 +55,8 @@ class Holding::PortfolioCache
     begin
       converted_amount = price_money.exchange_to(account.currency, date: date).amount
     rescue Money::ConversionError
+      return nil if converted_only
+
       converted_amount = price.price
     end
 
@@ -243,10 +248,21 @@ class Holding::PortfolioCache
         # cleaned up) where both rank the same
         # A provider row with no units marks a position closed, not a price
         # (some providers write one at no price), so it is left out.
+        #
+        # For a security with no market data, holdings are its only price
+        # history past its trades. A row without a provider is mostly one the
+        # reverse calculator wrote on an earlier run, often with a price it
+        # carried across a gap. Read back, that price would outlast the
+        # provider price that later covered the same days, so while the
+        # security has provider rows that price it, only they count as prices
+        # for it. Unlinking a provider keeps its rows and clears their
+        # provider, which leaves a security none at all: then the rows without
+        # one are the only price history it has, and they all count.
         security_holdings = if use_holdings
-          (holdings_by_security_id[security.id] || [])
+          rows = (holdings_by_security_id[security.id] || [])
             .reject { |h| h.account_provider_id && h.qty.to_d.zero? }
-            .sort_by { |h| h.account_provider_id ? 0 : 1 }
+          rows = rows.select(&:account_provider_id) if security.offline? && rows.any?(&:account_provider_id)
+          rows.sort_by { |h| h.account_provider_id ? 0 : 1 }
         else
           []
         end

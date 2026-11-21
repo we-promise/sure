@@ -552,6 +552,30 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     assert_equal 100, cache.get_price(security.id, Date.current).price
   end
 
+  # Unlinking a provider keeps its rows and clears their provider, so they are
+  # all the prices an offline security has left.
+  test "an offline security with no provider rows is priced by its rows without one" do
+    fund = Security.create!(name: "Unlinked Fund", ticker: "UNLF", offline: true)
+    @account.holdings.create!(security: fund, date: 3.days.ago.to_date, qty: 10, price: 120, amount: 1200, currency: "USD")
+
+    cache = Holding::PortfolioCache.new(@account, use_holdings: true)
+
+    assert_equal 120, cache.get_price(fund.id, 3.days.ago.to_date).price
+  end
+
+  # A calculated row's price was carried there on an earlier sync. Read back,
+  # it would keep standing in for the provider price that covers those days.
+  test "an offline security with provider rows is not priced by its rows without one" do
+    fund = Security.create!(name: "Linked Fund", ticker: "LNKF", offline: true)
+    provider_holding(fund, date: 2.days.ago.to_date, price: 150)
+    @account.holdings.create!(security: fund, date: 4.days.ago.to_date, qty: 10, price: 100, amount: 1000, currency: "USD")
+
+    cache = Holding::PortfolioCache.new(@account, use_holdings: true)
+
+    assert_equal 150, cache.get_price(fund.id, 2.days.ago.to_date).price
+    assert_nil cache.get_price(fund.id, 4.days.ago.to_date)
+  end
+
   test "converts historical prices using the requested date exchange rate" do
     account = families(:empty).accounts.create!(
       name: "CHF Brokerage",
