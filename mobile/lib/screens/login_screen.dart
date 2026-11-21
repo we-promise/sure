@@ -9,6 +9,7 @@ import '../services/api_config.dart';
 import '../widgets/sure_button.dart';
 import '../widgets/sure_logo.dart';
 import 'backend_config_screen.dart';
+import 'forgot_password_screen.dart';
 import '../l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -306,6 +307,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               },
                               onFieldSubmitted:
                                   showOtp ? null : (_) => _handleLogin(),
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ForgotPasswordScreen(),
+                                  ),
+                                ),
+                                child: Text(l.loginForgotPassword),
+                              ),
                             ),
 
                             // OTP Field (shown when MFA is required)

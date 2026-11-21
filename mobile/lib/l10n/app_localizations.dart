@@ -63,7 +63,7 @@ import 'app_localizations_sv.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,16 +86,16 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('sv'),
+    Locale('sv')
   ];
 
   /// Application title shown in the OS task switcher.
@@ -211,6 +211,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in'**
   String get loginSignIn;
+
+  /// Link from the login screen to password reset.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get loginForgotPassword;
+
+  /// Title of the password-reset request screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset password'**
+  String get forgotPasswordTitle;
+
+  /// Instructions on the password-reset request screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the email address for your account and we\'ll send you a reset link.'**
+  String get forgotPasswordInstructions;
+
+  /// Email field label on the password-reset request screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get forgotPasswordEmailLabel;
+
+  /// Validation message for an empty password-reset email.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your email'**
+  String get forgotPasswordEmailRequired;
+
+  /// Validation message for an invalid password-reset email.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email'**
+  String get forgotPasswordEmailInvalid;
+
+  /// Button that requests a password-reset email.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset link'**
+  String get forgotPasswordSendLink;
+
+  /// Heading after a password-reset request succeeds.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your inbox'**
+  String get forgotPasswordConfirmationTitle;
+
+  /// Account-enumeration-safe confirmation after a reset request.
+  ///
+  /// In en, this message translates to:
+  /// **'If an account exists for that email, you\'ll receive a reset link shortly.'**
+  String get forgotPasswordConfirmationMessage;
+
+  /// Button returning from password reset to sign in.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to sign in'**
+  String get forgotPasswordBackToSignIn;
+
+  /// Recoverable error when reset requests are rate limited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many reset requests. Please wait and try again.'**
+  String get forgotPasswordRateLimitedError;
+
+  /// Recoverable connection error for a reset request.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t reach your server. Check your connection and try again.'**
+  String get forgotPasswordNetworkError;
+
+  /// Fallback error for a reset request.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t request a reset link. Please try again.'**
+  String get forgotPasswordGenericError;
+
+  /// Title of the new-password screen.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get resetPasswordTitle;
+
+  /// Instructions on the new-password screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a strong password for your account.'**
+  String get resetPasswordInstructions;
+
+  /// New-password field label.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get resetPasswordNewPasswordLabel;
+
+  /// Password-confirmation field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get resetPasswordConfirmationLabel;
+
+  /// Validation message for an empty new password.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a password'**
+  String get resetPasswordPasswordRequired;
+
+  /// Validation message for a short new password.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters'**
+  String get resetPasswordPasswordMinLength;
+
+  /// Validation message for empty password confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please confirm your password'**
+  String get resetPasswordConfirmationRequired;
+
+  /// Validation message when password confirmation differs.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get resetPasswordPasswordsDoNotMatch;
+
+  /// Button that submits a new password.
+  ///
+  /// In en, this message translates to:
+  /// **'Update password'**
+  String get resetPasswordUpdateButton;
+
+  /// Snackbar after a password is reset successfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated. Please sign in.'**
+  String get resetPasswordSuccess;
+
+  /// Fallback error after a password reset fails.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t reset your password. The link may be invalid or expired.'**
+  String get resetPasswordGenericError;
+
+  /// Recoverable connection error when resetting a password.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t reach your server. Check your connection and try again.'**
+  String get resetPasswordNetworkError;
+
+  /// Error when password features are disabled for the account or instance.
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset isn\'t available for this account.'**
+  String get resetPasswordDisabledError;
 
   /// Google SSO button label.
   ///
@@ -2310,9 +2466,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }
