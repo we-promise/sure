@@ -14,6 +14,7 @@ class HoldingsController < ApplicationController
 
   def show
     @last_price_updated = @holding.security.prices.maximum(:updated_at)
+    @trade_entries = @holding.trades.includes(:entryable).to_a
     @lots = @holding.open_lots.to_a
     # The lots partial gates its edit affordances on these, as
     # HoldingLotsController refuses the writes: a read-only share edits

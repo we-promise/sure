@@ -187,6 +187,25 @@ class CategoryTest < ActiveSupport::TestCase
     end
   end
 
+  test "any_locale_display_name_matches? recognizes a default category under any locale's translation" do
+    category = categories(:food_and_drink)
+
+    I18n.with_locale(:en) do
+      assert category.any_locale_display_name_matches?("  restaurants & bars ")
+      assert category.any_locale_display_name_matches?(I18n.t("models.category.defaults.food_and_drink", locale: :"zh-CN"))
+      assert category.any_locale_display_name_matches?(category.name.upcase)
+      assert_not category.any_locale_display_name_matches?("Groceries")
+      assert_not category.any_locale_display_name_matches?(" ")
+    end
+  end
+
+  test "any_locale_display_name_matches? only matches the raw name of a custom category" do
+    category = Category.new(name: "School Supplies", color: "#123456", lucide_icon: "book", family: @family)
+
+    assert category.any_locale_display_name_matches?("school supplies")
+    assert_not category.any_locale_display_name_matches?("Food & Drink")
+  end
+
   test "display_name_with_parent localizes default parent and child names" do
     category = Category.new(
       name: "Groceries",

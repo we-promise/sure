@@ -6,7 +6,7 @@ class Current < ActiveSupport::CurrentAttributes
 
   delegate :family, to: :user, allow_nil: true
 
-  resets { @accessible_accounts = @finance_accounts = nil }
+  resets { @accessible_accounts = @finance_accounts = @folded_translations = nil }
 
   def user
     impersonated_user || session&.user
@@ -26,6 +26,13 @@ class Current < ActiveSupport::CurrentAttributes
 
   def finance_accounts
     @finance_accounts ||= (user ? user.finance_accounts : family&.accounts)&.load
+  end
+
+  # Per-request cache for LanguagesHelper.folded_translations. Living here, it
+  # is rebuilt after an I18n reload and never carries stubbed translations from
+  # one test into the next.
+  def folded_translations
+    @folded_translations ||= {}
   end
 
   def accessible_entries

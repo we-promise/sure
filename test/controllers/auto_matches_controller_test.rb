@@ -42,6 +42,17 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr##{ActionView::RecordIdentifier.dom_id(outflow_entry.transaction.transfer)}", false
   end
 
+  test "index lists matches between accounts shared with a member" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+
+    sign_in users(:family_member)
+    get auto_matches_url
+    assert_response :success
+    assert_select "tr##{ActionView::RecordIdentifier.dom_id(outflow_entry.transaction.transfer)}"
+  end
+
   # Regression: the bulk-select <form> used to wrap the whole table,
   # including each row's own Confirm/Reject button_to form. Nested <form>
   # elements are invalid HTML -- browsers flatten them, which merged every
