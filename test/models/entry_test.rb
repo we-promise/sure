@@ -58,6 +58,118 @@ class EntryTest < ActiveSupport::TestCase
     assert_not_nil category.reload.last_used_at
   end
 
+  test "bulk_update! locks the category when it also changes tags" do
+    entry = create_transaction(account: accounts(:depository))
+
+    Entry.where(id: entry.id).bulk_update!({ category_id: categories(:income).id, tag_ids: [ tags(:one).id ] }, update_tags: true)
+
+    transaction = entry.reload.transaction
+    assert transaction.locked?(:category_id)
+    assert transaction.locked?(:tag_ids)
+    assert entry.user_modified?
+  end
+
+  test "save_and_lock_attributes flags the entry and locks its tags in the same transaction" do
+    entry = create_transaction(account: accounts(:depository))
+    entry.stubs(:mark_user_modified!).raises(ActiveRecord::RecordInvalid.new(entry))
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      entry.save_and_lock_attributes(user_modified: true, lock_tags: :always) { entry.update(name: "User name") }
+    end
+
+    entry.reload
+    assert_not_equal "User name", entry.name
+    assert_not entry.locked?(:name)
+    assert_not entry.transaction.locked?(:tag_ids)
+  end
+
+  test "save_and_lock_attributes rolls back what the block wrote when it fails" do
+    entry = create_transaction(account: accounts(:depository))
+
+    assert_not entry.save_and_lock_attributes(user_modified: true, lock_tags: :always) {
+      entry.transaction.tag_ids = [ tags(:one).id ]
+      false
+    }
+
+    entry.reload
+    assert_empty entry.transaction.tag_ids
+    assert_not entry.user_modified?
+    assert_not entry.transaction.locked?(:tag_ids)
+  end
+
+  test "save_and_lock_attributes rolls back inside an outer transaction too" do
+    entry = create_transaction(account: accounts(:depository))
+
+    Entry.transaction do
+      assert_not entry.save_and_lock_attributes {
+        entry.transaction.tag_ids = [ tags(:one).id ]
+        false
+      }
+    end
+
+    assert_empty entry.reload.transaction.tag_ids
+  end
+
+  test "save_and_lock_attributes keeps locks committed after the entry was loaded" do
+    entry = create_transaction(account: accounts(:depository))
+    Entry.where(id: entry.id).update_all(locked_attributes: { "notes" => Time.current })
+
+    assert entry.save_and_lock_attributes { entry.update(name: "User name") }
+
+    entry.reload
+    assert entry.locked?(:notes)
+    assert entry.locked?(:name)
+  end
+
+  test "unlock_for_sync! and destroy write the transaction row before the entry row" do
+    entry = create_transaction(account: accounts(:depository))
+    entry.lock_attr!(:name)
+    entry.transaction.lock_attr!(:category_id)
+
+    assert_transaction_row_first { entry.unlock_for_sync! }
+    assert_transaction_row_first { entry.reload.save_and_lock_attributes { entry.update(name: "Locked name") } }
+    assert_transaction_row_first { entry.reload.lock_with_entryable! }
+    assert_transaction_row_first { entry.reload.destroy! }
+  end
+
+  test "save_and_lock_attributes locks a new entry's attributes without locking its rows again" do
+    entry = accounts(:depository).entries.new(
+      name: "New", date: Date.current, currency: "USD", amount: 100,
+      entryable: Transaction.new(category: categories(:food_and_drink), tag_ids: [ tags(:one).id ])
+    )
+
+    assert_no_queries_match(/FOR UPDATE/) do
+      assert entry.save_and_lock_attributes(user_modified: true, lock_tags: :if_any) { entry.save }
+    end
+
+    entry.reload
+    assert entry.user_modified?
+    assert entry.locked?(:name)
+    assert entry.locked?(:amount)
+    assert entry.transaction.locked?(:category_id)
+    assert entry.transaction.locked?(:tag_ids)
+  end
+
+  test "lock_with_entryable! locks an entry whose entryable row is missing" do
+    entry = create_transaction(account: accounts(:depository))
+    Transaction.where(id: entry.entryable_id).delete_all
+
+    assert_nothing_raised { entry.lock_with_entryable! }
+  end
+
+  test "bulk_update! locks the selected rows once, not again per row" do
+    entries = Array.new(3) { create_transaction(account: accounts(:depository)) }
+
+    assert_queries_match(/FOR UPDATE/, count: 2) do
+      Entry.where(id: entries.map(&:id)).bulk_update!({ category_id: categories(:income).id, tag_ids: [ tags(:one).id ] }, update_tags: true)
+    end
+
+    entries.each do |entry|
+      assert entry.reload.transaction.locked?(:category_id)
+      assert entry.transaction.locked?(:tag_ids)
+    end
+  end
+
   test "bulk_update! with a block reads the tags of all entries in one query" do
     entries = Array.new(3) { create_transaction(account: accounts(:depository)) }
     yielded = []
@@ -658,6 +770,18 @@ class EntryTest < ActiveSupport::TestCase
   end
 
   private
+    # Syncs lock the transaction row before the entry row; a writer that takes
+    # the entry row first can deadlock with them.
+    def assert_transaction_row_first(&block)
+      statements = []
+      callback = ->(*, payload) { statements << payload[:sql] }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+
+      row_sql = ->(table) { statements.index { |sql| sql.match?(/\A(UPDATE|DELETE FROM) "#{table}"|FROM "#{table}".*FOR UPDATE/m) } }
+      assert row_sql.call("transactions"), "no transaction row statement"
+      assert_operator row_sql.call("transactions"), :<, row_sql.call("entries")
+    end
+
     def create_pending(account, date:, amount:)
       create_transaction(
         account: account, date: date, amount: amount,

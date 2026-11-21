@@ -98,6 +98,16 @@ module Enrichable
     # a transaction, and without a savepoint the Rollback below would be
     # swallowed by the outer block and undo nothing.
     ActiveRecord::Base.transaction(requires_new: true) do
+      # The locks checked above may be stale: a user edit can commit its value
+      # and lock after this record was loaded. Re-read the locks under a row
+      # lock, which also waits for an edit still in progress
+      # (see #save_and_lock_attributes), so a sync never overwrites it.
+      unless ignore_locks || new_record?
+        reload_locked_attributes_for_update
+        enrichable_attrs = enrichable_attrs.reject { |attr_key, _| locked?(attr_key) }
+        next if enrichable_attrs.empty?
+      end
+
       enrichable_attrs.each do |attr, value|
         self.send("#{attr}=", value)
       end
@@ -154,18 +164,51 @@ module Enrichable
     !locked?(attr)
   end
 
+  # Merges into the locks as committed now, not as loaded with the record, so
+  # a lock another writer saved meanwhile is kept.
   def lock_attr!(attr)
-    update!(locked_attributes: locked_attributes.merge(attr.to_s => Time.current))
+    write_locked_attributes { |locks| locks.merge(attr.to_s => Time.current) }
   end
 
   def unlock_attr!(attr)
-    update!(locked_attributes: locked_attributes.except(attr.to_s))
+    write_locked_attributes { |locks| locks.except(attr.to_s) }
   end
 
+  # Locks every attribute the last save changed, in one write.
   def lock_saved_attributes!
-    saved_changes.keys.reject { |attr| ignored_enrichable_attributes.include?(attr) }.each do |attr|
-      lock_attr!(attr)
+    attrs = saved_changes.keys.reject { |attr| ignored_enrichable_attributes.include?(attr) }
+    return if attrs.empty?
+
+    locked_at = Time.current
+    write_locked_attributes { |locks| locks.merge(attrs.index_with { locked_at }) }
+  end
+
+  # Saves a user's edit and locks the attributes it changed in one database
+  # transaction. Syncs re-read locks under a row lock before they write (see
+  # #enrich_attributes), so they see the edit together with its locks or wait
+  # for both; saving and locking in two commits let a sync overwrite the edit
+  # in between.
+  #
+  # The block saves the record and returns whether it did. When it returns
+  # false the transaction (a savepoint inside an outer one) rolls back, so
+  # nothing the block wrote is kept.
+  #
+  # @param after_lock [Proc, nil] runs after the locks are saved, in the same
+  #   transaction, for writes that would replace the saved changes they read
+  # @yieldreturn [Boolean] whether the save succeeded
+  # @return [Boolean] the block's result
+  def save_and_lock_attributes(after_lock: nil)
+    saved = false
+    self.class.transaction(requires_new: true) do
+      reload_locked_attributes_for_update if persisted?
+      raise ActiveRecord::Rollback unless yield
+
+      remember_created_row_locks
+      lock_saved_attributes!
+      after_lock&.call
+      saved = true
     end
+    saved
   end
 
   # Returns the number of AI cache entries removed from this record.
@@ -214,7 +257,59 @@ module Enrichable
     removed_count
   end
 
+  # Loads the committed locks with a row lock held until the surrounding
+  # transaction ends, so lock_attr! merges into current locks rather than the
+  # ones loaded with the record. An unsaved change to the locks is kept.
+  # Skipped while a row lock this record took is still held: nothing else can
+  # have written the locks since.
+  #
+  # @return [void]
+  def reload_locked_attributes_for_update
+    return if row_locked?
+
+    # unscoped: called inside a class method on a relation (Entry.bulk_update!),
+    # where the class's own queries would otherwise inherit that relation.
+    fresh = self.class.uncached { self.class.unscoped.where(id: id).lock.pick(:locked_attributes) }
+    remember_row_lock
+    return if locked_attributes_changed?
+
+    self.locked_attributes = fresh || {}
+    clear_attribute_changes([ :locked_attributes ])
+  end
+
+  # Records that this record's row was just locked with its current values,
+  # for #row_locked?.
+  #
+  # @return [void]
+  def remember_row_lock
+    @row_lock_transaction = self.class.current_transaction
+  end
+
+  # A row this transaction just inserted is invisible to everyone else until
+  # it commits, so it counts as locked.
+  #
+  # @return [void]
+  def remember_created_row_locks
+    remember_row_lock if previously_new_record?
+  end
+
   private
+    # Whether the database transaction that locked this record's row is still
+    # open. Rolling back to a savepoint releases the locks taken after it, and
+    # that transaction then no longer reports open.
+    def row_locked?
+      persisted? && @row_lock_transaction&.open? || false
+    end
+
+    def write_locked_attributes
+      return update!(locked_attributes: yield(locked_attributes)) if new_record? || row_locked?
+
+      self.class.transaction(requires_new: true) do
+        reload_locked_attributes_for_update
+        update!(locked_attributes: yield(locked_attributes))
+      end
+    end
+
     # The rollback removes the join rows a collection setter such as tag_ids=
     # inserted, but not the records it loaded into the association. Resetting
     # makes the next read go to the database, so the instance stops reporting

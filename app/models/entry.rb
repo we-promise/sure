@@ -70,6 +70,10 @@ class Entry < ApplicationRecord
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
 
+  # Deleting removes the entry before its entryable (dependent: :destroy), the
+  # reverse of the row order syncs lock in (#reload_locked_attributes_for_update).
+  before_destroy :lock_entryable_row, prepend: true
+
   # new_record? && import_id.blank? keeps this to genuinely new manual
   # entries -- excludes CSV imports (which have their own, separately
   # decided blank-name handling) and any unrelated re-validation of an
@@ -458,6 +462,63 @@ class Entry < ApplicationRecord
     entryable.lock_saved_attributes!
   end
 
+  # Saves a user's edit, locks what it changed and, if asked, flags the entry
+  # as user-modified, all in one database transaction (see
+  # Enrichable#save_and_lock_attributes).
+  #
+  # @param user_modified [Boolean] also mark the entry user-modified
+  # @param lock_tags [Symbol, nil] also lock the transaction's tags: :if_any
+  #   when it has tags, :always even when the edit removed them all
+  # @yieldreturn [Boolean] whether the save succeeded
+  # @return [Boolean] the block's result
+  def save_and_lock_attributes(user_modified: false, lock_tags: nil, &block)
+    # After lock_saved_attributes!: these save again, which replaces the saved
+    # changes that method reads.
+    after_lock = -> do
+      if transaction? && (lock_tags == :always || (lock_tags == :if_any && transaction.tags.any?))
+        transaction.lock_attr!(:tag_ids)
+      end
+      mark_user_modified! if user_modified
+    end
+
+    super(after_lock: after_lock, &block)
+  end
+
+  # Locks the entryable's row, then this entry's, and refreshes the locks of
+  # both (see Enrichable#reload_locked_attributes_for_update).
+  #
+  # Saves write the entryable's row before the entry's (has_one touch), so
+  # every row lock on an entry takes them in that order. An edit that only
+  # writes the entry and then its tag lock would otherwise deadlock with a
+  # sync or rule.
+  #
+  # @return [void]
+  def reload_locked_attributes_for_update
+    entryable.reload_locked_attributes_for_update
+    super
+  end
+
+  # Takes a row lock on the entryable, then on this entry (see
+  # #reload_locked_attributes_for_update), and reloads this entry.
+  #
+  # @raise [ActiveRecord::RecordNotFound] when the entry was deleted meanwhile
+  def lock_with_entryable!
+    # Loading the locked entryable whole spares the query that would fetch it
+    # again: lock! reloads this entry and drops its loaded associations.
+    locked_entryable = entryable_class.uncached { entryable_class.unscoped.lock.find_by(id: entryable_id) }
+    lock!
+    return unless locked_entryable
+
+    association(:entryable).target = locked_entryable
+    locked_entryable.remember_row_lock
+    remember_row_lock
+  end
+
+  def remember_created_row_locks
+    super
+    entryable&.remember_created_row_locks
+  end
+
   # Columns no rule condition or action reads: how an entry was edited, and
   # import and reconciliation bookkeeping. Any other column counts, so a
   # column rules start reading later can't be missed.
@@ -678,9 +739,10 @@ class Entry < ApplicationRecord
   #
   # @return [void]
   def unlock_for_sync!
+    # Entryable first: the row order syncs lock in (#reload_locked_attributes_for_update).
     self.class.transaction do
-      update!(user_modified: false, import_locked: false, locked_attributes: {})
       entryable&.update!(locked_attributes: {})
+      update!(user_modified: false, import_locked: false, locked_attributes: {})
     end
   end
 
@@ -911,6 +973,12 @@ class Entry < ApplicationRecord
           records: locked_entries,
           associations: [ :account, :entryable ]
         ).call
+        # Loaded under the row locks above, so their locks are current and
+        # lock_attr! need not read them again.
+        locked_entries.each do |entry|
+          entry.remember_row_lock
+          entry.entryable.remember_row_lock if entry.transaction?
+        end
 
         # Resolve the matched-transfer set inside the transaction, after the
         # locks, so it reflects a match that committed before the lock.
@@ -996,6 +1064,10 @@ class Entry < ApplicationRecord
                 sync_windows[entry.account] = [ sync_windows[entry.account], window_start ].compact.min
                 rescheduled_ids << entry.id
               end
+
+              # After the date check and before the tag save below: saving the
+              # locks replaces the saved changes both of them read.
+              entry.lock_saved_attributes! if lockable_change
             end
           end
 
@@ -1009,10 +1081,7 @@ class Entry < ApplicationRecord
           end
 
           if changed
-            if lockable_change
-              entry.lock_saved_attributes!
-              entry.mark_user_modified!
-            end
+            entry.mark_user_modified! if lockable_change
             if block_given?
               tags_after = update_tags && entry.transaction? ? entry.transaction.tag_ids : tags_before
               yield entry if before != entry.rule_input_snapshot(tag_ids: tags_after)
@@ -1058,6 +1127,10 @@ class Entry < ApplicationRecord
         lock!
         yield txn
       end
+    end
+
+    def lock_entryable_row
+      entryable_class.uncached { entryable_class.unscoped.where(id: entryable_id).lock.pick(:id) }
     end
 
     # Remembers the earliest date this entry had before any save that changed
