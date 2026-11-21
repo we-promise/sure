@@ -128,6 +128,42 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
     assert_match(/SimpleFin server error \(500\)/, error.message)
   end
 
+  test "follows a same-host relative 307 redirect and succeeds" do
+    redirect = OpenStruct.new(
+      code: 307,
+      message: "Temporary Redirect",
+      headers: { "location" => "/simplefin/accounts?version=2&pending=1" },
+      body: ""
+    )
+    ok = OpenStruct.new(code: 200, body: '{"accounts": []}')
+
+    Provider::Simplefin.expects(:get)
+      .times(2)
+      .returns(redirect)
+      .then.returns(ok)
+
+    result = @provider.get_accounts(@access_url)
+    assert_equal({ accounts: [] }, result)
+  end
+
+  test "does not follow an absolute cross-host redirect" do
+    redirect = OpenStruct.new(
+      code: 307,
+      message: "Temporary Redirect",
+      headers: { "location" => "https://evil.example.com/simplefin/accounts" },
+      body: ""
+    )
+
+    Provider::Simplefin.expects(:get).times(1).returns(redirect)
+
+    error = assert_raises(Provider::Simplefin::SimplefinError) do
+      @provider.get_accounts(@access_url)
+    end
+
+    assert_equal :fetch_failed, error.error_type
+    assert_match(/evil.example.com/, error.message)
+  end
+
   test "get_accounts sends pending=1 when pending is enabled" do
     mock_response = OpenStruct.new(code: 200, body: '{"accounts": []}')
 
