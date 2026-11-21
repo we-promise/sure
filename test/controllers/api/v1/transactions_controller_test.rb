@@ -900,6 +900,13 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
           params: { transaction: { currency: "EUR" } },
           headers: api_headers(@api_key)
     assert_response :unprocessable_entity
+    assert_match "Use the split editor", JSON.parse(response.body)["message"]
+
+    patch api_v1_transaction_url(parent.transaction),
+          params: { transaction: { currency: "XYZ" } },
+          headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_equal "Unknown currency: XYZ", JSON.parse(response.body)["message"]
 
     assert_equal "USD", parent.reload.currency
     assert parent.child_entries.all? { |child| child.currency == "USD" }

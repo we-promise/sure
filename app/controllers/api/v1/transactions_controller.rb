@@ -151,13 +151,14 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
+    return render_unknown_currency if unknown_currency?
+
     if @entry.split_parent? && split_financial_fields_changed?
       render json: { error: "validation_failed", message: "Split parent amount, currency, date, and type cannot be changed directly. Use the split editor." }, status: :unprocessable_entity
       return
     end
 
     return render_validation_error(INVALID_NATURE_MESSAGE) if invalid_nature?
-    return render_unknown_currency if unknown_currency?
     # The web UI hides amount, nature and currency on a transfer: one leg alone
     # cannot change them without breaking Transfer#transfer_has_opposite_amounts.
     if @entry.transaction.transfer
