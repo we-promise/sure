@@ -1,0 +1,7 @@
+---
+fr:
+  push_notifications:
+    budget_description: M'avertir aussi lorsqu'une catégorie de budget approche de sa limite. Les alertes de dépassement de budget sont toujours envoyées. Désactivé par défaut.
+    budget_title: Alertes de budget
+    description: S'applique à tous les appareils que vous avez activés, navigateur et iOS.
+    title: Notifications push
