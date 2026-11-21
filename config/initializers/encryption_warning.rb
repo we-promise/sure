@@ -64,9 +64,9 @@ Rails.application.config.after_initialize do
   if ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
     if ActiveRecordEncryptionConfig.explicitly_configured?
       Rails.logger.warn(<<~WARN)
-        [SECURITY] SECRET_KEY_BASE is set to a value that was previously
-        shipped as a working default in this project's example Docker
-        Compose files. Anyone who knows that value can forge or decrypt
+        [SECURITY] SECRET_KEY_BASE is set to a publicly known value: a
+        default or placeholder from this project's example files or hosting
+        guides. Anyone who knows that value can forge or decrypt
         Rails session cookies, and can decrypt any value stored via Setting
         (AI/market-data provider API keys, etc.), which derives its own
         encryption key directly from SECRET_KEY_BASE - independently of
@@ -82,8 +82,8 @@ Rails.application.config.after_initialize do
     else
       Rails.logger.warn(<<~WARN)
         [SECURITY] ActiveRecord Encryption keys were auto-derived from a
-        SECRET_KEY_BASE value that was previously shipped as a working
-        default in this project's example Docker Compose files. Anyone who
+        publicly known SECRET_KEY_BASE value: a default or placeholder from
+        this project's example files or hosting guides. Anyone who
         knows that value can compute the same encryption keys, so this
         installation's "encrypted" data is not actually protected. The same
         value also signs/encrypts Rails session cookies and Setting's own

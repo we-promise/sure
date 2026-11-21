@@ -668,6 +668,7 @@ components:
       - classification
       - account_type
       - status
+      - exclude_from_reports
       - created_at
       - updated_at
       properties:
@@ -703,6 +704,10 @@ components:
           - draft
           - disabled
           - pending_deletion
+        exclude_from_reports:
+          type: boolean
+          readOnly: true
+          description: Whether this account is excluded from financial reports
         institution_name:
           type: string
           nullable: true
@@ -1525,6 +1530,7 @@ components:
       - active
       - position
       - stop_processing
+      - apply_immediately
       - conditions
       - actions
       - created_at
@@ -1554,6 +1560,12 @@ components:
           type: boolean
           description: When true, rules further down do not change transactions this
             rule matches
+        apply_immediately:
+          type: boolean
+          description: When true, the rule also runs right after a transaction is
+            created or edited by hand, in a bulk edit, in Categorize, via the API
+            or by the assistant (splits, transfers and conversions to trades wait
+            for the nightly run); otherwise it only runs on the nightly and sync runs
         conditions:
           type: array
           items:
@@ -1638,6 +1650,7 @@ components:
           enum:
           - manual
           - scheduled
+          - immediate
         status:
           type: string
           enum:
@@ -2254,46 +2267,6 @@ components:
       properties:
         message:
           type: string
-    TransactionResponse:
-      type: object
-      required:
-      - id
-      - date
-      - amount
-      - currency
-      - name
-      - entryable_type
-      - account
-      properties:
-        id:
-          type: string
-          format: uuid
-        date:
-          type: string
-          format: date
-        amount:
-          type: string
-        currency:
-          type: string
-        name:
-          type: string
-        entryable_type:
-          type: string
-        account:
-          type: object
-          required:
-          - id
-          - name
-          - account_type
-          properties:
-            id:
-              type: string
-              format: uuid
-            name:
-              type: string
-            account_type:
-              type: string
-              nullable: true
     ImportConfiguration:
       type: object
       properties:
@@ -3291,6 +3264,13 @@ components:
         investment_activity_label:
           type: string
           nullable: true
+        lot_source_trade_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: For a sale, the trade whose lot it names to sell from first.
+            It applies only while the account sells by FIFO; an account that sells
+            by average keeps it but sells from the pooled average.
         account:
           "$ref": "#/components/schemas/Account"
         security:
@@ -3385,12 +3365,54 @@ components:
         avg_cost:
           type: string
           nullable: true
+        lots:
+          type: array
+          nullable: true
+          description: The position's open lots, the opening lot first and then by
+            acquisition. Present only on the position's latest row, while its lots
+            add up to the holding; null otherwise.
+          items:
+            "$ref": "#/components/schemas/HoldingLot"
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+    HoldingLot:
+      type: object
+      required:
+      - id
+      - opening
+      - qty
+      - manual_cost
+      properties:
+        id:
+          type: string
+          format: uuid
+        opening:
+          type: boolean
+          description: Units held before the first imported trade
+        acquired_on:
+          type: string
+          format: date
+          nullable: true
+          description: Null for the opening lot
+        qty:
+          type: string
+          description: Units of the lot still held
+        unit_cost:
+          type: string
+          nullable: true
+          description: Formatted cost per unit; null when unknown
+        manual_cost:
+          type: boolean
+          description: Whether the cost was set by the user
+        trade_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: The trade that acquired the lot; null for the opening lot
     HoldingCollection:
       type: object
       required:
@@ -5335,7 +5357,16 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                oneOf:
+                - type: object
+                  required:
+                  - errors
+                  properties:
+                    errors:
+                      type: array
+                      items:
+                        type: string
+                - "$ref": "#/components/schemas/ErrorResponse"
         '403':
           description: 'registration refused: the instance is closed to new registrations,
             or an invite code is required or invalid'
@@ -8219,7 +8250,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ImportResponse"
         '403':
-          description: guest users cannot import family configuration
+          description: guest users cannot import family configuration, or the account
+            is shared without write access
           content:
             application/json:
               schema:
@@ -8272,7 +8304,8 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID to import into
+                  description: Account ID to import into. Must be an account the API
+                    user can write to
                 publish:
                   type: string
                   description: Set to "true" to automatically queue for processing
@@ -8385,7 +8418,8 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID to import into
+                  description: Account ID to import into. Must be an account the API
+                    user can write to
                 publish:
                   type: string
                   description: Set to "true" to automatically queue for processing
@@ -8587,6 +8621,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: account is shared with the user without write access
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: account not found
           content:
@@ -8625,7 +8665,8 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID used for account-scoped CSV import validation
+                  description: Account ID used for account-scoped CSV import validation.
+                    Must be an account the API user can write to
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -8738,7 +8779,8 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID used for account-scoped CSV import validation
+                  description: Account ID used for account-scoped CSV import validation.
+                    Must be an account the API user can write to
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -9518,6 +9560,7 @@ paths:
           enum:
           - manual
           - scheduled
+          - immediate
       - name: start_executed_at
         in: query
         required: false
@@ -10424,11 +10467,16 @@ paths:
       parameters: []
       responses:
         '201':
-          description: trade created
+          description: 'created: a Trade for trade types, a Transaction for a deposit
+            or withdrawal without transfer_account_id, or a TransferDecision for a
+            deposit or withdrawal with transfer_account_id'
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/TransactionResponse"
+                oneOf:
+                - "$ref": "#/components/schemas/Trade"
+                - "$ref": "#/components/schemas/Transaction"
+                - "$ref": "#/components/schemas/TransferDecision"
         '403':
           description: forbidden - api key missing read_write scope
           content:
@@ -10482,6 +10530,7 @@ paths:
                         interest, fee)
                     fee:
                       type: number
+                      minimum: 0
                       description: Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)
                     type:
                       type: string
@@ -10581,13 +10630,21 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or the account
+            is shared with you without write access
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: trade not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: qty or price is not a positive number, or nature is not inflow
+            or outflow
           content:
             application/json:
               schema:
@@ -10606,8 +10663,13 @@ paths:
                       format: date
                     qty:
                       type: number
+                      description: Positive quantity. Sending qty, price, type or
+                        nature recomputes the entry amount as signed qty * price +
+                        fee, where qty is negative on a sell; what the request leaves
+                        out is taken from the trade.
                     price:
                       type: number
+                      description: Positive price per unit
                     type:
                       type: string
                       enum:
@@ -10616,11 +10678,13 @@ paths:
                       - sweep_in
                       - sweep_out
                       - reinvestment
+                      description: Side of the trade; takes precedence over nature
                     nature:
                       type: string
                       enum:
                       - inflow
                       - outflow
+                      description: inflow is a sell, outflow a buy
                     name:
                       type: string
                     notes:
@@ -10650,7 +10714,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or the account
+            is shared with you without write access
           content:
             application/json:
               schema:
@@ -10924,6 +10989,13 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '403':
+          description: account is shared with you without permission to change this
+            transaction
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
           content:
@@ -10931,8 +11003,9 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - malformed tag_ids, or a tag, category or
-            merchant id the family cannot use
+          description: validation error - unknown nature, an amount or nature change
+            on a transfer, malformed tag_ids, or a tag, category or merchant id the
+            family cannot use
           content:
             application/json:
               schema:
@@ -10974,6 +11047,8 @@ paths:
                       - expense
                       - inflow
                       - outflow
+                      description: Sign of the amount. Without amount, applies to
+                        the stored amount.
                     tag_ids:
                       type: array
                       items:
@@ -10999,6 +11074,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/DeleteResponse"
+        '403':
+          description: account is shared with you without full control
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
           content:
@@ -11388,6 +11469,12 @@ paths:
                 "$ref": "#/components/schemas/Valuation"
         '422':
           description: validation error - only one of amount/date provided
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: account is shared with you without write access
           content:
             application/json:
               schema:

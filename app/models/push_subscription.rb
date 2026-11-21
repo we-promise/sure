@@ -2,6 +2,7 @@ require "digest"
 
 class PushSubscription < ApplicationRecord
   belongs_to :user
+  has_many :push_deliveries, as: :subscription, dependent: :destroy
 
   enum :environment, { sandbox: "sandbox", production: "production" }, validate: true
 
@@ -58,18 +59,36 @@ class PushSubscription < ApplicationRecord
     user.active? && last_registered_at > 90.days.ago
   end
 
-  # A response may arrive after the app has registered again. Only remove the
-  # exact registration sent, and respect APNs' invalidation timestamp when given.
-  def invalidate_if_unchanged!(response)
-    return unless response.status.to_i == 410
+  def self.channel_ready?
+    Apns::Client.available?
+  end
 
-    timestamp = response.body.is_a?(Hash) && response.body["timestamp"]
-    if timestamp
-      return unless timestamp.is_a?(Numeric) && timestamp.positive? && timestamp.finite?
-      return if last_registered_at.to_f * 1000 > timestamp
+  # The APNs adapter for PushDelivery.
+  def deliver(delivery)
+    PushSubscription::Delivery.new(self).call do |client|
+      I18n.with_locale(user.family.locale) do
+        client.deliver(token: token, title: I18n.t("insights.notification.title"),
+          body: I18n.t("insights.notification.body"), insight_id: delivery.insight_id)
+      end
     end
+  rescue Apns::Client::TransientError => e
+    raise PushDelivery::TransientError, e.message
+  end
 
+  # APNs answers 410 with the moment the token stopped being valid. A device
+  # that registered again after that moment keeps its row.
+  def unregistered_by?(response)
+    timestamp = response.body.is_a?(Hash) && response.body["timestamp"]
+    return true unless timestamp
+
+    timestamp.is_a?(Numeric) && timestamp.positive? && timestamp.finite? &&
+      last_registered_at.to_f * 1000 <= timestamp
+  end
+
+  # A response may arrive after the app has registered again: only remove the
+  # exact registration sent. Destroy (not delete) so its ledger rows go with it.
+  def invalidate_if_unchanged!
     self.class.where(id: id, token: token, environment: environment,
-      last_registered_at: last_registered_at).delete_all
+      last_registered_at: last_registered_at).destroy_all
   end
 end
