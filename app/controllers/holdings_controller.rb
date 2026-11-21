@@ -9,7 +9,6 @@ class HoldingsController < ApplicationController
     # Every row shows its average cost; load them together, not per row.
     @current_holdings = @account.current_holdings.includes(:security).to_a
     Holding.preload_avg_costs(@current_holdings)
-    @negative_positions = @account.negative_positions
     @trade_republic_categories = trade_republic_categories_for(@account)
   end
 

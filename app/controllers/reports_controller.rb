@@ -379,34 +379,35 @@ class ReportsController < ApplicationController
     end
 
     def build_trends_data(income_statement:)
-      # Generate month-by-month data based on the current period filter
+      # Month-by-month data based on the current period filter, fetched with a
+      # single month-grouped totals query instead of two queries per month.
       trends = []
 
-      # Generate list of months within the period
       current_month = @start_date.beginning_of_month
       end_of_period = @end_date.end_of_month
 
+      monthly_totals = if filter_tags.empty?
+        income_statement.monthly_income_expense_totals(
+          period: Period.custom(start_date: current_month, end_date: @end_date)
+        )
+      end
+
       while current_month <= end_of_period
-        month_start = current_month
-        month_end = current_month.end_of_month
-
-        # Ensure we don't go beyond the end date
-        month_end = @end_date if month_end > @end_date
-
-        period = Period.custom(start_date: month_start, end_date: month_end)
-
         if filter_tags.any?
+          month_end = [ current_month.end_of_month, @end_date ].min
+          period = Period.custom(start_date: current_month, end_date: month_end)
           totals = income_statement.totals_for(period, tag_ids: filter_tags.map(&:id))
           income = totals.income_money.amount
           expenses = totals.expense_money.amount
         else
-          income = income_statement.income_totals(period: period).total
-          expenses = income_statement.expense_totals(period: period).total
+          totals = monthly_totals[current_month] || { income: 0.to_d, expense: 0.to_d }
+          income = totals[:income]
+          expenses = totals[:expense]
         end
 
         trends << {
-          month: month_start.strftime("%b %Y"),
-          is_current_month: (month_start.month == Date.current.month && month_start.year == Date.current.year),
+          month: current_month.strftime("%b %Y"),
+          is_current_month: (current_month.month == Date.current.month && current_month.year == Date.current.year),
           income: income,
           expenses: expenses,
           net: income - expenses
@@ -636,10 +637,11 @@ class ReportsController < ApplicationController
 
     def build_gains_by_tax_treatment(investment_statement)
       currency = Current.family.currency
-      # Eager-load account and accountable to avoid N+1 when accessing tax_treatment
-      current_holdings = investment_statement.current_holdings
-        .includes(account: :accountable)
-        .to_a
+      # The card's holdings, average costs already read in one query (the trends
+      # below would otherwise run them per holding), plus each account's
+      # accountable for its tax treatment.
+      current_holdings = investment_statement.holdings_with_avg_costs
+      ActiveRecord::Associations::Preloader.new(records: current_holdings, associations: { account: :accountable }).call
 
       # Group holdings by tax treatment (from account)
       holdings_by_treatment = current_holdings.group_by { |h| h.account.tax_treatment || :taxable }
@@ -650,18 +652,9 @@ class ReportsController < ApplicationController
         .includes(:security, entry: { account: :accountable })
         .to_a
 
-      # Preload holdings for all accounts that have sell trades to avoid N+1 in realized_gain_loss
-      account_ids = sell_trades.map { |t| t.entry.account_id }.uniq
-      holdings_by_account = Holding
-        .where(account_id: account_ids)
-        .where("date <= ?", @period.date_range.end)
-        .order(date: :desc)
-        .group_by(&:account_id)
-
-      # Inject preloaded holdings into trades for realized_gain_loss calculation
-      sell_trades.each do |trade|
-        trade.instance_variable_set(:@preloaded_holdings, holdings_by_account[trade.entry.account_id] || [])
-      end
+      # Each sale's basis position in one query, before the rates: the rate
+      # preload keys on the currency that position is carried in.
+      Trade.preload_basis_holdings(sell_trades)
 
       # What each fifo sale took from which lot, read once for the whole set.
       lot_disposals = HoldingLotDisposal.readable_by_sale(sell_trades)
@@ -706,7 +699,7 @@ class ReportsController < ApplicationController
       foreign_trade_currencies = (
         sell_trades.map(&:currency) +
         sell_trades.map { |t| t.entry.account.currency } +
-        holdings_by_account.values.flatten.map(&:currency)
+        sell_trades.map(&:preloaded_basis_currency)
       ).compact.uniq.reject { |c| c == currency }
       rates_by_trade_date = sell_trades.map { |t| t.entry.date }.uniq.each_with_object({}) do |date, memo|
         memo[date] = ExchangeRate.rates_for(foreign_trade_currencies, to: currency, date: date)
