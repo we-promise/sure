@@ -219,7 +219,7 @@ class Sync < ApplicationRecord
           # record would silently overwrite that terminal status.
           with_lock { fail! if may_fail? }
           update(error: e.message)
-          report_error(e)
+          report_error(e) unless e.try(:reported?)
         ensure
           finalize_if_all_children_finalized
         end
