@@ -2,6 +2,7 @@
 ca:
   transfer_matches:
     create:
+      already_matched: "Una de les transaccions ja forma part d'una altra transferència."
       success: Transferència creada
     matching_fields:
       create_new_transaction: Crea una nova transacció

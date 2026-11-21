@@ -2,6 +2,7 @@
 hu:
   transfer_matches:
     create:
+      already_matched: "Az egyik tranzakció már egy másik átutalás része."
       success: Átutalás létrehozva
     new:
       header:
