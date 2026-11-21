@@ -3,6 +3,8 @@ require "uri"
 require "json"
 
 class Assistant::External::Client
+  extend ProxyConfigurable
+
   TIMEOUT_CONNECT = 10   # seconds
   TIMEOUT_READ    = 120  # seconds (agent may take time to reason + call tools)
   MAX_RETRIES     = 2
@@ -111,13 +113,9 @@ class Assistant::External::Client
       model
     end
 
-    # The proxy comes from Ai::Transport::Http, the one resolver every AI client uses:
-    # HTTPS_PROXY, then HTTP_PROXY, whatever the scheme; NO_PROXY with CIDR blocks; loopback
-    # never proxied. A nil proxy address stops Net::HTTP's own ENV lookup.
+    # The proxy comes from ProxyConfigurable, the resolver every outbound client uses.
     def build_http(uri)
-      proxy_uri = Ai::Transport::Http.net_http_proxy(uri.to_s)
-
-      http = Net::HTTP.new(uri.host, uri.port, proxy_uri&.host, proxy_uri&.port, proxy_uri&.user, proxy_uri&.password)
+      http = Net::HTTP.new(uri.host, uri.port, *self.class.net_http_proxy_args(uri.to_s))
       http.use_ssl = (uri.scheme == "https")
       http.open_timeout = TIMEOUT_CONNECT
       http.read_timeout = TIMEOUT_READ

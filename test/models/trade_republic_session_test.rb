@@ -2,6 +2,7 @@ require "test_helper"
 
 class TradeRepublicSessionTest < ActiveSupport::TestCase
   include TradeRepublicSessionTestHelper
+  include NetHttpCaptureHelper
 
   test "builds a desktop device fingerprint with a current browser version" do
     session = Provider::TradeRepublicSession.new(phone_number: "+491701234567", pin: "1234")
@@ -49,4 +50,28 @@ class TradeRepublicSessionTest < ActiveSupport::TestCase
     assert_nil Provider::TradeRepublicSession.expires_at(JSON.generate("tr_refresh" => "not-a-jwt"))
     assert_nil Provider::TradeRepublicSession.expires_at(JSON.generate("tr_refresh" => "a.#{Base64.urlsafe_encode64("[]")}.c"))
   end
+
+  test "session requests go through HTTPS_PROXY when HTTP_PROXY is unset" do
+    stub_request(:get, "https://api.traderepublic.com/api/v1/auth/web/session").to_return(status: 200, body: "{}")
+    calls, connection = capture_net_http_new("api.traderepublic.com", 443)
+
+    with_proxy_env(https: PROXY) { trade_republic_session.get("/api/v1/auth/web/session") }
+
+    assert_equal [ [ "api.traderepublic.com", 443, "proxy.internal", 8888, nil, nil ] ], calls
+    assert connection.use_ssl?
+  end
+
+  test "NO_PROXY=* sends session requests direct" do
+    stub_request(:get, "https://api.traderepublic.com/api/v1/auth/web/session").to_return(status: 200, body: "{}")
+    calls, = capture_net_http_new("api.traderepublic.com", 443)
+
+    with_proxy_env(https: PROXY, http: PROXY, no_proxy: "*") { trade_republic_session.get("/api/v1/auth/web/session") }
+
+    assert_equal [ [ "api.traderepublic.com", 443, nil, nil, nil, nil ] ], calls
+  end
+
+  private
+    def trade_republic_session
+      Provider::TradeRepublicSession.new(phone_number: "+491701234567", pin: "1234")
+    end
 end

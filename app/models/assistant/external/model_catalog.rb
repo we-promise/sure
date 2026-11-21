@@ -3,6 +3,8 @@ require "uri"
 require "json"
 
 class Assistant::External::ModelCatalog
+  extend ProxyConfigurable
+
   Error = Class.new(StandardError)
   CONNECTION_ERRORS = [
     *Assistant::External::Client::TRANSIENT_ERRORS,
@@ -25,7 +27,8 @@ class Assistant::External::ModelCatalog
     request["Authorization"] = "Bearer #{@token}"
     request["Accept"] = "application/json"
 
-    response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: @open_timeout, read_timeout: @read_timeout) do |http|
+    response = Net::HTTP.start(uri.host, uri.port, *self.class.net_http_proxy_args(uri.to_s),
+                               use_ssl: uri.scheme == "https", open_timeout: @open_timeout, read_timeout: @read_timeout) do |http|
       http.request(request)
     end
 

@@ -9,6 +9,8 @@ require "socket"
 require "uri"
 
 class Provider::TradeRepublicSession
+  extend ProxyConfigurable
+
   API_HOST = "api.traderepublic.com"
   API_ORIGIN = "https://#{API_HOST}"
   USER_AGENT = ENV.fetch(
@@ -97,6 +99,7 @@ class Provider::TradeRepublicSession
       response = Net::HTTP.start(
         uri.host,
         uri.port,
+        *self.class.net_http_proxy_args(uri.to_s),
         use_ssl: uri.scheme == "https",
         open_timeout: timeout_seconds,
         read_timeout: timeout_seconds

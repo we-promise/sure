@@ -21,7 +21,8 @@ flowchart LR
 | Concern | File |
 |---|---|
 | Endpoint and model values a transport takes | `app/models/ai/config/endpoint.rb`, `model.rb` |
-| Every HTTP client, the proxy resolver, the base URL rule | `app/models/ai/transport/http.rb` |
+| Every HTTP client, the base URL rule | `app/models/ai/transport/http.rb` |
+| The proxy resolver, shared with non-AI clients | `app/models/concerns/proxy_configurable.rb` |
 | The transports | `app/models/ai/transport/{base,compatible,anthropic,ruby_llm_adapter}.rb` |
 | Errors | `app/models/ai/error.rb` |
 | Token counts and cost | `app/models/ai/tokens.rb` |
