@@ -7,10 +7,10 @@ ru:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Брокерский счёт"
-      private_markets: "Частные рынки"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: "Процентные продукты"
-      crypto_wallet: "Криптокошелёк"
+      crypto_wallet: "Crypto Wallet"
     trade_republic_item:
       syncing: "Синхронизация"
       requires_update: "Требуется повторная аутентификация"
@@ -91,6 +91,7 @@ ru:
         title: Доступный счёт
         account_type_investment: Инвестиционный портфель
         account_type_cash: Денежный счёт
+        account_type_crypto: Криптовалютный счёт
         account_summary: '%{account_type} • Баланс: %{balance}'
         account_id: 'ID счёта: %{account_id}'
       link_existing:
@@ -126,8 +127,6 @@ ru:
       wait_for_sync: Дождитесь завершения синхронизации для поиска счетов.
       balance: Баланс
     initiate_login:
-      verification_required: "Вход начат. Подтвердите его через %{method}, затем нажмите «Подтвердить вход»."
-      not_configured: Trade Republic не настроен.
       pin_required: Введите PIN-код или пароль Trade Republic, чтобы начать новый вход.
     complete_login:
       approval_pending: "Ещё не подтверждено. Одобрите вход в приложении Trade Republic и повторите попытку."
@@ -166,7 +165,7 @@ ru:
         card_fee: Комиссия по карте
         card_refund: Возврат на карту
         tax_refund: Налоговый возврат
-        round_up: Round up
+        round_up: "Round up"
     duplicate_connection: "Этот счёт Trade Republic уже подключён. Новое подключение удалено."
     defaults:
       name: Trade Republic
@@ -178,8 +177,6 @@ ru:
         many: '%{count} счетов связано'
         other: '%{count} счёта связаны'
       partial: '%{linked} связано, %{unlinked} требуют настройки'
-    create:
-      success: Trade Republic сохранён. Подтвердите вход в приложении Trade Republic, чтобы завершить подключение.
     update:
       success: Конфигурация Trade Republic успешно обновлена.
       pin_required: Введите PIN-код или пароль Trade Republic для повторной аутентификации.

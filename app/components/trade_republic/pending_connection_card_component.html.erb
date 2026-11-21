@@ -1,0 +1,42 @@
+<%= render TradeRepublic::ConnectionRowComponent.new(
+      id: dom_id,
+      data: ({ controller: "trade-republic-login", trade_republic_login_url_value: helpers.poll_login_trade_republic_pending_connection_path(pending_connection, login_token: pending_connection.login_token) } if login_stage == "waiting_for_approval") || {}
+    ) do %>
+  <%= render TradeRepublic::QrLoginComponent.new(
+        record: pending_connection,
+        return_url: helpers.settings_providers_path(anchor: "trade-republic"),
+        active: login_stage == "qr_pending",
+        code_svg: qr_code_svg
+      ) do %>
+    <%= render TradeRepublic::ConnectionRowHeaderComponent.new(
+          title: translation("new_connection"),
+          dot_class: expired? ? "bg-destructive" : "bg-warning",
+          identifier: identifier_text
+        ) do |row| %>
+      <% row.with_status do %>
+        <% if expired? %>
+          <span class="text-destructive"><%= translation("login_expired") %></span>
+        <% elsif login_stage == "authenticator_code" %>
+          <%= translation("awaiting_authenticator_code") %>
+        <% else %>
+          <%= translation("awaiting_confirmation") %>
+        <% end %>
+      <% end %>
+
+      <% row.with_actions do %>
+        <%# A lapsed login starts again from Add a connection. Cancel stays
+            available whatever happens to the QR login in the browser. %>
+        <%= render DS::Button.new(
+              text: translation("cancel_login"),
+              variant: :outline,
+              size: :sm,
+              icon: "x",
+              href: helpers.trade_republic_pending_connection_path(pending_connection),
+              method: :delete
+            ) %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= render TradeRepublic::LoginChallengeComponent.new(record: pending_connection, login_stage: login_stage) %>
+<% end %>

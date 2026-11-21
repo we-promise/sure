@@ -659,6 +659,22 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "qr_pending", @client.login_stage(pending_login_b64: encoded)
   end
 
+  test "a login token stays the same across one login's steps and differs between logins" do
+    encode = ->(pending) { Base64.strict_encode64(JSON.generate(pending)) }
+    qr = encode.({ "challenge_id" => "challenge-1", "session_blob" => "session=1" })
+    scanned = encode.({ "challenge_id" => "challenge-1", "process_id" => "process-1", "session_blob" => "session=2" })
+    other_qr = encode.({ "challenge_id" => "challenge-2", "session_blob" => "session=1" })
+    push = encode.({ "process_id" => "process-1", "session_blob" => "session=1" })
+
+    token = Provider::TradeRepublicClient.login_token(qr)
+    assert_match(/\A\h{16}\z/, token)
+    assert_equal token, Provider::TradeRepublicClient.login_token(scanned)
+    assert_not_equal token, Provider::TradeRepublicClient.login_token(other_qr)
+    assert_not_equal token, Provider::TradeRepublicClient.login_token(push)
+    assert_not_includes token, "challenge"
+    assert_nil Provider::TradeRepublicClient.login_token("not-a-login")
+  end
+
   test "an abandoned QR login is expired once its challenge lapsed" do
     pending = { "challenge_id" => "challenge-1", "session_blob" => "session=1", "expires_at" => 1.minute.ago.iso8601 }
     encoded = Base64.strict_encode64(JSON.generate(pending))
