@@ -10,6 +10,7 @@ zh-TW:
     form:
       amount: 金額
       bank_charges: 銀行費用
+      category: 分類
       outgoing_fee: 轉出手續費
       incoming_fee: 轉入手續費
       date: 日期
@@ -24,6 +25,7 @@ zh-TW:
       submit: 建立轉帳
       to: 至
       transfer: 轉帳
+      uncategorized: 未分類
     new:
       title: 新增轉帳
     show:

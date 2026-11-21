@@ -7,19 +7,17 @@ class TransfersController < ApplicationController
 
   before_action :set_transfer, only: %i[show destroy update update_tags mark_as_recurring]
   before_action :set_accounts, only: %i[new create]
+  before_action :set_categories, only: %i[new show create]
+  before_action :set_tags, only: %i[new show create]
 
   helper_method :new_transfer_idempotency_key
 
   def new
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
-    @tags = Current.family.tags.alphabetically
   end
 
   def show
-    @categories = Current.family.categories.alphabetically_by_hierarchy
-    @tags = Current.family.tags.alphabetically
-
     # Whether the current user can hit `mark_as_recurring` (feature flag on)
     # or switch the investment contribution: both need write access to BOTH
     # transfer endpoints. Gating the view controls on this avoids showing a
@@ -40,7 +38,7 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(source_account, redirect_path: transactions_path)
     return unless require_account_permission!(destination_account, redirect_path: transactions_path)
 
-    @transfer = Transfer::Creator.new(
+    creator_params = {
       family: Current.family,
       source_account_id: source_account.id,
       destination_account_id: destination_account.id,
@@ -50,8 +48,11 @@ class TransfersController < ApplicationController
       source_fee_amount: transfer_params[:source_fee_amount],
       destination_fee_amount: transfer_params[:destination_fee_amount],
       tag_ids: transfer_params[:tag_ids],
+      category_id: transfer_params[:category_id],
       idempotency_key: submitted_idempotency_key
-    ).create
+    }
+
+    @transfer = Transfer::Creator.new(**creator_params).create
 
     if @transfer.persisted?
       success_message = "Transfer created"
@@ -61,7 +62,7 @@ class TransfersController < ApplicationController
       end
     else
       @from_account_id = transfer_params[:from_account_id]
-      @tags = Current.family.tags.alphabetically
+      @selected_category_id = transfer_params[:category_id]
       render :new, status: :unprocessable_entity
     end
   rescue Money::ConversionError
@@ -70,7 +71,7 @@ class TransfersController < ApplicationController
     @transfer.errors.add(:base, t(".exchange_rate_unavailable"))
     @from_account_id = transfer_params[:from_account_id]
     set_accounts
-    @tags = Current.family.tags.alphabetically
+    @selected_category_id = transfer_params[:category_id]
     render :new, status: :unprocessable_entity
   rescue ArgumentError
     @transfer ||= Transfer.new
@@ -78,7 +79,7 @@ class TransfersController < ApplicationController
     @transfer.errors.add(:date, t(".date_invalid"))
     @from_account_id = transfer_params[:from_account_id]
     set_accounts
-    @tags = Current.family.tags.alphabetically
+    @selected_category_id = transfer_params[:category_id]
     render :new, status: :unprocessable_entity
   rescue Transfer::Creator::StaleIdempotencyKeyError
     @transfer ||= Transfer.new
@@ -86,7 +87,7 @@ class TransfersController < ApplicationController
     @transfer.errors.add(:base, t(".stale_form"))
     @from_account_id = transfer_params[:from_account_id]
     set_accounts
-    @tags = Current.family.tags.alphabetically
+    @selected_category_id = transfer_params[:category_id]
     render :new, status: :unprocessable_entity
   end
 
@@ -339,7 +340,7 @@ class TransfersController < ApplicationController
     end
 
     def transfer_params
-      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :source_fee_amount, :destination_fee_amount, tag_ids: [])
+      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :source_fee_amount, :destination_fee_amount, :category_id, tag_ids: [])
     end
 
     # Anti-double-submit token: a random UUID rendered fresh on every "new
@@ -369,6 +370,14 @@ class TransfersController < ApplicationController
         )
     end
 
+    def set_categories
+      @categories = Current.family.categories.alphabetically_by_hierarchy
+    end
+
+    def set_tags
+      @tags = Current.family.tags.alphabetically
+    end
+
     def transfer_update_params
       params.require(:transfer).permit(:notes, :status, :category_id, :amount, :source_fee_amount, :destination_fee_amount, :investment_contribution)
     end
@@ -391,11 +400,11 @@ class TransfersController < ApplicationController
       # Confirming from the transaction list sends only the status; leave the
       # category and notes alone unless the form actually submitted them.
       if transfer_update_params.key?(:category_id)
-        @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+        category_id = Current.family.categories.find_by(id: transfer_update_params[:category_id].presence)&.id
+        @transfer.outflow_transaction.update!(category_id: category_id)
+        @transfer.outflow_transaction.lock_attr!(:category_id)
       end
-      if transfer_update_params.key?(:notes)
-        @transfer.update!(notes: transfer_update_params[:notes])
-      end
+      @transfer.update!(notes: transfer_update_params[:notes]) if transfer_update_params.key?(:notes)
     end
 
     def update_transfer_fees_and_amount
