@@ -12,7 +12,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     trades_query = family.trades.visible
 
     trades_query = apply_filters(trades_query)
-    trades_query = trades_query.includes({ entry: :account }, :security, :category).reverse_chronological
+    trades_query = trades_query.includes({ entry: :account }, :security, :category, :lot_source_entry).reverse_chronological
 
     @pagy, @trades = pagy(
       trades_query,

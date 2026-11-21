@@ -1,3 +1,26 @@
+Multi-part series branch https://github.com/we-promise/sure/tree/refactor/ai-plumbing
+
+- https://github.com/we-promise/sure/pull/4440 plan documents. draft PR
+- https://github.com/we-promise/sure/pull/4773 2a. Transports and instrumentation. merged on main
+- https://github.com/we-promise/sure/pull/4774 2b. Routing and consent. merged on main
+- https://github.com/we-promise/sure/pull/4775 2c. Generations. merged on branch
+- https://github.com/we-promise/sure/pull/5209 CI: refuse provider HTTP outside live tests. merged on branch
+- https://github.com/we-promise/sure/pull/4765 2d. Jev and shadow runs. merged on branch
+- https://github.com/we-promise/sure/pull/3422 bridge the statement vault to search and let tools read a file. merged on branch
+- https://github.com/we-promise/sure/pull/4771 2e. PDF import and document search.
+- https://github.com/we-promise/sure/pull/4892 2f. ruby_llm 2.2, Jev via OpenRouter, review fixes. under review & cleanup
+- https://github.com/we-promise/sure/pull/4425 Propose a transaction split from an attached receipt.
+- 3a Capsule, shared state and probes. developed, will push after stage 2 is merged. milestone to merge with main. stacked PR from here on
+- 3b Bill suggestions and stopping AI work.
+- 3c Documents and MCP tools.
+- 3d Enforcement.
+- 4 Sequencer. 
+- 6 Chat.
+- 7 Configuration in the database.
+- 8 Health and settings pages. 
+- 9 Allowed endpoints, own keys and the member switch.
+
+
 [![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/we-promise/sure)
 [![View performance data on Skylight](https://badges.skylight.io/typical/s6PEZSKwcklL.svg)](https://oss.skylight.io/app/applications/s6PEZSKwcklL)
 [![Dosu](https://raw.githubusercontent.com/dosu-ai/assets/main/dosu-badge.svg)](https://app.dosu.dev/a72bdcfd-15f5-4edc-bd85-ea0daa6c3adc/ask)

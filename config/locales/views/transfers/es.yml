@@ -3,6 +3,9 @@ es:
   transfers:
     create:
       success: Transferencia creada
+      exchange_rate_unavailable: No hay tipo de cambio disponible para las divisas y la fecha seleccionadas
+      date_invalid: no es válida
+      stale_form: Este formulario ya se envió con otros datos. Recarga la página e inténtalo de nuevo.
     destroy:
       success: Transferencia eliminada
     form:
@@ -29,6 +32,8 @@ es:
       delete_subtitle: Esto eliminará la transferencia. No se eliminarán las transacciones subyacentes.
       delete_title: ¿Eliminar transferencia?
       details: Detalles
+      investment_contribution_subtitle: Cuenta esta transferencia como gasto en presupuestos e informes. Desactívalo si la cuenta de bolsa o de cripto solo convierte el dinero a otra divisa.
+      investment_contribution_title: Aportación a inversión
       mark_recurring: Marcar como recurrente
       mark_recurring_subtitle: Haz seguimiento de esta transferencia como un patrón recurrente en el feed de próximos movimientos y en la página de recurrentes.
       mark_recurring_title: Marcar transferencia como recurrente
