@@ -213,6 +213,47 @@ class IncomeStatementTest < ActiveSupport::TestCase
     IncomeStatement.new(@family).daily_expense_series(period: period, category_ids: [ @food_category.id ])
   end
 
+  test "upgrading skips serialized totals from before the month field was added" do
+    cache = ActiveSupport::Cache::MemoryStore.new(coder: Marshal)
+    Rails.stubs(:cache).returns(cache)
+    statement = IncomeStatement.new(@family)
+    date_range = Period.last_30_days.date_range
+    scope = @family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled)
+    legacy_key = [
+      "income_statement", "totals_query", "v2", ExchangeRate::CONVERSION_CACHE_VERSION,
+      @family.id, statement.user&.id, statement.send(:included_account_ids_hash),
+      Digest::MD5.hexdigest(scope.to_sql), date_range.begin, date_range.end,
+      *statement.send(:cache_freshness_key)
+    ]
+
+    # Serialize the actual pre-upgrade shape under its original constant name.
+    current_row = IncomeStatement::Totals.const_get(:TotalsRow)
+    begin
+      IncomeStatement::Totals.send(:remove_const, :TotalsRow)
+      legacy_row = IncomeStatement::Totals.const_set(:TotalsRow, Data.define(
+        :parent_category_id, :category_id, :classification, :total,
+        :transactions_count, :is_uncategorized_investment
+      ))
+      cache.write(legacy_key, [ legacy_row.new(
+        parent_category_id: nil, category_id: nil, classification: "expense",
+        total: 999, transactions_count: 1, is_uncategorized_investment: false
+      ) ])
+    ensure
+      IncomeStatement::Totals.send(:remove_const, :TotalsRow)
+      IncomeStatement::Totals.const_set(:TotalsRow, current_row)
+      IncomeStatement::Totals.private_constant :TotalsRow
+    end
+
+    assert_raises(TypeError) { cache.read(legacy_key) }
+
+    2.times do
+      totals = IncomeStatement.new(@family).totals(date_range: date_range)
+      assert_equal Money.new(1000, @family.currency), totals.income_money
+      assert_equal Money.new(900, @family.currency), totals.expense_money
+      assert_equal 4, totals.transactions_count
+    end
+  end
+
   test "calculates totals for transactions" do
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
