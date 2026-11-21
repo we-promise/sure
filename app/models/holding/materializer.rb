@@ -134,7 +134,10 @@ class Holding::Materializer
       holdings_buffer_to_upsert_without_cost = []
 
       flush = ->(buf) do
-        account.holdings.upsert_all(buf, unique_by: %i[account_id security_id date currency])
+        key = %w[account_id security_id date currency]
+        # Repricing a snapshot keeps its provenance.
+        update_columns = buf.first.keys - key - [ "materialized" ]
+        account.holdings.upsert_all(buf, unique_by: key, update_only: update_columns)
         buf.clear
       end
 
@@ -152,7 +155,7 @@ class Holding::Materializer
             currency: holding.currency, qty: holding.qty, price: holding.price, amount: holding.amount,
             cost_basis: basis,
             cost_basis_source: snapshot.cost_basis_source, cost_basis_locked: snapshot.cost_basis_locked,
-            security_locked: snapshot.security_locked, provider_security_id: snapshot.provider_security_id)
+            security_locked: snapshot.security_locked, provider_security_id: snapshot.provider_security_id, materialized: true)
           next
         end
 
@@ -180,6 +183,7 @@ class Holding::Materializer
           "amount" => holding.amount,
           "security_id" => holding.security_id,
           "account_id" => account.id,
+          "materialized" => true,
           "updated_at" => current_time
         }
 
@@ -403,26 +407,20 @@ class Holding::Materializer
       end
     end
 
-    # A cash-anchored account keeps its holdings before the window; other
-    # accounts keep the existing cleanup.
     def purge_stale_holdings
-      # Syncs run in the family's time zone. A calculated row dated after its
-      # today was written by an earlier sync in a zone ahead of it.
-      account.holdings.where(account_provider_id: nil).where("date > ?", Date.current).delete_all
+      providerless_holdings = account.holdings.where(account_provider_id: nil)
+      # A change of time zone can leave a calculated row dated after today.
+      # Snapshots and older rows of unknown origin may have come from an import.
+      providerless_holdings.where(materialized: true, date: Date.current.next_day..).delete_all
       return if account.accounting_start_date
 
       portfolio_security_ids = account.trades.distinct.pluck(:security_id)
-
-      # Never delete provider-sourced holdings - they're authoritative from the provider
-      # If there are no securities in the portfolio, only delete non-provider holdings
+      historical_holdings = providerless_holdings.through_today
       if portfolio_security_ids.empty?
         Rails.logger.info("Clearing non-provider holdings (no securities from trades)")
-        account.holdings.where(account_provider_id: nil).delete_all
+        historical_holdings.delete_all
       else
-        # Keep provider holdings and holdings for known securities within date range
-        deleted_count = account.holdings
-          .where(account_provider_id: nil)
-          .delete_by("date < ? OR security_id NOT IN (?)", account.start_date, portfolio_security_ids)
+        deleted_count = historical_holdings.delete_by("date < ? OR security_id NOT IN (?)", account.start_date, portfolio_security_ids)
         Rails.logger.info("Purged #{deleted_count} stale holdings") if deleted_count > 0
       end
     end

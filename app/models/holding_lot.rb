@@ -81,7 +81,7 @@ class HoldingLot < ApplicationRecord
       lots = where(account_id: account_ids, security_id: security_ids).group(:account_id, :security_id).sum(:qty)
       return Set.new if lots.empty?
 
-      holdings = Holding.where(account_id: account_ids, security_id: security_ids)
+      holdings = Holding.through_today.where(account_id: account_ids, security_id: security_ids)
       latest = holdings.group(:account_id, :security_id).select(:account_id, :security_id, "MAX(date)")
       held = holdings.where("(holdings.account_id, holdings.security_id, holdings.date) IN (#{latest.to_sql})")
         .group(:account_id, :security_id).sum(:qty)

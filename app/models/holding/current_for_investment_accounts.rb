@@ -36,8 +36,9 @@ class Holding::CurrentForInvestmentAccounts
       INNER JOIN accounts ON accounts.id = latest_holdings.account_id
       WHERE latest_holdings.account_id IN (:account_ids)
         AND accounts.id IN (:account_ids)
+        AND latest_holdings.date <= :today
         AND (
-          (latest_holdings.account_id IN (#{ANCHORED_ACCOUNT_IDS_SQL}) AND latest_holdings.date <= :today)
+          latest_holdings.account_id IN (#{ANCHORED_ACCOUNT_IDS_SQL})
           OR (
             latest_holdings.currency = accounts.currency
             AND latest_holdings.account_id NOT IN (

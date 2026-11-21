@@ -209,6 +209,33 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a future imported holding survives sync and becomes current on its date" do
+    @account.create_cash_anchor!
+    date = Date.current.next_day
+    snapshot = { type: "Holding", data: {
+      account_id: "source-account", ticker: @other.ticker, date: date, qty: 2, price: 100, amount: 200, currency: "USD"
+    } }
+    Family::DataImporter.new(@account.family, snapshot.to_json, account_targets: { "source-account" => @account }).import!
+    imported = @account.holdings.find_by!(date: date)
+    refute imported.materialized?
+    report = Holding::CurrentForInvestmentAccounts.new([ @account.id ])
+
+    materialize
+    assert Holding.exists?(imported.id)
+    assert_not_includes @account.current_holdings, imported
+    assert_not_includes report.relation, imported
+    assert_equal 1100, @account.reload.balance
+    refute @account.balances.exists?(date: date)
+
+    travel 1.day do
+      materialize
+      assert_includes @account.current_holdings, imported
+      assert_includes report.relation, imported
+      refute imported.reload.materialized?
+      assert_equal 1300, @account.reload.balance
+    end
+  end
+
   test "untraded foreign holdings are valued in the account currency" do
     ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "USD", date: Date.current).update!(rate: 2)
     @account.holdings.create!(security: @other, date: Date.current, qty: 2, price: 30, amount: 60, currency: "EUR")

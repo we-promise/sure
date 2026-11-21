@@ -51,11 +51,16 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
 
   test "drops calculated holdings dated after the family's today" do
     create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
-    @account.holdings.create!(security: @aapl, date: Date.current.next_day, qty: 1, price: 200, amount: 200, currency: "USD")
+    date = Date.current.next_day
+    travel_to(date) do
+      @aapl.prices.find_or_initialize_by(date: date).update!(price: 200, currency: "USD")
+      Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+      assert @account.holdings.find_by!(security: @aapl, date: date).materialized?
+    end
 
     Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
 
-    refute @account.holdings.exists?(date: Date.current.next_day)
+    refute @account.holdings.exists?(date: date)
   end
 
   test "syncs holdings" do
