@@ -23,6 +23,14 @@ class Crypto < ApplicationRecord
   end
 
   class << self
+    def default_liquidity_for(_subtype)
+      "short_term"
+    end
+
+    def default_tax_treatment_for(_subtype)
+      :taxable
+    end
+
     def color
       "#737373"
     end

@@ -85,7 +85,7 @@ class Family::DataExporter
 
     def generate_accounts_csv
       generate_sanitized_csv do |csv|
-        csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ]
+        csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at", "liquidity", "available_on" ]
 
         # Only export accounts belonging to this family
         @family.accounts.includes(:accountable).find_each do |account|
@@ -96,7 +96,9 @@ class Family::DataExporter
             account.subtype,
             account.balance.to_s,
             account.currency,
-            account.created_at.iso8601
+            account.created_at.iso8601,
+            account.liquidity,
+            account.available_on&.iso8601
           ]
         end
       end

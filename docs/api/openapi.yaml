@@ -697,6 +697,23 @@ components:
         subtype:
           type: string
           nullable: true
+        liquidity:
+          type: string
+          enum:
+          - immediate
+          - short_term
+          - locked
+          - long_term
+          description: How quickly the money can be reached. Locked accounts become
+            available on available_on.
+        available_on:
+          type: string
+          format: date
+          nullable: true
+          description: Release date of a locked account
+        available_now:
+          type: boolean
+          description: Whether the money counts as available today (assets only)
         status:
           type: string
           enum:

@@ -103,6 +103,15 @@ en:
       riester:
         short: Riester
         long: Riester-Rente
+      ruerup:
+        short: Rürup
+        long: Rürup-Rente (Basisrente)
+      bav:
+        short: bAV
+        long: Company Pension (bAV)
+      vl:
+        short: VL
+        long: Capital-Forming Savings (VL)
       # India
       nps:
         short: NPS

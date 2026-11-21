@@ -172,7 +172,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     Zip::File.open_buffer(zip_data) do |zip|
       # Check accounts.csv
       accounts_csv = zip.read("accounts.csv")
-      assert_equal [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ],
+      assert_equal [ "id", "name", "type", "subtype", "balance", "currency", "created_at", "liquidity", "available_on" ],
                    CSV.parse(accounts_csv, headers: true).headers
 
       # Check version marker

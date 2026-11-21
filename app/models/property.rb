@@ -21,6 +21,10 @@ class Property < ApplicationRecord
   attribute :area_unit, :string, default: "sqft"
 
   class << self
+    def default_liquidity_for(_subtype)
+      "long_term"
+    end
+
     def icon
       "home"
     end

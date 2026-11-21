@@ -171,6 +171,12 @@ de:
       eu: Europa
       generic: Generisch
       in: Indien
+    liquidity:
+      levels:
+        immediate: Sofort verfügbar
+        short_term: Kurzfristig verfügbar
+        locked: Gebunden bis Datum
+        long_term: Langfristig gebunden
     tax_treatments:
       taxable: Versteuerbar
       tax_deferred: Steuerlich aufgeschoben
