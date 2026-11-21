@@ -16,7 +16,9 @@ class BalanceSheet::AccountTotals
   private
     attr_reader :family, :user, :sync_status_monitor
 
-    AccountRow = Data.define(:account, :converted_balance, :is_syncing, :included_in_finances, :exclude_from_reports) do
+    # converted_balance is the viewer's share and feeds totals; full_converted_balance
+    # is the whole account, the amount a row shows, and what balance sorting uses.
+    AccountRow = Data.define(:account, :converted_balance, :full_converted_balance, :is_syncing, :included_in_finances, :exclude_from_reports) do
       def syncing? = is_syncing
       def included_in_finances? = included_in_finances
       # Whether this account is excluded from financial reports, dashboards,
@@ -57,6 +59,7 @@ class BalanceSheet::AccountTotals
         AccountRow.new(
           account: account,
           converted_balance: converted_balance_for(account),
+          full_converted_balance: converted_balance_for(account, share: false),
           is_syncing: sync_status_monitor.account_syncing?(account),
           included_in_finances: finance_account_ids.nil? || finance_account_ids.include?(account.id),
           exclude_from_reports: account.exclude_from_reports?
@@ -66,7 +69,7 @@ class BalanceSheet::AccountTotals
 
     # Returns the cache key for storing visible account IDs, invalidated on data updates.
     def cache_key
-      shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
+      shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_f : nil
       family.build_cache_key(
         [ "balance_sheet_account_ids", user&.id, shares_version ].compact.join("_"),
         invalidate_on_data_updates: true
@@ -98,15 +101,18 @@ class BalanceSheet::AccountTotals
       end
     end
 
-    # Converts an account's balance to the family's currency using pre-fetched exchange rates.
+    # Converts an account's balance to the family's currency using pre-fetched
+    # exchange rates. By default only the viewing user's share counts; with
+    # share: false the whole account does.
     # An account in a currency with no rate at all converts to 0, so it is
     # left out of every total rather than counted at 1; its row still
     # shows its own balance, and the page says the currency is missing.
     # @return [BigDecimal] balance in the family's currency
-    def converted_balance_for(account)
-      return account.balance if account.currency == family.currency
+    def converted_balance_for(account, share: true)
+      balance = share ? account.owned_balance_for(user) : account.balance
+      return balance if account.currency == family.currency
 
       rate = exchange_rates[account.currency]
-      rate ? account.balance * rate : BigDecimal(0)
+      rate ? balance * rate : BigDecimal(0)
     end
 end

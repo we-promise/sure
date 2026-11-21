@@ -89,8 +89,10 @@ class BalanceSheet
       accounts.sort_by { |account| [ account.name.to_s.downcase, account.id ] }
     end
 
+    # By the whole-account balance, the amount each row shows, not the viewer's
+    # share (which the badge and totals carry), so the order matches the screen.
     def sort_by_balance(accounts)
-      accounts.sort_by { |account| [ account.converted_balance, account.id ] }
+      accounts.sort_by { |account| [ account.full_converted_balance, account.id ] }
     end
 
     # Accounts the user has dragged into place come first, in their saved

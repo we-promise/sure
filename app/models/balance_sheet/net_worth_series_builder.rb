@@ -15,7 +15,8 @@ class BalanceSheet::NetWorthSeriesBuilder
         account_active_until_dates: disabled_account_active_until_dates,
         currency: family.currency,
         period: period,
-        favorable_direction: "up"
+        favorable_direction: "up",
+        user: user
       )
 
       builder.balance_series
@@ -51,7 +52,7 @@ class BalanceSheet::NetWorthSeriesBuilder
     end
 
     def cache_key(period)
-      shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
+      shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_f : nil
       key = [
         "balance_sheet_net_worth_series_historical",
         ExchangeRate::CONVERSION_CACHE_VERSION,

@@ -344,6 +344,15 @@ class Family::DataImporter
           next
         end
 
+        # Exports from before ownership percentages carry no value: keep the
+        # default (or the existing account's) rather than guessing.
+        raw_percentage = data["ownership_percentage"]
+        ownership_percentage = BigDecimal(raw_percentage.to_s, exception: false) if raw_percentage.present?
+        if raw_percentage.present? && !ownership_percentage&.between?(0, 100)
+          invalid_record!("Account", "ownership_percentage", raw_percentage)
+          next
+        end
+
         account = mapped_record(:accounts, old_id, @family.accounts, record_type: "Account")
         created = account.blank?
 
@@ -379,6 +388,7 @@ class Family::DataImporter
           notes: data["notes"],
           status: importable_account_status(data["status"])
         )
+        account.ownership_percentage = ownership_percentage if ownership_percentage
         # `Account#subtype=` writes through to the accountable, so assigning a
         # nil top-level subtype would wipe the nested one. The nested value
         # wins, matching SureImport::Preflight#validate_accountables.
