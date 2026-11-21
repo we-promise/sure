@@ -10,6 +10,8 @@ class Account < ApplicationRecord
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
+  # On update the Loan's own validation reports this; checking here too would add a second error.
+  validate :financed_account_in_family, if: -> { new_record? && loan? && accountable&.will_save_change_to_financed_account_id? }
 
   belongs_to :family
   belongs_to :owner, class_name: "User", optional: true
@@ -19,6 +21,9 @@ class Account < ApplicationRecord
   has_many :shared_users, through: :account_shares, source: :user
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
   has_many :entries, dependent: :destroy
+  # Loans that name this account as the asset they financed. No `dependent:`:
+  # the foreign key nullifies, so deleting the asset only unlinks them.
+  has_many :financing_loans, class_name: "Loan", foreign_key: :financed_account_id, inverse_of: :financed_account
   has_many :transactions, through: :entries, source: :entryable, source_type: "Transaction"
   has_many :valuations, through: :entries, source: :entryable, source_type: "Valuation"
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
@@ -978,6 +983,11 @@ class Account < ApplicationRecord
     user.present? && owner_id == user.id
   end
 
+  # The visible loan accounts that financed this asset.
+  def financing_loan_accounts
+    family.accounts.visible.where(accountable_type: "Loan", accountable_id: financing_loans.select(:id))
+  end
+
   def shared_with?(user)
     return false if user.nil?
 
@@ -1099,6 +1109,13 @@ class Account < ApplicationRecord
           family&.users&.where(role: "super_admin")&.order(:created_at, :id)&.first ||
           family&.users&.order(:created_at, :id)&.first
       end
+    end
+
+    def financed_account_in_family
+      financed = accountable.financed_account
+      return if financed.nil? || financed.family_id == family_id
+
+      errors.add(:base, :financed_account_other_family)
     end
 
     def owner_belongs_to_family

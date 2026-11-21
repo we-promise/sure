@@ -35,6 +35,7 @@ en:
     errors:
       models:
         account:
+          financed_account_other_family: The financed asset must be one of your own accounts
           attributes:
             logo:
               invalid_content_type: must be a PNG, JPEG, GIF, WebP or ICO image
