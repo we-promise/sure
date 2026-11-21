@@ -29,7 +29,7 @@ class TransactionsController < ApplicationController
                        .reverse_chronological
                        .includes(
                          { entry: :account },
-                         :category, { merchant: { logo_attachment: :blob } }, :tags,
+                         :category, { merchant: { logo_attachment: :blob } }, :tags, :auto_category_enrichments,
                          # Union of #2643 counterpart UI + Skylight category-menu N+1:
                          # - outflow rows need inflow_transaction (to_account) for both
                          #   counterpart display and Transfer#categorizable?/#payment?
@@ -63,7 +63,7 @@ class TransactionsController < ApplicationController
       split_parent_ids = @transactions.filter_map { |t| t.entry.parent_entry_id }.uniq
       if split_parent_ids.any?
         Entry.where(id: split_parent_ids)
-             .includes(:account, entryable: [ :category, { merchant: { logo_attachment: :blob } } ])
+             .includes(:account, entryable: [ :category, { merchant: { logo_attachment: :blob } }, :auto_category_enrichments ])
              .index_by(&:id)
       else
         {}
@@ -231,6 +231,12 @@ class TransactionsController < ApplicationController
               locals: { entry: @entry }
             ) if can_edit_entry? && !@entry.split_child?),
             turbo_stream.replace(
+              dom_id(@entry, :category_provenance),
+              partial: "transactions/category_provenance",
+              locals: { entry: @entry }
+            ),
+            matching_rules_frame_stream,
+            turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
               locals: { entry: @entry, in_split_group: in_split_group }
@@ -291,7 +297,8 @@ class TransactionsController < ApplicationController
             locals: { tag: @toggled_tag, entry: @entry, selected: transaction.tag_ids.include?(@toggled_tag.id), autofocus: true }
           )
         end
-        render turbo_stream: streams
+        streams << matching_rules_frame_stream
+        render turbo_stream: streams.compact
       end
     end
   end
@@ -588,6 +595,15 @@ class TransactionsController < ApplicationController
   end
 
   private
+    # A fresh lazy frame for the drawer's "Which rules match?" disclosure: an
+    # edit can change which rules match, and an open disclosure reloads it.
+    # Split parents show no disclosure (rules never match them).
+    def matching_rules_frame_stream
+      return if @entry.split_parent?
+
+      turbo_stream.replace(dom_id(@entry, :matching_rules), partial: "transactions/matching_rules_frame", locals: { entry: @entry })
+    end
+
     def uncategorized_count_cache_key
       "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"

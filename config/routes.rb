@@ -624,6 +624,7 @@ Rails.application.routes.draw do
     resource :transfer_match, only: %i[new create destroy]
     resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
+    resource :matching_rules, only: :show, controller: "transactions/matching_rules"
     resources :attachments, only: %i[show create destroy], controller: :transaction_attachments
 
     collection do
