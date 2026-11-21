@@ -52,19 +52,24 @@ module ProviderItemModelLifecycleTests
       assert_equal without_error, blank_error
     end
 
-    test "lifecycle: a failed sync reaches Sentry once, without the safe error carrying it as its cause" do
+    test "lifecycle: a failed sync reaches Sentry once, as the raw error tagged with the connection and the sync" do
+      key = provider_item.provider_key
       error = StandardError.new("raw provider failure")
-      provider_item.class.any_instance.stubs(:"import_latest_#{provider_item.provider_key}_data").raises(error)
+      provider_item.class.any_instance.stubs(:"import_latest_#{key}_data").raises(error)
+      # Only the failure's own reports are counted, not the post-sync broadcast's.
+      provider_item.class.any_instance.stubs(:broadcast_sync_complete)
+      sync = Sync.create!(syncable: provider_item)
       captured = []
 
-      Sentry.stub(:capture_exception, ->(exception, *) { captured << exception }) do
-        Sync.create!(syncable: provider_item).perform
+      Sentry.stub(:capture_exception, ->(exception, *, &block) { captured << [ exception, sentry_tags(&block) ] }) do
+        sync.perform
       end
 
-      safe_errors = captured.grep(ProviderItem::Syncer::SafeSyncError)
-      assert_equal 1, safe_errors.size
-      assert_nil safe_errors.first.cause
-      assert_equal 1, captured.flat_map { |exception| exception_chain(exception) }.count { |exception| exception.equal?(error) }
+      assert_equal 1, captured.size, "expected one Sentry event, got #{captured.map { |exception, _| exception.class.name }}"
+      reported, tags = captured.first
+      assert_same error, reported
+      assert_equal({ "#{key}_item_id": provider_item.id, sync_id: sync.id }, tags)
+      assert_equal I18n.t("#{key}_items.syncer.failed"), sync.reload.error
     end
 
     test "lifecycle: unlinking removes the connection's links and detaches their holdings" do
@@ -106,13 +111,13 @@ module ProviderItemModelLifecycleTests
   end
 
   private
-    def exception_chain(exception)
-      chain = []
-      while exception
-        chain << exception
-        exception = exception.cause
-      end
-      chain
+    # The tags a Sentry.capture_exception block sets on its scope.
+    def sentry_tags
+      tags = {}
+      scope = Object.new
+      scope.define_singleton_method(:set_tags) { |new_tags| tags.merge!(new_tags) }
+      yield scope if block_given?
+      tags
     end
 
     def provider_account

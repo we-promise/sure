@@ -103,11 +103,13 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
     assert_equal 1, sync.sync_stats["tx_seen"]
   end
 
-  test "tags the Sentry report with the Brex item id" do
+  test "tags the Sentry report with the Brex item id and the sync id" do
     sync = mock_sync(window_start_date: Date.new(2026, 2, 1))
+    sync.stubs(:respond_to?).with(:id).returns(true)
+    sync.stubs(:id).returns(42)
     @brex_item.expects(:import_latest_brex_data).raises(RuntimeError, "connection reset")
     scope = mock("scope")
-    scope.expects(:set_tags).with(brex_item_id: @brex_item.id).once
+    scope.expects(:set_tags).with(brex_item_id: @brex_item.id, sync_id: 42).once
     Sentry.expects(:capture_exception).yields(scope)
 
     assert_raises(BrexItem::Syncer::SafeSyncError) { @syncer.perform_sync(sync) }

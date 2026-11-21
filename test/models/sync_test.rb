@@ -89,6 +89,20 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "test sync error", sync.error
   end
 
+  test "a failed sync reports its error to Sentry once, tagged with the sync" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable)
+    error = StandardError.new("test sync error")
+    syncable.expects(:perform_sync).with(sync).raises(error)
+    scope = mock("scope")
+    scope.expects(:set_tags).with(sync_id: sync.id).once
+    Sentry.expects(:capture_exception).with(error).yields(scope).once
+
+    sync.perform
+
+    assert_equal "failed", sync.reload.status
+  end
+
   test "can run nested syncs that alert the parent when complete" do
     family = families(:dylan_family)
     plaid_item = plaid_items(:one)
