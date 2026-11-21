@@ -160,8 +160,10 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _markLockedIfEnabled();
-    } else if (state == AppLifecycleState.resumed && _isLocked) {
-      // Lock screen is already showing via build(); biometric auto-triggers there.
+    } else if (state == AppLifecycleState.resumed) {
+      // Refresh the server-resolved amount format when returning to the app.
+      // A locked screen is already showing via build() and unlocks separately.
+      context.read<AuthProvider>().refreshCurrentUser();
     }
   }
 

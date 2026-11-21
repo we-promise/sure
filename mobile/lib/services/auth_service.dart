@@ -76,7 +76,7 @@ class AuthService {
     try {
       await _saveTokens(tokens);
       if (user != null) {
-        await _saveUser(user);
+        await saveUser(user);
       }
     } catch (_) {
       await _storage.delete(key: _tokenKey);
@@ -655,7 +655,7 @@ class AuthService {
       if (response.statusCode == 200) {
         _logUserPayloadShape('enable_ai', responseData['user']);
         final user = User.fromJson(responseData['user']);
-        await _saveUser(user);
+        await saveUser(user);
         return {
           'success': true,
           'user': user,
@@ -711,7 +711,9 @@ class AuthService {
     );
   }
 
-  Future<void> _saveUser(User user) async {
+  /// Persists the signed-in user so the next cold start can render before the
+  /// network responds.
+  Future<void> saveUser(User user) async {
     await _storage.write(
       key: _userKey,
       value: jsonEncode(user.toJson()),

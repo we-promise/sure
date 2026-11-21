@@ -36,6 +36,27 @@ class UserService {
     }
   }
 
+  static Future<Map<String, dynamic>> fetchCurrentUser(
+      String accessToken) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/users/me');
+      final response = await http
+          .get(
+            url,
+            headers: ApiConfig.getAuthHeaders(accessToken),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception('Failed to fetch current user: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching current user: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> deleteAccount({
     required String accessToken,
   }) async {

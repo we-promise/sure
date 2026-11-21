@@ -1,3 +1,5 @@
+import 'amount_format.dart';
+
 class User {
   final String id;
   final String email;
@@ -5,6 +7,7 @@ class User {
   final String? lastName;
   final String uiLayout;
   final bool aiEnabled;
+  final AmountFormat amountFormat;
 
   User({
     required this.id,
@@ -13,7 +16,8 @@ class User {
     this.lastName,
     required this.uiLayout,
     required this.aiEnabled,
-  });
+    AmountFormat? amountFormat,
+  }) : amountFormat = amountFormat ?? const AmountFormat();
 
   bool get isIntroLayout => uiLayout == 'intro';
 
@@ -24,7 +28,14 @@ class User {
       firstName: json['first_name'] as String?,
       lastName: json['last_name'] as String?,
       uiLayout: _coerceUiLayout(json['ui_layout'] ?? json['uiLayout']),
-      aiEnabled: _coerceBool(json['ai_enabled'] ?? json['aiEnabled'], defaultValue: false),
+      aiEnabled: _coerceBool(json['ai_enabled'] ?? json['aiEnabled'],
+          defaultValue: false),
+      amountFormat:
+          AmountFormat.fromJson(json['amount_format'] is Map<String, dynamic>
+              ? json['amount_format']
+              : json['amountFormat'] is Map<String, dynamic>
+                  ? json['amountFormat']
+                  : null),
     );
   }
 
@@ -66,6 +77,7 @@ class User {
     String? lastName,
     String? uiLayout,
     bool? aiEnabled,
+    AmountFormat? amountFormat,
   }) {
     return User(
       id: id ?? this.id,
@@ -74,6 +86,7 @@ class User {
       lastName: lastName ?? this.lastName,
       uiLayout: uiLayout ?? this.uiLayout,
       aiEnabled: aiEnabled ?? this.aiEnabled,
+      amountFormat: amountFormat ?? this.amountFormat,
     );
   }
 
@@ -85,6 +98,7 @@ class User {
       'last_name': lastName,
       'ui_layout': uiLayout,
       'ai_enabled': aiEnabled,
+      'amount_format': amountFormat.toJson(),
     };
   }
 

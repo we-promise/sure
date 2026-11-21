@@ -68,13 +68,61 @@ class Account {
   bool get isLiability => classification == 'liability';
 
   double get balanceAsDouble {
-    try {
-      // Remove commas and any other non-numeric characters except dots and minus signs
-      final cleanedBalance = balance.replaceAll(RegExp(r'[^\d.-]'), '');
-      return double.parse(cleanedBalance);
-    } catch (e) {
-      return 0.0;
+    return _parseAmount(balance);
+  }
+
+  // Parses amounts formatted by any server locale. Handles comma or dot
+  // grouping (including Indian lakh/crore) and either decimal separator, so a
+  // German or Indian formatted balance never silently becomes zero.
+  static double _parseAmount(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'[^\d.,-]'), '');
+    if (cleaned.isEmpty) return 0.0;
+
+    final negative = cleaned.contains('-');
+    final digitsAndSeparators = cleaned.replaceAll('-', '');
+    if (digitsAndSeparators.isEmpty) return 0.0;
+
+    final lastDot = digitsAndSeparators.lastIndexOf('.');
+    final lastComma = digitsAndSeparators.lastIndexOf(',');
+
+    String normalized;
+    if (lastDot >= 0 && lastComma >= 0) {
+      final decimalIndex = lastDot > lastComma ? lastDot : lastComma;
+      final integerPart = digitsAndSeparators
+          .substring(0, decimalIndex)
+          .replaceAll(RegExp(r'[.,]'), '');
+      final fractionPart = digitsAndSeparators
+          .substring(decimalIndex + 1)
+          .replaceAll(RegExp(r'[.,]'), '');
+      normalized = '$integerPart.$fractionPart';
+    } else if (lastComma >= 0) {
+      final groups = digitsAndSeparators.split(',');
+      normalized = _groupsToCanonical(groups);
+    } else if (lastDot >= 0) {
+      final groups = digitsAndSeparators.split('.');
+      normalized = _groupsToCanonical(groups);
+    } else {
+      normalized = digitsAndSeparators;
     }
+
+    final value = double.tryParse(normalized) ?? 0.0;
+    return negative ? -value : value;
+  }
+
+  static String _groupsToCanonical(List<String> groups) {
+    if (groups.length > 2) return groups.join();
+
+    if (groups.length == 2 && groups[1].length == 3) {
+      // A single separator followed by exactly three digits is grouping, not
+      // decimals: "1,234" and the German "1.234" both mean one thousand.
+      return groups.join();
+    }
+
+    if (groups.length == 2) {
+      return '${groups[0]}.${groups[1]}';
+    }
+
+    return groups.first;
   }
 
   String get displayAccountType {

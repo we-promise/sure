@@ -60,6 +60,41 @@ void main() {
     expect(await authService.getStoredUser(), isNull);
   });
 
+  test('login persists the resolved amount format with the user', () async {
+    final authService = AuthService();
+
+    await _loginWithResponse(
+      {
+        'access_token': 'access-token',
+        'refresh_token': 'refresh-token',
+        'token_type': 'Bearer',
+        'expires_in': 3600,
+        'created_at': 0,
+        'user': {
+          'id': 'user_1',
+          'email': 'user@example.test',
+          'ui_layout': 'dashboard',
+          'ai_enabled': false,
+          'amount_format': {
+            'key': 'indian',
+            'grouping': 'indian',
+            'delimiter': ',',
+            'separator': '.',
+            'symbol_position': 'before',
+            'symbol_spacing': '',
+          },
+        },
+      },
+      statusCode: 200,
+      authService: authService,
+    );
+
+    final storedUser = await authService.getStoredUser();
+    expect(storedUser, isNotNull);
+    expect(storedUser!.amountFormat.key, 'indian');
+    expect(storedUser.amountFormat.grouping, 'indian');
+  });
+
   test('fetchSsoProviders parses configured providers', () async {
     final providers = await _withServer(
       '/api/v1/auth/sso_providers',

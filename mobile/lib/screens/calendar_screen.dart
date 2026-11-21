@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../models/amount_format.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
 import '../providers/accounts_provider.dart';
@@ -9,6 +10,7 @@ import '../providers/auth_provider.dart';
 import '../providers/privacy_provider.dart';
 import '../services/log_service.dart';
 import '../utils/amount_parser.dart';
+import '../utils/money_formatter.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/money_masker.dart';
 
@@ -666,17 +668,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   String _formatAmount(double amount) {
-    // Support up to 8 decimal places, but omit unnecessary trailing zeros
-    final formatter = NumberFormat('#,##0.########');
+    final format = context.select<AuthProvider, AmountFormat>(
+      (auth) => auth.amountFormat,
+    );
     final sign = amount >= 0 ? '+' : '';
-    return '$sign${formatter.format(amount)}';
+    return '$sign${MoneyFormatter.decimal(amount.abs(), format, maxFractionDigits: 8)}';
   }
 
   String _formatCurrency(double amount) {
     final currencySymbol = _selectedAccount?.currency ?? '';
-    // Support up to 8 decimal places for monthly total
-    final formatter = NumberFormat('#,##0.########');
+    final format = context.select<AuthProvider, AmountFormat>(
+      (auth) => auth.amountFormat,
+    );
     final sign = amount >= 0 ? '+' : '';
-    return '$sign$currencySymbol${formatter.format(amount.abs())}';
+    return '$sign${MoneyFormatter.currency(amount.abs(), format, symbol: currencySymbol, maxFractionDigits: 8)}';
   }
 }
