@@ -65,6 +65,23 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
     assert_equal Money.new(18, "CHF").format, row[:formatted_average_cost]
   end
 
+  # The page's average costs come from one batch (Holding.preload_avg_costs),
+  # which shares each conversion rate across the page, not from each holding
+  # computing its own for each cost field.
+  test "get_holdings costs the page in one batch" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: Date.current, rate: 0.9)
+    3.times do |i|
+      security = Security.create!(ticker: "CHF#{i}", name: "CHF#{i}")
+      create_trade(security, account: @account, qty: 10, price: 20, date: Date.current)
+      @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 30, amount: 300, currency: "CHF")
+    end
+    Holding.any_instance.expects(:calculate_avg_cost).never
+
+    rows = @fn.call("accounts" => [ @account.name ])[:holdings].select { |row| row[:ticker].start_with?("CHF") }
+
+    assert_equal [ 18.0 ] * 3, rows.map { |row| row[:average_cost] }, "20 USD at 0.9"
+  end
+
   test "get_holdings lists a position's open lots, oldest first" do
     fifo_position
     lots = lot_row[:lots]

@@ -99,6 +99,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
     total_value = holdings_query.sum(:amount)
 
     paginated_holdings = paginated_holdings.to_a
+    Holding.preload_avg_costs(paginated_holdings)
     open_lots = Holding.open_lots_for(paginated_holdings)
 
     normalized_holdings = paginated_holdings.map do |holding|
