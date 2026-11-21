@@ -113,7 +113,7 @@ class AiDocumentsTest < ActiveSupport::TestCase
   test "the family's store goes only when its deletion commits" do
     family = Family.create!(name: "Leaving", vector_store_id: "vs-gone")
     adapter = mock("adapter")
-    Family.any_instance.stubs(:vector_store_adapter).returns(adapter)
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
 
     adapter.expects(:delete_store).never
     Family.transaction do
