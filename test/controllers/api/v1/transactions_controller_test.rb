@@ -74,7 +74,10 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
     end
 
-    assert_equal baseline_queries, expanded_queries
+    # Rails' preloader loads the legs' accounts in one query or in two, depending
+    # on which counterpart transactions it already holds, so the counts can
+    # differ by one either way. A query per transfer would add at least five.
+    assert_operator (expanded_queries - baseline_queries).abs, :<=, 1, "#{baseline_queries} queries before the five transfers, #{expanded_queries} after"
   end
 
   test "should get index with read-only API key" do
