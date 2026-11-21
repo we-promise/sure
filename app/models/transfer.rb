@@ -261,12 +261,15 @@ class Transfer < ApplicationRecord
             transaction.unlock_attr!(:kind) if transaction.locked?(:kind)
           end
           # The entry survives this destroy (only the Transfer join row and
-          # fee transactions go away), but its idempotency_key must not: a
-          # later retry of the original create request looks up that key,
-          # finds no Transfer anymore, and would otherwise hit the unique
+          # fee transactions go away), but a key Transfer::Creator gave it must
+          # not: a later retry of the original create request looks up that
+          # key, finds no Transfer anymore, and would otherwise hit the unique
           # index on the stale entry and raise instead of creating a new
-          # transfer (see Transfer::Creator#find_existing_transfer).
-          transaction.entry.update!(idempotency_key: nil) if transaction.entry&.idempotency_key.present?
+          # transfer (see Transfer::Creator#find_existing_transfer). Creator
+          # only makes confirmed transfers, so a pending one's key came from
+          # the transaction itself (the standalone form) and stays, letting
+          # that form's retry still find its entry.
+          transaction.entry.update!(idempotency_key: nil) if !pending? && transaction.entry&.idempotency_key.present?
         rescue ActiveRecord::RecordNotFound
         rescue NoMethodError
           next

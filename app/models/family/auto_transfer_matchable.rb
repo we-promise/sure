@@ -47,7 +47,8 @@ module Family::AutoTransferMatchable
     restrict_cross_currency_to_linked_accounts: false,
     require_common_writer: false,
     exclude_same_connection_pairs: false,
-    require_compatible_categories: false
+    require_compatible_categories: false,
+    displace_pending_cross_currency: false
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -72,6 +73,7 @@ module Family::AutoTransferMatchable
         require_common_writer:,
         exclude_same_connection_pairs:,
         require_compatible_categories:,
+        displace_pending_cross_currency:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
@@ -119,38 +121,53 @@ module Family::AutoTransferMatchable
   def auto_match_transfers!(account: nil, exchange_rate_tolerance: Family::AutoTransferMatchable.exchange_rate_tolerance)
     return if auto_match_transfers_disabled?
 
-    # Exclude already matched transfers. Cross-currency FX-tolerance matching is
-    # restricted to provider-linked accounts ONLY on this automatic path -- a
-    # coincidental amount/FX-rate match applied here has no human reviewing it
-    # first. The manual "match as transfer" dialog goes through
-    # Transaction#transfer_match_candidates, which calls transfer_match_candidates
-    # directly without this restriction, so a user can still find and confirm a
-    # real cross-currency transfer that happens to involve a manual account.
-    candidates_scope = transfer_match_candidates(
-      account_id: account&.id,
-      include_rejected: false,
-      exchange_rate_tolerance:,
-      restrict_cross_currency_to_linked_accounts: true,
-      # Only pair accounts that at least one member can write to on both sides, so
-      # someone can always confirm or reject the match.
-      require_common_writer: true,
-      # Pairs a provider already links from its own feed, such as two balances
-      # of one connection (Provider::Base.auto_match_exclusion_sql), are never
-      # guessed here; the manual dialog still offers them.
-      exclude_same_connection_pairs: true,
-      # A cross-currency guess between two categorized transactions in different
-      # categories (a fuel purchase against an income) is not one movement of
-      # money. One uncategorized leg still matches, since providers often
-      # categorize only one side. Exact same-currency pairs, and pairs on a route
-      # the user has confirmed before, are not affected.
-      require_compatible_categories: true
-    )
-
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
     created_transfers = []
 
     Transfer.transaction do
+      # One run per family at a time, taken before candidates are selected: two
+      # runs that each displace a guess the other wants would otherwise lock the
+      # same rows in opposite orders and deadlock. A run that finds the lock held
+      # is skipped rather than queued behind it: the run holding it already
+      # covers its own account but not a pair only this run would see, and
+      # waiting could stall a caller that holds row locks of its own. So the
+      # skipped run queues a family-wide one for shortly after.
+      unless lock_auto_match_transfers!
+        AutoMatchTransfersJob.set(wait: 1.minute).perform_later(self)
+        next
+      end
+
+      # Exclude already matched transfers. Cross-currency FX-tolerance matching is
+      # restricted to provider-linked accounts ONLY on this automatic path -- a
+      # coincidental amount/FX-rate match applied here has no human reviewing it
+      # first. The manual "match as transfer" dialog goes through
+      # Transaction#transfer_match_candidates, which calls transfer_match_candidates
+      # directly without this restriction, so a user can still find and confirm a
+      # real cross-currency transfer that happens to involve a manual account.
+      candidates_scope = transfer_match_candidates(
+        account_id: account&.id,
+        include_rejected: false,
+        exchange_rate_tolerance:,
+        restrict_cross_currency_to_linked_accounts: true,
+        # Only pair accounts that at least one member can write to on both sides, so
+        # someone can always confirm or reject the match.
+        require_common_writer: true,
+        # Pairs a provider already links from its own feed, such as two balances
+        # of one connection (Provider::Base.auto_match_exclusion_sql), are never
+        # guessed here; the manual dialog still offers them.
+        exclude_same_connection_pairs: true,
+        # A cross-currency guess between two categorized transactions in different
+        # categories (a fuel purchase against an income) is not one movement of
+        # money. One uncategorized leg still matches, since providers often
+        # categorize only one side. Exact same-currency pairs, and pairs on a route
+        # the user has confirmed before, are not affected.
+        require_compatible_categories: true,
+        # A pending cross-currency guess is not final: an exact same-currency
+        # counterpart that turns up later replaces it (find_or_create_transfer!).
+        displace_pending_cross_currency: true
+      )
+
       candidates_scope.each do |match|
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
@@ -172,6 +189,17 @@ module Family::AutoTransferMatchable
   end
 
   private
+    # True when this transaction now holds the family's auto-match lock.
+    def lock_auto_match_transfers!
+      key = Digest::SHA1.hexdigest("auto_match_transfers:#{id}").to_i(16) % (2**63)
+      locked = self.class.connection.exec_query(
+        "SELECT pg_try_advisory_xact_lock($1) AS locked",
+        "Auto Match Transfers Lock",
+        [ ActiveRecord::Relation::QueryAttribute.new("key", key, ActiveRecord::Type::BigInteger.new) ]
+      ).rows.first&.first
+      ActiveModel::Type::Boolean.new.cast(locked)
+    end
+
     # A principal-only loan replays a linked transfer as principal. The balance
     # was materialized before this match existed, so re-sync from the transfer's
     # entry dates.
@@ -232,6 +260,11 @@ module Family::AutoTransferMatchable
     # rolls back only the failed statement, leaving the outer transaction healthy.
     def find_or_create_transfer!(match)
       Transfer.transaction(requires_new: true) do
+        # Rolling back restores any guess already destroyed for this pair.
+        if match.match_rank.to_i.zero? && !displace_pending_cross_currency_guesses!(match)
+          raise ActiveRecord::Rollback
+        end
+
         Transfer.find_or_create_by!(
           inflow_transaction_id: match.inflow_transaction_id,
           outflow_transaction_id: match.outflow_transaction_id,
@@ -250,6 +283,119 @@ module Family::AutoTransferMatchable
       # ...and even for :taken, only accept it once the exact (inflow, outflow) row is
       # confirmed present; otherwise the :taken came from a different pairing.
       existing_transfer(match)
+    end
+
+    # Destroys the pending cross-currency auto-match suggestions holding either leg
+    # of an exact same-currency candidate, so the exact pair can take their place.
+    # Selected by displaceable_transfer_sql, the predicate that let the candidate
+    # through, so the two cannot disagree about which transfers may go.
+    # Destroyed rather than rejected: the user never judged the guess, so no
+    # RejectedTransfer is recorded. Runs inside the caller's savepoint, so a
+    # failed insert restores the guess.
+    #
+    # Each leg is looked up in both roles: editing an entry's sign doesn't change
+    # the role a transfer stored it in, so a leg that now reads as an inflow can
+    # still be some transfer's outflow.
+    #
+    # Returns false, displacing nothing, when the pair is no longer an exact
+    # same-currency match (an entry edited after the candidate query).
+    def displace_pending_cross_currency_guesses!(match)
+      leg_ids = [ match.inflow_transaction_id, match.outflow_transaction_id ]
+
+      Transfer.uncached do
+        # Locks are taken transfers, then transactions, then entries: the order
+        # a confirm takes them (AutoMatchesController#bulk_update locks the
+        # transfer, then saves its transactions, which touch their entries), so
+        # the two can't deadlock. A confirm holding the transfer finishes first.
+        locked_ids = Transfer.where(inflow_transaction_id: leg_ids)
+          .or(Transfer.where(outflow_transaction_id: leg_ids))
+          .order(:id)
+          .lock
+          .pluck(:id)
+
+        # Nothing holds either leg, so there is nothing to displace: the pair is
+        # inserted as any exact match is, without locking its legs.
+        return true if locked_ids.empty?
+
+        # The guesses' own legs are locked too: a leg can be edited (its kind
+        # changed) without the transfer row lock, and the re-read below must
+        # see what such an edit committed.
+        guess_leg_ids = Transfer.where(id: locked_ids).pluck(:inflow_transaction_id, :outflow_transaction_id).flatten
+        return false unless exact_pair_under_lock?(match, also_lock: guess_leg_ids)
+
+        # A new statement, so its snapshot sees what committed while the locks
+        # were awaited: a confirmed status, a changed kind, an attached fee.
+        Transfer.where(id: locked_ids)
+          .where(displaceable_transfer_sql("transfers"))
+          .order(:id)
+          .each(&:destroy!)
+
+        # A blocker the candidate query couldn't see (held in the other role)
+        # still holds a leg, so the pair is not created. A transfer for this
+        # exact pair, committed concurrently, is the match itself:
+        # find_or_create_by! returns it.
+        Transfer.where(id: locked_ids)
+          .where.not(inflow_transaction_id: match.inflow_transaction_id, outflow_transaction_id: match.outflow_transaction_id)
+          .none?
+      end
+    end
+
+    # Locks both legs, and any other transactions in `also_lock` (transactions,
+    # then their entries, each in id order) and re-reads the pair: still
+    # opposite amounts in one currency, neither excluded, and not categorized
+    # apart since the candidate query read it.
+    def exact_pair_under_lock?(match, also_lock: [])
+      leg_ids = [ match.inflow_transaction_id, match.outflow_transaction_id ]
+      lock_ids = (leg_ids + also_lock).compact.uniq
+      categories = Transaction.where(id: lock_ids).order(:id).lock.pluck(:id, :category_id).to_h
+      entries = Entry.where(entryable_type: "Transaction", entryable_id: lock_ids)
+        .order(:id).lock.to_a.index_by(&:entryable_id)
+      inflow = entries[match.inflow_transaction_id]
+      outflow = entries[match.outflow_transaction_id]
+      inflow_category = categories[match.inflow_transaction_id]
+      outflow_category = categories[match.outflow_transaction_id]
+
+      inflow.present? && outflow.present? &&
+        !inflow.excluded? && !outflow.excluded? &&
+        (inflow_category.nil? || outflow_category.nil? || inflow_category == outflow_category) &&
+        inflow.currency == outflow.currency &&
+        inflow.amount.negative? && inflow.amount == -outflow.amount
+    end
+
+    # A genuine auto-match suggestion (both legs still "standard", as
+    # AutoMatchesController#cleanup_pending_auto_matches! defines it) that is
+    # pending, whose legs are in different currencies and that carries no fee or
+    # notes (the user's additions would be destroyed with it), for the transfer at
+    # `transfers_alias`.
+    def displaceable_transfer_sql(transfers_alias)
+      <<~SQL.squish
+        (
+          #{transfers_alias}.status = 'pending' AND
+          EXISTS (
+            SELECT 1
+            FROM transactions displaced_inflows
+            JOIN entries displaced_inflow_entries ON (
+              displaced_inflow_entries.entryable_type = 'Transaction' AND
+              displaced_inflow_entries.entryable_id = displaced_inflows.id
+            )
+            JOIN transactions displaced_outflows ON displaced_outflows.id = #{transfers_alias}.outflow_transaction_id
+            JOIN entries displaced_outflow_entries ON (
+              displaced_outflow_entries.entryable_type = 'Transaction' AND
+              displaced_outflow_entries.entryable_id = displaced_outflows.id
+            )
+            WHERE
+              displaced_inflows.id = #{transfers_alias}.inflow_transaction_id AND
+              displaced_inflows.kind = 'standard' AND
+              displaced_outflows.kind = 'standard' AND
+              displaced_inflow_entries.currency <> displaced_outflow_entries.currency
+          ) AND
+          NOT EXISTS (
+            SELECT 1 FROM transactions displaced_fees
+            WHERE displaced_fees.transfer_id = #{transfers_alias}.id
+          ) AND
+          (#{transfers_alias}.notes IS NULL OR btrim(#{transfers_alias}.notes) = '')
+        )
+      SQL
     end
 
     # The committed transfer for this exact candidate pair, or nil if none exists.
@@ -372,6 +518,17 @@ module Family::AutoTransferMatchable
     # Only auto_match_transfers! sets it; the exact same-currency branch, the manual
     # dialog and the hint (which filters categories itself, more strictly) leave it off.
     #
+    # With :displace_pending_cross_currency (only auto_match_transfers! sets it), the
+    # exact branch does not count a pending cross-currency auto-match suggestion
+    # (displaceable_transfer_sql) as holding a leg, so a later exact counterpart is
+    # still offered; find_or_create_transfer! then destroys the guess. Only an
+    # exact pair whose categories would pass the guess's own category check
+    # (one leg uncategorized, or both in one category) displaces it: a
+    # coincidental same-amount purchase and income are no surer a transfer than
+    # the guess they would replace. The
+    # cross-currency branch keeps every transfer as a blocker, so a guess never
+    # displaces another guess.
+    #
     # Candidates are ordered by match_rank before date_diff: exact same-currency matches
     # (rank 0) come before FX-tolerance guesses (rank 1). auto_match_transfers! consumes
     # candidates greedily, so without the rank a coincidental cross-currency candidate
@@ -405,9 +562,22 @@ module Family::AutoTransferMatchable
             outflow_candidates.amount = -inflow_candidates.amount
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
+          JOIN transactions exact_inflow_txns ON exact_inflow_txns.id = inflow_candidates.entryable_id
+          JOIN transactions exact_outflow_txns ON exact_outflow_txns.id = outflow_candidates.entryable_id
           LEFT JOIN transfers existing_transfers ON (
-            existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
-            existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
+            (
+              existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
+              existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
+            ) AND
+            NOT (
+              :displace_pending_cross_currency = TRUE AND
+              #{displaceable_transfer_sql("existing_transfers")} AND
+              (
+                exact_inflow_txns.category_id IS NULL OR
+                exact_outflow_txns.category_id IS NULL OR
+                exact_inflow_txns.category_id = exact_outflow_txns.category_id
+              )
+            )
           )
           LEFT JOIN rejected_transfers ON (
             rejected_transfers.inflow_transaction_id = inflow_candidates.entryable_id AND
