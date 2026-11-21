@@ -1,4 +1,9 @@
 class MercuryItem::Importer
+  # Mercury's largest and default page of transactions.
+  TRANSACTIONS_PAGE_SIZE = 1000
+  # Stops a paging loop whose pages never come back short.
+  MAX_TRANSACTION_PAGES = 100
+
   attr_reader :mercury_item, :mercury_provider, :sync_start_date
 
   # sync_start_date: an explicit window start (the sync's), which overrides
@@ -194,11 +199,7 @@ class MercuryItem::Importer
       Rails.logger.info "MercuryItem::Importer - Fetching transactions for account #{mercury_account.account_id} from #{start_date}"
 
       begin
-        # Fetch transactions
-        transactions_data = mercury_provider.get_account_transactions(
-          mercury_account.account_id,
-          start_date: start_date
-        )
+        transactions_data = fetch_transaction_pages(mercury_account, start_date: start_date)
 
         # Validate response structure
         unless transactions_data.is_a?(Hash)
@@ -283,6 +284,54 @@ class MercuryItem::Importer
         Rails.logger.error e.backtrace.join("\n")
         { success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }
       end
+    end
+
+    # Every page from start_date, each transaction id once. A short page is the
+    # last: Mercury does not document what the response's total counts. A full
+    # page with no new ids ends it too, for an API that ignores the offset.
+    def fetch_transaction_pages(mercury_account, start_date:)
+      transactions = []
+      seen_ids = Set.new
+
+      MAX_TRANSACTION_PAGES.times do |page|
+        data = mercury_provider.get_account_transactions(
+          mercury_account.account_id,
+          start_date: start_date,
+          offset: page * transactions_page_size,
+          limit: transactions_page_size
+        )
+        return nil unless data.is_a?(Hash)
+
+        batch = data[:transactions].to_a
+        transactions.concat(batch)
+        return { transactions: unique_transactions(transactions) } if batch.size < transactions_page_size
+
+        new_ids = batch.filter_map { |tx| tx.with_indifferent_access[:id] if tx.is_a?(Hash) }.to_set - seen_ids
+        return { transactions: unique_transactions(transactions) } if new_ids.empty?
+
+        seen_ids.merge(new_ids)
+      end
+
+      Rails.logger.warn "MercuryItem::Importer - Stopped paging transactions for account #{mercury_account.account_id} after #{MAX_TRANSACTION_PAGES} pages"
+      DebugLogEntry.capture(
+        category: "provider_sync_warning",
+        level: "warn",
+        message: "Stopped paging transactions at the page cap; later transactions were not fetched",
+        source: self.class.name,
+        provider_key: "mercury",
+        family: mercury_item.family,
+        account_provider: mercury_account.account_provider,
+        metadata: { mercury_item_id: mercury_item.id, account_id: mercury_account.account_id, pages: MAX_TRANSACTION_PAGES, page_size: transactions_page_size }
+      )
+      { transactions: unique_transactions(transactions) }
+    end
+
+    def unique_transactions(transactions)
+      transactions.uniq { |tx| tx.is_a?(Hash) ? tx.with_indifferent_access[:id] : tx }
+    end
+
+    def transactions_page_size
+      TRANSACTIONS_PAGE_SIZE
     end
 
     def determine_sync_start_date(mercury_account)
