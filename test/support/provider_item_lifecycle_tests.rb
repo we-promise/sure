@@ -190,6 +190,30 @@ module ProviderItemLifecycleTests
       assert_equal [ 0, 0 ], [ again.created_count, again.failed_count ]
     end
 
+    test "lifecycle: setup keeps a subtype only when it belongs to the chosen type" do
+      provider_item.class.any_instance.stubs(:sync_later)
+      supported_types = "Provider::#{provider_item.provider_key.camelize}Adapter".constantize.supported_account_types
+      # [type, submitted subtype, stored subtype]: a subtype of another type falls back to the chosen type's default.
+      cases = [
+        [ "Depository", "credit_card", Depository::DEFAULT_SUBTYPE ],
+        [ "CreditCard", "checking", CreditCard::DEFAULT_SUBTYPE ],
+        [ "Depository", "savings", "savings" ],
+        [ "Depository", "", Depository::DEFAULT_SUBTYPE ]
+      ].select { |type, _, _| supported_types.include?(type) }
+      ids = cases.each_index.map { |index| "subtype-#{index}" }
+      account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for(ids))
+      account_flow.import_accounts_with_user_facing_error
+      imported = provider_item.provider_accounts.where(account_id: ids).index_by(&:account_id)
+
+      account_flow.complete_setup!(
+        account_types: ids.zip(cases).to_h { |id, (type, _, _)| [ imported[id].id.to_s, type ] },
+        account_subtypes: ids.zip(cases).to_h { |id, (_, subtype, _)| [ imported[id].id.to_s, subtype ] }
+      )
+
+      assert_equal cases.map { |type, _, stored| [ type, stored ] },
+                   ids.map { |id| imported[id].reload.account.then { |account| [ account.accountable_type, account.accountable.subtype ] } }
+    end
+
     test "lifecycle: setup keeps the accounts it created when a later one raises" do
       provider_item.class.any_instance.expects(:sync_later).once
       account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "raise-1", "raise-2" ]))
