@@ -85,6 +85,27 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
     assert Session.exists?(id: super_admin_session.id), "the admin's own session must survive"
   end
 
+  test "impersonation ends, admin stays signed in, when the impersonated user's family vanishes mid-request" do
+    sign_in super_admin = users(:sure_support_staff)
+    impersonated = users(:family_member)
+
+    impersonator_session = impersonation_sessions(:in_progress)
+    super_admin_session = super_admin.sessions.order(created_at: :desc).first
+
+    post join_impersonation_sessions_path, params: { impersonation_session_id: impersonator_session.id }
+    assert_equal impersonator_session, super_admin_session.reload.active_impersonator_session
+
+    # Simulate the stale in-memory impersonated user whose family was purged
+    # while the request was in flight.
+    impersonated.stubs(:family).returns(nil)
+    ImpersonationSession.any_instance.stubs(:impersonated).returns(impersonated)
+
+    get root_path
+    assert_response :success
+    assert_nil super_admin_session.reload.active_impersonator_session
+    assert Session.exists?(id: super_admin_session.id), "the admin's own session must survive"
+  end
+
   test "super admin can complete an impersonation session" do
     sign_in super_admin = users(:sure_support_staff)
 
