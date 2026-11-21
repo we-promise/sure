@@ -419,6 +419,7 @@ class ReportsController < ApplicationController
 
         trends << {
           month: current_month.strftime("%b %Y"),
+          calendar_month: current_month,
           is_current_month: (current_month.month == Date.current.month && current_month.year == Date.current.year),
           income: income,
           expenses: expenses,
