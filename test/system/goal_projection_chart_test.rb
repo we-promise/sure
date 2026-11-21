@@ -18,7 +18,12 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       preferences: (@user.preferences || {}).merge("preview_features_enabled" => true),
       show_ai_sidebar: false
     )
-    travel_to(TODAY) { sign_in @user }
+    # Sign in on the real clock. A session dated TODAY is idle past
+    # Session::INACTIVITY_TIMEOUT by the real clock, so any request the browser
+    # makes between travel_to blocks would end it and land on the login page.
+    # TODAY is in the past, so a session from the real clock never looks idle
+    # inside travel_to(TODAY).
+    sign_in @user
   end
 
   test "a target on a gridline keeps its full label inside the chart" do
@@ -89,7 +94,7 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
 
   test "a window of daily ticks keeps the label of every month it covers" do
     travel_to Date.new(2027, 1, 25) do
-      # The setup session is three months old by now.
+      # By this date the setup session can be idle past the timeout.
       sign_in @user
       visit_goal(target: 10_000, target_date: Date.new(2027, 2, 1))
       resize_chart(428)
