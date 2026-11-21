@@ -69,6 +69,17 @@ hu:
         manual_entry: Egyenleg manuális megadása
         title: Hogyan szeretnéd hozzáadni?
       title: Mit szeretnél hozzáadni?
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): %{date} óta nulla alatt, legalacsonyabb %{qty}"
+        hint: "Valószínűleg hiányzik egy vétel vagy átvezetés. Vedd fel, vagy javítsd azokat a tranzakciókat, amelyek nulla alá vitték a pozíciót."
+        link: "Pozíciók ellenőrzése"
+        message: "Néhány pozíció nulla alá került"
+      sync_failed:
+        message: "Az utolsó szinkronizálás sikertelen volt"
+      sync_hint: "Az itt látható adatok elavultak lehetnek. Szinkronizálj újra a frissítésükhöz."
+      sync_stale:
+        message: "Az utolsó szinkronizálás nem fejeződött be"
     show:
       limited_fx_history_warning: "Az árfolyam-előzmények csak %{date} dátumtól érhetők el. Az ezt megelőző tranzakciókhoz közelítő árfolyamok kerülnek alkalmazásra – ez akkor fordulhat elő, ha a devizaárfolyam-szolgáltató csak korlátozott előzményadatokat kínál."
       tabs:

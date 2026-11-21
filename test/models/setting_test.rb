@@ -195,6 +195,20 @@ class SettingTest < ActiveSupport::TestCase
     assert_nil Setting.transform_brand_fetch_url(nil)
   end
 
+  test "integer_from_env treats a blank variable as unset" do
+    with_env_overrides("LLM_CONTEXT_WINDOW" => "") do
+      assert_nil Setting.integer_from_env("LLM_CONTEXT_WINDOW")
+    end
+
+    with_env_overrides("LLM_CONTEXT_WINDOW" => " 8192 ") do
+      assert_equal 8192, Setting.integer_from_env("LLM_CONTEXT_WINDOW")
+    end
+
+    with_env_overrides("LLM_CONTEXT_WINDOW" => nil) do
+      assert_nil Setting.integer_from_env("LLM_CONTEXT_WINDOW")
+    end
+  end
+
   test "LLM_PROVIDER env wins over a stored llm_provider" do
     original = Setting.raw_llm_provider
     Setting.llm_provider = "anthropic"

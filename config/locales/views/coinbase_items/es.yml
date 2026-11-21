@@ -8,6 +8,10 @@ es:
       success: Configuración de Coinbase actualizada correctamente.
     destroy:
       success: Conexión de Coinbase programada para su eliminación.
+    select_accounts:
+      connection_unavailable: Esa conexión de Coinbase no está disponible. Elige una en los Ajustes del proveedor.
+      no_credentials_configured: Conecta Coinbase en los Ajustes del proveedor antes de añadir sus carteras.
+      select_connection: Elige una conexión de Coinbase en los Ajustes del proveedor.
     setup_accounts:
       title: Importar carteras de Coinbase
       subtitle: Selecciona qué carteras quieres seguir

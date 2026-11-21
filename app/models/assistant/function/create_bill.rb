@@ -17,7 +17,8 @@ class Assistant::Function::CreateBill < Assistant::Function
           create the bill without an account.
         - category_name must exactly match a name returned by get_categories.
         - first_due_on seeds the schedule: its day of month (or weekday for weekly
-          cadences) becomes the recurring due day.
+          cadences) becomes the recurring due day. frequency "once" is a single
+          occurrence on first_due_on and does not repeat.
         - Transfers between accounts cannot be created here.
 
         Confirm the details with the user before calling this.
