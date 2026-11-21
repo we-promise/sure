@@ -313,6 +313,22 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert_equal replacement.id, allocation.reload.entry_id
   end
 
+  test "repair gives the replacement transaction the bill's category" do
+    category = @family.categories.create!(name: "Utilities", color: "#e99537", lucide_icon: "zap")
+    series = create_series(name: "POWER CO", amount: 60, day_offset: 2)
+    series.update!(category: category)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    original = create_entry(amount: 60, date: Date.current, name: "POWER CO")
+    @matcher.run!
+    allocation = occurrence.allocations.sole
+    original.destroy!
+
+    replacement = create_entry(amount: 60, date: allocation.paid_on, name: "POWER CO POSTED")
+    @matcher.repair_orphans!
+
+    assert_equal category, replacement.transaction.reload.category
+  end
+
   test "repair re-attaches a recurring transfer's payment by its account pair, not its name" do
     series = create_series(name: "Payment to Loan", amount: 500, day_offset: 0, destination: accounts(:loan))
     occurrence = first_occurrence(series)
