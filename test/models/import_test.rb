@@ -3,6 +3,26 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  test "parse_csv_str handles a quoted multi-line header followed by CRLF rows" do
+    csv = Import.parse_csv_str("\"Date\nPosted\",Amount\r\n2024-01-01,5\r\n2024-01-02,6\r\n")
+
+    assert_equal [ "Date\nPosted", "Amount" ], csv.headers
+    assert_equal [ "5", "6" ], csv.map { |row| row["Amount"] }
+  end
+
+  test "parse_csv_str handles mixed LF and CRLF line endings" do
+    csv = Import.parse_csv_str("date,amount\n2024-01-01,5\r\n2024-01-02,6\r\n")
+
+    assert_equal [ "date", "amount" ], csv.headers
+    assert_equal [ "5", "6" ], csv.map { |row| row["amount"] }
+  end
+
+  test "parse_csv_str handles CR-only line endings" do
+    csv = Import.parse_csv_str("date,amount\r2024-01-01,5\r")
+
+    assert_equal [ "5" ], csv.map { |row| row["amount"] }
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")
