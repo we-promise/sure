@@ -45,6 +45,9 @@ class DS::Table < DesignSystemComponent
   # @param opts [Hash] forwarded to the outer element; :class merges with the base classes
   def initialize(rows:, inset: false, sticky_header: false, label: nil, row_class: nil, row_opts: nil, row_detail: nil, **opts)
     raise ArgumentError, "DS::Table needs an id: when given row_detail" if row_detail && opts[:id].blank?
+    # The id prefixes the detail ids that aria-controls names, and a space
+    # there reads as a second id.
+    raise ArgumentError, "DS::Table's id must not contain whitespace when given row_detail" if row_detail && opts[:id].to_s.match?(/\s/)
 
     @rows = rows
     @inset = inset
