@@ -66,6 +66,6 @@ class PlaidAccount::Investments::BalanceCalculator
         security.brokerage_cash?
       end
 
-      true_holdings.sum { |h| h["quantity"] * h["institution_price"] }
+      true_holdings.sum { |h| h["quantity"] * plaid_account.holding_price(h) }
     end
 end
