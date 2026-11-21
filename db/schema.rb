@@ -1204,7 +1204,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.uuid "account_provider_id"
     t.decimal "amount", precision: 19, scale: 4, null: false
     t.decimal "cost_basis", precision: 19, scale: 4
+    t.boolean "cost_basis_carried", default: false, null: false
     t.boolean "cost_basis_locked", default: false, null: false
+    t.datetime "cost_basis_locked_at"
+    t.decimal "cost_basis_locked_qty", precision: 34, scale: 18
+    t.decimal "cost_basis_locked_unit_cost", precision: 19, scale: 4
     t.string "cost_basis_source"
     t.datetime "created_at", null: false
     t.string "currency", null: false
