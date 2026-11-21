@@ -26,4 +26,16 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
       assert_nil @fn.send(:model_for, Provider::Anthropic.new("test-key"))
     end
   end
+
+  test "refuses with the router's reason when no provider can be resolved after the availability check" do
+    use_ai_routes
+    pdf_import = PdfImport.create!(family: @user.family, document_type: "bank_statement")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    result = @fn.call("pdf_import_id" => pdf_import.id, "account_id" => accounts(:depository).id)
+
+    assert_equal "ai_unavailable", result[:error]
+    assert_equal "not_configured", result[:reason]
+    assert result[:message].present?, "the refusal carries the reason worded for the user"
+  end
 end

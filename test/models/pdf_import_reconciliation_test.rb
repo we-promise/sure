@@ -131,6 +131,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "extract_transactions stores string keys so rows can actually be generated" do
+    use_ai_routes
     provider = mock("llm_provider")
     Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
     provider.stubs(:extract_bank_statement).returns(
@@ -146,6 +147,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "extract_transactions syncs period and balances to statement_backed import" do
+    use_ai_routes
     provider = mock("llm_provider")
     Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
     provider.stubs(:extract_bank_statement).returns(
@@ -175,6 +177,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "extract_transactions ignores inverted dates while syncing valid balances and hints" do
+    use_ai_routes
     provider = mock("llm_provider")
     Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
     provider.stubs(:extract_bank_statement).returns(
@@ -208,6 +211,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "extract_transactions handles unparseable date independently without dropping balances" do
+    use_ai_routes
     provider = mock("llm_provider")
     Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
     provider.stubs(:extract_bank_statement).returns(
@@ -237,6 +241,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "extract_transactions rejects dates outside Import.reasonable_date_range" do
+    use_ai_routes
     provider = mock("llm_provider")
     Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
     provider.stubs(:extract_bank_statement).returns(
@@ -258,6 +263,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "extract_transactions drops balances when extracted currency conflicts with statement currency" do
+    use_ai_routes
     @statement.update!(currency: "USD", opening_balance: 10.0)
 
     provider = mock("llm_provider")
@@ -286,6 +292,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "extract_transactions honors currency mismatch detected during earlier processing" do
+    use_ai_routes
     @statement.update!(currency: "USD", opening_balance: 10.0, sanitized_parser_output: { "extracted_currency" => "EUR" })
 
     provider = mock("llm_provider")
@@ -330,6 +337,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "apply_statement_metadata_updates preserves existing hints when already populated" do
+    use_ai_routes
     @statement.update!(institution_name_hint: "Existing Bank", account_last4_hint: "9999")
 
     provider = mock("llm_provider")

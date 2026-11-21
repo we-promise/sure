@@ -35,6 +35,9 @@ es:
           - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
           - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
           generate: 'Genera un juego de claves con: bin/rails db:encryption:init'
+        disable_mfa_password_label: Confirma con tu contraseña
+        disable_mfa_password_placeholder: Introduce tu contraseña
+        mfa_sso_only: La verificación en dos pasos se gestiona en tu proveedor de identidad.
         sso_title: Cuentas Conectadas
         sso_subtitle: Gestiona tus conexiones de inicio de sesión único (SSO)
         sso_disconnect: Desconectar
@@ -47,6 +50,11 @@ es:
         sso_confirm_body: "¿Estás seguro de que deseas desconectar tu cuenta de %{provider}? Podrás volver a conectarla más tarde iniciando sesión de nuevo con ese proveedor."
         sso_confirm_button: Desconectar
         sso_warning_message: Este es tu único método de acceso. Deberías establecer una contraseña en tus ajustes de seguridad antes de desconectarlo, de lo contrario podrías perder el acceso a tu cuenta.
+        compromised_secret_warning:
+          title: Las claves de cifrado no son secretas
+          intro: Las claves de cifrado de esta instalación se derivaron automáticamente de un valor de SECRET_KEY_BASE que este proyecto distribuyó como valor por defecto funcional en sus ficheros Docker Compose de ejemplo. Cualquiera que conozca ese valor puede calcular las mismas claves de cifrado, así que estos datos no están protegidos de verdad.
+          generate: 'NO te limites a poner un SECRET_KEY_BASE nuevo y ejecutar la tarea de backfill: si ya había datos cifrados con la clave comprometida, el backfill no puede distinguir ese texto cifrado del texto plano real y lo volverá a cifrar encima, de modo que será irrecuperable. Rota las claves de forma segura, con la app parada: genera claves nuevas con bin/rails db:encryption:init y ponlas en las variables ACTIVE_RECORD_ENCRYPTION_*; después ejecuta bin/rails "security:backfill_encryption[100,0]" con este SECRET_KEY_BASE en la variable de entorno ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE solo para ese comando, para que los datos existentes se sigan descifrando y pasen a las claves nuevas. Consulta la guía de alojamiento con Docker.'
+          settings_secrets: Las claves API y los tokens guardados en los ajustes se cifran con una clave derivada del propio SECRET_KEY_BASE, que el procedimiento anterior no cubre. Después de cambiar SECRET_KEY_BASE, vuelve a cifrarlos con bin/rails "security:rotate_setting_secrets[0]", pasando el valor antiguo en la variable de entorno OLD_SECRET_KEY_BASE (consulta la guía de alojamiento con Docker). Vuelve a introducir las claves que indique como no descifrables.
   webauthn_credentials:
     code_already_used: Ese código ya se ha usado. Espera al siguiente código de tu app de autenticación.
     invalid_code: Ese código no es válido. Introduce un código actual de tu app de autenticación o un código de respaldo sin usar.

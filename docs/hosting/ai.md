@@ -37,7 +37,7 @@ Background jobs that classify transactions and detect merchants. These use the L
 
 If you use an external agent for chat, you still need an LLM provider configured (`OPENAI_ACCESS_TOKEN` or `ANTHROPIC_API_KEY`) for auto-categorization and merchant detection to work. The two systems are fully independent.
 
-With `mcp_only`, Sure also skips the features that need a user's AI consent: the bills AI shortcuts (review, smart fill, smart configuration). Insights never use AI: their text comes from templates.
+With `mcp_only`, the buttons that start a chat go too, including the bills AI review. Smart fill and smart configuration don't start a chat, so they follow each member's own AI switch, like the other AI features. Insights never use AI: their text comes from templates.
 
 ### Where AI jobs run (Sidekiq lanes)
 
@@ -454,56 +454,6 @@ Similar requirements to categorization:
 **Local:**
 - Same recommendations as auto-categorization
 
-### Community-reported model compatibility
-
-These are historical reports from people using or testing Sure, not a current
-certification or a guarantee for every deployment. Reports reviewed **2026-11-15**.
-The linked messages do not specify a Sure version unless noted; do not infer one
-from the report date. Discord links may require signing in and joining the Sure
-server.
-
-Model identifiers below are preserved as reported, including namespaces and
-quantizations where supplied. An identifier for Ollama or LM Studio is not
-necessarily an OpenRouter model ID. **Local success does not establish OpenRouter
-compatibility**, and success with one feature does not establish success with all
-features.
-
-#### Reported successes
-
-| Model identifier as reported | Provider / runtime | Reported use cases | Report date and evidence |
-| --- | --- | --- | --- |
-| `qwen3-30b-a3b` | Local; the related integration report names Ollama and LM Studio | Chat with tool calling and transaction categorization; the detailed report describes good categorization performance | 2025-10-30: [detailed model report](https://discord.com/channels/1397639792258449498/1397639792748920978/1433545989276569671); 2025-10-22: [runtime and tool-calling report](https://discord.com/channels/1397639792258449498/1397639792748920978/1430625824243191941). No namespace or quantization supplied for this entry. |
-| `openai/gpt-oss-20b` | Local; the related integration report names Ollama and LM Studio | Chat with tool calling and transaction categorization | 2025-10-30: [detailed model report](https://discord.com/channels/1397639792258449498/1397639792748920978/1433545989276569671); 2025-10-22: [runtime and tool-calling report](https://discord.com/channels/1397639792258449498/1397639792748920978/1430625824243191941). These are local reports, despite the `openai/` namespace. |
-| `hf.co/unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF:Q3_K_M` | Local GGUF; serving runtime not stated in the success message | Merchant enrichment through transaction rules | 2026-01-05: [user confirmation](https://discord.com/channels/1397639792258449498/1397646278216646870/1457530697546727456). This is the non-thinking Instruct variant; the report is not a chat test. |
-| `openai/gpt-4o` | OpenRouter | OpenAI-compatible integration, including tool calling | 2025-10-22: [integration test report](https://discord.com/channels/1397639792258449498/1397639792748920978/1430625824243191941). Included as a hosted reference; this is not an open-weight model. |
-
-#### Partial successes and later failures
-
-- **Qwen3.5-9B:** [reported working well with Sure on 2026-03-02](https://discord.com/channels/1397639792258449498/1397639792748920978/1478133318422761572),
-  but the same person [reported chat failing on 2026-03-09](https://discord.com/channels/1397639792258449498/1397639792748920978/1480602409599373455)
-  with `TypeError: no implicit conversion of Hash into String`. Keep this as a
-  mixed historical result, not an unconditional recommendation. The success
-  message does not give a fully qualified model identifier or Sure version.
-- **Qwen3-VL through self-hosted Ollama:** [reported on 2026-10-23](https://discord.com/channels/1397639792258449498/1557234157585698907/1562992776084328460)
-  to pass the checks and complete some tasks with a **12K context window** and
-  **thinking disabled**. The reporter still needed to tune assistant behavior;
-  model size, exact identifier, and Sure version were not specified. Passing the
-  checks alone is not evidence of reliable end-to-end chat.
-
-#### Evaluation evidence is separate
-
-The [categorization evaluation report for `qwen/qwen3.5-35b-a3b`](https://discord.com/channels/1397639792258449498/1397639792748920979/1476575185137303593)
-(2026-02-26) records a successful benchmark run, not a chat/tool-calling test or
-an OpenRouter compatibility confirmation. Consult the
-[LLM Benchmarks](https://docs.sure.am/development/llm-benchmarks) for numerical
-comparisons; do not generalize a dataset score to every person's transactions.
-
-To contribute a report, include the **exact model ID and quantization**, **provider
-or serving runtime**, **Sure version**, **test date**, **successful and failing
-features** (chat/tool calling, categorization, merchant detection, or PDF import),
-and any required context or thinking settings. Link the original Discord report
-or public GitHub issue. Do not include API keys or personal financial data.
-
 ## Configuration via Settings UI
 
 For self-hosted deployments, you can configure AI settings through the web interface:
@@ -519,6 +469,21 @@ For self-hosted deployments, you can configure AI settings through the web inter
 5. Optionally set **Chat Response Timeout** — how long the chat waits for a whole turn before showing a "no response" error (default 90s). Raise it for slow local models; see [Chat Errors While the Model Is Still Generating](#chat-errors-while-the-model-is-still-generating).
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
+
+**Give the `web` and `worker` containers the same AI variables.** Each process reads its own
+environment: the web container decides which AI buttons and actions are offered, and the worker
+runs the AI jobs. When their AI variables differ, a feature can be offered that the worker can't
+run, or hidden although it would work. Settings saved in the UI are shared by both.
+
+**Which AI features are available** is decided in one place for every feature except chat, from
+the same settings: a button, rule action or MCP tool appears only when a configured model can do
+the work. For example, **Enhance merchants** appears on an install with only an Anthropic key, as
+merchant enhancement runs on Anthropic too.
+
+Chat, and the buttons that open it (the Bills AI review and prompt chips, **Review with AI** and
+**Dig in with AI**), keep their own check: the user's AI switch and a configured provider. They can
+appear when a custom endpoint has no model, or when chat doesn't accept the configured model, and
+then every chat turn fails with an error.
 
 ## External AI Assistant
 
@@ -624,7 +589,7 @@ curl -X POST https://your-sure-instance/mcp \
 
 ### OpenClaw Gateway Example
 
-[OpenClaw](https://github.com/luckyPipewrench/openclaw) is an AI agent gateway that exposes agents as OpenAI-compatible endpoints. If your agent runs behind OpenClaw, configure it like this:
+[OpenClaw](https://github.com/openclaw/openclaw) is an AI agent gateway that exposes agents as OpenAI-compatible endpoints. If your agent runs behind OpenClaw, configure it like this:
 
 ```bash
 ASSISTANT_TYPE=external
@@ -1710,9 +1675,13 @@ VECTOR_STORE_PROVIDER=pgvector
 # Embedding model configuration
 EMBEDDING_MODEL=mxbai-embed-large         # Default: mxbai-embed-large
 EMBEDDING_DIMENSIONS=1024                 # Default: 1024 (must match your model)
-EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to OPENAI_URI_BASE if not set
-EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN if not set
+EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to the OpenAI API Base URL (ENV or Settings) if not set
+EMBEDDING_ACCESS_TOKEN=                   # Falls back to the OpenAI Access Token (ENV or Settings) if not set
 ```
+
+The fallbacks include values saved in **Settings** → **Self-Hosting**. Before this release they
+read only `OPENAI_URI_BASE` and `OPENAI_ACCESS_TOKEN` from the environment, so an install that set
+its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key.
 
 Sure enables the `vector` extension when it first provisions the chunks table,
 provided the database user has permission. If the AI status page reports that

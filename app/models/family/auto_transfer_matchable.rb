@@ -46,10 +46,12 @@ module Family::AutoTransferMatchable
     include_rejected: true,
     restrict_cross_currency_to_linked_accounts: false,
     require_common_writer: false,
-    exclude_same_wise_item: false
+    exclude_same_connection_pairs: false,
+    require_compatible_categories: false
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
+    window_start, window_end = transfer_match_window(transaction_ids, date_window) if transaction_ids.present?
 
     Entry.find_by_sql([
       transfer_match_candidates_sql,
@@ -63,10 +65,13 @@ module Family::AutoTransferMatchable
         filter_transaction_ids: !transaction_ids.nil?,
         # IN () is invalid SQL, so an empty list binds a NULL that matches nothing.
         transaction_ids: transaction_ids.presence || [ nil ],
+        window_start:,
+        window_end:,
         include_rejected:,
         restrict_cross_currency_to_linked_accounts:,
         require_common_writer:,
-        exclude_same_wise_item:,
+        exclude_same_connection_pairs:,
+        require_compatible_categories:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
@@ -129,12 +134,16 @@ module Family::AutoTransferMatchable
       # Only pair accounts that at least one member can write to on both sides, so
       # someone can always confirm or reject the match.
       require_common_writer: true,
-      # Two balances of one Wise connection move money between each other only
-      # through conversions and Jar moves, which WiseItem#link_jar_transfers!
-      # links from Wise's own activity feed. Any other pair across them is a
-      # coincidence (a GBP top-up "matching" a USD payout), so it is never
-      # suggested here; the manual dialog still offers it.
-      exclude_same_wise_item: true
+      # Pairs a provider already links from its own feed, such as two balances
+      # of one connection (Provider::Base.auto_match_exclusion_sql), are never
+      # guessed here; the manual dialog still offers them.
+      exclude_same_connection_pairs: true,
+      # A cross-currency guess between two categorized transactions in different
+      # categories (a fuel purchase against an income) is not one movement of
+      # money. One uncategorized leg still matches, since providers often
+      # categorize only one side. Exact same-currency pairs, and pairs on a route
+      # the user has confirmed before, are not affected.
+      require_compatible_categories: true
     )
 
     # Track which transactions we've already matched to avoid duplicates
@@ -251,6 +260,17 @@ module Family::AutoTransferMatchable
       )
     end
 
+    # Both legs of any pair that touches one of `transaction_ids` lie within
+    # `date_window` days of that transaction, so within the ids' date span
+    # widened by the window. The id filter spans both legs and only applies
+    # once pairs are formed; this range narrows each leg before the join and
+    # drops no pair the id filter would keep. nil when none of the ids exist.
+    def transfer_match_window(transaction_ids, date_window)
+      first, last = Entry.where(entryable_type: "Transaction", entryable_id: transaction_ids)
+                         .pick(Arel.sql("MIN(entries.date)"), Arel.sql("MAX(entries.date)"))
+      [ first - date_window, last + date_window ] if first
+    end
+
     def coerce_transfer_match_date_window!(value)
       Integer(value)
     rescue ArgumentError, TypeError
@@ -290,28 +310,18 @@ module Family::AutoTransferMatchable
       SQL
     end
 
-    # With :exclude_same_wise_item, drops pairs whose two accounts are linked to
-    # balances (WiseAccounts) of the same WiseItem. Applied in both UNION branches,
-    # since two balances of one item may share a currency (a balance and its Jar)
-    # or not. Only auto_match_transfers! sets it (see the comment there); the
-    # manual "match as transfer" dialog leaves it off.
-    def same_wise_item_condition_sql
-      <<~SQL.squish
-        (:exclude_same_wise_item = FALSE OR NOT EXISTS (
-          SELECT 1
-          FROM account_providers inflow_wise_links
-          JOIN wise_accounts inflow_wise_accounts ON inflow_wise_accounts.id = inflow_wise_links.provider_id
-          JOIN account_providers outflow_wise_links ON (
-            outflow_wise_links.account_id = outflow_accounts.id AND
-            outflow_wise_links.provider_type = 'WiseAccount'
-          )
-          JOIN wise_accounts outflow_wise_accounts ON outflow_wise_accounts.id = outflow_wise_links.provider_id
-          WHERE
-            inflow_wise_links.account_id = inflow_accounts.id AND
-            inflow_wise_links.provider_type = 'WiseAccount' AND
-            outflow_wise_accounts.wise_item_id = inflow_wise_accounts.wise_item_id
-        ))
-      SQL
+    # With :exclude_same_connection_pairs, drops pairs that any registered provider
+    # adapter excludes through Provider::Base.auto_match_exclusion_sql. Applied in
+    # both UNION branches, since two balances of one connection may share a
+    # currency or not. Only auto_match_transfers! sets it (see the comment there);
+    # the manual "match as transfer" dialog leaves it off.
+    def provider_exclusion_condition_sql
+      exclusions = Provider::Factory.registered_adapters.filter_map do |adapter|
+        adapter.auto_match_exclusion_sql("inflow_accounts", "outflow_accounts")
+      end
+      return "TRUE" if exclusions.empty?
+
+      "(:exclude_same_connection_pairs = FALSE OR NOT (#{exclusions.map { |sql| "(#{sql})" }.join(" OR ")}))"
     end
 
     # Mirrors Account.writable_by for the `writers` row: owner or full_control share.
@@ -356,6 +366,12 @@ module Family::AutoTransferMatchable
     # them; a missing rate leaves the tolerance check NULL, which drops the pair.
     # A zero direct rate is treated as missing so it cannot mask a usable derived rate.
     #
+    # With :require_compatible_categories, the cross-currency branch also drops pairs
+    # whose legs are both categorized, in different categories, unless they lie on a
+    # confirmed route (computed only with :restrict_cross_currency_to_linked_accounts).
+    # Only auto_match_transfers! sets it; the exact same-currency branch, the manual
+    # dialog and the hint (which filters categories itself, more strictly) leave it off.
+    #
     # Candidates are ordered by match_rank before date_diff: exact same-currency matches
     # (rank 0) come before FX-tolerance guesses (rank 1). auto_match_transfers! consumes
     # candidates greedily, so without the rank a coincidental cross-currency candidate
@@ -366,6 +382,8 @@ module Family::AutoTransferMatchable
     # newlines) into single spaces -- a `--` SQL line comment anywhere in this heredoc would
     # swallow the remainder of the query. Put explanatory comments here in Ruby instead.
     def transfer_match_candidates_sql
+      provider_exclusion_condition = provider_exclusion_condition_sql
+
       <<~SQL.squish
         SELECT transfer_match_candidates.*
         FROM (
@@ -408,8 +426,12 @@ module Family::AutoTransferMatchable
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
             (:filter_transaction_ids = FALSE OR inflow_candidates.entryable_id IN (:transaction_ids) OR outflow_candidates.entryable_id IN (:transaction_ids)) AND
+            (:window_start IS NULL OR (
+              inflow_candidates.date BETWEEN :window_start AND :window_end AND
+              outflow_candidates.date BETWEEN :window_start AND :window_end
+            )) AND
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
-            #{same_wise_item_condition_sql} AND
+            #{provider_exclusion_condition} AND
             #{common_writer_condition_sql}
           UNION ALL
           SELECT
@@ -429,6 +451,8 @@ module Family::AutoTransferMatchable
             outflow_candidates.currency <> inflow_candidates.currency
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
+          JOIN transactions inflow_txns ON inflow_txns.id = inflow_candidates.entryable_id
+          JOIN transactions outflow_txns ON outflow_txns.id = outflow_candidates.entryable_id
           LEFT JOIN exchange_rates direct_rates ON (
             direct_rates.date = outflow_candidates.date AND
             direct_rates.from_currency = outflow_candidates.currency AND
@@ -493,13 +517,24 @@ module Family::AutoTransferMatchable
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
             (:filter_transaction_ids = FALSE OR inflow_candidates.entryable_id IN (:transaction_ids) OR outflow_candidates.entryable_id IN (:transaction_ids)) AND
+            (:window_start IS NULL OR (
+              inflow_candidates.date BETWEEN :window_start AND :window_end AND
+              outflow_candidates.date BETWEEN :window_start AND :window_end
+            )) AND
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
             (
               :restrict_cross_currency_to_linked_accounts = FALSE OR
               (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")}) OR
               confirmed_routes.outflow_account_id IS NOT NULL
             ) AND
-            #{same_wise_item_condition_sql} AND
+            (
+              :require_compatible_categories = FALSE OR
+              confirmed_routes.outflow_account_id IS NOT NULL OR
+              inflow_txns.category_id IS NULL OR
+              outflow_txns.category_id IS NULL OR
+              inflow_txns.category_id = outflow_txns.category_id
+            ) AND
+            #{provider_exclusion_condition} AND
             #{common_writer_condition_sql}
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.match_rank ASC, transfer_match_candidates.date_diff ASC
