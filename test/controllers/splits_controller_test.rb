@@ -69,6 +69,47 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert @entry.split_parent?
   end
 
+  test "create locks the category and merchant chosen for each part" do
+    post transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Groceries", amount: "-70", category_id: categories(:food_and_drink).id, merchant_id: merchants(:amazon).id },
+          { name: "Household", amount: "-30", category_id: "" }
+        ]
+      }
+    }
+
+    groceries, household = @entry.child_entries.in_split_order.map(&:entryable)
+    assert groceries.locked?(:category_id)
+    assert groceries.locked?(:merchant_id)
+    assert_not household.locked?(:category_id), "a part left without a category stays open to rules"
+  end
+
+  test "a rule run leaves a category chosen in the split dialog alone" do
+    @entry.transaction.update!(merchant: merchants(:amazon))
+    rule = Rule.create!(
+      family: @user.family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: merchants(:amazon).id) ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id) ]
+    )
+
+    post transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Groceries", amount: "-70", category_id: categories(:food_and_drink).id },
+          { name: "Reimbursable", amount: "-30", category_id: categories(:income).id }
+        ]
+      }
+    }
+
+    rule.apply
+
+    reimbursable = @entry.child_entries.find_by!(name: "Reimbursable").entryable
+    assert_equal categories(:income), reimbursable.reload.category
+  end
+
   test "create with mismatched amounts rejects" do
     assert_no_difference "Entry.count" do
       post transaction_split_path(@entry), params: {
@@ -284,6 +325,26 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     @entry.reload
     assert @entry.split_parent?
     assert_equal 3, @entry.child_entries.count
+  end
+
+  test "update locks the categories chosen for the new parts" do
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    patch transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Food", amount: "-60", category_id: categories(:food_and_drink).id },
+          { name: "Other", amount: "-40", category_id: categories(:income).id }
+        ]
+      }
+    }
+
+    children = @entry.reload.child_entries.map(&:entryable)
+    assert_equal 2, children.size
+    assert children.all? { |child| child.locked?(:category_id) }
   end
 
   test "update with mismatched amounts rejects" do

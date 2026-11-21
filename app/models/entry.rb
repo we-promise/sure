@@ -706,12 +706,12 @@ class Entry < ApplicationRecord
   # Replaces the children of a split under the same lock, so a concurrent unsplit can't be undone
   # and two edits can't both insert children. Returns false when the entry is no longer a split
   # parent. Editing an existing split doesn't re-check pending/transfer: it creates no new split.
-  def resplit!(splits)
+  def resplit!(splits, lock_attributes: false)
     with_split_lock do
       next false unless split_parent?
 
       unsplit!
-      split!(splits)
+      split!(splits, lock_attributes: lock_attributes)
       true
     end
   end
