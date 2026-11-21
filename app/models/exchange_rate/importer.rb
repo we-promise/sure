@@ -15,7 +15,7 @@ class ExchangeRate::Importer
   end
 
   def import_provider_rates
-    if !clear_cache && all_rates_exist?
+    if rates_up_to_date?
       Rails.logger.info("No new rates to sync for #{from} to #{to} between #{start_date} and #{end_date}, skipping")
       backfill_inverse_rates_if_needed
       return
@@ -114,10 +114,14 @@ class ExchangeRate::Importer
     end
   end
 
+  def rates_up_to_date?
+    !clear_cache && all_rates_exist?
+  end
+
   private
     attr_reader :exchange_rate_provider, :from, :to, :start_date, :end_date, :clear_cache, :current_provider_name
 
-    def upsert_rows(rows)
+    def upsert_rows(rows, on_duplicate: :update)
       batch_size = 200
 
       total_upsert_count = 0
@@ -126,6 +130,7 @@ class ExchangeRate::Importer
         upserted_ids = ExchangeRate.upsert_all(
           batch,
           unique_by: %i[from_currency to_currency date],
+          on_duplicate: on_duplicate,
           returning: [ "id" ]
         )
 
@@ -249,7 +254,9 @@ class ExchangeRate::Importer
         }
       end
 
-      upsert_rows(inverse_rows) if inverse_rows.any?
+      # Insert only: an inverse row stored by a concurrent import since the read
+      # above came from a newer forward rate and must not be overwritten.
+      upsert_rows(inverse_rows, on_duplicate: :skip) if inverse_rows.any?
     end
 
     # Inverses are stored to 12 decimal places, so a forward rate above 1e12
