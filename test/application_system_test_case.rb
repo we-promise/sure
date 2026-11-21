@@ -25,6 +25,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     Capybara.register_driver :selenium_remote_chrome do |app|
       options = Selenium::WebDriver::Chrome::Options.new
       options.add_argument("--window-size=1400,1400")
+      # Every session on the Selenium node shares one X display. A headed
+      # window there also receives the display's real pointer: when another
+      # session's window opens, resizes or closes over it, Chrome reports the
+      # pointer leaving whatever a test is hovering, and its tooltip closes.
+      # Headless sessions only receive WebDriver input. E2E_BROWSER=chrome
+      # shows the browser on the node's VNC, for watching a serial run.
+      options.add_argument("--headless=new") unless ENV["E2E_BROWSER"] == "chrome"
 
       Capybara::Selenium::Driver.new(
         app,
