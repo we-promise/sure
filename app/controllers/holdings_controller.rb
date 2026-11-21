@@ -74,7 +74,7 @@ class HoldingsController < ApplicationController
     # Validate ticker is present (form has required: true, but can be bypassed)
     if parsed[:ticker].blank?
       flash[:alert] = t(".security_not_found")
-      redirect_to account_path(@holding.account, tab: "holdings")
+      redirect_to_holdings_tab
       return
     end
 
@@ -94,27 +94,32 @@ class HoldingsController < ApplicationController
     new_security.failed_fetch_count = 0
     new_security.failed_fetch_at = nil
 
-    new_security.save!
-
-    # The remap and the re-materialization with the new security's prices
-    # commit together under the account row lock, taken first as a sync and a
-    # lot edit take it. The materializer's own lock! reloads the account, so
-    # it reads no associations cached before the remap.
+    # Saving the security, the remap and the re-materialization with the new
+    # security's prices commit together under the account row lock, taken
+    # first as a sync and a lot edit take it, so a failure at any step leaves
+    # nothing changed and the alert below is true. The materializer's own
+    # lock! reloads the account, so it reads no associations cached before
+    # the remap.
     # The around_action :switch_timezone already sets the family timezone
     # for this request, so Date.current is correct here.
     account = Account.find(@holding.account_id)
-    account.with_lock do
-      @holding.remap_security!(new_security)
-      strategy = account.linked? ? :reverse : :forward
-      Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
+    begin
+      account.with_lock do
+        new_security.save!
+        @holding.remap_security!(new_security)
+        strategy = account.linked? ? :reverse : :forward
+        Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
+      end
+    rescue StandardError => e
+      Rails.logger.warn("remap_security failed for holding #{@holding.id}: #{e.class}: #{e.message}")
+      Rails.error.report(e, handled: true, context: { holding_id: @holding.id, action: "remap_security" })
+      flash[:alert] = t(".failed")
+      redirect_to_holdings_tab
+      return
     end
 
     flash[:notice] = t(".success")
-
-    respond_to do |format|
-      format.html { redirect_to account_path(@holding.account, tab: "holdings") }
-      format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
-    end
+    redirect_to_holdings_tab
   end
 
   def sync_prices
@@ -161,22 +166,27 @@ class HoldingsController < ApplicationController
 
     # The reset and the re-materialization of both securities, as a remap
     # re-materializes its target, commit together under the account row lock,
-    # so the lots and holdings each takes back match before the next sync.
+    # so the lots and holdings each takes back match before the next sync,
+    # and a failure at any step rolls both back.
     account = Account.find(@holding.account_id)
-    account.with_lock do
-      @holding.reset_security_to_provider!
-      if reset
-        strategy = account.linked? ? :reverse : :forward
-        Balance::Materializer.new(account, strategy: strategy, security_ids: security_ids).materialize_balances
+    begin
+      account.with_lock do
+        @holding.reset_security_to_provider!
+        if reset
+          strategy = account.linked? ? :reverse : :forward
+          Balance::Materializer.new(account, strategy: strategy, security_ids: security_ids).materialize_balances
+        end
       end
+    rescue StandardError => e
+      Rails.logger.warn("reset_security failed for holding #{@holding.id}: #{e.class}: #{e.message}")
+      Rails.error.report(e, handled: true, context: { holding_id: @holding.id, action: "reset_security" })
+      flash[:alert] = t(".failed")
+      redirect_to_holdings_tab
+      return
     end
 
     flash[:notice] = t(".success")
-
-    respond_to do |format|
-      format.html { redirect_to account_path(@holding.account, tab: "holdings") }
-      format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
-    end
+    redirect_to_holdings_tab
   end
 
   private
@@ -200,6 +210,20 @@ class HoldingsController < ApplicationController
         }
       end
     end
+
+    # The drawer's forms submit inside its turbo-frame. A plain redirect is
+    # followed in that frame, which the account page doesn't have, so the
+    # drawer shows "Content missing" and the flash never appears. A
+    # turbo-stream request gets a redirect action, which visits the page.
+    def redirect_to_holdings_tab
+      url = account_path(@holding.account, tab: "holdings")
+
+      respond_to do |format|
+        format.html { redirect_to url }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, url) }
+      end
+    end
+
     def set_holding
       @holding = Current.family.holdings
                    .joins(:account)

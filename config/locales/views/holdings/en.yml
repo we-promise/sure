@@ -14,8 +14,10 @@ en:
     remap_security:
       success: Security updated successfully.
       security_not_found: Could not find the selected security.
+      failed: Couldn't update the security. Nothing was changed, please try again.
     reset_security:
       success: Security reset to provider value.
+      failed: Couldn't reset the security. Nothing was changed, please try again.
     sync_prices:
       success: Market data synced successfully.
       unavailable: Market data sync is not available for offline securities.
