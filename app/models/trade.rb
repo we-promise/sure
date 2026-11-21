@@ -124,8 +124,9 @@ class Trade < ApplicationRecord
 
   # Set by callers that list many sales: what this sale took from each lot, as
   # HoldingLotDisposal.readable_by_sale gives it, or nil where there is no
-  # readable record and the basis comes from the holding snapshot. Clears the
-  # memo, so a sale measured before the preload does not keep its old figure.
+  # readable record: the basis then comes from the holding snapshot, or under
+  # fifo is unknown. Clears the memo, so a sale measured before the preload
+  # does not keep its old figure.
   def preloaded_lot_disposals=(value)
     @preloaded_lot_disposals = value
     remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)

@@ -292,13 +292,20 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
   test "the query count does not grow with fifo disposals" do
     @account.update!(cost_basis_method: "fifo")
     seed_fifo_disposals(2)
+    # Once untimed, so a first-touch query cannot land in "few" alone. Its
+    # repeats would then come from the query cache, so that is cleared; the
+    # seeding below clears it for "many".
+    measure_fully(realized)
+    ActiveRecord::Base.connection.clear_query_cache
     few = capture_sql_queries { measure_fully(realized) }.size
 
     seed_fifo_disposals(4)
-    many = capture_sql_queries { measure_fully(realized) }.size
+    gains = realized
+    queries = capture_sql_queries { measure_fully(gains) }
 
-    assert_equal 6, realized.trade_count, "every fifo disposal must be measured, or this proves nothing"
-    assert_equal few, many, "2 fifo disposals and 6 must cost the same number of queries"
+    assert_equal 6, gains.trade_count, "every fifo disposal must be measured, or this proves nothing"
+    assert_equal few, queries.size, "2 fifo disposals and 6 must cost the same number of queries"
+    assert_equal 1, queries.count { |sql| sql.include?(%("holding_lot_disposals")) }, "one preload, not one per sale"
   end
 
   test "a fifo sale's gain is the cost of the lots it consumed" do
@@ -311,8 +318,9 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
 
     # 10 x (25 - 12) from the oldest lot, then 50 x (25 - 12) + 10 x (25 - 20).
     # Priced off the snapshot (the 30 left, at 20) it would be 70 x (25 - 20).
-    assert_equal 2, realized.trade_count
-    assert_equal BigDecimal(830), realized.net
+    gains = realized
+    assert_equal 2, gains.trade_count
+    assert_equal BigDecimal(830), gains.net
   end
 
   # Stored lots that no longer add up to the position say nothing reliable
@@ -320,10 +328,10 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
   # that cost either, so the gain is unknown rather than priced off it.
   test "a fifo sale whose lots do not add up to its position is excluded as gain unknown" do
     @account.update!(cost_basis_method: "fifo")
-    seed_fifo_disposals(1)
+    security = seed_fifo_disposals(1).first
     assert_equal 1, realized.trade_count, "the sale must measure while its lots add up, or this proves nothing"
 
-    @account.holdings.order(date: :desc).first.update_columns(qty: 7)
+    @account.holdings.where(security: security).order(date: :desc, id: :asc).first.update_columns(qty: 7)
 
     gains = realized
     assert_equal 0, gains.trade_count
@@ -445,15 +453,18 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
 
     # n securities in a fifo account, each bought once and sold in part on
     # its own day, materialized so each sale has a readable lot record.
+    # Returns the securities it created.
     def seed_fifo_disposals(count)
       @seeded ||= 0
-      count.times do
+      securities = Array.new(count) do
         security = create_security
         date = @march + (@seeded += 1)
         buy_trade account: @account, date: @march - 20, qty: 10, price: 12, security: security
         sell_trade account: @account, date: date, qty: 4, price: 25, security: security
+        security
       end
       Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+      securities
     end
 
     def create_account(currency: "USD")
