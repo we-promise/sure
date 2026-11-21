@@ -21,14 +21,16 @@ module Transactions::LocaleAwareCategoryMatching
     end
 
     # Sure's own names for the default category behind this group, in every supported
-    # locale. Defaults can be persisted under a member's locale rather than the family's
-    # (CategoriesController#bootstrap uses Current.user.locale), so checking only the
-    # family and default locales misses them.
+    # locale plus the family and default locales. Defaults can be persisted under a
+    # member's locale rather than the family's (CategoriesController#bootstrap uses
+    # Current.user.locale), and available locales such as `id` are not in SUPPORTED_LOCALES.
     def default_category_names(key)
       return [] if key.blank?
 
       @default_category_names ||= {}
-      @default_category_names[key] ||= Category.localized_default_names_for("models.category.defaults.#{key}")
+      @default_category_names[key] ||= Category.localized_default_names_for(
+        "models.category.defaults.#{key}", [ locale, I18n.default_locale ]
+      )
     end
 
     def match_candidates(candidates)
