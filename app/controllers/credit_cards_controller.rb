@@ -17,9 +17,9 @@ class CreditCardsController < ApplicationController
     # compare the limit before and after instead.
     @available_credit_before = @account.accountable&.available_credit
     super
-    # Only apply provider settings once the account update succeeded (redirect);
-    # a failed update renders :edit and must not persist the flag.
-    if response.redirect?
+    # Only apply provider settings once the account update succeeded; a failed
+    # update renders :edit and must not persist the flag.
+    if account_updated?
       update_enable_banking_settings
       update_lunchflow_settings
       update_simplefin_settings

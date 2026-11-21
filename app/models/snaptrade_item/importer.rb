@@ -327,7 +327,9 @@ class SnaptradeItem::Importer
         Rails.logger.error "SnaptradeItem::Importer - Failed to fetch activities: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
         register_error(e, context: "activities", account_id: snaptrade_account.id)
-        0
+        # nil, not 0: a fetch that failed is not SnapTrade still syncing, and
+        # must not queue the background job to repeat it.
+        nil
       end
     end
 

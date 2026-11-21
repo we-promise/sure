@@ -1,12 +1,15 @@
 class IncomeStatement::Totals
   include IncomeStatement::ScopedTransactionsQuery
 
-  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil)
+  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil, group_by_month: false)
     @family = family
     @transactions_scope = transactions_scope
     @date_range = date_range
     @include_trades = include_trades
     @included_account_ids = included_account_ids
+    @group_by_month = group_by_month
+
+    raise ArgumentError, "group_by_month requires include_trades" if @group_by_month && !@include_trades
 
     validate_date_range!
   end
@@ -22,13 +25,16 @@ class IncomeStatement::Totals
         classification: row["classification"],
         total: row["total"],
         transactions_count: row["transactions_count"],
-        is_uncategorized_investment: row["is_uncategorized_investment"]
+        is_uncategorized_investment: row["is_uncategorized_investment"],
+        month: row["month"]&.to_date
       )
     end
   end
 
   private
-    TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment)
+    TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment, :month) do
+      def initialize(month: nil, **rest) = super
+    end
 
     def query_sql
       ActiveRecord::Base.sanitize_sql_array([
@@ -45,6 +51,7 @@ class IncomeStatement::Totals
           parent_category_id,
           classification,
           is_uncategorized_investment,
+          #{"month," if @group_by_month}
           SUM(total) as total,
           SUM(entry_count) as transactions_count
         FROM (
@@ -52,7 +59,7 @@ class IncomeStatement::Totals
           UNION ALL
           #{trades_subquery_sql}
         ) combined
-        GROUP BY category_id, parent_category_id, classification, is_uncategorized_investment;
+        GROUP BY category_id, parent_category_id, classification, is_uncategorized_investment#{", month" if @group_by_month};
       SQL
     end
 
@@ -63,14 +70,13 @@ class IncomeStatement::Totals
           c.id as category_id,
           c.parent_id as parent_category_id,
           #{classification_sql("at")} as classification,
-          ABS(SUM(#{converted_amount_sql("at")})) as total,
+          ABS(COALESCE(SUM(#{converted_amount_sql("at")}), 0)) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
         #{entries_join_sql("at")}
         #{accounts_join_sql}
         LEFT JOIN categories c ON c.id = at.category_id
-        #{exchange_rates_join_sql}
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           AND ae.excluded = false
           AND a.family_id = :family_id
@@ -88,14 +94,13 @@ class IncomeStatement::Totals
           c.id as category_id,
           c.parent_id as parent_category_id,
           #{classification_sql("at")} as classification,
-          ABS(SUM(#{converted_amount_sql("at")})) as total,
+          ABS(COALESCE(SUM(#{converted_amount_sql("at")}), 0)) as total,
           COUNT(ae.id) as entry_count,
-          false as is_uncategorized_investment
+          false as is_uncategorized_investment#{",\n          date_trunc('month', ae.date)::date as month" if @group_by_month}
         FROM (#{@transactions_scope.to_sql}) at
         #{entries_join_sql("at")}
         #{accounts_join_sql}
         LEFT JOIN categories c ON c.id = at.category_id
-        #{exchange_rates_join_sql}
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           #{investment_activity_label_sql("at")}
           AND ae.excluded = false
@@ -104,7 +109,7 @@ class IncomeStatement::Totals
           AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, #{classification_sql("at")}
+        GROUP BY c.id, c.parent_id, #{classification_sql("at")}#{", date_trunc('month', ae.date)::date" if @group_by_month}
       SQL
     end
 
@@ -115,7 +120,7 @@ class IncomeStatement::Totals
       # Contributions/withdrawals are tracked separately as Transactions with activity labels
       <<~SQL
         SELECT NULL as category_id, NULL as parent_category_id, NULL as classification,
-               NULL as total, NULL as entry_count, NULL as is_uncategorized_investment
+               NULL as total, NULL as entry_count, NULL as is_uncategorized_investment#{",\n               NULL::date as month" if @group_by_month}
         WHERE false
       SQL
     end

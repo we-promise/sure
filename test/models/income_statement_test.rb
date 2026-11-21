@@ -232,6 +232,73 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
   end
 
+  test "monthly totals exclude scheduled entries until their date arrives" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    travel_to Date.current.beginning_of_month + 14.days do
+      create_transaction(account: @checking_account, amount: 100, date: Date.current)
+      create_transaction(account: @checking_account, amount: 250, date: Date.tomorrow)
+      period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+      month = Date.current.beginning_of_month
+      statement = IncomeStatement.new(@family)
+
+      assert_equal 100, statement.monthly_income_expense_totals(period: period).fetch(month)[:expense]
+      assert_equal statement.expense_totals(period: period).total,
+                   statement.monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    end
+  end
+
+  test "monthly totals refresh when the family currency changes" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    period = Period.current_month
+    month = Date.current.beginning_of_month
+
+    assert_equal 900, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    @family.update!(currency: "EUR")
+    assert_equal 810, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+  end
+
+  test "monthly totals refresh when an exchange rate changes" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @family.update!(currency: "EUR")
+    rate = ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    period = Period.current_month
+    month = Date.current.beginning_of_month
+
+    assert_equal 810, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    travel 1.second do
+      rate.update!(rate: 0.8)
+      assert_equal 720, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    end
+  end
+
+  test "monthly income/expense totals match per-month period totals" do
+    # Spread entries over two months
+    create_transaction(account: @checking_account, amount: -500, category: @income_category, date: 40.days.ago.to_date)
+    create_transaction(account: @checking_account, amount: 250, category: @groceries_category, date: 40.days.ago.to_date)
+
+    income_statement = IncomeStatement.new(@family)
+    start_date = 60.days.ago.to_date.beginning_of_month
+    period = Period.custom(start_date: start_date, end_date: Date.current)
+
+    monthly = income_statement.monthly_income_expense_totals(period: period)
+
+    month = start_date
+    while month <= Date.current
+      month_end = [ month.end_of_month, Date.current ].min
+      expected_income = income_statement.income_totals(period: Period.custom(start_date: month, end_date: month_end)).total
+      expected_expense = income_statement.expense_totals(period: Period.custom(start_date: month, end_date: month_end)).total
+
+      actual = monthly[month] || { income: 0.to_d, expense: 0.to_d }
+      assert_equal expected_income.to_d, actual[:income].to_d, "income mismatch for #{month}"
+      assert_equal expected_expense.to_d, actual[:expense].to_d, "expense mismatch for #{month}"
+
+      month = month.next_month
+    end
+  end
+
   test "orphaned categories still count as root category totals" do
     orphan_category = @family.categories.create! name: "Orphaned Category"
     orphan_category.update_column(:parent_id, SecureRandom.uuid)
@@ -280,6 +347,43 @@ class IncomeStatementTest < ActiveSupport::TestCase
     checking_only_totals = income_statement.totals_for(period, account_ids: [ @checking_account.id ])
     assert_equal Money.new(1000, @family.currency), checking_only_totals.income_money
     assert_equal Money.new(200, @family.currency), checking_only_totals.expense_money
+  end
+
+  test "totals_for limits totals to transactions carrying any of the tag ids" do
+    travel = @family.tags.create!(name: "Travel")
+    work = @family.tags.create!(name: "Work")
+    create_transaction(account: @checking_account, amount: 30, category: @food_category, tags: [ travel ])
+    create_transaction(account: @checking_account, amount: 50, category: @food_category, tags: [ work ])
+    create_transaction(account: @checking_account, amount: 20, category: @food_category, tags: [ travel, work ])
+    create_transaction(account: @checking_account, amount: -10, category: @income_category, tags: [ travel ])
+
+    totals = IncomeStatement.new(@family).totals_for(Period.last_30_days, tag_ids: [ travel.id, work.id ])
+
+    assert_equal Money.new(10, @family.currency), totals.income_money
+    assert_equal Money.new(30 + 50 + 20, @family.currency), totals.expense_money
+    assert_equal 4, totals.transactions_count
+  end
+
+  test "cached tagged totals follow tag changes that do not touch entries" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    period = Period.last_30_days
+    travel = @family.tags.create!(name: "Travel")
+    trip = @family.tags.create!(name: "Trip")
+    create_transaction(account: @checking_account, amount: 30, category: @food_category, tags: [ travel ])
+    toggled = create_transaction(account: @checking_account, amount: 50, category: @food_category).transaction
+    create_transaction(account: @checking_account, amount: 20, category: @food_category, tags: [ trip ])
+    expenses = -> { IncomeStatement.new(@family).totals_for(period, tag_ids: [ travel.id ]).expense_money }
+
+    assert_equal Money.new(30, @family.currency), expenses.call
+
+    toggled.toggle_tag!(travel)
+    assert_equal Money.new(80, @family.currency), expenses.call
+
+    trip.replace_and_destroy!(travel)
+    assert_equal Money.new(100, @family.currency), expenses.call
+
+    toggled.toggle_tag!(travel)
+    assert_equal Money.new(50, @family.currency), expenses.call
   end
 
   test "eligible_accounts excludes accounts not reflected in totals" do
@@ -372,6 +476,37 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 600.0, income_statement.avg_expense(interval: "month")
   end
 
+  # A month whose only expense has no exchange rate at all has no measurable
+  # spending, which is not the same as spending nothing. Counted as 0 it pulled
+  # the average and the median down to 50.
+  test "a month with nothing convertible is skipped by the average and median" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    krw_account = @family.accounts.create! name: "KRW Checking", currency: "KRW", balance: 0, accountable: Depository.new
+
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: Date.current.beginning_of_month)
+    create_transaction(account: krw_account, amount: 130_000, currency: "KRW", category: @groceries_category,
+                       date: Date.current.beginning_of_month.prev_month)
+
+    income_statement = IncomeStatement.new(@family)
+    assert_equal 100.0, income_statement.avg_expense(interval: "month")
+    assert_equal 100.0, income_statement.median_expense(interval: "month")
+    assert_equal 100.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "a month with nothing convertible between measurable months is left out of the category average" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    krw_account = @family.accounts.create! name: "KRW Checking", currency: "KRW", balance: 0, accountable: Depository.new
+    this_month = Date.current.beginning_of_month
+
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: this_month.prev_month(2))
+    create_transaction(account: krw_account, amount: 130_000, currency: "KRW", category: @groceries_category, date: this_month.prev_month)
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: this_month)
+
+    income_statement = IncomeStatement.new(@family)
+    assert_equal 100.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
+    assert_equal 100.0, income_statement.median_expense(interval: "month", category: @groceries_category)
+  end
+
   test "calculates category-specific median expense" do
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
@@ -411,6 +546,116 @@ class IncomeStatementTest < ActiveSupport::TestCase
     # CORRECT BUSINESS LOGIC: Calculates average of time-period totals for budget planning
     # All transactions in same month = monthly total of 600, so average = 600.0
     assert_equal 600.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "category average counts months without spending as zero" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    first_month = Date.current.beginning_of_month - 4.months
+    other_food_category = @family.categories.create! name: "Restaurants", parent: @food_category
+
+    # Groceries spends 300 once in four months; restaurants spends every month.
+    create_transaction(account: @checking_account, date: first_month, amount: 300, category: @groceries_category)
+    4.times do |i|
+      create_transaction(account: @checking_account, date: first_month + i.months, amount: 50, category: other_food_category)
+    end
+
+    income_statement = IncomeStatement.new(@family)
+    assert_equal 75.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
+    # The median stays the typical month with spending, so the budget hint is not $0.
+    assert_equal 300.0, income_statement.median_expense(interval: "month", category: @groceries_category)
+    assert_equal 50.0, income_statement.avg_expense(interval: "month", category: other_food_category)
+  end
+
+  test "category average starts at the category's first month, not the family's" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    this_month = Date.current.beginning_of_month
+
+    # Years of income history, one mistyped 1997 entry, and a new category.
+    create_transaction(account: @checking_account, date: Date.new(1997, 5, 1), amount: -5, category: @income_category)
+    24.times { |i| create_transaction(account: @checking_account, date: this_month - (i + 1).months, amount: -3000, category: @income_category) }
+    2.times { |i| create_transaction(account: @checking_account, date: this_month - (i + 1).months, amount: 1000, category: @groceries_category) }
+
+    assert_equal 1000.0, IncomeStatement.new(@family).avg_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "category average does not count the unfinished current month until it has spending" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    this_month = Date.current.beginning_of_month
+
+    3.times { |i| create_transaction(account: @checking_account, date: this_month - (i + 1).months, amount: 100, category: @groceries_category) }
+    create_transaction(account: @checking_account, date: this_month, amount: -3000, category: @income_category)
+
+    assert_equal 100.0, IncomeStatement.new(@family).avg_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "category average covers at most the last 12 months" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    this_month = Date.current.beginning_of_month
+    month_ago = ->(n) { this_month - n.months + 3.days }
+    childcare = @family.categories.create! name: "Childcare"
+    old_kids = @family.categories.create! name: "Kids (old)"
+
+    # A mistyped 1997 date, a one-off use 5 years ago, and a merged-in category from 4 years ago.
+    create_transaction(account: @checking_account, date: Date.new(1997, 5, 1), amount: 5, category: @groceries_category)
+    create_transaction(account: @checking_account, date: month_ago.(60), amount: 200, category: childcare)
+    create_transaction(account: @checking_account, date: month_ago.(48), amount: 50, category: old_kids)
+    6.times { |i| create_transaction(account: @checking_account, date: month_ago.(i + 1), amount: 300, category: @groceries_category) }
+    3.times { |i| create_transaction(account: @checking_account, date: month_ago.(i + 1), amount: 1000, category: childcare) }
+    3.times { |i| create_transaction(account: @checking_account, date: month_ago.(i + 1), amount: 1000, category: @food_category) }
+    old_kids.replace_and_destroy!(@food_category)
+
+    income_statement = IncomeStatement.new(@family)
+    assert_equal 150.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
+    assert_equal 250.0, income_statement.avg_expense(interval: "month", category: childcare)
+    assert_equal 250.0, income_statement.avg_expense(interval: "month", category: @food_category)
+  end
+
+  test "category average with current-month spending still covers at most 12 months" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    this_month = Date.current.beginning_of_month
+    12.times { |i| create_transaction(account: @checking_account, date: this_month - (i + 1).months, amount: 100, category: @groceries_category) }
+    create_transaction(account: @checking_account, date: this_month, amount: 220, category: @groceries_category)
+
+    # Months -11 .. -1 and the current month: (11 * 100 + 220) / 12.
+    assert_equal 110.0, IncomeStatement.new(@family).avg_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "a refund in the current month does not move the category's expense window" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    this_month = Date.current.beginning_of_month
+    3.times { |i| create_transaction(account: @checking_account, date: this_month - (i + 1).months, amount: 300, category: @groceries_category) }
+    create_transaction(account: @checking_account, date: this_month, amount: -50, category: @groceries_category)
+
+    assert_equal 300.0, IncomeStatement.new(@family).avg_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "category average after months without any activity covers the 12 months up to the current one" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    this_month = Date.current.beginning_of_month
+    # Spending in months -18 .. -7, nothing at all in months -6 .. -1, then the current month.
+    12.times { |i| create_transaction(account: @checking_account, date: this_month - (i + 7).months, amount: 100, category: @groceries_category) }
+    create_transaction(account: @checking_account, date: this_month, amount: 100, category: @groceries_category)
+
+    # Months -11 .. 0: months -11 .. -7 and the current month have 100.
+    assert_equal 50.0, IncomeStatement.new(@family).avg_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "category average covers the last 12 periods for weekly intervals" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    this_week = Date.current.beginning_of_week
+    70.times { |i| create_transaction(account: @checking_account, date: this_week - (i + 1).weeks, amount: 70, category: @groceries_category) }
+
+    assert_equal 70.0, IncomeStatement.new(@family).avg_expense(interval: "week", category: @groceries_category)
+  end
+
+  test "weekly category average with current-week spending still covers at most 12 weeks" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    this_week = Date.current.beginning_of_week
+    20.times { |i| create_transaction(account: @checking_account, date: this_week - (i + 1).weeks, amount: i == 11 ? 1300 : 100, category: @groceries_category) }
+    create_transaction(account: @checking_account, date: this_week, amount: 220, category: @groceries_category)
+
+    # Weeks -11 .. -1 and the current week; week -12 (1300) is outside the window.
+    assert_equal 110.0, IncomeStatement.new(@family).avg_expense(interval: "week", category: @groceries_category)
   end
 
   # NEW TESTS: Transfer and Kind Filtering
@@ -1002,6 +1247,88 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 1, totals_query_calls
   end
 
+  test "bill_expense_totals counts only the spending that paid bills, rolled into parents" do
+    pay_bill(groceries_bill, date: Date.current)
+
+    totals = bill_totals
+
+    assert_equal 50, totals[@groceries_category.id]
+    assert_equal 50, totals[@food_category.id]
+    assert_equal 900 + 50, IncomeStatement.new(@family).expense_totals(period: Period.current_month)
+                                                       .category_totals.find { |ct| ct.category == @food_category }.total
+  end
+
+  test "bill_expense_totals counts a payment once however many occurrences it settles" do
+    bill = groceries_bill
+    entry = pay_bill(bill, date: Date.current)
+    expect_bill(bill, due_on: Date.current + 1.day, amount: 10).allocations.create!(
+      entry: entry, allocated_amount: 10, currency: "USD", source: "auto_matched"
+    )
+
+    assert_equal 50, bill_totals[@food_category.id]
+  end
+
+  # Totals are cached for the day and linking a payment doesn't touch its
+  # entry, so the cache has to notice the allocation itself.
+  test "bill_expense_totals follows payments linked and unlinked the same day" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    bill = groceries_bill
+    entry = pay_bill(bill, date: Date.current)
+    assert_equal 50, bill_totals[@food_category.id]
+
+    allocation = RecurringAllocation.find_by!(entry: entry)
+    allocation.destroy!
+    assert_equal 0, bill_totals[@food_category.id]
+
+    relinked = allocation.recurring_occurrence.allocations.create!(
+      entry: entry, allocated_amount: 50, currency: "USD", source: "auto_matched", state: "suggested"
+    )
+    assert_equal 0, bill_totals[@food_category.id]
+
+    relinked.update!(state: "confirmed", source: "user_confirmed")
+    assert_equal 50, bill_totals[@food_category.id]
+  end
+
+  # The Allocator lets an entry be matched again once its bill was deleted or
+  # dismissed; the tombstone must not count it a second time, or at all.
+  test "bill_expense_totals ignores payments of ended bills" do
+    bill = groceries_bill
+    pay_bill(bill, date: Date.current)
+    bill.update_columns(status: "ended")
+
+    assert_equal 0, bill_totals[@food_category.id]
+  end
+
+  # A split payment is excluded and its children count in its place: the
+  # expense parts in their own categories, the transfer part not at all.
+  test "bill_expense_totals counts the spending parts of a split payment" do
+    fees = @family.categories.create!(name: "Fees")
+    split_payment(pay_bill(groceries_bill, date: Date.current),
+                  { amount: 30, category: @groceries_category },
+                  { amount: 15, category: fees },
+                  { amount: 5, kind: "funds_movement" })
+
+    totals = bill_totals
+
+    assert_equal 30, totals[@groceries_category.id]
+    assert_equal 30, totals[@food_category.id]
+    assert_equal 15, totals[fees.id]
+    assert_equal 45, IncomeStatement.new(@family).bill_expense_totals(period: Period.current_month).total
+  end
+
+  # Mid-month, so the future-dated payment still falls inside the period.
+  test "bill_expense_totals leaves out what expense_totals leaves out" do
+    travel_to Date.current.beginning_of_month + 14.days do
+      pay_bill(groceries_bill, date: Date.current).update!(excluded: true)
+      pay_bill(create_bill(category: @groceries_category, amount: 60, name: "Future", account: @checking_account), date: Date.current + 1.day)
+      hidden = @family.accounts.create!(name: "Hidden", currency: @family.currency, balance: 0,
+                                        accountable: Depository.new, exclude_from_reports: true)
+      pay_bill(create_bill(category: @groceries_category, amount: 70, name: "Hidden", account: hidden), date: Date.current)
+
+      assert_equal 0, bill_totals[@food_category.id]
+    end
+  end
+
   private
     # Adds a 250 grocery expense whose pending flag is +flag+ and asserts every
     # figure is the one without it: totals (Transaction.excluding_pending), the
@@ -1020,5 +1347,14 @@ class IncomeStatementTest < ActiveSupport::TestCase
       assert_equal 900.0, income_statement.median_expense(interval: "month")
       assert_equal 900.0, income_statement.avg_expense(interval: "month")
       assert_equal 900.0, income_statement.median_expense(interval: "month", category: @groceries_category)
+    end
+
+    def groceries_bill
+      create_bill(category: @groceries_category, amount: 50, name: "Veg box", account: @checking_account)
+    end
+
+    def bill_totals
+      IncomeStatement.new(@family).bill_expense_totals(period: Period.current_month)
+                     .category_totals.to_h { |ct| [ ct.category.id, ct.total ] }
     end
 end

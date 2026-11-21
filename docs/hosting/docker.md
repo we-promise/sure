@@ -65,6 +65,8 @@ To do this, you should get our .env.example as a starting point:
 curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 ```
 
+Optional linked-account balance anchoring is documented separately; see [Linked-account balance anchoring](balance-anchors.md) before enabling `BALANCE_REUSE_EXPLAINED_ANCHOR`.
+
 #### Generate the app secret key
 
 The app requires an environment variable called `SECRET_KEY_BASE` to run.
@@ -435,6 +437,18 @@ MARKET_DATA_SYNC_TIMEZONE=UTC     # IANA name such as Europe/Berlin; unknown nam
 
 **Upgrading from an earlier version:** the import used to be a fixed entry in `config/schedule.yml`. It is now created by the worker when it starts, from the settings above. Without any change on your side it keeps running at 22:00 UTC, Monday to Friday. If prices stop updating after an upgrade, open `/sidekiq` (see [Inspecting background jobs](#inspecting-background-jobs-sidekiq)), check that the **Cron** tab lists `import_market_data`, and look for `[MarketDataScheduler]` lines in the worker log (`docker compose logs worker`). Saving the import time once on the settings page recreates the job.
 
+### Hosts that sleep (laptops, NAS)
+
+Scheduled jobs such as the daily account sync and the market data import only run if the worker is awake within 10 minutes of their scheduled time. A run missed by more than that is skipped until the next day. If your host sleeps overnight, either schedule the jobs for a time it is awake, or let missed runs catch up by raising the grace period in your `.env` file:
+
+```txt
+SIDEKIQ_CRON_GRACE_PERIOD_SECONDS=86400   # default 600 (10 minutes)
+```
+
+When the worker wakes, each job then runs once for its most recent missed time, but only if that time is within the grace period; otherwise it waits for its next scheduled time (older missed runs are not replayed). For example, a Friday 22:00 import missed until Monday morning needs `259200` (3 days) to catch up; with `86400` it waits until Monday 22:00.
+
+The value only reaches the worker if your compose file passes it: the current `compose.example.yml` and `compose.example.ai.yml` forward it in the `x-rails-env` block. If your `compose.yml` was copied from an older example, add `SIDEKIQ_CRON_GRACE_PERIOD_SECONDS: ${SIDEKIQ_CRON_GRACE_PERIOD_SECONDS:-}` under `x-rails-env`. After changing it, run `docker compose up -d worker` (`docker compose -f compose.ai.yml up -d worker` for the AI compose file) to recreate the worker; `docker compose restart` keeps the old value.
+
 ## How to update your app
 
 The mechanism that updates your self-hosted Sure app is the GHCR (Github Container Registry) Docker image that you see in the `compose.yml` file:
@@ -677,7 +691,7 @@ Sure encrypts sensitive fields in the database, such as bank and provider creden
 > [!WARNING]
 > Encrypted data can only be read with the keys it was encrypted with. On an instance with data, don't change the three keys or `SECRET_KEY_BASE` except as described below, and keep `config/.env` (which backups include) private.
 
-Your own keys are recommended, because they don't depend on `SECRET_KEY_BASE`. If the boot log warns that `SECRET_KEY_BASE` is a value from an example compose file, the derived keys are public; see [Encryption key rotation](encryption.md).
+Your own keys are recommended, because they don't depend on `SECRET_KEY_BASE`. If the boot log warns that `SECRET_KEY_BASE` is a publicly known value, the derived keys are public; see [Encryption key rotation](encryption.md).
 
 ### Generate the keys
 

@@ -56,6 +56,17 @@ class TradeTest < ActiveSupport::TestCase
     sell = cross_currency_disposal(rate: 1.5, rate_date: Date.new(2026, 3, 9))
 
     assert_nil sell.realized_gain_loss, "a neighbouring day's rate is not this day's"
+    assert sell.realized_gain_unconvertible?
+  end
+
+  # No rate on any date means the gain is unknown, not zero and not the figure
+  # a rate of 1.0 would produce, and the caller can tell why.
+  test "a cross-currency disposal with no rate at all has no figure and says why" do
+    sell = cross_currency_disposal(rate: 1.5)
+    ExchangeRate.where(from_currency: "EUR", to_currency: "USD").delete_all
+
+    assert_nil sell.realized_gain_loss
+    assert sell.realized_gain_unconvertible?
   end
 
   # `exchange_rates` no longer stores a 0 or a negative, but the conversion
@@ -101,11 +112,10 @@ class TradeTest < ActiveSupport::TestCase
       create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR").entryable
     end
 
-    # The ivar directly, as ReportsController does on this branch -- there is
-    # no public writer for it upstream yet. Outside the capture on purpose: the
-    # cost being counted is the rates', not the holdings'.
+    # Outside the capture on purpose: the cost being counted is the rates', not
+    # the holdings'.
     holdings = account.holdings.to_a
-    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, holdings) }
+    trades.each { |trade| trade.preloaded_holdings = holdings }
 
     queries = capture_sql_queries do
       Trade.preload_exchange_rates(trades)
@@ -135,7 +145,7 @@ class TradeTest < ActiveSupport::TestCase
     end
 
     holdings = account.holdings.to_a
-    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, holdings) }
+    trades.each { |trade| trade.preloaded_holdings = holdings }
 
     queries = capture_sql_queries do
       Trade.preload_exchange_rates(trades)
@@ -147,6 +157,91 @@ class TradeTest < ActiveSupport::TestCase
     # 2 units at 150 EUR is 300 EUR of proceeds, 240 GBP at 0.8, against a basis
     # of 2 x 100 GBP.
     assert_equal [ BigDecimal(40) ] * 4, trades.map { |t| t.realized_gain_loss.value.amount }
+  end
+
+  # A sale is measured against its security's latest position on or before the
+  # sale: one row. Preloading used to read every holding of the sale's account
+  # instead, a row per security per day of its history.
+  test "preloading reads each disposal's basis position in one query" do
+    account, security = cross_currency_account
+    other = Security.create!(ticker: "OTH#{SecureRandom.hex(3)}", name: "Other")
+
+    (0..9).each do |offset|
+      date = Date.new(2026, 3, 1) + offset
+      account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                               amount: BigDecimal(750), currency: "USD", cost_basis: 100 + offset)
+      account.holdings.create!(security: other, date: date, qty: 5, price: 10,
+                               amount: BigDecimal(50), currency: "USD", cost_basis: 8)
+    end
+    early = create_trade(security, account: account, qty: -2, date: Date.new(2026, 3, 3), price: 150, currency: "USD").entryable
+    late = create_trade(security, account: account, qty: -2, date: Date.new(2026, 3, 20), price: 150, currency: "USD").entryable
+    unheld = create_trade(Security.create!(ticker: "NEW#{SecureRandom.hex(3)}", name: "Never held"),
+                          account: account, qty: -1, date: Date.new(2026, 3, 5), price: 10, currency: "USD").entryable
+    trades = Trade.where(id: [ early, late, unheld ].map(&:id)).includes(:entry).to_a
+
+    queries = capture_sql_queries { Trade.preload_basis_holdings(trades) }.grep(/holdings/)
+
+    assert_equal 1, queries.size, "three disposals cost one holdings query, not one each"
+    by_id = trades.index_by(&:id)
+    # The position on the sale's own date, and for a sale after the last
+    # snapshot the last one: never a later day's, nor another security's.
+    assert_equal BigDecimal(2 * 150 - 2 * 102), by_id[early.id].realized_gain_loss.value.amount
+    assert_equal BigDecimal(2 * 150 - 2 * 109), by_id[late.id].realized_gain_loss.value.amount
+    assert_no_queries_matching(/holdings/) { by_id[unheld.id].realized_gain_loss }
+  end
+
+  # A basis holding without a stored cost basis falls back to averaging its
+  # buys, which on its own is several queries per sale.
+  test "preloading reads the basis positions' average costs in the same pass" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 1), price: 100, currency: "USD")
+    (1..5).each do |day|
+      account.holdings.create!(security: security, date: Date.new(2026, 3, day), qty: 10, price: 150,
+                               amount: BigDecimal(1500), currency: "USD")
+    end
+    sales = [ 3, 5 ].map do |day|
+      create_trade(security, account: account, qty: -2, date: Date.new(2026, 3, day), price: 150, currency: "USD").entryable
+    end
+    trades = Trade.where(id: sales.map(&:id)).includes(:entry).to_a
+    Trade.preload_basis_holdings(trades)
+    trades.each { |trade| trade.preloaded_lot_disposals = nil }
+
+    queries = capture_sql_queries { trades.each(&:realized_gain_loss) }
+
+    assert_empty queries.grep(/SUM\(/), "no sale averages its buys on its own"
+    assert_equal [ BigDecimal(100) ] * 2, trades.map { |t| t.realized_gain_loss.value.amount }
+  end
+
+  test "a preloaded disposal measures the same as one that looks its position up" do
+    account, security = cross_currency_account
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 10), qty: 5, price: 150,
+                             amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+    sale = create_trade(security, account: account, qty: -2, date: Date.new(2026, 3, 12), price: 150, currency: "USD").entryable
+
+    looked_up = Trade.find(sale.id).realized_gain_loss.value
+    preloaded = Trade.find(sale.id).tap { |trade| Trade.preload_basis_holdings([ trade ]) }.realized_gain_loss.value
+
+    assert_equal looked_up, preloaded
+  end
+
+  # Two snapshots on the same day differ only by currency (a security remap can
+  # leave that). Every path settles on the same one, whatever the row order.
+  test "a same-day tie resolves to the account's currency on every path" do
+    account, security = cross_currency_account
+    date = Date.new(2026, 3, 10)
+    usd = account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                                   amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+    eur = account.holdings.create!(security: security, date: date, qty: 5, price: 140,
+                                   amount: BigDecimal(700), currency: "EUR", cost_basis: 90)
+    sale = create_trade(security, account: account, qty: -2, date: Date.new(2026, 3, 12), price: 150, currency: "USD").entryable
+
+    looked_up = Trade.find(sale.id).send(:basis_holding)
+    preloaded = Trade.find(sale.id).tap { |trade| Trade.preload_basis_holdings([ trade ]) }.send(:basis_holding)
+    given = [ [ eur, usd ], [ usd, eur ] ].map do |order|
+      Trade.find(sale.id).tap { |trade| trade.preloaded_holdings = order }.send(:basis_holding)
+    end
+
+    assert_equal [ usd.id ] * 4, [ looked_up, preloaded, *given ].map(&:id)
   end
 
   test "build_name generates buy trade name" do
@@ -264,6 +359,10 @@ class TradeTest < ActiveSupport::TestCase
   end
 
   private
+    def assert_no_queries_matching(pattern, &block)
+      assert_empty capture_sql_queries(&block).grep(pattern)
+    end
+
     # A position whose cost basis is known, which is what makes a fabricated
     # gain possible: without one, realized_gain_loss returns nil for any reason.
     def position_with_known_cost_basis
@@ -327,5 +426,19 @@ class TradeTest < ActiveSupport::TestCase
       security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
 
       [ account, security ]
+    end
+
+    test "label_for_side follows the side for Buy, Sell and a missing label, and keeps any other activity" do
+      trade = Trade.new(investment_activity_label: "Buy")
+      assert_equal "Sell", trade.label_for_side(sell: true)
+
+      trade.investment_activity_label = "Sell"
+      assert_equal "Buy", trade.label_for_side(sell: false)
+
+      trade.investment_activity_label = nil
+      assert_equal "Sell", trade.label_for_side(sell: true)
+
+      trade.investment_activity_label = "Sweep In"
+      assert_equal "Sweep In", trade.label_for_side(sell: true)
     end
 end

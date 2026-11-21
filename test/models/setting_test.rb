@@ -166,6 +166,49 @@ class SettingTest < ActiveSupport::TestCase
     assert_nil Setting.brand_fetch_icon_url("example.com")
   end
 
+  test "transform_brand_fetch_url renders a stored logo with the current client id and size" do
+    Setting.stubs(:brand_fetch_client_id).returns("new-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    assert_equal(
+      "https://cdn.brandfetch.io/walmart.com/icon/fallback/lettermark/w/120/h/120?c=new-client-id",
+      Setting.transform_brand_fetch_url("https://cdn.brandfetch.io/walmart.com/icon/fallback/lettermark/w/40/h/40?c=old-client-id")
+    )
+    assert_equal(
+      "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/120/h/120?c=new-client-id",
+      Setting.transform_brand_fetch_url("https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/40/h/40?c=old-client-id")
+    )
+  end
+
+  test "transform_brand_fetch_url keeps the stored client id when none is configured" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
+
+    stored = "https://cdn.brandfetch.io/walmart.com/icon/fallback/lettermark/w/40/h/40?c=old-client-id"
+    assert_equal stored, Setting.transform_brand_fetch_url(stored)
+  end
+
+  test "transform_brand_fetch_url leaves other logo URLs alone" do
+    Setting.stubs(:brand_fetch_client_id).returns("new-client-id")
+
+    assert_equal "https://plaid.com/walmart.png?c=old-client-id", Setting.transform_brand_fetch_url("https://plaid.com/walmart.png?c=old-client-id")
+    assert_nil Setting.transform_brand_fetch_url(nil)
+  end
+
+  test "integer_from_env treats a blank variable as unset" do
+    with_env_overrides("LLM_CONTEXT_WINDOW" => "") do
+      assert_nil Setting.integer_from_env("LLM_CONTEXT_WINDOW")
+    end
+
+    with_env_overrides("LLM_CONTEXT_WINDOW" => " 8192 ") do
+      assert_equal 8192, Setting.integer_from_env("LLM_CONTEXT_WINDOW")
+    end
+
+    with_env_overrides("LLM_CONTEXT_WINDOW" => nil) do
+      assert_nil Setting.integer_from_env("LLM_CONTEXT_WINDOW")
+    end
+  end
+
   test "LLM_PROVIDER env wins over a stored llm_provider" do
     original = Setting.raw_llm_provider
     Setting.llm_provider = "anthropic"

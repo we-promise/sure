@@ -40,7 +40,10 @@ class IncomeStatement::ScopedTransactionsQueryEquivalenceTest < ActiveSupport::T
 
     ExchangeRate.create! from_currency: "EUR", to_currency: "USD", date: 5.days.ago.to_date, rate: 2
     create_transaction(account: @eur, amount: 40, currency: "EUR", date: 5.days.ago.to_date)
-    create_transaction(account: @eur, amount: 10, currency: "EUR", date: 10.days.ago.to_date) # no rate row, falls back to 1
+    # Its own rate, so the legacy copy (no rate: 1) and the current rule (no
+    # rate that day: the nearest stored one) convert it the same way.
+    ExchangeRate.create! from_currency: "EUR", to_currency: "USD", date: 10.days.ago.to_date, rate: 1.5
+    create_transaction(account: @eur, amount: 10, currency: "EUR", date: 10.days.ago.to_date)
 
     create_transaction(account: @retirement, amount: 300, date: 5.days.ago.to_date) # tax-advantaged, excluded
     create_transaction(account: @unreported, amount: 45, date: 5.days.ago.to_date) # exclude_from_reports, excluded
@@ -54,8 +57,13 @@ class IncomeStatement::ScopedTransactionsQueryEquivalenceTest < ActiveSupport::T
         args = { transactions_scope: transactions_scope, date_range: @period.date_range,
                  include_trades: include_trades, included_account_ids: included_account_ids }
 
+        # Monthly grouping adds a dimension; ungrouped totals keep it nil.
+        expected_rows = LegacyIncomeStatementTotals.new(@family, **args).call.map do |row|
+          row.to_h.merge(month: nil)
+        end
+
         assert_equal_rows(
-          LegacyIncomeStatementTotals.new(@family, **args).call,
+          expected_rows,
           IncomeStatement::Totals.new(@family, **args).call,
           "Totals (include_trades: #{include_trades}, included_account_ids: #{included_account_ids.inspect})"
         )
