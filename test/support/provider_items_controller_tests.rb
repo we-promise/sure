@@ -34,7 +34,26 @@ module ProviderItemsControllerTests
         assert_equal "/#{key}_items/#{provider_item.id}/#{action}", path
         assert_equal({ controller: "#{key}_items", action: action, id: provider_item.id.to_s }, Rails.application.routes.recognize_path(path, method: verb))
       end
+      item_path = provider_routes.public_send(:"#{key}_item_path", provider_item)
+      { [ :post, "/#{key}_items" ] => "create", [ :patch, item_path ] => "update", [ :delete, item_path ] => "destroy" }.each do |(verb, path), action|
+        expected = { controller: "#{key}_items", action: action }
+        expected[:id] = provider_item.id.to_s unless action == "create"
+        assert_equal expected, Rails.application.routes.recognize_path(path, method: verb)
+      end
       assert_operator "#{key}_items_controller".camelize.constantize, :<, ProviderItemsController
+    end
+
+    test "provider kit: a connection has no index, new, show or edit page" do
+      key = provider_item.provider_key
+      item_path = "/#{key}_items/#{provider_item.id}"
+
+      [ "/#{key}_items", "/#{key}_items/new", item_path, "#{item_path}/edit" ].each do |path|
+        assert_raises(ActionController::RoutingError, "GET #{path}") { Rails.application.routes.recognize_path(path, method: :get) }
+      end
+
+      sign_in users(:family_member)
+      get "/#{key}_items/new"
+      assert_response :not_found
     end
 
     test "provider kit: a member who is not an admin can neither change the connection nor link accounts" do
@@ -42,7 +61,7 @@ module ProviderItemsControllerTests
       key = provider_item.provider_key
       item_path = provider_routes.public_send(:"#{key}_item_path", provider_item)
       requests = ACCOUNT_FLOW_ROUTES.map { |action, verb| [ verb, "/#{key}_items/#{action}" ] } +
-        [ [ :get, "/#{key}_items/new" ], [ :post, "/#{key}_items" ], [ :get, "#{item_path}/edit" ] ] +
+        [ [ :post, "/#{key}_items" ] ] +
         [ [ :post, "#{item_path}/sync" ], [ :patch, item_path ], [ :delete, item_path ],
           [ :get, "#{item_path}/setup_accounts" ], [ :post, "#{item_path}/complete_account_setup" ] ]
 

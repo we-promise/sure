@@ -552,7 +552,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
         File.read("config/routes.rb")
       end
 
-      line = "  resources :gocardless_items, only: %i[index new create show edit update destroy], concerns: :provider_items\n"
+      line = "  resources :gocardless_items, only: %i[create update destroy], concerns: :provider_items\n"
       assert_equal 1, routes.scan(line).size
       assert_operator routes.index(line), :>, routes.index("concern :provider_items do")
       assert_equal line, inserted_text(original, routes).lines.reject(&:blank?).join

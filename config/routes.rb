@@ -49,7 +49,7 @@ Rails.application.routes.draw do
       post :complete_account_setup
     end
   end
-  resources :mercury_items, only: %i[index new create show edit update destroy], concerns: :provider_items
+  resources :mercury_items, only: %i[create update destroy], concerns: :provider_items
 
   resources :wise_items, only: %i[index new create show edit update destroy] do
     collection do
@@ -69,7 +69,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :brex_items, only: %i[index new create show edit update destroy], concerns: :provider_items
+  resources :brex_items, only: %i[create update destroy], concerns: :provider_items
 
   resources :coinbase_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
@@ -933,7 +933,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :lunchflow_items, only: %i[index new create show edit update destroy], concerns: :provider_items
+  resources :lunchflow_items, only: %i[create update destroy], concerns: :provider_items
 
   resources :redbark_items, only: %i[create update destroy] do
     collection do
