@@ -1,5 +1,5 @@
 # Per-family overrides for the built-in AI prompts, editable from
-# /settings/ai_prompts so tuning them no longer needs a fork + redeploy.
+# /settings/ai_prompts.
 #
 # Every override is stored in one jsonb column, one per feature, and resolved
 # where the prompt is chosen: Ai::Prompt for categorization and merchant detection,

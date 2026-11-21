@@ -28,9 +28,8 @@ module Admin
     end
 
     # The results Ai::ProbeJob stored: opening the tab makes no AI request.
-    # Loaded through a lazy frame, so only the AI tab pays for it.
     def ai_status
-      @ai_health = AiHealth.new(stored_only: true)
+      @ai_health = AiHealth.new
       @worker_ai_health_results = WorkerAiHealth.recent
       render layout: false
     end

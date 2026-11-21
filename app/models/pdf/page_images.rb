@@ -43,11 +43,10 @@ module Pdf::PageImages
 
   # PNGs of `pages` (a 1-based Range or a list of page numbers; every page by default), in
   # order. Consecutive pages share one child; a gap is never rendered.
-  def render(content, pages: nil, dpi: DPI, binary: "pdftoppm", **limits)
-    limits = LIMITS.merge(limits)
+  def render(content, pages: nil, binary: "pdftoppm", timeout: LIMITS[:timeout])
     pdf = reader(content)
     wanted = pages_for(readable { pdf.page_count }, pages)
-    check_size!(pdf, numbers: wanted, dpi:)
+    check_size!(pdf, numbers: wanted)
 
     executable = executable(binary)
     raise Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary) unless executable
@@ -59,7 +58,7 @@ module Pdf::PageImages
       runs(wanted).each_with_index do |(first, last), index|
         prefix = File.join(dir, "run-#{index}", "page")
         Dir.mkdir(File.dirname(prefix))
-        by_page.merge!(render_run(executable, input, prefix, first:, last:, dpi:, limits:))
+        by_page.merge!(render_run(executable, input, prefix, first:, last:, timeout:))
       end
 
       missing = wanted - by_page.keys
@@ -94,22 +93,22 @@ module Pdf::PageImages
   def runs(numbers) = numbers.chunk_while { |previous, number| number == previous + 1 }.map { [ _1.first, _1.last ] }
 
   # One pdftoppm child, its output keyed by the absolute page number from the filename.
-  def render_run(executable, input, prefix, first:, last:, dpi:, limits:)
+  def render_run(executable, input, prefix, first:, last:, timeout:)
     pid = begin
-      Process.spawn({}, executable, "-png", "-r", dpi.to_s, "-f", first.to_s, "-l", last.to_s, input, prefix,
+      Process.spawn({}, executable, "-png", "-r", DPI.to_s, "-f", first.to_s, "-l", last.to_s, input, prefix,
                     unsetenv_others: true, pgroup: true, chdir: File.dirname(prefix), in: File::NULL, out: File::NULL, err: File::NULL,
-                    rlimit_cpu: limits[:cpu_seconds], rlimit_as: limits[:memory])
+                    rlimit_cpu: LIMITS[:cpu_seconds], rlimit_as: LIMITS[:memory])
     rescue SystemCallError => error
       raise Error.new("could not start pdftoppm: #{error.message}", code: :failed)
     end
 
     status = nil
     begin
-      status = wait(pid, limits[:timeout])
+      status = wait(pid, timeout)
     ensure
       kill_group(pid) unless status   # a timeout, or an interruption from outside: poppler doesn't outlive it
     end
-    raise Error.new("pdftoppm took longer than #{limits[:timeout]}s", code: :timeout) unless status
+    raise Error.new("pdftoppm took longer than #{timeout}s", code: :timeout) unless status
     unless status.success?
       raise Error.new("pdftoppm failed (#{status.signaled? ? "signal #{status.termsig}" : "exit #{status.exitstatus}"})", code: :failed)
     end
@@ -121,12 +120,12 @@ module Pdf::PageImages
 
   # From the pages' MediaBox, read by pdf-reader, which already parses every upload in process
   # for its text layer. A file it can't open is refused before poppler sees it.
-  def check_size!(pdf, numbers:, dpi:)
+  def check_size!(pdf, numbers:)
     numbers.each do |number|
       box = readable { pdf.page(number).rectangles[:MediaBox] }   # resolved, even when the PDF stores it as a reference
-      pixels = (box.width.abs * dpi / 72.0) * (box.height.abs * dpi / 72.0)
+      pixels = (box.width.abs * DPI / 72.0) * (box.height.abs * DPI / 72.0)
       if pixels > MAX_PIXELS
-        raise Error.new("page #{number} would be #{(pixels / 1e6).round} million pixels at #{dpi} dpi", code: :too_large)
+        raise Error.new("page #{number} would be #{(pixels / 1e6).round} million pixels at #{DPI} dpi", code: :too_large)
       end
     end
   end

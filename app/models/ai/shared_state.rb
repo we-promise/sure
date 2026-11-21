@@ -8,7 +8,7 @@ module Ai::SharedState
   # use a MemoryStore instead of the Redis that parallel test processes share.
   class RedisStore
     def write(key, value, expires_in:)
-      Sidekiq.redis { _1.call("SET", key, value, "EX", expires_in.to_i) }
+      Sidekiq.redis { _1.call("SET", key, value, "PX", (expires_in.to_f * 1000).ceil) }
     end
 
     def read(key) = Sidekiq.redis { _1.call("GET", key) }
@@ -21,7 +21,10 @@ module Ai::SharedState
 
     def store = @store ||= RedisStore.new
 
+    # Every value expires: nothing here outlives the work that wrote it.
     def write(key, value, expires_in:)
+      raise ArgumentError, "expires_in must be positive, got #{expires_in.inspect}" unless expires_in.to_f.positive?
+
       store.write(key, value.to_json, expires_in:)
     end
 

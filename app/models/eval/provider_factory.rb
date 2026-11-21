@@ -6,9 +6,8 @@
 # registry answers "what is this install configured to use"; this answers "what
 # is this particular run measuring".
 #
-# Both Eval::Runners::Base and Eval::Langfuse::ExperimentRunner call this. They
-# previously carried their own copies, so adding a provider meant two edits with
-# no failure signal if you made only one.
+# Both Eval::Runners::Base and Eval::Langfuse::ExperimentRunner call this, so a
+# provider is added in one place.
 class Eval::ProviderFactory
   Error = Class.new(StandardError)
 
@@ -65,7 +64,7 @@ class Eval::ProviderFactory
             base_url: uri_base, api_key: access_token, extra_headers: gateway_headers,
             responses_api: chat_provider.supports_responses_endpoint?,   # OPENAI_SUPPORTS_RESPONSES_ENDPOINT, as production
             # With no installed endpoint, the operator's OPENAI_REQUEST_TIMEOUT and JSON mode, as production.
-            location: uri_base.to_s.start_with?("http:") ? :local : :cloud,
+            location: Ai::Config::Endpoint.location_for(uri_base),
             timeout_seconds: installed&.timeout_seconds || Provider::Openai.request_timeout,
             json_mode: installed&.json_mode || Ai::LegacyEnvConfig.openai_json_mode
           )

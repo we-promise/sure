@@ -6,16 +6,6 @@ class Family::AutoMerchantDetector
   include RuleRun::AiProgress
   ai_feature :detect_merchants
 
-  def self.from_ai_job(ids:, family_id:, rule_run_id: nil)
-    new(Family.find(family_id), transaction_ids: ids, rule_run: (RuleRun.find_by(id: rule_run_id) if rule_run_id))
-  end
-
-  def initialize(family, transaction_ids: [], rule_run: nil)
-    @family = family
-    @transaction_ids = transaction_ids
-    @rule_run = rule_run
-  end
-
   def ai_generation
     if scope.none?
       Rails.logger.info("No transactions to auto-detect merchants for family #{family.id}")
@@ -66,12 +56,6 @@ class Family::AutoMerchantDetector
     modified_count
   end
 
-  # The modified counts reached the run per batch (apply_ai); this releases the rest.
-  def ai_finished(_count)
-    release_unhandled
-    @rule_run&.complete_job!
-  end
-
   def ai_failed(error)
     release_unhandled
     @rule_run&.fail_job!(error:, source: self.class.name, transaction_ids:)
@@ -83,25 +67,11 @@ class Family::AutoMerchantDetector
   end
 
   private
-    attr_reader :family, :transaction_ids
-
     def user_merchants_input
       @user_merchants_input ||= family.merchants.map do |merchant|
         {
           id: merchant.id,
           name: merchant.name
-        }
-      end
-    end
-
-    def transactions_input
-      scope.map do |transaction|
-        {
-          id: transaction.id,
-          amount: transaction.entry.amount.abs,
-          classification: transaction.entry.classification,
-          description: [ transaction.entry.name, transaction.entry.notes ].compact.reject(&:empty?).join(" "),
-          merchant: transaction.merchant&.name
         }
       end
     end

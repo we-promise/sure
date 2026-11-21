@@ -101,7 +101,6 @@ class Ai::Transport::Jev < Ai::Transport::Base
     end
 
     def ruby_llm_provider = endpoint.preset == :jev_openrouter ? :openrouter : :typesafe
-    def ruby_llm_protocol = nil
     def ruby_llm_api_base = endpoint.base_url.presence || DEFAULT_BASE
 
     def configure_provider(config)

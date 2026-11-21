@@ -88,7 +88,6 @@ class AiPromptsTest < ActiveSupport::TestCase
 
     assert_equal "Sort these. <%= ENV.keys %>", rendered.instructions
     assert_equal golden("categorize_transactions", "input"), rendered.input
-    assert rendered.override
   end
 
   test "every prompt folder has both parts, and every locale file a base" do

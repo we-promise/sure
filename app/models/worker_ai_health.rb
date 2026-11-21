@@ -76,7 +76,7 @@ class WorkerAiHealth
     end
 
     def stale?
-      checked_at.nil? || checked_at < WorkerAiHealth::STALE_AFTER.ago
+      checked_at < WorkerAiHealth::STALE_AFTER.ago
     end
 
     # Most-specific-first: a stale result can't be trusted as passing or
@@ -137,10 +137,12 @@ class WorkerAiHealth
     # STALE_AFTER are still returned (status: :stale) so an operator can see
     # a worker went quiet rather than the section going empty.
     def recent
-      results = Array(Ai::SharedState.read(STORE_KEY)).map { Snapshot.from_json(_1) }
-      # Filter out entries older than RETENTION
-      results = results.select { |r| r.checked_at && r.checked_at > RETENTION.ago }
-      results.sort_by { |r| r.checked_at || Time.at(0) }.reverse
+      Array(Ai::SharedState.read(STORE_KEY)).map { Snapshot.from_json(_1) }
+        .select { _1.checked_at > RETENTION.ago }
+        .sort_by(&:checked_at).reverse
+    rescue RedisClient::Error => error
+      Rails.logger.warn("Worker AI health unreadable: #{error.class.name}")
+      []
     end
 
     # Stable identity for "this OS process" -- hostname:pid. Good enough to

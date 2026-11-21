@@ -5,10 +5,10 @@ require "timeout"
 
 class AiHealth
   # Performs bounded, non-destructive checks against the exact services used
-  # by Sure. Ai::ProbeJob runs them in a worker and stores each result briefly
-  # in Ai::SharedState, where the admin page reads it (`stored_only:`) without
-  # calling a model. A failed check is recorded in both operator-facing debug
-  # logs and the application log.
+  # by Sure. Ai::ProbeJob runs them in a worker (`run: true`) and stores the
+  # results in Ai::SharedState once every check is done; the admin page reads
+  # them without calling a model. A failed check is recorded in both
+  # operator-facing debug logs and the application log.
   #
   # The checks go through the AI transports (Ai::Transport#probe) and the
   # clients Ai::Transport::Http builds, so a probe exercises the same client
@@ -41,21 +41,6 @@ class AiHealth
       def not_checked?
         status == :not_checked
       end
-    end
-
-    # The probe cache in Ai::SharedState, so the web reads what a worker probed. It takes the
-    # ActiveSupport::Cache calls #run makes.
-    class Store
-      def read(key)
-        json = Ai::SharedState.read(key)
-        Result.from_json(json) if json
-      end
-
-      def fetch(key, expires_in:)
-        read(key) || yield.tap { Ai::SharedState.write(key, _1, expires_in:) }
-      end
-
-      def delete(key) = Ai::SharedState.delete(key)
     end
 
     class Failure < StandardError
@@ -92,12 +77,18 @@ class AiHealth
       seconds.positive? ? seconds.seconds : DEFAULT_CACHE_TTL
     end
 
-    # force: probe even when a result is stored. stored_only: never probe; answer each check with
-    # its stored result, or not_checked (the admin page, which makes no AI request).
-    def initialize(force: false, stored_only: false, cache: Store.new)
-      @force = force
-      @stored_only = stored_only
-      @cache = cache
+    # run: probe now, and keep the results for #store!. Otherwise each check answers with its
+    # stored result, or not_checked, and no AI request is made.
+    def initialize(run: false)
+      @run = run
+      @results = {}
+    end
+
+    # Writes every result at once, so the first check's doesn't expire while the last one runs.
+    def store!
+      @results.each { |key, result| Ai::SharedState.write(key, result, expires_in: Probe.cache_ttl) }
+    rescue StandardError => error
+      record_store_failure(error)
     end
 
     # Whether the model is up, by the endpoint's `probe_check`
@@ -114,7 +105,8 @@ class AiHealth
         verification: probe_endpoint.probe_check
       ) do
         raise_unsupported_provider!(provider)
-        transport_for(probe_endpoint).probe(config_model(probe_endpoint, model), probe_endpoint.probe_check, timeout:)
+        probe_model = Ai::Config::Model.new(endpoint: probe_endpoint, name: model)
+        Ai::Transport.for(probe_endpoint).probe(probe_model, probe_endpoint.probe_check, timeout:)
       end
     end
 
@@ -136,8 +128,8 @@ class AiHealth
       ) do
         raise_unsupported_provider!(provider)
         probe_endpoint = config_endpoint(provider:, base_url: endpoint, api_key: access_token, responses_api: use_responses_endpoint)
-        transport = transport_for(probe_endpoint)
-        probe_model = config_model(probe_endpoint, model)
+        transport = Ai::Transport.for(probe_endpoint)
+        probe_model = Ai::Config::Model.new(endpoint: probe_endpoint, name: model)
 
         tool_called = confirming_tools_refusal(
           tools: -> { transport.probe(probe_model, :tools, timeout:) },
@@ -148,30 +140,12 @@ class AiHealth
       end
     end
 
-    def pdf_text_extraction(provider:, endpoint:, access_token:, model:, openai_compatible: false)
-      pdf_processing(
-        provider: provider,
-        endpoint: endpoint,
-        access_token: access_token,
-        model: model,
-        openai_compatible: openai_compatible,
-        component: "pdf_text_extraction",
-        verification: :synthetic_pdf_text,
-        processing_mode: :text
-      )
+    def pdf_text_extraction(**connection)
+      pdf_processing(**connection, component: "pdf_text_extraction", verification: :synthetic_pdf_text, processing_mode: :text)
     end
 
-    def pdf_vision_processing(provider:, endpoint:, access_token:, model:, openai_compatible: false)
-      pdf_processing(
-        provider: provider,
-        endpoint: endpoint,
-        access_token: access_token,
-        model: model,
-        openai_compatible: openai_compatible,
-        component: "pdf_vision_processing",
-        verification: :synthetic_pdf_vision,
-        processing_mode: :vision
-      )
+    def pdf_vision_processing(**connection)
+      pdf_processing(**connection, component: "pdf_vision_processing", verification: :synthetic_pdf_vision, processing_mode: :vision)
     end
 
     def openai_vector_store(endpoint:, access_token:)
@@ -207,19 +181,18 @@ class AiHealth
         dimensions: dimensions
       ) do
         probe_endpoint = config_endpoint(provider: :openai_compatible, base_url: endpoint, api_key: access_token, exact_base_url: true)
-        returned = transport_for(probe_endpoint).probe(config_model(probe_endpoint, model), :embedding, timeout:)
+        probe_model = Ai::Config::Model.new(endpoint: probe_endpoint, name: model)
+        returned = Ai::Transport.for(probe_endpoint).probe(probe_model, :embedding, timeout:)
         raise Failure, :dimensions_mismatch unless returned == dimensions
       end
     end
 
     private
-      attr_reader :cache, :force, :stored_only
 
       # The synthetic statement through ReadPdf on a one-entry plan, the production path:
       # its text layer, or for the vision check the page as an image (the PDF itself on Anthropic,
       # which reads PDFs natively).
-      def pdf_processing(provider:, endpoint:, access_token:, model:, openai_compatible:, component:, verification:,
-                         processing_mode:)
+      def pdf_processing(provider:, endpoint:, access_token:, model:, component:, verification:, processing_mode:)
         run(
           component: component,
           provider_key: provider,
@@ -265,23 +238,16 @@ class AiHealth
 
       def run(component:, provider_key:, endpoint: nil, model: nil, credential: nil, dimensions: nil, verification: nil)
         key = cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
-        return stored(key) if stored_only
+        return stored(key) unless @run
 
-        cache.delete(key) if force
-
-        result = nil
-        cache.fetch(key, expires_in: cache_ttl) do
-          result = perform(component:, provider_key:, endpoint:, model:) { yield }
-        end
-      rescue StandardError => error
-        record_cache_failure(error)
-        result || perform(component:, provider_key:, endpoint:, model:) { yield }
+        @results[key] = perform(component:, provider_key:, endpoint:, model:) { yield }
       end
 
       def stored(key)
-        cache.read(key) || self.class.not_checked
+        json = Ai::SharedState.read(key)
+        json ? Result.from_json(json) : self.class.not_checked
       rescue StandardError => error
-        record_cache_failure(error)
+        record_store_failure(error)
         self.class.not_checked
       end
 
@@ -303,11 +269,10 @@ class AiHealth
       # resolved and the probe's timeout. Only a probe of a server Ai::Config doesn't know (an
       # admin's ad-hoc check, or a test) builds one from those values alone.
       # The endpoint's own API choice stands unless the caller picks one (the tool-call probe).
-      def config_endpoint(provider:, base_url:, api_key:, responses_api: nil, extra_headers: nil, exact_base_url: nil)
+      def config_endpoint(provider:, base_url:, api_key:, responses_api: nil, exact_base_url: nil)
         configured = configured_endpoint(provider.to_sym)
         overrides = { base_url:, api_key:, timeout_seconds: timeout, max_retries: 0 }
         overrides[:responses_api] = responses_api unless responses_api.nil?
-        overrides[:extra_headers] = extra_headers if extra_headers
         overrides[:exact_base_url] = exact_base_url unless exact_base_url.nil?
         return configured.with(**overrides) if configured
 
@@ -323,10 +288,6 @@ class AiHealth
         when :openai_compatible then config.embedding_model&.endpoint
         end
       end
-
-      def config_model(endpoint, name) = Ai::Config::Model.new(endpoint:, name:)
-
-      def transport_for(endpoint) = Ai::Transport.for(endpoint)
 
       def raise_unsupported_provider!(provider)
         raise Failure, :unsupported_provider unless provider.to_sym.in?(%i[openai anthropic])
@@ -369,11 +330,7 @@ class AiHealth
         "#{CACHE_NAMESPACE}/#{fingerprint}"
       end
 
-      def cache_ttl = self.class.cache_ttl
-
-      def timeout
-        self.class.timeout
-      end
+      def timeout = Probe.timeout
 
       # Map a probe error to a machine-readable code for the admin AI status
       # page. Prefers an explicit `failure_code` the error carries (e.g. a
@@ -425,8 +382,8 @@ class AiHealth
         )
       end
 
-      def record_cache_failure(error)
-        message = "AI health probe cache failed"
+      def record_store_failure(error)
+        message = "AI health probe store failed"
         Rails.logger.warn("#{message}: #{error.class.name}")
         DebugLogEntry.capture(
           category: "ai_health",

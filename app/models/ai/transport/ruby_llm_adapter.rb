@@ -15,6 +15,18 @@ module Ai::Transport::RubyLlmAdapter
   }.freeze
 
   private
+    def run_probe(model, check, timeout:)
+      case check
+      when :models then probe_models(model, timeout:)
+      when :chat then probe_chat(model, timeout:)
+      when :tools then probe_tools(model, timeout:)
+      when :embedding then probe_embedding(model, timeout:)
+      end
+    end
+
+    # The protocol RubyLLM's provider speaks, where it has more than one.
+    def ruby_llm_protocol = nil
+
     # Settings RubyLLM would otherwise choose:
     # - request_timeout from the endpoint, or the probe's own (RubyLLM's default is 300 s per read);
     # - max_retries 0: Sure retries itself (Ai::Transport::Base#attempt);
@@ -30,7 +42,7 @@ module Ai::Transport::RubyLlmAdapter
         config.max_retries = 0
         config.http_proxy = Ai::Transport::Http.proxy_or_warn(ruby_llm_api_base)
         config.ssl = Ai::Transport::Http.faraday_ssl_options
-        config.faraday_adapter = Ai::Transport::Http.ruby_llm_adapter
+        config.faraday_adapter = Ai::Transport::Http::ProxyNetHttp   # RubyLLM's config can't force a direct connection
         config.auto_upload_large_files = false
         config.split_think_tags = true
         config.instrumenter = Ai::Transport::Instrumenter.new(config.instrumenter, map_error: method(:mapped_error), scrub: scrubber)
@@ -47,12 +59,11 @@ module Ai::Transport::RubyLlmAdapter
     # One completion for a generation, without running tools (`Chat#generate`). The schema
     # goes through `with_schema` on every protocol: `response_format` on
     # chat completions and the Responses API, Anthropic's native `output_config`. Returns
-    # [text, Ai::Tokens, raw id, finish reason]. A fallback request gets only what's left of the
+    # [text, Ai::Tokens, finish reason]. A fallback request gets only what's left of the
     # call's budget, so the call's fallbacks can't outlast it.
     def complete_json(request, schema: true, response_format: nil, effort: nil, provider_options: {})
       chat = ruby_llm_chat(request.model, timeout: within_budget(endpoint.timeout_seconds)).with_instructions(request.instructions)
-      max_tokens = request.max_tokens || request.model.max_output_tokens
-      chat.with_max_output_tokens(max_tokens) if max_tokens
+      chat.with_max_output_tokens(request.model.max_output_tokens) if request.model.max_output_tokens
       chat.with_schema(name: request.schema_name, schema: request.schema, strict: true) if schema
       chat.with_thinking(effort:) if effort
       options = provider_options.merge(response_format ? { response_format: } : {})
@@ -60,7 +71,7 @@ module Ai::Transport::RubyLlmAdapter
       chat.add_message(role: :user, content: request.input, attachments: ruby_llm_attachments(request.attachments).presence)
 
       message = mapping_errors { chat.generate }
-      [ message.content.to_s, Ai::Tokens.from_ruby_llm(message.tokens), raw_id(message), message.finish_reason ]
+      [ message.content.to_s, Ai::Tokens.from_ruby_llm(message.tokens), message.finish_reason ]
     end
 
     # Files inline, page images at high detail: `detail: "low"` shrinks a page to 512 pixels.
@@ -68,11 +79,6 @@ module Ai::Transport::RubyLlmAdapter
       attachments.map do |file|
         RubyLLM::Attachment.new(StringIO.new(file.data), filename: file.filename, resolution: (:high if file.image?))
       end
-    end
-
-    def raw_id(message)
-      body = message.raw.respond_to?(:body) ? message.raw.body : nil
-      body.is_a?(Hash) ? body["id"] : nil
     end
 
     # A parsed answer, or the error that ends the call: an answer cut at the output limit is

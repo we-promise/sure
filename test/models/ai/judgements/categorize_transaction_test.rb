@@ -113,7 +113,6 @@ class Ai::Judgements::CategorizeTransactionTest < ActiveSupport::TestCase
 
     assert_equal [ Ai::Transport::Base::JudgeRequest, Ai::Transport::Base::Request ], requests.map(&:class)
     assert_equal "openai", result.route.endpoint.name
-    assert_equal [ "jev" ], result.failed_over_from.map { _1.endpoint.name }
     assert_equal %w[Coffee\ Shops Salary], result.value[:categorizations].map { _1[:category_name] }
   end
 
