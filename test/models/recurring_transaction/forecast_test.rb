@@ -61,6 +61,33 @@ class RecurringTransaction::ForecastTest < ActiveSupport::TestCase
     end
   end
 
+  test "keeps a snoozed occurrence that lands on the next cycle's date as its own bill" do
+    travel_to Date.new(2026, 8, 13) do
+      series = create_series(name: "Snoozed", next_expected_date: Date.new(2026, 8, 21))
+      stored_occurrence(series, Date.new(2026, 8, 21)).update!(snoozed_until: Date.new(2026, 9, 21))
+
+      forecast = forecast_with(end_date: "2026-09-30")
+
+      assert_equal [ Date.new(2026, 9, 21), Date.new(2026, 9, 21) ], dates_for(forecast, series)
+      assert_equal 2, forecast.totals.count
+      assert_equal Money.new(200, @family.currency), forecast.totals.expense_money
+    end
+  end
+
+  test "does not continue the schedule into a stored cycle moved off the weekend" do
+    travel_to Date.new(2026, 8, 13) do
+      # 2026-08-22 is a Saturday; the occurrence is due Monday 2026-08-24.
+      series = create_series(name: "Weekend", next_expected_date: Date.new(2026, 8, 24), expected_day_of_month: 22, last_occurrence_date: Date.new(2026, 7, 22),
+                             weekend_adjust: "after")
+      saturday = stored_occurrence(series, Date.new(2026, 8, 22))
+      assert_equal Date.new(2026, 8, 24), saturday.due_on
+      saturday.update!(status: "paid", closed_at: Time.current)
+      series.recurring_occurrences.where("original_due_on > ?", saturday.original_due_on).delete_all
+
+      assert_equal [ Date.new(2026, 9, 22) ], dates_for(forecast_with(end_date: "2026-09-30"), series)
+    end
+  end
+
   test "leaves out disabled accounts unless active_accounts_only is off, as the list does" do
     account = accounts(:credit_card)
     series = create_series(name: "Old card fee", next_expected_date: 3.days.from_now.to_date, account: account)
