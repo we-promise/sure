@@ -128,9 +128,9 @@ module BillsHelper
   def entry_bill_allocations(entry)
     return [] unless preview_features_enabled?
 
-    entry.recurring_allocations
-         .includes(recurring_occurrence: :recurring_transaction)
-         .reject { |allocation| allocation.recurring_occurrence.nil? }
+    RecurringTransaction::Allocator.active_allocations(entry.recurring_allocations)
+                                   .includes(recurring_occurrence: :recurring_transaction)
+                                   .to_a
   end
 
   # The paycheck split into `[key, percent]` pairs; the caller owns the colours.
