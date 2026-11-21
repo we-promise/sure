@@ -1,0 +1,50 @@
+<%# locals: (account:, as_of: Date.current) %>
+
+<% gift_card = account.gift_card %>
+
+<div class="grid grid-cols-3 gap-2">
+  <%= summary_card title: t(".remaining") do %>
+    <%= format_money account.balance_money %>
+  <% end %>
+
+  <%= summary_card title: t(".initial_amount") do %>
+    <%= gift_card.initial_amount ? format_money(gift_card.initial_amount) : t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".spent") do %>
+    <%= gift_card.spent_amount ? format_money(gift_card.spent_amount) : t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".expires_on") do %>
+    <span class="flex items-center gap-2 flex-wrap">
+      <%= gift_card.expires_on ? l(gift_card.expires_on, format: :long) : t(".no_expiry") %>
+
+      <% if gift_card.expired?(as_of: as_of) %>
+        <%= render DS::Pill.new(label: t(".expired"), tone: :error, marker: false) %>
+      <% elsif gift_card.expiring_soon?(as_of: as_of) %>
+        <%= render DS::Pill.new(label: t(".expires_in", count: gift_card.days_until_expiry(as_of: as_of)), tone: :warning, marker: false) %>
+      <% end %>
+    </span>
+  <% end %>
+
+  <%= summary_card title: t(".card_format") do %>
+    <%= t("gift_cards.card_formats.#{gift_card.card_format}") %>
+  <% end %>
+</div>
+
+<% if gift_card.visible_codes_for(Current.user).any? || gift_card.visible_redeem_url_for(Current.user).present? %>
+  <div class="mt-4">
+    <%= render DS::Disclosure.new(title: t(".card_details"), align: :left) do %>
+      <%= render "gift_cards/credentials", account: account, revealed: false %>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="flex justify-center py-8">
+  <%= render DS::Link.new(
+    text: t(".edit_account_details"),
+    variant: "ghost",
+    href: edit_gift_card_path(account),
+    frame: :modal
+  ) %>
+</div>

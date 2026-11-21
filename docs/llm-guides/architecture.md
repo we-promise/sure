@@ -51,8 +51,10 @@ at the date that fits the figure. Mixed-currency paths are covered in
 
 Account uses a delegated `accountable` type. The supported types are defined in
 [Accountable](../../app/models/concerns/accountable.rb): asset types `Depository`,
-`Investment`, `Crypto`, `Property`, `Vehicle`, `OtherAsset`; liability types
-`CreditCard`, `Loan`, `OtherLiability`.
+`Investment`, `Crypto`, `Property`, `Vehicle`, `GiftCard`, `OtherAsset`; liability
+types `CreditCard`, `Loan`, `OtherLiability`. Types in `Accountable::PREVIEW_TYPES`
+are offered for creation only to users with preview features enabled; use
+`Accountable.types_for(user)` where a user picks a type.
 
 A daily balance records what an asset is worth or what is owed on a liability.
 For a depository account this is cash; for an investment account it includes cash

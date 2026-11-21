@@ -77,7 +77,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 13
+  CURRENT_BACKFILL_VERSION = 14
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -161,6 +161,7 @@ module ActiveRecordEncryptionConfig
     trading212_accounts: [ "Trading212Account", %i[raw_positions_payload raw_orders_payload raw_dividends_payload raw_transactions_payload] ],
     up_accounts: [ "UpAccount", %i[raw_payload raw_transactions_payload] ],
     wise_accounts: [ "WiseAccount", %i[raw_payload raw_transactions_payload] ],
+    gift_cards: [ "GiftCard", %i[card_number pin redeem_url] ],
     api_keys: [ "ApiKey", %i[display_key] ],
     sso_providers: [ "SsoProvider", %i[client_secret] ],
     sso_identity_blocks: [ "SsoIdentityBlock", %i[identity_label uid legacy_digest_key] ],

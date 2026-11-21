@@ -37,7 +37,7 @@ class Family::DataImporter
   VEHICLE_DETAIL_ATTRIBUTES = %w[make model year mileage_value mileage_unit].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
-    "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
+    "Property" => Property, "Vehicle" => Vehicle, "GiftCard" => GiftCard, "OtherAsset" => OtherAsset,
     "CreditCard" => CreditCard, "Loan" => Loan, "OtherLiability" => OtherLiability
   }.freeze
 
@@ -357,6 +357,7 @@ class Family::DataImporter
 
           # Copy any other accountable attributes
           safe_accountable_attrs = %w[subtype locked_attributes]
+          safe_accountable_attrs += accountable_class::IMPORTABLE_ATTRIBUTES if accountable_class.const_defined?(:IMPORTABLE_ATTRIBUTES, false)
           safe_accountable_attrs.each do |attr|
             if accountable.respond_to?("#{attr}=") && accountable_data[attr].present?
               accountable.send("#{attr}=", accountable_data[attr])

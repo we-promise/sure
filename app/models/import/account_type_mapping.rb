@@ -1,5 +1,6 @@
 class Import::AccountTypeMapping < Import::Mapping
   validates :value, presence: true
+  validate :preview_type_allowed, if: :will_save_change_to_value?
 
   class << self
     def mappables_by_key(import)
@@ -8,7 +9,7 @@ class Import::AccountTypeMapping < Import::Mapping
   end
 
   def selectable_values
-    Accountable::TYPES.map { |type| [ type.titleize, type ] }
+    Accountable.types_for(Current.user).map { |type| [ type.titleize, type ] }
   end
 
   def requires_selection?
@@ -22,4 +23,11 @@ class Import::AccountTypeMapping < Import::Mapping
   def create_mappable!
     # no-op
   end
+
+  private
+    def preview_type_allowed
+      return unless value.in?(Accountable::PREVIEW_TYPES) && !value.in?(Accountable.types_for(Current.user))
+
+      errors.add(:value, :inclusion, value: value)
+    end
 end
