@@ -69,6 +69,106 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
+  # paging
+  # ---------------------------------------------------------------------------
+
+  test "fetches every page of an account's transactions" do
+    _account, mercury_account = create_linked_account("acc_pages")
+    use_paging_provider("acc_pages")
+    MercuryItem::Importer.any_instance.stubs(:transactions_page_size).returns(2)
+    expect_page("acc_pages", offset: 0, limit: 2, ids: %w[tx_1 tx_2])
+    expect_page("acc_pages", offset: 2, limit: 2, ids: %w[tx_3 tx_4])
+    expect_page("acc_pages", offset: 4, limit: 2, ids: %w[tx_5])
+
+    result = run_import
+
+    assert_equal 5, result[:transactions_imported]
+    assert_equal %w[tx_1 tx_2 tx_3 tx_4 tx_5], mercury_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+  end
+
+  test "stores a transaction repeated across pages once" do
+    _account, mercury_account = create_linked_account("acc_repeat")
+    use_paging_provider("acc_repeat")
+    MercuryItem::Importer.any_instance.stubs(:transactions_page_size).returns(2)
+    expect_page("acc_repeat", offset: 0, limit: 2, ids: %w[tx_1 tx_2])
+    expect_page("acc_repeat", offset: 2, limit: 2, ids: %w[tx_2])
+
+    run_import
+
+    assert_equal %w[tx_1 tx_2], mercury_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+  end
+
+  test "a full page followed by an empty one stops after the empty page" do
+    _account, mercury_account = create_linked_account("acc_full")
+    use_paging_provider("acc_full")
+    MercuryItem::Importer.any_instance.stubs(:transactions_page_size).returns(2)
+    expect_page("acc_full", offset: 0, limit: 2, ids: %w[tx_1 tx_2])
+    expect_page("acc_full", offset: 2, limit: 2, ids: [])
+
+    run_import
+
+    assert_equal %w[tx_1 tx_2], mercury_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+  end
+
+  test "a short first page makes one request at the documented page size" do
+    create_linked_account("acc_short")
+    use_paging_provider("acc_short")
+    expect_page("acc_short", offset: 0, limit: 1000, ids: %w[tx_1])
+
+    assert_equal 1, run_import[:transactions_imported]
+  end
+
+  test "a failed later page leaves the stored transactions unchanged" do
+    _account, mercury_account = create_linked_account("acc_fail", raw_transactions: [ tx_payload("tx_old") ])
+    use_paging_provider("acc_fail")
+    MercuryItem::Importer.any_instance.stubs(:transactions_page_size).returns(2)
+    expect_page("acc_fail", offset: 0, limit: 2, ids: %w[tx_1 tx_2])
+    @provider.expects(:get_account_transactions).with("acc_fail", has_entries(offset: 2, limit: 2))
+             .raises(Provider::Mercury::MercuryError.new("Rate limited", :rate_limited))
+
+    result = run_import
+
+    assert_not result[:success]
+    assert_equal 1, result[:transactions_failed]
+    assert_equal %w[tx_old], mercury_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+  end
+
+  test "paging stops at the page cap when every page is full of new transactions" do
+    _account, mercury_account = create_linked_account("acc_runaway")
+    use_paging_provider("acc_runaway")
+    MercuryItem::Importer.any_instance.stubs(:transactions_page_size).returns(1)
+    pages = (1..MercuryItem::Importer::MAX_TRANSACTION_PAGES).map { |page| { transactions: [ tx_payload("tx_#{page}") ] } }
+    @provider.expects(:get_account_transactions).with("acc_runaway", anything)
+             .times(MercuryItem::Importer::MAX_TRANSACTION_PAGES)
+             .returns(*pages)
+
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync_warning").count }, 1 do
+      run_import
+    end
+
+    entry = DebugLogEntry.where(category: "provider_sync_warning").recent.first
+    assert_equal [ "mercury", "warn", mercury_account.account_provider ], [ entry.provider_key, entry.level, entry.account_provider ]
+    assert_equal(
+      { "mercury_item_id" => @item.id, "account_id" => "acc_runaway", "pages" => MercuryItem::Importer::MAX_TRANSACTION_PAGES, "page_size" => 1 },
+      entry.metadata
+    )
+  end
+
+  test "an API that ignores the offset stops after two requests" do
+    _account, mercury_account = create_linked_account("acc_no_offset")
+    use_paging_provider("acc_no_offset")
+    MercuryItem::Importer.any_instance.stubs(:transactions_page_size).returns(2)
+    @provider.expects(:get_account_transactions).with("acc_no_offset", anything).twice
+             .returns({ transactions: [ tx_payload("tx_1"), tx_payload("tx_2") ] })
+
+    assert_no_difference -> { DebugLogEntry.where(category: "provider_sync_warning").count } do
+      run_import
+    end
+
+    assert_equal %w[tx_1 tx_2], mercury_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+  end
+
+  # ---------------------------------------------------------------------------
   # sync window
   # ---------------------------------------------------------------------------
 
@@ -140,6 +240,19 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
       )
       AccountProvider.create!(provider: mercury_account, account: account)
       [ account, mercury_account ]
+    end
+
+    # A provider without the setup's catch-all transactions stub, so a request
+    # no test expects fails it.
+    def use_paging_provider(account_id)
+      @provider = mock("mercury_provider")
+      @provider.stubs(:get_accounts).returns({ accounts: [ account_payload(account_id, "Checking") ] })
+    end
+
+    def expect_page(account_id, offset:, limit:, ids:)
+      @provider.expects(:get_account_transactions)
+               .with(account_id, has_entries(offset: offset, limit: limit))
+               .returns({ transactions: ids.map { |id| tx_payload(id) } })
     end
 
     def account_payload(id, name, balance: 1_000.0)
