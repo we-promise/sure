@@ -39,6 +39,13 @@ class AccountTest < ActiveSupport::TestCase
     assert_empty account.negative_positions
   end
 
+  test "negative_positions skips the holdings query for an account without holdings" do
+    account = accounts(:depository)
+    account.expects(:holdings).never
+
+    assert_empty account.negative_positions
+  end
+
   test "linked cash and investment accounts hide balance updates by default" do
     assert accounts(:connected).hides_balance_updates_by_default?
 
