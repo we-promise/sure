@@ -111,8 +111,8 @@ class IbkrAccount::HoldingsProcessor
     # Each lot is valued at its own mark: a group holds every lot of one asset,
     # which for an unlisted position can span conids that IBKR marks separately.
     # price is the weighted average that amount and quantity imply. A bond lot
-    # quoted in another unit than per 100 face has its prices carried into it,
-    # so its value stays what IBKR reports.
+    # whose value is not its quantity x quoted price has its prices carried to
+    # it, so its value stays what IBKR reports.
     def valid_lots(rows)
       total_quantity = BigDecimal("0")
       total_cost = BigDecimal("0")
@@ -134,7 +134,7 @@ class IbkrAccount::HoldingsProcessor
         units = row_quantity.abs * quantity_multiplier(row)
         scale = price_scale(row)
         total_quantity += units
-        total_cost     += units * row_cost_basis * scale
+        total_cost     += lot_cost(row, units, row_cost_basis, scale)
         total_value    += units * row_price * scale
       end
 
@@ -146,6 +146,17 @@ class IbkrAccount::HoldingsProcessor
         amount: total_value,
         price: total_value / total_quantity
       }
+    end
+
+    # What a lot cost. A bond's costBasisMoney is IBKR's own figure, so it is
+    # taken as it stands: its price is carried to the lot's current value, which
+    # a value factor has moved off what was paid. Without it, the cost price is
+    # carried the way the mark price is.
+    def lot_cost(row, units, cost_basis_price, scale)
+      money = parse_decimal(row[:cost_basis_money]) if bond?(row)
+      return money.abs if money&.finite? && money.positive?
+
+      units * cost_basis_price * scale
     end
 
     def resolve_position_security(row)
@@ -226,8 +237,9 @@ class IbkrAccount::HoldingsProcessor
       )
     end
 
-    # A position quoted in another unit than per 100 face was carried into it,
-    # which the holding's price shows.
+    # A position whose value is not quantity x its quoted price (quoted per
+    # unit, or principal-adjusted) has its price carried to the value, which
+    # the holding's price shows.
     def capture_bond_unit_disagreements
       disagreements = bond_unit_disagreements(:positions)
       return if disagreements.empty?
@@ -235,7 +247,7 @@ class IbkrAccount::HoldingsProcessor
       DebugLogEntry.capture(
         category: "provider_sync",
         level: "warn",
-        message: "IBKR bond positions quoted in another unit than per 100 face",
+        message: "IBKR bond positions priced to their reported value",
         source: self.class.name,
         provider_key: "ibkr",
         account_provider: @ibkr_account.account_provider,

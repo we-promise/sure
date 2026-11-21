@@ -10,15 +10,16 @@ module IbkrAccount::DataHelpers
   # its own window and never rescales a trade stored by an earlier one, so a
   # unit that depended on the rows of the current report could differ from the
   # unit a bond's earlier trades were stored in. What does depend on the row is
-  # the price: IBKR's documentation does not say what the multiplier of a bond
-  # is (0.01 or the generic 1), so a row whose own value says it is quoted per
-  # unit, or per anything else, has its price carried into the 100 face unit,
-  # and quantity x price stays the value IBKR reported (see #price_scale).
+  # the price: it is the one that makes quantity x price the value IBKR reports
+  # for the row (see #price_scale). That is the quoted price for an ordinary
+  # bond, and carries an inflation index ratio, a pool factor or a quote per
+  # unit instead of per 100 face into the price for any other.
   BOND_MULTIPLIER = BigDecimal("0.01")
 
-  # How far, in orders of magnitude, a bond's implied unit factor may sit from
-  # a candidate (the reported multiplier, 1 or 0.01) to count as that one.
-  BOND_UNIT_TOLERANCE = 0.5
+  # How far a bond's price may sit from the quoted one, as a share of it,
+  # before the row is reported. The reported value is rounded to cents, so a
+  # lot of a few units can be reported from rounding alone.
+  BOND_PRICE_TOLERANCE = BigDecimal("0.001")
 
   # A bond is tracked under this prefix, its IBKR symbol and its contract id
   # (conid), as "BOND:<symbol>:<conid>". Trades carry no ISIN, and two bonds
@@ -120,25 +121,38 @@ module IbkrAccount::DataHelpers
       bond?(row) ? BOND_MULTIPLIER : BigDecimal("1")
     end
 
-    # What a row's own price is multiplied by to read per 100 face: 1 for a
-    # row quoted that way, 100 for one quoted per unit. Decided by the row alone,
-    # so a bond reads the same whichever sync imports it. 1 for a row with no
-    # value to tell, and for anything but a bond.
+    # What a bond row's quoted price is multiplied by so that quantity x price
+    # x 0.01 is the value the row reports (positionValue for a position,
+    # proceeds or tradeMoney for a trade): 1 for a row quoted per 100 face, 100
+    # for one quoted per unit, the index ratio or pool factor for a principal-
+    # adjusted bond. Accrued interest is booked as its own cash row (see the
+    # fixture), and the trade and position values are taken to be clean, so the
+    # quoted price is not moved by it. If a value does include some, it is
+    # carried into the price, a small deviation. 1 for a row with no usable
+    # value, and for anything but a bond.
     def price_scale(row)
       return BigDecimal("1") unless bond?(row)
 
-      row_unit_factor(row)&.then { |factor| factor / BOND_MULTIPLIER } || BigDecimal("1")
+      data = row.with_indifferent_access
+      quantity = parse_decimal(data[:position] || data[:quantity])
+      price = parse_decimal(data[:mark_price] || data[:trade_price])
+      value = [ data[:position_value], data[:proceeds], data[:trade_money] ]
+        .filter_map { |v| parse_decimal(v) }.find { |v| v.finite? && !v.zero? }
+      return BigDecimal("1") unless quantity&.finite? && price&.finite? && value && !quantity.zero? && !price.zero?
+
+      scale = value.abs / (quantity.abs * BOND_MULTIPLIER * price.abs)
+      scale.finite? && scale.positive? ? scale : BigDecimal("1")
     end
 
-    # For each bond with rows of this kind (:positions or :trades) quoted in
-    # another unit than per 100 face: its ticker, that unit and the factors of
-    # the rows that were carried into it. What a debug entry reports.
+    # For each bond with rows of this kind (:positions or :trades) whose price
+    # was moved off the quoted one: its ticker, its unit and the factors the
+    # prices were multiplied by. What a debug entry reports.
     def bond_unit_disagreements(kind)
       rows = kind == :positions ? raw_position_rows.select { |row| row[:side].to_s == "Long" } : raw_trade_rows
-      factors = bond_rows(rows).filter_map { |row| [ bond_ticker(row), row_unit_factor(row) ] }
+      factors = bond_rows(rows).map { |row| [ bond_ticker(row), price_scale(row) ] }
       factors.group_by(&:first).filter_map do |ticker, pairs|
-        others = pairs.map(&:last).compact.reject { |factor| factor == BOND_MULTIPLIER }
-        { ticker: ticker, unit_factor: BOND_MULTIPLIER.to_s("F"), differing_rows: others.size, row_unit_factors: others.uniq.map { |f| f.to_s("F") } } if others.any?
+        moved = pairs.map(&:last).reject { |scale| (scale - 1).abs <= BOND_PRICE_TOLERANCE }
+        { ticker: ticker, unit_factor: BOND_MULTIPLIER.to_s("F"), differing_rows: moved.size, row_price_factors: moved.uniq.map { |f| f.round(6).to_s("F") } } if moved.any?
       end
     end
 
@@ -152,36 +166,6 @@ module IbkrAccount::DataHelpers
 
     def bond_rows(rows)
       rows.select { |row| bond?(row) && bond_ticker(row) }
-    end
-
-    # The factor one row's own value implies, matched to the multiplier it
-    # reports, 1 and 0.01 -- the one that makes quantity x price equal the
-    # reported value (positionValue for a position, proceeds or tradeMoney for
-    # a trade). Nil for a row with nothing to check it against, or whose value
-    # fits none of them.
-    def row_unit_factor(row)
-      data = row.with_indifferent_access
-      implied = implied_unit_factor(data)
-      return nil unless implied
-
-      reported = parse_decimal(data[:multiplier])
-      candidates = [ reported, BigDecimal("1"), BOND_MULTIPLIER ].select { |c| c&.positive? }
-      best = candidates.min_by { |c| (Math.log10(implied.to_f) - Math.log10(c.to_f)).abs }
-      best if (Math.log10(implied.to_f) - Math.log10(best.to_f)).abs <= BOND_UNIT_TOLERANCE
-    end
-
-    # |value| / (|quantity| x |price|) for a position or a trade row, nil when
-    # the row lacks a figure to work it out from. Accrued interest and a bond's
-    # value factor move it a little, which the tolerance absorbs.
-    def implied_unit_factor(data)
-      quantity = parse_decimal(data[:position] || data[:quantity])
-      price = parse_decimal(data[:mark_price] || data[:trade_price])
-      value = [ data[:position_value], data[:proceeds], data[:trade_money] ]
-        .filter_map { |v| parse_decimal(v) }.find { |v| !v.zero? }
-      return nil unless quantity && price && value && !quantity.zero? && !price.zero?
-
-      factor = value.abs / (quantity.abs * price.abs)
-      factor.finite? ? factor : nil
     end
 
     def asset_category(row)

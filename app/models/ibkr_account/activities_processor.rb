@@ -329,8 +329,9 @@ class IbkrAccount::ActivitiesProcessor
       )
     end
 
-    # A trade quoted in another unit than per 100 face was carried into it,
-    # which the trade's price shows.
+    # A trade whose proceeds are not quantity x its quoted price (quoted per
+    # unit, or principal-adjusted) has its price carried to the proceeds, which
+    # the trade's price shows.
     def capture_bond_unit_disagreements
       disagreements = bond_unit_disagreements(:trades)
       return if disagreements.empty?
@@ -338,7 +339,7 @@ class IbkrAccount::ActivitiesProcessor
       DebugLogEntry.capture(
         category: "provider_sync",
         level: "warn",
-        message: "IBKR bond trades quoted in another unit than per 100 face",
+        message: "IBKR bond trades priced to their reported value",
         source: self.class.name,
         provider_key: "ibkr",
         account_provider: @ibkr_account.account_provider,

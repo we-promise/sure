@@ -253,22 +253,74 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("9725"), on_trade_day.amount
   end
 
-  test "a row quoted in another unit than per 100 face is reported" do
+  # An inflation-indexed or amortising bond is worth its face x price x a
+  # factor. IBKR reports the factored value in proceeds and positionValue and
+  # leaves the quantity at face, so the price is carried to what makes
+  # quantity x price the reported value.
+  test "a bond trade whose proceeds carry a value factor is imported at the proceeds" do
+    trade = @statement[:trades].find { |row| row["asset_category"] == "BOND" }
+    trade.merge!("proceeds" => "-11670.00", "ib_commission" => "0")
+
+    process!
+
+    entry = @account.entries.find_by!(external_id: "ibkr_trade_9102")
+    assert_equal BigDecimal("100"), entry.entryable.qty
+    assert_equal BigDecimal("116.7"), entry.entryable.price
+    assert_equal BigDecimal("11670"), entry.amount
+    assert_equal entry.amount, entry.entryable.qty * entry.entryable.price
+  end
+
+  test "a bond position whose value carries a value factor is imported at the position value" do
+    @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
+      .merge!("mark_price" => "97.25", "position_value" => "11670.00", "cost_basis_price" => "97.25", "cost_basis_money" => "9725.00")
+    @statement[:trades].find { |row| row["asset_category"] == "BOND" }
+      .merge!("proceeds" => "-11670.00", "ib_commission" => "0")
+
+    process!
+    materialize!
+
+    bond = holding_for(BOND_TICKER)
+    assert_equal BigDecimal("100"), bond.qty
+    assert_equal BigDecimal("11670"), bond.amount
+    # What was paid stays IBKR's cost, not the value factor's.
+    assert_equal BigDecimal("9725"), bond.qty * bond.cost_basis
+
+    security = Security.find_by!(ticker: BOND_TICKER)
+    assert_no_units_before_the_purchase(security)
+    on_trade_day = @account.holdings.find_by!(security: security, date: Date.new(2026, 4, 2))
+    assert_equal BigDecimal("11670"), on_trade_day.amount
+
+    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions priced to their reported value")
+    assert_equal [ "1.2" ], entry.metadata["bonds"].sole["row_price_factors"]
+  end
+
+  test "a value that is zero or not a number leaves the quoted price" do
+    position = @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
+    position["position_value"] = "NaN"
+    @statement[:trades].find { |row| row["asset_category"] == "BOND" }.merge!("proceeds" => "0", "trade_money" => "0")
+
+    process!
+
+    assert_equal [ BigDecimal("100"), BigDecimal("98.5") ], holding_for(BOND_TICKER).then { |h| [ h.qty, h.price ] }
+    assert_equal BigDecimal("97.25"), @account.entries.find_by!(external_id: "ibkr_trade_9102").entryable.price
+  end
+
+  test "a row priced to a value other than its quoted price is reported" do
     per_unit_position!
 
     process!
 
-    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions quoted in another unit than per 100 face")
+    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions priced to their reported value")
     assert_equal "warn", entry.level
     bond = entry.metadata["bonds"].sole
     assert_equal BOND_TICKER, bond["ticker"]
     assert_equal "0.01", bond["unit_factor"]
-    assert_equal [ "1.0" ], bond["row_unit_factors"]
-    assert_nil DebugLogEntry.find_by(provider_key: "ibkr", message: "IBKR bond trades quoted in another unit than per 100 face")
+    assert_equal [ "100.0" ], bond["row_price_factors"]
+    assert_nil DebugLogEntry.find_by(provider_key: "ibkr", message: "IBKR bond trades priced to their reported value")
   end
 
   test "rows quoted per 100 face report nothing" do
-    assert_no_difference -> { DebugLogEntry.where(provider_key: "ibkr", message: [ "IBKR bond trades quoted in another unit than per 100 face", "IBKR bond positions quoted in another unit than per 100 face" ]).count } do
+    assert_no_difference -> { DebugLogEntry.where(provider_key: "ibkr", message: [ "IBKR bond trades priced to their reported value", "IBKR bond positions priced to their reported value" ]).count } do
       process!
     end
   end
@@ -288,8 +340,8 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("14900"), bond.amount
     assert_in_delta 14675, bond.qty * bond.cost_basis, 0.01
 
-    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions quoted in another unit than per 100 face")
-    assert_equal [ "1.0" ], entry.metadata["bonds"].sole["row_unit_factors"]
+    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions priced to their reported value")
+    assert_equal [ "100.0" ], entry.metadata["bonds"].sole["row_price_factors"]
     assert_equal "0.01", entry.metadata["bonds"].sole["unit_factor"]
   end
 
@@ -304,7 +356,7 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("100"), @account.entries.find_by!(external_id: "ibkr_trade_9102").entryable.qty
     assert_equal BigDecimal("97.25"), @account.entries.find_by!(external_id: "ibkr_trade_9102").entryable.price
-    assert_nil DebugLogEntry.find_by(provider_key: "ibkr", message: "IBKR bond positions quoted in another unit than per 100 face")
+    assert_nil DebugLogEntry.find_by(provider_key: "ibkr", message: "IBKR bond positions priced to their reported value")
   end
 
   test "a bond sold since has no position and counts in the unit its trades imply" do
