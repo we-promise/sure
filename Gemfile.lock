@@ -772,7 +772,7 @@ GEM
       ffi (~> 1.12)
       logger
     ruby2_keywords (0.0.5)
-    ruby_llm (2.2.2)
+    ruby_llm (2.2.3)
       base64
       faraday (>= 1.10.0, != 2.0.0)
       faraday-multipart (>= 1)
