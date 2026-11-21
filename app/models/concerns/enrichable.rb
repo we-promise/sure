@@ -75,14 +75,9 @@ module Enrichable
           self[attr_key.to_s]
         end
 
-        # Normalize arrays for comparison (sort them). Repeats are dropped
-        # because the setters that take arrays (tag_ids=) store each value once;
-        # tag ids are compared as uuids, as tag_ids= casts them, so the same id
-        # in another case is no change.
         if current_value.is_a?(Array) && attr_value.is_a?(Array)
           current_values[attr_key] = current_value
-          normalize = attr_key.to_s == "tag_ids" ? ->(values) { values.map { |v| Tag.type_for_attribute(:id).cast(v) || v } } : :itself.to_proc
-          normalize.call(current_value).uniq.sort == normalize.call(attr_value).uniq.sort
+          same_enrichable_array?(attr_key, current_value, attr_value)
         else
           current_values[attr_key] = current_value
           current_value == attr_value
@@ -195,7 +190,12 @@ module Enrichable
       attrs_to_unlock = ai_enrichments.select do |enrichment|
         attr_name = enrichment.attribute_name
         current_value = respond_to?(attr_name) ? send(attr_name) : self[attr_name]
-        current_value.to_s == enrichment.value.to_s && enrichment.metadata&.dig("superseded") != true
+        same_value = if current_value.is_a?(Array) && enrichment.value.is_a?(Array)
+          same_enrichable_array?(attr_name, current_value, enrichment.value)
+        else
+          current_value.to_s == enrichment.value.to_s
+        end
+        same_value && enrichment.metadata&.dig("superseded") != true
       end.map(&:attribute_name).uniq
 
       # Batch unlock in a single update
@@ -249,5 +249,16 @@ module Enrichable
 
     def ignored_enrichable_attributes
       %w[id updated_at created_at]
+    end
+
+    # Arrays are compared as sets: the setters that take them (tag_ids=) store
+    # each value once, in no order the caller chose.
+    def same_enrichable_array?(attr, a, b)
+      enrichable_array_values(attr, a).uniq.sort == enrichable_array_values(attr, b).uniq.sort
+    end
+
+    # Override to compare an array attribute's values as its setter reads them.
+    def enrichable_array_values(_attr, values)
+      values
     end
 end

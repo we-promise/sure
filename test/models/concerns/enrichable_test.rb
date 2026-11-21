@@ -228,4 +228,31 @@ class EnrichableTest < ActiveSupport::TestCase
       refute txn.enrich_attribute(:tag_ids, [ tag.id, tag.id.upcase ], source: "rule")
     end
   end
+
+  # tag_ids= keeps no order the caller chose, so the same tags reordered are
+  # not an enrichment.
+  test "the same tag ids in another order are not an enrichment" do
+    txn = transactions(:transfer_out)
+    txn.update!(tag_ids: [ tags(:one).id, tags(:two).id ])
+
+    assert_no_difference "DataEnrichment.count" do
+      refute txn.enrich_attribute(:tag_ids, txn.reload.tag_ids.reverse, source: "rule")
+    end
+  end
+
+  # The provenance is what tag_ids= stored, which clearing the AI cache
+  # compares the transaction's tags against before it unlocks them.
+  test "an AI tag enrichment with a repeated id unlocks when the AI cache is cleared" do
+    txn = transactions(:transfer_out)
+    tag = tags(:one)
+    txn.update!(tag_ids: [])
+
+    assert txn.enrich_attribute(:tag_ids, [ tag.id, tag.id.upcase ], source: "ai")
+    txn.lock_attr!(:tag_ids)
+    assert txn.reload.locked?(:tag_ids), "precondition: the AI's tags are locked"
+
+    txn.clear_ai_cache
+
+    assert_not txn.reload.locked?(:tag_ids)
+  end
 end

@@ -708,6 +708,14 @@ class Transaction < ApplicationRecord
   end
 
   private
+    # tag_ids= casts its ids as uuids, so ids differing only in case name one tag.
+    def enrichable_array_values(attr, values)
+      return super unless attr.to_s == "tag_ids"
+
+      id_type = Tag.type_for_attribute(:id)
+      values.map { |id| id_type.cast(id) || id }
+    end
+
     # Another writer can tag this transaction between it loading its tags and
     # saving, so the insert hits index_taggings_unique. Retry once with fresh
     # tags, inside a savepoint so an enclosing transaction survives the error.
