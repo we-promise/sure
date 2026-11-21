@@ -201,9 +201,14 @@ class UI::Account::Chart < ApplicationComponent
   end
 
   # The Total value view of an account that holds trades draws a second line:
-  # what has been put in, net of what was taken out.
+  # what has been put in, net of what was taken out. Not for a period whose
+  # value line starts before the line can count (see
+  # Account::Chartable#net_contributions_comparable?).
   def show_net_contributions?
-    @net_contributions && view == "balance" && account.supports_trades?
+    return @show_net_contributions if defined?(@show_net_contributions)
+
+    @show_net_contributions = @net_contributions && view == "balance" && account.supports_trades? &&
+      account.net_contributions_comparable?(value_dates: series.values.map(&:date))
   end
 
   # The second line for the chart controller: each point's net contributions

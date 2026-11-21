@@ -40,6 +40,16 @@ module Account::Chartable
       .net_contributions_incomplete?(anchor_date: net_contributions_anchor_date, dates: value_dates)
   end
 
+  # False when the Total value line over `value_dates` kept points from
+  # before a linked investment account's supported history starts. The
+  # normalizer trims the line to that start only when some point is on or
+  # after it, while net contributions always count from it, so there is no
+  # line to set beside those points.
+  def net_contributions_comparable?(value_dates:)
+    anchor_date = net_contributions_anchor_date
+    anchor_date.nil? || value_dates.none? { |date| date < anchor_date }
+  end
+
   def sparkline_series
     Rails.cache.fetch(sparkline_cache_key, expires_in: 24.hours) do
       balance_series

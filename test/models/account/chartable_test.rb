@@ -758,6 +758,37 @@ class Account::ChartableTest < ActiveSupport::TestCase
            "no point on the anchor date"
   end
 
+  # A period ending before a linked account's supported history starts keeps
+  # every point of its value line: the normalizer trims only when some point
+  # is on or after the start. Net contributions count from that start, so
+  # beside those raw balances the line reads 0. A period ending on the start
+  # is trimmed to it and compares as before.
+  test "a linked account's period ending before its supported history is not comparable" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(family: families(:empty))
+    account.stubs(:linked?).returns(true)
+    lay_balance account: account, date: day_one, opening: 1_000, closing: 1_000
+    lay_balance account: account, date: day_one + 1, opening: 1_000, closing: 1_000
+    lay_balance account: account, date: day_one + 2, opening: 1_000, closing: 1_600, cash_flow: 500, market_flow: 100
+    provider_deposit account: account, date: day_one + 2, amount: 500
+    before = Period.custom(start_date: day_one, end_date: day_one + 1)
+    through = Period.custom(start_date: day_one, end_date: day_one + 2)
+
+    value = account.balance_series(period: before, interval: "1 day")
+    contributions = account.balance_series(period: before, view: :net_contributions, interval: "1 day")
+    assert_equal [ 1_000, 1_000 ], value.values.map { |v| v.value.amount }, "the value line is not trimmed"
+    assert_equal [ 0, 0 ], contributions.values.map { |v| v.value.amount }
+    refute account.net_contributions_comparable?(value_dates: value.values.map(&:date))
+    refute account.net_contributions_incomplete?(period: before, interval: "1 day")
+
+    trimmed = account.balance_series(period: through, interval: "1 day")
+    assert_equal [ day_one + 2 ], trimmed.values.map(&:date)
+    assert account.net_contributions_comparable?(value_dates: trimmed.values.map(&:date)), "a period ending on the start is trimmed"
+
+    unlinked = create_portfolio_account(family: families(:empty))
+    assert unlinked.net_contributions_comparable?(value_dates: [ day_one ]), "an unlinked account counts from its first balance"
+  end
+
   private
     # Value minus net contributions at each point: what the chart reads as
     # performance.
