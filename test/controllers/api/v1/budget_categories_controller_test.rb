@@ -139,6 +139,27 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert @budget.budget_categories.exists?(category: new_category)
   end
 
+  test "sync preserves the budget currency and rollover after the family changes currency" do
+    category = @family.categories.create!(name: "Currency rollover", color: "#654321")
+    previous = @family.budgets.create!(
+      start_date: @budget.start_date.prev_month.beginning_of_month,
+      end_date: @budget.start_date.prev_month.end_of_month,
+      budgeted_spending: 100, expected_income: 100, currency: "USD"
+    )
+    previous.budget_categories.create!(category:, budgeted_spending: 100, currency: "USD", rollover_enabled: true)
+    @family.update!(currency: "EUR")
+
+    get api_v1_budget_categories_url,
+        params: { budget_id: @budget.id, per_page: 100 },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    line = JSON.parse(response.body)["budget_categories"].find { |item| item.dig("category", "id") == category.id }
+    assert_equal "USD", line["currency"]
+    assert_equal 10_000, line["rolled_over_amount_cents"]
+    assert_equal "USD", @budget.budget_categories.find_by!(category:).currency
+  end
+
   test "index still lists when a concurrent request synced the same line first" do
     duplicate = @budget.budget_categories.build(category: @category)
     duplicate.errors.add(:budget_id, :taken)

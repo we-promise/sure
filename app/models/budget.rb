@@ -128,7 +128,7 @@ class Budget < ApplicationRecord
       budget_categories.create!(
         category: current_categories_by_id.fetch(category_id),
         budgeted_spending: 0,
-        currency: family.currency,
+        currency: currency,
         rollover_enabled: inherited_rollover.fetch(category_id, false)
       )
     end
