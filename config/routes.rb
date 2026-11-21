@@ -177,6 +177,7 @@ Rails.application.routes.draw do
       get :oauth_callback
       get :oauth_device_authorize
       post :start_oauth_device_flow
+      post :personal_key
     end
 
     member do

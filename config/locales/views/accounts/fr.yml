@@ -99,6 +99,17 @@ fr:
       title: Sélectionner un fournisseur à lier
     set_default:
       depository_only: Seuls les comptes de liquidités et de carte de crédit peuvent être définis par défaut.
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}) : sous zéro depuis le %{date}, au plus bas %{qty}"
+        hint: "Il manque probablement un achat ou un transfert. Ajoutez-le ou corrigez les opérations qui ont fait passer la position sous zéro."
+        link: "Vérifier les holdings"
+        message: "Certaines positions sont passées sous zéro"
+      sync_failed:
+        message: "La dernière synchronisation a échoué"
+      sync_hint: "Les chiffres affichés peuvent être obsolètes. Relancez la synchronisation pour les mettre à jour."
+      sync_stale:
+        message: "La dernière synchronisation ne s'est pas terminée"
     show:
       activity:
         amount: Montant
