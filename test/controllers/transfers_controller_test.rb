@@ -711,6 +711,28 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Rent split", transfer.notes
   end
 
+  test "unlinking a principal-only loan payment re-syncs the loan" do
+    loan = accounts(:loan)
+    loan.loan.update_column(:principal_only_transfers, true)
+    transfer = principal_only_loan_payment(loan)
+
+    assert_difference -> { loan.syncs.count }, 1 do
+      delete transfer_url(transfer)
+    end
+    assert_enqueued_with(job: SyncJob, args: [ loan.syncs.order(:created_at).last ])
+  end
+
+  test "rejecting a principal-only loan payment match re-syncs the loan" do
+    loan = accounts(:loan)
+    loan.loan.update_column(:principal_only_transfers, true)
+    transfer = principal_only_loan_payment(loan)
+
+    assert_difference -> { loan.syncs.count }, 1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+    assert_enqueued_with(job: SyncJob, args: [ loan.syncs.order(:created_at).last ])
+  end
+
   test "handles rejection without FrozenError" do
     transfer = transfers(:one)
 
@@ -1122,6 +1144,13 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       inflow = create_transaction(account: inflow_account, amount: -250, kind: "funds_movement")
 
       Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: status)
+    end
+
+    def principal_only_loan_payment(loan)
+      outflow_entry = create_transaction(date: 5.days.ago.to_date, account: accounts(:depository), amount: 500)
+      inflow_entry = create_transaction(date: 5.days.ago.to_date, account: loan, amount: -500)
+
+      Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
     end
 
     def attach_fee(transfer, account:)

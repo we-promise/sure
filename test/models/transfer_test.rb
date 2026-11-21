@@ -437,10 +437,80 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal 5, transfer.total_fee
   end
 
+  test "removing a principal-only loan payment re-syncs the loan from the payment date" do
+    loan = accounts(:loan)
+    loan.loan.update_column(:principal_only_transfers, true)
+    transfer = create_pending_transfer(from: accounts(:depository), to: loan, date: 5.days.ago.to_date)
+
+    assert_difference -> { loan.syncs.count }, 1 do
+      transfer.destroy!
+    end
+
+    sync = loan.syncs.order(:created_at).last
+    assert_enqueued_with(job: SyncJob, args: [ sync ])
+    assert_operator sync.window_start_date, :<=, 5.days.ago.to_date
+  end
+
+  test "rejecting a principal-only loan payment re-syncs the loan" do
+    loan = accounts(:loan)
+    loan.loan.update_column(:principal_only_transfers, true)
+    transfer = create_pending_transfer(from: accounts(:depository), to: loan, date: 5.days.ago.to_date)
+
+    assert_difference -> { loan.syncs.count }, 1 do
+      transfer.reject!
+    end
+
+    assert_enqueued_with(job: SyncJob, args: [ loan.syncs.order(:created_at).last ])
+  end
+
+  test "removing a principal-only loan payment widens a pending loan sync instead of adding one" do
+    loan = accounts(:loan)
+    loan.loan.update_column(:principal_only_transfers, true)
+    transfer = create_pending_transfer(from: accounts(:depository), to: loan, date: 5.days.ago.to_date)
+    pending_sync = loan.syncs.create!(window_start_date: 1.day.ago.to_date)
+
+    assert_no_difference -> { loan.syncs.count } do
+      assert_no_enqueued_jobs(only: SyncJob) do
+        transfer.destroy!
+      end
+    end
+
+    assert_equal 5.days.ago.to_date, pending_sync.reload.window_start_date
+  end
+
+  test "removing a loan payment without principal-only transfers syncs neither account" do
+    loan = accounts(:loan)
+    transfer = create_pending_transfer(from: accounts(:depository), to: loan)
+
+    assert_no_difference [ -> { loan.syncs.count }, -> { accounts(:depository).syncs.count } ] do
+      transfer.destroy!
+    end
+  end
+
+  test "removing a transfer between two non-loan accounts syncs neither account" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+
+    assert_no_difference [ -> { accounts(:depository).syncs.count }, -> { accounts(:credit_card).syncs.count } ] do
+      transfer.destroy!
+    end
+  end
+
+  test "deleting the loan leg of a principal-only loan payment does not sync the deleted entry" do
+    loan = accounts(:loan)
+    loan.loan.update_column(:principal_only_transfers, true)
+    transfer = create_pending_transfer(from: accounts(:depository), to: loan)
+
+    assert_difference "Transfer.count", -1 do
+      assert_no_difference -> { loan.syncs.count } do
+        transfer.inflow_transaction.entry.destroy!
+      end
+    end
+  end
+
   private
-    def create_pending_transfer(from:, to:)
-      outflow_entry = create_transaction(date: Date.current, account: from, amount: 500)
-      inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)
+    def create_pending_transfer(from:, to:, date: Date.current)
+      outflow_entry = create_transaction(date: date, account: from, amount: 500)
+      inflow_entry = create_transaction(date: date, account: to, amount: -500)
 
       Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
     end
