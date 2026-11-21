@@ -48,8 +48,13 @@ class SnaptradeAccount::ActivitiesProcessor
     "CORP_ACTION" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :if_absent, cash_flow: :invert },
 
     # Cash activities
-    "DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
-    "DIV" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    #
+    # Income, fee and tax types can move either way (a dividend reversal, interest
+    # charged on a margin debit, a fee rebate, a tax refund), so they keep the
+    # provider's sign (:invert) and their label. Totals and Portfolio::FlowClassifier
+    # sum labelled amounts signed, so a reversal or a charge nets against the label.
+    "DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :invert },
+    "DIV" => { category: :cash, label: "Dividend", cash_flow: :invert },
     "CONTRIBUTION" => { category: :cash, label: "Contribution", cash_flow: :inflow },
     "WITHDRAWAL" => { category: :cash, label: "Withdrawal", cash_flow: :outflow },
     "TRANSFER" => { category: :cash, label: "Transfer", cash_flow: :invert },
@@ -57,14 +62,14 @@ class SnaptradeAccount::ActivitiesProcessor
     "TRANSFER_OUT" => { category: :cash, label: "Transfer", cash_flow: :outflow },
     "INTERNAL_CASH_TRANSFER_IN" => { category: :cash, label: "Transfer", cash_flow: :inflow },
     "INTERNAL_CASH_TRANSFER_OUT" => { category: :cash, label: "Transfer", cash_flow: :outflow },
-    "INTEREST" => { category: :cash, label: "Interest", cash_flow: :inflow },
-    "FEE" => { category: :cash, label: "Fee", cash_flow: :outflow },
-    "TAX" => { category: :cash, label: "Fee", cash_flow: :outflow },
+    "INTEREST" => { category: :cash, label: "Interest", cash_flow: :invert },
+    "FEE" => { category: :cash, label: "Fee", cash_flow: :invert },
+    "TAX" => { category: :cash, label: "Fee", cash_flow: :invert },
     "CASH" => { category: :cash, label: "Contribution", cash_flow: :inflow },
     "REBATE" => { category: :cash, label: "Other", cash_flow: :inflow },
-    "RETURN_OF_CAPITAL" => { category: :cash, label: "Dividend", cash_flow: :inflow },
-    "DISTRIBUTION" => { category: :cash, label: "Dividend", cash_flow: :inflow },
-    "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "RETURN_OF_CAPITAL" => { category: :cash, label: "Dividend", cash_flow: :invert },
+    "DISTRIBUTION" => { category: :cash, label: "Dividend", cash_flow: :invert },
+    "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :invert },
     "JOURNAL" => { category: :cash, label: "Other" },
     "OTHER" => { category: :cash, label: "Other" }
   }.freeze
@@ -416,13 +421,15 @@ class SnaptradeAccount::ActivitiesProcessor
       when :inflow
         -amount.abs  # Money in should be negative in Sure
       when :invert
-        # Direction is not encoded in the type (unlike TRANSFER_IN/TRANSFER_OUT), so the
-        # provider's sign is the only directional signal available. SnapTrade signs these
-        # from the account's perspective (positive = money in), which is the inverse of
-        # Sure's convention, so invert it rather than passing it through unchanged.
-        # Passing it through stored a 401k contribution as a positive amount, which
+        # The type does not fix the direction (TRANSFER, or income/fee types that can
+        # be reversed or credited), so the provider's sign is the directional signal.
+        # SnapTrade signs amounts from the account's perspective (positive = money in,
+        # negative = money out), the inverse of Sure's convention, so the sign is
+        # flipped rather than passed through or replaced with abs: a debit-interest
+        # charge stays money out and a fee rebate stays money in. Passing it through
+        # would store a 401k contribution as a positive amount, which
         # Entry#classification reads as an expense and ReverseCalculator reads as a
-        # value decrease — a correct current balance with a declining history (issue #2756).
+        # value decrease (issue #2756).
         -amount
       else
         amount
