@@ -1,0 +1,11 @@
+---
+en:
+  provider:
+    openai:
+      model_catalog:
+        errors:
+          http_status: "Model discovery returned HTTP %{status}."
+          invalid_response: "Model discovery returned an invalid response."
+          invalid_response_detail: "Model discovery returned an invalid response: %{detail}"
+          unavailable: "Model discovery is unavailable: %{detail}"
+          invalid_url: "the URL must be an absolute HTTP or HTTPS URL with a host"
