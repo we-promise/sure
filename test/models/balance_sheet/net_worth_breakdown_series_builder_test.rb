@@ -93,6 +93,21 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilderTest < ActiveSupport::TestCase
     assert_nil parsed["values"].last["trend"]["percent"]
   end
 
+  test "a disabled account stops counting the day before it was disabled" do
+    period = Period.custom(start_date: Date.new(2026, 4, 15), end_date: Date.new(2026, 7, 15))
+
+    create_balance(account: @asset_account, date: period.start_date, balance: 5000)
+    create_balance(account: @liability_account, date: period.start_date, balance: 1000)
+    @asset_account.update_columns(status: "disabled", disabled_at: Time.zone.local(2026, 6, 1))
+
+    by_date = builder.breakdown_series(period: period)[:values].index_by { |point| point[:date] }
+
+    # Cut off on 2026-05-31: the May point still counts the account, June's does not.
+    assert_equal 5000, by_date.fetch(Date.new(2026, 5, 15))[:assets].amount
+    assert_equal 0, by_date.fetch(Date.new(2026, 6, 15))[:assets].amount
+    assert_equal(-1000, by_date.fetch(Date.new(2026, 6, 15))[:value].amount)
+  end
+
   test "cache key includes payload version" do
     period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
 

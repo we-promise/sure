@@ -347,6 +347,30 @@ class InvestmentStatement
     )
   end
 
+  # Portfolio value (cash + holdings) over the period, in family currency.
+  #
+  # Charted from the *historical* account scope, so a disabled broker keeps its
+  # history up to its cut-off date. The last point therefore diverges from
+  # #portfolio_value (visible accounts only) whenever a disabled account still
+  # carries a non-zero balance. See HistoricalScope for the rationale.
+  def value_series(period: Period.last_30_days)
+    fetch_series(:value, period) { |builder| builder.balance_series }
+  end
+
+  # Holdings-only value (portfolio value minus cash) over the period.
+  def holdings_value_series(period: Period.last_30_days)
+    fetch_series(:holdings_value, period) { |builder| builder.holdings_balance_series }
+  end
+
+  # Unrealized gains (market value minus cost basis) over the period.
+  def gains_series(period: Period.last_30_days)
+    fetch_series(:gains, period) { |builder| builder.gains_series }
+  end
+
+  def historical_scope
+    @historical_scope ||= HistoricalScope.new(family, user: user)
+  end
+
   # The snapshot before each current holding, keyed by the current holding's
   # id: the latest row for the same account, security and currency dated
   # before the current row, which is what Holding#day_change compares
@@ -416,13 +440,117 @@ class InvestmentStatement
   # Investment accounts
   def investment_accounts
     @investment_accounts ||= begin
-      scope = family.accounts.visible.included_in_reports.where(accountable_type: %w[Investment Crypto])
+      scope = family.accounts.visible.included_in_reports.where(accountable_type: HistoricalScope::INVESTMENT_ACCOUNTABLE_TYPES)
       scope = scope.included_in_finances_for(user) if user
       scope
     end
   end
 
   private
+    # Two layers of caching, mirroring BalanceSheet::NetWorthSeriesBuilder:
+    # Rails.cache across requests, plus a per-instance memo so a single
+    # dashboard render that asks for the same series twice runs one query.
+    #
+    # Every series is trimmed to the first date any linked account in the
+    # scope has history for: the balance rows before a broker's first snapshot
+    # are zeros, and charting them shows a portfolio that appears from nothing
+    # on the day the connection was made. The earliest start, not the common
+    # one, so linking a new broker does not erase the history of an older
+    # one, open or closed.
+    def fetch_series(kind, period)
+      @series_cache ||= {}
+      @series_cache[[ kind, period.start_date, period.end_date ]] ||= Rails.cache.fetch(series_cache_key(kind, period)) do
+        Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(
+          yield(series_builder(period)),
+          account_ids: historical_scope.account_ids,
+          history_start: series_history_start
+        )
+      end
+    end
+
+    # The trim fetch_series applies, read by its cache key too, so a series
+    # cached under one trim is never served under another.
+    def series_history_start
+      :earliest
+    end
+
+    def series_builder(period)
+      Balance::ChartSeriesBuilder.new(
+        account_ids: historical_scope.account_ids,
+        account_active_until_dates: historical_scope.active_until_dates,
+        currency: family.currency,
+        period: period,
+        favorable_direction: "up"
+      )
+    end
+
+    # Beyond the family key (sync time and accounts.updated_at), the key
+    # carries a version for each table the series reads that can change
+    # without a sync or an account write:
+    #
+    # - shares (every kind): revoking a share deletes a row, which changes
+    #   neither maximum(:updated_at) nor accounts.updated_at, and a key built
+    #   from those alone would keep serving a series that still counts the
+    #   revoked account.
+    # - holdings (every kind): the gains series reads holdings.cost_basis,
+    #   which a manual cost-basis edit, an unlock or a security remap
+    #   rewrites in place. Every series is also trimmed to the supported
+    #   history start, which provider holdings' dates and securities
+    #   decide, so deleting or remapping a holding can move the value and
+    #   holdings-value charts' first date without a sync.
+    # - exchange rates (every kind): every series is converted to the family
+    #   currency, and the exchange-rate job stores or backfills a rate
+    #   without a sync or an account write, as the net worth series' keys
+    #   allow for.
+    # - the history trim (every kind): it decides the series' first point, and
+    #   nothing else in the key moves when only the trim does.
+    #
+    # The family currency and the accounts' status version come from
+    # family.build_cache_key.
+    def series_cache_key(kind, period)
+      key = [
+        "investment_statement_#{kind}_series",
+        # "own-history" marks the trim that keeps the history of an account
+        # with no provider history (manual, or valuations only), so a series
+        # cached under a trim that cut it is not served again.
+        "start-#{series_history_start}-own-history",
+        user&.id,
+        ExchangeRate::CONVERSION_CACHE_VERSION,
+        ExchangeRate.updated_at_version,
+        shares_version,
+        holdings_version,
+        period.start_date,
+        period.end_date
+      ].compact.join("_")
+
+      family.build_cache_key(key, invalidate_on_data_updates: true)
+    end
+
+    # Memoized: one instance builds a key per series kind it is asked for,
+    # and the versions need not be re-queried between them.
+    def shares_version
+      return nil unless user
+
+      @shares_version ||= begin
+        shares = AccountShare.where(user: user)
+        "#{shares.count}-#{shares.maximum(:updated_at)&.to_f || 0}"
+      end
+    end
+
+    # Count plus latest timestamp over the holdings the series can read, so a
+    # cost-basis edit, unlock or remap (rows rewritten in place) and a
+    # deletion (a row gone, timestamps unchanged) each move every series key.
+    def holdings_version
+      @holdings_version ||= begin
+        # The provider-linked count covers an unlink, which clears
+        # account_provider_id with update_all and leaves updated_at alone,
+        # yet moves the supported-history trim that reads that column.
+        count, linked, latest = Holding.where(account_id: historical_scope.account_ids)
+          .pick(Arel.sql("COUNT(*), COUNT(account_provider_id), MAX(updated_at)"))
+        "#{count}-#{linked}-#{latest&.to_f || 0}"
+      end
+    end
+
     # Today's rates for every currency present on the family's investment
     # accounts and their holdings. Mirrors BalanceSheet::AccountTotals#exchange_rates.
     def exchange_rates
