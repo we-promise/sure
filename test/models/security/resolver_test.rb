@@ -3,6 +3,7 @@ require "ostruct"
 
 class Security::ResolverTest < ActiveSupport::TestCase
   include ProviderTestHelper
+  include ActiveJob::TestHelper
 
   test "resolves DB security" do
     # Given an existing security in the DB that exactly matches the lookup params
@@ -564,18 +565,32 @@ class Security::ResolverTest < ActiveSupport::TestCase
     assert_equal 1, Security.where(ticker: "PNDU").count
   end
 
-  test "a successful search merges a resolution_pending placeholder into the listed security" do
+  test "a successful search returns the listed security and settles the placeholder after commit" do
     placeholder = Security.create!(ticker: "PNDY", offline: true, offline_reason: "resolution_pending")
     listed = Security.create!(ticker: "PNDY", exchange_operating_mic: "XNAS", country_code: "US", price_provider: "yahoo_finance")
     holding = accounts(:investment).holdings.create!(security: placeholder, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
     stub_listed_search("PNDY")
+
+    assert_enqueued_with(job: SecurityPlaceholderSettlementJob, args: [ placeholder.id, listed.id ]) do
+      assert_equal listed, Security::Resolver.new("PNDY").resolve
+    end
+    assert Security.exists?(placeholder.id), "Records built in memory against the placeholder must still be insertable"
+
     Account.any_instance.expects(:sync_later).once
+    perform_enqueued_jobs(only: SecurityPlaceholderSettlementJob)
 
-    resolved = Security::Resolver.new("PNDY").resolve
-
-    assert_equal listed, resolved
     assert_not Security.exists?(placeholder.id)
     assert_equal listed.id, holding.reload.security_id
+  end
+
+  test "keeps the exact ticker held back for a placeholder when the search offers only other tickers" do
+    listed = Security.create!(ticker: "PNDR", exchange_operating_mic: "XNAS", country_code: "US", price_provider: "yahoo_finance")
+    Security.create!(ticker: "PNDR", offline: true, offline_reason: "resolution_pending")
+    stub_listed_search("PNDR", match_ticker: "PNDRX")
+
+    assert_no_difference "Security.count" do
+      assert_equal listed, Security::Resolver.new("PNDR").resolve
+    end
   end
 
   test "retries the provider for a ticker with a placeholder even when the listed row sorts first" do
@@ -583,8 +598,9 @@ class Security::ResolverTest < ActiveSupport::TestCase
     placeholder = Security.create!(id: "ffffffff-ffff-4fff-bfff-ffffffffffff", ticker: "PNDZ", offline: true, offline_reason: "resolution_pending")
     stub_listed_search("PNDZ")
 
-    assert_equal listed, Security::Resolver.new("PNDZ").resolve
-    assert_not Security.exists?(placeholder.id)
+    assert_enqueued_with(job: SecurityPlaceholderSettlementJob, args: [ placeholder.id, listed.id ]) do
+      assert_equal listed, Security::Resolver.new("PNDZ").resolve
+    end
   end
 
   test "falls back to the listed row when the retry for a placeholder fails" do

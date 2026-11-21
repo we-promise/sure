@@ -189,6 +189,9 @@ class Security::Resolver
       match = sorted_candidates.first
 
       return nil unless match
+      # The row held back from the DB fast path is an exact ticker match;
+      # a search that only offers other tickers does not replace it.
+      return nil if @db_match_held_for_retry && match.ticker&.upcase.to_s != symbol
 
       find_or_create_provider_match!(match)
     end
@@ -234,9 +237,9 @@ class Security::Resolver
     # a blank-MIC "resolution_pending" placeholder. Once an exchange-less
     # lookup, the kind that created it, finds the ticker on an exchange, the
     # placeholder is that instrument: it becomes the listed row, or is merged
-    # into it when one already exists. Left alone, it would keep receiving
-    # holdings whenever a later search failed, splitting one position across
-    # two securities. A lookup for an explicit exchange says nothing about
+    # into it after commit when one already exists. Left alone, it would keep
+    # receiving holdings whenever a later search failed, splitting one
+    # position across two securities. A lookup for an explicit exchange says nothing about
     # which listing the placeholder stood for.
     def settle_pending_placeholder(security, match)
       return security if exchange_operating_mic.present? || security.exchange_operating_mic.blank?
@@ -248,7 +251,8 @@ class Security::Resolver
         placeholder.exchange_operating_mic = security.exchange_operating_mic
         placeholder
       else
-        Security::Merger.new(from: placeholder, into: security).merge!.reload
+        SecurityPlaceholderSettlementJob.perform_later(placeholder.id, security.id)
+        security
       end
     end
 

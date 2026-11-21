@@ -10,13 +10,17 @@ class Security::Merger
     @into = into
   end
 
-  def merge!
+  # `condition` is checked against the locked source row, for callers whose
+  # reason to merge could have changed since they last read it.
+  def merge!(condition: nil)
     return into if from.id == into.id
 
     account_ids = Security.transaction do
       locked = Security.where(id: [ from.id, into.id ]).order(:id).lock.to_a
+      source = locked.find { |security| security.id == from.id }
       # A concurrent merge already removed the row.
       next [] unless locked.size == 2
+      next [] if condition && !condition.call(source)
 
       referencing_account_ids.tap do
         now = Time.current
@@ -27,7 +31,7 @@ class Security::Merger
         move_unless_target_has(Security::Split, :ex_date)
         move_taggings!
         into.update!(name: from.name) if into.name.blank? && from.name.present?
-        Security.find(from.id).destroy!
+        source.reload.destroy!
       end
     end
 

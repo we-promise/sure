@@ -80,6 +80,14 @@ class Security::MergerTest < ActiveSupport::TestCase
     assert_not HoldingLot.where(origin_security_id: @placeholder.id).exists?
   end
 
+  test "leaves both rows alone when the condition no longer holds under the lock" do
+    @placeholder.update!(offline: false, offline_reason: nil)
+
+    Security::Merger.new(from: @placeholder, into: @listed).merge!(condition: ->(source) { source.offline? })
+
+    assert Security.exists?(@placeholder.id)
+  end
+
   test "is a no-op when the source is the target" do
     Account.any_instance.expects(:sync_later).never
 
