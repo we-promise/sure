@@ -34,6 +34,10 @@ class OfflineTransaction extends Transaction {
     super.tagIds,
     super.tagNames,
     super.tagsProvided = true,
+    super.amountDecimal,
+    super.kind,
+    super.excluded,
+    super.splitParent,
     this.syncStatus = SyncStatus.pending,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -64,6 +68,10 @@ class OfflineTransaction extends Transaction {
       tagIds: transaction.tagIds,
       tagNames: transaction.tagNames,
       tagsProvided: transaction.tagsProvided,
+      amountDecimal: transaction.amountDecimal,
+      kind: transaction.kind,
+      excluded: transaction.excluded,
+      splitParent: transaction.splitParent,
       syncStatus: syncStatus,
     );
   }
@@ -91,6 +99,10 @@ class OfflineTransaction extends Transaction {
       tagIds: tagIds,
       tagNames: tagNames,
       tagsProvided: tagsProvided,
+      amountDecimal: map['amount_decimal'] as String?,
+      kind: map['kind'] as String?,
+      excluded: _decodeBool(map['excluded']),
+      splitParent: _decodeBool(map['split_parent']),
       syncStatus: _parseSyncStatus(map['sync_status'] as String),
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -114,6 +126,10 @@ class OfflineTransaction extends Transaction {
       'merchant_name': merchantName,
       'tag_ids': jsonEncode(tagIds),
       'tag_names': jsonEncode(tagNames),
+      'amount_decimal': amountDecimal,
+      'kind': kind,
+      'excluded': _encodeBool(excluded),
+      'split_parent': _encodeBool(splitParent),
       'sync_status': _syncStatusToString(syncStatus),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -139,6 +155,10 @@ class OfflineTransaction extends Transaction {
       tagIds: tagIds,
       tagNames: tagNames,
       tagsProvided: tagsProvided,
+      amountDecimal: amountDecimal,
+      kind: kind,
+      excluded: excluded,
+      splitParent: splitParent,
     );
   }
 
@@ -176,6 +196,10 @@ class OfflineTransaction extends Transaction {
       tagIds: nextTagIds,
       tagNames: nextTagIds.map((tagId) => tagNamesById[tagId] ?? '').toList(),
       tagsProvided: true,
+      amountDecimal: amountDecimal,
+      kind: kind,
+      excluded: excluded,
+      splitParent: splitParent,
     );
   }
 
@@ -205,6 +229,13 @@ class OfflineTransaction extends Transaction {
           : merchantName,
       tagIds: transaction.tagsProvided ? transaction.tagIds : tagIds,
       tagNames: transaction.tagsProvided ? transaction.tagNames : tagNames,
+      // An older server leaves these out; the cached value came from the same
+      // server, so it is null too unless the amount is unchanged.
+      amountDecimal: transaction.amountDecimal ??
+          (transaction.amount == amount ? amountDecimal : null),
+      kind: transaction.kind ?? kind,
+      excluded: transaction.excluded ?? excluded,
+      splitParent: transaction.splitParent ?? splitParent,
       syncStatus: SyncStatus.synced,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
@@ -230,10 +261,17 @@ class OfflineTransaction extends Transaction {
     List<String>? tagIds,
     List<String>? tagNames,
     bool? tagsProvided,
+    String? amountDecimal,
+    String? kind,
+    bool? excluded,
+    bool? splitParent,
     SyncStatus? syncStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
+    // A new display amount without a new exact amount makes the cached exact
+    // amount stale.
+    final amountChanged = amount != null && amount != this.amount;
     return OfflineTransaction(
       id: id ?? this.id,
       localId: localId ?? this.localId,
@@ -253,6 +291,11 @@ class OfflineTransaction extends Transaction {
       tagIds: tagIds ?? this.tagIds,
       tagNames: tagNames ?? this.tagNames,
       tagsProvided: tagsProvided ?? this.tagsProvided,
+      amountDecimal:
+          amountDecimal ?? (amountChanged ? null : this.amountDecimal),
+      kind: kind ?? this.kind,
+      excluded: excluded ?? this.excluded,
+      splitParent: splitParent ?? this.splitParent,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -297,6 +340,15 @@ class OfflineTransaction extends Transaction {
 
     return const [];
   }
+
+  static bool? _decodeBool(Object? value) {
+    if (value is bool) return value;
+    if (value is int) return value != 0;
+    return null;
+  }
+
+  static int? _encodeBool(bool? value) =>
+      value == null ? null : (value ? 1 : 0);
 
   static String _syncStatusToString(SyncStatus status) {
     switch (status) {

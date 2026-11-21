@@ -8,6 +8,7 @@ import 'providers/categories_provider.dart';
 import 'providers/merchants_provider.dart';
 import 'providers/tags_provider.dart';
 import 'providers/transactions_provider.dart';
+import 'providers/transaction_splits_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/privacy_provider.dart';
@@ -96,6 +97,15 @@ class SureApp extends StatelessWidget {
               transactionsProvider.setConnectivityService(connectivityService);
               return transactionsProvider;
             }
+          },
+        ),
+        ChangeNotifierProxyProvider<ConnectivityService,
+            TransactionSplitsProvider>(
+          create: (_) => TransactionSplitsProvider(),
+          update: (_, connectivityService, splitsProvider) {
+            final provider = splitsProvider ?? TransactionSplitsProvider();
+            provider.setConnectivityService(connectivityService);
+            return provider;
           },
         ),
       ],
