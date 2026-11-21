@@ -619,7 +619,7 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_duplicate_warning do
       assert_select "p", text: I18n.t("plaid_items.duplicate_warning.overlap.some_connected.unconnected", count: 1)
-      assert_select "dl > div", text: /Example HSA\s*\*{4}7777/
+      assert_select "dl > div", text: /Example HSA\s*•••7777/
       assert_select "p", text: I18n.t("plaid_items.duplicate_warning.overlap.some_connected.connected", count: 1)
       assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true)
     end

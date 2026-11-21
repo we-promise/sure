@@ -67,7 +67,7 @@ class IbkrItem::ReportParser
 
       {
         ibkr_account_id: account_id,
-        name: account_id,
+        name: IbkrAccount.default_name(account_id),
         currency: currency,
         cash_balance: extract_cash_balance(cash_report, currency),
         current_balance: extract_nav_balance(equity_summary_in_base, currency, report_date) ||

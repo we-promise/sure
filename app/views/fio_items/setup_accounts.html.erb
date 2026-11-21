@@ -53,7 +53,7 @@
             <div class="mb-3">
               <h3 class="font-medium text-primary"><%= @fio_account.name %></h3>
               <p class="text-xs text-secondary">
-                <%= [ [ @fio_account.fio_account_id, @fio_account.bank_id ].compact_blank.join("/").presence, @fio_account.currency ].compact_blank.join(" · ") %>
+                <%= [ [ mask_last4(@fio_account.fio_account_id), @fio_account.bank_id ].compact_blank.join("/").presence, @fio_account.currency ].compact_blank.join(" · ") %>
               </p>
             </div>
 

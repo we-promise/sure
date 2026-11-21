@@ -13,7 +13,7 @@
     on the wrong one. When nothing matches, or nothing can be compared, every
     connection at the institution stays listed as context. %>
 <% listed_items = state.in?(%i[all_connected some_connected]) ? account_overlap.matching_items : duplicate_items %>
-<% masked = ->(mask) { t(".mask", mask: mask) if mask.present? } %>
+<% masked = ->(mask) { mask_last4(mask) } %>
 
 <%# Connections this user can take into update mode: US ones they may manage, and that
     are theirs. An admin may manage a member's connection, but update mode signs in
