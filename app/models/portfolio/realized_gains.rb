@@ -36,8 +36,9 @@
 # A disposal is a sell trade on an entry that is not excluded: an excluded
 # entry is left out of reports, as InvestmentStatement::Totals and the
 # Reports card's realised list leave it out. The gain is the one
-# Trade#realized_gain_loss gives, against the holding's average cost at the
-# time of the sale, not a FIFO or specific-lot basis.
+# Trade#realized_gain_loss gives: in an account that sells by fifo, the cost
+# of the lots the sale consumed; otherwise the holding's average cost at the
+# time of the sale.
 #
 # A sale's rate is the one stored for its date, else the nearest earlier one
 # up to ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS before it, the
@@ -201,24 +202,21 @@ class Portfolio::RealizedGains
       cutoff.present? && trade.entry.date > cutoff
     end
 
-    # One holdings query for every account and security involved, handed to
-    # each trade so Trade#realized_gain_loss never looks one up per disposal,
-    # then one query for the proceeds-to-basis rates those trades need.
-    # Scoped to the securities actually sold and to the period's end.
+    # Each sale's basis snapshot, the lots each fifo sale consumed, and the
+    # proceeds-to-basis rates, one query each for the whole set (plus the
+    # snapshots' average-cost fallback), so Trade#realized_gain_loss never
+    # looks one up per disposal. As ReportsController preloads them.
     #
     # Holdings are preloaded first because Trade.preload_exchange_rates reads
     # the preloaded basis currency.
     def preload(trades)
       return if trades.empty?
 
-      holdings = Holding
-        .where(account_id: trades.map { |trade| trade.entry.account_id }.uniq, security_id: trades.map(&:security_id).uniq)
-        .where("date <= ?", period.date_range.end)
-        .order(date: :desc)
-        .to_a
-        .group_by(&:account_id)
+      Trade.preload_basis_holdings(trades)
 
-      trades.each { |trade| trade.preloaded_holdings = holdings[trade.entry.account_id] || [] }
+      lot_disposals = HoldingLotDisposal.readable_by_sale(trades)
+      trades.each { |trade| trade.preloaded_lot_disposals = lot_disposals[trade.entry.id] }
+
       Trade.preload_exchange_rates(trades)
     end
 

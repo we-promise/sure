@@ -287,6 +287,40 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     assert_equal few, many, "2 gains and 6 must cost the same number of queries"
   end
 
+  # Under fifo each sale's basis is what it took from each lot, which
+  # Trade#realized_gain_loss looks up per sale unless the set is preloaded.
+  test "fifo sales read their lot disposals in one query" do
+    @account.update!(cost_basis_method: "fifo")
+    buy_trade account: @account, date: @march - 20, qty: 60, price: 12
+    buy_trade account: @account, date: @march - 10, qty: 40, price: 20
+    sell_trade account: @account, date: @march, qty: 10, price: 25
+    sell_trade account: @account, date: @march, qty: 60, price: 25
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    gains = realized
+    queries = capture_sql_queries { measure_fully(gains) }
+
+    assert_equal 2, gains.trade_count, "both sales must be measured, or this proves nothing"
+    # 10 x (25 - 12) from the oldest lot, then 50 x (25 - 12) + 10 x (25 - 20).
+    assert_equal BigDecimal(830), gains.net
+    assert_equal 1, queries.count { |sql| sql.include?(%("holding_lot_disposals")) }, "one preload, not one per sale"
+  end
+
+  # A sale is measured against its security's latest snapshot on or before
+  # the sale, so that is the only holding row worth loading.
+  test "each sale loads only its own basis snapshot" do
+    (0..9).each { |offset| holding_snapshot account: @account, date: @march - offset, cost_basis: 100 }
+    sell_trade account: @account, date: @march, qty: 2, price: 150
+
+    gains = realized
+    loaded = 0
+    counter = ->(*, payload) { loaded += payload[:record_count] if payload[:class_name] == "Holding" }
+    ActiveSupport::Notifications.subscribed(counter, "instantiation.active_record") { measure_fully(gains) }
+
+    assert_equal BigDecimal(100), gains.net, "the sale must be measured, or this proves nothing"
+    assert_equal 1, loaded, "one snapshot for one sale, not the position's whole history"
+  end
+
   # A disabled account stops contributing on its cut-off date.
   test "a disposal after an account's cut-off date does not count" do
     holding_snapshot account: @account, date: @march, cost_basis: 100
