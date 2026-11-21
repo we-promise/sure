@@ -89,6 +89,7 @@ en:
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
         sharesight: Sync the portfolios you track in Sharesight using its API.
+        scalable_capital: Sync Scalable Broker, cash, and Overnight Savings using the read-only Scalable CLI.
         trade_republic: Sync your Trade Republic investment account via secure read-only web login.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         questrade: Sync your Questrade investment accounts directly via the Questrade API.

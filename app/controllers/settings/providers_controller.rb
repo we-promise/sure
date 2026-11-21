@@ -227,6 +227,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
       { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
       { key: "trading212",     title: "Trading 212",     turbo_id: "trading212", partial: "trading212_panel" },
+      { key: "scalable_capital", title: "Scalable Capital", turbo_id: "scalable-capital", partial: "scalable_capital_panel" },
       { key: "trade_republic", title: "Trade Republic",  turbo_id: "trade-republic", partial: "trade_republic_panel" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
@@ -262,10 +263,16 @@ class Settings::ProvidersController < ApplicationController
       "sharesight"     => "SharesightItem",
       "ibkr"           => "IbkrItem",
       "trading212"     => "Trading212Item",
+      "scalable_capital" => "ScalableCapitalItem",
       "trade_republic" => "TradeRepublicItem",
       "indexa_capital" => "IndexaCapitalItem",
       "sophtron"       => "SophtronItem"
     }.freeze
+
+    def scalable_capital_panel_available?
+      Current.family.scalable_capital_items.exists? ||
+        (preview_features_enabled? && ScalableCapitalItem.configured_family_id == Current.family.id)
+    end
 
     def load_provider_items(provider_key)
       case provider_key
@@ -311,6 +318,8 @@ class Settings::ProvidersController < ApplicationController
         @ibkr_items = Current.family.ibkr_items.ordered
       when "trading212"
         @trading212_items = Current.family.trading212_items.ordered
+      when "scalable_capital"
+        @scalable_capital_items = Current.family.scalable_capital_items.ordered
       when "trade_republic"
         @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
       when "indexa_capital"
@@ -354,6 +363,7 @@ class Settings::ProvidersController < ApplicationController
       @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
       @trading212_items = Current.family.trading212_items.ordered
       @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
+      @scalable_capital_items = Current.family.scalable_capital_items.ordered
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
@@ -412,6 +422,7 @@ class Settings::ProvidersController < ApplicationController
         "sharesight"     => @sharesight_items,
         "ibkr"           => @ibkr_items,
         "trading212"     => @trading212_items,
+        "scalable_capital" => @scalable_capital_items,
         "trade_republic" => @trade_republic_items,
         "indexa_capital" => @indexa_capital_items,
         "sophtron"       => @sophtron_items
@@ -465,7 +476,9 @@ class Settings::ProvidersController < ApplicationController
         }
       end
 
-      family_entries = FAMILY_PANELS.map do |panel|
+      family_entries = FAMILY_PANELS.filter_map do |panel|
+        next if panel[:key] == "scalable_capital" && !scalable_capital_panel_available?
+
         {
           provider_key: panel[:key],
           title: panel[:title],

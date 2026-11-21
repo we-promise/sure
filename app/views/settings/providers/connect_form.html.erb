@@ -1,10 +1,11 @@
 <%= render DS::Dialog.new(frame: "drawer", responsive: true, auto_open: true) do |dialog| %>
   <% provider_key = @panel_key || @provider_configuration&.provider_key&.to_s %>
+  <% scalable_cli = provider_key == "scalable_capital" %>
   <% dialog.with_header(custom_header: true) do %>
     <%= render "settings/providers/drawer_header", provider_key: provider_key, title: @panel_title %>
   <% end %>
   <% dialog.with_body do %>
-    <% if @provider_setup_encryption_warning %>
+    <% if @provider_setup_encryption_warning && !scalable_cli %>
       <div class="mb-4">
         <%= render DS::Alert.new(
               variant: :warning,
@@ -27,7 +28,11 @@
     <% end %>
 
     <p class="text-xs text-secondary mt-6 pt-3 border-t border-tertiary">
-      <%= t(@provider_setup_encryption_warning ? "settings.providers.drawer_trust_statement_encryption_unconfigured" : "settings.providers.drawer_trust_statement") %>
+      <% if scalable_cli %>
+        <%= t("scalable_capital_items.panel.trust_statement") %>
+      <% else %>
+        <%= t(@provider_setup_encryption_warning ? "settings.providers.drawer_trust_statement_encryption_unconfigured" : "settings.providers.drawer_trust_statement") %>
+      <% end %>
     </p>
   <% end %>
 <% end %>

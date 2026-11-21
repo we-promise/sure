@@ -1,4 +1,5 @@
 class Family < ApplicationRecord
+  has_many :scalable_capital_items, dependent: :destroy
   has_many :financekit_items, dependent: :destroy
   has_many :financekit_account_lineages, dependent: :destroy
   has_many :financekit_conflicts, dependent: :destroy

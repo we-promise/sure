@@ -1,0 +1,30 @@
+<% item = @scalable_capital_items.first %>
+
+<div id="scalable-capital-providers-panel" class="space-y-3">
+  <% if item %>
+    <% if item.requires_update? %>
+      <%= render DS::Alert.new(message: t("scalable_capital_items.panel.reconnect"), variant: :warning) %>
+    <% end %>
+    <% unless item.configured? %>
+      <%= render DS::Alert.new(message: t("scalable_capital_items.disabled"), variant: :warning) %>
+    <% end %>
+    <%= render DS::Button.new(
+      text: t("scalable_capital_items.panel.disconnect"),
+      variant: :outline_destructive,
+      href: scalable_capital_item_path(item),
+      method: :delete,
+      data: { turbo_confirm: t("scalable_capital_items.panel.disconnect_confirm"), turbo_frame: "_top" }
+    ) %>
+  <% elsif preview_features_enabled? && ScalableCapitalItem.configured_family_id == Current.family.id %>
+    <%= render DS::Pill.new(label: t("scalable_capital_items.panel.preview")) %>
+    <p class="text-sm text-secondary"><%= t("scalable_capital_items.panel.description") %></p>
+    <%= styled_form_with scope: :scalable_capital_item, url: scalable_capital_items_path,
+                         data: { turbo_frame: "_top" }, class: "space-y-3" do |form| %>
+      <%= form.text_field :portfolio_id, label: t("scalable_capital_items.panel.portfolio_id"), required: true %>
+      <%= form.text_field :savings_id, label: t("scalable_capital_items.panel.savings_id") %>
+      <%= render DS::Button.new(text: t("scalable_capital_items.panel.connect"), type: "submit") %>
+    <% end %>
+  <% else %>
+    <%= render DS::Alert.new(message: t("scalable_capital_items.panel.unavailable"), variant: :info) %>
+  <% end %>
+</div>

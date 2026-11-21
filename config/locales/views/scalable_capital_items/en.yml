@@ -1,0 +1,27 @@
+en:
+  scalable_capital_items:
+    disabled: The Scalable CLI is disabled for this household.
+    accounts:
+      title: Scalable Capital
+      brokerage: Scalable Broker
+      cash: Scalable Broker Cash
+      savings: Scalable Overnight Savings
+      settlement: "%{name} settlement"
+    create:
+      started: Scalable Capital sync queued.
+      invalid: Enter valid Scalable account IDs and check whether a connection already exists.
+    sync:
+      started: Scalable Capital sync queued.
+    destroy:
+      disconnected: Scalable Capital disconnected. Imported accounts are now manual.
+    panel:
+      preview: Preview
+      trust_statement: Read-only access. The Scalable CLI manages broker credentials on the server.
+      unavailable: Enable preview features and configure the Scalable CLI for this household to connect.
+      description: Sign in to the server’s Scalable CLI in local read-only mode, then enter your portfolio ID. Sure creates separate investment and Cash accounts. Enter an Overnight Savings ID if Scalable has multiple active savings accounts.
+      portfolio_id: Broker portfolio ID
+      savings_id: Overnight Savings ID (optional)
+      connect: Connect Scalable Capital
+      reconnect: Sign in to the server’s Scalable CLI again, then sync this connection.
+      disconnect: Disconnect
+      disconnect_confirm: Disconnect Scalable Capital and keep the imported data as manual accounts?
