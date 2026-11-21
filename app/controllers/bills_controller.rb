@@ -13,7 +13,6 @@ class BillsController < ApplicationController
   # Enough to answer "what happens next" without becoming a second bill list.
   NEXT_UP_LIMIT = 4
   # Six covers a month of weekly paydays with room for a leading bridge.
-  PAY_PERIOD_LIMIT = 6
   before_action :ensure_recurring_enabled
 
   # The pay-run workspace, built on occurrence rows rather than series
@@ -82,8 +81,6 @@ class BillsController < ApplicationController
 
     compute_kpis(today, month_end)
 
-    @month_pay_periods = month_pay_periods(today, month_end)
-
     @detected_awaiting_review = detected_awaiting_review
     # Fresh detections wait here for confirm/dismiss. Reviewing them is bill
     # work, so the strip lives on this page as well as in Settings.
@@ -109,6 +106,18 @@ class BillsController < ApplicationController
                  .select { |occurrence| occurrence.effective_due_on >= today }
                  .sort_by(&:effective_due_on)
                  .first(NEXT_UP_LIMIT)
+
+    # The page's gates ask whether there are bills, so they are read before
+    # paydays join the lists.
+    @bills_due = [ @overdue, @month_rows, @later ].any?(&:any?)
+
+    # Paydays go where their month is: this month's join the month list in date
+    # order, next month's sit under After this month with the bills due then.
+    # Added after the counts above so they are not counted as bills.
+    payday_this_month, payday_next_month = overview_paydays(today).partition { |occurrence| occurrence.effective_due_on <= month_end }
+    @month_rows = (@month_rows + payday_this_month).sort_by { |occurrence| [ occurrence.effective_due_on, occurrence.id ] }
+    @later = (@later + payday_next_month).sort_by(&:effective_due_on)
+    @payday_due_before = payday_due_before(payday_this_month + payday_next_month, today)
   end
 
   # One-click detection for a page with nothing on it: run the full pipeline
@@ -219,11 +228,11 @@ class BillsController < ApplicationController
       # The next income EVENT, which is not the same fact as any one series'
       # next payday: two sources can land on the same day.
       arrivals = @next_income_by_series.values
-      first_arrival = arrivals.min_by(&:due_on)
+      first_arrival = arrivals.min_by(&:effective_due_on)
       if first_arrival
-        same_day = arrivals.select { |occurrence| occurrence.due_on == first_arrival.due_on }
+        same_day = arrivals.select { |occurrence| occurrence.effective_due_on == first_arrival.effective_due_on }
         total, unconvertible = total_of(same_day) { |occurrence| occurrence.resolved_expected_amount_money }
-        @next_income = { date: first_arrival.due_on, occurrences: same_day, total: total, unconvertible: unconvertible }
+        @next_income = { date: first_arrival.effective_due_on, occurrences: same_day, total: total, unconvertible: unconvertible }
       end
 
       @income_needs_attention = @income_series.any? { |series| !paycheck_income_plans?(series) }
@@ -470,6 +479,50 @@ class BillsController < ApplicationController
                          .sum(:allocated_amount)
     end
 
+    # What each upcoming payday has to cover: the open bills due from it up to
+    # the next payday. The planner owns the window, so this figure is the one the
+    # Income plan shows for the same payday. A passed payday carries nothing,
+    # since its bills are settled. A window the planner cannot total (it reaches
+    # past the bills the overview loads, or holds a bill with no exchange rate)
+    # carries nothing either, rather than a total that leaves a bill out.
+    def payday_due_before(paydays, today)
+      upcoming = paydays.select { |payday| payday.scheduled? && payday.effective_due_on >= today }
+      return {} if upcoming.empty?
+
+      windows = RecurringTransaction::PaycheckPlanner
+                  .new(Current.family, user: Current.user)
+                  .plan(through: upcoming.last.effective_due_on, cash: false)
+                  .to_a
+                  .index_by(&:starts_on)
+
+      upcoming.each_with_object({}) do |payday, due_before|
+        window = windows[payday.effective_due_on]
+        next if window.nil? || !window.bills_total_known?
+
+        due_before[payday.id] = { amount: Money.new(window.bills_total, Current.family.currency), until: window.ends_on + 1 }
+      end
+    end
+
+    # Manually declared income due this month or next, whether or not its date
+    # has passed. Its state is read from the row itself (RecurringOccurrence#payday_state),
+    # so no date window decides what is shown.
+    def overview_paydays(today)
+      series_ids = Current.family.recurring_transactions
+                          .accessible_by(Current.user)
+                          .where(bill_type: "income", manual: true, status: "active")
+                          .select(:id)
+
+      paydays = Current.family.recurring_occurrences
+                       .where(recurring_transaction_id: series_ids)
+                       .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} BETWEEN ? AND ?",
+                              today.beginning_of_month, today.next_month.end_of_month)
+                       .includes(recurring_transaction: :merchant)
+                       .order(Arel.sql(RecurringOccurrence::EFFECTIVE_DUE_ON_SQL))
+                       .to_a
+      preload_allocation_sums(paydays)
+      paydays
+    end
+
     # Open occurrences through the horizon plus everything closed this
     # month, for every payable series (bills, subscriptions, and debt
     # payments alike). Inactive series ride along so their leftover open
@@ -496,35 +549,17 @@ class BillsController < ApplicationController
     end
 
     def preload_allocation_sums(occurrences)
-      sums = RecurringAllocation.confirmed
-                                .where(recurring_occurrence_id: occurrences.map(&:id))
-                                .group(:recurring_occurrence_id)
-                                .sum(:allocated_amount)
+      ids = occurrences.map(&:id)
+      confirmed = RecurringAllocation.confirmed.where(recurring_occurrence_id: ids)
+      sums = confirmed.group(:recurring_occurrence_id).sum(:allocated_amount)
+      matched = confirmed.where.not(entry_id: nil).distinct.pluck(:recurring_occurrence_id).to_set
+      latest = confirmed.group(:recurring_occurrence_id).maximum(:paid_on)
 
       occurrences.each do |occurrence|
         occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
+        occurrence.cached_matched_entry = matched.include?(occurrence.id)
+        occurrence.cached_received_on = latest[occurrence.id]
       end
-    end
-
-    # The month is the right container for planning and the wrong unit for
-    # anyone whose income does not arrive monthly. Paid weekly, "this month"
-    # collapses four paychecks and four rent payments into one list.
-    #
-    # These are markers inside the month, not a regrouping of it. Only returned
-    # when income actually subdivides the month: monthly income yields a single
-    # overlapping period and undeclared income yields none, and in both cases
-    # the list renders exactly as it did before.
-    def month_pay_periods(today, month_end)
-      periods = RecurringTransaction::PaycheckPlanner
-                  .new(Current.family, user: Current.user)
-                  .plan(periods_limit: PAY_PERIOD_LIMIT)
-      return [] if periods.blank?
-
-      overlapping = periods.select do |period|
-        period.starts_on <= month_end && period.ends_on >= today
-      end
-
-      overlapping.size > 1 ? overlapping : []
     end
 
     def compute_kpis(today, month_end)

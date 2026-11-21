@@ -159,6 +159,88 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
   # A bill is something you owe. Income is not owed, an internal transfer is not owed,
   # and a paused row was explicitly set aside, so none of them belong on the list.
+  # Paydays are listed for this month and next whether or not they have passed,
+  # so a payday with no bill after it still shows and a missed one is visible.
+  test "index lists declared paydays for this month and next, passed or not" do
+    travel_to Date.new(2026, 10, 23)
+    declare_income(name: "Santa Maria", amount: -1700, payday: Date.new(2026, 10, 21))
+    declare_income(name: "OutSystems", amount: -4300, payday: Date.new(2026, 10, 26))
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.payday.title", source: "Santa Maria"), response.body
+    assert_match I18n.t("bills.payday.title", source: "OutSystems"), response.body
+    assert_match I18n.t("bills.payday.unmatched"), response.body
+    assert_match I18n.t("bills.payday.expected"), response.body
+
+    # This month's payday sits above After this month; next month's sits below it.
+    title = I18n.t("bills.payday.title", source: "OutSystems")
+    later_at = response.body.index(I18n.t("bills.index.later"))
+    assert response.body.index(title) < later_at, "this month's payday should be above After this month"
+    assert response.body.index(title, later_at), "next month's payday should be under After this month"
+  end
+
+  test "a paused bill does not count toward a payday's due-before total" do
+    travel_to Date.new(2026, 10, 23)
+    declare_income(name: "Santa Maria", amount: -1700, payday: Date.new(2026, 10, 26))
+    bill = declare_bill(name: "Rent", amount: 900, due: Date.new(2026, 10, 27))
+    bill.update!(status: "inactive")
+
+    get bills_url
+
+    assert_response :success
+    until_text = I18n.l(Date.new(2026, 11, 26), format: "%-d %b")
+    assert_match I18n.t("bills.payday.due_before", amount: money_string(0), date: until_text), response.body
+    assert_no_match I18n.t("bills.payday.due_before", amount: money_string(900), date: until_text), response.body
+  end
+
+  test "two paydays on one date share one due-before window, so each bill counts once" do
+    travel_to Date.new(2026, 10, 23)
+    declare_income(name: "Santa Maria", amount: -1700, payday: Date.new(2026, 10, 26))
+    declare_income(name: "OutSystems", amount: -4300, payday: Date.new(2026, 10, 26))
+    declare_bill(name: "Rent", amount: 900, due: Date.new(2026, 10, 27))
+
+    get bills_url
+
+    assert_response :success
+    until_text = I18n.l(Date.new(2026, 11, 26), format: "%-d %b")
+    assert_no_match I18n.t("bills.payday.due_before", amount: money_string(0), date: until_text), response.body
+    assert_equal 2, response.body.scan(I18n.t("bills.payday.due_before", amount: money_string(900), date: until_text)).size
+  end
+
+  test "a snoozed payday's due-before window starts on the date it was snoozed to" do
+    travel_to Date.new(2026, 10, 23)
+    income = declare_income(name: "Santa Maria", amount: -1700, payday: Date.new(2026, 10, 26))
+    income.recurring_occurrences.find_by!(due_on: Date.new(2026, 10, 26)).snooze!(Date.new(2026, 10, 28))
+    declare_bill(name: "Rent", amount: 900, due: Date.new(2026, 10, 27))
+    declare_bill(name: "Gym", amount: 50, due: Date.new(2026, 10, 29))
+
+    get bills_url
+
+    assert_response :success
+    until_text = I18n.l(Date.new(2026, 11, 26), format: "%-d %b")
+    assert_match I18n.t("bills.payday.due_before", amount: money_string(50), date: until_text), response.body,
+      "only the bill due on or after the snoozed date counts toward it"
+    assert_no_match I18n.t("bills.payday.due_before", amount: money_string(950), date: until_text), response.body
+  end
+
+  test "a payday received early does not close the window before the bills that follow it" do
+    travel_to Date.new(2026, 10, 23)
+    declare_income(name: "Santa Maria", amount: -1700, payday: Date.new(2026, 10, 27))
+    early = declare_income(name: "OutSystems", amount: -4300, payday: Date.new(2026, 10, 28))
+    early.recurring_occurrences.find_by!(due_on: Date.new(2026, 10, 28)).close!("paid", source: "user")
+    declare_bill(name: "Gym", amount: 100, due: Date.new(2026, 10, 29))
+
+    get bills_url
+
+    assert_response :success
+    until_text = I18n.l(Date.new(2026, 11, 27), format: "%-d %b")
+    assert_match I18n.t("bills.payday.due_before", amount: money_string(100), date: until_text), response.body,
+      "the bill after the settled payday counts toward the payday still coming, as in the Income plan"
+    assert_no_match I18n.t("bills.payday.due_before", amount: money_string(0), date: I18n.l(Date.new(2026, 10, 28), format: "%-d %b")), response.body
+  end
+
   test "index excludes income and inactive rows but shows debt payments" do
     create_bill(name: "Real bill", amount: 50)
     create_bill(name: "Salary deposit", amount: -2000)
@@ -1178,24 +1260,6 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.safe_after_bills"), response.body
   end
 
-  test "a pay period marker totals the bills due after the month's end" do
-    travel_to Date.new(2026, 10, 23)
-    [ 21, 26 ].each do |day|
-      payday = Date.new(2026, 10, day)
-      @family.recurring_transactions.create!(
-        name: "Paycheck #{day}", account: accounts(:depository), amount: -1840, currency: "USD",
-        bill_type: "income", expected_day_of_month: day, anchor_date: payday,
-        last_occurrence_date: payday, next_expected_date: payday.next_month, status: "active", manual: true
-      )
-    end
-    create_bill(name: "Rent", amount: 900, expected_day_of_month: 28, next_expected_date: Date.new(2026, 10, 28))
-    create_bill(name: "Power", amount: 80, expected_day_of_month: 5, next_expected_date: Date.new(2026, 11, 5))
-
-    get bills_url
-
-    assert_response :success
-    assert_match I18n.t("bills.pay_period.due_before_date", amount: "$980.00", date: I18n.l(Date.new(2026, 11, 21), format: :short)), response.body
-  end
 
   # A lone materialized paycheck landing today collapses the planner's
   # boundary list to a single date, which yields an empty plan; the page must
@@ -2851,7 +2915,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # The overview groups by calendar month, which is the wrong unit for anyone
   # paid weekly: four paychecks and four rent payments land in one list. The
   # markers only earn their place when income actually subdivides the month.
-  test "weekly income marks pay periods inside the month" do
+  test "weekly income lists each paycheck in the month" do
     travel_to Date.current.beginning_of_month + 9.days
 
     declare_scheduled_income(frequency: "weekly", weekday: Date.current.wday)
@@ -2860,8 +2924,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    assert_match(/due before [A-Z][a-z]{2} \d+/, response.body,
-      "a weekly paycheck should mark its period inside the month")
+    assert_match I18n.t("bills.payday.title", source: "Payday"), response.body,
+      "a weekly paycheck should appear as a payday row in the overview"
   end
 
   test "monthly income leaves the month undivided" do
