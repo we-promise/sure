@@ -1001,7 +1001,7 @@ class ReportsController < ApplicationController
       # at Google Sheets, so the cells that carry them are escaped against
       # formula injection (CWE-1236). Only that column: the amount cells are
       # formatted money such as "-$42.00", which the escape would turn to text.
-      CSV.generate do |csv|
+      CSV.generate(force_quotes: true) do |csv|
         # Build header row: Category + Month columns + Total
         month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
         header_row = [ "Category" ] + month_headers + [ "Total" ]
