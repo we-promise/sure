@@ -86,6 +86,19 @@ class ExchangeRateTest < ActiveSupport::TestCase
     end
   end
 
+  test "keyless fallback records a direct quote under Frankfurter, so later lookups keep it" do
+    keyless_fallback(signed_in: false) do
+      ExchangeRatePair.where(from_currency: "SEK", to_currency: "NOK").delete_all
+      stub_request(:get, %r{/rate/SEK/NOK}).to_return(status: 200, body: { date: Date.current.to_s, base: "SEK", quote: "NOK", rate: 0.95 }.to_json)
+
+      ExchangeRate.find_or_fetch_rate(from: "SEK", to: "NOK", date: Date.current)
+      pair = ExchangeRatePair.for_pair(from: "SEK", to: "NOK")
+
+      assert_equal "frankfurter", pair.provider_name
+      assert pair.quoted_directly?
+    end
+  end
+
   test "finds rate in DB" do
     existing_rate = exchange_rates(:one)
 
@@ -134,6 +147,18 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_difference "ExchangeRate.count", 1 do
       assert_equal 1.2, ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true).rate
     end
+    assert_not ExchangeRatePair.exists?(from_currency: "USD", to_currency: "EUR")
+  end
+
+  test "records that the provider answered a pair with neither side USD" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+    @provider.expects(:fetch_exchange_rate)
+             .returns(provider_success_response(OpenStruct.new(from: "KZT", to: "RUB", date: Date.current, rate: 0.16)))
+
+    ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current)
+
+    assert ExchangeRatePair.find_by!(from_currency: "KZT", to_currency: "RUB").quoted_directly?
   end
 
   test "returns nil on provider error" do
@@ -142,6 +167,76 @@ class ExchangeRateTest < ActiveSupport::TestCase
     @provider.expects(:fetch_exchange_rate).returns(provider_response)
 
     assert_nil ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
+  end
+
+  test "derives a pair the provider lacks from its USD legs and caches it" do
+    ExchangeRate.delete_all
+    date = Date.current
+    window = { start_date: date - ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS, end_date: date }
+
+    @provider.expects(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no KZT/RUB")))
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", **window)
+             .returns(provider_success_response([ OpenStruct.new(from: "KZT", to: "USD", date: date, rate: 0.002) ]))
+    @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", **window)
+             .returns(provider_success_response([ OpenStruct.new(from: "USD", to: "RUB", date: date, rate: 80) ]))
+
+    assert_equal 0.16, ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: date).rate.to_f
+    assert_equal 0.16, ExchangeRate.find_by!(from_currency: "KZT", to_currency: "RUB", date: date).rate.to_f
+  end
+
+  test "does not ask Yahoo for the USD legs when its single lookup failed on authentication" do
+    ExchangeRate.delete_all
+    yahoo = Provider::YahooFinance.new
+    ExchangeRate.stubs(:provider).returns(yahoo)
+    auth = Provider::YahooFinance::AuthenticationError.new("no crumb")
+    yahoo.expects(:fetch_exchange_rates).once.returns(provider_error_response(auth))
+
+    assert_nil ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current)
+  end
+
+  test "asks for the USD legs once for a pair the provider lacks in every form" do
+    ExchangeRate.delete_all
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.expects(:fetch_exchange_rate).twice.returns(provider_error_response(StandardError.new("no KZT/RUB")))
+    @provider.expects(:fetch_exchange_rates).once.returns(provider_error_response(StandardError.new("no KZT/USD")))
+
+    2.times { assert_nil ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current) }
+  end
+
+  test "builds the provider once per lookup, so its throttle spaces the direct request and the legs" do
+    ExchangeRate.delete_all
+    ExchangeRate.unstub(:provider)
+    ExchangeRate.expects(:provider).once.returns(@provider)
+    @provider.expects(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no KZT/RUB")))
+    @provider.expects(:fetch_exchange_rates).once.returns(provider_error_response(StandardError.new("no KZT/USD")))
+
+    assert_nil ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current)
+  end
+
+  test "returns a derived rate without storing it when cache is false" do
+    ExchangeRate.delete_all
+    date = Date.current
+
+    @provider.expects(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no KZT/RUB")))
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: date - 5, end_date: date)
+             .returns(provider_success_response([ OpenStruct.new(from: "KZT", to: "USD", date: date, rate: 0.002) ]))
+    @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", start_date: date - 5, end_date: date)
+             .returns(provider_success_response([ OpenStruct.new(from: "USD", to: "RUB", date: date, rate: 80) ]))
+
+    assert_no_difference "ExchangeRate.count" do
+      assert_equal 0.16, ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: date, cache: false).rate.to_f
+    end
+  end
+
+  test "does not derive and cache a pair the provider has quoted before when it fails" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.record_direct_quote(from: "KZT", to: "RUB")
+
+    @provider.expects(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("timeout")))
+    @provider.expects(:fetch_exchange_rates).never
+
+    assert_nil ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current)
+    assert_equal 0, ExchangeRate.count
   end
 
   test "reuses nearest cached rate within lookback window instead of calling provider" do

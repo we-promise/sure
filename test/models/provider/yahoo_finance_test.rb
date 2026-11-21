@@ -453,6 +453,29 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal date, rate.date
   end
 
+  test "fetch_exchange_rate keeps a rate limit or authentication failure as its own error" do
+    date = Date.new(2026, 10, 22)
+
+    [ Provider::YahooFinance::RateLimitError.new("slow down"), Provider::YahooFinance::AuthenticationError.new("no crumb") ].each do |error|
+      @provider.stubs(:fetch_exchange_rates).returns(Provider::Response.new(success?: false, data: nil, error: error))
+
+      response = @provider.fetch_exchange_rate(from: "KZT", to: "RUB", date: date)
+
+      assert_not response.success?
+      assert_instance_of error.class, response.error
+    end
+  end
+
+  test "fetch_exchange_rate still wraps any other failure in a plain error" do
+    @provider.stubs(:fetch_exchange_rates)
+             .returns(Provider::Response.new(success?: false, data: nil, error: Provider::YahooFinance::Error.new("no chart")))
+
+    response = @provider.fetch_exchange_rate(from: "KZT", to: "RUB", date: Date.new(2026, 10, 22))
+
+    assert_instance_of Provider::YahooFinance::Error, response.error
+    assert_equal "Failed to fetch exchange rates: no chart", response.error.message
+  end
+
   test "fetch_exchange_rate handles invalid currency codes" do
     date = Date.parse("2024-01-15")
 
@@ -1038,6 +1061,18 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     result = @provider.send(:fetch_chart_data, "EURUSD=X", Date.current - 5.days, Date.current, currency: "USD") { |ts, close| close }
 
     assert_nil result
+  end
+
+  test "fetch_exchange_rates reports a chart HTTP 429 as a rate limit, without trying the inverse symbol" do
+    @provider.stubs(:throttle_request)
+    @provider.expects(:fetch_authenticated_chart).once
+             .raises(Faraday::TooManyRequestsError.new("Too many requests", { body: "slow down" }))
+    DebugLogEntry.expects(:capture).with { |attributes| attributes[:metadata][:exception_class] == "Faraday::TooManyRequestsError" }
+
+    response = @provider.fetch_exchange_rates(from: "KZT", to: "USD", start_date: Date.new(2026, 10, 20), end_date: Date.new(2026, 10, 22))
+
+    assert_not response.success?
+    assert_instance_of Provider::YahooFinance::RateLimitError, response.error
   end
 
   # ================================

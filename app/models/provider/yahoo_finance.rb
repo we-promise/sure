@@ -143,7 +143,13 @@ class Provider::YahooFinance < Provider
             end_date: end_date
           )
 
-          raise Error, "Failed to fetch exchange rates: #{rates_response.error.message}" unless rates_response.success?
+          unless rates_response.success?
+            error = rates_response.error
+            # Kept as is, so callers can tell the provider failing from the pair missing.
+            raise error if error.is_a?(RateLimitError) || error.is_a?(AuthenticationError)
+
+            raise Error, "Failed to fetch exchange rates: #{error.message}"
+          end
 
           rates = rates_response.data
           if rates.length == 1
@@ -965,6 +971,9 @@ class Provider::YahooFinance < Provider
           provider_key: "yahoo_finance",
           metadata: { symbol: symbol, exception_class: e.class.name, exception_message: e.message }
         )
+        # Not a missing pair: the inverse symbol would only be limited too.
+        raise RateLimitError.new("Yahoo Finance rate limit exceeded", details: e.response&.dig(:body)) if e.is_a?(Faraday::TooManyRequestsError)
+
         nil
       end
     end
