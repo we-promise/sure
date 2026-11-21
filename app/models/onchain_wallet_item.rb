@@ -17,6 +17,7 @@ class OnchainWalletItem < ApplicationRecord
   belongs_to :family
 
   has_many :onchain_wallet_accounts, dependent: :destroy
+  has_many :bitcoin_wallet_accounts, dependent: :destroy
   has_many :accounts, through: :onchain_wallet_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }

@@ -1,0 +1,17 @@
+---
+fr:
+  activerecord:
+    errors:
+      models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: suit un portefeuille Bitcoin. Supprimez le portefeuille avant de lier un autre fournisseur.
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: est lié à un autre fournisseur. Les portefeuilles Bitcoin ne peuvent être suivis que sur des comptes crypto manuels.
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: nécessite que le chiffrement Active Record soit configuré

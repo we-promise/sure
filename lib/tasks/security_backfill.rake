@@ -145,8 +145,12 @@ namespace :security do
               encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
             end
 
-            # Write directly to database, bypassing callbacks/validations
-            record.update_columns(encrypted_attrs) if encrypted_attrs.any?
+            # Write directly to database, bypassing callbacks/validations.
+            # update_columns refuses read-only attributes; update_all with a
+            # hash still encrypts them through the attribute type.
+            readonly, writable = encrypted_attrs.partition { |field, _| model_class.readonly_attributes.include?(field.to_s) }.map(&:to_h)
+            record.update_columns(writable) if writable.any?
+            model_class.where(id: record.id).update_all(readonly) if readonly.any?
             write_raw_columns(record, rotated) if rotated.any?
             true
           end
