@@ -664,17 +664,9 @@ class ReportsController < ApplicationController
         .includes(:security, entry: { account: :accountable })
         .to_a
 
-      # Each sale's basis position in one query, before the rates: the rate
-      # preload keys on the currency that position is carried in.
-      Trade.preload_basis_holdings(sell_trades)
-
-      # What each fifo sale took from which lot, read once for the whole set.
-      lot_disposals = HoldingLotDisposal.readable_by_sale(sell_trades)
-      sell_trades.each { |trade| trade.preloaded_lot_disposals = lot_disposals[trade.entry.id] }
-
-      # The rates the proceeds conversion needs, in one query rather than one
-      # per foreign disposal.
-      Trade.preload_exchange_rates(sell_trades)
+      # Each sale's basis snapshot, consumed lots and rates, read once for the
+      # whole set rather than per sale.
+      Trade.preload_realized_gains(sell_trades)
 
       trades_by_treatment = sell_trades.group_by { |t| t.entry.account.tax_treatment || :taxable }
 

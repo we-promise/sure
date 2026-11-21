@@ -17,10 +17,11 @@
 #    target currency at that day's rate (see below), never today's. Marking an
 #    old disposal to today's rate restates a figure the user may already have
 #    reported.
-#    The figure is the gain in the holding's own currency, converted at the
-#    sale date's rate: the foreign-exchange move on the cost while the
-#    position was held is not part of it, so it is not a home-currency cost
-#    basis gain and can differ from a tax figure computed that way.
+#    The figure is the gain in the currency its cost is carried in (the
+#    holding's own, or under fifo the consumed lots'), converted at the sale
+#    date's rate: the foreign-exchange move on the cost while the position
+#    was held is not part of it, so it is not a home-currency cost basis gain
+#    and can differ from a tax figure computed that way.
 #
 # 3. A missing rate is not a rate of 1. ExchangeRate.rates_for ends in
 #    `rate&.rate || 1`, so it hands back parity for a pair it could not find
@@ -38,7 +39,10 @@
 # Reports card's realised list leave it out. The gain is the one
 # Trade#realized_gain_loss gives: in an account that sells by fifo, the cost
 # of the lots the sale consumed; otherwise the holding's average cost at the
-# time of the sale.
+# time of the sale. A fifo sale whose stored lots do not add up to its
+# position (HoldingLot.in_partition) has no readable record of what it
+# consumed, so its gain is unknown and it is excluded as gain_unknown, as the
+# Reports card leaves it out, rather than priced off the snapshot.
 #
 # A sale's rate is the one stored for its date, else the nearest earlier one
 # up to ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS before it, the
@@ -161,8 +165,9 @@ class Portfolio::RealizedGains
         # Rule 4. Not a zero gain.
         next exclusions << :gain_unknown if gain.nil?
 
-        # The gain is Money in the basis currency (the holding's), which
-        # Trade#realized_gain_loss has already converted the proceeds into.
+        # The gain is Money in the basis currency (the holding's, or under fifo
+        # the consumed lots'), which Trade#realized_gain_loss has already
+        # converted the proceeds into.
         amount = converted(gain.value, trade.entry.date, rates)
         next exclusions << :missing_exchange_rate if amount.nil?
 
@@ -191,7 +196,7 @@ class Portfolio::RealizedGains
         .to_a
         .reject { |trade| after_cutoff?(trade) }
 
-      preload(trades)
+      Trade.preload_realized_gains(trades)
       trades
     end
 
@@ -200,24 +205,6 @@ class Portfolio::RealizedGains
     def after_cutoff?(trade)
       cutoff = active_until_dates[trade.entry.account_id.to_s]
       cutoff.present? && trade.entry.date > cutoff
-    end
-
-    # Each sale's basis snapshot, the lots each fifo sale consumed, and the
-    # proceeds-to-basis rates, one query each for the whole set (plus the
-    # snapshots' average-cost fallback), so Trade#realized_gain_loss never
-    # looks one up per disposal. As ReportsController preloads them.
-    #
-    # Holdings are preloaded first because Trade.preload_exchange_rates reads
-    # the preloaded basis currency.
-    def preload(trades)
-      return if trades.empty?
-
-      Trade.preload_basis_holdings(trades)
-
-      lot_disposals = HoldingLotDisposal.readable_by_sale(trades)
-      trades.each { |trade| trade.preloaded_lot_disposals = lot_disposals[trade.entry.id] }
-
-      Trade.preload_exchange_rates(trades)
     end
 
     # Rules 2 and 3: the sale date's rate, and nil -- never 1 -- when there is

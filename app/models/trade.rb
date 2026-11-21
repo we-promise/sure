@@ -234,6 +234,20 @@ class Trade < ApplicationRecord
     trades.each { |trade| trade.preloaded_holdings = Array(by_entry[trade.entry.id]) }
   end
 
+  # Everything #realized_gain_loss reads, for a whole set of sales, in a fixed
+  # number of queries however many there are: each sale's basis snapshot and
+  # their average-cost fallback, the lots each fifo sale consumed, and the
+  # proceeds-to-basis rates. Snapshots go first, because the rate preload
+  # keys on the currency the position is carried in.
+  def self.preload_realized_gains(trades)
+    return if trades.empty?
+
+    preload_basis_holdings(trades)
+    lot_disposals = HoldingLotDisposal.readable_by_sale(trades)
+    trades.each { |trade| trade.preloaded_lot_disposals = lot_disposals[trade.entry.id] }
+    preload_exchange_rates(trades)
+  end
+
   # The currency this disposal's basis is carried in, where it can be answered
   # without a query. `Holding#avg_cost` is Money in the HOLDING's own currency,
   # which is not always the account's, and that is what the proceeds are

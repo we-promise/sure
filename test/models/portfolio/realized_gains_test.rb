@@ -289,7 +289,19 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
 
   # Under fifo each sale's basis is what it took from each lot, which
   # Trade#realized_gain_loss looks up per sale unless the set is preloaded.
-  test "fifo sales read their lot disposals in one query" do
+  test "the query count does not grow with fifo disposals" do
+    @account.update!(cost_basis_method: "fifo")
+    seed_fifo_disposals(2)
+    few = capture_sql_queries { measure_fully(realized) }.size
+
+    seed_fifo_disposals(4)
+    many = capture_sql_queries { measure_fully(realized) }.size
+
+    assert_equal 6, realized.trade_count, "every fifo disposal must be measured, or this proves nothing"
+    assert_equal few, many, "2 fifo disposals and 6 must cost the same number of queries"
+  end
+
+  test "a fifo sale's gain is the cost of the lots it consumed" do
     @account.update!(cost_basis_method: "fifo")
     buy_trade account: @account, date: @march - 20, qty: 60, price: 12
     buy_trade account: @account, date: @march - 10, qty: 40, price: 20
@@ -297,13 +309,25 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     sell_trade account: @account, date: @march, qty: 60, price: 25
     Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
 
-    gains = realized
-    queries = capture_sql_queries { measure_fully(gains) }
-
-    assert_equal 2, gains.trade_count, "both sales must be measured, or this proves nothing"
     # 10 x (25 - 12) from the oldest lot, then 50 x (25 - 12) + 10 x (25 - 20).
-    assert_equal BigDecimal(830), gains.net
-    assert_equal 1, queries.count { |sql| sql.include?(%("holding_lot_disposals")) }, "one preload, not one per sale"
+    # Priced off the snapshot (the 30 left, at 20) it would be 70 x (25 - 20).
+    assert_equal 2, realized.trade_count
+    assert_equal BigDecimal(830), realized.net
+  end
+
+  # Stored lots that no longer add up to the position say nothing reliable
+  # about what a sale consumed, and under fifo the snapshot's average is not
+  # that cost either, so the gain is unknown rather than priced off it.
+  test "a fifo sale whose lots do not add up to its position is excluded as gain unknown" do
+    @account.update!(cost_basis_method: "fifo")
+    seed_fifo_disposals(1)
+    assert_equal 1, realized.trade_count, "the sale must measure while its lots add up, or this proves nothing"
+
+    @account.holdings.order(date: :desc).first.update_columns(qty: 7)
+
+    gains = realized
+    assert_equal 0, gains.trade_count
+    assert_equal({ gain_unknown: 1 }, gains.excluded_trades)
   end
 
   # A sale is measured against its security's latest snapshot on or before
@@ -417,6 +441,19 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
         sell_trade account: @account, date: date, qty: 1, price: 150, security: security, currency: currency
         set_rate from: currency, to: @account.currency, date: date, rate: rate if currency && rate
       end
+    end
+
+    # n securities in a fifo account, each bought once and sold in part on
+    # its own day, materialized so each sale has a readable lot record.
+    def seed_fifo_disposals(count)
+      @seeded ||= 0
+      count.times do
+        security = create_security
+        date = @march + (@seeded += 1)
+        buy_trade account: @account, date: @march - 20, qty: 10, price: 12, security: security
+        sell_trade account: @account, date: date, qty: 4, price: 25, security: security
+      end
+      Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
     end
 
     def create_account(currency: "USD")
