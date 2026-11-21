@@ -70,6 +70,20 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Private holds a balance", response.body
   end
 
+  test "new chat ignores a household total computed from accounts someone can no longer open" do
+    insight = families(:dylan_family).insights.create!(
+      insight_type: "savings_rate_change", priority: "medium", status: "active", title: "Savings",
+      body: "Stale household total", metadata: { "accounts_digest" => "an-account-set-that-changed" },
+      dedup_key: "savings_rate_change:stale", generated_at: Time.current
+    )
+
+    get new_chat_url(insight_id: insight.id)
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]']", text: ""
+    assert_no_match "Stale household total", response.body
+  end
+
   # Hidden from everyone, owner included, same as the feed.
   test "new chat ignores an insight about a private account for its owner too" do
     insight = create_private_account_insight

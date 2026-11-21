@@ -67,11 +67,19 @@ class Insight::Generator
 
     # Totals have no single account that Insight.about_shared_accounts could
     # recheck on read, so an aggregate insight carries the account set it was
-    # computed from. When a share is granted or revoked the digest changes and
-    # the job rewrites the body (see GenerateInsightsJob#upsert_insights), so
-    # prose written from the old set does not outlive it.
+    # computed from. Once access changes the feed hides it, and the next run
+    # writes the new digest and rewrites the body (see
+    # GenerateInsightsJob#upsert_insights), so prose written from the old set
+    # does not outlive it.
+    #
+    # Hashed from the captured ids rather than the account rows, so an account
+    # deleted after the figures were computed still counts. The ids are
+    # aliased as accounts.id so the shared expression applies unchanged.
     def shared_accounts_digest
-      @shared_accounts_digest ||= Digest::SHA256.hexdigest(shared_account_ids.join(","))
+      @shared_accounts_digest ||= Account.connection.select_value(Account.sanitize_sql_array([
+        "SELECT #{Account::ID_SET_DIGEST_SQL} FROM unnest(?::uuid[]) AS accounts(id)",
+        "{#{shared_account_ids.join(",")}}"
+      ]))
     end
 
     # Recurring series follow the same rule, matching

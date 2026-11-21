@@ -1,44 +1,44 @@
 # frozen_string_literal: true
 
+# Delivers one PushDelivery row through its channel's #deliver adapter.
 class DeliverInsightNotificationJob < ApplicationJob
-  queue_as :scheduled
+  queue_as :high_priority
+  # The persisted delivery owns the total budget; ActiveJob only schedules
+  # backoff. Sidekiq must not start a separate retry chain.
+  sidekiq_options retry: false
 
-  retry_on Apns::Client::TransientError, wait: :polynomially_longer, attempts: 5
+  retry_on PushDelivery::TransientError, wait: :polynomially_longer, attempts: PushDelivery::MAX_PROVIDER_ATTEMPTS
   discard_on ActiveRecord::RecordNotFound
 
-  def self.enqueue_for(insight)
-    return unless Apns::Client.available? && insight.priority_high? && insight.active?
-
-    insight.family.users.includes(:push_subscriptions).find_each do |user|
-      next unless user.active? && user.preview_features_enabled?
-
-      user.push_subscriptions.recent.find_each do |subscription|
-        perform_later(insight_id: insight.id, push_subscription_id: subscription.id)
+  def perform(push_delivery_id: nil, insight_id: nil, push_subscription_id: nil)
+    delivery =
+      if push_delivery_id
+        PushDelivery.find(push_delivery_id)
+      else
+        # Queued before the ledger existed. Synthesize the row this send needs
+        # so in-flight jobs survive the deploy instead of dying on an
+        # incompatible signature; the claim re-checks every eligibility rule.
+        subscription = PushSubscription.find(push_subscription_id)
+        insight = Insight.find(insight_id)
+        PushDelivery.for_subscription(subscription, insight)
       end
+    return unless delivery
+
+    attempt = delivery.claim_attempt!
+    return unless attempt
+
+    subscription = delivery.subscription
+    subscription_updated_at = subscription.updated_at
+    result = subscription.deliver(delivery)
+    if result == :skipped
+      # The channel could not attempt (for example the client went unavailable
+      # between claim and deliver); release the reservation instead of
+      # recording an outcome the provider never gave.
+      delivery.release_attempt!(attempt)
+    else
+      delivery.complete_attempt!(attempt, result: result, subscription_updated_at: subscription_updated_at)
     end
-  end
-
-  def perform(insight_id:, push_subscription_id:)
-    return unless Apns::Client.available?
-
-    insight = Insight.find(insight_id)
-    subscription = PushSubscription.find(push_subscription_id)
-    return unless subscription.user.family_id == insight.family_id
-    return unless subscription.eligible? && subscription.user.preview_features_enabled?
-    return unless insight.priority_high? && insight.active?
-    # The account it names may have stopped being shared with everyone
-    # since the insight was generated; the feed hides it, so no push either.
-    return unless Insight.about_shared_accounts.exists?(insight.id)
-
-    PushSubscription::Delivery.new(subscription).call do |client|
-      I18n.with_locale(insight.family.locale) do
-        client.deliver(
-          token: subscription.token,
-          title: I18n.t("insights.notification.title"),
-          body: I18n.t("insights.notification.body"),
-          insight_id: insight.id
-        )
-      end
-    end
+  rescue PushDelivery::TransientError
+    raise if delivery.retry_attempt!(attempt)
   end
 end
