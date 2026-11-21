@@ -88,7 +88,7 @@
                     form: ef,
                     categories: Current.family.categories.alphabetically_by_hierarchy,
                     selected_id: ef.object.category_id,
-                    disabled: @entry.split_child? || annotate_locked,
+                    disabled: annotate_locked,
                     auto_submit: true,
                     blank_label: t(".uncategorized"),
                     locked: Current.family.categories_locked?

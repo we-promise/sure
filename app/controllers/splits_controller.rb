@@ -111,16 +111,11 @@ class SplitsController < ApplicationController
       raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
 
       raw_splits.map do |s|
-        # A blank merchant follows the parent's; a picked merchant or "no merchant" is the row's own.
-        no_merchant = s[:merchant_id] == SplitsHelper::NO_MERCHANT
-        scoped = references.scope(category_id: s[:category_id], merchant_id: (s[:merchant_id] unless no_merchant), tag_ids: s[:tag_ids])
-
         {
           name: s[:name],
           amount: s[:amount].to_d * -1,
           excluded: s[:excluded],
-          own_merchant: no_merchant || scoped[:merchant_id].present?,
-          **scoped
+          **references.scope(category_id: s[:category_id], merchant_id: s[:merchant_id], tag_ids: s[:tag_ids])
         }
       end
     end
