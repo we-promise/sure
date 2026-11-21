@@ -611,6 +611,7 @@ RSpec.describe 'API V1 Auth', type: :request do
                properties: {
                  message: { type: :string }
                }
+        let(:body) { { email: user.email } }
         run_test!
       end
     end
@@ -634,16 +635,38 @@ RSpec.describe 'API V1 Auth', type: :request do
                properties: {
                  message: { type: :string }
                }
+        let(:body) do
+          {
+            token: user.generate_token_for(:password_reset),
+            password: 'New-Docs-Pass1!',
+            password_confirmation: 'New-Docs-Pass1!'
+          }
+        end
         run_test!
       end
 
       response '422', 'invalid or expired token, SSO-only account, or password validation failed' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:body) do
+          {
+            token: 'invalid-or-expired-token',
+            password: 'New-Docs-Pass1!',
+            password_confirmation: 'New-Docs-Pass1!'
+          }
+        end
         run_test!
       end
 
       response '403', 'password features are disabled on this instance' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        before { allow(AuthConfig).to receive(:password_features_enabled?).and_return(false) }
+        let(:body) do
+          {
+            token: 'any-token',
+            password: 'New-Docs-Pass1!',
+            password_confirmation: 'New-Docs-Pass1!'
+          }
+        end
         run_test!
       end
     end
