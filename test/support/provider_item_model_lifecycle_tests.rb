@@ -70,6 +70,11 @@ module ProviderItemModelLifecycleTests
       assert_same error, reported
       assert_equal({ "#{key}_item_id": provider_item.id, sync_id: sync.id }, tags)
       assert_equal I18n.t("#{key}_items.syncer.failed"), sync.reload.error
+
+      safe_error = Sentry.stub(:capture_exception, ->(*) { }) do
+        assert_raises(ProviderItem::Syncer::SafeSyncError) { provider_item.perform_sync(Sync.create!(syncable: provider_item)) }
+      end
+      assert_nil safe_error.cause
     end
 
     test "lifecycle: unlinking removes the connection's links and detaches their holdings" do
