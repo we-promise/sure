@@ -105,7 +105,7 @@ class AccountsController < ApplicationController
     @q = activity_search_params
     # The account and its provider links are preloaded once for every row: a
     # balance update's label depends on whether the account is linked.
-    entries = @account.entries.excluding_split_parents.search(@q.except(:balance_updates), family).reverse_chronological
+    entries = @account.entries.excluding_split_parents.excluding_cash_anchors.search(@q.except(:balance_updates), family).reverse_chronological
       .includes(:entryable, account: [ :account_providers, :plaid_account, :simplefin_account ])
     entries = entries.excluding_balance_updates unless show_balance_updates?
     if statement_tab_active?

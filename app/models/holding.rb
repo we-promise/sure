@@ -24,6 +24,7 @@ class Holding < ApplicationRecord
   validates :cost_basis_source, inclusion: { in: COST_BASIS_SOURCES }, allow_nil: true
 
   scope :chronological, -> { order(:date) }
+  scope :through_today, -> { where(date: ..Date.current) }
   scope :for, ->(security) { where(security_id: security).order(:date) }
   scope :with_locked_cost_basis, -> { where(cost_basis_locked: true) }
   scope :with_unlocked_cost_basis, -> { where(cost_basis_locked: false) }
@@ -111,7 +112,7 @@ class Holding < ApplicationRecord
     account_ids = holdings.map(&:account_id).uniq
     security_ids = holdings.map(&:security_id).uniq
     readable = HoldingLot.in_partition(account_ids, security_ids)
-    latest = Holding.where(account_id: account_ids, security_id: security_ids).group(:account_id, :security_id).maximum(:date)
+    latest = Holding.through_today.where(account_id: account_ids, security_id: security_ids).group(:account_id, :security_id).maximum(:date)
     lots = HoldingLot.where(account_id: account_ids, security_id: security_ids).where("holding_lots.qty > 0")
       .left_joins(:source_entry).select("holding_lots.*, entries.entryable_id AS trade_id")
       .order(Arel.sql("holding_lots.acquired_on ASC NULLS FIRST"), "holding_lots.created_at")
@@ -305,13 +306,24 @@ class Holding < ApplicationRecord
     account.entries.where(entryable: account.trades.where(security: security)).reverse_chronological
   end
 
+  # A cash-anchored account keeps holdings history, so remove this position's whole manual series.
   def destroy_holding_and_entries!
-    transaction do
-      account.entries.where(entryable: account.trades.where(security: security)).destroy_all
-      destroy
+    trade_entries = account.entries.where(entryable: account.trades.where(security: security))
+    # A cash-anchored account only rebuilds from a given date: start where this position began.
+    if account.accounting_start_date
+      window_start_date = [ trade_entries.minimum(:date), account.holdings.where(security: security).minimum(:date) ].compact.min
     end
 
-    account.sync_later
+    transaction do
+      trade_entries.destroy_all
+      if account.accounting_start_date
+        account.holdings.where(security: security, account_provider_id: nil).destroy_all
+      else
+        destroy
+      end
+    end
+
+    account.sync_later(window_start_date: window_start_date)
   end
 
   # Returns the priority level for the current source (higher = better)
@@ -341,7 +353,7 @@ class Holding < ApplicationRecord
   # The stored lots are the position as it stands, so only its latest row
   # shows them, and only while they add up to it (HoldingLot.in_partition).
   def open_lots
-    return HoldingLot.none unless date == account.holdings.where(security_id: security_id).maximum(:date)
+    return HoldingLot.none unless date == account.holdings.through_today.where(security_id: security_id).maximum(:date)
     return HoldingLot.none unless HoldingLot.in_partition([ account_id ], [ security_id ]).include?([ account_id, security_id ])
 
     HoldingLot.where(account_id: account_id, security_id: security_id).where("qty > 0")
@@ -353,7 +365,7 @@ class Holding < ApplicationRecord
   # provider's rows alone, so a lot cost set under it would change nothing the
   # position shows.
   def provider_cost_position?
-    latest = account.holdings.where(security_id: security_id).order(date: :desc, id: :asc).first
+    latest = account.holdings.through_today.where(security_id: security_id).order(date: :desc, id: :asc).first
     latest.present? && latest.cost_basis_source == "provider" && latest.known_cost_basis.present?
   end
 

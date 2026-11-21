@@ -6,10 +6,12 @@ class Holding::Materializer
   # alongside the full @holdings collection. Reduces peak RSS during sync.
   PERSIST_BATCH_SIZE = 2_000
 
-  def initialize(account, strategy:, security_ids: nil)
+  # A window applies only to cash-anchored accounts; see Account#materialization_window.
+  def initialize(account, strategy:, security_ids: nil, window_start_date: nil)
     @account = account
     @strategy = strategy
     @security_ids = security_ids
+    @window_start_date = window_start_date
   end
 
   def materialize_holdings
@@ -116,6 +118,7 @@ class Holding::Materializer
       [ split_adjusted_cost_basis(cost_basis, security_id, date, Date.current), currency ]
     end
 
+    # Persist calculated or carried holdings while respecting provider rows and basis locks.
     def persist_holdings
       return if @holdings.empty?
 
@@ -131,13 +134,30 @@ class Holding::Materializer
       holdings_buffer_to_upsert_without_cost = []
 
       flush = ->(buf) do
-        account.holdings.upsert_all(buf, unique_by: %i[account_id security_id date currency])
+        key = %w[account_id security_id date currency]
+        # Repricing a snapshot keeps its provenance.
+        update_columns = buf.first.keys - key - [ "materialized" ]
+        account.holdings.upsert_all(buf, unique_by: key, update_only: update_columns)
         buf.clear
       end
 
       @holdings.each do |holding|
         key = holding_key(holding)
         existing = existing_holdings_map[key]
+
+        if holding.snapshot && existing.nil?
+          snapshot = holding.snapshot
+          # Per-share basis moves against a split-scaled quantity, so the total stays.
+          basis = snapshot.cost_basis
+          basis = basis * snapshot.qty / holding.qty if basis && holding.qty.nonzero? && holding.qty != snapshot.qty
+          # Providerless: the carried row is calculated here, so later syncs keep repricing it.
+          account.holdings.create!(security_id: holding.security_id, date: holding.date,
+            currency: holding.currency, qty: holding.qty, price: holding.price, amount: holding.amount,
+            cost_basis: basis,
+            cost_basis_source: snapshot.cost_basis_source, cost_basis_locked: snapshot.cost_basis_locked,
+            security_locked: snapshot.security_locked, provider_security_id: snapshot.provider_security_id, materialized: true)
+          next
+        end
 
         # Skip provider-sourced holdings - they have authoritative data from the provider
         # (e.g., Coinbase, SimpleFIN) and should not be overwritten by calculated holdings
@@ -163,6 +183,7 @@ class Holding::Materializer
           "amount" => holding.amount,
           "security_id" => holding.security_id,
           "account_id" => account.id,
+          "materialized" => true,
           "updated_at" => current_time
         }
 
@@ -231,6 +252,7 @@ class Holding::Materializer
       existing.cost_basis_source.nil? || existing.cost_basis_source == "calculated"
     end
 
+    # Preload dated rows whose provider priority or locked basis affects reconciliation.
     def load_existing_holdings_map
       # Load holdings that might affect reconciliation:
       # - Locked holdings (must preserve their cost_basis)
@@ -240,6 +262,12 @@ class Holding::Materializer
       #   figure and no source was invisible here, so the transfer clearing
       #   below saw `existing` as nil and left the stale basis standing —
       #   exactly the rows least able to justify the number they hold.
+      # Only rows inside the window can match a calculated holding.
+      if account.accounting_start_date
+        scope = @window_start_date ? account.holdings.where(date: @window_start_date..) : account.holdings
+        return scope.index_by { |h| holding_key(h) }
+      end
+
       account.holdings
         .where(cost_basis_locked: true)
         .or(account.holdings.where.not(cost_basis_source: nil))
@@ -380,18 +408,19 @@ class Holding::Materializer
     end
 
     def purge_stale_holdings
-      portfolio_security_ids = account.trades.distinct.pluck(:security_id)
+      providerless_holdings = account.holdings.where(account_provider_id: nil)
+      # A change of time zone can leave a calculated row dated after today.
+      # Snapshots and older rows of unknown origin may have come from an import.
+      providerless_holdings.where(materialized: true, date: Date.current.next_day..).delete_all
+      return if account.accounting_start_date
 
-      # Never delete provider-sourced holdings - they're authoritative from the provider
-      # If there are no securities in the portfolio, only delete non-provider holdings
+      portfolio_security_ids = account.trades.distinct.pluck(:security_id)
+      historical_holdings = providerless_holdings.through_today
       if portfolio_security_ids.empty?
         Rails.logger.info("Clearing non-provider holdings (no securities from trades)")
-        account.holdings.where(account_provider_id: nil).delete_all
+        historical_holdings.delete_all
       else
-        # Keep provider holdings and holdings for known securities within date range
-        deleted_count = account.holdings
-          .where(account_provider_id: nil)
-          .delete_by("date < ? OR security_id NOT IN (?)", account.start_date, portfolio_security_ids)
+        deleted_count = historical_holdings.delete_by("date < ? OR security_id NOT IN (?)", account.start_date, portfolio_security_ids)
         Rails.logger.info("Purged #{deleted_count} stale holdings") if deleted_count > 0
       end
     end
@@ -401,7 +430,7 @@ class Holding::Materializer
         portfolio_snapshot = Holding::PortfolioSnapshot.new(account)
         Holding::ReverseCalculator.new(account, portfolio_snapshot: portfolio_snapshot, security_ids: security_ids)
       else
-        Holding::ForwardCalculator.new(account, security_ids: security_ids)
+        Holding::ForwardCalculator.new(account, security_ids: security_ids, window_start_date: @window_start_date)
       end
     end
 end
