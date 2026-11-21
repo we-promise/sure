@@ -197,7 +197,8 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
   end
 
   test "refuses a feature whose requester can't rebuild a shadow" do
-    assert_raises(ArgumentError) { Ai::ShadowJob.perform_now("detect_merchants", @family.id, [], {}) }
+    job = Ai::ShadowJob.set(queue: "ai_low_priority")   # as queued; there's no shadow route to ask
+    assert_raises(ArgumentError) { job.perform_now("detect_merchants", @family.id, [], {}) }
   end
 
   test "the job carries ids and answers, never the transactions' text" do

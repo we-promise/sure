@@ -206,15 +206,12 @@ fr:
             probe_request_timeout: Délai d'expiration de la sonde de vérification
             selected_provider: Fournisseur sélectionné
             storage_probe: Vérification du stockage pgvector
-          last_checked: Vérifications en direct terminées il y a %{time_ago}. Les résultats sont mis en cache brièvement.
           llm:
             description: Les vérifications en direct contrôlent le modèle configuré, lui demandent un appel de fonction trivial comme le fait l'assistant, puis testent séparément l'extraction de texte et le traitement vision / natif à l'aide d'un PDF synthétique d'une page ne contenant aucune donnée client. Les valeurs des identifiants ne sont jamais affichées.
             title: LLM et traitement des PDF
-          loading: "Vérifications en direct en cours…"
           local_setup:
             description: Faites tourner le LLM via votre point de terminaison local compatible OpenAI, stockez les vecteurs de documents dans pgvector et faites pointer les paramètres d'embeddings vers un point de terminaison d'embeddings compatible OpenAI. L'image PostgreSQL doit inclure l'extension vector, et les dimensions d'embedding doivent correspondre au modèle sélectionné.
             title: Installation locale recommandée
-          not_checked_help: Ouvrez directement l'URL de statut de l'IA ou lancez les vérifications pour contrôler la disponibilité des services.
           pdf_statuses:
             failing: Vérification du PDF synthétique échouée
             not_checked: Non vérifié
@@ -263,10 +260,7 @@ fr:
             configuration_statuses:
               match: Identique au web
               mismatch: Différente du web
-            coverage_notice: Chaque vérification ne contrôle qu'un seul processus worker, celui qui la dépile. Avec plusieurs réplicas de worker, un résultat positif ne garantit pas que tous les workers sont sains ; relancez la vérification pour en tester un autre.
-            description: Les vérifications ci-dessus ont été exécutées depuis ce processus web. La majeure partie du travail lié à l'IA (réponses de l'assistant, traitement des PDF, embeddings, catégorisation automatique et détection des marchands) s'exécute en réalité dans un processus worker Sidekiq, dont l'accès réseau, le DNS, les règles de proxy ou même les identifiants chargés peuvent différer. Mettez une vérification en file d'attente pour contrôler la configuration et la connectivité propres à un worker.
             empty:
-              description: Cliquez sur « Vérifier la configuration du worker » pour mettre une vérification asynchrone en file d'attente. Le résultat apparaît ici dès qu'un processus worker la prend en charge.
               title: Aucun worker ne s'est encore manifesté
             labels:
               checked_at: Vérifié le
@@ -280,8 +274,6 @@ fr:
               failing: En échec
               passing: Opérationnel
               stale: Obsolète
-            title: Vérification du worker
-            verify_button: Vérifier la configuration du worker
         alert:
           title: Les tâches en arrière-plan ne s'exécutent pas
         counters_section_description: Compteurs Sidekiq agrégés sur toutes les files d'attente.
@@ -315,8 +307,6 @@ fr:
           seconds: "%{seconds} s"
           time_ago: il y a %{time_ago}
           unhealthy: Dégradé
-      verify_worker_ai:
-        queued: Vérification du worker mise en file d'attente. Elle apparaîtra ci-dessous dès qu'un processus worker la prendra en charge, généralement en quelques secondes.
       optional_services:
         description: 'Intégrations optionnelles côté opérateur. Les services non configurés sont donnés à titre informatif. Ces vérifications n''inspectent que les paramètres : elles ne testent pas la connectivité, n''envoient pas d''événements de test et ne modifient pas le consentement aux statistiques. Dépliez un service pour voir les détails de configuration.'
         missing_settings: 'Paramètres manquants : %{settings}'

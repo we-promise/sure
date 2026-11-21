@@ -103,8 +103,6 @@ id:
       push_notification:
         title: "Notifikasi uji coba Sure"
         body: "Ini adalah notifikasi push uji coba untuk akun Sure Anda."
-      verify_worker_ai:
-        queued: "Pemeriksaan worker telah masuk antrean. Hasilnya akan muncul di bawah ini setelah proses worker mengambilnya, biasanya dalam beberapa detik."
       optional_services:
         title: Layanan opsional
         description: "Integrasi operator opsional. Layanan yang belum dikonfigurasi bersifat informasional. Pemeriksaan ini hanya memeriksa pengaturan; tidak menguji konektivitas, mengirim event uji coba, atau mengubah persetujuan analitik. Rentangkan layanan untuk detail pengaturan."
@@ -254,9 +252,6 @@ id:
           no_queues: "Tidak ada antrean yang terdaftar. Worker mungkin tidak berjalan."
         ai:
           run_checks: Jalankan pemeriksaan lagi
-          last_checked: "Pemeriksaan langsung selesai %{time_ago} lalu. Hasil di-cache sebentar."
-          not_checked_help: Buka URL status AI secara langsung atau jalankan pemeriksaan untuk memverifikasi keaktifan layanan.
-          loading: "Menjalankan pemeriksaan langsung…"
           alerts:
             custom_openai:
               title: Pemeriksaan vector-store terkelola gagal di endpoint kustom ini
@@ -405,13 +400,8 @@ id:
             request_failed: Permintaan layanan gagal
             unsupported_provider: Penyedia tidak mendukung pemeriksaan ini
           worker:
-            title: Verifikasi worker
-            description: Pemeriksaan di atas berjalan dari proses web ini. Sebagian besar pekerjaan AI -- respons asisten, pemrosesan PDF, embedding, kategorisasi otomatis, dan deteksi merchant -- sebenarnya berjalan di proses worker Sidekiq, yang dapat berbeda dalam akses jaringan, DNS, aturan proxy, atau bahkan kredensial yang dimuat. Antrekan pemeriksaan untuk memverifikasi konfigurasi dan konektivitas worker sendiri.
-            verify_button: Verifikasi konfigurasi worker
-            coverage_notice: Setiap pemeriksaan memverifikasi tepat satu proses worker -- mana saja yang mengambilnya dari antrean. Dengan lebih dari satu replika worker, hasil lulus tidak memastikan setiap worker sehat; antrekan pemeriksaan lagi untuk mengambil sampel lain.
             empty:
               title: Belum ada worker yang melapor
-              description: Klik "Verifikasi konfigurasi worker" untuk mengantrekan pemeriksaan asinkron. Hasilnya muncul di sini setelah proses worker mengambilnya.
             labels:
               process: Proses worker
               checked_at: Diperiksa

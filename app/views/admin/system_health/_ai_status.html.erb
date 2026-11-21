@@ -22,21 +22,28 @@
 ] %>
 
 <div class="space-y-4" data-testid="ai-status">
+  <%= render "shared/ai_worker_health_warning", message: t("admin.system_health.show.ai.worker_unhealthy_warning") %>
+
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-secondary">
       <% if ai_health.last_checked_at %>
-        <%= t("admin.system_health.show.ai.last_checked", time_ago: time_ago_in_words(ai_health.last_checked_at)) %>
+        <%= t("admin.system_health.show.ai.last_checked_in_worker", time_ago: time_ago_in_words(ai_health.last_checked_at)) %>
       <% else %>
-        <%= t("admin.system_health.show.ai.not_checked_help") %>
+        <%= t("admin.system_health.show.ai.run_checks_help") %>
       <% end %>
     </p>
-    <%# A link, because a GET form drops the query string from its action. %>
-    <%= render DS::Link.new(
-      href: admin_system_health_path(tab: "ai", refresh_ai_health: "1"),
+    <%# `replace` renders the redirect back here as a morphing refresh, which
+        keeps the status on screen, even when a tab switch changed the URL
+        behind Turbo's back. The morph reloads this frame from its old src,
+        so a locale override has to make the round trip too. %>
+    <%= render DS::Button.new(
+      href: run_ai_checks_admin_system_health_path(locale: locale_from_param),
+      method: :post,
       variant: :outline,
       size: :sm,
       icon: "refresh-cw",
-      text: t("admin.system_health.show.ai.run_checks")
+      text: t("admin.system_health.show.ai.run_checks"),
+      data: { turbo_action: "replace" }
     ) %>
   </div>
 
@@ -116,6 +123,7 @@
       <div>
         <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.ai.llm.title") %></h2>
         <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.ai.llm.description") %></p>
+        <%= render "probe_age", probe: ai_health.llm_probe %>
       </div>
       <%= render DS::Pill.new(
         label: t("admin.system_health.show.ai.probe_statuses.#{ai_health.llm_status}"),
@@ -155,6 +163,7 @@
         <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.function_calling") %></dt>
         <dd class="mt-1 font-medium <%= function_calling_class %>" data-testid="function-calling-status">
           <%= t("admin.system_health.show.ai.function_calling_statuses.#{function_calling_status}") %>
+          <%= render "probe_age", probe: ai_health.function_calling_probe %>
         </dd>
       </div>
       <% pdf_checks.each do |check| %>
@@ -162,6 +171,7 @@
           <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.#{check[:key]}") %></dt>
           <dd class="mt-1 font-medium <%= check[:supported] ? "text-success" : (check[:status] == :failing ? "text-destructive" : "text-warning") %>">
             <%= t("admin.system_health.show.ai.pdf_statuses.#{check[:status]}") %>
+            <%= render "probe_age", probe: check[:probe] %>
           </dd>
         </div>
       <% end %>
@@ -172,6 +182,10 @@
       <div>
         <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.probe_request_timeout") %></dt>
         <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.values.seconds", seconds: ai_health.probe_request_timeout) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.probe_cache_ttl") %></dt>
+        <dd class="mt-1 font-medium text-primary" data-testid="probe-cache-ttl"><%= t("admin.system_health.show.values.seconds", seconds: ai_health.probe_cache_ttl.to_i) %></dd>
       </div>
       <div>
         <dt class="text-secondary">
@@ -216,6 +230,7 @@
       <div>
         <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.ai.vector_store.title") %></h2>
         <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.ai.vector_store.description") %></p>
+        <%= render "probe_age", probe: ai_health.vector_store_probe %>
       </div>
       <%= render DS::Pill.new(
         label: t("admin.system_health.show.ai.vector_statuses.#{vector_status}"),
@@ -274,6 +289,7 @@
               tone: ai_health.embedding_probe.passing? ? :success : (ai_health.embedding_probe.failing? ? :error : :neutral),
               marker: false
             ) %>
+            <%= render "probe_age", probe: ai_health.embedding_probe %>
           </dd>
         </div>
         <div>
@@ -322,32 +338,17 @@
   <% end %>
 
   <%= render DS::Card.new(class: "gap-4") do %>
-    <div class="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.ai.worker.title") %></h2>
-        <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.ai.worker.description") %></p>
-      </div>
-      <%# `replace` renders the redirect back here as a morphing refresh, which
-          keeps the status on screen, even when a tab switch changed the URL
-          behind Turbo's back. The morph reloads this frame from its old src,
-          so a locale override has to make the round trip too. %>
-      <%= render DS::Button.new(
-        href: verify_worker_ai_admin_system_health_path(locale: locale_from_param),
-        method: :post,
-        variant: :outline,
-        size: :sm,
-        icon: "server",
-        text: t("admin.system_health.show.ai.worker.verify_button"),
-        data: { turbo_action: "replace" }
-      ) %>
+    <div>
+      <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.ai.worker.ran_by_title") %></h2>
+      <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.ai.worker.ran_by_description") %></p>
     </div>
 
-    <p class="text-sm text-secondary"><%= t("admin.system_health.show.ai.worker.coverage_notice") %></p>
+    <p class="text-sm text-secondary"><%= t("admin.system_health.show.ai.worker.run_coverage_notice") %></p>
 
     <% worker_ai_health_results = Array(worker_ai_health_results) %>
     <% if worker_ai_health_results.empty? %>
       <%= render DS::Alert.new(title: t("admin.system_health.show.ai.worker.empty.title"), variant: :info) do %>
-        <p><%= t("admin.system_health.show.ai.worker.empty.description") %></p>
+        <p><%= t("admin.system_health.show.ai.worker.empty.run_description") %></p>
       <% end %>
     <% else %>
       <div class="space-y-3" data-testid="worker-ai-health-results">

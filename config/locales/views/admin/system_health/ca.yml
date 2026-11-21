@@ -44,8 +44,6 @@ ca:
       push_notification:
         title: Notificació de prova de Sure
         body: Aquesta és una notificació push de prova per al teu compte de Sure.
-      verify_worker_ai:
-        queued: Comprovació del worker a la cua. Apareixerà a sota quan un procés worker l'agafi, normalment en pocs segons.
       show:
         title: Estat del sistema
         tabs:
@@ -80,9 +78,6 @@ ca:
           no_queues: No hi ha cap cua registrada. Pot ser que el worker no s'estigui executant.
         ai:
           run_checks: Torna a executar les comprovacions
-          last_checked: Comprovacions en directe completades fa %{time_ago}. Els resultats es desen breument a la memòria cau.
-          not_checked_help: Obre directament l'URL d'estat de la IA o executa les comprovacions per verificar que el servei respon.
-          loading: "S'estan executant les comprovacions en directe…"
           alerts:
             custom_openai:
               title: La comprovació del magatzem vectorial allotjat ha fallat en aquest endpoint personalitzat
@@ -231,13 +226,8 @@ ca:
             request_failed: La petició al servei ha fallat
             unsupported_provider: El proveïdor no admet aquesta comprovació
           worker:
-            title: Verificació del worker
-            description: Les comprovacions anteriors s'han executat des d'aquest procés web. La major part del treball d'IA (respostes de l'assistent, processament de PDF, embeddings, categorització automàtica i detecció de comerços) s'executa en realitat en un procés worker de Sidekiq, que pot tenir un accés a la xarxa, un DNS, unes regles de proxy o fins i tot unes credencials carregades diferents. Posa una comprovació a la cua per verificar la configuració i la connectivitat del mateix worker.
-            verify_button: Verifica la configuració del worker
-            coverage_notice: 'Cada comprovació verifica exactament un procés worker: el que l''agafi de la cua. Amb més d''una rèplica del worker, un resultat correcte no confirma que tots els workers funcionin bé; torna a posar la comprovació a la cua per provar-ne un altre.'
             empty:
               title: Encara no ha respost cap worker
-              description: Fes clic a «Verifica la configuració del worker» per posar a la cua una comprovació asíncrona. El resultat apareixerà aquí quan un procés worker l'agafi.
             labels:
               process: Procés worker
               checked_at: Comprovat
