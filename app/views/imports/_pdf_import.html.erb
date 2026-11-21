@@ -55,7 +55,7 @@
                 existing transactions before they are ever shown, so importing a
                 statement for a synced account can no longer duplicate what sync
                 already brought in. %>
-            <% accounts = Current.user.accessible_accounts.alphabetically.pluck(:name, :id) %>
+            <% accounts = Current.user.accessible_accounts.selectable_or_including(import.account_id).alphabetically.pluck(:name, :id) %>
             <% if accounts.any? %>
               <%= f.select :account_id, accounts,
                            { include_blank: t("imports.pdf_import.select_account_placeholder"), selected: import.account_id, label: false },

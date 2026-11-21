@@ -1,5 +1,7 @@
 <%# locals: (account_group:, mobile: false, all_tab: false, open: nil, sortable: false, **args) %>
 
+<%# Archived accounts still count in the group total but are not listed. %>
+<% shown_accounts, archived_accounts = account_group.accounts.partition { |account| !account.archived? } %>
 <div id="<%= account_group.dom_id(tab: all_tab ? :all : nil, mobile: mobile) %>" data-group-key="<%= account_group.key %>">
   <% is_open = open.nil? ? (account_group.accounts.any? { |account| page_active?(account_path(account)) } || Current.user.always_expanded_account_group?(account_group.key)) : open %>
   <%= render DS::Disclosure.new(align: :left, open: is_open) do |disclosure| %>
@@ -34,7 +36,7 @@
             sortable_list_mirror_lists_value: true,
             action: "dragover->sortable-list#dragOver drop->sortable-list#drop account-sort-mode:stop@window->sortable-list#releaseKeyboardGrab turbo:before-visit@window->sortable-list#saveBeforeVisit"
           } : {} do %>
-      <% account_group.accounts.each do |account| %>
+      <% shown_accounts.each do |account| %>
         <%# Rows become draggable only in sort mode (account-sort-mode). %>
         <%= tag.div class: "flex items-center gap-1 rounded-lg",
               data: sortable ? {
@@ -91,6 +93,13 @@
         <% end %>
         <% end %>
       <% end %>
+    <% end %>
+
+    <% if archived_accounts.any? %>
+      <%= link_to t("accounts.sidebar.archived_accounts", count: archived_accounts.size),
+            accounts_path,
+            class: "block px-3 py-1 text-xs text-secondary hover:underline",
+            data: { turbo_frame: "_top" } %>
     <% end %>
 
     <div class="my-2">

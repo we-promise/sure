@@ -669,6 +669,7 @@ components:
       - account_type
       - status
       - exclude_from_reports
+      - archived
       - created_at
       - updated_at
       properties:
@@ -708,6 +709,13 @@ components:
           type: boolean
           readOnly: true
           description: Whether this account is excluded from financial reports
+        archived:
+          type: boolean
+          readOnly: true
+          description: Whether this account is archived. Archived accounts are left
+            out of the sidebar and of account pickers for new records, but are still
+            offered when editing a record already linked to them. They are still included
+            in net worth and reports.
         institution_name:
           type: string
           nullable: true

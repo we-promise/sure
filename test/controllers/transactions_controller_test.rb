@@ -230,6 +230,17 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
                   "change->money-field#handleCurrencyChange change->transaction-form#onCurrencyChange"
   end
 
+  test "new leaves archived accounts out of the account picker" do
+    archived = accounts(:depository)
+    archived.update!(archived: true)
+
+    get new_transaction_path
+
+    assert_response :success
+    assert_select "[role=option][data-value=?]", accounts(:credit_card).id
+    assert_select "[role=option][data-value=?]", archived.id, count: 0
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {

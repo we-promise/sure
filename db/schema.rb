@@ -95,6 +95,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.integer "account_providers_count", default: 0, null: false
     t.uuid "accountable_id"
     t.string "accountable_type"
+    t.boolean "archived", default: false, null: false
     t.decimal "balance", precision: 19, scale: 4
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
     t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true

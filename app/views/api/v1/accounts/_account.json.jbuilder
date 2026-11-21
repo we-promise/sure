@@ -15,6 +15,7 @@ json.account_type account.accountable_type&.underscore
 json.subtype account.subtype
 json.status account.status
 json.exclude_from_reports account.exclude_from_reports?
+json.archived account.archived?
 json.institution_name account.institution_name
 json.institution_domain account.institution_domain
 json.created_at account.created_at.iso8601
