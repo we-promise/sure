@@ -50,10 +50,10 @@ class Security::Resolver
         exchange_operating_mic: exchange_operating_mic
       )
 
-      security.assign_attributes(
-        country_code: country_code,
-        offline: true # This tells us that we shouldn't try to fetch prices later
-      )
+      security.offline = true # This tells us that we shouldn't try to fetch prices later
+      # The caller's country is the family's, a search hint rather than the
+      # listing, so it never replaces a country the row already trusts.
+      security.assign_country(country_code, source: "user_hint") unless trusted_country?(security)
       # Don't clobber a more specific existing reason (e.g. "provider_disabled",
       # "health_check_failed") with "resolution_pending" — only write a new
       # reason when the record doesn't already have a more specific one.
@@ -175,7 +175,7 @@ class Security::Resolver
         exchange_operating_mic: match.exchange_operating_mic
       )
 
-      security.country_code = match.country_code
+      security.assign_country(match.country_code, source: "provider")
 
       # Backfill the name straight from the search result — it's already
       # available here and doesn't depend on a later, separate
@@ -203,6 +203,10 @@ class Security::Resolver
       reactivate_if_provider_available!(security)
 
       security
+    end
+
+    def trusted_country?(security)
+      security.country_code.present? && !security.country_hint?
     end
 
     # If a security was marked offline, bring it back online whenever we have

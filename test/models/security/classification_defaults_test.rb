@@ -172,19 +172,16 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     assert_nil security.development_status
   end
 
-  # KNOWN LIMITATION, pinned on purpose.
   # The guard above holds only while the row stays offline. The daily health
   # check includes offline rows, prices them through `providers.first` and,
-  # on success, flips them online. On the save that does this, `offline?` no
-  # longer returns early, so the family's hint country becomes `region`, and
-  # `development_status` reads the same country.
+  # on success, flips them online. The row records that its country is the
+  # family's hint, so neither `region` nor `development_status` reads it once
+  # it is online.
   # Assert after the WHOLE `run_check`, not after `handle_success`, because
   # its `ensure` saves the row a second time. A guard keyed on the
   # offline->online transition would see no change on that second save and
-  # fill the region anyway. Recording where `country_code` came from
-  # (option B) is the follow-up fix. Whoever lands it flips these
-  # expectations to nil on purpose.
-  test "a hint-country offline security takes a region from the hint once the health check brings it online" do
+  # fill the region anyway.
+  test "a hint-country security the health check brings online takes no region from the hint" do
     family = families(:dylan_family)
     # Not the column default ("US"), so the region below can only come from
     # the hint this test sets.
@@ -212,8 +209,136 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     refute security.offline?, "the health check did not bring the row online"
     assert_nil region_before
     assert_nil development_before
+    assert_nil security.region, "the family's hint country became the security's region"
+    assert_nil security.development_status
+  end
+
+  # A provider match replaces the hint with the listing country, which is a
+  # fact about the instrument, so the region follows it once the row is online.
+  test "a provider match on a hint-country security derives its region from the listing country" do
+    Security.expects(:search_provider).returns([])
+    hinted = Security::Resolver.new("REG-MATCH", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+    assert_equal "user_hint", hinted.country_source
+    # A row whose search failed technically is searched again; any other
+    # offline row is returned from the database without asking a provider.
+    hinted.update_columns(offline_reason: "resolution_pending")
+
+    match = Security.new(ticker: "REG-MATCH", exchange_operating_mic: "XNAS", country_code: "US")
+    Security.expects(:search_provider).returns([ match ])
+    matched = Security::Resolver.new("REG-MATCH", exchange_operating_mic: "XNAS").resolve
+    matched.update!(offline: false)
+
+    assert_equal hinted.id, matched.id
+    assert_equal [ "US", "provider" ], [ matched.country_code, matched.country_source ]
+    assert_equal "north_america", matched.region
+    assert_equal "developed", matched.development_status
+  end
+
+  # A provider's own country is a fact about the listing even when it is the
+  # family's country too.
+  test "a provider country equal to the hint is recorded as the provider's" do
+    match = Security.new(ticker: "REG-SAME", exchange_operating_mic: "XNAS", country_code: "GB")
+    Security.expects(:search_provider).returns([ match ])
+
+    security = Security::Resolver.new("REG-SAME", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+    security.update!(offline: false)
+
+    assert_equal [ "GB", "provider" ], [ security.country_code, security.country_source ]
+    assert_equal "europe", security.region
+  end
+
+  # A family whose country is where the exchange is: the hint is the listing
+  # country, so the region follows it.
+  test "a hint country the exchange confirms still gives a region" do
+    Security.expects(:search_provider).returns([])
+    security = Security::Resolver.new("REG-CONFIRMED", exchange_operating_mic: "XNAS", country_code: "US").resolve
+    security.update!(offline: false)
+
+    assert_equal "user_hint", security.country_source
+    assert_equal "north_america", security.region
+    assert_equal "developed", security.development_status
+  end
+
+  # The confirmation belongs to the exchange, so moving the listing to one in
+  # another country takes back the region the hint gave.
+  test "a confirmed hint moved to an exchange elsewhere loses its region" do
+    Security.expects(:search_provider).returns([])
+    security = Security::Resolver.new("REG-MOVED", exchange_operating_mic: "XNAS", country_code: "US").resolve
+    security.update!(offline: false)
+    assert_equal "north_america", security.region
+
+    security.update!(exchange_operating_mic: "XLON")
+
+    assert_nil security.reload.region
+    assert_nil security.development_status
+  end
+
+  test "a region set by hand on a hint row survives other edits" do
+    Security.expects(:search_provider).returns([])
+    security = Security::Resolver.new("REG-HAND", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+    security.update!(offline: false, region: "europe")
+
+    security.update!(name: "Renamed")
+
+    assert_equal "europe", security.reload.region
+  end
+
+  test "assigning the country a row already has writes nothing" do
+    security = Security.create!(ticker: "REG-SAME-WRITE", country_code: "US", country_source: "provider")
+
+    security.assign_country("US", source: "provider")
+
+    assert_not security.changed?, "an unchanged country marked the row for a write"
+  end
+
+  test "a provider correcting its own country keeps the provider source" do
+    security = Security.create!(ticker: "REG-MOVE", exchange_operating_mic: "XNAS", country_code: "US", country_source: "provider",
+                                offline: true, offline_reason: "resolution_pending")
+    match = Security.new(ticker: "REG-MOVE", exchange_operating_mic: "XNAS", country_code: "CA")
+    Security.expects(:search_provider).returns([ match ])
+
+    Security::Resolver.new("REG-MOVE", exchange_operating_mic: "XNAS").resolve
+
+    assert_equal %w[CA provider], security.reload.slice(:country_code, :country_source).values
+  end
+
+  # A writer that does not record a source (Trade Republic's exchange lookup,
+  # say) correcting a hint row's country has replaced the hint.
+  test "a country corrected without a source is no longer a hint" do
+    Security.expects(:search_provider).returns([])
+    security = Security::Resolver.new("REG-FIXED", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+    assert_equal "user_hint", security.country_source
+
+    security.country_code = "DE"
+    security.offline = false
+    security.save!
+
+    assert_nil security.reload.country_source
     assert_equal "europe", security.region
     assert_equal "developed", security.development_status
+  end
+
+  # A hint the exchange confirms is the listing country, so another family's
+  # hint must not replace it.
+  test "the offline fallback keeps a hint country the exchange confirms" do
+    security = Security.create!(ticker: "VOD", exchange_operating_mic: "XLON", country_code: "GB",
+                                country_source: "user_hint", offline: true)
+    Security.expects(:search_provider).returns([])
+
+    Security::Resolver.new("VOD", exchange_operating_mic: "XLON", country_code: "US").resolve
+
+    assert_equal %w[GB user_hint], security.reload.slice(:country_code, :country_source).values
+  end
+
+  # The offline fallback reaches a row by ticker and exchange alone, so it can
+  # land on one a provider classified; the family's country must not replace it.
+  test "the offline fallback keeps a country the row already trusts" do
+    security = Security.create!(ticker: "REG-KEEP", exchange_operating_mic: "XNAS", country_code: "US")
+    Security.expects(:search_provider).returns([])
+
+    Security::Resolver.new("REG-KEEP", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+
+    assert_equal [ "US", nil, "north_america" ], security.reload.slice(:country_code, :country_source, :region).values
   end
 
   # Named for what it verifies, not for a path it never takes. There is no

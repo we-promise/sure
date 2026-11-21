@@ -101,6 +101,9 @@ class Security < ApplicationRecord
   # than quietly creating a sixth region that an allocation chart would show
   # as its own slice.
   REGIONS = YAML.safe_load_file(Rails.root.join("config", "regions.yml")).freeze
+  # Where `country_code` came from. NULL is a country from a writer that does
+  # not say, trusted as the listing country.
+  COUNTRY_SOURCES = %w[user_hint provider].freeze
 
   # Snake_case keys, like ASSET_CLASSES and ASSET_SUB_CLASSES, so the label a
   # user sees is a translation rather than the stored value.
@@ -112,6 +115,9 @@ class Security < ApplicationRecord
   # Declared after :upcase_symbols deliberately -- `crypto?` compares against a
   # canonical MIC, and that callback is what canonicalises it.
   before_validation :apply_classification_defaults
+  # Before the region is derived: a country changed by a writer that named no
+  # source is no longer the hint the row recorded.
+  before_save :clear_unsourced_country_source, if: -> { country_code_changed? && !country_source_changed? }
   before_save :apply_default_region, unless: :classification_locked?
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
   before_save :reset_first_provider_price_on_if_provider_changed
@@ -170,11 +176,31 @@ class Security < ApplicationRecord
     kind == "cash"
   end
 
+  # The country may be only a family's search hint, not where the instrument
+  # is listed. A hint the exchange's own country confirms is the listing
+  # country either way, so it is not treated as one.
+  def country_hint?
+    country_source == "user_hint" && exchange_country != country_code.to_s.upcase
+  end
+
+  # Sets the country together with where it came from. A source unchanged
+  # beside a new country is marked as written, so
+  # `clear_unsourced_country_source` keeps it.
+  def assign_country(code, source:)
+    self.country_code = code
+    self.country_source = (source if code.present?)
+    country_source_will_change! if country_code_changed?
+  end
+
+  def exchange_country
+    EXCHANGES.dig(exchange_operating_mic.to_s.upcase, "country")
+  end
+
   # Derived rather than stored: developed/emerging is a property of the country,
   # so there is no column for it and nothing to keep in sync. Nil for a country
-  # the config does not name.
+  # the config does not name, and for one that is only a family's search hint.
   def development_status
-    return nil if offline?
+    return nil if offline? || country_hint?
 
     REGIONS.dig(country_code.to_s.upcase, "development")
   end
@@ -480,7 +506,13 @@ class Security < ApplicationRecord
       # so deriving a region from it would publish one family's guess to
       # everyone holding that security. Provider-matched securities take
       # `match.country_code`, which is the listing country, and those do
-      # classify.
+      # classify. The hint stays on the row once it comes online (a health
+      # check or a remap prices it), so `country_source` marks it too. A hint
+      # its new exchange no longer confirms takes back the region it gave.
+      if country_hint?
+        self.region = nil if exchange_operating_mic_changed? && region == REGIONS.dig(country_code.to_s.upcase, "region")
+        return
+      end
       return if offline?
 
       derived = REGIONS.dig(country_code.to_s.upcase, "region")
@@ -508,6 +540,10 @@ class Security < ApplicationRecord
         # callback's, so `region_changed?` leaves it alone.
         self.region = derived
       end
+    end
+
+    def clear_unsourced_country_source
+      self.country_source = nil
     end
 
     def upcase_symbols

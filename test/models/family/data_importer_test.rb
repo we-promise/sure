@@ -2031,6 +2031,40 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "https://investor.vanguard.com", security.website_url
   end
 
+  # A country with no recorded source (an older export) is trusted, as it is
+  # in the database; one the file says a provider gave replaces a hint.
+  test "an imported country keeps the source the file records" do
+    %w[HINTC HINTD].each do |ticker|
+      Security.create!(ticker: ticker, exchange_operating_mic: "ARCX", country_code: "GB", country_source: "user_hint")
+    end
+    holdings = [ [ "HINTA", "GB", nil ], [ "HINTB", "GB", "provider" ], [ "HINTC", "US", "provider" ], [ "HINTD", "US", nil ] ].map do |ticker, country, source|
+      {
+        type: "Holding",
+        data: {
+          id: "holding-#{ticker}", account_id: "inv-acct-1", security_id: "security-#{ticker}", ticker: ticker,
+          exchange_operating_mic: "ARCX", country_code: country, country_source: source,
+          date: "2024-01-15", qty: "1", price: "1", amount: "1", currency: "USD"
+        }.compact
+      }
+    end
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "inv-acct-1", name: "Investment Account", balance: "10", currency: "USD", accountable_type: "Investment" } },
+      *holdings
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    stored = %w[HINTA HINTB HINTC HINTD].index_with do |ticker|
+      Security.find_by!(ticker: ticker).slice(:country_code, :country_source, :region).values
+    end
+    assert_equal({
+      "HINTA" => [ "GB", nil, "europe" ],
+      "HINTB" => [ "GB", "provider", "europe" ],
+      "HINTC" => [ "US", "provider", "north_america" ],
+      "HINTD" => [ "GB", "user_hint", nil ]
+    }, stored)
+  end
+
   test "imports valuations" do
     ndjson = build_ndjson([
       {

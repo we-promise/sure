@@ -333,6 +333,22 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ securities(:msft), securities(:aapl) ], [ @holding.security, @holding.provider_security ]
   end
 
+  # Remapping brings the chosen security online, but the combobox carries no
+  # country, so a row the resolver saved with the family's hint keeps it.
+  test "remapping onto a hint-country security leaves its region unset" do
+    Security.expects(:search_provider).returns([])
+    hinted = Security::Resolver.new("REG-REMAP", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+    assert hinted.offline?, "precondition: the resolver created the row offline"
+
+    patch remap_security_holding_path(@holding), params: { security_id: "REG-REMAP|XNAS" }
+
+    hinted.reload
+    assert_equal hinted, @holding.reload.security
+    refute hinted.offline?
+    assert_nil hinted.region, "the family's hint country became the security's region"
+    assert_nil hinted.development_status
+  end
+
   test "a remap whose restatement fails is not applied" do
     original = @holding.security
     Balance::Materializer.any_instance.stubs(:materialize_balances).raises(RuntimeError, "restatement failed")

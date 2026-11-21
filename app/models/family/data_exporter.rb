@@ -533,6 +533,7 @@ class Family::DataExporter
             exchange_mic: holding.security.exchange_mic,
             exchange_acronym: holding.security.exchange_acronym,
             country_code: holding.security.country_code,
+            country_source: holding.security.country_source,
             kind: holding.security.kind,
             website_url: holding.security.website_url,
             date: holding.date,

@@ -1235,6 +1235,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       ticker: "VTI#{SecureRandom.hex(4).upcase}",
       name: "Vanguard Total Stock Market ETF",
       country_code: "US",
+      country_source: "provider",
       exchange_operating_mic: "ARCX"
     )
     holding = investment_account.holdings.create!(
@@ -1258,6 +1259,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       assert holding_data
       assert_equal investment_account.id, holding_data["data"]["account_id"]
+      assert_equal %w[US provider], holding_data["data"].values_at("country_code", "country_source")
       assert_equal security.id, holding_data["data"]["security_id"]
       assert_equal security.ticker, holding_data["data"]["ticker"]
       assert_equal "ARCX", holding_data["data"]["exchange_operating_mic"]
