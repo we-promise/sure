@@ -19,7 +19,7 @@ class RecurringTransactionsController < ApplicationController
   before_action :set_recurring_transaction, only: %i[edit update toggle_status destroy confirm dismiss]
   before_action :ensure_series_writable, only: %i[update toggle_status destroy confirm dismiss]
 
-  helper_method :series_writable?, :separate_bill_chosen?
+  helper_method :series_writable?, :separate_bill_chosen?, :bill_account_options
 
   def index
     scope = Current.family.recurring_transactions
@@ -282,6 +282,17 @@ class RecurringTransactionsController < ApplicationController
     end
 
   private
+
+    # The bill form's account dropdown, shared by new, edit and the failed
+    # create/update re-renders. Its :logo variant reads Account#logo_url per
+    # account, which checks the stored logo and falls back to the provider's
+    # (Account#linked? also consults the legacy Plaid/SimpleFIN links), so all
+    # of that is preloaded rather than queried once per account.
+    def bill_account_options
+      @bill_account_options ||= Current.user.accessible_accounts.visible.alphabetically
+        .with_attached_logo
+        .includes(:plaid_account, :simplefin_account, account_providers: :provider)
+    end
 
     # "Create a separate bill anyway" posts allow_duplicate=1, and only that
     # counts as the choice: a "0" or "false" from a direct POST does not.
