@@ -415,6 +415,25 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "standard", card.entries.find_by!(external_id: "purchase_002", source: "snaptrade").entryable.kind
   end
 
+  # SnapTrade links a line of credit without "card" in its type as a Loan.
+  # Account::ProviderImportAdapter already classifies money into a linked Loan
+  # as loan_payment (a transfer kind), so only cards needed card_payment_kind.
+  test "a payment into a line of credit linked as a loan is a loan payment, not income" do
+    loan = @family.accounts.create!(name: "Line of credit", balance: 0, currency: "USD", accountable: Loan.new)
+    @snaptrade_account.ensure_account_provider!(loan)
+    @snaptrade_account.reload
+
+    process_activities(
+      build_cash_activity(id: "payment_003", type: "PAYMENT", amount: 300.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "purchase_003", type: "POSDEBIT", amount: -40.00, settlement_date: Date.current.to_s)
+    )
+
+    payment = loan.entries.find_by!(external_id: "payment_003", source: "snaptrade").entryable
+    assert_equal "loan_payment", payment.kind
+    assert_includes Transaction::TRANSFER_KINDS, payment.kind
+    assert_equal "standard", loan.entries.find_by!(external_id: "purchase_003", source: "snaptrade").entryable.kind
+  end
+
   test "processes cash FEE and TAX as positive outflow and INTEREST as negative inflow" do
     process_activities(
       build_cash_activity(id: "fee_001", type: "FEE", amount: -25.00, settlement_date: Date.current.to_s),
