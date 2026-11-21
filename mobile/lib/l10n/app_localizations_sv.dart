@@ -68,6 +68,95 @@ class AppLocalizationsSv extends AppLocalizations {
   String get loginSignIn => 'Logga in';
 
   @override
+  String get loginForgotPassword => 'Glömt lösenordet?';
+
+  @override
+  String get forgotPasswordTitle => 'Återställ lösenord';
+
+  @override
+  String get forgotPasswordInstructions =>
+      'Ange e-postadressen för ditt användarkonto så skickar vi en återställningslänk.';
+
+  @override
+  String get forgotPasswordEmailLabel => 'E-post';
+
+  @override
+  String get forgotPasswordEmailRequired => 'Ange din e-postadress';
+
+  @override
+  String get forgotPasswordEmailInvalid => 'Ange en giltig e-postadress';
+
+  @override
+  String get forgotPasswordSendLink => 'Skicka återställningslänk';
+
+  @override
+  String get forgotPasswordConfirmationTitle => 'Kolla din inkorg';
+
+  @override
+  String get forgotPasswordConfirmationMessage =>
+      'Om det finns ett användarkonto med den e-postadressen får du snart en återställningslänk.';
+
+  @override
+  String get forgotPasswordBackToSignIn => 'Tillbaka till inloggningen';
+
+  @override
+  String get forgotPasswordRateLimitedError =>
+      'För många återställningsförsök. Vänta en stund och försök igen.';
+
+  @override
+  String get forgotPasswordNetworkError =>
+      'Det gick inte att nå din server. Kontrollera anslutningen och försök igen.';
+
+  @override
+  String get forgotPasswordGenericError =>
+      'Det gick inte att begära en återställningslänk. Försök igen.';
+
+  @override
+  String get resetPasswordTitle => 'Nytt lösenord';
+
+  @override
+  String get resetPasswordInstructions =>
+      'Välj ett starkt lösenord för ditt användarkonto.';
+
+  @override
+  String get resetPasswordNewPasswordLabel => 'Nytt lösenord';
+
+  @override
+  String get resetPasswordConfirmationLabel => 'Bekräfta lösenord';
+
+  @override
+  String get resetPasswordPasswordRequired => 'Ange ett lösenord';
+
+  @override
+  String get resetPasswordPasswordMinLength =>
+      'Lösenordet måste innehålla minst 8 tecken';
+
+  @override
+  String get resetPasswordConfirmationRequired => 'Bekräfta ditt lösenord';
+
+  @override
+  String get resetPasswordPasswordsDoNotMatch =>
+      'Lösenorden stämmer inte överens';
+
+  @override
+  String get resetPasswordUpdateButton => 'Uppdatera lösenord';
+
+  @override
+  String get resetPasswordSuccess => 'Lösenordet har uppdaterats. Logga in.';
+
+  @override
+  String get resetPasswordGenericError =>
+      'Det gick inte att återställa lösenordet. Länken kan vara ogiltig eller ha gått ut.';
+
+  @override
+  String get resetPasswordNetworkError =>
+      'Vi kunde inte nå din server. Kontrollera din anslutning och försök igen.';
+
+  @override
+  String get resetPasswordDisabledError =>
+      'Lösenordsåterställning är inte tillgänglig för det här kontot.';
+
+  @override
   String get loginSignInWithGoogle => 'Logga in med Google';
 
   @override

@@ -14,10 +14,9 @@ class PasswordResetsController < ApplicationController
       # Security: Block password reset for SSO-only users.
       # These users have no local password and must authenticate via SSO.
       unless user.sso_only?
-        PasswordMailer.with(
-          user: user,
-          token: user.generate_token_for(:password_reset)
-        ).password_reset.deliver_later
+        # The mailer generates the token itself; passing it here would serialize
+        # it into the delivery job's logged arguments.
+        PasswordMailer.with(user: user).password_reset.deliver_later
       end
     end
 
@@ -44,6 +43,17 @@ class PasswordResetsController < ApplicationController
     end
   rescue ActiveRecord::ActiveRecordError
     render :edit, status: :unprocessable_entity
+  end
+
+  # Bridges the HTTPS reset link in the email to the app's custom scheme so the
+  # native reset screen opens. Renders in the shared auth layout and meta-refreshes
+  # to sureapp://password-reset, with a design-system fallback link to tap.
+  # Analytics is suppressed (@skip_analytics) so the token-bearing URL is never
+  # captured by PostHog.
+  def mobile_redirect
+    @skip_analytics = true
+    @token = params[:token].to_s
+    @deep_link = "sureapp://password-reset?token=#{ERB::Util.url_encode(@token)}"
   end
 
   private
