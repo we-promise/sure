@@ -6,8 +6,23 @@ class EntryScheduledSyncJobTest < ActiveJob::TestCase
   test "schedule_for enqueues a job for the entry's date when scheduled" do
     entry = create_transaction(account: accounts(:depository), date: 3.days.from_now.to_date)
 
-    assert_enqueued_with(job: EntryScheduledSyncJob, args: [ entry.id ]) do
+    assert_enqueued_with(job: EntryScheduledSyncJob, args: [ entry.id, entry.account_id ]) do
       EntryScheduledSyncJob.schedule_for(entry)
+    end
+  end
+
+  test "schedule_for enqueues when the entry is dated tomorrow in the family's time zone" do
+    families(:dylan_family).update!(timezone: "America/Los_Angeles")
+
+    # 04:00 UTC is 20:00 the previous day in Los Angeles: the app already
+    # calls it tomorrow, the family still calls it today.
+    travel_to Time.utc(2026, 11, 11, 4, 0, 0) do
+      entry = create_transaction(account: accounts(:depository), date: Date.new(2026, 11, 11))
+      expected_run_at = entry.date.in_time_zone("America/Los_Angeles") + 5.minutes
+
+      assert_enqueued_with(job: EntryScheduledSyncJob, args: [ entry.id, entry.account_id ], at: expected_run_at) do
+        EntryScheduledSyncJob.schedule_for(entry)
+      end
     end
   end
 
@@ -40,6 +55,58 @@ class EntryScheduledSyncJobTest < ActiveJob::TestCase
     assert_enqueued_jobs 2, only: EntryScheduledSyncJob do
       EntryScheduledSyncJob.schedule_for_entries(Entry.where(id: [ first.id, second.id, later.id, today.id ]))
     end
+  end
+
+  test "schedule_for_entries includes entries dated tomorrow in the family's time zone" do
+    families(:dylan_family).update!(timezone: "America/Los_Angeles")
+
+    travel_to Time.utc(2026, 11, 11, 4, 0, 0) do
+      entry = create_transaction(account: accounts(:depository), date: Date.new(2026, 11, 11))
+
+      assert_enqueued_jobs 1, only: EntryScheduledSyncJob do
+        EntryScheduledSyncJob.schedule_for_entries(Entry.where(id: entry.id))
+      end
+    end
+  end
+
+  test "schedule_for_entries does not touch entries dated before yesterday" do
+    account = accounts(:depository)
+    recent = create_transaction(account: account, date: 3.days.from_now.to_date)
+    old = create_transaction(account: account, date: 1.month.ago.to_date)
+    older = create_transaction(account: account, date: 2.years.ago.to_date)
+
+    scheduled = []
+    EntryScheduledSyncJob.stubs(:schedule_for).with { |entry| scheduled << entry.id; true }
+
+    EntryScheduledSyncJob.schedule_for_entries(Entry.where(id: [ recent.id, old.id, older.id ]))
+
+    assert_equal [ recent.id ], scheduled
+  end
+
+  test "sync_account_later schedules the fallback job when the entry is tomorrow in the family's time zone" do
+    families(:dylan_family).update!(timezone: "America/Los_Angeles")
+
+    # 04:00 UTC is 20:00 the previous day in Los Angeles: the app already
+    # calls it tomorrow, the family still calls it today.
+    travel_to Time.utc(2026, 11, 11, 4, 0, 0) do
+      entry = create_transaction(account: accounts(:depository), date: Date.new(2026, 11, 11))
+      expected_run_at = entry.date.in_time_zone("America/Los_Angeles") + 5.minutes
+      Account.any_instance.stubs(:sync_later)
+
+      assert_enqueued_with(job: EntryScheduledSyncJob, args: [ entry.id, entry.account_id ], at: expected_run_at) do
+        entry.sync_account_later
+      end
+    end
+  end
+
+  test "perform still syncs the account when the representative entry was deleted" do
+    entry = create_transaction(account: accounts(:depository), date: 3.days.from_now.to_date)
+    account = entry.account
+    entry.destroy!
+
+    Account.any_instance.expects(:sync_later).once
+
+    EntryScheduledSyncJob.perform_now(entry.id, account.id)
   end
 
   test "perform triggers a sync for the entry's account" do
