@@ -28,10 +28,10 @@ class RuleGroup < ApplicationRecord
   # Switches every rule of the group on or off, one by one, so each rule runs
   # its own callbacks (switching a rule on takes its email baseline). Returns
   # the rules left as they were: invalid ones, and those kept off because that
-  # baseline timed out.
-  def switch_rules(active)
+  # baseline timed out, and those the user may not switch (Rule#manageable_by?).
+  def switch_rules(active, user:)
     rules.ordered.to_a.reject do |rule|
-      rule.update(active: active) && !rule.notification_baseline_timed_out?
+      rule.manageable_by?(user) && rule.update(active: active) && !rule.notification_baseline_timed_out?
     end
   end
 

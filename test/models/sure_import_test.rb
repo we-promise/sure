@@ -8,6 +8,40 @@ class SureImportTest < ActiveSupport::TestCase
     @import = @family.imports.create!(type: "SureImport")
   end
 
+  test "writes_rules? reads the stored record counts instead of the file" do
+    attach_ndjson({ type: "Rule", data: { id: "rule-1", name: "Counted", resource_type: "transaction", actions: [ { action_type: "exclude_transaction" } ] } }.to_json)
+    import = SureImport.find(@import.id)
+    import.expects(:ndjson_blob_string).never
+
+    assert import.writes_rules?
+  end
+
+  test "an admin's publish doesn't look for rules" do
+    attach_ndjson({ type: "Tag", data: { id: "tag-1", name: "Admin" } }.to_json)
+    @import.expects(:writes_rules?).never
+
+    assert_nil @import.publish_refusal_for(users(:family_admin))
+  end
+
+  test "rules a member publishes are theirs" do
+    member = users(:family_member)
+    attach_ndjson({ type: "Rule", data: { id: "rule-1", name: "Published by member", resource_type: "transaction", active: true, actions: [ { action_type: "exclude_transaction" } ] } }.to_json)
+    @import.update!(published_by: member)
+
+    @import.import!
+
+    assert_equal member, @family.rules.find_by!(name: "Published by member").user
+  end
+
+  test "a failed preflight leaves an import another request has published" do
+    attach_ndjson({ type: "Tag", data: { id: "tag-1", name: "Racing" } }.to_json)
+    @import.stubs(:sure_preflight).returns(stub(valid?: false, error_message: "bad file"))
+    SureImport.where(id: @import.id).update_all(status: "importing")
+
+    assert_raises(SureImport::PreflightError) { @import.send(:validate_sure_preflight!) }
+    assert @import.reload.importing?
+  end
+
   test "dry_run reflects attached ndjson content" do
     ndjson = [
       { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } },
@@ -552,7 +586,7 @@ class SureImportTest < ActiveSupport::TestCase
     ]))
 
     assert_enqueued_with job: ImportJob, args: [ @import ] do
-      @import.publish_later
+      @import.publish_later(user: users(:family_admin))
     end
 
     assert_equal "importing", @import.status
@@ -564,7 +598,7 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_no_enqueued_jobs do
       error = assert_raises SureImport::NotPublishableError do
-        @import.publish_later
+        @import.publish_later(user: users(:family_admin))
       end
       assert_equal "Import was uploaded but has no publishable records.", error.message
     end
@@ -585,7 +619,7 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_no_enqueued_jobs do
       error = assert_raises StandardError do
-        @import.publish_later
+        @import.publish_later(user: users(:family_admin))
       end
       assert_equal "queue down", error.message
     end
@@ -604,7 +638,7 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_no_enqueued_jobs do
       assert_raises SureImport::PreflightError do
-        @import.publish_later
+        @import.publish_later(user: users(:family_admin))
       end
     end
 
@@ -619,7 +653,7 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_no_enqueued_jobs do
       assert_raises SureImport::PreflightError do
-        @import.publish_later
+        @import.publish_later(user: users(:family_admin))
       end
     end
 
@@ -800,7 +834,7 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_no_enqueued_jobs do
       assert_raises SureImport::PreflightError do
-        @import.publish_later
+        @import.publish_later(user: users(:family_admin))
       end
     end
     assert_equal "failed", @import.reload.status

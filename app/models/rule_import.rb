@@ -15,6 +15,10 @@ class RuleImport < Import
     committed_by_named_records?(family.rules)
   end
 
+  def writes_rules?
+    true
+  end
+
   def column_keys
     %i[name resource_type active effective_date conditions actions rule_group]
   end

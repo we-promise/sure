@@ -8,6 +8,8 @@ class ImportSession < ApplicationRecord
   STATUSES = %w[pending importing complete failed].freeze
 
   belongs_to :family
+  # Who opened the session. Null for sessions opened before this was recorded.
+  belongs_to :created_by, class_name: "User", optional: true
   has_many :imports, -> { order(:sequence, :created_at) }, dependent: :destroy
   has_many :source_mappings,
            class_name: "ImportSourceMapping",
@@ -100,7 +102,13 @@ class ImportSession < ApplicationRecord
     end
   end
 
-  def self.create_or_find_for!(family:, import_type:, client_session_id:, expected_chunks:)
+  # Reusing a session by client_session_id is the same as adding to it.
+  def self.ensure_managed_by!(session, user)
+    raise ActiveRecord::RecordNotFound if session.persisted? && user && !session.managed_by?(user)
+  end
+  private_class_method :ensure_managed_by!
+
+  def self.create_or_find_for!(family:, import_type:, client_session_id:, expected_chunks:, created_by: nil)
     import_type = import_type.presence || "SureImport"
     expected_chunks = normalize_positive_integer(expected_chunks)
     unless IMPORT_TYPES.include?(import_type)
@@ -111,6 +119,7 @@ class ImportSession < ApplicationRecord
 
     if client_session_id.present?
       session = family.import_sessions.find_or_initialize_by(client_session_id: client_session_id)
+      ensure_managed_by!(session, created_by)
       if session.persisted? &&
          expected_chunks.present? &&
          session.expected_chunks.present? &&
@@ -123,6 +132,7 @@ class ImportSession < ApplicationRecord
 
     session.import_type = import_type
     session.expected_chunks ||= expected_chunks
+    session.created_by = created_by if session.new_record?
     session.save!
     session
   rescue ActiveRecord::RecordNotUnique
@@ -130,6 +140,8 @@ class ImportSession < ApplicationRecord
 
     existing = family.import_sessions.find_by(client_session_id: client_session_id)
     raise unless existing
+
+    ensure_managed_by!(existing, created_by)
 
     if expected_chunks.present? &&
        existing.expected_chunks.present? &&
@@ -227,7 +239,15 @@ class ImportSession < ApplicationRecord
   end
   private :create_chunk!
 
-  def publish_later
+  # Only who opened the session, or an admin, may add to or publish it.
+  def managed_by?(user)
+    user.admin? || (created_by_id.present? && created_by_id == user.id)
+  end
+
+  # user: who publishes. Every chunk must pass the checks a single import's
+  # publish does (Import#publish_refusal_for), under the lock chunks are
+  # attached with.
+  def publish_later(user:)
     previous_status = nil
     should_enqueue = false
 
@@ -237,6 +257,8 @@ class ImportSession < ApplicationRecord
       return if complete? || importing?
 
       validate_publishable_chunks!
+      refusal = user && imports.lazy.filter_map { |import| import.publish_refusal_for(user) }.first
+      raise Import::PublishNotAllowedError.new(refusal) if refusal
 
       previous_status = status
       update!(status: :importing, error_details: {})

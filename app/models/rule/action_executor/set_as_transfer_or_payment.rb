@@ -4,7 +4,17 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   end
 
   def options
-    family.accounts.alphabetically.pluck(:name, :id)
+    target_accounts.alphabetically.pluck(:name, :id)
+  end
+
+  def options_cache_key
+    rule.restricted? ? [ rule.user_id ] : []
+  end
+
+  # A saved target the editor can't pick keeps a label, without the name of
+  # an account they can't write.
+  def option_for(value)
+    [ I18n.t("rule.actions.set_as_transfer_or_payment.not_accessible"), value ] if family.accounts.exists?(id: value)
   end
 
   def claimed_attributes
@@ -12,11 +22,11 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   end
 
   def actionable?(value)
-    family.accounts.exists?(id: value)
+    target_accounts.exists?(id: value)
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
-    target_account = family.accounts.find_by_id(value)
+    target_account = target_accounts.find_by(id: value)
     return 0 unless target_account
     scope = transaction_scope.with_entry
     # Checked once per run, not per transaction.
@@ -39,6 +49,12 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   end
 
   private
+    # The action writes an entry into the target, so it must be an account
+    # the rule's owner can write (the whole family for an unrestricted rule).
+    def target_accounts
+      rule.restricted? ? family.accounts.writable_by(rule.user) : family.accounts
+    end
+
     def build_transfer(target_account, entry)
       missing_transaction = Transaction.new(
         entry: target_account.entries.build(

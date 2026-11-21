@@ -1341,6 +1341,81 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "importing", json_response["data"]["status"]
   end
 
+  test "a member cannot auto-publish a Sure import that writes rules" do
+    member_key = ApiKey.create!(user: users(:family_member), name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web")
+    ndjson = { type: "Rule", data: { id: "rule_1", name: "Imported", resource_type: "transaction", conditions: [], actions: [ { action_type: "exclude_transaction" } ] } }.to_json
+
+    assert_no_enqueued_jobs(only: ImportJob) do
+      # The API answers in English whatever the request's language.
+      post api_v1_imports_url, params: { type: "SureImport", raw_file_content: ndjson, publish: "true" }, headers: api_headers(member_key).merge("Accept-Language" => "es")
+    end
+
+    assert_response :forbidden
+    assert_equal Import::PublishNotAllowedError::API_MESSAGES[:rules], JSON.parse(response.body)["message"]
+    assert_equal "pending", Import.find(JSON.parse(response.body)["import_id"]).status
+  ensure
+    Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
+  end
+
+  test "a CSV import that can't be published yet is kept and its id returned" do
+    params = {
+      raw_file_content: "date,amount,name\nnot-a-date,-10.00,Broken row",
+      date_col_label: "date", amount_col_label: "amount", name_col_label: "name",
+      account_id: @account.id, date_format: "%Y-%m-%d", publish: "true"
+    }
+
+    assert_difference("Import.count", 1) do
+      assert_no_enqueued_jobs(only: ImportJob) { post api_v1_imports_url, params: params, headers: api_headers(@api_key) }
+    end
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "not_publishable", body["error"]
+    assert_equal "pending", Import.find(body["import_id"]).status
+
+    TransactionImport.any_instance.stubs(:row_count_exceeded?).returns(true)
+    post api_v1_imports_url, params: params.merge(raw_file_content: "date,amount,name\n2023-01-01,-10.00,Fine row"), headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "max_row_count_exceeded", body["error"]
+    assert_equal "pending", Import.find(body["import_id"]).status
+  end
+
+  test "a CSV import whose publish can't be queued is kept pending and its id returned" do
+    ImportJob.stubs(:perform_later).raises(StandardError, "queue offline")
+
+    post api_v1_imports_url,
+         params: { raw_file_content: "date,amount,name\n2023-01-01,-10.00,Fine row", date_col_label: "date", amount_col_label: "amount", name_col_label: "name", account_id: @account.id, date_format: "%Y-%m-%d", publish: "true" },
+         headers: api_headers(@api_key)
+
+    assert_response :internal_server_error
+    body = JSON.parse(response.body)
+    assert_equal "publish_failed", body["error"]
+    assert_equal "pending", Import.find(body["import_id"]).status
+  end
+
+  test "publishes into an account the member can write" do
+    member = users(:family_member)
+    member_key = ApiKey.create!(user: member, name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web")
+
+    assert_enqueued_with(job: ImportJob) do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test Transaction",
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: accounts(:depository).id,
+             date_format: "%Y-%m-%d",
+             publish: "true"
+           },
+           headers: api_headers(member_key)
+    end
+
+    assert_response :created
+  ensure
+    Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
+  end
+
   test "should not create import for account in another family" do
     other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en")
     other_depository = Depository.create!(subtype: "checking")

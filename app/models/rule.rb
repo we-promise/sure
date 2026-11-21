@@ -7,6 +7,11 @@ class Rule < ApplicationRecord
 
   belongs_to :family
   belongs_to :rule_group, optional: true
+  # The person the rule acts for. A rule changes only transactions in
+  # accounts its owner may change (#permitted_accounts); an admin's rule, or
+  # one with no owner (made before rules had one, or by the app itself), acts
+  # on the whole family.
+  belongs_to :user, optional: true
   has_many :conditions, dependent: :destroy
   has_many :actions, dependent: :destroy
   has_many :rule_runs, dependent: :destroy
@@ -26,6 +31,9 @@ class Rule < ApplicationRecord
   # the same moment before anyone reordered them.
   scope :ordered, -> { order(:position, :created_at, :id) }
   scope :applied_immediately, -> { where(active: true, apply_immediately: true) }
+
+  after_update_commit :log_owner_change, if: :saved_change_to_user_id?
+  validate :owner_in_family, if: -> { user && will_save_change_to_user_id? }
 
   validates :resource_type, presence: true, if: -> { resource_type.to_s.valid_encoding? }
   # A NUL or invalid encoding is reported by DatabaseTextValidator instead.
@@ -258,8 +266,8 @@ class Rule < ApplicationRecord
 
   # Creates a categorization rule for the Quick Categorize Wizard.
   # Returns the saved rule, or nil if a duplicate or invalid rule already exists.
-  def self.create_from_grouping(family, grouping_key, category, transaction_type: nil)
-    rule = family.rules.build(name: grouping_key, resource_type: "transaction", active: true)
+  def self.create_from_grouping(family, grouping_key, category, transaction_type: nil, user: nil)
+    rule = family.rules.build(name: grouping_key, resource_type: "transaction", active: true, user: user)
     rule.conditions.build(condition_type: "transaction_name", operator: "like", value: grouping_key)
     rule.conditions.build(condition_type: "transaction_type", operator: "=", value: transaction_type) if transaction_type.present?
     rule.actions.build(action_type: "set_transaction_category", value: category.id.to_s)
@@ -344,6 +352,29 @@ class Rule < ApplicationRecord
   rescue StandardError => e
     Rails.logger.error("Rule.apply_immediately_later failed for family #{family.id}: #{e.class}: #{e.message}")
     nil
+  end
+
+  # Only its owner or an admin may change, switch or run a rule.
+  def manageable_by?(person)
+    person.present? && (person.admin? || (user_id.present? && user_id == person.id))
+  end
+
+  # Whether the rule is limited to what its owner may change.
+  def restricted?
+    user.present? && !user.admin?
+  end
+
+  # Family accounts the rule may change: those its owner may annotate when
+  # every action only annotates (AccountShare::ANNOTATE_*), or write
+  # otherwise. The whole family when it isn't restricted.
+  def permitted_accounts
+    return family.accounts unless restricted?
+
+    annotation_only? ? family.accounts.annotatable_by(user) : family.accounts.writable_by(user)
+  end
+
+  def annotation_only?
+    actions.any? && actions.all?(&:annotation?)
   end
 
   def apply_later(ignore_attribute_locks: false)
@@ -513,8 +544,16 @@ class Rule < ApplicationRecord
       end
     end
 
+    def log_owner_change
+      SecurityAuditLog.log_rule_owner_changed!(rule: self, from_user_id: user_id_previously_was, actor: Current.true_user)
+    end
+
+    def owner_in_family
+      errors.add(:user, :invalid) unless user.family_id == family_id
+    end
+
     def note_match_criteria_change
-      @match_criteria_changed = will_save_change_to_effective_date? ||
+      @match_criteria_changed = will_save_change_to_effective_date? || will_save_change_to_user_id? ||
         (association(:conditions).target.any?(&:match_criteria_changing?) && condition_criteria_changing?)
     end
 

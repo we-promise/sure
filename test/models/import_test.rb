@@ -3,6 +3,74 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  test "publish_later checks the publisher and records them" do
+    import = imports(:transaction)
+    import.update!(account: accounts(:credit_card))
+    import.stubs(:publishable?).returns(true)
+
+    error = assert_raises(Import::PublishNotAllowedError) { import.publish_later(user: users(:family_member)) }
+    assert_equal :accounts, error.reason
+    assert import.reload.pending?
+
+    import.update!(account: accounts(:depository))
+    import.publish_later(user: users(:family_member))
+    assert import.reload.importing?
+    assert_equal users(:family_member), import.published_by
+  end
+
+  test "publish_later refuses an import that is already published" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+
+    assert_enqueued_jobs(1, only: ImportJob) do
+      import.publish_later(user: users(:family_admin))
+      assert_raises(Import::AlreadyPublishedError) { Import.find(import.id).publish_later(user: users(:family_admin)) }
+    end
+
+    import.update!(status: :complete)
+    assert_raises(Import::AlreadyPublishedError) { import.publish_later(user: users(:family_admin)) }
+  end
+
+  test "a failed enqueue puts the import back as it was in the database" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    # This copy still reads importing; another one has since failed it.
+    import.update!(status: :importing)
+    Import.find(import.id).update!(status: :failed)
+    ImportJob.stubs(:perform_later).raises(StandardError, "queue down")
+
+    error = assert_raises(StandardError) { import.publish_later(user: users(:family_admin)) }
+    assert_equal "queue down", error.message
+
+    import.reload
+    assert import.failed?
+    assert_nil import.published_by
+  end
+
+  test "a guest can't publish an import that would create categories or tags" do
+    guest = family_guest
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    import.stubs(:creates_categories_or_tags?).returns(true)
+
+    error = assert_raises(Import::PublishNotAllowedError) { import.publish_later(user: guest) }
+    assert_equal :guest_categories_or_tags, error.reason
+  end
+
+  test "a publish while an edit holds the import refuses with a try-again error" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    Import.stubs(:publish_lock_wait).returns(0)
+    # A connection of its own: the test's pinned one would share the session.
+    other = Import.connection.class.new(Import.connection_db_config.configuration_hash)
+    other.execute(Import.sanitize_sql_array([ "SELECT pg_advisory_lock(?, hashtext(?))", Import::PUBLISH_LOCK_NAMESPACE, import.id.to_s ]))
+
+    assert_raises(Import::PublishBusyError) { import.publish_later(user: users(:family_admin)) }
+    assert import.reload.pending?
+  ensure
+    other&.disconnect!
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

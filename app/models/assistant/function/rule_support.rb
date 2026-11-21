@@ -97,6 +97,10 @@ module Assistant::Function::RuleSupport
 
   private
     # Finds a rule in the user's family. Returns nil for unknown or foreign ids.
+    def not_manageable_error
+      error("not_manageable", "Only the person this rule acts for, or an admin, can change or apply it.")
+    end
+
     def find_rule(id)
       return nil unless valid_uuid?(id)
 
@@ -295,6 +299,9 @@ module Assistant::Function::RuleSupport
         name: rule.name,
         active: rule.active,
         effective_date: rule.effective_date&.iso8601,
+        # Whom the rule acts for (Rule#user), and so which accounts it changes.
+        owner: rule.user&.display_name,
+        applies_to: rule.restricted? ? "owner_accounts" : "family",
         conditions: rule.conditions.reject(&:marked_for_destruction?).select { |c| c.parent_id.nil? }.map { |c| serialize_condition(rule, c) },
         actions: rule.actions.reject(&:marked_for_destruction?).map { |a| serialize_action(rule, a) },
         updated_at: rule.updated_at&.iso8601
@@ -430,6 +437,7 @@ module Assistant::Function::RuleSupport
     # What the rule would do, independent of timestamps and display names.
     def definition_digest(rule)
       definition = {
+        owner: rule.user_id,
         effective_date: rule.effective_date&.iso8601,
         conditions: rule.conditions.reject(&:marked_for_destruction?).select { |c| c.parent_id.nil? }
                         .map { |c| digest_condition(c) }.sort_by(&:to_json),

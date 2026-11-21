@@ -1,5 +1,6 @@
 class ImportsController < ApplicationController
   include SettingsHelper
+  include ImportGuestGuardable
 
   before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
@@ -7,6 +8,8 @@ class ImportsController < ApplicationController
   before_action :reject_guest_family_config_import!, except: %i[index new show summary]
   before_action :require_guest_writable_created_accounts!, only: %i[revert destroy]
   before_action :reject_guest_new_categories_or_tags!, only: :publish
+  # A statement import's account can move until its data lands (PdfImport#reassignable?).
+  around_action :lock_changeable_import, only: %i[update apply_template], unless: -> { @import.is_a?(PdfImport) }
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -42,11 +45,17 @@ class ImportsController < ApplicationController
     # step that needs a new choice.
     return redirect_to import_path(@import) if @import.failed? && !@import.publishable?
 
-    @import.publish_later
+    @import.publish_later(user: Current.user)
 
     redirect_to import_path(@import), notice: t(".started")
   rescue Import::MaxRowCountExceededError
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
+  rescue Import::PublishNotAllowedError => e
+    redirect_back_or_to import_path(@import), alert: e.message
+  rescue Import::AlreadyPublishedError
+    redirect_to import_path(@import), alert: t("imports.published_locked")
+  rescue Import::PublishBusyError
+    redirect_to import_path(@import), alert: t("imports.publish_busy")
   end
 
   # Statement imports only: what became of each extracted transaction. Without it
@@ -66,7 +75,8 @@ class ImportsController < ApplicationController
   end
 
   def index
-    @pagy, @imports = pagy(Current.family.imports.where(type: Import::TYPES).ordered, limit: safe_per_page)
+    # An import session's chunks are managed through the API that made them.
+    @pagy, @imports = pagy(Current.family.imports.where(type: Import::TYPES, import_session_id: nil).ordered, limit: safe_per_page)
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.imports"), imports_path ]
@@ -77,7 +87,7 @@ class ImportsController < ApplicationController
   end
 
   def new
-    @pending_import = Current.family.imports.ordered.pending.first
+    @pending_import = Current.family.imports.where(import_session_id: nil).ordered.pending.first
     @document_upload_extensions = document_upload_supported_extensions
   end
 

@@ -3,6 +3,7 @@ require "test_helper"
 class FamilyTest < ActiveSupport::TestCase
   include SyncableInterfaceTest
   include SqlQueryCapture
+  include EntriesTestHelper
 
   def setup
     @syncable = families(:dylan_family)
@@ -355,6 +356,21 @@ class FamilyTest < ActiveSupport::TestCase
     new_merchant = family.merchants.create!(name: "New Test Merchant")
 
     assert_includes family.available_merchants, new_merchant
+  end
+
+  test "available_merchants_for leaves out another family's merchant already on a transaction" do
+    family = families(:dylan_family)
+    user = users(:family_admin)
+    foreign = families(:empty).merchants.create!(name: "Elsewhere")
+    provider = ProviderMerchant.create!(name: "Provider shop", source: "synth", provider_merchant_id: "provider-shop")
+    # Written past validation, as rows from before it was added may be.
+    create_transaction(account: accounts(:depository)).transaction.update_column(:merchant_id, foreign.id)
+    create_transaction(account: accounts(:depository)).transaction.update_column(:merchant_id, provider.id)
+
+    merchants = family.available_merchants_for(user)
+
+    assert_not_includes merchants, foreign
+    assert_includes merchants, provider
   end
 
   test "known_merchant_names includes assigned and family-owned merchant names, deduplicates matching names, and excludes recently-unlinked merchants" do

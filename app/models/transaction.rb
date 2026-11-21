@@ -25,6 +25,15 @@ class Transaction < ApplicationRecord
 
   validate :validate_attachments, if: -> { attachments.attached? }
 
+  # Per reference, whether the id points at another family's record
+  # (#foreign_references; provider merchants belong to no family), given the
+  # column holding the entry's family.
+  FOREIGN_REFERENCE_SQL = {
+    category: "EXISTS (SELECT 1 FROM categories WHERE categories.id = ? AND categories.family_id <> %{family})",
+    merchant: "EXISTS (SELECT 1 FROM merchants WHERE merchants.id = ? AND merchants.type = 'FamilyMerchant' AND merchants.family_id <> %{family})"
+  }.freeze
+  validate :references_belong_to_family
+
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
   # A tag can be applied to a transaction only once, but assigning the same
@@ -384,6 +393,33 @@ class Transaction < ApplicationRecord
     end
   end
 
+  # The account of this transaction's entry, as a relation for one query.
+  def self.owning_accounts(transaction_id)
+    Account.where(id: Entry.where(entryable_type: name, entryable_id: transaction_id).select(:account_id))
+  end
+
+  def owning_accounts
+    association(:entry).loaded? ? Account.where(id: entry&.account_id) : self.class.owning_accounts(id)
+  end
+
+  # [category, merchant]: whether each belongs to another family than the
+  # entry's (provider merchants belong to none). Only changed references
+  # unless only_changed: false (Entry checks a transaction it is attached to).
+  # Compared in memory when the references are loaded, otherwise in one query.
+  def foreign_references(only_changed: true)
+    checks = %i[category merchant].select { |name| reference_to_check?(name, only_changed) }
+    return [ false, false ] if checks.empty?
+
+    loaded, unloaded = checks.partition { |name| association(name).loaded? }
+    foreign = foreign_loaded_references(loaded).merge(foreign_unloaded_references(unloaded))
+    [ foreign.fetch(:category, false), foreign.fetch(:merchant, false) ]
+  end
+
+  # The entry's family when its account is already loaded, else nil.
+  def loaded_family_id
+    entry.account.family_id if association(:entry).loaded? && entry&.association(:account)&.loaded? && entry.account
+  end
+
   # Overarching grouping method for all transfer-type transactions
   def transfer?
     TRANSFER_KINDS.include?(kind)
@@ -736,6 +772,48 @@ class Transaction < ApplicationRecord
       return posted_notes if posted_parts.each_cons(pending_parts.size).include?(pending_parts)
 
       "#{posted_notes}\n\n#{pending_notes}"
+    end
+
+    # Whatever sets them, the category and merchant are the entry's family's
+    # own; provider merchants are shared by every family. Tagging checks tags.
+    def references_belong_to_family
+      foreign_category, foreign_merchant = foreign_references
+      errors.add(:category, :invalid) if foreign_category
+      errors.add(:merchant, :invalid) if foreign_merchant
+    end
+
+    # Loaded references (possibly not saved yet) are compared in memory.
+    def foreign_loaded_references(names)
+      return {} if names.empty?
+
+      family_id = loaded_family_id || owning_accounts.pick(:family_id)
+      return {} if family_id.nil?
+
+      names.index_with do |name|
+        record = public_send(name)
+        name == :merchant ? record.is_a?(FamilyMerchant) && record.family_id != family_id : record&.family_id != family_id
+      end
+    end
+
+    # The rest are checked by id, in one query.
+    # The family comes from the entry's account in memory when loaded (it may
+    # not be saved yet), otherwise from its row.
+    def foreign_unloaded_references(names)
+      return {} if names.empty?
+
+      family_id = loaded_family_id
+      source, family = family_id ? [ Family.where(id: family_id), "families.id" ] : [ owning_accounts, "accounts.family_id" ]
+      columns = names.map { |name| Arel.sql(self.class.sanitize_sql([ format(FOREIGN_REFERENCE_SQL.fetch(name), family: family), self["#{name}_id"] ])) }
+      values = Array.wrap(source.pick(*columns))
+      names.zip(values).to_h { |name, value| [ name, value || false ] }
+    end
+
+    # A reference set by id, or assigned as a record not saved yet. With
+    # only_changed: false, any the transaction carries.
+    def reference_to_check?(name, only_changed)
+      id_attribute = "#{name}_id"
+      set = self[id_attribute].present? && (!only_changed || attribute_changed?(id_attribute))
+      set || (association(name).loaded? && public_send(name)&.new_record?)
     end
 
     def validate_attachments

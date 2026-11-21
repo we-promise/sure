@@ -91,8 +91,11 @@ class Family::DataImporter
 
   # account_targets maps source account IDs to existing accounts that the
   # import's records go into instead of accounts it creates.
-  def initialize(family, ndjson_content, import_session: nil, import: nil, account_targets: {})
+  # user: who imports; it decides who the rules it brings act for
+  # (#assign_rule_owner).
+  def initialize(family, ndjson_content, import_session: nil, import: nil, account_targets: {}, user: nil)
     @family = family
+    @user = user
     @ndjson_content = ndjson_content
     @import_session = import_session
     @import = import
@@ -1579,6 +1582,11 @@ class Family::DataImporter
         require_source_id!("Rule", old_id)
 
         rule = mapped_record(:rules, old_id, @family.rules, record_type: "Rule")
+        owner = rule_owner(rule, data)
+        if owner == :not_found
+          increment_summary("Rule", :owner_not_found)
+          next
+        end
         created = rule.blank?
         rule ||= @family.rules.build
 
@@ -1615,6 +1623,17 @@ class Family::DataImporter
           build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
 
+        rule.user = owner unless owner == :unchanged
+        # A transfer target the owner can't write here (an account the file
+        # doesn't hold, or one only someone else can write) drops that action
+        # rather than failing the whole import.
+        drop_unwritable_transfer_actions(rule)
+        if rule.actions.reject(&:marked_for_destruction?).empty?
+          rule.persisted? ? rule.destroy! : nil
+          increment_summary("Rule", :skipped)
+          next
+        end
+
         left_group_id = rule.rule_group_id_was if rule.will_save_change_to_rule_group_id? && rule.rule_group.nil?
 
         rule.save!
@@ -1645,6 +1664,32 @@ class Family::DataImporter
       return unless index
 
       items.drop(index + 1).take_while { |item| !item.group? && session_rule_ids.include?(item.rule.id) }.last&.rule
+    end
+
+    # Who the imported rule acts for. A non-admin's import makes them the
+    # owner of every rule it brings. An admin's keeps the owner the export
+    # names when they are in this family, and otherwise owns the rule, unless
+    # the rule was limited to that person (applies_to "owner_accounts", or no
+    # applies_to in older exports): it has nobody to act for here, and owning
+    # it would widen it to the whole family, so it is skipped (:not_found).
+    # Exports without an owner key leave a rule already here as it is
+    # (:unchanged).
+    def rule_owner(rule, data)
+      return @user if @user && !@user.admin?
+      return :unchanged if !data.key?("owner") && rule.present?
+      return @user if data["owner"].blank?
+
+      @family.users.find_by(email: data["owner"]) || (data["applies_to"] == "family" ? @user : :not_found)
+    end
+
+    def drop_unwritable_transfer_actions(rule)
+      rule.actions.each do |action|
+        next unless action.action_type == "set_as_transfer_or_payment" && action.value.present?
+        next if action.executor.actionable?(action.value)
+
+        action.mark_for_destruction
+        increment_summary("Rule", :dropped_actions)
+      end
     end
 
     def find_or_create_rule_group(name)
@@ -1735,6 +1780,13 @@ class Family::DataImporter
       # Map merchant names to IDs
       if action_type == "set_transaction_merchant"
         return resolve_rule_merchant_id(action_data, value)
+      end
+
+      # The export holds the source account's id: point at the account it
+      # was restored to. An unmapped target stays as it is, for the rule's
+      # target validation to judge.
+      if action_type == "set_as_transfer_or_payment"
+        return mapped_id(:accounts, value, record_type: "Rule", required: false) || value
       end
 
       value

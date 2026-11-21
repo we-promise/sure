@@ -80,17 +80,17 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         success: false,
         error: "account_required",
         message: "Please specify which account to import transactions into",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        available_accounts: available_accounts
       }
     end
 
-    account = family.accounts.find_by(id: params["account_id"])
+    account = writable_accounts.find_by(id: params["account_id"])
     unless account
       return {
         success: false,
         error: "account_not_found",
         message: "Account not found",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        available_accounts: available_accounts
       }
     end
 
@@ -171,6 +171,16 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # The refusal every AI gate on this path returns: the router's reason and its message.
     def ai_unavailable(availability)
       { success: false, error: "ai_unavailable", reason: availability.reason.to_s, message: availability.message_for(user) }
+    end
+
+    # The import writes into the account, so only accounts the user can write
+    # are offered or accepted; the others' names are not shown either.
+    def writable_accounts
+      family.accounts.writable_by(user)
+    end
+
+    def available_accounts
+      writable_accounts.visible.depositories.map { |a| { id: a.id, name: a.name } }
     end
 
     def generate_csv(transactions)

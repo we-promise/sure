@@ -302,6 +302,8 @@ en:
         ndjson_invalid: Must be valid NDJSON with at least one record
   imports:
     configuration_locked: "This import's data is already in Sure, so its files and choices can't change. Try again to finish it, or delete it to start over."
+    published_locked: "This import has been published, so it can't be changed."
+    publish_busy: "This import is being changed or published right now. Try again in a moment."
     mapping_labels:
       account_type: "Account Type"
       account: "Account"
@@ -364,6 +366,7 @@ en:
       started: "Your import has started in the background."
       max_rows_exceeded: "Your import exceeds the maximum row count of %{max}."
       guest_new_categories_or_tags: "Guests can't create categories or tags. Map them to existing ones or leave them empty."
+      rules_admin_only: "This import includes rules, which only an admin can import."
     revert:
       started: "Import is reverting in the background."
     cancel:

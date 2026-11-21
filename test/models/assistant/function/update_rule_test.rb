@@ -23,6 +23,7 @@ class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
     private_account = @family.accounts.create!(name: "Private", balance: 0, currency: "USD", accountable: Depository.new, owner: @user)
     create_transaction(account: private_account, name: "ZXQ hidden", merchant: hidden)
     @rule.actions.create!(action_type: "set_transaction_merchant", value: hidden.id)
+    @rule.update!(user: users(:family_member))
     fn = Assistant::Function::UpdateRule.new(users(:family_member))
     assert_not_includes @family.assignable_merchants_for(users(:family_member)).ids, hidden.id
 
@@ -33,6 +34,13 @@ class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
 
     assert result[:success], result.inspect
     assert_equal hidden.id, @rule.reload.actions.find_by!(action_type: "set_transaction_merchant").value
+  end
+
+  test "a member can't update a rule they don't own" do
+    result = Assistant::Function::UpdateRule.new(users(:family_member)).call("rule_id" => @rule.id, "name" => "Taken")
+
+    assert_equal "not_manageable", result[:error]
+    assert_not_equal "Taken", @rule.reload.name
   end
 
   test "renaming keeps an active rule active" do

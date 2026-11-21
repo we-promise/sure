@@ -2635,6 +2635,94 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert @family.rules.find_by(name: "Second").apply_immediately
   end
 
+  test "a transfer rule's target is mapped to the imported account" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-checking", name: "Restored Checking", balance: "10", currency: "USD", accountable_type: "Depository", accountable: { subtype: "checking" } } },
+      { type: "Rule", version: 1, data: { id: "rule-t", name: "Transfer", resource_type: "transaction",
+        actions: [ { action_type: "set_as_transfer_or_payment", value: "old-checking" } ] } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    restored = @family.accounts.find_by!(name: "Restored Checking")
+    assert_equal restored.id, @family.rules.find_by!(name: "Transfer").actions.first.value
+  end
+
+  test "a member's import owns the rules it brings, whatever the file names" do
+    family = families(:dylan_family)
+    member = users(:family_member)
+    ndjson = build_ndjson([ { type: "Rule", version: 1, data: { id: "r1", name: "Member import", resource_type: "transaction", owner: users(:family_admin).email, actions: [ { action_type: "exclude_transaction" } ] } } ])
+
+    Family::DataImporter.new(family, ndjson, user: member).import!
+
+    assert_equal member, family.rules.find_by!(name: "Member import").user
+  end
+
+  test "an admin's import keeps the owner the export names, and owns a rule that names none" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    record = ->(id, name, email) { { type: "Rule", version: 1, data: { id: id, name: name, resource_type: "transaction", owner: email, actions: [ { action_type: "exclude_transaction" } ] } } }
+    ndjson = build_ndjson([ record.call("r1", "Known", users(:family_member).email), record.call("r2", "Unnamed", nil) ])
+
+    Family::DataImporter.new(family, ndjson, user: admin).import!
+
+    assert_equal users(:family_member), family.rules.find_by!(name: "Known").user
+    assert_equal admin, family.rules.find_by!(name: "Unnamed").user
+  end
+
+  test "a transfer action the owner can't write is dropped and counted, not a failed import" do
+    family = families(:dylan_family)
+    ndjson = build_ndjson([ { type: "Rule", version: 1, data: { id: "r1", name: "Transfer", resource_type: "transaction", active: true,
+      actions: [ { action_type: "set_as_transfer_or_payment", value: accounts(:investment).id }, { action_type: "exclude_transaction" } ] } } ])
+
+    result = Family::DataImporter.new(family, ndjson, user: users(:family_member)).import!
+
+    rule = family.rules.find_by!(name: "Transfer")
+    assert_equal [ "exclude_transaction" ], rule.actions.pluck(:action_type)
+    assert_equal 1, result[:summary]["rules"]["dropped_actions"]
+  end
+
+  test "a rule whose only action is an unwritable transfer is skipped" do
+    ndjson = build_ndjson([ { type: "Rule", version: 1, data: { id: "r1", name: "Lost target", resource_type: "transaction",
+      actions: [ { action_type: "set_as_transfer_or_payment", value: SecureRandom.uuid } ] } } ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    assert_nil @family.rules.find_by(name: "Lost target")
+    assert_equal 1, result[:summary]["rules"]["skipped"]
+  end
+
+  test "a member's rule exported and imported back keeps its owner, through all.ndjson and never through rules.csv" do
+    family = families(:dylan_family)
+    member = users(:family_member)
+    family.rules.create!(name: "Round trip", resource_type: "transaction", user: member, actions_attributes: [ { action_type: "exclude_transaction" } ])
+    ndjson = nil
+    rules_csv = nil
+    Zip::File.open_buffer(Family::DataExporter.new(family).generate_export) do |zip|
+      ndjson = zip.read("all.ndjson")
+      rules_csv = zip.read("rules.csv")
+    end
+    family.rules.destroy_all
+
+    assert_not_includes rules_csv, "Round trip"
+    rule_lines = ndjson.lines.select { |line| JSON.parse(line)["type"] == "Rule" }.join
+    Family::DataImporter.new(family, rule_lines, user: users(:family_admin)).import!
+
+    assert_equal member, family.rules.find_by!(name: "Round trip").user
+  end
+
+  test "a member's rule whose owner isn't in the family is skipped, never imported for the whole family" do
+    family = families(:dylan_family)
+    record = ->(id, name, applies_to) { { type: "Rule", version: 1, data: { id: id, name: name, resource_type: "transaction", owner: "gone@example.com", applies_to: applies_to, actions: [ { action_type: "exclude_transaction" } ] } } }
+    ndjson = build_ndjson([ record.call("r1", "Member rule", "owner_accounts"), record.call("r2", "Family rule", "family") ])
+
+    result = Family::DataImporter.new(family, ndjson, user: users(:family_admin)).import!
+
+    assert_nil family.rules.find_by(name: "Member rule")
+    assert_equal users(:family_admin), family.rules.find_by!(name: "Family rule").user
+    assert_equal 1, result[:summary]["rules"]["owner_not_found"]
+  end
+
   test "imports rule groups by name and keeps each group in one block" do
     existing = @family.rule_groups.create!(name: "Food")
     rule_record = ->(name, position, group) do

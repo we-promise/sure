@@ -90,6 +90,18 @@ class RuleGroupsControllerTest < ActionDispatch::IntegrationTest
     assert_not rule.reload.active?
   end
 
+  test "a member switching a group switches only their own rules" do
+    own = create_rule(group: @group, active: false)
+    own.update!(user: users(:family_member))
+    other = create_rule(group: @group, active: false)
+    sign_in users(:family_member)
+
+    patch activation_rule_group_url(@group, active: true)
+
+    assert own.reload.active?
+    assert_not other.reload.active?
+  end
+
   test "groups of another family are not found" do
     foreign = families(:empty).rule_groups.create!(name: "Foreign")
 

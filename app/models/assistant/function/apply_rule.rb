@@ -60,6 +60,7 @@ class Assistant::Function::ApplyRule < Assistant::Function
   def call(params = {})
     rule = find_rule(params["rule_id"])
     return error("not_found", "No rule with id '#{params["rule_id"]}'.") unless rule
+    return not_manageable_error unless rule.manageable_by?(user)
 
     if rule.actions.any? { |a| BLOCKED_ACTION_TYPES.include?(a.action_type) }
       return error("ai_action", "This rule has an AI-backed action; apply it in Settings > Rules, which shows the cost estimate.")

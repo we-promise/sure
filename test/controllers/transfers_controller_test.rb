@@ -678,6 +678,16 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert transfer.reload.pending?
   end
 
+  test "update refuses a category from another family" do
+    transfer = transfers(:one)
+    foreign_category = Family.create!(name: "Other Family", currency: "USD").categories.create!(name: "Foreign")
+
+    patch transfer_url(transfer), params: { transfer: { category_id: foreign_category.id } }
+
+    assert_response :not_found
+    assert_nil transfer.outflow_transaction.reload.category_id
+  end
+
   test "can add notes to transfer" do
     transfer = transfers(:one)
     assert_nil transfer.notes

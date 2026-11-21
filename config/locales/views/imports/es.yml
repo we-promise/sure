@@ -287,6 +287,8 @@ es:
         hint_html: Sube el archivo <strong>all.ndjson</strong> del ZIP de tu exportación de datos
         ndjson_invalid: Debe ser un NDJSON válido con al menos un registro
   imports:
+    published_locked: Esta importación ya se ha publicado y no se puede cambiar.
+    publish_busy: Esta importación se está cambiando o publicando ahora mismo. Inténtalo de nuevo en un momento.
     configuration_locked: Los datos de esta importación ya están en Sure, así que sus archivos y opciones no se pueden cambiar. Vuelve a intentarlo para terminarla o elimínala para empezar de nuevo.
     mapping_labels:
       account_type: Tipo de cuenta
@@ -349,6 +351,7 @@ es:
     publish:
       started: Tu importación ha comenzado en segundo plano.
       max_rows_exceeded: Tu importación supera el número máximo de filas de %{max}.
+      rules_admin_only: Esta importación incluye reglas, que solo puede importar un administrador.
       guest_new_categories_or_tags: Los invitados no pueden crear categorías ni etiquetas. Asígnalas a otras existentes o déjalas vacías.
     revert:
       started: La importación se está revirtiendo en segundo plano.

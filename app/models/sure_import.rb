@@ -1,5 +1,4 @@
 class SureImport < Import
-  NotPublishableError = Class.new(StandardError)
   PreflightError = Class.new(StandardError)
 
   DEFAULT_MAX_NDJSON_SIZE_MB = 10
@@ -108,6 +107,16 @@ class SureImport < Import
     false
   end
 
+  # From the record counts stored with the file (#sync_ndjson_rows_count!,
+  # run on every upload and before a publish), so a check under a lock
+  # doesn't download it; imports from before those counts read the file.
+  def writes_rules?
+    counts = normalized_expected_record_counts
+    return counts["rules"].to_i.positive? if counts.key?("rules")
+
+    ndjson_file.attached? && self.class.ndjson_line_type_counts(ndjson_blob_string)["Rule"].to_i.positive?
+  end
+
   def column_keys
     []
   end
@@ -133,7 +142,7 @@ class SureImport < Import
   def import!(import_session: nil)
     sync_ndjson_counts!
     before_counts = readback_count_snapshot
-    importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self)
+    importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self, user: importing_user(import_session))
     result = importer.import!
 
     # DataImporter doesn't set import_id, so link the records it created here.
@@ -165,21 +174,15 @@ class SureImport < Import
     raise
   end
 
-  def publish_later
+  def publish_later(user:)
+    # The counts the claim's checks read (#writes_rules?) match the file now.
+    sync_ndjson_rows_count!
     raise MaxRowCountExceededError if row_count_exceeded?
 
     validate_sure_preflight!
     raise NotPublishableError, "Import was uploaded but has no publishable records." unless publishable?
 
-    previous_status = status
-    update! status: :importing
-
-    begin
-      ImportJob.perform_later(self)
-    rescue StandardError
-      update! status: previous_status
-      raise
-    end
+    super
   end
 
   def publish
@@ -268,6 +271,16 @@ class SureImport < Import
   end
 
   private
+    # Who imports, for the rules it brings (Family::DataImporter). A
+    # session's rules belong to who opened it, even when an admin publishes,
+    # and only while they are still in this family.
+    def importing_user(import_session)
+      return published_by unless import_session
+
+      creator = import_session.created_by
+      creator if creator&.family_id == family_id
+    end
+
 
     def sync_ndjson_counts!
       line_counts = self.class.ndjson_line_type_counts(ndjson_blob_string)
@@ -391,11 +404,13 @@ class SureImport < Import
       @ndjson_blob_string = ndjson_file.download.force_encoding(Encoding::UTF_8)
     end
 
+    # Marks the import failed only while it can still change: another
+    # request may have published a corrected file meanwhile.
     def validate_sure_preflight!
       result = sure_preflight
       return if result.valid?
 
-      update! status: :failed, error: result.error_message
+      with_lock { update!(status: :failed, error: result.error_message) if changeable? }
       raise PreflightError, result.error_message
     end
 end

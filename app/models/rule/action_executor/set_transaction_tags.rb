@@ -7,6 +7,10 @@ class Rule::ActionExecutor::SetTransactionTags < Rule::ActionExecutor
     family.tags.alphabetically.pluck(:name, :id)
   end
 
+  def written_attributes
+    [ :tag_ids ]
+  end
+
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     tag_ids = Array(value).compact_blank
     selected_tag_ids = family.tags.where(id: tag_ids).pluck(:id)

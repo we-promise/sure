@@ -417,6 +417,18 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  # rules.csv has no column for the restriction, so a restricted rule would
+  # come back family-wide; all.ndjson carries it.
+  test "exports a rule's owner, and leaves member-owned rules out of rules.csv" do
+    @rule.update!(user: users(:family_member))
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }.find { |record| record["type"] == "Rule" && record["data"]["id"] == @rule.id }
+      assert_equal users(:family_member).email, rule_data["data"]["owner"]
+      assert_not zip.read("rules.csv").include?("Test Rule")
+    end
+  end
+
   test "exports rules in NDJSON format with versioning" do
     zip_data = @exporter.generate_export
 

@@ -22,13 +22,13 @@ class RuleGroupTest < ActiveSupport::TestCase
     outside = @family.rules.create!(resource_type: "transaction", active: false,
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
 
-    assert_empty @group.switch_rules(true)
+    assert_empty @group.switch_rules(true, user: users(:empty))
 
     assert first.reload.active?
     assert second.reload.active?
     assert_not outside.reload.active?
 
-    assert_empty @group.switch_rules(false)
+    assert_empty @group.switch_rules(false, user: users(:empty))
     assert_not first.reload.active?
   end
 
@@ -39,7 +39,7 @@ class RuleGroupTest < ActiveSupport::TestCase
     plain = create_rule(active: false)
     Rule::SafeRegex.stubs(:with_timeout).raises(Rule::SafeRegex::TimeoutError)
 
-    assert_equal [ rule ], @group.switch_rules(true)
+    assert_equal [ rule ], @group.switch_rules(true, user: users(:empty))
     assert_not rule.reload.active?
     assert plain.reload.active?
   end

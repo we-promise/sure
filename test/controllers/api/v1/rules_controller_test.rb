@@ -29,6 +29,19 @@ class Api::V1::RulesControllerTest < ActionDispatch::IntegrationTest
     @rule.save!
   end
 
+  test "shows whom each rule acts for" do
+    @rule.update!(user: users(:family_member))
+    family_rule = @family.rules.create!(resource_type: "transaction", name: "Family rule", actions_attributes: [ { action_type: "exclude_transaction" } ])
+
+    get api_v1_rules_url, headers: api_headers(@api_key)
+
+    rules = JSON.parse(response.body)["data"].index_by { |rule| rule["id"] }
+    assert_equal({ "id" => users(:family_member).id, "name" => users(:family_member).display_name }, rules[@rule.id]["owner"])
+    assert_equal "owner_accounts", rules[@rule.id]["applies_to"]
+    assert_nil rules[family_rule.id]["owner"]
+    assert_equal "family", rules[family_rule.id]["applies_to"]
+  end
+
   test "should list rules" do
     get api_v1_rules_url, headers: api_headers(@api_key)
     assert_response :success

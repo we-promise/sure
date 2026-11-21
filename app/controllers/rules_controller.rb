@@ -2,10 +2,12 @@ class RulesController < ApplicationController
   include StreamExtensions
 
   before_action :require_non_guest!, except: %i[index]
+  # Running or deleting every rule reaches rules other people own.
+  before_action :require_admin!, only: %i[destroy_all confirm_all apply_all]
   before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index
-    @rules = Current.family.rules.includes(:actions, conditions: :sub_conditions).ordered.to_a
+    @rules = Current.family.rules.includes(:user, :actions, conditions: :sub_conditions).ordered.to_a
     Rule.share_option_lists(@rules)
     @layout = Rule::Layout.new(Current.family, rules: @rules)
     @list_filter = Rule::ListFilter.new(@rules)
@@ -25,6 +27,7 @@ class RulesController < ApplicationController
   def new
     @rule = Current.family.rules.build(
       resource_type: params[:resource_type].presence_in(Rule::SUPPORTED_RESOURCE_TYPES) || "transaction",
+      user: Current.user
     )
 
     if params[:name].present?
@@ -45,7 +48,7 @@ class RulesController < ApplicationController
   end
 
   def create
-    @rule = Current.family.rules.build(rule_params)
+    @rule = Current.family.rules.build(rule_params.reverse_merge(user_id: Current.user.id))
 
     if save_rule
       redirect_to confirm_rule_path(@rule, reload_on_close: true)
@@ -240,14 +243,21 @@ class RulesController < ApplicationController
       raise
     end
 
+    # Only a rule's owner or an admin may change or run it (Rule#manageable_by?).
     def set_rule
       @rule = Current.family.rules.find(params[:id])
+      return if @rule.manageable_by?(Current.user)
+
+      respond_to do |format|
+        format.html { redirect_back_or_to rules_path, alert: t("rules.not_manageable") }
+        format.any { head :forbidden }
+      end
     end
 
     def rule_params
       params.require(:rule).permit(
         :resource_type, :effective_date, :active, :name, :stop_processing, :apply_immediately,
-        :rule_group_id, :new_rule_group_name,
+        :rule_group_id, :new_rule_group_name, *(Current.user.admin? ? [ :user_id ] : []),
         conditions_attributes: [
           :id, :condition_type, :operator, :value, :_destroy,
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]

@@ -695,6 +695,66 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to rules_url
   end
 
+  test "a rule a member creates is theirs and changes only accounts they can write" do
+    member = users(:family_member)
+    writable = create_transaction(account: accounts(:depository), name: "SecretProbe one")
+    unshared = create_transaction(account: accounts(:investment), name: "SecretProbe three")
+    sign_in member
+
+    post rules_url, params: { rule: {
+      name: "Member rule", resource_type: "transaction",
+      conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "SecretProbe" } },
+      actions_attributes: { "0" => { action_type: "set_transaction_name", value: "Renamed" } }
+    } }
+    rule = @user.family.rules.find_by!(name: "Member rule")
+    assert_equal member, rule.user
+
+    perform_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
+
+    assert_equal "Renamed", writable.reload.name
+    assert_equal "SecretProbe three", unshared.reload.name
+  end
+
+  test "a member can't change, run or delete a rule they don't own" do
+    rule = @user.family.rules.create!(resource_type: "transaction", name: "Admin rule", user: @user, actions_attributes: [ { action_type: "exclude_transaction" } ])
+    sign_in users(:family_member)
+
+    patch rule_url(rule), params: { rule: { active: "1", name: "Changed" } }
+    assert_no_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
+    delete rule_url(rule)
+
+    assert_equal I18n.t("rules.not_manageable"), flash[:alert]
+    rule.reload
+    assert_equal "Admin rule", rule.name
+    assert_not rule.active?
+  end
+
+  test "only an admin can set a rule's owner" do
+    rule = @user.family.rules.create!(resource_type: "transaction", name: "Owned", user: users(:family_member), actions_attributes: [ { action_type: "exclude_transaction" } ])
+
+    patch rule_url(rule), params: { rule: { user_id: @user.id } }
+    assert_equal @user, rule.reload.user
+
+    sign_in users(:family_member)
+    patch rule_url(rule), params: { rule: { user_id: users(:family_member).id, name: "Mine" } }
+    assert_equal @user, rule.reload.user
+  end
+
+  test "only an admin can run or delete every rule" do
+    sign_in users(:family_member)
+
+    assert_no_enqueued_jobs(only: ApplyAllRulesJob) { post apply_all_rules_url }
+    assert_no_difference("Rule.count") { delete destroy_all_rules_url }
+  end
+
+  test "the rules list says whose accounts a member's rule changes" do
+    @user.family.rules.create!(resource_type: "transaction", user: users(:family_member), actions_attributes: [ { action_type: "exclude_transaction" } ])
+
+    get rules_url
+
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("rules.rule.restricted_to", name: users(:family_member).display_name))
+  end
+
   test "guest cannot create rule" do
     sign_in family_guest
 

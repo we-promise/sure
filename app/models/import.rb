@@ -1,5 +1,35 @@
 class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
+  AlreadyPublishedError = Class.new(StandardError)
+  NotPublishableError = Class.new(StandardError)
+  # A wizard edit or a publish holds the import (#with_publish_lock).
+  PublishBusyError = Class.new(StandardError)
+  PUBLISH_LOCK_NAMESPACE = 4015
+  # reason is :accounts or :rules (see #publish_refusal_for).
+  class PublishNotAllowedError < StandardError
+    MESSAGE_KEYS = {
+      accounts: "accounts.not_authorized",
+      rules: "imports.publish.rules_admin_only",
+      guest_categories_or_tags: "imports.publish.guest_new_categories_or_tags"
+    }.freeze
+    # The API answers in English whatever the request's locale.
+    API_MESSAGES = {
+      accounts: "You don't have write access to every account this import writes to",
+      rules: "This import includes rules, which only an admin can import",
+      guest_categories_or_tags: "Guests cannot create categories or tags"
+    }.freeze
+
+    attr_reader :reason
+
+    def initialize(reason)
+      @reason = reason
+      super(I18n.t(MESSAGE_KEYS.fetch(reason)))
+    end
+
+    def api_message
+      API_MESSAGES.fetch(reason)
+    end
+  end
   MappingError = Class.new(StandardError)
 
   # A hard-killed worker (OOM, SIGKILL during deploy) loses its in-flight job
@@ -82,6 +112,7 @@ class Import < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :account_statement, optional: true
   belongs_to :import_session, optional: true
+  belongs_to :published_by, class_name: "User", optional: true
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
@@ -243,13 +274,91 @@ class Import < ApplicationRecord
     end
   end
 
-  def publish_later
-    raise MaxRowCountExceededError if row_count_exceeded?
-    raise "Import is not publishable" unless publishable?
+  # user: who publishes; checked and recorded with the status change. nil
+  # only for a publish no user asked for.
+  def publish_later(user:)
+    previous = claim_for_publish!(user)
 
-    update! status: :importing
+    begin
+      ImportJob.perform_later(self)
+    rescue StandardError
+      release_publish_claim!(previous)
+      raise
+    end
+  end
 
-    ImportJob.perform_later(self)
+  # Re-checks the import and its publisher, and marks it importing, under
+  # the publish lock wizard edits hold and the row lock a statement's
+  # account change takes (PdfImport#assign_account!), so a second publish
+  # finds it importing and no edit writes after the claim.
+  # Returns the status and publisher it replaced, as read under the lock.
+  def claim_for_publish!(user)
+    with_publish_lock { claim_under_row_lock!(user) }
+  end
+
+  # Serialises a wizard edit (ImportGuestGuardable) with a publish, so an
+  # edit that checked the status can't write after the import is claimed.
+  # A session-level advisory lock rather than a row lock: a transaction
+  # around the edit would join the edit's own and could commit half of a
+  # failed one. It gives up after a few seconds with PublishBusyError.
+  def with_publish_lock
+    connection = self.class.lease_connection
+    key = [ PUBLISH_LOCK_NAMESPACE, id.to_s ]
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + self.class.publish_lock_wait
+    until connection.select_value(self.class.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?, hashtext(?))", *key ]))
+      raise PublishBusyError, "Import #{id} is being changed or published" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      sleep 0.05
+    end
+
+    begin
+      yield
+    ensure
+      release_publish_lock(connection, key)
+    end
+  end
+
+  def self.publish_lock_wait
+    5
+  end
+
+  def claim_under_row_lock!(user)
+    with_lock do
+      raise AlreadyPublishedError, "Import #{id} is #{status}" unless changeable?
+      raise MaxRowCountExceededError if row_count_exceeded?
+      raise NotPublishableError, "Import was uploaded but has rows to fix before it can be published." unless publishable?
+
+      refusal = user && publish_refusal_for(user)
+      raise PublishNotAllowedError.new(refusal) if refusal
+
+      previous = { status: status, published_by_id: published_by_id }
+      update!(status: :importing, published_by: user)
+      previous
+    end
+  end
+
+  # An unlock that can't run (an aborted transaction, a broken connection)
+  # would leave the lock with the pooled connection; discarding the
+  # connection ends its session, which releases it.
+  def release_publish_lock(connection, key)
+    connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_unlock(?, hashtext(?))", *key ]))
+  rescue StandardError
+    connection.throw_away!
+    raise
+  end
+  private :claim_under_row_lock!, :release_publish_lock
+
+  # A job that never got queued leaves nothing to finish the import, so it
+  # goes back to how the claim found it and can be published again.
+  def release_publish_claim!(previous)
+    with_lock { update!(previous) if importing? }
+  end
+
+  # Whether the web wizard may still change the import: one published is
+  # being, or has been, written into the family, and an import session's
+  # chunk changes only through its session (ImportSession#attach_chunk!).
+  def changeable?
+    (pending? || failed?) && import_session_id.nil?
   end
 
   # Whether publishing would change existing records even when the dry run
@@ -498,7 +607,7 @@ class Import < ApplicationRecord
   def editable_by?(user)
     return true unless user&.guest?
 
-    (pending? || failed?) && !family_config?
+    changeable? && !family_config?
   end
 
   # Whether publishing would add new categories or tags to the family.
@@ -519,6 +628,23 @@ class Import < ApplicationRecord
     return false if user.nil?
 
     (ids - family.accounts.writable_by(user).where(id: ids).pluck(:id)).empty?
+  end
+
+  # Why the user may not publish this import, or nil: :accounts when it
+  # writes into an account they can't write, :rules when it writes rules and
+  # they are not an admin, :guest_categories_or_tags when a guest's import
+  # would add categories or tags. Imports are family records any member can
+  # reach, so importing rules stays an admin's job (Family::DataImporter
+  # decides who the imported rules act for).
+  def publish_refusal_for(user)
+    return :accounts unless accounts_writable_by?(user)
+    return :rules if !user&.admin? && writes_rules?
+
+    :guest_categories_or_tags if user&.guest? && creates_categories_or_tags?
+  end
+
+  def writes_rules?
+    false
   end
 
   # Existing family accounts the import resolves on its own at publish time

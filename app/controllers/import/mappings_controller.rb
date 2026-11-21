@@ -3,6 +3,7 @@ class Import::MappingsController < ApplicationController
 
   before_action :set_import
   before_action :require_import_editable!
+  around_action :lock_changeable_import
 
   def update
     @mapping = @import.mappings.find(params[:id])

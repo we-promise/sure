@@ -3,6 +3,115 @@ require "test_helper"
 class TransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
+  test "refuses another family's category, merchant and tags" do
+    other = families(:empty)
+    transaction = create_transaction.transaction
+
+    transaction.category = other.categories.create!(name: "Elsewhere")
+    assert_not transaction.valid?
+    assert transaction.errors.of_kind?(:category, :invalid)
+
+    transaction.reload.merchant = other.merchants.create!(name: "Elsewhere")
+    assert_not transaction.valid?
+    assert transaction.errors.of_kind?(:merchant, :invalid)
+
+    foreign_tag = other.tags.create!(name: "Elsewhere")
+    assert_raises(ActiveRecord::RecordInvalid) { transaction.reload.tag_ids = [ foreign_tag.id ] }
+    assert_empty transaction.reload.tags
+  end
+
+  test "refuses another family's references on a new transaction" do
+    other = families(:empty)
+
+    assert_raises(ActiveRecord::RecordInvalid) { create_transaction(category: other.categories.create!(name: "Elsewhere")) }
+    assert_raises(ActiveRecord::RecordInvalid) { create_transaction(merchant: other.merchants.create!(name: "Elsewhere")) }
+    assert_raises(ActiveRecord::RecordInvalid) { create_transaction(tags: [ other.tags.create!(name: "Elsewhere") ]) }
+  end
+
+  test "the family check on a reference costs at most one query" do
+    transaction = Transaction.find(create_transaction.transaction.id)
+    transaction.category_id = categories(:food_and_drink).id
+    assert_queries_count(1, include_schema: false) { transaction.send(:references_belong_to_family) }
+
+    tagged = Transaction.find(create_transaction.transaction.id)
+    tagging = tagged.taggings.build(tag_id: tags(:one).id)
+    assert_queries_count(1, include_schema: false) { tagging.send(:tag_belongs_to_taggable_family) }
+
+    loaded = create_transaction.transaction
+    loaded.category = categories(:food_and_drink)
+    assert_no_queries(include_schema: false) { loaded.send(:references_belong_to_family) }
+  end
+
+  test "refuses another family's new category, merchant and tag objects" do
+    other = families(:empty)
+    transaction = create_transaction.transaction
+
+    transaction.category = other.categories.build(name: "Elsewhere")
+    assert_not transaction.valid?
+    transaction.reload.merchant = other.merchants.build(name: "Elsewhere")
+    assert_not transaction.valid?
+    assert_not Tagging.new(taggable: transaction.reload, tag: other.tags.build(name: "Elsewhere")).valid?
+  end
+
+  test "a tagging whose tag is gone is invalid rather than raising" do
+    tagging = Tagging.new(taggable: create_transaction.transaction, tag_id: SecureRandom.uuid)
+    tagging.tag
+
+    assert_not tagging.valid?
+  end
+
+  test "attaching a saved transaction to another family's entry checks its references" do
+    transaction = Transaction.create!(category: families(:empty).categories.create!(name: "Elsewhere"))
+
+    entry = Entry.new(account: accounts(:depository), name: "Attach", date: Date.current, amount: 1, currency: "USD", entryable: transaction)
+    assert_not entry.valid?
+  end
+
+  test "replacing an entry's transaction checks the new one's references" do
+    entry = create_transaction
+    replacement = Transaction.create!(category: families(:empty).categories.create!(name: "Elsewhere"))
+
+    entry.entryable = replacement
+    assert_not entry.valid?
+  end
+
+  test "checks a loaded reference and an id-only one together" do
+    other = families(:empty)
+    own_merchant = merchants(:netflix)
+    transaction = Transaction.find(create_transaction.transaction.id)
+    transaction.category = other.categories.build(name: "Elsewhere")
+    transaction.merchant_id = own_merchant.id
+    assert_not transaction.valid?
+    assert transaction.errors.of_kind?(:category, :invalid)
+
+    transaction = Transaction.find(create_transaction.transaction.id)
+    transaction.merchant = other.merchants.build(name: "Elsewhere")
+    transaction.category_id = categories(:food_and_drink).id
+    assert_not transaction.valid?
+    assert transaction.errors.of_kind?(:merchant, :invalid)
+  end
+
+  test "checks id-only references on an entry whose account isn't saved yet" do
+    family = families(:dylan_family)
+    account = family.accounts.build(name: "Unsaved", balance: 0, currency: "USD", accountable: Depository.new)
+    foreign = families(:empty).categories.create!(name: "Elsewhere")
+    entry = account.entries.build(name: "New", date: Date.current, amount: 1, currency: "USD", entryable: Transaction.new(category_id: foreign.id))
+
+    assert_not entry.entryable.valid?
+    assert entry.entryable.errors.of_kind?(:category, :invalid)
+  end
+
+  test "accepts its own family's references and any provider merchant" do
+    transaction = create_transaction(
+      category: categories(:food_and_drink),
+      merchant: merchants(:netflix),
+      tags: [ tags(:one) ]
+    ).transaction
+
+    transaction.merchant = ProviderMerchant.create!(name: "Shared provider merchant", source: "synth", provider_merchant_id: "shared-provider-merchant")
+    assert transaction.valid?
+  end
+
   test "with_any_tag returns transactions carrying any of the tags, each once" do
     travel = families(:dylan_family).tags.create!(name: "Travel")
     work = families(:dylan_family).tags.create!(name: "Work")

@@ -541,6 +541,22 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
+  test "only an admin can publish an import that writes rules" do
+    import = @user.family.imports.create!(type: "RuleImport")
+    RuleImport.any_instance.stubs(:publishable?).returns(true)
+
+    sign_in users(:family_member)
+    assert_no_enqueued_jobs(only: ImportJob) { post publish_import_url(import) }
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.rules_admin_only"), flash[:alert]
+    assert import.reload.pending?
+
+    sign_in @user
+    assert_enqueued_with(job: ImportJob) { post publish_import_url(import) }
+    assert_equal I18n.t("imports.publish.started"), flash[:notice]
+  end
+
   test "member can publish import targeting a full control shared account" do
     import = imports(:transaction)
     import.update!(account: accounts(:depository))

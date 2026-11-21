@@ -29,6 +29,85 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a published Sure import's file can't be swapped while it runs" do
+    sign_in member = users(:family_member)
+    import = @user.family.imports.create!(type: "SureImport")
+    import.ndjson_file.attach(io: StringIO.new({ type: "Tag", data: { id: "tag-1", name: "Harmless" } }.to_json), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.publish_later(user: member)
+    original = import.reload.ndjson_file.blob.id
+
+    rule = { type: "Rule", data: { id: "rule-1", name: "Swapped", resource_type: "transaction", active: true, actions: [ { action_type: "exclude_transaction" } ] } }
+    patch import_upload_url(import), params: { import: { ndjson_file: Rack::Test::UploadedFile.new(StringIO.new(rule.to_json), "application/x-ndjson", original_filename: "all.ndjson") } }
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.published_locked"), flash[:alert]
+    assert_equal original, import.reload.ndjson_file.blob.id
+  end
+
+  test "a published CSV import's account can't be changed while it runs" do
+    sign_in member = users(:family_member)
+    @import.update!(account: accounts(:depository))
+    TransactionImport.any_instance.stubs(:publishable?).returns(true)
+    @import.publish_later(user: member)
+
+    patch import_upload_url(@import), params: { import: { raw_file_str: file_fixture("imports/valid.csv").read, col_sep: ",", account_id: accounts(:credit_card).id } }
+
+    assert_redirected_to import_path(@import)
+    assert_equal accounts(:depository), @import.reload.account
+  end
+
+  test "an import session's chunk can't be changed or listed in the web wizard" do
+    sign_in users(:family_member)
+    session = @user.family.import_sessions.create!(created_by: @user, status: :importing)
+    chunk = session.imports.create!(family: @user.family, type: "SureImport", sequence: 1, checksum: "0" * 64)
+    chunk.ndjson_file.attach(io: StringIO.new({ type: "Tag", data: { id: "tag-1", name: "Harmless" } }.to_json), filename: "all.ndjson", content_type: "application/x-ndjson")
+    original = chunk.ndjson_file.blob.id
+
+    rule = { type: "Rule", data: { id: "rule-1", name: "Swapped", resource_type: "transaction", active: true, actions: [ { action_type: "exclude_transaction" } ] } }
+    patch import_upload_url(chunk), params: { import: { ndjson_file: Rack::Test::UploadedFile.new(StringIO.new(rule.to_json), "application/x-ndjson", original_filename: "all.ndjson") } }
+
+    assert_redirected_to import_path(chunk)
+    assert_equal original, chunk.reload.ndjson_file.blob.id
+
+    get imports_url
+    assert_not_includes response.body, import_path(chunk)
+  end
+
+  test "the new import page doesn't offer an import session's chunk to resume" do
+    session = @user.family.import_sessions.create!(created_by: @user)
+    chunk = session.imports.create!(family: @user.family, type: "SureImport", sequence: 1, checksum: "0" * 64)
+    @user.family.imports.where.not(id: chunk.id).update_all(status: "complete")
+
+    get new_import_url
+
+    assert_not_includes response.body, import_path(chunk)
+  end
+
+  test "an edit holds the import's publish lock while it writes" do
+    held = nil
+    TransactionImport.any_instance.stubs(:preset_for_uploaded_csv).with do
+      held = Import.connection.select_value(Import.sanitize_sql_array([ <<~SQL.squish, Import::PUBLISH_LOCK_NAMESPACE, @import.id.to_s ])).positive?
+        SELECT count(*) FROM pg_locks
+        WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted AND objsubid = 2
+          AND classid = ? AND objid::bigint = (hashtext(?)::bigint & 4294967295)
+      SQL
+      true
+    end
+
+    patch import_upload_url(@import), params: { import: { raw_file_str: file_fixture("imports/valid.csv").read, col_sep: "," } }
+
+    assert held
+  end
+
+  test "an edit while the import is being published asks to try again" do
+    Import.any_instance.stubs(:with_publish_lock).raises(Import::PublishBusyError)
+
+    patch import_upload_url(@import), params: { import: { raw_file_str: file_fixture("imports/valid.csv").read, col_sep: "," } }
+
+    assert_redirected_to import_path(@import)
+    assert_equal I18n.t("imports.publish_busy"), flash[:alert]
+  end
+
   test "uploads valid csv by copy and pasting" do
     patch import_upload_url(@import), params: {
       import: {

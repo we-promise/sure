@@ -25,7 +25,7 @@ module ImportInterfaceTest
     import.stubs(:publishable?).returns(true)
 
     assert_enqueued_with job: ImportJob, args: [ import ] do
-      import.publish_later
+      import.publish_later(user: users(:family_admin))
     end
 
     assert_equal "importing", import.reload.status
@@ -36,8 +36,8 @@ module ImportInterfaceTest
 
     import.stubs(:publishable?).returns(false)
 
-    assert_raises(RuntimeError, "Import is not publishable") do
-      import.publish_later
+    assert_raises(Import::NotPublishableError) do
+      import.publish_later(user: users(:family_admin))
     end
   end
 

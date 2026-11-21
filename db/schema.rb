@@ -1338,6 +1338,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.string "status", default: "pending", null: false
     t.jsonb "summary", default: {}, null: false
     t.datetime "updated_at", null: false
+    t.uuid "created_by_id"
+    t.index ["created_by_id"], name: "index_import_sessions_on_created_by_id"
     t.index ["family_id", "client_session_id"], name: "idx_import_sessions_on_family_client_session", unique: true, where: "(client_session_id IS NOT NULL)"
     t.index ["family_id", "status"], name: "index_import_sessions_on_family_id_and_status"
     t.index ["id", "family_id"], name: "idx_import_sessions_on_id_family", unique: true
@@ -1413,11 +1415,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.string "ticker_col_label"
     t.string "type", null: false
     t.datetime "updated_at", null: false
+    t.uuid "published_by_id"
     t.index ["account_statement_id"], name: "index_imports_on_account_statement_id"
     t.index ["family_id"], name: "index_imports_on_family_id"
     t.index ["import_session_id", "client_chunk_id"], name: "idx_imports_on_session_client_chunk", unique: true, where: "((import_session_id IS NOT NULL) AND (client_chunk_id IS NOT NULL))"
     t.index ["import_session_id", "sequence"], name: "idx_imports_on_session_sequence", unique: true, where: "((import_session_id IS NOT NULL) AND (sequence IS NOT NULL))"
     t.index ["import_session_id"], name: "index_imports_on_import_session_id"
+    t.index ["published_by_id"], name: "index_imports_on_published_by_id"
     t.check_constraint "checksum IS NULL OR length(checksum::text) = 64", name: "chk_imports_checksum_sha256_length"
     t.check_constraint "client_chunk_id IS NULL OR btrim(client_chunk_id::text) <> ''::text", name: "chk_imports_client_chunk_id_present"
     t.check_constraint "import_session_id IS NULL OR checksum IS NOT NULL", name: "chk_imports_session_checksum_present"
@@ -2336,8 +2340,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.boolean "stop_processing", default: false, null: false
     t.datetime "updated_at", null: false
     t.boolean "apply_immediately", default: false, null: false
+    t.uuid "user_id"
     t.index ["family_id", "position"], name: "index_rules_on_family_id_and_position"
     t.index ["rule_group_id"], name: "index_rules_on_rule_group_id"
+    t.index ["user_id"], name: "index_rules_on_user_id"
   end
 
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3243,11 +3249,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
   add_foreign_key "import_sessions", "families"
+  add_foreign_key "import_sessions", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "import_source_mappings", "families"
   add_foreign_key "import_source_mappings", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_import_source_mappings_session_family", on_delete: :cascade
   add_foreign_key "imports", "account_statements", on_delete: :nullify
   add_foreign_key "imports", "families"
   add_foreign_key "imports", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_imports_session_family", on_delete: :cascade
+  add_foreign_key "imports", "users", column: "published_by_id", on_delete: :nullify
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
   add_foreign_key "insights", "families"
@@ -3306,6 +3314,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
   add_foreign_key "rules", "rule_groups", on_delete: :nullify
+  add_foreign_key "rules", "users"
   add_foreign_key "security_audit_logs", "users", on_delete: :nullify
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade

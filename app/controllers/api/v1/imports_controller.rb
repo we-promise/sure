@@ -147,7 +147,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
           return render_json({ error: "forbidden", message: "Guests cannot create categories or tags", import_id: @import.id }, status: :forbidden)
         end
 
-        @import.publish_later
+        return unless publish_import
       end
 
       render :show, status: :created
@@ -216,6 +216,15 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
     def import_scope
       current_resource_owner.family.imports
+    end
+
+    # The import is kept: only the publish is refused, as in the web.
+    def render_import_busy
+      render_json({ error: "import_busy", message: "The import is being changed or published right now. Try again in a moment.", import_id: @import.id }, status: :conflict)
+    end
+
+    def render_import_not_publishable(error)
+      render_json({ error: "forbidden", message: error.api_message, import_id: @import.id }, status: :forbidden)
     end
 
     def render_import_not_found
@@ -293,43 +302,45 @@ class Api::V1::ImportsController < Api::V1::BaseController
         return
       end
 
-      begin
-        @import.publish_later if params[:publish] == "true"
-      rescue Import::MaxRowCountExceededError
-        render json: {
-          error: "max_row_count_exceeded",
-          message: "Import was uploaded but has too many rows to publish automatically.",
-          import_id: @import.id
-        }, status: :unprocessable_entity
-        return
-      rescue SureImport::PreflightError
-        render json: {
-          error: "preflight_failed",
-          message: "Import was uploaded but did not pass Sure NDJSON preflight.",
-          errors: sure_import_error_lines,
-          import_id: @import.id
-        }, status: :unprocessable_entity
-        return
-      rescue SureImport::NotPublishableError => e
-        Rails.logger.warn "Sure import not publishable for import #{@import.id}: #{e.message}"
-        render json: {
-          error: "not_publishable",
-          message: "Import was uploaded but has no publishable records.",
-          import_id: @import.id
-        }, status: :unprocessable_entity
-        return
-      rescue StandardError => e
-        Rails.logger.error "Sure import publish failed for import #{@import.id}: #{e.message}"
-        restore_pending_sure_import_after_publish_failure
-        render json: {
-          error: "publish_failed",
-          message: "Import was uploaded but could not be queued for processing.",
-          import_id: @import.id
-        }, status: :internal_server_error
-        return
-      end
+      return if params[:publish] == "true" && !publish_import
 
       render :show, status: :created
+    end
+
+    # Publishes @import for the API user. When it can't, renders why and
+    # returns false; the import stays saved and pending, and the response
+    # carries its id, so a client fixes or republishes it instead of
+    # uploading it again.
+    def publish_import
+      @import.publish_later(user: current_resource_owner)
+      true
+    rescue Import::PublishNotAllowedError => e
+      render_import_not_publishable(e)
+      false
+    rescue Import::PublishBusyError
+      render_import_busy
+      false
+    rescue Import::MaxRowCountExceededError
+      render_publish_rejection("max_row_count_exceeded", "Import was uploaded but has too many rows to publish automatically.")
+      false
+    rescue SureImport::PreflightError
+      render_publish_rejection("preflight_failed", "Import was uploaded but did not pass Sure NDJSON preflight.", errors: sure_import_error_lines)
+      false
+    rescue Import::NotPublishableError => e
+      # The exception's own message may describe internal state.
+      Rails.logger.warn "Import not publishable for import #{@import.id}: #{e.message}"
+      message = @import.is_a?(SureImport) ? "Import was uploaded but has no publishable records." : "Import was uploaded but has rows to fix before it can be published."
+      render_publish_rejection("not_publishable", message)
+      false
+    rescue StandardError => e
+      Rails.logger.error "Import publish failed for import #{@import.id}: #{e.message}"
+      restore_pending_after_publish_failure
+      render json: { error: "publish_failed", message: "Import was uploaded but could not be queued for processing.", import_id: @import.id }, status: :internal_server_error
+      false
+    end
+
+    def render_publish_rejection(error, message, **extra)
+      render json: { error: error, message: message, **extra, import_id: @import.id }, status: :unprocessable_entity
     end
 
     def persist_sure_import!(family, content, filename, content_type)
@@ -347,7 +358,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
       raise
     end
 
-    def restore_pending_sure_import_after_publish_failure
+    def restore_pending_after_publish_failure
       # Import#publish_later flips status to importing before enqueueing the job.
       @import.update_column(:status, "pending") if @import&.persisted? && @import.importing?
     end

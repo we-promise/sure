@@ -33,12 +33,14 @@ class Transactions::CategorizesController < ApplicationController
     count = entries.bulk_update!({ category_id: category.id }) { |entry| changed_ids << entry.entryable_id }
     Rule.apply_immediately_later(Current.family, changed_ids)
 
-    if params[:create_rule] == "1" && (count.positive? || entry_ids.empty?)
+    # Rules are family configuration, which guests may not change.
+    if params[:create_rule] == "1" && !Current.user.guest? && (count.positive? || entry_ids.empty?)
       rule = Rule.create_from_grouping(
         Current.family,
         params[:grouping_key],
         category,
-        transaction_type: params[:transaction_type]
+        transaction_type: params[:transaction_type],
+        user: Current.user
       )
       flash[:alert] = t(".rule_creation_failed") if rule.nil?
     end

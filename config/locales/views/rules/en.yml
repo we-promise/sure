@@ -2,6 +2,7 @@
 en:
   rules:
     no_action: No Action
+    not_manageable: Only the person the rule acts for or an admin can change it.
     no_condition: No condition
     notification_baseline_timed_out: This rule is still off. Checking which transactions it already matches took too long, and without that check it would email all of them. Simplify its conditions, then turn it on again.
     category_rule_cta:
@@ -70,6 +71,7 @@ en:
       on_or_after: "%{resource} on or after %{date}"
       stop_processing: Stop
       stop_processing_hint: Rules further down don't change transactions matched by this rule.
+      restricted_to: Only changes accounts %{name} can edit
       apply_immediately: Immediately
       apply_immediately_hint: Also runs right after a transaction is created or edited by hand, in a bulk edit, in Categorize, via the API or by the assistant, together with the active rules above it.
     form:
@@ -81,6 +83,9 @@ en:
       all_past_and_future: All past and future %{resource}
       starting_from: Starting from
       then: THEN
+      owner_label: Acts for
+      owner_none: The whole family
+      owner_hint: The rule only changes accounts this person can edit. An admin's rule acts on the whole family.
       stop_processing_label: Stop processing further rules
       stop_processing_description: Rules further down the list don't change transactions this rule matches.
       apply_immediately_label: Apply immediately to new and changed transactions

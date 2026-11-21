@@ -638,6 +638,148 @@ class RuleTest < ActiveSupport::TestCase
     assert_nil Rule.apply_immediately_later(@family, transaction.id)
   end
 
+
+  test "a member's rule changes only accounts its owner can write, whoever runs it" do
+    family = families(:dylan_family)
+    writable = create_transaction(account: accounts(:depository), name: "Owned probe one")
+    read_only = create_transaction(account: accounts(:credit_card), name: "Owned probe two")
+    unshared = create_transaction(account: accounts(:investment), name: "Owned probe three")
+    rule = owned_rule(users(:family_member), "Owned probe", [ { action_type: "set_transaction_name", value: "Renamed" } ])
+
+    assert_equal [ writable.entryable_id ], rule.matching_resources.pluck(:id)
+    Rule::Runner.new(family, rules: family.rules, execution_type: "scheduled").run
+
+    assert_equal "Renamed", writable.reload.name
+    assert_equal "Owned probe two", read_only.reload.name
+    assert_equal "Owned probe three", unshared.reload.name
+  end
+
+  test "an admin's rule and one without an owner act on the whole family" do
+    unshared = create_transaction(account: accounts(:investment), name: "Family probe")
+
+    assert_includes owned_rule(users(:family_admin), "Family probe").matching_resources.pluck(:id), unshared.entryable_id
+    assert_includes owned_rule(nil, "Family probe").matching_resources.pluck(:id), unshared.entryable_id
+  end
+
+  test "a member's rule that only annotates reaches accounts shared with them read_write" do
+    member = users(:family_member)
+    accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
+    shared = create_transaction(account: accounts(:credit_card), name: "Annotate probe")
+    category = { action_type: "set_transaction_category", value: categories(:food_and_drink).id }
+
+    assert_equal [ shared.entryable_id ], owned_rule(member, "Annotate probe", [ category ]).matching_resources.pluck(:id)
+    assert_empty owned_rule(member, "Annotate probe", [ category, { action_type: "set_transaction_name", value: "Renamed" } ]).matching_resources
+  end
+
+  test "a member's rule that only writes notes reaches accounts shared with them read_write" do
+    member = users(:family_member)
+    accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
+    shared = create_transaction(account: accounts(:credit_card), name: "Notes probe")
+    # Stands in for a notes action (#4346), which writes the entry's notes.
+    Rule::ActionExecutor::ExcludeTransaction.any_instance.stubs(:written_attributes).returns([ :notes ])
+    notes = { action_type: "exclude_transaction" }
+
+    assert_equal [ shared.entryable_id ], owned_rule(member, "Notes probe", [ notes ]).matching_resources.pluck(:id)
+    assert_empty owned_rule(member, "Notes probe", [ notes, { action_type: "set_transaction_name", value: "Renamed" } ]).matching_resources
+  end
+
+  test "only its owner or an admin can manage a rule" do
+    rule = owned_rule(users(:family_member), "Manage probe")
+
+    assert rule.manageable_by?(users(:family_member))
+    assert rule.manageable_by?(users(:family_admin))
+    assert_not owned_rule(users(:family_admin), "Manage probe").manageable_by?(users(:family_member))
+    assert_not owned_rule(nil, "Manage probe").manageable_by?(users(:family_member))
+  end
+
+  test "a rule's owner belongs to its family" do
+    rule = families(:dylan_family).rules.build(resource_type: "transaction", user: users(:empty), actions_attributes: [ { action_type: "exclude_transaction" } ])
+
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:user, :invalid)
+  end
+
+  test "a member's rules go with them when they are removed or move family" do
+    member = users(:family_member)
+    removed = owned_rule(member, "Removed probe")
+    member.destroy!
+    assert_not Rule.exists?(removed.id)
+
+    mover = family_user("mover@example.com", "member")
+    moved = owned_rule(mover, "Moved probe")
+    mover.transfer_to_family!(Family.create!(name: "Elsewhere"), role: "member")
+    assert_not Rule.exists?(moved.id)
+  end
+
+  test "an admin's rules stay, acting on the whole family, when the admin is removed or moves family" do
+    leaver = family_user("leaving-admin@example.com", "admin")
+    removed = owned_rule(leaver, "Admin removed probe")
+    leaver.destroy!
+    assert_nil removed.reload.user_id
+
+    mover = family_user("moving-admin@example.com", "admin")
+    moved = owned_rule(mover, "Admin moved probe")
+    mover.transfer_to_family!(Family.create!(name: "Elsewhere"), role: "admin")
+    assert_nil moved.reload.user_id
+  end
+
+  test "a change of owner is recorded in the security audit log" do
+    rule = owned_rule(users(:family_member), "Audit probe")
+    Current.stubs(:true_user).returns(users(:family_admin))
+
+    assert_difference -> { SecurityAuditLog.by_event("rule_owner_changed").count }, 1 do
+      rule.update!(user: users(:family_admin))
+    end
+    log = SecurityAuditLog.by_event("rule_owner_changed").recent.first
+    assert_equal users(:family_admin), log.user
+    assert_equal({ "rule_id" => rule.id, "from_user_id" => users(:family_member).id, "to_user_id" => users(:family_admin).id }, log.metadata.slice("rule_id", "from_user_id", "to_user_id"))
+  end
+
+  test "an admin's removal records each rule left without an owner" do
+    leaver = family_user("audited-admin@example.com", "admin")
+    owned_rule(leaver, "Audit one")
+    owned_rule(leaver, "Audit two")
+
+    assert_difference -> { SecurityAuditLog.by_event("rule_owner_changed").count }, 2 do
+      leaver.destroy!
+    end
+  end
+
+  test "a change of owner re-takes an email rule's baseline" do
+    rule = owned_rule(users(:family_member), "Email probe", [ { action_type: "send_email_notification" } ])
+    rule.expects(:seed_notification_baseline).once
+
+    rule.update!(user: users(:family_admin))
+  end
+
+  test "a member's transfer rule targets only accounts its owner can write" do
+    family = families(:dylan_family)
+    source = create_transaction(account: accounts(:depository), name: "Transfer probe", amount: 50)
+    rule = owned_rule(users(:family_member), "Transfer probe", [ { action_type: "set_as_transfer_or_payment", value: accounts(:depository).id } ])
+    executor = rule.actions.first.executor
+
+    assert_not executor.actionable?(accounts(:investment).id)
+    assert_not_includes executor.options.map(&:last), accounts(:investment).id
+    action = rule.actions.build(action_type: "set_as_transfer_or_payment", value: accounts(:investment).id)
+    assert_not action.valid?
+
+    rule.actions.first.update_column(:value, accounts(:investment).id)
+    assert_no_difference -> { accounts(:investment).entries.count } do
+      Rule::Runner.new(family, rules: [ rule.reload ], execution_type: "manual").run
+    end
+    assert_not source.entryable.reload.transfer?
+  end
+
+  test "rules listed together don't share transfer targets across owners" do
+    member_rule = owned_rule(users(:family_member), "List probe", [ { action_type: "set_as_transfer_or_payment", value: accounts(:depository).id } ])
+    family_rule = owned_rule(users(:family_admin), "List probe", [ { action_type: "set_as_transfer_or_payment", value: accounts(:investment).id } ])
+    rules = Rule.where(id: [ member_rule.id, family_rule.id ]).includes(:user).to_a
+    Rule.share_option_lists(rules)
+
+    rules.find { |r| r.id == member_rule.id }.actions.first.options
+    assert_includes rules.find { |r| r.id == family_rule.id }.actions.first.options.map(&:last), accounts(:investment).id
+  end
+
   private
     def create_exclude_rule
       @family.rules.create!(resource_type: "transaction", actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
@@ -652,5 +794,17 @@ class RuleTest < ActiveSupport::TestCase
         conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
         actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
       )
+    end
+
+    def owned_rule(user, name, actions = [ { action_type: "exclude_transaction" } ])
+      families(:dylan_family).rules.create!(
+        resource_type: "transaction", active: true, user: user,
+        conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+        actions_attributes: actions
+      )
+    end
+
+    def family_user(email, role)
+      families(:dylan_family).users.create!(email: email, password: user_password_test, role: role, first_name: "Some", last_name: "One")
     end
 end

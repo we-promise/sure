@@ -168,7 +168,9 @@ class Rule::NotificationBaselineOnEditTest < ActiveSupport::TestCase
     assert_equal [ @coffee.id ], delivered_ids(rule)
     coffee_bar = create_transaction(date: Date.current, account: @account, amount: 5, name: "Coffee bar").transaction
 
-    session = @family.import_sessions.create!(expected_chunks: 1)
+    # An admin's session: one with no creator holds its rules for review.
+    admin = users(:family_admin)
+    session = @family.import_sessions.create!(expected_chunks: 1, created_by: admin)
     session.source_mappings.create!(family: @family, source_type: "Rule", source_id: "rule-1", target: rule)
     ndjson = {
       type: "Rule", version: 1,
@@ -179,7 +181,7 @@ class Rule::NotificationBaselineOnEditTest < ActiveSupport::TestCase
     }.to_json
 
     assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
-      Family::DataImporter.new(@family, ndjson, import_session: session).import!
+      Family::DataImporter.new(@family, ndjson, import_session: session, user: admin).import!
     end
     assert_equal "Coffee alerts", rule.reload.name, "precondition: the import updated this rule"
 
