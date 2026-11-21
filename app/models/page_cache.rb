@@ -4,7 +4,8 @@
 # Each page is stored under a key that names the page (whose, which period and
 # filters), together with the `version` of the data it was built from. When the
 # data has moved on, the stored page is still served at once, marked stale, and
-# a rebuild is queued, at most once per Setting.page_cache_cooldown. Only a
+# a rebuild is queued, no sooner than Setting.page_cache_cooldown after the last
+# build of that page finished, whether or not it was kept. Only a
 # page that was never built, or an explicit refresh, is built while the member
 # waits.
 #
@@ -49,7 +50,7 @@ class PageCache
       end
 
       stale = entry[:version] != version
-      if stale && entry[:built_at] <= Setting.page_cache_cooldown.ago && claim_rebuild(key)
+      if stale && entry[:built_at] <= Setting.page_cache_cooldown.ago && !cooling_down?(key) && claim_rebuild(key)
         queue_rebuild(key, rebuild_later)
       end
 
@@ -65,6 +66,7 @@ class PageCache
     # slow builder finishing last never replaces a newer page.
     def write(key, body, version:, family:, user:, started_at: Time.current)
       release_rebuild(key)
+      start_cooldown(key)
       kept = with_page_lock(key) do
         stored = read(key, family: family, user: user, touch: false, shared: true)
         next false if stored && stored[:started_at] > started_at
@@ -180,6 +182,22 @@ class PageCache
 
       def rebuild_claim_key(key)
         "#{key}/rebuilding"
+      end
+
+      # A build that isn't kept (too big, or older than the stored page) leaves
+      # the stored page's built_at as it was, so the cooldown is also counted
+      # from when the last build finished. A cooldown of 0 never holds one back.
+      def start_cooldown(key)
+        cooldown = Setting.page_cache_cooldown
+        Rails.cache.write(rebuild_cooldown_key(key), true, expires_in: cooldown) if cooldown.positive?
+      end
+
+      def cooling_down?(key)
+        Rails.cache.exist?(rebuild_cooldown_key(key))
+      end
+
+      def rebuild_cooldown_key(key)
+        "#{key}/rebuilt"
       end
 
       def evict_to_fit

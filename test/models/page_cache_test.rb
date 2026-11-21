@@ -114,6 +114,27 @@ class PageCacheTest < ActiveSupport::TestCase
     assert_equal %w[page/a], PageCacheEntry.pluck(:page_key)
   end
 
+  test "the cooldown counts from when the last rebuild finished, even one too big to keep" do
+    PageCache.write("page/a", "x" * 100, version: "v1", family: @family, user: @user)
+    PageCache.stubs(:max_bytes).returns(1_000)
+    rebuilds = 0
+    visit = -> { PageCache.serve("page/a", version: "v2", family: @family, user: @user, rebuild_later: -> { rebuilds += 1 }) { flunk "stale is served" } }
+
+    travel Setting.page_cache_cooldown + 1.minute do
+      visit.call
+      assert_equal 1, rebuilds, "the stored page is past its cooldown"
+      assert_not PageCache.write("page/a", SecureRandom.alphanumeric(5_000), version: "v2", family: @family, user: @user)
+
+      visit.call
+      assert_equal 1, rebuilds, "within the cooldown of the rebuild that just finished"
+    end
+
+    travel 2 * Setting.page_cache_cooldown + 2.minutes do
+      visit.call
+      assert_equal 2, rebuilds, "a cooldown after that rebuild finished"
+    end
+  end
+
   test "a page the cache store refuses is served but not kept" do
     Rails.cache.stubs(:write).returns(false)
 
