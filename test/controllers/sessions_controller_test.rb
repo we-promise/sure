@@ -56,6 +56,24 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     Faraday.stubs(:new).returns(connection)
   end
 
+  # Runs the browser half of desktop SSO and returns the minted code with its PKCE verifier.
+  def mint_desktop_sso_code
+    verifier = SecureRandom.hex(32)
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+    oidc_identity = oidc_identities(:bob_google)
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+    setup_omniauth_mock(provider: oidc_identity.provider, uid: oidc_identity.uid, email: @user.email, name: "Bob Dylan")
+
+    get "/auth/desktop/openid_connect", params: { code_challenge: challenge }
+    get "/auth/openid_connect/callback"
+    code = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)["code"]
+    assert code.present?
+    [ code, verifier ]
+  end
+
   def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil, id_token: nil)
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
@@ -1196,6 +1214,69 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
     assert_nil session[:mfa_user_id]
     assert_not Session.exists?(user_id: @user.id)
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "desktop SSO exchange refuses a cross-site Origin and leaves the code unclaimed" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    code, verifier = mint_desktop_sso_code
+
+    assert_no_difference -> { Session.count } do
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier },
+                                      headers: { "Origin" => "https://evil.example" }
+    end
+    assert_redirected_to new_session_path
+    assert cookies[:session_token].blank?
+    assert Rails.cache.exist?("desktop_sso:#{code}"), "A refused request must not burn the code"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "desktop SSO exchange refuses a null Origin" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    code, verifier = mint_desktop_sso_code
+
+    assert_no_difference -> { Session.count } do
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier },
+                                      headers: { "Origin" => "null" }
+    end
+    assert_redirected_to new_session_path
+    assert cookies[:session_token].blank?
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "desktop SSO exchange refuses a lookalike Origin" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    code, verifier = mint_desktop_sso_code
+
+    [ "http://www.example.com.evil.example", "http://www.example.com:8080" ].each do |origin|
+      assert_no_difference -> { Session.count }, origin do
+        post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier },
+                                        headers: { "Origin" => origin }
+      end
+      assert_redirected_to new_session_path, origin
+      assert cookies[:session_token].blank?, origin
+    end
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "desktop SSO exchange accepts the instance's own Origin" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    code, verifier = mint_desktop_sso_code
+
+    assert_difference -> { Session.count }, 1 do
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier },
+                                      headers: { "Origin" => "http://www.example.com" }
+    end
+    assert_redirected_to root_path
+    assert cookies[:session_token].present?
   ensure
     Rails.cache = original_cache
   end

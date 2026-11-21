@@ -190,6 +190,15 @@ class SessionsController < ApplicationController
   # Exchanges the single-use, PKCE-bound code (delivered to the desktop app via
   # sure://sso/callback) for a real web session in the app's own webview.
   def desktop_exchange
+    # CSRF protection is skipped here because the desktop webview can't carry a
+    # token, so refuse a cross-site POST by its Origin instead, using Rails' own
+    # rule: a missing Origin is allowed, any other value must be this instance.
+    # Checked before the code is claimed so a refused request doesn't burn it.
+    unless request.origin.nil? || request.origin == request.base_url
+      redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      return
+    end
+
     code = params[:code].to_s
     code_verifier = params[:code_verifier].to_s
 
