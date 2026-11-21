@@ -366,10 +366,9 @@ module QifParser
   end
   private_class_method :transaction_sections
 
-  # Maps a "!Type:" value, or the "T" type of an "!Account" record, to its
-  # TRANSACTION_TYPES entry, ignoring case and surrounding spaces. Returns nil
-  # for blank values and NON_ACCOUNT_TYPES and FALLBACK_ACCOUNT_TYPE for any
-  # other type.
+  # Maps a "!Type:" value to its TRANSACTION_TYPES entry, ignoring case and
+  # surrounding spaces. Returns nil for blank values and NON_ACCOUNT_TYPES and
+  # FALLBACK_ACCOUNT_TYPE for any other type.
   def self.section_account_type(raw_type)
     type = raw_type.to_s.strip
     return nil if type.empty? || known_type(type, NON_ACCOUNT_TYPES)
@@ -377,6 +376,15 @@ module QifParser
     known_type(type, TRANSACTION_TYPES) || FALLBACK_ACCOUNT_TYPE
   end
   private_class_method :section_account_type
+
+  # The "T" type of an "!Account" record overrides the type of the sections
+  # that follow it, so only a standard type (matched regardless of case) is
+  # kept. Any other value is dropped and the section type applies.
+  def self.standard_account_type(raw_type)
+    type = raw_type.to_s.strip
+    known_type(type, TRANSACTION_TYPES) unless type.empty?
+  end
+  private_class_method :standard_account_type
 
   def self.known_type(type, types)
     types.find { |known| known.casecmp?(type.strip) }
@@ -400,7 +408,7 @@ module QifParser
 
     ParsedAccount.new(
       name: record["N"].strip,
-      account_type: section_account_type(record["T"]),
+      account_type: standard_account_type(record["T"]),
       description: record["D"]&.strip
     )
   end
