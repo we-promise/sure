@@ -400,14 +400,16 @@ class ReportsController < ApplicationController
 
       monthly_totals = if filter_tags.empty?
         income_statement.monthly_income_expense_totals(
-          period: Period.custom(start_date: current_month, end_date: @end_date)
+          period: Period.custom(start_date: @start_date, end_date: @end_date)
         )
       end
 
       while current_month <= end_of_period
         if filter_tags.any?
+          # A range that starts mid-month only counts from its start date
+          month_start = [ current_month, @start_date ].max
           month_end = [ current_month.end_of_month, @end_date ].min
-          period = Period.custom(start_date: current_month, end_date: month_end)
+          period = Period.custom(start_date: month_start, end_date: month_end)
           totals = income_statement.totals_for(period, tag_ids: filter_tags.map(&:id))
           income = totals.income_money.amount
           expenses = totals.expense_money.amount
