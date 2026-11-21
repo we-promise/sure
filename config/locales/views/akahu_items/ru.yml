@@ -108,7 +108,7 @@ ru:
       account_type_label: Тип счёта
       account_types:
         credit_card: Кредитная карта
-        depository: Денежный счёт
+        depository: Счёт или наличные
         investment: Инвестиционный счёт
         loan: Кредит
         skip: Пропустить

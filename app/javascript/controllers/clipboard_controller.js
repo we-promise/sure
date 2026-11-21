@@ -5,8 +5,8 @@ import { Controller } from "@hotwired/stimulus";
 const RESET_DELAY_MS = 2000;
 
 export default class extends Controller {
-  static targets = ["source", "iconDefault", "iconSuccess"];
-  static values = { copiedText: String };
+  static targets = ["source", "iconDefault", "iconSuccess", "announcement"];
+  static values = { copiedText: String, errorText: String };
 
   copy(event) {
     event.preventDefault();
@@ -23,18 +23,29 @@ export default class extends Controller {
       })
       .catch((error) => {
         console.error("Failed to copy text: ", error);
+        if (this.hasErrorTextValue) alert(this.errorTextValue);
       });
   }
 
   showSuccess(button) {
+    if (this.hasAnnouncementTarget && this.hasCopiedTextValue) {
+      clearTimeout(this.announcementUpdateTimer);
+      this.announcementTarget.textContent = "";
+      this.announcementUpdateTimer = setTimeout(() => {
+        if (this.hasAnnouncementTarget) this.announcementTarget.textContent = this.copiedTextValue;
+      }, 50);
+    }
+
     // Markup that ships explicit default/success icons (invite codes, MFA,
     // profiles) toggles between them.
     if (this.hasIconDefaultTarget && this.hasIconSuccessTarget) {
+      clearTimeout(this.iconResetTimer);
       this.iconDefaultTarget.classList.add("hidden");
       this.iconSuccessTarget.classList.remove("hidden");
-      setTimeout(() => {
+      this.iconResetTimer = setTimeout(() => {
         this.iconDefaultTarget.classList.remove("hidden");
         this.iconSuccessTarget.classList.add("hidden");
+        if (this.hasAnnouncementTarget) this.announcementTarget.textContent = "";
       }, RESET_DELAY_MS);
       return;
     }
@@ -64,6 +75,8 @@ export default class extends Controller {
   }
 
   disconnect() {
+    clearTimeout(this.iconResetTimer);
     clearTimeout(this.labelResetTimer);
+    clearTimeout(this.announcementUpdateTimer);
   }
 }

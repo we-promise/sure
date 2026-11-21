@@ -17,8 +17,7 @@ ru:
       success: Подключение Interactive Brokers запланировано на удаление.
     ibkr_item:
       accounts_need_setup: Требуется настройка счетов
-      accounts_need_setup_description: Некоторые счета из IBKR нужно связать с счетами
-        в Sure.
+      accounts_need_setup_description: 'Некоторые счета из IBKR нужно связать со счетами в Sure.'
       delete: Удалить
       deletion_in_progress: Удаление в процессе
       error: Ошибка
@@ -66,7 +65,7 @@ ru:
       info_box:
         items:
           item_1: Активы с текущими ценами и количествами
-          item_2: Стоимость по каждой позиции
+          item_2: 'Стоимость приобретения по каждой позиции'
           item_3: Сделки, дивиденды, комиссии и пополнения и выводы денежных средств
         title: Импорт Flex Query IBKR
         warning: Историческая активность ограничена окном отчёта Flex Query

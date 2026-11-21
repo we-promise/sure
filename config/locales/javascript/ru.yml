@@ -1,0 +1,35 @@
+ru:
+  javascript:
+    turbo_frame_timeout:
+      timeout: Нет ответа
+    admin_sso_form:
+      copied: Скопировано!
+      copy_failed: Не удалось скопировать в буфер обмена
+      valid_issuer: Адрес издателя OIDC указан верно
+      issuer_mismatch: "Адрес издателя не совпадает: сервер обнаружения вернул %{issuer}. Скопируйте адрес в точности как его вернул провайдер."
+      issuer_slash_mismatch: "Адрес издателя не совпадает: сервер обнаружения вернул %{issuer}. Обычно причина в завершающем слеше. Скопируйте адрес в точности как его вернул сервер."
+      browser_validation_failed: Не удалось проверить адрес из браузера из-за CORS. Провайдера всё равно можно сохранить.
+      testing: Проверка…
+      request_failed: "Ошибка запроса: %{error}"
+    attachment_upload:
+      upload_files:
+        one: Загрузить %{count} файл
+        few: Загрузить %{count} файла
+        many: Загрузить %{count} файлов
+        other: Загрузить %{count} файла
+      too_many_files: Слишком много файлов (максимум %{max})
+      file_too_large: Слишком большой файл (максимум %{max})
+    file_upload:
+      uploading: Загрузка файла %{filename}…
+    drag_and_drop_import:
+      invalid_sure_file: Загрузите файл NDJSON или JSON.
+    rule:
+      and: и
+      no_options: (нет)
+    tag_select:
+      create_error: Не удалось создать тег
+    color_icon_picker:
+      contrast_error: Низкая контрастность. Выберите более тёмный цвет или используйте автокоррекцию.
+    goal_projection_chart:
+      target: Цель · %{amount}
+      shortfall: "Не хватает %{amount}"

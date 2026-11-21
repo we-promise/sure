@@ -27,3 +27,22 @@ ru:
         avg_cost_per_call: "Средняя стоимость/вызов"
         based_on_calls: "Основано на %{with_cost} из %{total} вызовов с данными о стоимости"
         total_tokens: Всего токенов
+        requests_in_calls:
+          one: "%{count} запрос, включая повторы"
+          few: "%{count} запроса, включая повторы"
+          many: "%{count} запросов, включая повторы"
+          other: "%{count} запросов, включая повторы"
+        recent_usage_scope: "Каждый вызов показывает все свои запросы, даже если некоторые находятся вне выбранных дат, поэтому его итог может отличаться от итогов выше, учитывающих только запросы в диапазоне."
+        cancelled: "Отменено"
+      requests:
+        summary:
+          one: "%{count} запрос"
+          few: "%{count} запроса"
+          many: "%{count} запросов"
+          other: "%{count} запросов"
+        request: "Запрос %{number}"
+        tokens: "%{prompt}/%{completion} токенов"
+        status:
+          succeeded: "Успешно"
+          failed: "Неудачно"
+          cancelled: "Отменено"

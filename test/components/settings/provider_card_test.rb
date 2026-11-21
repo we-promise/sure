@@ -40,6 +40,21 @@ class Settings::ProviderCardTest < ViewComponent::TestCase
     assert_equal "US · Bank / Investment · Paid", card.meta_line
   end
 
+  test "metadata line is localized without changing filter tokens" do
+    card = Settings::ProviderCard.new(
+      provider_key: "example",
+      name: "Example",
+      region: "US",
+      kinds: %w[Bank Investment],
+      tier: "Paid"
+    )
+
+    I18n.with_locale(:ru) do
+      assert_equal "США · Банки / Инвестиции · Платный", card.meta_line
+      assert_equal "bank investment", card.filter_data[:provider_kind]
+    end
+  end
+
   test "filter data includes all kinds as searchable tokens" do
     card = Settings::ProviderCard.new(
       provider_key: "example",

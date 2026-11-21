@@ -1,0 +1,21 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        monarch_import:
+          missing_columns: "В файле %{file} отсутствуют столбцы %{columns}. Это правильный экспорт Monarch?"
+          malformed_csv: "Файл %{file} не является читаемым CSV: %{error}"
+          invalid_number: "%{value} не является числом"
+          invalid_date: "%{value} не является датой в формате 2024-01-31"
+          date_out_of_range: "%{value} не входит в диапазон дат, которые импортирует Sure (%{from}–%{to})"
+          blank_account: "В строке нет имени счёта. Проверьте, что файл является экспортом Monarch."
+          blank_transaction_id: "У операции нет Id. Проверьте, что файл является экспортом операций Monarch."
+          opening_balance_changed: "Начальный баланс счёта %{account} изменился во время импорта. Проверьте импорт и опубликуйте его снова."
+          target_not_supported: "Sure больше не может импортировать в %{accounts}. Получателями должны быть ручные счета без позиций или сделок. Выберите другие счета и опубликуйте снова."
+          no_accounts: "В экспортированных файлах нет счетов. Проверьте, что вы экспортировали правильные файлы из Monarch."
+          files:
+            balances: "балансы"
+            transactions: "операции"
+        import/monarch_account_mapping:
+          target_taken: "%{account} уже является счётом назначения для другого счёта Monarch. Выберите другой счёт для %{monarch} или импортируйте его как новый счёт."

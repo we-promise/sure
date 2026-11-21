@@ -12,9 +12,11 @@ class RuleNotificationMailer < ApplicationMailer
     recipient = @family.users.find_by(role: %w[admin super_admin])
     return if recipient.nil?
 
-    mail(
-      to: recipient.email,
-      subject: t(".subject", count: transactions.size, product_name: product_name)
-    )
+    I18n.with_locale(recipient.locale.presence || I18n.default_locale) do
+      mail(
+        to: recipient.email,
+        subject: t(".subject", count: transactions.size, product_name: product_name)
+      )
+    end
   end
 end

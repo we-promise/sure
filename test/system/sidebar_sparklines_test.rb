@@ -209,6 +209,20 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a stalled request displays the Russian timeout message" do
+    @user.update!(locale: "ru")
+    with_short_sparkline_timeout do
+      visit root_path
+      with_stalled_sparkline_responses do
+        record_visible_account_sparkline_requests
+        expand_first_group
+        wait_out_timeout_window
+        assert_requested_account_timeout_messages
+        assert_no_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: "Timeout"
+      end
+    end
+  end
+
   # Only a response that renders the frame ends the wait; one without it is as
   # much a failed sparkline as a request that never returns. Each response has
   # to arrive inside the window, otherwise the badge would be there before it
@@ -266,6 +280,26 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
           if (event.target.id in requestedAt) window.sparklineResponseTimes.push(performance.now() - requestedAt[event.target.id])
         })
       JS
+    end
+
+    def record_visible_account_sparkline_requests
+      page.execute_script(<<~JS)
+        window.visibleAccountSparklineRequests = []
+        document.addEventListener("turbo:before-fetch-request", (event) => {
+          const frame = event.target
+          if (frame.matches("#{ACCOUNT_SPARKLINE_FRAME}") && frame.checkVisibility()) {
+            window.visibleAccountSparklineRequests.push(frame.id)
+          }
+        })
+      JS
+    end
+
+    def assert_requested_account_timeout_messages
+      ids = page.evaluate_script("window.visibleAccountSparklineRequests")
+      assert_not_empty ids
+      ids.each do |id|
+        assert_selector "##{id} p", text: "Нет ответа", wait: SETTLE_WAIT_SECONDS
+      end
     end
 
     def assert_account_sparkline_responses_within(ms)

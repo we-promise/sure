@@ -12,7 +12,7 @@
   <% end %>
 
   <%
-    indexa_capital_item = Current.family.indexa_capital_items.first_or_initialize(name: "Indexa Capital Connection")
+    indexa_capital_item = Current.family.indexa_capital_items.first_or_initialize(name: t("indexa_capital_items.panel.default_connection_name"))
     is_new_record = indexa_capital_item.new_record?
   %>
 

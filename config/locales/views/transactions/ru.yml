@@ -14,7 +14,7 @@ ru:
       sweep_in: Автоперевод (зачисление)
       sweep_out: Автоперевод (списание)
       transfer: Перевод
-      withdrawal: Снятие
+      withdrawal: 'Вывод средств'
     attachments:
       attachment_deleted: Вложение успешно удалено
       browse_to_add: Выберите файлы для добавления
@@ -32,8 +32,7 @@ ru:
         существующий файл, чтобы загрузить другой.
       no_attachments: Пока нет вложений
       no_files_selected: Файлы для загрузки не выбраны
-      select_up_to: Выберите до %{count} файлов (изображения или PDF, макс. %{size}МБ
-        каждый) • %{used} из %{count} использовано
+      select_up_to: 'Выберите до %{count} файлов (изображения или PDF, макс. %{size} МБ каждый) • %{used} из %{count} использовано'
       upload: Загрузить
       upload_failed: Не удалось загрузить вложение. Пожалуйста, попробуйте снова или
         свяжитесь с поддержкой.
@@ -57,6 +56,10 @@ ru:
         save: Сохранить
         tags_label: Теги
         transactions_section: Операции
+        no_change: "(без изменений)"
+        reconciled_status_hint: "Применимо только к счетам с ручным вводом (без синхронизации с банком)."
+        reconciled_status_label: "Статус сверки"
+        transfer_fields_hint: Для переводов дата и продавец не меняются. Категория применяется только к исходящим переводам, для которых она доступна.
     categorizes:
       create:
         categorized:
@@ -177,6 +180,7 @@ ru:
       submit: Добавить операцию
       tag_search_placeholder: Найти или создать тег
       tags_label: Теги
+      tags_save_error: Не удалось сохранить теги. Измените их ещё раз или перезагрузите страницу.
       transfer: Перевод
       category_search_placeholder: Поиск категорий
       create_category: Создать «%{name}»
@@ -187,6 +191,7 @@ ru:
       create_merchant: Создать
       create_merchant_error: Не удалось создать продавца
       merchant_search_placeholder: Найдите или создайте продавца
+      no_matching_categories: 'Нет подходящих категорий'
     header:
       edit_categories: Редактировать категории
       edit_imports: Редактировать импорты
@@ -236,6 +241,7 @@ ru:
     potential_duplicate_title: Обнаружен возможный дубликат
     search:
       filters:
+        balance_updates: Балансы
         account: Счёт
         amount: Сумма
         category: Категория
@@ -244,8 +250,17 @@ ru:
         status: Статус
         tag: Тег
         type: Тип
+        ai: 'ИИ'
+        attachment: 'Вложение'
+        reconcile_status: "Сверка"
+        reconcile_status_hint: Включены только счета с ручным вводом.
     searches:
       filters:
+        balance_updates_filter:
+          always_shown: Всегда показывать, как задано в
+          hint: Только для этого представления. Чтобы всегда показывать их, включите в
+          preferences_link: Настройки
+          show: Показывать синхронизированные обновления баланса
         account_filter:
           filter_accounts: Фильтр по счетам
         amount_filter:
@@ -254,6 +269,7 @@ ru:
           less_than: Меньше чем
           placeholder: '0'
         badge:
+          balance_updates: Синхронизированные балансы
           confirmed: Подтверждено
           expense: Расход
           income: Доход
@@ -261,6 +277,10 @@ ru:
           on_or_before: не позднее %{date}
           pending: В ожидании
           transfer: Перевод
+          ai_current: 'ИИ'
+          ai_history: 'История ИИ'
+          attachment_with: 'С вложением'
+          attachment_without: 'Без вложения'
         category_filter:
           filter_category: Фильтр по категориям
         date_filter:
@@ -277,6 +297,14 @@ ru:
           expense: Расход
           income: Доход
           transfer: Перевод
+        ai_filter:
+          current: 'ИИ'
+          current_description: 'Категория по-прежнему назначена автоматически (ИИ или Байесом).'
+          history: 'История ИИ'
+          history_description: 'Категория была назначена автоматически, но затем её изменили.'
+        attachment_filter:
+          with: 'С вложением'
+          without: 'Без вложения'
       form:
         filter: Фильтр
         search_placeholder: Поиск операций ...
@@ -293,6 +321,8 @@ ru:
         status_filter: Статус
         tag_filter: Тег
         type_filter: Тип
+        loading: "Загрузка фильтров..."
+        reconcile_status_filter: "Сверка"
       search:
         equal_to: равно
         greater_than: больше чем
@@ -301,6 +331,7 @@ ru:
       duplicate: Дублировать
       edit: Редактировать
       selected: выбрано
+      reconcile: "Сверить"
     show:
       account_label: Счёт
       activity_type: Тип активности
@@ -351,7 +382,7 @@ ru:
         как и проведенная ниже. Если это так, объедините их, чтобы избежать двойного
         учета.
       potential_duplicate_title: Обнаружен возможный дубликат
-      provider_extras: Дополнения провайдера
+      provider_extras: 'Дополнительные данные провайдера'
       settings: Настройки
       tab_transactions: Операции
       tab_upcoming: Предстоящие
@@ -364,6 +395,27 @@ ru:
       applied_to_title: Платежи, оплаченные этой операцией
       applied_to_detail: '%{amount} в счёт платежа со сроком %{date}'
       applied_to_unreviewed: Требует проверки
+      category_set_on_hidden_outflow: 'Это входящая часть перевода. Её категория задаётся для исходящей части на счёте, к которому у вас нет доступа, и изменить её можно только там.'
+      category_set_on_outflow: 'Это входящая часть перевода. Её категория задаётся для исходящей части, и изменить её можно только там, чтобы перевод учитывался в бюджете один раз.'
+      original_description: 'Исходное описание'
+      payment_channel: 'Канал оплаты'
+      transaction_code: 'Код операции'
+      plaid_payment_meta_label: 'Платёжные сведения · %{name}'
+      plaid_counterparty_label: 'Контрагент %{index}'
+      provider_extra_fields:
+        confidence_level: 'Уровень уверенности'
+        entity_id: 'ID объекта'
+        logo_url: 'URL логотипа'
+        name: 'Название'
+        payee: 'Получатель'
+        payer: 'Плательщик'
+        phone_number: 'Номер телефона'
+        reason: 'Причина'
+        type: 'Тип'
+        website: 'Веб-сайт'
+        by_order_of: 'По поручению'
+        reference_number: 'Номер операции'
+        ppd_id: ID PPD
     split_parent_row:
       split_label: Разделена
     summary:
@@ -372,6 +424,11 @@ ru:
       inflow: Поступления
       outflow: Отток
       total_transactions: Всего операций
+      scheduled_count:
+        one: "включая %{count} запланированную"
+        few: "включая %{count} запланированные"
+        many: "включая %{count} запланированных"
+        other: "включая %{count} запланированных"
     toggle_recurring_section: Переключить предстоящие регулярные операции
     transaction:
       activity_type_tooltip: Тип инвестиционной активности
@@ -389,6 +446,9 @@ ru:
       transfer_hint: Перевод?
       transfer_hint_dismiss: Это не перевод
       transfer_hint_tooltip: В другом счёте есть похожая встречная операция — нажмите, чтобы сопоставить их как перевод
+      scheduled: "Запланировано"
+      scheduled_tooltip: "Дата в будущем — до неё не влияет на баланс"
+      view_merchant: "Посмотреть продавца"
     transfer_match:
       auto_matched: Автоматически сопоставлено
       auto_matched_short: А/С
@@ -396,6 +456,23 @@ ru:
       payment_confirmed: Платеж подтвержден
       reject_match: Отклонить сопоставление
       transfer_confirmed: Перевод подтвержден
+      auto_matched_tooltip_html: "%{amount} на счёте %{account} от %{date}. Нажмите для проверки."
+      auto_matched_tooltip_hidden: "Операция на счёте, который вы не можете видеть."
     unknown_name: Неизвестная операция
     update:
       updated: Операция обновлена
+    transaction_category:
+      set_on_outflow: 'Категория задана для исходящей части этого перевода; изменить её можно только там.'
+    reconcile:
+      success: "Отмечено как %{status}"
+      failure: "Не удалось обновить статус сверки"
+      unavailable: "Сверка не включена для этой семьи"
+      not_manual_account: "Статус сверки применим только к счетам с ручным вводом (без синхронизации с банком)"
+      statuses:
+        unreconciled: "Не сверено"
+        cleared: "Проведено"
+        reconciled: "Сверено"
+      badge:
+        unreconciled_tooltip: "Ещё не проверено по выписке. Нажмите, чтобы отметить как проведённое."
+        cleared_tooltip: "Подтверждено выпиской, но ещё не полностью сверено. Нажмите, чтобы отметить как сверенное."
+        reconciled_tooltip: "Период выписки полностью сверён. Нажмите, чтобы сбросить статус на «Не сверено»."

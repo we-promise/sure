@@ -1,12 +1,45 @@
 require "application_system_test_case"
 
 class GoalMultiCurrencyTest < ApplicationSystemTestCase
+  include BalanceTestHelper
+
   setup do
     @user = users(:family_admin)
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @usd = @user.family.accounts.create!(name: "Dollar reserve", accountable: Depository.new, currency: "USD", balance: 500)
     @eur = @user.family.accounts.create!(name: "Euro reserve", accountable: Depository.new, currency: "EUR", balance: 1_000)
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
+  end
+
+  test "projection dates use the selected locale for ticks and tooltips" do
+    @user.update!(locale: "ru")
+    [ 70, 35, 0 ].each do |days_ago|
+      create_balance(account: @usd, date: days_ago.days.ago.to_date, balance: 500)
+    end
+    goal = @user.family.goals.create!(name: "Travel", target_amount: 2_000, currency: "USD", target_date: 4.months.from_now.to_date) do |record|
+      record.goal_accounts.build(account: @usd)
+    end
+    sign_in @user
+    visit goal_path(goal)
+    assert_selector "[data-controller='goal-projection-chart'] svg text"
+
+    dates = page.evaluate_script(<<~JS)
+      (() => {
+        const chart = document.querySelector("[data-controller='goal-projection-chart']");
+        const ticks = Array.from(chart.querySelectorAll("svg text")).filter((text) => text.__data__ instanceof Date);
+        const overlay = chart.querySelector("svg rect[style*='cursor: crosshair']");
+        const box = overlay.getBoundingClientRect();
+        overlay.dispatchEvent(new PointerEvent("pointermove", { clientX: box.left + 1, clientY: box.top + 20, bubbles: true }));
+        return {
+          ticks: ticks.map((tick) => ({ label: tick.textContent, expected: new Intl.DateTimeFormat("ru", { month: "short", year: "numeric" }).format(tick.__data__) })),
+          tooltip: chart.querySelector(".chart-tooltip").firstChild.textContent,
+        };
+      })()
+    JS
+
+    assert_not_empty dates["ticks"]
+    dates["ticks"].each { |tick| assert_equal tick["expected"], tick["label"] }
+    assert_match(/\A\d{1,2} [а-яё]+\.? \d{4} г\.\z/, dates["tooltip"])
   end
 
   test "create a goal backed by mixed currencies and show the converted total" do

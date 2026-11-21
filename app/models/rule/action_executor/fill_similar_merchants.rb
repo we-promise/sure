@@ -2,10 +2,6 @@
 # missing merchant from near-duplicates, in the rule's place in the order.
 # Free, so offered without a provider. Never overrides a lock.
 class Rule::ActionExecutor::FillSimilarMerchants < Rule::ActionExecutor
-  def label
-    "Fill missing merchants from similar transactions (no AI)"
-  end
-
   def claimed_attributes
     [ :merchant_id ]
   end

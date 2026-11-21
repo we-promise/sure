@@ -79,6 +79,7 @@ class Series
       start_date: start_date,
       end_date: end_date,
       interval: interval,
+      locale: I18n.locale.to_s,
       trend: trend,
       values: values.map do |v|
         { date: v.date, date_formatted: v.date_formatted, value: display_amount(v.value), trend: display_trend(v.trend) }

@@ -11,6 +11,15 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "renders the current locale in the document language" do
+    ensure_tailwind_build
+
+    get settings_preferences_url(locale: "ru")
+
+    assert_response :success
+    assert_select "html[lang='ru']"
+  end
+
   test "shows the saved timezone instead of another city sharing its zone" do
     users(:family_admin).family.update!(timezone: "Europe/Moscow")
 

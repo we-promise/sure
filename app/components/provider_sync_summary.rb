@@ -143,6 +143,14 @@ class ProviderSyncSummary < ViewComponent::Base
     stats["rate_limited"].present? || stats["rate_limited_at"].present?
   end
 
+  def rate_limited_label
+    elapsed = rate_limited_ago
+    return t("provider_sync_summary.health.rate_limited", time_ago: elapsed) if elapsed
+
+    t("provider_sync_summary.health.rate_limited_recently", fallback: false,
+      default: t("provider_sync_summary.health.rate_limited", time_ago: t("provider_sync_summary.health.recently")))
+  end
+
   def rate_limited_ago
     return nil unless stats["rate_limited_at"].present?
 

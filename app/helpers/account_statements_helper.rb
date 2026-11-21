@@ -75,7 +75,7 @@ module AccountStatementsHelper
   def account_statement_currency_options(statement)
     currency_picker_options_for_family(Current.family, extra: [ statement.currency ]).map do |code|
       currency = Money::Currency.new(code)
-      [ "#{currency.name} (#{currency.iso_code})", currency.iso_code ]
+      [ "#{currency.localized_name} (#{currency.iso_code})", currency.iso_code ]
     end
   end
 

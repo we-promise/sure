@@ -89,3 +89,7 @@ ru:
       title: Импорт кошельков Coinbase
     update:
       success: Конфигурация Coinbase успешно обновлена.
+    select_accounts:
+      connection_unavailable: 'Это подключение Coinbase недоступно. Выберите другое в настройках провайдеров.'
+      no_credentials_configured: 'Подключите Coinbase в настройках провайдеров, прежде чем добавлять его кошельки.'
+      select_connection: 'Выберите подключение Coinbase в настройках провайдеров.'

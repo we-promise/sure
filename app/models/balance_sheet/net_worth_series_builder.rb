@@ -59,6 +59,8 @@ class BalanceSheet::NetWorthSeriesBuilder
         ExchangeRate.updated_at_version,
         user&.id,
         shares_version,
+        I18n.locale,
+        family.date_format,
         accounts_digest,
         period.start_date,
         period.end_date

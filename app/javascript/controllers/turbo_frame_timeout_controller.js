@@ -16,7 +16,7 @@ import { Controller } from "@hotwired/stimulus"
 // error, or a sign-in page after a redirect) never render, so they keep
 // counting and still end in the badge.
 export default class extends Controller {
-  static values = { timeout: { type: Number, default: 10000 } }
+  static values = { timeout: { type: Number, default: 10000 }, message: String }
 
   connect() {
     // Turbo keeps a frame busy for the length of its request. An eager frame
@@ -47,6 +47,10 @@ export default class extends Controller {
   }
 
   handleTimeout() {
+    // A response can finish before Turbo's asynchronous frame render. Do not
+    // overwrite that render (or a cancelled request) with a stale timer.
+    if (!this.element.hasAttribute("busy")) return
+
     // Replace loading content with error state
     this.element.innerHTML = `
       <div class="flex items-center justify-end gap-1">
@@ -57,8 +61,9 @@ export default class extends Controller {
             <path d="m12 17 .01 0"/>
           </svg>
         </div>
-        <p class="font-mono text-right text-xs text-warning">Timeout</p>
+        <p class="font-mono text-right text-xs text-warning"></p>
       </div>
     `
+    this.element.querySelector("p").textContent = this.messageValue
   }
 }

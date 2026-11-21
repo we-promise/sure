@@ -122,11 +122,11 @@ fr:
     dig_in:
       prompt: |-
         Aide-moi à approfondir cette analyse.
-    
+
         Analyse : %{title}
         Ce que Sure a trouvé : %{body}
         Période : %{period}
         Chiffres :
         %{facts}
-    
+
         Qu'est-ce qui l'explique, et y a-t-il quelque chose que je devrais faire ?

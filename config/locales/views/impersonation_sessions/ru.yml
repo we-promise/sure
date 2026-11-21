@@ -14,12 +14,12 @@ ru:
     reject:
       success: Запрос отклонён
     super_admin_bar:
-      impersonating: Имитация
+      impersonating: 'Вы вошли как'
       jobs: Задачи
       join: Присоединиться
       join_a_session: Присоединиться к сеансу
       leave: Выйти
-      request_impersonation: Запросить имитацию
+      request_impersonation: 'Запросить вход от имени пользователя'
       super_admin: Супер Админ
       terminate: Завершить
       uuid_placeholder: UUID

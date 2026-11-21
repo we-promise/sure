@@ -1,6 +1,1200 @@
 ---
 ru:
   settings:
+    ai_prompts:
+      show:
+        disable_ai: 'Отключить ИИ-ассистента'
+        main_system_prompt:
+          subtitle: 'Основные инструкции, определяющие поведение ИИ-ассистента во всех чатах.'
+          title: Основной системный запрос
+          label: Системный запрос чата
+        merchant_detector:
+          subtitle: 'ИИ определяет продавцов и дополняет данные операций сведениями о них.'
+          title: Определитель продавцов
+        openai_label: OpenAI
+        page_title: Запросы ИИ
+        prompt_instructions: Инструкции по запросу
+        transaction_categorizer:
+          subtitle: 'ИИ автоматически распределяет операции по категориям согласно заданным инструкциям.'
+          title: Категоризатор операций
+        insight_dig_in:
+          title: Разбор вывода ИИ
+          subtitle: Первое сообщение чата, когда вы разбираете вывод с ИИ
+          label: Сообщение для разбора вывода
+        save: Сохранить запросы
+        save_confirm:
+          title: Сохранить собственные запросы ИИ?
+          body: Собственные запросы заменяют встроенные системные инструкции и защитные ограничения (например, запрет на финансовые консультации) для вашей семьи.
+          dont_show_again: Больше не показывать это предупреждение
+          cancel: Отмена
+          confirm: Подтвердить
+      prompt_field:
+        provider_label: Провайдер
+        prompt_label: Запрос
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Сбросить к стандартному
+        reset_confirm_title: Вернуть стандартный запрос?
+        reset_confirm_body: Ваш собственный запрос будет удалён, а встроенные инструкции по умолчанию — восстановлены.
+        status_custom: Используется ваш собственный запрос
+        status_default: Используется встроенный запрос по умолчанию
+        format_risk: 'В вашем запросе для %{provider} нет примера {"%{key}": ...}. В каждом запросе к модели по-прежнему запрашивается этот формат, поэтому разбор обычно работает. Но если в вашем запросе задан другой формат вывода, разбор не сработает.'
+      update:
+        success: Запросы ИИ обновлены
+        multiple_errors: Несколько запросов слишком длинные (максимум %{count} символов)
+    appearances:
+      show:
+        dashboard_subtitle: Настройте главную страницу
+        dashboard_title: Главная страница
+        dashboard_two_column_description: На широких экранах виджеты будут показаны в две колонки. Ширину и высоту каждого виджета можно изменить в его заголовке. Если отключить, виджеты выстроятся в одну колонку.
+        dashboard_two_column_title: Две колонки
+        disable_modal_click_outside_description: Не закрывать модальные окна при клике вне них, чтобы не потерять несохранённые изменения.
+        disable_modal_click_outside_title: Не закрывать модальные окна при клике вне них
+        modals_subtitle: Настройте поведение модальных окон
+        modals_title: Модальные окна
+        page_title: Внешний вид
+        split_grouped_description: Показывать части разделённой операции вместе с исходной в списке. Если отключить, части будут показаны отдельными строками.
+        split_grouped_title: Группировать разделённые операции
+        auto_generate_transaction_names_title: "Автоматически создавать названия транзакций"
+        auto_generate_transaction_names_description: "Если название вручную введённой транзакции оставлено пустым, оно заполняется по выбранной категории и продавцу (например, «Развлечения - Netflix»). Если ничего не выбрано, название по-прежнему обязательно. Действует для всего домохозяйства и только для новых транзакций."
+        theme_dark: Тёмная
+        theme_light: Светлая
+        theme_preview_alt: 'Предпросмотр темы: %{theme}'
+        theme_subtitle: Выберите тему оформления
+        theme_system: Системная
+        theme_title: Тема
+        transactions_subtitle: Настройте отображение операций
+        transactions_title: Операции
+        dashboard_account_groups_title: Открывать по умолчанию
+        dashboard_account_groups_description: Эти разделы счетов будут открыты на главной странице и в боковой панели счетов. Их можно свернуть вручную в любой момент.
+    debugs:
+      show:
+        context:
+          account: счёт=%{value}
+          account_provider: поставщик_счёта=%{value}
+          family: семья=%{value}
+          provider: поставщик=%{value}
+          user: пользователь=%{value}
+        empty: События отладки не найдены.
+        filters:
+          account_id: ID счёта
+          account_provider_id: ID поставщика счёта
+          all: Все
+          category: Категория
+          end_date: По
+          family_id: ID семьи
+          level: Уровень
+          provider: Поставщик
+          reset: Сброс
+          source: Источник
+          start_date: С
+          submit: Фильтр
+          user_id: ID пользователя
+        missing_value: "-"
+        page_title: Отладка
+        subtitle: Значимые операционные события для супер-администраторов. Новейшие
+          в начале.
+        table:
+          category: Категория
+          context: Контекст
+          level: Уровень
+          message: Сообщение
+          metadata: Метаданные
+          source: Источник
+          time: Время
+          view_metadata: Просмотр
+        title: Журнал событий отладки
+    hostings:
+      ensure_admin:
+        not_authorized: Доступ запрещён
+    llm_usages:
+      show:
+        avg_cost_per_request: Средняя стоимость/запрос
+        based_on_requests: Основано на %{with_cost} из %{total} запросов с данными
+          о стоимости
+        col_cost: Стоимость
+        col_date: Дата
+        col_model: Модель
+        col_operation: Операция
+        col_tokens: Токены
+        completion: ответ
+        cost_by_model: Стоимость по моделям
+        cost_by_operation: Стоимость по операциям
+        cost_estimates_description: 'Стоимость оценивается по опубликованным ценам поставщиков, проверенным %{date}. Фактические затраты могут отличаться. Цены указаны за 1 миллион токенов и варьируются в зависимости от модели. Для пользовательских и самохостинг-моделей будет показано «Нет данных», и они не включаются в общую стоимость.'
+        cost_estimates_title: Оценка стоимости
+        end_date: Дата окончания
+        failed: Неудачно
+        filter: Фильтр
+        http_status: 'Статус HTTP: %{status}'
+        no_usage_data: Данные об использовании за выбранный период не найдены
+        not_available: Нет данных
+        operations:
+          auto_categorize: Автоматическая категоризация
+          auto_detect_merchants: Автоматическое определение продавцов
+          chat: Чат
+          enhance_provider_merchants: Дополнение данных продавцов
+          extract_bank_statement: Извлечение банковской выписки
+          process_pdf: Обработка PDF
+          process_pdf_vision: Обработка PDF с распознаванием изображений
+          suggest_bill_setup: Подбор настроек счёта
+        page_title: Использование LLM и затраты
+        prompt: запрос
+        recent_usage: Недавнее использование
+        start_date: Дата начала
+        subtitle: Отслеживайте использование ИИ и предполагаемые затраты
+        total_cost: Общая стоимость
+        total_requests: Всего запросов
+        total_tokens: Всего токенов
+    mcp:
+      revoke:
+        revoked: Подключение отозвано.
+      show:
+        connect_subtitle: Вставьте этот URL в Claude.ai (или любой клиент с поддержкой
+          MCP), чтобы подключить его к вашему аккаунту Sure.
+        connect_title: Подключить ИИ-ассистента
+        connected_ago: Подключено %{time} назад
+        connected_subtitle: Эти приложения сейчас имеют доступ к вашим данным Sure.
+          Отзовите доступ для тех, которыми больше не пользуетесь.
+        connected_title: Подключённые клиенты
+        copied: Скопировано!
+        copy_url: Копировать
+        how_to_connect_title: Как подключить Claude
+        page_title: MCP-сервер
+        revoke: Отозвать
+        revoke_confirm: Отозвать доступ для этого клиента?
+        step_1: Откройте Claude.ai и перейдите в Settings → Customize → Connectors.
+        step_2: Нажмите «Add connector» и вставьте URL MCP-сервера выше.
+        step_3: Нажмите Connect — вы будете перенаправлены в Sure для входа и
+          подтверждения доступа.
+        step_4: После авторизации Claude сможет читать ваши счета, операции и данные
+          о балансе.
+        unknown_client: Неизвестный клиент
+    payments:
+      show:
+        choose_level: Выбрать уровень поддержки
+        contributions_note: Ваша поддержка %{product_name} будет отображаться здесь.
+        currently_on_plan: 'Текущий план:'
+        manage: Управлять
+        not_contributing_emphasis: не поддерживаете проект
+        not_contributing_prefix: Сейчас вы
+        page_title: Поддержка
+        payment_via_stripe: Оплата через Stripe
+        subscription_subtitle: Обновите данные банковской карты
+        subscription_title: Поддержка проекта
+        trial_days_left:
+          few: Данные будут удалены через %{count} дня
+          many: Данные будут удалены через %{count} дней
+          one: Данные будут удалены через %{count} день
+          other: Данные будут удалены через %{count} дня
+        trialing: Вы используете открытую демоверсию %{product_name}
+    preferences:
+      show:
+        additional_currencies_label: Дополнительные валюты
+        base_currency_badge: Базовая валюта
+        base_currency_label: Базовая валюта
+        country: Страна
+        currencies_more: "+%{count} ещё"
+        currencies_subtitle: Выберите валюты для денежных полей (%{moniker}).
+        currencies_title: '%{moniker}: валюты'
+        currency: Валюта
+        currency_search_placeholder: Поиск валют
+        date_format: Формат даты
+        default_account_order: Порядок счетов по умолчанию
+        default_account_order_hint: При ручной сортировке перетаскивайте счета в боковой панели.
+        default_period: Период по умолчанию
+        general_subtitle: Настройте основные параметры
+        general_title: Основные
+        language: Язык
+        language_auto: Язык браузера
+        language_names:
+          ca: Каталанский
+          de: Немецкий
+          en: Английский
+          es: Испанский
+          fr: Французский
+          hu: Венгерский
+          it: Итальянский
+          nb: Норвежский букмол
+          nl: Нидерландский
+          pl: Польский
+          pt-BR: Португальский (Бразилия)
+          pt-PT: Португальский (Португалия)
+          ro: Румынский
+          ru: Русский
+          tr: Турецкий
+          uk: Украинский
+          vi: Вьетнамский
+          zh-CN: Китайский (упрощённый)
+          zh-TW: Китайский (традиционный)
+        manage_currencies: Управление валютами
+        manage_currencies_subtitle: Снимите выбор с валют, которыми не пользуетесь, или оставьте только нужные.
+        month_start_day: Бюджетный месяц начинается
+        month_start_day_hint: Выберите день начала бюджетного месяца — например, день получения зарплаты.
+        month_start_day_warning: Бюджеты и расчёты за текущий месяц будут вестись от выбранного дня, а не с 1-го числа.
+        no_additional_currencies: Не выбрано
+        no_matching_currencies: Валюты не найдены
+        page_title: Настройки
+        preview:
+          description: Включите функции в разработке, помеченные как предварительные или экспериментальные.
+          title: Включить предварительные функции
+        save_currencies: Сохранить валюты
+        select_all_currencies: Выбрать все
+        select_base_only: Только базовая валюта
+        selected_currencies_count:
+          few: Выбрано %{count}
+          many: Выбрано %{count}
+          one: Выбрано %{count}
+          other: Выбрано %{count}
+        sharing_default_label: Доступ к новым счетам по умолчанию
+        sharing_private: Оставлять личными
+        sharing_shared: Открывать доступ всем участникам
+        sharing_subtitle: Настройте доступ участников к новым счетам (%{moniker}).
+        sharing_title: '%{moniker}: общий доступ'
+        timezone: Часовой пояс
+        timezones:
+          Etc/GMT+12: Международная линия перемены дат
+          Pacific/Pago_Pago: Паго-Паго
+          Pacific/Midway: Мидуэй
+          Pacific/Honolulu: Гонолулу
+          America/Juneau: Джуно
+          America/Los_Angeles: Лос-Анджелес
+          America/Tijuana: Тихуана
+          America/Phoenix: Финикс
+          America/Mazatlan: Масатлан
+          America/Denver: Денвер
+          America/Guatemala: Гватемала
+          America/Chicago: Чикаго
+          America/Chihuahua: Чиуауа
+          America/Mexico_City: Мехико
+          America/Monterrey: Монтеррей
+          America/Regina: Реджайна
+          America/Bogota: Богота
+          America/New_York: Нью-Йорк
+          America/Indiana/Indianapolis: Индианаполис
+          America/Lima: Лима
+          America/Halifax: Галифакс
+          America/Caracas: Каракас
+          America/Guyana: Гайана
+          America/La_Paz: Ла-Пас
+          America/Puerto_Rico: Пуэрто-Рико
+          America/Santiago: Сантьяго
+          America/St_Johns: Сент-Джонс
+          America/Asuncion: Асунсьон
+          America/Sao_Paulo: Сан-Паулу
+          America/Argentina/Buenos_Aires: Буэнос-Айрес
+          America/Montevideo: Монтевидео
+          America/Nuuk: Нуук
+          Atlantic/South_Georgia: Южная Георгия
+          Atlantic/Azores: Азорские острова
+          Atlantic/Cape_Verde: Кабо-Верде
+          Europe/London: Лондон
+          Europe/Lisbon: Лиссабон
+          Africa/Monrovia: Монровия
+          Etc/UTC: UTC
+          Europe/Amsterdam: Амстердам
+          Europe/Belgrade: Белград
+          Europe/Berlin: Берлин
+          Europe/Zurich: Цюрих
+          Europe/Bratislava: Братислава
+          Europe/Brussels: Брюссель
+          Europe/Budapest: Будапешт
+          Africa/Casablanca: Касабланка
+          Europe/Copenhagen: Копенгаген
+          Europe/Dublin: Дублин
+          Europe/Ljubljana: Любляна
+          Europe/Madrid: Мадрид
+          Europe/Paris: Париж
+          Europe/Prague: Прага
+          Europe/Rome: Рим
+          Europe/Sarajevo: Сараево
+          Europe/Skopje: Скопье
+          Europe/Stockholm: Стокгольм
+          Europe/Vienna: Вена
+          Europe/Warsaw: Варшава
+          Africa/Algiers: Алжир
+          Europe/Zagreb: Загреб
+          Europe/Athens: Афины
+          Europe/Bucharest: Бухарест
+          Africa/Cairo: Каир
+          Africa/Harare: Хараре
+          Europe/Helsinki: Хельсинки
+          Asia/Jerusalem: Иерусалим
+          Europe/Kaliningrad: Калининград
+          Europe/Kiev: Киев
+          Europe/Kyiv: Киев
+          Africa/Johannesburg: Йоханнесбург
+          Europe/Riga: Рига
+          Europe/Sofia: София
+          Europe/Tallinn: Таллин
+          Europe/Vilnius: Вильнюс
+          Asia/Baghdad: Багдад
+          Europe/Istanbul: Стамбул
+          Asia/Kuwait: Эль-Кувейт
+          Europe/Minsk: Минск
+          Europe/Moscow: Москва
+          Africa/Nairobi: Найроби
+          Asia/Riyadh: Эр-Рияд
+          Europe/Volgograd: Волгоград
+          Asia/Tehran: Тегеран
+          Asia/Muscat: Маскат
+          Asia/Baku: Баку
+          Europe/Samara: Самара
+          Asia/Tbilisi: Тбилиси
+          Asia/Yerevan: Ереван
+          Asia/Kabul: Кабул
+          Asia/Almaty: Алма-Ата
+          Asia/Yekaterinburg: Екатеринбург
+          Asia/Karachi: Карачи
+          Asia/Tashkent: Ташкент
+          Asia/Kolkata: Калькутта
+          Asia/Colombo: Коломбо
+          Asia/Kathmandu: Катманду
+          Asia/Dhaka: Дакка
+          Asia/Urumqi: Урумчи
+          Asia/Rangoon: Янгон
+          Asia/Yangon: Янгон
+          Asia/Bangkok: Бангкок
+          Asia/Jakarta: Джакарта
+          Asia/Krasnoyarsk: Красноярск
+          Asia/Novosibirsk: Новосибирск
+          Asia/Shanghai: Шанхай
+          Asia/Chongqing: Чунцин
+          Asia/Hong_Kong: Гонконг
+          Asia/Irkutsk: Иркутск
+          Asia/Kuala_Lumpur: Куала-Лумпур
+          Australia/Perth: Перт
+          Asia/Singapore: Сингапур
+          Asia/Taipei: Тайбэй
+          Asia/Ulaanbaatar: Улан-Батор
+          Asia/Tokyo: Токио
+          Asia/Seoul: Сеул
+          Asia/Yakutsk: Якутск
+          Australia/Adelaide: Аделаида
+          Australia/Darwin: Дарвин
+          Australia/Brisbane: Брисбен
+          Australia/Canberra: Канберра
+          Pacific/Guam: Гуам
+          Australia/Hobart: Хобарт
+          Australia/Melbourne: Мельбурн
+          Pacific/Port_Moresby: Порт-Морсби
+          Australia/Sydney: Сидней
+          Asia/Vladivostok: Владивосток
+          Asia/Magadan: Магадан
+          Pacific/Noumea: Нумеа
+          Pacific/Guadalcanal: Гуадалканал
+          Asia/Srednekolymsk: Среднеколымск
+          Pacific/Auckland: Окленд
+          Pacific/Fiji: Фиджи
+          Asia/Kamchatka: Камчатка
+          Pacific/Majuro: Маджуро
+          Pacific/Chatham: Чатем
+          Pacific/Tongatapu: Тонгатапу
+          Pacific/Apia: Апиа
+          Pacific/Fakaofo: Факаофо
+          Pacific/Niue: Ниуэ
+          America/Adak: Адак
+          Pacific/Rarotonga: о-ва Кука
+          Pacific/Tahiti: Таити
+          Pacific/Marquesas: Маркизские о-ва
+          America/Anchorage: Анкоридж
+          America/Metlakatla: Метлакатла
+          America/Nome: Ном
+          America/Sitka: Ситка
+          America/Yakutat: Якутат
+          Pacific/Gambier: о-ва Гамбье
+          Pacific/Pitcairn: о-ва Питкэрн
+          America/Boise: Бойсе
+          America/Cambridge_Bay: Кеймбридж-Бей
+          America/Ciudad_Juarez: Сьюдад-Хуарес
+          America/Dawson: Доусон
+          America/Dawson_Creek: Доусон-Крик
+          America/Edmonton: Эдмонтон
+          America/Fort_Nelson: Форт Нельсон
+          America/Hermosillo: Эрмосильо
+          America/Inuvik: Инувик
+          America/Vancouver: Ванкувер
+          America/Whitehorse: Уайтхорс
+          America/Bahia_Banderas: Баия-де-Бандерас
+          America/Belize: Белиз
+          America/Costa_Rica: Коста-Рика
+          America/El_Salvador: Сальвадор
+          America/Indiana/Knox: Нокс, Индиана
+          America/Indiana/Tell_City: Телл-Сити
+          America/Managua: Манагуа
+          America/Matamoros: Матаморос
+          America/Menominee: Меномини
+          America/Merida: Мерида
+          America/North_Dakota/Beulah: Бойла, Северная Дакота
+          America/North_Dakota/Center: Центр, Северная Дакота
+          America/North_Dakota/New_Salem: Нью-Сейлем, Северная Дакота
+          America/Ojinaga: Охинага
+          America/Rankin_Inlet: Ранкин-Инлет
+          America/Resolute: Резольют
+          America/Swift_Current: Свифт-Керрент
+          America/Tegucigalpa: Тегусигальпа
+          America/Winnipeg: Виннипег
+          Pacific/Easter: о-в Пасхи
+          Pacific/Galapagos: Галапагосские о-ва
+          America/Cancun: Канкун
+          America/Detroit: Детройт
+          America/Eirunepe: Эйрунепе
+          America/Grand_Turk: Тёркс и Кайкос
+          America/Guayaquil: Гуаякиль
+          America/Havana: Гавана
+          America/Indiana/Marengo: Маренго, Индиана
+          America/Indiana/Petersburg: Питерсберг, Индиана
+          America/Indiana/Vevay: Вевей, Индиана
+          America/Indiana/Vincennes: Винсеннес
+          America/Indiana/Winamac: Уинамак
+          America/Iqaluit: Икалуит
+          America/Jamaica: Ямайка
+          America/Kentucky/Louisville: Луисвилл
+          America/Kentucky/Monticello: Монтиселло, Кентукки
+          America/Panama: Панама
+          America/Port-au-Prince: Порт-о-Пренс
+          America/Rio_Branco: Риу-Бранку
+          America/Toronto: Торонто
+          America/Barbados: Барбадос
+          America/Boa_Vista: Боа-Виста
+          America/Campo_Grande: Кампу-Гранди
+          America/Cuiaba: Куяба
+          America/Glace_Bay: Глейс-Бей
+          America/Goose_Bay: Гус-Бей
+          America/Manaus: Манаус
+          America/Martinique: Мартиника
+          America/Moncton: Монктон
+          America/Porto_Velho: Порту-Велью
+          America/Santo_Domingo: Санто-Доминго
+          America/Thule: Туле
+          Atlantic/Bermuda: Бермудские о-ва
+          America/Araguaina: Арагуаина
+          America/Argentina/Catamarca: Катамарка
+          America/Argentina/Cordoba: Кордова
+          America/Argentina/Jujuy: Жужуй
+          America/Argentina/La_Rioja: Ла-Риоха
+          America/Argentina/Mendoza: Мендоса
+          America/Argentina/Rio_Gallegos: Рио-Гальегос
+          America/Argentina/Salta: Сальта
+          America/Argentina/San_Juan: Сан-Хуан
+          America/Argentina/San_Luis: Сан-Луис
+          America/Argentina/Tucuman: Тукуман
+          America/Argentina/Ushuaia: Ушуая
+          America/Bahia: Баия
+          America/Belem: Белен
+          America/Cayenne: Французская Гвиана
+          America/Coyhaique: Койайке
+          America/Fortaleza: Форталеза
+          America/Maceio: Масейо
+          America/Miquelon: Сен-Пьер и Микелон
+          America/Paramaribo: Суринам
+          America/Punta_Arenas: Пунта-Аренас
+          America/Recife: Ресифи
+          America/Santarem: Сантарен
+          Antarctica/Palmer: Палмер
+          Antarctica/Rothera: Ротера
+          Atlantic/Stanley: Фолклендские о-ва
+          America/Noronha: Норонья
+          America/Scoresbysund: Скорсбисунн
+          Africa/Abidjan: Абиджан
+          Africa/Bissau: Бисау
+          Africa/Sao_Tome: Сан-Томе
+          America/Danmarkshavn: Денмарксхавн
+          Antarctica/Troll: Тролль
+          Atlantic/Canary: Канарские о-ва
+          Atlantic/Faroe: Фарерские о-ва
+          Atlantic/Madeira: Мадейра
+          Africa/Ceuta: Сеута
+          Africa/El_Aaiun: Эль-Аюн
+          Africa/Lagos: Лагос
+          Africa/Ndjamena: Нджамена
+          Africa/Tunis: Тунис
+          Europe/Andorra: Андорра
+          Europe/Gibraltar: Гибралтар
+          Europe/Malta: Мальта
+          Europe/Tirane: Тирана
+          Africa/Juba: Джуба
+          Africa/Khartoum: Хартум
+          Africa/Maputo: Мапуту
+          Africa/Tripoli: Триполи
+          Africa/Windhoek: Виндхук
+          Asia/Beirut: Бейрут
+          Asia/Famagusta: Фамагуста
+          Asia/Gaza: Газа
+          Asia/Hebron: Хеврон
+          Asia/Nicosia: Никосия
+          Europe/Chisinau: Кишинёв
+          Asia/Amman: Амман
+          Asia/Damascus: Дамаск
+          Asia/Qatar: Катар
+          Europe/Kirov: Киров
+          Europe/Simferopol: Симферополь
+          Asia/Dubai: Дубай
+          Europe/Astrakhan: Астрахань
+          Europe/Saratov: Саратов
+          Europe/Ulyanovsk: Ульяновск
+          Indian/Mauritius: Маврикий
+          Antarctica/Mawson: Моусон
+          Antarctica/Vostok: Восток
+          Asia/Aqtau: Актау
+          Asia/Aqtobe: Актобе
+          Asia/Ashgabat: Ашхабад
+          Asia/Atyrau: Атырау
+          Asia/Dushanbe: Душанбе
+          Asia/Oral: Уральск
+          Asia/Qostanay: Костанай
+          Asia/Qyzylorda: Кызылорда
+          Asia/Samarkand: Самарканд
+          Indian/Maldives: Мальдивы
+          Asia/Bishkek: Бишкек
+          Asia/Omsk: Омск
+          Asia/Thimphu: Тхимпху
+          Indian/Chagos: Британская территория в Индийском океане
+          Antarctica/Davis: Дейвис
+          Asia/Barnaul: Барнаул
+          Asia/Ho_Chi_Minh: Хошимин
+          Asia/Hovd: Ховд
+          Asia/Novokuznetsk: Новокузнецк
+          Asia/Pontianak: Понтианак
+          Asia/Tomsk: Томск
+          Antarctica/Casey: Кейси
+          Asia/Kuching: Кучинг
+          Asia/Macau: Макао (САР)
+          Asia/Makassar: Макасар
+          Asia/Manila: Манила
+          Australia/Eucla: Юкла
+          Asia/Chita: Чита
+          Asia/Dili: Дили
+          Asia/Jayapura: Джаяпура
+          Asia/Khandyga: Хандыга
+          Asia/Pyongyang: Пхеньян
+          Pacific/Palau: Палау
+          Australia/Broken_Hill: Брокен-Хилл
+          Antarctica/Macquarie: Маккуори
+          Asia/Ust-Nera: Усть-Нера
+          Australia/Lindeman: Линдеман
+          Australia/Lord_Howe: Лорд-Хау
+          Asia/Sakhalin: о-в Сахалин
+          Pacific/Bougainville: Бугенвиль
+          Pacific/Efate: Эфате
+          Pacific/Kosrae: Косрае
+          Pacific/Norfolk: о-в Норфолк
+          Asia/Anadyr: Анадырь
+          Pacific/Kwajalein: Кваджалейн
+          Pacific/Nauru: Науру
+          Pacific/Tarawa: Тарава
+          Pacific/Kanton: Кантон
+          Pacific/Kiritimati: Киритимати
+        translations_notice: Мы продолжаем переводить интерфейс на другие языки.
+        budget_title: Бюджет
+        budget_subtitle: Настройте правила расчёта бюджета
+        investment_contributions_as_spending: Считать переводы в инвестиции расходами
+        investment_contributions_as_spending_hint: Переводы на инвестиционные счета будут учитываться как расходы в бюджетах, отчётах и диаграмме денежного потока. Отключите, чтобы показывать их как инвестиции.
+        personal_budgets: Личные бюджеты
+        personal_budgets_hint: Создать отдельный бюджет для каждого участника.
+        household_budget_enabled: Общий бюджет
+        household_budget_enabled_hint: Ведите общий бюджет вместе с личными. Отключите, чтобы оставить только личные бюджеты.
+        budget_sharing_title: Доступ к личным бюджетам
+        budget_sharing_subtitle: Разрешите другим участникам просматривать или редактировать ваш личный бюджет.
+        budget_sharing_no_members: '%{moniker}: нет других участников, которым можно открыть доступ.'
+        budget_sharing_permission_label: Доступ для %{name}
+        budget_sharing_permissions:
+          none: Нет доступа
+          read_only: Только просмотр
+          read_write: Просмотр и редактирование
+    profiles:
+      destroy:
+        cannot_remove_self: Нельзя удалить себя из аккаунта.
+        member_owns_other_family_data: У этого участника остались счета в другой семье. Сначала передайте или удалите их.
+        member_removal_failed: Не удалось удалить участника.
+        member_removed: Участник удалён.
+        not_authorized: У вас нет прав удалять участников.
+      show:
+        account: аккаунт
+        confirm_delete:
+          body: Удалить аккаунт навсегда? Это действие необратимо.
+          title: Удалить аккаунт?
+        confirm_remove_invitation:
+          body: Удалить приглашение для %{email}?
+          title: Удалить приглашение
+        confirm_remove_member:
+          body: Удалить %{name} из аккаунта?
+          title: Удалить участника
+        confirm_reset:
+          body: Все счета, категории, продавцы, теги и другие финансовые данные будут удалены без возможности восстановления. Профиль сохранится.
+          title: Сбросить финансовые данные?
+        confirm_reset_with_sample_data:
+          body: Текущие финансовые данные будут удалены без возможности восстановления и заменены демонстрационными данными. Профиль сохранится.
+          title: Заменить данные демонстрационными?
+        danger_zone_title: Сброс и удаление
+        delete_account: Удалить аккаунт
+        delete_account_warning: Все данные будут удалены без возможности восстановления.
+        email: Электронная почта
+        first_name: Имя
+        group_form_input_placeholder: Введите название группы
+        group_form_label: Название группы
+        group_title: Группа
+        household_form_input_placeholder: Введите название семьи
+        household_form_label: Название семьи
+        household_subtitle: Приглашённые участники смогут войти в общий аккаунт и пользоваться общими данными (%{moniker}).
+        household_title: Семья
+        invitation_link: Ссылка на приглашение
+        invite_member: Добавить участника
+        last_name: Фамилия
+        page_title: Профиль
+        pending: Ожидает подтверждения
+        profile_subtitle: Настройте отображение своего имени в %{product_name}
+        profile_title: Личные данные
+        remove_invitation: Удалить приглашение
+        remove_member: Удалить участника
+        resend_confirmation_link: отправьте письмо повторно
+        reset_account: Сбросить данные
+        reset_account_warning: Все финансовые данные будут удалены без возможности восстановления. Профиль сохранится.
+        reset_account_with_sample_data: Заменить демонстрационными данными
+        reset_account_with_sample_data_warning: Текущие финансовые данные будут безвозвратно заменены демонстрационными. Профиль сохранится.
+        save: Сохранить
+        unconfirmed_email_notice_html: Вы запросили смену адреса на %{email}. Перейдите по ссылке в письме, чтобы подтвердить изменение. Если письма нет, проверьте папку «Спам» или %{resend_link}.
+    providers:
+      akahu_panel:
+        step_1_html: Перейдите по ссылке %{link} и создайте персональное приложение.
+        step_2: Скопируйте токен приложения и пользовательский токен.
+        step_3: Вставьте токены ниже, сохраните и подключите синхронизированные счета.
+      bank_sync:
+        lede: Подключите внешние счета, чтобы операции, балансы и активы автоматически
+          поступали в Sure.
+        page_title: Синхронизация с банком
+      binance_panel:
+        api_key_label: API-ключ
+        api_key_placeholder: Вставьте ваш API-ключ Binance
+        api_secret_label: Секретный ключ API
+        api_secret_placeholder: Вставьте ваш секретный ключ API Binance
+        connect_button: Подключить Binance
+        disconnect: Отключить
+        disconnect_confirm: Вы уверены, что хотите отключить Binance?
+        historical_import: Настройки исторического импорта
+        ip_hint_body: 'Добавьте IP-адрес выхода сервера приложения в белый список
+          API-ключа Binance:'
+        ip_hint_contact_admin: Свяжитесь с вашим администратором, чтобы получить IP-адрес
+          выхода сервера приложения.
+        ip_hint_title: Требуется белый список IP
+        no_withdraw_body: Не включайте разрешения на вывод средств при создании вашего
+          API-ключа Binance. Sure требуется только доступ для чтения.
+        no_withdraw_title: Только ключ для чтения
+        setup_instructions: 'Чтобы подключить Binance, создайте API-ключ только для
+          чтения:'
+        step1_html: Перейдите на <a href="https://www.binance.com/en/my/settings/api-management"
+          target="_blank" rel="noopener noreferrer" class="underline">Управление API
+          Binance</a>
+        step2: Создайте новый API-ключ с разрешением только для чтения
+        step3: Вставьте ваш API-ключ и секретный ключ ниже
+        sync: Синхронизировать
+        sync_start_date_help: Выберите, с какой даты начинать загрузку исторических
+          сделок.
+        sync_start_date_label: Импортировать данные с
+        syncing: Синхронизация...
+      clear_filter: Очистить фильтры
+      coinbase_panel:
+        api_key_label: API-ключ
+        api_key_placeholder: Введите ваш API-ключ Coinbase
+        api_secret_label: Секретный ключ API
+        api_secret_placeholder: Введите ваш секретный ключ API Coinbase
+        connect_button: Подключить Coinbase
+        disconnect: Отключить
+        disconnect_confirm: Вы уверены, что хотите отключить это подключение Coinbase?
+          Ваши синхронизированные счета станут ручными счетами.
+        setup_instructions: 'Чтобы подключить Coinbase:'
+        step1_html: Перейдите на <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" rel="noopener noreferrer" class="text-primary underline">Настройки
+          API Coinbase</a>
+        step2: Создайте новый API-ключ с разрешениями только для чтения (просмотр
+          счетов, просмотр операций)
+        step3: Скопируйте ваш API-ключ и секретный ключ API и вставьте их ниже
+        sync: Синхронизировать
+        syncing: Синхронизация...
+      connect: Подключить
+      financekit:
+        app_store: App Store
+        coming_soon: Скоро появится!
+        description: Управляйте подключениями Apple Wallet в приложении Sure для iOS. Данные кошелька синхронизируются, пока приложение открыто; фоновая синхронизация без открытого приложения пока недоступна.
+        summary: Синхронизация кошелька
+        accounts: Связанные счета
+        linked_accounts:
+          one: "%{count} связанный счёт"
+          few: "%{count} связанных счёта"
+          many: "%{count} связанных счетов"
+          other: "%{count} связанного счёта"
+        status:
+          active: Синхронизация включена
+          repair_required: Требуется исправление — откройте приложение Sure для iOS
+        last_accepted_at: Последняя передача в Sure
+        last_imported_at: Последний импорт в семью
+        not_yet: Ещё нет
+      drawer_trust_statement: Доступ только для чтения. Sure никогда не может перемещать
+        деньги, а ваши учетные данные хранятся в зашифрованном виде.
+      empty_filter: Провайдеры, соответствующие фильтру, не найдены.
+      enable_banking_panel:
+        default_connection_name: Подключение Enable Banking
+        add_connection: Добавить подключение
+        application_id_label: ID приложения
+        application_id_placeholder_new: Введите ID приложения
+        application_id_placeholder_update: Введите новый ID для обновления
+        callback_url_instruction: Для URL обратного вызова используйте %{callback_url}.
+        client_certificate_label: Клиентский сертификат (с приватным ключом)
+        keep_client_certificate_hint: "Оставьте пустым, чтобы сохранить текущий сертификат"
+        config_locked_message: Отключите все связанные банки перед изменением этих
+          учётных данных.
+        config_locked_title: Конфигурация заблокирована
+        configured: Настроено
+        connect_bank: Подключить банк
+        connected_bank: Подключённый банк
+        connection: Подключение
+        connection_error: Ошибка подключения
+        country_label: Страна
+        ready_to_link: Готово к связыванию счетов
+        reconnect: Переподключить
+        remove: Удалить
+        remove_confirm: Вы уверены, что хотите удалить это подключение?
+        save_and_connect: Сохранить и подключить
+        select_country: Выберите страну...
+        session_expired_reconnect: Сессия истекла - переподключитесь
+        session_expires: 'Сессия истекает: %{date}'
+        step_1_html: Перейдите на %{link} и получите ваши учётные данные разработчика.
+        step_2: Выберите вашу страну и вставьте ID приложения + клиентский сертификат
+          ниже.
+        step_3: Сохраните, затем используйте Добавить подключение, чтобы связать ваш
+          банк.
+        sync: Синхронизировать
+        syncing: Синхронизация
+        unknown: Неизвестно
+        update_connection: Обновить подключение
+      encryption_error:
+        message: Синхронизация банка требует настройки шифрования Active Record. Установите
+          primary_key, deterministic_key и key_derivation_salt в ваших учетных данных
+          Rails или переменных окружения.
+        title: Отсутствуют ключи шифрования
+      groups:
+        available: Доступные
+        empty_available: Все доступные поставщики подключены.
+        your_connections: Ваши подключения
+      health_strip:
+        accounts_syncing: синхронизация счетов
+        connected: подключено
+        last_synced: Последняя синхронизация %{time} назад
+        needs_attention: требует внимания
+      ibkr_panel:
+        accounts_tab: Счета
+        configuration:
+          all_other_options: 'Все остальные параметры конфигурации: "Нет"'
+          date_format: 'Формат даты: yyyy-MM-dd'
+          date_time_separator: 'Разделитель даты/времени: ; (точка с запятой)'
+          format: 'Формат: XML'
+          models: 'Модели: Необязательно'
+          period: 'Период: Последние 365 календарных дней'
+          profit_and_loss: 'Прибыль и убытки: По умолчанию'
+          time_format: 'Формат времени: HH:mm:ss'
+        disconnect_confirm: Отключить Interactive Brokers?
+        flex_query_details:
+          configuration_heading: Установите эти параметры запроса
+          eyebrow: Flex Query
+          sections_heading: Включите эти разделы и поля
+          summary: Разверните, чтобы увидеть точные разделы, поля и настройки, которые
+            должен включать ваш запрос активности IBKR Flex.
+          title: Разделы, поля и конфигурация
+        not_configured: Не настроено.
+        query_id_label: ID запроса
+        query_id_placeholder_existing: Оставьте пустым, чтобы сохранить текущий ID
+          запроса
+        query_id_placeholder_new: Введите ваш ID запроса IBKR Flex
+        report_window_note: Отчёты IBKR Flex ограничены окном запроса, которое вы
+          настроили в IBKR. Sure импортирует полные текущие активы плюс до последних
+          365 дней активности из этого отчёта.
+        save_configuration: Сохранить конфигурацию
+        sections:
+          account_information: 'Информация о счёте: ID счёта, Валюта'
+          cash_report: 'Отчёт о наличных:'
+          cash_report_fields: 'Поля: Валюта, Конечный остаток наличных'
+          cash_report_options: 'Опции: Нет'
+          cash_transactions: 'Операции с наличными:'
+          cash_transactions_fields: 'Поля: Сумма, Conid, Валюта, Курс к базовой валюте,
+            Дата отчёта, ID операции, Тип'
+          cash_transactions_options: 'Опции: Дивиденды, Депозиты и снятия, Детали'
+          change_in_position_value_summary: 'Изменение стоимости позиции: Валюта,
+            Стоимость на конец периода'
+          net_asset_value: 'Чистая стоимость активов (NAV) в базовой валюте:'
+          net_asset_value_fields: 'Поля: Валюта, Дата отчёта, Всего'
+          net_asset_value_options: 'Опции: Нет'
+          open_positions: 'Открытые позиции:'
+          open_positions_fields: 'Поля: Класс активов, Conid, Цена по себестоимости,
+            Валюта, Курс к базовой валюте, Рыночная цена, Количество, Дата отчёта,
+            ID ценной бумаги, Тип ID ценной бумаги, Сторона, Символ'
+          open_positions_options: 'Опции: Сводка'
+          trades: 'Сделки:'
+          trades_fields: 'Поля: Класс активов, Покупка/Продажа, Conid, Валюта, Курс
+            к базовой валюте, Комиссия IB, Валюта комиссии IB, Количество, Символ,
+            Дата сделки, ID сделки, Цена сделки, ID операции'
+          trades_options: 'Опции: Исполнение'
+        status_configured_prefix: "%{summary}. Перейдите на"
+        status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
+        steps:
+          step_1: В вашем клиентском портале IBKR перейдите в "Performance & Reports"
+            > "Flex Queries".
+          step_2: Нажмите на значок "+" в разделе "Activity Flex Query", чтобы создать
+            новый запрос.
+          step_3: Назовите ваш запрос (например, "Sure Sync"), затем просмотрите детали
+            Flex Query ниже и включите перечисленные разделы, поля и параметры конфигурации.
+          step_4: Сохраните запрос, запомните ваш "Query ID", затем используйте значок
+            шестерёнки в разделе "Flex Web Service Configuration", чтобы сгенерировать
+            токен доступа.
+          step_5: Вставьте ваш Query ID и токен ниже, сохраните конфигурацию, затем
+            перейдите в Счета, чтобы связать обнаруженные счета IBKR.
+        sync: Синхронизировать
+        token_label: Токен
+        token_placeholder_existing: Оставьте пустым, чтобы сохранить текущий токен
+        token_placeholder_new: Введите ваш токен веб-сервиса IBKR Flex
+        update_configuration: Обновить конфигурацию
+      kraken_panel:
+        add_connection: Добавить подключение Kraken
+        api_key_label: API-ключ
+        api_key_placeholder: Вставьте ваш API-ключ Kraken
+        api_secret_label: Приватный ключ
+        api_secret_placeholder: Вставьте ваш приватный ключ Kraken
+        connection_name_label: Название подключения
+        connection_name_placeholder: Основное Kraken
+        default_connection_name: Kraken
+        disconnect: Отключить
+        disconnect_confirm: Вы уверены, что хотите отключить %{name}?
+        keep_api_key_placeholder: Оставьте пустым, чтобы сохранить существующий API-ключ
+        keep_api_secret_placeholder: Оставьте пустым, чтобы сохранить существующий
+          приватный ключ
+        read_only_body: Не предоставляйте разрешения на торговлю, отмену, вывод средств,
+          экспорт, книгу, Earn, стейкинг или переводы. Sure импортирует только балансы,
+          активы и спотовые торговые операции.
+        read_only_title: Только синхронизация биржи для чтения
+        setup_accounts: Настроить счёт
+        step1_html: Перейдите на <a href="https://pro.kraken.com/app/settings/api"
+          target="_blank" rel="noopener noreferrer" class="underline">настройки API
+          Kraken</a>
+        step2: Создайте API-ключ только с разрешениями Query Funds и Query Closed Orders
+          & Trades.
+        step3: Вставьте API-ключ и приватный ключ ниже.
+        sync: Синхронизировать
+        syncing: Синхронизация...
+        update_connection: Обновить подключение
+      lunchflow_panel:
+        default_connection_name: Подключение Lunch Flow
+        api_key_label: API-ключ
+        api_key_placeholder_new: Вставьте API-ключ здесь
+        api_key_placeholder_update: Введите новый API-ключ для обновления
+        base_url_label: Базовый URL (необязательно)
+        base_url_placeholder: https://lunchflow.app/api/v1 (по умолчанию)
+        save_and_connect: Сохранить и подключить
+        step_1_html: Перейдите на %{link} и создайте API-ключ.
+        step_2: Вставьте ваш ключ ниже и подключитесь.
+        step_3: Затем перейдите в Счета, чтобы связать ваши синхронизированные счета.
+        update_connection: Обновить подключение
+      maturity:
+        alpha: Альфа
+        beta: Бета
+      names:
+        onchain_wallet: Ончейн-кошельки
+      regions:
+        au: Австралия
+        ca: Канада
+        cz: Чехия
+        es: Испания
+        eu: ЕС
+        global: Весь мир
+        nz: Новая Зеландия
+        ua: Украина
+        uk: Великобритания
+        us: США
+      kinds:
+        bank: Банки
+        crypto: Криптовалюты
+        investment: Инвестиции
+        property: Недвижимость
+      tiers:
+        paid: Платный
+      meta:
+        last_synced: Синхронизировано %{time} назад
+        no_recent_sync: Синхронизация просрочена
+        reconsent_needed:
+          few: Повторное согласие требуется через %{count} дня
+          many: Повторное согласие требуется через %{count} дней
+          one: Повторное согласие требуется через %{count} день
+          other: Повторное согласие требуется через %{count} дня
+        reconsent_required: Требуется повторное согласие
+        login_required: "Требуется вход"
+        login_expires_soon: "Вход истекает через %{time} (%{at})"
+        sync_error: Ошибка синхронизации
+      not_authorized: Не авторизован
+      not_found: Провайдер не найден.
+      plaid_eu_panel:
+        step_1_html: Откройте %{link} и скопируйте ваш EU Client ID и секретный ключ.
+      plaid_panel:
+        step_1_html: Откройте %{link} и скопируйте ваш Client ID и секретный ключ.
+        step_2: Выберите среду. Используйте sandbox для тестирования и production
+          для реальных счетов.
+        step_3: Вставьте ваши учётные данные ниже и подключитесь.
+      provider_form:
+        environment_configuration_hint: Настройки можно задать через переменные окружения или переопределить ниже.
+        optional: Необязательно
+        fields:
+          plaid:
+            client_id:
+              label: ID клиента
+              description: Ваш Client ID из панели Plaid.
+            secret:
+              label: Секретный ключ
+              description: Ваш Secret Key из панели Plaid.
+            environment:
+              label: Среда
+              description: "Среда Plaid: sandbox, development или production."
+          plaid_eu:
+            client_id:
+              label: ID клиента
+              description: Ваш Client ID из панели Plaid для региона ЕС.
+            secret:
+              label: Секретный ключ
+              description: Ваш Secret Key из панели Plaid для региона ЕС.
+            environment:
+              label: Среда
+              description: "Среда Plaid: sandbox, development или production."
+        save_and_connect: Сохранить и подключить
+      recently_synced: Недавно синхронизировано. Попробуйте снова через мгновение.
+      search_filters:
+        aria_label: Поиск провайдеров
+        chips:
+          all: Все
+          bank: Банки
+          crypto: Крипто
+          investment: Инвестиции
+        placeholder: Поиск провайдеров
+      setup_steps:
+        eyebrow: Настройка
+        need_help: Нужна помощь?
+      simplefin_panel:
+        save_and_connect: Сохранить и подключить
+        setup_token_label: Токен настройки
+        setup_token_placeholder: Вставьте токен настройки SimpleFIN
+        step_1_html: Перейдите на %{link} для получения одноразового токена настройки.
+        step_2: Вставьте токен ниже и подключитесь.
+        step_3: Затем перейдите в Счета, чтобы связать ваши синхронизированные счета.
+      status:
+        err: Ошибка
+        "off": Не настроено
+        ok: Подключено
+        warn: Требуется действие
+      sync_all: Синхронизировать все
+      sync_all_in_progress: Синхронизация всех подключённых провайдеров…
+      sync_all_recently: Синхронизация уже в процессе. Попробуйте снова через мгновение.
+      sync_provider: Синхронизировать сейчас
+      sync_provider_in_progress: Синхронизация начата.
+      sync_provider_no_items: Нет доступных подключений для синхронизации.
+      taglines:
+        akahu: Синхронизация финансовых учреждений Новой Зеландии через Akahu.
+        binance: Синхронизируйте ваши спотовые балансы Binance с использованием API-ключа
+          только для чтения.
+        brex: Синхронизируйте операции по счетам Brex Cash и корпоративным картам Brex с доступом
+          только для чтения.
+        coinbase: Импортируйте ваши криптоактивы Coinbase и отслеживайте доходность.
+        coinstats: Отслеживайте весь ваш криптопортфель через кошельки и биржи.
+        enable_banking: Синхронизируйте европейские банковские счета через открытый
+          банкинг PSD2.
+        financekit: Синхронизируйте некоторые счета FinanceKit через приложение Sure для iOS.
+        ibkr: Синхронизируйте инвестиционные счета Interactive Brokers через импорт Flex Query.
+        indexa_capital: Отслеживайте ваш автоматизированный инвестиционный портфель
+          Indexa Capital.
+        kraken: Синхронизируйте балансы Kraken и спотовые торговые операции с использованием
+          API-ключа только для чтения.
+        lunchflow: Подключите более 20 000 банков из более чем 40 стран (Великобритания,
+          ЕС, США и другие!)
+        mercury: Синхронизируйте ваши бизнес-счета Mercury автоматически.
+        plaid: Подключите тысячи финансовых учреждений США через Plaid.
+        plaid_eu: Подключите европейские финансовые учреждения через Plaid (PSD2 / открытый банкинг).
+        simplefin: Подключите банковские счета США через открытый протокол SimpleFIN.
+        snaptrade: Подключите брокерские счета через сеть агрегации SnapTrade.
+        sophtron: 'Подключите банки и поставщиков коммунальных услуг США и Канады.'
+        redbark: Синхронизируйте австралийские банковские счета через открытый банкинг Redbark.
+        monobank: Синхронизируйте карты и «банки» Monobank из Украины с помощью персонального API-токена.
+        fio: Синхронизируйте счёт Fio banka с помощью API-токена только для чтения.
+        wise: Автоматически синхронизируйте мультивалютные балансы Wise и международные переводы.
+        coinspot: Синхронизируйте балансы CoinSpot, стоимость в AUD, переводы, пополнения, выводы и историю ордеров с помощью API-ключа только для чтения.
+        onchain_wallet: Отслеживайте некастодиальные кошельки Bitcoin, EVM, Solana, Cosmos и Polkadot по их публичным адресам.
+        trading212: Синхронизируйте инвестиционный портфель Trading 212 с помощью API-ключа только для чтения.
+        trade_republic: Синхронизируйте инвестиционный счёт Trade Republic через защищённый веб-вход только для чтения.
+        questrade: Синхронизируйте инвестиционные счета Questrade напрямую через Questrade API.
+        up: Синхронизируйте счета австралийского банка Up с помощью персонального токена доступа.
+      up_panel:
+        step_1_html: Перейдите по ссылке %{link} и создайте персональный токен доступа.
+        step_2: Скопируйте персональный токен доступа.
+        step_3: Вставьте токен ниже, сохраните и подключите синхронизированные счета.
+      update:
+        failed: Не удалось обновить настройки провайдера. Попробуйте ещё раз.
+        no_changes: Изменений не было
+        updated_successfully: Настройки поставщика успешно обновлены
+      drawer_trust_statement_encryption_unconfigured: Доступ только для чтения. Sure никогда не может перемещать деньги. Настройте явные ключи шифрования, прежде чем хранить учётные данные провайдеров в продакшене.
+      provider_setup_encryption_warning:
+        title: Отсутствуют ключи шифрования
+        message: В этой самостоятельно размещённой установке не заданы явные ключи шифрования Active Record. Настройте primary_key, deterministic_key и key_derivation_salt, прежде чем сохранять учётные данные провайдеров в продакшене.
+      coinspot_panel:
+        step1_html: Перейдите в <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">настройки API CoinSpot</a>
+        step2: Создайте API-ключ с доступом только для чтения к балансам и истории.
+        step3: Вставьте API-ключ и секретный ключ ниже.
+        read_only_title: Только синхронизация биржи для чтения
+        read_only_body: Не предоставляйте разрешения на отправку, вывод средств, торговлю или переводы. Sure импортирует только балансы, стоимость в AUD, переводы, пополнения, выводы и историю исполненных ордеров.
+        default_connection_name: CoinSpot
+        add_connection: Добавить подключение CoinSpot
+        update_connection: Обновить подключение
+        connection_name_label: Название подключения
+        connection_name_placeholder: Основной CoinSpot
+        api_key_label: API-ключ
+        api_key_placeholder: Вставьте ваш API-ключ CoinSpot
+        keep_api_key_placeholder: Оставьте пустым, чтобы сохранить текущий API-ключ
+        api_secret_label: Секретный ключ API
+        api_secret_placeholder: Вставьте ваш секретный ключ API CoinSpot
+        keep_api_secret_placeholder: Оставьте пустым, чтобы сохранить текущий секретный ключ API
+        setup_accounts: Настроить счёт
+        syncing: Синхронизация...
+        sync: Синхронизировать
+        disconnect: Отключить
+        disconnect_confirm: Вы уверены, что хотите отключить %{name}?
+      onchain_wallet_panel:
+        add_wallet: Добавить кошелёк
+        advanced: Дополнительно
+        disconnect_all: Отключить все кошельки
+        disconnect_all_confirm: Все отслеживаемые адреса и их счета будут удалены. Продолжить?
+        etherscan_api_key_label: API-ключ Etherscan (необязательно)
+        etherscan_api_key_placeholder: Вставьте API-ключ Etherscan
+        etherscan_hint: Данные Ethereum читаются и без ключа. Ключ Etherscan лишь повышает лимит запросов для Ethereum.
+        keep_etherscan_api_key: Оставьте пустым, чтобы сохранить текущий ключ
+        manage_wallets: Управление кошельками
+        keyless_body: Sure только читает публичные данные блокчейна. Ключи, сид-фразы и подписи не используются, и ничего не может быть потрачено.
+        keyless_title: Только чтение, ключи не нужны
+        save: Сохранить
+        sync_start_date_hint: Переводы до этой даты игнорируются. Оставьте пустым, чтобы импортировать всё, что показывает обозреватель блокчейна.
+        sync_start_date_label: Игнорировать переводы до
+      monobank_panel:
+        step_1_html: Перейдите на %{link}, войдите через приложение Monobank и создайте персональный токен.
+        step_2: Скопируйте токен — он показывается только один раз.
+        step_3: Вставьте токен ниже, сохраните и привяжите карты и «банки», которые хотите отслеживать.
+      fio_panel:
+        step_1_html: Войдите в интернет-банк %{link} и откройте Настройки → API.
+        step_2: Создайте токен с доступом только для чтения («Sledování účtu»). Для этого требуется строгая авторизация; токен действует до 180 дней.
+        step_3: Вставьте токен ниже и сохраните. Один токен даёт доступ к одному счёту, поэтому добавьте отдельное подключение для каждого счёта Fio.
+      trade_republic_panel:
+        encryption_warning:
+          title: Шифрование не настроено
+          message: Учётные данные и данные сессии Trade Republic нельзя хранить безопасно, пока не настроено шифрование Active Record.
+        steps:
+          step_1: Введите номер телефона и PIN-код или пароль, которые вы используете в приложении Trade Republic, затем сохраните.
+          step_2: Введите код из приложения-аутентификатора, когда он будет запрошен.
+          step_3: Подтвердите вход в приложении Trade Republic, когда появится запрос.
+        phone_number_label: Номер телефона
+        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_existing: Оставьте пустым, чтобы сохранить текущий номер телефона
+        pin_label: PIN-код или пароль
+        pin_placeholder_new: PIN-код или пароль приложения Trade Republic
+        pin_placeholder_existing: Оставьте пустым, чтобы сохранить текущий PIN-код или пароль
+        currency_label: Валюта счёта
+        connect: Войти
+        confirm_login: Проверить вход
+        complete_login: Продолжить
+        authenticator_code_label: Код аутентификатора (если запрошен)
+        authenticator_code_placeholder: 6-значный код
+        push_login_notice: Подтвердите вход в приложении Trade Republic. Sure проверяет статус автоматически в фоновом режиме. Вы также можете проверить его сами.
+        check_login_status: Проверить статус сейчас
+        authenticator_code_notice: Введите код из приложения-аутентификатора.
+        approval_pending: Вход начат. Подтвердите его в приложении Trade Republic; Sure проверяет статус автоматически.
+        awaiting_confirmation: Ожидается подтверждение в приложении Trade Republic.
+        awaiting_authenticator_code: Требуется код аутентификатора.
+        login_expired: Срок действия запроса на подтверждение истёк.
+        restart_login: Начать вход заново
+        connection_success:
+          title: Trade Republic успешно подключён
+          message: Подключение Trade Republic готово.
+          description: Sure синхронизирует ваши данные Trade Republic в фоновом режиме.
+          close: Готово
+        qr_login: Войти по QR-коду
+        qr_cancel: Отменить вход по QR-коду
+        qr_back_to_credentials: Вернуться к номеру телефона и PIN-коду или паролю
+        qr_loading: Подготовка QR-кода…
+        qr_instruction: Отсканируйте QR-код камерой телефона, затем подтвердите вход в приложении Trade Republic.
+        qr_success: Вход подтверждён. Sure обновляет страницу провайдера.
+        qr_error: Не удалось начать вход по QR-коду. Пожалуйста, попробуйте снова.
+        requires_update: "Войдите снова, чтобы возобновить синхронизацию."
+        session_expires_in: "Вход истекает через %{time} (%{at})."
+        add_account: "Добавить ещё одно подключение"
+        save_configuration: Сохранить и войти
+        update_configuration: Обновить конфигурацию
+        sync: Синхронизировать
+        syncing: "Синхронизация..."
+        disconnect: Отключить Trade Republic
+        disconnect_confirm: Отключить Trade Republic? Ваши синхронизированные счета станут ручными.
+        disconnect_confirm_with_identifier: "Отключить подключение Trade Republic, оканчивающееся на %{last4}? Ваши синхронизированные счета станут ручными."
+        identifier_phone: Телефон
+        identifier_account: Счёт
+        status_configured_prefix: Подключено. Перейдите на
+        accounts_tab: Счета
+        setup_accounts: Настроить счета
+        accounts_discovered:
+          one: Обнаружен %{count} счёт Trade Republic.
+          few: Обнаружено %{count} счёта Trade Republic.
+          many: Обнаружено %{count} счетов Trade Republic.
+          other: Обнаружено %{count} счёта Trade Republic.
+        status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
+        not_configured: Не настроено.
+      trading212_panel:
+        steps:
+          step_1: Откройте Trading 212 → Settings → API (в веб-версии или мобильном приложении).
+          step_2: Сгенерируйте новый API-ключ — Trading 212 покажет API ID и Secret Key.
+          step_3: Вставьте оба значения ниже, выберите среду и валюту счёта, затем сохраните.
+        api_key_label: ID API
+        api_key_placeholder_new: Вставьте ваш API ID Trading 212
+        api_key_placeholder_existing: Оставьте пустым, чтобы сохранить текущий API ID
+        api_secret_label: Секретный ключ
+        api_secret_placeholder_new: Вставьте ваш Secret Key Trading 212
+        api_secret_placeholder_existing: Оставьте пустым, чтобы сохранить текущий Secret Key
+        environment_label: Среда
+        environment_live: Реальный счёт
+        environment_demo: Демо-счёт
+        currency_label: Валюта счёта
+        save_configuration: Сохранить конфигурацию
+        update_configuration: Обновить конфигурацию
+        sync: Синхронизировать
+        syncing: Синхронизация...
+        disconnect: Отключить счёт Trading 212
+        disconnect_confirm: Отключить Trading 212?
+        default_account_name: Счёт Trading 212
+        add_account: Добавить ещё один счёт
+        status_configured_prefix: Настроено. Перейдите на
+        accounts_tab: Счета
+        status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
+        not_configured: Не настроено.
+    securities:
+      show:
+        encryption_warning:
+          generate: "Сгенерируйте набор ключей командой: bin/rails db:encryption:init"
+          intro: "Конфиденциальные данные (API-ключи, токены провайдеров, MFA-секреты и
+            персональные данные) хранятся без шифрования. Чтобы включить шифрование,
+            задайте следующие ключи в переменных окружения или в Rails credentials:"
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          title: Отсутствуют ключи шифрования
+        page_title: Безопасность
+        sso_confirm_body: Отключить вход через %{provider}? Позже его можно будет подключить снова, войдя через этого провайдера.
+        sso_confirm_button: Отключить
+        sso_confirm_title: Отключить вход?
+        sso_connect_hint: Выйдите из аккаунта, затем войдите через провайдера единого входа, чтобы подключить его.
+        sso_disconnect: Отключить
+        sso_last_used: Последний вход
+        sso_never: Никогда
+        sso_no_email: Адрес электронной почты не указан
+        sso_no_identities: Нет подключённых способов входа
+        sso_subtitle: Управляйте способами входа через единый вход
+        sso_title: Единый вход
+        sso_warning_message: Это единственный способ входа в аккаунт. Перед отключением задайте пароль в настройках безопасности, иначе можете потерять доступ к аккаунту.
     encryption_migration_guide: Руководство по настройке шифрования и миграции
     settings_nav:
       accounts_label: Счета
@@ -15,19 +1209,19 @@ ru:
       debug_label: Отладка
       exports_label: Экспорт
       feedback_label: Обратная связь
-      general_section_title: Общие
+      general_section_title: Основные
       guides_label: Руководства
       imports_label: Импорт
       llm_usage_label: Использование LLM
       logout: Выйти
       mcp_label: MCP
       merchants_label: Продавцы
-      other_section_title: Ещё
+      other_section_title: Другое
       payment_label: Оплата
-      preferences_label: Предпочтения
-      profile_label: Информация о профиле
+      preferences_label: Настройки
+      profile_label: Профиль
       providers_label: Провайдеры
-      recurring_transactions_label: Регулярные
+      recurring_transactions_label: Регулярные операции
       rules_label: Правила
       security_label: Безопасность
       self_hosting_label: Самостоятельный хостинг
@@ -39,6 +1233,12 @@ ru:
       whats_new_label: Что нового
       background_jobs_label: Фоновые задачи
       system_health_label: Состояние системы
+      classifier_label: Классификатор
+    settings_search:
+      aria_label: Поиск настроек
+      no_results: Нет настроек, соответствующих вашему запросу.
+      placeholder: Поиск настроек
+      results_label: Подходящие настройки
     settings_nav_link_large:
       next: Далее
       previous: Назад

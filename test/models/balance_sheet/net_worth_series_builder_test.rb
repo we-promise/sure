@@ -9,6 +9,21 @@ class BalanceSheet::NetWorthSeriesBuilderTest < ActiveSupport::TestCase
     @liability_account = accounts(:credit_card)
   end
 
+  test "chart cache keys include the display locale and date format" do
+    period = Period.last_30_days
+
+    [ BalanceSheet::NetWorthSeriesBuilder, BalanceSheet::NetWorthBreakdownSeriesBuilder ].each do |type|
+      english = I18n.with_locale(:en) { type.new(@family).send(:cache_key, period) }
+      russian = I18n.with_locale(:ru) { type.new(@family).send(:cache_key, period) }
+      assert_not_equal english, russian
+
+      @family.update!(date_format: "%d/%m/%Y")
+      formatted = I18n.with_locale(:ru) { type.new(@family).send(:cache_key, period) }
+      assert_not_equal russian, formatted
+      @family.update!(date_format: "%m-%d-%Y")
+    end
+  end
+
   test "net worth series cache key changes when the family currency changes" do
     period = Period.last_30_days
     before = builder.send(:cache_key, period)

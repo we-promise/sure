@@ -37,6 +37,7 @@ ru:
         провайдером
       warning_title: Что это значит
       warning_transactions_kept: Все существующие операции и балансы будут сохранены
+      warning_wallet_connection: 'Все счета в этом подключении Apple Wallet будут отвязаны. Их операции и балансы сохранятся. Вы сможете подключить их снова в приложении Sure для iOS, создав новое подключение Wallet.'
     create:
       success: Счёт %{type} создан
     destroy:
@@ -69,6 +70,11 @@ ru:
       opening_balance_date_label: Дата начального баланса
       enable_category_matcher_label: Включить подбор категорий
       enable_category_matcher_hint: Если включено, к импортированным операциям применяется категория, предложенная провайдером. Отключите, чтобы оставлять новые операции без категории.
+      cost_basis_method_label: Метод учёта себестоимости
+      cost_basis_method_hint: При продаже определяется, с какими акциями она сопоставляется. Изменение пересчитывает прошлую реализованную прибыль и среднюю стоимость имеющихся акций. Прибыль от продажи акций с неизвестной себестоимостью отображается как неизвестная.
+      cost_basis_methods:
+        average: Средняя стоимость
+        fifo: Первым поступил — первым выбыл (FIFO)
     index:
       accounts: Счета
       manual_accounts:
@@ -76,6 +82,9 @@ ru:
       new_account: Новый счёт
       sync: Синхронизировать все
       cancel_sync: Отменить синхронизацию
+      financekit_accounts:
+        description: 'Управляйте подключениями Apple Wallet и синхронизацией в приложении Sure для iOS.'
+        title: Apple Wallet
     new:
       container:
         close: Закрыть
@@ -93,9 +102,17 @@ ru:
         title: Как вы хотите добавить это?
       title: Что вы хотите добавить?
     not_authorized: У вас нет прав для управления этим счётом
+    reconcile_all:
+      success:
+        one: "%{count} операция отмечена как %{status}."
+        few: "%{count} операции отмечены как %{status}."
+        many: "%{count} операций отмечены как %{status}."
+        other: "%{count} операции отмечены как %{status}."
+      invalid_status: Выберите допустимый статус сверки.
+      not_manual_account: Массовая сверка доступна только для счетов с ручным вводом.
     select_provider:
       already_linked: Счёт уже связан с провайдером
-      description: Выберите, какого провайдера вы хотите использовать для связи %{account_name}
+      description: 'Выберите провайдера, с которым хотите связать %{account_name}.'
       no_providers: В настоящее время провайдеры не настроены
       title: Выберите провайдера для связи
     logo_caption:
@@ -129,8 +146,7 @@ ru:
         yandex: Яндекс
       stored: Сохранённая иконка
     set_default:
-      depository_only: По умолчанию можно установить только денежные счета и счета
-        кредитных карт.
+      depository_only: Счётом по умолчанию может быть банковский счёт, наличные или кредитная карта.
     health_status:
       negative_positions:
         detail: "%{name} (%{ticker}): ниже нуля с %{date}, минимум %{qty}"
@@ -164,6 +180,8 @@ ru:
         search_placeholder: Поиск записей по названию
         status: Статус
         title: Активность
+        category: 'Категория'
+        uncategorized_only: 'Только без категории'
       chart:
         balance: Баланс
         owed: Сумма задолженности
@@ -187,6 +205,13 @@ ru:
         import_transactions: Импортировать операции
         include_in_reports: Включить в отчёты
         manage: Управление счетами
+        reconcile_all:
+          cleared: Отметить все как подтверждённые
+          confirm_accept: Отметить все как %{status}
+          confirm_body: Это изменит статус сверки каждой операции на этом счёте. Загруженные выписки останутся без изменений.
+          confirm_title: Отметить каждую операцию как %{status}?
+          reconciled: Отметить все как сверенные
+          unreconciled: Отметить все как несверенные
         sharing: Совместное использование
         statements: Выписки
       tabs:
@@ -195,6 +220,7 @@ ru:
         overview: Обзор
         statements: Выписки
         schedule: График платежей
+        extra_repayments: "Дополнительные платежи"
     sidebar:
       configure_providers: Настройте ваших провайдеров здесь.
       missing_data: Отсутствуют исторические данные
@@ -211,6 +237,12 @@ ru:
         debts: Долги
       expand_all: Развернуть все
       collapse_all: Свернуть все
+      reorder_account: 'Переместить %{account}'
+      reorder_hint: 'Перетащите счёт, чтобы изменить порядок. С клавиатуры нажмите Enter, затем клавиши со стрелками.'
+      sort_mode:
+        start: 'Изменить порядок счетов'
+        hint: 'Перетаскивайте счета за маркер, чтобы изменить их порядок.'
+        done: 'Готово'
     subtype_regions:
       au: Австралия
       ca: Канада
@@ -223,32 +255,32 @@ ru:
       syncing: Синхронизация счетов...
     tax_treatment_descriptions:
       tax_advantaged: Специальные налоговые льготы с условиями
-      tax_deferred: Взносы вычитаются, облагаются налогом при снятии
+      tax_deferred: 'Взносы вычитаются из налогооблагаемого дохода, а выплаты облагаются налогом.'
       tax_exempt: Взносы после налогообложения, доходы не облагаются налогом
       taxable: Доходы облагаются налогом при реализации
     tax_treatments:
-      tax_advantaged: Налоговые льготы
-      tax_deferred: Отложенный налог
+      tax_advantaged: 'Налоговый режим с льготами'
+      tax_deferred: 'Отсрочка налогообложения'
       tax_exempt: Не облагаемый налогом
       taxable: Облагаемый налогом
     types:
       credit_card: Кредитная карта
       crypto: Крипто
-      depository: Денежный счёт
+      depository: Счёт или наличные
       investment: Инвестиция
       loan: Кредит
       other_asset: Другой актив
-      other_liability: Другое обязательство
+      other_liability: Прочий долг
       property: Недвижимость
       vehicle: Транспорт
     types_plural:
       credit_card: Кредитные карты
       crypto: Крипто
-      depository: Денежные счета
+      depository: Счета и наличные
       investment: Инвестиции
       loan: Кредиты
       other_asset: Другие активы
-      other_liability: Другие обязательства
+      other_liability: Прочие долги
       property: Недвижимость
       vehicle: Транспорт
     unlink:
@@ -259,8 +291,15 @@ ru:
     update:
       success: Счёт %{type} обновлён
       logo_not_applied: Счёт сохранён, но выбранную иконку скачать не удалось. Попробуйте ещё раз или загрузите свою.
+    reconciliation_indicator:
+      matched: "Все операции сверены"
+      needs_attention: "Операции требуют сверки"
+    scheduled_balance_tooltip:
+      description: "Ваш баланс после проведения всех запланированных операций"
+      current: "Текущий баланс"
+      scheduled: "Запланировано"
+      projected: "Прогнозируемый баланс"
   email_confirmations:
     new:
       invalid_token: Неверная или истекшая ссылка подтверждения.
-      success_login: Ваш email подтверждён. Пожалуйста, войдите с вашим новым адресом
-        электронной почты.
+      success_login: 'Адрес электронной почты подтверждён. Войдите с новым адресом электронной почты.'

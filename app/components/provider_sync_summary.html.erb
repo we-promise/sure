@@ -115,7 +115,7 @@
         <div class="flex items-center gap-3 flex-wrap">
           <% if rate_limited? %>
             <span class="text-warning">
-              <%= t("provider_sync_summary.health.rate_limited", time_ago: rate_limited_ago || t("provider_sync_summary.health.recently")) %>
+              <%= rate_limited_label %>
             </span>
           <% end %>
           <% if has_errors? %>

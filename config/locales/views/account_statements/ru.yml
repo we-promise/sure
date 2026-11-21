@@ -45,13 +45,13 @@ ru:
       period_hint: "Sure берёт период из PDF-выписки, если он там указан, или из даты в имени файла (например, 2026-04). Его также можно указать в выписке вручную."
     index:
       account_label: Счёт
-      confidence: "%{confidence} совпадение"
+      confidence: 'Совпадение: %{confidence}'
       empty_linked: Пока нет связанных выписок.
       empty_unmatched: Входящие выписки пусты.
       leave_unmatched: Оставить несопоставленной
       linked_title: Связанные выписки
       no_suggestion: Нет предложений
-      storage_used: Использовано места
+      storage_used: 'Использовано'
       title: Хранилище выписок
       unmatched_title: Несопоставленные выписки
       upload_description: Загрузите выписки во входящие или выберите счёт для немедленной
@@ -83,7 +83,7 @@ ru:
       difference: Разница
       download: Скачать
       institution_name_hint: Подсказка учреждения
-      ledger_amount: Книга Sure
+      ledger_amount: 'Учётная сумма в Sure'
       link_suggestion: Предложение привязки
       linked_to: Привязано к %{account}.
       linking_title: Привязка счёта
@@ -98,7 +98,7 @@ ru:
       reject: Отклонить
       save: Сохранить выписку
       statement_amount: Выписка
-      suggested_account: Предлагаемый счёт — %{account} (%{confidence} уверенность).
+      suggested_account: 'Предлагаемый счёт — %{account} (совпадение: %{confidence}).'
       title: Выписка
       unknown_value: Неизвестно
       unlink: Отвязать

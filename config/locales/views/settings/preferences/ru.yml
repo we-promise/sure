@@ -3,6 +3,8 @@ ru:
   settings:
     preferences:
       show:
+        show_balance_updates: Синхронизированные обновления баланса
+        show_balance_updates_hint: Всегда показывать в активности подключённых счетов ежедневные значения баланса, записанные при синхронизации с банком
         additional_currencies_label: Дополнительные валюты
         base_currency_badge: Базовая валюта
         base_currency_label: Базовая валюта
@@ -60,6 +62,12 @@ ru:
         budget_sharing_subtitle: Разрешите другим участникам просматривать или изменять ваш личный бюджет
         budget_sharing_no_members: 'Нет других участников, с которыми можно поделиться: %{moniker} состоит только из вас'
         budget_sharing_permission_label: Доступ для %{name}
+        manual_reconciliation: "Ручная сверка"
+        manual_reconciliation_hint: "Показывать элементы управления сверкой для счетов, введённых вручную. Для счетов с банковской синхронизацией вместо этого используется сверка по выписке."
+        rule_suggestions: "Предложения правил"
+        rule_suggestions_hint: "Предлагать создать правило после изменения категории транзакции"
+        transactions_subtitle: "Настройте поведение транзакций"
+        transactions_title: "Транзакции"
         budget_sharing_permissions:
           none: Нет доступа
           read_only: Только просмотр

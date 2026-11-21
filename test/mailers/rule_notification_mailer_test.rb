@@ -3,6 +3,24 @@ require "test_helper"
 class RuleNotificationMailerTest < ActionMailer::TestCase
   include EntriesTestHelper
 
+  test "unnamed rule digest follows the recipient locale in both parts without leaking locale" do
+    family = families(:dylan_family)
+    family.users.where(role: %w[admin super_admin]).update_all(locale: "ru")
+    account = family.accounts.create!(name: "Mailer test", balance: 100, currency: "USD", accountable: Depository.new)
+    txn = create_transaction(date: Date.current, account: account, amount: 100, name: "Coffee").transaction
+    rule = family.rules.build(resource_type: "transaction")
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "<Coffee>")
+
+    I18n.with_locale(:en) do
+      mail = RuleNotificationMailer.digest(rule: rule, transactions: [ txn ])
+      assert_match "Если название операции содержит &lt;Coffee&gt;", mail.html_part.body.decoded
+      assert_match "Если название операции содержит <Coffee>", mail.text_part.body.decoded
+      assert_equal I18n.t("rule_notification_mailer.digest.subject", locale: :ru,
+        count: 1, product_name: Rails.configuration.x.product_name), mail.subject
+      assert_equal :en, I18n.locale
+    end
+  end
+
   test "digest" do
     rule = rules(:one)
     rule.update!(name: "Coffee rule")

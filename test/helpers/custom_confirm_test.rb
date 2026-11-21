@@ -1,21 +1,28 @@
 require "test_helper"
 
 class CustomConfirmTest < ActiveSupport::TestCase
+  test "deletion confirmations preserve resource names" do
+    I18n.with_locale(:ru) do
+      result = CustomConfirm.for_resource_deletion("eBay — Семья").to_data_attribute
+      %i[title body confirmText].each { |key| assert_includes result[key], "eBay — Семья" }
+    end
+  end
+
   # `confirm_dialog_controller` renders `body` with textContent, so a record
   # named "<img src=x onerror=…>" shows as that text. Escaping it here as well
   # would print the entities: "rock &amp; roll" instead of "rock & roll".
   test "passes the resource name through as text" do
     assert_includes CustomConfirm.for_resource_deletion("<img src=x onerror=alert(1)>").to_data_attribute[:body],
       "<img src=x onerror=alert(1)>"
-    assert_includes CustomConfirm.for_resource_deletion("Rock & Roll").to_data_attribute[:body], "rock & roll"
+    assert_includes CustomConfirm.for_resource_deletion("Rock & Roll").to_data_attribute[:body], "Rock & Roll"
   end
 
-  test "keeps the English copy the hardcoded strings produced" do
+  test "preserves the supplied resource spelling in English copy" do
     data = CustomConfirm.for_resource_deletion("rule").to_data_attribute
 
-    assert_equal "Delete Rule?", data[:title]
+    assert_equal "Delete rule?", data[:title]
     assert_equal "Are you sure you want to delete rule? This is not reversible.", data[:body]
-    assert_equal "Delete Rule", data[:confirmText]
+    assert_equal "Delete rule", data[:confirmText]
   end
 
   # These back ~40 call sites across the app, so a locale that ships the

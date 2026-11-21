@@ -4,6 +4,7 @@ import { Controller } from "@hotwired/stimulus";
 // See javascript/controllers/application.js for how this is wired up
 export default class extends Controller {
   static targets = ["title", "subtitle", "confirmButton"];
+  static values = { defaultTitle: String, defaultBody: String, defaultConfirmText: String };
 
   handleConfirm(rawData) {
     const data = this.#normalizeRawData(rawData);
@@ -35,15 +36,15 @@ export default class extends Controller {
         button.setAttribute("hidden", true);
       }
 
-      button.textContent = data.confirmText || "Confirm";
+      button.textContent = data.confirmText || this.defaultConfirmTextValue;
     });
 
-    this.titleTarget.textContent = data.title || "Are you sure?";
+    this.titleTarget.textContent = data.title || this.defaultTitleValue;
     // Text, never HTML: bodies interpolate record names (merchants, accounts,
     // brokerages, tickers) that come from bank feeds, providers and other
     // family members, however the caller built the confirmation.
     this.subtitleTarget.textContent =
-      data.body || "This action cannot be undone.";
+      data.body || this.defaultBodyValue;
   }
 
   // If data is a string, it's the title.  Otherwise, return the parsed object.
@@ -52,7 +53,7 @@ export default class extends Controller {
       const parsed = JSON.parse(rawData);
 
       if (typeof parsed === "boolean") {
-        return { title: "Are you sure?" };
+        return { title: this.defaultTitleValue };
       }
 
       return parsed;

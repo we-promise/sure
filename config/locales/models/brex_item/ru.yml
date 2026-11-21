@@ -11,4 +11,4 @@ ru:
         brex_item:
           attributes:
             base_url:
-              official_hosts_only: должно быть пустым, https://api.brex.com или https://api-staging.brex.com
+              official_hosts_only: 'должен быть пустым, https://api.brex.com или https://api-staging.brex.com'

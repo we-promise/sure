@@ -30,6 +30,7 @@ en:
 
     # Panel (settings view)
     panel:
+      default_connection_name: "Questrade Connection"
       eyebrow: "Setup · desktop only"
       help_text: "Questrade API docs"
       disconnect: "Disconnect"

@@ -4,17 +4,72 @@ ru:
     conditions:
       condition_group:
         add_condition: Добавить условие
-        all: все
+        all: всем
         and_prefix: и
-        any: любые
-        match: совпадение
+        any: хотя бы одному
+        match: Соответствует
         of_the_following_conditions: из следующих условий
       condition:
         value_placeholder: Введите значение
   rules:
+    back_to_rules: К правилам
+    all_rules: все правила
+    menu_actions: Действия
+    condition_summary: Если %{field} %{operator} %{value}
+    if: ЕСЛИ
+    for: ДЛЯ
+    resource_types:
+      transaction:
+        one: операция
+        few: операции
+        many: операций
+        other: операции
+    new:
+      title: Новое правило для операций
+    edit:
+      title: Изменить правило для операций
+      title_with_name: Изменить правило «%{name}»
+    apply:
+      success: Правило для операций включено
     actions:
+      labels:
+        set_transaction_category: Назначить категорию
+        set_transaction_tags: Добавить метки
+        set_transaction_merchant: Указать продавца
+        set_transaction_name: Изменить название операции
+        set_investment_activity_label: Указать вид инвестиционной операции
+        exclude_transaction: Исключить из бюджета и отчётов
+        set_as_transfer_or_payment: Отметить как перевод или платёж
+        split_transaction: Разбить операцию
+        send_email_notification: Отправить уведомление по электронной почте
+        fill_similar_merchants: Заполнить продавцов по похожим операциям (без ИИ)
+        bayes_categorize: Назначить категории с помощью классификатора (без ИИ)
+        auto_categorize: Назначить категории с помощью ИИ
+        auto_detect_merchants: Определить продавцов автоматически
+      auto_categorize_with_cost: "%{label} (~$%{cost} за 20 операций)"
+      auto_categorize_cost_unavailable: "%{label} (стоимость неизвестна)"
+      auto_categorize_no_provider: "%{label} (поставщик категоризации не настроен)"
+      auto_detect_merchants_with_ai: Определить продавцов с помощью ИИ ($$)
       value_placeholder: Введите значение
       to_label: на
+      split:
+        type_fixed: Фиксированная сумма
+        type_percentage: Процент
+        type_label: Способ разбиения
+        add_split: Добавить часть
+        name_placeholder: Название части
+        share_label: Сумма или процент
+        category_label: Категория части
+        merchant_label: Продавец части
+        tags_label: Метки части
+        remove_split: Удалить часть
+        hint: Сначала вычитаются фиксированные суммы, затем остаток делится по указанным процентам. Если у всех частей фиксированная сумма, добавьте условие на точную сумму операции (например, «Сумма = 42.00»), чтобы части складывались в сумму каждой подходящей операции. У правила разбиения не может быть других действий.
+        fixed_summary_label: фиксированная сумма
+        summary:
+          one: '%{count} часть'
+          few: '%{count} части'
+          many: '%{count} частей'
+          other: '%{count} части'
     apply_all:
       ai_cost_message: Это использует ИИ для категоризации до %{transactions} операций.
       ai_cost_title: Оценка стоимости ИИ
@@ -40,6 +95,16 @@ ru:
       confirm_title: Сбросить кэш ИИ?
       success: Кэш ИИ очищается. Это может занять несколько минут.
     condition_filters:
+      labels:
+        transaction_name: Название операции
+        transaction_amount: Сумма операции
+        transaction_type: Тип операции
+        transaction_merchant: Продавец
+        transaction_category: Категория
+        transaction_tag: Метка
+        transaction_details: Дополнительные данные
+        transaction_notes: Примечания
+        transaction_account: Счёт
       transaction_type:
         equal_to: Равно
         expense: Расход
@@ -57,14 +122,17 @@ ru:
         greater_or_equal_to: Больше или равно
         less_than: Меньше
         less_than_or_equal_to: Меньше или равно
+        starts_with: Начинается с
+        ends_with: Заканчивается на
+        matches_regex: Соответствует регулярному выражению
+      transaction_additional_detail:
+        label: "Дополнительные сведения (ключ=значение)"
     confirm:
       ai_cost_no_estimate_html: Это использует ИИ для категоризации %{count} операций.
       ai_cost_title: Оценка стоимости ИИ
       ai_cost_with_estimate_html: 'Это использует ИИ для категоризации %{count} операций.
         Оценочная стоимость: <span class="font-semibold">~$%{cost}</span>'
-      apply_notice_html: Вы собираетесь применить это правило к <span class="text-primary
-        font-medium">%{count} %{resource}</span>, которые соответствуют указанным
-        критериям правила. Пожалуйста, подтвердите, если хотите продолжить это изменение.
+      apply_notice_html: 'Правило затронет следующие данные: <span class="text-primary font-medium">%{count} %{resource}</span>. Подтвердите изменения.'
       confirm_changes: Подтвердить изменения
       cost_unavailable_model: Оценка стоимости недоступна для модели "%{model}".
       cost_unavailable_no_provider: Оценка стоимости недоступна (поставщик LLM не
@@ -74,6 +142,11 @@ ru:
       title: Подтвердите изменения
       title_with_name: Подтвердите изменения для "%{name}"
       view_usage_history: Просмотреть историю использования
+      rules_above_notice:
+        one: Сначала выполняется %{count} активное правило выше, поэтому результат совпадает с результатом полного запуска.
+        few: Сначала выполняются %{count} активных правила выше, поэтому результат совпадает с результатом полного запуска.
+        many: Сначала выполняются %{count} активных правил выше, поэтому результат совпадает с результатом полного запуска.
+        other: Сначала выполняются %{count} активного правила выше, поэтому результат совпадает с результатом полного запуска.
     destroy:
       success: Правило удалено
     destroy_all:
@@ -87,6 +160,16 @@ ru:
       rule_name_placeholder: Введите название для этого правила
       starting_from: Начиная с
       then: ТОГДА
+      stop_processing_label: Не применять следующие правила
+      stop_processing_description: Правила ниже в списке не изменяют операции, соответствующие этому правилу.
+      apply_immediately_label: Применять сразу к новым и изменённым операциям
+      apply_immediately_description: Запускается сразу после создания или изменения операции вручную, при массовом редактировании, в «Категоризации», через API или ассистента, а также по ночам.
+      group_label: "Группа (необязательно)"
+      group_select_label: "Группа"
+      no_group: "Без группы"
+      new_group_label: "Или новая группа"
+      new_group_placeholder: "Название новой группы"
+      group_hint: "Группы только упорядочивают список. Правило в группе выполняется там, где расположена группа в списке."
     index:
       ai_cost_warning: Действия с использованием ИИ будут стоить денег. Убедитесь,
         что фильтры настроены как можно точнее, чтобы избежать ненужных затрат.
@@ -97,6 +180,14 @@ ru:
       no_rules_title: Пока нет правил
       page_title: Правила
       rules_heading: Правила
+      order_hint: Правила выполняются сверху вниз. Если правило задало значение поля операции, следующие правила его не изменяют. Метки добавляет каждое подходящее правило. Перетащите правило, чтобы изменить порядок.
+      reorder_rule: Переместить правило «%{name}». Нажмите Enter или пробел, затем используйте клавиши со стрелками.
+      new_group: "Новая группа"
+      reorder_group: "Переместить группу %{name}. Нажмите Enter или пробел, чтобы захватить её, затем используйте клавиши со стрелками для перемещения."
+      filters:
+        no_matches: "Поиск или фильтры не нашли правил."
+        drag_disabled: "Сортировка отключена, пока активны поиск или фильтр. Сбросьте их, чтобы изменить порядок."
+      fold_rule: "Свернуть или развернуть правило %{name}"
     no_action: Нет действия
     no_condition: Нет условия
     recent_runs:
@@ -115,6 +206,7 @@ ru:
       execution_types:
         manual: Вручную
         scheduled: Запланировано
+        immediate: Сразу
       statuses:
         failed: Неудача
         pending: В ожидании
@@ -122,7 +214,7 @@ ru:
       title: Недавние запуски
       unnamed_rule: Безымянное правило
     rule:
-      action_label_to: "%{label} на %{value}"
+      action_label_to: "%{label}: %{value}"
       all_past_and_future: Все прошлые и будущие %{resource}
       and_more_actions:
         few: и ещё %{count} действия
@@ -136,8 +228,70 @@ ru:
         other: и ещё %{count} условий
       delete: Удалить
       edit: Редактировать
-      on_or_after: "%{resource} на или после %{date}"
+      on_or_after: "%{resource} начиная с %{date}"
       re_apply_rule: Применить правило повторно
       then: ТОГДА
+      stop_processing: Остановить
+      stop_processing_hint: Следующие правила не изменяют операции, соответствующие этому правилу.
+      apply_immediately: Сразу
+      apply_immediately_hint: Также запускается сразу после создания или изменения операции вручную, при массовом редактировании, в «Категоризации», через API или ассистента вместе с активными правилами выше.
     update:
       success: Правило обновлено
+    notification_baseline_timed_out: Правило по-прежнему выключено. Проверка уже подходящих операций заняла слишком много времени. Без неё уведомления ушли бы по всем этим операциям. Упростите условия и включите правило снова.
+    category_rule_cta:
+      close: Закрыть
+      create_rule: Создать правило
+      description: Можно создать правило, чтобы автоматически присваивать категорию похожим операциям
+      dont_show_again: Больше не показывать
+      hide_for_today: Скрыть на сутки
+      hide_for_today_hint: Предложения не будут появляться в течение 24 часов.
+      message: Выбрана категория «%{category_name}»
+      not_today: "Не сегодня"
+      turn_off_suggestions: "Отключить предложения правил"
+    classifier_rules:
+      category_classifier: Классификатор категорий
+      merchant_matcher: Подбор продавцов
+    filters:
+      search_label: "Поиск правил"
+      search_placeholder: "Поиск по названию, условиям и действиям"
+      reset: "Сбросить"
+      button: "Фильтр"
+      done: "Готово"
+      active_label: "Активные фильтры"
+      remove: "Удалить фильтр %{filter}"
+      status:
+        label: "Статус"
+        all: "Все статусы"
+        active: "Активные"
+        inactive: "Неактивные"
+      action_type:
+        label: "Действие"
+        all: "Все действия"
+      condition_type:
+        label: "Условие"
+        all: "Все условия"
+      account:
+        label: "Счёт"
+        all: "Все счета"
+      group:
+        label: "Группа"
+        all: "Все группы"
+        none: "Без группы"
+    group:
+      rules_count:
+        one: "1 правило"
+        few: "%{count} правила"
+        many: "%{count} правил"
+        other: "%{count} правил"
+      inactive_count:
+        one: "1 неактивное"
+        few: "%{count} неактивных"
+        many: "%{count} неактивных"
+        other: "%{count} неактивных"
+      empty: "В этой группе пока нет правил. Выберите группу в форме правила."
+      activate_all: "Включить все правила"
+      deactivate_all: "Отключить все правила"
+      rename: "Переименовать"
+      delete: "Удалить группу"
+      delete_confirm_title: "Удалить группу «%{name}»?"
+      delete_confirm_body: "Правила останутся на месте, без группы. Ни одно правило не будет удалено."

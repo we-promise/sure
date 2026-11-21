@@ -61,6 +61,7 @@ class LlmUsage::CallTest < ActiveSupport::TestCase
     assert row.failed?, "the recorders write symbol keys"
     assert_equal "HTTP 500", row.reload.error_message
     assert usage(metadata: { "error" => "busy" }).failed?
+    assert usage(status: "failed", metadata: {}).failed?, "the status is authoritative for old failed rows"
     row.status = "exploded"
     assert_not row.valid?
   end

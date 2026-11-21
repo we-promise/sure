@@ -69,6 +69,10 @@ class Money::Currency
     @default_precision = currency_data["default_precision"]
   end
 
+  def localized_name
+    I18n.t("currencies.#{iso_code}", default: name)
+  end
+
   def step
     (1.0/10**default_precision)
   end

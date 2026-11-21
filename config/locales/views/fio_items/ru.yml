@@ -35,7 +35,7 @@ ru:
         few: Синхронизированы %{count} счёта
         many: Синхронизировано %{count} счетов
         other: Синхронизированы %{count} счёта
-      partial: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+      partial: 'Синхронизировано: %{linked}; требуют настройки: %{unlinked}'
   fio_items:
     account_types:
       depository: Текущий или сберегательный счёт

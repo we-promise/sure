@@ -14,6 +14,8 @@ ru:
       year: Год
       year_placeholder: '2023'
       mileage_unit_kilometers: Километры
+      purchase_date: "Дата покупки"
+      purchase_price: "Цена покупки"
       mileage_unit_miles: Мили
     new:
       title: Введите данные транспортного средства

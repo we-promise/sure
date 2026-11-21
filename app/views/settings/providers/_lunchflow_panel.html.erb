@@ -16,7 +16,7 @@
 
   <%
     # Get or initialize a lunchflow_item for this family
-    lunchflow_item = Current.family.lunchflow_items.first_or_initialize(name: "Lunch Flow Connection")
+    lunchflow_item = Current.family.lunchflow_items.first_or_initialize(name: t("settings.providers.lunchflow_panel.default_connection_name"))
     is_new_record = lunchflow_item.new_record?
   %>
 

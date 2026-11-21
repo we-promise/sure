@@ -1,14 +1,10 @@
 class Rule::ActionExecutor::SetInvestmentActivityLabel < Rule::ActionExecutor
-  def label
-    "Set investment activity label"
-  end
-
   def type
     "select"
   end
 
   def options
-    Transaction::ACTIVITY_LABELS.map { |l| [ l, l ] }
+    Transaction::ACTIVITY_LABELS.map { |label| [ I18n.t("transactions.activity_labels.#{label.parameterize(separator: "_")}", default: label), label ] }
   end
 
   def claimed_attributes

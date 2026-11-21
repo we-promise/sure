@@ -1,0 +1,152 @@
+ru:
+  providers:
+    sharesight:
+      name: "Sharesight"
+      connection_description: "Подключите портфели Sharesight через API Sharesight"
+      institution_name: "Sharesight"
+  sharesight_accounts:
+    settings_fields:
+      title: "Денежные средства и дивиденды Sharesight"
+      description: "Укажите, где хранятся денежные средства и дивиденды этого портфеля, чтобы Sure не учитывал их дважды."
+      cash_mode: "Денежные средства"
+      cash_modes:
+        broker: "У брокера"
+        settlement: "Расчёты через другой счёт"
+        untracked: "Не отслеживать (только акции)"
+      cash_mode_help: "Если используется другой счёт или денежные средства не отслеживаются, этот счёт показывает только акции. Денежные средства по каждой сделке компенсируются переводом, привязанным к счёту, через который прошёл расчёт."
+      settlement_account: "Счёт для расчётов"
+      settlement_starts_on: "Проводить расчёты здесь с"
+      settlement_window_days: "Дней, за которые банк может отобразить операцию"
+      settlement_help: "Каждая покупка, продажа и выплаченный сюда дивиденд сопоставляются по сумме с транзакцией на этом счёте и привязываются как перевод. Для ручного счёта транзакция учитывается на нём. До начальной даты денежные средства хранились у брокера."
+      choose_account: "Выберите счёт"
+      no_account: "Нет"
+      funding_account: "Счёт пополнения"
+      funding_match_terms: "Текст транзакции пополнения"
+      funding_match_terms_placeholder: "CMC Share Transfer, CMC Markets"
+      funding_help: "Пополнения и снятия на счёте пополнения, название или заметки которых содержат любое из этих значений (через запятую), отражаются здесь и привязываются как переводы."
+      cash_anchor_amount: "Денежные средства у брокера"
+      cash_anchor_on: "На дату проверки"
+      cash_anchor_help: "Для денежных средств, которые Sharesight не видит: остаток на ту дату, перенесённый с учётом всех операций, проведённых здесь с тех пор. Обновляйте его при каждой проверке у брокера."
+      dividend_mode: "Дивиденды и распределения"
+      dividend_modes:
+        with_cash: "Там, где находятся денежные средства"
+        other_account: "Выплачены на другой счёт"
+        skip: "Не импортировать (они показаны в другом подключении)"
+      dividend_mode_help: "Выплаченные дивиденды всё равно учитываются здесь как доход, затем привязываются к зачислению на счёт, на который они были выплачены."
+      dividend_account: "Выплачены на"
+      sync_start_date: "Импортировать операции начиная с"
+      sync_start_date_help: "Более ранние сделки и дивиденды не учитываются, а уже импортированные удаляются."
+    errors:
+      settlement_account_missing: "Выберите счёт, через который проводятся расчёты по портфелю."
+      dividend_account_missing: "Выберите счёт, на который выплачиваются дивиденды."
+      cash_anchor_incomplete: "Укажите и денежные средства у брокера, и дату, когда вы их видели."
+      invalid_date:
+        settlement_starts_on: "Дата начала расчётов здесь некорректна."
+        cash_anchor_on: "Дата, когда вы видели денежные средства у брокера, некорректна."
+        sync_start_date: "Дата начала импорта операций некорректна."
+      account_not_in_family: "%{name} не относится к вашим счетам."
+      account_is_portfolio: "%{name} — это собственный счёт этого портфеля."
+    notices:
+      unsettled_debit: "Пока нет списания %{amount} на счёте %{account} за %{description} от %{date}."
+      unsettled_credit: "Пока нет зачисления %{amount} на счёте %{account} за %{description} от %{date}."
+      units_drift: "%{account}: в Sharesight указано %{held} %{ticker}, но по сделкам получается %{traded}."
+  sharesight_items:
+    defaults:
+      name: "Sharesight"
+      portfolio_name: "Портфель Sharesight %{id}"
+    sharesight_item:
+      deletion_in_progress: "Удаление выполняется"
+      syncing: "Синхронизация"
+      requires_update: "Клиенту API требуется внимание"
+      error: "Ошибка"
+      synced: "Синхронизировано %{time} назад. %{summary}."
+      never_synced: "Никогда не синхронизировалось."
+      setup_accounts: "Настроить портфели"
+      delete: "Удалить"
+      accounts_need_setup: "Портфели нужно настроить"
+      accounts_need_setup_description: "Ваши портфели Sharesight нужно привязать к счетам Sure."
+      no_accounts_discovered: "Портфели Sharesight пока не найдены."
+      no_accounts_discovered_description: "Выполните синхронизацию после сохранения клиента API, чтобы найти свои портфели."
+    setup_accounts:
+      page_title: "Настройка портфелей Sharesight"
+      dialog_title: "Настройте свои портфели Sharesight"
+      subtitle: "Привяжите портфели Sharesight к инвестиционным счетам."
+      info_box:
+        title: "Импорт через API Sharesight"
+        items:
+          item_1: "Текущие позиции с ценами и количеством, а также стоимость портфеля"
+          item_2: "Покупки, продажи, начальные остатки, возвраты капитала и дивиденды, включая реинвестированные"
+          item_3: "Пополнения, снятия, проценты и комиссии с любого денежного счёта Sharesight"
+      status:
+        fetching_accounts: "Получение портфелей из Sharesight…"
+        no_accounts_found_title: "Портфели не найдены."
+        no_accounts_found_description: "Sure не удалось найти портфели Sharesight. Проверьте корректность клиента API."
+      available_accounts:
+        title: "Доступные портфели"
+        account_type_investment: "Инвестиционный"
+        account_summary: "%{account_type} • Баланс: %{balance}"
+        account_id: "ID портфеля: %{account_id}"
+      link_existing:
+        description: "Или привяжите найденный портфель к существующему ручному инвестиционному счёту."
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: "Выберите счёт…"
+      linked_accounts:
+        title: "Уже привязаны"
+        linked_to_html: "Привязан к: %{account}"
+      buttons:
+        refresh: "Обновить"
+        cancel: "Отмена"
+        back_to_settings: "Вернуться к настройкам"
+        create_selected_accounts: "Создать выбранные счета"
+        link: "Привязать"
+        done: "Готово"
+    sync:
+      status:
+        checking_credentials: "Проверка учётных данных Sharesight…"
+        importing_portfolios: "Импорт портфелей Sharesight…"
+        checking_configuration: "Проверка конфигурации портфеля…"
+        accounts_need_setup:
+          one: "1 портфель Sharesight нужно настроить…"
+          few: "%{count} портфеля Sharesight нужно настроить…"
+          many: "%{count} портфелей Sharesight нужно настроить…"
+          other: "%{count} портфелей Sharesight нужно настроить…"
+        processing_activity: "Обработка позиций и операций…"
+        calculating_balances: "Расчёт балансов…"
+    sync_status:
+      no_accounts: "Портфели Sharesight пока не найдены"
+      all_linked:
+        one: "Привязан 1 портфель"
+        few: "Привязано %{count} портфеля"
+        many: "Привязано %{count} портфелей"
+        other: "Привязано портфелей: %{count}"
+      partial: "Привязано: %{linked}; требуется настроить: %{unlinked}"
+    select_existing_account:
+      title: "Привязать портфель Sharesight"
+      no_accounts_available: "Непривязанные портфели Sharesight пока недоступны."
+      run_sync_hint: "Запустите синхронизацию в разделе «Настройки» > «Провайдеры» после сохранения клиента API."
+      wait_for_sync: "Дождитесь завершения синхронизации для обнаружения портфелей."
+      balance: "Баланс"
+      link: "Привязать"
+      cancel: "Отмена"
+    create:
+      success: "Sharesight успешно настроен."
+    update:
+      success: "Конфигурация Sharesight успешно обновлена."
+    destroy:
+      success: "Подключение Sharesight запланировано к удалению."
+    select_accounts:
+      not_configured: "Sharesight не настроен."
+    link_existing_account:
+      not_found: "Счёт или портфель Sharesight не найден."
+      only_manual_investment: "К Sharesight можно привязывать только ручные инвестиционные счета."
+      already_linked: "Этот портфель Sharesight уже привязан."
+      success: "Портфель Sharesight успешно привязан."
+      failed: "Не удалось привязать портфель Sharesight."
+    complete_account_setup:
+      success:
+        one: "Успешно создан %{count} счёт Sharesight."
+        few: "Успешно созданы %{count} счёта Sharesight."
+        many: "Успешно создано %{count} счетов Sharesight."
+        other: "Успешно создано счетов Sharesight: %{count}."
+      none_selected: "Не выбрано ни одного портфеля."
+      none_created: "Не создано ни одного счёта."

@@ -1,6 +1,6 @@
 <%# locals: (category:, categories:) %>
 
-<div data-controller="color-icon-picker" data-color-icon-picker-preset-colors-value="<%= Category::COLORS %>">
+<div data-controller="color-icon-picker" data-color-icon-picker-preset-colors-value="<%= Category::COLORS %>" data-color-icon-picker-contrast-error-value="<%= t("javascript.color_icon_picker.contrast_error") %>">
   <%= styled_form_with model: category, class: "space-y-4" do |f| %>
     <section class="space-y-4">
       <div class="w-fit mx-auto relative">

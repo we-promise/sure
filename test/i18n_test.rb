@@ -42,6 +42,53 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
+  def test_russian_catalog_covers_english_keys_and_preserves_interpolations
+    english = flatten_leaves(project_locale_tree("en"))
+    russian = flatten_leaves(project_locale_tree("ru"))
+    plural_suffix = /\.(one|few|many|other|zero|two)\z/
+    russian_keys = russian.keys.map { |key| key.sub(plural_suffix, "") }.to_set
+    missing = english.keys.reject { |key| russian_keys.include?(key.sub(plural_suffix, "")) }
+    assert_empty missing, "Russian translations missing: #{missing.join(', ')}"
+
+    plural_groups = english.keys.filter_map do |key|
+      key.delete_suffix(".one") if key.end_with?(".one") && english.key?(key.delete_suffix(".one") + ".other")
+    end
+    missing_plurals = plural_groups.flat_map do |group|
+      %w[one few many other].filter_map { |form| "#{group}.#{form}" unless russian.key?("#{group}.#{form}") }
+    end
+    assert_empty missing_plurals, "Russian plural forms missing: #{missing_plurals.join(', ')}"
+
+    scalar_pluralizations = russian.keys.filter_map do |key|
+      base_key = key.sub(plural_suffix, "")
+      next if base_key.start_with?("number.human.decimal_units.units.")
+
+      base_key if key != base_key && english[base_key].is_a?(String) && !english[base_key].include?("%{count}")
+    end.uniq
+    assert_empty scalar_pluralizations,
+                 "Russian plural translations require %{count} in the English source: #{scalar_pluralizations.join(', ')}"
+
+    mismatches = russian.filter_map do |key, value|
+      base_key = key.sub(plural_suffix, "")
+      source = english[key] || english["#{base_key}.other"] || english[base_key]
+      next unless source.is_a?(String) && value.is_a?(String)
+
+      required = source.scan(/%\{(\w+)\}/).flatten.uniq
+      actual = value.scan(/%\{(\w+)\}/).flatten.uniq
+      extra = actual - required
+      extra -= [ "count" ] if key != base_key
+      key if (required - actual).any? || extra.any?
+    end
+    assert_empty mismatches, "Russian interpolation mismatch: #{mismatches.join(', ')}"
+  end
+
+  def test_russian_timezone_names_cover_runtime_identifiers
+    missing = LanguagesHelper.timezone_option_rows.map { |row| row[:identifier] }.uniq.reject do |identifier|
+      I18n.exists?("settings.preferences.show.timezones.#{identifier}", :ru, fallback: false)
+    end
+
+    assert_empty missing, "Russian timezone labels missing: #{missing.join(', ')}"
+  end
+
   # The insights page, the card's "Dig in with AI" button and the push
   # notification all read this tree, so a gap shows Spanish users English
   # copy, and for the dig-in prompt, an English message in their chat box.
@@ -248,6 +295,13 @@ class I18nTest < ActiveSupport::TestCase
   end
 
   private
+    def project_locale_tree(locale)
+      Rails.root.glob("config/locales/**/*.yml").sort.each_with_object({}) do |path, tree|
+        data = YAML.load_file(path, aliases: true).fetch(locale, {})
+        tree.deep_merge!(data)
+      end
+    end
+
     # { "months_saved.one" => "...", ... } for UI.account.chart.loan in one locale.
     def loan_chart_leaves(locale)
       view_leaves("components", locale, "UI", "account", "chart", "loan")

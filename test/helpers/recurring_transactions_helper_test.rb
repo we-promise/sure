@@ -13,6 +13,11 @@ class RecurringTransactionsHelperTest < ActionView::TestCase
       assert_equal "1r", frequency_day_options.first.first
     end
 
+    I18n.with_locale(:ru) do
+      assert_equal "1-е число", frequency_day_options.first.first
+      assert_equal "28-е число", frequency_day_options[27].first
+    end
+
     I18n.with_locale(:es) do
       assert_equal "1", frequency_day_options.first.first
     end

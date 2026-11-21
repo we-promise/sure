@@ -62,6 +62,14 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilderTest < ActiveSupport::TestCase
     assert groups.all? { |g| g[:color].present? }
   end
 
+  test "includes the current locale in the chart payload" do
+    period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
+
+    I18n.with_locale(:ru) do
+      assert_equal "ru", builder.breakdown_series(period: period)[:locale]
+    end
+  end
+
   test "does not serialize a sub-unit residue the chart would plot as a move" do
     period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
 

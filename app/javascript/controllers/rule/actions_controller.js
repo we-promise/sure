@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="rule--actions"
 export default class extends Controller {
-  static values = { actionExecutors: Array };
+  static values = { actionExecutors: Array, emptyOptionsMessage: String };
   static targets = [
     "destroyField",
     "actionValue",
@@ -73,7 +73,8 @@ export default class extends Controller {
       if (!actionExecutor.options || actionExecutor.options.length === 0) {
         selectEl.disabled = true;
         const optionEl = document.createElement("option");
-        optionEl.textContent = "(none)";
+        optionEl.value = "";
+        optionEl.textContent = this.emptyOptionsMessageValue;
         selectEl.appendChild(optionEl);
       } else {
         selectEl.disabled = false;

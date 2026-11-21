@@ -103,8 +103,8 @@ ru:
         к Sophtron.
       no_user_id: ID пользователя Sophtron не настроен. Пожалуйста, настройте его
         в Настройках.
-      partial_invalid: "Привязано счетов: %{created_count}; уже были привязаны: %{already_linked_count}; с недопустимыми именами: %{invalid_count}"
-      partial_success: "Привязано счетов: %{created_count}. Уже были привязаны (%{already_linked_count}): %{already_linked_names}"
+      partial_invalid: 'Успешно привязано: %{created_count}; уже привязано: %{already_linked_count}; с недопустимыми именами: %{invalid_count}.'
+      partial_success: 'Успешно привязано: %{created_count}. Уже привязано: %{already_linked_count} (%{already_linked_names}).'
       success:
         few: Успешно связаны %{count} счёта
         many: Успешно связано %{count} счетов
@@ -288,12 +288,10 @@ ru:
       unlinked: Несвязанные
     sophtron_panel:
       field_descriptions:
-        access_key_html: "<strong>Ключ доступа:</strong> Ваше учетное данное ключа
-          доступа Sophtron"
+        access_key_html: '<strong>Ключ доступа:</strong> Ваш ключ доступа Sophtron'
         base_url_html: "<strong>Базовый URL:</strong> URL конечной точки API Sophtron,
           обычно https://api.sophtron.com/api"
-        user_id_html: "<strong>ID пользователя:</strong> Ваше учетное данное ID пользователя
-          Sophtron"
+        user_id_html: '<strong>ID пользователя:</strong> Ваш ID пользователя Sophtron'
       field_descriptions_title: 'Описание полей:'
       fields:
         access_key:

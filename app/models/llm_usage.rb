@@ -166,6 +166,11 @@ class LlmUsage < ApplicationRecord
     }
   end
 
+  # Check if this usage record represents a failed API call
+  def failed?
+    status == "failed"
+  end
+
   # The most recent calls in scope, newest first, each with all its requests in order, even one
   # outside the date range (a retry just after midnight).
   # @return [Array<LlmUsage::Call>]

@@ -16,3 +16,38 @@ ru:
       many: 'Импорт Lunchflow: не удалось получить операции по %{count} счетам'
       other: 'Импорт Lunchflow: не удалось получить операции по %{count} счёта'
     lunchflow_import_error: 'Импорт Lunchflow: %{error}'
+    enable_banking_history_truncated:
+      one: "Enable Banking: не удалось получить полную историю операций для %{count} счёта, поэтому более ранние операции могут отсутствовать"
+      few: "Enable Banking: не удалось получить полную историю операций для %{count} счёта, поэтому более ранние операции могут отсутствовать"
+      many: "Enable Banking: не удалось получить полную историю операций для %{count} счетов, поэтому более ранние операции могут отсутствовать"
+      other: "Enable Banking: не удалось получить полную историю операций для %{count} счетов, поэтому более ранние операции могут отсутствовать"
+    truelayer_accounts_failed:
+      one: "Импорт TrueLayer: не удалось обновить %{count} счёт"
+      few: "Импорт TrueLayer: не удалось обновить %{count} счёта"
+      many: "Импорт TrueLayer: не удалось обновить %{count} счетов"
+      other: "Импорт TrueLayer: не удалось обновить %{count} счетов"
+    truelayer_transactions_failed:
+      one: "Импорт TrueLayer: не удалось получить операции для %{count} счёта"
+      few: "Импорт TrueLayer: не удалось получить операции для %{count} счёта"
+      many: "Импорт TrueLayer: не удалось получить операции для %{count} счетов"
+      other: "Импорт TrueLayer: не удалось получить операции для %{count} счетов"
+    truelayer_balances_failed:
+      one: "Импорт TrueLayer: не удалось получить баланс для %{count} счёта"
+      few: "Импорт TrueLayer: не удалось получить баланс для %{count} счёта"
+      many: "Импорт TrueLayer: не удалось получить баланс для %{count} счетов"
+      other: "Импорт TrueLayer: не удалось получить баланс для %{count} счетов"
+    truelayer_processing_failed:
+      one: "Импорт TrueLayer: не удалось обработать %{count} счёт"
+      few: "Импорт TrueLayer: не удалось обработать %{count} счёта"
+      many: "Импорт TrueLayer: не удалось обработать %{count} счетов"
+      other: "Импорт TrueLayer: не удалось обработать %{count} счетов"
+    truelayer_entries_failed:
+      one: "Импорт TrueLayer: не удалось импортировать %{count} операцию"
+      few: "Импорт TrueLayer: не удалось импортировать %{count} операции"
+      many: "Импорт TrueLayer: не удалось импортировать %{count} операций"
+      other: "Импорт TrueLayer: не удалось импортировать %{count} операций"
+    truelayer_scheduling_failed:
+      one: "Импорт TrueLayer: не удалось запланировать обновление баланса для %{count} счёта"
+      few: "Импорт TrueLayer: не удалось запланировать обновление баланса для %{count} счёта"
+      many: "Импорт TrueLayer: не удалось запланировать обновление баланса для %{count} счетов"
+      other: "Импорт TrueLayer: не удалось запланировать обновление баланса для %{count} счетов"

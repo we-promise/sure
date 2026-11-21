@@ -1,6 +1,15 @@
 require "test_helper"
 
 class ApplicationHelperTest < ActionView::TestCase
+  test "currency labels use the selected locale and preserve ISO codes" do
+    I18n.with_locale(:ru) do
+      assert_equal "Доллар США (USD)", currency_label("USD")
+      assert_equal "Российский рубль (RUB)", currency_label("RUB")
+      assert_equal "Bitcoin (BTC)", currency_label("BTC")
+    end
+    I18n.with_locale(:en) { assert_equal "United States Dollar (USD)", currency_label("USD") }
+  end
+
   test "#icon normalizes icon names to lowercase" do
     capture = []
 

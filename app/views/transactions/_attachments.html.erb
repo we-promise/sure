@@ -3,6 +3,7 @@
 <div id="transaction_attachments_<%= transaction.id %>" class="pb-4">
   <!-- Upload Form -->
   <% if can_upload && transaction.attachments.count < Transaction::MAX_ATTACHMENTS_PER_TRANSACTION %>
+    <% remaining_uploads = Transaction::MAX_ATTACHMENTS_PER_TRANSACTION - transaction.attachments.count %>
     <%= styled_form_with url: transaction_attachments_path(transaction),
           method: :post,
           multipart: true,
@@ -10,8 +11,15 @@
           class: "mb-4",
           data: {
             controller: "attachment-upload",
-            attachment_upload_max_files_value: Transaction::MAX_ATTACHMENTS_PER_TRANSACTION - transaction.attachments.count,
-            attachment_upload_max_size_value: Transaction::MAX_ATTACHMENT_SIZE
+            attachment_upload_max_files_value: remaining_uploads,
+            attachment_upload_max_size_value: Transaction::MAX_ATTACHMENT_SIZE,
+            attachment_upload_locale_value: translation_locale("javascript.attachment_upload.upload_files"),
+            attachment_upload_labels_value: {
+              upload: t(".upload"),
+              upload_files: t("javascript.attachment_upload.upload_files"),
+              too_many_files: t("javascript.attachment_upload.too_many_files", max: remaining_uploads),
+              file_too_large: t("javascript.attachment_upload.file_too_large", max: number_to_human_size(Transaction::MAX_ATTACHMENT_SIZE))
+            }
           } do |form| %>
       <div class="space-y-3">
         <div>

@@ -1,0 +1,12 @@
+---
+ru:
+  activerecord:
+    models:
+      rule_group:
+        one: "Группа"
+        few: "Группы"
+        many: "Группы"
+        other: "Группы"
+    attributes:
+      rule_group:
+        name: "Название"

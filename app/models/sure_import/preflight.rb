@@ -411,7 +411,7 @@ class SureImport::Preflight
             "sure_import.preflight.provider_merchant_diff",
             line: record[:line_number],
             name: data["name"],
-            fields: diff.pluck(:field).join(", ")
+            fields: diff.pluck(:field).map { |field| I18n.t("imports.ready.provider_merchant_diff_fields.#{field}") }.join(", ")
           ),
           details: { merchant_name: data["name"], diff: diff }
         )

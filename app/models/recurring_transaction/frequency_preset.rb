@@ -383,7 +383,7 @@ class RecurringTransaction
         def day_phrase(day)
           return I18n.t("recurring_transactions.frequency.last_day") if day == RecurrenceRule::LAST
 
-          day.ordinalize
+          ApplicationController.helpers.localized_ordinal(day)
         end
 
         def weekday_name(weekday)
