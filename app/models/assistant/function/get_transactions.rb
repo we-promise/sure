@@ -50,8 +50,9 @@ class Assistant::Function::GetTransactions < Assistant::Function
           user asks when a payment was actually made.
 
         Note: `total_income` and `total_expenses` are computed over the whole
-        filtered set and exclude tax-advantaged accounts, so they do not always
-        equal the sum of the rows on this page.
+        filtered set, exclude tax-advantaged accounts, and leave excluded rows
+        out (which still appear in the list with `excluded: true`), so they do
+        not always equal the sum of the rows on this page.
 
         Note on pagination:
 

@@ -123,7 +123,11 @@ namespace :simplefin do
         puts "To restore these transactions, run:"
         puts "  rails simplefin:pending_restore DRY_RUN=false"
       else
-        Entry.where(id: to_restore.map(&:id)).update_all(excluded: false)
+        # Stamp updated_at too: update_all bypasses the timestamp bump that
+        # Family#entries_cache_version keys on, so without it the cached
+        # totals keep serving the pre-restore sums until the key rolls over
+        # (Date.current) the next day.
+        Entry.where(id: to_restore.map(&:id)).update_all(excluded: false, updated_at: Time.current)
         puts "Restored #{to_restore.count} transactions!"
       end
     else

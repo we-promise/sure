@@ -61,6 +61,20 @@ class MerchantsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "averages spending over non-excluded purchases only" do
+    create_transaction(account: accounts(:depository), name: "Netflix plan", merchant: @merchant, amount: 100)
+    create_transaction(account: accounts(:depository), name: "Netflix plan", merchant: @merchant, amount: 100, excluded: true)
+
+    get merchant_url(@merchant)
+
+    assert_response :success
+    # The excluded charge is out of the $100 total, so it must be out of the
+    # average too: one purchase at $100, not two at an average of $50.
+    assert_select "dt", text: "Average transaction" do |dt|
+      assert_equal "$100.00", dt.first.next_element.text.strip
+    end
+  end
+
   test "does not show a provider merchant used only on accounts the user cannot access" do
     provider = ProviderMerchant.create!(name: "Private Co", source: "plaid")
     create_transaction(account: accounts(:investment), name: "Private purchase", merchant: provider)

@@ -22,6 +22,23 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
     assert_equal @transaction.entry.notes, transaction[:notes]
   end
 
+  test "total_income leaves an excluded transaction out but still lists it" do
+    excluded = Entry.create!(
+      account: accounts(:depository),
+      name: "Excluded refund 4491",
+      date: Date.current,
+      amount: -200,
+      currency: "USD",
+      excluded: true,
+      entryable: Transaction.new
+    )
+
+    result = @function.call("page" => 1, "order" => "asc", "search" => excluded.name)
+
+    assert_equal Money.new(0, "USD").format, result[:total_income]
+    assert_equal [ excluded.entryable_id ], result[:transactions].map { |item| item[:id] }
+  end
+
   test "excludes transactions from inaccessible accounts" do
     hidden_entry = Entry.create!(
       account: accounts(:investment),
