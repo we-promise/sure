@@ -87,6 +87,7 @@ class RedbarkItem::SyncerTest < ActiveSupport::TestCase
       sync.stubs(:respond_to?).with(:status_text).returns(true)
       sync.stubs(:respond_to?).with(:sync_stats).returns(true)
       sync.stubs(:sync_stats).returns({})
+      sync.stubs(:id).returns(nil)
       sync.stubs(:created_at).returns(Time.current)
       sync.stubs(:window_start_date).returns(nil)
       sync.stubs(:window_end_date).returns(nil)
