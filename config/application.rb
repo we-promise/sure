@@ -31,6 +31,23 @@ module Sure
     # Explicit source of truth for the session cookie name (also used by Codespaces).
     config.session_store :cookie_store, key: SESSION_COOKIE_KEY
 
+    # Pages are server-rendered HTML that compresses ~15x, and the Docker image
+    # serves Puma directly, so without this every page crossed the network
+    # uncompressed unless a reverse proxy happened to compress it. A proxy that
+    # does compress leaves an already-encoded response alone. Not in
+    # development, where rack-mini-profiler has to inject into the HTML.
+    #
+    # After Rack::Sendfile, which every stack has: ActionDispatch::Static is
+    # absent when public_file_server is disabled. Text only (PDFs and images are
+    # already compressed), and never a 206, whose Content-Range counts bytes of
+    # the uncompressed file.
+    unless Rails.env.development?
+      config.middleware.insert_after Rack::Sendfile, Rack::Deflater,
+        include: %w[text/html text/vnd.turbo-stream.html text/css text/plain text/csv text/javascript
+                    application/javascript application/json application/xml image/svg+xml],
+        if: ->(_env, status, _headers, _body) { status != 206 }
+    end
+
     # TODO: This is here for incremental adoption of localization.  This can be removed when all translations are implemented.
     config.i18n.fallbacks = true
 
