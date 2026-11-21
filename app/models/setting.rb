@@ -104,7 +104,9 @@ class Setting < RailsSettings::Base
   end
 
   # Provider selection
-  field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")
+  # A Proc default is read on every call, so a blank variable (VAR= in compose) means unset
+  DEFAULT_EXCHANGE_RATE_PROVIDER = "twelve_data"
+  field :exchange_rate_provider, type: :string, default: -> { ENV["EXCHANGE_RATE_PROVIDER"].presence || DEFAULT_EXCHANGE_RATE_PROVIDER }
   field :securities_provider, type: :string, default: ENV.fetch("SECURITIES_PROVIDER", "twelve_data")
 
   # Multi-provider: comma-separated list of enabled securities providers

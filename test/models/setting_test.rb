@@ -344,6 +344,33 @@ class SettingTest < ActiveSupport::TestCase
     Setting.anthropic_access_token = nil
   end
 
+  test "the exchange-rate default reads ENV at read time" do
+    Setting.where(var: "exchange_rate_provider").delete_all
+    Setting.clear_cache
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "moex_public") do
+      assert_equal "moex_public", Setting.exchange_rate_provider
+    end
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "") do
+      assert_equal "twelve_data", Setting.exchange_rate_provider
+    end
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
+      assert_equal "twelve_data", Setting.exchange_rate_provider
+    end
+  end
+
+  test "a saved exchange-rate provider wins over the ENV default" do
+    Setting.exchange_rate_provider = "frankfurter"
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "moex_public") do
+      assert_equal "frankfurter", Setting.exchange_rate_provider
+    end
+  ensure
+    Setting.exchange_rate_provider = nil
+  end
+
   test "reencrypt_secrets_from rejects a blank old key" do
     assert_raises(ArgumentError) { Setting.reencrypt_secrets_from("") }
   end

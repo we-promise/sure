@@ -57,7 +57,7 @@ class ConfigurationHealth
   end
 
   def exchange_rates
-    selected = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
+    selected = ExchangeRate.configured_provider_name
     providers = provider_statuses(:exchange_rates, [ selected ].compact_blank)
     invalid = providers.first&.status == :invalid
     check(:exchange_rates, invalid ? :not_configured : provider_status(providers),

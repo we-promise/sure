@@ -31,6 +31,20 @@ class ExchangeRateTest < ActiveSupport::TestCase
     end
   end
 
+  test "a blank saved provider resolves to the default instead of raising" do
+    ExchangeRate.unstub(:provider)
+    Setting.exchange_rate_provider = ""
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => "test-key") do
+      assert_equal "", Setting.exchange_rate_provider, "precondition: a blank row is stored"
+      assert_equal "twelve_data", ExchangeRate.configured_provider_name
+      assert_equal "twelve_data", ExchangeRate.provider_name
+      assert_instance_of Provider::TwelveData, ExchangeRate.provider
+    end
+  ensure
+    Setting.exchange_rate_provider = nil
+  end
+
   test "keyless fallback on a signed-in request tries Frankfurter once, then skips it for a minute" do
     keyless_fallback(signed_in: true) do
       stub_request(:get, %r{/rate/SEK/JPY}).to_timeout
