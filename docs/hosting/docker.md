@@ -631,7 +631,7 @@ docker compose run --rm backup restore 0.7.4/2026-10-01_080524-manual   # or "la
 docker compose up -d
 ```
 
-`restore` replaces the database and all uploaded files. It refuses while other clients are connected to the database, and asks you to type `restore` to confirm (pass `--yes` to skip in scripts).
+`restore` replaces the database and all uploaded files (`--database-only` leaves the files alone). It refuses while other clients are connected to the database, and asks you to type `restore` to confirm (pass `--yes` to skip in scripts).
 
 ### Restore into a new folder or onto a new machine
 
@@ -719,7 +719,9 @@ It asks you to confirm that this PostgreSQL server is used only for Sure, then:
 2. sets the PostgreSQL 16 data aside inside the same volume, in a `pg16-old` folder; nothing is deleted;
 3. starts PostgreSQL 18, restores the backup into it and starts Sure.
 
-If it fails before step 2, your data is unchanged but Sure stays stopped: fix the problem and run the command again, or set the image and mount back to PostgreSQL 16 and run `docker compose up -d`. If it fails after step 2, it prints the commands that put the old data back. Until then `db-version-check` keeps the database from starting, and running `upgrade-postgres` again prints those commands instead of upgrading.
+If it fails or is interrupted before step 2, your data is unchanged but Sure stays stopped: fix the problem and run the command again, or set the image and mount back to PostgreSQL 16 and run `docker compose up -d`. If it fails during step 2 or 3, it prints the commands that put the old data back. Until then `db-version-check` keeps the database from starting, and running `upgrade-postgres` again prints those commands instead of upgrading.
+
+If the restore succeeds but Sure itself does not start, the upgrade is complete: the database is on PostgreSQL 18 and running the command again does nothing. It prints the startup error; fix that and run `docker compose up -d`, or go back as described [below](#going-back-to-postgresql-16).
 
 Only Sure's database is carried over. If the server holds other databases, the command refuses and changes nothing; move those yourself (for example with `pg_dumpall` while still on the old version) or give Sure its own database server. `--yes` skips the confirmation for scripts, and `--old-image` names the image that ran the old version if it can't be worked out (it handles `postgres` and `pgvector/pgvector` images).
 
@@ -750,7 +752,9 @@ docker compose up -d
 `upgrade-postgres` is a backup and restore. To do the same by hand, or to carry other databases and roles as well, dump everything while still on the old image and mount, switch the `db` service, start with a fresh volume and load the dump:
 
 ```bash
-(umask 077 && rm -f all-databases.sql && docker compose exec -T db pg_dumpall -U <POSTGRES_USER> > all-databases.sql)   # still on PostgreSQL 16; the file holds your data, so only you can read it
+# Still on PostgreSQL 16. The file holds your data, so only you can read it, and it only
+# appears once the dump has succeeded. If this command fails, stop here.
+(umask 077 && rm -f all-databases.sql all-databases.sql.partial && docker compose exec -T db pg_dumpall -U <POSTGRES_USER> > all-databases.sql.partial && mv all-databases.sql.partial all-databases.sql)
 docker compose down
 # Change the db image and mount in compose.yml, and move the old data aside as upgrade-postgres does, or use a new volume.
 docker compose up -d db
