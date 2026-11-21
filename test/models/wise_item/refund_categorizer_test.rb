@@ -1,0 +1,140 @@
+require "test_helper"
+
+class WiseItem::RefundCategorizerTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:empty)
+    @wise_item = WiseItem.create!(family: @family, name: "Test Wise", token: "test_token", profile_id: "123", profile_type: :business)
+    wise_account = @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR", current_balance: 0,
+                                                    raw_payload: { "type" => "STANDARD" })
+    @account = Account.create!(family: @family, name: "Wise EUR", balance: 0, currency: "EUR",
+                               accountable: Depository.new(subtype: "checking"))
+    AccountProvider.create!(account: @account, provider: wise_account)
+    @shopping = @family.categories.create!(name: "Shopping", color: "#123456", lucide_icon: "shopping-bag")
+  end
+
+  test "gives a full card refund the category of its purchase" do
+    purchase = card_payment("Mgp*Vinted Vilnius", 21.94, Date.new(2026, 9, 26), category: @shopping)
+    refund = card_refund("Vinted", 21.94, Date.new(2026, 10, 21))
+
+    assert_equal 1, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_equal @shopping, refund.reload.category
+    assert_equal @shopping, purchase.reload.category
+  end
+
+  test "leaves a partial refund alone" do
+    card_payment("Wallapop", 25.34, Date.new(2026, 9, 15), category: @shopping)
+    refund = card_refund("Wallapop", 10, Date.new(2026, 9, 23))
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_nil refund.reload.category
+  end
+
+  test "leaves a refund that could be any of several purchases alone" do
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 1), category: @shopping)
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 3), category: @shopping)
+    refund = card_refund("Wallapop", 6.74, Date.new(2026, 9, 6))
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_nil refund.reload.category
+  end
+
+  test "leaves a refund alone when an uncategorized purchase could be the one" do
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 1), category: @shopping)
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 3), category: nil)
+    refund = card_refund("Wallapop", 6.74, Date.new(2026, 9, 6))
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_nil refund.reload.category
+  end
+
+  test "tells merchants in other scripts apart" do
+    card_payment("東京 Shop", 9.5, Date.new(2026, 9, 1), category: @shopping)
+    refund = card_refund("大阪 Shop", 9.5, Date.new(2026, 9, 6))
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_nil refund.reload.category
+  end
+
+  test "keeps vowel signs apart" do
+    card_payment("कला", 9.5, Date.new(2026, 9, 1), category: @shopping)
+    refund = card_refund("कुल", 9.5, Date.new(2026, 9, 6))
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_nil refund.reload.category
+  end
+
+  test "prefers the purchase of the refund's card transaction to others from its merchant" do
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 1), category: nil, resource_id: "556")
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 3), category: @shopping, resource_id: "555")
+    refund = card_refund("Wallapop", 6.74, Date.new(2026, 9, 6), resource_id: "555")
+
+    assert_equal 1, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_equal @shopping, refund.reload.category
+  end
+
+  test "skips a refund removed before it is locked and goes on" do
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 5), category: @shopping)
+    card_refund("Wallapop", 6.74, Date.new(2026, 9, 6))
+    Transaction.any_instance.stubs(:lock!).raises(ActiveRecord::RecordNotFound)
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+  end
+
+  test "matches merchants written only in other scripts" do
+    card_payment("東京ショップ", 9.5, Date.new(2026, 9, 1), category: @shopping)
+    refund = card_refund("東京ショップ", 9.5, Date.new(2026, 9, 6))
+
+    assert_equal 1, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_equal @shopping, refund.reload.category
+  end
+
+  # Once a balance has statements, its statement rows book the card
+  # payments, named by Wise's description and sharing the CARD- reference.
+  test "gives a statement refund the category of the statement purchase with its reference" do
+    statement_row("Card transaction of 21.94 EUR issued by Vinted", 21.94, Date.new(2026, 9, 26), "CARD-555", category: @shopping)
+    refund = statement_row("Refund of card transaction", -21.94, Date.new(2026, 10, 21), "CARD-555")
+
+    assert_equal 1, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_equal @shopping, refund.reload.category
+  end
+
+  test "leaves a statement refund of another card transaction alone" do
+    statement_row("Vinted", 21.94, Date.new(2026, 9, 26), "CARD-555", category: @shopping)
+    refund = statement_row("Vinted", -21.94, Date.new(2026, 10, 21), "CARD-556")
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_nil refund.reload.category
+  end
+
+  test "does not change a refund whose category is locked" do
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 5), category: @shopping)
+    refund = card_refund("Wallapop", 6.74, Date.new(2026, 9, 6))
+    refund.lock_attr!(:category_id)
+
+    assert_equal 0, WiseItem::RefundCategorizer.new(@wise_item).categorize!
+    assert_nil refund.reload.category
+  end
+
+  private
+    def card_payment(name, amount, date, category:, resource_id: nil)
+      wise_transaction(name, amount, date, category: category,
+                       extra: { "activity_type" => "CARD_PAYMENT", "resource_id" => resource_id }.compact)
+    end
+
+    def card_refund(name, amount, date, resource_id: nil)
+      wise_transaction(name, -amount, date,
+                       extra: { "activity_type" => "CARD_PAYMENT", "description" => "Refunded", "resource_id" => resource_id }.compact)
+    end
+
+    def statement_row(name, amount, date, reference, category: nil)
+      extra = { "statement_id" => reference, "statement_type" => amount.negative? ? "CREDIT" : "DEBIT", "reference" => reference }
+      wise_transaction(name, amount, date, category: category, extra: extra)
+    end
+
+    def wise_transaction(name, amount, date, extra:, category: nil)
+      entry = @account.entries.create!(name: name, amount: amount, currency: "EUR", date: date, source: "wise",
+                                       external_id: "wise_activity_#{SecureRandom.hex(4)}",
+                                       entryable: Transaction.new(category: category, extra: { "wise" => extra }))
+      entry.entryable
+    end
+end

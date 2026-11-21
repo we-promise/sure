@@ -40,6 +40,12 @@ class WiseItem::ProcessLinkedAccountJobTest < ActiveJob::TestCase
     assert_empty @wise_item.syncs, "the connection's own sync is left alone"
   end
 
+  test "gives the booked card refunds the category of their purchase" do
+    WiseItem.any_instance.expects(:categorize_card_refunds!).once
+
+    WiseItem::ProcessLinkedAccountJob.perform_now(@gbp)
+  end
+
   # The balance's processing lock keeps the job from interleaving with the
   # connection's sync processing the same balance.
   test "books nothing outside the balance's processing lock" do

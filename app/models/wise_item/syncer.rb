@@ -45,6 +45,7 @@ class WiseItem::Syncer
       collect_wise_prune_stats(sync, process_results)
 
       wise_item.link_jar_transfers!
+      wise_item.categorize_card_refunds!
 
       # Phase 4: Schedule balance calculations
       update_status(sync, :calculating_balances)

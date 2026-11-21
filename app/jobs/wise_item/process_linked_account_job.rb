@@ -22,6 +22,7 @@ class WiseItem::ProcessLinkedAccountJob < ApplicationJob
     # Once the new legs are committed, and before the account sync's
     # transfer matching sees them.
     wise_account.wise_item.link_jar_transfers!
+    wise_account.wise_item.categorize_card_refunds!
 
     account.sync_later
   rescue ActiveRecord::Deadlocked
