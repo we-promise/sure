@@ -50,6 +50,15 @@ class ReceiptItemizationTest < ActiveSupport::TestCase
     assert_no_match "private receipt text", log.message
   end
 
+  test "invalid receipt currency is not exposed through the job error" do
+    request = ReceiptItemization.start!(transaction: @transaction, user: @user)
+    error = assert_raises(Ai::Error::InvalidOutput) do
+      request.apply_ai(Ai::Result.new(value: { currency: "private receipt text", line_items: [ { name: "Food", amount: 100 } ] }))
+    end
+    assert_no_match "private receipt text", error.message
+    assert_empty request.reload.proposal
+  end
+
   test "a job for a deleted attachment is discarded" do
     request = ReceiptItemization.start!(transaction: @transaction, user: @user)
     @transaction.attachments.first.destroy!

@@ -61,6 +61,9 @@ class ReceiptItemization < ApplicationRecord
       })
     end
     1
+  rescue Transaction::ReceiptItemizer::Error
+    # The shared job logs error messages; receipt-derived values must stay private.
+    raise Ai::Error::InvalidOutput, "The receipt could not be converted into a split proposal"
   end
 
   def ai_finished(_count) = broadcast_result
