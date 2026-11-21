@@ -1,4 +1,7 @@
 class Import < ApplicationRecord
+  # Carried by ImportJob so account mappings do not depend on request-local state.
+  attr_accessor :initiating_user
+
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
 
@@ -249,7 +252,11 @@ class Import < ApplicationRecord
 
     update! status: :importing
 
-    ImportJob.perform_later(self)
+    if Current.user
+      ImportJob.perform_later(self, initiating_user: Current.user)
+    else
+      ImportJob.perform_later(self)
+    end
   end
 
   # Whether publishing would change existing records even when the dry run
