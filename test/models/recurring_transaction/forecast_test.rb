@@ -61,6 +61,31 @@ class RecurringTransaction::ForecastTest < ActiveSupport::TestCase
     end
   end
 
+  test "leaves out disabled accounts unless active_accounts_only is off, as the list does" do
+    account = accounts(:credit_card)
+    series = create_series(name: "Old card fee", next_expected_date: 3.days.from_now.to_date, account: account)
+    account.update_columns(status: "disabled")
+
+    assert_not_includes forecast_with.series, series
+    assert_includes forecast_with(active_accounts_only: "false").series, series
+  end
+
+  test "matches a transfer on its destination account" do
+    transfer = create_series(name: "Savings", next_expected_date: 3.days.from_now.to_date,
+      destination_account: accounts(:credit_card))
+
+    assert_includes forecast_with(account_ids: [ accounts(:credit_card).id ]).series, transfer
+    assert_includes forecast_with(accounts: [ accounts(:credit_card).name ]).series, transfer
+  end
+
+  test "filters on the amount a manual series shows" do
+    series = create_series(name: "Power", amount: 50, next_expected_date: 3.days.from_now.to_date,
+      manual: true, expected_amount_avg: 120)
+
+    assert_includes forecast_with(amount: "100", amount_operator: "greater").series, series
+    assert_not_includes forecast_with(amount: "100", amount_operator: "less").series, series
+  end
+
   test "applies the list's account, category, merchant, type, search and amount filters" do
     due = 3.days.from_now.to_date
     rent = create_series(name: "Rent", amount: 1500, next_expected_date: due, category: categories(:subcategory))
