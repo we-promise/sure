@@ -30,6 +30,26 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name*='[value]'] option[selected][value='#{category.id}']"
   end
 
+  test "should get new with merchant_id prefilling a merchant condition" do
+    merchant = merchants(:netflix)
+    get new_rule_url(resource_type: "transaction", name: merchant.name, merchant_id: merchant.id)
+    assert_response :success
+
+    assert_select "input[name='rule[name]'][value=?]", merchant.name
+    assert_select "select[name*='[condition_type]'] option[selected][value='transaction_merchant']"
+    assert_select "select[name*='[value]'] option[selected][value=?]", merchant.id
+  end
+
+  test "should get new with another family's merchant_id falling back to name-only prefill" do
+    foreign_merchant = FamilyMerchant.create!(family: families(:empty), name: "Foreign Shop")
+    get new_rule_url(resource_type: "transaction", name: "Starbucks", merchant_id: foreign_merchant.id)
+    assert_response :success
+
+    assert_select "select[name*='[condition_type]'] option[selected][value='transaction_name']"
+    assert_select "select[name*='[condition_type]'] option[selected][value='transaction_merchant']", false
+    assert_select "option[value=?]", foreign_merchant.id, false
+  end
+
   test "should get new with malformed merchant_id falling back to name-only prefill" do
     get new_rule_url(
       resource_type: "transaction",
