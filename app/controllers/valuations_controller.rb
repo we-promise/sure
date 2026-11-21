@@ -69,8 +69,11 @@ class ValuationsController < ApplicationController
   def update
     return unless require_account_permission!(@entry.account)
 
-    # Notes updating is independent of reconciliation, just a simple CRUD operation
-    @entry.update!(notes: entry_params[:notes]) if entry_params[:notes].present?
+    # Notes updating is independent of reconciliation, just a simple CRUD operation.
+    # Saved whenever the form submits the field, so a cleared note stays cleared,
+    # stored as nil like an entry that never had one; the balance confirmation
+    # form does not send notes, so it leaves them alone.
+    @entry.update!(notes: entry_params[:notes].presence) if entry_params.key?(:notes)
 
     if entry_params[:date].present? && entry_params[:amount].present?
       result = @entry.account.update_reconciliation(
