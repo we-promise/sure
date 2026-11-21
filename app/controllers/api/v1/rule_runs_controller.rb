@@ -4,7 +4,7 @@ class Api::V1::RuleRunsController < Api::V1::BaseController
   include Pagy::Backend
 
   STATUSES = %w[pending success failed].freeze
-  EXECUTION_TYPES = %w[manual scheduled].freeze
+  EXECUTION_TYPES = %w[manual scheduled immediate].freeze
   InvalidFilterError = Class.new(StandardError)
 
   before_action :ensure_read_scope

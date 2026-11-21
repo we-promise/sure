@@ -606,7 +606,7 @@ curl -X POST https://your-sure-instance/mcp \
 
 ### OpenClaw Gateway Example
 
-[OpenClaw](https://github.com/luckyPipewrench/openclaw) is an AI agent gateway that exposes agents as OpenAI-compatible endpoints. If your agent runs behind OpenClaw, configure it like this:
+[OpenClaw](https://github.com/openclaw/openclaw) is an AI agent gateway that exposes agents as OpenAI-compatible endpoints. If your agent runs behind OpenClaw, configure it like this:
 
 ```bash
 ASSISTANT_TYPE=external
