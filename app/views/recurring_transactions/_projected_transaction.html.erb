@@ -1,4 +1,4 @@
-<%# locals: (recurring_transaction:) %>
+<%# locals: (recurring_transaction:, due_on: recurring_transaction.next_expected_date) %>
 
 <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4">
   <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
@@ -42,7 +42,7 @@
             </div>
 
             <div class="text-secondary text-xs font-normal">
-              <%= days_left = (recurring_transaction.next_expected_date.to_date - Time.zone.today).to_i
+              <%= days_left = (due_on.to_date - Time.zone.today).to_i
               days_left.zero? ? t("recurring_transactions.expected_today") : t("recurring_transactions.expected_in", count: days_left) %>
             </div>
           </div>
