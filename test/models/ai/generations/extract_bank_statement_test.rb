@@ -32,6 +32,12 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_operator checks.dates_anchored, :>=, 0.5
   end
 
+  test "a space-grouped amount is found whole, but its last group isn't an amount of its own" do
+    assert check(value([ [ "2025-02-01", 1234.56 ] ]), source: "01/02/2025 salary 1 234,56").amounts_in_source
+    assert check(value([ [ "2025-02-01", 234.56 ] ]), source: "01/02/2025 salary 234,56").amounts_in_source
+    assert_equal false, check(value([ [ "2025-02-01", 234.56 ] ]), source: "01/02/2025 salary 1 234,56").amounts_in_source
+  end
+
   test "dotted and localized dates anchor their amounts" do
     source = "05.01.2025 fee 12,50|5 janvier fee 12,50"
 

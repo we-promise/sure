@@ -29,6 +29,23 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_equal "gpt-4.1-mini", outcome.model
   end
 
+  test "each document route takes the PDF only within its own limits" do
+    skip_without_pdftoppm
+    limited = Ai::Config::Model.new(endpoint: Ai::Config::Endpoint.new(name: :limited, protocol: :compatible, preset: :openai,
+                                                                        base_url: "https://api.openai.com/v1"),
+                                    name: "gpt-4.1-mini", capabilities: %i[structured_output documents])
+    unlimited = Ai::Config::Model.new(endpoint: Ai::Config::Endpoint.new(name: :unlimited, protocol: :compatible,
+                                                                          base_url: "http://docs.local:8080/v1", location: :local),
+                                      name: "doc-reader", capabilities: %i[structured_output documents])
+
+    with_reading_routes(limited, unlimited) do
+      reader = reading(blank_pdf(pages: 101))   # over the OpenAI preset's 100 pages
+
+      assert_nil reader.ways[:pdf], "the second route can take it"
+      assert_equal [ unlimited ], reader.send(:plan_for, :pdf).routes.map(&:model)
+    end
+  end
+
   test "a text model reads the text layer, page by page, and every check runs on it" do
     requests = stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
 

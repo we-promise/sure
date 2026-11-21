@@ -110,22 +110,8 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # Two live drafts from one statement could both publish overlapping rows as
     # new transactions. Reuse the waiting draft instead of leaving another one
     # to publish on top of it.
-    live_draft = family.imports.where(
-      type: "TransactionImport", source_pdf_import_id: pdf_import.id, account_id: account.id
-    ).where(
-      "status IN (?) OR EXISTS (SELECT 1 FROM entries WHERE entries.import_id = imports.id)",
-      %w[pending importing complete reverting revert_failed]
-    ).first
-    if live_draft
-      return {
-        success: false,
-        error: "draft_already_exists",
-        import_id: live_draft.id,
-        message: "This statement already has a draft for that account (import #{live_draft.id}). " \
-                 "Delete that draft first; reviewing or publishing it does not allow a second extraction, " \
-                 "and read_as alone cannot create another draft while it exists.",
-        available_actions: [ "Ask the user to delete draft import #{live_draft.id}, then call this tool again" ]
-      }
+    if (draft = live_draft(pdf_import, account))
+      return draft_exists(draft)
     end
 
     read_as = params["read_as"].presence_in(PdfImport::READ_AS) || "auto"   # omitted is Auto, as the tool says
@@ -145,8 +131,13 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     csv_content = generate_csv(result[:transactions])
 
     # A row-generation failure must roll the draft back too, or a retry meets an empty
-    # draft and can only report draft_already_exists.
-    import = family.imports.transaction do
+    # draft and can only report draft_already_exists. The draft is checked again under the source
+    # import's lock: another call may have created one while this one extracted.
+    import = pdf_import.with_lock do
+      if (draft = live_draft(pdf_import, account))
+        return draft_exists(draft)
+      end
+
       created = family.imports.create!(
         type: "TransactionImport",
         account: account,
@@ -208,6 +199,26 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         "The statement's balances weren't found, so the rows couldn't be checked; ask the user to review them. "
       else "The extraction failed its checks, so some rows may be wrong or missing; tell the user. "
       end
+    end
+
+    # A draft that still waits, runs or published rows from this statement for this account.
+    def live_draft(pdf_import, account)
+      family.imports.where(type: "TransactionImport", source_pdf_import_id: pdf_import.id, account_id: account.id)
+            .where("status IN (?) OR EXISTS (SELECT 1 FROM entries WHERE entries.import_id = imports.id)",
+                   %w[pending importing complete reverting revert_failed])
+            .first
+    end
+
+    def draft_exists(draft)
+      {
+        success: false,
+        error: "draft_already_exists",
+        import_id: draft.id,
+        message: "This statement already has a draft for that account (import #{draft.id}). " \
+                 "Delete that draft first; reviewing or publishing it does not allow a second extraction, " \
+                 "and read_as alone cannot create another draft while it exists.",
+        available_actions: [ "Ask the user to delete draft import #{draft.id}, then call this tool again" ]
+      }
     end
 
     def generate_csv(transactions)

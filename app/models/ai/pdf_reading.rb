@@ -92,7 +92,7 @@ class Ai::PdfReading
     attempts = []
     best = nil
     each_way(read_as, start:, attempts:, cancelled:, keep: -> { best }) do |way, units, source, untranscribed_pages|
-      result = Ai::Generations::ExtractBankStatement.new(units:, content:, filename:, family:, user:).call(plan:, cancelled:)
+      result = Ai::Generations::ExtractBankStatement.new(units:, content:, filename:, family:, user:).call(plan: plan_for(way), cancelled:)
       result.value!
 
       balances = printed_balances(source)
@@ -122,7 +122,7 @@ class Ai::PdfReading
       usage = nil
       CLASSIFY_BATCHES.times do
         begin
-          result = Ai::Generations::ReadPdf.new(units:, content:, filename:, family:, user:).call(batches: 1, plan:, cancelled:)
+          result = Ai::Generations::ReadPdf.new(units:, content:, filename:, family:, user:).call(batches: 1, plan: plan_for(way), cancelled:)
           result.value!
         rescue Ai::Error::Cancelled
           raise
@@ -217,8 +217,7 @@ class Ai::PdfReading
       when :pdf
         return :needs_documents unless text_routes.any? { _1.model.capable?(:documents) }
 
-        limits = text_routes.find { _1.model.capable?(:documents) }.endpoint.pdf_limits
-        :too_large if limits && (content.bytesize > limits[:bytes] || page_count.to_i > limits[:pages])
+        :too_large unless text_routes.any? { _1.model.capable?(:documents) && fits?(_1) }
       when :text then :no_text_layer unless text_layer?
       when :images
         return :needs_vision unless text_routes.any? { _1.model.capable?(:vision) }
@@ -339,6 +338,19 @@ class Ai::PdfReading
     end
 
     def text_routes = plan.routes.select { _1.model.capable?(:structured_output) }
+
+    # Each document route takes the PDF only within its own limits: a later route with higher
+    # limits can still read a file the first can't, and failover never sends it to one that can't.
+    def plan_for(way)
+      return plan unless way == :pdf
+
+      plan.with(routes: plan.routes.reject { _1.model.capable?(:documents) && !fits?(_1) })
+    end
+
+    def fits?(route)
+      limits = route.endpoint.pdf_limits
+      limits.nil? || (content.bytesize <= limits[:bytes] && page_count.to_i <= limits[:pages])
+    end
 
     # The first live OCR route, then any others: one model's refusal at a page needn't lose it.
     def ocr_routes

@@ -45,6 +45,8 @@ module Pdf::PageImages
     executable = binary.include?("/") ? binary : ENV.fetch("PATH", "").split(":").map { File.join(_1, binary) }.find { File.executable?(_1) }
     raise Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary) unless executable
 
+    executable = File.expand_path(executable)   # the child runs in a temporary directory
+
     Dir.mktmpdir do |dir|
       input = File.join(dir, "input.pdf")
       File.binwrite(input, content)

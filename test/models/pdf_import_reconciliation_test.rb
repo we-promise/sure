@@ -205,6 +205,27 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal 1, @import.reload.rows_count, "nothing on the new account matches, so it is offered"
   end
 
+  test "reassigning the account keeps a mark another import owns and hands over a shared one" do
+    other_account = @family.accounts.create!(name: "Second Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    shared = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+    theirs = create_transaction(account: @account, date: @date, amount: 9.99, name: "Theirs alone")
+    other_import = PdfImport.create!(family: @family, account: @account, account_statement: @statement,
+                                     date_format: @family.date_format, status: :pending)
+    row = extracted(date: @date, amount: -50, name: "Coffee Shop")
+    @import.update!(extracted_data: { "transactions" => [ row ] })
+    @import.generate_rows_from_extracted_data
+    other_import.update!(extracted_data: { "transactions" => [ row ] })
+    other_import.generate_rows_from_extracted_data
+    shared.update_columns(reconciled_by_import_id: @import.id)   # this import owns the shared mark
+    theirs.update_columns(reconciled_at: Time.current, reconciled_by_statement_id: @statement.id,
+                          reconciled_by_import_id: other_import.id)
+
+    @import.assign_account!(other_account)
+
+    assert_equal other_import.id, shared.reload.reconciled_by_import_id, "the other reading still needs it"
+    assert_equal other_import.id, theirs.reload.reconciled_by_import_id, "never this import's to release"
+  end
+
   test "extract_transactions stores string keys so rows can actually be generated" do
     use_ai_routes
     stub_ai(:extract_pdf, returns: { transactions: [ { date: @date.to_s, amount: "-5.0", description: "Coffee" } ] })

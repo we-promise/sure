@@ -54,7 +54,7 @@ class PdfImport < Import
           pdf_import.update!(status: :complete, error: nil, reread_token: nil)
           needs_sync = true
         else
-          pdf_import.update!(status: :pending, reread_token: nil)
+          pdf_import.release_lost_claim!
         end
 
         DebugLogEntry.capture(
@@ -101,10 +101,15 @@ class PdfImport < Import
 
     # Where Auto starts: the way the last extraction for this account and model that passed, or
     # that had nothing another way could fix (a statement without balances), used.
+    # Keyed by the model Auto started from (`tuned_model`), not the one that answered: when a
+    # fallback answered, the next upload still starts from the same primary. Readings from before
+    # the key was stored fall back to their answering model.
     def last_passing_way(account:, model:)
       return if account.nil? || model.blank?
 
-      where(account:, read_model: model).where.not(read_with: nil)
+      where(account:).where.not(read_with: nil)
+        .where("extraction_checks ->> 'tuned_model' = :model OR (extraction_checks ->> 'tuned_model' IS NULL AND read_model = :model)",
+               model:)
         .where("extraction_checks ->> 'passed' = 'true' OR extraction_checks ->> 'settled' = 'true'")
         .order(updated_at: :desc).pick(:read_with)
     end
@@ -116,7 +121,7 @@ class PdfImport < Import
   end
 
   # A PdfImport's importing status is a processing claim (AI extraction or
-  # publish). Release a lost claim back to pending so the user can re-trigger
+  # publish). Release a lost claim (release_lost_claim!) so the user can re-trigger
   # processing, mirroring ProcessPdfJob's own reclaim; lost reverts keep the
   # base revert_failed behavior.
   def force_fail!(error_message = Import.lost_error_message)
@@ -125,10 +130,21 @@ class PdfImport < Import
     with_lock do
       return false unless presumed_lost?
 
-      update!(status: :pending, reread_token: nil)
+      release_lost_claim!(error_message)
     end
 
     true
+  end
+
+  # A lost claim goes back to pending so the user can start it again, except a reread that had
+  # already cleared the previous reading: pending with no rows shows "processing" with nothing to
+  # press, so it fails instead, which offers "Read again".
+  def release_lost_claim!(error_message = Import.lost_error_message)
+    if reread_token.present? && rows_count.zero?
+      update!(status: :failed, error: error_message, reread_token: nil)
+    else
+      update!(status: :pending, reread_token: nil)
+    end
   end
 
   def import!
@@ -238,14 +254,18 @@ class PdfImport < Import
     # the queue must not find its old attempt still owning this processing run.
     return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing, reread_token: nil) }
 
-    begin
+    queued = begin
       ProcessPdfJob.perform_later(self)
-      true
     rescue StandardError => e
-      Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name} - #{e.message}")
-      reload.with_lock { update!(status: :pending, reread_token: nil) }
+      Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name}")
       false
     end
+    return true if queued
+
+    # perform_later can also return false without raising. A reread that claimed the import in the
+    # meantime holds a token, and its claim isn't this attempt's to release.
+    with_lock { update!(status: :pending) if importing? && reread_token.nil? }
+    false
   end
 
   # What the document is (Ai::Generations::ReadPdf), read the way the upload asked for.
@@ -272,7 +292,8 @@ class PdfImport < Import
     data = Ai::Generations::ExtractBankStatement.statement(outcome.value).deep_stringify_keys
     return unless with_claim(reread_token) do
       update!(extracted_data: data, read_with: outcome.way.to_s, read_model: outcome.model,
-              extraction_checks: (outcome.checks&.to_h || {}).merge(attempts: outcome.attempts).deep_stringify_keys)
+              extraction_checks: (outcome.checks&.to_h || {}).merge(attempts: outcome.attempts, tuned_model: reading.model&.name)
+                                                             .deep_stringify_keys)
     end
     return unless with_claim(reread_token) { sync_statement_metadata_from_extracted_data(data); true }
 
@@ -302,7 +323,11 @@ class PdfImport < Import
     read_as = read_as.to_s
     raise ArgumentError, "unknown way #{read_as}" unless READ_AS.include?(read_as)
     return false unless pdf_uploaded?
-    return false if read_as != "auto" && pdf_reading.ways[read_as.to_sym]   # this file can't be read that way
+    begin
+      return false if read_as != "auto" && pdf_reading.ways[read_as.to_sym]   # this file can't be read that way
+    rescue Ai::Error::Unavailable   # the last route was removed after the form was shown
+      return false
+    end
 
     previous = nil
     token = with_lock do
@@ -351,27 +376,7 @@ class PdfImport < Import
     with_lock do
       return false if reread_token.present? && !(importing? && self.reread_token == reread_token)
 
-      # Another import on the same statement may rely on marks it wrote itself.
-      # Hand a shared mark to a surviving import instead of clearing it, then release only the
-      # marks and older statement-only marks this reading solely supported. A NULL statement id
-      # matches nothing; a mark owned by another import is never this reading's to release.
-      statement_id = account_statement&.id
-      owned_ids = Entry.where(account_id:).where(reconciled_by_import_id: id).pluck(:id)
-      survivors = surviving_owners_for(owned_ids)
-      now = Time.current
-      owned_ids.each do |entry_id|
-        if (owner_id = survivors[entry_id])
-          Entry.where(id: entry_id).update_all(reconciled_by_import_id: owner_id, updated_at: now)
-        else
-          Entry.where(id: entry_id).update_all(
-            reconciled_at: nil, reconciled_by_statement_id: nil, reconciled_by_import_id: nil, updated_at: now
-          )
-        end
-      end
-      if statement_id.present?
-        Entry.where(account_id:, reconciled_by_import_id: nil, reconciled_by_statement_id: statement_id)
-             .update_all(reconciled_at: nil, reconciled_by_statement_id: nil, updated_at: now)
-      end
+      release_reconciliations!(account_id)
       rows.delete_all
       self.class.reset_counters(id, :rows)
       update!(ai_summary: nil, document_type: nil, extracted_data: nil, extraction_checks: nil, read_with: nil, read_model: nil,
@@ -590,11 +595,11 @@ class PdfImport < Import
     # A shared entry can be owned by only one import at a time. Another reading on the same
     # statement and account that recorded the same entry as its dependency still needs the mark,
     # so clearing this reading reassigns ownership to it rather than dropping the evidence.
-    def surviving_owners_for(entry_ids)
+    def surviving_owners_for(entry_ids, account_scope_id)
       return {} if entry_ids.empty?
 
       wanted = entry_ids.map(&:to_s)
-      self.class.where(account_id:, account_statement_id:).where.not(id:).find_each.each_with_object({}) do |other, owners|
+      self.class.where(account_id: account_scope_id, account_statement_id:).where.not(id:).find_each.each_with_object({}) do |other, owners|
         (other.extraction_dependencies & wanted).each { owners[_1] ||= other.id }
       end
     end
@@ -691,20 +696,27 @@ class PdfImport < Import
       update!(status: target) unless status.to_s == target
     end
 
-    # Scoped to the account being moved away from. A statement is evidence for
-    # exactly one account at a time, but it can back more than one import, so an
-    # unscoped release would clear reconciliations another account still relies
-    # on. Nothing is reconciled while no account is assigned, so a blank scope
-    # has nothing to release.
+    # Releases the marks this import wrote on one account's entries. Another import on the same
+    # statement may rely on a mark too: a mark another reading still depends on is handed to it, a
+    # mark this import solely supported is cleared, and so are older statement-only marks from
+    # before owner ids existed. A mark another import owns is never this import's to release, and
+    # every write re-checks the owner, so a mark another import took meanwhile is left alone. A NULL
+    # statement id matches nothing.
     def release_reconciliations!(account_scope_id)
-      return if account_statement.blank? || account_scope_id.blank?
+      return if account_scope_id.blank?
 
-      Entry.reconciled_by_statement(account_statement).where(account_id: account_scope_id).update_all(
-        reconciled_at: nil,
-        reconciled_by_statement_id: nil,
-        reconciled_by_import_id: nil,
-        updated_at: Time.current
-      )
+      now = Time.current
+      owned = Entry.where(account_id: account_scope_id, reconciled_by_import_id: id)
+      survivors = surviving_owners_for(owned.pluck(:id), account_scope_id)
+      survivors.each do |entry_id, owner_id|
+        owned.where(id: entry_id).update_all(reconciled_by_import_id: owner_id, updated_at: now)
+      end
+      owned.where.not(id: survivors.keys)
+           .update_all(reconciled_at: nil, reconciled_by_statement_id: nil, reconciled_by_import_id: nil, updated_at: now)
+      return unless (statement_id = account_statement&.id)
+
+      Entry.where(account_id: account_scope_id, reconciled_by_import_id: nil, reconciled_by_statement_id: statement_id)
+           .update_all(reconciled_at: nil, reconciled_by_statement_id: nil, updated_at: now)
     end
 
     # Reverting a statement import unwinds its evidence as well as its rows. The

@@ -312,7 +312,7 @@ class Ai::Generation
       # route that couldn't fit the batch doesn't change that.
       if unusable_on && pending && pending.size > 1 && @down_marks.state(route = unusable_on) == :up
         begin
-          done, pending = bisect(route, pending, 1, pending_offset)
+          done, pending = bisect_pending_runs(route, pending, pending_positions, pending_offset)
           answers.concat(remap.call(done, pending_offset).map { |at, value| [ at, route, value ] })
           refresh_positions.call
           pending_offset = position_of(pending.first, slice) if pending.any?
@@ -366,6 +366,22 @@ class Ai::Generation
     def split_pending_runs(route, pending, positions, offset)
       return split_on(route, nil, offset) if pending.nil?
 
+      runs, starts = contiguous_runs(pending, positions, offset)
+      values, unfit = answer_pieces(route, runs, offset, offsets: starts)
+      raise Interrupted.new(values, unfit.flatten(1), Ai::Error::ContextTooLong.new("a pending run doesn't fit #{route.model.name}")) if unfit.any?
+
+      [ values, [] ]
+    end
+
+    # The same for the bisection retry: each run is halved on its own, so a half never joins
+    # items that weren't adjacent in the slice.
+    def bisect_pending_runs(route, pending, positions, offset)
+      runs, starts = contiguous_runs(pending, positions, offset)
+      each_piece(runs, offset, offsets: starts) { |run, at| bisect(route, run, 1, at) }
+    end
+
+    # [runs of `pending` adjacent in the slice, each run's offset in `pending`].
+    def contiguous_runs(pending, positions, offset)
       runs, starts, index = [], [], 0
       while index < pending.size
         finish = index + 1
@@ -374,10 +390,7 @@ class Ai::Generation
         starts << offset + index
         index = finish
       end
-      values, unfit = answer_pieces(route, runs, offset, offsets: starts)
-      raise Interrupted.new(values, unfit.flatten(1), Ai::Error::ContextTooLong.new("a pending run doesn't fit #{route.model.name}")) if unfit.any?
-
-      [ values, [] ]
+      [ runs, starts ]
     end
 
     # Answers `slice` on one route: in pieces of the route's batch_size when it holds more (a

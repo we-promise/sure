@@ -67,16 +67,17 @@ module Ai::Transport::Http
     end
 
     # One base URL rule for every OpenAI-compatible server, the same as ruby-openai's, so an
-    # endpoint configured for ruby-openai keeps its URL: a URL whose path carries a version
-    # segment (`/v1`, `/v1beta/openai`, Cloudflare's `/ai/v1`) is used as given; any other gets
-    # `/v1`. A "v1" in the host (`v1-proxy.lan`) is not a version. Agent URLs are stored whole,
-    # so a trailing `/chat/completions` goes.
+    # endpoint configured for ruby-openai keeps its URL: a URL whose path ends in the API's
+    # version (`/v1`, `/v1beta/openai`, Cloudflare's `/ai/v1`) is used as given; any other gets
+    # `/v1`. A version earlier in the path is the service's, not the API's: Cloudflare's
+    # `/client/v4/accounts/x/ai` still needs `/v1`. A "v1" in the host (`v1-proxy.lan`) is not a
+    # version. Agent URLs are stored whole, so a trailing `/chat/completions` goes.
     def compatible_base(base_url)
       url = base_url.to_s.strip.chomp("/").delete_suffix("/chat/completions")
       return OPENAI_BASE if url.blank?
 
       path = URI.parse(url).path
-      path.match?(%r{/v\d}i) ? url : "#{url}/v1"
+      path.match?(%r{/v\d+[a-z0-9]*(/openai)?\z}i) ? url : "#{url}/v1"
     rescue URI::InvalidURIError
       url.include?("v1") ? url : "#{url}/v1"
     end

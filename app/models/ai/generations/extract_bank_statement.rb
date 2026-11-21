@@ -152,6 +152,7 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
     return Checks.new(reconciles:, amounts_in_source: nil, dates_anchored: invalid_date ? 0.0 : nil) if text.blank? || rows.empty?
 
     dates = dated.flat_map { |row| printed_dates(row[:date]).map { [ _1, row[:date] ] } }.uniq
+                 .map { |form, date| [ form_pattern(form), form.length, date ] }
     Checks.new(reconciles:, amounts_in_source: dated.all? { |row| text.match?(amount_pattern(row[:amount])) },
                dates_anchored: invalid_date ? 0.0 : (dated.count { date_anchored?(_1, dates, text) } / dated.size.to_f).round(2))
   end
@@ -201,32 +202,36 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
 
       # Some occurrence of the row's amount has, as the last date printed in the DATE_WINDOW
       # characters before it, the row's own date. `dates`: every row's printed forms, as
-      # [form, the row's date].
+      # [form_pattern, the form's length, the row's date]. Where two forms end at the same place,
+      # the longer one is the printed date.
       def date_anchored?(row, dates, text)
         positions(text, amount_pattern(row[:amount])).any? do |at|
           before = text[[ at - DATE_WINDOW, 0 ].max...at]
-          dates.filter_map { |form, date| (index = last_form_index(before, form)) && [ index, form.length, date ] }
+          dates.filter_map { |pattern, length, date| (index = before.rindex(pattern)) && [ index, length, date ] }
                .max_by { |index, length, _| [ index, length ] }&.last == row[:date]
         end
       end
 
       # Date forms must not be part of a longer number ("1february" isn't the
       # "11february" printed on the row), but a letter-form may sit beside other
-      # letters. Where both forms end at the same place, the longer one is the
-      # printed date.
-      def last_form_index(text, form)
+      # letters.
+      def form_pattern(form)
         pattern = Regexp.escape(form)
         pattern = "(?<!\\d)#{pattern}" if form.match?(/\A\d/)
         pattern = "#{pattern}(?!\\d)" if form.match?(/\d\z/)
-        text.rindex(/#{pattern}/)
+        Regexp.new(pattern)
       end
 
       def positions(text, pattern) = text.enum_for(:scan, pattern).map { Regexp.last_match.begin(0) }
 
       # The amount as a whole number in the text, not part of a longer one: "20.00" isn't in
-      # "120.00", "1,020.00" or "20.005"; after a word or a comma ("Ford, 50.00") it is.
+      # "120.00", "1,020.00" or "20.005"; after a word or a comma ("Ford, 50.00") it is. Whole
+      # groups of three digits after a space may be the tail of a space-grouped number: "234,56"
+      # isn't in "1 234,56".
       def amount_pattern(amount)
-        /(?<!\d)(?<!\d[.,])(?:#{printed_amounts(amount).map { Regexp.escape(_1) }.join("|")})(?!\d)/
+        whole = format("%.2f", amount.to_f.abs).split(".").first
+        group_tail = "(?<!\\d\\|)" if whole.length % 3 == 0
+        /(?<!\d)(?<!\d[.,])#{group_tail}(?:#{printed_amounts(amount).map { Regexp.escape(_1) }.join("|")})(?!\d)/
       end
 
       # 2575.0 as "2575.00", "2,575.00" or "1.234,56", with spaces between digits normalized to
