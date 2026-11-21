@@ -117,6 +117,16 @@ class RecurringTransaction::ForecastTest < ActiveSupport::TestCase
     assert_equal Money.new(1100, @family.currency), totals.expense_money
   end
 
+  test "combines the filtered actuals with the forecast" do
+    create_series(name: "Rent", amount: 1000, next_expected_date: 3.days.from_now.to_date)
+    actual = Transaction::Search.new(@family).totals
+
+    combined = forecast_with.combined_with(actual, 7)
+
+    assert_equal 8, combined.count
+    assert_equal actual.expense_money + Money.new(1000, @family.currency), combined.expense_money
+  end
+
   test "reports the filters that only apply to posted transactions" do
     assert_equal %w[tags status], forecast_with(tags: [ "Trip" ], status: [ "pending" ], search: "rent").ignored_filters
   end

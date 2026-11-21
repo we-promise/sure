@@ -17,7 +17,12 @@ class RecurringTransaction::Forecast
                         "THEN recurring_transactions.expected_amount_avg ELSE recurring_transactions.amount END)".freeze
 
   Occurrence = Data.define(:date, :series)
-  Totals = Data.define(:count, :income_money, :expense_money)
+  Totals = Data.define(:count, :income_money, :expense_money) do
+    def +(other)
+      with(count: count + other.count, income_money: income_money + other.income_money,
+           expense_money: expense_money + other.expense_money)
+    end
+  end
 
   attr_reader :family, :start_date, :end_date
 
@@ -77,6 +82,12 @@ class RecurringTransaction::Forecast
         expense_money: Money.new(expense, family.currency)
       )
     end
+  end
+
+  # The filtered transactions' totals plus this forecast, for the Upcoming
+  # tab's summary.
+  def combined_with(actual_totals, actual_count)
+    Totals.new(count: actual_count, income_money: actual_totals.income_money, expense_money: actual_totals.expense_money) + totals
   end
 
   def ignored_filters
