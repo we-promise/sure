@@ -12,6 +12,20 @@ class Provider::BinanceTest < ActiveSupport::TestCase
     assert_equal expected, sig
   end
 
+  test "queries the funding wallet with an authenticated signed POST" do
+    @provider.stubs(:timestamp_params).returns({ "timestamp" => "1000", "recvWindow" => "5000" })
+    query = "recvWindow=5000&timestamp=1000"
+    signature = @provider.send(:sign, query)
+    response = mock_httparty_response(200, [ { "asset" => "USDT", "free" => "20" } ])
+    Provider::Binance.expects(:post).with(
+      "/sapi/v1/asset/get-funding-asset",
+      body: "#{query}&signature=#{signature}",
+      headers: { "X-MBX-APIKEY" => "test_key", "Content-Type" => "application/x-www-form-urlencoded" }
+    ).returns(response)
+
+    assert_equal [ { "asset" => "USDT", "free" => "20" } ], @provider.get_funding_account
+  end
+
   test "auth_headers include X-MBX-APIKEY" do
     headers = @provider.send(:auth_headers)
     assert_equal "test_key", headers["X-MBX-APIKEY"]

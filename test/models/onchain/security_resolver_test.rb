@@ -65,4 +65,13 @@ class Onchain::SecurityResolverTest < ActiveSupport::TestCase
     # choice would break their pricing to fix ours.
     assert_equal "yahoo_finance", resolved.reload.price_provider
   end
+
+  test "reuses the winning security after a concurrent create" do
+    existing = Security.create!(ticker: "CRYPTO:SOL", name: "Solana")
+    resolver = Onchain::SecurityResolver.new(symbol: "SOL")
+    resolver.expects(:existing_security).twice.returns(nil, existing)
+    Security.expects(:create!).raises(ActiveRecord::RecordNotUnique)
+
+    assert_equal existing, resolver.resolve
+  end
 end

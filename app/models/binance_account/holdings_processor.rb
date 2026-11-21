@@ -96,7 +96,18 @@ class BinanceAccount::HoldingsProcessor
       return unless security
 
       price_usd = fetch_price(symbol)
-      return if price_usd.nil?
+      if price_usd.nil?
+        # An unavailable quote does not mean the reported units disappeared.
+        # Keep the quantity so reverse reconstruction cannot invent a short.
+        price_usd = cached_price_usd(security) || 0.to_d
+        DebugLogEntry.capture(
+          category: "provider_sync", level: "warn",
+          message: "Binance holding has no available market price",
+          source: self.class.name, provider_key: "binance",
+          family: account.family, account_provider: binance_account.account_provider,
+          metadata: { symbol: symbol, quantity: total.to_s("F"), wallet: source }
+        )
+      end
 
       amount_usd = total * price_usd
 
@@ -130,6 +141,16 @@ class BinanceAccount::HoldingsProcessor
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
     end
 
+    def cached_price_usd(security)
+      quote = security.prices.where("price > 0 AND date <= ?", Date.current).order(date: :desc).first
+      quote ||= account.holdings.where(security: security).where("price > 0 AND date <= ?", Date.current).order(date: :desc).first
+      return unless quote
+
+      Money.new(quote.price, quote.currency).exchange_to("USD", date: quote.date).amount
+    rescue Money::ConversionError, Money::Currency::UnknownCurrencyError
+      nil
+    end
+
     def resolve_security(ticker, symbol)
       BinanceAccount::SecurityResolver.resolve(ticker, symbol)
     end
@@ -145,7 +166,7 @@ class BinanceAccount::HoldingsProcessor
         return price_str.to_d if price_str.present?
       end
 
-      Rails.logger.warn "BinanceAccount::HoldingsProcessor - no price found for #{symbol} across all quote pairs; skipping holding"
+      Rails.logger.warn "BinanceAccount::HoldingsProcessor - no price found for #{symbol} across all quote pairs"
       nil
     end
 end

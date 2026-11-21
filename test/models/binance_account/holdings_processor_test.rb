@@ -103,6 +103,72 @@ class BinanceAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_empty held_tickers, "the emptied wallet still reported holdings"
   end
 
+  test "keeps wrapped and unwrapped assets as separate holdings" do
+    seed_rate_and_securities
+    write_payload([ eth_asset, { "symbol" => "WETH", "total" => "3", "source" => "spot" } ])
+
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+
+    holdings = @account.reload.current_holdings.index_by { |holding| holding.security.ticker }
+    assert_equal 2, holdings.fetch("CRYPTO:ETH").qty
+    assert_equal 3, holdings.fetch("CRYPTO:WETH").qty
+  end
+
+  test "keeps reported units when no market quote exists" do
+    seed_rate_and_securities
+    write_payload([ eth_asset ])
+    BinanceAccount::HoldingsProcessor.any_instance.stubs(:fetch_price).with("ETH").returns(nil)
+
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+
+    holding = @account.holdings.find_by!(security: Security.find_by!(ticker: "CRYPTO:ETH"), date: Date.current)
+    assert_equal eth_asset.fetch("total").to_d, holding.qty
+    assert_equal 0, holding.price
+    assert DebugLogEntry.where(provider_key: "binance").exists?
+  end
+
+  test "keeps reported units when the cached quote currency is unknown" do
+    seed_rate_and_securities
+    write_payload([ eth_asset ])
+    security = Security.find_by!(ticker: "CRYPTO:ETH")
+    security.prices.create!(date: Date.current, price: 2000, currency: "INVALID")
+    BinanceAccount::HoldingsProcessor.any_instance.stubs(:fetch_price).with("ETH").returns(nil)
+
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+
+    holding = @account.holdings.find_by!(security: security, date: Date.current)
+    assert_equal eth_asset.fetch("total").to_d, holding.qty
+    assert_equal 0, holding.price
+    assert_equal 0, holding.amount
+  end
+
+  test "reuses the last known price during a quote outage" do
+    seed_rate_and_securities
+    write_payload([ eth_asset ])
+    security = Security.find_by!(ticker: "CRYPTO:ETH")
+    security.prices.create!(date: Date.current, price: 2000, currency: "USD")
+    BinanceAccount::HoldingsProcessor.any_instance.stubs(:fetch_price).with("ETH").returns(nil)
+
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+
+    holding = @account.holdings.find_by!(security: security, date: Date.current)
+    assert_equal eth_asset.fetch("total").to_d, holding.qty
+    assert_equal 2000, holding.price
+  end
+
+  test "an unpriced zero placeholder does not hide an older usable quote" do
+    seed_rate_and_securities
+    write_payload([ eth_asset ])
+    security = Security.find_by!(ticker: "CRYPTO:ETH")
+    security.prices.create!(date: Date.current - 1.day, price: 2000, currency: "USD")
+    security.prices.create!(date: Date.current, price: 0, currency: "USD")
+    BinanceAccount::HoldingsProcessor.any_instance.stubs(:fetch_price).with("ETH").returns(nil)
+
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+
+    assert_equal 2000, @account.holdings.find_by!(security: security, date: Date.current).price
+  end
+
   private
     def seed_rate_and_securities
       ExchangeRate.create!(from_currency: "USD", to_currency: "EUR",

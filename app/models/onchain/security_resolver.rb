@@ -21,8 +21,8 @@ class Onchain::SecurityResolver
 
   class << self
     # @return [Security, nil] nil when the symbol cannot be a ticker
-    def resolve(symbol:, name: nil)
-      new(symbol: symbol, name: name).resolve
+    def resolve(symbol:, name: nil, canonicalize: true)
+      new(symbol: symbol, name: name, canonicalize: canonicalize).resolve
     end
 
     # Whether this symbol resolves to something the price provider can quote.
@@ -48,9 +48,10 @@ class Onchain::SecurityResolver
     end
   end
 
-  def initialize(symbol:, name: nil)
+  def initialize(symbol:, name: nil, canonicalize: true)
     @symbol = symbol
     @name = name
+    @canonicalize = canonicalize
   end
 
   def resolve
@@ -63,7 +64,7 @@ class Onchain::SecurityResolver
   def ticker_symbol
     return @ticker_symbol if defined?(@ticker_symbol)
 
-    candidate = Onchain::AssetSymbol.canonical(symbol)
+    candidate = @canonicalize ? Onchain::AssetSymbol.canonical(symbol) : symbol.to_s.strip.upcase
     @ticker_symbol = SYMBOL_PATTERN.match?(candidate) ? candidate : nil
   end
 
@@ -94,11 +95,19 @@ class Onchain::SecurityResolver
     end
 
     def create_security
-      Security.create!(
-        ticker: ticker,
-        name: name.presence || ticker_symbol,
-        exchange_operating_mic: EXCHANGE_MIC,
-        price_provider: PRICE_PROVIDER
-      )
+      Security.transaction(requires_new: true) do
+        Security.create!(
+          ticker: ticker,
+          name: name.presence || ticker_symbol,
+          exchange_operating_mic: EXCHANGE_MIC,
+          price_provider: PRICE_PROVIDER
+        )
+      end
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => error
+      if error.is_a?(ActiveRecord::RecordInvalid)
+        details = error.record.errors.details
+        raise unless details.keys == [ :ticker ] && details[:ticker].all? { |detail| detail[:error] == :taken }
+      end
+      existing_security || raise(error)
     end
 end

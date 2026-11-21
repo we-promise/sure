@@ -87,6 +87,116 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     assert_in_delta 1000.0, @account.balance, 0.01
   end
 
+  test "finishes P2P backfill when time advances during the final request" do
+    travel_to Time.utc(2026, 11, 4, 12) do
+      @family.update!(currency: "USD")
+      @item.update!(sync_start_date: 31.days.ago)
+      provider = mock
+      @item.stubs(:binance_provider).returns(provider)
+      @ba.stubs(:binance_item).returns(@item)
+      start_time = @item.sync_start_date.to_i * 1000
+      finish_time = Time.current.to_i * 1000
+      first_end = start_time + 30.days.to_i * 1000
+
+      provider.expects(:get_all_p2p_trades).with(start_timestamp: start_time, end_timestamp: first_end).returns([])
+      provider.expects(:get_all_p2p_trades).with do |start_timestamp:, end_timestamp:|
+        matches = start_timestamp == first_end + 1 && end_timestamp == finish_time
+        travel 2.seconds if matches
+        matches
+      end.returns([])
+
+      BinanceAccount::Processor.new(@ba).process
+
+      assert_equal [], @ba.reload.raw_transactions_payload["p2p"]
+    end
+  end
+
+  test "spot history without a start date begins within 24 hours and paginates by ID" do
+    travel_to Time.utc(2026, 11, 5, 12) do
+      @item.update!(sync_start_date: nil)
+      @ba.stubs(:binance_item).returns(@item)
+      provider = mock
+      start_ms = 24.hours.ago.to_i * 1000
+      now_ms = Time.current.to_i * 1000
+      first_page = (1..1000).map { |id| { "id" => id, "time" => start_ms } }
+      next_page = [ { "id" => 1001, "time" => start_ms } ]
+      provider.expects(:get_spot_trades).with("BTCUSDT", limit: 1000, from_id: nil, start_time: start_ms, end_time: now_ms).returns(first_page)
+      provider.expects(:get_spot_trades).with("BTCUSDT", limit: 1000, from_id: 1001, start_time: nil, end_time: nil).returns(next_page)
+      provider.expects(:get_spot_trades).with("BTCUSDT", limit: 1000, from_id: 1002, start_time: nil, end_time: nil).returns([])
+      processor = BinanceAccount::Processor.new(@ba)
+      cursors = {}
+
+      trades = processor.send(:fetch_new_trades, provider, "BTCUSDT", nil, :spot, cursors: cursors)
+      assert_equal (1..1001).to_a, trades.map { |trade| trade["id"] }
+      assert_equal 1001, cursors["BTCUSDT"]
+      assert_empty processor.send(:fetch_new_trades, provider, "BTCUSDT", nil, :spot, cursors: cursors)
+    end
+  end
+
+  test "initial spot history uses trade IDs and respects the configured start date" do
+    @family.update!(currency: "USD")
+    @item.update!(sync_start_date: Time.utc(2024, 1, 1))
+    @ba.update!(raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1" } ], "futures" => nil })
+    provider = mock
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+    provider.stubs(:get_all_p2p_trades).returns([])
+    provider.stubs(:get_spot_trades).returns([])
+    provider.expects(:get_futures_trades).never
+    trades = [ 2023, 2024 ].map do |year|
+      { "id" => year, "time" => Time.utc(year, 6, 1).to_i * 1000, "qty" => "0.1", "price" => "40000",
+        "quoteQty" => "4000", "commission" => "0", "commissionAsset" => "USDT", "isBuyer" => true }
+    end
+    provider.expects(:get_spot_trades).with("BTCUSDT", limit: 1000, from_id: 0, start_time: nil, end_time: nil).returns(trades)
+
+    BinanceAccount::Processor.new(@ba).process
+
+    assert @account.entries.exists?(external_id: "binance_spot_BTCUSDT_2024")
+    assert_not @account.entries.exists?(external_id: "binance_spot_BTCUSDT_2023")
+  end
+
+  test "spot history advances through discarded pages and resumes from the scanned cursor" do
+    @family.update!(currency: "USD")
+    @item.update!(sync_start_date: Time.utc(2024, 1, 1))
+    @ba.update!(raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1" } ], "futures" => nil })
+    provider = mock
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+    provider.stubs(:get_all_p2p_trades).returns([])
+    provider.stubs(:get_spot_trades).returns([])
+    old = (1..1000).map { |id| { "id" => id, "time" => Time.utc(2023, 1, 1).to_i * 1000 } }
+    eligible = { "id" => 1001, "time" => Time.utc(2024, 6, 1).to_i * 1000, "qty" => "1", "price" => "10",
+                 "quoteQty" => "10", "commission" => "0", "commissionAsset" => "USDT", "isBuyer" => true }
+    provider.expects(:get_spot_trades).with("BTCUSDT", limit: 1000, from_id: 0, start_time: nil, end_time: nil).returns(old).once
+    provider.expects(:get_spot_trades).with("BTCUSDT", limit: 1000, from_id: 1001, start_time: nil, end_time: nil).returns([ eligible ]).once
+    provider.expects(:get_spot_trades).with("BTCUSDT", limit: 1000, from_id: 1002, start_time: nil, end_time: nil).returns([]).once
+    provider.expects(:get_spot_trades).with("BTCEUR", limit: 1000, from_id: 0, start_time: nil, end_time: nil).returns(old.first(1)).once
+    provider.expects(:get_spot_trades).with("BTCEUR", limit: 1000, from_id: 2, start_time: nil, end_time: nil).returns([]).once
+
+    2.times { BinanceAccount::Processor.new(@ba).process }
+
+    assert @account.entries.exists?(external_id: "binance_spot_BTCUSDT_1001")
+    assert_equal 1, @ba.reload.raw_transactions_payload.dig("spot_cursors", "BTCEUR")
+  end
+
+  test "repairs a cached trade with a legacy quoted security" do
+    @family.update!(currency: "USD")
+    old_security = Security.create!(ticker: "BTCBRL", name: "BTC / BRL")
+    entry = @account.entries.create!(date: Date.current, name: "Buy BTC", amount: 10, currency: "USD",
+      external_id: "binance_spot_BTCUSDT_42", source: "binance",
+      entryable: Trade.new(security: old_security, qty: 1, price: 10, currency: "USD", investment_activity_label: "Buy"))
+    @ba.update!(raw_transactions_payload: { "spot" => { "BTCUSDT" => [ { "id" => 42 } ] } })
+    provider = stub(get_all_p2p_trades: [], get_spot_trades: [], get_futures_trades: [])
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+
+    assert_no_difference "Entry.count" do
+      BinanceAccount::Processor.new(@ba).process
+    end
+
+    assert_equal "CRYPTO:BTC", entry.reload.entryable.security.ticker
+  end
+
   test "processes futures trades correctly" do
     @family.update!(currency: "USD")
     @ba.update!(raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1.0" } ] })

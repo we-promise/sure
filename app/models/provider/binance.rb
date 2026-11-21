@@ -30,6 +30,18 @@ class Provider::Binance
     signed_get("/api/v3/account")
   end
 
+  # Binance exposes this read-only wallet query as a signed POST.
+  def get_funding_account
+    params = timestamp_params
+    query = URI.encode_www_form(params.sort)
+    response = self.class.post(
+      "/sapi/v1/asset/get-funding-asset",
+      body: "#{query}&signature=#{sign(query)}",
+      headers: auth_headers.merge("Content-Type" => "application/x-www-form-urlencoded")
+    )
+    handle_response(response)
+  end
+
   # Margin account — requires signed request
   def get_margin_account
     signed_get("/sapi/v1/margin/account")
