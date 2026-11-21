@@ -2,7 +2,6 @@ require "csv"
 
 class Assistant::Function::ImportBankStatement < Assistant::Function
   self.ai_feature = :extract_pdf
-
   class << self
     def name
       "import_bank_statement"
@@ -55,6 +54,10 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   def call(params = {})
+    unless AccountStatement.statement_manager?(user)
+      return { success: false, error: "forbidden", message: "User is not allowed to manage bank statements." }
+    end
+
     pdf_import = family.imports.find_by(id: params["pdf_import_id"], type: "PdfImport")
 
     unless pdf_import
@@ -80,29 +83,30 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         success: false,
         error: "account_required",
         message: "Please specify which account to import transactions into",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        available_accounts: writable_depository_accounts.map { |account| { id: account.id, name: account.name } }
       }
     end
 
-    account = family.accounts.find_by(id: params["account_id"])
+    account = writable_depository_accounts.find_by(id: params["account_id"])
     unless account
       return {
         success: false,
         error: "account_not_found",
         message: "Account not found",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        available_accounts: writable_depository_accounts.map { |account| { id: account.id, name: account.name } }
       }
     end
 
     availability = Ai.availability(:extract_pdf, family:, user:)
     return ai_unavailable(availability) unless availability.available?
 
-    # The first provider in extract_pdf's route. Settings can clear the last key between the
-    # availability check and this lookup, so a missing provider is the same refusal
-    # (PdfImport::AiProcessor#route_provider refuses the same way).
+    # Settings can clear the last route key after the availability check.
     provider = Provider::Registry.preferred_llm_provider
     return ai_unavailable(Ai::Availability.unavailable(:extract_pdf, :not_configured)) unless provider
 
+    # Extract transactions from the PDF using the configured LLM provider.
+    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
+    # extract_bank_statement (PR #1985).
     response = provider.extract_bank_statement(
       pdf_content: pdf_import.pdf_file_content,
       model: model_for(provider),
@@ -131,21 +135,23 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # Create a CSV from extracted transactions
     csv_content = generate_csv(result[:transactions])
 
-    # Create a TransactionImport
-    import = family.imports.create!(
-      type: "TransactionImport",
-      account: account,
-      raw_file_str: csv_content,
-      date_col_label: "date",
-      amount_col_label: "amount",
-      name_col_label: "name",
-      category_col_label: "category",
-      notes_col_label: "notes",
-      date_format: "%Y-%m-%d",
-      signage_convention: "inflows_positive"
-    )
-
-    import.generate_rows_from_csv
+    import = Import.transaction do
+      account = Account::MutationAccess.lock!(accounts: [ account ], user:, level: Account::MutationAccess::WRITE).fetch(account.id.to_s)
+      created = family.imports.create!(
+        type: "TransactionImport",
+        account: account,
+        raw_file_str: csv_content,
+        date_col_label: "date",
+        amount_col_label: "amount",
+        name_col_label: "name",
+        category_col_label: "category",
+        notes_col_label: "notes",
+        date_format: "%Y-%m-%d",
+        signage_convention: "inflows_positive"
+      )
+      created.generate_rows_from_csv
+      created
+    end
 
     {
       success: true,
@@ -155,6 +161,13 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       statement_period: result[:period],
       account_holder: result[:account_holder],
       message: "Successfully extracted #{result[:transactions].size} transactions. Import created with ID: #{import.id}. Review and publish when ready."
+    }
+  rescue Account::MutationAccess::Denied
+    {
+      success: false,
+      error: "account_not_found",
+      message: "Account is no longer writable. No import was created.",
+      available_accounts: writable_depository_accounts.map { |available| { id: available.id, name: available.name } }
     }
   rescue Provider::Error, Faraday::Error, Timeout::Error, RuntimeError => e
     Rails.logger.error("ImportBankStatement error: #{e.class.name} - #{e.message}")
@@ -167,6 +180,10 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   private
+
+    def writable_depository_accounts
+      family.accounts.writable_by(user).visible.where(accountable_type: "Depository")
+    end
 
     # The refusal every AI gate on this path returns: the router's reason and its message.
     def ai_unavailable(availability)
