@@ -288,11 +288,23 @@ class ReportsController < ApplicationController
         Date.current.beginning_of_year.to_date
       when :last_6_months
         (Date.current.end_of_month + 1.day - 6.months).beginning_of_month.to_date
+      when :all_time
+        earliest_report_activity_date || Date.current.beginning_of_month.to_date
       when :custom
         1.month.ago.to_date
       else
         Date.current.beginning_of_month.to_date
       end
+    end
+
+    # The first transaction or trade in the accounts this member's reports read
+    # (their finance accounts, as IncomeStatement uses), never a scheduled one.
+    # An older entry in an account they can't see must not start All time: its
+    # date would show in the label and the URLs built from it.
+    def earliest_report_activity_date
+      Entry.where(account_id: Current.user.finance_accounts.select(:id), entryable_type: %w[Transaction Trade])
+        .excluding_scheduled
+        .minimum(:date)
     end
 
     def default_end_date
@@ -301,9 +313,7 @@ class ReportsController < ApplicationController
         Date.current.end_of_month.to_date
       when :quarterly
         Date.current.end_of_quarter.to_date
-      when :ytd
-        Date.current
-      when :custom
+      when :ytd, :all_time, :custom
         Date.current
       else
         Date.current.end_of_month.to_date
@@ -333,9 +343,11 @@ class ReportsController < ApplicationController
       end
       net_savings = current_income - current_expenses
 
-      # Calculate percentage changes
-      income_change = calculate_percentage_change(previous_income, current_income)
-      expense_change = calculate_percentage_change(previous_expenses, current_expenses)
+      # Calculate percentage changes. All time has no period before it to compare with.
+      unless @period_type == :all_time
+        income_change = calculate_percentage_change(previous_income, current_income)
+        expense_change = calculate_percentage_change(previous_expenses, current_expenses)
+      end
 
       # Get budget performance for current period
       budget_percent = calculate_budget_performance
@@ -637,10 +649,11 @@ class ReportsController < ApplicationController
 
     def build_gains_by_tax_treatment(investment_statement)
       currency = Current.family.currency
-      # Eager-load account and accountable to avoid N+1 when accessing tax_treatment
-      current_holdings = investment_statement.current_holdings
-        .includes(account: :accountable)
-        .to_a
+      # The card's holdings, average costs already read in one query (the trends
+      # below would otherwise run them per holding), plus each account's
+      # accountable for its tax treatment.
+      current_holdings = investment_statement.holdings_with_avg_costs
+      ActiveRecord::Associations::Preloader.new(records: current_holdings, associations: { account: :accountable }).call
 
       # Group holdings by tax treatment (from account)
       holdings_by_treatment = current_holdings.group_by { |h| h.account.tax_treatment || :taxable }
@@ -651,18 +664,9 @@ class ReportsController < ApplicationController
         .includes(:security, entry: { account: :accountable })
         .to_a
 
-      # Preload holdings for all accounts that have sell trades to avoid N+1 in realized_gain_loss
-      account_ids = sell_trades.map { |t| t.entry.account_id }.uniq
-      holdings_by_account = Holding
-        .where(account_id: account_ids)
-        .where("date <= ?", @period.date_range.end)
-        .order(date: :desc)
-        .group_by(&:account_id)
-
-      # Inject preloaded holdings into trades for realized_gain_loss calculation
-      sell_trades.each do |trade|
-        trade.instance_variable_set(:@preloaded_holdings, holdings_by_account[trade.entry.account_id] || [])
-      end
+      # Each sale's basis position in one query, before the rates: the rate
+      # preload keys on the currency that position is carried in.
+      Trade.preload_basis_holdings(sell_trades)
 
       # What each fifo sale took from which lot, read once for the whole set.
       lot_disposals = HoldingLotDisposal.readable_by_sale(sell_trades)
@@ -707,7 +711,7 @@ class ReportsController < ApplicationController
       foreign_trade_currencies = (
         sell_trades.map(&:currency) +
         sell_trades.map { |t| t.entry.account.currency } +
-        holdings_by_account.values.flatten.map(&:currency)
+        sell_trades.map(&:preloaded_basis_currency)
       ).compact.uniq.reject { |c| c == currency }
       rates_by_trade_date = sell_trades.map { |t| t.entry.date }.uniq.each_with_object({}) do |date, memo|
         memo[date] = ExchangeRate.rates_for(foreign_trade_currencies, to: currency, date: date)
