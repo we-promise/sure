@@ -80,7 +80,9 @@ class Provider::YourProvider < Provider
         logo_url:               parsed["logo"],
         description:            parsed["description"],
         kind:                   parsed["type"],       # e.g. "common stock", "etf"
-        exchange_operating_mic: exchange_operating_mic
+        exchange_operating_mic: exchange_operating_mic,
+        sector:                 parsed["sector"],     # optional, free text
+        industry:               parsed["industry"]    # optional, free text
       )
     end
   end
@@ -118,6 +120,17 @@ class Provider::YourProvider < Provider
         )
       end
     end
+  end
+
+  # Return true when fetch_security_info answers a classification worth a
+  # request of its own: the importers then ask for it even when the security
+  # already has a name and logo, and only then may `kind` set the asset class
+  # and claim `provider` as its source. Sector and industry returned anyway are
+  # stored either way. Return false when the call is costly or often refused:
+  # Alpha Vantage returns sector and industry, but OVERVIEW is premium, so it
+  # declares false. Defaults to false.
+  def supplies_classification?
+    true
   end
 
   # Optional: limit how far back the importer fetches history.
@@ -180,7 +193,14 @@ All methods must return these exact types (wrapped in `with_provider_response`):
 
 ```ruby
 SecurityConcept::Security    = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency)
-SecurityConcept::SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic)
+SecurityConcept::SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
+                                            :sector, :industry) do
+  # sector and industry are optional and default to nil
+  def initialize(symbol:, name:, links:, logo_url:, description:, kind:, exchange_operating_mic:,
+                 sector: nil, industry: nil)
+    super
+  end
+end
 SecurityConcept::Price       = Data.define(:symbol, :date, :price, :currency, :exchange_operating_mic)
 ```
 

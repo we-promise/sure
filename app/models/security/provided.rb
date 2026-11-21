@@ -135,6 +135,11 @@ module Security::Provided
       rank_search_results(all_results, symbol, country_code).first(MAX_SEARCH_RESULTS)
     end
 
+    # The registry key of a provider instance, e.g. "twelve_data".
+    def provider_key_for(provider_instance)
+      provider_instance.class.name.demodulize.underscore
+    end
+
     private
       def build_provider(name)
         Provider::Registry.for_concept(:securities).get_provider(name.to_sym)
@@ -152,10 +157,6 @@ module Security::Provided
         return unless @logged_keyless_substitutions.add?(name)
 
         Rails.logger.info("Securities provider #{name} can't be built; using #{KEYLESS_FALLBACK_PROVIDER} in its place")
-      end
-
-      def provider_key_for(provider_instance)
-        provider_instance.class.name.demodulize.underscore
       end
 
       # Fetches (or reads from cache) search results for a single provider.
@@ -308,8 +309,24 @@ module Security::Provided
   end
   private :log_failed_price_fetch
 
-  def import_provider_details(clear_cache: false)
-    unless price_data_provider.present?
+  # `include_classification` widens the refetch gate below so a security that
+  # already has a name and a logo -- which is most of them -- can still be
+  # asked for its classification.
+  #
+  # It defaults to FALSE because the unbounded shape is the importers' cadence,
+  # not any single call. `Account::MarketDataImporter` and `MarketDataImporter`
+  # walk every security on every sync, so a widened gate that never closes
+  # costs one provider request per security per sync, indefinitely. The gate
+  # closing is what bounds that, and the importers opt in on that basis.
+  #
+  # The third caller, `HoldingsController#sync_prices`, is a POST behind
+  # `require_holding_write_permission!` -- a user asking for one holding's
+  # prices, not a page view; `#show` makes no provider call at all. It keeps
+  # the narrow gate because the user asked for prices, not for classification.
+  def import_provider_details(clear_cache: false, include_classification: false)
+    # Resolved once: each call re-reads the enabled providers and the registry.
+    provider = price_data_provider
+    unless provider.present?
       Rails.logger.warn("No provider configured for Security.import_provider_details")
       return
     end
@@ -318,28 +335,63 @@ module Security::Provided
     # already have a name plus a logo or website. This gate must be evaluated
     # before any brand-logo enrichment, otherwise setting logo_url first would
     # trip it and skip website_url backfill from providers that return links.
-    unless self.name.present? && (self.logo_url.present? || self.website_url.present?) && !clear_cache
-      response = price_data_provider.fetch_security_info(
+    has_metadata = self.name.present? && (self.logo_url.present? || self.website_url.present?)
+    # A provider is asked for a classification only when it can give one and
+    # nothing is known yet:
+    # - `supplies_classification?` first: a provider with no sector to give
+    #   never fills the columns below, so without it the gate never closes.
+    # - No source: cash and crypto carry a `default` source, which no provider
+    #   improves on. A sector alone does not close the gate, since it leaves
+    #   the asset class unanswered.
+    # - Not yet asked of this provider: an answer that holds nothing (a bond,
+    #   an ETF with no sector) is stamped with the provider that gave it, so
+    #   that provider is asked once. A failed answer is not stamped, so it is
+    #   retried. The stamp is compared with the provider resolved now, so an
+    #   assigned provider changing and the enabled default changing (for a
+    #   security with no `price_provider`) both open the gate.
+    classification_provider_key = self.class.provider_key_for(provider)
+    wants_classification = include_classification && provider.supplies_classification? &&
+      !classification_locked? && classification_source.blank? &&
+      (classification_fetched_at.nil? || classification_fetched_from != classification_provider_key)
+
+    unless has_metadata && !wants_classification && !clear_cache
+      response = provider.fetch_security_info(
         symbol: ticker,
         exchange_operating_mic: exchange_operating_mic
       )
 
       if response.success?
-        # Only overwrite fields the provider actually returned, so providers that
-        # don't support metadata (e.g. Alpha Vantage) won't blank existing values.
-        attrs = {}
-        attrs[:name]        = response.data.name    if response.data.name.present?
-        attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
-        attrs[:website_url] = response.data.links   if response.data.links.present?
-        update(attrs) if attrs.any?
+        # `with_lock` re-reads the row, so precedence is checked against what
+        # it holds now: a manual classification, a sector or a lock written
+        # while the provider was answering is not overwritten.
+        with_lock do
+          # Only overwrite fields the provider actually returned, so providers that
+          # don't support metadata (e.g. Alpha Vantage) won't blank existing values.
+          attrs = {}
+          attrs[:name]        = response.data.name    if response.data.name.present?
+          attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
+          attrs[:website_url] = response.data.links   if response.data.links.present?
+          attrs.merge!(classification_attributes_from(response.data, classifies: provider.supplies_classification?))
+          stored = attrs.empty? || update(attrs)
+          # `update` runs the model's validations, and a row can hold a value
+          # they now refuse (a legacy region, a ticker clash). Its answer is
+          # stamped anyway, with the refusal logged for support: an unstamped
+          # row is asked again on every sync, and each ask costs a provider
+          # request. A lock set while the provider answered rejects the answer
+          # instead, and closes the gate on its own.
+          if wants_classification && !classification_locked?
+            log_refused_classification(provider, errors.full_messages) unless stored
+            update_columns(classification_fetched_at: Time.current, classification_fetched_from: classification_provider_key)
+          end
+        end
       else
-        Rails.logger.warn("Failed to fetch security info for #{ticker} from #{price_data_provider.class.name}: #{response.error.message}")
+        Rails.logger.warn("Failed to fetch security info for #{ticker} from #{provider.class.name}: #{response.error.message}")
         DebugLogEntry.capture(
           category: "security_metadata_fetch",
           level: "warn",
           message: "Failed to get security info",
           source: self.class.name,
-          provider: price_data_provider,
+          provider: provider,
           metadata: {
             security_id: self.id,
             ticker: ticker,
@@ -404,5 +456,56 @@ module Security::Provided
       clear_cache: clear_cache
     )
     [ importer.import_provider_prices, importer.provider_error ]
+  end
+
+  # A provider's type says what the wrapper is, not what it holds. "Common
+  # stock" is an equity whatever else is true of it, so it maps. An ETF or a
+  # fund does NOT: a bond ETF and an equity ETF are the same wrapper around
+  # different asset classes, and answering "equity" for both would fill an
+  # allocation with a figure no one can justify. Those are left unclassified
+  # until something can see what they hold.
+  ASSET_CLASS_FROM_PROVIDER_KIND = {
+    "common stock" => [ "equity", "stock" ],
+    "equity" => [ "equity", "stock" ],
+    "stock" => [ "equity", "stock" ]
+  }.freeze
+
+  def log_refused_classification(provider, messages)
+    DebugLogEntry.capture(
+      category: "security_metadata_fetch",
+      level: "warn",
+      message: "Security details refused by validation",
+      source: self.class.name,
+      provider: provider,
+      metadata: { security_id: id, ticker: ticker, errors: messages }
+    )
+  end
+  private :log_refused_classification
+
+  # The provider is the second-weakest writer: it may fill what nothing has
+  # answered, and may replace a `default`, but never a `manual` classification,
+  # and never anything at all on a locked security. Only a provider that
+  # classifies may claim the classification: an instrument type from one that
+  # does not (Twelve Data) would stamp `provider` as the source and keep a
+  # capable provider from ever being asked.
+  def classification_attributes_from(data, classifies: true)
+    return {} if classification_locked?
+
+    attrs = {}
+    # Free text with no other writer, so "already set" is the only guard it
+    # needs -- a value a user corrected is not re-stated here.
+    attrs[:sector] = data.sector if data.sector.present? && sector.blank?
+    attrs[:industry] = data.industry if data.industry.present? && industry.blank?
+
+    return attrs unless classifies && classification_source.in?([ nil, "default" ])
+
+    mapped_class, mapped_sub_class = ASSET_CLASS_FROM_PROVIDER_KIND[data.kind.to_s.downcase]
+    if mapped_class.present?
+      attrs[:asset_class] = mapped_class
+      attrs[:asset_sub_class] = mapped_sub_class
+      attrs[:classification_source] = "provider"
+    end
+
+    attrs
   end
 end
