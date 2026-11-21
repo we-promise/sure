@@ -45,4 +45,32 @@ module SyncableInterfaceTest
     assert_equal earlier_start, first_sync.window_start_date
     assert_equal wider_end, first_sync.window_end_date
   end
+
+  test "sync request during a running sync queues a follow-up sync" do
+    running = @syncable.sync_later
+    running.start!
+
+    follow_up = nil
+    assert_difference "@syncable.syncs.count", 1 do
+      assert_enqueued_with job: SyncJob do
+        follow_up = @syncable.sync_later
+      end
+    end
+
+    assert_not_equal running.id, follow_up.id
+    assert follow_up.pending?
+  end
+
+  test "sync requests during a running sync share one follow-up sync" do
+    running = @syncable.sync_later
+    running.start!
+
+    start = 2.days.ago.to_date
+    follow_up = @syncable.sync_later(window_start_date: start, window_end_date: start)
+
+    assert_no_difference "@syncable.syncs.count" do
+      assert_equal follow_up, @syncable.sync_later(window_start_date: 5.days.ago.to_date, window_end_date: start)
+    end
+    assert_equal 5.days.ago.to_date, follow_up.reload.window_start_date
+  end
 end

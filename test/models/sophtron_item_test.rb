@@ -135,11 +135,9 @@ class SophtronItemTest < ActiveSupport::TestCase
   end
 
   test "start_initial_load_later starts a sync when no active sync exists" do
-    assert_no_enqueued_jobs only: SophtronInitialLoadJob do
-      assert_difference "@item.syncs.count", 1 do
-        assert_enqueued_with job: SyncJob do
-          @item.start_initial_load_later
-        end
+    assert_difference "@item.syncs.count", 1 do
+      assert_enqueued_with job: SyncJob do
+        @item.start_initial_load_later
       end
     end
   end
@@ -153,14 +151,18 @@ class SophtronItemTest < ActiveSupport::TestCase
   end
 
   test "start_initial_load_later queues a follow-up when current sync is already running" do
+    @item.update!(sync_start_date: Date.new(2026, 1, 1))
     sync = @item.syncs.create!
     sync.start!
 
-    assert_no_difference "@item.syncs.count" do
-      assert_enqueued_with job: SophtronInitialLoadJob do
+    assert_difference "@item.syncs.count", 1 do
+      assert_enqueued_with job: SyncJob do
         @item.start_initial_load_later
       end
     end
+
+    follow_up = @item.syncs.pending.sole
+    assert_equal Date.new(2026, 1, 1), follow_up.window_start_date
   end
   test "manual Sophtron accounts do not remove the whole item from automatic sync scope" do
     manual_item = @family.sophtron_items.create!(
