@@ -162,6 +162,7 @@ es:
       notes: Notas
       funding_last_30d: últimos 30 días
       funding_last_90d: últimos 90 días
+      milestone: "%{percent}% · %{date}"
       status_callout:
         depleted: "%{amount} por debajo de su saldo objetivo; repónlo para recuperar el fondo"
         behind: ahorra %{amount}/mes más para ponerte al día

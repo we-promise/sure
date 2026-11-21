@@ -155,6 +155,7 @@ uk:
       notes: Нотатки
       funding_last_30d: за 30 дн.
       funding_last_90d: за 90 дн.
+      milestone: "%{percent}% · %{date}"
       status_callout:
         depleted: на %{amount} нижче цільового балансу — поповніть, щоб відновити резерв
         behind: відкладайте на %{amount}/міс. більше, щоб наздогнати
