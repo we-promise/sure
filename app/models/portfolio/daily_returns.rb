@@ -474,6 +474,15 @@ class Portfolio::DailyReturns
                               THEN -entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS income,
             COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'fee'
                               THEN  entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS fees,
+            -- A commission recorded on a buy or sell (`trades.fee`) and folded
+            -- into its entry amount, as the trade form, SnapTrade and IBKR write
+            -- it: amount = qty x price + fee. Balance::BaseCalculator books it
+            -- as a market loss, so the final SELECT moves it from `market` to
+            -- `fees`, converted as the trade's own amount is. An amount nearer
+            -- qty x price than qty x price + fee left the fee out, so the
+            -- balance never charged it and there is nothing to move.
+            COALESCE(SUM(CASE WHEN #{trade_commission_sql}
+                              THEN trades.fee * entry_fx.rate * fx.rate ELSE 0 END), 0) AS trade_fees,
             -- A missing rate applies to flows as it does to balances: a flow in a
             -- currency with no rate is flagged, never converted at parity. So is
             -- an internal entry, which is no flow: Balance::SyncCache drops an
@@ -482,7 +491,8 @@ class Portfolio::DailyReturns
             -- An entry with no class is pending, which SyncCache never applies,
             -- or a valuation, which is written in the account's own currency. A
             -- zero amount converts to zero at any rate, so it cannot be short of
-            -- one.
+            -- one -- unless it carries a commission, which is a fee to convert
+            -- even when a sale's proceeds cancel it to a zero amount.
             --
             -- A journal converts from the HOLDING's currency, not the entry's,
             -- so a missing rate there is invisible to the check above. Without
@@ -496,7 +506,7 @@ class Portfolio::DailyReturns
             -- with no label makes it NULL; NOT NULL is NULL, which would
             -- drop the row from this check rather than keep it.
             COALESCE(BOOL_OR(((entry_fx.rate IS NULL OR fx.rate IS NULL)
-                              AND entries.amount <> 0
+                              AND (entries.amount <> 0 OR #{trade_commission_sql})
                               AND NOT COALESCE((#{fragment(:journal_predicate)}), false)
                               AND #{fragment(:flow_class_sql)} IS NOT NULL)
                              OR (journal_fx.rate IS NULL
@@ -828,7 +838,9 @@ class Portfolio::DailyReturns
           -- The journal is now an external flow, so it must stop being a
           -- market move. Same value, same row, taken out of the driver that
           -- double-counted it.
-          b.market - COALESCE(f.journal_flow, 0) - COALESCE(cj.carried_flow, 0) AS market,
+          -- A commission on a trade is a fee, not a market loss: added back
+          -- here and counted in `fees` below, so the identity is unchanged.
+          b.market - COALESCE(f.journal_flow, 0) - COALESCE(cj.carried_flow, 0) + COALESCE(f.trade_fees, 0) AS market,
           b.revaluations,
           b.fx_effect,
           (b.rate_missing OR COALESCE(f.flow_rate_missing, false) OR COALESCE(cj.carry_rate_missing, false)) AS rate_missing,
@@ -843,7 +855,7 @@ class Portfolio::DailyReturns
            OR COALESCE(cj.carry_rate_missing, false)) AS journal_unpriced,
           COALESCE(f.external_flow, 0) + COALESCE(cj.carried_flow, 0) AS external_flow,
           COALESCE(f.income, 0) AS income,
-          COALESCE(f.fees, 0) AS fees
+          COALESCE(f.fees, 0) + COALESCE(f.trade_fees, 0) AS fees
         FROM balances_by_date b
         LEFT JOIN flows_by_date f ON f.date = b.date
         LEFT JOIN carried_journals_by_date cj ON cj.date = b.date
@@ -974,6 +986,21 @@ class Portfolio::DailyReturns
         WHERE s.security_id = trades.security_id
           AND s.ex_date > #{from_expression}
           AND s.ex_date <= #{to}
+      SQL
+    end
+
+    # A buy's or sell's commission that its entry amount includes, as
+    # trade_fees sums it: amount = qty x price + fee, within half the fee. A
+    # trade with no quantity bought or sold nothing; the balance books its
+    # amount as cash, so there is no commission in `market` to move.
+    def trade_commission_sql
+      <<~SQL.squish
+        (entries.entryable_type = 'Trade'
+          AND #{fragment(:flow_class_sql)} = 'internal'
+          AND trades.fee > 0
+          AND trades.qty <> 0
+          AND trades.currency = entries.currency
+          AND ABS(entries.amount - (trades.qty * trades.price + trades.fee)) < trades.fee / 2)
       SQL
     end
 
