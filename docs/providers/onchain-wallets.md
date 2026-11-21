@@ -1,7 +1,8 @@
 # On-chain (self-custody) wallets
 
 Sure can track wallets you hold the keys to — Bitcoin, six EVM networks,
-Solana, Polkadot and the Cosmos Hub — from their **public addresses only**. Nothing is signed, no key or seed
+Solana, Avalanche, Polkadot and the Cosmos Hub — plus staked SOL, POL and ETH,
+from their **public addresses only**. Nothing is signed, no key or seed
 phrase is ever entered, and no API key is required for any chain.
 
 This document covers where the data comes from, what needs configuring, the
@@ -80,6 +81,11 @@ listed, so the cause is visible without having to reproduce it.
 | Solana token names | Jupiter token search (`lite-api.jup.ag`) | No | `SOLANA_TOKEN_LIST_URL` |
 | Cosmos Hub | Public REST node (`cosmos-rest.publicnode.com`) | No | `COSMOS_REST_URL` |
 | Polkadot | Parity's public Asset Hub Sidecar | No | `POLKADOT_SIDECAR_URL` (must be an Asset Hub Sidecar) |
+| Avalanche C-Chain | Avalanche's public JSON-RPC (`api.avax.network/ext/bc/C/rpc`) | No | `AVALANCHE_CCHAIN_URL` |
+| Avalanche P-Chain | Avalanche's public platform API (`api.avax.network/ext/bc/P`) | No | `AVALANCHE_PCHAIN_URL` |
+| Solana stake account | The Solana JSON-RPC above | No | `SOLANA_RPC_URL` |
+| Polygon staking | Polygon's staking API (`staking-api.polygon.technology/api/v2`) | No | `POLYGON_STAKING_API_URL` |
+| Ethereum validator | PublicNode's Beacon API (`ethereum-beacon-api.publicnode.com`) | No | `ETHEREUM_BEACON_API_URL` |
 
 Every override expects the base URL of a compatible instance, without a trailing
 slash — useful if you run your own indexer or node, or if a public endpoint rate
@@ -113,6 +119,15 @@ address, the cost is roughly:
 | Solana | ~2 + up to 25 transaction reads |
 | Cosmos Hub | 3, plus a page per extra 200 validators staked with |
 | Polkadot | 1 |
+| Avalanche C-Chain | 1 |
+| Avalanche P-Chain | 2 |
+| Solana stake account | 1 |
+| Polygon staking | 1, plus a page per extra 100 validators delegated to |
+| Ethereum validator | 1 |
+
+The Avalanche, Polygon staking and Ethereum validator sources do not retry a
+429: a throttled sync fails and is tried again on the next one. Solana stake
+accounts go through the Solana client above, which does.
 
 History is capped by default at 10 pages per source — 250 transactions for
 Bitcoin, 10 pages per EVM collection — and at 25 transactions for Solana, which
@@ -220,12 +235,12 @@ uses for valuation. That change belongs to how crypto enters Sure's price
 pipeline rather than to this feature, so it is not something you can configure
 your way out of today.
 
-**DeFi positions are not seen at all.** Staked ETH, liquidity-pool tokens,
-lending positions and Solana stake accounts are invisible: only natively-held
-coins and fungible tokens sitting at the address are read. A wallet holding most
-of its value in a staking or lending protocol will report a fraction of it. This
-is a scope limit, not a bug — nothing in the UI claims those positions were
-checked.
+**DeFi positions are not seen at all.** Liquidity-pool tokens and lending
+positions are invisible: only natively-held coins and fungible tokens sitting at
+the address are read. A wallet holding most of its value in a lending protocol
+will report a fraction of it. This is a scope limit, not a bug — nothing in the
+UI claims those positions were checked. Native staking is the exception, tracked
+as its own network: see the Avalanche and staked positions below.
 
 **Bitcoin is one address at a time.** Extended keys (`xpub`, `ypub`, `zpub`) are
 not supported and are rejected as addresses. This matters: most Bitcoin wallets
@@ -252,6 +267,27 @@ imported.
 **Polkadot has no transfer history.** No keyless source indexes transfers, so
 only the DOT balance on Asset Hub is read, staked DOT included. Other Asset Hub
 tokens are not. Past transfers are not imported.
+
+**Avalanche, and every staked position, has no transfer history.** None of these
+sources indexes transfers keylessly, so each reads one balance:
+
+- **Avalanche C-Chain** — the AVAX balance only. Tokens on the C-Chain are not
+  read: Avalanche has no public Blockscout instance to list them.
+- **Avalanche P-Chain** — spendable and staked AVAX on a `P-avax1…` address. The `P-` prefix is optional when adding it.
+- **Solana stake account** — one stake account, by its own address, not the
+  wallet that funded it. Public RPCs refuse the query that would find every stake
+  account a wallet owns, so add each one separately. The total includes the
+  account's rent reserve.
+- **Polygon staking** — POL delegated to validators by a `0x` wallet address,
+  summed over every validator. Unclaimed rewards are not included.
+- **Ethereum validator** — one beacon-chain validator, by its `0x` BLS public key
+  (96 hex characters), not its index. Liquid staking tokens such as stETH or rETH
+  need nothing extra: they are ordinary ERC-20s on Ethereum.
+
+Solana stake accounts and Polygon staking share their address format with
+ordinary Solana and EVM wallets, so they are never auto-detected: pick them from
+the network list when adding the address. A wallet that both holds ETH and stakes
+POL is added twice, once per network.
 
 **Fees are not itemised.** Network fees are included in the net effect of each
 transfer rather than recorded separately. On Solana, native balance changes below
