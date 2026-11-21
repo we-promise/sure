@@ -15,6 +15,21 @@ class Transfer::InvestmentKindReconcilerTest < ActiveSupport::TestCase
     assert_equal({ "investment_contribution->funds_movement" => 1 }, result.changed)
   end
 
+  test "drops the Investment Contributions category of a leg it makes a plain transfer" do
+    transfer = create_transfer(from: accounts(:crypto), to: accounts(:investment), outflow_kind: "investment_contribution")
+    category = @family.investment_contributions_category
+    transfer.outflow_transaction.update_columns(category_id: category.id)
+    locked = create_transfer(from: accounts(:crypto), to: accounts(:investment), outflow_kind: "investment_contribution")
+    locked.outflow_transaction.update_columns(category_id: category.id)
+    locked.outflow_transaction.lock_attr!(:category_id)
+
+    Transfer::InvestmentKindReconciler.new.run
+
+    assert_nil transfer.outflow_transaction.reload.category_id
+    assert_equal "funds_movement", locked.outflow_transaction.reload.kind
+    assert_equal category.id, locked.outflow_transaction.category_id
+  end
+
   test "repairs a matched brokerage inflow an earlier sync turned back into a contribution" do
     transfer = create_transfer(from: accounts(:depository), to: accounts(:investment),
                                outflow_kind: "investment_contribution", inflow_kind: "investment_contribution")

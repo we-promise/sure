@@ -689,6 +689,46 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Test notes", transfer.reload.notes
   end
 
+  test "a category chosen in the transfer editor is locked as the user's" do
+    transfer = transfers(:one)
+    category = families(:dylan_family).investment_contributions_category
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    outflow = transfer.outflow_transaction.reload
+    assert_equal category, outflow.category
+    assert outflow.locked?(:category_id), "a cleanup or sync would treat an unlocked choice as its own"
+  end
+
+  test "a category re-chosen in the transfer editor stays the user's where the AI had set it" do
+    transfer = transfers(:one)
+    category = families(:dylan_family).investment_contributions_category
+    outflow = transfer.outflow_transaction
+    outflow.enrich_attribute(:category_id, category.id, source: "ai")
+    outflow.lock_attr!(:category_id)
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    assert_empty Transaction.where(id: outflow.id).without_user_category_lock
+    outflow.reload.update!(kind: "funds_movement")
+    assert_equal category, outflow.reload.category
+  end
+
+  test "a different category chosen in the transfer editor keeps the AI's superseded suggestion" do
+    transfer = transfers(:one)
+    outflow = transfer.outflow_transaction
+    outflow.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
+    outflow.lock_attr!(:category_id)
+    category = families(:dylan_family).investment_contributions_category
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    assert_equal category, outflow.reload.category
+    suggestion = DataEnrichment.find_by(enrichable: outflow, attribute_name: "category_id", source: "ai")
+    assert suggestion, "the AI's suggestion was deleted, so the transaction leaves the AI history filter"
+    assert_equal true, suggestion.metadata["superseded"]
+  end
+
   test "confirming a transfer keeps the outflow category" do
     transfer = transfers(:one)
     transfer.outflow_transaction.update!(category: categories(:food_and_drink))
