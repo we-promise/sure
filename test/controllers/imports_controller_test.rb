@@ -619,6 +619,17 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.publish.enqueue_failed"), flash[:alert]
   end
 
+  test "a blank row date sends the user back to the clean step with a correction" do
+    import = imports(:transaction)
+    message = I18n.t("imports.errors.blank_dates")
+    TransactionImport.any_instance.stubs(:publish_later).raises(Import::InvalidRowDataError, message)
+
+    post publish_import_url(import)
+
+    assert_redirected_to import_clean_path(import, view: "errors")
+    assert_equal message, flash[:alert]
+  end
+
   test "member cannot publish import targeting a read only shared account" do
     import = imports(:transaction)
     import.update!(account: accounts(:credit_card))

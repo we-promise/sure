@@ -2,6 +2,19 @@ module VectorStore
   Error = Class.new(StandardError)
   ConfigurationError = Class.new(Error)
 
+  # The upload succeeded but neither the attachment nor the compensating deletion did. The
+  # uploaded file id has to reach the caller so a document row can keep it for a later retry.
+  class UploadCleanupError < Error
+    attr_reader :file_id, :attachment_error, :cleanup_error
+
+    def initialize(file_id:, attachment_error:, cleanup_error:)
+      @file_id = file_id
+      @attachment_error = attachment_error
+      @cleanup_error = cleanup_error
+      super("uploaded file #{file_id} could not be attached or deleted (#{cleanup_error.class})")
+    end
+  end
+
   Response = Data.define(:success?, :data, :error)
 
   DEFAULT_EMBEDDING_MODEL = "mxbai-embed-large".freeze

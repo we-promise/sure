@@ -6,6 +6,9 @@ class Import < ApplicationRecord
   # callers that treat an unpublishable import as a runtime failure still do.
   AlreadyClaimedError = Class.new(RuntimeError)
   EnqueueFailedError = Class.new(StandardError)
+  # ArgumentError so a blank date found while reconciling a row still takes the
+  # existing "offer it for review" rescue instead of being dropped.
+  InvalidRowDataError = Class.new(ArgumentError)
 
   # A hard-killed worker (OOM, SIGKILL during deploy) loses its in-flight job
   # permanently, wedging the record in importing/reverting with no UI recourse.
@@ -34,6 +37,11 @@ class Import < ApplicationRecord
       "imports.errors.interrupted",
       default: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."
     )
+  end
+
+  # User-facing (shown as the import's error and as the publish request's alert).
+  def self.blank_date_error_message
+    I18n.t("imports.errors.blank_dates", default: "Enter a date for every row before publishing.")
   end
 
   # Shared CSV upload/content limit for web and API imports, including preflight.
@@ -260,6 +268,7 @@ class Import < ApplicationRecord
       # complete means a competing request finished publishing between the
       # controller's check and this claim; importing means another job owns it.
       raise AlreadyClaimedError, "Import is already claimed" if importing? || reverting? || complete?
+      raise InvalidRowDataError, self.class.blank_date_error_message if blank_dates?
       raise "Import is not publishable" unless publishable?
 
       previous_status = status
@@ -267,7 +276,7 @@ class Import < ApplicationRecord
     end
 
     enqueued = begin
-      ImportJob.perform_later(self)
+      ImportJob.perform_later(self, publish_token: token)
     rescue StandardError => e
       release_publish_claim!(previous_status, token)
       raise EnqueueFailedError, e.message
@@ -300,7 +309,7 @@ class Import < ApplicationRecord
     %w[importing reverting].include?(status) && updated_at < cutoff
   end
 
-  def publish
+  def publish(publish_token: nil)
     # A redelivered or stray ImportJob must not re-import data that already
     # committed (types without row dedup would double-apply), and must not
     # race a revert that owns the record. A failed import is deliberately NOT
@@ -317,16 +326,48 @@ class Import < ApplicationRecord
       return
     end
 
+    # Consume the claim under the row lock before doing any work. A duplicate
+    # delivery can then no longer pass the check while another one is importing,
+    # and a reread that took over in the meantime keeps its own claim untouched.
+    claimed = false
+    if publish_token.present?
+      with_lock do
+        unless importing? && reread_token == publish_token
+          DebugLogEntry.capture(
+            category: "background_jobs",
+            level: "warn",
+            message: "Import publish skipped: stale publish claim",
+            source: self.class.name,
+            family: family,
+            metadata: { record_type: type, record_id: id, status: status }
+          )
+          return
+        end
+
+        update!(reread_token: nil)
+        claimed = true
+      end
+    end
+
     raise MaxRowCountExceededError if row_count_exceeded?
+    raise InvalidRowDataError, self.class.blank_date_error_message if blank_dates?
 
     import!
 
     family.sync_later
     EntryScheduledSyncJob.schedule_for_entries(entries)
 
-    update! status: :complete, reread_token: nil
+    if publish_token.present?
+      with_lock { update!(status: :complete, reread_token: nil) if importing? }
+    else
+      update!(status: :complete, reread_token: nil)
+    end
   rescue => error
-    update! status: :failed, error: error.message, reread_token: nil
+    if publish_token.present? && claimed
+      with_lock { update!(status: :failed, error: error.message, reread_token: nil) if importing? }
+    elsif publish_token.blank?
+      update!(status: :failed, error: error.message, reread_token: nil)
+    end
   end
 
   def revert_later
@@ -666,6 +707,12 @@ class Import < ApplicationRecord
 
     def row_count_exceeded?
       rows_count > max_row_count
+    end
+
+    def blank_dates?
+      # Account imports may leave the optional balance date blank; only block
+      # imports whose row validation already requires a date.
+      required_column_keys.include?(:date) && rows.any? { _1.date.blank? }
     end
 
     def import!

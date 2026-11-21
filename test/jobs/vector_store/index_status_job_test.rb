@@ -124,7 +124,7 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     assert_equal "processing", @document.reload.status
 
     VectorStore::IndexStatusJob.unstub(:set)
-    assert_enqueued_with(job: VectorStore::IndexStatusJob) { @document.poll_index_later }
+    assert_enqueued_with(job: VectorStore::IndexStatusJob) { VectorStore::RequeueIndexPollsJob.perform_now }
   end
 
   private

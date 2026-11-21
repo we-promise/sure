@@ -98,7 +98,7 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     endpoint = ai_endpoint(name: "anthropic", protocol: :anthropic, base_url: "https://anthropic.example.test")
     request = Ai::Transport::Base::EmbedRequest.new(feature: :embed, model: ai_model(endpoint:), texts: [ "x" ])
 
-    assert_raises(NotImplementedError) { Ai::Transport.for(endpoint).embed(request) }
+    assert_raises(Ai::Error::Refused) { Ai::Transport.for(endpoint).embed(request) }
   end
 
   test "Ai::Embeddings indexes in batches of 50 on the embed route and queries under search_documents" do

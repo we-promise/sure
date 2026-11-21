@@ -149,6 +149,16 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_equal 40_000.0, statement[:opening_balance]
   end
 
+  test "a date form inside a longer printed day doesn't anchor a different row" do
+    extraction = value([ [ "2019-02-01", -5.0 ], [ "2019-02-11", 300.0 ] ])
+
+    checks = Ai::Generations::ExtractBankStatement.checks(
+      extraction, source: "1february Rent 5.00 11february Deposit 300.00"
+    )
+
+    assert_equal 1.0, checks.dates_anchored
+  end
+
   test "an amount inside a longer printed number isn't in the source" do
     checks = Ai::Generations::ExtractBankStatement.checks(
       { opening_balance: 100.0, closing_balance: 120.0, transactions: [ { date: "2019-02-01", amount: 20.0 } ] },

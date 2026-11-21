@@ -72,6 +72,24 @@ class Family::VectorSearchableTest < ActiveSupport::TestCase
     assert_enqueued_with(job: VectorStore::IndexStatusJob) { document.poll_index_later }
   end
 
+  test "a failed upload cleanup is recorded with its file id for a later retry" do
+    adapter = stub("adapter")
+    error = VectorStore::UploadCleanupError.new(file_id: "file-lost",
+                                                attachment_error: VectorStore::Error.new("attach failed"),
+                                                cleanup_error: VectorStore::Error.new("delete failed"))
+    adapter.stubs(:upload_file).returns(VectorStore::Response.new(success?: false, data: nil, error:))
+    adapter.expects(:remove_file).never
+    @family.stubs(:vector_store_adapter).returns(adapter)
+    @family.stubs(:ensure_vector_store!).returns("vs_test")
+
+    document = @family.upload_document(file_content: "x", filename: "s.pdf")
+
+    assert document.persisted?
+    assert_equal "error", document.status
+    assert_equal "file-lost", document.provider_file_id
+    assert_equal "VectorStore::Error", document.metadata["cleanup_error"]
+  end
+
   test "deleting a family removes an OpenAI store with the backend that created it" do
     family = Family.create!(name: "Leaving", vector_store_id: "vs-openai")
     family.family_documents.create!(filename: "tax.pdf", provider_file_id: "file-1", status: "ready",

@@ -194,11 +194,14 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
       max_results: 50,
       family: @user.family,
       user: @user
-    ).returns(VectorStore::Response.new(success?: true, data: [], error: nil))
+    ).returns(VectorStore::Response.new(success?: true, data: Array.new(21) { { content: "hit", filename: "f.pdf", score: 0.5 } }, error: nil))
 
     VectorStore::Registry.stubs(:adapter).returns(mock_adapter)
 
-    assert @function.call("query" => "test", "max_results" => 50)[:success]
+    result = @function.call("query" => "test", "max_results" => 50)
+
+    assert result[:success]
+    assert_equal 20, result[:results].size, "the tool caps readable hits independently of the adapter's candidate limit"
   end
 
   test "never claims nothing was uploaded when statements are on file" do

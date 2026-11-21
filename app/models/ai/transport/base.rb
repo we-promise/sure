@@ -144,9 +144,15 @@ class Ai::Transport::Base
   # How many requests one call may have in flight.
   def parallel_requests = endpoint.parallel_requests || 1
 
+  # Whether this transport can embed at all. A route can name an embedding model on a transport
+  # that only generates, so the call must refuse with an Ai::Error before reaching run_embed.
+  def embed? = self.class.instance_method(:run_embed).owner != Ai::Transport::Base
+
   # Embeds an EmbedRequest's texts and returns an EmbedResponse, or raises an Ai::Error: one
   # vector per text, each of the model's dimensions when it has them.
   def embed(request)
+    raise Ai::Error::Refused, "#{self.class.name} doesn't embed" unless embed?
+
     Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family, budget: endpoint.timeout_seconds) do
       instrument("embed", model: request.model, request: request.to_event) { run_embed(request) }
     end

@@ -24,7 +24,7 @@ module ImportInterfaceTest
 
     import.stubs(:publishable?).returns(true)
 
-    assert_enqueued_with job: ImportJob, args: [ import ] do
+    assert_enqueued_with job: ImportJob do
       import.publish_later
     end
 

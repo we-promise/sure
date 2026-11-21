@@ -60,8 +60,12 @@ class VectorStore::Openai < VectorStore::Base
       begin
         client.vector_store_files.create(vector_store_id: store_id, parameters: { file_id: file_id })
       rescue => e
-        delete_file(file_id) rescue nil
-        raise e
+        begin
+          delete_file(file_id)
+        rescue => cleanup_error
+          raise VectorStore::UploadCleanupError.new(file_id:, attachment_error: e, cleanup_error:), cause: e
+        end
+        raise
       end
 
       { file_id: file_id, status: "processing" }

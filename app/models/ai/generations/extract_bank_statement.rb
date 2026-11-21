@@ -201,8 +201,20 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
       def date_anchored?(row, dates, text)
         positions(text, amount_pattern(row[:amount])).any? do |at|
           before = text[[ at - DATE_WINDOW, 0 ].max...at]
-          dates.filter_map { |form, date| (index = before.rindex(form)) && [ index, date ] }.max_by(&:first)&.last == row[:date]
+          dates.filter_map { |form, date| (index = last_form_index(before, form)) && [ index, form.length, date ] }
+               .max_by { |index, length, _| [ index, length ] }&.last == row[:date]
         end
+      end
+
+      # Date forms must not be part of a longer number ("1february" isn't the
+      # "11february" printed on the row), but a letter-form may sit beside other
+      # letters. Where both forms end at the same place, the longer one is the
+      # printed date.
+      def last_form_index(text, form)
+        pattern = Regexp.escape(form)
+        pattern = "(?<!\\d)#{pattern}" if form.match?(/\A\d/)
+        pattern = "#{pattern}(?!\\d)" if form.match?(/\d\z/)
+        text.rindex(/#{pattern}/)
       end
 
       def positions(text, pattern) = text.enum_for(:scan, pattern).map { Regexp.last_match.begin(0) }

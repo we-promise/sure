@@ -229,6 +229,23 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_equal %w[gpu], result.failed_over_from.map { _1.endpoint.name }
   end
 
+  test "unsupported singleton answers during bisection keep the halves already answered" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b])
+    use_ai_model_settings(batch_size: 2)
+    stub_ai(:detect_merchants) do |request|
+      ids = request.input.scan(/ID: (t\d)/).flatten
+      raise Ai::Error::InvalidOutput, "garbage" if ids == %w[t2 t3]
+      raise Ai::Error::UnsupportedInput, "image input is not supported" if ids == %w[t2] || ids == %w[t3]
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = generation(4).call
+
+    assert_equal %w[t0 t1], answered_ids(result)
+    assert_equal %w[t2 t3], result.skipped.map { _1[:id] }
+  end
+
   test "items a route can't fit wait for an escalation route that is only marked down" do
     use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     Ai::DownMarks.stubs(:state).returns(:up)
