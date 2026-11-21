@@ -140,8 +140,9 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: Import::TYPES - %w[MonarchImport],
-            description: 'Import type (defaults to TransactionImport). MonarchImport imports are created in the web app; requesting one here returns 422 unsupported_type.'
+            enum: Import::TYPES,
+            description: 'Import type (defaults to TransactionImport when omitted). MonarchImport is created in the web app and ' \
+                         'the API refuses it with 422 unsupported_type. A type outside this list returns 422 invalid_import_type.'
           },
           account_id: {
             type: :string,
@@ -271,7 +272,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '422', 'validation error or publish rejection' do
+      response '422', 'validation error, publish rejection, invalid_import_type, or unsupported_type (MonarchImport)' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
           { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }
