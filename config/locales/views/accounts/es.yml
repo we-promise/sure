@@ -124,6 +124,17 @@ es:
         manual_entry: Introducir saldo de la cuenta
         title: ¿Cómo te gustaría añadirla?
       title: ¿Qué te gustaría añadir?
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): por debajo de cero desde el %{date}, mínimo %{qty}"
+        hint: "Probablemente falta una compra o un traspaso. Añádela o corrige las operaciones que dejaron la posición por debajo de cero."
+        link: Revisar posiciones
+        message: "Algunas posiciones quedaron por debajo de cero"
+      sync_failed:
+        message: La última sincronización falló
+      sync_hint: Las cifras pueden estar desactualizadas. Vuelve a sincronizar para ponerlas al día.
+      sync_stale:
+        message: La última sincronización no terminó
     show:
       balance_gap:
         body_higher: "Desde el %{since}, el saldo que informa tu banco es %{difference} mayor que la suma de tus transacciones. Normalmente falta una transacción en Sure o se importó dos veces."

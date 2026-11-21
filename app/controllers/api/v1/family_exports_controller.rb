@@ -4,6 +4,8 @@ class Api::V1::FamilyExportsController < Api::V1::BaseController
   include Pagy::Backend
   include ActiveStorage::Streaming
 
+  wrap_parameters false
+
   before_action :ensure_read_scope, only: [ :index, :show, :download ]
   before_action :ensure_write_scope, only: [ :create ]
   before_action :ensure_admin

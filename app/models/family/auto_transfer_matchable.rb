@@ -51,6 +51,7 @@ module Family::AutoTransferMatchable
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
+    window_start, window_end = transfer_match_window(transaction_ids, date_window) if transaction_ids.present?
 
     Entry.find_by_sql([
       transfer_match_candidates_sql,
@@ -64,6 +65,8 @@ module Family::AutoTransferMatchable
         filter_transaction_ids: !transaction_ids.nil?,
         # IN () is invalid SQL, so an empty list binds a NULL that matches nothing.
         transaction_ids: transaction_ids.presence || [ nil ],
+        window_start:,
+        window_end:,
         include_rejected:,
         restrict_cross_currency_to_linked_accounts:,
         require_common_writer:,
@@ -257,6 +260,17 @@ module Family::AutoTransferMatchable
       )
     end
 
+    # Both legs of any pair that touches one of `transaction_ids` lie within
+    # `date_window` days of that transaction, so within the ids' date span
+    # widened by the window. The id filter spans both legs and only applies
+    # once pairs are formed; this range narrows each leg before the join and
+    # drops no pair the id filter would keep. nil when none of the ids exist.
+    def transfer_match_window(transaction_ids, date_window)
+      first, last = Entry.where(entryable_type: "Transaction", entryable_id: transaction_ids)
+                         .pick(Arel.sql("MIN(entries.date)"), Arel.sql("MAX(entries.date)"))
+      [ first - date_window, last + date_window ] if first
+    end
+
     def coerce_transfer_match_date_window!(value)
       Integer(value)
     rescue ArgumentError, TypeError
@@ -412,6 +426,10 @@ module Family::AutoTransferMatchable
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
             (:filter_transaction_ids = FALSE OR inflow_candidates.entryable_id IN (:transaction_ids) OR outflow_candidates.entryable_id IN (:transaction_ids)) AND
+            (:window_start IS NULL OR (
+              inflow_candidates.date BETWEEN :window_start AND :window_end AND
+              outflow_candidates.date BETWEEN :window_start AND :window_end
+            )) AND
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
             #{provider_exclusion_condition} AND
             #{common_writer_condition_sql}
@@ -499,6 +517,10 @@ module Family::AutoTransferMatchable
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
             (:filter_transaction_ids = FALSE OR inflow_candidates.entryable_id IN (:transaction_ids) OR outflow_candidates.entryable_id IN (:transaction_ids)) AND
+            (:window_start IS NULL OR (
+              inflow_candidates.date BETWEEN :window_start AND :window_end AND
+              outflow_candidates.date BETWEEN :window_start AND :window_end
+            )) AND
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
             (
               :restrict_cross_currency_to_linked_accounts = FALSE OR
