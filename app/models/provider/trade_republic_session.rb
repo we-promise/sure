@@ -170,10 +170,9 @@ class Provider::TradeRepublicSession
     def device_info
       @device_info ||= Base64.strict_encode64(JSON.generate(
         stableDeviceId: stable_device_id,
+        model: ENV["TRADE_REPUBLIC_DEVICE_MODEL"].presence || "Sure",
         browser: "Chrome",
         browserVersion: USER_AGENT[/Chrome\/([\d.]+)/, 1].to_s,
-        device: "Desktop",
-        deviceType: "desktop",
         os: Etc.uname[:sysname].to_s,
         osVersion: Etc.uname[:release].to_s,
         timezone: Time.zone.tzinfo.name,

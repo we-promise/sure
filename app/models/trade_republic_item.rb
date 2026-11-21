@@ -1,9 +1,5 @@
 class TradeRepublicItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
-
-  # The PIN is accepted only for the authentication request. It is never
-  # persisted; session restoration uses the encrypted session blob instead.
-  attr_accessor :pin
+  include Syncable, Provided, LoginCompletion, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -13,31 +9,56 @@ class TradeRepublicItem < ApplicationRecord
     encrypts :pending_login_state
   end
 
+  # Needed to start the scheduled daily login; never logged or rendered. Unlike
+  # the optionally encrypted attributes above it is only stored while auto
+  # login is on and the encryption keys are safe (see discard_unneeded_pin).
+  encrypts :pin if ActiveRecordEncryptionConfig.ready?
+
+  AUTO_LOGIN_TIME_FORMAT = /\A([01]\d|2[0-3]):[0-5]\d\z/
+
   belongs_to :family
   has_many :trade_republic_accounts, dependent: :destroy
+
+  normalizes :auto_login_time, with: ->(time) { time.presence }
 
   # QR login does not require the phone number or PIN. The account is created
   # in requires_update state first and receives its authenticated session after
   # the QR challenge is approved in the Trade Republic app.
   validates :phone_number, presence: true, unless: -> { requires_update? || session_configured? }
 
+  validates :auto_login_time, format: { with: AUTO_LOGIN_TIME_FORMAT }, allow_nil: true
+  validate :auto_login_needs_stored_pin, if: -> { auto_login_time.present? && will_save_change_to_auto_login_time? }
+
   scope :active, -> { where(scheduled_for_deletion: false) }
+  # A scheduled login started before the session ends leaves the still valid
+  # session in place, so a pending login does not stop syncs.
   # Matches ready_for_sync?: a session without a known end (stored before
   # session_expires_at existed) stays syncable until its next save sets one.
   scope :syncable, -> {
-    active.where(status: :good, pending_login_state: nil).where.not(session_blob: [ nil, "" ])
+    active.where(status: :good).where.not(session_blob: [ nil, "" ])
       .where("trade_republic_items.session_expires_at IS NULL OR trade_republic_items.session_expires_at > ?", Time.current)
   }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  before_save :discard_unneeded_pin
   before_save :set_session_expires_at, if: -> { session_blob_changed? || (session_expires_at.nil? && session_configured?) }
-  after_commit :schedule_sync_before_session_expires, if: -> { saved_change_to_session_expires_at? && session_expires_at.present? }
+  after_commit :schedule_jobs_before_session_expires, if: -> { saved_change_to_session_expires_at? && session_expires_at.present? }
+  after_commit :schedule_auto_login, if: -> { saved_change_to_auto_login_time? || (auto_login_time.present? && auto_login_token.blank?) }
 
-  # Reloading represents a new persisted state; never carry an authentication
-  # PIN across that boundary in the in-memory model instance.
-  def reload(*)
-    super.tap { @pin = nil }
+  # The next moment the opt-in daily login starts: auto_login_time ("HH:MM")
+  # on the family's clock. A time the clocks skip over on the change to summer
+  # time moves to the next valid one, so the login still happens that day.
+  def next_auto_login_at(after: Time.current)
+    return if auto_login_time.blank?
+
+    hour, minute = auto_login_time.split(":").map(&:to_i)
+    zone = (ActiveSupport::TimeZone[family.timezone] if family.timezone.present?) || Time.zone
+    day = after.in_time_zone(zone).to_date
+    at = zone.local(day.year, day.month, day.day, hour, minute)
+    day = day.tomorrow
+    at = zone.local(day.year, day.month, day.day, hour, minute) if at <= after
+    at
   end
 
   def credentials_configured?
@@ -57,7 +78,7 @@ class TradeRepublicItem < ApplicationRecord
   end
 
   def ready_for_sync?
-    good? && pending_login_state.blank? && session_configured? && !session_expired?
+    good? && session_configured? && !session_expired?
   end
 
   def import_latest_data
@@ -242,11 +263,36 @@ class TradeRepublicItem < ApplicationRecord
 
   private
 
+    # The PIN only exists for the scheduled login. Without auto login, or
+    # without keys that protect it, it is not stored; the manual login then
+    # asks for it each time.
+    def discard_unneeded_pin
+      self.pin = nil if auto_login_time.blank? || !pin_storable?
+    end
+
+    # Keys derived from a published SECRET_KEY_BASE are as good as none.
+    def pin_storable?
+      ActiveRecordEncryptionConfig.explicitly_configured? ||
+        (ActiveRecordEncryptionConfig.ready? && !ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?)
+    end
+
     def set_session_expires_at
       self.session_expires_at = session_configured? ? Provider::TradeRepublicSession.expires_at(session_blob) : nil
     end
 
-    def schedule_sync_before_session_expires
+    def schedule_jobs_before_session_expires
       TradeRepublicPreExpirySyncJob.schedule_for(self)
+    end
+
+    # Starts a new schedule: jobs of the previous one see another token (or
+    # none, once auto login is off) and do nothing.
+    def schedule_auto_login
+      TradeRepublicReloginJob.schedule_for(self)
+    end
+
+    def auto_login_needs_stored_pin
+      errors.add(:auto_login_time, :pin_required) if pin.blank?
+      errors.add(:auto_login_time, :phone_number_required) if phone_number.blank?
+      errors.add(:auto_login_time, :encryption_unavailable) unless pin_storable?
     end
 end

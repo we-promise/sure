@@ -352,6 +352,8 @@ en:
         pin_placeholder_new: Your Trade Republic PIN or password
         pin_placeholder_existing: Leave blank to keep the current PIN or password
         currency_label: Account currency
+        auto_login_time_label: Automatic login at
+        auto_login_time_help: Optional. The time of day (in your time zone) when Sure starts the Trade Republic login by itself; you then only approve it in the Trade Republic app. Needs your PIN, which Sure keeps encrypted only while this is on. Leave empty to turn it off and delete the stored PIN.
         connect: Log in
         confirm_login: Check login
         complete_login: Continue

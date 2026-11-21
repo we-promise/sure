@@ -304,6 +304,8 @@ de:
         pin_placeholder_new: PIN oder Passwort deiner Trade-Republic-App
         pin_placeholder_existing: Leer lassen, um die aktuelle PIN bzw. das aktuelle Passwort zu behalten
         currency_label: Kontowährung
+        auto_login_time_label: Automatischer Login um
+        auto_login_time_help: Optional. Die Uhrzeit (in deiner Zeitzone), zu der Sure den Trade-Republic-Login selbst startet; du bestätigst ihn dann nur noch in der Trade-Republic-App. Braucht deine PIN, die Sure nur verschlüsselt und nur so lange speichert, wie das aktiv ist. Leer lassen, um es auszuschalten und die gespeicherte PIN zu löschen.
         connect: Einloggen
         confirm_login: Login prüfen
         complete_login: Fortfahren

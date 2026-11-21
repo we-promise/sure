@@ -1,6 +1,8 @@
 require "test_helper"
 
 class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
+  include TradeRepublicSessionTestHelper
+
   setup do
     sign_in users(:family_admin)
   end
@@ -512,6 +514,76 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'data-action="DS--dialog#close"'
     assert_includes response.body, I18n.t("settings.providers.trade_republic_panel.connection_success.close")
+  end
+
+  test "update changes the auto login time and keeps the stored PIN when the PIN field is blank" do
+    item = trade_republic_items(:configured_item)
+    item.update!(pin: "1234", auto_login_time: "06:00")
+    TradeRepublicItem.any_instance.expects(:trade_republic_provider).never
+
+    patch trade_republic_item_url(item), params: { trade_republic_item: { phone_number: "", pin: "", auto_login_time: "07:30" } },
+          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    item.reload
+    assert_equal "07:30", item.auto_login_time
+    assert_equal "1234", item.pin
+    assert_predicate item, :session_configured?
+  end
+
+  test "update turns auto login off with a blank time" do
+    item = trade_republic_items(:configured_item)
+    item.update!(pin: "1234", auto_login_time: "07:30")
+
+    patch trade_republic_item_url(item), params: { trade_republic_item: { phone_number: "", pin: "", auto_login_time: "" } },
+          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_nil item.reload.auto_login_time
+    assert_nil item.auto_login_token
+    assert_nil item.pin
+  end
+
+  test "update refuses an auto login time without a stored PIN" do
+    item = trade_republic_items(:configured_item)
+    item.update!(pin: nil)
+
+    patch trade_republic_item_url(item), params: { trade_republic_item: { phone_number: "", pin: "", auto_login_time: "07:30" } },
+          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_nil item.reload.auto_login_time
+  end
+
+  test "a scheduled login pending beside a good session shows one approval poller and finishes through the browser poll" do
+    item = trade_republic_items(:configured_item)
+    old_session = trade_republic_session_blob(expires_at: 40.minutes.from_now)
+    item.update!(session_blob: old_session, pending_login_state: "pending-login")
+    new_session = trade_republic_session_blob(expires_at: 24.hours.from_now)
+    provider = mock
+    provider.stubs(:login_stage).returns("waiting_for_approval")
+    provider.stubs(:login_method).returns("push")
+    provider.stubs(:qr_login?).returns(false)
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    get settings_providers_url
+    assert_response :success
+    assert_equal 1, response.body.scan("data-controller=\"trade-republic-login\"").size
+    assert_predicate item.reload, :ready_for_sync?
+
+    provider.expects(:complete_login).with(pending_login_b64: "pending-login").returns(
+      Provider::TradeRepublicClient::Result.new(
+        data: { "status" => "ok", "session_txt" => new_session, "account" => { "brokerage_account_id" => "DE-RELOGIN" } }
+      )
+    )
+    TradeRepublicItem.any_instance.stubs(:syncing?).returns(true)
+
+    post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    item.reload
+    assert_equal new_session, item.session_blob
+    assert_nil item.pending_login_state
+    assert_predicate item, :good?
   end
 
   test "pending push login poll stores the new state without re-rendering the card" do
