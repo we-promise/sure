@@ -14,7 +14,7 @@
 # the caller via the `on_token_refresh` callback so the item model can persist
 # them inside its own row lock / transaction.
 class Provider::Questrade
-  include HTTParty
+  include ProxiedHttparty
 
   headers "User-Agent" => "Sure Finance Questrade Client"
   default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)

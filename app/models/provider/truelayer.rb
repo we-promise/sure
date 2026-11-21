@@ -11,7 +11,7 @@
 #
 # Docs: https://docs.truelayer.com/docs/data-api-basics
 class Provider::Truelayer
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   headers "User-Agent" => "Sure Finance TrueLayer Client"

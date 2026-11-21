@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Provider::Kraken
-  include HTTParty
+  include ProxiedHttparty
   include Provider::RateLimitable  # fully qualified: Provider::Kraken does not inherit from Provider, unlike the other includers
   extend SslConfigurable
 

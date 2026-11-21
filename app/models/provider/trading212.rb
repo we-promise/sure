@@ -1,5 +1,5 @@
 class Provider::Trading212
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   class Error < StandardError; end

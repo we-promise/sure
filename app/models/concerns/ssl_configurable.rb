@@ -53,7 +53,7 @@ module SslConfigurable
   # @return [Hash] SSL options for HTTParty
   # @example
   #   class MyProvider
-  #     include HTTParty
+  #     include ProxiedHttparty
   #     extend SslConfigurable
   #     default_options.merge!(httparty_ssl_options)
   #   end
