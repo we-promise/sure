@@ -1107,10 +1107,11 @@ class EnableBankingItem::Importer
       end
 
       seen = {}
+      occurrences = Hash.new(0)
       duplicates_removed = 0
 
-      result = transactions.select do |tx|
-        tx = tx.with_indifferent_access
+      result = transactions.each_with_object([]) do |original, rows|
+        tx = original.with_indifferent_access
         key = build_transaction_content_key(tx)
 
         if reference_groups.include?(key)
@@ -1118,18 +1119,27 @@ class EnableBankingItem::Importer
           # copies, regardless of which appears first in the response.
           unless distinct_booked_reference?(tx)
             duplicates_removed += 1
-            next false
+            next
           end
           key = [ key, tx[:entry_reference] ]
+        elsif tx[:transaction_id].blank? && tx[:entry_reference].blank?
+          # Two real movements can have no identifier at all and identical content
+          # (Revolut's twice-daily €200 top-ups, for example). Count occurrences in
+          # the response so both survive dedup; the index is folded into the
+          # processor's content-based external id, and a stable order keeps the
+          # same rows identical on later syncs.
+          index = occurrences[key]
+          occurrences[key] += 1
+          key = [ key, index ]
+          original = original.merge(_content_occurrence: index)
         end
 
         if seen[key]
           duplicates_removed += 1
-          false
-        else
-          seen[key] = true
-          true
+          next
         end
+        seen[key] = true
+        rows << original
       end
 
       if duplicates_removed > 0
@@ -1329,7 +1339,7 @@ class EnableBankingItem::Importer
 
     def content_key(transaction)
       content_id = EnableBankingEntry::Processor.compute_external_id(
-        transaction.with_indifferent_access.except(:transaction_id, :entry_reference)
+        transaction.with_indifferent_access.except(:transaction_id, :entry_reference, :_content_occurrence)
       )
       [ pending_row?(transaction), content_id ] if content_id.present?
     end

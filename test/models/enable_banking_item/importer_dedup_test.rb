@@ -344,6 +344,39 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 2, result.count
   end
 
+  test "keeps identifierless rows with identical content by occurrence" do
+    base = {
+      booking_date: "2026-02-07",
+      transaction_amount: { amount: "200.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      debtor: { name: "Own account" },
+      status: "BOOK"
+    }
+
+    result = @importer.send(:deduplicate_api_transactions, [ base.dup, base.dup ])
+
+    assert_equal 2, result.count
+    assert_equal [ 0, 1 ], result.map { |tx| tx[:_content_occurrence] }
+  end
+
+  test "still collapses identifierless copies of a booked reference" do
+    booked = {
+      entry_reference: "ref_aaa",
+      transaction_id: nil,
+      booking_date: "2026-02-07",
+      transaction_amount: { amount: "200.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      debtor: { name: "Own account" },
+      status: "BOOK"
+    }
+    identifierless = booked.except(:entry_reference)
+
+    result = @importer.send(:deduplicate_api_transactions, [ identifierless.dup, booked.dup, identifierless.dup ])
+
+    assert_equal 1, result.count
+    assert_equal "ref_aaa", result.first[:entry_reference]
+  end
+
   test "returns empty array for empty input" do
     result = @importer.send(:deduplicate_api_transactions, [])
     assert_equal [], result
