@@ -242,6 +242,27 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="modal"/).size
   end
 
+  # The account dropdown shows each account's logo, and Account#logo_url
+  # reads the stored logo and, failing that, the provider's. Unpreloaded that
+  # was an attachment load and an account_providers EXISTS per account.
+  test "new renders the account dropdown without per-account queries" do
+    queries = []
+    callback = ->(*, payload) { queries << payload[:sql] unless payload[:cached] }
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+    end
+
+    assert_response :success
+    assert_empty queries.grep(/SELECT 1 AS one FROM "account_providers"/),
+      "account_providers should be preloaded, not checked one account at a time"
+    assert_operator queries.grep(/FROM "active_storage_attachments" WHERE .*"record_id" = \$1 AND/).size, :<=, 1,
+      "account logos should be preloaded, not loaded one account at a time"
+    # Account#linked? falls back to the legacy links once account_providers is empty.
+    assert_empty queries.grep(/FROM "(plaid|simplefin)_accounts" WHERE .*"id" = \$1 LIMIT/),
+      "legacy plaid/simplefin links should be preloaded, not loaded one account at a time"
+  end
+
   test "add income opens an income dialog, not a bill dialog" do
     get new_recurring_transaction_url(income: true), headers: { "Turbo-Frame" => "modal" }
 

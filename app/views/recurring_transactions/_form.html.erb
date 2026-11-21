@@ -62,7 +62,7 @@
     <% end %>
 
     <%= f.collection_select :account_id,
-          Current.user.accessible_accounts.visible.alphabetically,
+          bill_account_options,
           :id, :name,
           { label: income ? t(".income_account_label") : t(".account_label"), include_blank: t(".account_blank"),
             variant: :logo, searchable: true } %>
