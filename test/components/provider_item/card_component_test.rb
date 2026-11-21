@@ -110,6 +110,58 @@ class ProviderItem::CardComponentTest < ActiveSupport::TestCase
     end
   end
 
+  # The last sync's stats, with an account count no fixture produces and a
+  # skipped transaction that names an account.
+  CONNECTION_STATS = {
+    "total_accounts" => 7, "linked_accounts" => 1, "unlinked_accounts" => 6,
+    "tx_seen" => 3, "tx_skipped" => 1, "skip_details" => [ { "name" => "Payroll run", "reason" => "excluded" } ]
+  }.freeze
+
+  # A viewer who cannot see every linked account, admin or not, gets no
+  # connection-wide counts and no account names; only an admin gets the setup
+  # prompt. This reverses #3630's "counts without the names" for a partly
+  # shared member.
+  test "a member who sees none of the connection's accounts gets no counts, names or setup prompt" do
+    html = render_card_with_stats(user: :family_member, visible: :none)
+
+    assert_equal({ setup: false, header_summary: false, counts: false, names: false }, connection_details(html))
+    assert_not_includes html, ERB::Util.html_escape(I18n.t("brex_items.brex_item.setup_description", linked: 0, total: 1))
+  end
+
+  test "a member shown one of two linked accounts gets no counts or names" do
+    html = render_card_with_stats(user: :family_member, visible: :linked, linked: true, second_linked: true)
+
+    assert_equal({ setup: false, header_summary: false, counts: false, names: false }, connection_details(html))
+  end
+
+  test "a member who sees every linked account gets the counts and names but no setup prompt" do
+    html = render_card_with_stats(user: :family_member, visible: :linked, linked: true, extra_unlinked: true)
+
+    assert_equal({ setup: false, header_summary: true, counts: true, names: true }, connection_details(html))
+  end
+
+  test "a member gets no setup prompt for a connection without accounts" do
+    html = render_card(user: :family_member, visible: :none) do |visible|
+      ProviderItem::CardComponent.new(item: @item, visible_accounts: visible, account_counts_map: { @item.id => { linked: 0, unlinked: 0, total: 0 } })
+    end
+
+    assert_not_includes html, I18n.t("brex_items.brex_item.no_accounts_title")
+    assert_not_includes html, "/brex_items/#{@item.id}/setup_accounts"
+  end
+
+  test "an admin shown one of two linked accounts gets no counts or names" do
+    html = render_card_with_stats(user: :family_admin, visible: :linked, linked: true, second_linked: true)
+
+    assert_equal({ setup: false, header_summary: false, counts: false, names: false }, connection_details(html))
+    assert_not_includes html, ERB::Util.html_escape(@item.institution_summary)
+  end
+
+  test "an admin gets the counts, names and setup prompt" do
+    html = render_card_with_stats(user: :family_admin, visible: :all)
+
+    assert_equal({ setup: true, header_summary: true, counts: true, names: true }, connection_details(html))
+  end
+
   test "snapshots treat a blank CSRF token as a difference" do
     assert_equal %(<input name="authenticity_token" value="">\n), normalise_provider_item_html(%(<input name="authenticity_token" value="">))
     assert_equal %(<input name="authenticity_token" value="CSRF">\n), normalise_provider_item_html(%(<input name="authenticity_token" value="abc123">))
@@ -129,9 +181,27 @@ class ProviderItem::CardComponentTest < ActiveSupport::TestCase
         account = @item.family.accounts.create!(name: "Brex Card", balance: 300, currency: "USD", accountable: CreditCard.new)
         AccountProvider.create!(account: account, provider: second)
       end
+      if options[:extra_unlinked]
+        @item.brex_accounts.first.dup.tap { |brex_account| brex_account.update!(account_id: "unlinked_extra", name: "Brex Savings") }
+      end
       visible = { all: @item.accounts.to_a, linked: @item.accounts.order(:name).where(name: "Brex Operating").to_a, none: [] }.fetch(options[:visible])
 
       renderable = yield(visible)
       renderable.is_a?(Hash) ? ApplicationController.render(**renderable) : ApplicationController.render(renderable, layout: false)
+    end
+
+    def render_card_with_stats(options)
+      render_card(options) do |visible|
+        ProviderItem::CardComponent.new(item: @item, visible_accounts: visible, sync_stats_map: { @item.id => CONNECTION_STATS })
+      end
+    end
+
+    def connection_details(html)
+      {
+        setup: html.include?("/brex_items/#{@item.id}/setup_accounts"),
+        header_summary: html.include?(ERB::Util.html_escape(@item.sync_status_summary)),
+        counts: html.include?(I18n.t("provider_sync_summary.accounts.total", count: 7)),
+        names: html.include?("Payroll run")
+      }
     end
 end
