@@ -110,11 +110,12 @@ module PortfolioFlowTestHelper
   end
 
   # A position moved between two accounts: no Transfer row, two Transfer
-  # trades with opposite quantities on the same security and date.
+  # trades with opposite quantities on the same security and date, each with
+  # no cash amount, as Questrade writes a journal.
   def create_security_transfer(security:, from:, to:, qty:, price:, date: Date.current)
     [
       create_portfolio_trade(account: from, security: security, qty: -qty, price: price, label: "Transfer", date: date),
       create_portfolio_trade(account: to, security: security, qty: qty, price: price, label: "Transfer", date: date)
-    ]
+    ].each { |entry| entry.update!(amount: 0) }
   end
 end

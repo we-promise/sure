@@ -143,6 +143,89 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
   # transfer itself, so money moved between two accounts inside the scope read
   # as money leaving the portfolio and arriving from outside it -- twice over,
   # once on each leg.
+  # Transfer validates each leg as unique, but only the pair is a unique index,
+  # so insert_all or two racing matchers can link one leg to two transfers.
+  # sql_joins promises one row per entry, which every SUM embedding it relies
+  # on, so it reads one transfer: of two it is the outflow of, the earliest.
+  test "sql_joins gives one row per entry when a leg belongs to two transfers" do
+    transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400)
+    outflow = transfer.outflow_transaction.entry
+    stray_inflow = create_labelled_transaction(account: @checking, label: nil, amount: -400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: stray_inflow.entryable_id,
+      outflow_transaction_id: transfer.outflow_transaction_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at + 1.minute, updated_at: transfer.created_at + 1.minute
+    } ])
+
+    assert_equal 2, Transfer.where(outflow_transaction_id: transfer.outflow_transaction_id).count
+    assert_equal 1, Entry.where(id: outflow.id).joins(@family_scope.sql_joins).count,
+                 "one row per entry, whatever the transfers table holds"
+    assert_equal({ outflow.id => :internal }, @family_scope.classify_ids([ outflow.id ]),
+                 "the earliest transfer, to the IRA, is the one read")
+  end
+
+  # The same corruption can make one transaction the outflow of one transfer
+  # and the inflow of another. #classify reads transfer_as_inflow first, so
+  # the lateral prefers the transfer the transaction is the inflow of, and
+  # only then the earliest; otherwise the two forms read different transfers.
+  test "sql_joins reads the transfer a leg is the inflow of, as classify does" do
+    transfer = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 400)
+    inflow = transfer.inflow_transaction.entry
+    stray = create_labelled_transaction(account: @checking, label: nil, amount: -400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: stray.entryable_id,
+      outflow_transaction_id: transfer.inflow_transaction_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at - 1.minute, updated_at: transfer.created_at - 1.minute
+    } ])
+
+    assert_equal 1, Transfer.where(outflow_transaction_id: transfer.inflow_transaction_id).count,
+                 "precondition: the inflow leg is also the outflow of an earlier transfer, out of scope"
+    assert_equal :internal, @family_scope.classify(inflow)
+    assert_equal({ inflow.id => :internal }, @family_scope.classify_ids([ inflow.id ]),
+                 "the transfer the leg is the inflow of, from the IRA, is the one read")
+  end
+
+  # Of two transfers a leg is the inflow of, both forms read the earliest. The
+  # stray one here is inserted second but dated first, so a lookup that takes
+  # whichever row the index returns reads the IRA transfer instead.
+  test "classify reads the earliest of two transfers a leg is the inflow of, as sql_joins does" do
+    transfer = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 400)
+    inflow = transfer.inflow_transaction.entry
+    stray_outflow = create_labelled_transaction(account: @checking, label: nil, amount: 400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: transfer.inflow_transaction_id,
+      outflow_transaction_id: stray_outflow.entryable_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at - 1.minute, updated_at: transfer.created_at - 1.minute
+    } ])
+
+    assert_equal 2, Transfer.where(inflow_transaction_id: transfer.inflow_transaction_id).count,
+                 "precondition: the inflow leg is the inflow of two transfers"
+    assert_equal({ inflow.id => :external_inflow }, @family_scope.classify_ids([ inflow.id ]),
+                 "the earlier transfer, from Checking outside the scope, is the one read")
+    assert_equal :external_inflow, @family_scope.classify(inflow.reload)
+  end
+
+  test "classify reads the earliest of two transfers a leg is the outflow of, as sql_joins does" do
+    transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400)
+    outflow = transfer.outflow_transaction.entry
+    stray_inflow = create_labelled_transaction(account: @checking, label: nil, amount: -400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: stray_inflow.entryable_id,
+      outflow_transaction_id: transfer.outflow_transaction_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at - 1.minute, updated_at: transfer.created_at - 1.minute
+    } ])
+
+    assert_equal 2, Transfer.where(outflow_transaction_id: transfer.outflow_transaction_id).count,
+                 "precondition: the outflow leg is the outflow of two transfers"
+    assert_equal({ outflow.id => :external_outflow }, @family_scope.classify_ids([ outflow.id ]),
+                 "the earlier transfer, to Checking outside the scope, is the one read")
+    assert_equal :external_outflow, @family_scope.classify(outflow.reload)
+  end
+
   test "a Contribution or Withdrawal label does not outrank a linked transfer in scope" do
     transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 100)
     transfer.outflow_transaction.update!(investment_activity_label: "Withdrawal")
@@ -200,7 +283,78 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     # A Transfer trade with no opposite leg anywhere (position moved in from
     # a broker that is not tracked) is external even at family scope.
     orphan = create_portfolio_trade(account: @brokerage, security: create_portfolio_security, qty: 3, price: 20, label: "Transfer")
+      .tap { |entry| entry.update!(amount: 0) }
     assert_equal :external_inflow, @family_scope.classify(orphan)
+  end
+
+  # A cash-funded Transfer trade is a purchase (#cash_settled?), not the other
+  # leg of a move. Matching it to a journal out of another account hid a real
+  # withdrawal: the shares left the scope while the purchase that happened to
+  # mirror them read as their arrival.
+  test "a cash-funded Transfer trade is not the opposite leg of a security journal in both forms" do
+    security = create_portfolio_security
+    journal_out = create_portfolio_trade(account: @brokerage, security: security, qty: -5, price: 100, label: "Transfer")
+      .tap { |entry| entry.update!(amount: 0) }
+    bought = create_portfolio_trade(account: @ira, security: security, qty: 5, price: 100, label: "Transfer")
+
+    assert_equal :external_outflow, @family_scope.classify(journal_out)
+    assert_equal :internal, @family_scope.classify(bought)
+    assert_equal({ journal_out.id => :external_outflow, bought.id => :internal },
+                 @family_scope.classify_ids([ journal_out.id, bought.id ]))
+  end
+
+  # One leg out can be the other half of one leg in, not of two. When a day
+  # holds more legs on either side than a one-to-one move explains, there is
+  # no telling which pair moved, so every leg is a flow by direction: the
+  # unmatched units are external capital, and the matched ones net to zero.
+  test "a security journal is internal only when it pairs one to one in both forms" do
+    security = create_portfolio_security
+    third = create_portfolio_account(@family, name: "Third")
+    scope = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id, third.id ])
+    out_leg = create_portfolio_trade(account: @brokerage, security: security, qty: -5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+    in_one = create_portfolio_trade(account: @ira, security: security, qty: 5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+    in_two = create_portfolio_trade(account: third, security: security, qty: 5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+
+    expected = { out_leg.id => :external_outflow, in_one.id => :external_inflow, in_two.id => :external_inflow }
+    assert_equal expected, [ out_leg, in_one, in_two ].index_by(&:id).transform_values { |entry| scope.classify(entry) }
+    assert_equal expected, scope.classify_ids(expected.keys)
+
+    # Without the second arrival the pair is a move again.
+    in_two.update_columns(excluded: true)
+    assert_equal({ out_leg.id => :internal, in_one.id => :internal }, scope.classify_ids([ out_leg.id, in_one.id ]))
+    assert_equal :internal, scope.classify(out_leg)
+  end
+
+  # A leg back into the same account still counts as an opposite leg when
+  # judging whether a move is one to one: with A out 5, B in 5 and A in 5, the
+  # out leg has two candidates, so no leg is internal. Pairing A's out with B's
+  # in alone would leave an internal outflow beside an external inflow, since
+  # B's in sees A's in on its own side.
+  test "a same-account opposite leg makes a security journal ambiguous in both forms" do
+    security = create_portfolio_security
+    out_leg = create_portfolio_trade(account: @brokerage, security: security, qty: -5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+    in_other = create_portfolio_trade(account: @ira, security: security, qty: 5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+    in_same = create_portfolio_trade(account: @brokerage, security: security, qty: 5, price: 100, label: "Transfer").tap { |e| e.update!(amount: 0) }
+
+    expected = { out_leg.id => :external_outflow, in_other.id => :external_inflow, in_same.id => :external_inflow }
+    assert_equal expected, [ out_leg, in_other, in_same ].index_by(&:id).transform_values { |entry| @family_scope.classify(entry) }
+    assert_equal expected, @family_scope.classify_ids(expected.keys)
+
+    # The lone pair across two accounts is still a move.
+    in_same.update_columns(excluded: true)
+    assert_equal({ out_leg.id => :internal, in_other.id => :internal }, @family_scope.classify_ids([ out_leg.id, in_other.id ]))
+    assert_equal :internal, @family_scope.classify(out_leg)
+
+    # Read as live, the excluded leg makes the day ambiguous again.
+    including = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], include_excluded: true)
+    assert_equal expected, [ out_leg, in_other, in_same ].index_by(&:id).transform_values { |entry| including.classify(entry) }
+    assert_equal expected, including.classify_ids(expected.keys)
+
+    # A lone pair inside one account is not a move between accounts.
+    in_other.update_columns(excluded: true)
+    in_same.update_columns(excluded: false)
+    assert_equal({ out_leg.id => :external_outflow, in_same.id => :external_inflow }, @family_scope.classify_ids([ out_leg.id, in_same.id ]))
+    assert_equal :external_outflow, @family_scope.classify(out_leg)
   end
 
   # entries.excluded is nullable. #classify reads a NULL as live (excluded? is
@@ -222,6 +376,27 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
 
     assert_equal :external_outflow, @family_scope.classify(out_leg)
     assert_equal :external_outflow, @family_scope.classify_ids([ out_leg.id ])[out_leg.id]
+  end
+
+  # include_excluded asks for an excluded leg to be read as live, so the
+  # opposite leg's lookup has to read it as live too. Otherwise the excluded
+  # leg finds its live counterpart and is internal, while the live leg cannot
+  # see the excluded one and is external: one move, two answers.
+  test "include_excluded counts an excluded leg as the opposite leg of a security transfer" do
+    security = create_portfolio_security
+    out_leg, in_leg = create_security_transfer(security: security, from: @brokerage, to: @ira, qty: 10, price: 50)
+    out_leg.update_columns(excluded: true)
+    including = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], include_excluded: true)
+
+    assert_equal :internal, including.classify(out_leg)
+    assert_equal :internal, including.classify(in_leg)
+    assert_equal({ out_leg.id => :internal, in_leg.id => :internal }, including.classify_ids([ out_leg.id, in_leg.id ]))
+
+    # Without the option the excluded leg is not a flow and does not count as
+    # the live leg's counterpart, as before.
+    assert_nil @family_scope.classify(out_leg)
+    assert_equal :external_inflow, @family_scope.classify(in_leg)
+    assert_equal({ out_leg.id => nil, in_leg.id => :external_inflow }, @family_scope.classify_ids([ out_leg.id, in_leg.id ]))
   end
 
   test "an unlabelled or Other trade is internal" do
@@ -272,9 +447,23 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_nil @family_scope.classify(valuation)
   end
 
+  # The balance calculators still apply an excluded entry, so a reader that
+  # reconciles against balances asks for it to be classified as live. Both
+  # forms must honour the option the same way.
+  test "include_excluded classifies an excluded entry as if it were live" do
+    excluded = create_labelled_transaction(account: @brokerage, label: nil, amount: -500, excluded: true)
+    including = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], include_excluded: true)
+
+    assert_nil @family_scope.classify(excluded)
+    assert_nil @family_scope.classify_ids([ excluded.id ])[excluded.id]
+    assert_equal :external_inflow, including.classify(excluded)
+    assert_equal :external_inflow, including.classify_ids([ excluded.id ])[excluded.id]
+  end
+
+  # An in-kind contribution or withdrawal moves units and no cash (amount 0).
   test "direction follows the trade quantity sign or the transaction amount sign" do
-    inflow_trade = create_portfolio_trade(account: @brokerage, qty: 5, price: 10, label: "Contribution")
-    outflow_trade = create_portfolio_trade(account: @brokerage, qty: -5, price: 10, label: "Withdrawal")
+    inflow_trade = create_portfolio_trade(account: @brokerage, qty: 5, price: 10, label: "Contribution").tap { |e| e.update!(amount: 0) }
+    outflow_trade = create_portfolio_trade(account: @brokerage, qty: -5, price: 10, label: "Withdrawal").tap { |e| e.update!(amount: 0) }
     inflow_transaction = create_labelled_transaction(account: @brokerage, label: "Withdrawal", amount: -20)
 
     assert_equal :external_inflow, @family_scope.classify(inflow_trade)
@@ -284,11 +473,104 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_inflow, @family_scope.classify(inflow_transaction)
   end
 
+  # The trades form and API keep a Contribution or Withdrawal label on a trade
+  # whose amount is qty x price. The balance calculators apply it as a buy or
+  # a sale: cash out, units in at the same value. Nothing crossed the scope,
+  # so it is internal. Read by direction, it was an inflow summed from
+  # -amount as an outflow, and a flat day read as a large return.
+  test "a Contribution or Withdrawal trade that settles in cash is internal in both forms" do
+    bought = create_portfolio_trade(account: @brokerage, qty: 5, price: 100, label: "Contribution")
+    sold = create_portfolio_trade(account: @brokerage, qty: -5, price: 100, label: "Withdrawal")
+    cash_only = create_portfolio_trade(account: @brokerage, qty: 0, price: 0, label: "Contribution").tap { |e| e.update!(amount: -500) }
+
+    [ @family_scope, @brokerage_scope ].each do |scope|
+      assert_equal :internal, scope.classify(bought)
+      assert_equal :internal, scope.classify(sold)
+      assert_equal :external_inflow, scope.classify(cash_only), "a qty 0 cash contribution stays external"
+      assert_equal({ bought.id => :internal, sold.id => :internal, cash_only.id => :external_inflow },
+                   scope.classify_ids([ bought.id, sold.id, cash_only.id ]))
+    end
+  end
+
+  # A Transfer-labelled trade whose amount is signed like its quantity is a
+  # buy or a sale to the balance calculators, cash for units at the same
+  # value, as a Contribution or Withdrawal trade is. Only the zero-amount
+  # journal shape moves a position across the scope.
+  test "a Transfer trade that settles in cash is internal in both forms" do
+    bought = create_portfolio_trade(account: @brokerage, qty: 5, price: 100, label: "Transfer")
+    sold = create_portfolio_trade(account: @brokerage, qty: -5, price: 100, label: "Transfer")
+    journal = create_portfolio_trade(account: @brokerage, qty: 3, price: 20, label: "Transfer").tap { |e| e.update!(amount: 0) }
+
+    [ @family_scope, @brokerage_scope ].each do |scope|
+      assert_equal :internal, scope.classify(bought)
+      assert_equal :internal, scope.classify(sold)
+      assert_equal :external_inflow, scope.classify(journal), "the journal shape stays external"
+      assert_equal({ bought.id => :internal, sold.id => :internal, journal.id => :external_inflow },
+                   scope.classify_ids([ bought.id, sold.id, journal.id ]))
+    end
+  end
+
+  # Each leg of a transfer moves its own account's balance on its own date.
+  # Internal only when both legs land on one day; across days each leg is a
+  # flow on its day, or the outflow day reads as a loss and the inflow day as
+  # a gain.
+  test "a linked transfer whose legs post on different days is a flow on each day in both forms" do
+    transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400, date: Date.new(2026, 3, 2))
+    out_leg = transfer.outflow_transaction.entry
+    in_leg = transfer.inflow_transaction.entry
+    in_leg.update!(date: Date.new(2026, 3, 3))
+
+    assert_equal :external_outflow, @family_scope.classify(out_leg)
+    assert_equal :external_inflow, @family_scope.classify(in_leg)
+    assert_equal({ out_leg.id => :external_outflow, in_leg.id => :external_inflow },
+                 @family_scope.classify_ids([ out_leg.id, in_leg.id ]))
+
+    in_leg.update!(date: out_leg.date)
+    assert_equal :internal, @family_scope.classify(in_leg), "on one day the same transfer is internal"
+    assert_equal :internal, @family_scope.classify_ids([ out_leg.id ])[out_leg.id]
+  end
+
+  # Entry#split! does not copy the activity label to the children it makes,
+  # so a child with no label of its own reads its parent's, in both forms.
+  test "a split child without a label of its own takes its parent's in both forms" do
+    dividend = create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -100)
+    labelled, unlabelled = dividend.split!([ { name: "Part one", amount: -60 }, { name: "Part two", amount: -40 } ])
+    labelled.entryable.update!(investment_activity_label: "Fee")
+
+    assert_equal :income, @brokerage_scope.classify(unlabelled.reload)
+    assert_equal :fee, @brokerage_scope.classify(labelled.reload), "a child's own label still wins"
+    assert_equal({ labelled.id => :fee, unlabelled.id => :income }, @brokerage_scope.classify_ids([ labelled.id, unlabelled.id ]))
+  end
+
   test "every activity label has a rule" do
     assert_equal Transaction::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
     assert_equal Trade::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
     assert_includes Portfolio::FlowClassifier.labels_for(:income), "Dividend"
     assert_equal %w[Fee], Portfolio::FlowClassifier.labels_for(:fee)
+  end
+
+  # An account past its cut-off has left the scope, so a transfer to it after
+  # that date is external, in both forms; on the cut-off date it is still in.
+  test "a transfer to an account past its cut off is external in both forms" do
+    cut_off = Date.new(2026, 3, 2)
+    windowed = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], active_until_dates: { @ira.id => cut_off })
+    after = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400, date: cut_off + 1.day)
+    on = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 300, date: cut_off)
+    security = create_portfolio_security
+    security_out, = create_security_transfer(security: security, from: @brokerage, to: @ira, qty: 2, price: 50, date: cut_off + 1.day)
+
+    after_out = after.outflow_transaction.entry
+    on_out = on.outflow_transaction.entry
+
+    assert_equal :external_outflow, windowed.classify(after_out)
+    assert_equal :internal, windowed.classify(on_out)
+    assert_equal :external_outflow, windowed.classify(security_out)
+    assert_equal :internal, @family_scope.classify(after_out), "without a cut-off the same transfer is internal"
+
+    sql = windowed.classify_ids([ after_out.id, on_out.id, security_out.id ])
+    assert_equal :external_outflow, sql.fetch(after_out.id)
+    assert_equal :internal, sql.fetch(on_out.id)
+    assert_equal :external_outflow, sql.fetch(security_out.id)
   end
 
   test "scope_account_ids is required" do
@@ -363,6 +645,8 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
       entries << create_labelled_transaction(account: @ira, label: "Contribution", amount: -300, kind: "funds_movement")
       entries << create_portfolio_trade(account: @brokerage, qty: 5, price: 10, label: "Contribution")
       entries << create_portfolio_trade(account: @brokerage, qty: -5, price: 10, label: "Withdrawal")
+      entries << create_portfolio_trade(account: @brokerage, qty: 5, price: 10, label: "Contribution").tap { |e| e.update!(amount: 0) }
+      entries << create_portfolio_trade(account: @brokerage, qty: -5, price: 10, label: "Withdrawal").tap { |e| e.update!(amount: 0) }
 
       internal_transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400, source_fee_amount: 1)
       entries << internal_transfer.outflow_transaction.entry
@@ -373,13 +657,21 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
       entries << contribution.outflow_transaction.entry
       entries << contribution.inflow_transaction.entry
 
+      staggered = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 300)
+      staggered.inflow_transaction.entry.update!(date: 1.day.from_now.to_date)
+      entries << staggered.outflow_transaction.entry
+      entries << staggered.inflow_transaction.entry
+
       entries << create_labelled_transaction(account: @brokerage, label: nil, amount: -800, kind: "funds_movement")
       entries << create_labelled_transaction(account: @ira, label: nil, amount: 200, kind: "investment_contribution")
       entries << create_labelled_transaction(account: @brokerage, label: "Transfer", amount: 60)
 
       entries.concat(create_security_transfer(security: security, from: @brokerage, to: @ira, qty: 10, price: 50))
       entries << create_portfolio_trade(account: @brokerage, security: create_portfolio_security, qty: 3, price: 20, label: "Transfer")
+        .tap { |entry| entry.update!(amount: 0) }
       entries << create_portfolio_trade(account: @brokerage, security: security, qty: -10, price: 50, label: "Transfer", date: 1.day.ago.to_date)
+        .tap { |entry| entry.update!(amount: 0) }
+      entries << create_portfolio_trade(account: @brokerage, security: create_portfolio_security, qty: 4, price: 25, label: "Transfer")
 
       entries << create_portfolio_trade(account: @brokerage, qty: 2, price: 10).tap { |e| e.entryable.update!(investment_activity_label: nil) }
       entries << create_portfolio_trade(account: @brokerage, qty: -2, price: 10, label: "Other")
@@ -395,6 +687,8 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
       entries << create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -11, extra: { "plaid" => { "pending" => "no" } })
       entries << create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -12, extra: { "plaid" => { "pending" => "maybe" } })
       entries << create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -13, extra: { "plaid" => { "pending" => "false" } })
+      entries.concat(create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -20)
+        .split!([ { name: "Split dividend one", amount: -15 }, { name: "Split dividend two", amount: -5 } ]))
       entries << @brokerage.entries.create!(name: "Valuation", date: Date.current, amount: 1000, currency: "USD", entryable: Valuation.new(kind: "reconciliation"))
       entries
     end
