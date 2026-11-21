@@ -1605,6 +1605,134 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "inactive", rt.reload.status
   end
 
+  test "Cleaner removes a suggestion once every transaction it matches is a confirmed transfer leg" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      transfers = 3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }
+
+      cleaner = RecurringTransaction::Cleaner.new(@family)
+      assert_equal 0, cleaner.retire_transfer_suggestions,
+        "a pending auto-match leaves the legs as ordinary transactions"
+      assert suggestion.reload.suggested?
+
+      transfers.each(&:confirm!)
+
+      assert_equal 1, cleaner.retire_transfer_suggestions
+      assert_not RecurringTransaction.exists?(suggestion.id),
+        "deleted, not tombstoned: no dismissal by the user stands behind it"
+    end
+  end
+
+  test "Cleaner keeps a suggestion that turned manual between its scan and the row lock" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }.each(&:confirm!)
+      cleaner = RecurringTransaction::Cleaner.new(@family)
+      # The scan loaded the row while it was still detected; an import replay
+      # then marked it manual. Only the reload under the lock can see that.
+      scanned = RecurringTransaction.find(suggestion.id)
+      scan = stub
+      scan.stubs(:find_each).yields(scanned)
+      cleaner.stubs(:retirement_candidates).returns(scan)
+      RecurringTransaction.where(id: suggestion.id).update_all(manual: true)
+      assert_not scanned.manual?
+
+      assert_equal 0, cleaner.retire_transfer_suggestions
+      assert RecurringTransaction.exists?(suggestion.id)
+    end
+  end
+
+  test "Cleaner's retirement leaves the bill detectable again once the transfers are unlinked" do
+    travel_to Date.new(2026, 8, 10) do
+      transfer_shaped_suggestion
+      transfers = 3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }
+      transfers.each(&:confirm!)
+      RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+
+      transfers.each(&:reject!)
+      # A fresh family, as the next detection job loads: this one has the
+      # retired row cached in its association.
+      RecurringTransaction.identify_patterns_for!(Family.find(@family.id))
+
+      revived = RecurringTransaction.find_by(family: @family, name: "Move to savings")
+      assert revived&.suggested?, "the legs are standard again, so detection offers the bill again"
+    end
+  end
+
+  test "Cleaner keeps a suggestion detection attributes to this run's charges" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      3.times { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i).confirm! }
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions(claimed_ids: [ suggestion.id ])
+      assert suggestion.reload.suggested?
+    end
+  end
+
+  test "Cleaner keeps a suggestion whose transfer was unlinked before it took the lock" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      transfers = 3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }
+      transfers.each(&:confirm!)
+      # The unlink commits after the unlocked check and before the row lock.
+      RecurringTransaction.any_instance.stubs(:lock!).with do
+        transfers.each { |transfer| transfer.reload.destroy! if Transfer.exists?(transfer.id) }
+      end.returns(suggestion)
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert suggestion.reload.suggested?
+    end
+  end
+
+  test "Cleaner keeps a suggestion while it still matches an ordinary transaction" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      2.times { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i).confirm! }
+      @account.entries.create!(date: Date.new(2026, 6, 5), amount: 500, currency: "USD",
+                               name: "Move to savings", entryable: Transaction.new)
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert suggestion.reload.suggested?
+    end
+  end
+
+  test "Cleaner leaves a suggestion the user confirmed while it was checking" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      # The confirmation lands between loading the batch and ending the row.
+      RecurringTransaction.any_instance.stubs(:matches_only_transfer_legs?).with do
+        RecurringTransaction.where(id: suggestion.id).update_all(status: "active")
+      end.returns(true)
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert suggestion.reload.active?
+    end
+  end
+
+  test "Cleaner keeps a suggestion that matches nothing" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert suggestion.reload.suggested?
+    end
+  end
+
+  test "Cleaner never retires confirmed, manual or transfer series whose matches are transfer legs" do
+    travel_to Date.new(2026, 8, 10) do
+      active = transfer_shaped_suggestion(status: "active")
+      manual = transfer_shaped_suggestion(manual: true, dedup_scope: "manual")
+      transfer_series = transfer_shaped_suggestion(destination_account: accounts(:connected))
+      3.times { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i).confirm! }
+      assert_not_empty transfer_series.matching_transactions, "guard sanity: the transfer series sees the pairs"
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert active.reload.active?
+      assert manual.reload.suggested?
+      assert transfer_series.reload.suggested?
+    end
+  end
+
   test "matching_transactions finds the transfer pair regardless of occurrence name" do
     rt = @family.recurring_transactions.create!(
       account: @account, destination_account: accounts(:credit_card),
@@ -1969,6 +2097,27 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   end
 
   private
+    # A detected bill on the outflow side of what later turns out to be a
+    # monthly move between two of the family's own accounts.
+    def transfer_shaped_suggestion(status: "suggested", manual: false, destination_account: nil, dedup_scope: "")
+      @family.recurring_transactions.create!(
+        account: @account, destination_account: destination_account, name: "Move to savings",
+        amount: 500, currency: "USD", expected_day_of_month: 5, dedup_scope: dedup_scope,
+        last_occurrence_date: Date.new(2026, 8, 5), next_expected_date: Date.new(2026, 9, 5),
+        status: status, manual: manual, occurrence_count: 3
+      )
+    end
+
+    # Two ordinary transactions linked by an auto-match the user has yet to
+    # confirm, the state they are in when detection first sees them.
+    def pending_transfer_leg_pair(date)
+      outflow = @account.entries.create!(date: date, amount: 500, currency: "USD",
+                                         name: "Move to savings", entryable: Transaction.new)
+      inflow = accounts(:connected).entries.create!(date: date, amount: -500, currency: "USD",
+                                                    name: "Move from checking", entryable: Transaction.new)
+      Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "pending")
+    end
+
     def create_rent(amount, name: "Rent", **attributes)
       @family.recurring_transactions.create!(
         name: name, account: @account, amount: amount, currency: "USD",
