@@ -72,6 +72,17 @@ class IncomeStatement::FxRatesTest < ActiveSupport::TestCase
     assert_equal Money.new(100, "USD"), totals.income_money
   end
 
+  test "a transactions scope that doesn't join entries is rejected" do
+    totals = IncomeStatement::Totals.new(
+      @family,
+      transactions_scope: Transaction.where(id: @family.transactions.select(:id)),
+      date_range: @period.date_range
+    )
+
+    error = assert_raises(ArgumentError) { totals.call }
+    assert_match "must join entries", error.message
+  end
+
   private
     def account(currency)
       @family.accounts.create!(name: "#{currency} account", currency: currency, balance: 0, accountable: Depository.new)
