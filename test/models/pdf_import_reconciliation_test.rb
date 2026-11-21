@@ -458,6 +458,17 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_not @import.force_fail!
   end
 
+  test "an error after the ledger commits doesn't turn a completed publish into a failed one" do
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    @import.update_columns(status: "importing")
+    Family.any_instance.stubs(:sync_later).raises(StandardError, "queue down")
+
+    @import.publish
+
+    assert @import.reload.complete?, "a retry of a failed import would publish the rows again"
+  end
+
   test "assigning an account that reconciles every row completes the import" do
     @import.update!(account: nil, status: :pending)
     create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")

@@ -367,7 +367,7 @@ class Import < ApplicationRecord
 
     if publish_token.present? && claimed
       with_lock { update!(status: :failed, error: error.message, reread_token: nil) if importing? }
-    elsif publish_token.blank?
+    elsif publish_token.blank? && !complete?   # a PdfImport completes with its ledger transaction
       update!(status: :failed, error: error.message, reread_token: nil)
     end
   end
