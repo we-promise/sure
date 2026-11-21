@@ -86,7 +86,7 @@ class AccountStatement < ApplicationRecord
     def create_from_prepared_upload!(family:, account:, prepared_upload:)
       statement = nil
       duplicate = duplicate_for(family, prepared_upload)
-      raise DuplicateUploadError, duplicate if duplicate
+      return claim_duplicate!(duplicate, account) if duplicate
 
       statement = family.account_statements.build(
         account: account,
@@ -115,9 +115,7 @@ class AccountStatement < ApplicationRecord
       duplicate = duplicate_for(family, prepared_upload)
       purge_original_file(statement)
 
-      if duplicate
-        raise DuplicateUploadError, duplicate
-      end
+      return claim_duplicate!(duplicate, account) if duplicate
 
       raise
     rescue StandardError
@@ -228,6 +226,18 @@ class AccountStatement < ApplicationRecord
       # Active Storage's MD5 checksum is retained only to catch legacy rows that predate content_sha256.
       legacy_scope = prepared_upload.content_sha256.present? ? scope.where(content_sha256: nil) : scope
       legacy_scope.find_by(checksum: prepared_upload.checksum)
+    end
+
+    # An unlinked statement is still stored in the family, so re-uploading the same
+    # file to an account links it. The row lock re-reads account_id so a concurrent
+    # upload cannot overwrite a link that was just made.
+    def claim_duplicate!(duplicate, account)
+      duplicate.with_lock do
+        raise DuplicateUploadError, duplicate unless account.present? && duplicate.account_id.nil?
+
+        duplicate.link_to_account!(account)
+      end
+      duplicate
     end
   end
 
