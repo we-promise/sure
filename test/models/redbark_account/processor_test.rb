@@ -138,6 +138,31 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("842.15"), card.reload.balance
   end
 
+  # A sync carries the card's published purchase rate onto
+  # a blank APR, so the processor must run the card details step.
+  test "processor fills a blank credit card APR from this sync's account details" do
+    card, ra = link(CreditCard, provider: "fiskil", balance: "-842.15")
+    as_of = Date.new(2026, 11, 20)
+    ra.update!(
+      raw_account_details_payload: { "lendingRates" => [ { "rateType" => "PURCHASE", "rate" => "0.1999" } ] },
+      account_details_fetched_at: as_of.in_time_zone
+    )
+
+    RedbarkAccount::Processor.new(ra.reload, as_of: as_of).process
+
+    assert_equal BigDecimal("19.99"), card.reload.accountable.apr
+  end
+
+  test "a card details failure does not skip the sync broadcast" do
+    card, ra = link(CreditCard, provider: "fiskil", balance: "-842.15")
+    as_of = Date.new(2026, 11, 20)
+    ra.update!(raw_account_details_payload: [ "unexpected" ], account_details_fetched_at: as_of.in_time_zone)
+    Account.any_instance.expects(:broadcast_sync_complete).once
+
+    assert_nothing_raised { RedbarkAccount::Processor.new(ra.reload, as_of: as_of).process }
+    assert_nil card.reload.accountable.apr
+  end
+
   # [Control — CDR loan] Fiskil home loan: -997672.00 stored as +997672.00.
   test "processor negates a fiskil (CDR) loan balance so the amount owed is stored positive" do
     loan, ra = link(Loan, provider: "fiskil", balance: "-997672.00")

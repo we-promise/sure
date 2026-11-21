@@ -25,7 +25,7 @@ class RedbarkItem::ImporterTest < ActiveSupport::TestCase
     importer = RedbarkItem::Importer.new(redbark_account.redbark_item, redbark_provider: provider)
 
     assert_nothing_raised do
-      importer.send(:import_loan_account_details, [ redbark_account.reload ])
+      importer.send(:import_account_details, [ redbark_account.reload ])
     end
 
     assert_equal({ "lendingRate" => "0.0625" }, redbark_account.reload.raw_account_details_payload,
@@ -55,7 +55,7 @@ class RedbarkItem::ImporterTest < ActiveSupport::TestCase
     )
 
     travel_to Time.utc(2026, 9, 22, 0, 0, 30) do
-      importer.send(:import_loan_account_details, [ redbark_account.reload ])
+      importer.send(:import_account_details, [ redbark_account.reload ])
     end
 
     assert_equal injected, redbark_account.reload.account_details_fetched_at.utc,
@@ -97,7 +97,7 @@ class RedbarkItem::ImporterTest < ActiveSupport::TestCase
             .returns([])
 
     importer = RedbarkItem::Importer.new(item, redbark_provider: provider)
-    importer.send(:import_loan_account_details, [ first.reload, second.reload ])
+    importer.send(:import_account_details, [ first.reload, second.reload ])
 
     assert_equal "0.0675", first.reload.raw_account_details_payload["lendingRate"],
                  "the account the retry could serve never got its details stored"
@@ -106,9 +106,9 @@ class RedbarkItem::ImporterTest < ActiveSupport::TestCase
                "an account the retry could not serve was written anyway"
   end
 
-  # Only loans: every other account type would cost a request per sync for a
-  # field nothing reads.
-  test "account details are not fetched when no linked account is a loan" do
+  # Only loans and credit cards: every other account type would cost a request
+  # per sync for a field nothing reads.
+  test "account details are not fetched when no linked account is a loan or credit card" do
     redbark_account = redbark_accounts(:savings_account)
     family = redbark_account.redbark_item.family
     account = family.accounts.create!(
@@ -121,7 +121,171 @@ class RedbarkItem::ImporterTest < ActiveSupport::TestCase
     provider.expects(:get_account_details).never
     importer = RedbarkItem::Importer.new(redbark_account.redbark_item, redbark_provider: provider)
 
-    importer.send(:import_loan_account_details, [ redbark_account.reload ])
+    importer.send(:import_account_details, [ redbark_account.reload ])
+  end
+
+  # A card's APR comes from the same endpoint.
+  test "a credit card's account details are fetched and stamped" do
+    redbark_account = redbark_accounts(:savings_account)
+    family = redbark_account.redbark_item.family
+    account = family.accounts.create!(
+      name: "Credit card", balance: 100, currency: "AUD", accountable: CreditCard.new
+    )
+    redbark_account.ensure_account_provider!(account)
+
+    injected = Time.utc(2026, 11, 20, 9, 0, 0)
+    provider = mock
+    provider.stubs(:list_connections).returns([])
+    provider.expects(:get_account_details)
+            .with(account_ids: [ redbark_account.redbark_account_id ])
+            .returns([ { accountId: redbark_account.redbark_account_id, lendingRates: [ { rateType: "PURCHASE", rate: "0.1999" } ] } ])
+    importer = RedbarkItem::Importer.new(
+      redbark_account.redbark_item, redbark_provider: provider, fetched_at: injected
+    )
+
+    importer.send(:import_account_details, [ redbark_account.reload ])
+
+    redbark_account.reload
+    assert_equal "0.1999", redbark_account.raw_account_details_payload.dig("lendingRates", 0, "rate"),
+                 "a credit card's details were not stored"
+    assert_equal injected, redbark_account.account_details_fetched_at.utc
+  end
+
+  # Cards are fetched in a batch of their own, so a card id the endpoint
+  # rejects leaves the loans' single batched call alone.
+  test "a rejected card id does not push the loans into per-account retries" do
+    loan_ra = redbark_accounts(:savings_account)
+    item = loan_ra.redbark_item
+    family = item.family
+    card_ra = item.redbark_accounts.create!(redbark_account_id: "rb_acc_card_1", name: "Card", currency: "AUD")
+    loan_ra.ensure_account_provider!(
+      family.accounts.create!(name: "Mortgage", balance: 400_000, currency: "AUD", accountable: Loan.new)
+    )
+    card_ra.ensure_account_provider!(
+      family.accounts.create!(name: "Card", balance: 100, currency: "AUD", accountable: CreditCard.new)
+    )
+
+    provider = mock
+    provider.stubs(:list_connections).returns([])
+    provider.expects(:get_account_details)
+            .with(account_ids: [ loan_ra.redbark_account_id ]).once
+            .returns([ { accountId: loan_ra.redbark_account_id, lendingRate: "0.0675" } ])
+    provider.expects(:get_account_details)
+            .with(account_ids: [ card_ra.redbark_account_id ]).once
+            .raises(Provider::Redbark::Error.new("stale id", :not_found))
+
+    RedbarkItem::Importer.new(item, redbark_provider: provider)
+                         .send(:import_account_details, [ loan_ra.reload, card_ra.reload ])
+
+    assert_equal "0.0675", loan_ra.reload.raw_account_details_payload["lendingRate"]
+    assert_nil card_ra.reload.raw_account_details_payload
+  end
+
+  test "a card fetched in the last seven days is not fetched again" do
+    redbark_account, item = link_card("rb_acc_card_recent")
+    now = Time.utc(2026, 11, 20, 9, 0, 0)
+    redbark_account.update!(account_details_fetched_at: now - 6.days)
+
+    provider = mock
+    provider.stubs(:list_connections).returns([])
+    provider.expects(:get_account_details).never
+
+    RedbarkItem::Importer.new(item, redbark_provider: provider, fetched_at: now)
+                         .send(:import_account_details, [ redbark_account.reload ])
+  end
+
+  test "a card is fetched again once seven days have passed" do
+    redbark_account, item = link_card("rb_acc_card_stale")
+    now = Time.utc(2026, 11, 20, 9, 0, 0)
+    redbark_account.update!(account_details_fetched_at: now - 7.days)
+
+    provider = mock
+    provider.stubs(:list_connections).returns([])
+    provider.expects(:get_account_details).with(account_ids: [ "rb_acc_card_stale" ]).once.returns([])
+
+    RedbarkItem::Importer.new(item, redbark_provider: provider, fetched_at: now)
+                         .send(:import_account_details, [ redbark_account.reload ])
+  end
+
+  test "a failed card fetch is stamped, logged and not a sync error" do
+    redbark_account, item = link_card("rb_acc_card_failing")
+    now = Time.utc(2026, 11, 20, 9, 0, 0)
+    provider = mock
+    provider.stubs(:list_connections).returns([])
+    provider.expects(:get_account_details).once.raises(Provider::Redbark::Error.new("stale id", :not_found))
+    importer = RedbarkItem::Importer.new(item, redbark_provider: provider, fetched_at: now)
+
+    assert_difference -> { DebugLogEntry.where(source: RedbarkItem::Importer.name).count }, 1 do
+      importer.send(:import_account_details, [ redbark_account.reload ])
+      RedbarkItem::Importer.new(item, redbark_provider: provider, fetched_at: now + 1.day)
+                           .send(:import_account_details, [ redbark_account.reload ])
+    end
+
+    assert_equal now, redbark_account.reload.account_details_fetched_at.utc, "a failed attempt was not stamped"
+    assert_nil redbark_account.raw_account_details_payload
+    assert importer.send(:stats)["errors"].blank?, "a card fetch failure was registered as a sync error"
+  end
+
+  test "a card the provider leaves out is stamped so it waits for the window" do
+    redbark_account, item = link_card("rb_acc_card_omitted")
+    now = Time.utc(2026, 11, 20, 9, 0, 0)
+    provider = mock
+    provider.stubs(:list_connections).returns([])
+    provider.expects(:get_account_details).once.returns([])
+
+    RedbarkItem::Importer.new(item, redbark_provider: provider, fetched_at: now)
+                         .send(:import_account_details, [ redbark_account.reload ])
+
+    assert_equal now, redbark_account.reload.account_details_fetched_at.utc
+  end
+
+  test "a card failure already logged in the window is not logged again" do
+    redbark_account, item = link_card("rb_acc_card_repeat")
+    provider = mock
+    provider.stubs(:list_connections).returns([])
+    provider.stubs(:get_account_details).raises(Provider::Redbark::Error.new("stale id", :not_found))
+
+    assert_difference -> { DebugLogEntry.where(source: RedbarkItem::Importer.name).count }, 1 do
+      2.times do
+        redbark_account.update_columns(account_details_fetched_at: nil)
+        RedbarkItem::Importer.new(item, redbark_provider: provider).send(:import_account_details, [ redbark_account.reload ])
+      end
+    end
+  end
+
+  test "a rejected batch of cards and its per-card retries are each logged once" do
+    first, item = link_card("rb_acc_card_a")
+    second, = link_card("rb_acc_card_b")
+    provider = mock
+    provider.stubs(:list_connections).returns([])
+    provider.stubs(:get_account_details).raises(Provider::Redbark::Error.new("stale id", :not_found))
+
+    assert_difference -> { DebugLogEntry.where(source: RedbarkItem::Importer.name).count }, 3 do
+      2.times do
+        [ first, second ].each { |redbark_account| redbark_account.update_columns(account_details_fetched_at: nil) }
+        RedbarkItem::Importer.new(item, redbark_provider: provider).send(:import_account_details, [ first.reload, second.reload ])
+      end
+    end
+  end
+
+  test "a card whose APR is set or locked is not fetched" do
+    with_apr = redbark_accounts(:savings_account)
+    item = with_apr.redbark_item
+    family = item.family
+    locked = item.redbark_accounts.create!(redbark_account_id: "rb_acc_card_2", name: "Locked card", currency: "AUD")
+    with_apr.ensure_account_provider!(
+      family.accounts.create!(name: "Card", balance: 100, currency: "AUD", accountable: CreditCard.new(apr: 12.5))
+    )
+    locked_account = family.accounts.create!(name: "Locked card", balance: 100, currency: "AUD", accountable: CreditCard.new)
+    locked_account.accountable.lock_attr!(:apr)
+    locked.ensure_account_provider!(locked_account)
+
+    provider = mock
+    provider.stubs(:list_connections).returns([])
+    provider.expects(:get_account_details).never
+
+    RedbarkItem::Importer.new(item, redbark_provider: provider)
+                         .send(:import_account_details, [ with_apr.reload, locked.reload ])
   end
 
   test "merge_transactions keeps posted rows and refreshes by id" do
@@ -216,5 +380,14 @@ class RedbarkItem::ImporterTest < ActiveSupport::TestCase
       ).returns([])
 
       importer.send(:import_transactions, redbark_account)
+    end
+
+    def link_card(redbark_account_id)
+      item = redbark_accounts(:savings_account).redbark_item
+      redbark_account = item.redbark_accounts.create!(redbark_account_id: redbark_account_id, name: "Card", currency: "AUD")
+      redbark_account.ensure_account_provider!(
+        item.family.accounts.create!(name: "Card", balance: 100, currency: "AUD", accountable: CreditCard.new)
+      )
+      [ redbark_account, item ]
     end
 end
