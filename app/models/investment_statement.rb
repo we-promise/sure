@@ -86,16 +86,16 @@ class InvestmentStatement
 
   # Top investments rolled up by security across accounts, ranked by
   # family-currency value. Weight is % of total portfolio (including cash).
-  # Presence is gated on holdings totals — not Account#balance — so a stale
-  # zero portfolio_value still surfaces real positions.
+  # Presence is gated on holdings, not Account#balance, so a stale zero
+  # portfolio_value still surfaces real positions. A security held only in
+  # currencies with no rate to the family currency is listed last, with no
+  # amount, weight or trend; one held partly so is valued at its rated
+  # positions.
   def top_holdings(limit: 5)
     rolled_up = holdings_rolled_up_by_security
     return [] if rolled_up.empty?
 
-    holdings_total = rolled_up.sum { |_, value, _| value }
-    return [] if holdings_total.zero?
-
-    total = weight_denominator(holdings_total)
+    total = weight_denominator(rolled_up.sum { |_, value, _| value || 0 })
 
     # Rank/limit on value first; only then compute cost-basis trends for the
     # rows that will be rendered. The cost basis behind them is preloaded for
@@ -105,9 +105,10 @@ class InvestmentStatement
       .map do |security, value, holdings|
         HoldingAllocation.new(
           security: security,
-          amount: Money.new(value, family.currency),
-          weight: (value / total * 100).round(2),
-          trend: combined_holding_trend(holdings)
+          amount: value && Money.new(value, family.currency),
+          weight: weight_of(value, total),
+          trend: combined_holding_trend(priced_holdings(holdings)),
+          unvalued_positions: holdings.size - valued_holdings(holdings).size
         )
       end
   end
@@ -122,18 +123,20 @@ class InvestmentStatement
   # only. Not Account#cash_balance, which can be stale or default to the whole
   # balance; and not one residual across the portfolio, which would let one
   # account's margin net against another account's cash.
+  #
+  # A security with no valued position is listed with no amount or weight,
+  # though the allocation segments (#allocation_by) leave it out.
   def allocation
     rolled_up = holdings_rolled_up_by_security
-    holdings_total = rolled_up.sum { |_, value, _| value }
-    total = weight_denominator(holdings_total)
-    return [] if total.zero?
+    total = weight_denominator(rolled_up.sum { |_, value, _| value || 0 })
 
     rows = rolled_up.map do |security, value, holdings|
       HoldingAllocation.new(
         security: security,
-        amount: Money.new(value, family.currency),
-        weight: (value / total * 100).round(2),
-        trend: combined_holding_trend(holdings)
+        amount: value && Money.new(value, family.currency),
+        weight: weight_of(value, total),
+        trend: combined_holding_trend(priced_holdings(holdings)),
+        unvalued_positions: holdings.size - valued_holdings(holdings).size
       )
     end
 
@@ -142,8 +145,9 @@ class InvestmentStatement
       rows << HoldingAllocation.new(
         security: nil,
         amount: Money.new(cash, family.currency),
-        weight: (cash / total * 100).round(2),
-        trend: nil
+        weight: weight_of(cash, total),
+        trend: nil,
+        unvalued_positions: 0
       )
     end
 
@@ -158,8 +162,9 @@ class InvestmentStatement
   # (`positive_account_cash`) -- placed where the grouping says cash belongs.
   # So every grouping and every level of the drill-down sums to the same
   # total, and weights sum to 100 within rounding. Segments are sorted largest
-  # first. Amounts convert to the family currency at the latest rate; a
-  # currency with no rate counts 1:1 (`convert_to_family_currency`).
+  # first. Amounts convert to the family currency at the latest rate. A
+  # position in a currency with no rate is left out, and so is the cash of an
+  # account that holds one (`positive_account_cash`).
   ALLOCATION_GROUPINGS = %w[security asset_class asset_sub_class sector region account currency kind].freeze
 
   # The bucket a holding falls into when the column it is grouped by is empty.
@@ -233,7 +238,7 @@ class InvestmentStatement
     rolled_up = holdings_rolled_up_by_security
     return [] if rolled_up.empty?
 
-    total = weight_denominator(rolled_up.sum { |_, value, _| value })
+    total = weight_denominator(rolled_up.sum { |_, value, _| value || 0 })
 
     rows = rolled_up.map do |security, value, positions|
       build_holdings_table_row(security, value, positions, total)
@@ -449,9 +454,25 @@ class InvestmentStatement
     def convert_to_family_currency(amount, from_currency)
       return amount if amount.nil?
       numeric = amount.is_a?(Money) ? amount.amount : amount
-      return numeric if from_currency == family.currency
-      rate = exchange_rates[from_currency]
+      rate = family_rate(from_currency)
       rate ? numeric * rate : 0
+    end
+
+    # The one test for whether a currency converts: 1 for the family currency,
+    # the latest stored rate otherwise, nil when there is none.
+    def family_rate(currency)
+      currency == family.currency ? 1 : exchange_rates[currency]
+    end
+
+    # Positions with a value in the family currency.
+    def valued_holdings(holdings)
+      holdings.select { |holding| family_rate(holding.currency) }
+    end
+
+    # Valued positions with a positive amount. A zero amount is more often a
+    # missing price than a worthless holding, so it is kept out of returns.
+    def priced_holdings(holdings)
+      valued_holdings(holdings).select { |holding| holding.amount.positive? }
     end
 
     def all_time_totals
@@ -469,7 +490,7 @@ class InvestmentStatement
     end
 
     # `security` is nil only for the cash row #allocation appends.
-    HoldingAllocation = Data.define(:security, :amount, :weight, :trend) do
+    HoldingAllocation = Data.define(:security, :amount, :weight, :trend, :unvalued_positions) do
       def cash? = security.nil?
       def ticker = cash? ? CASH_TICKER : security.ticker
       def name = cash? ? I18n.t("models.investment_statement.cash") : (security.name.presence || ticker)
@@ -485,9 +506,10 @@ class InvestmentStatement
     # or a stale zero balance) would otherwise show less than it holds, or drop
     # out of the grouping altogether.
     # The #allocation rows as segments, without the per-security trend a
-    # segment does not carry. build_segments' total is the holdings plus
-    # account_cash_total, which is weight_denominator, so each weight matches
-    # #allocation's.
+    # segment does not carry. build_segments' total is the valued holdings
+    # plus account_cash_total, which is weight_denominator, so each weight
+    # matches #allocation's. A security with no valued position has a nil
+    # value and no segment; #allocation still lists it.
     def allocation_by_security
       segments = holdings_rolled_up_by_security.map do |security, value, _holdings|
         [ security.id, security.name.presence || security.ticker, value ]
@@ -616,8 +638,14 @@ class InvestmentStatement
     # count the holdings twice. `Balance::BaseCalculator` derives an
     # investment account's cash the same way, so on synced data the two agree.
     # Per account, so one account's margin cannot net against another's cash.
+    #
+    # An account holding a position with no rate has no cash figure:
+    # its balance includes that position at a value that cannot be told apart
+    # from cash, so counting the residual would show the same money twice.
     def positive_account_cash
       @positive_account_cash ||= investment_accounts.filter_map do |account|
+        next if unvalued_account_ids.include?(account.id)
+
         balance = convert_to_family_currency(account.balance.to_d, account.currency)
         cash = balance - account_holdings_totals[account.id]
         [ account, cash ] if cash.positive?
@@ -633,6 +661,12 @@ class InvestmentStatement
 
     def account_cash_total
       positive_account_cash.sum { |_, value| value }
+    end
+
+    def unvalued_account_ids
+      @unvalued_account_ids ||= current_holdings
+        .select { |holding| holding.amount.positive? && !family_rate(holding.currency) }
+        .map(&:account_id).to_set
     end
 
     # One rule for which bucket a holding falls in, shared by the grouping, the
@@ -661,11 +695,11 @@ class InvestmentStatement
       end
     end
 
-    # The allocation ladder's holdings, filtered by the per-row rule
-    # `holdings_rolled_up_by_security` applies: a negative amount is corrupt
-    # data (`Holding::Materializer` writes through `upsert_all`, skipping
-    # validation). It is applied before anything sums, so a level above cannot
-    # net a negative row that the bottom level then drops.
+    # The allocation ladder's holdings, filtered row by row: a negative amount
+    # is corrupt data (`Holding::Materializer` writes through `upsert_all`,
+    # skipping validation), and a position with no family-currency value has
+    # nothing to size a segment by. It is applied before anything sums, so a
+    # level above cannot net a negative row that the bottom level then drops.
     def allocatable_holdings
       @allocatable_holdings ||= current_holdings.select do |holding|
         convert_to_family_currency(holding.amount, holding.currency).positive?
@@ -688,12 +722,12 @@ class InvestmentStatement
     # accounts that hold it, in family currency.
     HoldingsTableRow = Data.define(
       :security, :positions, :accounts_count, :qty, :avg_cost, :amount, :weight,
-      :unrealized, :day_change, :day_change_positions, :missing_cost_basis
+      :unrealized, :day_change, :day_change_positions, :priced_positions, :missing_cost_basis, :unvalued_positions
     ) do
       def ticker = security.ticker
-      # The Day change sums only the positions with a previous snapshot, while
-      # the row's value sums them all.
-      def day_change_partial? = day_change.present? && day_change_positions < positions.size
+      # The Day change sums the priced positions (priced_holdings) with a
+      # previous snapshot; it is partial when that is fewer than all of them.
+      def day_change_partial? = day_change.present? && day_change_positions < priced_positions
       def name = security.name.presence || ticker
       def amount_money = amount
     end
@@ -711,19 +745,21 @@ class InvestmentStatement
       # preloaded for every holding by holdings_with_avg_costs. Reading
       # `cost_basis` directly instead would hide a return on this table that
       # top_holdings counts for the same security.
-      known = positions.select(&:avg_cost)
-      missing_cost_basis = known.size < positions.size
+      based = positions.select(&:avg_cost)
+      missing_cost_basis = based.size < positions.size
+      # The return covers the priced positions (priced_holdings) with a known
+      # cost; the rest are counted in unvalued_positions or have no price.
+      known = priced_holdings(based)
 
-      cost = nil
       unrealized = nil
-      known_qty = known.sum(&:qty)
       if known.any?
         cost = known.sum { |holding| convert_to_family_currency(holding.qty * holding.avg_cost.amount, holding.currency) }
         known_value = known.sum { |holding| convert_to_family_currency(holding.amount, holding.currency) }
         unrealized = Trend.new(current: Money.new(known_value, family.currency), previous: Money.new(cost, family.currency))
       end
 
-      day_changes = positions.filter_map do |holding|
+      priced = priced_holdings(positions)
+      day_changes = priced.filter_map do |holding|
         trend = holding_day_change(holding)
         next unless trend
         [ convert_to_family_currency(trend.current.amount, holding.currency), convert_to_family_currency(trend.previous.amount, holding.currency) ]
@@ -740,14 +776,31 @@ class InvestmentStatement
         positions: positions,
         accounts_count: positions.map(&:account_id).uniq.size,
         qty: qty,
-        avg_cost: (cost && known_qty.positive?) ? Money.new(cost / known_qty, family.currency) : nil,
-        amount: Money.new(value, family.currency),
-        weight: total.zero? ? 0 : (value / total * 100).round(2),
+        avg_cost: average_cost(based),
+        amount: value && Money.new(value, family.currency),
+        weight: weight_of(value, total),
         unrealized: unrealized,
         day_change: day_change,
         day_change_positions: day_changes.size,
-        missing_cost_basis: missing_cost_basis
+        priced_positions: priced.size,
+        missing_cost_basis: missing_cost_basis,
+        unvalued_positions: positions.size - valued_holdings(positions).size
       )
+    end
+
+    # The average cost per unit over every position with a known cost, so it
+    # reconciles with the row's quantity when no basis is missing: in the
+    # family currency when every one converts, otherwise in the positions'
+    # own currency when they share one, otherwise nil.
+    def average_cost(based)
+      qty = based.sum(&:qty)
+      return unless qty.positive?
+
+      if based.all? { |holding| family_rate(holding.currency) }
+        Money.new(based.sum { |holding| convert_to_family_currency(holding.qty * holding.avg_cost.amount, holding.currency) } / qty, family.currency)
+      elsif based.map(&:currency).uniq.one?
+        Money.new(based.sum { |holding| holding.qty * holding.avg_cost.amount } / qty, based.first.currency)
+      end
     end
 
     def sort_holdings_table_rows(rows, sort:, dir:)
@@ -781,6 +834,8 @@ class InvestmentStatement
 
     def sort_key_present?(row, sort)
       case sort
+      when "value" then row.amount.present?
+      when "weight" then row.weight.present?
       when "return" then row.unrealized.present?
       when "day_change" then row.day_change.present?
       else true
@@ -789,13 +844,16 @@ class InvestmentStatement
 
     # Groups current holdings by security and sums family-currency value.
     # Returns [[security, value, holdings], ...] sorted by value descending.
+    # The value sums the positions whose currency has a rate to the family
+    # currency; a security with none is kept with a nil value, sorted last.
     # Callers that need return trends should call combined_holding_trend only
     # for rows they will render (e.g. after top_holdings applies its limit).
     # Shared by top_holdings and allocation so one security cannot report two
     # different percentages.
     #
-    # The denominator is the holdings total plus the account cash every
-    # grouping files -- the total each allocation grouping sums to -- rather
+    # The denominator is the valued holdings total (positions with no rate
+    # count for nothing) plus the account cash every grouping files -- the
+    # total each allocation grouping sums to -- rather
     # than portfolio_value: Account#balance can lag the holdings (a stale zero)
     # or fall below them (margin, an unsettled buy) and push a weight past
     # 100%. Account cash is positive only, so the denominator is never below
@@ -803,6 +861,12 @@ class InvestmentStatement
     # below its holdings.
     def weight_denominator(holdings_total)
       holdings_total + account_cash_total
+    end
+
+    # nil for a position with no family-currency value, or when there is
+    # nothing to weigh it against.
+    def weight_of(value, total)
+      (value / total * 100).round(2) if value && total.positive?
     end
 
     # Memoized: top_holdings, allocation and holdings_table_rows all start
@@ -815,18 +879,19 @@ class InvestmentStatement
           # is DISTINCT ON (account_id, security_id), so one security held in two
           # accounts yields two rows; a negative row in one would otherwise net
           # against the good row in the other and understate the position.
-          positive_holdings = holdings.select do |holding|
-            convert_to_family_currency(holding.amount, holding.currency).positive?
-          end
-          next if positive_holdings.empty?
+          # The sign is read natively, so a position with no rate or no value
+          # is kept.
+          kept_holdings = holdings.reject { |holding| holding.amount.negative? }
+          next if kept_holdings.empty?
 
-          security = positive_holdings.first.security
-          value = positive_holdings.sum { |h| convert_to_family_currency(h.amount, h.currency) }
+          security = kept_holdings.first.security
+          valued = valued_holdings(kept_holdings)
+          value = valued.sum { |h| convert_to_family_currency(h.amount, h.currency) } if valued.any?
 
-          # positive_holdings, not holdings, so the trend excludes the bad row too.
-          [ security, value, positive_holdings ]
+          # kept_holdings, not holdings, so the trend excludes the bad row too.
+          [ security, value, kept_holdings ]
         end
-        .sort_by { |_, value, _| -value }
+        .sort_by { |_, value, _| value ? [ 0, -value ] : [ 1, 0 ] }
     end
 
     def combined_holding_trend(holdings)

@@ -5,6 +5,12 @@ en:
       redis_configured: "Redis is now configured properly! You can now setup your Sure application."
   shared:
     preview: Preview
+    holding_value:
+      no_exchange_rate: no exchange rate
+      unavailable: "—"
+      unvalued_positions:
+        one: "%{count} position without an exchange rate"
+        other: "%{count} positions without an exchange rate"
     exchange_rate_notes:
       missing:
         one: "No exchange rate from %{currencies} to %{currency} is stored yet, so some totals may leave out amounts in %{currencies}."

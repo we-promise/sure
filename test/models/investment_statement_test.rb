@@ -1698,6 +1698,164 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal %w[CCC BBB AAA], @statement.holdings_table_rows(sort: "name", dir: "sideways").map(&:ticker), "an unknown dir keeps a valid sort"
   end
 
+  test "holdings_table_rows lists a position with no exchange rate, without a family value or weight" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    usd = create_investment_account(balance: 1000, currency: "USD")
+    gbp = create_investment_account(balance: 500, currency: "GBP")
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    vod = Security.create!(ticker: "VOD", name: "Vodafone")
+    short = Security.create!(ticker: "SHRT", name: "Short")
+    Holding.create!(account: usd, security: aapl, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+    Holding.create!(account: gbp, security: vod, date: Date.current, qty: 10, price: 50, amount: 500, currency: "GBP", cost_basis: 40, cost_basis_locked: true)
+    Holding.create!(account: gbp, security: vod, date: 1.day.ago.to_date, qty: 10, price: 45, amount: 450, currency: "GBP")
+    Holding.new(account: gbp, security: short, date: Date.current, qty: 2, price: 50, amount: -100, currency: "GBP").save!(validate: false)
+
+    rows = @statement.holdings_table_rows
+
+    assert_equal [ [ "AAPL", 1000, 100.0 ], [ "VOD", nil, nil ] ], rows.map { |r| [ r.ticker, r.amount&.amount, r.weight ] },
+      "the position is listed, left out of the denominator, and the negative row stays out"
+    vod_row = rows.last
+    assert_equal [ 10, Money.new(40, "GBP"), nil, nil, 1, false ],
+      [ vod_row.qty, vod_row.avg_cost, vod_row.unrealized, vod_row.day_change, vod_row.unvalued_positions, vod_row.missing_cost_basis ],
+      "the cost is still known, in the position's own currency"
+    %w[value weight].each do |sort|
+      assert_equal %w[AAPL VOD], @statement.holdings_table_rows(sort: sort, dir: "asc").map(&:ticker), "#{sort}: the row without one goes last"
+    end
+    assert_equal %w[AAPL], @statement.top_holdings(limit: 1).map(&:ticker), "ranked after every valued position"
+  end
+
+  # AAPL is held in USD and in an unrated GBP account. Valued at its USD
+  # position, it weighs the same as MSFT.
+  test "a security held partly in a currency with no rate is valued at its rated positions" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    usd = create_investment_account(balance: 2000, currency: "USD")
+    gbp = create_investment_account(balance: 500, currency: "GBP")
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    msft = Security.create!(ticker: "MSFT", name: "Microsoft")
+    Holding.create!(account: usd, security: aapl, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD", cost_basis: 100, cost_basis_locked: true)
+    Holding.create!(account: usd, security: msft, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+    Holding.create!(account: gbp, security: aapl, date: Date.current, qty: 5, price: 100, amount: 500, currency: "GBP", cost_basis: 80, cost_basis_locked: true)
+
+    assert_equal [ [ "AAPL", 1000, 50.0, 1 ], [ "MSFT", 1000, 50.0, 0 ] ],
+      @statement.top_holdings.map { |h| [ h.ticker, h.amount.amount, h.weight, h.unvalued_positions ] }.sort
+    row = @statement.holdings_table_rows.find { |r| r.ticker == "AAPL" }
+    assert_equal [ 1, 10, nil, false, 1000, 500 ],
+      [ row.unvalued_positions, row.qty, row.avg_cost, row.missing_cost_basis, row.unrealized.current.amount, row.unrealized.previous.amount ],
+      "the costs are in two currencies that do not convert, so no average; the return covers the USD position"
+  end
+
+  # A zero amount on a held position is usually a missing price.
+  test "a position with no value is left out of the return, here and in the same security elsewhere" do
+    a = create_investment_account(balance: 0, currency: "USD")
+    b = create_investment_account(balance: 1000, currency: "USD")
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    zero = Security.create!(ticker: "ZERO", name: "Unpriced")
+    Holding.create!(account: a, security: aapl, date: Date.current, qty: 10, price: 0, amount: 0, currency: "USD", cost_basis: 100, cost_basis_locked: true)
+    Holding.create!(account: b, security: aapl, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD", cost_basis: 150, cost_basis_locked: true)
+    Holding.create!(account: a, security: zero, date: Date.current, qty: 10, price: 0, amount: 0, currency: "USD", cost_basis: 100, cost_basis_locked: true)
+
+    rows = @statement.holdings_table_rows.to_h { |r| [ r.ticker, r ] }
+    assert_equal [ 1000, 750 ], [ rows["AAPL"].unrealized.current.amount, rows["AAPL"].unrealized.previous.amount ]
+    assert_nil rows["ZERO"].unrealized
+    trends = @statement.top_holdings.to_h { |h| [ h.ticker, h.trend ] }
+    assert_equal [ 1000, 750 ], [ trends["AAPL"].current.amount, trends["AAPL"].previous.amount ]
+    assert_nil trends["ZERO"]
+  end
+
+  test "a corrupt negative row with no rate leaves its account's cash" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = create_investment_account(balance: 1500, currency: "USD")
+    provider = synced_provider_for(account)
+    Holding.create!(account: account, account_provider: provider, security: Security.create!(ticker: "AAPL", name: "Apple"), date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+    Holding.new(account: account, account_provider: provider, security: Security.create!(ticker: "BAD", name: "Bad"), date: Date.current, qty: 1, price: -5, amount: -5, currency: "GBP").save!(validate: false)
+
+    assert_equal [ [ "AAPL", 1000 ], [ "CASH", 500 ] ], @statement.allocation.map { |h| [ h.ticker, h.amount.amount ] }
+  end
+
+  test "a day change is partial only against the positions that have a price" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    usd = create_investment_account(balance: 1000, currency: "USD")
+    gbp = create_investment_account(balance: 500, currency: "GBP")
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    Holding.create!(account: usd, security: aapl, date: 1.day.ago.to_date, qty: 5, price: 190, amount: 950, currency: "USD")
+    Holding.create!(account: usd, security: aapl, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+    Holding.create!(account: gbp, security: aapl, date: Date.current, qty: 5, price: 100, amount: 500, currency: "GBP")
+
+    row = @statement.holdings_table_rows.first
+    assert_equal 1, row.day_change_positions
+    assert_not row.day_change_partial?
+  end
+
+  # A USD account's balance holds a GBP position with no rate. Its residual
+  # would list that position again as cash beside its own unvalued row.
+  test "an account holding a position with no rate has no cash row" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = create_investment_account(balance: 1500, currency: "USD")
+    provider = synced_provider_for(account)
+    Holding.create!(account: account, account_provider: provider, security: Security.create!(ticker: "AAPL", name: "Apple"), date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+    Holding.create!(account: account, account_provider: provider, security: Security.create!(ticker: "VOD", name: "Vodafone"), date: Date.current, qty: 10, price: 50, amount: 500, currency: "GBP")
+
+    assert_equal [ [ "AAPL", 1000, 100.0 ], [ "VOD", nil, nil ] ],
+      @statement.allocation.map { |h| [ h.ticker, h.amount&.amount, h.weight ] }
+  end
+
+  test "every allocation grouping and the drill-down sum to the same total when a rate is missing" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    synced = create_investment_account(balance: 1500, currency: "USD")
+    provider = synced_provider_for(synced)
+    Holding.create!(account: synced, account_provider: provider, security: aapl, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+    Holding.create!(account: synced, account_provider: provider, security: Security.create!(ticker: "VOD", name: "Vodafone"), date: Date.current, qty: 10, price: 50, amount: 500, currency: "GBP")
+    manual = create_investment_account(balance: 800, currency: "USD")
+    Holding.create!(account: manual, security: Security.create!(ticker: "MSFT", name: "Microsoft"), date: Date.current, qty: 5, price: 100, amount: 500, currency: "USD")
+    gbp = create_investment_account(balance: 200, currency: "GBP")
+    Holding.create!(account: gbp, security: aapl, date: Date.current, qty: 2, price: 100, amount: 200, currency: "GBP")
+
+    # AAPL's USD position, MSFT, and the manual account's 300 of cash.
+    expected = 1800
+    InvestmentStatement::ALLOCATION_GROUPINGS.each do |by|
+      assert_equal expected, @statement.allocation_by(by).sum { |s| s.amount.amount }, by
+    end
+    assert_equal expected, @statement.allocation.sum { |h| h.amount&.amount.to_d }
+    @statement.allocation_by("asset_class").each do |segment|
+      assert_equal segment.amount.amount, @statement.allocation_children("asset_class", segment.id).sum { |s| s.amount.amount }, segment.id
+    end
+  end
+
+  test "holdings_table_rows lists a position with a quantity and no value" do
+    account = create_investment_account(balance: 100, currency: "USD")
+    security = Security.create!(ticker: "ZERO", name: "Worthless")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 10, price: 0, amount: 0, currency: "USD")
+
+    assert_equal [ [ "ZERO", 0, 0.0 ] ], @statement.holdings_table_rows.map { |r| [ r.ticker, r.amount.amount, r.weight ] }
+
+    account.update!(balance: 0)
+    assert_equal [ [ "ZERO", 0, nil ] ], InvestmentStatement.new(@family, user: nil).holdings_table_rows.map { |r| [ r.ticker, r.amount.amount, r.weight ] },
+      "with nothing to weigh it against it has no weight"
+  end
+
+  test "top_holdings and allocation list a family's only position when it has no exchange rate" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = create_investment_account(balance: 500, currency: "GBP")
+    vod = Security.create!(ticker: "VOD", name: "Vodafone")
+    Holding.create!(account: account, security: vod, date: Date.current, qty: 10, price: 50, amount: 500, currency: "GBP", cost_basis: 40, cost_basis_locked: true)
+
+    expected = [ [ "VOD", nil, nil, nil ] ]
+    assert_equal expected, @statement.top_holdings.map { |h| [ h.ticker, h.amount, h.weight, h.trend ] }
+    assert_equal expected, @statement.allocation.map { |h| [ h.ticker, h.amount, h.weight, h.trend ] }
+  end
+
+  test "a position with no exchange rate stays out of the allocation segments" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    usd = create_investment_account(balance: 1000, currency: "USD")
+    gbp = create_investment_account(balance: 500, currency: "GBP")
+    Holding.create!(account: usd, security: Security.create!(ticker: "AAPL", name: "Apple"), date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+    Holding.create!(account: gbp, security: Security.create!(ticker: "VOD", name: "Vodafone"), date: Date.current, qty: 10, price: 50, amount: 500, currency: "GBP")
+
+    assert_equal [ [ "Apple", 100.0 ] ], @statement.allocation_by(:security).map { |s| [ s.name, s.weight ] }
+    assert_equal [ [ "USD", 100.0 ] ], @statement.allocation_by(:currency).map { |s| [ s.name, s.weight ] }
+  end
+
   test "holdings_table_rows issues no query per holding" do
     account = create_investment_account(balance: 10_000)
     5.times do |i|
@@ -1905,6 +2063,11 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         currency: currency,
         accountable: Investment.new
       )
+    end
+
+    def synced_provider_for(account)
+      item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+      AccountProvider.create!(account: account, provider: item.coinstats_accounts.create!(name: "Brokerage", currency: account.currency))
     end
 
     def create_crypto_account(balance:, cash_balance: 0, currency: "USD")

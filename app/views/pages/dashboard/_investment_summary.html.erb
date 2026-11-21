@@ -58,11 +58,11 @@
                 </td>
 
                 <td class="p-4 text-right text-secondary privacy-sensitive">
-                  <%= number_to_percentage(holding.weight || 0, precision: 1) %>
+                  <%= holding.weight ? number_to_percentage(holding.weight, precision: 1) : t("shared.holding_value.unavailable") %>
                 </td>
 
                 <td class="p-4 text-right privacy-sensitive">
-                  <%= format_money(holding.amount_money) %>
+                  <%= render "shared/holding_value", amount: holding.amount, unvalued_positions: holding.unvalued_positions %>
                 </td>
 
                 <td class="p-4 text-right">

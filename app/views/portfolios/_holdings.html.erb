@@ -62,22 +62,32 @@
   <% end %>
 
   <% table.with_column(header.call(t("portfolios.holdings.columns.value"), "value"), numeric: true, aria_sort: holdings_aria_sort("value", **sorting)) do |row| %>
-    <%= tag.span format_money(row.amount_money), class: "privacy-sensitive", data: { portfolio_value: true } %>
+    <%= tag.div class: "privacy-sensitive", data: { portfolio_value: true } do %>
+      <%= render "shared/holding_value", amount: row.amount, unvalued_positions: row.unvalued_positions %>
+    <% end %>
   <% end %>
 
   <% table.with_column(header.call(t("portfolios.holdings.columns.weight"), "weight"), numeric: true, aria_sort: holdings_aria_sort("weight", **sorting)) do |row| %>
-    <div class="flex justify-end items-center gap-2">
-      <%= render DS::ProgressRing.new(percent: row.weight, size: 16, stroke_width: 2, show_percent: false) %>
-      <%= number_to_percentage(row.weight, precision: 1) %>
-    </div>
+    <% if row.weight %>
+      <div class="flex justify-end items-center gap-2" data-portfolio-weight>
+        <%= render DS::ProgressRing.new(percent: row.weight, size: 16, stroke_width: 2, show_percent: false) %>
+        <%= number_to_percentage(row.weight, precision: 1) %>
+      </div>
+    <% else %>
+      <%= tag.span t("shared.holding_value.unavailable"), class: "text-secondary", data: { portfolio_weight: true } %>
+    <% end %>
   <% end %>
 
   <% table.with_column(header.call(t("portfolios.holdings.columns.unrealized"), "return"), numeric: true, aria_sort: holdings_aria_sort("return", **sorting)) do |row| %>
     <% if row.unrealized %>
       <%= render "shared/trend_figure", trend: row.unrealized %>
     <% else %>
-      <p class="text-secondary">—</p>
-      <p class="text-xs text-secondary"><%= t("portfolios.holdings.no_cost_basis") %></p>
+      <p class="text-secondary"><%= t("shared.holding_value.unavailable") %></p>
+      <% if row.amount.nil? %>
+        <p class="text-xs text-secondary"><%= t("shared.holding_value.no_exchange_rate") %></p>
+      <% elsif row.positions.none?(&:avg_cost) %>
+        <p class="text-xs text-secondary"><%= t("portfolios.holdings.no_cost_basis") %></p>
+      <% end %>
     <% end %>
   <% end %>
 
