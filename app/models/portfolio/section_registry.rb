@@ -103,17 +103,21 @@ class Portfolio::SectionRegistry
       @holdings_sort ||= InvestmentStatement.holdings_sort(sort, dir)
     end
 
-    # The accounts the cards show, in name order (case-insensitive; id breaks
-    # ties, so same-named cards keep their places), with every record the logo
-    # reads (the attachment, the accountable's colour, the provider links and
-    # the provider each falls back to) loaded here rather than once per card.
+    # The accounts the cards show, in the viewing user's sidebar order (name,
+    # balance or their own), with every record the logo reads (the
+    # attachment, the accountable's colour, the provider links and the
+    # provider each falls back to) loaded here rather than once per card.
     #
-    # They are the statement's own records, sorted here, rather than a second
-    # query: the holdings section's weights load the same accounts through the
-    # statement, and the page reads them once.
+    # They are the statement's own records rather than a second query: the
+    # holdings section's weights load the same accounts through the
+    # statement, and the page reads them once. So they are sorted here, by
+    # AccountOrder as the sidebar sorts its own.
     def accounts_for_cards
       @accounts_for_cards ||= begin
-        accounts = statement.investment_accounts.to_a.sort_by { |account| [ account.name.downcase, account.id ] }
+        order = user&.account_order || AccountOrder.default
+        accounts = order.sort(statement.investment_accounts.to_a,
+                              manual_order: user&.manual_account_order || {},
+                              balance: statement.method(:family_balance))
         ActiveRecord::Associations::Preloader.new(records: accounts, associations: CARD_PRELOADS).call
         accounts
       end

@@ -9,7 +9,7 @@
   holding drawer, in a detail row of the table.
 %>
 <%
-  sorting = { active_sort: sort.presence || "value", active_dir: dir.presence || "desc" }
+  sorting = { active_sort: sort, active_dir: dir }
   header = ->(label, key) { holdings_sort_header(label, key, **sorting) }
 %>
 

@@ -422,6 +422,12 @@ class InvestmentStatement
     end
   end
 
+  # An account's balance in the family's currency, at today's rate, as the
+  # sidebar's balance order reads it; 0 when the currency has no rate.
+  def family_balance(account)
+    convert_to_family_currency(account.balance, account.currency)
+  end
+
   private
     # Today's rates for every currency present on the family's investment
     # accounts and their holdings. Mirrors BalanceSheet::AccountTotals#exchange_rates.
@@ -703,6 +709,7 @@ class InvestmentStatement
     # the positions whose basis is known, and its weight against the caller's
     # `total` -- which is chosen by #weight_denominator, not here.
     def build_holdings_table_row(security, value, positions, total)
+      positions = positions.sort_by { |holding| [ -convert_to_family_currency(holding.amount, holding.currency), holding.id.to_s ] }
       qty = positions.sum(&:qty)
 
       # Same rule as combined_holding_trend: the return covers the positions
@@ -757,25 +764,29 @@ class InvestmentStatement
       # Ties break by name, then security id, in both directions, so rows with
       # the same figure keep their order between requests.
       present, absent = rows.partition { |row| sort_key_present?(row, sort) }
-      present = present.sort do |a, b|
-        order = sort_value(a, sort) <=> sort_value(b, sort)
+      # Each row's keys are computed once, not once per comparison.
+      keyed = present.map { |row| [ row, sort_value(row, sort), tiebreak(row) ] }
+      present = keyed.sort do |(_, a_value, a_tie), (_, b_value, b_tie)|
+        order = a_value <=> b_value
         order = -order if dir == "desc"
-        order.nonzero? || (tiebreak(a) <=> tiebreak(b))
-      end
+        order.nonzero? || (a_tie <=> b_tie)
+      end.map(&:first)
       present + absent.sort_by { |row| tiebreak(row) }
     end
 
     def tiebreak(row)
-      [ row.name.downcase, row.security.id.to_s ]
+      [ NameSortKey.for(row.name), row.security.id.to_s ]
     end
 
     def sort_value(row, sort)
       case sort
       when "value" then row.amount.amount
-      when "weight" then row.weight
+      # Weight is value over one total, rounded for display, so value orders
+      # it without the rounding's ties.
+      when "weight" then row.amount.amount
       when "return" then row.unrealized.value.amount
       when "day_change" then row.day_change.value.amount
-      when "name" then row.name.downcase
+      when "name" then NameSortKey.for(row.name)
       end
     end
 
