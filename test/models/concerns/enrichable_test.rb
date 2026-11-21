@@ -206,4 +206,80 @@ class EnrichableTest < ActiveSupport::TestCase
     assert_equal "tag_ids", de.attribute_name
     assert_equal "rule", de.source
   end
+
+  # enrich_attributes_unless_refused returns nil, or the messages of a save the
+  # record refused. A refusal leaves the record as it was loaded, so a later
+  # write in the same sync is judged on its own values.
+
+  test "an accepted write through enrich_attributes_unless_refused returns nil" do
+    result = nil
+    assert_difference "DataEnrichment.count", 1 do
+      result = @enrichable.enrich_attributes_unless_refused({ name: "Accepted" }, source: "plaid")
+    end
+
+    assert_nil result
+    assert_equal "Accepted", Account.find(@enrichable.id).name
+  end
+
+  test "a refused write returns its messages and leaves the record as loaded" do
+    stored_name = @enrichable.name
+
+    result = nil
+    assert_no_difference "DataEnrichment.count" do
+      result = @enrichable.enrich_attributes_unless_refused({ name: "" }, source: "plaid")
+    end
+
+    assert_equal [ "Name can't be blank" ], result
+    assert_equal stored_name, @enrichable.name, "the refused value is still assigned"
+    assert_empty @enrichable.errors, "the refusal's errors were left behind"
+    assert_equal stored_name, Account.find(@enrichable.id).name
+  end
+
+  test "a refusal inside a caller's transaction rolls back only its own writes" do
+    Account.transaction do
+      @enrichable.enrich_attribute(:balance, 7_000, source: "plaid")
+      assert_not_nil @enrichable.enrich_attributes_unless_refused({ name: "" }, source: "plaid")
+    end
+
+    assert_equal 7_000, Account.find(@enrichable.id).balance.to_d, "the caller's earlier write was rolled back"
+    assert DataEnrichment.exists?(enrichable: @enrichable, attribute_name: "balance", source: "plaid")
+  end
+
+  # enrich_attributes returns early when every attribute is locked or
+  # unchanged, so errors left by a refusal would read as a second one. Locked
+  # first: lock_attr! validates, which would clear the errors on its own.
+  test "a locked write after a refusal returns nil" do
+    @enrichable.lock_attr!(:balance)
+    assert_not_nil @enrichable.enrich_attributes_unless_refused({ name: "" }, source: "plaid")
+
+    assert_nil @enrichable.enrich_attributes_unless_refused({ balance: 7_000 }, source: "plaid")
+  end
+
+  # The steps run in order and land together. A later step may be a callable,
+  # evaluated once the earlier ones have saved.
+  test "a refused later step rolls back the earlier step's save, in memory too" do
+    stored_balance = @enrichable.balance.to_d
+    seen_balance = nil
+
+    result = nil
+    assert_no_difference "DataEnrichment.count" do
+      result = @enrichable.enrich_attributes_unless_refused(
+        { balance: 7_000 },
+        -> { seen_balance = @enrichable.balance.to_d; { name: "" } },
+        source: "plaid"
+      )
+    end
+
+    assert_equal 7_000, seen_balance, "the callable ran before the earlier step saved"
+    assert_equal [ "Name can't be blank" ], result
+    assert_equal stored_balance, Account.find(@enrichable.id).balance.to_d, "the earlier step landed without the later one"
+    assert_equal stored_balance, @enrichable.balance.to_d, "the rolled-back save's value is still in memory"
+    assert_empty @enrichable.errors
+  end
+
+  test "blank steps are skipped" do
+    assert_difference "DataEnrichment.count", 1 do
+      assert_nil @enrichable.enrich_attributes_unless_refused({}, -> { nil }, { name: "Accepted" }, source: "plaid")
+    end
+  end
 end

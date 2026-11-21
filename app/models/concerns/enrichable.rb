@@ -146,6 +146,52 @@ module Enrichable
     was_modified
   end
 
+  # Runs each step through enrich_attributes, in order and in one savepoint,
+  # for writers that must survive the record refusing a value. A step is a
+  # hash of attributes, or a callable returning one that is evaluated after
+  # the earlier steps have saved; blank steps are skipped.
+  #
+  # Returns nil when every step landed or changed nothing, or the refused
+  # save's error messages. `false` from enrich_attributes is not a refusal on
+  # its own: it is also the answer when every attribute was locked or
+  # unchanged, so only populated errors tell the two apart.
+  #
+  # On a refusal nothing persists, and the record is left as it was loaded:
+  # the rejected values are unassigned and the errors cleared. Left in place,
+  # they would get the next write in the same sync refused for the wrong
+  # attribute, and a later no-op write would report a refusal that did not
+  # happen. Callers log the returned messages themselves.
+  def enrich_attributes_unless_refused(*steps, source:, metadata: {})
+    refusal = nil
+    attempted = []
+
+    ActiveRecord::Base.transaction(requires_new: true) do
+      steps.each do |step|
+        attrs = step.respond_to?(:call) ? step.call : step
+        next if attrs.blank?
+
+        attempted << attrs
+        enrich_attributes(attrs, source:, metadata:)
+        next if errors.empty?
+
+        refusal = errors.full_messages
+        raise ActiveRecord::Rollback
+      end
+    end
+    return nil if refusal.nil?
+
+    # An earlier step's rolled-back save leaves its values applied in memory,
+    # which only a reload undoes.
+    if attempted.one?
+      restore_attributes(attempted.first.keys.map(&:to_s))
+    else
+      reload
+    end
+    errors.clear
+
+    refusal
+  end
+
   def locked?(attr)
     locked_attributes[attr.to_s].present?
   end
