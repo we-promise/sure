@@ -154,6 +154,13 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[role=tabpanel][data-id=transactions].hidden"
   end
 
+  test "an explicit tab stays open after filtering" do
+    get transactions_url(tab: "upcoming")
+    get transactions_url(q: { search: "rent" })
+
+    assert_select "[role=tabpanel][data-id=upcoming]:not(.hidden)"
+  end
+
   test "upcoming summary adds the forecast to the actual totals" do
     create_upcoming_bill("Soon Bill", due_on: 3.days.from_now.to_date)
 
