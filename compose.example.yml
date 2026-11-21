@@ -42,6 +42,10 @@
 # Or use explicit DNS servers that prefer IPv4 (already configured below).
 #
 
+# The PostgreSQL image, used by both `db` and `db-version-check`. To change the
+# major version, see docs/hosting/docker.md "PostgreSQL major version upgrades".
+x-db-image: &db_image postgres:18
+
 x-db-env: &db_env
   POSTGRES_USER: ${POSTGRES_USER:-sure_user}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sure_password}
@@ -141,17 +145,61 @@ services:
       - sure_net
 
   db-version-check:
-    image: alpine:3.23
+    # Runs before `db`. If the data volume was created by another PostgreSQL
+    # major version it stops here with instructions, rather than letting the
+    # server crash-loop or start empty. See docs/hosting/docker.md
+    # "PostgreSQL major version upgrades".
+    image: *db_image
     restart: "no"
+    user: "0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        want=$$PG_MAJOR
+        if [ -f /pgdata/.sure-upgrade-incomplete ]; then
+          echo "ERROR: a 'sure-backup upgrade-postgres' run did not finish. Your data is safe."
+          echo "Run it again for the steps to put the data back: sh sure-backup upgrade-postgres"
+          exit 1
+        fi
+        root=""
+        if [ -f /pgdata/PG_VERSION ]; then root=$$(cat /pgdata/PG_VERSION)
+        elif [ -f /pgdata/data/PG_VERSION ]; then root=$$(cat /pgdata/data/PG_VERSION)
+        fi
+        have=""
+        other=""
+        for f in /pgdata/*/docker/PG_VERSION; do
+          [ -f "$$f" ] || continue
+          if [ "$$(cat "$$f")" = "$$want" ]; then have=1; else other=$$(cat "$$f"); fi
+        done
+        if [ "$$want" -ge 18 ]; then
+          # 18+ keeps its data in <major>/docker; data in the old place is never read.
+          if [ -z "$$root" ] && { [ -n "$$have" ] || [ -z "$$other" ]; }; then ok=1; fi
+        else
+          # Up to 17 the data sits at the volume root.
+          if [ "$$root" = "$$want" ] || { [ -z "$$root" ] && [ -z "$$have$$other" ]; }; then ok=1; fi
+        fi
+        if [ -n "$${ok:-}" ]; then
+          echo "db-version-check: OK"
+          exit 0
+        fi
+        found=$${root:-$${other:-$$want}}
+        echo "ERROR: the database volume holds PostgreSQL $$found data, but this setup runs PostgreSQL $$want."
+        echo "Nothing was changed and your data is safe."
+        if [ "$$found" -lt "$$want" ]; then
+          echo "To upgrade it (a backup is taken first), run this from the folder with your compose file:"
+          echo "  curl -fsSL -o sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup"
+          echo "  sh sure-backup upgrade-postgres"
+          echo "To stay on PostgreSQL $$found instead, set x-db-image AND the db volume mount back."
+        else
+          echo "Set x-db-image and the db volume mount to match PostgreSQL $$found."
+        fi
+        echo "Details: https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#postgresql-major-version-upgrades"
+        exit 1
     volumes:
       - postgres-data:/pgdata:ro
-      - ./bin/db-version-check.sh:/db-version-check.sh:ro
-    command: sh /db-version-check.sh /pgdata 18
-    networks:
-      - sure_net
 
   db:
-    image: postgres:18
+    image: *db_image
     depends_on:
       db-version-check:
         condition: service_completed_successfully
