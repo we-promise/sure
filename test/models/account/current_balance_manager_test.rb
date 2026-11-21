@@ -11,6 +11,9 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
       provider_type: "PlaidAccount",
       provider_id: plaid_accounts(:one).id
     )
+
+    # The reuse of an explained anchor is gated on BALANCE_REUSE_EXPLAINED_ANCHOR (default off).
+    Rails.configuration.x.balance.stubs(:reuse_explained_anchor).returns(true)
   end
 
   # -------------------------------------------------------------------------------------------------
@@ -207,7 +210,6 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
 
     assert_equal 1000, @linked_account.balance
   end
-
   # A provider whose figures come from a statement knows the day they describe,
   # which is not always today.
   test "anchors a linked account balance on the date it is given" do
@@ -264,40 +266,439 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     assert_equal 1500, entry.amount
   end
 
-  test "preserves previous day anchor as reconciliation when updating linked account balance" do
-    # First create a current anchor
+  test "moves a stale anchor forward when the imported ledger explains the balance change" do
+    day_one = Date.current
     manager = Account::CurrentBalanceManager.new(@linked_account)
-    result = manager.set_current_balance(1000)
-    assert result.success?
+    assert manager.set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
 
-    current_anchor = @linked_account.valuations.current_anchor.first
-    original_id = current_anchor.id
+    travel_to day_one + 1.day do
+      # Processors now import transactions BEFORE anchoring, so day one's entries are
+      # already persisted by the time set_current_balance judges the old anchor.
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Card payment",
+        amount: 400,
+        currency: "USD",
+        entryable: Transaction.new
+      )
 
-    # Travel to tomorrow to ensure date change
-    travel_to Date.current + 1.day do
-      # Now update it
-      assert_difference -> { @linked_account.entries.count } => 1,
-                       -> { @linked_account.valuations.count } => 1 do
-        result = manager.set_current_balance(2000)
-        assert result.success?
-        assert result.changes_made?
+      day_two_manager = Account::CurrentBalanceManager.new(@linked_account)
+
+      # The anchor just moves forward in place: no destroy, no create. Net row delta
+      # is ZERO.
+      assert_no_difference -> { @linked_account.entries.count } do
+        assert_no_difference -> { @linked_account.valuations.count } do
+          assert day_two_manager.set_current_balance(600).success?
+        end
       end
 
-      # The old anchor should now be a reconciliation
-      preserved_valuation = Valuation.find(original_id)
-      assert_equal "reconciliation", preserved_valuation.kind
-      assert_equal 1000, preserved_valuation.entry.amount
-      assert_equal Valuation.build_reconciliation_name(@linked_account.accountable_type), preserved_valuation.entry.name
-      assert_equal Date.yesterday, preserved_valuation.entry.date
+      moved = Valuation.find(stale_id)
+      assert_equal "current_anchor", moved.kind
+      assert_equal 600, moved.entry.amount
+      assert_equal Date.current, moved.entry.date
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+      assert_empty @linked_account.valuations.reconciliation
+    end
+  end
 
-      # A new current anchor should exist for today
-      new_anchor = @linked_account.valuations.current_anchor.first
-      assert_not_equal original_id, new_anchor.id
-      assert_equal 2000, new_anchor.entry.amount
-      assert_equal Date.current, new_anchor.entry.date
+  # With BALANCE_REUSE_EXPLAINED_ANCHOR off (the default), the ledger is never consulted and
+  # every stale anchor rotates into a reconciliation waypoint, as it did before this gate.
+  test "preserves a stale anchor as a waypoint when the explained-anchor reuse flag is off" do
+    Rails.configuration.x.balance.stubs(:reuse_explained_anchor).returns(false)
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Card payment",
+        amount: 400,
+        currency: "USD",
+        entryable: Transaction.new
+      )
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(600).success?
+
+      preserved = Valuation.find(stale_id)
+      assert_equal "reconciliation", preserved.kind
+      assert_equal 1000, preserved.entry.amount
+      assert_equal day_one, preserved.entry.date
+
+      anchors = @linked_account.valuations.current_anchor
+      assert_equal 1, anchors.count
+      assert_equal 600, anchors.first.entry.amount
+      assert_equal Date.current, anchors.first.entry.date
+    end
+  end
+
+  test "records a partial-import reading without reusing an explained anchor" do
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Card payment",
+        amount: 400,
+        currency: "USD",
+        entryable: Transaction.new
+      )
+
+      result = Account::CurrentBalanceManager.new(@linked_account).set_current_balance(
+        600,
+        reuse_explained_anchor: false
+      )
+
+      assert result.success?
+      preserved = Valuation.find(stale_id)
+      assert_equal "reconciliation", preserved.kind
+      assert_equal 1000, preserved.entry.amount
+      assert_equal day_one, preserved.entry.date
+
+      anchors = @linked_account.valuations.current_anchor
+      assert_equal 1, anchors.count
+      assert_equal 600, anchors.first.entry.amount
+      assert_equal Date.current, anchors.first.entry.date
+    end
+  end
+
+  # An anchor moved forward in place carries the flows dated on its new date inside its own
+  # amount. Re-summing that date on the next sync counts them twice, makes the move look
+  # unexplained, and freezes a mid-day reading as a waypoint - the #1492 / #1484 corruption
+  # this change exists to remove. Needs three syncs to reach; no other test goes that far.
+  test "an anchor already moved forward in place is not double counted on the next sync" do
+    day_one = Date.current
+    day_two = day_one + 1.day
+    day_three = day_one + 2.days
+
+    # Day one, 02:22: the provider reports 1000 and nothing has posted yet.
+    travel_to Time.zone.parse("#{day_one} 02:22") do
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
     end
 
-    assert_equal 2000, @linked_account.balance
+    anchor_id = @linked_account.valuations.current_anchor.first.id
+
+    # Day two, 02:22: yesterday's 400 arrives in today's batch. The ledger explains
+    # 1000 -> 600, so the anchor moves forward IN PLACE to day two / 600.
+    travel_to Time.zone.parse("#{day_two} 02:22") do
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Day 1 spend",
+        amount: 400,
+        currency: "USD",
+        entryable: Transaction.new
+      )
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(600).success?
+    end
+
+    # Precondition for the bug, asserted rather than assumed.
+    assert_equal "current_anchor", Valuation.find(anchor_id).kind
+    assert_equal day_two, Valuation.find(anchor_id).entry.date
+
+    # Day two, 14:00: a second cycle the same day. 100 posts, dated to day two, and the
+    # reading drops to 500. Same-day update, so the anchor's amount now BAKES IN that 100.
+    travel_to Time.zone.parse("#{day_two} 14:00") do
+      @linked_account.entries.create!(
+        date: day_two,
+        name: "Day 2 spend (early)",
+        amount: 100,
+        currency: "USD",
+        entryable: Transaction.new
+      )
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(500).success?
+    end
+
+    assert_equal 500, Valuation.find(anchor_id).entry.amount
+    assert_equal day_two, Valuation.find(anchor_id).entry.date
+
+    # Day three, 02:22: the 50 that posted after yesterday's last reading arrives, dated
+    # to day two. True day-two close = 1000 - 400 - 100 - 50 = 450, and 450 is exactly what
+    # the provider now reports. The only flow NOT already inside the anchor's 500 is that 50,
+    # so the ledger fully explains 500 -> 450 and the anchor should just move forward again.
+    travel_to Time.zone.parse("#{day_three} 02:22") do
+      @linked_account.entries.create!(
+        date: day_two,
+        name: "Day 2 spend (late)",
+        amount: 50,
+        currency: "USD",
+        entryable: Transaction.new
+      )
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(450).success?
+
+      moved = Valuation.find(anchor_id)
+      assert_equal "current_anchor", moved.kind,
+        "the day-two 100 is already inside the anchor's 500; re-summing it makes an explained " \
+        "move look unexplained and freezes a mid-day reading as a waypoint"
+      assert_empty @linked_account.valuations.reconciliation
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+      assert_equal day_three, moved.entry.date
+      assert_equal 450, moved.entry.amount
+    end
+  end
+
+  # A split replaces a transaction already inside the anchor with child rows created
+  # afterwards. The children must use the parent's timestamp, not their own, or an
+  # unchanged reading looks unexplained and the stale anchor is preserved.
+  test "a split of a transaction already inside the anchor does not make an unchanged reading look unexplained" do
+    day_one = Date.current
+    parent = @linked_account.entries.create!(
+      date: day_one,
+      name: "Split purchase",
+      amount: 25,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(100).success?
+    anchor_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Split A",
+        amount: 10,
+        currency: "USD",
+        entryable: Transaction.new,
+        parent_entry: parent
+      )
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Split B",
+        amount: 15,
+        currency: "USD",
+        entryable: Transaction.new,
+        parent_entry: parent
+      )
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(100).success?
+
+      moved = Valuation.find(anchor_id)
+      assert_equal "current_anchor", moved.kind
+      assert_equal 100, moved.entry.amount
+      assert_equal day_one + 1.day, moved.entry.date
+      assert_empty @linked_account.valuations.reconciliation
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+    end
+  end
+
+  # `current_anchor_valuation` picks the newest of several anchor rows, but max_by over an
+  # unordered query needs an explicit tiebreak to resolve a same-date tie. Duplicates are
+  # reachable: the only guard is Entry's app-level date uniqueness validation (no DB index).
+  test "current anchor lookup resolves a same-date duplicate to the newest row" do
+    anchor_name = Valuation.build_current_anchor_name(@linked_account.accountable_type)
+
+    @linked_account.entries.create!(
+      date: Date.current,
+      name: anchor_name,
+      amount: 100,
+      currency: "USD",
+      entryable: Valuation.new(kind: "current_anchor")
+    )
+
+    # How such a row exists in production: pre-dating the validation, inserted via raw SQL,
+    # or written by a second in-flight transaction that could not see the first one commit.
+    duplicate = @linked_account.entries.new(
+      date: Date.current,
+      name: anchor_name,
+      amount: 9999,
+      currency: "USD",
+      entryable: Valuation.new(kind: "current_anchor")
+    )
+    duplicate.save!(validate: false)
+
+    assert_equal 2, @linked_account.valuations.current_anchor.count
+
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+
+    assert_equal 9999, manager.current_balance,
+      "with two anchors tied on date the newest row must win"
+  end
+
+  test "preserves a stale anchor when the explaining window mixes currencies" do
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Foreign card payment",
+        amount: 400,
+        currency: "EUR",
+        entryable: Transaction.new
+      )
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(600).success?
+
+      assert_equal "reconciliation", Valuation.find(stale_id).kind
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+    end
+  end
+
+  # A provider can correct an account's currency between syncs, leaving the standing anchor's
+  # own entry denominated in the old code. Rotating is the only path that replaces it with a
+  # reading in the current currency.
+  test "preserves a stale anchor whose own currency no longer matches the account" do
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+    assert_equal "USD", Valuation.find(stale_id).entry.currency
+
+    travel_to day_one + 1.day do
+      # No transactions were imported, so the flow window is empty and the flow-currency
+      # check passes vacuously.
+      @linked_account.update!(currency: "EUR")
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+
+      assert_equal "reconciliation", Valuation.find(stale_id).kind
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+
+      fresh = @linked_account.valuations.current_anchor.first
+      assert_equal "EUR", fresh.entry.currency
+      assert_equal day_one + 1.day, fresh.entry.date
+    end
+  end
+
+  test "preserves a stale-currency anchor even when every flow matches the new currency" do
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      @linked_account.update!(currency: "EUR")
+      @linked_account.entries.create!(
+        date: day_one + 1.day,
+        name: "Coffee",
+        amount: 20,
+        currency: "EUR",
+        entryable: Transaction.new
+      )
+
+      # 1000 - 20 == 980 satisfies the ledger identity numerically, but the 1000 is USD.
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(980).success?
+
+      assert_equal "reconciliation", Valuation.find(stale_id).kind
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+      assert_equal "EUR", @linked_account.valuations.current_anchor.first.entry.currency
+    end
+  end
+
+  test "does not move a stale anchor forward on an investment account" do
+    investment = accounts(:investment)
+    investment.update!(plaid_account: plaid_accounts(:one))
+    assert investment.linked?
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(investment).set_current_balance(1000).success?
+    stale_id = investment.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      investment.entries.create!(date: day_one, name: "Withdrawal", amount: 400, currency: "USD", entryable: Transaction.new)
+
+      assert Account::CurrentBalanceManager.new(investment).set_current_balance(600).success?
+
+      assert_equal "reconciliation", Valuation.find(stale_id).kind
+      assert_equal 1, investment.valuations.current_anchor.count
+    end
+  end
+
+  # The tolerance in ledger_explains? is the account currency's minor unit, not a fixed 0.01.
+  # BHD has 3 decimal places (step 0.001), so a reading exactly one minor unit off the
+  # ledger-predicted balance is still "explained" and the anchor moves forward in place.
+  test "moves a stale anchor forward when it is off by exactly one BHD minor unit" do
+    @linked_account.update!(currency: "BHD")
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      # No ledger flows: the expected balance stays at 1000. 999.999 is exactly 0.001 (one
+      # BHD minor unit) away, which is at the accepted threshold.
+      assert_no_difference -> { @linked_account.entries.count } do
+        assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(999.999).success?
+      end
+
+      moved = Valuation.find(stale_id)
+      assert_equal "current_anchor", moved.kind
+      assert_equal BigDecimal("999.999"), moved.entry.amount
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+      assert_empty @linked_account.valuations.reconciliation
+    end
+  end
+
+  # One tick beyond the BHD minor unit is a genuine unexplained move, and must NOT be
+  # swallowed by a coarser, USD-shaped 0.01 tolerance.
+  test "preserves a stale anchor when it is off by just beyond one BHD minor unit" do
+    @linked_account.update!(currency: "BHD")
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      # 999.998 is 0.002 away from the expected 1000: beyond BHD's 0.001 minor unit.
+      assert_difference -> { @linked_account.entries.count } => 1,
+                        -> { @linked_account.valuations.count } => 1 do
+        assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(999.998).success?
+      end
+
+      preserved = Valuation.find(stale_id)
+      assert_equal "reconciliation", preserved.kind
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+    end
+  end
+
+  # JPY has 0 decimal places (step 1), a coarser granularity than the fixed 0.01 the old
+  # tolerance used. A reading exactly one JPY unit off is still "explained".
+  test "moves a stale anchor forward when it is off by exactly one JPY minor unit" do
+    @linked_account.update!(currency: "JPY")
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      # No ledger flows: the expected balance stays at 1000. 999 is exactly 1 (one JPY
+      # minor unit) away, which is at the accepted threshold.
+      assert_no_difference -> { @linked_account.entries.count } do
+        assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(999).success?
+      end
+
+      moved = Valuation.find(stale_id)
+      assert_equal "current_anchor", moved.kind
+      assert_equal 999, moved.entry.amount
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+      assert_empty @linked_account.valuations.reconciliation
+    end
+  end
+
+  # One tick beyond the JPY minor unit is a genuine unexplained move.
+  test "preserves a stale anchor when it is off by just beyond one JPY minor unit" do
+    @linked_account.update!(currency: "JPY")
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      # 998 is 2 away from the expected 1000: beyond JPY's minor unit of 1.
+      assert_difference -> { @linked_account.entries.count } => 1,
+                        -> { @linked_account.valuations.count } => 1 do
+        assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(998).success?
+      end
+
+      preserved = Valuation.find(stale_id)
+      assert_equal "reconciliation", preserved.kind
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+    end
   end
 
   test "does not preserve same-day anchor as reconciliation" do
@@ -333,6 +734,81 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     assert_equal Date.current, current_anchor.entry.date
 
     assert_equal 1500, @linked_account.balance
+  end
+
+  # Arnau's first scenario: a transaction that posts after the reading, dated the
+  # reading's day, arrives in the next sync and explains the move.
+  test "a late-posted same-day transaction explains the stale anchor" do
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    anchor_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      Account::ProviderImportAdapter.new(@linked_account).import_transaction(
+        external_id: "late-posted",
+        amount: 20,
+        currency: "USD",
+        date: day_one,
+        name: "Late payment",
+        source: "plaid",
+        extra: { "plaid" => { "pending" => false } }
+      )
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(980).success?
+
+      moved = Valuation.find(anchor_id)
+      assert_equal "current_anchor", moved.kind
+      assert_equal 980, moved.entry.amount
+      assert_equal day_one + 1.day, moved.entry.date
+      assert_empty @linked_account.valuations.reconciliation
+    end
+  end
+
+  # Arnau's second scenario: a pending row exists before the anchor, then the
+  # provider claims it in place. Its created_at stays before the anchor, so the
+  # current watermark excludes it and the stale anchor is preserved. This pins
+  # the known limitation; update these assertions when the pending-basis
+  # follow-up lands.
+  test "a pending row claimed in place keeps the stale anchor as a known limitation" do
+    day_one = Date.current
+    adapter = Account::ProviderImportAdapter.new(@linked_account)
+    pending = adapter.import_transaction(
+      external_id: "pending-400",
+      amount: 400,
+      currency: "USD",
+      date: day_one,
+      name: "Pending card payment",
+      source: "plaid",
+      extra: { "plaid" => { "pending" => true } }
+    )
+    assert pending.transaction.pending?
+
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      claimed = adapter.import_transaction(
+        external_id: "posted-400",
+        amount: 400,
+        currency: "USD",
+        date: Date.current,
+        name: "Posted card payment",
+        source: "plaid",
+        pending_transaction_id: "pending-400",
+        extra: { "plaid" => { "pending" => false, "pending_transaction_id" => "pending-400" } }
+      )
+      assert_equal pending.id, claimed.id
+      assert_not claimed.transaction.reload.pending?
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(600).success?
+
+      preserved = Valuation.find(stale_id)
+      assert_equal "reconciliation", preserved.kind
+      assert_equal 1000, preserved.entry.amount
+      assert_equal day_one, preserved.entry.date
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+      assert_equal 600, @linked_account.valuations.current_anchor.first.entry.amount
+    end
   end
 
   test "current_balance returns balance from current anchor" do
