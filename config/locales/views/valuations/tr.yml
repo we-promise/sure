@@ -28,6 +28,7 @@ tr:
       account_updated: Hesap güncellendi
     errors:
       amount_required: Tutar gereklidir
+      duplicate_date: Bu tarih için zaten bir bakiye güncellemesi var. Lütfen sayfayı yenileyip tekrar deneyin.
     form:
       amount: Tutar
       submit: Bakiye güncellemesi ekle
