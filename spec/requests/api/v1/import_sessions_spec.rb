@@ -330,6 +330,14 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
 
         run_test!
       end
+
+      response '422', 'missing or invalid content, or a sequence that is not an integer' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { sequence: '1abc', raw_file_content: entity_ndjson } }
+
+        run_test!
+      end
     end
   end
 

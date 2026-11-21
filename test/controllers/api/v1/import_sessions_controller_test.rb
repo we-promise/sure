@@ -55,14 +55,27 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "rejects malformed expected chunk counts" do
-    assert_no_difference("ImportSession.count") do
-      post api_v1_import_sessions_url,
-           params: { type: "SureImport", expected_chunks: "2abc" },
-           headers: api_headers(@api_key)
-    end
+    [ "2abc", "1.5", "0x10", "0b11" ].each do |expected_chunks|
+      assert_no_difference("ImportSession.count", expected_chunks) do
+        post api_v1_import_sessions_url,
+             params: { type: "SureImport", expected_chunks: expected_chunks },
+             headers: api_headers(@api_key)
+      end
 
-    assert_response :unprocessable_entity
-    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+      assert_response :unprocessable_entity, expected_chunks
+      body = JSON.parse(response.body)
+      assert_equal "validation_failed", body["error"]
+      assert_equal "expected_chunks must be a valid integer", body["message"], expected_chunks
+    end
+  end
+
+  test "reads expected chunk counts in base 10" do
+    post api_v1_import_sessions_url,
+         params: { type: "SureImport", expected_chunks: "010" },
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    assert_equal 10, JSON.parse(response.body).dig("data", "expected_chunks")
   end
 
   test "requires authentication for session creation" do
@@ -145,12 +158,29 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
   test "rejects malformed chunk sequence values" do
     session = build_import_session
 
+    [ "1abc", "1.5", "0x2", "0b1" ].each do |sequence|
+      assert_no_difference("session.imports.count", sequence) do
+        post chunks_api_v1_import_session_url(session),
+             params: { sequence: sequence, raw_file_content: build_ndjson(entity_records) },
+             headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity, sequence
+      body = JSON.parse(response.body)
+      assert_equal "validation_failed", body["error"]
+      assert_equal "sequence must be a valid integer", body["message"], sequence
+    end
+  end
+
+  test "rejects a chunk sequence below one as a conflict" do
+    session = build_import_session
+
     post chunks_api_v1_import_session_url(session),
-         params: { sequence: "1abc", raw_file_content: build_ndjson(entity_records) },
+         params: { sequence: "0", raw_file_content: build_ndjson(entity_records) },
          headers: api_headers(@api_key)
 
     assert_response :conflict
-    assert_equal "import_session_conflict", JSON.parse(response.body)["error"]
+    assert_equal "sequence must be a positive integer", JSON.parse(response.body)["message"]
   end
 
   test "shows import session with read scope" do

@@ -51,6 +51,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # Rails will automatically use app/views/api/v1/transactions/index.json.jbuilder
     render :index
 
+  rescue InvalidFilterError => e
+    handle_invalid_filter(e)
   rescue => e
     Rails.logger.error "TransactionsController#index error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -108,6 +110,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     return render_validation_error("Unknown tag id") if unknown_tag_ids?
     return render_validation_error("Unknown category id") if unknown_category_id?
     return render_validation_error("Unknown merchant id") if unknown_merchant_id?
+    return render_validation_error("amount must be a valid number") if malformed_amount?
 
     @entry = account.entries.new(entry_params_for_create)
 
@@ -156,6 +159,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     return render_validation_error(INVALID_NATURE_MESSAGE) if invalid_nature?
+    return render_validation_error("amount must be a valid number") if malformed_amount?
     # The web UI hides amount and nature on a transfer: one leg alone cannot
     # change them without breaking Transfer#transfer_has_opposite_amounts.
     if @entry.transaction.transfer && transfer_amount_changed?
@@ -311,15 +315,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       end
 
       # Amount filtering
-      if params[:min_amount].present?
-        min_amount = params[:min_amount].to_f
-        query = query.where("entries.amount >= ?", min_amount)
-      end
-
-      if params[:max_amount].present?
-        max_amount = params[:max_amount].to_f
-        query = query.where("entries.amount <= ?", max_amount)
-      end
+      query = query.where("entries.amount >= ?", decimal_filter_param(:min_amount)) if params[:min_amount].present?
+      query = query.where("entries.amount <= ?", decimal_filter_param(:max_amount)) if params[:max_amount].present?
 
       # Tag filtering
       if params[:tag_ids].present?
@@ -340,6 +337,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       end
 
       query
+    end
+
+    def decimal_filter_param(key)
+      parse_decimal(params[key]) || raise(InvalidFilterError, "#{key} must be a valid number")
     end
 
     def apply_search(query)
@@ -547,10 +548,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def transfer_amount_changed?
       amount = entry_params_for_update[:amount]
-      amount.present? && amount.to_d != @entry.amount
+      amount.present? && amount != @entry.amount
     end
 
-    def calculate_signed_amount(amount = transaction_params[:amount].to_f)
+    # A blank amount is still 0, as it always was; anything else must parse.
+    def malformed_amount?
+      transaction_params[:amount].present? && parse_decimal(transaction_params[:amount]).nil?
+    end
+
+    def calculate_signed_amount(amount = parse_decimal(transaction_params[:amount]) || 0)
       nature = transaction_params[:nature]
 
       case nature.to_s.downcase
