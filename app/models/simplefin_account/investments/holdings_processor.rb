@@ -4,7 +4,8 @@ class SimplefinAccount::Investments::HoldingsProcessor
   end
 
   def process
-    return if holdings_data.empty?
+    payload = holdings_data
+    return if payload.empty?
     return unless [ "Investment", "Crypto" ].include?(account&.accountable_type)
 
     # SimpleFIN reports one record per LOT, so a single position can arrive as
@@ -14,8 +15,12 @@ class SimplefinAccount::Investments::HoldingsProcessor
     # makes each overwrite the last and the account silently loses the value of
     # every lot but one. Combine them into the position they represent first.
     positions = {}
+    # Records this payload could not read or save. Only a payload read in
+    # full can say a position is gone.
+    not_imported = []
+    snapshot_date = Date.current
 
-    holdings_data.each do |simplefin_holding|
+    payload.each do |simplefin_holding|
       begin
         symbol = simplefin_holding["symbol"].presence
         holding_id = simplefin_holding["id"]
@@ -24,6 +29,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
         Rails.logger.debug({ event: "simplefin.holding.start", sfa_id: simplefin_account.id, account_id: account&.id, id: holding_id, symbol: symbol, raw: simplefin_holding }.to_json)
 
         unless holding_id.present?
+          not_imported << { reason: "missing_id", symbol: symbol }
           Rails.logger.debug({ event: "simplefin.holding.skip", reason: "missing_id", id: holding_id, symbol: symbol }.to_json)
           next
         end
@@ -39,12 +45,14 @@ class SimplefinAccount::Investments::HoldingsProcessor
         end
 
         unless symbol.present?
+          not_imported << { reason: "no_symbol_or_description", id: holding_id }
           Rails.logger.debug({ event: "simplefin.holding.skip", reason: "no_symbol_or_description", id: holding_id }.to_json)
           next
         end
 
         security = resolve_security(symbol, simplefin_holding["description"])
         unless security.present?
+          not_imported << { reason: "unresolved_security", id: holding_id, symbol: symbol }
           Rails.logger.debug({ event: "simplefin.holding.skip", reason: "unresolved_security", id: holding_id, symbol: symbol }.to_json)
           next
         end
@@ -55,11 +63,26 @@ class SimplefinAccount::Investments::HoldingsProcessor
         # which would cause the system to display average cost as current price. (GH #1182)
         qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
         market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
+        fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
+
+        # A number that is present but unreadable is not a zero. Reading it as
+        # one would make the record look like an empty position below, and the
+        # purge would drop the position's earlier row for the day. A price only
+        # matters when there is no market value to derive it from.
+        malformed = []
+        malformed << "quantity" if qty.nil?
+        malformed << "market_value" if market_value.nil?
+        malformed << "price" if malformed.empty? && fallback_price.nil? && qty.positive? && !market_value.positive?
+        if malformed.any?
+          not_imported << { reason: "malformed_number", fields: malformed, id: holding_id, symbol: symbol }
+          Rails.logger.debug({ event: "simplefin.holding.skip", reason: "malformed_number", fields: malformed, id: holding_id, symbol: symbol }.to_json)
+          next
+        end
+
         raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
         cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, institution_reports_total_basis?)
 
         # Derive price from market_value when possible; otherwise fall back to any price field
-        fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
         price = if qty > 0 && market_value > 0
           market_value / qty
         else
@@ -78,9 +101,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
         # SimpleFIN holdings represent a current snapshot, not historical positions.
         # Always use today's date regardless of the `created` timestamp (which is when
         # the holding was first seen by SimpleFIN, not when we observed it).
-        holding_date = Date.current
+        holding_date = snapshot_date
 
-        # Skip zero positions with no value to avoid invisible rows
+        # Skip zero positions with no value to avoid invisible rows. The record
+        # was read, so a same-day row it had earlier is still purged.
         next if qty.to_d.zero? && computed_amount.to_d.zero?
 
         currency = simplefin_holding["currency"].presence || "USD"
@@ -118,12 +142,42 @@ class SimplefinAccount::Investments::HoldingsProcessor
           end
         end
       rescue => e
+        not_imported << { reason: "error", id: holding_id, symbol: symbol, error: "#{e.class}: #{e.message}" }
         ctx = (defined?(symbol) && symbol.present?) ? " #{symbol}" : ""
         Rails.logger.error "Error processing SimpleFin holding#{ctx}: #{e.message}"
       end
     end
 
-    positions.each_value do |position|
+    saved_holding_ids = []
+    current = while_payload_current(payload) do
+      positions.each_value do |position|
+        saved_holding_ids << import_position(position).id
+      rescue => e
+        not_imported << { reason: "import_failed", symbol: position[:security]&.ticker, error: "#{e.class}: #{e.message}" }
+        Rails.logger.error "Error importing SimpleFin position #{position[:security]&.ticker}: #{e.message}"
+      end
+
+      purge_unreported_holdings(snapshot_date, saved_holding_ids) if not_imported.empty?
+    end
+    return unless current
+
+    report_incomplete_payload(snapshot_date, not_imported) if not_imported.any?
+  end
+
+  private
+    attr_reader :simplefin_account
+
+    def import_adapter
+      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+    end
+
+    def account
+      simplefin_account.current_account
+    end
+
+    # Saves one combined position. The savepoint keeps a failed save from
+    # aborting the surrounding transaction, so the other positions still save.
+    def import_position(position)
       qty = position[:qty]
       amount = position[:amount]
 
@@ -142,35 +196,92 @@ class SimplefinAccount::Investments::HoldingsProcessor
       # back to matching on security/date/currency and updates the same row.
       external_id = position[:external_ids].sort.first
 
-      saved = import_adapter.import_holding(
-        security: position[:security],
-        quantity: qty,
-        amount: amount,
-        currency: position[:currency],
-        date: position[:date],
-        price: price,
-        cost_basis: cost_basis,
-        external_id: external_id,
-        account_provider_id: simplefin_account.account_provider&.id,
-        source: "simplefin",
-        delete_future_holdings: false  # SimpleFin tracks each holding uniquely
-      )
+      saved = SimplefinAccount.transaction(requires_new: true) do
+        import_adapter.import_holding(
+          security: position[:security],
+          quantity: qty,
+          amount: amount,
+          currency: position[:currency],
+          date: position[:date],
+          price: price,
+          cost_basis: cost_basis,
+          external_id: external_id,
+          account_provider_id: simplefin_account.account_provider&.id,
+          source: "simplefin",
+          delete_future_holdings: false  # SimpleFin tracks each holding uniquely
+        )
+      end
 
       Rails.logger.debug({ event: "simplefin.holding.saved", account_id: account&.id, holding_id: saved.id, security_id: saved.security_id, qty: saved.qty.to_s, amount: saved.amount.to_s, currency: saved.currency, date: saved.date, external_id: saved.external_id, lots: position[:external_ids].size }.to_json)
-    rescue => e
-      Rails.logger.error "Error importing SimpleFin position #{position[:security]&.ticker}: #{e.message}"
-    end
-  end
 
-  private
-    attr_reader :simplefin_account
-
-    def import_adapter
-      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+      saved
     end
 
-    def account
-      simplefin_account.current_account
+    # SimplefinHoldingsApplyJob and the sync's own account processing can run
+    # this for the same account at the same time, and a sync that lands
+    # mid-run stores a newer payload. A run still working from the older
+    # payload must neither save its positions over the newer run's rows nor
+    # purge against them. So the saves and the purge run in one transaction
+    # that holds the simplefin_accounts row lock, and only if the stored
+    # payload is still the one this run read; otherwise the run stops and
+    # leaves the day to the newer payload's run. An import storing a newer
+    # payload updates the same row, so it waits until this commits.
+    #
+    # Security resolution runs before this, outside the lock, because it can
+    # call out to a market data provider. An account linked only through the
+    # legacy account foreign key has no account provider, so nothing is
+    # purged and its saves run unguarded, as before.
+    def while_payload_current(payload)
+      unless simplefin_account.account_provider
+        yield
+        return true
+      end
+
+      SimplefinAccount.transaction do
+        stored = SimplefinAccount.lock.where(id: simplefin_account.id).pick(:raw_holdings_payload) || []
+        unless stored.as_json == payload.as_json
+          Rails.logger.info("SimpleFin: holdings payload for account #{account.id} changed during processing; leaving its holdings to the newer run")
+          next false
+        end
+
+        yield
+        true
+      end
+    end
+
+    # A position an earlier sync reported today, but this payload no longer
+    # has -- sold since, or a sweep fund that settled -- would otherwise keep
+    # its row for the day, and the balance history counts it.
+    def purge_unreported_holdings(snapshot_date, saved_holding_ids)
+      account_provider_id = simplefin_account.account_provider&.id
+      return unless account_provider_id
+
+      deleted = account.holdings
+        .where(account_provider_id: account_provider_id, date: snapshot_date)
+        .where.not(id: saved_holding_ids)
+        .delete_all
+
+      Rails.logger.info("SimpleFin: removed #{deleted} holding(s) for #{snapshot_date} no longer reported on account #{account.id}") if deleted > 0
+    end
+
+    def report_incomplete_payload(snapshot_date, not_imported)
+      Rails.logger.warn("SimpleFin: #{not_imported.size} holding record(s) not imported for account #{account.id}; keeping #{snapshot_date} holdings the payload did not report")
+
+      DebugLogEntry.capture(
+        category: "provider_sync_warning",
+        level: "warn",
+        message: "SimpleFIN holdings payload not fully imported; kept #{snapshot_date} holdings it did not report",
+        source: self.class.name,
+        provider_key: "simplefin",
+        account: account,
+        account_provider: simplefin_account.account_provider,
+        metadata: {
+          simplefin_account_id: simplefin_account.id,
+          snapshot_date: snapshot_date,
+          not_imported_count: not_imported.size,
+          not_imported: not_imported.first(20)
+        }
+      )
     end
 
     def holdings_data
@@ -297,19 +408,24 @@ class SimplefinAccount::Investments::HoldingsProcessor
       nil
     end
 
+    # Blank is zero. A value that is present but is not a finite number
+    # returns nil, so a caller can tell "reported zero" from "unreadable".
     def parse_decimal(value)
       return 0 unless value.present?
 
-      case value
+      number = case value
       when String
         BigDecimal(value)
       when Numeric
         BigDecimal(value.to_s)
-      else
-        BigDecimal("0")
       end
-    rescue ArgumentError => e
-      Rails.logger.error "Failed to parse SimpleFin decimal value #{value}: #{e.message}"
-      BigDecimal("0")
+
+      return number if number&.finite?
+
+      Rails.logger.error "Failed to parse SimpleFin decimal value #{value.inspect}"
+      nil
+    rescue ArgumentError, TypeError => e
+      Rails.logger.error "Failed to parse SimpleFin decimal value #{value.inspect}: #{e.message}"
+      nil
     end
 end
