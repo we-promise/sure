@@ -1123,14 +1123,18 @@ transports, have no `call_id` and are calls of one request.
 
 ### Outbound proxy
 
-Sure resolves the proxy once for its AI clients: `HTTPS_PROXY`, then `HTTP_PROXY`, whatever the
-scheme of the server it calls, honouring `NO_PROXY` (CIDR blocks such as `10.0.0.0/8` included).
-Loopback addresses (`127.0.0.0/8`, `::1`, `localhost`) never go through the proxy. `NO_PROXY`
-matches a host exactly as written: `127.0.0.1` doesn't cover `localhost`.
+Sure resolves the proxy the same way for every client it builds itself: `HTTPS_PROXY`, then
+`HTTP_PROXY`, whatever the scheme of the server it calls, honouring `NO_PROXY` (CIDR blocks such
+as `10.0.0.0/8` included). Loopback addresses (`127.0.0.0/8`, `::1`, `localhost`) never go
+through the proxy. `NO_PROXY` matches a host exactly as written: `127.0.0.1` doesn't cover
+`localhost`. A proxy value without a scheme (`proxy.internal:8888`) is read as `http://`; one
+that can't be read is ignored, with a warning in the log.
 
-This covers the OpenAI and OpenAI-compatible clients, the external assistant, and the AI health
-probes. Anthropic's client library takes no proxy setting, so native Anthropic calls that don't
-use the transports go direct, unless `HTTP_PROXY` is set (the only variable that library reads).
+This covers the OpenAI and OpenAI-compatible clients, the external assistant and its agent
+discovery, the AI health probes, Langfuse exports, and Trade Republic login and session calls.
+Trade Republic's WebSocket connection opens its own socket and is not proxied yet. Anthropic's
+client library takes no proxy setting, so native Anthropic calls that don't use the transports
+go direct, unless `HTTP_PROXY` is set (the only variable that library reads).
 
 ## Testing and Evaluation
 

@@ -2,59 +2,19 @@
 # settings, and the proxy, resolved once. A contract test checks that nothing under
 # app/models/ai/ builds a client anywhere else.
 #
-# Proxy coverage: RubyLLM's contexts, the ruby-openai clients built below (health
-# probes, Provider::Openai) and Assistant::External::Client. The anthropic gem takes no proxy
-# option (Net::HTTP reads only HTTP_PROXY, even for HTTPS), so Anthropic's own client goes
-# direct.
+# The proxy comes from ProxyConfigurable, Sure's one resolver. It covers RubyLLM's contexts,
+# the ruby-openai clients built below (health probes, Provider::Openai) and
+# Assistant::External::Client. The anthropic gem takes no proxy option (Net::HTTP reads only
+# HTTP_PROXY, even for HTTPS), so Anthropic's own client goes direct.
 module Ai::Transport::Http
   extend SslConfigurable
 
   OPENAI_BASE = "https://api.openai.com/v1".freeze
   OPENROUTER_BASE = "https://openrouter.ai/api/v1".freeze
-  PROXY_VARIABLES = %w[HTTPS_PROXY https_proxy HTTP_PROXY http_proxy].freeze
 
   class << self
-    # The proxy URL for a request to `url`, or nil to go direct: HTTPS_PROXY, then HTTP_PROXY,
-    # whatever the target's scheme, so a setup that sets only one still covers every call.
-    # Loopback is never proxied, as Ruby's own lookup does; NO_PROXY matches a host exactly as
-    # written, so `127.0.0.1` doesn't cover `localhost`, and `*` means every host, as curl reads it.
-    # A leading dot is dropped, as curl and the external assistant's old matcher do, so
-    # `.agents.example.com` covers `agents.example.com` itself as well as its subdomains.
-    def proxy_for(url, env: ENV)
-      uri = parse(url)
-      return if uri&.host.blank? || loopback?(uri.host)
-
-      proxy = PROXY_VARIABLES.lazy.filter_map { env[_1].presence }.first
-      return if proxy.nil?
-
-      no_proxy = env["NO_PROXY"].presence || env["no_proxy"].presence
-      no_proxy &&= no_proxy.split(",").map { _1.strip.delete_prefix(".") }.join(",")
-      return if no_proxy && (no_proxy.strip == "*" || !URI::Generic.use_proxy?(uri.host, address(uri.host, no_proxy), uri.port, no_proxy))
-
-      proxy
-    end
-
-    # The host's address, for NO_PROXY's IP and CIDR entries, as Ruby's own lookup resolves it
-    # (URI#find_proxy). Names are resolved only when NO_PROXY has such an entry.
-    def address(host, no_proxy)
-      return host if ip?(host.delete("[]"))
-      return host unless no_proxy.split(",").any? { ip?(_1.strip) }
-
-      IPSocket.getaddress(host)
-    rescue SocketError
-      host
-    end
-
-    def ip?(value) = IPAddr.new(value).present? rescue false
-
-    # The proxy for Net::HTTP.new, which takes host, port, user and password.
-    def net_http_proxy(url, env: ENV)
-      proxy = proxy_for(url, env:)
-      URI(proxy) if proxy
-    rescue URI::InvalidURIError
-      Rails.logger.warn("[Ai::Transport::Http] Invalid proxy URL ignored")
-      nil
-    end
+    # The proxy URL for a request to `url`, or nil to go direct, from ProxyConfigurable.
+    def proxy_for(url, env: ENV) = ProxyConfigurable.url_for(url, env:)
 
     # One base URL rule for every OpenAI-compatible server, the same as ruby-openai's, so an
     # endpoint configured for ruby-openai keeps its URL: a URL that contains "v1" is used as given
@@ -114,20 +74,6 @@ module Ai::Transport::Http
         faraday.ssl.update(ssl) if ssl.present?
       end
     end
-
-    private
-      def parse(url)
-        URI(url.to_s)
-      rescue URI::InvalidURIError
-        nil
-      end
-
-      def loopback?(host)
-        host = host.delete_prefix("[").delete_suffix("]")
-        host.casecmp?("localhost") || IPAddr.new(host).loopback?
-      rescue IPAddr::InvalidAddressError
-        false
-      end
   end
 
   # Net::HTTP with Sure's TLS settings (SSL_VERIFY, SSL_CA_FILE) and Sure's proxy decision on

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Assistant::External::ModelCatalogTest < ActiveSupport::TestCase
+  include NetHttpCaptureHelper
+
   test "discovers gateway agents from the OpenAI models endpoint" do
     request = stub_request(:get, "https://agent.example.com/v1/models")
       .with(headers: { "Authorization" => "Bearer secret", "Accept" => "application/json" })
@@ -67,4 +69,38 @@ class Assistant::External::ModelCatalogTest < ActiveSupport::TestCase
       assert_includes error.message, "Agent discovery is unavailable"
     end
   end
+
+  test "discovery goes through HTTPS_PROXY when HTTP_PROXY is unset" do
+    stub_request(:get, "https://agent.example.test/v1/models").to_return(status: 200, body: { data: [ { id: "openclaw" } ] }.to_json)
+    calls, connection = capture_net_http_new("agent.example.test", 443)
+
+    with_proxy_env(https: PROXY) { catalog("https://agent.example.test/v1/chat/completions").models }
+
+    assert_equal [ [ "agent.example.test", 443, "proxy.internal", 8888, nil, nil ] ], calls
+    assert connection.use_ssl?
+  end
+
+  test "NO_PROXY=* sends discovery direct" do
+    stub_request(:get, "https://agent.example.test/v1/models").to_return(status: 200, body: { data: [] }.to_json)
+    calls, = capture_net_http_new("agent.example.test", 443)
+
+    with_proxy_env(https: PROXY, http: PROXY, no_proxy: "*") { catalog("https://agent.example.test/v1/chat/completions").models }
+
+    assert_equal [ [ "agent.example.test", 443, nil, nil, nil, nil ] ], calls
+  end
+
+  test "a loopback agent is never proxied" do
+    stub_request(:get, "http://127.0.0.1:18789/v1/models").to_return(status: 200, body: { data: [] }.to_json)
+    calls, connection = capture_net_http_new("127.0.0.1", 18789)
+
+    with_proxy_env(https: PROXY, http: PROXY) { catalog("http://127.0.0.1:18789/v1/chat/completions").models }
+
+    assert_equal [ [ "127.0.0.1", 18789, nil, nil, nil, nil ] ], calls
+    assert_not connection.use_ssl?
+  end
+
+  private
+    def catalog(url)
+      Assistant::External::ModelCatalog.new(url:, token: "secret")
+    end
 end
