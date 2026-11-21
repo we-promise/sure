@@ -40,6 +40,9 @@ class RecurringTransaction::Forecast
   # or missed is not forecast again. Past the last stored occurrence the
   # schedule continues. A series with nothing stored yet falls back to its
   # cached next_expected_date, as RecurringTransaction#next_due_date does.
+  #
+  # Each date is one obligation, so two can share a day (a snoozed occurrence
+  # landing on the next cycle's date) and dates are not deduplicated.
   def occurrences
     @occurrences ||= begin
       open = open_occurrences.group_by(&:recurring_transaction_id)
@@ -50,7 +53,7 @@ class RecurringTransaction::Forecast
         else
           hinted_dates(series)
         end
-        dates.select { |date| date.between?(start_date, end_date) }.uniq.sort.map { |date| Occurrence.new(date:, series:) }
+        dates.select { |date| date.between?(start_date, end_date) }.sort.map { |date| Occurrence.new(date:, series:) }
       }.sort_by(&:date)
     end
   end
@@ -108,9 +111,12 @@ class RecurringTransaction::Forecast
       end
     end
 
+    # Continuation compares original dates, since stored_through is one: a
+    # stored cycle moved off the weekend can be due after it.
     def stored_dates(series, open, stored_through)
-      beyond = series.schedule.occurrences_between([ start_date, stored_through + 1 ].max, end_date)
-      open.map(&:effective_due_on) + beyond
+      beyond = series.schedule.occurrence_pairs_between(start_date, end_date)
+                     .select { |pair| pair.original_due_on > stored_through }
+      open.map(&:effective_due_on) + beyond.map(&:due_on)
     end
 
     def hinted_dates(series)
