@@ -479,6 +479,23 @@ class Security::ResolverTest < ActiveSupport::TestCase
     end
   end
 
+  test "looks again when another sync claims the placeholder for this exchange after this sync's lookup" do
+    placeholder = Security.create!(ticker: "RACEZ", offline: true, offline_reason: "resolution_pending")
+    Security.expects(:search_provider).returns([ Security.new(ticker: "RACEZ", exchange_operating_mic: "XNAS", country_code: "US") ])
+
+    resolver = Security::Resolver.new("RACEZ", exchange_operating_mic: "XNAS", country_code: "US")
+    # This sync's lookup found no XNAS row. The other sync's claim lands before
+    # this sync looks for a placeholder, so it finds none and builds a new row.
+    resolver.define_singleton_method(:pending_placeholder_candidate) do |_match|
+      placeholder.update!(exchange_operating_mic: "XNAS", offline: false, offline_reason: nil)
+      nil
+    end
+
+    assert_no_difference "Security.count" do
+      assert_equal placeholder, resolver.resolve
+    end
+  end
+
   test "rejects disabled price_provider" do
     db_security = Security.create!(ticker: "GOOG2", exchange_operating_mic: "XNAS", country_code: "US")
 

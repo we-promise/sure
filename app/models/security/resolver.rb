@@ -169,7 +169,7 @@ class Security::Resolver
       find_or_create_provider_match!(match)
     end
 
-    def find_or_create_provider_match!(match)
+    def find_or_create_provider_match!(match, retried: false)
       security = Security.find_or_initialize_by_ticker_and_exchange(
         ticker: match.ticker,
         exchange_operating_mic: match.exchange_operating_mic
@@ -204,6 +204,12 @@ class Security::Resolver
       reactivate_if_provider_available!(security)
 
       security
+    rescue ActiveRecord::RecordInvalid => e
+      # Another sync saved this listing, or claimed a placeholder for it,
+      # between the lookup above and this save. Look again once and use its row.
+      raise unless !retried && e.record.new_record? && e.record.errors.of_kind?(:ticker, :taken)
+
+      find_or_create_provider_match!(match, retried: true)
     end
 
     # A failed search leaves a blank-MIC "resolution_pending" placeholder (see
