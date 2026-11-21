@@ -133,6 +133,20 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
     assert_equal %w[tx_old], mercury_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
   end
 
+  test "a later page that is not a Hash leaves the stored transactions unchanged" do
+    _account, mercury_account = create_linked_account("acc_bad_page", raw_transactions: [ tx_payload("tx_old") ])
+    use_paging_provider("acc_bad_page")
+    MercuryItem::Importer.any_instance.stubs(:transactions_page_size).returns(2)
+    expect_page("acc_bad_page", offset: 0, limit: 2, ids: %w[tx_1 tx_2])
+    @provider.expects(:get_account_transactions).with("acc_bad_page", has_entries(offset: 2, limit: 2)).returns("<html>")
+
+    result = run_import
+
+    assert_not result[:success]
+    assert_equal 1, result[:transactions_failed]
+    assert_equal %w[tx_old], mercury_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+  end
+
   test "paging stops at the page cap when every page is full of new transactions" do
     _account, mercury_account = create_linked_account("acc_runaway")
     use_paging_provider("acc_runaway")
