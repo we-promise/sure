@@ -186,6 +186,20 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "keeps a sliver of the Twelve Data usage bar visible when nothing is used" do
+    @provider.stubs(:usage).returns(provider_success_response(
+      OpenStruct.new(used: 0, limit: 800, utilization: 0, plan: "free")
+    ))
+
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      bar = css_select("div.w-52.bg-surface-inset > div.bg-green-500").sole
+      assert_equal "width: 2%;", bar["style"]
+    end
+  end
+
   test "renders OpenAI model and timeout guidance in German" do
     sign_in users(:sure_support_staff)
 
