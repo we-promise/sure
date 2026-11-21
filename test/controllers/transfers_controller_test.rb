@@ -1016,6 +1016,33 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "show names each side's transaction beside its amount" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.entry.update!(name: "Card bill sent from checking")
+    transfer.inflow_transaction.entry.update!(name: "Payment received, thank you")
+
+    get transfer_url(transfer)
+
+    assert_response :success
+    assert_select "dt", text: I18n.t("transfers.show.transaction"), count: 2
+    assert_select "dd", text: "Card bill sent from checking"
+    assert_select "dd", text: "Payment received, thank you"
+  end
+
+  test "show leaves out the name of a side whose account the user cannot see" do
+    transfer = cross_owner_transfer(outflow_account: member_loan, inflow_account: accounts(:depository))
+    transfer.outflow_transaction.entry.update!(name: "Private loan payment")
+    transfer.inflow_transaction.entry.update!(name: "Money in")
+
+    get transfer_url(transfer)
+
+    assert_response :success
+    assert_select "dt", text: I18n.t("transfers.show.transaction"), count: 1
+    assert_select "dd", text: "Money in"
+    assert_select "dd", text: "Private loan payment", count: 0
+    assert_no_match "Private loan payment", response.body
+  end
+
   test "show offers the investment contribution switch only for transfers into an investment account" do
     contribution = create_confirmed_transfer(to: accounts(:investment))
     payment = create_confirmed_transfer(to: accounts(:credit_card))
