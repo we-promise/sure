@@ -178,6 +178,14 @@ class Budget < ApplicationRecord
     scope
   end
 
+  # The rows a category drill-down lists (web BudgetCategoriesController#show
+  # and the API budget_id filter): #transactions minus the kinds the budget's
+  # aggregates leave out (Family#analytics_excluded_kinds), so the list
+  # matches what the totals count.
+  def reportable_transactions
+    transactions.where.not(transactions: { kind: family.analytics_excluded_kinds })
+  end
+
   # --- Cash on hand, next to the plan ---
   #
   # DELIBERATELY OUTSIDE the allocation arithmetic. `budgeted_spending`,
