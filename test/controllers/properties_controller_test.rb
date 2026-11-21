@@ -147,8 +147,220 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "value step dates the first valuation on the purchase date" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 150_000_000, currency: "PYG", purchase_date: 3.years.ago.to_date.iso8601 }
+    }
+
+    assert_redirected_to address_property_path(account)
+    account.reload
+    assert_equal "PYG", account.currency
+    assert_equal 150_000_000, account.balance
+
+    valuations = account.entries.valuations
+    assert_equal 1, valuations.count
+    assert_equal 3.years.ago.to_date, valuations.first.date
+    assert_equal "PYG", valuations.first.currency
+    assert_equal Money.new(150_000_000, "PYG"), account.property.purchase_price
+  end
+
+  test "value step defaults the purchase date to today" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: { account: { balance: 500_000, currency: "USD" } }
+
+    assert_redirected_to address_property_path(account)
+    assert_equal [ Date.current ], account.entries.valuations.pluck(:date)
+  end
+
+  test "resubmitting the value step moves the purchase valuation instead of adding one" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100, currency: "EUR", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+    patch update_balances_property_path(account), params: {
+      account: { balance: 150_000_000, currency: "PYG", purchase_date: 2.years.ago.to_date.iso8601 }
+    }
+
+    valuation = account.entries.valuations.sole
+    assert_equal 2.years.ago.to_date, valuation.date
+    assert_equal 150_000_000, valuation.amount
+    assert_equal "PYG", valuation.currency
+  end
+
+  test "value step rejects a purchase date in the future" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100, currency: "EUR", purchase_date: 1.day.from_now.to_date.iso8601 }
+    }
+
+    assert_response :unprocessable_entity
+    assert_empty account.entries.valuations
+  end
+
+  test "value step shows the purchase date only while the property is being set up" do
+    get balances_property_path(create_draft_property)
+    assert_select "input[name='account[purchase_date]']"
+
+    get balances_property_path(@account)
+    assert_select "input[name='account[purchase_date]']", count: 0
+  end
+
+  test "value step asks for the purchase price while the property is being set up" do
+    get balances_property_path(create_draft_property)
+    assert_select "label", text: "Purchase price"
+    assert_select "label", text: "Estimated market value", count: 0
+    assert_no_match "Zillow", response.body
+
+    get balances_property_path(@account)
+    assert_select "label", text: "Estimated market value"
+    assert_select "label", text: "Purchase price", count: 0
+  end
+
+  test "value step defaults the purchase date to before a value the draft already has" do
+    account = create_draft_property
+    add_reconciliation(account, date: Date.current, amount: 90_000)
+
+    get balances_property_path(account)
+    assert_select "input[name='account[purchase_date]'][value='#{Date.yesterday.iso8601}']"
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100_000, currency: "EUR", purchase_date: Date.yesterday.iso8601 }
+    }
+    assert_redirected_to address_property_path(account)
+    assert_equal Date.yesterday, account.reload.opening_anchor_date
+  end
+
+  test "value step dates a blank purchase date before a value the draft already has" do
+    account = create_draft_property
+    oldest = 5.years.ago.to_date
+    add_reconciliation(account, date: oldest, amount: 90_000)
+
+    patch update_balances_property_path(account), params: { account: { balance: 100_000, currency: "EUR" } }
+
+    assert_redirected_to address_property_path(account)
+    assert_equal oldest.prev_day, account.reload.opening_anchor_date
+  end
+
+  test "value step keeps the default purchase date within the accepted range" do
+    account = create_draft_property
+    add_reconciliation(account, date: Entry.min_supported_date + 1, amount: 90_000)
+
+    get balances_property_path(account)
+    assert_select "input[name='account[purchase_date]'][value='#{(Entry.min_supported_date + 1).iso8601}']"
+  end
+
+  test "value step shows the saved purchase price, not a later value" do
+    account = create_draft_property
+    add_reconciliation(account, date: Date.current, amount: 90_000)
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100_000, currency: "EUR", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+    account.update!(balance: 90_000)
+
+    get balances_property_path(account)
+    assert_select "input[name='account[balance]'][value='100000.00']"
+  end
+
+  test "value step keeps showing the saved purchase price when a blank price is rejected" do
+    account = create_draft_property
+    add_reconciliation(account, date: Date.current, amount: 90_000)
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100_000, currency: "EUR", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+    account.update!(balance: 90_000)
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: "", currency: "EUR", purchase_date: 1.day.from_now.to_date.iso8601 }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='100000.00']"
+  end
+
+  test "value step ignores a malformed account parameter" do
+    get balances_property_path(create_draft_property), params: { account: "x" }
+
+    assert_response :success
+    assert_select "input[name='account[purchase_date]'][value='#{Date.current.iso8601}']"
+  end
+
+  test "value step rejects an unknown currency" do
+    account = create_draft_property
+    add_reconciliation(account, date: 1.year.ago.to_date, amount: 90_000)
+
+    [ 1.day.from_now.to_date, Date.current ].each do |purchase_date|
+      patch update_balances_property_path(account), params: {
+        account: { balance: 250_000, currency: "XXX", purchase_date: purchase_date.iso8601 }
+      }
+
+      assert_response :unprocessable_entity
+      assert_select "input[name='account[balance]'][value='250000.00']"
+    end
+    assert_equal "EUR", account.reload.currency
+    assert_not account.has_opening_anchor?
+  end
+
+  test "value step rejects an unknown currency on a valid submission" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 250_000, currency: "XXX", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+
+    assert_response :unprocessable_entity
+    assert_match "Choose a currency from the list.", response.body
+    assert_equal "EUR", account.reload.currency
+    assert_not account.has_opening_anchor?
+  end
+
+  test "value step keeps the submitted price when the purchase date is rejected" do
+    account = create_draft_property
+    add_reconciliation(account, date: 1.year.ago.to_date, amount: 90_000)
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 250_000, currency: "EUR", purchase_date: Date.current.iso8601 }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='250000.00']"
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 260_000, currency: "EUR", purchase_date: 1.day.from_now.to_date.iso8601 }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='260000.00']"
+  end
+
+  test "value step rejects an oversized or non-string purchase date and keeps the submitted price" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 250_000, currency: "EUR", purchase_date: "2020-03-01#{" " * 119}" }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='250000.00']"
+
+    patch update_balances_property_path(account),
+          params: { account: { balance: 260_000, currency: "EUR", purchase_date: 20200301 } }.to_json,
+          headers: { "CONTENT_TYPE" => "application/json" }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='260000.00']"
+
+    patch update_balances_property_path(account),
+          params: { account: { balance: 270_000, currency: "EUR", purchase_date: false } }.to_json,
+          headers: { "CONTENT_TYPE" => "application/json" }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='270000.00']"
+
+    assert_not account.reload.has_opening_anchor?
+  end
+
   test "balances update handles validation errors" do
-    Account.any_instance.stubs(:set_current_balance).returns(OpenStruct.new(success?: false, error_message: "Invalid balance"))
+    Account.any_instance.stubs(:set_current_balance)
+      .returns(Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "Invalid balance"))
 
     patch update_balances_property_path(@account), params: {
       account: {
@@ -158,6 +370,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
+    assert_match "Invalid balance", response.body
   end
 
   test "address update handles validation errors" do
@@ -929,5 +1142,19 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       provider.stubs(:valuation_currency).returns("USD")
       provider.stubs(:fetch_property_valuation).returns(response)
       provider
+    end
+
+    def create_draft_property
+      @user.family.accounts.create!(
+        name: "Land", balance: 0, currency: "EUR", status: "draft", owner: @user,
+        accountable: Property.new(subtype: "plot")
+      )
+    end
+
+    def add_reconciliation(account, date:, amount:)
+      account.entries.create!(
+        date: date, name: "Manual value update", amount: amount, currency: account.currency,
+        entryable: Valuation.new(kind: "reconciliation")
+      )
     end
 end
