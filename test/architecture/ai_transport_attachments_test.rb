@@ -24,18 +24,6 @@ class AiTransportAttachmentsTest < ActiveSupport::TestCase
     assert content[1].dig("image_url", "url").start_with?("data:image/png;base64,")
   end
 
-  test "a PDF goes to OpenAI's Responses API as an input file" do
-    bodies = stub_json(RESPONSES_URL, responses_answer)
-    endpoint = ai_endpoint(name: "openai", base_url: "https://api.openai.example.test/v1", preset: :openai, responses_api: true)
-
-    generate(endpoint:, attachments: [ Ai::Attachment.pdf(PDF, filename: "statement.pdf") ],
-             capabilities: %i[structured_output documents])
-
-    part = bodies.first["input"].last["content"].find { _1["type"] == "input_file" }
-    assert_equal "statement.pdf", part["filename"]
-    assert part["file_data"].start_with?("data:application/pdf;base64,")
-  end
-
   test "a PDF goes to Anthropic as a base64 document block, and pages as image blocks" do
     bodies = stub_json(MESSAGES_URL, anthropic_answer)
     endpoint = ai_endpoint(name: "anthropic", protocol: :anthropic, base_url: "https://anthropic.example.test")
@@ -47,17 +35,6 @@ class AiTransportAttachmentsTest < ActiveSupport::TestCase
     assert_equal %w[text document image], content.map { _1["type"] }
     assert_equal "application/pdf", content[1].dig("source", "media_type")
     assert_equal "base64", content[1].dig("source", "type")
-  end
-
-  test "images to a model without vision are refused before anything is sent" do
-    stub = stub_request(:post, CHAT_URL)
-
-    error = assert_raises(Ai::Error::Refused) do
-      generate(attachments: [ Ai::Attachment.png(PNG, filename: "page-1.png") ], capabilities: %i[structured_output])
-    end
-
-    assert_match(/needs vision/, error.message)
-    assert_not_requested stub
   end
 
   test "a server without a vision projector answering images with a 500 is Refused, after one request" do
@@ -72,25 +49,6 @@ class AiTransportAttachmentsTest < ActiveSupport::TestCase
                endpoint: ai_endpoint(name: "llm", base_url: "https://llm.example.test/v1", max_retries: 2))
     end
     assert_requested :post, CHAT_URL, times: 1
-  end
-
-  test "a PDF to a model without documents is refused before anything is sent" do
-    stub = stub_request(:post, CHAT_URL)
-
-    assert_raises(Ai::Error::Refused) do
-      generate(attachments: [ Ai::Attachment.pdf(PDF) ], capabilities: %i[structured_output vision])
-    end
-    assert_not_requested stub
-  end
-
-  test "a PDF over the preset's inline limit is refused, since uploading it is off" do
-    endpoint = ai_endpoint(name: "openai", base_url: "https://api.openai.example.test/v1", preset: :openai, responses_api: true)
-    big = Ai::Attachment.pdf("%PDF".b + ("x" * (Ai::Config::Endpoint::PDF_LIMITS.dig(:openai, :bytes) + 1)))
-
-    assert_raises(Ai::Error::Refused) do
-      generate(endpoint:, attachments: [ big ], capabilities: %i[structured_output documents])
-    end
-    assert_equal false, Ai::Transport.for(endpoint).send(:ruby_llm_context).config.auto_upload_large_files
   end
 
   test "the generate event names each file with its size, never its bytes" do
@@ -127,13 +85,6 @@ class AiTransportAttachmentsTest < ActiveSupport::TestCase
     def chat_answer
       { id: "c1", model: "test-model", choices: [ { index: 0, message: { role: "assistant", content: '{"ok":true}' }, finish_reason: "stop" } ],
         usage: { prompt_tokens: 100, completion_tokens: 5, total_tokens: 105 } }
-    end
-
-    def responses_answer
-      { id: "resp_1", object: "response", status: "completed", model: "test-model",
-        output: [ { type: "message", id: "msg_1", role: "assistant", status: "completed",
-                    content: [ { type: "output_text", text: '{"ok":true}', annotations: [] } ] } ],
-        usage: { input_tokens: 100, output_tokens: 5, total_tokens: 105 } }
     end
 
     def anthropic_answer

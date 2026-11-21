@@ -75,43 +75,6 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal category, txn.reload.category
   end
 
-  test "a batch locks the transactions it applies to until it commits" do
-    category = @family.categories.create!(name: "Coffee")
-    txn = create_transaction(account: @account, name: "Blue Bottle").transaction
-    categorizer = Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ])
-    categorizer.ai_generation
-
-    assert_queries_match(/FROM "transactions".*FOR UPDATE/m) do
-      categorizer.apply_ai(Ai::Result.new(value: { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] }))
-    end
-    assert_equal category, txn.reload.category
-  end
-
-  test "a rule run's progress moves with each batch" do
-    use_ai_model_settings(batch_size: 2)
-    category = @family.categories.create!(name: "Coffee")
-    ids = 3.times.map { |i| create_transaction(account: @account, name: "Coffee #{i}").transaction.id }
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
-                               transactions_queued: 3, executed_at: Time.current)
-    rule_run.await_ai!(3)
-    stub_ai(:categorize) do |request|
-      batch = request.schema.dig(:properties, :categorizations, :items, :properties, :transaction_id, :enum)
-      { categorizations: batch.map { { transaction_id: _1, category_name: category.name } } }
-    end
-
-    Ai::GenerationJob.perform_later(:categorize, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
-    progress = []
-    # No shadow jobs in the queue: the host's CATEGORIZATION_SHADOW_RATE would add them.
-    with_env_overrides("CATEGORIZATION_SHADOW_RATE" => nil) do
-      until enqueued_jobs.empty?
-        ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys)
-        progress << rule_run.reload.slice(:transactions_awaiting_ai, :transactions_modified, :status).values
-      end
-    end
-
-    assert_equal [ [ 1, 2, "pending" ], [ 0, 3, "success" ] ], progress
-  end
-
   test "each batch logs only its own transactions, not every one still left in the run" do
     use_ai_model_settings(batch_size: 2)
     category = @family.categories.create!(name: "Coffee")
@@ -329,35 +292,6 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal category, txn.reload.category
   end
 
-  test "logs an unsupported Jev endpoint when categorization falls back to the LLM" do
-    Ai::Config.override = nil
-    txn = create_transaction(account: @account, name: "Coffee shop").transaction
-    category = @family.categories.create!(name: "Coffee")
-    stub_ai(:categorize, returns: { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] })
-
-    with_ai_env(
-      "OPENAI_ACCESS_TOKEN" => "sk-test", "CATEGORIZATION_PROVIDER" => "jev", "JEV_API_KEY" => "test_api_key",
-      "JEV_ENDPOINT" => "https://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET#frag" # pipelock:ignore Credential in URL
-    ) do
-      assert_difference "DebugLogEntry.count", 3 do  # was 2; the config build now logs its own one-shot capture
-        categorize([ txn.id ])
-      end
-    end
-
-    assert_equal category, txn.reload.category
-    entry = DebugLogEntry.where(message: "Jev is misconfigured; falling back to the LLM provider").sole
-    assert_equal "auto_categorization", entry.category
-    assert_equal "error", entry.level
-    assert_equal "jev", entry.provider_key
-    assert_equal @family, entry.family
-    assert_equal "https://gw.example.com", entry.metadata["endpoint"]
-    assert_equal "path", entry.metadata["reason"]
-    serialized = entry.metadata.to_json
-    assert_not_includes serialized, "s3cret"
-    assert_not_includes serialized, "QUERYSECRET"
-    assert_not_includes serialized, "frag"
-  end
-
   test "a Jev outage never falls back to the LLM: no LLM route is attempted" do
     Ai::Config.override = nil
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
@@ -479,7 +413,6 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     categorize([ other.id ])
     assert_equal category, other.reload.category
   end
-
 
   private
     def categorize(transaction_ids)

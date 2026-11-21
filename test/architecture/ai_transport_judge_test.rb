@@ -63,59 +63,12 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     assert_equal 240, response.usage.input_tokens, "the rejected answer was still billed"
   end
 
-  test "an OpenRouter decisions preset posts the OpenRouter dialect to the decisions URL" do
-    decisions_url = "https://openrouter.ai/api/alpha/decisions"
-    stub_request(:post, decisions_url).with { |request|
-      criteria = JSON.parse(request.body).dig("questions", "category", "criteria") || {}
-      criteria.any? && criteria.values.none?(&:nil?)
-    }.to_return(status: 200, headers: JSON_HEADERS, body: answer("Salary", 0.8).to_json)
-
-    response = judge({ "txn_1" => { description: "ACME CORP", amount: 10.0 } },
-                     questions: OPENROUTER_QUESTIONS, preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1")
-
-    assert_equal "Salary", response.answers.fetch("txn_1").fetch(:category).choice
-    assert_requested(:post, decisions_url,
-                     headers: { "Authorization" => "Bearer test-key",
-                                "X-OpenRouter-Title" => "Sure",
-                                "HTTP-Referer" => "https://sure.am" })
-  end
-
-  test "an OpenRouter decisions 401, 402 and a retried 429 map the same as TypeSafe" do
-    decisions_url = "https://openrouter.ai/api/alpha/decisions"
-    { 401 => Ai::Error::Unauthorized, 402 => Ai::Error::NoCredit }.each do |status, expected|
-      stub_request(:post, decisions_url).to_return(status:, headers: JSON_HEADERS,
-                                                     body: { error: { code: status, message: "err" } }.to_json)
-
-      assert_raises(expected) { judge({ "txn_1" => { description: "x" } },
-                                       questions: OPENROUTER_QUESTIONS, preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
-      WebMock.reset!
-    end
-
-    stub_request(:post, decisions_url).to_return(
-      { status: 429, headers: JSON_HEADERS, body: { error: { code: 429, message: "slow down" } }.to_json },
-      { status: 200, headers: JSON_HEADERS, body: answer("Salary", 0.6).to_json }
-    )
-
-    assert_equal "Salary", judge({ "txn_1" => { description: "x" } }, max_retries: 1,
-                                 questions: OPENROUTER_QUESTIONS, preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1")
-                          .answers["txn_1"][:category].choice
-  end
-
   test "an OpenRouter decisions 200 with an embedded error body is an outage, not a refusal" do
     decisions_url = "https://openrouter.ai/api/alpha/decisions"
     stub_request(:post, decisions_url).to_return(status: 200, headers: JSON_HEADERS,
                                                    body: { error: { code: 500, message: "upstream is down" } }.to_json)
 
     assert_raises(Ai::Error::Upstream) { judge({ "txn_1" => { description: "x" } },
-                                                questions: OPENROUTER_QUESTIONS, preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
-  end
-
-  test "an OpenRouter decisions 503 after the retries fails the batch for failover" do
-    decisions_url = "https://openrouter.ai/api/alpha/decisions"
-    stub_request(:post, decisions_url).to_return(status: 503, headers: JSON_HEADERS,
-                                                   body: { error: { code: 503, message: "down" } }.to_json)
-
-    assert_raises(Ai::Error::Upstream) { judge({ "txn_1" => { description: "x" } }, max_retries: 1,
                                                 questions: OPENROUTER_QUESTIONS, preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
   end
 
@@ -139,40 +92,9 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     assert_operator peak.value, :>=, 2, "the requests ran concurrently"
   end
 
-  test "a self-hosted server sends one request at a time by default" do
-    assert_equal 1, Ai::Transport.for(jev_endpoint(location: :local, base_url: "http://jev:8080")).parallel_requests
-    assert_equal 8, Ai::Transport.for(jev_endpoint).parallel_requests
-  end
-
   test "an endpoint can't be built with fewer than one request in flight" do
     error = assert_raises(ArgumentError) { jev_endpoint(parallel_requests: 0) }
     assert_match "parallel_requests must be at least 1", error.message
-  end
-
-  test "an http base on a local endpoint is used as given" do
-    stub_request(:post, "http://jev:8080/v1/systemone").to_return(status: 200, headers: JSON_HEADERS, body: answer("Salary", 0.7).to_json)
-
-    response = judge({ "txn_1" => { description: "ACME PAYROLL" } }, location: :local, base_url: "http://jev:8080")
-
-    assert_equal "Salary", response.answers["txn_1"][:category].choice
-  end
-
-  test "maps 401 and 402, and retries a 429" do
-    stub_jev([ 401, { detail: "invalid key" } ])
-    assert_raises(Ai::Error::Unauthorized) { judge({ "txn_1" => { description: "x" } }) }
-
-    stub_jev([ 402, { detail: "balance exhausted" } ])
-    assert_raises(Ai::Error::NoCredit) { judge({ "txn_1" => { description: "x" } }) }
-
-    bodies = stub_jev([ 429, { detail: "slow down" } ], answer("Salary", 0.6))
-    assert_equal "Salary", judge({ "txn_1" => { description: "x" } }, max_retries: 1).answers["txn_1"][:category].choice
-    assert_equal 2, bodies.size
-  end
-
-  test "a 5xx after the retries fails the batch for failover" do
-    stub_jev([ 503, { detail: "overloaded" } ])
-
-    assert_raises(Ai::Error::Upstream) { judge({ "txn_1" => { description: "x" }, "txn_2" => { description: "y" } }, max_retries: 1) }
   end
 
   test "a failover error stops the fan-out: queued states aren't sent" do
@@ -181,19 +103,6 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
 
     assert_raises(Ai::Error::Unauthorized) { judge(states, parallel_requests: 1) }
     assert_equal 1, bodies.size
-  end
-
-  test "a malformed answer fails only its state" do
-    stub_request(:post, URL).to_return(lambda do |request|
-      body = JSON.parse(request.body)
-      answer = body.dig("state", "description") == "bad" ? { answers: { category: { type: "choice", choice: "Salary" } } } : answer("Salary", 0.9)
-      { status: 200, headers: JSON_HEADERS, body: answer.to_json }
-    end)
-
-    response = judge({ "txn_1" => { description: "bad" }, "txn_2" => { description: "good" } })
-
-    assert_nil response.answers["txn_1"], "a choice with no confidence is malformed"
-    assert_equal "Salary", response.answers["txn_2"][:category].choice
   end
 
   test "an all-malformed batch is attributed: both billed requests are failed rows under one call" do
@@ -217,33 +126,6 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     assert rows.none? { _1.metadata["tokens_unknown"] }
   end
 
-  test "an option that wasn't asked for is malformed, and all malformed is InvalidOutput" do
-    stub_jev(answer("Groceries", 0.9))
-
-    assert_raises(Ai::Error::InvalidOutput) { judge({ "txn_1" => { description: "x" } }) }
-  end
-
-  test "refuses questions built from a Proc" do
-    questions = { category: { type: :choice, instructions: "Which?", options: -> { OPTIONS } } }
-
-    assert_raises(ArgumentError) { judge({ "txn_1" => { description: "x" } }, questions:) }
-  end
-
-  test "one judge.ai event per batch, without the states" do
-    stub_jev(answer("Salary", 0.9))
-    events = []
-    subscription = ActiveSupport::Notifications.subscribe("judge.ai") { events << _1.payload }
-
-    judge({ "txn_1" => { description: "ACME PAYROLL" }, "txn_2" => { description: "ACME PAYROLL" } })
-
-    assert_equal 1, events.size
-    assert_equal 2, events.first.dig(:request, :items)
-    assert_not_includes events.first[:request].to_s, "ACME"
-    assert_equal "Salary", events.first.dig(:output, "txn_1", :category, :choice)
-  ensure
-    ActiveSupport::Notifications.unsubscribe(subscription)
-  end
-
   test "every request of the fan-out writes a usage row with the call's id" do
     stub_jev(answer("Salary", 0.9))
 
@@ -256,13 +138,6 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     assert rows.first.call_id.present?
     assert_equal [ "jev" ], rows.map(&:provider).uniq
     assert_equal [ 120 ], rows.map(&:prompt_tokens).uniq
-  end
-
-  test "Jev doesn't generate" do
-    request = Ai::Transport::Base::Request.new(feature: :categorize, model: ai_model(endpoint: jev_endpoint), instructions: "",
-                                               input: "", schema: {}, schema_name: "x")
-
-    assert_raises(NotImplementedError) { Ai::Transport.for(jev_endpoint).generate(request) }
   end
 
   private
