@@ -251,6 +251,8 @@ class Api::V1::ImportsController < Api::V1::BaseController
         :col_sep,
         :amount_type_strategy,
         :amount_type_inflow_value,
+        :debit_col_label,
+        :credit_col_label,
         :rows_to_skip
       )
     end

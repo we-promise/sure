@@ -34,6 +34,9 @@ json.data do
     json.date_format @import.date_format
     json.number_format @import.number_format
     json.signage_convention @import.signage_convention
+    json.amount_type_strategy @import.amount_type_strategy
+    json.debit_col_label @import.debit_col_label
+    json.credit_col_label @import.credit_col_label
   end
 
   json.stats do
