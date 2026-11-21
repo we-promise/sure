@@ -2,6 +2,7 @@ require "test_helper"
 
 class TransferTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include ActiveJob::TestHelper
 
   setup do
     @outflow = transactions(:transfer_out)
@@ -177,6 +178,24 @@ class TransferTest < ActiveSupport::TestCase
     assert transfer.reload.confirmed?
     assert_equal "cc_payment", transfer.outflow_transaction.reload.kind
     assert_equal "funds_movement", transfer.inflow_transaction.reload.kind
+  end
+
+  test "confirm! schedules recurring detection so suggestions built from the legs are retired" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+
+    assert_enqueued_with(job: IdentifyRecurringTransactionsJob, args: ->(args) { args.first == transfer.to_account.family_id }) do
+      transfer.confirm!
+    end
+  end
+
+  test "confirm! schedules recurring detection only once the enclosing transaction commits" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    IdentifyRecurringTransactionsJob.expects(:schedule_for).never
+
+    Transfer.transaction do
+      transfer.confirm!
+      raise ActiveRecord::Rollback
+    end
   end
 
   test "confirm! assigns the investment contributions category to an uncategorized outflow" do
