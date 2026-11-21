@@ -257,6 +257,21 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal @dining, @other.reload.category
   end
 
+  test "a rule counts a transaction once when several actions change it" do
+    rule = create_rule("Tag and categorize", "Whole Foods", category: @groceries, tags: [ @tag_a ])
+
+    rule_run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first
+
+    assert_equal 1, rule_run.transactions_queued
+    assert_equal 1, rule_run.transactions_processed
+    assert_equal 1, rule_run.transactions_modified
+    assert_equal 0, rule_run.transactions_blocked
+
+    @whole_foods.reload
+    assert_equal @groceries, @whole_foods.category
+    assert_equal [ @tag_a.id ], @whole_foods.tag_ids
+  end
+
   test "applying a single rule sees the changes the rules above make" do
     create_rule("Rename", "Whole Foods", name: "Supermarket")
     middle = create_rule("Middle", "Supermarket", category: @groceries)

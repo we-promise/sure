@@ -197,6 +197,31 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal @groceries_category, transaction_entry.transaction.category
   end
 
+  test "a transaction changed by several actions counts once" do
+    transaction_entry = create_transaction(date: Date.current, account: @account, name: "Whole Foods")
+    second_entry = create_transaction(date: Date.current, account: @account, name: "Whole Foods")
+    tag = @family.tags.create!(name: "Rule tag")
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id),
+        Rule::Action.new(action_type: "set_transaction_tags", value: [ tag.id ])
+      ]
+    )
+
+    assert_equal 2, rule.apply
+
+    [ transaction_entry, second_entry ].each do |entry|
+      entry.reload
+      assert_equal @groceries_category, entry.transaction.category
+      assert_equal [ tag.id ], entry.transaction.tag_ids
+    end
+  end
+
   test "split_transaction rule end to end" do
     transaction_entry = create_transaction(
       date: Date.current,

@@ -1,6 +1,11 @@
 class Rule::ActionExecutor
   TYPES = [ "select", "multi_select", "function", "text", "split" ]
 
+  # Rule#apply passes a set here so several actions that change the same
+  # transaction count it once. Executors that report their own count without
+  # using #count_modified_resources leave it untouched.
+  attr_accessor :modified_transaction_ids
+
   def initialize(rule)
     @rule = rule
   end
@@ -99,7 +104,10 @@ class Rule::ActionExecutor
           end
         end
 
-        modified_count += 1 if was_modified
+        if was_modified
+          modified_count += 1
+          modified_transaction_ids&.add(resource.id)
+        end
       end
       modified_count
     end
