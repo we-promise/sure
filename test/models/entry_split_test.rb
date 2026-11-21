@@ -27,6 +27,26 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert @entry.split_parent?
   end
 
+  test "split! gives each part the parent's activity label" do
+    @entry.transaction.update!(investment_activity_label: "Dividend")
+
+    children = @entry.split!([
+      { name: "Net", amount: 70 },
+      { name: "Withholding", amount: 30 }
+    ])
+
+    assert_equal %w[Dividend Dividend], children.map { |child| child.transaction.investment_activity_label }
+  end
+
+  test "split! leaves the parts unlabelled when the parent has no activity label" do
+    children = @entry.split!([
+      { name: "Groceries", amount: 70 },
+      { name: "Household", amount: 30 }
+    ])
+
+    assert children.all? { |child| child.transaction.investment_activity_label.nil? }
+  end
+
   test "split! locks only the fields a split sets when asked to" do
     merchant = @entry.account.family.merchants.create!(name: "Lock merchant", type: "FamilyMerchant")
     splits = [

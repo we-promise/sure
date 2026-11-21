@@ -778,6 +778,57 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(110, "USD"), totals.total_income
   end
 
+  test "a split Dividend transaction still counts in dividends" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+    dividend = create_labelled_transaction(account: account, label: "Dividend", amount: -100, date: period.start_date)
+
+    before = InvestmentStatement.new(@family, user: nil).totals(period: period).dividends
+    dividend.split!([ { name: "Part 1", amount: -60 }, { name: "Part 2", amount: -40 } ])
+    after = InvestmentStatement.new(@family, user: nil).totals(period: period).dividends
+
+    assert_equal Money.new(100, "USD"), before
+    assert_equal before, after
+  end
+
+  test "a split Interest transaction still counts in interest" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+    interest = create_labelled_transaction(account: account, label: "Interest", amount: -30, date: period.start_date)
+
+    before = InvestmentStatement.new(@family, user: nil).totals(period: period).interest
+    interest.split!([ { name: "Part 1", amount: -20 }, { name: "Part 2", amount: -10 } ])
+    after = InvestmentStatement.new(@family, user: nil).totals(period: period).interest
+
+    assert_equal Money.new(30, "USD"), before
+    assert_equal before, after
+  end
+
+  test "a split unlabelled transaction stays out of investment income" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+    create_income_trade(account: account, label: "Dividend", amount: 10, date: period.start_date)
+    plain = create_labelled_transaction(account: account, label: nil, amount: -100, date: period.start_date)
+
+    before = InvestmentStatement.new(@family, user: nil).totals(period: period).total_income
+    plain.split!([ { name: "Part 1", amount: -60 }, { name: "Part 2", amount: -40 } ])
+    after = InvestmentStatement.new(@family, user: nil).totals(period: period).total_income
+
+    assert_equal Money.new(10, "USD"), before
+    assert_equal before, after
+  end
+
+  test "a split part relabelled away from Dividend leaves dividends" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+    dividend = create_labelled_transaction(account: account, label: "Dividend", amount: -100, date: period.start_date)
+
+    _kept, withheld = dividend.split!([ { name: "Net dividend", amount: -60 }, { name: "Withholding", amount: -40 } ])
+    withheld.transaction.update!(investment_activity_label: "Fee")
+
+    assert_equal Money.new(60, "USD"), InvestmentStatement.new(@family, user: nil).totals(period: period).dividends
+  end
+
   test "trades_count counts trades, not the income transactions read beside them" do
     period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
     account = create_investment_account(balance: 500)

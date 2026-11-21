@@ -19,7 +19,8 @@ class InvestmentFlowStatement
     @user = user
   end
 
-  # Get contribution/withdrawal totals for a period
+  # Get contribution/withdrawal totals for a period. A split transaction is
+  # counted through its parts, which carry its label, not through its parent.
   def period_totals(period: Period.current_month)
     # From Transaction rather than family.transactions: `visible` joins the
     # entry and its account itself, and the association's own copies of those
@@ -28,6 +29,7 @@ class InvestmentFlowStatement
     base = Transaction
       .visible
       .excluding_pending
+      .merge(Entry.excluding_split_parents)
       .where(entries: { account_id: family.accounts.select(:id), date: period.date_range })
       .where(investment_activity_label: %w[Contribution Withdrawal])
 

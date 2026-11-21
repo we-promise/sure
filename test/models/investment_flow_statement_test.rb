@@ -99,6 +99,18 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.contributions
   end
 
+  test "a split contribution counts once" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    contribution = create_flow(label: "Contribution", amount: -100, date: period.start_date)
+
+    before = InvestmentFlowStatement.new(@family).period_totals(period: period).contributions
+    contribution.split!([ { name: "Part 1", amount: -60 }, { name: "Part 2", amount: -40 } ])
+    after = InvestmentFlowStatement.new(@family).period_totals(period: period).contributions
+
+    assert_equal Money.new(100, "USD"), before
+    assert_equal before, after
+  end
+
   test "movements between investment and crypto accounts are not contributions" do
     family = families(:dylan_family)
     period = Period.custom(start_date: Date.current, end_date: Date.current)

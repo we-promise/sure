@@ -755,7 +755,8 @@ class Entry < ApplicationRecord
           category_id: split_attrs[:category_id],
           merchant_id: split_attrs[:merchant_id].presence || entryable.try(:merchant_id),
           tag_ids: split_attrs[:tag_ids] || [],
-          kind: entryable.try(:kind)
+          kind: entryable.try(:kind),
+          investment_activity_label: entryable.try(:investment_activity_label)
         )
         if lock_attributes
           locked_at = Time.current
