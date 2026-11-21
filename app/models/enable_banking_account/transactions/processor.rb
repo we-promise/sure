@@ -117,7 +117,7 @@ class EnableBankingAccount::Transactions::Processor
 
     pending_external_ids = open_pending_external_ids
 
-    rows_in_settlement_order(pending_external_ids).each do |transaction_data, index|
+    rows_in_settlement_order(pending_external_ids).each do |transaction_data, index, copy_settles_pending_id|
       begin
         ext_id = external_ids[index]
 
@@ -140,7 +140,8 @@ class EnableBankingAccount::Transactions::Processor
           identifierless_external_ids: shared_identifierless_external_ids,
           excluded_external_ids: excluded_ids,
           external_id: ext_id,
-          pending_external_ids: pending_external_ids
+          pending_external_ids: pending_external_ids,
+          settles_pending_external_id: copy_settles_pending_id
         ).process
 
         if result.nil?
@@ -232,7 +233,11 @@ class EnableBankingAccount::Transactions::Processor
     #
     # An identifierless booked copy of a settling row still goes ahead of it, so
     # the settling row claims that copy's entry as its predecessor instead of
-    # the copy importing as a second entry.
+    # the copy importing as a second entry. The copy is handed the pending entry
+    # that row settles, which it claims in that row's place: left to the
+    # amount-based match, it could take a more recent pending entry of the same
+    # amount, and the settling row would then claim the copy's entry and leave
+    # its own pending entry open.
     #
     # A settling row whose content key raises is left out of that match:
     # processing it raises again inside its own rescue, which records the
@@ -240,7 +245,9 @@ class EnableBankingAccount::Transactions::Processor
     # rows_in_import_order. Indexes remain those of the stored payload, for
     # error reporting.
     #
-    # @return [Array<Array(Hash, Integer)>]
+    # @return [Array<Array(Hash, Integer, String)>] each row, its payload index
+    #   and, for an identifierless copy, the external id of the pending entry its
+    #   settling row settles
     def rows_in_settlement_order(pending_external_ids)
       rows = rows_in_import_order
       return rows if pending_external_ids.empty?
@@ -252,17 +259,23 @@ class EnableBankingAccount::Transactions::Processor
       end
       return rows if settling.empty?
 
-      settling_content_ids = settling.filter_map do |transaction_data, _index|
-        EnableBankingEntry::Processor.content_external_id(transaction_data)
+      settled_pending_by_content_id = {}
+      settling.each do |transaction_data, index|
+        content_id = EnableBankingEntry::Processor.content_external_id(transaction_data)
+        settled_pending_by_content_id[content_id] ||= EnableBankingEntry::Processor.settled_pending_external_id(
+          transaction_data, pending_external_ids, external_id: external_ids[index]
+        )
       rescue StandardError
-        nil
-      end.to_set
-
-      predecessors, others = others.partition do |transaction_data, _index|
-        EnableBankingEntry::Processor.identifierless?(transaction_data) &&
-          !EnableBankingEntry::Processor.pending_payload?(transaction_data) &&
-          settling_content_ids.include?(EnableBankingEntry::Processor.content_external_id(transaction_data))
+        next
       end
+
+      others = others.map do |transaction_data, index|
+        copy = EnableBankingEntry::Processor.identifierless?(transaction_data) &&
+          !EnableBankingEntry::Processor.pending_payload?(transaction_data)
+        settled_pending_id = (settled_pending_by_content_id[EnableBankingEntry::Processor.content_external_id(transaction_data)] if copy)
+        [ transaction_data, index, settled_pending_id ]
+      end
+      predecessors, others = others.partition { |_transaction_data, _index, settled_pending_id| settled_pending_id }
       predecessors + settling + others
     end
 end

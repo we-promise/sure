@@ -322,8 +322,13 @@ class EnableBankingEntry::Processor
   #
   # external_id: this row's id from external_ids_for over the whole payload,
   # which can differ from compute_external_id when rows share a transaction_id.
+  #
+  # settles_pending_external_id: for an identifierless copy imported ahead of
+  # the identified row it duplicates, the pending entry that row settles. The
+  # copy claims it as that row would have.
   def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil,
-                 identifierless_external_ids: nil, excluded_external_ids: nil, external_id: nil, pending_external_ids: nil)
+                 identifierless_external_ids: nil, excluded_external_ids: nil, external_id: nil, pending_external_ids: nil,
+                 settles_pending_external_id: nil)
     @enable_banking_transaction = enable_banking_transaction
     @external_id = external_id
     @enable_banking_account = enable_banking_account
@@ -332,6 +337,7 @@ class EnableBankingEntry::Processor
     @identifierless_external_ids = identifierless_external_ids
     @excluded_external_ids = excluded_external_ids
     @pending_external_ids = pending_external_ids
+    @settles_pending_external_id = settles_pending_external_id
   end
 
   def process
@@ -355,7 +361,8 @@ class EnableBankingEntry::Processor
     first_hold_import = unidentified_hold? &&
       !account.entries.exists?(source: "enable_banking", external_id: safe_id)
 
-    settled_pending_id = self.class.settled_pending_external_id(data, pending_external_ids, external_id: @external_id)
+    settled_pending_id = @settles_pending_external_id ||
+      self.class.settled_pending_external_id(data, pending_external_ids, external_id: @external_id)
 
     entry = begin
       import_adapter.import_transaction(
