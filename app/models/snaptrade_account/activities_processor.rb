@@ -65,6 +65,11 @@ class SnaptradeAccount::ActivitiesProcessor
     "RETURN_OF_CAPITAL" => { category: :cash, label: "Dividend", cash_flow: :inflow },
     "DISTRIBUTION" => { category: :cash, label: "Dividend", cash_flow: :inflow },
     "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    # Card accounts (SnapTrade's LOC category) sign these from the account's
+    # perspective: purchases negative, refunds and payments positive.
+    "POSDEBIT" => { category: :cash, label: "Other", cash_flow: :outflow },
+    "POSCREDIT" => { category: :cash, label: "Other", cash_flow: :inflow },
+    "PAYMENT" => { category: :cash, label: "Other", cash_flow: :invert },
     "JOURNAL" => { category: :cash, label: "Other" },
     "OTHER" => { category: :cash, label: "Other" }
   }.freeze
@@ -383,9 +388,17 @@ class SnaptradeAccount::ActivitiesProcessor
         date: activity_date,
         name: description,
         source: "snaptrade",
+        kind: card_payment_kind(activity_type),
         investment_activity_label: label_from_type(activity_type)
       )
       @transactions_count += 1 if result
+    end
+
+    # A card PAYMENT is money arriving from another account. Unpaired, a
+    # standard inflow would count as income; this is the kind the card leg of a
+    # matched payment takes, so pairing it later changes nothing.
+    def card_payment_kind(activity_type)
+      "funds_movement" if activity_type&.upcase == "PAYMENT" && account.accountable_type == "CreditCard"
     end
 
     def reclassify_entry_if_needed(external_id, expected_type)

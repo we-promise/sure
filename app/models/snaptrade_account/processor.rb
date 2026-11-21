@@ -40,6 +40,12 @@ class SnaptradeAccount::Processor
     end
 
     if anchor_balance
+      # Missing activities would make the ledger misjudge the old readings'
+      # signs, whether the fetch failed (keeping the last payload) or some
+      # failed to import; the repair waits for a sync that brings all of them in.
+      if activities_ok && !snaptrade_account.activities_fetch_failed? && !snaptrade_account.activities_fetch_pending?
+        SnaptradeAccount::LiabilitySignRepair.new(snaptrade_account, account).run(anchor_balance, date)
+      end
       account.set_current_balance(
         anchor_balance,
         date: date,
@@ -62,6 +68,13 @@ class SnaptradeAccount::Processor
       # Calculate total balance and cash balance from SnapTrade data
       total_balance = calculate_total_balance
       cash_balance = calculate_cash_balance
+
+      # SnapTrade reports a card's debt as a negative balance; Sure stores what's
+      # owed on a liability as a positive one.
+      if account.liability?
+        total_balance = -total_balance
+        cash_balance = -cash_balance
+      end
 
       Rails.logger.debug "SnaptradeAccount::Processor - Balance update: total=#{total_balance}, cash=#{cash_balance}"
 

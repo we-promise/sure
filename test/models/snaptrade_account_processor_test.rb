@@ -1001,6 +1001,331 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
 
   # === Full Account Sync Integration ===
 
+  test "processor stores a card's negative SnapTrade balance as a positive amount owed" do
+    card = @family.accounts.create!(
+      name: "Test Card",
+      balance: 0,
+      currency: "USD",
+      accountable: CreditCard.new
+    )
+    @snaptrade_account.ensure_account_provider!(card)
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("-1455.44"),
+      cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        {
+          "id" => "card_purchase",
+          "type" => "POSDEBIT",
+          "amount" => "-32.73",
+          "description" => "Safeway",
+          "settlement_date" => Date.current.to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    card.reload
+    assert_equal BigDecimal("1455.44"), card.balance
+    assert_equal BigDecimal("1455.44"), card.cash_balance
+    assert_equal BigDecimal("32.73"), card.entries.find_by!(external_id: "card_purchase").amount
+  end
+
+  # A card synced before the sign fix holds its reading as SnapTrade sent it.
+  test "a card's anchor from before the sign fix is turned around, not kept beside the new reading" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-1400.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-1455.44"), cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    card.reload
+    readings = card.entries.where(entryable_type: "Valuation").order(:date).pluck(:amount)
+    assert_equal BigDecimal("1455.44"), card.balance
+    assert readings.none?(&:negative?), "no reading keeps the old sign: #{readings.map(&:to_s)}"
+    assert_includes readings, BigDecimal("1400.00")
+    assert_not_nil @snaptrade_account.reload.liability_signs_fixed_at
+  end
+
+  test "a card in credit keeps its negative anchor" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-20.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("15.00"), cash_balance: BigDecimal("15.00"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    assert_equal BigDecimal("-15.00"), card.reload.balance
+    assert_includes card.entries.where(entryable_type: "Valuation").pluck(:amount), BigDecimal("-20.00")
+  end
+
+  test "a card's credit anchor from before the sign fix is turned around" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("20.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-10.00"), cash_balance: BigDecimal("-10.00"),
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        {
+          "id" => "card_purchase",
+          "type" => "POSDEBIT",
+          "amount" => "-30.00",
+          "description" => "Safeway",
+          "settlement_date" => (Date.current - 2).to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    card.reload
+    readings = card.entries.where(entryable_type: "Valuation").pluck(:amount)
+    assert_equal BigDecimal("10.00"), card.balance
+    assert_includes readings, BigDecimal("-20.00")
+    assert_not_includes readings, BigDecimal("20.00")
+  end
+
+  test "a card that went from credit to owing keeps its negative anchor" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-20.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-10.00"), cash_balance: BigDecimal("-10.00"),
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        {
+          "id" => "card_purchase",
+          "type" => "POSDEBIT",
+          "amount" => "-30.00",
+          "description" => "Safeway",
+          "settlement_date" => (Date.current - 2).to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    card.reload
+    readings = card.entries.where(entryable_type: "Valuation").pluck(:amount)
+    assert_equal BigDecimal("10.00"), card.balance
+    assert_includes readings, BigDecimal("-20.00")
+    assert_not_includes readings, BigDecimal("20.00")
+  end
+
+  test "after its first sync since the fix, a card's anchor is never turned around" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-20.00"), date: Date.current - 5)
+    # A $30 purchase that never arrived from SnapTrade: the ledger alone would
+    # say the card owed money on the anchor's date.
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-10.00"), cash_balance: BigDecimal("-10.00"),
+      raw_holdings_payload: [], raw_activities_payload: [], liability_signs_fixed_at: 1.day.ago
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    readings = card.reload.entries.where(entryable_type: "Valuation").pluck(:amount)
+    assert_equal BigDecimal("10.00"), card.balance
+    assert_includes readings, BigDecimal("-20.00")
+    assert_not_includes readings, BigDecimal("20.00")
+  end
+
+  test "a sync that finds the correction already done by an overlapping sync leaves the anchor alone" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-1400.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-1455.44"), cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+    processor = SnaptradeAccount::Processor.new(@snaptrade_account.reload)
+    SnaptradeAccount.where(id: @snaptrade_account.id).update_all(liability_signs_fixed_at: Time.current)
+
+    processor.process
+
+    assert_includes card.reload.entries.where(entryable_type: "Valuation").pluck(:amount), BigDecimal("-1400.00")
+  end
+
+  test "a loan's anchor from before the sign fix is turned around" do
+    loan = @family.accounts.create!(name: "Line of credit", balance: 0, currency: "USD", accountable: Loan.new)
+    @snaptrade_account.ensure_account_provider!(loan)
+    loan.set_current_balance(BigDecimal("-100.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-100.00"), cash_balance: BigDecimal("-100.00"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    readings = loan.reload.entries.where(entryable_type: "Valuation").pluck(:amount)
+    assert_equal BigDecimal("100.00"), loan.balance
+    assert readings.none?(&:negative?), "no reading keeps the old sign: #{readings.map(&:to_s)}"
+    assert_not_nil @snaptrade_account.reload.liability_signs_fixed_at
+  end
+
+  test "every reading a card's syncs left before the sign fix is turned around" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-1400.00"), date: Date.current - 6)
+    card.set_current_balance(BigDecimal("-1450.00"), date: Date.current - 5)
+    assert_equal 1, card.valuations.reconciliation.count
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-1455.44"), cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    readings = card.reload.entries.where(entryable_type: "Valuation").order(:date).pluck(:amount)
+    assert_equal [ BigDecimal("1400.00"), BigDecimal("1450.00"), BigDecimal("1455.44") ], readings
+  end
+
+  test "a reading entered by hand in Sure's signs is kept while the sync's readings around it are turned" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-1400.00"), date: Date.current - 6)
+    card.create_reconciliation(balance: BigDecimal("1420.00"), date: Date.current - 3)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-1455.44"), cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    readings = card.reload.entries.where(entryable_type: "Valuation").order(:date).pluck(:amount)
+    assert_equal [ BigDecimal("1400.00"), BigDecimal("1420.00"), BigDecimal("1455.44") ], readings
+  end
+
+  test "readings recorded before SnapTrade was linked are left alone" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    card.entries.create!(
+      date: Date.current - 7, name: "Manual balance update", amount: BigDecimal("-50.00"), currency: "USD",
+      entryable: Valuation.new(kind: "reconciliation"), created_at: 2.days.ago
+    )
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-1400.00"), date: Date.current - 6)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-1455.44"), cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    readings = card.reload.entries.where(entryable_type: "Valuation").order(:date).pluck(:amount)
+    assert_equal [ BigDecimal("-50.00"), BigDecimal("1400.00"), BigDecimal("1455.44") ], readings
+  end
+
+  test "old readings are not judged from an import that left activities out" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    # A credit carried over from before; the $30 purchase since brings it to $10 owed
+    card.set_current_balance(BigDecimal("-20.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-10.00"), cash_balance: BigDecimal("-10.00"),
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        {
+          "id" => "card_purchase",
+          "type" => "POSDEBIT",
+          "amount" => "-30.00",
+          "description" => "Safeway",
+          "settlement_date" => (Date.current - 2).to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    SnaptradeAccount::ActivitiesProcessor.any_instance.stubs(:process).returns({ trades: 0, transactions: 0, failed: 1 })
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    assert_includes card.reload.entries.where(entryable_type: "Valuation").pluck(:amount), BigDecimal("-20.00")
+    assert_nil @snaptrade_account.reload.liability_signs_fixed_at
+
+    SnaptradeAccount::ActivitiesProcessor.any_instance.unstub(:process)
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    assert_includes card.reload.entries.where(entryable_type: "Valuation").pluck(:amount), BigDecimal("-20.00")
+    assert_not_nil @snaptrade_account.reload.liability_signs_fixed_at
+  end
+
+  # A failed fetch keeps the last payload, which can process cleanly but still
+  # miss the purchase that explains the change.
+  test "old readings are not judged after an activities fetch that failed" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    # A credit carried over from before; an unfetched $30 purchase brings it to $10 owed
+    card.set_current_balance(BigDecimal("-20.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-10.00"), cash_balance: BigDecimal("-10.00"),
+      raw_holdings_payload: [], raw_activities_payload: [], activities_fetch_failed: true
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    assert_includes card.reload.entries.where(entryable_type: "Valuation").pluck(:amount), BigDecimal("-20.00")
+    assert_nil @snaptrade_account.reload.liability_signs_fixed_at
+  end
+
+  # jjmata's example: a refund imported after the latest reading belongs to the
+  # interval after it, not also to the one before.
+  test "each interval counts only the flows its later reading had seen" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    @snaptrade_account.account_provider.update_columns(created_at: 4.days.ago)
+    travel_to 3.days.ago do
+      card.set_current_balance(BigDecimal("20.00"), date: Date.current) # a $20 credit, stored pre-fix as +20
+    end
+    travel_to 2.days.ago do
+      card.entries.create!(date: Date.current, name: "Purchase", amount: BigDecimal("30.00"), currency: "USD", entryable: Transaction.new)
+      card.set_current_balance(BigDecimal("-10.00"), date: Date.current) # $10 owed, stored pre-fix as -10
+    end
+    travel_to 2.days.ago + 1.hour do
+      card.entries.create!(date: Date.current, name: "Refund", amount: BigDecimal("-50.00"), currency: "USD", entryable: Transaction.new)
+    end
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("40.00"), cash_balance: BigDecimal("40.00"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    readings = card.reload.entries.where(entryable_type: "Valuation").order(:date).pluck(:amount)
+    assert_equal [ BigDecimal("-20.00"), BigDecimal("10.00"), BigDecimal("-40.00") ], readings
+  end
+
+  test "a repair that stops at a reading it can't judge is tried again, not marked done" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-1400.00"), date: Date.current - 6)
+    card.set_current_balance(BigDecimal("-1450.00"), date: Date.current - 5)
+    # A flow in another currency between the two readings: the ledger can't judge the older one
+    card.entries.create!(date: Date.current - 6, name: "Abroad", amount: BigDecimal("20.00"), currency: "EUR", entryable: Transaction.new)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-1455.44"), cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    readings = card.reload.entries.where(entryable_type: "Valuation").order(:date).pluck(:amount)
+    assert_equal [ BigDecimal("-1400.00"), BigDecimal("1450.00"), BigDecimal("1455.44") ], readings
+    assert_nil @snaptrade_account.reload.liability_signs_fixed_at
+  end
+
   test "processor synchronizes balances, holdings, and activities end-to-end without cash distortion" do
     security = securities(:aapl)
 
