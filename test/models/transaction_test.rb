@@ -733,6 +733,37 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
   end
 
+  # Another writer can tag the transaction between this copy loading its tags
+  # and saving: the copy then inserts a tagging the unique index refuses. The
+  # write must re-read the tags and succeed, not fail the whole request.
+  test "a tag another writer added meanwhile is stored once without raising" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+    transaction.tags.load
+    Tagging.create!(tag: tag, taggable: Transaction.find(transaction.id))
+
+    other = tags(:two)
+
+    assert_nothing_raised { transaction.update!(tag_ids: [ tag.id, other.id ]) }
+
+    # The tag the other writer did not add is stored too: the retry re-reads
+    # and inserts what is still missing rather than swallowing the conflict.
+    assert_equal [ tag.id, other.id ].sort, Tagging.where(taggable: transaction).pluck(:tag_id).sort
+  end
+
+  test "a tag another writer added meanwhile is stored once through tags= too" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+    transaction.tags.load
+    Tagging.create!(tag: tag, taggable: Transaction.find(transaction.id))
+
+    other = tags(:two)
+
+    assert_nothing_raised { transaction.update!(tags: [ tag, other ]) }
+
+    assert_equal [ tag.id, other.id ].sort, Tagging.where(taggable: transaction).pluck(:tag_id).sort
+  end
+
   # The dedupe above relies on the uuid cast downcasing a non-canonical id
   # (ActiveRecord's PostgreSQL OID::Uuid#format_uuid), so pin that, and an
   # assignment made only of case variants of one id.
@@ -805,6 +836,23 @@ class TransactionTest < ActiveSupport::TestCase
     )
 
     assert_equal [ tag.id ], entry.transaction.taggings.pluck(:tag_id)
+  end
+
+  test "a tagging conflict is retried once and a conflict on another index is not" do
+    txn = transactions(:transfer_out)
+    conflict = ActiveRecord::RecordNotUnique.new(%(duplicate key value violates unique constraint "index_taggings_unique"))
+    calls = 0
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      txn.send(:retrying_tagging_conflict) { calls += 1; raise conflict }
+    end
+    assert_equal 2, calls, "one retry, then the second conflict is raised"
+
+    other = ActiveRecord::RecordNotUnique.new(%(duplicate key value violates unique constraint "index_entries_on_account_id_and_external_id"))
+    other_calls = 0
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      txn.send(:retrying_tagging_conflict) { other_calls += 1; raise other }
+    end
+    assert_equal 1, other_calls, "another index's violation is not retried"
   end
 
   private
