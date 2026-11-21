@@ -222,6 +222,8 @@ class ProviderItem::AccountFlow
     end
 
     def selected_subtype_for(selected_type:, submitted_subtype:)
+      # A subtype of another account type is dropped, as if none was chosen.
+      submitted_subtype = nil unless selected_type.constantize::SUBTYPES.key?(submitted_subtype.to_s)
       return CreditCard::DEFAULT_SUBTYPE if selected_type == "CreditCard" && submitted_subtype.blank?
       return Depository::DEFAULT_SUBTYPE if selected_type == "Depository" && submitted_subtype.blank?
 
