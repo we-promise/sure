@@ -55,6 +55,72 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "does not re-import a tombstoned transaction" do
+    ProviderImportTombstone.create!(account: @account, source: "plaid", external_id: "plaid_deleted_1")
+
+    assert_no_difference "@account.entries.count" do
+      entry = @adapter.import_transaction(
+        external_id: "plaid_deleted_1",
+        amount: 10.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Deleted Transaction",
+        source: "plaid"
+      )
+
+      assert_nil entry
+    end
+  end
+
+  test "a destroy by sync code does not tombstone, so the provider can send the row again" do
+    entry = @adapter.import_transaction(
+      external_id: "plaid_reclassified_1",
+      amount: 10.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Reclassified Transaction",
+      source: "plaid"
+    )
+
+    entry.destroy!
+
+    assert_not ProviderImportTombstone.tombstoned?(account: @account, source: "plaid", external_id: "plaid_reclassified_1")
+    assert_not_nil @adapter.import_transaction(
+      external_id: "plaid_reclassified_1",
+      amount: 10.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Reclassified Transaction",
+      source: "plaid"
+    )
+  end
+
+  test "deleting a provider entry as the user tombstones it so the next import skips it" do
+    entry = @adapter.import_transaction(
+      external_id: "plaid_deleted_2",
+      amount: 10.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Doomed Transaction",
+      source: "plaid"
+    )
+
+    entry.destroy_by_user!
+
+    assert ProviderImportTombstone.tombstoned?(account: @account, source: "plaid", external_id: "plaid_deleted_2")
+
+    assert_no_difference "@account.entries.count" do
+      assert_nil @adapter.import_transaction(
+        external_id: "plaid_deleted_2",
+        amount: 10.00,
+        currency: "USD",
+        date: Date.today,
+        name: "Doomed Transaction",
+        source: "plaid"
+      )
+    end
+  end
+
   test "applies an explicit provider kind on a depository account" do
     entry = @adapter.import_transaction(
       external_id: "up_transfer_1",

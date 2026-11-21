@@ -96,7 +96,15 @@ class EnableBankingAccount::Transactions::Processor
                                   .compact
                                   .to_set
 
-      manually_merged_ids | auto_claimed_ids | superseded_ids
+      # 4. Deleted: entries the user deleted. Their external_ids (and retired
+      #    aliases) were tombstoned on destroy, so a re-walked stored payload
+      #    must not resurrect them. Scoped to this provider, so another
+      #    provider's tombstones never suppress this account's rows.
+      tombstoned_ids = ProviderImportTombstone.external_ids_for(
+        enable_banking_account.current_account, source: "enable_banking"
+      )
+
+      manually_merged_ids | auto_claimed_ids | superseded_ids | tombstoned_ids
     else
       Set.new
     end

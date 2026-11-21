@@ -35,12 +35,23 @@ class Account::ProviderImportAdapter
   # @param name_extra_keys [Hash{String=>Array<String>}] Keys, per namespace, that `name`
   #   was built from. When a protected entry keeps its name, these keep their stored values
   #   too, so the name and the data it came from cannot drift apart.
-  # @return [Entry] The created or updated entry
+  # @return [Entry, nil] The created or updated entry, or nil when the
+  #   external_id was tombstoned: the user deleted it, so it must not be
+  #   re-imported. Batch processors that pre-filter by excluded_ids never
+  #   reach here; this is the backstop for direct importers.
   def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {})
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
     Account.transaction do
+      # A deleted provider entry stays deleted. Its external_id was tombstoned
+      # when it was destroyed, so a re-walked payload or long sync window
+      # must not resurrect it.
+      if ProviderImportTombstone.tombstoned?(account: account, source: source, external_id: external_id)
+        Rails.logger.info("ProviderImportAdapter: skipping tombstoned #{source} transaction #{external_id} for account #{account.id}")
+        return nil
+      end
+
       # Find or initialize by both external_id AND source
       # This allows multiple providers to sync same account with separate entries
       entry = account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
