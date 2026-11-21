@@ -18,7 +18,11 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       preferences: (@user.preferences || {}).merge("preview_features_enabled" => true),
       show_ai_sidebar: false
     )
-    travel_to(TODAY) { sign_in @user }
+    # Stays on TODAY until each test's own travel_to: a request the signed-in
+    # page makes at the real date would find a session last touched on TODAY,
+    # expire it once TODAY is Session::INACTIVITY_TIMEOUT behind, and log out.
+    travel_to TODAY
+    sign_in @user
   end
 
   test "a target on a gridline keeps its full label inside the chart" do
