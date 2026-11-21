@@ -66,12 +66,16 @@ class Provider::CoinstatsTest < ActiveSupport::TestCase
     first_page = coinstats_response(200, { result: [ { id: "tx-1" } ] })
     last_page = coinstats_response(200, { result: [] })
     Provider::Coinstats.expects(:get).twice.returns(first_page, last_page)
+    @provider.stubs(:min_request_interval).returns(1.0)
 
-    # The first request goes out at once; the second waits out the interval.
-    @provider.expects(:sleep).with { |seconds| seconds.positive? && seconds <= Provider::Coinstats::MIN_REQUEST_INTERVAL }.once
+    # With the clock frozen, the first request goes out at once and the second
+    # waits the whole interval, whatever COINSTATS_MIN_REQUEST_INTERVAL is set to.
+    @provider.expects(:sleep).with(1.0).once
 
-    transactions = @provider.list_exchange_transactions(portfolio_id: "portfolio-1", limit: 1)
-    assert_equal [ "tx-1" ], transactions.map { |transaction| transaction[:id] }
+    freeze_time do
+      transactions = @provider.list_exchange_transactions(portfolio_id: "portfolio-1", limit: 1)
+      assert_equal [ "tx-1" ], transactions.map { |transaction| transaction[:id] }
+    end
   end
 
   test "retries portfolio requests on rate limit with retry after" do
