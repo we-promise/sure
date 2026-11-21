@@ -11,6 +11,14 @@ class SnaptradeItem::ImporterTest < ActiveSupport::TestCase
     @importer = SnaptradeItem::Importer.new(snaptrade_items(:configured_item), snaptrade_provider: @provider)
   end
 
+  test "a rate-limited Personal key fails the import instead of being swallowed" do
+    @provider.stubs(:list_accounts).returns([])
+    @provider.stubs(:get_positions).returns([])
+    @provider.stubs(:rate_limit_error).returns(Provider::Snaptrade::RateLimitError.new("Rate limit exceeded"))
+
+    assert_raises(Provider::Snaptrade::RateLimitError) { @importer.import }
+  end
+
   # The flag is how anything outside the job chain (the item's syncing state,
   # SnaptradeAccount::SplitSecurityRepair) sees that a fetch is on its way,
   # so the job must never be queued without it.
@@ -22,6 +30,14 @@ class SnaptradeItem::ImporterTest < ActiveSupport::TestCase
     end
 
     assert @snaptrade_account.reload.activities_fetch_pending?
+  end
+
+  test "the first background fetch waits the same 15 seconds as its retries" do
+    freeze_time do
+      assert_enqueued_with(job: SnaptradeActivitiesFetchJob, at: SnaptradeActivitiesFetchJob::RETRY_DELAY.from_now) do
+        @importer.send(:import_activities, @snaptrade_account)
+      end
+    end
   end
 
   test "no background fetch is queued when the pending flag cannot be set" do
