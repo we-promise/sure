@@ -93,6 +93,23 @@ class SharesightItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil portfolio.reload.current_account
   end
 
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_sharesight_items_url,
+    link_url: :link_existing_account_sharesight_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Brokerage", balance: 0, currency: "AUD",
+                               accountable: Investment.new(subtype: "brokerage"))
+    },
+    provider_account: -> {
+      (@sharesight_item ||= sharesight_item).sharesight_accounts.create!(
+        name: "Shares", currency: "AUD", sharesight_account_id: SecureRandom.hex(4), current_balance: 1500
+      )
+    },
+    provider_param: :sharesight_account_id,
+    setup_url: ->(record) { setup_accounts_sharesight_item_url(record.sharesight_item) }
+  )
+
   test "the link dialog renders one modal frame" do
     sharesight_item
 
@@ -128,7 +145,8 @@ class SharesightItemsControllerTest < ActionDispatch::IntegrationTest
 
     post link_existing_account_sharesight_items_url, params: { account_id: private_account.id, sharesight_account_id: portfolio.id }
 
-    assert_redirected_to settings_providers_url
+    assert_redirected_to accounts_url
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
     assert_nil portfolio.reload.current_account
   end
 

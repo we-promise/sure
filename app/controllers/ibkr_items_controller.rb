@@ -63,6 +63,8 @@ class IbkrItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     ibkr_items = Current.family.ibkr_items.active
     ibkr_items = ibkr_items.where(id: params[:ibkr_item_id]) if params[:ibkr_item_id].present?
     @available_ibkr_accounts = ibkr_items
@@ -88,6 +90,8 @@ class IbkrItemsController < ApplicationController
       redirect_to settings_providers_path, alert: t(".not_found")
       return
     end
+
+    return unless require_linkable_account!(account)
 
     if account.accountable_type != "Investment" || account.account_providers.any? || account.plaid_account_id.present? || account.simplefin_account_id.present?
       redirect_to account_path(account), alert: t(".only_manual_investment")
@@ -134,6 +138,7 @@ class IbkrItemsController < ApplicationController
     end
 
     @linkable_accounts = Current.family.accounts
+      .writable_by(Current.user)
       .visible
       .where(accountable_type: "Investment")
       .left_joins(:account_providers)

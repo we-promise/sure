@@ -147,7 +147,9 @@ class QuestradeItemsController < ApplicationController
   end
 
   def select_existing_account
-    @account = find_writable_account!(params[:account_id])
+    @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     @questrade_item = Current.family.questrade_items.first
 
     unless @questrade_item&.credentials_configured?
@@ -166,7 +168,9 @@ class QuestradeItemsController < ApplicationController
   end
 
   def link_existing_account
-    account = find_writable_account!(params[:account_id])
+    account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(account)
+
     questrade_item = Current.family.questrade_items.first
 
     unless questrade_item&.credentials_configured?
@@ -249,14 +253,6 @@ class QuestradeItemsController < ApplicationController
 
     def set_questrade_item
       @questrade_item = Current.family.questrade_items.find(params[:id])
-    end
-
-    # Mirror AccountsController's access gate: only accounts the user can reach
-    # and write to may be inspected or linked to a provider.
-    def find_writable_account!(account_id)
-      account = Current.user.accessible_accounts.find(account_id)
-      raise ActiveRecord::RecordNotFound unless account.permission_for(Current.user).in?([ :owner, :full_control ])
-      account
     end
 
     def questrade_item_params

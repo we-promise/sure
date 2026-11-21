@@ -56,7 +56,9 @@ class SharesightItemsController < ApplicationController
   end
 
   def select_existing_account
-    @account = linkable_accounts.find(params[:account_id])
+    @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     @available_sharesight_accounts = Current.family.sharesight_items
       .includes(sharesight_accounts: { account_provider: :account })
       .flat_map(&:sharesight_accounts)
@@ -68,7 +70,7 @@ class SharesightItemsController < ApplicationController
   end
 
   def link_existing_account
-    account = linkable_accounts.find_by(id: params[:account_id])
+    account = Current.family.accounts.find_by(id: params[:account_id])
     sharesight_account = SharesightAccount
       .joins(:sharesight_item)
       .where(sharesight_items: { family_id: Current.family.id })
@@ -78,6 +80,8 @@ class SharesightItemsController < ApplicationController
       redirect_to settings_providers_path, alert: t(".not_found")
       return
     end
+
+    return unless require_linkable_account!(account)
 
     if account.accountable_type != "Investment" || account.account_providers.any? || account.plaid_account_id.present? || account.simplefin_account_id.present?
       redirect_to account_path(account), alert: t(".only_manual_investment")
