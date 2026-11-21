@@ -1,4 +1,9 @@
 class IncomeStatement::Totals
+  # Part of the cache key of every totals query. Bump it whenever TotalsRow's
+  # members or the query's result change: the cache Marshal-loads old rows
+  # into the current TotalsRow, which raises TypeError when the members differ.
+  CACHE_VERSION = 3
+
   include IncomeStatement::ScopedTransactionsQuery
 
   def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil, group_by_month: false)

@@ -221,6 +221,26 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 4, totals.transactions_count
   end
 
+  test "totals ignore rows cached before TotalsRow gained :month" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    date_range = Period.last_30_days.date_range
+
+    written = []
+    subscriber = ActiveSupport::Notifications.subscribe("cache_write.active_support") { |*, payload| written << payload[:key] }
+    IncomeStatement.new(@family).totals(date_range: date_range)
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+
+    key = written.find { |k| k.include?("/totals_query/") }
+    pre_month_key = key.sub(%r{/totals_query/[^/]+/}, "/totals_query/v2/")
+    Rails.cache.clear
+    write_with_pre_month_totals_row(pre_month_key)
+
+    totals = IncomeStatement.new(@family).totals(date_range: date_range)
+
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(200 + 300 + 400, @family.currency), totals.expense_money
+  end
+
   test "calculates expenses for a period" do
     income_statement = IncomeStatement.new(@family)
     expense_totals = income_statement.expense_totals(period: Period.last_30_days)
@@ -1356,5 +1376,22 @@ class IncomeStatementTest < ActiveSupport::TestCase
     def bill_totals
       IncomeStatement.new(@family).bill_expense_totals(period: Period.current_month)
                      .category_totals.to_h { |ct| [ ct.category.id, ct.total ] }
+    end
+
+    # Writes rows the way the code before #2561 cached them: the cache marshals
+    # them as IncomeStatement::Totals::TotalsRow without the :month member, so
+    # loading them into the current struct raises "struct ... not compatible".
+    def write_with_pre_month_totals_row(key)
+      current_row = IncomeStatement::Totals::TotalsRow
+      IncomeStatement::Totals.send(:remove_const, :TotalsRow)
+      pre_month_row = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment)
+      IncomeStatement::Totals.const_set(:TotalsRow, pre_month_row)
+
+      Rails.cache.write(key, [
+        pre_month_row.new(parent_category_id: nil, category_id: @income_category.id, classification: "income", total: 1, transactions_count: 1, is_uncategorized_investment: false)
+      ])
+    ensure
+      IncomeStatement::Totals.send(:remove_const, :TotalsRow)
+      IncomeStatement::Totals.const_set(:TotalsRow, current_row)
     end
 end
