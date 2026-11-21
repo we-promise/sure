@@ -9,6 +9,7 @@ Multi-part series branch https://github.com/we-promise/sure/tree/refactor/ai-plu
 - https://github.com/we-promise/sure/pull/3422 bridge the statement vault to search and let tools read a file. merged on branch
 - https://github.com/we-promise/sure/pull/4771 2e. PDF import and document search.
 - https://github.com/we-promise/sure/pull/4892 2f. ruby_llm 2.2, Jev via OpenRouter, review fixes. under review & cleanup
+- https://github.com/we-promise/sure/pull/4425 Propose a transaction split from an attached receipt.
 - 3a Capsule, shared state and probes. developed, will push after stage 2 is merged. milestone to merge with main. stacked PR from here on
 - 3b Bill suggestions and stopping AI work.
 - 3c Documents and MCP tools.
