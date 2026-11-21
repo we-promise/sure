@@ -186,11 +186,15 @@ class ConfigurationHealthTest < ActiveSupport::TestCase
     end
   end
 
-  test "blank exchange rate selection is not configured" do
+  test "a blank exchange rate selection checks Twelve Data, not configured without its key" do
     Setting.stubs(:exchange_rate_provider).returns(nil)
+    Setting.stubs(:twelve_data_api_key).returns(nil)
 
-    ClimateControl.modify("EXCHANGE_RATE_PROVIDER" => nil) do
-      assert_equal :not_configured, ConfigurationHealth.new.exchange_rates.status
+    ClimateControl.modify("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => nil) do
+      check = ConfigurationHealth.new.exchange_rates
+
+      assert_equal [ :twelve_data ], check.providers.map(&:key)
+      assert_equal :not_configured, check.status
     end
   end
 

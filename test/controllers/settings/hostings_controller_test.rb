@@ -342,8 +342,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "shows the clear cache text without provider when no exchange rate provider is set" do
-    Setting.stubs(:exchange_rate_provider).returns(nil)
+  test "a blank exchange rate setting counts as the default provider in the clear cache text" do
+    Setting.stubs(:exchange_rate_provider).returns("")
     Security.stubs(:provider).returns(nil)
 
     with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
@@ -351,7 +351,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         get settings_hosting_url
 
         assert_response :success
-        assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning_without_provider"))
+        assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+        assert_not_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning_without_provider"))
       end
     end
   end

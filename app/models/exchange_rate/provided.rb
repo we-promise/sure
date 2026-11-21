@@ -25,7 +25,7 @@ module ExchangeRate::Provided
     end
 
     def configured_provider_name
-      (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
+      ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider.presence || Setting::DEFAULT_EXCHANGE_RATE_PROVIDER
     end
 
     def fallback_provider?
