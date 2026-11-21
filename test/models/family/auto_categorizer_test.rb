@@ -84,7 +84,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
       { categorizations: batch.map { { transaction_id: _1, category_name: category.name } } }
     end
 
-    perform_enqueued_jobs { Ai::GenerationJob.perform_later(:categorize, { ids:, family_id: @family.id }) }
+    perform_enqueued_jobs { Ai::GenerationJob.perform_later(:categorize, ai_run_args(:categorize, ids: ids, family: @family)) }
 
     logged = DebugLogEntry.where(message: "AI categorization completed").order(:created_at).map { _1.metadata["requested_transaction_ids"] }
     assert_equal [ 2, 1 ], logged.map(&:size)
@@ -101,7 +101,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     rule_run.await_ai!(2)
     stub_ai(:categorize) { { sure => { category: [ category.name, 0.9 ] }, unsure => { category: [ category.name, 0.3 ] } } }
 
-    Ai::GenerationJob.perform_now(:categorize, { ids: [ sure, unsure ], family_id: @family.id, rule_run_id: rule_run.id })
+    Ai::GenerationJob.perform_now(:categorize, ai_run_args(:categorize, ids: [ sure, unsure ], family: @family, rule_run_id: rule_run.id))
 
     assert_equal [ 0, 1, "success" ], rule_run.reload.slice(:transactions_awaiting_ai, :transactions_modified, :status).values
   end
@@ -114,7 +114,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     stub_ai(:categorize, raises: Ai::Error::InvalidOutput.new("no JSON"))
 
     assert_difference -> { DebugLogEntry.where(message: "AI categorization failed").count }, 1 do
-      Ai::GenerationJob.perform_now(:categorize, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
+      Ai::GenerationJob.perform_now(:categorize, ai_run_args(:categorize, ids: [ txn.id ], family: @family, rule_run_id: rule_run.id))
     end
 
     assert_equal "failed", rule_run.reload.status
@@ -128,7 +128,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
                                transactions_queued: 1, executed_at: Time.current)
     stub_ai(:categorize) { flunk "the model shouldn't be asked" }
 
-    Ai::GenerationJob.perform_now(:categorize, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
+    Ai::GenerationJob.perform_now(:categorize, ai_run_args(:categorize, ids: [ txn.id ], family: @family, rule_run_id: rule_run.id))
 
     assert_equal "failed", rule_run.reload.status
     assert_includes rule_run.error_message, "No categories available"
@@ -414,9 +414,59 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal category, other.reload.category
   end
 
+  test "a rule run over several windows counts skipped transactions as handled and finishes at zero" do
+    use_ai_model_settings(batch_size: 2)
+    category = @family.categories.create!(name: "Shops")
+    txns = 8.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction }
+    txns[1].update!(category:)                      # already categorized
+    txns[2].lock_attr!(:category_id)                # the user's choice
+    txns[6].update!(category:)
+    txns[7].lock_attr!(:category_id)                # skipped ids at the end of the run
+    open = txns.values_at(0, 3, 4, 5)
+    rule_run = ai_rule_run(txns.size)
+    sent = []
+    stub_ai(:categorize) do |request|
+      ids = request.schema.dig(:properties, :categorizations, :items, :properties, :transaction_id, :enum)
+      sent << ids
+      { categorizations: ids.map { { transaction_id: _1, category_name: category.name } } }
+    end
+
+    Ai::GenerationRun.enqueue(:categorize, family: @family, ids: txns.map(&:id), rule_run_id: rule_run.id)
+    ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys) until enqueued_jobs.empty?
+
+    assert_equal open.map(&:id).each_slice(2).to_a, sent, "items reach the model in the order they were queued"
+    assert_equal [ 0, 4, "success" ], rule_run.reload.values_at(:transactions_awaiting_ai, :transactions_modified, :status)
+    assert_equal 0, Ai::GenerationRun.count
+  end
+
+  test "a run that gives up halfway releases the transactions no job read" do
+    use_ai_model_settings(batch_size: 2)
+    category = @family.categories.create!(name: "Shops")
+    txns = 6.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction }
+    rule_run = ai_rule_run(txns.size)
+    calls = 0
+    stub_ai(:categorize) do |request|
+      raise Ai::Error::Unauthorized, "key revoked" if (calls += 1) > 1
+
+      ids = request.schema.dig(:properties, :categorizations, :items, :properties, :transaction_id, :enum)
+      { categorizations: ids.map { { transaction_id: _1, category_name: category.name } } }
+    end
+
+    Ai::GenerationRun.enqueue(:categorize, family: @family, ids: txns.map(&:id), rule_run_id: rule_run.id)
+    ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys) until enqueued_jobs.empty?
+
+    assert_equal [ 0, 2, "failed" ], rule_run.reload.values_at(:transactions_awaiting_ai, :transactions_modified, :status)
+    assert_equal 0, Ai::GenerationRun.count
+  end
+
   private
+    def ai_rule_run(count)
+      RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                      transactions_queued: count, executed_at: Time.current).tap { _1.await_ai!(count) }
+    end
+
     def categorize(transaction_ids)
-      Ai::GenerationJob.perform_now(:categorize, { ids: transaction_ids, family_id: @family.id })
+      Ai::GenerationJob.perform_now(:categorize, ai_run_args(:categorize, ids: transaction_ids, family: @family))
     end
 
     # Routes categorize to the test setup's cloud Jev and has it give one answer.

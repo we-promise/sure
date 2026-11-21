@@ -14,16 +14,17 @@ class Family::AutoCategorizer
   Error = Class.new(StandardError)
 
   def ai_generation
+    ids = matching_transaction_ids
     @cached_ids = cached_transaction_ids
     @blocked_ids = protected_transaction_ids - @cached_ids
     log_cache_usage(@cached_ids) if @cached_ids.any?
     log_blocked_transactions(@blocked_ids) if @blocked_ids.any?
 
-    if scope.none?
+    if ids.empty?
       Rails.logger.info("No transactions to auto-categorize for family #{family.id}")
       return
     end
-    Rails.logger.info("Auto-categorizing #{scope.count} transactions for family #{family.id}")
+    Rails.logger.info("Auto-categorizing #{ids.size} transactions for family #{family.id}")
 
     if categories_input.empty?
       log_no_categories
@@ -31,7 +32,8 @@ class Family::AutoCategorizer
     end
 
     log_jev_fallback
-    Ai::Generations::CategorizeTransactions.new(transactions: transactions_input, categories: categories_input, family:)
+    transactions = scope_for(ids).preload(:merchant, :entry).in_order_of(:id, ids)
+    Ai::Generations::CategorizeTransactions.new(transactions: transactions_input(transactions), categories: categories_input, family:)
   end
 
   def apply_ai(result)
@@ -45,7 +47,7 @@ class Family::AutoCategorizer
     ActiveRecord::Base.transaction do
       live_category_ids = locked_category_ids(decisions)
       # Locked until the batch commits, so a user's edit lands before the lock check or after the batch.
-      scope.where(id: decisions.map { _1[:transaction_id] }).lock.each do |transaction|
+      scope_for(decided(decisions.map { _1[:transaction_id] })).preload(:merchant, :entry).lock.each do |transaction|
         decision = decisions.find { _1[:transaction_id] == transaction.id }
         category_id = categories_input.find { |c| c[:name] == decision&.dig(:category_name) }&.dig(:id)
         next unless live_category_ids.include?(category_id)
@@ -85,7 +87,7 @@ class Family::AutoCategorizer
   end
 
   # A shadow run's generation: these transactions as they are now. The primary's answer is
-  # applied by then, so they're read without `scope`'s uncategorized and unlocked filters.
+  # applied by then, so they're read without `scope_for`'s uncategorized and unlocked filters.
   def ai_shadow_generation
     transactions = family.transactions.where(id: transaction_ids).includes(:merchant, :entry)
     return if transactions.none? || categories_input.empty?
@@ -99,7 +101,8 @@ class Family::AutoCategorizer
     DebugLogEntry.capture(
       category: "auto_categorization", level: "error", message: "AI categorization failed",
       source: self.class.name, family:,
-      metadata: { error_class: error.class.name, error_message: error.message.truncate(500), requested_transaction_ids: transaction_ids }
+      metadata: { error_class: error.class.name, error_message: error.message.truncate(500), requested_transaction_ids: transaction_ids,
+                  outstanding_count: @window&.outstanding }.compact
     )
   end
 
@@ -181,12 +184,11 @@ class Family::AutoCategorizer
 
     # Excluded transactions are out of every report on purpose; a guessed
     # category on them is noise, so the LLM is never asked about them.
-    # `preload`, not `includes`: the entries condition would turn `includes` into
+    # Callers `preload`, not `includes`: the entries condition would turn `includes` into
     # outer joins, and Postgres refuses the apply step's FOR UPDATE on those.
-    def scope
+    def scope_for(ids)
       family.transactions.with_entry
-                         .where(id: transaction_ids, category_id: nil, entries: { excluded: false })
+                         .where(id: ids, category_id: nil, entries: { excluded: false })
                          .enrichable(:category_id)
-                         .preload(:category, :merchant, :entry)
     end
 end

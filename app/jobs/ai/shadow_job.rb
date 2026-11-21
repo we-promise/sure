@@ -29,7 +29,7 @@ class Ai::ShadowJob < ApplicationJob
       next unless plan.is_a?(Ai::Plan)
 
       sent = sent.to_h.with_indifferent_access
-      generation = requester.from_ai_job(ids: sent[:items].keys, family_id: family.id).ai_shadow_generation
+      generation = requester.from_shadow_job(ids: sent[:items].keys, family_id: family.id).ai_shadow_generation
       next if generation.nil?
 
       now = Ai::Shadow.fingerprint(generation)

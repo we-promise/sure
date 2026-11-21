@@ -6,13 +6,16 @@
 #     include Ai::Requester
 #     ai_feature :categorize
 #
-#     def self.from_ai_job(ids:, family_id:, **)   # job arguments are ids, never records
-#     def ai_generation                            # the generation for the remaining items, or nil
+#     def self.from_ai_job(window:, family_id:, **) # job arguments are ids, never records; window: this
+#                                                  # job's share of the run (Ai::GenerationRun::Window)
+#     def ai_generation                            # the generation for the window's matching items, or
+#                                                  # nil when none are left in the run
 #     def apply_ai(result)                         # writes through the domain; returns a count
 #     def ai_finished(count)                       # once, after the last batch
 #     def ai_failed(error)                         # once, when the job gives up
 #     def ai_cancelled?                            # true when the user cancelled
-#     def ai_shadow_generation                     # optional: these ids as they are now, for Ai::ShadowJob
+#     def self.from_shadow_job(ids:, family_id:)   # with ai_shadow_generation: optional, for Ai::ShadowJob
+#     def ai_shadow_generation                     # these ids as they are now
 #   end
 module Ai::Requester
   extend ActiveSupport::Concern

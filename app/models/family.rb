@@ -428,7 +428,7 @@ class Family < ApplicationRecord
   end
 
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
-    Ai::GenerationJob.perform_later(:categorize, { ids: transactions.pluck(:id), family_id: id, rule_run_id: }.compact)
+    Ai::GenerationRun.enqueue(:categorize, family: self, ids: transactions.pluck(:id), rule_run_id:)
   end
 
   # Runs Bayes over the uncategorized transactions in scope the user hasn't
@@ -523,7 +523,7 @@ class Family < ApplicationRecord
   end
 
   def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)
-    Ai::GenerationJob.perform_later(:detect_merchants, { ids: transactions.pluck(:id), family_id: id, rule_run_id: }.compact)
+    Ai::GenerationRun.enqueue(:detect_merchants, family: self, ids: transactions.pluck(:id), rule_run_id:)
   end
 
   # Memoized per user: the layout renders the account sidebar on every page

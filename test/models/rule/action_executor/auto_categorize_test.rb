@@ -25,7 +25,9 @@ class Rule::ActionExecutor::AutoCategorizeTest < ActiveSupport::TestCase
       result = @executor.execute(@account.transactions)
     end
 
-    assert_equal ids.sort, enqueued_jobs.last["arguments"].second["ids"].sort
+    args = enqueued_jobs.last["arguments"].second
+    assert_equal [ 0, [] ], args.values_at("cursor", "pending")
+    assert_equal ids.sort, Ai::GenerationRun.find(args["run_id"]).items.pluck(:item_id).sort
     assert_equal 1, result[:jobs_count]
   end
 

@@ -12,14 +12,18 @@ class ProviderMerchant::Enhancer
 
   def self.lock_key(family) = "enhance_provider_merchants:#{family.id}"
 
-  # Queues a run unless one is already going. Returns false when one is.
+  # The family's provider merchants without a website: the ones a run asks the AI about.
+  def self.unenhanced(family) = family.assigned_merchants.where(type: "ProviderMerchant").where(website_url: [ nil, "" ])
+
+  # Queues a run over the merchants that lack a website now, unless one is already going. Returns
+  # false when one is.
   def self.enhance_later(family)
     return false unless Rails.cache.write(lock_key(family), true, expires_in: LOCK_TTL, unless_exist: true)
 
     # A run that never starts must not hold the lock until it expires.
     queued = false
     begin
-      queued = Ai::GenerationJob.perform_later(:enhance_merchants, { family_id: family.id })
+      queued = Ai::GenerationRun.enqueue(:enhance_merchants, family:, ids: unenhanced(family).pluck(:id))
     rescue StandardError
       # A queue adapter raises its own errors (Redis down); the caller handles one kind.
       raise ActiveJob::EnqueueError, "the merchant enhancement couldn't be queued"
@@ -31,20 +35,19 @@ class ProviderMerchant::Enhancer
     true
   end
 
-  # ids: the merchants left from an earlier batch; nil on the first job, which starts the run.
-  def self.from_ai_job(family_id:, ids: nil) = new(Family.find(family_id), merchant_ids: ids)
+  def self.from_ai_job(window:, family_id:) = new(Family.find(family_id), window:)
 
-  def initialize(family, merchant_ids: nil)
+  # window: this job's share of the run; without one, every merchant the family has without a website.
+  def initialize(family, window: nil)
     @family = family
-    @merchant_ids = merchant_ids
+    @window = window
   end
 
   def ai_generation
     hold_lock
     # The run's first job backfills logos before any AI: generating a logo from a known website
     # needs no model, and merchants that already have a website are never sent (issue #2925).
-    @family.backfill_provider_merchant_logos if @merchant_ids.nil?
-    merge_websites_saved_since if @merchant_ids
+    @family.backfill_provider_merchant_logos if @window.nil? || @window.first?
     return if unenhanced_merchants.empty?
 
     Rails.logger.info("Enhancing #{unenhanced_merchants.size} provider merchants for family #{@family.id}")
@@ -89,17 +92,18 @@ class ProviderMerchant::Enhancer
     DebugLogEntry.capture(
       category: "merchant_enhancement", level: "error", message: "AI merchant enhancement failed",
       source: self.class.name, family: @family,
-      metadata: { error_class: error.class.name, error_message: error.message.truncate(500), merchant_ids: @merchant_ids }.compact
+      metadata: { error_class: error.class.name, error_message: error.message.truncate(500), merchant_ids: @window&.examined_ids,
+                  outstanding_count: @window&.outstanding }.compact
     )
   end
 
   def ai_correlation_id = "family:#{@family.id}:enhance_merchants"
 
   private
-    # A later batch's merchants that another family's run gave a website since this run queued them:
+    # The window's merchants that another family's run gave a website since this run queued them:
     # they're no longer sent to the AI, so this family's duplicates are merged with that website here.
-    def merge_websites_saved_since
-      @family.assigned_merchants.where(type: "ProviderMerchant", id: @merchant_ids).where.not(website_url: [ nil, "" ]).each do |merchant|
+    def merge_websites_saved_since(ids)
+      @family.assigned_merchants.where(type: "ProviderMerchant", id: ids).where.not(website_url: [ nil, "" ]).each do |merchant|
         merchant.with_lock { deduplicate_by_website(merchant, merchant.website_url) }
       end
     end
@@ -124,10 +128,13 @@ class ProviderMerchant::Enhancer
     end
 
     def unenhanced_merchants
-      @unenhanced_merchants ||= begin
-        scope = @family.assigned_merchants.where(type: "ProviderMerchant").where(website_url: [ nil, "" ])
-        scope = scope.where(id: @merchant_ids) if @merchant_ids
-        scope.to_a
-      end
+      @unenhanced_merchants ||=
+        if @window
+          ids = @window.take_matching { |chunk| self.class.unenhanced(@family).where(id: chunk).pluck(:id) }
+          merge_websites_saved_since(@window.examined_ids - ids)
+          self.class.unenhanced(@family).where(id: ids).in_order_of(:id, ids).to_a
+        else
+          self.class.unenhanced(@family).to_a
+        end
     end
 end

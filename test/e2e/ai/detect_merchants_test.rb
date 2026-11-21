@@ -12,7 +12,7 @@ class AiE2eDetectMerchantsTest < ActiveSupport::TestCase
 
   test "Kilo detects merchants through the job" do
     with_live_ai do
-      Ai::GenerationJob.perform_now(:detect_merchants, { ids: @transactions.map(&:id), family_id: @family.id })
+      Ai::GenerationJob.perform_now(:detect_merchants, ai_run_args(:detect_merchants, ids: @transactions.map(&:id), family: @family))
     end
 
     merchants = @transactions.map { _1.reload.merchant }

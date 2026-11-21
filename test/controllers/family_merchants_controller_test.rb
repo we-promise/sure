@@ -191,9 +191,12 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
   test "enhance enqueues job and redirects" do
     use_ai_routes
 
-    assert_enqueued_with(job: Ai::GenerationJob, args: [ :enhance_merchants, { family_id: @user.family.id } ]) do
+    assert_enqueued_jobs 1, only: Ai::GenerationJob do
       post enhance_family_merchants_path
     end
+    feature, args = ActiveJob::Arguments.deserialize(enqueued_jobs.last["arguments"])
+    assert_equal :enhance_merchants, feature
+    assert_equal @user.family.id, Ai::GenerationRun.find(args[:run_id]).family_id
 
     assert_redirected_to family_merchants_path
   end

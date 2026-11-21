@@ -170,7 +170,7 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
 
   private
     def categorize(transaction_ids)
-      Ai::GenerationJob.perform_now(:categorize, { ids: transaction_ids, family_id: @family.id })
+      Ai::GenerationJob.perform_now(:categorize, ai_run_args(:categorize, ids: transaction_ids, family: @family))
     end
 
     # The LLM answers categorize (`llm`: id => name); the shadow's Jev answers shadow_categorize

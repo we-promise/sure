@@ -91,9 +91,25 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     ProviderMerchant.any_instance.stubs(:with_lock).with { true }.yields
     ProviderMerchant.any_instance.stubs(:website_url).returns(nil)   # another writer cleared it under the lock
 
-    ProviderMerchant::Enhancer.from_ai_job(family_id: @family.id, ids: [ lunchflow.id ]).ai_generation
+    ProviderMerchant::Enhancer.new(@family, window: later_window([ lunchflow.id ])).ai_generation
 
     assert_equal blank.id, corner_purchase.reload.merchant_id
+  end
+
+  test "a run asks about the merchants that lacked a website at the click, a batch at a time" do
+    use_ai_model_settings(batch_size: 1)
+    walmart = provider_merchant("Walmart")
+    target = provider_merchant("Target")
+    requests = stub_websites("Walmart" => "walmart.com", "Target" => "target.com")
+
+    ProviderMerchant::Enhancer.enhance_later(@family)
+    late = provider_merchant("Costco")   # assigned after the click
+    ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys) until enqueued_jobs.empty?
+
+    assert_equal 2, requests.size
+    assert_equal [ "walmart.com", "target.com" ], [ walmart, target ].map { _1.reload.website_url }
+    assert_nil late.reload.website_url
+    assert_equal 0, Ai::GenerationRun.count
   end
 
   test "a second run isn't queued while one holds the lock" do
@@ -187,9 +203,15 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     key = ProviderMerchant::Enhancer.lock_key(@family)
 
     travel ProviderMerchant::Enhancer::LOCK_TTL - 1.minute
-    ProviderMerchant::Enhancer.new(@family, merchant_ids: []).ai_generation
+    ProviderMerchant::Enhancer.new(@family, window: later_window([])).ai_generation
     travel 2.minutes
 
     assert cache.exist?(key)
   end
+
+  private
+    # A window after the run's first, its ids left over from the batch before.
+    def later_window(ids)
+      Ai::GenerationRun.start!(family: @family, feature: :enhance_merchants, ids:).window(cursor: ids.size, pending: ids, size: 25)
+    end
 end

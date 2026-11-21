@@ -2,6 +2,9 @@
 # requester and enqueues the rest at the back of its queue, so one family's large run takes turns
 # with other families' work. The queue comes from the feature's lane (Ai::Routes.queue_for).
 #
+# The run's ids live in an Ai::GenerationRun (Ai::GenerationRun.enqueue starts one); each job reads
+# one window of them, so a job's work and payload stay at about one batch however long the run is.
+#
 # On a failure, the transport has already retried 429s and 5xxs and the generation
 # has failed over and escalated; what's left is retried later when it may pass, and discarded
 # when it can't. Any other error ends the run. Either way the requester hears once, so a RuleRun
@@ -17,8 +20,9 @@ class Ai::GenerationJob < ApplicationJob
   retry_on(ActiveRecord::Deadlocked, attempts: 5) { |job, error| job.give_up(error) }
   discard_on(*DISCARDED) { |job, error| job.give_up(error) }
 
-  # feature: a key in Ai::Requesters; args: the requester's own (`ids:` the items left); applied:
-  # the count the earlier batches applied; answered_before: whether any earlier batch was answered.
+  # feature: a key in Ai::Requesters; args: `run_id:`, `cursor:` (the run's next unread position)
+  # and `pending:` (the ids the last batch left unanswered), plus the requester's own; applied: the
+  # count the earlier batches applied; answered_before: whether any earlier batch was answered.
   def perform(feature, args, applied = 0, answered_before = false)
     return if requester.nil?
 
@@ -32,10 +36,11 @@ class Ai::GenerationJob < ApplicationJob
       # Only once applied: a deadlock in apply_ai retries the whole job, which would sample again.
       Ai::Shadow.enqueue(generation, result)
 
-      if result.remaining.any?
+      if result.remaining.any? || !@window.exhausted?
         # A result has a route only when a batch was answered. An enqueue that fails returns false
         # rather than raising, and would leave the requester waiting.
-        queued = self.class.perform_later(feature, args.merge(ids: result.remaining_ids), applied, answered_before || result.route.present?)
+        next_args = args.to_h.symbolize_keys.merge(cursor: @window.cursor, pending: result.remaining_ids)
+        queued = self.class.perform_later(feature, next_args, applied, answered_before || result.route.present?)
         raise ActiveJob::EnqueueError, "the next batch couldn't be queued" unless queued
       else
         finish(applied)
@@ -66,6 +71,7 @@ class Ai::GenerationJob < ApplicationJob
   def give_up(error)
     Rails.logger.info("[Ai::GenerationJob] #{arguments.first} gave up: #{error.class.name.demodulize} #{error.message.truncate(200)}")
     requester&.ai_failed(error)
+    delete_run
   end
 
   private
@@ -74,6 +80,7 @@ class Ai::GenerationJob < ApplicationJob
     # ids and, the batch being applied already, release those transactions a second time.
     def finish(applied, attempts: 3)
       requester.ai_finished(applied)
+      delete_run
     rescue ActiveRecord::Deadlocked => error
       return give_up(error) if (attempts -= 1).zero?
 
@@ -83,15 +90,29 @@ class Ai::GenerationJob < ApplicationJob
     def requester
       return @requester if defined?(@requester)
 
-      @requester = Ai::Requesters.fetch(arguments.first).from_ai_job(**arguments.second.to_h.symbolize_keys)
+      klass = Ai::Requesters.fetch(arguments.first)
+      args = arguments.second.to_h.symbolize_keys
+      run = Ai::GenerationRun.find_by!(id: args.delete(:run_id), family_id: args[:family_id])
+      @window = run.window(cursor: args.delete(:cursor), pending: args.delete(:pending),
+                           size: Ai::Config.current.window_for(arguments.first))
+      @requester = klass.from_ai_job(window: @window, **args)
     rescue ActiveRecord::RecordNotFound => error
-      # The family the job names was deleted while it waited: nothing to run, and no one to tell.
+      # The family the job names was deleted while it waited, or the run already ended (finished,
+      # given up, swept): nothing to run, and no one to tell.
       Rails.logger.info("[Ai::GenerationJob] #{arguments.first} dropped: #{error.message}")
       @requester = nil
     rescue KeyError
       # A stale job for a feature no longer registered: give up once, don't poison the queue.
       Rails.logger.error("[Ai::GenerationJob] no requester registered for #{arguments.first.inspect}; dropping")
       @requester = nil
+    end
+
+    # Once the requester has heard the end. A run left behind is swept by DataCleanerJob, so a
+    # failure here doesn't replace the outcome the requester was told.
+    def delete_run
+      @window&.run&.destroy
+    rescue StandardError => error
+      Rails.logger.error("[Ai::GenerationJob] couldn't delete run #{@window.run.id}: #{error.class}: #{error.message}")
     end
 
     def correlation_id

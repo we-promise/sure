@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_21_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_22_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -193,6 +193,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_000000) do
     t.datetime "updated_at", null: false
     t.index ["family_id", "feature", "agreed", "created_at"], name: "index_ai_comparisons_on_family_feature_agreement"
     t.index ["subject_type", "subject_id"], name: "index_ai_comparisons_on_subject_type_and_subject_id"
+  end
+
+  create_table "ai_generation_run_items", primary_key: ["run_id", "position"], force: :cascade do |t|
+    t.uuid "run_id", null: false
+    t.integer "position", null: false
+    t.uuid "item_id", null: false
+  end
+
+  create_table "ai_generation_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "feature", null: false
+    t.integer "item_count", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_ai_generation_runs_on_created_at"
+    t.index ["family_id"], name: "index_ai_generation_runs_on_family_id"
   end
 
   create_table "akahu_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3173,6 +3189,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_000000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ai_comparisons", "families"
+  add_foreign_key "ai_generation_run_items", "ai_generation_runs", column: "run_id", on_delete: :cascade
+  add_foreign_key "ai_generation_runs", "families", on_delete: :cascade
   add_foreign_key "akahu_accounts", "akahu_items"
   add_foreign_key "akahu_items", "families"
   add_foreign_key "api_keys", "users"

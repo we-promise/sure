@@ -7,13 +7,15 @@ class Family::AutoMerchantDetector
   ai_feature :detect_merchants
 
   def ai_generation
-    if scope.none?
+    ids = matching_transaction_ids
+    if ids.empty?
       Rails.logger.info("No transactions to auto-detect merchants for family #{family.id}")
       return
     end
 
-    Rails.logger.info("Auto-detecting merchants for #{scope.count} transactions for family #{family.id}")
-    Ai::Generations::DetectMerchants.new(transactions: transactions_input, merchants: user_merchants_input, family:)
+    Rails.logger.info("Auto-detecting merchants for #{ids.size} transactions for family #{family.id}")
+    transactions = scope_for(ids).preload(:merchant, :entry).in_order_of(:id, ids)
+    Ai::Generations::DetectMerchants.new(transactions: transactions_input(transactions), merchants: user_merchants_input, family:)
   end
 
   def apply_ai(result)
@@ -24,7 +26,7 @@ class Family::AutoMerchantDetector
     # counts every change it makes.
     ActiveRecord::Base.transaction do
       # Locked until the batch commits, so a user's edit lands before the lock check or after the batch.
-      scope.where(id: detections.keys).lock.each do |transaction|
+      scope_for(decided(detections.keys)).preload(:merchant, :entry).lock.each do |transaction|
         auto_detection = detections[transaction.id]
         next unless auto_detection&.dig(:business_name).present? && auto_detection&.dig(:business_url).present?
 
@@ -62,7 +64,8 @@ class Family::AutoMerchantDetector
     DebugLogEntry.capture(
       category: "merchant_detection", level: "error", message: "AI merchant detection failed",
       source: self.class.name, family:,
-      metadata: { error_class: error.class.name, error_message: error.message.truncate(500), requested_transaction_ids: transaction_ids }
+      metadata: { error_class: error.class.name, error_message: error.message.truncate(500), requested_transaction_ids: transaction_ids,
+                  outstanding_count: @window&.outstanding }.compact
     )
   end
 
@@ -76,10 +79,8 @@ class Family::AutoMerchantDetector
       end
     end
 
-    def scope
-      family.transactions.where(id: transaction_ids)
-                         .enrichable(:merchant_id)
-                         .includes(:merchant, :entry)
+    def scope_for(ids)
+      family.transactions.where(id: ids).enrichable(:merchant_id)
     end
 
     # Re-read, and locked until the batch commits, rather than taken from the list the prompt was

@@ -242,7 +242,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     stub_ai(:detect_merchants, raises: Ai::Error::Refused.new("bad request", status: 400))
 
     assert_difference -> { DebugLogEntry.where(category: "merchant_detection", level: "error").count }, 1 do
-      Ai::GenerationJob.perform_now(:detect_merchants, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
+      Ai::GenerationJob.perform_now(:detect_merchants, ai_run_args(:detect_merchants, ids: [ txn.id ], family: @family, rule_run_id: rule_run.id))
     end
     assert_equal "failed", rule_run.reload.status
   end
@@ -258,7 +258,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
       { merchants: batch.map { { transaction_id: _1, business_name: "Shop", business_url: "shop.example" } } }
     end
 
-    Ai::GenerationJob.perform_later(:detect_merchants, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
+    Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ids, family: @family, rule_run_id: rule_run.id))
     progress = []
     until enqueued_jobs.empty?
       ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys)
@@ -288,7 +288,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
       real_complete_job.bind_call(self, **kwargs)
     end
 
-    Ai::GenerationJob.perform_later(:detect_merchants, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
+    Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ids, family: @family, rule_run_id: rule_run.id))
     ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys) until enqueued_jobs.empty?
 
     assert_equal 2, calls
@@ -306,7 +306,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     RuleRun.any_instance.stubs(:ai_handled!).raises(ActiveRecord::Deadlocked, "deadlock")
 
     assert_enqueued_with(job: Ai::GenerationJob) do
-      Ai::GenerationJob.perform_now(:detect_merchants, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
+      Ai::GenerationJob.perform_now(:detect_merchants, ai_run_args(:detect_merchants, ids: [ txn.id ], family: @family, rule_run_id: rule_run.id))
     end
 
     assert_nil txn.reload.merchant
@@ -333,6 +333,6 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
 
   private
     def detect(family, transaction_ids)
-      Ai::GenerationJob.perform_now(:detect_merchants, { ids: transaction_ids, family_id: family.id })
+      Ai::GenerationJob.perform_now(:detect_merchants, ai_run_args(:detect_merchants, ids: transaction_ids, family: family))
     end
 end
