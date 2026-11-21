@@ -2,8 +2,7 @@ require "test_helper"
 
 class AiHealth::ProbeTest < ActiveSupport::TestCase
   setup do
-    @cache = ActiveSupport::Cache::MemoryStore.new
-    @probe = AiHealth::Probe.new(cache: @cache)
+    @probe = AiHealth::Probe.new(run: true)
   end
 
   test "OpenAI LLM probe calls the models endpoint and verifies the configured model" do
@@ -151,8 +150,8 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     Rails.logger.stubs(:error)
     DebugLogEntry.stubs(:capture)
 
-    spent = AiHealth::Probe.new(cache: @cache, force: true).llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "m")
-    wrong = AiHealth::Probe.new(cache: @cache, force: true).llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "m")
+    spent = AiHealth::Probe.new(run: true).llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "m")
+    wrong = AiHealth::Probe.new(run: true).llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "m")
 
     assert_equal [ :no_credit, 429 ], [ spent.failure_code, spent.http_status ]
     assert_equal [ :unauthorized, 401 ], [ wrong.failure_code, wrong.http_status ]
@@ -231,7 +230,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
 
     result = @probe.pdf_text_extraction(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
-                                        model: "text-model", openai_compatible: true)
+                                        model: "text-model")
 
     assert result.passing?
     request = requests.sole
@@ -250,7 +249,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     result = Ai::Config.with(config) do
       @probe.pdf_text_extraction(provider: :openai, endpoint: "https://limit.example.test/v1", access_token: "limit-token",
-                                 model: "limited-model", openai_compatible: true)
+                                 model: "limited-model")
     end
 
     assert result.passing?
@@ -268,7 +267,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     Ai::Config.with(config) do
       @probe.pdf_text_extraction(provider: :openai, endpoint: "https://adhoc.example.test/v1", access_token: "other-token",
-                                 model: "limited-model", openai_compatible: true)
+                                 model: "limited-model")
     end
 
     assert_equal AiHealth::Probe::PDF_MAX_RESPONSE_TOKENS, requests.sole.model.max_output_tokens
@@ -279,7 +278,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
 
     result = @probe.pdf_vision_processing(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
-                                          model: "vision-model", openai_compatible: true)
+                                          model: "vision-model")
 
     assert result.passing?
     assert_equal [ "image/png" ], requests.sole.attachments.map(&:content_type)
@@ -291,7 +290,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     DebugLogEntry.stubs(:capture)
 
     result = @probe.pdf_text_extraction(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
-                                        model: "text-model", openai_compatible: true)
+                                        model: "text-model")
 
     assert result.failing?
     assert_equal :invalid_response, result.failure_code
@@ -350,59 +349,6 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_equal "http://ollama:11434/v1", entry.metadata.fetch("endpoint")
     assert_equal "model_not_available", entry.metadata.fetch("failure_code")
     assert_no_match(/secret-token|uri-secret|query-secret/, entry.metadata.to_json)
-  end
-
-  test "probe results are cached to avoid repeated requests and failure logs" do
-    models = mock("models")
-    models.expects(:list).once.returns({ "data" => [ { "id" => "gpt-4.1" } ] })
-    client = stub(models: models)
-    Ai::Transport::Http.stubs(:openai_client).returns(client)
-
-    2.times do
-      result = @probe.llm(
-        provider: :openai,
-        endpoint: "https://api.openai.com/v1",
-        access_token: "token",
-        model: "gpt-4.1"
-      )
-      assert result.passing?
-    end
-  end
-
-  test "a probe keeps the configured endpoint's API choice unless the caller picks one" do
-    @probe.stubs(:configured_endpoint).returns(ai_endpoint(name: "openai", responses_api: true, probe_check: :chat))
-    build = ->(**choice) { @probe.send(:config_endpoint, provider: :openai, base_url: "https://llm.example.test/v1", api_key: "t", **choice) }
-
-    assert build.().responses_api, "the endpoint's Responses API stands"
-    assert_not build.(responses_api: false).responses_api, "the tool-call probe picks Chat Completions"
-  end
-
-  test "a changed static header isn't answered from the cache" do
-    key = lambda do |headers|
-      @probe.stubs(:configured_endpoint).returns(ai_endpoint(name: "openai", extra_headers: headers))
-      @probe.send(:cache_key, component: "llm", provider_key: :openai, endpoint: "https://llm.example.test/v1", model: "m",
-                              credential: "t", dimensions: nil, verification: :models)
-    end
-
-    assert_not_equal key.({ "X-Gateway-Key" => "old" }), key.({ "X-Gateway-Key" => "new" })
-  end
-
-  test "forced probe bypasses the cached result" do
-    models = mock("models")
-    models.expects(:list).twice.returns({ "data" => [ { "id" => "gpt-4.1" } ] })
-    client = stub(models: models)
-    Ai::Transport::Http.stubs(:openai_client).returns(client)
-
-    arguments = {
-      provider: :openai,
-      endpoint: "https://api.openai.com/v1",
-      access_token: "token",
-      model: "gpt-4.1"
-    }
-    @probe.llm(**arguments)
-
-    forced_probe = AiHealth::Probe.new(cache: @cache, force: true)
-    assert forced_probe.llm(**arguments).passing?
   end
 
   test "hosted vector-store probe calls the non-destructive list endpoint" do
@@ -695,7 +641,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     DebugLogEntry.stubs(:capture)
 
     result = @probe.pdf_vision_processing(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
-                                          model: "vision-model", openai_compatible: true)
+                                          model: "vision-model")
 
     assert result.failing?
     assert_equal :missing_binary, result.failure_code
@@ -709,24 +655,28 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     Ai::DownMarks.expects(:state).never
 
     @probe.pdf_text_extraction(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
-                               model: "text-model", openai_compatible: true)
+                               model: "text-model")
   end
 
-  test "a worker's result reaches the page through Ai::SharedState, and the page never probes" do
+  test "a worker's results reach the page through Ai::SharedState once stored, and the page never probes" do
     request = stub_request(:get, "https://api.openai.example.test/v1/models")
-              .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: [ { id: "gpt-4.1" } ] }.to_json)
+              .to_return(status: 402, headers: { "Content-Type" => "application/json" }, body: { error: { message: "no credit" } }.to_json)
     arguments = { provider: :openai, endpoint: "https://api.openai.example.test/v1", access_token: "token", model: "gpt-4.1" }
+    Rails.logger.stubs(:error)
 
-    worker = AiHealth::Probe.new(force: true).llm(**arguments)
-    page = AiHealth::Probe.new(stored_only: true).llm(**arguments)
+    worker = AiHealth::Probe.new(run: true)
+    probed = worker.llm(**arguments)
+    assert AiHealth::Probe.new.llm(**arguments).not_checked?, "nothing is stored until the run ends"
+    worker.store!
+    page = AiHealth::Probe.new.llm(**arguments)
 
-    assert page.passing?
-    assert_in_delta worker.checked_at, page.checked_at, 0.001
+    assert_equal [ :failing, :no_credit, 402 ], [ page.status, page.failure_code, page.http_status ]
+    assert_in_delta probed.checked_at, page.checked_at, 0.001
     assert_requested request, times: 1
   end
 
   test "with nothing stored, a stored-only probe is not checked and makes no request" do
-    result = AiHealth::Probe.new(stored_only: true).llm(provider: :openai, endpoint: "https://api.openai.example.test/v1",
+    result = AiHealth::Probe.new.llm(provider: :openai, endpoint: "https://api.openai.example.test/v1",
                                                         access_token: "token", model: "gpt-4.1")
 
     assert result.not_checked?
@@ -737,19 +687,8 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     Ai::SharedState.stubs(:read).raises(RedisClient::CannotConnectError)
 
     assert_difference -> { DebugLogEntry.where(category: "ai_health", level: "warn").count }, 1 do
-      assert AiHealth::Probe.new(stored_only: true).pgvector.not_checked?
+      assert AiHealth::Probe.new.pgvector.not_checked?
     end
-  end
-
-  test "a failing result round-trips through the store with its code and status" do
-    failing = AiHealth::Probe::Result.new(status: :failing, checked_at: Time.current, failure_code: :no_credit, http_status: 402)
-    store = AiHealth::Probe::Store.new
-
-    store.fetch("ai_health/test", expires_in: 1.minute) { failing }
-    stored = store.read("ai_health/test")
-
-    assert_equal [ :failing, :no_credit, 402 ], [ stored.status, stored.failure_code, stored.http_status ]
-    assert_in_delta failing.checked_at, stored.checked_at, 0.001
   end
 
   test "results are kept for AI_HEALTH_PROBE_CACHE_TTL, 60 seconds when unset" do

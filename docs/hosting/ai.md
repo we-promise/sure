@@ -1889,9 +1889,11 @@ non-destructive live checks against the effective configuration:
 The checks run in a Sidekiq worker, where AI work runs, never in the web
 request: opening the tab makes no AI request. **Run checks again** queues them
 (`Ai::ProbeJob`, on the AI capsule's low-priority queue), and the tab reloads
-with the results when the worker finishes. So the checks need a worker running
-the AI capsule (`RAILS_AI_MAX_THREADS` of at least 1); with none, the tab says
-the worker appears to be down.
+with the results when the worker finishes. A click while a run is queued adds
+nothing. So the checks need a worker running the AI capsule
+(`RAILS_AI_MAX_THREADS` of at least 1); with none, the tab says the worker
+appears to be down. The automatic reload needs Action Cable on Redis; in
+development, reload the tab to see the results.
 
 When `OPENAI_URI_BASE` points outside OpenAI's hosted API, the page labels the
 selected provider **OpenAI-compatible** and identifies a known effective
@@ -1900,7 +1902,7 @@ Cloudflare Workers AI/AI Gateway). Unrecognized services are shown as **Custom
 endpoint**.
 
 Each result shows how long ago it was checked, and is kept for 60 seconds by
-default; after that the tab shows it as not checked until the checks run again.
+default from the end of the run; after that the tab shows it as not checked until the checks run again.
 Set `AI_HEALTH_PROBE_CACHE_TTL` to keep results longer, and
 `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request timeout.
 Five seconds is too short for a model running on CPU, such as llama.cpp without

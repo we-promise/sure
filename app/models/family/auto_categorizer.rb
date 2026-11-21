@@ -13,16 +13,6 @@ class Family::AutoCategorizer
 
   Error = Class.new(StandardError)
 
-  def self.from_ai_job(ids:, family_id:, rule_run_id: nil)
-    new(Family.find(family_id), transaction_ids: ids, rule_run: (RuleRun.find_by(id: rule_run_id) if rule_run_id))
-  end
-
-  def initialize(family, transaction_ids: [], rule_run: nil)
-    @family = family
-    @transaction_ids = transaction_ids
-    @rule_run = rule_run
-  end
-
   def ai_generation
     @cached_ids = cached_transaction_ids
     @blocked_ids = protected_transaction_ids - @cached_ids
@@ -103,12 +93,6 @@ class Family::AutoCategorizer
     Ai::Generations::CategorizeTransactions.new(transactions: transactions_input(transactions), categories: categories_input, family:)
   end
 
-  # The modified counts reached the run per batch (apply_ai); this releases the rest.
-  def ai_finished(_count)
-    release_unhandled
-    @rule_run&.complete_job!
-  end
-
   def ai_failed(error)
     release_unhandled
     @rule_run&.fail_job!(error:, source: self.class.name, transaction_ids:)
@@ -120,8 +104,6 @@ class Family::AutoCategorizer
   end
 
   private
-    attr_reader :family, :transaction_ids
-
     # The instance chose Jev, but the config left it out because RubyLLM can't reach its endpoint.
     # Without this the only symptom is categorization silently running on the LLM. The endpoint is
     # redacted, because a gateway URL can carry a key.
@@ -168,18 +150,6 @@ class Family::AutoCategorizer
     def categories_input
       @categories_input ||= family.categories.map do |category|
         { id: category.id, name: category.name, is_subcategory: category.subcategory?, parent_id: category.parent_id }
-      end
-    end
-
-    def transactions_input(transactions = scope)
-      transactions.map do |transaction|
-        {
-          id: transaction.id,
-          amount: transaction.entry.amount.abs,
-          classification: transaction.entry.classification,
-          description: [ transaction.entry.name, transaction.entry.notes ].compact.reject(&:empty?).join(" "),
-          merchant: transaction.merchant&.name
-        }
       end
     end
 

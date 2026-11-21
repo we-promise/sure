@@ -1,11 +1,10 @@
-# Deprecated: reads the AI ENV and `Setting` fields as an AI configuration, so
-# installs configured either way keep working while features move from the providers' own lookups
-# to the router.
+# Deprecated: reads the AI ENV and `Setting` fields as an AI configuration, so installs
+# configured either way keep working.
 #
 # Each value resolves the way the provider code resolves it. Wherever that code has a resolver
 # (Provider::Registry and the providers it builds, Assistant::External.config,
-# Ai::LegacyEnvConfig::Jev), this calls it, so the router and the calls not yet on the router
-# can't disagree. test/architecture/ai_config_test checks that over every documented setup. The
+# Ai::LegacyEnvConfig::Jev), this calls it, so the router and chat, which still calls the
+# providers, can't disagree. test/architecture/ai_config_test checks that over every documented setup. The
 # one deliberate difference: embeddings fall back to the OpenAI values saved in Settings, as every
 # other AI setting does.
 #
@@ -28,7 +27,7 @@ class Ai::LegacyEnvConfig
   SIMPLE_PROMPTS = %i[categorize detect_merchants enhance_merchants].freeze   # bill setup has one OpenAI prompt
   JSON_MODES = Ai::Config::Endpoint::JSON_MODES.map(&:to_s).freeze
   ANTHROPIC_MAX_TOKENS = 4096
-  EMBEDDING_TIMEOUT = 120         # VectorStore::Embeddable's client
+  EMBEDDING_TIMEOUT = 120
   EXTERNAL_ASSISTANT_TIMEOUT = 120 # Assistant::External::Client::TIMEOUT_READ
 
   # The inputs a snapshot depends on, so Ai::Config rebuilds when one changes.
@@ -88,8 +87,7 @@ class Ai::LegacyEnvConfig
     embed_model = embedding_model if %i[pgvector qdrant].include?(backend)
     embed_route_model = embed_route(backend, llm[:openai], embed_model)
 
-    # Both mirror Provider::Registry.preferred_llm_provider, which walks the LLM order and raises at
-    # a provider it can't build. Generations list only the provider it picks, so failover never
+    # Both walk the LLM order and stop at a provider that can't be built. Generations list only the provider it picks, so failover never
     # sends a family's data to a provider the install doesn't use; chat lists every provider the
     # walk reaches, as it resolves its own provider.
     reached = reachable_llm_models(llm)
@@ -125,9 +123,9 @@ class Ai::LegacyEnvConfig
       provider = Provider::Registry.get_provider(:openai)
       endpoint = Ai::Config::Endpoint.new(
         name: custom ? "openai_compatible" : "openai", protocol: :compatible, preset: (:openai unless custom),
-        base_url: uri_base, api_key: token, extra_headers: static_openai_headers, location: location_for(uri_base),
+        base_url: uri_base, api_key: token, extra_headers: self.class.static_openai_headers, location: Ai::Config::Endpoint.location_for(uri_base),
         timeout_seconds: Provider::Openai.request_timeout, responses_api: provider&.supports_responses_endpoint? || false,
-        vector_store:, json_mode: openai_json_mode
+        vector_store:, json_mode: self.class.openai_json_mode
       )
       name = Provider::Openai.effective_model
       flag = ENV["OPENAI_SUPPORTS_PDF_PROCESSING"]   # raw: set but empty was an opt-out, and stays one
@@ -147,7 +145,7 @@ class Ai::LegacyEnvConfig
       provider = buildable(:anthropic) { Provider::Registry.get_provider(:anthropic) }
       endpoint = Ai::Config::Endpoint.new(
         name: "anthropic", protocol: :anthropic, preset: (:anthropic if anthropic_native?(base_url)), base_url:, api_key: token,
-        location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
+        location: Ai::Config::Endpoint.location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       )
       name = Provider::Anthropic.effective_model
       vision = base_url.present? || Provider::Anthropic::VISION_CAPABLE_MODEL_PREFIXES.any? { name.to_s.start_with?(_1) }
@@ -182,7 +180,7 @@ class Ai::LegacyEnvConfig
     # LLM_CONTEXT_WINDOW, extract_pdf's model has no window, which Ai::PdfReading reads the same
     # way, splitting a batch only when the server says it's too long.
     def pdf_model(model)
-      positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window) ? model : model.with(context_window: nil)
+      explicit_context_window ? model : model.with(context_window: nil)
     end
 
     # A cloud model's real window is far larger than the 2048 guard, which would split its batches
@@ -190,8 +188,6 @@ class Ai::LegacyEnvConfig
     def explicit_context_window = positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window)
 
     def batch_size = positive(env("LLM_MAX_ITEMS_PER_CALL"), Setting.llm_max_items_per_call) || Ai::Config::Model::DEFAULT_BATCH_SIZE
-
-    def openai_json_mode = self.class.openai_json_mode
 
     def positive(*values) = values.map(&:to_i).find(&:positive?)
 
@@ -203,7 +199,7 @@ class Ai::LegacyEnvConfig
 
       url = Jev.effective_endpoint
       if (reason = Jev.unreachable_reason(url))
-        key = "#{Jev.redacted_endpoint(url)}|#{reason}"
+        key = "#{Ai::Instrumentation::Redactor.url(url)}|#{reason}"
         unless (self.class.unreachably_warned ||= Set.new).include?(key)
           recorded = DebugLogEntry.capture(
             category: "ai_configuration", level: "error",
@@ -229,7 +225,7 @@ class Ai::LegacyEnvConfig
       allowed = env("EXTERNAL_ASSISTANT_ALLOWED_EMAILS").to_s.split(",").map { _1.strip.downcase }.compact_blank
       endpoint = Ai::Config::Endpoint.new(
         name: "external_assistant", protocol: :compatible, base_url: config.url, api_key: config.token,
-        location: location_for(config.url), timeout_seconds: EXTERNAL_ASSISTANT_TIMEOUT, agent: true,
+        location: Ai::Config::Endpoint.location_for(config.url), timeout_seconds: EXTERNAL_ASSISTANT_TIMEOUT, agent: true,
         agent_settings: { allowed_emails: allowed, agent_id: config.agent_id, session_key: config.session_key }
       )
       Ai::Config::Model.new(endpoint:, name: config.model)
@@ -280,7 +276,7 @@ class Ai::LegacyEnvConfig
       base_url = env("EMBEDDING_URI_BASE") || openai_uri_base || VectorStore::DEFAULT_EMBEDDING_URI_BASE
       api_key = env("EMBEDDING_ACCESS_TOKEN") || env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.presence
       endpoint = Ai::Config::Endpoint.new(
-        name: "embed", protocol: :compatible, base_url:, api_key:, location: location_for(base_url),
+        name: "embed", protocol: :compatible, base_url:, api_key:, location: Ai::Config::Endpoint.location_for(base_url),
         timeout_seconds: EMBEDDING_TIMEOUT, exact_base_url: true
       )
       Ai::Config::Model.new(
@@ -290,21 +286,10 @@ class Ai::LegacyEnvConfig
     end
 
     def route_list(feature, models)
-      models.map { |model| Ai::Route.new(feature:, model:, prompt: prompt_for(feature, model)) }
+      models.map { |model| Ai::Route.new(feature:, model:, prompt: self.class.prompt_for(feature, model.endpoint)) }
     end
-
-    def prompt_for(feature, model) = self.class.prompt_for(feature, model.endpoint)
 
     def openai_uri_base = self.class.openai_uri_base
-
-    def static_openai_headers = self.class.static_openai_headers
-
-    # http is a server on a private network; https, or no URL (the provider's own), is cloud.
-    def location_for(url)
-      url.present? && URI.parse(url).scheme == "http" ? :local : :cloud
-    rescue URI::InvalidURIError
-      :cloud
-    end
 
     def reachable_llm_models(llm)
       Provider::Registry.llm_provider_order.each_with_object([]) do |name, models|

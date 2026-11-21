@@ -18,7 +18,7 @@ module Ai::Transport::Http
     # whatever the target's scheme, so a setup that sets only one still covers every call.
     # Loopback is never proxied, as Ruby's own lookup does; NO_PROXY matches a host exactly as
     # written, so `127.0.0.1` doesn't cover `localhost`, and `*` means every host, as curl reads it.
-    # A leading dot is dropped, as curl and the external assistant's old matcher do, so
+    # A leading dot is dropped, as curl does, so
     # `.agents.example.com` covers `agents.example.com` itself as well as its subdomains.
     def proxy_for(url, env: ENV)
       uri = parse(url)
@@ -98,9 +98,8 @@ module Ai::Transport::Http
     # by Provider::Openai, so they're left out here.
     def headers(endpoint) = endpoint.extra_headers.reject { |_, value| value.to_s.include?("{session_id}") }
 
-    # The ruby-openai client for an endpoint: vector stores, the PDF probes and model listing
-    # stay on ruby-openai (RubyLLM has no vector store calls).
-    # Its base follows compatible_base, as RubyLLM's does, so the models list and the chat calls
+    # The ruby-openai client for an endpoint, for what RubyLLM doesn't do: vector stores and the
+    # models list. Its base follows compatible_base, as RubyLLM's does, so the models list and the chat calls
     # it checks reach the same server; an OpenRouter endpoint without a URL is OpenRouter's.
     def openai_client(endpoint, timeout: endpoint.timeout_seconds)
       base = endpoint.base_url.presence || (OPENROUTER_BASE if endpoint.preset == :openrouter)
@@ -117,9 +116,6 @@ module Ai::Transport::Http
     def faraday(url, timeout:)
       Faraday.new(request: { timeout:, open_timeout: timeout }, &faraday_options(url))
     end
-
-    # The Faraday adapter for RubyLLM's contexts, whose config can't force a direct connection.
-    def ruby_llm_adapter = ProxyNetHttp
 
     # A Faraday block for a client built elsewhere (ruby-openai): the resolved proxy, which
     # also stops Faraday's own ENV lookup when the resolver says direct, and TLS options.

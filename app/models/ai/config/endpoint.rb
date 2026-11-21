@@ -19,10 +19,10 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
   # which also catches a spent balance and a server that answers for a model it hasn't loaded.
   # :models is the default, so a probe makes no chat call unless its endpoint asks for one.
   PROBE_CHECKS = %i[models chat].freeze
-  # exact_base_url: the base URL is used as written, without the `/v1` Ai::Transport::Http.compatible_base
-  # adds, as VectorStore::Embeddable posts `embeddings` straight onto EMBEDDING_URI_BASE.
   JSON_MODES = %i[auto strict json_object none].freeze
 
+  # exact_base_url: the base URL is used as written, without the `/v1` that
+  # Ai::Transport::Http.compatible_base adds (EMBEDDING_URI_BASE is taken as given).
   def initialize(name:, protocol:, preset: nil, base_url: nil, api_key: nil, extra_headers: {}, location: :cloud,
                  timeout_seconds: 60, max_retries: 0, responses_api: false, probe_check: :models, vector_store: false,
                  agent: false, agent_settings: {}, json_mode: :auto, parallel_requests: nil,
@@ -56,8 +56,14 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
 
   def pdf_limits = PDF_LIMITS[preset]
 
+  # http is a server on a private network; https, or no URL (the provider's own), is cloud.
+  def self.location_for(url)
+    url.present? && URI.parse(url.to_s).scheme == "http" ? :local : :cloud
+  rescue URI::InvalidURIError
+    :cloud
+  end
+
   def local? = location == :local
-  def cloud? = location == :cloud
   def agent? = agent
   def vector_store? = vector_store
 

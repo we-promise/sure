@@ -168,7 +168,7 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
 
       assert_equal :text, outcome.way
       assert_equal false, outcome.checks.complete, "the blank second page may hold transactions"
-      assert outcome.flagged?
+      assert_not outcome.passed?
     end
   end
 
@@ -180,7 +180,7 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     with_reading_routes(vision_model) do
       outcome = reading(@bac).extract
 
-      assert outcome.flagged?
+      assert_not outcome.passed?
       assert_equal :text, outcome.way, "the text layer's passed more checks"
       assert_equal 12, outcome.value[:transactions].size
     end
@@ -198,7 +198,7 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     with_reading_routes(vision_model) do
       outcome = reading(@bac).extract
 
-      assert outcome.flagged?
+      assert_not outcome.passed?
       assert_equal :text, outcome.way
       assert_equal [ :text, :images ], outcome.attempts.map { _1[:way] }
       assert_equal "Upstream", outcome.attempts.last[:error]
@@ -278,7 +278,7 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
       outcome = reading(@scan).extract
 
       assert_equal :images, outcome.way, "OCR was tried, as images had no text to show the balances aren't printed; images' extraction stays the better one"
-      assert outcome.flagged?
+      assert_not outcome.passed?
       assert_equal [ :balances ], outcome.checks.failed
       assert_equal %i[images ocr], outcome.attempts.map { _1[:way] }
     end
@@ -313,7 +313,7 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
       outcome = reading(@bac).extract
 
       assert_equal :text, outcome.way
-      assert outcome.flagged?
+      assert_not outcome.passed?
       assert_equal :missing_binary, outcome.attempts.last[:render_error]
     end
   end

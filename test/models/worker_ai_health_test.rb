@@ -46,13 +46,6 @@ class WorkerAiHealthTest < ActiveSupport::TestCase
     assert_equal WorkerAiHealth::MAX_RESULTS, WorkerAiHealth.recent.size
   end
 
-  test "a snapshot without a checked_at is stale" do
-    snapshot = passing_snapshot(checked_at: nil)
-
-    assert snapshot.stale?
-    assert_equal :stale, snapshot.status
-  end
-
   test "a snapshot older than STALE_AFTER is stale even if it recorded passing" do
     snapshot = passing_snapshot(checked_at: (WorkerAiHealth::STALE_AFTER + 1.second).ago)
 
