@@ -362,7 +362,7 @@ class AccountStatement < ApplicationRecord
   # Found by the statement id in the document's metadata, so a re-run, or PDF import having
   # indexed the file already, can't make a second copy.
   def vector_store_document
-    family.family_documents.where("metadata->>'account_statement_id' = ?", id).first
+    family.family_documents.search_copies.where("metadata->>'account_statement_id' = ?", id).first
   end
 
   def indexed_in_vector_store?

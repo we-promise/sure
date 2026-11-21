@@ -45,7 +45,7 @@ class AccountStatement
             page_count: pages.size,
             extractable: false,
             note: "The PDF has #{pages.size} page(s) but contains no extractable text layer, which means it is " \
-                  "a scan, so its contents cannot be read here. #{scan_hint}"
+                  "a scan, so its contents cannot be read here. #{scan_hint(content)}"
           )
         end
 
@@ -54,10 +54,15 @@ class AccountStatement
         unsupported("The PDF could not be parsed (#{e.class.name.demodulize}).")
       end
 
-      # What PDF import's "Read as" can do with a scan for this family and user.
-      def scan_hint
-        reasons = Ai::PdfReading.route_reasons(family: @statement.family, user: @user)
-        way = %i[pdf images ocr].find { reasons[_1].nil? }
+      # What PDF import's "Read as" can do with this scan for this family and user: a way whose
+      # routes are set up but can't take this file (too large for inline PDF) isn't suggested.
+      def scan_hint(content)
+        reasons = begin
+          Ai::PdfReading.new(content:, family: @statement.family, filename: @statement.filename, user: @user).ways
+        rescue Ai::Error::Unavailable
+          {}
+        end
+        way = %i[pdf images ocr].find { reasons.key?(_1) && reasons[_1].nil? }
         if way
           "Importing it as a statement with \"Read as\" set to #{{ pdf: "PDF", images: "Images", ocr: "OCR" }.fetch(way)} can read the " \
             "scanned pages; suggest that, or ask the user for the figures. Don't guess."

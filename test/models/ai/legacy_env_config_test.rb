@@ -418,6 +418,7 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
 
   test "the default embedding URL with a trailing slash or without is still the server that needs a key" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns(nil)   # a host's OPENAI_ACCESS_TOKEN at boot would leak in
     without_slash = VectorStore::DEFAULT_EMBEDDING_URI_BASE.chomp("/")
 
     config = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => without_slash)

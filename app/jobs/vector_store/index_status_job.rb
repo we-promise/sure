@@ -18,7 +18,7 @@ class VectorStore::IndexStatusJob < ApplicationJob
 
     # Another store can't speak for this one's file (pgvector would call any id ready).
     accepted_by = document.metadata.to_h["vector_store"]
-    adapter = adapter_for(accepted_by)
+    adapter = VectorStore.adapter_for(accepted_by, endpoint_url: family.vector_store_endpoint)
     if adapter.nil?
       message = accepted_by.present? ? "the vector store changed from #{accepted_by} while it indexes" : "vector store no longer configured"
       return mark_error_if_processing(document, message)
@@ -38,18 +38,6 @@ class VectorStore::IndexStatusJob < ApplicationJob
   end
 
   private
-    # Poll the backend that accepted the file, not whichever one is configured now. Only OpenAI
-    # indexes asynchronously, but a document predating the recorded backend still uses the
-    # configured adapter.
-    def adapter_for(backend)
-      return VectorStore.adapter if backend.blank?
-      return VectorStore::Openai.from_config if backend == "openai"
-      return VectorStore::Pgvector.new if backend == "pgvector" && VectorStore::Pgvector.available?
-
-      configured = VectorStore.adapter
-      configured if configured && VectorStore.backend_name(configured) == backend
-    end
-
     # Polls overlap: an old one must not turn a `ready` row back into `error`. `with_lock` reloads
     # the row under the lock, so the decision is made against its current state.
     def mark_error_if_processing(document, message)

@@ -129,7 +129,7 @@ class ProcessPdfJob < ApplicationJob
     def upload_document(pdf_import, family, document_type, statement)
       statement_id = statement&.id
 
-      documents = family.family_documents
+      documents = family.family_documents.search_copies
       existing = (documents.find_by("metadata->>'account_statement_id' = ?", statement_id) if statement_id.present?) ||
                  documents.find_by("metadata->>'pdf_import_id' = ?", pdf_import.id)   # read again
       return existing.poll_index_later if existing

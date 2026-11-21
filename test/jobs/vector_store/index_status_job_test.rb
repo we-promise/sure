@@ -93,7 +93,7 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
   test "an unavailable backend that accepted the document errors instead of calling it ready" do
     @document.update_column(:metadata, { "vector_store" => "openai" })
     @adapter.expects(:file_status).never
-    VectorStore::Openai.stubs(:from_config).returns(nil)
+    VectorStore::Openai.stubs(:for_store).returns(nil)
 
     VectorStore::IndexStatusJob.perform_now(@document)
 
@@ -106,7 +106,7 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     openai = mock("openai_adapter")
     openai.expects(:file_status).with(store_id: "vs_abc123", file_id: "file-xyz")
           .returns(VectorStore::Response.new(success?: true, data: { status: "ready" }, error: nil))
-    VectorStore::Openai.stubs(:from_config).returns(openai)
+    VectorStore::Openai.stubs(:for_store).returns(openai)
     @adapter.expects(:file_status).never
 
     VectorStore::IndexStatusJob.perform_now(@document)

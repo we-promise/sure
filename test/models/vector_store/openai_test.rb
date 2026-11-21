@@ -13,6 +13,20 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
     @adapter = VectorStore::Openai.new(endpoint: @endpoint)
   end
 
+  test "a store is reached on the server that created it, whichever route embeds now" do
+    other = ai_endpoint(name: "embed", base_url: "https://embed.example.test/v1", api_key: "k2", vector_store: true)
+    Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ other, @endpoint ]))
+
+    assert_equal BASE, VectorStore::Openai.for_store("#{BASE}/").endpoint_url
+    assert_nil VectorStore::Openai.for_store("https://gone.example.test/v1"), "never another server"
+  end
+
+  test "a store created before its server was recorded falls back to the OpenAI endpoint" do
+    Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ @endpoint ]))
+
+    assert_equal BASE, VectorStore::Openai.for_store(nil).endpoint_url
+  end
+
   test "create_store goes through Ai::Transport::Http's client, with the endpoint's key and headers" do
     stub_json(:post, "/vector_stores", { id: "vs_abc123" })
 
