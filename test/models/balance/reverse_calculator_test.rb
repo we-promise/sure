@@ -593,7 +593,50 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
     )
   end
 
-  test "non cash accounts can only use valuations and transactions will be recorded but ignored for balance calculation" do
+  test "other asset and other liability transfers affect non cash balance, other transactions and unmatched transfer kinds do not" do
+    { OtherLiability => 2500, OtherAsset => 1500 }.each do |account_type, expected_start_balance|
+      account = create_account_with_ledger(
+        account: { type: account_type, balance: 2000, cash_balance: 0, currency: "USD" },
+        entries: [
+          { type: "current_anchor", date: Date.current, balance: 2000 },
+          { type: "transaction", date: 1.day.ago, amount: -500, kind: "funds_movement", transfer: true },
+          { type: "transaction", date: 1.day.ago, amount: -100 },
+          { type: "transaction", date: 1.day.ago, amount: -200, kind: "funds_movement" }
+        ]
+      )
+
+      calculated = Balance::ReverseCalculator.new(account).calculate
+
+      assert_calculated_ledger_balances(
+        calculated_data: calculated,
+        expected_data: [
+          {
+            date: Date.current,
+            legacy_balances: { balance: 2000, cash_balance: 0 },
+            balances: { start: 2000, start_cash: 0, start_non_cash: 2000, end_cash: 0, end_non_cash: 2000, end: 2000 },
+            flows: 0,
+            adjustments: 0
+          },
+          {
+            date: 1.day.ago,
+            legacy_balances: { balance: 2000, cash_balance: 0 },
+            balances: { start: expected_start_balance, start_cash: 0, start_non_cash: expected_start_balance, end_cash: 0, end_non_cash: 2000, end: 2000 },
+            flows: { non_cash_inflows: 500, non_cash_outflows: 0, cash_inflows: 0, cash_outflows: 0 },
+            adjustments: 0
+          },
+          {
+            date: 2.days.ago,
+            legacy_balances: { balance: expected_start_balance, cash_balance: 0 },
+            balances: { start: expected_start_balance, start_cash: 0, start_non_cash: expected_start_balance, end_cash: 0, end_non_cash: expected_start_balance, end: expected_start_balance },
+            flows: 0,
+            adjustments: { cash_adjustments: 0, non_cash_adjustments: 0 }
+          }
+        ]
+      )
+    end
+  end
+
+  test "non cash accounts ignore standard transactions for balance calculation" do
     [ Property, Vehicle, OtherAsset, OtherLiability ].each do |account_type|
       account = create_account_with_ledger(
         account: { type: account_type, balance: 1000, cash_balance: 0, currency: "USD" },

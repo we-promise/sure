@@ -964,6 +964,12 @@ class Account < ApplicationRecord
     end
   end
 
+  # Other assets and liabilities are valued, but money transferred in or out still moves
+  # their balance (see Balance::BaseCalculator#non_cash_balance_transactions).
+  def balance_counts_transfers?
+    accountable_type.in?(%w[OtherAsset OtherLiability])
+  end
+
   # Whether the activity feed hides balance updates unless asked to show them.
   #
   # A linked account gets one from almost every daily sync, and users can't add

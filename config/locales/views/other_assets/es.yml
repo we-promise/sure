@@ -3,7 +3,7 @@ es:
   other_assets:
     edit:
       edit: Editar %{account}
-      balance_tracking_info: "El seguimiento de otros activos se realiza mediante valoraciones manuales usando 'Nuevo saldo', no mediante transacciones. El flujo de caja no afectará al saldo de la cuenta."
+      balance_tracking_info: "El seguimiento de otros activos se realiza mediante valoraciones manuales usando 'Nuevo saldo', no mediante transacciones. Las transferencias desde o hacia tus otras cuentas sí cambian el saldo."
     new:
       title: Introduce los detalles del activo
-      balance_tracking_info: "El seguimiento de otros activos se realiza mediante valoraciones manuales usando 'Nuevo saldo', no mediante transacciones. El flujo de caja no afectará al saldo de la cuenta."
+      balance_tracking_info: "El seguimiento de otros activos se realiza mediante valoraciones manuales usando 'Nuevo saldo', no mediante transacciones. Las transferencias desde o hacia tus otras cuentas sí cambian el saldo."

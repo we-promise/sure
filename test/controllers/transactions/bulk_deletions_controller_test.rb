@@ -22,6 +22,17 @@ class Transactions::BulkDeletionsControllerTest < ActionDispatch::IntegrationTes
     assert_equal "#{delete_count} transactions deleted", flash[:notice]
   end
 
+  test "bulk delete of a valuation resyncs its account" do
+    valuation = entries(:valuation)
+    Sync.where(syncable: valuation.account).delete_all
+
+    assert_difference [ -> { Entry.count } ], -1 do
+      post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ valuation.id ] } }
+    end
+    assert_redirected_to transactions_url
+    assert valuation.account.syncs.exists?
+  end
+
   test "bulk delete with rejected transfers" do
     entry = entries(:transaction)
     other_entry = entries(:transfer_out)

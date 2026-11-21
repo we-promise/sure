@@ -730,6 +730,12 @@ class Entry < ApplicationRecord
     parent_entry_id.present?
   end
 
+  # Other accounts that change when this entry and its split children are
+  # deleted: removing a transfer leg removes the transfer with its fees.
+  def accounts_changed_by_transfer_removal
+    [ self, *child_entries ].flat_map { |entry| entry.entryable.try(:transfer)&.accounts_changed_by_removal || [] }.uniq
+  end
+
   # The other side of a split: a child's parent, or a parent's children. Both
   # sides are the same money. Siblings are not: each child is its own part.
   def split_counterparts

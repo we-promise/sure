@@ -5,7 +5,8 @@
 # card payment paired with the account that funded it rather than the one that
 # paid it). Both transactions stay in the ledger; a confirmed transfer's
 # become standard transactions again (a pending match never changed their
-# kinds, so those stay). Balances don't change.
+# kinds, so those stay). Balances only change on other assets and other
+# liabilities, which count transfers; Transfer resyncs those itself.
 #
 # By default it rejects the pairing (Transfer#reject!, the Reject button), so
 # auto-match won't suggest it again. reject: false only unlinks
