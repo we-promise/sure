@@ -1,5 +1,5 @@
 class Provider::Akahu
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   DEFAULT_BASE_URL = "https://api.akahu.io/v1".freeze

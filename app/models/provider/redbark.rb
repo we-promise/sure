@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Provider::Redbark
-  include HTTParty
+  include ProxiedHttparty
 
   headers "User-Agent" => "Sure Finance Redbark Client"
   default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)

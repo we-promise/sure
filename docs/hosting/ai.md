@@ -1131,10 +1131,12 @@ through the proxy. `NO_PROXY` matches a host exactly as written: `127.0.0.1` doe
 that can't be read fails the call rather than sending it direct.
 
 This covers the OpenAI and OpenAI-compatible clients, the external assistant and its agent
-discovery, the AI health probes, Langfuse exports, and Trade Republic login and session calls.
-Trade Republic's WebSocket connection opens its own socket and is not proxied yet. Anthropic's
-client library takes no proxy setting, so native Anthropic calls that don't use the transports
-go direct, unless `HTTP_PROXY` is set (the only variable that library reads).
+discovery, the AI health probes, Langfuse exports, Trade Republic login and session calls, and
+the bank, brokerage and crypto providers built on HTTParty (`include ProxiedHttparty`), so
+provider syncs honour `HTTPS_PROXY` and `NO_PROXY` too. Trade Republic's WebSocket connection
+opens its own socket and is not proxied yet. Anthropic's client library takes no proxy setting,
+so native Anthropic calls that don't use the transports go direct, unless `HTTP_PROXY` is set
+(the only variable that library reads).
 
 ## Testing and Evaluation
 

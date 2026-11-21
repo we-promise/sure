@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Provider::Wise
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   LIVE_BASE_URL = "https://api.wise.com"

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Provider::Coinspot
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   class Error < StandardError; end
