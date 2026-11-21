@@ -1,6 +1,9 @@
 require "test_helper"
 
 class UI::Account::ChartTest < ViewComponent::TestCase
+  include BalanceTestHelper
+  include PortfolioFlowTestHelper
+
   setup do
     @account = accounts(:investment)
     @account.holdings.destroy_all
@@ -329,6 +332,270 @@ class UI::Account::ChartTest < ViewComponent::TestCase
 
     assert_equal "all_time", component.period.key
     assert_equal family_oldest, component.period.start_date
+  end
+
+  # The Total value view of an account that holds trades carries the
+  # net contributions line for the chart controller, with each point's
+  # difference from total value, and a legend naming both lines.
+  test "the total value view of an investment account carries net contributions and a legend" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 15_400)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+    create_balance(account: account, date: day_one + 1, balance: 15_400, start_cash_balance: 10_000, cash_adjustments: 5_400)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+
+    comparison = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])
+    last = comparison["values"].last
+
+    assert_equal "Net contributions", comparison["label"]
+    assert_equal "Difference", comparison["difference_label"]
+    assert_equal [ day_one.iso8601, (day_one + 1).iso8601 ], comparison["values"].map { |v| v["date"] }
+    assert_equal "15000.0", last["value"]["amount"]
+    assert_equal "400.0", last["difference"]["value"]["amount"], "total value minus net contributions"
+    assert_equal 2.7, last["difference"]["percent"], "as a percentage of net contributions"
+    assert_selector "[data-net-contributions-legend]", text: "Net contributions"
+    assert_selector "[data-net-contributions-legend]", text: "Total value"
+    refute_selector "[data-net-contributions-incomplete]"
+  end
+
+  # The chart draws a line only from two points, so a one-day range draws
+  # neither, and a legend naming them would describe nothing on screen.
+  test "a one-day range shows no net contributions legend" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 10_000)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one), view: "balance"))
+
+    comparison = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])
+    assert_equal 1, comparison["values"].size, "precondition: one comparison point"
+    refute_selector "[data-net-contributions-legend]"
+  end
+
+  # Zero net contributions under a non-zero value make the difference's
+  # percentage infinite. ActiveSupport writes a non-finite Float as null,
+  # so the attribute stays valid JSON and the controller leaves the
+  # percentage off. Strict JSON.parse refuses a bare Infinity, as the
+  # browser's does.
+  test "zero net contributions serialize a null percent the browser can parse" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 400)
+    create_balance(account: account, date: day_one, balance: 0)
+    create_balance(account: account, date: day_one + 1, balance: 5_400, start_cash_balance: 0, cash_adjustments: 5_400)
+    create_balance(account: account, date: day_one + 2, balance: 400, start_cash_balance: 5_400, cash_adjustments: -5_000)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+    create_labelled_transaction account: account, label: nil, amount: 5_000, date: day_one + 2
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 2), view: "balance"))
+
+    raw = page.find("#lineChart")["data-time-series-chart-comparison-value"]
+    comparison = JSON.parse(raw)
+    last = comparison["values"].last
+
+    assert_equal (day_one + 2).iso8601, last["date"]
+    assert_equal "0.0", last["value"]["amount"], "net contributions must be zero, or this asserts nothing"
+    assert_equal "400.0", last["difference"]["value"]["amount"], "the value must be non-zero, so the percentage is not the 0.0 of 0 over 0"
+    assert_nil last["difference"]["percent"]
+    assert_equal "＋∞", last["difference"]["percent_formatted"]
+  end
+
+  # More taken out than put in leaves net contributions below zero. The
+  # difference has no meaning as a percentage of a negative base (Trend
+  # divides by its magnitude, which reads a 7,000 gap as +140%), so the
+  # tooltip shows the amount alone.
+  # A linked account's value line is trimmed to its first broker activity and
+  # opens there at the balance before that activity, 0 here. The
+  # contributions line counts from the 1,000 actually held before it. Read
+  # against each other at the opening, the tooltip showed -1,000 / -100%: a
+  # history marker, not a loss. Both open at the value line's point, so the
+  # opening difference is nothing and the next point carries the day's gain.
+  test "a linked account's opening point shows no difference against net contributions" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 1_900)
+    account.stubs(:linked?).returns(true)
+    [ [ day_one, 1_000, 1_000, 0, 0 ], [ day_one + 1, 1_000, 1_000, 0, 0 ],
+      [ day_one + 2, 1_000, 1_600, 500, 100 ], [ day_one + 3, 1_600, 1_900, 300, 0 ] ].each do |date, opening, closing, cash, market|
+      account.balances.create!(
+        date: date, currency: "USD", balance: closing, cash_balance: opening + cash, start_cash_balance: opening,
+        start_non_cash_balance: 0, cash_inflows: cash, cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: market, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1
+      )
+    end
+    account.entries.create!(name: "Deposit", date: day_one + 2, amount: -500, currency: "USD", source: "plaid",
+                            entryable: Transaction.new(kind: "standard"))
+    create_labelled_transaction account: account, label: nil, amount: -300, date: day_one + 3
+
+    chart = UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 3), view: "balance")
+    render_inline(chart)
+
+    values = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"]
+    opening, closing = values.first, values.last
+
+    assert_equal [ (day_one + 2).iso8601, (day_one + 3).iso8601 ], values.map { |v| v["date"] }, "trimmed to the first broker activity"
+    assert_equal "0.0", opening["difference"]["value"]["amount"], "the opening is a marker, not a loss"
+    assert_nil opening["difference"]["percent"], "and zero over zero has no percentage"
+    assert_equal "100.0", closing["difference"]["value"]["amount"], "the anchor day's market gain"
+  end
+
+  test "negative net contributions leave the difference without a percentage" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 2_000)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+    create_balance(account: account, date: day_one + 1, balance: 2_000, start_cash_balance: 10_000, cash_adjustments: -8_000)
+    create_labelled_transaction account: account, label: nil, amount: 15_000, date: day_one + 1
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+
+    last = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"].last
+    assert_equal "-5000.0", last["value"]["amount"], "net contributions must be negative, or this asserts nothing"
+    assert_equal "7000.0", last["difference"]["value"]["amount"]
+    assert_nil last["difference"]["percent"]
+    assert_nil last["difference"]["percent_formatted"]
+  end
+
+  # The comparison reads the value line's dates from the series the chart
+  # already holds, so a render builds the Total value series once.
+  test "a render builds the total value series once" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 15_400)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+    create_balance(account: account, date: day_one + 1, balance: 15_400, start_cash_balance: 10_000, cash_adjustments: 5_400)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+    builds = 0
+    original = account.method(:balance_series)
+    account.define_singleton_method(:balance_series) do |**kwargs|
+      builds += 1 if kwargs.fetch(:view, :balance).to_s == "balance"
+      original.call(**kwargs)
+    end
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+
+    assert_selector "[data-time-series-chart-comparison-value]"
+    assert_equal 1, builds
+  end
+
+  # The tooltip sets the value's percentage beside the difference's, so both
+  # are written in the page's locale.
+  test "the value line's percentages follow the page's locale beside the comparison's" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 15_400)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+    create_balance(account: account, date: day_one + 1, balance: 15_400, start_cash_balance: 10_000, cash_adjustments: 5_400)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+
+    I18n.with_locale(:de) do
+      render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+    end
+
+    value_trend = JSON.parse(page.find("#lineChart")["data-time-series-chart-data-value"])["values"].last["trend"]
+    difference = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"].last["difference"]
+    assert_equal "54,0%", value_trend["percent_formatted"]
+    assert_equal "+2,7%", difference["percent_formatted"]
+  end
+
+  test "net contributions are not drawn on the holdings, cash or gains views" do
+    %w[holdings_balance cash_balance gains].each do |view|
+      component = UI::Account::Chart.new(account: @account, view: view)
+
+      refute component.show_net_contributions?, "#{view} must not carry net contributions"
+      render_inline(component)
+      refute_selector "[data-time-series-chart-comparison-value]"
+      refute_selector "[data-net-contributions-legend]"
+    end
+  end
+
+  test "net contributions are drawn only for accounts that hold trades" do
+    exchange = accounts(:crypto)
+    exchange.accountable.update!(subtype: "exchange")
+    assert UI::Account::Chart.new(account: exchange, view: "balance").show_net_contributions?
+
+    wallet = accounts(:crypto)
+    wallet.accountable.update!(subtype: "wallet")
+    refute UI::Account::Chart.new(account: wallet.reload, view: "balance").show_net_contributions?
+
+    render_inline(UI::Account::Chart.new(account: accounts(:depository), view: "balance"))
+    refute_selector "[data-time-series-chart-comparison-value]"
+    refute_selector "[data-net-contributions-legend]"
+  end
+
+  # The controller draws the dashed line only when the comparison has points,
+  # so the legend naming it must follow the same condition, not the value
+  # line's.
+  test "no legend when the net contributions comparison has no points" do
+    values = @account.balance_series(view: "balance").values
+    assert values.any?, "the value line must have points, or this asserts nothing"
+    original = @account.method(:balance_series)
+    @account.define_singleton_method(:balance_series) do |**kwargs|
+      kwargs[:view].to_s == "net_contributions" ? Struct.new(:values).new([]) : original.call(**kwargs)
+    end
+
+    render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
+
+    assert_equal [], JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"]
+    refute_selector "[data-net-contributions-legend]"
+  end
+
+  # The tooltip shows the percentage as the server formats it, signed, in
+  # the page's locale, beside money amounts formatted the same way.
+  test "the difference percentage is signed and formatted in the active locale" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 15_400)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+    create_balance(account: account, date: day_one + 1, balance: 15_400, start_cash_balance: 10_000, cash_adjustments: 5_400)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+
+    I18n.with_locale(:fr) do
+      render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+    end
+
+    last = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"].last
+    assert_equal "+2,7%", last["difference"]["percent_formatted"]
+  end
+
+  # Nothing in and nothing held: the difference is zero over a base of zero,
+  # a ratio with no value, so no percentage rather than 0.0%.
+  test "zero value over zero net contributions carries no percentage" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 0)
+    create_balance(account: account, date: day_one, balance: 0)
+    create_balance(account: account, date: day_one + 1, balance: 0)
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+
+    last = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"].last
+    assert_equal "0.0", last["value"]["amount"], "precondition: net contributions are zero"
+    assert_equal "0.0", last["difference"]["value"]["amount"], "precondition: so is the difference"
+    assert_nil last["difference"]["percent"]
+    assert_nil last["difference"]["percent_formatted"]
+  end
+
+  # A request for a frame the chart is not in (the activity feed's pages)
+  # renders the page and discards the chart, so the comparison is not built.
+  test "net contributions are not built when the chart card is not requested" do
+    component = UI::Account::Chart.new(account: @account, view: "balance", net_contributions: false)
+    @account.expects(:net_contributions_incomplete?).never
+
+    refute component.show_net_contributions?
+    render_inline(component)
+    refute_selector "[data-time-series-chart-comparison-value]"
+    refute_selector "[data-net-contributions-legend]"
+  end
+
+  test "the chart says when net contributions are incomplete" do
+    @account.stubs(:net_contributions_incomplete?).returns(true)
+    render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
+    assert_selector "[data-net-contributions-incomplete]", text: I18n.t("UI.account.chart.net_contributions.incomplete")
+    # An unvalued withdrawal leaves the line too high, so the note
+    # names no direction.
+    note = page.find("[data-net-contributions-incomplete]").text
+    assert_includes note, "incomplete"
+    refute_match(/understated|overstated/i, note)
+
+    @account.stubs(:net_contributions_incomplete?).returns(false)
+    render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
+    refute_selector "[data-net-contributions-incomplete]"
   end
 
   private
