@@ -5,6 +5,10 @@ en:
     sso_only_user: Your account uses SSO for authentication. Please contact your administrator to manage your credentials.
     edit:
       title: Reset password
+    mobile_redirect:
+      action: Reset your password
+      fallback: If the app doesn't open automatically, tap the button above.
+      opening: Opening %{product_name}…
     new:
       requested: Please check your email for a link to reset your password.
       submit: Reset password

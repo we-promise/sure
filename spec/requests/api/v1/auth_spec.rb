@@ -592,4 +592,60 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
     end
   end
+
+  path '/api/v1/auth/password_reset' do
+    post 'Request a password-reset email' do
+      tags 'Auth'
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        properties: {
+          email: { type: :string, format: :email }
+        },
+        required: %w[email]
+      }
+
+      response '200', 'generic acknowledgement (returned whether or not an account exists, to prevent account enumeration)' do
+        schema type: :object,
+               properties: {
+                 message: { type: :string }
+               }
+        run_test!
+      end
+    end
+
+    patch 'Reset a password using an emailed token' do
+      tags 'Auth'
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        properties: {
+          token: { type: :string, description: 'Reset token from the emailed link (valid for 15 minutes)' },
+          password: { type: :string },
+          password_confirmation: { type: :string }
+        },
+        required: %w[token password password_confirmation]
+      }
+
+      response '200', 'password updated; every session and token for the account is revoked' do
+        schema type: :object,
+               properties: {
+                 message: { type: :string }
+               }
+        run_test!
+      end
+
+      response '422', 'invalid or expired token, SSO-only account, or password validation failed' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+
+      response '403', 'password features are disabled on this instance' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+    end
+  end
 end

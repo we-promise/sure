@@ -1,0 +1,17 @@
+<% content_for :head do %>
+  <meta http-equiv="refresh" content="0; url=<%= @deep_link %>">
+<% end %>
+
+<div class="text-center space-y-4">
+  <p class="text-secondary"><%= t(".opening", product_name: product_name) %></p>
+
+  <%= render DS::Link.new(
+    text: t(".action"),
+    href: @deep_link,
+    variant: "primary",
+    size: "lg",
+    full_width: true
+  ) %>
+
+  <p class="text-sm text-subdued"><%= t(".fallback") %></p>
+</div>
