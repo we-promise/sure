@@ -26,6 +26,18 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-action='app-layout#toggleRightSidebar']", count: 0
   end
 
+  test "invitation delete dialog shows the email as stored" do
+    invitation = invitations(:one)
+    sign_in @admin
+    get settings_profile_path
+
+    assert_select "form[action=?] button[data-turbo-confirm]", invitation_path(invitation) do |buttons|
+      confirm = JSON.parse(buttons.first["data-turbo-confirm"])
+      assert_equal "Delete #{invitation.email}?", confirm["title"]
+      assert_equal "Delete #{invitation.email}", confirm["confirmText"]
+    end
+  end
+
   test "admin can remove a family member" do
     sign_in @admin
     assert_difference("User.count", -1) do

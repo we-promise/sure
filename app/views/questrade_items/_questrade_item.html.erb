@@ -55,7 +55,7 @@
                 icon: "trash-2",
                 href: questrade_item_path(questrade_item),
                 method: :delete,
-                confirm: CustomConfirm.for_resource_deletion("Questrade", high_severity: true)
+                confirm: CustomConfirm.for_noun_deletion("Questrade", high_severity: true)
               ) %>
             <% end %>
           </div>
