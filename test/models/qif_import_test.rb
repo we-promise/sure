@@ -356,6 +356,36 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal [ "CCard" ], QifParser.parse(qif).map(&:account_type)
   end
 
+  test "account metadata types are matched like section types" do
+    qif = <<~QIF
+      !Account
+      NBrokerage
+      Tinvst
+      ^
+      !Type:invst
+      D1/2'24
+      NBuy
+      YACME
+      I10.00
+      Q2
+      T20.00
+      ^
+      !Account
+      NTagesgeld
+      TOth T
+      ^
+      !Type:Oth T
+      D1/3'24
+      T-5.00
+      PKiosk
+      ^
+    QIF
+
+    assert_equal [ "Invst", "Bank" ], QifParser.parse_accounts(qif).map(&:account_type)
+    assert_equal [ "Invst" ], QifParser.parse_investment_transactions(qif).map(&:account_type)
+    assert_equal [ [ "Kiosk", "Bank" ] ], QifParser.parse(qif).map { |t| [ t.payee, t.account_type ] }
+  end
+
   test "unknown_account_types lists each non-standard account type once" do
     qif = QIF_WITH_UNKNOWN_ACCOUNT_TYPE + "!Type:Oth T\nD4/1'20\nT-5.00\nPKiosk\n^\n!Type:Bank\nD5/1'20\nT-1.00\nPBakery\n^\n"
 

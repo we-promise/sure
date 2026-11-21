@@ -366,9 +366,10 @@ module QifParser
   end
   private_class_method :transaction_sections
 
-  # Maps a "!Type:" value to its TRANSACTION_TYPES entry, ignoring case and
-  # surrounding spaces. Returns nil for NON_ACCOUNT_TYPES and
-  # FALLBACK_ACCOUNT_TYPE for any other type.
+  # Maps a "!Type:" value, or the "T" type of an "!Account" record, to its
+  # TRANSACTION_TYPES entry, ignoring case and surrounding spaces. Returns nil
+  # for blank values and NON_ACCOUNT_TYPES and FALLBACK_ACCOUNT_TYPE for any
+  # other type.
   def self.section_account_type(raw_type)
     type = raw_type.to_s.strip
     return nil if type.empty? || known_type(type, NON_ACCOUNT_TYPES)
@@ -399,7 +400,7 @@ module QifParser
 
     ParsedAccount.new(
       name: record["N"].strip,
-      account_type: record["T"]&.strip,
+      account_type: section_account_type(record["T"]),
       description: record["D"]&.strip
     )
   end
