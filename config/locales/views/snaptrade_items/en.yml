@@ -41,6 +41,9 @@ en:
       missing_client_id: "SnapTrade OAuth is not configured. Add SNAPTRADE_OAUTH_CLIENT_ID to .env.local, restart the app, then try again."
     start_oauth_device_flow:
       failed: "Unable to start SnapTrade device authorization. Please try again."
+    personal_key:
+      success: "SnapTrade Personal API key saved. Syncing your accounts..."
+      missing_fields: "Enter both the SnapTrade client ID and consumer key."
     complete_oauth_device_flow:
       success: "SnapTrade authorization complete."
       device_code_required: "No SnapTrade device authorization is in progress for this connection. Start it again to get a new code."
@@ -145,10 +148,17 @@ en:
       oauth_setup_step_2_html: "For the browser flow only: add this app's callback URL (<code>%{callback_url}</code>) as a registered redirect URI"
       oauth_setup_step_3: "Set SNAPTRADE_OAUTH_CLIENT_ID in your environment and restart. That alone enables the device code flow; add SNAPTRADE_OAUTH_CLIENT_SECRET for the browser flow too"
       free_tier_warning: "SnapTrade's free tier covers 20 brokerage connections."
+      personal_key_title: "SnapTrade Personal API key"
+      personal_key_description_html: "Use the free Personal key for your own brokerage accounts. Create it at <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">dashboard.snaptrade.com</a> and paste the client ID and consumer key here."
+      personal_key_client_id_label: "Client ID"
+      personal_key_consumer_key_label: "Consumer key"
+      personal_key_save_button: "Save key"
+      oauth_alternative: "Running Sure for other people? Register a SnapTrade OAuth app instead:"
       oauth_title: "SnapTrade OAuth"
       oauth_status_ready: "Authorize Sure to read your SnapTrade account data."
       oauth_status_ready_device: "Authorize Sure with a device code to read your SnapTrade account data."
       oauth_status_authorized: "Authorized with SnapTrade."
+      oauth_status_personal_key: "Syncing with your SnapTrade Personal API key. Authorizing with OAuth switches this connection to OAuth."
       oauth_connect_button: "Connect with SnapTrade"
       oauth_device_button: "Use a device code"
       oauth_reauthorize_button: "Reauthorize"

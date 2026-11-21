@@ -17,6 +17,7 @@ class Security::Resolver
     exact_match_from_db ||
       exact_match_from_provider ||
       close_match_from_provider ||
+      db_match_held_for_retry ||
       offline_security(reason: provider_search_technical_failure? ? "resolution_pending" : nil)
   end
 
@@ -96,13 +97,36 @@ class Security::Resolver
 
       return nil unless security
 
+      # Without an exchange, the lookup above returns whichever row for the
+      # ticker sorts first. While a placeholder exists, retry the provider so
+      # a successful search can fold it into the listed row, and fall back to
+      # the listed row if the search fails or finds nothing.
+      if exchange_operating_mic.blank? && (placeholder = pending_placeholder_for(symbol))
+        @db_match_held_for_retry = resolution_pending?(security) ? listed_row_besides(placeholder) : security
+        return nil
+      end
+
       # A "resolution_pending" record means the last provider search failed
       # technically (rate limit/timeout), not that the security is a
       # confirmed no-match. Skip the DB fast path so this resolution attempt
       # actually retries the provider instead of returning the same stale
       # offline record forever.
-      return nil if security.offline? && security.offline_reason == "resolution_pending"
+      return nil if resolution_pending?(security)
 
+      use_db_match(security)
+    end
+
+    def listed_row_besides(placeholder)
+      scope = Security.where("UPPER(ticker) = ?", symbol).where.not(id: placeholder.id).order(:id)
+      scope = scope.where(country_code: country_code) if country_code.present?
+      scope.detect { |security| !resolution_pending?(security) }
+    end
+
+    def db_match_held_for_retry
+      use_db_match(@db_match_held_for_retry) if @db_match_held_for_retry
+    end
+
+    def use_db_match(security)
       # When the caller provides an explicit provider (e.g. user selected from
       # search results), honor that choice. Automated syncs (Plaid, SimpleFIN)
       # pass price_provider: nil and will not overwrite.
@@ -165,6 +189,9 @@ class Security::Resolver
       match = sorted_candidates.first
 
       return nil unless match
+      # The row held back from the DB fast path is an exact ticker match;
+      # a search that only offers other tickers does not replace it.
+      return nil if @db_match_held_for_retry && match.ticker&.upcase.to_s != symbol
 
       find_or_create_provider_match!(match)
     end
@@ -174,6 +201,7 @@ class Security::Resolver
         ticker: match.ticker,
         exchange_operating_mic: match.exchange_operating_mic
       )
+      security = settle_pending_placeholder(security, match)
 
       security.country_code = match.country_code
 
@@ -203,6 +231,38 @@ class Security::Resolver
       reactivate_if_provider_available!(security)
 
       security
+    end
+
+    # A search that fails technically for a ticker without an exchange leaves
+    # a blank-MIC "resolution_pending" placeholder. Once an exchange-less
+    # lookup, the kind that created it, finds the ticker on an exchange, the
+    # placeholder is that instrument: it becomes the listed row, or is merged
+    # into it after commit when one already exists. Left alone, it would keep
+    # receiving holdings whenever a later search failed, splitting one
+    # position across two securities. A lookup for an explicit exchange says nothing about
+    # which listing the placeholder stood for.
+    def settle_pending_placeholder(security, match)
+      return security if exchange_operating_mic.present? || security.exchange_operating_mic.blank?
+
+      placeholder = pending_placeholder_for(match.ticker)
+      return security unless placeholder
+
+      if security.new_record?
+        placeholder.exchange_operating_mic = security.exchange_operating_mic
+        placeholder
+      else
+        SecurityPlaceholderSettlementJob.perform_later(placeholder.id, security.id)
+        security
+      end
+    end
+
+    def pending_placeholder_for(ticker)
+      placeholder = Security.find_by_ticker_and_exchange(ticker: ticker, match_blank_mic: true)
+      placeholder if placeholder && resolution_pending?(placeholder)
+    end
+
+    def resolution_pending?(security)
+      security.offline? && security.offline_reason == "resolution_pending"
     end
 
     # If a security was marked offline, bring it back online whenever we have

@@ -125,6 +125,10 @@ class Setting < RailsSettings::Base
   field :chimnie_api_key, type: :string, default: ENV["CHIMNIE_API_KEY"]
   field :terrascoutx_api_key, type: :string, default: ENV["TERRASCOUTX_API_KEY"]
 
+  # Instance-wide Plaid credentials; provider configuration handles ENV fallback.
+  field :plaid_secret, type: :string
+  field :plaid_eu_secret, type: :string
+
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
   # reads (decrypt) and writes (encrypt) while `super` delegates to the
@@ -148,6 +152,8 @@ class Setting < RailsSettings::Base
       anthropic_access_token
       jev_api_key
       external_assistant_token
+      plaid_secret
+      plaid_eu_secret
     ].freeze
 
     ENCRYPTED_FIELDS.each do |field_name|
