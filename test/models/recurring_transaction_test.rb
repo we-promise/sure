@@ -1431,6 +1431,169 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "active", rt.status
   end
 
+  test "create_from_transfer keeps same-amount series between the same accounts apart by day" do
+    source = @account
+    destination = accounts(:credit_card)
+
+    first = build_transfer_between(source, destination, Date.new(2026, 1, 1))
+    second = build_transfer_between(source, destination, Date.new(2026, 1, 28))
+    repeat = build_transfer_between(source, destination, Date.new(2026, 2, 28))
+
+    RecurringTransaction.create_from_transfer(first)
+    day28 = RecurringTransaction.create_from_transfer(second)
+
+    assert_equal [ 1, 28 ], @family.recurring_transactions.where(destination_account: destination).order(:expected_day_of_month).pluck(:expected_day_of_month)
+    assert_equal day28, RecurringTransaction.transfer_series_for(repeat)
+    assert_raises(ActiveRecord::RecordNotUnique) { RecurringTransaction.create_from_transfer(repeat) }
+  end
+
+  test "transfer_series_for finds a series edited to a non-monthly cadence" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 5)))
+    RecurringTransaction::FrequencyPreset.apply(series, preset: "weekly", weekday: Date.new(2026, 1, 5).wday)
+    series.save!
+
+    later_week = build_transfer_between(source, destination, Date.new(2026, 1, 19))
+
+    assert_equal series, RecurringTransaction.transfer_series_for(later_week)
+  end
+
+  test "editing the day of a recurring transfer keeps its dedup_scope in step" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 1)))
+
+    series.update!(expected_day_of_month: 28)
+
+    assert_equal "day-28", series.reload.dedup_scope
+    assert_nothing_raised do
+      RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 2, 1)))
+    end
+  end
+
+  test "editing a recurring transfer onto the day of another series is invalid" do
+    source = @account
+    destination = accounts(:credit_card)
+    RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 28)))
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 1)))
+
+    assert_not series.update(expected_day_of_month: 28)
+    assert series.errors[:expected_day_of_month].present?
+    assert_equal 1, series.reload.expected_day_of_month
+    assert_equal "day-1", series.dedup_scope
+  end
+
+  test "transfer_series_for finds a day-31 series for the last day of a short month" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 31)))
+
+    assert_equal series, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 2, 28)))
+    assert_nil RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 2, 25)))
+  end
+
+  test "transfer_series_for keeps a day-28 transfer apart from a day-31 series when a day-28 series exists" do
+    source = @account
+    destination = accounts(:credit_card)
+    RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 31)))
+    day28 = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 28)))
+
+    assert_equal day28, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 2, 28)))
+  end
+
+  test "transfer_series_for finds a series for a transfer posted within the posting tolerance" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 7, 1)))
+
+    # August 1 is a Saturday, so the payment lands on Monday the 3rd.
+    assert_equal series, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 8, 3)))
+    assert_nil RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 8, 4)))
+  end
+
+  test "transfer_series_for prefers the series whose day the transfer is on" do
+    source = @account
+    destination = accounts(:credit_card)
+    RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 7, 1)))
+    day3 = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 7, 3)))
+
+    assert_equal day3, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 8, 3)))
+  end
+
+  test "Cleaner does not let a transfer allocated to another series keep a stale series alive" do
+    source = @account
+    destination = accounts(:credit_card)
+    stale = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 1)))
+    live = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 2)))
+    stale.update!(last_occurrence_date: 7.months.ago.to_date)
+    live.update!(last_occurrence_date: Date.current)
+
+    # The stopped series' tolerance window still covers the live series' day.
+    recent = 1.month.ago.to_date.beginning_of_month + 1.day
+    entry = build_transfer_between(source, destination, recent).outflow_transaction.entry
+    occurrence = live.recurring_occurrences.create!(
+      family: @family, original_due_on: recent, due_on: recent, expected_amount: live.amount, currency: "USD", status: "scheduled"
+    )
+    occurrence.allocations.create!(
+      entry: entry, allocated_amount: live.amount, currency: "USD", state: "confirmed", source: "auto_matched"
+    )
+
+    assert_includes stale.matching_transactions.map(&:id), entry.id
+
+    RecurringTransaction.cleanup_stale_for(@family)
+
+    assert_equal "inactive", stale.reload.status
+    assert_equal "active", live.reload.status
+  end
+
+  test "Cleaner keeps a series alive on a transfer nothing else has claimed" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 1)))
+    series.update!(last_occurrence_date: 7.months.ago.to_date)
+    build_transfer_between(source, destination, 1.month.ago.to_date.beginning_of_month)
+
+    RecurringTransaction.cleanup_stale_for(@family)
+
+    assert_equal "active", series.reload.status
+  end
+
+  test "transfer_series_for ignores a monthly series whose schedule skips the date" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 31)))
+    series.update!(weekend_adjust: "skip")
+    saturday = Date.new(2026, 2, 28)
+
+    assert_not series.schedule.matches_day?(saturday)
+    assert_nil RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, saturday))
+  end
+
+  test "an exact day beats a clamped day when both are equally close" do
+    source = @account
+    destination = accounts(:credit_card)
+    day31 = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 31)))
+    day28 = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 28)))
+    # Ids decide ties otherwise: give the day-28 series the losing one.
+    [ day31, day28 ].each { |series| series.recurring_occurrences.delete_all }
+    day31.update_column(:id, "00000000-0000-4000-8000-000000000031")
+    day28.update_column(:id, "ffffffff-ffff-4fff-8fff-ffffffffff28")
+    day28 = RecurringTransaction.find(day28.id)
+
+    assert_equal day28, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 2, 28)))
+  end
+
+  test "transfer_series_for measures the day across the month boundary" do
+    source = @account
+    destination = accounts(:credit_card)
+    day31 = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 31)))
+    RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 3)))
+
+    # May 1 is one day from the day-31 series' April 30 occurrence, two from day 3.
+    assert_equal day31, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 5, 1)))
+  end
+
   test "projected_entry exposes source and destination on a recurring transfer" do
     destination = accounts(:credit_card)
     rt = @family.recurring_transactions.create!(
@@ -2124,6 +2287,18 @@ class RecurringTransactionTest < ActiveSupport::TestCase
         expected_day_of_month: 1, last_occurrence_date: Date.current,
         next_expected_date: 1.month.from_now.to_date, status: "active", manual: true, **attributes
       )
+    end
+
+    def build_transfer_between(source, destination, date, amount: 2000)
+      outflow = source.entries.create!(
+        date: date, amount: amount, currency: "USD", name: "raw",
+        entryable: Transaction.new(kind: "standard")
+      )
+      inflow = destination.entries.create!(
+        date: date, amount: -amount, currency: "USD", name: "raw",
+        entryable: Transaction.new(kind: "standard")
+      )
+      Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
     end
 
     def create_transfer_series(name, destination)
