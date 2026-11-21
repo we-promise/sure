@@ -30,7 +30,21 @@
           title: t("transactions.transaction.pending_tooltip")
         ) %>
       <% end %>
+      <%# Manual reconciliation toggle (#2950) — manual accounts only. %>
       <%= render "transactions/reconcile_badge", entry: entry %>
+
+      <%# Statement-matched state (#3119) — evidence-driven, read-only.
+          statement_reconciled?, not reconciled?: the latter is the
+          reconciled_status enum's predicate for the manual toggle above. %>
+      <% if entry.statement_reconciled? %>
+        <%= render DS::Pill.new(
+          label: t("transactions.transaction.reconciled"),
+          tone: :success,
+          marker: false,
+          icon: "circle-check",
+          title: t("transactions.transaction.reconciled_tooltip")
+        ) %>
+      <% end %>
     </div>
   </div>
 </div>
