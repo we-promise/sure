@@ -1619,12 +1619,12 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     settled = seed_five_settled_expenses
     create_transaction(name: "Card hold", amount: 500, date: BIGGEST_MONTH + 3)
       .entryable.update!(extra: { "simplefin" => { "pending" => true } })
-    create_transaction(name: "Settled card charge", amount: 50, date: BIGGEST_MONTH + 3)
+    create_transaction(name: "Settled card charge", amount: 450, date: BIGGEST_MONTH + 3)
       .entryable.update!(extra: { "simplefin" => { "pending" => false } })
 
     get biggest_expenses_reports_path
 
-    assert_equal settled, biggest_expense_names
+    assert_equal [ "Settled card charge", *settled.first(4) ], biggest_expense_names
   end
 
   test "biggest expenses leaves out a future-dated transaction and keeps one dated today" do
