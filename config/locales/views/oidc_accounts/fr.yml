@@ -7,6 +7,8 @@ fr:
       account_created: Bienvenue ! Votre compte a été créé.
       account_creation_disabled: La création de compte SSO est désactivée. Veuillez
         contacter un administrateur.
+      duplicate_account: Un compte ou une identité de connexion avec ces informations
+        existe déjà
       no_pending_oidc: Aucune authentification OIDC en attente trouvée
     link:
       account_creation_disabled: La création de compte via l'authentification unique

@@ -40,3 +40,4 @@ en:
       no_pending_oidc: No pending OIDC authentication found
       account_creation_disabled: SSO account creation is disabled. Please contact an administrator.
       account_created: "Welcome! Your account has been created."
+      duplicate_account: An account or sign-in identity with these details already exists
