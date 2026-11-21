@@ -7,7 +7,9 @@ class TradeRepublicAccount::ActivitiesProcessor
   BROKER_FUNDED_TRADE_EVENT_TYPES = [ SAVEBACK_EVENT_TYPE, STOCK_PERK_EVENT_TYPE ].freeze
   # Shares moved into or out of Trade Republic from/to another broker
   # (Depotübertrag): a quantity change with no cash impact.
-  SECURITIES_TRANSFER_EVENT_TYPES = %w[SSP_SECURITIES_TRANSFER_INCOMING SSP_SECURITIES_TRANSFER_OUTGOING].freeze
+  SECURITIES_TRANSFER_EVENT_TYPES = %w[
+    SSP_SECURITIES_TRANSFER_INCOMING SSP_SECURITIES_TRANSFER_OUTGOING ACCOUNT_TRANSFER_INCOMING
+  ].freeze
   PRIVATE_MARKETS_TRADE_EVENT_TYPE = "PRIVATE_MARKET_FUND_TRADE_EXECUTED"
   # The bonus units Trade Republic adds to a Private Markets order ("1 %
   # Bonus"). The statement credits their value and buys them with it in one

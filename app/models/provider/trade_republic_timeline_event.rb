@@ -31,6 +31,10 @@ module Provider::TradeRepublicTimelineEvent
     # zero-amount trades so quantities and cost basis line up with holdings.
     "SSP_SECURITIES_TRANSFER_INCOMING" => "orderExecution",
     "SSP_SECURITIES_TRANSFER_OUTGOING" => "orderExecution",
+    # The older form of the same transfers (late 2023 and 2024). A booking and
+    # its later removal share this event type, so the direction comes from the
+    # detail, not from the type.
+    "ACCOUNT_TRANSFER_INCOMING" => "orderExecution",
     "BANK_TRANSACTION_INCOMING" => "PAYMENT_RECEIVED",
     "INCOMING_TRANSFER" => "PAYMENT_RECEIVED",
     "INCOMING_TRANSFER_DELEGATION" => "PAYMENT_RECEIVED",
@@ -67,6 +71,10 @@ module Provider::TradeRepublicTimelineEvent
     # cancellation arrives with the same event type and is turned into a
     # credit by the activities processor.
     "STAMP_DUTY_TAX_PAID" => "POC_CREATED",
+    # German advance lump sum (Vorabpauschale) for tax year 2023, charged in
+    # January 2024. From 2025 Trade Republic books it as
+    # SSP_CORPORATE_ACTION_CASH.
+    "PRE_DETERMINED_TAX_BASE" => "POC_CREATED",
     "SSP_CORPORATE_ACTION_CASH" => "DIVIDEND",
     "ssp_corporate_action_invoice_cash" => "DIVIDEND",
     "SSP_CORPORATE_ACTION_CASH_NON_DIVIDEND" => "PAYMENT_RECEIVED",

@@ -1126,6 +1126,46 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "maps the pre-determined tax base to a cash outflow and the older securities transfer to an order execution" do
+    categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
+    assert_equal "POC_CREATED", categories["PRE_DETERMINED_TAX_BASE"]
+    assert_equal "orderExecution", categories["ACCOUNT_TRANSFER_INCOMING"]
+
+    %w[PRE_DETERMINED_TAX_BASE ACCOUNT_TRANSFER_INCOMING].each do |event_type|
+      assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+    assert Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "ACCOUNT_TRANSFER_INCOMING")
+    assert_not Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "PRE_DETERMINED_TAX_BASE")
+
+    # A stored transfer whose detail was never fetched (category nil) is
+    # fetched again by the backlog.
+    stored = { "id" => "evt_old", "eventType" => "ACCOUNT_TRANSFER_INCOMING", "category" => nil, "detail" => nil, "status" => "EXECUTED" }
+    assert Provider::TradeRepublicClient.incomplete_trade_detail_event?(stored)
+  end
+
+  test "normalize_event_detail signs an older securities transfer by its shares row" do
+    item = { "id" => "evt_old", "eventType" => "ACCOUNT_TRANSFER_INCOMING", "title" => "Core S&P 500", "subtitle" => "Securities transfer" }
+    raw = lambda do |shares_title|
+      {
+        "sections" => [
+          { "title" => "Overview", "data" => [
+            { "title" => shares_title, "detail" => { "text" => "2" } },
+            { "title" => "Share price", "detail" => { "text" => "€511.96" } }
+          ] },
+          { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
+        ]
+      }
+    end
+
+    added = @client.send(:normalize_event_detail, raw.call("Shares added"), item: item)
+    removed = @client.send(:normalize_event_detail, raw.call("Shares removed"), item: item)
+
+    assert_equal "2.0", added["quantity"]
+    assert_equal "-2.0", removed["quantity"]
+    assert_equal "511.96", removed["price"]
+    assert_equal "IE00B5BMR087", removed["isin"]
+  end
+
   test "maps credit card top-ups and stock bonuses" do
     categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
     assert_equal "PAYMENT_RECEIVED", categories["PAYMENT_INBOUND_CREDIT_CARD"]
