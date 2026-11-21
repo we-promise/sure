@@ -18,6 +18,16 @@ class EnableBankingItem::Importer
   # incremental_sync_start_date).
   STORED_ROW_LOOKBACK_LIMIT = Provider::EnableBanking::FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.first.days
 
+  # A full-history request (set by complete_authorization) is acted on by syncs
+  # for this long, then dropped even if a fetch kept failing. Enable Banking
+  # says full history is typically only available for about an hour after
+  # authorization (Revolut: 5 minutes), so later retries would not get more.
+  FULL_HISTORY_REQUEST_WINDOW = 1.hour
+
+  # Raw transactions stored by an early fetch are deleted if the account is
+  # still not linked this long after that fetch.
+  UNLINKED_TRANSACTIONS_RETENTION = 7.days
+
   # Prefer booked ledger balances for net worth/current_balance. Available balances
   # can include an arranged overdraft facility for some ASPSPs (for example CGD PT),
   # so they are only a last-resort fallback.
@@ -107,6 +117,11 @@ class EnableBankingItem::Importer
 
     sync_uids_from_accounts_data(session_data[:accounts])
 
+    # Before the linked accounts, so the early fetch runs as soon after the
+    # authorization as possible. The syncer purges stale early rows first.
+    @early_fetch_truncated = 0
+    handle_full_history_request
+
     # Update accounts from session
     accounts_updated = 0
     accounts_failed = 0
@@ -188,6 +203,10 @@ class EnableBankingItem::Importer
       end
     end
 
+    # An authorization that completed while this sync ran reuses it instead
+    # of starting another one, so its request is handled here.
+    handle_full_history_request if newer_full_history_request?
+
     result = {
       success: accounts_failed == 0 && transactions_failed == 0,
       accounts_updated: accounts_updated,
@@ -195,11 +214,47 @@ class EnableBankingItem::Importer
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed,
       balances_failed: balances_failed,
-      transactions_truncated: transactions_truncated
+      transactions_truncated: transactions_truncated + @early_fetch_truncated
     }
 
     result[:error] = @sync_error || I18n.t("enable_banking_items.errors.unexpected") if !result[:success]
     result
+  end
+
+  # Raw transactions stored by an early fetch are deleted if the account is
+  # still unlinked UNLINKED_TRANSACTIONS_RETENTION later (skipped in setup,
+  # or setup never finished). Processing a linked account clears
+  # early_fetched_at, so rows of an account that was linked and later
+  # unlinked are kept, and a relink stays incremental. The syncer runs it at
+  # the start of every sync, before the early fetch, so a payload fetched in
+  # that sync is never deleted.
+  def purge_stale_unlinked_transactions
+    # A linked account keeps its rows even if no sync has processed it yet.
+    # An account being deleted keeps the flag, so its rows are purged once it is unlinked.
+    enable_banking_item.enable_banking_accounts.joins(:account)
+                       .where.not(accounts: { status: "pending_deletion" })
+                       .where.not(early_fetched_at: nil).update_all(early_fetched_at: nil)
+    unlinked_accounts.where(enable_banking_accounts: { early_fetched_at: ...UNLINKED_TRANSACTIONS_RETENTION.ago })
+                     .update_all(raw_transactions_payload: nil, early_fetched_at: nil)
+  rescue => e
+    Rails.logger.warn "EnableBankingItem::Importer - Failed to purge unlinked account transactions: #{e.message}"
+    # Raw rows stay past their retention until a later sync purges them; show
+    # that in /settings/debug. The sync carries on.
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "warn",
+      message: "Enable Banking purge of stale early-fetched transactions failed; unlinked accounts keep their raw transactions until a later sync succeeds",
+      source: self.class.name,
+      provider_key: "enable_banking",
+      # An id, resolved inside capture's own rescue: the database may be what failed.
+      family_id: enable_banking_item.family_id,
+      metadata: {
+        enable_banking_item_id: enable_banking_item.id,
+        retention_days: UNLINKED_TRANSACTIONS_RETENTION.in_days.to_i,
+        error_class: e.class.name,
+        error_message: e.message.to_s.truncate(500)
+      }
+    )
   end
 
   private
@@ -1019,10 +1074,10 @@ class EnableBankingItem::Importer
       { success: true, transactions_count: transactions_count, truncated: truncated }
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Error fetching transactions for account #{enable_banking_account.uid}: #{e.message}"
-      { success: false, transactions_count: 0, error: handle_sync_error(e) }
+      { success: false, transactions_count: 0, error: handle_sync_error(e), exception: e }
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching transactions for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
-      { success: false, transactions_count: 0, error: handle_sync_error(e) }
+      { success: false, transactions_count: 0, error: handle_sync_error(e), exception: e }
     end
 
     # Collapse rows the API returns more than once for the same movement.
@@ -1358,6 +1413,109 @@ class EnableBankingItem::Importer
     # fetch always stores an array, even an empty one.
     def first_transactions_fetch?(enable_banking_account)
       enable_banking_account.raw_transactions_payload.nil?
+    end
+
+    def full_history_fetch?
+      @full_history_requested_at.present?
+    end
+
+    def handle_full_history_request
+      capture_full_history_request
+      return unless full_history_fetch?
+
+      fetch_unlinked_accounts_after_authorization
+      finish_full_history_request
+    end
+
+    def newer_full_history_request?
+      requested_at = EnableBankingItem.where(id: enable_banking_item.id).pick(:full_history_fetch_requested_at)
+      requested_at.present? && requested_at != @full_history_requested_at
+    end
+
+    # Read from the database rather than the in-memory item, which a sync may
+    # have loaded before the authorization committed. A request older than
+    # FULL_HISTORY_REQUEST_WINDOW is dropped.
+    def capture_full_history_request
+      @full_history_incomplete = false
+      requested_at = EnableBankingItem.where(id: enable_banking_item.id).pick(:full_history_fetch_requested_at)
+
+      if requested_at && requested_at < FULL_HISTORY_REQUEST_WINDOW.ago
+        Rails.logger.warn "EnableBankingItem::Importer - Dropping the full-history request from #{requested_at.iso8601} for item #{enable_banking_item.id}: older than #{FULL_HISTORY_REQUEST_WINDOW.inspect}"
+        clear_full_history_request(requested_at)
+        requested_at = nil
+      end
+
+      @full_history_requested_at = requested_at
+    end
+
+    # The request stays for the next sync unless every early fetch in this one
+    # succeeded. Clearing compares against the value read at the start of this
+    # sync, so an authorization that lands while it runs keeps its own request.
+    def finish_full_history_request
+      clear_full_history_request(@full_history_requested_at) unless @full_history_incomplete
+    end
+
+    def clear_full_history_request(requested_at)
+      EnableBankingItem.where(id: enable_banking_item.id, full_history_fetch_requested_at: requested_at)
+                       .update_all(full_history_fetch_requested_at: nil)
+    end
+
+    def unlinked_accounts
+      enable_banking_item.enable_banking_accounts
+                         .left_joins(:account_provider)
+                         .where(account_providers: { id: nil })
+    end
+
+    # Right after an authorization, also fetch the accounts that are not linked
+    # yet and have never been fetched, so their first (longest) fetch happens
+    # inside the bank's full-history window (Revolut: 5 minutes after SCA)
+    # instead of after the setup modal is submitted. The rows stay raw until
+    # the account is linked. An account with stored rows is left alone: some
+    # banks issue new transaction identifiers in every session, so a second
+    # longest fetch could import its history twice. Failures are retried while
+    # the request is fresh, never fail the sync, and are captured as debug log
+    # entries. Accounts the user ignored are not fetched.
+    def fetch_unlinked_accounts_after_authorization
+      enable_banking_item.enable_banking_accounts.needs_setup.where(raw_transactions_payload: nil).each do |enable_banking_account|
+        # Makes the rows purgeable while the account stays unlinked (see
+        # purge_stale_unlinked_transactions). Set before the fetch, so stored
+        # rows are never left without it.
+        enable_banking_account.update_columns(early_fetched_at: Time.current)
+        result = fetch_and_store_transactions(enable_banking_account)
+        if result[:success]
+          @early_fetch_truncated += 1 if result[:truncated]
+        else
+          @full_history_incomplete = true
+          capture_early_fetch_failure(enable_banking_account, result[:exception])
+        end
+      rescue => e
+        @full_history_incomplete = true
+        Rails.logger.warn "EnableBankingItem::Importer - Early transaction fetch failed for unlinked account #{enable_banking_account.uid}: #{e.message}"
+        capture_early_fetch_failure(enable_banking_account, e)
+      end
+    end
+
+    # Only the provider's own error fields are stored. Other errors keep just
+    # their class, since their message can carry a response body.
+    def capture_early_fetch_failure(enable_banking_account, error)
+      metadata = {
+        enable_banking_item_id: enable_banking_item.id,
+        enable_banking_account_id: enable_banking_account.id,
+        uid: enable_banking_account.uid,
+        full_history_requested_at: @full_history_requested_at&.iso8601,
+        error_class: error&.class&.name
+      }
+      metadata[:provider_error] = sanitized_provider_error(error) if error.is_a?(Provider::EnableBanking::EnableBankingError)
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Enable Banking transaction fetch after authorization failed for an unlinked account; retried while the full-history request is open",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        metadata: metadata
+      )
     end
 
     def determine_sync_start_date(enable_banking_account)
