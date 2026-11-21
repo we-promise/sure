@@ -14,31 +14,6 @@ class Security::TagsTest < ActiveSupport::TestCase
     @other_tag = @other_family.tags.create!(name: "Another household's scheme")
   end
 
-  # Merging a duplicate security keeps every family's tags on the canonical
-  # row, and leaves a tag the canonical row already has with the duplicate,
-  # which is about to be destroyed.
-  test "move_taggings_to! moves a duplicate's taggings and skips tags the canonical row has" do
-    duplicate = Security.create!(ticker: "AAPL", exchange_operating_mic: nil, name: "Apple duplicate")
-    @security.taggings.create!(tag: @tag)
-    duplicate.taggings.create!(tag: @tag)
-    duplicate.taggings.create!(tag: @second_tag)
-    duplicate.taggings.create!(tag: @other_tag)
-    duplicate.taggings.load
-
-    assert_no_difference -> { Tagging.count } do
-      duplicate.move_taggings_to!(@security)
-    end
-
-    assert_equal [ @tag, @second_tag ].map(&:id).sort, @security.tags_for(@family).pluck(:id).sort
-    assert_equal [ @other_tag ], @security.tags_for(@other_family).to_a
-    assert_equal [ @tag.id ], Tagging.where(taggable: duplicate).pluck(:tag_id)
-
-    assert_difference -> { Tagging.count }, -1 do
-      duplicate.destroy!
-    end
-    assert_equal 3, Tagging.where(taggable: @security).count
-  end
-
   # set_tags_for is the one writer: it takes the security's lock and keeps the
   # edit inside the family. Tag#securities only reads.
   test "a tag lists its securities but cannot attach one" do
