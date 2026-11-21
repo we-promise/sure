@@ -2,7 +2,7 @@
 
 Status: analysis and plan, 2026-11-21 · Companion to [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md)
 and [`pr-2c-generations.md`](pr-2c-generations.md). The problem comes from #5077, comment 6
-(raised in review of #4775). The implementation is a later PR on `refactor/ai-plumbing`.
+(raised in review of #4775). The implementation is its own PR, stacked on 3a (§7).
 
 Code references are to `refactor/ai-plumbing` at `c9b953993`. Versions are Rails 8.1.4.1
 (activejob 8.1.4.1), Sidekiq 8.0.5 (OSS), ruby_llm 2.1.1 and Ruby 3.4.9.
@@ -218,9 +218,11 @@ flowchart LR
 
 ## 4. Implementation outline
 
-This is for a later PR on `refactor/ai-plumbing`, under #5077. It touches `Ai::GenerationJob`,
-which PR 4 (`Busy` re-enqueue) and 3b also touch. The `Busy` re-enqueue replays the same
-arguments, so the two compose. Whichever lands second rebases.
+This is for its own PR under #5077, stacked on 3a (§7). It touches `Ai::GenerationJob`, which
+PR 4 (`Busy` re-enqueue) and 3b also touch. The `Busy` re-enqueue replays the same arguments, so
+the two compose. Whichever lands second rebases. On 3a, the requesters' `from_ai_job`,
+`initialize`, `ai_finished` and transaction input live in one place, `RuleRun::AiProgress`
+(3a's `058942628`), so the window goes there once instead of into each requester.
 
 ### 4.1 Schema
 
@@ -364,3 +366,50 @@ fingerprint ids only) and `Eval::GenerationClient`. `Ai::Shadow.enqueue`'s
 - A benchmark script in the test environment: 10,000 transactions with a stubbed transport,
   timing each job, to show that the time per job stays flat.
 - One live run of about 500 transactions on venus llama.cpp.
+
+## 7. Where it sits
+
+### 7.1 Not part of the sequencer (PR 4)
+
+The quadratic isn't PR 4's to solve. **[technical]**
+
+- **Different layer.** The sequencer decides *when* a request runs: lane order, the gate for
+  each local host, interrupts and `Busy`. It sits in the transport's instrumenter and never sees
+  requesters, scopes or a run's items. The quadratic is about *how much* each job loads and
+  carries, which happens in the requester and the job's arguments before any request reaches
+  the gate.
+- **Cloud endpoints have no gate.** A large categorize run on OpenAI or Anthropic is just as
+  quadratic, so a fix in the sequencer would miss it.
+- **Coupling.** Putting item cursors, domain scopes and RuleRun progress into the sequencer would
+  mix scheduling with domain data access.
+
+They do interact (`pr-4-sequencer.md`):
+
+- `Busy` re-enqueues replay the job's arguments every 5–15 s while a local host is busy or the
+  typing hold is on. Without this fix, each replay rebuilds every remaining item and re-serialises
+  every remaining id. With it, each replay costs one window.
+- `Busy` mustn't destroy the run, just as it doesn't call `ai_failed`.
+- A `Busy` re-enqueue that can't be queued should give up as the "next batch couldn't be queued"
+  path does: release what's outstanding and destroy the run. Test it in whichever PR lands second.
+
+**The hook for a future scheduler.** Fairness between families comes from each job re-enqueuing
+at the back of its queue (M2). If that ever moves into a scheduler, for example picking the next
+family's run in turn or sharing capacity fairly between families, `ai_generation_runs` is what it
+would read: every run in progress, by family and feature, with its cursor. That would be new work
+after PR 4, not part of it. **[product, if it's ever proposed]**
+
+### 7.2 Position in the stack
+
+**Stacked on 3a. Merged after 3a, before or after PR 4, whichever is ready first.**
+**[product: the order is @josh-sanders' call]**
+
+- **Not in 2f.** 2f is the release branch for 2a–2e and is in review. A migration and a change to
+  the job's arguments would widen it, and the quadratic is slow but correct.
+- **Not between 2f and 3a.** 3a's `058942628` moves the requesters' shared code into
+  `RuleRun::AiProgress`, the same code this PR rewrites. Landing first would conflict with that
+  move and write the window into three requesters instead of one.
+- **On 3a, beside PR 4.** PR 4 also starts from 3a. The two share one file, `Ai::GenerationJob`,
+  where PR 4 adds a `Busy` rescue and this PR changes the arguments, the next enqueue, `finish` and
+  `give_up`. The conflict is small. Landing this first means PR 4's `Busy` replays never run the
+  quadratic rebuild. 3b rebases onto both.
+
