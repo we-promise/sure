@@ -184,6 +184,8 @@ Once your initial admin account is ready, open **Settings > Self-Hosting > Onboa
 - **Invite-only**: New signups require a valid invite code unless you configure a default family for invite-only onboarding.
 - **Closed**: New signups from the registration page are blocked.
 
+In **Invite-only** and **Closed** mode, signing in through SSO only creates a new account for people with a pending invitation. See [OIDC and SSO](oidc.md#33-jit-user-creation).
+
 For single-admin or tightly controlled deployments, set the onboarding mode to **Closed** after the initial setup.
 
 ## Step 7: Set Up Automated Backups
