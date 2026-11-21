@@ -123,6 +123,25 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal [ "pending_race" ], pending.transaction.extra["auto_claimed_pending_ids"]
   end
 
+  test "does not claim a pending entry excluded meanwhile" do
+    pending = @adapter.import_transaction(
+      external_id: "pending_excluded", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    pending.update!(excluded: true)
+    return_once_from_find_pending(stale)
+
+    posted = @adapter.import_transaction(
+      external_id: "posted_after_exclude", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+
+    assert_not_equal pending.id, posted.id
+    assert_equal "pending_excluded", pending.reload.external_id
+  end
+
   test "returns the entry a concurrent import of the same posted transaction claimed" do
     pending = @adapter.import_transaction(
       external_id: "pending_same", amount: 50, currency: "USD",

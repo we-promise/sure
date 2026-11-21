@@ -174,10 +174,13 @@ module Enrichable
     write_locked_attributes { |locks| locks.except(attr.to_s) }
   end
 
+  # Locks every attribute the last save changed, in one write.
   def lock_saved_attributes!
-    saved_changes.keys.reject { |attr| ignored_enrichable_attributes.include?(attr) }.each do |attr|
-      lock_attr!(attr)
-    end
+    attrs = saved_changes.keys.reject { |attr| ignored_enrichable_attributes.include?(attr) }
+    return if attrs.empty?
+
+    locked_at = Time.current
+    write_locked_attributes { |locks| locks.merge(attrs.index_with { locked_at }) }
   end
 
   # Saves a user's edit and locks the attributes it changed in one database
@@ -200,6 +203,7 @@ module Enrichable
       reload_locked_attributes_for_update if persisted?
       raise ActiveRecord::Rollback unless yield
 
+      remember_created_row_locks
       lock_saved_attributes!
       after_lock&.call
       saved = true
@@ -279,6 +283,14 @@ module Enrichable
   # @return [void]
   def remember_row_lock
     @row_lock_transaction = self.class.current_transaction
+  end
+
+  # A row this transaction just inserted is invisible to everyone else until
+  # it commits, so it counts as locked.
+  #
+  # @return [void]
+  def remember_created_row_locks
+    remember_row_lock if previously_new_record?
   end
 
   private

@@ -199,7 +199,7 @@ class Account::ProviderImportAdapter
           # no second candidate to fall back to: when this one was claimed
           # meanwhile, the posted transaction is imported as a new entry.
           candidate = find_pending_transaction(date: date, amount: amount, currency: currency, source: source)
-          if candidate && lock_unclaimed_pending(candidate) && candidate.transaction.pending?
+          if candidate && lock_unclaimed_pending(candidate) && candidate.transaction.pending? && !candidate.excluded?
             pending_match = candidate
             Rails.logger.info("Reconciling pending→posted via exact amount match: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
           elsif candidate&.external_id == external_id

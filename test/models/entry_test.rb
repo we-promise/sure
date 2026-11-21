@@ -132,6 +132,31 @@ class EntryTest < ActiveSupport::TestCase
     assert_transaction_row_first { entry.reload.destroy! }
   end
 
+  test "save_and_lock_attributes locks a new entry's attributes without locking its rows again" do
+    entry = accounts(:depository).entries.new(
+      name: "New", date: Date.current, currency: "USD", amount: 100,
+      entryable: Transaction.new(category: categories(:food_and_drink), tag_ids: [ tags(:one).id ])
+    )
+
+    assert_no_queries_match(/FOR UPDATE/) do
+      assert entry.save_and_lock_attributes(user_modified: true, lock_tags: :if_any) { entry.save }
+    end
+
+    entry.reload
+    assert entry.user_modified?
+    assert entry.locked?(:name)
+    assert entry.locked?(:amount)
+    assert entry.transaction.locked?(:category_id)
+    assert entry.transaction.locked?(:tag_ids)
+  end
+
+  test "lock_with_entryable! locks an entry whose entryable row is missing" do
+    entry = create_transaction(account: accounts(:depository))
+    Transaction.where(id: entry.entryable_id).delete_all
+
+    assert_nothing_raised { entry.lock_with_entryable! }
+  end
+
   test "bulk_update! locks the selected rows once, not again per row" do
     entries = Array.new(3) { create_transaction(account: accounts(:depository)) }
 

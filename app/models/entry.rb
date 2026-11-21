@@ -505,11 +505,18 @@ class Entry < ApplicationRecord
   def lock_with_entryable!
     # Loading the locked entryable whole spares the query that would fetch it
     # again: lock! reloads this entry and drops its loaded associations.
-    locked_entryable = entryable_class.uncached { entryable_class.unscoped.lock.find(entryable_id) }
+    locked_entryable = entryable_class.uncached { entryable_class.unscoped.lock.find_by(id: entryable_id) }
     lock!
+    return unless locked_entryable
+
     association(:entryable).target = locked_entryable
     locked_entryable.remember_row_lock
     remember_row_lock
+  end
+
+  def remember_created_row_locks
+    super
+    entryable&.remember_created_row_locks
   end
 
   # Columns no rule condition or action reads: how an entry was edited, and
