@@ -103,6 +103,38 @@ RSpec.configure do |config|
               children: { type: :array, items: { '$ref' => '#/components/schemas/SplitChild' } }
             }
           },
+          ReceiptItemization: {
+            type: :object,
+            required: %w[id status result_url],
+            properties: {
+              id: { type: :string, format: :uuid },
+              status: { type: :string, enum: %w[pending completed failed] },
+              result_url: { type: :string },
+              proposal: { '$ref' => '#/components/schemas/SplitReceiptProposal' },
+              error: { type: :string }
+            }
+          },
+          SplitReceiptProposal: {
+            allOf: [
+              { '$ref' => '#/components/schemas/SplitRequest' },
+              {
+                type: :object,
+                required: %w[transaction_id attachment_id currency receipt_total unmatched_amount],
+                properties: {
+                  transaction_id: { type: :string, format: :uuid },
+                  attachment_id: { type: :string, description: 'The receipt attachment that was read' },
+                  merchant_name: { type: :string, nullable: true },
+                  currency: { type: :string },
+                  receipt_total: { type: :string, description: 'What the receipt lines, tax and discounts add up to' },
+                  unmatched_amount: {
+                    type: :string,
+                    description: 'Part of the transaction the receipt does not account for (a tip, a fee). ' \
+                                 'When not zero it is the last split row, named like the transaction.'
+                  }
+                }
+              }
+            ]
+          },
           SplitChild: {
             allOf: [
               { '$ref' => '#/components/schemas/Transaction' },

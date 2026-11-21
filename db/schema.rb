@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_19_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_20_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2095,6 +2095,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_000001) do
     t.index ["status"], name: "index_questrade_items_on_status"
   end
 
+  create_table "receipt_itemizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "transaction_id", null: false
+    t.uuid "user_id", null: false
+    t.uuid "attachment_id", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "proposal", default: {}, null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["attachment_id"], name: "index_receipt_itemizations_on_attachment_id"
+    t.index ["transaction_id"], name: "index_receipt_itemizations_on_transaction_id"
+    t.index ["user_id"], name: "index_receipt_itemizations_on_user_id"
+  end
+
   create_table "recurrence_rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "day_of_month"
@@ -3278,6 +3292,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_000001) do
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"
+  add_foreign_key "receipt_itemizations", "active_storage_attachments", column: "attachment_id", on_delete: :cascade
+  add_foreign_key "receipt_itemizations", "transactions", on_delete: :cascade
+  add_foreign_key "receipt_itemizations", "users", on_delete: :cascade
   add_foreign_key "recurrence_rules", "recurring_transactions", on_delete: :cascade
   add_foreign_key "recurring_allocations", "entries", on_delete: :nullify
   add_foreign_key "recurring_allocations", "recurring_occurrences", column: ["recurring_occurrence_id", "currency"], primary_key: ["id", "currency"], name: "fk_recurring_allocations_currency_matches_occurrence", on_delete: :cascade

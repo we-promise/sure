@@ -499,4 +499,70 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     get api_v1_transaction_split_url("not-a-uuid"), headers: api_headers(@api_key)
     assert_response :not_found
   end
+
+  # ITEMIZE
+
+  test "itemize queues work and returns a pending result without splitting" do
+    use_ai_routes(extract_receipt: %w[openai/gpt-4.1-mini])
+    @user.update!(ai_enabled: true)
+    attach_receipt
+    Ai::Generations::ExtractReceipt.expects(:new).never
+    assert_enqueued_with(job: Ai::GenerationJob) do
+      post itemize_api_v1_transaction_split_path(@transaction), headers: headers(@api_key)
+    end
+    assert_response :accepted
+    assert_equal "pending", response.parsed_body["status"]
+    refute @entry.reload.split_parent?
+    get response.parsed_body["result_url"], headers: headers(@api_key)
+    assert_response :success
+    assert_equal "pending", response.parsed_body["status"]
+  end
+
+  test "itemize requires consent and write scope" do
+    use_ai_routes(extract_receipt: %w[openai/gpt-4.1-mini])
+    @user.update!(ai_enabled: false)
+    post itemize_api_v1_transaction_split_path(@transaction), headers: headers(@api_key)
+    assert_response :forbidden
+    @user.update!(ai_enabled: true)
+    post itemize_api_v1_transaction_split_path(@transaction), headers: headers(@read_only_api_key)
+    assert_response :forbidden
+  end
+
+  test "itemize requires an attached receipt and authentication" do
+    use_ai_routes(extract_receipt: %w[openai/gpt-4.1-mini])
+    @user.update!(ai_enabled: true)
+    post itemize_api_v1_transaction_split_path(@transaction), headers: headers(@api_key)
+    assert_response :unprocessable_entity
+    post itemize_api_v1_transaction_split_path(@transaction)
+    assert_response :unauthorized
+  end
+
+  test "result lookup cannot read another transaction's proposal" do
+    use_ai_routes(extract_receipt: %w[openai/gpt-4.1-mini])
+    @user.update!(ai_enabled: true)
+    attach_receipt
+    request = ReceiptItemization.start!(transaction: @transaction, user: @user)
+    other = create_transaction(account: @account, amount: 25).transaction
+    get itemization_api_v1_transaction_split_path(other, receipt_itemization_id: request.id), headers: headers(@api_key)
+    assert_response :not_found
+  end
+
+  test "results are private even to another member of the same family" do
+    use_ai_routes(extract_receipt: %w[openai/gpt-4.1-mini])
+    @user.update!(ai_enabled: true)
+    attach_receipt
+    request = ReceiptItemization.start!(transaction: @transaction, user: @user)
+    request.update!(user: users(:family_member))
+    get itemization_api_v1_transaction_split_path(@transaction, receipt_itemization_id: request.id), headers: api_headers(@api_key), as: :json
+    assert_response :not_found
+  end
+
+  private
+    def headers(key)
+      { "X-Api-Key" => key.display_key }
+    end
+
+    def attach_receipt
+      @transaction.attachments.attach(io: StringIO.new("png"), filename: "receipt.png", content_type: "image/png")
+    end
 end

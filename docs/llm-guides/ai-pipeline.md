@@ -115,6 +115,7 @@ flowchart LR
 |---|---|---|---|---|
 | `chat` | interactive | tools, streaming | Chat (user) | Your chat messages; The financial data the assistant looks up to answer; The text of statements stored in your vault |
 | `bill_setup` | interactive | structured_output | Bills (user) | Transaction dates; Transaction amounts; Transaction names; Your category names; The bill's current settings |
+| `extract_receipt` | interactive | structured_output | Receipt itemization (user) | The document you upload |
 | `extract_pdf` | prompt | generation: structured_output; ocr: ocr | PDF import (user) | The document you upload |
 | `embed` | prompt | embedding | Documents (user) | Your uploaded documents, as whole files to a vector store or as text chunks to an embedding model |
 | `search_documents` | interactive | embedding | Documents (user) | Your search text |

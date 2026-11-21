@@ -17,6 +17,7 @@ en:
       detect_merchants: Merchants
       embed: Documents
       extract_pdf: PDF import
+      extract_receipt: Receipt itemization
     sends:
       bill_configuration: The bill's current settings
       category_names: Your category names

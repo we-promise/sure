@@ -149,4 +149,40 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
       end
     end
   end
+
+  path '/api/v1/transactions/{transaction_id}/split/itemize' do
+    parameter name: :transaction_id, in: :path, type: :string
+    post 'Queue a receipt split proposal' do
+      tags 'Transactions'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+      description 'Queues receipt extraction on the interactive AI queue. Poll result_url until status is completed or failed. A completed proposal is never saved as a split automatically; review proposal.split before submitting it to the split endpoint. Requires AI consent and write access.'
+      parameter name: :attachment_id, in: :query, type: :string, required: false
+      response '202', 'proposal queued or terminal enqueue failure' do
+        schema '$ref' => '#/components/schemas/ReceiptItemization'
+        run_test!
+      end
+      response('401', 'unauthorized') { run_test! }
+      response('403', 'AI unavailable or write access missing') { run_test! }
+      response('404', 'transaction not found') { run_test! }
+      response('422', 'no receipt or transaction cannot be split') { run_test! }
+    end
+  end
+
+  path '/api/v1/transactions/{transaction_id}/split/itemization/{receipt_itemization_id}' do
+    parameter name: :transaction_id, in: :path, type: :string
+    parameter name: :receipt_itemization_id, in: :path, type: :string
+    get 'Read a receipt split proposal' do
+      tags 'Transactions'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+      description 'Returns only a result requested by the authenticated user for this accessible transaction. Pending results omit proposal; failed results contain a generic error without receipt text.'
+      response '200', 'pending, completed or failed proposal' do
+        schema '$ref' => '#/components/schemas/ReceiptItemization'
+        run_test!
+      end
+      response('401', 'unauthorized') { run_test! }
+      response('404', 'transaction or result not found') { run_test! }
+    end
+  end
 end

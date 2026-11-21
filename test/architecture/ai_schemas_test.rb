@@ -9,6 +9,7 @@ class AiSchemasTest < ActiveSupport::TestCase
     Ai::Generations::DetectMerchants => -> { new(transactions: [ { id: "t1" } ], merchants: [], family: nil) },
     Ai::Generations::EnhanceMerchants => -> { new(merchants: [ { id: "m1", name: "Shop" } ], family: nil) },
     Ai::Generations::SuggestBillSetup => -> { new(charges: [], categories: [], family: nil) },
+    Ai::Generations::ExtractReceipt => -> { new(attachment: nil, family: nil, user: nil) },
     Ai::Generations::ReadPdf => -> { new(units: [], content: "", family: nil) },
     Ai::Generations::ExtractBankStatement => -> { new(units: [], content: "", family: nil) }
   }.freeze

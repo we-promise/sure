@@ -18,7 +18,7 @@ class Ai::LegacyEnvConfig
   # OpenAI's vector store embeds files on its own side, so the `embed` route names this stand-in
   # model on the OpenAI endpoint.
   VECTOR_STORE_MODEL = "vector_store".freeze
-  LLM_FEATURES = %i[bill_setup extract_pdf detect_merchants enhance_merchants].freeze
+  LLM_FEATURES = %i[bill_setup extract_pdf extract_receipt detect_merchants enhance_merchants].freeze
   # Each generation feature's prompt folder: OpenAI's detailed prompt on native OpenAI, the
   # simplified one on custom servers, and Anthropic's own.
   PROMPTS = {

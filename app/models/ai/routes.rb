@@ -14,6 +14,8 @@ module Ai::Routes
     # A route entry reads (a model with structured output; vision or documents per way of reading)
     # or transcribes (an OCR model, read before the text model extracts).
     # An OCR model alone can't extract (`requires`): it only transcribes for the model that reads.
+    extract_receipt:   { lane: :interactive, needs: %i[structured_output], consent: :user,
+                         sends: %i[uploaded_document] },
     extract_pdf:       { lane: :prompt,      needs: { generation: %i[structured_output], ocr: %i[ocr] }, requires: :generation, consent: :user,
                          sends: %i[uploaded_document] },
     embed:             { lane: :prompt,      needs: %i[embedding],              consent: :user,

@@ -1,7 +1,7 @@
 # Who has agreed to what. Chat and bills need the user's own AI switch, `users.ai_enabled`, and
 # nothing else needs any consent.
 module Ai::Consent
-  USER_SWITCH = %i[chat bill_setup].freeze
+  USER_SWITCH = %i[chat bill_setup extract_receipt].freeze
 
   # @return [Symbol, nil] the reason the feature is denied, or nil when it's allowed
   def self.denial(feature, user:)

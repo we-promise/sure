@@ -116,6 +116,58 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/SplitChild"
+    ReceiptItemization:
+      type: object
+      required:
+      - id
+      - status
+      - result_url
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - pending
+          - completed
+          - failed
+        result_url:
+          type: string
+        proposal:
+          "$ref": "#/components/schemas/SplitReceiptProposal"
+        error:
+          type: string
+    SplitReceiptProposal:
+      allOf:
+      - "$ref": "#/components/schemas/SplitRequest"
+      - type: object
+        required:
+        - transaction_id
+        - attachment_id
+        - currency
+        - receipt_total
+        - unmatched_amount
+        properties:
+          transaction_id:
+            type: string
+            format: uuid
+          attachment_id:
+            type: string
+            description: The receipt attachment that was read
+          merchant_name:
+            type: string
+            nullable: true
+          currency:
+            type: string
+          receipt_total:
+            type: string
+            description: What the receipt lines, tax and discounts add up to
+          unmatched_amount:
+            type: string
+            description: Part of the transaction the receipt does not account for
+              (a tip, a fee). When not zero it is the last split row, named like the
+              transaction.
     SplitChild:
       allOf:
       - "$ref": "#/components/schemas/Transaction"
@@ -10123,6 +10175,76 @@ paths:
           description: split removed
         '404':
           description: transaction is not split
+  "/api/v1/transactions/{transaction_id}/split/itemize":
+    parameters:
+    - name: transaction_id
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      summary: Queue a receipt split proposal
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Queues receipt extraction on the interactive AI queue. Poll result_url
+        until status is completed or failed. A completed proposal is never saved as
+        a split automatically; review proposal.split before submitting it to the split
+        endpoint. Requires AI consent and write access.
+      parameters:
+      - name: attachment_id
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '202':
+          description: proposal queued or terminal enqueue failure
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ReceiptItemization"
+        '401':
+          description: unauthorized
+        '403':
+          description: AI unavailable or write access missing
+        '404':
+          description: transaction not found
+        '422':
+          description: no receipt or transaction cannot be split
+  "/api/v1/transactions/{transaction_id}/split/itemization/{receipt_itemization_id}":
+    parameters:
+    - name: transaction_id
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: receipt_itemization_id
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Read a receipt split proposal
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Returns only a result requested by the authenticated user for this
+        accessible transaction. Pending results omit proposal; failed results contain
+        a generic error without receipt text.
+      responses:
+        '200':
+          description: pending, completed or failed proposal
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ReceiptItemization"
+        '401':
+          description: unauthorized
+        '404':
+          description: transaction or result not found
   "/api/v1/syncs":
     get:
       summary: Lists sync history

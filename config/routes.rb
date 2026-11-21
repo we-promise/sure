@@ -612,7 +612,9 @@ Rails.application.routes.draw do
   end
 
   resources :transactions, only: %i[index new create show update destroy] do
-    resource :split, only: %i[new create edit update destroy]
+    resource :split, only: %i[new create edit update destroy] do
+      post :itemize
+    end
     resource :transfer_match, only: %i[new create destroy]
     resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
@@ -852,7 +854,10 @@ Rails.application.routes.draw do
       resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ] do
-        resource :split, only: [ :show, :create, :update, :destroy ]
+        resource :split, only: [ :show, :create, :update, :destroy ] do
+          post :itemize
+          get "itemization/:receipt_itemization_id", action: :itemization, as: :itemization
+        end
       end
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]
