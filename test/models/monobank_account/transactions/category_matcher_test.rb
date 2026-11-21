@@ -43,6 +43,16 @@ class MonobankAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCa
     assert_equal localized, matcher.match(5411)&.name
   end
 
+  # CategoriesController#bootstrap uses Current.user.locale, so an English family can
+  # hold a default category persisted under a member's different locale.
+  test "matches a default category persisted in another supported locale" do
+    ukrainian = I18n.t("models.category.defaults.groceries", locale: :uk)
+    assert_not_equal I18n.t("models.category.defaults.groceries", locale: :en), ukrainian
+    matcher = build_matcher([ ukrainian ], locale: "en")
+
+    assert_equal ukrainian, matcher.match(5411)&.name
+  end
+
   test "ignores case, punctuation and the and conjunction" do
     matcher = build_matcher([ "gifts and donations" ])
 
