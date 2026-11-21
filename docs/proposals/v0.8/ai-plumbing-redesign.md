@@ -2831,6 +2831,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      use `with_schema`, Anthropic through its native `output_config`, once a live check with a
      funded key shows the current Claude models accept it.
      Implementation plan: [`pr-2c-generations.md`](pr-2c-generations.md).
+     Follow-up (#5077): runs are O(N²/B), because each job reloads every remaining item;
+     the fix, windowed requesters and a run snapshot, is planned in
+     [`ai-generation-windowing.md`](ai-generation-windowing.md).
    - **2d. Jev and shadow runs.** The `jev` transport as a thin adapter over RubyLLM's `judge`, so
      Jev's requests pass the gate and the usage path like every other call; `Ai::Judgement` and
      `categorize`'s judgement; `Ai::ShadowJob` and `Ai::Comparison` for any feature;
@@ -3140,6 +3143,7 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md) | PR 2a's implementation plan (#4773), and the RubyLLM commits since 2.1.1 that matter for 2.2 |
 | [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md) | PR 2b's implementation plan (#4774), and the agreement test's setups |
 | [`pr-2c-generations.md`](pr-2c-generations.md) | PR 2c's implementation plan (#4775), with the JSON policy, prompt folders and batches |
+| [`ai-generation-windowing.md`](ai-generation-windowing.md) | #5077 follow-up to 2c: why generation runs are O(N²/B), Continuable and Workbench compared, and windowed requesters with a run snapshot as the fix |
 | [`pr-2d-jev-and-shadow-runs.md`](pr-2d-jev-and-shadow-runs.md) | PR 2d's implementation plan (#4765): the Jev transport, judgements and shadow runs |
 | [`pr-2e-documents.md`](pr-2e-documents.md) | PR 2e's implementation plan (#4771, after 2d and #3422): attachments, `embed`, `ocr`, PDF reading with its checks, and the vector store fixes |
 | [`pr-2f-release-e2e.md`](pr-2f-release-e2e.md) | PR 2f's release e2e plan (#4892): the AI features end to end on free live models on every `v*` tag |
