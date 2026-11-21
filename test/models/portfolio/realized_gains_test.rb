@@ -1,0 +1,519 @@
+require "test_helper"
+
+class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
+  include SqlQueryCapture
+
+  setup do
+    @family = families(:empty)
+    @account = create_account
+    @march = Date.new(2026, 3, 10)
+    @april = Date.new(2026, 4, 14)
+    @period = Period.custom(start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 12, 31))
+  end
+
+  # Hand-computable: a basis of 100 a share, 2 sold at 150 is a gain of 100,
+  # and 1 sold at 130 a month later is 30. The second disposal is in another
+  # month so the buckets have to separate rather than merge into one total.
+  test "a sale is bucketed in the month it was realised" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 2, price: 150
+    sell_trade account: @account, date: @april, qty: 1, price: 130
+
+    buckets = realized.buckets
+
+    assert_equal [ Date.new(2026, 3, 1), Date.new(2026, 4, 1) ], buckets.map(&:month)
+    assert_equal BigDecimal(100), buckets.first.gains
+    assert_equal BigDecimal(0), buckets.first.losses
+    assert_equal BigDecimal(30), buckets.second.gains
+    assert_equal BigDecimal(130), realized.net
+    assert_equal 2, realized.trade_count
+  end
+
+  # A pass that fails partway must leave nothing memoized, so the next read
+  # measures again instead of returning the failed pass's empty result.
+  test "a measurement that raises is retried, not remembered as empty" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 2, price: 150
+    gains = realized
+
+    gains.stubs(:sell_trades).raises(ActiveRecord::StatementInvalid, "db down")
+    assert_raises(ActiveRecord::StatementInvalid) { gains.net }
+    gains.unstub(:sell_trades)
+
+    assert_equal BigDecimal(100), gains.net, "the retry measures the sale the failed pass never recorded"
+  end
+
+  # A transfer out carries the same negative qty as a sale. Nothing was
+  # disposed of, so there is no month and no figure, and nothing excluded.
+  test "a transfer out is not a realised sale" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 2, price: 150, label: "Transfer"
+
+    assert_empty realized.buckets
+    assert_equal 0, realized.trade_count
+    assert_empty realized.excluded_trades,
+                 "a movement that realised nothing is not a disposal this class failed to measure"
+  end
+
+  # "Exchange" on a security can dispose of an appreciated asset, so it is not
+  # an internal movement for a trade and its gain is reported.
+  test "a security exchange is still a disposal" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 2, price: 150, label: "Exchange"
+
+    assert_equal BigDecimal(100), realized.net
+  end
+
+  # A realised gain is fixed on the day of the sale. Today's rate is
+  # deliberately different: if it were used the figure would be 300, not 150.
+  test "a foreign currency gain converts at its own trade date" do
+    account = create_account(currency: "EUR")
+    holding_snapshot account: account, date: @march, cost_basis: 100
+    sell_trade account: account, date: @march, qty: 2, price: 150
+    set_rate from: "EUR", to: "USD", date: @march, rate: 1.5
+    set_rate from: "EUR", to: "USD", date: Date.current, rate: 3.0
+
+    gains = build_gains(account)
+
+    assert_equal BigDecimal(150), gains.net, "100 EUR of gain at the trade date's 1.5, not today's 3.0"
+    assert_empty gains.excluded_trades
+  end
+
+  # A sale on a day with no stored rate (a weekend, or before that day's rates
+  # sync) converts at the nearest earlier rate, as ExchangeRate.find_or_fetch_rate
+  # reuses one. The older of the two earlier rates would read 200, not 150.
+  test "a gain on a day with no rate converts at the nearest earlier one" do
+    account = create_account(currency: "EUR")
+    holding_snapshot account: account, date: @march, cost_basis: 100
+    sell_trade account: account, date: @march, qty: 2, price: 150
+    set_rate from: "EUR", to: "USD", date: @march - 3, rate: 2.0
+    set_rate from: "EUR", to: "USD", date: @march - 1, rate: 1.5
+
+    gains = build_gains(account)
+
+    assert_equal BigDecimal(150), gains.net, "100 EUR of gain at the previous day's 1.5"
+    assert_empty gains.excluded_trades
+  end
+
+  # The lookback stops where find_or_fetch_rate's does, so both sides of it:
+  # a rate exactly that many days before the sale converts, one a day older
+  # does not.
+  test "the nearest earlier rate is used only within the lookback window" do
+    lookback = ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS
+    inside = create_account(currency: "EUR")
+    holding_snapshot account: inside, date: @march, cost_basis: 100
+    sell_trade account: inside, date: @march, qty: 2, price: 150
+    set_rate from: "EUR", to: "USD", date: @march - lookback, rate: 1.5
+
+    assert_equal BigDecimal(150), build_gains(inside).net
+
+    outside = create_account(currency: "GBP")
+    holding_snapshot account: outside, date: @march, cost_basis: 100
+    sell_trade account: outside, date: @march, qty: 2, price: 150
+    set_rate from: "GBP", to: "USD", date: @march - lookback - 1, rate: 1.5
+
+    gains = build_gains(outside)
+
+    assert_empty gains.buckets, "a rate older than the lookback is not carried forward"
+    assert_equal({ missing_exchange_rate: 1 }, gains.excluded_trades)
+  end
+
+  # No parity fallback, and no borrowing from the future: a gain with no rate on
+  # or before its sale date is reported, never counted at 1:1 (which would read
+  # 100) or at a later day's rate.
+  test "a gain with no exchange rate on or before its trade date is excluded and counted" do
+    account = create_account(currency: "EUR")
+    holding_snapshot account: account, date: @march, cost_basis: 100
+    sell_trade account: account, date: @march, qty: 2, price: 150
+    set_rate from: "EUR", to: "USD", date: @march + 1, rate: 1.5
+
+    gains = build_gains(account)
+
+    assert_empty gains.buckets, "the next day's rate is not carried back"
+    assert_equal({ missing_exchange_rate: 1 }, gains.excluded_trades)
+    assert_equal 1, gains.excluded_trade_count
+  end
+
+  # Folding this case to 0 drags a total toward zero with nothing to say so.
+  test "a sale with no determinable cost basis is excluded and counted" do
+    holding_snapshot account: @account, date: @march, cost_basis: nil
+    sell_trade account: @account, date: @march, qty: 2, price: 150
+
+    assert_empty realized.buckets
+    assert_equal BigDecimal(0), realized.net
+    assert_equal({ gain_unknown: 1 }, realized.excluded_trades)
+  end
+
+  # A period whose every disposal was unmeasurable has no buckets, and that is
+  # exactly the case a caller must not hide.
+  test "a period whose only disposals are all excluded still reports itself" do
+    holding_snapshot account: @account, date: @march, cost_basis: nil
+    sell_trade account: @account, date: @march, qty: 2, price: 150
+
+    assert_empty realized.buckets
+    assert realized.any?, "the exclusion must still be reportable"
+  end
+
+  test "a portfolio with no disposals at all reports nothing" do
+    assert_not realized.any?
+    assert_empty realized.excluded_trades
+  end
+
+  # `losses` is a positive magnitude and `net` carries the sign.
+  test "a disposal below cost is a loss, reported as a magnitude with a negative net" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 2, price: 60
+
+    bucket = realized.buckets.sole
+
+    assert_equal BigDecimal(0), bucket.gains
+    assert_equal BigDecimal(80), bucket.losses
+    assert_equal BigDecimal(-80), bucket.net
+    assert_equal BigDecimal(-80), realized.net
+  end
+
+  test "gains and losses in one month are reported separately" do
+    other = create_security
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    holding_snapshot account: @account, date: @march, cost_basis: 100, security: other
+    sell_trade account: @account, date: @march, qty: 2, price: 150
+    sell_trade account: @account, date: @march, qty: 1, price: 60, security: other
+
+    bucket = realized.buckets.sole
+
+    assert_equal BigDecimal(100), bucket.gains
+    assert_equal BigDecimal(40), bucket.losses
+    assert_equal BigDecimal(60), bucket.net
+    assert_equal 2, bucket.trade_count
+  end
+
+  # Trade#realized_gain_loss converts the proceeds into the basis currency
+  # before subtracting. A USD account holding a EUR-priced security: 300 EUR
+  # of proceeds at 1.5 is 450 USD, less 200 USD of basis, so 250 USD.
+  test "a disposal priced in another currency is measured in its basis currency" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 2, price: 150, currency: "EUR"
+    set_rate from: "EUR", to: "USD", date: @march, rate: 1.5
+
+    assert_equal BigDecimal(250), realized.net
+  end
+
+  # Without a rate for the proceeds, Trade#realized_gain_loss gives no figure,
+  # and that is reported rather than counted.
+  test "a disposal whose proceeds cannot be converted into its basis is excluded" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 2, price: 150, currency: "EUR"
+
+    assert_empty realized.buckets
+    assert_equal({ gain_unknown: 1 }, realized.excluded_trades)
+  end
+
+  # The gain is carried in the HOLDING's currency, not the trade's, so that
+  # is the currency converted from. A GBP-priced sale against a EUR basis in a
+  # USD family: 300 GBP at 1.2 is 360 EUR, less 200 EUR of basis, so 160 EUR,
+  # which at 1.5 is 240 USD. Converting from the trade's GBP at 2.0 would
+  # give 320.
+  test "a gain converts from the currency its basis is carried in" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100, currency: "EUR"
+    sell_trade account: @account, date: @march, qty: 2, price: 150, currency: "GBP"
+    set_rate from: "GBP", to: "EUR", date: @march, rate: 1.2
+    set_rate from: "EUR", to: "USD", date: @march, rate: 1.5
+    set_rate from: "GBP", to: "USD", date: @march, rate: 2.0
+
+    assert_equal BigDecimal(240), realized.net
+  end
+
+  # Without the preload, each disposal looks up its own holding. Asserting
+  # equality rather than a number: the constant is the claim.
+  test "the query count does not grow with the number of disposals" do
+    seed_disposals(2)
+    few = capture_sql_queries { measure_fully(realized) }.size
+
+    seed_disposals(4)
+    many = capture_sql_queries { measure_fully(realized) }.size
+
+    assert_equal 6, realized.trade_count, "the fixture must actually grow, or this proves nothing"
+    assert_equal few, many, "2 disposals and 6 must cost the same number of queries"
+  end
+
+  # The test above prices every disposal in the account's currency, which
+  # never needs a rate. A foreign-priced disposal converts its proceeds into
+  # the basis currency, and without Trade.preload_exchange_rates that is one
+  # rate lookup per disposal. The dates differ so each needs its own rate.
+  test "the query count does not grow with foreign-priced disposals" do
+    seed_disposals(2, currency: "EUR")
+    few = capture_sql_queries { measure_fully(realized) }.size
+
+    seed_disposals(4, currency: "EUR")
+    many = capture_sql_queries { measure_fully(realized) }.size
+
+    assert_equal 6, realized.trade_count, "every disposal must be measured, or this proves nothing"
+    assert_equal few, many, "2 foreign disposals and 6 must cost the same number of queries"
+  end
+
+  # A date with no rate is an answer the preload holds, and the gain stays
+  # unknown, so these disposals cost no lookup each either.
+  test "the query count does not grow with disposals that have no rate" do
+    seed_disposals(2, currency: "EUR", rate: nil)
+    few = capture_sql_queries { measure_fully(realized) }.size
+
+    seed_disposals(4, currency: "EUR", rate: nil)
+    many = capture_sql_queries { measure_fully(realized) }.size
+
+    assert_equal 0, realized.trade_count, "an unmeasurable disposal must not count, or this proves nothing"
+    assert_equal few, many, "2 disposals with no rate and 6 must cost the same number of queries"
+  end
+
+  # Each foreign gain finds its rate in one query, whichever day before the
+  # sale that rate is on.
+  test "the query count does not grow with gains converted at an earlier day's rate" do
+    account = create_account(currency: "EUR")
+    seed = lambda do |count|
+      count.times do
+        security = create_security
+        date = @march + (@seeded_foreign = (@seeded_foreign || 0) + 1) * 7
+        holding_snapshot account: account, date: @march, cost_basis: 100, security: security
+        sell_trade account: account, date: date, qty: 1, price: 150, security: security
+        set_rate from: "EUR", to: "USD", date: date - 2, rate: 1.5
+      end
+    end
+
+    seed.call(2)
+    few = capture_sql_queries { measure_fully(build_gains(account)) }.size
+    seed.call(4)
+    many = capture_sql_queries { measure_fully(build_gains(account)) }.size
+
+    assert_equal 6, build_gains(account).trade_count, "every gain must convert, or this proves nothing"
+    assert_equal few, many, "2 gains and 6 must cost the same number of queries"
+  end
+
+  # Under fifo each sale's basis is what it took from each lot, which
+  # Trade#realized_gain_loss looks up per sale unless the set is preloaded.
+  test "the query count does not grow with fifo disposals" do
+    @account.update!(cost_basis_method: "fifo")
+    seed_fifo_disposals(2)
+    # Once untimed, so a first-touch query cannot land in "few" alone. Its
+    # repeats would then come from the query cache, so that is cleared; the
+    # seeding below clears it for "many".
+    measure_fully(realized)
+    ActiveRecord::Base.connection.clear_query_cache
+    few = capture_sql_queries { measure_fully(realized) }.size
+
+    seed_fifo_disposals(4)
+    gains = realized
+    queries = capture_sql_queries { measure_fully(gains) }
+
+    assert_equal 6, gains.trade_count, "every fifo disposal must be measured, or this proves nothing"
+    assert_equal few, queries.size, "2 fifo disposals and 6 must cost the same number of queries"
+    assert_equal 1, queries.count { |sql| sql.include?(%("holding_lot_disposals")) }, "one preload, not one per sale"
+  end
+
+  test "a fifo sale's gain is the cost of the lots it consumed" do
+    @account.update!(cost_basis_method: "fifo")
+    buy_trade account: @account, date: @march - 20, qty: 60, price: 12
+    buy_trade account: @account, date: @march - 10, qty: 40, price: 20
+    sell_trade account: @account, date: @march, qty: 10, price: 25
+    sell_trade account: @account, date: @march, qty: 60, price: 25
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    # 10 x (25 - 12) from the oldest lot, then 50 x (25 - 12) + 10 x (25 - 20).
+    # Priced off the snapshot (the 30 left, at 20) it would be 70 x (25 - 20).
+    gains = realized
+    assert_equal 2, gains.trade_count
+    assert_equal BigDecimal(830), gains.net
+  end
+
+  # Stored lots that no longer add up to the position say nothing reliable
+  # about what a sale consumed, and under fifo the snapshot's average is not
+  # that cost either, so the gain is unknown rather than priced off it.
+  test "a fifo sale whose lots do not add up to its position is excluded as gain unknown" do
+    @account.update!(cost_basis_method: "fifo")
+    security = seed_fifo_disposals(1).first
+    assert_equal 1, realized.trade_count, "the sale must measure while its lots add up, or this proves nothing"
+
+    @account.holdings.where(security: security).order(date: :desc, id: :asc).first.update_columns(qty: 7)
+
+    gains = realized
+    assert_equal 0, gains.trade_count
+    assert_equal({ gain_unknown: 1 }, gains.excluded_trades)
+  end
+
+  # A sale is measured against its security's latest snapshot on or before
+  # the sale, so that is the only holding row worth loading.
+  test "each sale loads only its own basis snapshot" do
+    (0..9).each { |offset| holding_snapshot account: @account, date: @march - offset, cost_basis: 100 }
+    sell_trade account: @account, date: @march, qty: 2, price: 150
+
+    gains = realized
+    loaded = 0
+    counter = ->(*, payload) { loaded += payload[:record_count] if payload[:class_name] == "Holding" }
+    ActiveSupport::Notifications.subscribed(counter, "instantiation.active_record") { measure_fully(gains) }
+
+    assert_equal BigDecimal(100), gains.net, "the sale must be measured, or this proves nothing"
+    assert_equal 1, loaded, "one snapshot for one sale, not the position's whole history"
+  end
+
+  # A disabled account stops contributing on its cut-off date.
+  test "a disposal after an account's cut-off date does not count" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 1, price: 150
+    sell_trade account: @account, date: @april, qty: 2, price: 150
+
+    gains = Portfolio::RealizedGains.new(
+      accounts: [ @account ], period: @period, currency: "USD", active_until_dates: { @account.id => @march }
+    )
+
+    assert_equal BigDecimal(50), gains.net, "the March sale counts and the April one does not"
+  end
+
+  # Balance::ChartSeriesBuilder takes its cut-off dates as Dates or ISO
+  # strings, since it hands them to SQL as JSON. Compared raw, a String
+  # cut-off raised on the first disposal.
+  test "a cut-off date given as an ISO string is honoured" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 1, price: 150
+    sell_trade account: @account, date: @april, qty: 2, price: 150
+
+    gains = Portfolio::RealizedGains.new(
+      accounts: [ @account ], period: @period, currency: "USD", active_until_dates: { @account.id => @march.iso8601 }
+    )
+
+    assert_equal BigDecimal(50), gains.net, "the March sale counts and the April one does not"
+  end
+
+  # An excluded entry is left out of reports: InvestmentStatement::Totals and
+  # the Reports card's realised list both filter entries.excluded = false.
+  # The kept sale shows the excluded one would otherwise have added 100.
+  test "an excluded disposal is not realised" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade(account: @account, date: @march, qty: 2, price: 150).update!(excluded: true)
+    sell_trade account: @account, date: @april, qty: 1, price: 130
+
+    assert_equal [ Date.new(2026, 4, 1) ], realized.buckets.map(&:month)
+    assert_equal BigDecimal(30), realized.net
+    assert_empty realized.excluded_trades, "an excluded entry is not a disposal this class failed to measure"
+  end
+
+  # A provider-synced holding often carries no cost_basis; its average cost
+  # then comes from the buy trades behind it (Holding#calculate_avg_cost).
+  # 5 bought at 100, 2 sold at 150: a gain of 100, not gain_unknown.
+  test "a holding with no stored cost basis measures its gain from the buys behind it" do
+    buy_trade account: @account, date: @march - 30, qty: 5, price: 100
+    holding_snapshot account: @account, date: @march, cost_basis: nil
+    sell_trade account: @account, date: @march, qty: 2, price: 150
+
+    assert_equal BigDecimal(100), realized.net
+    assert_empty realized.excluded_trades
+  end
+
+  test "a disposal outside the period does not count" do
+    holding_snapshot account: @account, date: Date.new(2025, 11, 1), cost_basis: 100
+    sell_trade account: @account, date: Date.new(2025, 11, 4), qty: 2, price: 150
+    sell_trade account: @account, date: @march, qty: 1, price: 150
+
+    assert_equal [ Date.new(2026, 3, 1) ], realized.buckets.map(&:month)
+  end
+
+  test "another account's disposals do not count" do
+    other = create_account
+    holding_snapshot account: other, date: @march, cost_basis: 100
+    sell_trade account: other, date: @march, qty: 2, price: 150
+
+    assert_not realized.any?
+  end
+
+  private
+    def realized
+      build_gains(@account)
+    end
+
+    def build_gains(account)
+      Portfolio::RealizedGains.new(accounts: [ account ], period: @period, currency: "USD")
+    end
+
+    # Reads every derived figure, so the capture covers the whole query path.
+    def measure_fully(gains)
+      gains.buckets
+      gains.excluded_trades
+      gains.net
+    end
+
+    # n securities, each with a stored basis and one sale. A foreign `currency`
+    # prices each sale on its own day, with that day's rate into the account's.
+    def seed_disposals(count, currency: nil, rate: 1.5)
+      @seeded ||= 0
+      count.times do
+        security = create_security
+        date = @march + (@seeded += 1)
+        holding_snapshot account: @account, date: @march, cost_basis: 100, security: security
+        sell_trade account: @account, date: date, qty: 1, price: 150, security: security, currency: currency
+        set_rate from: currency, to: @account.currency, date: date, rate: rate if currency && rate
+      end
+    end
+
+    # n securities in a fifo account, each bought once and sold in part on
+    # its own day, materialized so each sale has a readable lot record.
+    # Returns the securities it created.
+    def seed_fifo_disposals(count)
+      @seeded ||= 0
+      securities = Array.new(count) do
+        security = create_security
+        date = @march + (@seeded += 1)
+        buy_trade account: @account, date: @march - 20, qty: 10, price: 12, security: security
+        sell_trade account: @account, date: date, qty: 4, price: 25, security: security
+        security
+      end
+      Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+      securities
+    end
+
+    def create_account(currency: "USD")
+      @family.accounts.create!(
+        name: "Brokerage #{SecureRandom.hex(3)}", balance: 0, cash_balance: 0,
+        currency: currency, accountable: Investment.new
+      )
+    end
+
+    def create_security
+      Security.create!(ticker: "RG#{SecureRandom.hex(4)}", name: "Realised gains security")
+    end
+
+    def security_under_test
+      @security_under_test ||= create_security
+    end
+
+    def sell_trade(account:, date:, qty:, price:, currency: nil, label: "Sell", security: nil)
+      currency ||= account.currency
+      account.entries.create!(
+        name: "Sell", date: date, amount: BigDecimal((-qty.abs * price).to_s), currency: currency,
+        entryable: Trade.new(
+          security: security || security_under_test, qty: -qty.abs, price: price,
+          currency: currency, investment_activity_label: label
+        )
+      )
+    end
+
+    def buy_trade(account:, date:, qty:, price:, security: nil)
+      account.entries.create!(
+        name: "Buy", date: date, amount: BigDecimal((qty * price).to_s), currency: account.currency,
+        entryable: Trade.new(
+          security: security || security_under_test, qty: qty, price: price,
+          currency: account.currency, investment_activity_label: "Buy"
+        )
+      )
+    end
+
+    # A snapshot with an explicit per-share basis, so a test's gain is
+    # hand-computable. `cost_basis: nil` with no buy trades behind it is the
+    # case where the basis cannot be determined.
+    def holding_snapshot(account:, date:, cost_basis:, security: nil, currency: nil)
+      account.holdings.create!(
+        security: security || security_under_test, date: date, qty: 5, price: 150,
+        amount: BigDecimal(750), currency: currency || account.currency, cost_basis: cost_basis
+      )
+    end
+
+    def set_rate(from:, to:, date:, rate:)
+      ExchangeRate.create!(from_currency: from, to_currency: to, date: date, rate: rate)
+    end
+end

@@ -124,8 +124,9 @@ class Trade < ApplicationRecord
 
   # Set by callers that list many sales: what this sale took from each lot, as
   # HoldingLotDisposal.readable_by_sale gives it, or nil where there is no
-  # readable record and the basis comes from the holding snapshot. Clears the
-  # memo, so a sale measured before the preload does not keep its old figure.
+  # readable record: the basis then comes from the holding snapshot, or under
+  # fifo is unknown. Clears the memo, so a sale measured before the preload
+  # does not keep its old figure.
   def preloaded_lot_disposals=(value)
     @preloaded_lot_disposals = value
     remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
@@ -135,6 +136,7 @@ class Trade < ApplicationRecord
   # reads one preloaded set instead of a query per foreign disposal. Keyed
   # `[from, to, date]`.
   #
+  # A key present with nil means the rate was looked for and does not exist.
   # NOT authoritative when a key is absent, unlike preloaded_holdings: a caller
   # that preloads rates without preloading holdings leaves the basis side
   # unknowable without a query, so the preload keys it on the account's
@@ -186,6 +188,8 @@ class Trade < ApplicationRecord
       )
       .to_h { |rate| [ [ rate.from_currency, rate.to_currency, rate.date ], rate.rate ] }
 
+    wanted.each { |key| rates[key] = nil unless rates.key?(key) }
+
     trades.each { |trade| trade.preloaded_exchange_rates = rates }
   end
 
@@ -229,6 +233,20 @@ class Trade < ApplicationRecord
 
     by_entry = holdings.index_by { |holding| holding["basis_for_entry_id"] }
     trades.each { |trade| trade.preloaded_holdings = Array(by_entry[trade.entry.id]) }
+  end
+
+  # Everything #realized_gain_loss reads, for a whole set of sales, in a fixed
+  # number of queries however many there are: each sale's basis snapshot and
+  # their average-cost fallback, the lots each fifo sale consumed, and the
+  # proceeds-to-basis rates. Snapshots go first, because the rate preload
+  # keys on the currency the position is carried in.
+  def self.preload_realized_gains(trades)
+    return if trades.empty?
+
+    preload_basis_holdings(trades)
+    lot_disposals = HoldingLotDisposal.readable_by_sale(trades)
+    trades.each { |trade| trade.preloaded_lot_disposals = lot_disposals[trade.entry.id] }
+    preload_exchange_rates(trades)
   end
 
   # The currency this disposal's basis is carried in, where it can be answered
@@ -381,8 +399,8 @@ class Trade < ApplicationRecord
 
     # The position's average on the sale's day, applied to the units sold.
     def snapshot_cost
-      holding = basis_holding
-      holding.avg_cost * qty.abs if holding&.avg_cost
+      avg_cost = basis_holding&.avg_cost
+      avg_cost * qty.abs if avg_cost
     end
 
     def calculate_realized_gain_loss
@@ -431,28 +449,25 @@ class Trade < ApplicationRecord
     # the rate, and its absence is a fact to report rather than a 1.0 nobody
     # can see.
     #
-    # A rate that is present but not positive is absent for this purpose.
-    # `ExchangeRate` validates presence only -- neither the model nor the
-    # column requires a positive number -- so a provider or an import can leave
-    # a 0 behind, and multiplying by it books the disposal as a total loss the
-    # user never made. A negative one is worse: it flips the sign. Both are the
-    # missing-rate case wearing a number, and reporting no figure is the whole
-    # point of the paragraph above.
+    # A rate that is present but not positive is absent for this purpose. The
+    # table refuses one, but a preloaded map is handed in. Multiplying by 0
+    # books the disposal as a total loss the user never made, and a negative
+    # flips the sign.
     def converted_to_basis_currency(proceeds, basis_currency)
       from = proceeds.currency.iso_code
       to = basis_currency.iso_code
       return proceeds if from == to
 
-      rate = preloaded_rate(from, to) ||
-             ExchangeRate.find_by(from_currency: from, to_currency: to, date: entry.date)&.rate
+      rate = exchange_rate_on_entry_date(from, to)
       return nil unless rate.to_d.positive?
 
       Money.new(proceeds.amount * rate, to)
     end
 
-    def preloaded_rate(from, to)
-      return nil unless defined?(@preloaded_exchange_rates)
+    def exchange_rate_on_entry_date(from, to)
+      key = [ from, to, entry.date ]
+      return @preloaded_exchange_rates[key] if @preloaded_exchange_rates&.key?(key)
 
-      (@preloaded_exchange_rates || {})[[ from, to, entry.date ]]
+      ExchangeRate.find_by(from_currency: from, to_currency: to, date: entry.date)&.rate
     end
 end
