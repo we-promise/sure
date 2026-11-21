@@ -36,15 +36,16 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert check(value([ [ "2025-02-01", 1234.56 ] ]), source: "01/02/2025 salary 1 234,56").amounts_in_source
     assert check(value([ [ "2025-02-01", 234.56 ] ]), source: "01/02/2025 salary 234,56").amounts_in_source
     assert_equal false, check(value([ [ "2025-02-01", 234.56 ] ]), source: "01/02/2025 salary 1 234,56").amounts_in_source
+    assert check(value([ [ "2025-02-01", 234.56 ] ]), source: "01/02/2025 fee 120.00 234.56").amounts_in_source, "after a whole amount"
   end
 
-  test "dotted and localized dates anchor their amounts" do
-    source = "05.01.2025 fee 12,50|5 janvier fee 12,50"
+  test "a dotted date anchors its amount" do
+    assert_equal 1.0, check(value([ [ "2025-01-05", -12.5 ] ]), source: "05.01.2025 fee 12,50").dates_anchored
+  end
 
-    checks = check(value([ [ "2025-01-05", -12.5 ], [ "2025-01-05", -12.5 ] ]), source:)
-
-    assert checks.amounts_in_source
-    assert_operator checks.dates_anchored, :>=, 0.5
+  test "a localized month name anchors its amount, including one of several words" do
+    assert_equal 1.0, check(value([ [ "2025-01-05", -12.5 ] ]), source: "5 janvier fee 12,50").dates_anchored
+    assert_equal 1.0, check(value([ [ "2025-01-05", -12.5 ] ]), source: "5 Am Faoilleach fee 12,50").dates_anchored
   end
 
   test "a flipped sign, a missing row or a merged row fails reconciles" do

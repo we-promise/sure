@@ -37,7 +37,7 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
       month_names.each_with_index do |name, month|
         next if month.zero? || name.blank?
 
-        (names[month] ||= []) << name.downcase
+        (names[month] ||= []) << name.downcase.gsub(/\s+/, "")   # as the source text is normalized
       end
     end
   end.transform_values(&:uniq).freeze
@@ -233,10 +233,10 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
       # The amount as a whole number in the text, not part of a longer one: "20.00" isn't in
       # "120.00", "1,020.00" or "20.005"; after a word or a comma ("Ford, 50.00") it is. Whole
       # groups of three digits after a space may be the tail of a space-grouped number: "234,56"
-      # isn't in "1 234,56".
+      # isn't in "1 234,56", but is in "120.00 234,56", after a whole amount.
       def amount_pattern(amount)
         whole = format("%.2f", amount.to_f.abs).split(".").first
-        group_tail = "(?<!\\d\\|)" if whole.length % 3 == 0
+        group_tail = "(?:(?<!\\d\\|)|(?<=[.,]\\d\\d\\|))" if whole.length % 3 == 0
         /(?<!\d)(?<!\d[.,])#{group_tail}(?:#{printed_amounts(amount).map { Regexp.escape(_1) }.join("|")})(?!\d)/
       end
 

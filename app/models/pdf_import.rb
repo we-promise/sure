@@ -208,6 +208,10 @@ class PdfImport < Import
 
       Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
       reconcile_entries!(reconciled_now, at: reconciled_at)
+      # Complete in the ledger's own transaction: a publish whose rows all matched existing
+      # entries creates none, so recovery couldn't otherwise tell it committed and would publish
+      # it again.
+      update!(status: :complete, error: nil)
     end
   end
 

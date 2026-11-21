@@ -350,7 +350,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal "error", entry.level
     assert_equal "jev", entry.provider_key
     assert_equal @family, entry.family
-    assert_equal "https://gw.example.com/v1", entry.metadata["endpoint"]
+    assert_equal "https://gw.example.com", entry.metadata["endpoint"]
     assert_equal "path", entry.metadata["reason"]
     serialized = entry.metadata.to_json
     assert_not_includes serialized, "s3cret"

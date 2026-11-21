@@ -55,17 +55,22 @@ class AccountStatement
       end
 
       # What PDF import's "Read as" can do with this scan for this family and user: a way whose
-      # routes are set up but can't take this file (too large for inline PDF) isn't suggested.
+      # routes are set up but can't take this file (too large for inline PDF), or that needs the
+      # page renderer when it isn't installed, isn't suggested.
       def scan_hint(content)
         reasons = begin
           Ai::PdfReading.new(content:, family: @statement.family, filename: @statement.filename, user: @user).ways
         rescue Ai::Error::Unavailable
           {}
         end
-        way = %i[pdf images ocr].find { reasons.key?(_1) && reasons[_1].nil? }
+        rendered = Pdf::PageImages.executable.present?
+        way = %i[pdf images ocr].find { reasons.key?(_1) && reasons[_1].nil? && (_1 == :pdf || rendered) }
         if way
           "Importing it as a statement with \"Read as\" set to #{{ pdf: "PDF", images: "Images", ocr: "OCR" }.fetch(way)} can read the " \
             "scanned pages; suggest that, or ask the user for the figures. Don't guess."
+        elsif reasons[:pdf] == :too_large
+          "It is too large for the model set up here to read as a scan; a smaller PDF (fewer pages) may work. " \
+            "Otherwise ask the user for the figures directly rather than guessing."
         else
           "No model set up on this install can read scanned pages. Ask the user for the figures directly rather than guessing."
         end

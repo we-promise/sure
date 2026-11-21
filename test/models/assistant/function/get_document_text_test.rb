@@ -215,10 +215,24 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
     statement = create_statement
     PDF::Reader.stubs(:new).returns(stub(pages: [ stub(text: "") ]))
     Ai::PdfReading.any_instance.stubs(:ways).returns({ pdf: :too_large, text: :no_text_layer, images: nil, ocr: :needs_ocr_route })
+    Pdf::PageImages.stubs(:executable).returns("/usr/bin/pdftoppm")
 
     result = @fn.call("account_statement_id" => statement.id)
 
     assert_match(/"Read as" set to Images/, result[:note])
+  end
+
+  test "without the page renderer, a scan too large for PDF says so instead of suggesting Images" do
+    use_ai_routes
+    statement = create_statement
+    PDF::Reader.stubs(:new).returns(stub(pages: [ stub(text: "") ]))
+    Ai::PdfReading.any_instance.stubs(:ways).returns({ pdf: :too_large, text: :no_text_layer, images: nil, ocr: :needs_ocr_route })
+    Pdf::PageImages.stubs(:executable).returns(nil)
+
+    result = @fn.call("account_statement_id" => statement.id)
+
+    assert_no_match(/Read as/, result[:note])
+    assert_match(/too large/, result[:note])
   end
 
   test "reports a scan with no text layer as unreadable and names the reason" do

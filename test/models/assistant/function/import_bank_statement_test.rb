@@ -51,9 +51,10 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_not second[:success]
     assert_equal "draft_already_exists", second[:error]
     assert_equal first[:import_id], second[:import_id]
-    assert_match(/delete that draft/i, second[:message])
+    assert_match(/delete draft import/i, second[:message])
+    assert_match(/write access/i, second[:message])
     assert_match(/delete draft import/i, second[:available_actions].sole)
-    assert_match(/delete its draft import/i, Assistant::Function::ImportBankStatement.description)
+    assert_match(/draft_already_exists/, Assistant::Function::ImportBankStatement.description)
     assert_equal 1, @user.family.imports.where(type: "TransactionImport", source_pdf_import_id: @import.id).count
   end
 
@@ -69,6 +70,7 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_not second[:success]
     assert_equal "draft_already_exists", second[:error]
     assert_equal draft.id, second[:import_id]
+    assert_match(/revert import .* removes the transactions it published, then delete it/, second[:message])
   end
 
   test "a failed import that still owns committed entries blocks another draft" do

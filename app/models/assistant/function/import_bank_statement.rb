@@ -32,9 +32,9 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         If account_id is not provided, you should ask the user which account to import to.
 
         read_as is optional: leave it out (Auto) unless the user asks for a way. If an earlier
-        extraction came out badly, ask the user to delete its draft import first; publishing or
-        reviewing that draft does not allow a second extraction, and read_as alone won't create one
-        while the draft exists.
+        extraction came out badly, a second one needs its import gone first: the tool's
+        draft_already_exists answer says what the user must do (delete it, or revert a published one
+        and then delete it).
       INSTRUCTIONS
     end
   end
@@ -211,15 +211,22 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
             .first
     end
 
+    # What clears the guard: deleting the draft, after reverting it if it published anything.
+    # Both need write access to the account.
     def draft_exists(draft)
+      step = if draft.complete? || draft.entries.exists?
+        "revert import #{draft.id} on the imports page, which removes the transactions it published, then delete it"
+      else
+        "delete draft import #{draft.id}"
+      end
       {
         success: false,
         error: "draft_already_exists",
         import_id: draft.id,
-        message: "This statement already has a draft for that account (import #{draft.id}). " \
-                 "Delete that draft first; reviewing or publishing it does not allow a second extraction, " \
-                 "and read_as alone cannot create another draft while it exists.",
-        available_actions: [ "Ask the user to delete draft import #{draft.id}, then call this tool again" ]
+        message: "This statement already has an import for that account (import #{draft.id}). To extract it again, " \
+                 "the user must #{step}; that needs write access to the account. Reviewing or publishing it does " \
+                 "not allow a second extraction, and read_as alone cannot create another while it exists.",
+        available_actions: [ "Ask the user to #{step}, then call this tool again" ]
       }
     end
 

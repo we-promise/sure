@@ -3,12 +3,6 @@
 class ProcessPdfJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(:extract_pdf) }
 
-  # Marked failed with its reason before it's raised, and a failed import isn't processed again,
-  # so a retry would do nothing: the user reads it again or uploads again.
-  discard_on(Ai::Error::Base, Pdf::PageImages::Error) do |job, err|
-    Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}, error_class=#{err.class.name})")
-  end
-
   # reread: "Read again as…" claimed the import with reread_token; the previous
   # reading is cleared here, under the lock that verifies that claim. The token stays until a
   # terminal status, so a retry after cleanup can resume instead of being rejected as stale.
@@ -30,10 +24,12 @@ class ProcessPdfJob < ApplicationJob
 
     Ai::CallContext.job("pdf_import:#{pdf_import.id}") { process(pdf_import, family:, reread_token: token) }
   rescue Ai::Error::Base, Pdf::PageImages::Error => e
-    # discard_on below must not retire a job whose failed status is unrecorded. A failed write
-    # raises a different error, so the job is retried instead of discarded.
+    # The import is marked failed with its reason, and a failed import isn't processed again, so
+    # the job ends here: the user reads it again or uploads again. It isn't re-raised, since
+    # Active Job would log the provider's message. A failed write raises a different error, so the
+    # job is retried.
     record_failed_status(pdf_import, e, reread_token: token)
-    raise
+    Rails.logger.error("[ProcessPdfJob] failed (job_id=#{job_id}, error_class=#{e.class.name})")
   end
 
   private
@@ -185,9 +181,12 @@ class ProcessPdfJob < ApplicationJob
       raise update_error   # not an Ai::Error, so discard_on can't retire this job
     end
 
+    # A redelivery of a job whose worker stopped: the same recovery as the reaper's, so a
+    # classified import can be read again and an unclassified one goes back to pending.
     def reset_processing_claim(pdf_import)
-      pdf_import.with_lock do
-        pdf_import.update!(status: :pending, reread_token: nil) if pdf_import.importing? && pdf_import.updated_at <= 30.minutes.ago
+      needs_sync = pdf_import.with_lock do
+        pdf_import.importing? && pdf_import.updated_at <= 30.minutes.ago && pdf_import.recover_lost_claim!
       end
+      pdf_import.family.sync_later if needs_sync
     end
 end

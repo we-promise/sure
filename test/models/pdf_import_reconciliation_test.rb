@@ -443,6 +443,21 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     end
   end
 
+  test "a publish whose every row matched a synced entry is complete once the ledger commits" do
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")   # a sync lands before publishing
+    @import.update_columns(status: "importing", updated_at: 2.hours.ago)
+
+    assert_no_difference -> { @account.entries.count } do
+      @import.import!
+    end
+
+    # The worker stops here: the import is already complete, so recovery doesn't reopen it.
+    assert @import.reload.complete?
+    assert_not @import.force_fail!
+  end
+
   test "assigning an account that reconciles every row completes the import" do
     @import.update!(account: nil, status: :pending)
     create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")

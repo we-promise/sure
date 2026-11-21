@@ -44,7 +44,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "complete", processed_import.reload.status
   end
 
-  test "skips already processed importing import and releases processing claim" do
+  test "a redelivered job for a classified import whose worker stopped fails it, so it can be read again" do
     processed_import = imports(:pdf_processed)
     attach_pdf!(processed_import)
     processed_import.update!(document_type: "financial_document")
@@ -53,7 +53,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
     ProcessPdfJob.perform_now(processed_import)
 
-    assert_equal "pending", processed_import.reload.status
+    assert_equal "failed", processed_import.reload.status
   end
 
   test "skips already processed importing import without releasing fresh processing claim" do
@@ -139,7 +139,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     error = assert_raises(StandardError) do
       ProcessPdfJob.new.send(:record_failed_status, @import, Ai::Error::NoCredit.new("No credit", status: 400))
     end
-    assert_equal "database down", error.message, "a generic error isn't swallowed by discard_on(Ai::Error::Base)"
+    assert_equal "database down", error.message, "a failed write is retried, not swallowed with the AI error"
   end
 
   test "an account error shows fixed text rather than the provider's message" do
@@ -150,6 +150,22 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
     assert_equal "failed", @import.reload.status
     assert_equal I18n.t("imports.pdf_import.account_errors.no_credit"), @import.error
+  end
+
+  test "an AI failure is recorded and logged by class only, never with the provider's message" do
+    attach_pdf!(@import)
+    @import.expects(:process_with_ai).once.raises(Ai::Error::RateLimited.new("quota for account 12345678 exceeded", status: 429))
+    log = StringIO.new
+    original = [ Rails.logger, ActiveJob::Base.logger ]
+    Rails.logger = ActiveJob::Base.logger = ActiveSupport::Logger.new(log)
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert_equal "failed", @import.reload.status
+    assert_match "Ai::Error::RateLimited", log.string
+    assert_no_match "12345678", log.string
+  ensure
+    Rails.logger, ActiveJob::Base.logger = original
   end
 
   test "a rendering failure keeps its concrete reason (#3275)" do

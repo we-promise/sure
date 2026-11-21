@@ -135,7 +135,7 @@ class Family::AutoCategorizer
       DebugLogEntry.capture(
         category: "auto_categorization", level: "error", message: "Jev is misconfigured; falling back to the LLM provider",
         source: self.class.name, family:, provider: "jev",
-        metadata: { endpoint: Ai::LegacyEnvConfig::Jev.redacted_endpoint(endpoint), reason:,
+        metadata: { endpoint: Ai::LegacyEnvConfig::Jev.endpoint_origin(endpoint), reason:,
                     detail: Ai::LegacyEnvConfig::Jev::UNSUPPORTED.fetch(reason) }
       )
     end
