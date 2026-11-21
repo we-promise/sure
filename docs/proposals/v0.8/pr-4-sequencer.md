@@ -6,11 +6,12 @@ whole design), §12 (the gate's cancel point), §17 (`ai_gate_test`, `ai_lane_te
 "Prompt cache and prompt reads on one slot" in [`rubyllm-spike-report.md`](rubyllm-spike-report.md),
 and [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md), whose four parts (3a–3d) are
 built at the same time.
-**Base:** 3a (`feat/ai-3a-capsule-probes`), which sits on `feat/ai-2f-review` @
-`d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0; 2f's head now pins 2.2.2). 3a gives PR 4 the
+**Base:** 3a-tidy (`feat/ai-3a-tidy`), the editor's pass stacked on 3a
+(`feat/ai-3a-capsule-probes`), on `refactor/ai-plumbing` @ `d51f2ec20` (2a–2f merged, ruby_llm
+2.2.3). 3a and its pass give PR 4 the
 `ApplicationJob` hook, `Ai::Capsule`'s queue list, `Ai::SharedState` and `Ai::ProbeJob` without a
 copy of its own.
-**Branch:** `feat/ai-4-sequencer`, worktree `~/src/sure-ai-4`, started from 3a, then built in
+**Branch:** `feat/ai-4-sequencer`, worktree `~/src/sure-ai-4`, started from 3a-tidy, then built in
 parallel with 3b and 3c (calls by @josh-sanders, 2026-11-13 and 2026-11-16).
 **Merge order:** after 3a, before 3b, 3c and 3d, which rebase onto it (PR 3's decision 9). It
 doesn't have to share a release with any part of PR 3.

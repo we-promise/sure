@@ -3,22 +3,28 @@
 **Companion to:** [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) §19 (PR 3), §7 (transports
 run only inside the AI capsules), §11 ("No LLM call on a web thread"), §12, §13, §14, §15 and §17,
 and [`pr-4-sequencer.md`](pr-4-sequencer.md), which merges between 3a and 3b.
-**Base:** `feat/ai-2f-review` @ `928052010` (2f squashed onto 2e, ruby_llm 2.2.2). The context
-below was checked on the earlier head `d55dc808a`; 3a was built on `928052010`.
-**Parts:** four PRs into `main`, each stacked on the one before (decision 9):
+**Base:** `refactor/ai-plumbing` @ `d51f2ec20` (2a–2f squash-merged, main merged in, Ruby 3.4.13).
+3a was built on `928052010` (2f's head before it merged) and restacked onto `d51f2ec20` on
+2026-11-21. The context below was checked on the earlier head `d55dc808a`.
+**Parts:** four PRs, each stacked on the one before (decision 9). 3a lands as three PRs in a GitHub
+stack on `refactor/ai-plumbing`: 3a itself, then its editor's pass, then its test trim (call by
+@josh-sanders, 2026-11-21):
 
 | Part | Branch | Steps |
 |---|---|---|
 | 3a Capsule, shared state and probes | `feat/ai-3a-capsule-probes` | 1–2 |
+| 3a-tidy Editor's pass over 3a and 2a–2f | `feat/ai-3a-tidy` | [Editor's pass](#2-aiprobejob) |
+| 3a-tests A few comprehensive AI tests per layer | `feat/ai-3a-test-trim` | [Editor's pass](#2-aiprobejob) |
 | 3b Bill suggestions and stopping AI work | `feat/ai-3b-bill-suggestions` | 3–5 |
 | 3c Documents and MCP tools | `feat/ai-3c-documents-mcp` | 6–7 |
 | 3d Capsule-only | `feat/ai-3d-capsule-only` | 8 |
 
-Worktree `~/src/sure-ai-3`. PR 4's branch `feat/ai-4-sequencer` starts from 3a; 3b and 3c are
-built from 3a while PR 4 is, and rebased onto PR 4 before review.
+Worktrees `~/src/sure-ai-3`, `~/src/sure-ai-3-tidy` and `~/src/sure-ai-3-tests`. PR 4's branch
+`feat/ai-4-sequencer` starts from 3a-tidy, which holds the shape PR 4 and 3b need (below); 3b and
+3c are built from 3a-tidy while PR 4 is, and rebased onto PR 4 before review.
 **Merge order:** 3a, then PR 4, then 3b and 3c (neither depends on the other), then 3d. No part has
 to ship in the same release as another (see [Order with PR 4](#order-with-pr-4)).
-**Status:** 3a built 2026-11-17 (`d4ddc5b4c`, `d7d558114`), not pushed and no PR yet; 3b–3d
+**Status:** 3a, 3a-tidy and 3a-tests restacked onto `d51f2ec20` on 2026-11-21 (3a `cd11a37bf` + `f6b25ff9b`, 3a-tidy `7a8681987`, 3a-tests `3d25c604c`; full suite green on each, e2e 12/12 on the top); 3b–3d
 planned. Decisions 1–8 made by @josh-sanders on 2026-11-13, decision 9 on 2026-11-16.
 
 ## Context
@@ -294,7 +300,7 @@ Each part is its own PR; each step is one commit.
 - Strings whose meaning changed were renamed; the old keys were dropped from every locale, and the
   new ones are in English and German.
 
-**Editor's pass (2026-11-17), so 3b and PR 4 both start from 3a:**
+**Editor's pass (2026-11-17; PR 3a-tidy since 2026-11-21), so 3b and PR 4 both start from it:**
 
 - The capsule's mark is fiber storage (`Fiber[:ai_capsule]`), like `Ai::CallContext` and PR 4's
   lane, so threads a job starts (Jev's parallel requests) are inside too. `Ai::Capsule` has no
@@ -312,6 +318,16 @@ Each part is its own PR; each step is one commit.
 - `sidekiq_config_test` checks that the AI capsules, whichever they are, poll exactly
   `Ai::Routes.ai_queues`, so PR 4's `ai_chat` capsule passes it unchanged.
 - `ai_capsule!` is left to 3d, its first user; 3a keeps `with_ai_capsule`.
+
+**Restack onto `d51f2ec20` (2026-11-21).** 2f's review rounds after `928052010` changed code the
+pass touched, so the pass was redone on the merged base, not replayed:
+- #4866's PDF probe output limit is the base's fix (`production_pdf_output_tokens`); 3a's own
+  version was dropped.
+- `Response#finish_reason` stays (the `.ai` event records it); Jev's `endpoint_origin` stays (logs
+  carry only scheme, host and port). `redacted_endpoint` still folds into `Redactor.url`.
+- The test trim keeps every case 2e and 2f's review rounds added, moving those in deleted files
+  (error mapping, base URL rule, NO_PROXY, RubyLLM debug logging, overloaded 400) into their
+  layer's keeper. In its 53 files, cases go from 664 to 395.
 
 ## 3b. Bill suggestions and stopping AI work
 
