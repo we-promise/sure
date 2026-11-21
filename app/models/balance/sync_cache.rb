@@ -41,7 +41,8 @@ class Balance::SyncCache
   # balance built from it is wrong by the FX gap: converted here for want of a
   # rate (see #holdings_value_by_date), or priced so by the holdings calculator
   # (Holding::PortfolioCache#price_at_parity?), which stores it in the
-  # account's currency and marks the row.
+  # account's currency and marks the row. A zero-amount row, such as a
+  # sold-out position the calculator still prices, misstates nothing.
   def holdings_valued_at_parity?(date)
     holdings_valuation.parity_dates.include?(date)
   end
@@ -91,12 +92,12 @@ class Balance::SyncCache
             # as phantom cash. Report it rather than silently accepting the wrong number.
             converted = h.amount
             @unconvertible_holding_count += 1
-            parity_dates << h.date
+            parity_dates << h.date unless h.amount.zero?
             missing_rate_pairs |= [ [ error.from_currency, error.to_currency ] ]
           end
           if h.price_at_parity
             priced_at_parity_count += 1
-            parity_dates << h.date
+            parity_dates << h.date unless h.amount.zero?
           end
           acc[h.date] += converted
         end

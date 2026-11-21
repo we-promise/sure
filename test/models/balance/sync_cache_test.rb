@@ -362,6 +362,21 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal 0, log.metadata["unconvertible_holding_count"]
   end
 
+  # A position of nothing is worth nothing at any rate, so a zero-amount row
+  # cannot misstate the balance, whichever way it was kept at 1:1.
+  test "a zero-amount holding at 1:1 marks no date" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    @account.holdings.create!(security: security, date: 2.days.ago.to_date, qty: 0, price: 100, amount: 0, currency: "USD", price_at_parity: true)
+    @account.holdings.create!(security: security, date: 1.day.ago.to_date, qty: 0, price: 100, amount: 0, currency: "EUR")
+    @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD", price_at_parity: true)
+
+    sync_cache = Balance::SyncCache.new(@account)
+
+    refute sync_cache.holdings_valued_at_parity?(2.days.ago.to_date), "priced at 1:1 by the calculator"
+    refute sync_cache.holdings_valued_at_parity?(1.day.ago.to_date), "converted at 1:1 here"
+    assert sync_cache.holdings_valued_at_parity?(Date.current)
+  end
+
   test "records no holding diagnostic when every holding converts" do
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
 

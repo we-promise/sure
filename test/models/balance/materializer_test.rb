@@ -82,6 +82,25 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_equal expected, parity.call, "re-materializing another security keeps the mark"
   end
 
+  # A sold-out security stays in the calculator's portfolio at qty 0, so a
+  # later EUR price with no rate is still kept at 1:1. Nothing is valued at
+  # that price, so no balance is wrong and none is marked.
+  test "a sold-out holding priced at 1:1 marks no balance" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    @account.entries.create!(name: "Opening", date: 5.days.ago.to_date, amount: 10_000, currency: "USD",
+                             entryable: Valuation.new(kind: "opening_anchor"))
+    euro = Security.create!(ticker: "EURX", name: "Euro listed")
+    create_trade(euro, account: @account, qty: 10, date: 4.days.ago.to_date, price: 100)
+    create_trade(euro, account: @account, qty: -10, date: 3.days.ago.to_date, price: 100)
+    euro.prices.create!(date: 2.days.ago.to_date, price: 110, currency: "EUR")
+
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+
+    sold_out = @account.holdings.find_by!(security: euro, date: 2.days.ago.to_date)
+    assert_equal [ 0, true ], [ sold_out.qty, sold_out.price_at_parity ], "the row is still priced at 1:1"
+    assert_equal [], @account.balances.where(holdings_valued_at_parity: true).pluck(:date)
+  end
+
   # The mark is the sync's: a later sync that converts the holding clears it.
   test "persists which balances valued a holding at 1:1, and a later sync rewrites it" do
     Holding::Materializer.any_instance.stubs(:materialize_holdings).returns([])
