@@ -79,6 +79,7 @@ class Holding::ForwardCalculator
           qty: qty,
           price: price.price,
           currency: price.currency,
+          price_at_parity: portfolio_cache.price_at_parity?(security_id, date, source: price_source),
           amount: qty * price.price,
           cost_basis: cost_basis_for(security_id, price.currency),
           cost_basis_unknown: cost_unknown?(security_id)

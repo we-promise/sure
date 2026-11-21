@@ -21,6 +21,7 @@ class Holding::PortfolioCache
     @account = account
     @use_holdings = use_holdings
     @security_ids = security_ids
+    @prices_at_parity = Set.new
     load_prices
   end
 
@@ -51,8 +52,10 @@ class Holding::PortfolioCache
 
     begin
       converted_amount = price_money.exchange_to(account.currency, date: date).amount
+      @prices_at_parity.delete([ security_id, date, source ])
     rescue Money::ConversionError
       converted_amount = price.price
+      @prices_at_parity << [ security_id, date, source ]
     end
 
     Security::Price.new(
@@ -61,6 +64,13 @@ class Holding::PortfolioCache
       price: converted_amount,
       currency: account.currency
     )
+  end
+
+  # True when #get_price returned this price unconverted, at 1:1, for want of
+  # a rate. The price it returns is in the account's currency either way, so
+  # this is the only place that knows.
+  def price_at_parity?(security_id, date, source: nil)
+    @prices_at_parity.include?([ security_id, date, source ])
   end
 
   def get_securities

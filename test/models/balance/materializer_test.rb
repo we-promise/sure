@@ -51,6 +51,59 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_balance_fields_persisted(expected_balances)
   end
 
+  # Holding::PortfolioCache keeps a EUR price unconverted when the pair has no
+  # rate and stores the row in USD, so the row itself says so, on its own day
+  # and on the days the calculator carries it to. A holding edit re-materializes
+  # only its own security; the other security's rows, and so the mark, stand.
+  test "a holding priced at 1:1 marks its balances, and a partial sync of another security keeps them" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    @account.entries.create!(name: "Opening", date: 4.days.ago.to_date, amount: 10_000, currency: "USD",
+                             entryable: Valuation.new(kind: "opening_anchor"))
+    euro = Security.create!(ticker: "EURX", name: "Euro listed")
+    dollar = Security.create!(ticker: "USDX", name: "Dollar listed")
+    [ euro, dollar ].each do |security|
+      @account.entries.create!(name: "Buy", date: 3.days.ago.to_date, amount: 1_000, currency: "USD",
+                               entryable: Trade.new(security: security, qty: 10, price: 100, currency: "USD", investment_activity_label: "Buy"))
+    end
+    euro.prices.create!(date: 2.days.ago.to_date, price: 110, currency: "EUR")
+    dollar.prices.create!(date: 2.days.ago.to_date, price: 105, currency: "USD")
+    parity = -> { @account.balances.order(:date).pluck(:date, :holdings_valued_at_parity).to_h }
+    expected = { 4.days.ago.to_date => false, 3.days.ago.to_date => false,
+                 2.days.ago.to_date => true, 1.day.ago.to_date => true, Date.current => true }
+
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+
+    assert_equal expected, parity.call
+    assert @account.holdings.find_by!(security: euro, date: 1.day.ago.to_date).price_at_parity, "carried over a day with no price"
+    refute @account.holdings.find_by!(security: dollar, date: 1.day.ago.to_date).price_at_parity
+
+    Balance::Materializer.new(@account, strategy: :forward, security_ids: [ dollar.id ]).materialize_balances
+
+    assert_equal expected, parity.call, "re-materializing another security keeps the mark"
+  end
+
+  # The mark is the sync's: a later sync that converts the holding clears it.
+  test "persists which balances valued a holding at 1:1, and a later sync rewrites it" do
+    Holding::Materializer.any_instance.stubs(:materialize_holdings).returns([])
+    balance = ->(parity) do
+      Balance::BalanceData.new(
+        account: @account, date: Date.current, balance: 1000, cash_balance: 1000, currency: "USD",
+        start_cash_balance: 1000, start_non_cash_balance: 0, cash_inflows: 0,
+        cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: 0, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1,
+        holdings_valued_at_parity: parity
+      )
+    end
+
+    Balance::ForwardCalculator.any_instance.stubs(:calculate).returns([ balance.call(true) ])
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+    assert @account.balances.find_by!(date: Date.current).holdings_valued_at_parity
+
+    Balance::ForwardCalculator.any_instance.stubs(:calculate).returns([ balance.call(false) ])
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+    refute @account.balances.find_by!(date: Date.current).holdings_valued_at_parity
+  end
+
   test "incremental sync preserves balances before window_start_date and purges only beyond calc_end_date" do
     # Add an opening anchor so opening_anchor_date is well in the past.
     @account.entries.create!(

@@ -333,6 +333,35 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal [ "EUR->USD" ], log.metadata["missing_rate_pairs"]
   end
 
+  test "says which dates valued a holding at 1:1" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    @account.holdings.create!(security: security, date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD")
+    @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    sync_cache = Balance::SyncCache.new(@account)
+
+    refute sync_cache.holdings_valued_at_parity?(1.day.ago.to_date), "a holding in the account's currency needs no rate"
+    assert sync_cache.holdings_valued_at_parity?(Date.current)
+  end
+
+  # The holdings calculator stores a price it kept at 1:1 in the account's
+  # currency, so the pair is gone; the count still tells support why returns
+  # are withheld.
+  test "reports a holding the calculator priced at 1:1" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD", price_at_parity: true)
+
+    sync_cache = Balance::SyncCache.new(@account)
+
+    assert_difference "DebugLogEntry.count", 1 do
+      assert sync_cache.holdings_valued_at_parity?(Date.current)
+    end
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal 1, log.metadata["priced_at_parity_holding_count"]
+    assert_equal 0, log.metadata["unconvertible_holding_count"]
+  end
+
   test "records no holding diagnostic when every holding converts" do
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
 

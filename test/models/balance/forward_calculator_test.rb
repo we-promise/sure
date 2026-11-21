@@ -548,6 +548,43 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
   # A trade increases/decreases cash balance (i.e. "buys" and "sells", which consume/add "brokerage cash" and create/destroy "holdings")
   # A valuation can set both cash and non-cash balances to "override" investment account value.
   # Holdings are calculated separately and fed into the balance calculator; treated as "non-cash"
+  # The balance is built from a holding valued at 1:1 for want of a rate, so
+  # the day says so; a reader can then withhold a return built on it.
+  test "a balance built from a holding valued at 1:1 is marked as such" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 2.days.ago.to_date, balance: 5000 } ]
+    )
+    security = Security.create!(ticker: "EURH", name: "Euro holding")
+    account.holdings.create!(security: security, date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    parity = calculated.to_h { |balance| [ balance.date, balance.holdings_valued_at_parity ] }
+    assert_equal false, parity[2.days.ago.to_date]
+    assert_equal true, parity[1.day.ago.to_date]
+  end
+
+  # Only an investment account's balance is built from its holdings, so a
+  # holding row left on any other account marks nothing and is not read.
+  test "a non-investment account is never marked, whatever holding rows it has" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 2.days.ago.to_date, balance: 5000 } ]
+    )
+    security = Security.create!(ticker: "EURD", name: "Euro holding")
+    account.holdings.create!(security: security, date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "EUR")
+    account.holdings.create!(security: security, date: 2.days.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD", price_at_parity: true)
+    Balance::SyncCache.any_instance.expects(:holdings_valued_at_parity?).never
+
+    calculated = assert_no_difference("DebugLogEntry.count") { Balance::ForwardCalculator.new(account).calculate }
+
+    assert calculated.any?
+    refute calculated.any?(&:holdings_valued_at_parity)
+  end
+
   test "investment account calculates balance from transactions and trades and treats holdings as non-cash, additive to balance" do
     account = create_account_with_ledger(
       account: { type: Investment, currency: "USD" },

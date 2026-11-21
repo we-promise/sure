@@ -205,7 +205,8 @@ class Balance::BaseCalculator
         cash_adjustments: args[:cash_adjustments] || 0,
         non_cash_adjustments: args[:non_cash_adjustments] || 0,
         net_market_flows: args[:net_market_flows] || 0,
-        flows_factor: flows_factor
+        flows_factor: flows_factor,
+        holdings_valued_at_parity: account.balance_type == :investment && sync_cache.holdings_valued_at_parity?(date)
       )
     end
 end

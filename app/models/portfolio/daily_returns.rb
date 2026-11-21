@@ -289,10 +289,11 @@ class Portfolio::DailyReturns
         departures_by_date AS (
           SELECT
             (sa.active_until_date + 1)::date AS date,
-            COALESCE(SUM(lb.end_balance * lb.flows_factor * er.rate), 0) AS departed_value
+            COALESCE(SUM(lb.end_balance * lb.flows_factor * er.rate), 0) AS departed_value,
+            COALESCE(BOOL_OR(lb.holdings_valued_at_parity), false) AS departed_at_parity
           FROM scoped_accounts sa
           LEFT JOIN LATERAL (
-            SELECT b.end_balance, b.flows_factor
+            SELECT b.end_balance, b.flows_factor, b.holdings_valued_at_parity
             FROM balances b
             WHERE b.account_id = sa.id
               AND b.currency = sa.currency
@@ -346,6 +347,21 @@ class Portfolio::DailyReturns
             AND (sa.active_until_date IS NULL OR fb.date <= sa.active_until_date)
           GROUP BY fb.date
         ),
+        -- The row before the period each account opens it at, read once; see
+        -- holdings_at_parity below.
+        opening_rows AS (
+          SELECT sa.id AS account_id, ob.holdings_valued_at_parity
+          FROM scoped_accounts sa
+          JOIN LATERAL (
+            SELECT b.holdings_valued_at_parity
+            FROM balances b
+            WHERE b.account_id = sa.id
+              AND b.currency = sa.currency
+              AND b.date < DATE :start_date
+            ORDER BY b.date DESC
+            LIMIT 1
+          ) ob ON TRUE
+        ),
         balances_by_date AS (
           SELECT
             d.date,
@@ -387,12 +403,20 @@ class Portfolio::DailyReturns
             BOOL_OR((lb.end_balance <> 0 OR (lb.date = d.date AND lb.start_balance <> 0)
                      OR tb.net_market_flows <> 0 OR tb.cash_adjustments + tb.non_cash_adjustments <> 0)
                     AND sa.currency <> :target_currency
-                    AND er.rate IS NULL) AS rate_missing
+                    AND er.rate IS NULL) AS rate_missing,
+            -- A sync that valued a holding at 1:1 for want of a rate marks the
+            -- balance (Balance::SyncCache#holdings_valued_at_parity?), whatever
+            -- the account's currency, so this sits outside the gate above. It
+            -- reads the row the close comes from, and on the period's first day,
+            -- when that row is dated that day, the row before it (ob), whose
+            -- close the day opens at; a carried row is its own opening. Later
+            -- days open at the previous day's close, which flagged that day.
+            BOOL_OR(lb.holdings_valued_at_parity OR ob.holdings_valued_at_parity) AS holdings_at_parity
           FROM dates d
           LEFT JOIN scoped_accounts sa
             ON sa.active_until_date IS NULL OR d.date <= sa.active_until_date
           LEFT JOIN LATERAL (
-            SELECT b.date, b.end_balance, b.start_balance, b.flows_factor
+            SELECT b.date, b.end_balance, b.start_balance, b.flows_factor, b.holdings_valued_at_parity
             FROM balances b
             WHERE b.account_id = sa.id
               AND b.currency = sa.currency
@@ -400,6 +424,8 @@ class Portfolio::DailyReturns
             ORDER BY b.date DESC
             LIMIT 1
           ) lb ON TRUE
+          LEFT JOIN opening_rows ob
+            ON ob.account_id = sa.id AND d.date = DATE :start_date AND lb.date = d.date
           LEFT JOIN LATERAL (
             SELECT b.net_market_flows, b.cash_adjustments, b.non_cash_adjustments, b.flows_factor
             FROM balances b
@@ -488,7 +514,8 @@ class Portfolio::DailyReturns
           b.market,
           b.revaluations,
           b.fx_effect,
-          (b.rate_missing OR COALESCE(f.flow_rate_missing, false)) AS rate_missing,
+          (b.rate_missing OR COALESCE(f.flow_rate_missing, false)
+           OR COALESCE(b.holdings_at_parity, false) OR COALESCE(dep.departed_at_parity, false)) AS rate_missing,
           COALESCE(arr.arrived_value, 0) AS arrived_value,
           COALESCE(dep.departed_value, 0) AS departed_value,
           COALESCE(f.external_flow, 0) AS external_flow,

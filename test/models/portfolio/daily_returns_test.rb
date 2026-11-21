@@ -636,6 +636,72 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert daily_returns.rate_missing?
   end
 
+  # A sync that valued a holding at 1:1 for want of a rate marks the balance.
+  # The account and the family are both USD, so the account-level check has
+  # nothing to convert. The value stays wrong until a sync recomputes it, so
+  # a rate stored since does not clear the day.
+  test "a balance built from a holding valued at 1:1 flags its own day only" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000, holdings_valued_at_parity: true
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+
+    rows = daily_returns(end_date: day_three).rows
+
+    assert_equal [ false, true, false ], rows.map(&:rate_missing)
+
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    assert_equal [ false, true, false ], daily_returns(end_date: day_three).rows.map(&:rate_missing),
+                 "the stored value is still the 1:1 one"
+  end
+
+  # The period's first day opens at the previous day's close, from a row
+  # before the period; later days open at the previous row's close, which
+  # flagged its own day already.
+  test "a first day opening from a balance valued at 1:1 is flagged" do
+    lay_balance account: @account, date: @day_one - 1.day, opening: 1_000, closing: 1_000, holdings_valued_at_parity: true
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+
+    assert_equal [ true, false ], daily_returns.rows.map(&:rate_missing)
+
+    assert_equal [ false ], daily_returns(start_date: @day_two).rows.map(&:rate_missing),
+                 "a day opening from an ordinary row is not"
+  end
+
+  test "a balance valued at 1:1 carried forward over a gap flags every day it carries" do
+    lay_balance account: @account, date: @day_one - 1.day, opening: 1_000, closing: 1_000, holdings_valued_at_parity: true
+
+    assert_equal [ true, true ], daily_returns.rows.map(&:rate_missing)
+  end
+
+  # The value an account carries out of the scope is its cut-off row's close.
+  # Here that row is from before the period, so no row in the period carries
+  # the mark: the departure has to.
+  test "a departure valued from a balance at 1:1 is flagged" do
+    staying = create_portfolio_account(family: @family)
+    leaving = create_portfolio_account(family: @family)
+    [ @day_one - 1.day, @day_one, @day_two ].each { |date| lay_balance account: staying, date: date, opening: 1_000, closing: 1_000 }
+    lay_balance account: leaving, date: @day_one - 1.day, opening: 500, closing: 500, holdings_valued_at_parity: true
+
+    returns = Portfolio::DailyReturns.new(
+      account_ids: [ staying.id, leaving.id ], currency: @family.currency,
+      period: Period.custom(start_date: @day_one + 1.day, end_date: @day_two + 1.day),
+      active_until_dates: { leaving.id => @day_two }
+    )
+    lay_balance account: staying, date: @day_two + 1.day, opening: 1_000, closing: 1_000
+
+    assert_equal [ true, true ], returns.rows.map(&:rate_missing), "in scope on the first day, departing on the second"
+
+    lay_balance account: leaving, date: @day_two, opening: 500, closing: 500
+    fresh = Portfolio::DailyReturns.new(
+      account_ids: [ staying.id, leaving.id ], currency: @family.currency,
+      period: Period.custom(start_date: @day_one + 1.day, end_date: @day_two + 1.day),
+      active_until_dates: { leaving.id => @day_two }
+    )
+    assert_equal [ true, false ], fresh.rows.map(&:rate_missing), "a cut-off row of its own departs clean"
+  end
+
   # Balance::SyncCache applies nothing dated after today, so a scheduled
   # deposit has not moved the balance the series carries forward. Counted as a
   # flow it joined the denominator alone, and a flat day read as a loss.

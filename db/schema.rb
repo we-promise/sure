@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_21_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -270,6 +270,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.virtual "end_cash_balance", type: :decimal, precision: 19, scale: 4, as: "((start_cash_balance + ((cash_inflows - cash_outflows) * (flows_factor)::numeric)) + cash_adjustments)", stored: true
     t.virtual "end_non_cash_balance", type: :decimal, precision: 19, scale: 4, as: "(((start_non_cash_balance + ((non_cash_inflows - non_cash_outflows) * (flows_factor)::numeric)) + net_market_flows) + non_cash_adjustments)", stored: true
     t.integer "flows_factor", default: 1, null: false
+    t.boolean "holdings_valued_at_parity", default: false, null: false
     t.decimal "net_market_flows", precision: 19, scale: 4, default: "0.0", null: false
     t.decimal "non_cash_adjustments", precision: 19, scale: 4, default: "0.0", null: false
     t.decimal "non_cash_inflows", precision: 19, scale: 4, default: "0.0", null: false
@@ -1242,6 +1243,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.date "date", null: false
     t.string "external_id"
     t.decimal "price", precision: 19, scale: 4, null: false
+    t.boolean "price_at_parity", default: false, null: false
     t.uuid "provider_security_id"
     t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "security_id", null: false

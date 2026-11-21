@@ -5,5 +5,11 @@
 Holding::HoldingData = Struct.new(
   :account_id, :security_id, :date,
   :qty, :price, :currency, :amount, :cost_basis, :cost_basis_unknown,
+  :price_at_parity,
   keyword_init: true
-)
+) do
+  # False unless the calculator priced the holding at 1:1 for want of a rate.
+  def initialize(price_at_parity: false, **attributes)
+    super
+  end
+end

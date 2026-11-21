@@ -43,6 +43,24 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     assert_equal [ sale.id, purchase.id ], cache.get_trades(date: 1.day.ago.to_date).map(&:id)
   end
 
+  # The mark is the last conversion's: a rate found on a later call for the
+  # same price clears it, and the default is unmarked.
+  test "a price converted after an earlier miss is no longer marked at 1:1" do
+    date = 1.day.ago.to_date
+    Security::Price.create!(security: @security, date: date, price: 100, currency: "EUR")
+    cache = Holding::PortfolioCache.new(@account)
+
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    assert_equal 100, cache.get_price(@security.id, date).price
+    assert cache.price_at_parity?(@security.id, date)
+
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1.1))
+    assert_equal 110, cache.get_price(@security.id, date).price
+    refute cache.price_at_parity?(@security.id, date)
+
+    assert_equal false, Holding::HoldingData.new(security_id: @security.id, date: date).price_at_parity
+  end
+
   test "gets price from DB if available" do
     db_price = 210
 

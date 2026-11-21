@@ -37,6 +37,15 @@ class Balance::SyncCache
     holdings_value_by_date[date] || 0
   end
 
+  # True when that date's holdings value counted a holding at 1:1, so the
+  # balance built from it is wrong by the FX gap: converted here for want of a
+  # rate (see #holdings_value_by_date), or priced so by the holdings calculator
+  # (Holding::PortfolioCache#price_at_parity?), which stores it in the
+  # account's currency and marks the row.
+  def holdings_valued_at_parity?(date)
+    holdings_valuation.parity_dates.include?(date)
+  end
+
   def get_entries(date)
     entries_by_date[date]&.select { |e| e.transaction? || e.trade? } || []
   end
@@ -60,9 +69,17 @@ class Balance::SyncCache
       @entries_by_date ||= converted_entries.group_by(&:date)
     end
 
+    HoldingsValuation = Data.define(:totals, :parity_dates)
+
     def holdings_value_by_date
-      @holdings_value_by_date ||= begin
+      holdings_valuation.totals
+    end
+
+    def holdings_valuation
+      @holdings_valuation ||= begin
         missing_rate_pairs = []
+        parity_dates = Set.new
+        priced_at_parity_count = 0
 
         totals = account.holdings.each_with_object(Hash.new(0)) do |h, acc|
           begin
@@ -74,20 +91,28 @@ class Balance::SyncCache
             # as phantom cash. Report it rather than silently accepting the wrong number.
             converted = h.amount
             @unconvertible_holding_count += 1
+            parity_dates << h.date
             missing_rate_pairs |= [ [ error.from_currency, error.to_currency ] ]
+          end
+          if h.price_at_parity
+            priced_at_parity_count += 1
+            parity_dates << h.date
           end
           acc[h.date] += converted
         end
 
-        if @unconvertible_holding_count.positive?
+        # A row the holdings calculator priced at 1:1 is already in the account's
+        # currency, so its pair is not known here; it is counted beside the rest.
+        at_parity_count = @unconvertible_holding_count + priced_at_parity_count
+        if at_parity_count.positive?
           report_missing_rates(
-            message: "Valued #{@unconvertible_holding_count} #{"holding".pluralize(@unconvertible_holding_count)} at a 1:1 rate: no exchange rate available",
-            counts: { unconvertible_holding_count: @unconvertible_holding_count },
+            message: "Valued #{at_parity_count} #{"holding".pluralize(at_parity_count)} at a 1:1 rate: no exchange rate available",
+            counts: { unconvertible_holding_count: @unconvertible_holding_count, priced_at_parity_holding_count: priced_at_parity_count },
             missing_rate_pairs: missing_rate_pairs
           )
         end
 
-        totals
+        HoldingsValuation.new(totals: totals, parity_dates: parity_dates)
       end
     end
 
