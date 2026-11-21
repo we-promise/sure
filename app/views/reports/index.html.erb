@@ -31,7 +31,7 @@
     <%# Period Navigation Tabs %>
     <div class="flex flex-wrap items-center justify-between gap-4">
       <%= render DS::SegmentedControl.new(aria_label: t("reports.index.period_aria", default: "Report period"), class: "max-w-full overflow-x-auto no-scrollbar") do |sc| %>
-        <% %i[monthly quarterly ytd last_6_months custom].each do |ptype| %>
+        <% %i[monthly quarterly ytd last_6_months all_time custom].each do |ptype| %>
           <% sc.with_segment(t("reports.index.periods.#{ptype}"),
                active: @period_type == ptype,
                href: reports_path(period_type: ptype, **reports_filter_params),
@@ -90,6 +90,14 @@
                            class: "px-3 py-1.5 border border-primary rounded-lg text-sm bg-container-inset text-primary" %>
         </div>
       <% end %>
+    <% end %>
+
+    <% if @period_type == :all_time %>
+      <p class="text-primary font-medium text-lg lg:text-base mb-4">
+        <%= t("reports.index.period_label.all_time",
+              start: I18n.l(@start_date, format: :short_month_year),
+              end: I18n.l(@end_date, format: :short_month_year)) %>
+      </p>
     <% end %>
 
     <%# Period Display %>

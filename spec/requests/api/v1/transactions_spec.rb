@@ -56,6 +56,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Checking Account',
       balance: 1000,
       currency: 'USD',
@@ -340,7 +341,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               },
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
-              nature: { type: :string, enum: %w[income expense inflow outflow] },
+              nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Sign of the amount. Without amount, applies to the stored amount.' },
               tag_ids: {
                 type: :array,
                 items: { type: :string, format: :uuid },
@@ -383,7 +384,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - malformed tag_ids, an unknown currency, or a tag, category or merchant id the family cannot use' do
+      response '422', 'validation error - unknown nature, an amount or nature change on a transfer, malformed tag_ids, an unknown currency, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { transaction: { tag_ids: [ SecureRandom.uuid ] } } }
