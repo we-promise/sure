@@ -9,6 +9,12 @@ de:
         family_id: "%{moniker}"
         name: Name
         subtype: Untertyp
+      depository:
+        subtype: Kontotyp
+      investment:
+        subtype: Investmenttyp
+      loan:
+        subtype: Kreditart
     models:
       account: Konto
       account/credit: Kreditkarte
