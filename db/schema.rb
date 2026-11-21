@@ -1674,6 +1674,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
     t.string "color"
     t.datetime "created_at", null: false
     t.uuid "family_id"
+    t.string "iban"
     t.string "logo_url"
     t.string "name", null: false
     t.string "provider_merchant_id"

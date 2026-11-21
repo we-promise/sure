@@ -1,4 +1,6 @@
 class Merchant < ApplicationRecord
+  include Encryptable, IbanNormalizable
+
   TYPES = %w[FamilyMerchant ProviderMerchant].freeze
 
   # Merchant name key for i18n
@@ -8,6 +10,15 @@ class Merchant < ApplicationRecord
   # Using an opaque sentinel (rather than the translated display name) means a real
   # merchant can never collide with it, regardless of name or locale.
   NO_MERCHANT_FILTER_VALUE = "__no_merchant__"
+
+  # Entered by the family on its own merchants only (see
+  # FamilyMerchantsController); a ProviderMerchant is shared by every family
+  # and never holds one. Not deterministic: an IBAN is never looked up by
+  # value in SQL, Account::ProviderImportAdapter compares the family's few
+  # merchant IBANs in Ruby.
+  if encryption_ready?
+    encrypts :iban
+  end
 
   has_many :transactions, dependent: :nullify
   has_many :recurring_transactions, dependent: :destroy

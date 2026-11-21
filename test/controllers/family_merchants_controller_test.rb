@@ -79,6 +79,193 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "#000000", @merchant.reload.color
   end
 
+  test "should create merchant with a manually entered iban" do
+    post family_merchants_url, params: { family_merchant: { name: "Landlord", iban: "de89 3704 0044 0532 0130 00" } }
+
+    created_merchant = FamilyMerchant.find_by(name: "Landlord")
+    assert_equal "DE89370400440532013000", created_merchant.iban # pipelock:ignore IBAN
+  end
+
+  test "should update merchant iban" do
+    patch family_merchant_url(@merchant), params: { family_merchant: { name: @merchant.name, iban: "AT611904300234573201" } } # pipelock:ignore IBAN
+    assert_equal "AT611904300234573201", @merchant.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "edit form never renders the stored iban" do
+    @merchant.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    get edit_family_merchant_url(@merchant)
+
+    assert_response :success
+    refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
+    assert_select "input[type=checkbox][name='family_merchant[remove_iban]'][aria-labelledby='family_merchant_remove_iban_label']", 1
+    assert_select "#family_merchant_remove_iban_label", text: I18n.t("family_merchants.form.iban_remove_label")
+  end
+
+  test "iban field is a plain text field that shows only the stored last four" do
+    @merchant.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    get edit_family_merchant_url(@merchant)
+
+    assert_response :success
+    # Not type=password: password managers would offer to fill the login
+    # password into it, and it would then be saved as the IBAN.
+    assert_select "input[type=password][name='family_merchant[iban]']", 0
+    assert_select "input[type=text][name='family_merchant[iban]'][autocomplete=off]:not([value])", 1
+    assert_select "input[name='family_merchant[iban]'][placeholder^=?]", "•••3201"
+    refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
+  end
+
+  test "edit form does not render a remove_iban toggle when no iban is stored" do
+    get edit_family_merchant_url(@merchant)
+
+    assert_response :success
+    assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 0
+  end
+
+  test "update with a blank iban field leaves the stored iban unchanged" do
+    @merchant.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { name: "New Name", iban: "" } }
+
+    assert_equal "AT611904300234573201", @merchant.reload.iban # pipelock:ignore IBAN
+    assert_equal "New Name", @merchant.reload.name
+  end
+
+  test "update with remove_iban checked clears the stored iban even with a blank field" do
+    @merchant.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { iban: "", remove_iban: "1" } }
+
+    assert_nil @merchant.reload.iban
+  end
+
+  test "a blank iban field on a provider merchant does not trigger a spurious conversion" do
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking", iban: "AT611904300234573201") # pipelock:ignore IBAN
+    transactions(:one).update!(merchant: provider_merchant)
+
+    assert_no_difference "FamilyMerchant.count" do
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { name: "Provider Payee", website_url: "", iban: "" } }
+    end
+
+    assert_equal "AT611904300234573201", provider_merchant.reload.iban # pipelock:ignore IBAN
+    assert_instance_of ProviderMerchant, Merchant.find(provider_merchant.id)
+  end
+
+  test "changing only the website of a provider merchant converts it without its shared iban" do
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking", iban: "AT611904300234573201") # pipelock:ignore IBAN
+    transactions(:one).update!(merchant: provider_merchant)
+
+    assert_difference "FamilyMerchant.count", 1 do
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { website_url: "https://example.com", iban: "" } }
+    end
+
+    assert_nil provider_merchant.reload.website_url, "the shared ProviderMerchant must be untouched"
+    converted = @user.family.merchants.find_by(name: "Provider Payee")
+    assert_equal "https://example.com", converted.website_url
+    assert_nil converted.iban, "an iban on the shared ProviderMerchant may stem from another family"
+  end
+
+  test "a website-only edit does not inherit an iban another family merchant already holds" do
+    FamilyMerchant.create!(name: "Existing Landlord", family: @user.family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking", iban: "AT611904300234573201") # pipelock:ignore IBAN
+    transactions(:one).update!(merchant: provider_merchant)
+
+    assert_difference "FamilyMerchant.count", 1 do
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { website_url: "https://example.com", iban: "" } }
+    end
+
+    assert_redirected_to family_merchants_path
+    converted = @user.family.merchants.find_by(name: "Provider Payee")
+    assert_equal "https://example.com", converted.website_url
+    assert_nil converted.iban
+  end
+
+  test "updating iban on a provider merchant converts it to a family merchant instead of mutating the shared record" do
+    # A ProviderMerchant is shared across every family it's assigned to; an
+    # iban written onto it would be visible to all of them, so the edit must
+    # stay with this family.
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
+    transactions(:one).update!(merchant: provider_merchant)
+
+    assert_difference "FamilyMerchant.count", 1 do
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } } # pipelock:ignore IBAN
+    end
+
+    assert_redirected_to family_merchants_path
+    assert_nil provider_merchant.reload.iban, "the shared ProviderMerchant must be untouched"
+
+    converted = @user.family.merchants.find_by(name: "Provider Payee")
+    assert_instance_of FamilyMerchant, converted
+    assert_equal "AT611904300234573201", converted.iban # pipelock:ignore IBAN
+    assert_equal converted.id, transactions(:one).reload.merchant_id
+  end
+
+  test "a failed conversion re-renders the form still targeting the original provider merchant" do
+    # Regression: the rescue used to replace @family_merchant with the failed
+    # conversion's unsaved (never persisted) FamilyMerchant. _form.html.erb
+    # picks its submit URL from `persisted?`, so that form silently posted
+    # to FamilyMerchant#create on the next attempt instead of back to this
+    # ProviderMerchant's #update -- losing the whole conversion (transaction
+    # reassignment, user_modified protection) without any visible error.
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
+    transactions(:one).update!(merchant: provider_merchant)
+    stub_failed_conversion
+
+    assert_no_difference "FamilyMerchant.count" do
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } } # pipelock:ignore IBAN
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "form[action=?]", family_merchant_path(provider_merchant)
+    assert_match "has already been taken", response.body
+    assert_nil provider_merchant.reload.iban, "the shared ProviderMerchant must still be untouched"
+  end
+
+  test "a unique violation on another index is not turned into a form error" do
+    FamilyMerchant.any_instance.stubs(:save).raises(
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "some_other_index"')
+    )
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      post family_merchants_url, params: { family_merchant: { name: "Race Landlord" } }
+    end
+  end
+
+  test "a failed update still offers to remove the stored iban" do
+    merchant = FamilyMerchant.create!(name: "Stored Landlord", family: @user.family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch family_merchant_url(merchant), params: { family_merchant: { name: "", remove_iban: "1" } }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 1
+  end
+
+  test "iban field placeholder keeps the stored last four after a failed update" do
+    merchant = FamilyMerchant.create!(name: "Stored Landlord", family: @user.family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch family_merchant_url(merchant), params: {
+      family_merchant: { name: "", iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='family_merchant[iban]'][placeholder^=?]", "•••3201"
+    refute_includes response.body, "DE89370400440532013000" # pipelock:ignore IBAN
+  end
+
+  test "a failed conversion preserves the submitted color" do
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking", color: "#000000")
+    transactions(:one).update!(merchant: provider_merchant)
+    stub_failed_conversion
+
+    patch family_merchant_url(provider_merchant), params: {
+      provider_merchant: { iban: "AT611904300234573201", color: "#4da568" } # pipelock:ignore IBAN
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name=?][value=?][checked]", "provider_merchant[color]", "#4da568"
+  end
+
   test "edit keeps return_to in the form" do
     get edit_family_merchant_url(@merchant, return_to: merchant_path(@merchant))
 
@@ -222,4 +409,11 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     get family_merchants_path
     assert_not_includes response.body, enhance_family_merchants_path
   end
+
+  private
+    def stub_failed_conversion
+      invalid = FamilyMerchant.new(name: "Provider Payee", family: @user.family)
+      invalid.errors.add(:name, :taken)
+      ProviderMerchant.any_instance.stubs(:convert_to_family_merchant_for).raises(ActiveRecord::RecordInvalid.new(invalid))
+    end
 end
