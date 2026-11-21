@@ -898,6 +898,32 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready")
   end
 
+  test "GET index lists SnapTrade connections for an OAuth item only while the OAuth app is configured" do
+    item = snaptrade_items(:configured_item)
+
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
+    get settings_providers_path(manage: 1)
+    assert_response :success
+    refute_includes response.body, connections_snaptrade_item_path(item)
+
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    get settings_providers_path(manage: 1)
+    assert_response :success
+    assert_includes response.body, connections_snaptrade_item_path(item)
+  end
+
+  test "GET connect_form for snaptrade offers the Personal API key form when instance is not configured" do
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    assert_select "form[action='#{personal_key_snaptrade_items_path}']" do
+      assert_select "input[name='snaptrade_item[client_id]']"
+      assert_select "input[name='snaptrade_item[consumer_key]'][type=password]"
+    end
+  end
+
   test "GET connect_form for snaptrade shows connect CTA when configured but item is not authorized" do
     sign_in users(:empty)
     Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
@@ -912,6 +938,34 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("providers.snaptrade.oauth_device_button")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_authorized")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_reauthorize_button")
+  end
+
+  test "GET connect_form for snaptrade shows a Personal-key item as syncing when an OAuth app is configured later" do
+    sign_in users(:empty)
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.stubs(:authorization_code_configured?).returns(false)
+    users(:empty).family.snaptrade_items.create!(name: "SnapTrade").apply_personal_key!(client_id: "c", consumer_key: "k")
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_personal_key")
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready_device")
+  end
+
+  test "GET connect_form for snaptrade asks to authorize a rejected Personal key once an OAuth app is configured" do
+    sign_in users(:empty)
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.stubs(:authorization_code_configured?).returns(false)
+    item = users(:empty).family.snaptrade_items.create!(name: "SnapTrade")
+    item.apply_personal_key!(client_id: "c", consumer_key: "k")
+    item.update!(status: :requires_update)
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_personal_key")
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready_device")
   end
 
   test "GET connect_form for snaptrade offers only the device code without a confidential client" do

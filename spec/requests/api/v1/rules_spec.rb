@@ -39,6 +39,7 @@ RSpec.describe 'API V1 Rules', type: :request do
       user: user,
       name: 'No Read Docs Key',
       key: key,
+      display_key: key,
       scopes: [],
       display_key: key,
       source: 'mobile'

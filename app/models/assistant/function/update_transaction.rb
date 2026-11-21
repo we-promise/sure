@@ -81,8 +81,9 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
     end
 
     result = nil
+    entry = transaction.entry
+    rule_input = nil
     Entry.transaction do
-      entry = transaction.entry
       level = (params.keys & %w[name amount date nature]).any? ? Account::MutationAccess::WRITE : Account::MutationAccess::ANNOTATE
       Account::MutationAccess.lock!(accounts: [ entry.account ], user:, level:)
       entry.lock!
@@ -108,6 +109,7 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
         next
       end
 
+      rule_input = entry.rule_input_snapshot
       entry.update!(entry_attrs)
 
       if params.key?("tag_ids")
@@ -121,6 +123,8 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
       transaction.reload.lock_attr!(:tag_ids) if params.key?("tag_ids")
     end
     return result if result
+
+    entry.apply_immediate_rules_later(changed_from: rule_input)
 
     {
       success: true,

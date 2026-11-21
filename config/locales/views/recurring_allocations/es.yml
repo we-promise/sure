@@ -4,6 +4,7 @@ es:
     over_allocation: Eso asignaría más que el importe de la transacción
     missing_rate: No hay tipo de cambio disponible; introduce el importe a mano
     already_allocated: Esa transacción ya está aplicada a este recibo
+    split_counterpart_allocated: Esa transacción está dividida y el cargo original o una de sus partes ya paga un recibo
     entry_exhausted: El importe completo de esa transacción ya está aplicado a otros pagos pendientes
     invalid: No se ha podido registrar el pago
     create:

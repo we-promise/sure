@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @user = users(:family_admin)
     @family = @user.family
@@ -235,6 +237,36 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
       %w[NaN Infinity -Infinity].each do |amount|
         assert_equal "invalid_amount", @function.call(required_params("amount" => amount))[:error]
       end
+    end
+  end
+
+  test "runs rules set to apply immediately on the new transaction" do
+    @user.family.rules.create!(name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+
+    result = @function.call(
+      "account_id" => @account.id,
+      "date" => "2026-09-11",
+      "amount" => 10.00,
+      "type" => "expense",
+      "name" => "Immediate Rule Target"
+    )
+
+    assert_equal true, result[:created]
+    entry = Entry.find_by(name: "Immediate Rule Target", account: @account)
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ entry.entryable_id ] } ])
+  end
+
+  test "an idempotent retry does not enqueue immediate rules again" do
+    @family.rules.create!(name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    params = required_params("external_id" => "immediate-retry")
+
+    assert @function.call(params)[:created]
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob) do
+      result = @function.call(params)
+      assert result[:success]
+      assert_equal false, result[:created]
     end
   end
 
