@@ -71,8 +71,8 @@ class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
   { "brex_item" => :import_latest_brex_data,
     "questrade_item" => :import_latest_questrade_data,
     "sharesight_item" => :import_latest_data }.each do |provider, import|
-    test "a completed #{provider} sync refreshes its linked account and sends the toast, not the card" do
-      item, account = connection_with_linked_account(provider)
+    test "a completed #{provider} sync refreshes each linked account and sends the toast, not the card" do
+      item, linked_accounts = connection_with_linked_accounts(provider)
       item.class.any_instance.stubs(import).returns(true)
       item.class.any_instance.stubs(:process_accounts).returns([])
       # No child account syncs, so the connection's post-sync runs within perform.
@@ -88,7 +88,9 @@ class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
       assert_equal [], captured
       assert_includes targets, "sync-toast"
       assert_not_includes targets, ActionView::RecordIdentifier.dom_id(item)
-      assert_equal [ "refresh" ], capture_turbo_stream_broadcasts(account).map { |stream| stream["action"] }
+      linked_accounts.each do |account|
+        assert_equal [ "refresh" ], capture_turbo_stream_broadcasts(account).map { |stream| stream["action"] }, account.name
+      end
       assert_empty capture_turbo_stream_broadcasts(accounts(:depository))
     end
   end
@@ -113,21 +115,26 @@ class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
   end
 
   private
-    def connection_with_linked_account(provider)
+    # The connection and its two linked accounts.
+    def connection_with_linked_accounts(provider)
       family = families(:dylan_family)
-      account = family.accounts.create!(name: "Linked #{provider}", balance: 0, currency: "USD", accountable: Investment.new)
+      accounts = 2.times.map do |i|
+        family.accounts.create!(name: "Linked #{provider} #{i}", balance: 0, currency: "USD", accountable: Investment.new)
+      end
 
       case provider
       when "brex_item"
-        AccountProvider.create!(account: account, provider: brex_accounts(:checking_account))
-        [ brex_items(:one), account ]
+        item = brex_items(:one)
+        provider_accounts = [ brex_accounts(:checking_account), item.brex_accounts.create!(name: "Brex Card", currency: "USD", account_id: "card_2", account_kind: "card") ]
       when "questrade_item"
-        AccountProvider.create!(account: account, provider: questrade_accounts(:one))
-        [ questrade_items(:one), account ]
+        item = questrade_items(:one)
+        provider_accounts = [ questrade_accounts(:one), item.questrade_accounts.create!(name: "RRSP", currency: "CAD", questrade_account_id: "87654321") ]
       when "sharesight_item"
         item = family.sharesight_items.create!(name: "Sharesight", client_id: "client", client_secret: "secret")
-        item.sharesight_accounts.create!(name: "Shares", currency: "USD", sharesight_account_id: "1").ensure_account_provider!(account)
-        [ item, account ]
+        provider_accounts = 2.times.map { |i| item.sharesight_accounts.create!(name: "Shares #{i}", currency: "USD", sharesight_account_id: i.to_s) }
       end
+
+      provider_accounts.zip(accounts).each { |provider_account, account| AccountProvider.create!(account: account, provider: provider_account) }
+      [ item, accounts ]
     end
 end
