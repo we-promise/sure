@@ -1,4 +1,4 @@
-# Projects the family's combined cash (Depository) balance forward 30 days by
+# Projects the family's combined cash (Depository + Physical Cash) balance forward 30 days by
 # layering known recurring transactions on top of a statistical daily-spend
 # baseline, and warns when the projected balance dips below the threshold.
 # Bills subsystem: projects from materialized occurrences rather than one
@@ -76,7 +76,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
 
   private
     def cash_accounts
-      shared_accounts.visible.where(accountable_type: "Depository", currency: family.currency)
+      shared_accounts.visible.where(accountable_type: Account::CASH_ACCOUNTABLE_TYPES, currency: family.currency)
     end
 
     # Projected occurrences of known recurring transactions within the horizon.

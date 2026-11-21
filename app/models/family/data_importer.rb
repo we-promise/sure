@@ -36,7 +36,7 @@ class Family::DataImporter
   PROPERTY_ADDRESS_ATTRIBUTES = %w[line1 line2 locality region county postal_code country].freeze
   VEHICLE_DETAIL_ATTRIBUTES = %w[make model year mileage_value mileage_unit].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
-    "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
+    "Depository" => Depository, "PhysicalCash" => PhysicalCash, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
     "CreditCard" => CreditCard, "Loan" => Loan, "OtherLiability" => OtherLiability
   }.freeze
