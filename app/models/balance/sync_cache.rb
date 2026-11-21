@@ -37,6 +37,21 @@ class Balance::SyncCache
     holdings_value_by_date[date] || 0
   end
 
+  # The quantity of `security_id` in the priced holdings of `date`: 0 when
+  # they hold none or have no price for it. Indexed per security on first
+  # ask, so a sync that never asks builds no index.
+  def valued_holding_qty(security_id, date)
+    valued_holding_qtys(security_id).fetch(date, 0)
+  end
+
+  # The ratio of the split of `security_id` going ex on `date`, nil when there
+  # is none. Loaded per security on first ask.
+  def split_ratio(security_id, date)
+    @split_ratios ||= {}
+    @split_ratios[security_id] ||= Security::Split.where(security_id: security_id).to_h { |split| [ split.ex_date, split.ratio ] }
+    @split_ratios[security_id][date]
+  end
+
   def get_entries(date)
     entries_by_date[date]&.select { |e| e.transaction? || e.trade? } || []
   end
@@ -88,6 +103,13 @@ class Balance::SyncCache
         end
 
         totals
+      end
+    end
+
+    def valued_holding_qtys(security_id)
+      @valued_holding_qtys ||= {}
+      @valued_holding_qtys[security_id] ||= account.holdings.each_with_object(Hash.new(0)) do |h, acc|
+        acc[h.date] += h.qty if h.security_id == security_id && h.price.to_d.positive?
       end
     end
 

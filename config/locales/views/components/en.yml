@@ -11,6 +11,7 @@ en:
           adjustments: Adjustments
           buys: Buys
           change_in_brokerage_cash: Change in brokerage cash
+          change_in_holdings_crypto: Change in holdings (bought, sold or transferred)
           change_in_holdings_market: Change in holdings (market price activity)
           change_in_holdings_trades: Change in holdings (buys/sells)
           charges: Charges
@@ -34,6 +35,7 @@ en:
           adjustments_asset: Manual value adjustments or appraisals
           buys: Crypto purchases during the day
           change_in_brokerage_cash: Net change in cash from deposits, withdrawals, and trades
+          change_in_holdings_crypto: Value of the crypto bought, sold, or moved in or out of the account
           change_in_holdings_market: Change in holdings value from market price movements
           change_in_holdings_trades: Impact on holdings from buying and selling securities
           charges: New charges made during the day

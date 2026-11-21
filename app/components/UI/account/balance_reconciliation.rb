@@ -121,6 +121,7 @@ class UI::Account::BalanceReconciliation < ApplicationComponent
 
       items << { label: t_label(:buys), value: balance.cash_outflows_money * -1, tooltip: t_tooltip(:buys), style: :flow } if balance.cash_outflows != 0
       items << { label: t_label(:sells), value: balance.cash_inflows_money, tooltip: t_tooltip(:sells), style: :flow } if balance.cash_inflows != 0
+      items << { label: t_label(:change_in_holdings_crypto), value: net_non_cash_flow, tooltip: t_tooltip(:change_in_holdings_crypto), style: :flow } if balance.non_cash_inflows != balance.non_cash_outflows
       items << { label: t_label(:market_changes), value: balance.net_market_flows_money, tooltip: t_tooltip(:market_changes), style: :flow } if balance.net_market_flows != 0
 
       if has_adjustments?

@@ -1,4 +1,7 @@
 class Balance::BaseCalculator
+  # How far apart two quantities of one position may be across a split's rounding.
+  SPLIT_QTY_TOLERANCE = BigDecimal("1e-12")
+
   attr_reader :account
 
   def initialize(account)
@@ -113,7 +116,9 @@ class Balance::BaseCalculator
       change_holdings_value - net_buy_sell_value
     end
 
-    def flows_for_date(date)
+    # transfers: false leaves out the value of priced Transfer trades, for a
+    # day whose balance does not follow from its flows.
+    def flows_for_date(date, transfers: true)
       entries = sync_cache.get_entries(date)
 
       cash_inflows = 0
@@ -151,6 +156,14 @@ class Balance::BaseCalculator
         # Trades are inverse (a "buy" is outflow of cash, but "inflow" of non-cash, aka "holdings")
         non_cash_outflows = trade_cash_inflow_sum.abs
         non_cash_inflows = trade_cash_outflow_sum
+
+        # A position moved in or out without cash changes the holdings by its
+        # value, which is not a market move.
+        if transfers && account.balance_type == :investment
+          transfer_values = regular_trades.filter_map { |e| transfer_trade_value(e) }
+          non_cash_inflows += transfer_values.select(&:positive?).sum
+          non_cash_outflows += transfer_values.select(&:negative?).sum.abs
+        end
       end
 
       {
@@ -159,6 +172,49 @@ class Balance::BaseCalculator
         non_cash_inflows: non_cash_inflows,
         non_cash_outflows: non_cash_outflows
       }
+    end
+
+    # A zero-amount Transfer trade moves a position without cash, so its amount
+    # says nothing of its value; see Trade#priced_transfer_value. It is a flow
+    # only where the holdings value show the day's trades of that security:
+    # its priced quantity changes from the day before by exactly what the
+    # day's trades add up to (a day without a price counting as none held).
+    # Otherwise (no price, a persisted provider row that does not show the
+    # move) the holdings value does not change with it, and a flow would only
+    # turn into market movement of its own size.
+    #
+    # Transfers in and out that cancel out on a day the account holds none
+    # before or after are left out too: the holdings never show them, and
+    # valued at their own prices they would only leave the difference as
+    # market movement.
+    def transfer_trade_value(entry)
+      return nil unless entry.amount.zero?
+
+      trade = entry.entryable
+      value = trade.priced_transfer_value(account.currency, date: entry.date)
+      return nil unless value && holdings_show_trades?(trade.security_id, entry.date)
+
+      value
+    end
+
+    def holdings_show_trades?(security_id, date)
+      trades = sync_cache.get_entries(date).select { |e| e.trade? && e.entryable.security_id == security_id }
+      traded_qty = trades.sum { |e| e.entryable.qty }
+      start_qty = sync_cache.valued_holding_qty(security_id, date.prev_day)
+      end_qty = sync_cache.valued_holding_qty(security_id, date)
+      # Trades that moved no cash (the transfers) and income booked as a trade
+      # (quantity zero) do not count against the cancel-out; a buy and a sale
+      # that net to no shares leave it standing.
+      cash_moving_qty = trades.reject { |e| e.amount.zero? || e.entryable.qty.zero? }.sum { |e| e.entryable.qty }
+      return false if traded_qty.zero? && start_qty.zero? && end_qty.zero? && cash_moving_qty.zero?
+
+      # A split goes ex at the open, before the day's trades, so the stored
+      # quantity of the day before is in pre-split shares. Scaling it back can
+      # land a unit of the stored scale away from the day's own quantity.
+      ratio = sync_cache.split_ratio(security_id, date)
+      return end_qty - start_qty == traded_qty unless ratio
+
+      (end_qty - Security::Split.scale(start_qty, ratio) - traded_qty).abs <= SPLIT_QTY_TOLERANCE
     end
 
     def derive_cash_balance(cash_balance, date)
