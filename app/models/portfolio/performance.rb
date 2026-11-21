@@ -18,7 +18,7 @@
 class Portfolio::Performance
   # Bumped whenever the meaning of a cached figure changes, so warm caches stop
   # serving the old interpretation under the same name.
-  CACHE_VERSION = "v10".freeze
+  CACHE_VERSION = "v11".freeze
 
   # The balance rows are calendar daily, so the series includes weekends and
   # holidays as structural zeros. Annualising that by the trading-day convention
@@ -128,22 +128,28 @@ class Portfolio::Performance
     metrics[:drivers]
   end
 
-  # Dividend and interest income by calendar month, and the fees over the same
-  # rows -- see Portfolio::Income#to_h for the keys. A Hash, as #drivers is,
-  # because it is cached and an object would not survive the round trip.
+  # Dividend and interest income by calendar month, by security, and the fees
+  # over the same rows -- see Portfolio::Income#to_h for the keys. A Hash, as
+  # #drivers is, so it survives the cache. `by_security` is a period figure,
+  # keyed by the security id each income entry names, as stored; income
+  # naming none is not in it. It is raw input for Portfolio::IncomeBySecurity,
+  # whose #unattributed is the total less only the amounts it can match to a
+  # Security: income under an id naming no Security on this install is in
+  # both, so the two are not to be added together.
   #
-  # Its OWN cache entry rather than part of #metrics, and computed only when
-  # asked, so a caller that builds a Performance only to read index_series or
-  # the returns never pays for it -- and the other way round: the missing-rate
-  # flag it needs is read from the daily returns, not from #metrics, so a
-  # caller reading only the income never runs the returns' compute.
+  # Its own cache entry, computed only when asked: a caller reading only the
+  # returns never runs the by-security query, and one reading only the income
+  # never runs the returns' compute (the missing-rate flag comes from the
+  # daily returns, not #metrics).
+  #
+  # Computed from a series of its own, read at the miss and past the query
+  # cache. The total comes from the series' rows and `by_security` from a
+  # query of its own, so rows this instance read earlier for its returns would
+  # pair an old total with a current attribution, and nothing would move the
+  # key to correct it.
   def income
-    @income ||= begin
-      key = cache_key
-      Rails.cache.fetch("#{key}_income") do
-        daily_returns_for(key)
-        income_metrics(daily_returns.rate_missing?)
-      end
+    @income ||= Rails.cache.fetch("#{cache_key}_income") do
+      ActiveRecord::Base.uncached { income_metrics(build_daily_returns) }
     end
   end
 
@@ -166,12 +172,7 @@ class Portfolio::Performance
 
   # Exposed for tests and for callers that want the raw series.
   def daily_returns
-    @daily_returns ||= Portfolio::DailyReturns.new(
-      account_ids: account_ids,
-      currency: family.currency,
-      period: period,
-      active_until_dates: active_until_dates
-    )
+    @daily_returns ||= build_daily_returns
   end
 
   # Every constructor argument that can change a figure has to be in here.
@@ -250,8 +251,7 @@ class Portfolio::Performance
     # The series an entry stored under `key` is computed from, built for that
     # key. Rows read through #daily_returns before the key was taken can
     # predate it -- a sync or a rate stored in between -- and would otherwise
-    # be cached under it and served to every later instance. Entries computed
-    # under the same key share one series.
+    # be cached under it and served to every later instance.
     def daily_returns_for(key)
       @daily_returns = nil unless @daily_returns_key == key
       @daily_returns_key = key
@@ -300,9 +300,18 @@ class Portfolio::Performance
     # terms as the returns: with a rate missing, fees and value cover only the
     # currencies that converted, and their ratio would read as the whole
     # portfolio's.
-    def income_metrics(rate_missing)
-      income = Portfolio::Income.new(daily_returns).to_h
-      rate_missing ? income.merge(fee_ratio: nil) : income
+    def build_daily_returns
+      Portfolio::DailyReturns.new(
+        account_ids: account_ids,
+        currency: family.currency,
+        period: period,
+        active_until_dates: active_until_dates
+      )
+    end
+
+    def income_metrics(series)
+      income = Portfolio::Income.new(series).to_h
+      series.rate_missing? ? income.merge(fee_ratio: nil) : income
     end
 
     # One day's growth applied to a level, rounded to CHAIN_PRECISION

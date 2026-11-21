@@ -187,6 +187,23 @@ class Portfolio::DailyReturns
     rows.any?
   end
 
+  # Income paid in the period by the security that paid it, in the family
+  # currency: { "security-uuid" => BigDecimal }. Only income that names a
+  # security is here (a Trade's column, or the `extra` keys
+  # Transaction#activity_security_id reads); the caller keeps the rest of the
+  # rows' income as an unattributed remainder. That only adds up if this reads
+  # the entries the rows do, so it shares their fragments rather than copying
+  # them: the flow classifier, #entry_fx_joins, and the date, active-until and
+  # split-parent predicates. An unconvertible entry drops out of both, and
+  # #rate_missing? reports it.
+  def income_by_security
+    return {} if account_ids.empty?
+
+    @income_by_security ||= ActiveRecord::Base.connection.select_all(
+      bind_and_splice(income_by_security_query)
+    ).to_a.reject { |raw| raw["security_id"].nil? }.to_h { |raw| [ raw["security_id"], decimal(raw["income"]) ] }
+  end
+
   private
     def decimal(value)
       return BigDecimal(0) if value.nil?
@@ -571,30 +588,7 @@ class Portfolio::DailyReturns
           -- denominator of a day that account is no longer part of.
           LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
           #{fragment(:flow_class_joins)}
-          -- Two steps, the same two the balance takes. First into the
-          -- ACCOUNT's currency on the entry's own date, preferring a rate the
-          -- entry carries itself, as Balance::SyncCache converts it before the
-          -- calculators apply it -- so the flow is the amount the balance
-          -- actually moved by. A stored rate is found the way SyncCache finds
-          -- it (see #entry_rate_lookup), so an entry the balance dropped for
-          -- want of a rate is NULL here too, and flagged.
-          LEFT JOIN LATERAL (
-            SELECT CASE
-              WHEN COALESCE(entries.currency, entry_accounts.currency) = entry_accounts.currency THEN 1::numeric
-              WHEN #{fragment(:entry_custom_rate)} IS NOT NULL
-                THEN CASE WHEN #{fragment(:entry_custom_rate)} > 0 THEN #{fragment(:entry_custom_rate)} END
-              ELSE #{entry_rate_lookup('entries.currency', 'entries.date', to: 'entry_accounts.currency')}
-            END AS rate
-          ) entry_fx ON TRUE
-          -- Then into the family's currency at the PREVIOUS day's rate,
-          -- because a start-of-day flow joins the opening capital, which is
-          -- itself valued at that rate. Mixing rates here is what would leave
-          -- a residual in `unexplained`. NULL at either step when the pair has
-          -- no rate: the amount then drops out of every sum and
-          -- flow_rate_missing says so.
-          LEFT JOIN LATERAL (
-            SELECT #{rate_lookup('entry_accounts.currency', 'entries.date - 1')} AS rate
-          ) fx ON TRUE
+          #{entry_fx_joins}
           -- The position this entry moved, on the day it moved, for valuing a
           -- journal. Absent for every non-trade entry and for a trade whose
           -- security the account holds no row for that date.
@@ -659,7 +653,7 @@ class Portfolio::DailyReturns
             -- belongs in the denominator (the classifier is built with
             -- include_excluded). A split parent is the exception: SyncCache
             -- skips it and its children carry the amount.
-            AND NOT EXISTS (SELECT 1 FROM entries split_children WHERE split_children.parent_entry_id = entries.id)
+            AND #{not_split_parent_sql}
           GROUP BY entries.date
         ),
         -- A journal that could not be valued on its own date, carried to the
@@ -865,6 +859,44 @@ class Portfolio::DailyReturns
       SQL
     end
 
+    # How a flow reaches the family currency, shared by every query that sums
+    # entries so they convert them identically (`entry_fx.rate * fx.rate`).
+    def entry_fx_joins
+      <<~SQL
+        -- Two steps, the same two the balance takes. First into the
+        -- ACCOUNT's currency on the entry's own date, preferring a rate the
+        -- entry carries itself, as Balance::SyncCache converts it before the
+        -- calculators apply it -- so the flow is the amount the balance
+        -- actually moved by. A stored rate is found the way SyncCache finds
+        -- it (see #entry_rate_lookup), so an entry the balance dropped for
+        -- want of a rate is NULL here too, and flagged.
+        LEFT JOIN LATERAL (
+          SELECT CASE
+            WHEN COALESCE(entries.currency, entry_accounts.currency) = entry_accounts.currency THEN 1::numeric
+            WHEN #{fragment(:entry_custom_rate)} IS NOT NULL
+              THEN CASE WHEN #{fragment(:entry_custom_rate)} > 0 THEN #{fragment(:entry_custom_rate)} END
+            ELSE #{entry_rate_lookup('entries.currency', 'entries.date', to: 'entry_accounts.currency')}
+          END AS rate
+        ) entry_fx ON TRUE
+        -- Then into the family's currency at the PREVIOUS day's rate,
+        -- because a start-of-day flow joins the opening capital, which is
+        -- itself valued at that rate. Mixing rates here is what would leave
+        -- a residual in `unexplained`. NULL at either step when the pair has
+        -- no rate: the amount then drops out of every sum and
+        -- flow_rate_missing says so.
+        LEFT JOIN LATERAL (
+          SELECT #{rate_lookup('entry_accounts.currency', 'entries.date - 1')} AS rate
+        ) fx ON TRUE
+      SQL
+    end
+
+    # Excluded entries count as flows (the balance still applied them); a
+    # split parent does not, because Balance::SyncCache skips it and its
+    # children carry the amount.
+    def not_split_parent_sql
+      "NOT EXISTS (SELECT 1 FROM entries split_children WHERE split_children.parent_entry_id = entries.id)"
+    end
+
     # Carry the last known rate forward, then fall back to the earliest one
     # ahead. Both halves matter: without the first a weekend converts at parity,
     # and without the second an account that predates the family's rate history
@@ -1028,5 +1060,42 @@ class Portfolio::DailyReturns
       "entries.entryable_type = 'Trade' " \
         "AND trades.investment_activity_label = '#{Portfolio::FlowClassifier::TRANSFER_LABEL}' " \
         "AND entries.amount = 0"
+    end
+
+    def income_by_security_query
+      <<~SQL
+        WITH account_windows AS (
+          SELECT
+            account_window.account_id::uuid AS account_id,
+            account_window.active_until_date::date AS active_until_date
+          FROM jsonb_each_text(CAST(:active_until_json AS jsonb))
+            AS account_window(account_id, active_until_date)
+        )
+        SELECT
+          COALESCE(
+            trades.security_id::text,
+            LOWER(NULLIF(transactions.extra->>'security_id', '')),
+            LOWER(NULLIF(transactions.extra->'security'->>'id', '')),
+            -- A split part carries neither the label nor `extra`; the
+            -- classifier reads the parent's label, and this its security.
+            LOWER(NULLIF(flow_parent_transactions.extra->>'security_id', '')),
+            LOWER(NULLIF(flow_parent_transactions.extra->'security'->>'id', ''))
+          ) AS security_id,
+          SUM(-entries.amount * entry_fx.rate * fx.rate) AS income
+        FROM entries
+        JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
+        LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
+        #{fragment(:flow_class_joins)}
+        #{entry_fx_joins}
+        WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
+          -- The flows' window, so a scheduled dividend is in neither.
+          AND entries.date BETWEEN :start_date AND LEAST(DATE :end_date, DATE :today)
+          AND (flow_windows.active_until_date IS NULL OR entries.date <= flow_windows.active_until_date)
+          AND #{not_split_parent_sql}
+          AND entry_fx.rate IS NOT NULL
+          AND fx.rate IS NOT NULL
+          AND #{fragment(:flow_class_sql)} = 'income'
+        GROUP BY 1
+      SQL
     end
 end
