@@ -52,6 +52,7 @@ en:
       step3_html: After a successful connection, visit the <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Accounts</a> tab to set up your crypto accounts.
       api_key_label: API Key
       api_key_placeholder: Required
+      api_key_placeholder_update: Enter new API key to update
       configure: Configure
       update_configuration: Reconfigure
       default_name: CoinStats Connection

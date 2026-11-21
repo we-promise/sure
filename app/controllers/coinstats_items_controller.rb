@@ -143,11 +143,13 @@ class CoinstatsItemsController < ApplicationController
     end
 
     def coinstats_item_params
-      params.require(:coinstats_item).permit(
+      permitted = params.require(:coinstats_item).permit(
         :name,
         :sync_start_date,
         :api_key
       )
+      permitted.delete(:api_key) if @coinstats_item&.persisted? && permitted[:api_key].blank?
+      permitted
     end
 
     def validate_api_key(api_key)

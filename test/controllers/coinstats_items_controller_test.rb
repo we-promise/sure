@@ -76,6 +76,29 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renamed CoinStats", @coinstats_item.reload.name
   end
 
+  test "the re-rendered panel leaves the API key field empty instead of echoing the stored key" do
+    patch coinstats_item_url(@coinstats_item), params: { coinstats_item: { name: "Renamed CoinStats" } }, as: :turbo_stream
+
+    assert_select "form[action=?] input[name=?]", coinstats_item_path(@coinstats_item), "coinstats_item[api_key]" do |inputs|
+      assert_nil inputs.first["value"]
+      assert_equal I18n.t("coinstats_items.new.api_key_placeholder_update"), inputs.first["placeholder"]
+    end
+    assert_not_includes response.body, "test_api_key_123"
+  end
+
+  test "update with the API key left blank changes the other fields and keeps the stored key" do
+    Provider::Coinstats.any_instance.expects(:get_blockchains).never
+
+    patch coinstats_item_url(@coinstats_item),
+          params: { coinstats_item: { name: "Renamed CoinStats", api_key: "" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "coinstats-providers-panel"
+    @coinstats_item.reload
+    assert_equal "Renamed CoinStats", @coinstats_item.name
+    assert_equal "test_api_key_123", @coinstats_item.api_key
+  end
+
   test "invalid create from the page shows the error in the panel" do
     post coinstats_items_url,
          params: { coinstats_item: { name: "New CoinStats Connection", api_key: "" } },
@@ -128,6 +151,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
 
     @coinstats_item.reload
     assert_equal "Updated Name", @coinstats_item.name
+    assert_equal "new_valid_api_key", @coinstats_item.api_key
   end
 
   test "should not update coinstats item with invalid api key" do
