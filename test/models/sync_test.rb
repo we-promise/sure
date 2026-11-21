@@ -24,7 +24,7 @@ class SyncTest < ActiveSupport::TestCase
 
     sync.perform
 
-    assert sync.completed_at < Time.now
+    assert sync.completed_at < Time.current
     assert_equal "completed", sync.status
   end
 
@@ -84,7 +84,7 @@ class SyncTest < ActiveSupport::TestCase
 
     sync.perform
 
-    assert sync.failed_at < Time.now
+    assert sync.failed_at < Time.current
     assert_equal "failed", sync.status
     assert_equal "test sync error", sync.error
   end

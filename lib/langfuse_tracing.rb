@@ -43,7 +43,7 @@ class LangfuseTracing
     def initialize(tracer, name:, input:, attributes:, parent: nil, type: "span", model: nil, start_time: nil)
       @tracer = tracer
       @attributes = attributes
-      @start_time = start_time || Time.now
+      @start_time = start_time || Time.current
       @span = tracer.start_span(name, with_parent: parent || OpenTelemetry::Context.empty, attributes: attributes.merge(
         "langfuse.observation.type" => type,
         "langfuse.observation.input" => JSON.generate(input),

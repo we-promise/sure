@@ -49,6 +49,16 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal evening_utc.in_time_zone(Time.zone).to_date, family.local_date(evening_utc)
   end
 
+  test "with_time_zone runs the block on the family's clock" do
+    family = families(:dylan_family)
+    family.update!(timezone: "Europe/Madrid")
+
+    travel_to Time.utc(2026, 11, 15, 23, 30) do # 00:30 on November 16 in Madrid
+      assert_equal Date.new(2026, 11, 16), family.with_time_zone { Date.current }
+      assert_equal Date.new(2026, 11, 15), Date.current
+    end
+  end
+
   test "investment_contributions_category creates category when missing" do
     family = families(:dylan_family)
     family.categories.where(name: Category.investment_contributions_name).destroy_all

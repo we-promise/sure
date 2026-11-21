@@ -28,6 +28,32 @@ class GenerateRecurringOccurrencesJobTest < ActiveJob::TestCase
     end
   end
 
+  # The scheduler starts this job at 05:30 UTC, which is still the evening
+  # before in the Americas. Generation starts at the current cycle, so judging
+  # it by UTC's date drops the occurrence the family is still inside of.
+  test "generates from the current cycle on the family's calendar" do
+    @family.update!(timezone: "America/Los_Angeles")
+    series = @family.recurring_transactions.create!(
+      account: accounts(:depository),
+      merchant: merchants(:netflix),
+      amount: 22.99,
+      currency: "USD",
+      status: "active",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.new(2026, 9, 5),
+      next_expected_date: Date.new(2026, 10, 5),
+      occurrence_count: 3
+    )
+    RecurringTransaction::FrequencyPreset.apply(series, preset: "monthly", day_of_month: "5")
+    series.save!
+
+    travel_to Time.utc(2026, 11, 5, 5, 30) do # 21:30 on November 4 in Los Angeles
+      GenerateRecurringOccurrencesJob.perform_now(@family.id)
+    end
+
+    assert_equal Date.new(2026, 10, 5), series.recurring_occurrences.minimum(:due_on)
+  end
+
   test "does not issue one recurrence_rules query per active series (no N+1)" do
     # Ensure we have at least two active series so an N+1 would be observable.
     series1 = recurring_transactions(:netflix_subscription)

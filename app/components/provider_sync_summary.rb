@@ -147,7 +147,7 @@ class ProviderSyncSummary < ViewComponent::Base
     return nil unless stats["rate_limited_at"].present?
 
     begin
-      helpers.time_ago_in_words(Time.parse(stats["rate_limited_at"]))
+      helpers.time_ago_in_words(Time.zone.parse(stats["rate_limited_at"]))
     rescue StandardError
       nil
     end

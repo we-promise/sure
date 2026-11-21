@@ -132,7 +132,7 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     outflow_tx = Transaction.create!(kind: "funds_movement")
     outflow_entry = Entry.create!(
       account: accounts(:depository), entryable: outflow_tx,
-      name: "Transfer out", amount: 100, currency: "USD", date: Date.today
+      name: "Transfer out", amount: 100, currency: "USD", date: Date.current
     )
     tags = create_tags(2)
     outflow_tx.update!(tag_ids: tags.map(&:id))
@@ -148,12 +148,12 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     outflow_tx = Transaction.create!(kind: "funds_movement")
     outflow_entry = Entry.create!(
       account: accounts(:depository), entryable: outflow_tx,
-      name: "Transfer out", amount: 100, currency: "USD", date: Date.today
+      name: "Transfer out", amount: 100, currency: "USD", date: Date.current
     )
     inflow_tx = Transaction.create!(kind: "funds_movement")
     Entry.create!(
       account: accounts(:credit_card), entryable: inflow_tx,
-      name: "Transfer in", amount: -100, currency: "USD", date: Date.today
+      name: "Transfer in", amount: -100, currency: "USD", date: Date.current
     )
     Transfer.create!(inflow_transaction: inflow_tx, outflow_transaction: outflow_tx, status: "confirmed")
 

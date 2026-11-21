@@ -297,7 +297,7 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
 
   test "throttle_request does not wait when under credit limit" do
     # Set last_request_time far in the past so per-instance throttle doesn't trigger
-    @provider.send(:instance_variable_set, :@last_request_time, Time.at(0))
+    @provider.send(:instance_variable_set, :@last_request_time, Time.zone.at(0))
 
     # Stub cache to return under limit
     Rails.cache.stubs(:read).returns(3)

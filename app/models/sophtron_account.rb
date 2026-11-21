@@ -211,11 +211,11 @@ class SophtronAccount < ApplicationRecord
 
       case balance_date_value
       when String
-        Time.parse(balance_date_value)
+        Time.zone.parse(balance_date_value) || raise(ArgumentError)
       when Numeric
         t = balance_date_value
         t = (t / 1000.0) if t > 1_000_000_000_000 # likely ms epoch
-        Time.at(t)
+        Time.zone.at(t)
       when Time, DateTime
         balance_date_value
       else

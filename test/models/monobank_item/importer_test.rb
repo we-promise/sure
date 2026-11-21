@@ -276,7 +276,7 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
     MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
 
     @monobank_account.reload
-    assert_equal Time.at(oldest.to_i), @monobank_account.history_synced_from,
+    assert_equal Time.zone.at(oldest.to_i), @monobank_account.history_synced_from,
                  "the gap below the oldest record received has to be re-walked, from its exact time"
   end
 
@@ -420,7 +420,7 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
 
     MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
 
-    assert_operator provider.statement_calls.first[:from], :<=, Time.at(hold["time"]),
+    assert_operator provider.statement_calls.first[:from], :<=, Time.zone.at(hold["time"]),
                     "the forward window must cover the oldest hold still stored"
     assert_equal [ "tx_hotel" ], @monobank_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
   end

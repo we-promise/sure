@@ -1396,7 +1396,7 @@ class SimplefinItem::Importer
         t = tx.with_indifferent_access
         posted = t[:posted]
         next nil if posted.blank? || posted.to_i <= 0
-        Time.at(posted.to_i).to_date
+        Time.at(posted.to_i).utc.to_date
       end.compact.uniq.sort
 
       return [] if dates.size < 2
@@ -1429,7 +1429,7 @@ class SimplefinItem::Importer
         posted.to_i if posted.present? && posted.to_i > 0
       end.compact.max
 
-      latest_timestamp ? Time.at(latest_timestamp).to_date : nil
+      latest_timestamp ? Time.at(latest_timestamp).utc.to_date : nil
     end
 
     # Find duplicate transaction IDs

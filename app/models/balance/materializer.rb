@@ -74,7 +74,7 @@ class Balance::Materializer
     end
 
     def persist_balances
-      current_time = Time.now
+      current_time = Time.current
       @balances.each_slice(PERSIST_BATCH_SIZE) do |slice|
         account.balances.upsert_all(
           slice.map { |b| b.to_h.except(:account).transform_keys(&:to_s).merge("updated_at" => current_time) },

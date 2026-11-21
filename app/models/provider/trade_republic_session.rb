@@ -26,7 +26,7 @@ class Provider::TradeRepublicSession
     @cookies = decode_cookies(session_blob)
     @device_id = device_id.presence
     @device_info = nil
-    @session_expires_at = Time.at(0)
+    @session_expires_at = Time.zone.at(0)
   end
 
   def post(path, body:, headers: {})

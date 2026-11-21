@@ -50,7 +50,7 @@ namespace :sure do
       days_i = 30 if days_i <= 0
 
       window_start = days_i.days.ago.to_date
-      window_end   = Date.today
+      window_end   = Date.current
 
       # Basic UUID validation when provided
       uuid_rx = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i

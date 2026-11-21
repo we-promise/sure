@@ -47,6 +47,19 @@ Sure/NoAiEnv:
     - "app/models/setting.rb"                                   # settings pages
     - "app/models/vector_store/pgvector.rb"                     # embeddings
 
+# "Today" is the family's: requests and syncs set Time.zone to the family's
+# zone, and the host's zone means nothing to a user. These catch Date.today,
+# Time.now, Time.parse and Time.at, which read the host's zone. Strict mode
+# would also reject Date.current (3,500 uses, the same as Time.zone.today) and
+# explicit conversions such as Time.at(...).utc, so it is flexible.
+Rails/Date:
+  Enabled: true
+  EnforcedStyle: flexible
+
+Rails/TimeZone:
+  Enabled: true
+  EnforcedStyle: flexible
+
 Layout/IndentationWidth:
   Enabled: true
 
