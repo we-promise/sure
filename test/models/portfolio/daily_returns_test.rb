@@ -2394,6 +2394,60 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert departure_day.contribution_rate_missing, "the departing value the line counts converted to nothing"
   end
 
+  # An empty account brings nothing in or out, so with no rate there is no
+  # value left unconverted and the line is complete.
+  test "an empty arrival with no rate leaves contributions complete" do
+    eur = create_portfolio_account(family: @family, currency: "EUR")
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: eur, date: @day_two, opening: 0, closing: 0
+
+    arrival_day = daily_returns(account_ids: [ @account.id, eur.id ]).rows.last
+
+    assert_not arrival_day.contribution_rate_missing, "an arriving balance of zero needs no rate"
+  end
+
+  test "an empty departure with no rate leaves contributions complete" do
+    eur = create_portfolio_account(family: @family, currency: "EUR")
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: eur, date: @day_one, opening: 0, closing: 0
+
+    departure_day = Portfolio::DailyReturns.new(
+      account_ids: [ @account.id, eur.id ],
+      currency: @family.currency,
+      period: Period.custom(start_date: @day_one, end_date: @day_two),
+      active_until_dates: { eur.id => @day_one }
+    ).rows.last
+
+    assert_not departure_day.contribution_rate_missing, "a departing balance of zero needs no rate"
+  end
+
+  # Nothing values what left: no price on the day and no earlier row.
+  test "an unpriced journal out with no earlier holding row makes contributions incomplete" do
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    security_journal account: @account, date: @day_two, qty: -5, price: 0
+
+    second = daily_returns.rows.last
+
+    assert second.contribution_journal_unpriced, "the withdrawal has no value to count"
+  end
+
+  # The earlier row prices what left in EUR, which has no rate, so the
+  # withdrawal still converts to nothing.
+  test "an unpriced partial journal out with no rate for its earlier price makes contributions incomplete" do
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    @account.holdings.create!(security: security_under_test, date: @day_one, qty: 5, price: 100,
+                              amount: 500, currency: "EUR")
+    security_journal account: @account, date: @day_two, qty: -3, currency: "EUR", price: 0, holding_qty: 2
+
+    second = daily_returns.rows.last
+
+    assert second.contribution_journal_unpriced, "the withdrawal's EUR value converts to nothing"
+  end
+
   # A journal with no quantity is external (no counterpart can match it), so
   # carried to a first priced day in the period it leaves that day's external
   # flow short by units nobody knows. Dated before the period, its own day
