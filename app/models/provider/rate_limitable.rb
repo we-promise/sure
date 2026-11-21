@@ -5,6 +5,7 @@
 # - `throttle_request`: sleeps to enforce MIN_REQUEST_INTERVAL between calls
 # - `min_request_interval`: reads from ENV with fallback to the class constant
 # - `default_error_transformer`: maps Faraday/rate-limit errors to provider-scoped types
+# - `env_positive_integer` / `env_interval` from Provider::EnvTuning, for other overrides
 #
 # The including class MUST define:
 # - `MIN_REQUEST_INTERVAL` (Float) — default seconds between requests
@@ -16,6 +17,7 @@
 # the prefix is derived from the class name (Provider::AlphaVantage → "ALPHA_VANTAGE").
 module Provider::RateLimitable
   extend ActiveSupport::Concern
+  include Provider::EnvTuning
 
   # Runs a hook immediately before every HTTP attempt, including retries, so
   # each one can be throttled and counted against a request budget. Register it
@@ -51,8 +53,10 @@ module Provider::RateLimitable
       positive_interval(ENV.fetch(key, self.class::MIN_REQUEST_INTERVAL), key)
     end
 
-    # A configured interval that does not parse, or is not positive, must not
-    # silently turn pacing off -- `"invalid".to_f` is 0 -- so it is an error.
+    # <PREFIX>_MIN_REQUEST_INTERVAL is strict for these providers: a value that does not
+    # parse, or is not positive, raises rather than turning pacing off (`"invalid".to_f` is
+    # 0). Caps and Twelve Data's interval go through Provider::EnvTuning instead, which falls
+    # back to the default with a warning.
     def positive_interval(value, key)
       interval = Float(value, exception: false)
       raise ArgumentError, "#{key} must be a positive number of seconds, got #{value.inspect}" if interval.nil? || !interval.finite? || interval <= 0

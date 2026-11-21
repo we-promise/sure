@@ -1,5 +1,5 @@
 class Provider::TwelveData < Provider
-  include ExchangeRateConcept, SecurityConcept
+  include ExchangeRateConcept, SecurityConcept, EnvTuning
   extend SslConfigurable
 
   # Subclass so errors caught in this provider are raised as Provider::TwelveData::Error
@@ -331,11 +331,11 @@ class Provider::TwelveData < Provider
     end
 
     def min_request_interval
-      ENV.fetch("TWELVE_DATA_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL).to_f
+      env_interval("TWELVE_DATA_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL)
     end
 
     def max_requests_per_minute
-      ENV.fetch("TWELVE_DATA_MAX_REQUESTS_PER_MINUTE", 7).to_i
+      env_positive_integer("TWELVE_DATA_MAX_REQUESTS_PER_MINUTE", 7)
     end
 
     def check_api_error!(parsed)

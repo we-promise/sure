@@ -425,7 +425,7 @@ class Provider::Eodhd < Provider
     # throttle_request and min_request_interval provided by RateLimitable
 
     def max_requests_per_day
-      ENV.fetch("EODHD_MAX_REQUESTS_PER_DAY", MAX_REQUESTS_PER_DAY).to_i
+      env_positive_integer("EODHD_MAX_REQUESTS_PER_DAY", MAX_REQUESTS_PER_DAY)
     end
 
     def check_api_error!(parsed)

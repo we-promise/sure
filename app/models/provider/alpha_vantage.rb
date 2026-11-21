@@ -261,7 +261,7 @@ class Provider::AlphaVantage < Provider
     end
 
     def max_requests_per_day
-      ENV.fetch("ALPHA_VANTAGE_MAX_REQUESTS_PER_DAY", MAX_REQUESTS_PER_DAY).to_i
+      env_positive_integer("ALPHA_VANTAGE_MAX_REQUESTS_PER_DAY", MAX_REQUESTS_PER_DAY)
     end
 
     # Converts a symbol + MIC code to Alpha Vantage's ticker format
