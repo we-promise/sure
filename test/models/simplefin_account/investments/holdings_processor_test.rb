@@ -329,4 +329,62 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     # but the basis is unknown for the position as a whole, NOT $100/share
     assert_nil position[:cost_basis]
   end
+
+  test "an explicit zero market_value is kept instead of falling back to purchase_price" do
+    # A delisted, worthless position: SimpleFIN reports market_value 0.00 but a
+    # non-zero purchase_price. Falling back to the purchase price stored it at
+    # its cost, overstating holdings and the balance history's derived cash.
+    position = process_single_holding(
+      "id" => "lot-worthless", "symbol" => "AAPL", "shares" => "1.00",
+      "market_value" => "0.00", "cost_basis" => "100.00", "purchase_price" => "100.00"
+    )
+
+    assert_in_delta 1.0, position[:quantity].to_f, 0.000001
+    assert_equal 0, position[:amount].to_d
+    assert_equal 0, position[:price].to_d
+    assert_in_delta 100.0, position[:cost_basis].to_f, 0.01
+  end
+
+  test "a missing, unparseable, non-finite or negative market_value still falls back to purchase_price" do
+    [ nil, "", "n/a", "NaN", "-Infinity", "-100.00" ].each do |raw|
+      holding = { "id" => "lot-a", "symbol" => "AAPL", "shares" => "2", "purchase_price" => "50.00" }
+      holding["market_value"] = raw unless raw.nil?
+
+      position = process_single_holding(holding)
+
+      assert_in_delta 100.0, position[:amount].to_f, 0.01, "market_value=#{raw.inspect}"
+      assert_in_delta 50.0, position[:price].to_f, 0.01, "market_value=#{raw.inspect}"
+    end
+  end
+
+  private
+    def process_single_holding(holding)
+      processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+      processor.stubs(:holdings_data).returns([ holding ])
+      processor.stubs(:account).returns(accounts(:investment))
+      processor.stubs(:resolve_security).returns(securities(:aapl))
+      processor.stubs(:institution_reports_total_basis?).returns(false)
+      processor.stubs(:simplefin_account).returns(
+        stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+      )
+
+      recorder = Class.new do
+        attr_reader :calls
+
+        def initialize = @calls = []
+
+        def import_holding(**kwargs)
+          @calls << kwargs
+          Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
+                .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
+                     kwargs[:currency], kwargs[:date], kwargs[:external_id])
+        end
+      end.new
+      processor.stubs(:import_adapter).returns(recorder)
+
+      processor.process
+
+      assert_equal 1, recorder.calls.size
+      recorder.calls.first
+    end
 end
