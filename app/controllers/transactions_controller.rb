@@ -585,14 +585,23 @@ class TransactionsController < ApplicationController
     end
 
     def projected_recurring_cache_version
-      "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
-        "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
+      "#{Current.family.recurring_transactions_version}/#{Current.family.categories_version}/" \
+        "#{Current.family.accounts_status_version}/#{Current.family.recurring_transaction_merchants_version}/" \
+        "#{Current.account_share_version}"
     end
 
     # The tab to open: an explicit ?tab=, else the one last picked this session,
-    # so applying a filter from the Upcoming tab stays on it.
+    # so applying a filter from the Upcoming tab stays on it. An explicit tab is
+    # remembered too, since the filter form does not carry it.
     def transactions_tab
-      [ params[:tab], Current.session.get_preferred_tab(TRANSACTIONS_TAB_KEY) ].find { |tab| TRANSACTIONS_TABS.include?(tab) } || "transactions"
+      preferred = Current.session.get_preferred_tab(TRANSACTIONS_TAB_KEY)
+
+      if TRANSACTIONS_TABS.include?(params[:tab])
+        Current.session.set_preferred_tab(TRANSACTIONS_TAB_KEY, params[:tab]) unless params[:tab] == preferred
+        return params[:tab]
+      end
+
+      preferred.presence_in(TRANSACTIONS_TABS) || "transactions"
     end
 
     def covering_series_for(entry)
