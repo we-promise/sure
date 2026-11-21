@@ -70,6 +70,9 @@ Rules:
   the frame URL, digest the viewer's percentages (read in SQL in the same query
   as the account rows, so the page makes no extra accounts query), so a share
   edit fetches a new series. Per-account sparklines stay whole-account, like the row balance.
+- Dashboard balance-sheet rows show the viewer's share (in the account currency), so
+  each row agrees with its weight and the group total. The account page's "Your share"
+  line appears only in the total balance view; cash, holdings and gains stay whole-account.
 - Sidebar rows show a small `DS::Pill` with the viewer's percentage when it is
   below 100 (`AccountsHelper#ownership_badge_label`); the row balance stays whole.
   The sidebar fragment cache version (`account_sidebar_tabs_v8`) must be bumped

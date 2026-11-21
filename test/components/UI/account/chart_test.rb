@@ -347,6 +347,15 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_includes display, @account.owned_balance_money_for(@account.owner).format
   end
 
+  test "shows no ownership share line outside the total balance view" do
+    @account.update!(ownership_percentage: 40)
+    Current.stubs(:user).returns(@account.owner)
+
+    %w[holdings_balance cash_balance gains].each do |view|
+      assert_nil UI::Account::Chart.new(account: @account, view: view).ownership_share_display, view
+    end
+  end
+
   private
     # 10 shares at $100 market price; gain = 1000 - cost_basis * 10
     def create_holding(cost_basis:)

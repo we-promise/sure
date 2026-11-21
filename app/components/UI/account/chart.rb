@@ -140,8 +140,11 @@ class UI::Account::Chart < ApplicationComponent
   end
 
   # Placeholder: the current user's share of the account, shown only when it is
-  # not 100%. Nil otherwise.
+  # not 100% and the chart shows the total balance (the amount is a share of the
+  # whole account, so it would not fit cash, holdings or gains). Nil otherwise.
   def ownership_share_display
+    return unless view == "balance"
+
     percentage = account.ownership_percentage_for(Current.user)
     return if percentage == 100
 

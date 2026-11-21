@@ -23,6 +23,26 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#account-sidebar-tabs span[title=?]", I18n.t("accounts.sidebar.ownership_share", percentage: "60%"), minimum: 1
   end
 
+  test "dashboard rows show the viewer's share, matching the group totals" do
+    account = accounts(:depository)
+    account.update!(ownership_percentage: 60)
+
+    get root_path
+
+    assert_response :ok
+    assert_includes response.body, ApplicationController.helpers.format_money(account.owned_balance_money_for(users(:family_admin)), precision: 0)
+  end
+
+  test "dashboard rows show the whole balance when every account is fully owned" do
+    account = accounts(:depository)
+
+    get root_path
+
+    assert_response :ok
+    assert_equal account.balance, account.owned_balance_for(users(:family_admin))
+    assert_includes response.body, ApplicationController.helpers.format_money(account.balance_money, precision: 0)
+  end
+
   test "sidebar shows no ownership badge when every account is fully owned" do
     get root_path
 
