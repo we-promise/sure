@@ -3,6 +3,8 @@ zh-TW:
   chats:
     demo_banner_title: 示範模式已啟用
     demo_banner_message: "Vercel AI Gateway 免費提供 LLM token。由於我們經常更換模型權重進行測試，結果可能會有所不同。請參閱 Vercel 的文件，了解您的對話會被傳送到哪裡！🤖"
+    demo_banner_message_addendum_html: "(見%{link})"
+    demo_banner_link: "這裡"
     thinking: 思考中...
     worker_unhealthy_warning: AI 回應目前可能無法送達 — 背景工作似乎未執行或積壓中。請確認您的 Sidekiq worker 正在執行。
     ai_greeting:

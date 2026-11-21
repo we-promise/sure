@@ -41,6 +41,8 @@ ru:
       edit_chat_title: Редактировать название чата
       start_new_chat: Начать новый чат
     demo_banner_message: "Бесплатные токены LLM предоставлены Vercel AI Gateway. Результаты могут различаться, поскольку мы часто меняем веса моделей для тестирования. В документации Vercel можно узнать, куда отправляются ваши разговоры! 🤖"
+    demo_banner_message_addendum_html: "(см. %{link})"
+    demo_banner_link: "здесь"
     demo_banner_title: Демо-режим активен
     destroy:
       notice: Чат успешно удалён

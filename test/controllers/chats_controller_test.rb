@@ -7,6 +7,50 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user
   end
 
+  test "demo notices link to usage settings in every locale and chat view" do
+    ApplicationController.any_instance.stubs(:show_demo_warning?).returns(true)
+
+    locales = Rails.root.glob("config/locales/views/chats/*.yml").map { |path| path.basename(".yml").to_s }
+
+    locales.each do |locale|
+      @user.update!(locale: locale)
+      [ chats_url, new_chat_url, chat_url(@user.chats.first) ].each do |url|
+        get url
+
+        assert_response :success
+        warning = I18n.t("chats.demo_banner_message", locale: locale, fallback: false, raise: true)
+        suffix = I18n.t("chats.demo_banner_message_addendum_html", locale: locale, fallback: false, raise: true,
+          link: I18n.t("chats.demo_banner_link", locale: locale, fallback: false, raise: true))
+        assert_select "[role='status'] p", count: 1 do |paragraphs|
+          paragraph = paragraphs.first.dup
+          paragraph.css("a").each { |link| link.content = link.text.squish }
+          assert_equal "#{warning} #{suffix}", paragraph.text.squish
+        end
+        assert_select "[role='status'] a[href=?][data-turbo-frame='_top']", settings_llm_usage_path,
+          text: I18n.t("chats.demo_banner_link", locale: locale, fallback: false, raise: true), count: 1
+      end
+    end
+  end
+
+  test "demo notices preserve localized warnings without usage links for members and guests" do
+    ApplicationController.any_instance.stubs(:show_demo_warning?).returns(true)
+    locales = Rails.root.glob("config/locales/views/chats/*.yml").map { |path| path.basename(".yml").to_s }
+
+    %w[member guest].each do |role|
+      @user.update!(role: role)
+      locales.each do |locale|
+        @user.update!(locale: locale)
+        [ chats_url, new_chat_url, chat_url(@user.chats.first) ].each do |url|
+          get url
+
+          assert_response :success
+          assert_select "[role='status'] p", text: I18n.t("chats.demo_banner_message", locale: locale, fallback: false, raise: true)
+          assert_select "[role='status'] a[href=?]", settings_llm_usage_path, count: 0
+        end
+      end
+    end
+  end
+
   test "gets index" do
     Usage.stubs(:capture)
     Usage.expects(:capture).with("ai_assistant_served_daily").never
