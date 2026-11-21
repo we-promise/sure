@@ -49,6 +49,28 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal evening_utc.in_time_zone(Time.zone).to_date, family.local_date(evening_utc)
   end
 
+  test "fees_category reuses a Fees category created under another locale" do
+    family = families(:dylan_family)
+    legacy = family.categories.create!(name: "Fees", color: "#123456", lucide_icon: "folder")
+
+    I18n.with_locale(:"pt-BR") do
+      assert_no_difference "family.categories.count" do
+        assert_equal legacy, family.fees_category
+      end
+    end
+  end
+
+  test "fees_category creates the category in the current locale when missing" do
+    family = families(:dylan_family)
+    family.categories.fees.destroy_all
+
+    I18n.with_locale(:"pt-BR") do
+      assert_difference "family.categories.count", 1 do
+        assert_equal "Tarifas", family.fees_category.name
+      end
+    end
+  end
+
   test "investment_contributions_category creates category when missing" do
     family = families(:dylan_family)
     family.categories.where(name: Category.investment_contributions_name).destroy_all

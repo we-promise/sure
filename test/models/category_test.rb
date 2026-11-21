@@ -148,6 +148,16 @@ class CategoryTest < ActiveSupport::TestCase
     end
   end
 
+  test "display_name localizes default category names in pt-BR instead of falling back to english" do
+    supermercado = Category.new(name: "Supermercado", color: "#123456", lucide_icon: "folder", family: @family)
+
+    I18n.with_locale(:"pt-BR") do
+      assert_equal "Comida e bebida", categories(:food_and_drink).display_name
+      assert_equal "Supermercado", supermercado.display_name
+      assert_equal "Sem categoria", Category.uncategorized.display_name
+    end
+  end
+
   test "display_name returns default category names in english" do
     I18n.with_locale(:en) do
       assert_equal "Food & Drink", categories(:food_and_drink).display_name
