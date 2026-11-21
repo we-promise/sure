@@ -267,7 +267,9 @@ class RedbarkItem::Importer
 
     # A card's product details rarely change, so each card is tried at most
     # once per window: its stamp records every attempt -- stored, left out by
-    # the provider, or failed -- not only a stored payload. A batch of its own,
+    # the provider, or failed -- not only a stored payload. The payload is
+    # replaced on every attempt, cleared when there is none, so a stamp never
+    # vouches for details from an earlier attempt. A batch of its own,
     # so a card id the endpoint rejects cannot push the loans into per-account
     # retries; a failure is logged once per window, never a sync error.
     def store_card_account_details(cards)
@@ -279,16 +281,14 @@ class RedbarkItem::Importer
 
         cards.each do |redbark_account|
           detail = details_by_id[redbark_account.redbark_account_id]
-          attributes = { account_details_fetched_at: fetched_at }
-          attributes[:raw_account_details_payload] = detail if detail.present?
-          redbark_account.update!(attributes)
+          redbark_account.update!(raw_account_details_payload: detail.presence, account_details_fetched_at: fetched_at)
           stats["account_details_updated"] = stats.fetch("account_details_updated", 0) + 1 if detail.present?
         end
       rescue Provider::Redbark::AuthenticationError
         raise
       rescue => e
-        warn_card_failure("Card account details fetch failed; keeping previous details", e)
-        RedbarkAccount.where(id: cards.map(&:id)).update_all(account_details_fetched_at: fetched_at)
+        warn_card_failure("Card account details fetch failed; clearing previous details", e)
+        RedbarkAccount.where(id: cards.map(&:id)).update_all(raw_account_details_payload: nil, account_details_fetched_at: fetched_at)
       end
     end
 
@@ -566,15 +566,6 @@ class RedbarkItem::Importer
         context: context.to_s,
         timestamp: Time.current.iso8601
       }
-    end
-
-    # Once per CARD_DETAILS_REFRESH for the same message and account: a card
-    # whose details keep failing is retried every sync.
-    def capture_card_failure(message, error, **metadata)
-      logged = DebugLogEntry.where(source: self.class.name, message: message, family_id: redbark_item.family_id)
-                            .where(created_at: (fetched_at - CARD_DETAILS_REFRESH)..)
-      logged = logged.where("metadata->>'account_id' = ?", metadata[:account_id].to_s) if metadata[:account_id]
-      capture_failure(message, error, **metadata) unless logged.exists?
     end
 
     # Surfaces provider failures in the /settings/debug super-admin UI so

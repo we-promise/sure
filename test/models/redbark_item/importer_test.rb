@@ -226,9 +226,32 @@ class RedbarkItem::ImporterTest < ActiveSupport::TestCase
     assert importer.send(:stats)["errors"].blank?, "a card fetch failure was registered as a sync error"
   end
 
+  # The stamp is what the card processor reads as "fetched this window", so a
+  # failed attempt must not leave an older payload under a fresh stamp.
+  test "a failed card fetch clears an old payload so the APR stays blank" do
+    redbark_account, item = link_card("rb_acc_card_old_payload")
+    now = Time.utc(2026, 11, 20, 9, 0, 0)
+    redbark_account.update!(
+      raw_account_details_payload: { "lendingRates" => [ { "rateType" => "PURCHASE", "rate" => "0.1999" } ] },
+      account_details_fetched_at: now - 30.days
+    )
+    provider = mock
+    provider.stubs(:list_connections).returns([])
+    provider.expects(:get_account_details).once.raises(Provider::Redbark::Error.new("boom", :server_error))
+
+    RedbarkItem::Importer.new(item, redbark_provider: provider, fetched_at: now)
+                         .send(:import_account_details, [ redbark_account.reload ])
+    RedbarkAccount::CreditCardDetailsProcessor.new(redbark_account.reload, as_of: now.to_date).process
+
+    assert_nil redbark_account.current_account.accountable.reload.apr,
+               "a payload from before the failed fetch filled the APR"
+    assert_nil redbark_account.raw_account_details_payload
+  end
+
   test "a card the provider leaves out is stamped so it waits for the window" do
     redbark_account, item = link_card("rb_acc_card_omitted")
     now = Time.utc(2026, 11, 20, 9, 0, 0)
+    redbark_account.update!(raw_account_details_payload: { "lendingRates" => [] }, account_details_fetched_at: now - 30.days)
     provider = mock
     provider.stubs(:list_connections).returns([])
     provider.expects(:get_account_details).once.returns([])
@@ -237,6 +260,7 @@ class RedbarkItem::ImporterTest < ActiveSupport::TestCase
                          .send(:import_account_details, [ redbark_account.reload ])
 
     assert_equal now, redbark_account.reload.account_details_fetched_at.utc
+    assert_nil redbark_account.raw_account_details_payload, "an old payload was kept under the new stamp"
   end
 
   test "a card failure already logged in the window is not logged again" do
