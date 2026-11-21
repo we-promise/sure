@@ -133,6 +133,50 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "completed", family_sync.reload.status
   end
 
+  test "a standalone provider sync applies the family's rules when it completes" do
+    plaid_item = plaid_items(:one)
+    sync = Sync.create!(syncable: plaid_item)
+
+    plaid_item.expects(:perform_sync).with(sync).once
+    # Finalization reloads the sync (lock!), so post-sync runs on a fresh instance
+    PlaidItem.any_instance.expects(:perform_post_sync).once
+    PlaidItem.any_instance.stubs(:broadcast_sync_complete)
+
+    assert_enqueued_with(job: ApplyRulesJob, args: [ plaid_item.family ]) do
+      sync.perform
+    end
+  end
+
+  test "a provider sync inside a family sync leaves the rules to the family" do
+    family = families(:dylan_family)
+    plaid_item = plaid_items(:one)
+    family_sync = Sync.create!(syncable: family, status: :syncing)
+    plaid_item_sync = Sync.create!(syncable: plaid_item, parent: family_sync)
+
+    plaid_item.expects(:perform_sync).with(plaid_item_sync).once
+    PlaidItem.any_instance.stubs(:perform_post_sync)
+    Family.any_instance.stubs(:perform_post_sync)
+    PlaidItem.any_instance.stubs(:broadcast_sync_complete)
+    Family.any_instance.stubs(:broadcast_sync_complete)
+
+    assert_no_enqueued_jobs(only: ApplyRulesJob) do
+      plaid_item_sync.perform
+    end
+  end
+
+  test "a standalone account sync does not apply the rules" do
+    account = accounts(:depository)
+    sync = Sync.create!(syncable: account)
+
+    account.expects(:perform_sync).with(sync).once
+    Account.any_instance.stubs(:perform_post_sync)
+    Account.any_instance.stubs(:broadcast_sync_complete)
+
+    assert_no_enqueued_jobs(only: ApplyRulesJob) do
+      sync.perform
+    end
+  end
+
   test "failures propagate up the chain" do
     family = families(:dylan_family)
     plaid_item = plaid_items(:one)
