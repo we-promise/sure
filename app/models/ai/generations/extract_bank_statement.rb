@@ -137,7 +137,7 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
   # source: the text the model read, or nil for images and the PDF. balances: the opening and
   # closing balances read from the text layer (AccountStatement::TextMetadataParser), when found.
   def self.checks(value, source: nil, balances: {})
-    rows = Array(value[:transactions]).reject { _1[:amount].to_f.zero? }
+    rows = transactions(value)
     period = value[:statement_period]
     dated = rows.map { _1.merge(date: normal_date(_1[:date], period:)) }
     invalid_date = dated.any? { _1[:date].nil? }
@@ -161,7 +161,7 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
   def self.statement(value)
     period = value[:statement_period]
     {
-      transactions: Array(value[:transactions]).map do |row|
+      transactions: transactions(value).map do |row|
         { date: normal_date(row[:date], period:), amount: row[:amount]&.to_f, name: row[:description], category: row[:category], notes: row[:reference] }
       end,
       period: { start_date: normal_date(value.dig(:statement_period, :start_date)), end_date: normal_date(value.dig(:statement_period, :end_date)) },
@@ -169,6 +169,9 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
       currency: value[:currency], opening_balance: value[:opening_balance], closing_balance: value[:closing_balance]
     }
   end
+
+  # The rows, without zero-amount lines ("Balance brought forward"), which aren't transactions.
+  def self.transactions(value) = Array(value[:transactions]).reject { _1[:amount].to_f.zero? }
 
   class << self
     private

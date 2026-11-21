@@ -205,13 +205,13 @@ class Ai::LegacyEnvConfig
       if (reason = Jev.unreachable_reason(url))
         key = "#{Jev.redacted_endpoint(url)}|#{reason}"
         unless (self.class.unreachably_warned ||= Set.new).include?(key)
-          self.class.unreachably_warned << key
-          DebugLogEntry.capture(
+          recorded = DebugLogEntry.capture(
             category: "ai_configuration", level: "error",
             message: "Jev endpoint is not supported and was ignored; categorize falls back to the LLM provider",
             source: "Ai::LegacyEnvConfig", provider_key: "jev",
             metadata: { endpoint: Jev.redacted_endpoint(url), reason:, detail: Jev::UNSUPPORTED.fetch(reason) }
           )
+          self.class.unreachably_warned << key if recorded   # a failed write is tried again on the next build
         end
         Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{Jev::UNSUPPORTED.fetch(reason)}")
         return

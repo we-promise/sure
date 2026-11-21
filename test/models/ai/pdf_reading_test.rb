@@ -46,6 +46,19 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "a scan too large for the PDF limits, read as PDF, says it's too large" do
+    skip_without_pdftoppm
+    limited = Ai::Config::Model.new(endpoint: Ai::Config::Endpoint.new(name: :limited, protocol: :compatible, preset: :openai,
+                                                                        base_url: "https://api.openai.com/v1"),
+                                    name: "gpt-4.1-mini", capabilities: %i[structured_output documents])
+
+    with_reading_routes(limited) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(blank_pdf(pages: 101)).extract(read_as: :pdf) }
+
+      assert_equal :too_large, error.reason
+    end
+  end
+
   test "a text model reads the text layer, page by page, and every check runs on it" do
     requests = stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
 

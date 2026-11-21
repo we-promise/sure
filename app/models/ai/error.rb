@@ -79,9 +79,10 @@ module Ai::Error
     when 408 then Timeout
     when 429 then matches?(text, NO_CREDIT) ? NoCredit : RateLimited
     when 400, 413
+      # The provider's own image refusal wins over a credit phrase in another field.
       if matches?(text, CONTEXT_TOO_LONG) then ContextTooLong
-      elsif matches?(text, NO_CREDIT) then NoCredit
       elsif direct_image_refusal?(body, message) then UnsupportedInput
+      elsif matches?(text, NO_CREDIT) then NoCredit
       else Refused
       end
     when 500..599

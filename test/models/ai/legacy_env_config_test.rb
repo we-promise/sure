@@ -342,6 +342,14 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_includes entry.metadata["endpoint"], "gw.example.test"
   end
 
+  test "a Jev diagnostic that couldn't be written is tried again on the next build" do
+    Ai::LegacyEnvConfig.unreachably_warned = nil
+    env = { "OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://gw.example.test/v1/jev" }
+
+    DebugLogEntry.expects(:capture).twice.returns(nil).then.returns(DebugLogEntry.new)
+    3.times { build(env) }
+  end
+
   test "an OpenRouter decisions URL routes categorize through the openrouter preset" do
     config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_MODEL" => "~typesafe/jev-latest",
                    "JEV_ENDPOINT" => "https://openrouter.ai/api/alpha/decisions", "CATEGORIZATION_PROVIDER" => "jev")
@@ -428,6 +436,7 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
 
   test "equivalent hosted OpenAI embedding URLs still need a key" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns(nil)   # a host's OPENAI_ACCESS_TOKEN at boot would leak in
     config = build("VECTOR_STORE_PROVIDER" => "pgvector",
                    "EMBEDDING_URI_BASE" => "https://API.OPENAI.COM:443/v1/")
 

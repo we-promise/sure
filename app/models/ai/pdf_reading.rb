@@ -112,7 +112,7 @@ class Ai::PdfReading
       best = outcome if best.nil? || checks.score > best.checks.score
       nil
     end
-    best || raise_unavailable(attempts)
+    best || raise_unavailable(attempts, read_as)
   end
 
   # What the document is (ReadPdf), from the first way that answers. A batch at a time: the first
@@ -150,7 +150,7 @@ class Ai::PdfReading
       attempts << { way: }
       return Outcome.new(value: first.value, way:, model: first.route&.model&.name, checks: nil, usage:, attempts:)
     end
-    raise_unavailable(attempts)
+    raise_unavailable(attempts, read_as)
   end
 
   # The text layer, page by page ("" for a page without one).
@@ -206,12 +206,17 @@ class Ai::PdfReading
       end
     end
 
-    # A scan nothing on the route can read is `no_text_layer`; otherwise the last
-    # way's reason. A failed renderer's code stays on the error for the admin's status page.
-    def raise_unavailable(attempts)
+    # A way asked for by name gives its own reason (a scan too large for the PDF limits is
+    # `too_large`). Under Auto, a scan nothing on the route can read is `no_text_layer`; otherwise
+    # the last way's reason. A failed renderer's code stays on the error for the admin's status page.
+    def raise_unavailable(attempts, read_as)
       render_error = attempts.filter_map { _1[:render_error] }.last || @page_count_error
-      reason = text_layer? ? attempts.filter_map { _1[:error] }.last || ways.values.compact.first :
-               render_error ? :unreadable : :no_text_layer
+      last_reason = attempts.filter_map { _1[:error] }.last
+      reason =
+        if WAYS.include?(read_as.to_s.presence&.to_sym) then last_reason
+        elsif text_layer? then last_reason || ways.values.compact.first
+        else render_error ? :unreadable : :no_text_layer
+        end
       raise Ai::Error::Unavailable.new(reason || :no_way_to_read, code: render_error)
     end
 

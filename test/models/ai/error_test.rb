@@ -54,6 +54,13 @@ class Ai::ErrorTest < ActiveSupport::TestCase
     assert_equal Ai::Error::Refused, Ai::Error.for_status(400, nil, body: { error: { message: "bad request" }, detail: message })
   end
 
+  test "a direct image refusal is not a credit error because another field mentions credits" do
+    body = { error: { message: "image input is not supported" }, previous_error: "insufficient credits" }
+
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(400, nil, body:)
+    assert_equal Ai::Error::NoCredit, Ai::Error.for_status(400, nil, body: { error: { message: "insufficient credits" } })
+  end
+
   test "a spent balance is NoCredit, however the provider says it" do
     assert_equal Ai::Error::NoCredit, Ai::Error.for_status(400, "Your credit balance is too low to access the Anthropic API")
     assert_equal Ai::Error::NoCredit, Ai::Error.for_status(429, "You exceeded your current quota", body: { "error" => { "code" => "insufficient_quota" } })

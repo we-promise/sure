@@ -50,11 +50,8 @@ class PdfImport < Import
         previous_status = pdf_import.status
         if previous_status == "reverting"
           pdf_import.update!(status: :revert_failed, error: Import.interrupted_error_message, reread_token: nil)
-        elsif pdf_import.data_committed?
-          pdf_import.update!(status: :complete, error: nil, reread_token: nil)
-          needs_sync = true
         else
-          pdf_import.release_lost_claim!
+          needs_sync = pdf_import.recover_lost_claim!
         end
 
         DebugLogEntry.capture(
@@ -127,20 +124,34 @@ class PdfImport < Import
   def force_fail!(error_message = Import.lost_error_message)
     return super if reverting?
 
-    with_lock do
+    needs_sync = with_lock do
       return false unless presumed_lost?
 
-      release_lost_claim!(error_message)
+      recover_lost_claim!(error_message)
     end
+    family.sync_later if needs_sync
 
     true
   end
 
-  # A lost claim goes back to pending so the user can start it again, except a reread that had
-  # already cleared the previous reading: pending with no rows shows "processing" with nothing to
-  # press, so it fails instead, which offers "Read again".
+  # Under the row lock. A publish whose ledger transaction committed finishes as complete (true:
+  # the family needs a sync); publishing again would insert its rows twice. Otherwise the claim
+  # is released.
+  def recover_lost_claim!(error_message = Import.lost_error_message)
+    if data_committed?
+      update!(status: :complete, error: nil, reread_token: nil)
+    else
+      release_lost_claim!(error_message)
+      false
+    end
+  end
+
+  # A lost claim goes back to pending so the user can start it again, except a reading that had
+  # already written something (a reread that cleared the previous reading, or an initial reading
+  # that classified the document): pending with no rows shows "processing" with nothing to press,
+  # so it fails instead, which offers "Read again".
   def release_lost_claim!(error_message = Import.lost_error_message)
-    if reread_token.present? && rows_count.zero?
+    if rows_count.zero? && (reread_token.present? || ai_processed?)
       update!(status: :failed, error: error_message, reread_token: nil)
     else
       update!(status: :pending, reread_token: nil)

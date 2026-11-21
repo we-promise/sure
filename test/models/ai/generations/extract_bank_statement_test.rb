@@ -162,6 +162,12 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_equal 40_000.0, statement[:opening_balance]
   end
 
+  test "a zero-amount balance line is not a transaction PdfImport can publish" do
+    statement = Ai::Generations::ExtractBankStatement.statement(value([ [ "2019-02-01", 0.0 ], [ "2019-02-01", -24.5 ] ]))
+
+    assert_equal [ -24.5 ], statement[:transactions].map { _1[:amount] }
+  end
+
   test "a date form inside a longer printed day doesn't anchor a different row" do
     extraction = value([ [ "2019-02-01", -5.0 ], [ "2019-02-11", 300.0 ] ])
 

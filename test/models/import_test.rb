@@ -121,6 +121,16 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal "current", import.reread_token
   end
 
+  test "publish that can't check its claim raises, so the job is retried" do
+    import = imports(:transaction)
+    import.update_columns(status: "importing", reread_token: "current")
+    import.stubs(:with_lock).raises(ActiveRecord::ConnectionFailed, "connection lost")
+    import.expects(:import!).never
+
+    assert_raises(ActiveRecord::ConnectionFailed) { import.publish(publish_token: "current") }
+    assert import.reload.importing?
+  end
+
   test "publish with the current token consumes the claim before importing" do
     import = imports(:transaction)
     import.update_columns(status: "importing", reread_token: "current")
@@ -280,6 +290,16 @@ class ImportTest < ActiveSupport::TestCase
 
     assert pdf.force_fail!
     assert_equal "pending", pdf.reload.status
+  end
+
+  test "force_fail! completes a lost PdfImport publish whose ledger transaction committed" do
+    pdf = imports(:pdf_with_rows)
+    pdf.update_columns(status: "importing", updated_at: 2.hours.ago)
+    pdf.stubs(:data_committed?).returns(true)
+    Family.any_instance.expects(:sync_later)
+
+    assert pdf.force_fail!
+    assert pdf.reload.complete?
   end
 
   # Category/Merchant/Rule imports attach nothing to the import (their records

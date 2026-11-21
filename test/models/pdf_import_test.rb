@@ -154,6 +154,16 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_nil import.reread_token
   end
 
+  test "an initial reading lost after classifying the document fails, so it can be read again" do
+    import = PdfImport.create_from_statement!(statement: create_pdf_statement)
+    import.update_columns(status: "importing", document_type: "bank_statement", updated_at: 7.hours.ago)
+
+    PdfImport.reap_stuck!(import.reload)
+
+    assert import.reload.failed?
+    assert import.rereadable?
+  end
+
   test "reading again after the last route was removed is refused, not raised" do
     import = @import_with_rows
     import.stubs(:pdf_uploaded?).returns(true)
