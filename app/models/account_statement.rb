@@ -63,12 +63,15 @@ class AccountStatement < ApplicationRecord
   validate :original_file_constraints, if: -> { original_file.attached? }
 
   scope :ordered, -> { order(created_at: :desc) }
-  # Newest statement period first; statements whose period wasn't read go
-  # last, and upload order breaks ties.
+  # Statements with a known period first, newest period first. A period
+  # counts as known only with both ends, as account_statement_period shows
+  # it; the rest follow in upload order, which also breaks ties.
   scope :by_period, -> {
+    known = "account_statements.period_start_on IS NOT NULL AND account_statements.period_end_on IS NOT NULL"
     order(
-      arel_table[:period_end_on].desc.nulls_last,
-      arel_table[:period_start_on].desc.nulls_last,
+      Arel.sql("CASE WHEN #{known} THEN 0 ELSE 1 END"),
+      Arel.sql("CASE WHEN #{known} THEN account_statements.period_end_on END DESC"),
+      Arel.sql("CASE WHEN #{known} THEN account_statements.period_start_on END DESC"),
       created_at: :desc
     )
   }

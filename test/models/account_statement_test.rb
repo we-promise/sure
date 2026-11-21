@@ -944,6 +944,18 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal [ march, quarter, january_again, january, unread ], @account.account_statements.by_period.to_a
   end
 
+  test "by_period lists a statement with only one end of its period with the unknown periods, by upload" do
+    march = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 3, 1), period_end_on: Date.new(2024, 3, 31), content: "march")
+    unread = create_statement_with_period(account: @account, period_start_on: nil, period_end_on: nil, content: "unread")
+    end_only = create_statement_with_period(account: @account, period_start_on: nil, period_end_on: Date.new(2024, 4, 30), content: "end_only")
+    start_only = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 5, 1), period_end_on: nil, content: "start_only")
+    unread.update_columns(created_at: 3.hours.ago)
+    end_only.update_columns(created_at: 2.hours.ago)
+    start_only.update_columns(created_at: 1.hour.ago)
+
+    assert_equal [ march, start_only, end_only, unread ], @account.account_statements.by_period.to_a
+  end
+
   private
 
     def create_statement(account:, month:, content:, suggested_account: nil, closing_balance: nil)
