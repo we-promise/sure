@@ -235,10 +235,14 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal 2, run.transactions_processed
     assert_equal 2, run.transactions_modified
 
+    assert_equal 0, run.transactions_blocked
+
+    # Both transactions are already counted, so the AI's change to one of
+    # them cannot take modified past the matched count.
     run.complete_job!(modified_count: 1)
 
     assert_equal "success", run.reload.status
-    assert_equal 3, run.transactions_modified
+    assert_equal 2, run.transactions_modified
     assert_equal 0, run.transactions_blocked
   end
 
@@ -251,8 +255,10 @@ class Rule::RunnerTest < ActiveSupport::TestCase
       actions: [ Rule::Action.new(action_type: "auto_categorize") ]
     )
 
-    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first
+    runner = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual")
+    run = runner.run.first
 
+    assert_equal 0, runner.changed_now_count
     assert_equal "pending", run.status
     assert_equal 2, run.transactions_processed
     assert_equal 0, run.transactions_modified
@@ -267,6 +273,17 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal "success", run.status
     assert_equal 2, run.transactions_processed
     assert_equal 1, run.transactions_modified
+  end
+
+  test "a run never records more modified than it matched" do
+    rule = create_rule("Two actions", "o", category: @groceries, tags: [ @tag_a ])
+
+    runner = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual")
+    run = runner.run.first
+
+    assert_equal 2, run.transactions_queued
+    assert_equal 2, run.transactions_modified
+    assert_equal 2, runner.changed_now_count
   end
 
   test "a failing rule is recorded and the remaining rules still run" do

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_21_093556) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2314,6 +2314,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.text "error_message"
     t.datetime "executed_at", null: false
     t.string "execution_type", null: false
+    t.integer "job_transactions_modified", default: 0, null: false
     t.integer "pending_jobs_count", default: 0, null: false
     t.uuid "rule_id", null: false
     t.string "rule_name"
