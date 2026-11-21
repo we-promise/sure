@@ -159,14 +159,35 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
       produces 'application/json'
       description 'Queues receipt extraction on the interactive AI queue. Poll result_url until status is completed or failed. A completed proposal is never saved as a split automatically; review proposal.split before submitting it to the split endpoint. Requires AI consent and write access.'
       parameter name: :attachment_id, in: :query, type: :string, required: false
+      let(:receipt_attached) { true }
+      before do
+        user.update!(ai_enabled: true)
+        allow(Ai).to receive(:availability).and_return(double(available?: true))
+        if receipt_attached
+          transaction.attachments.attach(io: StringIO.new('receipt'), filename: 'receipt.png', content_type: 'image/png')
+        end
+      end
+
       response '202', 'proposal queued or terminal enqueue failure' do
         schema '$ref' => '#/components/schemas/ReceiptItemization'
         run_test!
       end
-      response('401', 'unauthorized') { run_test! }
-      response('403', 'AI unavailable or write access missing') { run_test! }
-      response('404', 'transaction not found') { run_test! }
-      response('422', 'no receipt or transaction cannot be split') { run_test! }
+      response '401', 'unauthorized' do
+        let(:'X-Api-Key') { nil }
+        run_test!
+      end
+      response '403', 'AI unavailable or write access missing' do
+        before { allow(Ai).to receive(:availability).and_return(double(available?: false, reason: :user_disabled)) }
+        run_test!
+      end
+      response '404', 'transaction not found' do
+        let(:transaction_id) { SecureRandom.uuid }
+        run_test!
+      end
+      response '422', 'no receipt or transaction cannot be split' do
+        let(:receipt_attached) { false }
+        run_test!
+      end
     end
   end
 
@@ -178,12 +199,23 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
       description 'Returns only a result requested by the authenticated user for this accessible transaction. Pending results omit proposal; failed results contain a generic error without receipt text.'
+      let(:receipt_itemization_id) do
+        transaction.attachments.attach(io: StringIO.new('receipt'), filename: 'receipt.png', content_type: 'image/png')
+        ReceiptItemization.create!(source_transaction: transaction, user: user, attachment: transaction.attachments.first).id
+      end
+
       response '200', 'pending, completed or failed proposal' do
         schema '$ref' => '#/components/schemas/ReceiptItemization'
         run_test!
       end
-      response('401', 'unauthorized') { run_test! }
-      response('404', 'transaction or result not found') { run_test! }
+      response '401', 'unauthorized' do
+        let(:'X-Api-Key') { nil }
+        run_test!
+      end
+      response '404', 'transaction or result not found' do
+        let(:receipt_itemization_id) { SecureRandom.uuid }
+        run_test!
+      end
     end
   end
 end
