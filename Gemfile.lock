@@ -1017,7 +1017,7 @@ DEPENDENCIES
   rubocop-rails-omakase
   ruby-lsp-rails
   ruby-openai
-  ruby_llm (~> 2.2)
+  ruby_llm (~> 2.2, >= 2.2.3)
   rubyzip (~> 3.4)
   selenium-webdriver
   sentry-rails
