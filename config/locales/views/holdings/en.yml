@@ -81,6 +81,8 @@ en:
       no_trade_history: No trade history available for this holding.
       overview: Overview
       portfolio_weight_label: Portfolio Weight
+      price_history: Price History
+      price_history_loading: Loading price history...
       settings: Settings
       security_label: Security
       originally: "was %{ticker}"

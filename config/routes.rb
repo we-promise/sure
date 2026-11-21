@@ -598,6 +598,7 @@ Rails.application.routes.draw do
     resources :lots, only: :update, controller: "holding_lots" do
       post :unlock, on: :member
     end
+    resource :price_chart, only: :show, controller: "holding_price_charts"
   end
   resources :trades, only: %i[show new create update destroy] do
     member do

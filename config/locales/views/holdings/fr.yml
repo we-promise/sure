@@ -74,6 +74,8 @@ fr:
       originally: était %{ticker}
       overview: Aperçu
       portfolio_weight_label: Poids du portefeuille
+      price_history: Historique des prix
+      price_history_loading: Chargement de l'historique des prix...
       provider_disabled_warning: Mises à jour des cours en pause — le fournisseur
         %{provider} est désactivé. Passez à un autre fournisseur ci-dessous ou réactivez-le
         dans les Paramètres.

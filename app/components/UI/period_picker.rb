@@ -15,12 +15,15 @@ class UI::PeriodPicker < ApplicationComponent
   #
   # NOTE: `url` must be a path without a query string; pass query state via
   # `extra_params` so the picker can compose `?period=…` cleanly.
-  attr_reader :selected, :selected_key, :url, :frame, :extra_params, :placement, :options
+  attr_reader :selected, :selected_key, :url, :frame, :extra_params, :placement, :options, :history
 
   # `options` narrows the menu to [key, label] pairs, for a chart that offers
   # its own timescales under the shared period keys (the loan chart). Without
   # it every Period is offered under its own short label.
-  def initialize(selected:, url:, frame: nil, extra_params: {}, placement: "bottom-end", options: nil)
+  #
+  # `history: false` keeps picks out of the address bar, for a frame whose
+  # `url` is not a page of its own (a chart lazy-loaded inside a drawer).
+  def initialize(selected:, url:, frame: nil, extra_params: {}, placement: "bottom-end", options: nil, history: true)
     @selected = selected
     @selected_key = selected.respond_to?(:key) ? selected.key : selected.to_s
     @url = url
@@ -28,6 +31,7 @@ class UI::PeriodPicker < ApplicationComponent
     @extra_params = (extra_params || {}).symbolize_keys
     @placement = placement
     @options = options
+    @history = history
   end
 
   # [key, label] pairs, in menu order.
@@ -96,6 +100,8 @@ class UI::PeriodPicker < ApplicationComponent
   # instead: a no-op has no business stacking a duplicate history entry the user
   # then has to press Back through twice to escape.
   def turbo_action_for(item_selected)
+    return unless history
+
     item_selected ? "replace" : "advance"
   end
 

@@ -430,4 +430,45 @@ class SecurityTest < ActiveSupport::TestCase
 
     assert_nil security.crypto_base_asset
   end
+
+  test "price_series plots the period's closes in the latest close's currency" do
+    security = Security.create!(ticker: "PSER", name: "Price series")
+    security.prices.create!(date: 40.days.ago.to_date, price: 5, currency: "EUR")
+    security.prices.create!(date: 3.days.ago.to_date, price: 8, currency: "USD")
+    security.prices.create!(date: 2.days.ago.to_date, price: 9, currency: "EUR")
+    security.prices.create!(date: 1.day.ago.to_date, price: 10, currency: "EUR")
+
+    series = security.price_series(period: Period.last_30_days)
+
+    assert_equal [ 2.days.ago.to_date, 1.day.ago.to_date ], series.values.map(&:date)
+    assert_equal [ Money.new(9, "EUR"), Money.new(10, "EUR") ], series.values.map(&:value)
+  end
+
+  test "price_series follows the most recently stored currency when the latest date has several" do
+    security = Security.create!(ticker: "PSTIE", name: "Price series tie")
+    security.prices.create!(date: 2.days.ago.to_date, price: 8, currency: "USD")
+    security.prices.create!(date: 2.days.ago.to_date, price: 7, currency: "EUR")
+    security.prices.create!(date: 1.day.ago.to_date, price: 9, currency: "USD", created_at: 1.hour.ago)
+    security.prices.create!(date: 1.day.ago.to_date, price: 8, currency: "EUR", created_at: 1.minute.ago)
+
+    assert_equal [ Money.new(7, "EUR"), Money.new(8, "EUR") ], security.price_series.values.map(&:value)
+  end
+
+  test "price_series for All Time covers every close, not just the family's activity window" do
+    security = Security.create!(ticker: "PSALL", name: "Price series all time")
+    security.prices.create!(date: 10.years.ago.to_date, price: 5, currency: "USD")
+    security.prices.create!(date: 1.day.ago.to_date, price: 9, currency: "USD")
+    period = Period.custom(start_date: 1.month.ago.to_date, end_date: Date.current)
+    period.stubs(:key).returns("all_time")
+
+    assert_equal [ 10.years.ago.to_date, 1.day.ago.to_date ], security.price_series(period: period).values.map(&:date)
+  end
+
+  test "price_series is nil when the period holds fewer than two closes" do
+    security = Security.create!(ticker: "PSNO", name: "Price series none")
+    assert_nil security.price_series
+
+    security.prices.create!(date: 1.day.ago.to_date, price: 10, currency: "USD")
+    assert_nil security.price_series
+  end
 end
