@@ -21,6 +21,35 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
   end
 
+  test "index keeps active filters in the search form until the filter menu loads" do
+    get transactions_url(q: { categories: [ "Food & Drink" ], start_date: "2026-10-01" })
+
+    assert_response :success
+    assert_select "#transactions-search turbo-frame#transaction-filters" do
+      assert_select "input[type=hidden][name='q[categories][]'][value=?]", "Food & Drink", count: 1
+      assert_select "input[type=hidden][name='q[start_date]'][value=?]", "2026-10-01", count: 1
+    end
+  end
+
+  test "index keeps the amount filter pair but not the search text in the unloaded filter menu" do
+    get transactions_url(q: { search: "coffee", amount: "50", amount_operator: "greater" })
+
+    assert_response :success
+    assert_select "#transactions-search turbo-frame#transaction-filters" do
+      assert_select "input[type=hidden][name='q[amount]'][value=?]", "50", count: 1
+      assert_select "input[type=hidden][name='q[amount_operator]'][value=?]", "greater", count: 1
+      assert_select "input[name='q[search]']", count: 0
+    end
+    assert_select "#transactions-search input[name='q[search]']", count: 1
+  end
+
+  test "index renders no hidden filter inputs when no filter is active" do
+    get transactions_url
+
+    assert_response :success
+    assert_select "#transactions-search turbo-frame#transaction-filters input", count: 0
+  end
+
   test "show lists split rows in the order they were entered" do
     entry = create_transaction(amount: 100, name: "Split parent", account: accounts(:depository))
     entry.split!([ { name: "Part 1", amount: 60 }, { name: "Part 2", amount: 40 } ])
