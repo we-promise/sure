@@ -88,16 +88,35 @@ class Holding < ApplicationRecord
   # and only while they add up to it (HoldingLot.in_partition). Any other
   # row, or an open lot with no cost, is unknown: the trades' pooled average
   # is the average method's figure, not this one.
-  def self.fifo_avg_costs(holdings)
+  def self.fifo_avg_costs(holdings, rates: {})
     open_lots = open_lots_for(holdings)
 
     holdings.to_h do |holding|
       open = open_lots[holding.id]&.reject(&:opening?)
-      value = if open&.any? && open.none? { |lot| lot.unit_cost.nil? }
-        Money.new(open.sum { |lot| lot.qty * lot.unit_cost } / open.sum(&:qty), holding.currency)
+      value = if open&.any? && open.none? { |lot| lot.unit_cost.nil? } && open.map(&:currency).uniq.one?
+        mean = Money.new(open.sum { |lot| lot.qty * lot.unit_cost } / open.sum(&:qty), open.first.currency)
+        lots_mean_in(mean, holding, rates)
       end
       [ holding.id, value ]
     end
+  end
+
+  # Lots and the average method are costed in the account's currency; a
+  # provider can report the holding in another, so a mean is converted at the
+  # holding's date, and is unknown without a stored rate. The rate comes from
+  # the stored table only (never the provider), since costs are read while a
+  # page renders. `rates` caches lookups, hits and misses, by currency pair
+  # and date; a batch shares one cache, so it looks each pair and date up once.
+  def self.lots_mean_in(mean, holding, rates = {})
+    from = mean.currency.iso_code
+    to = Money::Currency.new(holding.currency).iso_code
+    return mean if from == to
+
+    key = [ from, to, holding.date ]
+    rate = rates.fetch(key) { rates[key] = ExchangeRate.find_stored_rate(from: from, to: to, date: holding.date)&.rate }
+    rate && mean.exchange_to(to, date: holding.date, custom_rate: rate)
+  rescue Money::ConversionError
+    nil
   end
 
   # Each holding's open lots, by holding id, the opening lot first and then by
@@ -185,6 +204,7 @@ class Holding < ApplicationRecord
           ))
         SQL
         Arel.sql("BOOL_OR(accounts.cost_basis_method = 'fifo')"),
+        Arel.sql("MAX(accounts.currency)"),
         *avg_cost_totals_sql(lots: true)
       )
       .index_by(&:first)
@@ -194,16 +214,18 @@ class Holding < ApplicationRecord
     # its lots, so its account is looked up; nothing extra runs otherwise.
     unrowed = pending.reject { |holding| rows.key?(holding.id) }
     fifo_account_ids = unrowed.any? ? Account.where(id: unrowed.map(&:account_id).uniq, cost_basis_method: "fifo").pluck(:id).to_set : Set.new
-    lot_costs = fifo_avg_costs(pending.select { |holding| rows.key?(holding.id) ? rows[holding.id][3] : fifo_account_ids.include?(holding.account_id) })
+    rates = {}
+    lot_costs = fifo_avg_costs(pending.select { |holding| rows.key?(holding.id) ? rows[holding.id][3] : fifo_account_ids.include?(holding.account_id) }, rates: rates)
 
     pending.each do |holding|
-      _id, internal_movement, clamped, _fifo, total_cost, total_qty, rate_missing = rows[holding.id]
+      _id, internal_movement, clamped, _fifo, account_currency, total_cost, total_qty, rate_missing = rows[holding.id]
       value = if clamped
         nil
       elsif lot_costs.key?(holding.id)
         lot_costs[holding.id]
       elsif !internal_movement
-        avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency)
+        mean = avg_cost_from_totals(total_cost, total_qty, rate_missing, account_currency)
+        mean && lots_mean_in(mean, holding, rates)
       end
       holding.preload_avg_cost(value)
     end
@@ -576,6 +598,7 @@ class Holding < ApplicationRecord
 
       total_cost, total_qty, rate_missing = trades.pick(*self.class.avg_cost_totals_sql(account.currency, lots: true))
 
-      self.class.avg_cost_from_totals(total_cost, total_qty, rate_missing, currency)
+      mean = self.class.avg_cost_from_totals(total_cost, total_qty, rate_missing, account.currency)
+      mean && self.class.lots_mean_in(mean, self)
     end
 end
