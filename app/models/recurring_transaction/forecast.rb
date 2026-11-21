@@ -11,6 +11,11 @@ class RecurringTransaction::Forecast
   DEFAULT_DAYS = 10
   IGNORED_FILTERS = %w[tags status ai_status attachment_status reconcile_status].freeze
 
+  # The amount a projected row shows: the running average for a manual series
+  # that tracks one, otherwise the fixed amount. Filters and totals use it too.
+  EXPECTED_AMOUNT_SQL = "(CASE WHEN recurring_transactions.manual AND recurring_transactions.expected_amount_avg IS NOT NULL " \
+                        "THEN recurring_transactions.expected_amount_avg ELSE recurring_transactions.amount END)".freeze
+
   Occurrence = Data.define(:date, :series)
   Totals = Data.define(:count, :income_money, :expense_money)
 
@@ -121,6 +126,7 @@ class RecurringTransaction::Forecast
     def filtered_scope
       scope = family.recurring_transactions.accessible_by(user).active
 
+      scope = filter_active_accounts(scope)
       scope = filter_accounts(scope)
       scope = filter_categories(scope)
       scope = filter_merchants(scope)
@@ -129,10 +135,25 @@ class RecurringTransaction::Forecast
       filter_amount(scope)
     end
 
+    # As in Transaction::Search, the list shows only draft and active accounts
+    # unless active_accounts_only is turned off.
+    def filter_active_accounts(scope)
+      return scope unless ActiveModel::Type::Boolean.new.cast(filters.fetch(:active_accounts_only, true))
+
+      scope.where(account_id: family.accounts.where(status: %w[draft active]).select(:id))
+           .or(scope.where(account_id: nil))
+    end
+
+    # A transfer shows in the list under both of its accounts, so a series
+    # matches on either end.
     def filter_accounts(scope)
-      scope = scope.where(account_id: family.accounts.where(name: filters[:accounts]).select(:id)) if filters[:accounts].present?
-      scope = scope.where(account_id: filters[:account_ids]) if filters[:account_ids].present?
-      scope
+      account_ids = []
+      account_ids << family.accounts.where(name: filters[:accounts]).pluck(:id) if filters[:accounts].present?
+      account_ids << Array(filters[:account_ids]) if filters[:account_ids].present?
+
+      account_ids.reduce(scope) do |filtered, ids|
+        filtered.where(account_id: ids).or(filtered.where(destination_account_id: ids))
+      end
     end
 
     # A named category also matches its subcategories, as in the list.
@@ -170,8 +191,8 @@ class RecurringTransaction::Forecast
       return scope if types.empty? || types.size == 3
 
       conditions = {
-        "income" => "recurring_transactions.amount < 0 AND recurring_transactions.destination_account_id IS NULL",
-        "expense" => "recurring_transactions.amount >= 0 AND recurring_transactions.destination_account_id IS NULL",
+        "income" => "#{EXPECTED_AMOUNT_SQL} < 0 AND recurring_transactions.destination_account_id IS NULL",
+        "expense" => "#{EXPECTED_AMOUNT_SQL} >= 0 AND recurring_transactions.destination_account_id IS NULL",
         "transfer" => "recurring_transactions.destination_account_id IS NOT NULL"
       }
       scope.where(types.map { |type| "(#{conditions[type]})" }.join(" OR "))
@@ -191,9 +212,9 @@ class RecurringTransaction::Forecast
       return scope if amount.blank? || filters[:amount_operator].blank?
 
       case filters[:amount_operator]
-      when "equal" then scope.where("ABS(ABS(recurring_transactions.amount) - ?) <= 0.01", amount.to_f.abs)
-      when "less" then scope.where("ABS(recurring_transactions.amount) < ?", amount.to_f.abs)
-      when "greater" then scope.where("ABS(recurring_transactions.amount) > ?", amount.to_f.abs)
+      when "equal" then scope.where("ABS(ABS(#{EXPECTED_AMOUNT_SQL}) - ?) <= 0.01", amount.to_f.abs)
+      when "less" then scope.where("ABS(#{EXPECTED_AMOUNT_SQL}) < ?", amount.to_f.abs)
+      when "greater" then scope.where("ABS(#{EXPECTED_AMOUNT_SQL}) > ?", amount.to_f.abs)
       else scope
       end
     end
