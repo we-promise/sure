@@ -418,6 +418,21 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal 5, transfer.total_fee
   end
 
+  test "with_edit_lock raises Removed for a transfer deleted meanwhile" do
+    transfer = transfers(:one)
+    Transfer.where(id: transfer.id).delete_all
+
+    ran = false
+    assert_raises(Transfer::Removed) { transfer.with_edit_lock { ran = true } }
+    assert_not ran
+  end
+
+  test "with_edit_lock bounds lock waits for the rest of its transaction" do
+    inside = transfers(:one).with_edit_lock { Transfer.connection.select_value("SHOW lock_timeout") }
+
+    assert_equal Transfer.edit_lock_timeout, inside
+  end
+
   private
     def create_pending_transfer(from:, to:)
       outflow_entry = create_transaction(date: Date.current, account: from, amount: 500)
