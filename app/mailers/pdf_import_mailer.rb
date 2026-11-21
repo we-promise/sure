@@ -1,4 +1,11 @@
 class PdfImportMailer < ApplicationMailer
+  # The reading's summary can name the account holder and give a balance: Active Job would log it
+  # with the job's arguments at enqueue and delivery.
+  class DeliveryJob < ActionMailer::MailDeliveryJob
+    self.log_arguments = false
+  end
+  self.delivery_job = DeliveryJob
+
   def next_steps
     @user = params[:user]
     @pdf_import = params[:pdf_import]

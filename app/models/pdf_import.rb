@@ -324,7 +324,7 @@ class PdfImport < Import
     raise ArgumentError, "unknown way #{read_as}" unless READ_AS.include?(read_as)
     return false unless pdf_uploaded?
     begin
-      return false if read_as != "auto" && pdf_reading.ways[read_as.to_sym]   # this file can't be read that way
+      return false if read_as != "auto" && !pdf_reading.usable?(read_as)   # this file can't be read that way
     rescue Ai::Error::Unavailable   # the last route was removed after the form was shown
       return false
     end

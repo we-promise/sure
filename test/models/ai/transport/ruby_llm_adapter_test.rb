@@ -34,4 +34,12 @@ class Ai::Transport::RubyLlmAdapterTest < ActiveSupport::TestCase
 
     assert_equal true, context.config.split_think_tags
   end
+
+  test "an overload reported as a 400 stays a retryable outage" do
+    response = Struct.new(:status, :body).new(400, { error: { message: "The model is currently overloaded" } }.to_json)
+
+    assert_raises(Ai::Error::Upstream) do
+      @transport.send(:mapping_errors) { raise RubyLLM::OverloadedError.new("The model is currently overloaded", response:) }
+    end
+  end
 end

@@ -145,7 +145,7 @@ module Family::VectorSearchable
   end
 
   def remove_document(family_document)
-    adapter = vector_store_adapter
+    adapter = document_adapter(family_document)
     return false unless adapter && vector_store_id.present? && family_document.provider_file_id.present?
 
     response = adapter.remove_file(
@@ -191,7 +191,21 @@ module Family::VectorSearchable
       @unattached_file_ids = family_documents.unattached.pluck(:provider_file_id)
     end
 
+    # The configured backend, but an existing OpenAI store stays on the server that created it,
+    # whichever endpoint the embed route uses now. A store from before the server was recorded is
+    # pinned on first use to the one that reaches it, which after the upgrade is its creator.
     def vector_store_adapter
-      VectorStore.adapter
+      adapter = VectorStore.adapter
+      return adapter unless vector_store_id.present? && adapter.is_a?(VectorStore::Openai)
+
+      VectorStore::Openai.for_store(vector_store_endpoint).tap do |existing|
+        update_column(:vector_store_endpoint, existing.endpoint_url) if existing && vector_store_endpoint.blank?
+      end
+    end
+
+    # The backend that accepted the document, which can differ from the configured one.
+    def document_adapter(document)
+      backend = document.metadata.to_h["vector_store"]
+      backend.present? ? VectorStore.adapter_for(backend, endpoint_url: vector_store_endpoint) : vector_store_adapter
     end
 end

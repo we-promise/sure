@@ -157,7 +157,7 @@ class PdfImportTest < ActiveSupport::TestCase
   test "reading again after the last route was removed is refused, not raised" do
     import = @import_with_rows
     import.stubs(:pdf_uploaded?).returns(true)
-    import.stubs(:pdf_reading).returns(stub.tap { _1.stubs(:ways).raises(Ai::Error::Unavailable, "not_configured") })
+    import.stubs(:pdf_reading).returns(stub.tap { _1.stubs(:usable?).raises(Ai::Error::Unavailable, "not_configured") })
 
     assert_equal false, import.reread!("images")
     assert import.reload.pending?
@@ -194,7 +194,7 @@ class PdfImportTest < ActiveSupport::TestCase
   test "reading again a way this file can't be read changes nothing" do
     import = @import_with_rows
     import.stubs(:pdf_uploaded?).returns(true)
-    import.stubs(:pdf_reading).returns(stub(ways: { images: :needs_vision }))
+    import.stubs(:pdf_reading).returns(stub.tap { _1.expects(:usable?).with("images").returns(false) })
 
     assert_no_enqueued_jobs(only: ProcessPdfJob) { assert_not import.reread!("images") }
     assert import.reload.pending?

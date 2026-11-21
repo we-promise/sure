@@ -66,6 +66,8 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
 
   def call(params = {})
     pdf_import = family.imports.find_by(id: params["pdf_import_id"], type: "PdfImport")
+    # A statement on an account this user can't see is not found, as on the web.
+    pdf_import = nil if pdf_import&.account_statement && !pdf_import.account_statement.viewable_by?(user)
 
     unless pdf_import
       return {

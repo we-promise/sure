@@ -32,6 +32,17 @@ class PdfImportMailerTest < ActionMailer::TestCase
     assert_match I18n.t("pdf_import_mailer.next_steps.review_flag_note").first(40), body
   end
 
+  test "the queued email's summary stays out of the job log" do
+    log = StringIO.new
+    ActiveJob::Base.logger = ActiveSupport::Logger.new(log)
+    @pdf_import.update!(ai_summary: "Statement for Jane Holder, closing balance 4,079.83")
+
+    assert_enqueued_with(job: PdfImportMailer::DeliveryJob) { @pdf_import.send_next_steps_email(@user) }
+    assert_no_match "Jane Holder", log.string
+  ensure
+    ActiveJob::Base.logger = Rails.logger
+  end
+
   test "a statement whose balances weren't found is unchecked, not failed" do
     reading = { document_type: "bank_statement", summary: "s", failed_checks: %w[balances] }
 

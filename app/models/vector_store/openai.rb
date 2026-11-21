@@ -16,7 +16,7 @@ class VectorStore::Openai < VectorStore::Base
   def self.for_store(endpoint_url)
     endpoints = Ai::Config.current.endpoints.select(&:api_key)
     endpoint = if endpoint_url.present?
-      endpoints.find { same_url?(_1.base_url, endpoint_url) }
+      endpoints.find { Ai::Transport::Http.same_url?(Ai::Transport::Http.openai_base(_1), endpoint_url) }
     else
       Ai::Config.current.routes_for(:embed).map(&:endpoint).find { _1.vector_store? && _1.api_key } ||
         endpoints.find { _1.name.in?(%w[openai openai_compatible]) }
@@ -24,12 +24,12 @@ class VectorStore::Openai < VectorStore::Base
     new(endpoint:) if endpoint
   end
 
-  def self.same_url?(a, b) = a.to_s.chomp("/").casecmp?(b.to_s.chomp("/"))
-
+  # The URL the client calls, default included, so an endpoint configured without one is still
+  # found by for_store.
   attr_reader :endpoint_url
 
   def initialize(endpoint:)
-    @endpoint_url = endpoint.base_url
+    @endpoint_url = Ai::Transport::Http.openai_base(endpoint)
     @client = Ai::Transport::Http.openai_client(endpoint)
   end
 

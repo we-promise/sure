@@ -222,9 +222,9 @@ class AiHealth
         return PDF_MAX_RESPONSE_TOKENS unless plan.is_a?(Ai::Plan)
 
         configured = configured_endpoint(provider.to_sym)
-        names = [ "#{configured&.name}/#{model}", model ]
-        route = plan.routes.find { names.include?("#{_1.model.endpoint.name}/#{_1.model.name}") && _1.model.name == model } ||
-                plan.routes.find { _1.model.name == model }
+        return PDF_MAX_RESPONSE_TOKENS if configured.nil? || (endpoint.present? && !Ai::Transport::Http.same_url?(endpoint, configured.base_url))
+
+        route = plan.routes.find { _1.model.endpoint.name == configured.name && _1.model.name == model }
         limit = route&.model&.max_output_tokens.to_i
         limit.positive? ? limit : PDF_MAX_RESPONSE_TOKENS
       end

@@ -217,6 +217,13 @@ class Ai::Generation
 
           log_unanswered(slice)
           [ [], [] ]
+        rescue Pdf::PageImages::Error
+          # A later page that can't be rendered (too large, blank) is skipped, so the extraction
+          # is incomplete rather than lost. Before any answer, the caller tries another way.
+          raise if values.empty? && !answered_before
+
+          log_unanswered(slice)
+          [ [], [] ]
         rescue *Ai::DownMarks::PASSING
           # An outage on a later batch doesn't throw away what the earlier batches answered; the
           # failed slice waits for the later job, like a failover part-way through a slice.

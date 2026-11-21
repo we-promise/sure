@@ -259,6 +259,21 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_equal 2048, requests.sole.model.max_output_tokens
   end
 
+  test "a PDF probe of another server with the same model name keeps the fallback output limit" do
+    endpoint = Ai::Config::Endpoint.new(name: :openai, protocol: :compatible, base_url: "https://limit.example.test/v1", api_key: "limit-token")
+    model = Ai::Config::Model.new(endpoint:, name: "limited-model", capabilities: %i[structured_output vision documents],
+                                 max_output_tokens: 8192)
+    config = AiTestHelper.build_ai_config([ model ], { extract_pdf: [ "openai/limited-model" ] }, vector_store_backend: :pgvector)
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
+
+    Ai::Config.with(config) do
+      @probe.pdf_text_extraction(provider: :openai, endpoint: "https://adhoc.example.test/v1", access_token: "other-token",
+                                 model: "limited-model", openai_compatible: true)
+    end
+
+    assert_equal AiHealth::Probe::PDF_MAX_RESPONSE_TOKENS, requests.sole.model.max_output_tokens
+  end
+
   test "PDF vision probe sends the page as an image on a compatible server" do
     skip "pdftoppm isn't installed (poppler-utils)" unless system("pdftoppm", "-v", out: File::NULL, err: File::NULL)
     requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))

@@ -142,4 +142,38 @@ class Family::VectorSearchableTest < ActiveSupport::TestCase
     assert_equal "vs-new", @family.ensure_vector_store!
     assert_equal "https://vs.example.test/v1", @family.reload.vector_store_endpoint
   end
+
+  test "an existing OpenAI store stays on the server that created it when the embed route moves" do
+    @family.update!(vector_store_endpoint: "https://a.example.test/v1")
+    VectorStore::Registry.stubs(:adapter).returns(VectorStore::Openai.new(endpoint: ai_endpoint(name: "b", base_url: "https://b.example.test/v1", api_key: "k")))
+    original = mock("server_a")
+    original.expects(:search).returns(VectorStore::Response.new(success?: true, data: [], error: nil))
+    VectorStore::Openai.expects(:for_store).with("https://a.example.test/v1").returns(original)
+
+    @family.search_documents("rent")
+  end
+
+  test "a store from before its server was recorded is pinned to the one that reaches it" do
+    configured = VectorStore::Openai.new(endpoint: ai_endpoint(name: "openai", base_url: "https://vs.example.test/v1", api_key: "k"))
+    configured.stubs(:search).returns(VectorStore::Response.new(success?: true, data: [], error: nil))
+    VectorStore::Registry.stubs(:adapter).returns(configured)
+    VectorStore::Openai.stubs(:for_store).with(nil).returns(configured)
+
+    @family.search_documents("rent")
+
+    assert_equal "https://vs.example.test/v1", @family.reload.vector_store_endpoint
+  end
+
+  test "a document is removed through the backend that accepted it, not the configured one" do
+    document = @family.family_documents.create!(filename: "tax.pdf", provider_file_id: "file-1", status: "ready",
+                                                metadata: { "vector_store" => "openai" })
+    VectorStore::Registry.stubs(:adapter).returns(mock("pgvector").tap { _1.expects(:remove_file).never })
+    openai = mock("openai_adapter")
+    openai.expects(:remove_file).with(store_id: "vs_test", file_id: "file-1")
+          .returns(VectorStore::Response.new(success?: false, data: nil, error: VectorStore::Error.new("down")))
+    VectorStore::Openai.stubs(:for_store).returns(openai)
+
+    assert_not @family.remove_document(document)
+    assert document.reload.persisted?, "the row keeps the file id until the original server deletes it"
+  end
 end

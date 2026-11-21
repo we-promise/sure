@@ -21,6 +21,24 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
     assert_nil VectorStore::Openai.for_store("https://gone.example.test/v1"), "never another server"
   end
 
+  test "an endpoint without a URL records OpenAI's default, and is found by it" do
+    hosted = ai_endpoint(name: "openai", base_url: nil, api_key: "sk-test-key", vector_store: true)
+    Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ hosted ]))
+
+    recorded = VectorStore::Openai.new(endpoint: hosted).endpoint_url
+
+    assert_equal "https://api.openai.com/v1", recorded
+    assert VectorStore::Openai.for_store(recorded)
+  end
+
+  test "a gateway path keeps its case when a store's server is matched" do
+    upper = ai_endpoint(name: "team_a", base_url: "https://gw.example.test/TeamA/v1", api_key: "a", vector_store: true)
+    lower = ai_endpoint(name: "team_b", base_url: "https://gw.example.test/teama/v1", api_key: "b", vector_store: true)
+    Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ lower, upper ]))
+
+    assert_equal "https://gw.example.test/TeamA/v1", VectorStore::Openai.for_store("https://GW.example.test/TeamA/v1/").endpoint_url
+  end
+
   test "a store created before its server was recorded falls back to the OpenAI endpoint" do
     Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ @endpoint ]))
 

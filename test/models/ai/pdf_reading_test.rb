@@ -305,6 +305,22 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "a later page that can't be rendered keeps the earlier batches, incomplete" do
+    Pdf::PageImages.stubs(:page_count).returns(2)
+    Pdf::PageImages.stubs(:render).with(anything, pages: [ 1 ]).returns([ "png" ])
+    Pdf::PageImages.stubs(:render).with(anything, pages: [ 2 ]).raises(Pdf::PageImages::Error.new("page 2 would be 400 million pixels", code: :too_large))
+    stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
+    one_page = vision_model.with(batch_size: 1)
+
+    with_reading_routes(one_page) do
+      outcome = reading(@bac).extract(read_as: :images)
+
+      assert_equal :images, outcome.way
+      assert_equal BAC_ROWS.size, outcome.value[:transactions].size
+      assert_equal false, outcome.checks.complete
+    end
+  end
+
   test "a page no route can fit is skipped and logged, and the extraction is incomplete" do
     units = [ Ai::PdfReading::Unit.text("PAGE ONE 24.50", page: 1), Ai::PdfReading::Unit.text("PAGE TWO #{"x" * 50}", page: 2) ]
     stub_ai(:extract_pdf) do |request|

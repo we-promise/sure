@@ -76,6 +76,9 @@ class Ai::PdfReading
   # Each way, with why it can't be used here, or nil when it can.
   def ways = WAYS.index_with { reason_for(_1) }
 
+  # Whether this file can be read `way`, checking that way alone.
+  def usable?(way) = reason_for(way.to_sym).nil?
+
   # The ways to try, in order. `start` comes first when it's usable (Auto's tuning).
   def order(read_as = :auto, start: nil)
     read_as = read_as.to_s.presence&.to_sym || :auto
