@@ -1,0 +1,177 @@
+---
+id:
+  simplefin_items:
+    new:
+      title: Hubungkan SimpleFIN
+      setup_token: Token pengaturan
+      setup_token_placeholder: tempel token pengaturan SimpleFIN Anda
+      connect: Hubungkan
+      cancel: Batal
+    create:
+      success: Koneksi SimpleFIN berhasil ditambahkan! Rekening Anda akan segera muncul saat disinkronkan di latar belakang.
+      errors:
+        blank_token: Harap masukkan token pengaturan SimpleFIN.
+        invalid_token: Token pengaturan tidak valid. Pastikan Anda menyalin token lengkap dari SimpleFIN Bridge.
+        token_compromised: Token pengaturan mungkin telah bocor, kedaluwarsa, atau sudah digunakan. Silakan buat token baru.
+        create_failed: "Gagal menghubungkan: %{message}"
+        unexpected: Terjadi kesalahan tak terduga. Silakan coba lagi.
+    destroy:
+      success: Koneksi SimpleFIN akan dihapus
+    update:
+      success: Koneksi SimpleFIN berhasil diperbarui! Rekening Anda sedang dihubungkan ulang.
+      errors:
+        blank_token: Harap masukkan token pengaturan SimpleFIN.
+        invalid_token: Token pengaturan tidak valid. Pastikan Anda menyalin token lengkap dari SimpleFIN Bridge.
+        token_compromised: Token pengaturan mungkin telah bocor, kedaluwarsa, atau sudah digunakan. Silakan buat token baru.
+        update_failed: "Gagal memperbarui koneksi: %{message}"
+        unexpected: Terjadi kesalahan tak terduga. Silakan coba lagi.
+    edit:
+      setup_token:
+        label: "Token Pengaturan SimpleFIN:"
+        placeholder: "Tempel token pengaturan SimpleFIN Anda di sini..."
+        help_text: "Token harus berupa string panjang yang diawali dengan huruf dan angka"
+      title: Perbarui Koneksi SimpleFIN
+      header_subtitle: Dapatkan token pengaturan baru untuk menghubungkan kembali rekening SimpleFIN Anda
+      connection_needs_update: "Koneksi SimpleFIN Anda perlu diperbarui:"
+      step_1_html: "Kunjungi <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> untuk membuat token pengaturan baru"
+      step_2: Salin token tersebut dan tempel di bawah ini
+      step_3: "Klik \"Perbarui\" untuk memulihkan akses"
+      update: Perbarui
+      cancel: Batal
+    setup_accounts:
+      title: Atur Rekening SimpleFIN Anda
+      header_subtitle: Pilih jenis rekening yang tepat untuk rekening yang diimpor
+      choose_account_type: "Pilih jenis rekening yang tepat untuk setiap rekening SimpleFIN:"
+      account_type_checking_savings: Giro atau Tabungan
+      account_type_checking_savings_desc: Rekening bank biasa
+      account_type_credit_card: Kartu Kredit
+      account_type_credit_card_desc: Rekening kartu kredit
+      account_type_investment: Investasi
+      account_type_investment_desc: "Rekening pialang, 401(k), IRA"
+      account_type_loan: Pinjaman atau KPR
+      account_type_loan_desc: Rekening utang
+      account_type_other_asset: Aset Lainnya
+      account_type_other_asset_desc: Lainnya
+      transaction_history_title: "Riwayat Transaksi:"
+      transaction_history_description_html: "SimpleFIN umumnya menyediakan <strong>60-90 hari</strong> riwayat transaksi, tergantung bank Anda. Setelah pengaturan awal, transaksi baru akan tersinkronisasi secara otomatis ke depannya. Ketersediaan data historis berbeda menurut lembaga dan jenis rekening."
+      account_type_label: "Jenis Rekening:"
+      create_accounts: Buat Rekening
+      creating_accounts: Membuat Rekening...
+      cancel: Batal
+      account_card:
+        balance: "Saldo"
+      activity:
+        recent:
+          one: "1 transaksi • terbaru %{when}"
+          other: "%{count} transaksi • terbaru %{when}"
+        dormant: "Tidak ada aktivitas dalam %{days} hari"
+        empty: "Belum ada transaksi yang diimpor"
+        likely_closed: "Tidak ada aktivitas terbaru dan saldo nol — kartu ini mungkin sudah ditutup atau diganti"
+        today: "hari ini"
+        yesterday: "kemarin"
+        days_ago:
+          one: "1 hari lalu"
+          other: "%{count} hari lalu"
+      stale_accounts:
+        title: "Rekening Tidak Lagi Ada di SimpleFIN"
+        description: "Rekening ini ada di basis data Anda tetapi tidak lagi disediakan oleh SimpleFIN. Ini dapat terjadi saat konfigurasi rekening berubah di pihak penyedia."
+        action_prompt: "Apa yang ingin Anda lakukan?"
+        action_delete: "Hapus rekening dan semua transaksi"
+        action_move: "Pindahkan transaksi ke:"
+        action_skip: "Lewati untuk saat ini"
+        transaction_count:
+          one: "%{count} transaksi"
+          other: "%{count} transaksi"
+    complete_account_setup:
+      all_skipped: "Semua rekening dilewati. Tidak ada rekening yang dibuat."
+      no_accounts: "Tidak ada rekening untuk diatur."
+      success:
+        one: "Berhasil membuat %{count} rekening SimpleFIN! Transaksi dan kepemilikan Anda sedang diimpor di latar belakang."
+        other: "Berhasil membuat %{count} rekening SimpleFIN! Transaksi dan kepemilikan Anda sedang diimpor di latar belakang."
+      stale_accounts_processed: "Rekening usang: %{deleted} dihapus, %{moved} dipindahkan."
+      stale_accounts_errors:
+        one: "%{count} tindakan rekening usang gagal. Periksa log untuk detailnya."
+        other: "%{count} tindakan rekening usang gagal. Periksa log untuk detailnya."
+    sync_status:
+      no_accounts: Tidak ada rekening ditemukan
+      synced:
+        one: "%{count} rekening disinkronkan"
+        other: "%{count} rekening disinkronkan"
+      partial_setup:
+        one: "%{linked} disinkronkan, %{unlinked} perlu pengaturan"
+        other: "%{linked} disinkronkan, %{unlinked} perlu pengaturan"
+    institution_summary:
+      none: Tidak ada lembaga terhubung
+      count:
+        one: "%{count} lembaga"
+        other: "%{count} lembaga"
+    rate_limited:
+      daily_refresh: "Anda telah mencapai batas pembaruan harian SimpleFIN. Silakan coba lagi setelah bridge diperbarui (hingga 24 jam)."
+    stale_sync:
+      last_successful: "Sinkronisasi berhasil terakhir adalah %{count} hari lalu. Koneksi SimpleFIN Anda mungkin perlu perhatian."
+      no_transactions: "Tidak ada transaksi baru dalam %{count} hari. Periksa dasbor SimpleFIN Anda untuk memastikan koneksi bank aktif."
+    simplefin_item:
+      add_new: Tambah koneksi baru
+      confirm_accept: Hapus koneksi
+      confirm_body: Tindakan ini akan menghapus secara permanen semua rekening dalam grup ini beserta semua data terkait.
+      confirm_title: Hapus koneksi SimpleFIN?
+      delete: Hapus
+      deletion_in_progress: "(penghapusan sedang berlangsung...)"
+      error: Terjadi kesalahan saat menyinkronkan data
+      no_accounts_description: Koneksi ini belum memiliki rekening yang tersinkronisasi.
+      no_accounts_title: Tidak ada rekening ditemukan
+      requires_update: Hubungkan kembali
+      setup_needed: Rekening baru siap diatur
+      setup_description: Pilih jenis rekening untuk rekening SimpleFIN Anda yang baru diimpor.
+      setup_action: Atur Rekening Baru
+      setup_accounts_menu: Atur Rekening
+      more_accounts_available:
+        one: "%{count} rekening lagi tersedia untuk diatur"
+        other: "%{count} rekening lagi tersedia untuk diatur"
+      accounts_skipped_tooltip: "Beberapa rekening dilewati karena kesalahan saat sinkronisasi"
+      accounts_skipped_label: "Dilewati: %{count}"
+      rate_limited_ago: "Dibatasi laju (%{time} lalu)"
+      rate_limited_recently: "Dibatasi laju baru-baru ini"
+      status: Terakhir disinkronkan %{timestamp} lalu
+      status_never: Belum pernah disinkronkan
+      status_with_summary: "Terakhir disinkronkan %{timestamp} lalu • %{summary}"
+      syncing: Menyinkronkan...
+      update: Perbarui
+      stale_pending_note: "(dikecualikan dari anggaran)"
+      stale_pending_accounts: "di: %{accounts}"
+      reconciled_details_note: "(lihat ringkasan sinkronisasi untuk detail)"
+      duplicate_accounts_skipped: "Beberapa rekening dilewati sebagai duplikat — gunakan 'Tautkan rekening yang ada' untuk menggabungkan."
+    select_existing_account:
+      title: "Tautkan %{account_name} ke SimpleFIN"
+      description: Pilih rekening SimpleFIN untuk ditautkan ke rekening Anda yang sudah ada
+      cancel: Batal
+      link_account: Tautkan rekening
+      no_accounts_found: "Tidak ada rekening SimpleFIN yang ditemukan untuk %{moniker} ini."
+      wait_for_sync: Jika Anda baru saja menghubungkan atau menyinkronkan, coba lagi setelah sinkronisasi selesai.
+      check_provider_health: Periksa apakah koneksi SimpleFIN Anda sehat di Pengaturan → Penyedia.
+      unlink_to_move: Untuk memindahkan tautan, putuskan tautannya terlebih dahulu dari menu tindakan rekening.
+      all_accounts_already_linked: Semua rekening SimpleFIN tampaknya sudah ditautkan.
+      currently_linked_to: "Saat ini ditautkan ke: %{account_name}"
+    link_existing_account:
+      success: Rekening berhasil ditautkan ke SimpleFIN
+      errors:
+        only_manual: Hanya rekening manual yang dapat ditautkan
+        different_provider: Rekening ini ditautkan ke penyedia lain. Putuskan tautannya dari penyedia tersebut terlebih dahulu, lalu tautkan ke SimpleFIN.
+        invalid_simplefin_account: Rekening SimpleFIN yang dipilih tidak valid
+    dismiss_replacement_suggestion:
+      dismissed: Saran penggantian diabaikan
+    replacement_prompt:
+      title: "Kartu %{institution} Anda mungkin telah diganti"
+      description: "“%{account_name}” ditautkan ke “%{old_name}”, yang tidak memiliki aktivitas terbaru dan bersaldo nol. Kartu baru, “%{new_name}”, kini aktif di lembaga yang sama. Tautkan ulang untuk menjaga riwayat Anda tetap utuh."
+      relink: Tautkan ulang ke kartu baru
+      confirm_title: Tautkan ulang ke kartu baru?
+      confirm_body: "“%{account_name}” akan ditautkan ke “%{new_name}”. Riwayat transaksi Anda tetap tersimpan; transaksi mendatang berasal dari kartu baru."
+      dismiss_aria: Abaikan saran penggantian
+    reconciled_status:
+      message:
+        one: "%{count} transaksi tertunda duplikat direkonsiliasi"
+        other: "%{count} transaksi tertunda duplikat direkonsiliasi"
+    stale_pending_status:
+      message:
+        one: "%{count} transaksi tertunda lebih lama dari %{days} hari"
+        other: "%{count} transaksi tertunda lebih lama dari %{days} hari"
