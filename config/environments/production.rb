@@ -101,13 +101,33 @@ Rails.application.configure do
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # DNS rebinding protection. Set ALLOWED_HOSTS to turn it on; APP_DOMAIN then
+  # joins the list. APP_DOMAIN alone does not turn it on, since operators set it
+  # for mail. Left off, the app answers to any Host, which is how it behaved
+  # before, so an upgrade cannot lock an operator out of an instance they reach
+  # by LAN address, Tailscale name, tunnel or Pipelock.
+  #
+  # Turned on, any Host outside the list gets a 403, so every name the app is
+  # reached by belongs in ALLOWED_HOSTS.
+  # Required explicitly: this file is evaluated while the environment is being
+  # configured, before the autoloader is set up, so a bare constant reference
+  # here raises NameError and the app never boots.
+  require_relative "../../lib/allowed_hosts"
+  allowed_hosts = AllowedHosts.list
+  rejected_hosts = AllowedHosts.rejected
+
+  if rejected_hosts.any?
+    config.after_initialize do
+      Rails.logger.warn("[SECURITY] Ignoring host entries that are not a single host: #{rejected_hosts.join(', ')}. Wildcards are not accepted; list each host.")
+    end
+  end
+
+  if allowed_hosts.any?
+    config.hosts = allowed_hosts
+    config.host_authorization = AllowedHosts.host_authorization
+  else
+    AllowedHosts.warn_unprotected_on_server_boot(self)
+  end
 
   # set REDIS_URL for Sidekiq to use Redis
   config.active_job.queue_adapter = :sidekiq

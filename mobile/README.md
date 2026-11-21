@@ -82,6 +82,11 @@ flutter run -d "iPhone 17 Pro"
 flutter run -d chrome
 ```
 
+The web build is a browser client, so the server must grant its origin through
+CORS. A local `bin/dev` server accepts any `localhost` origin. Any other server
+needs the dev server's origin, including its port, in `ALLOWED_ORIGINS`; pass
+`--web-port` to keep that port fixed.
+
 ## Project Structure
 
 ```
