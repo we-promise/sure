@@ -333,6 +333,55 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal "mock", @security.first_provider_price_source
   end
 
+  test "a refresh that starts after another provider's first date keeps it" do
+    # A holding's price refresh re-imports only the last month with a cache
+    # clear. The gap before the stored date is untouched, so it still applies.
+    Security::Price.delete_all
+
+    first_on = Date.parse("2020-01-03")
+    refresh_start = first_on + 60.days
+    @security.update!(first_provider_price_on: first_on, first_provider_price_source: "yahoo_finance")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: refresh_start,         price: 50, currency: "USD"),
+      OpenStruct.new(security: @security, date: refresh_start + 1.day, price: 51, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: refresh_start,
+      end_date: refresh_start + 1.day,
+      clear_cache: true
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal first_on, @security.first_provider_price_on
+    assert_equal "yahoo_finance", @security.first_provider_price_source
+  end
+
+  test "an import anchored on another provider's first date clears it" do
+    Security::Price.delete_all
+
+    first_on = Date.parse("2020-01-03")
+    @security.update!(first_provider_price_on: first_on, first_provider_price_source: "yahoo_finance")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: first_on,         price: 50, currency: "USD"),
+      OpenStruct.new(security: @security, date: first_on + 1.day, price: 51, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: first_on,
+      end_date: first_on + 1.day,
+      clear_cache: true
+    ).import_provider_prices
+
+    assert_nil @security.reload.first_provider_price_on
+  end
+
   test "pre-listing fallback picks earliest VALID provider row, skipping nil/zero leaders" do
     # Regression: if the provider returns a row with a nil/zero price as its
     # earliest entry (e.g. a listing-day or halted-day placeholder), the

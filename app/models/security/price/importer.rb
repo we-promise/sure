@@ -150,11 +150,13 @@ class Security::Price::Importer
        (provider_first_price_on.blank? || advanced_first_price_on < provider_first_price_on)
       security.update_columns(first_provider_price_on: advanced_first_price_on,
                               first_provider_price_source: provider_key)
-    elsif advanced_first_price_on.nil? && fill_start_date <= start_date && first_price_from_another_provider?
-      # This provider anchored a price at the requested start, so the
-      # history no longer starts on the date another provider found. A fill
-      # that starts later (capped history, or an incremental sync) leaves the
-      # earlier gap as it was, so the date still describes it.
+    elsif advanced_first_price_on.nil? && fill_start_date <= start_date && first_price_from_another_provider? &&
+          start_date <= security.first_provider_price_on
+      # This provider anchored a price at the requested start, on or before
+      # the date another provider found, so the history no longer starts
+      # there. A fill that starts later (capped history, an incremental sync,
+      # or a refresh of recent prices) leaves the earlier gap as it was, so
+      # the date still describes it.
       security.update_columns(first_provider_price_on: nil, first_provider_price_source: nil)
     end
 
