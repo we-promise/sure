@@ -1657,7 +1657,7 @@ Sure reads an uploaded PDF in one of four ways, then checks what the model retur
 
 | Way | When | Sent to the provider |
 |---|---|---|
-| **PDF** | The model reads PDFs natively (Anthropic, OpenAI's own API) and the file is within the provider's inline limit: at most 100 pages, and 32 MB on OpenAI or 23.25 MiB (24,379,392 bytes) on Anthropic, whose 32 MB request limit must also hold the file's base64 encoding | The PDF file itself |
+| **PDF** | The model reads PDFs natively (Anthropic, OpenAI's own API) and the file is within the provider's inline limit: at most 100 pages, and 32 MiB on OpenAI or 23.25 MiB (24,379,392 bytes) on Anthropic, whose 32 MB request limit must also hold the file's base64 encoding | The PDF file itself |
 | **Text** | The PDF has a text layer | The text layer, a batch of pages at a time |
 | **Images** | The model reads images (OpenAI's vision models, Anthropic, and any custom OpenAI-compatible server) | Each page as a 150 dpi image at high detail |
 | **OCR** | An OCR model is set up (from the next config release; see below) | Each page as an image to the OCR model, then its transcription to the text model |
