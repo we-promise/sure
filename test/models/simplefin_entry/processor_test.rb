@@ -17,6 +17,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       currency: "USD",
       current_balance: 1000,
       available_balance: 1000,
+      org_data: { name: "Fidelity Investments" },
       account: @account
     )
   end
@@ -278,5 +279,406 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     entry = @account.entries.find_by!(external_id: "simplefin_tx_malformed_posted_1", source: "simplefin")
     sf = entry.transaction.extra.fetch("simplefin")
     assert_equal false, sf["pending"], "expected a non-numeric posted value to not be inferred as pending"
+  end
+
+  test "normalizes a direct debit to a positive Sure expense" do
+    tx = {
+      id: "tx_direct_debit_1",
+      amount: "25.00",
+      currency: "USD",
+      description: "DIRECT DEBIT",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_direct_debit_1", source: "simplefin")
+    assert_equal BigDecimal("25.00"), entry.amount
+    assert_equal "direct_debit", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "normalizes a direct deposit to negative Sure income" do
+    tx = {
+      id: "tx_direct_deposit_1",
+      amount: "-80.00",
+      currency: "USD",
+      description: "  direct   deposit payroll ",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_direct_deposit_1", source: "simplefin")
+    assert_equal BigDecimal("-80.00"), entry.amount
+    assert_equal "direct_deposit", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "normalizes mapped transaction classes by semantic direction" do
+    cases = [
+      [ "eft_paid", "EFT PAID UTILITY", "35.00", BigDecimal("35.00") ],
+      [ "eft_paid", "ELECTRONIC FUNDS TRANSFER PAID (CASH)", "35.00", BigDecimal("35.00") ],
+      [ "check_received", "CHECK RECEIVED", "-120.00", BigDecimal("-120.00") ],
+      [ "dividend", "DIVIDEND PAYMENT", "-9.50", BigDecimal("-9.50") ]
+    ]
+
+    cases.each_with_index do |(normalization, description, raw_amount, expected_amount), index|
+      tx = {
+        id: "tx_semantic_class_#{index}",
+        amount: raw_amount,
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_semantic_class_#{index}", source: "simplefin")
+      assert_equal expected_amount, entry.amount
+      assert_equal normalization, entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "normalizes Fidelity rollover checks to negative Sure inflows" do
+    tx = {
+      id: "tx_rollover_check_1",
+      amount: "-171645.83",
+      currency: "USD",
+      description: "ROLLOVER CASH CHECK RECEIVED IRA DIR ROLOVR MOBILE DEPOSIT (CASH)",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_rollover_check_1", source: "simplefin")
+    assert_equal BigDecimal("-171645.83"), entry.amount
+    assert_equal "rollover_check", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "normalizes Fidelity core-account purchases to positive Sure outflows" do
+    tx = {
+      id: "tx_core_purchase_1",
+      amount: "216.21",
+      currency: "USD",
+      description: "PURCHASE INTO CORE ACCOUNT FIDELITY GOVERNMENT MONEY MARKET (SPAXX) (CASH)",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_core_purchase_1", source: "simplefin")
+    assert_equal BigDecimal("216.21"), entry.amount
+    assert_equal "core_purchase", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "marks Fidelity core-account redemptions as negative Sure inflows" do
+    tx = {
+      id: "tx_core_redemption_1",
+      amount: "3533.18",
+      currency: "USD",
+      description: "REDEMPTION FROM CORE ACCOUNT FIDELITY GOVERNMENT MONEY MARKET (SPAXX) MORNING TRADE (CASH)",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_core_redemption_1", source: "simplefin")
+    assert_equal BigDecimal("-3533.18"), entry.amount
+    assert_equal "core_redemption", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "normalizes Fidelity card payments to negative Sure inflows" do
+    [ "2303.00", "-2303.00" ].each_with_index do |raw_amount, index|
+      tx = {
+        id: "tx_card_payment_#{index}",
+        amount: raw_amount,
+        currency: "USD",
+        description: "PAYMENT MADE BY ACCOUNT ENDING IN:9923",
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_card_payment_#{index}", source: "simplefin")
+      assert_equal BigDecimal("-2303.00"), entry.amount
+      assert_equal "card_payment", entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "normalizes Fidelity ATM fee rebates to negative Sure inflows" do
+    tx = {
+      id: "tx_atm_fee_rebate_1",
+      amount: "-2.95",
+      currency: "USD",
+      description: "ADJUST FEE CHARGED ATM FEE REBATE (CASH)",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_atm_fee_rebate_1", source: "simplefin")
+    assert_equal BigDecimal("-2.95"), entry.amount
+    assert_equal "fee_rebate", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "marks Fidelity security dividends as negative Sure income" do
+    tx = {
+      id: "tx_security_dividend_1",
+      amount: "204.70",
+      currency: "USD",
+      description: "DIVIDEND RECEIVED PROSHARES BITCOIN ETF (BITO) (MARGIN)",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_security_dividend_1", source: "simplefin")
+    assert_equal BigDecimal("-204.70"), entry.amount
+    assert_equal "dividend", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "normalizes the observed Fidelity cash-action matrix" do
+    cases = [
+      [ "check_paid", "CHECK PAID # 1234 (CASH)", "44.63", BigDecimal("44.63") ],
+      [ "wire_out", "WIRE TRANSFER TO BANK (CASH)", "500.00", BigDecimal("500.00") ],
+      [ "cash_advance", "CASH ADVANCE ATM (CASH)", "202.95", BigDecimal("202.95") ],
+      [ "fee", "ADJUST FEE CHARGED ATM SURCHARGE (CASH)", "-2.95", BigDecimal("2.95") ],
+      [ "interest", "INTEREST FULLY PAID (CASH)", "-18.16", BigDecimal("-18.16") ],
+      [ "reinvestment", "REINVESTMENT PROSHARES BITCOIN ETF (BITO) (MARGIN)", "4.30", BigDecimal("4.30") ],
+      [ "cash_in_lieu", "IN LIEU OF FRX SHARE LEU PAYOUT SECURITY (CASH)", "-3.11", BigDecimal("-3.11") ]
+    ]
+
+    cases.each_with_index do |(normalization, description, raw_amount, expected_amount), index|
+      tx = {
+        id: "tx_fidelity_cash_action_#{index}",
+        amount: raw_amount,
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_fidelity_cash_action_#{index}", source: "simplefin")
+      assert_equal expected_amount, entry.amount
+      assert_equal normalization, entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "leaves dividend expenses on upstream sign behavior" do
+    [ "DIVIDEND TAX", "DIVIDEND WITHHOLDING" ].each_with_index do |description, index|
+      tx = {
+        id: "tx_dividend_expense_#{index}",
+        amount: "-7.00",
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_dividend_expense_#{index}", source: "simplefin")
+      assert_equal BigDecimal("7.00"), entry.amount
+      assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "does not derive Fidelity transaction direction from merchant text" do
+    [ "Dividend Finance", "Direct Deposit Cafe" ].each_with_index do |payee, index|
+      tx = {
+        id: "tx_fidelity_merchant_#{index}",
+        amount: "-100.00",
+        currency: "USD",
+        payee: payee,
+        description: "PURCHASE",
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_fidelity_merchant_#{index}", source: "simplefin")
+      assert_equal BigDecimal("100.00"), entry.amount
+      assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "does not normalize transaction signs for non-Fidelity institutions" do
+    @simplefin_account.update!(org_data: { name: "Example Credit Union" })
+    cases = [
+      [ "direct_debit", "25.00", "DIRECT DEBIT", BigDecimal("-25.00") ],
+      [ "card_payment", "-25.00", "PAYMENT MADE BY ACCOUNT ENDING IN:9923", BigDecimal("25.00") ]
+    ]
+
+    cases.each do |label, raw_amount, description, expected_amount|
+      tx = {
+        id: "tx_other_institution_#{label}",
+        amount: raw_amount,
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_other_institution_#{label}", source: "simplefin")
+      assert_equal expected_amount, entry.amount
+      sf = entry.transaction.extra.fetch("simplefin")
+      assert_not sf.key?("amount_normalization"), "expected non-Fidelity transactions to carry no amount_normalization key"
+    end
+  end
+
+  test "does not raise or normalize when org_data is missing or malformed" do
+    cases = {
+      "nil" => nil,
+      "empty" => {},
+      "no_name" => { "domain" => "fidelity.com" },
+      "non_string_name" => { "name" => 123 },
+      "json_string" => "Fidelity Investments",
+      "json_array" => [ "Fidelity Investments" ]
+    }
+
+    cases.each do |label, org_data|
+      @simplefin_account.update!(org_data: org_data)
+      tx = {
+        id: "tx_org_data_#{label}",
+        amount: "25.00",
+        currency: "USD",
+        description: "DIRECT DEBIT",
+        posted: Date.current.to_s
+      }
+
+      assert_nothing_raised do
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      end
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_org_data_#{label}", source: "simplefin")
+      assert_equal BigDecimal("-25.00"), entry.amount, "expected org_data #{label} to fall back to upstream sign behavior"
+      sf = entry.transaction.extra.fetch("simplefin")
+      assert_not sf.key?("amount_normalization"), "expected org_data #{label} to carry no amount_normalization key"
+    end
+  end
+
+  test "leaves ambiguous and unmapped descriptions on upstream sign behavior" do
+    cases = [
+      [ "DIRECT DEBIT REVERSAL", "10.00" ],
+      [ "DIRECT DEBIT RETURNED", "11.00" ],
+      [ "DIRECT DEBIT REVERSED", "12.00" ],
+      [ "DIRECT DEPOSIT REFUNDED", "13.00" ],
+      [ "DIVIDEND REINVESTMENT", "14.00" ]
+    ]
+
+    cases.each_with_index do |(description, raw_amount), index|
+      tx = {
+        id: "tx_unmapped_class_#{index}",
+        amount: raw_amount,
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_unmapped_class_#{index}", source: "simplefin")
+      assert_equal BigDecimal("-#{raw_amount}"), entry.amount
+      assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "preserves Fidelity nonfinancial and mixed-leg action signs" do
+    cases = [
+      [ "INCREASE COLLATERAL MARK TO MARKET ADJ COLLATERAL DELV TO US BANK NA SECURI... (L0C990063) (FINANCING)", "0", BigDecimal("0") ],
+      [ "DECREASE COLLATERAL MARK TO MARKET ADJ COLLATERAL DELV TO US BANK NA SECURI... (L0C990063) (FINANCING)", "0", BigDecimal("0") ],
+      [ "YOU LOANED VS X20-123-2 PROSHARES BITCOIN ETF (BITO) (FINANCING)", "-1217.58", BigDecimal("1217.58") ],
+      [ "LOAN RETURNED YOU RETURNED VS X20-123-2 PROSHARES BITCOIN ETF (BITO) (FINANCING)", "1217.58", BigDecimal("-1217.58") ],
+      [ "REVERSE SPLIT R/S FROM 92891H606#REOR M0051756140001 VS TRUST 2X LONG VIX FUT (UVIX) (FINANCING)", "335.00", BigDecimal("-335.00") ]
+    ]
+
+    cases.each_with_index do |(description, raw_amount, expected_amount), index|
+      tx = {
+        id: "tx_fidelity_passthrough_#{index}",
+        amount: raw_amount,
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_fidelity_passthrough_#{index}", source: "simplefin")
+      assert_equal expected_amount, entry.amount
+      assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "clears stale normalization metadata when a resynced descriptor becomes ambiguous" do
+    tx = {
+      id: "tx_normalization_resync_1",
+      amount: "10.00",
+      currency: "USD",
+      description: "DIRECT DEBIT",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_normalization_resync_1", source: "simplefin")
+    assert_equal "direct_debit", entry.transaction.extra.dig("simplefin", "amount_normalization")
+
+    tx[:description] = "DIRECT DEBIT REVERSAL"
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry.reload
+    assert_equal BigDecimal("-10.00"), entry.amount
+    assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "clears stale normalization metadata when account changes from Fidelity" do
+    {
+      "unsupported" => { name: "Example Credit Union" },
+      "malformed" => "Fidelity Investments"
+    }.each do |label, org_data|
+      @simplefin_account.update!(org_data: { name: "Fidelity Investments" })
+      tx = {
+        id: "tx_normalization_institution_transition_#{label}",
+        amount: "10.00",
+        currency: "USD",
+        description: "DIRECT DEBIT",
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+      assert_equal BigDecimal("10.00"), entry.amount
+      assert_equal "direct_debit", entry.transaction.extra.dig("simplefin", "amount_normalization")
+
+      @simplefin_account.update!(org_data: org_data)
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry.reload
+      assert_equal BigDecimal("-10.00"), entry.amount
+      sf = entry.transaction.extra.fetch("simplefin")
+      assert_not sf.key?("amount_normalization"), "expected #{label} transition to remove stale normalization metadata"
+    end
+  end
+
+  test "clears stale normalization metadata when a resynced descriptor becomes unmapped" do
+    tx = {
+      id: "tx_normalization_resync_2",
+      amount: "-40.00",
+      currency: "USD",
+      description: "DIRECT DEPOSIT",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_normalization_resync_2", source: "simplefin")
+    assert_equal "direct_deposit", entry.transaction.extra.dig("simplefin", "amount_normalization")
+
+    tx[:description] = "PURCHASE"
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry.reload
+    assert_equal BigDecimal("40.00"), entry.amount
+    sf = entry.transaction.extra.fetch("simplefin")
+    assert sf.key?("amount_normalization"), "expected Fidelity transactions to keep the key so stale values are overwritten"
+    assert_nil sf["amount_normalization"]
   end
 end
