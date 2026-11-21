@@ -40,9 +40,12 @@ class SnaptradeAccount::Processor
     end
 
     if anchor_balance
-      # An incomplete import would make the ledger misjudge the old readings'
-      # signs; the repair waits for a sync that brings everything in.
-      SnaptradeAccount::LiabilitySignRepair.new(snaptrade_account, account).run(anchor_balance, date) if activities_ok
+      # Missing activities would make the ledger misjudge the old readings'
+      # signs, whether the fetch failed (keeping the last payload) or some
+      # failed to import; the repair waits for a sync that brings all of them in.
+      if activities_ok && !snaptrade_account.activities_fetch_failed? && !snaptrade_account.activities_fetch_pending?
+        SnaptradeAccount::LiabilitySignRepair.new(snaptrade_account, account).run(anchor_balance, date)
+      end
       account.set_current_balance(
         anchor_balance,
         date: date,

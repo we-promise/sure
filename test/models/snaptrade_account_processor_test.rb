@@ -1262,6 +1262,70 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_not_nil @snaptrade_account.reload.liability_signs_fixed_at
   end
 
+  # A failed fetch keeps the last payload, which can process cleanly but still
+  # miss the purchase that explains the change.
+  test "old readings are not judged after an activities fetch that failed" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    # A credit carried over from before; an unfetched $30 purchase brings it to $10 owed
+    card.set_current_balance(BigDecimal("-20.00"), date: Date.current - 5)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-10.00"), cash_balance: BigDecimal("-10.00"),
+      raw_holdings_payload: [], raw_activities_payload: [], activities_fetch_failed: true
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    assert_includes card.reload.entries.where(entryable_type: "Valuation").pluck(:amount), BigDecimal("-20.00")
+    assert_nil @snaptrade_account.reload.liability_signs_fixed_at
+  end
+
+  # jjmata's example: a refund imported after the latest reading belongs to the
+  # interval after it, not also to the one before.
+  test "each interval counts only the flows its later reading had seen" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    @snaptrade_account.account_provider.update_columns(created_at: 4.days.ago)
+    travel_to 3.days.ago do
+      card.set_current_balance(BigDecimal("20.00"), date: Date.current) # a $20 credit, stored pre-fix as +20
+    end
+    travel_to 2.days.ago do
+      card.entries.create!(date: Date.current, name: "Purchase", amount: BigDecimal("30.00"), currency: "USD", entryable: Transaction.new)
+      card.set_current_balance(BigDecimal("-10.00"), date: Date.current) # $10 owed, stored pre-fix as -10
+    end
+    travel_to 2.days.ago + 1.hour do
+      card.entries.create!(date: Date.current, name: "Refund", amount: BigDecimal("-50.00"), currency: "USD", entryable: Transaction.new)
+    end
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("40.00"), cash_balance: BigDecimal("40.00"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    readings = card.reload.entries.where(entryable_type: "Valuation").order(:date).pluck(:amount)
+    assert_equal [ BigDecimal("-20.00"), BigDecimal("10.00"), BigDecimal("-40.00") ], readings
+  end
+
+  test "a repair that stops at a reading it can't judge is tried again, not marked done" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    card.set_current_balance(BigDecimal("-1400.00"), date: Date.current - 6)
+    card.set_current_balance(BigDecimal("-1450.00"), date: Date.current - 5)
+    # A flow in another currency between the two readings: the ledger can't judge the older one
+    card.entries.create!(date: Date.current - 6, name: "Abroad", amount: BigDecimal("20.00"), currency: "EUR", entryable: Transaction.new)
+    @snaptrade_account.update!(
+      currency: "USD", current_balance: BigDecimal("-1455.44"), cash_balance: BigDecimal("-1455.44"),
+      raw_holdings_payload: [], raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+
+    readings = card.reload.entries.where(entryable_type: "Valuation").order(:date).pluck(:amount)
+    assert_equal [ BigDecimal("-1400.00"), BigDecimal("1450.00"), BigDecimal("1455.44") ], readings
+    assert_nil @snaptrade_account.reload.liability_signs_fixed_at
+  end
+
   test "processor synchronizes balances, holdings, and activities end-to-end without cash distortion" do
     security = securities(:aapl)
 
