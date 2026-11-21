@@ -67,6 +67,18 @@ class PageCacheTest < ActiveSupport::TestCase
     assert_equal %w[page/small], PageCacheEntry.pluck(:page_key), "the pages already kept stay"
   end
 
+  test "a rebuild too big to keep leaves the earlier build in place" do
+    PageCache.write("page/a", "x" * 100, version: "v1", family: @family, user: @user)
+    PageCache.stubs(:max_bytes).returns(1_000)
+
+    assert_not PageCache.write("page/a", SecureRandom.alphanumeric(5_000), version: "v2", family: @family, user: @user)
+
+    served = PageCache.serve("page/a", version: "v2", family: @family, user: @user, rebuild_later: -> { }) { flunk "built while a stored page exists" }
+    assert_equal "x" * 100, served.body
+    assert served.stale
+    assert_equal %w[page/a], PageCacheEntry.pluck(:page_key)
+  end
+
   test "a page the cache store refuses is served but not kept" do
     Rails.cache.stubs(:write).returns(false)
 

@@ -74,10 +74,10 @@ class PageCache
         sealed = encryptor_for(family).encrypt_and_sign(entry, purpose: key)
         bytes = sealed.bytesize
 
-        if bytes > max_bytes
-          forget(PageCacheEntry.where(page_key: key))
-          next false
-        end
+        # Too big to keep: not stored, and an earlier build of this page stays.
+        # It is still served (stale) rather than leaving the next visitor to
+        # wait for a build.
+        next false if bytes > max_bytes
 
         next false unless Rails.cache.write(key, sealed, expires_in: Setting.page_cache_ttl)
 
