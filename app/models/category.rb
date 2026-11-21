@@ -298,6 +298,19 @@ class Category < ApplicationRecord
       i18n_key ? I18n.t(i18n_key, default: name) : name
     end
 
+    # Every stored name a default category can have. CategoriesController#bootstrap
+    # persists the name in the member's locale, which need not match the family's (or
+    # the default locale) and survives later locale changes, so callers comparing a
+    # persisted name must check all supported locales. Callers can pass extra locales
+    # for labels persisted under an available locale outside SUPPORTED_LOCALES (e.g. id).
+    def localized_default_names_for(i18n_key, additional_locales = [])
+      locales = (LanguagesHelper::SUPPORTED_LOCALES + additional_locales.compact.map(&:to_s)).uniq
+
+      locales.filter_map do |locale|
+        I18n.t(i18n_key, locale: locale, default: nil).presence
+      end.uniq
+    end
+
     private
       def default_category_translation_key_for(name)
         default_category_translation_keys_by_name[name.to_s]
@@ -402,9 +415,8 @@ class Category < ApplicationRecord
     i18n_key = self.class.send(:default_category_translation_key_for, name)
     return false unless i18n_key
 
-    LanguagesHelper::SUPPORTED_LOCALES.any? do |locale|
-      translated = I18n.t(i18n_key, locale: locale, default: nil)
-      translated.present? && normalized.casecmp?(translated)
+    self.class.localized_default_names_for(i18n_key).any? do |translated|
+      normalized.casecmp?(translated)
     end
   end
 
