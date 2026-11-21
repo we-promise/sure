@@ -118,7 +118,9 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "upcoming follows the date range of the filter bar" do
-    bill = create_upcoming_bill("Distant Rent", due_on: 40.days.from_now.to_date)
+    due_on = 40.days.from_now.to_date
+    bill = create_upcoming_bill("Annual Insurance", due_on: due_on,
+      recurrence_rules: [ RecurrenceRule.new(frequency: "yearly", interval: 1, day_of_month: due_on.day, month_of_year: due_on.month, position: 0) ])
 
     get transactions_url
     assert_no_match bill.name, response.body
@@ -2686,11 +2688,11 @@ end
   end
 
   private
-    def create_upcoming_bill(name, due_on:)
+    def create_upcoming_bill(name, due_on:, **attrs)
       @user.family.recurring_transactions.create!(
         account: accounts(:depository), name: name, amount: 50, currency: "USD",
-        expected_day_of_month: 1, status: "active", manual: true, bill_type: "bill",
-        last_occurrence_date: Date.current, next_expected_date: due_on
+        expected_day_of_month: due_on.day, status: "active", manual: true, bill_type: "bill",
+        last_occurrence_date: Date.current, next_expected_date: due_on, **attrs
       )
     end
 

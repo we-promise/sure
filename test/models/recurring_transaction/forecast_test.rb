@@ -24,6 +24,43 @@ class RecurringTransaction::ForecastTest < ActiveSupport::TestCase
     assert_equal [ rent ], forecast.occurrences.map(&:series).uniq
   end
 
+  test "projects from the schedule when the cached next date has fallen behind" do
+    travel_to Date.new(2026, 8, 13) do
+      create_series(name: "Stale", next_expected_date: Date.new(2026, 6, 5))
+
+      assert_equal [ Date.new(2026, 9, 5) ], forecast_with(end_date: "2026-09-30").occurrences.map(&:date)
+    end
+  end
+
+  test "projects from the schedule when the cached next date skipped this month" do
+    travel_to Date.new(2026, 8, 13) do
+      create_series(name: "Rent", next_expected_date: Date.new(2026, 9, 29), last_occurrence_date: Date.new(2026, 8, 6))
+
+      assert_equal [ Date.new(2026, 8, 29) ], forecast_with(end_date: "2026-08-31").occurrences.map(&:date)
+    end
+  end
+
+  test "falls back to the cached next date for a series with nothing stored" do
+    series = create_series(name: "Legacy", next_expected_date: 4.days.from_now.to_date)
+    series.recurring_occurrences.delete_all
+
+    assert_equal [ 4.days.from_now.to_date ], dates_for(forecast_with, series)
+  end
+
+  test "skips a cycle already paid and uses an open occurrence's snoozed date" do
+    travel_to Date.new(2026, 8, 13) do
+      paid_early = create_series(name: "Paid early", next_expected_date: Date.new(2026, 8, 20))
+      stored_occurrence(paid_early, Date.new(2026, 8, 20)).update!(status: "paid", closed_at: Time.current)
+      snoozed = create_series(name: "Snoozed", next_expected_date: Date.new(2026, 8, 21))
+      stored_occurrence(snoozed, Date.new(2026, 8, 21)).update!(snoozed_until: Date.new(2026, 8, 26))
+
+      forecast = forecast_with(end_date: "2026-09-30")
+
+      assert_equal [ Date.new(2026, 9, 20) ], dates_for(forecast, paid_early)
+      assert_equal [ Date.new(2026, 8, 26), Date.new(2026, 9, 21) ], dates_for(forecast, snoozed)
+    end
+  end
+
   test "applies the list's account, category, merchant, type, search and amount filters" do
     due = 3.days.from_now.to_date
     rent = create_series(name: "Rent", amount: 1500, next_expected_date: due, category: categories(:subcategory))
@@ -69,10 +106,19 @@ class RecurringTransaction::ForecastTest < ActiveSupport::TestCase
     end
 
     def create_series(name:, next_expected_date:, amount: 100, currency: @family.currency, account: accounts(:depository), **attrs)
-      @family.recurring_transactions.create!(
+      @family.recurring_transactions.create!({
         name: name, amount: amount, currency: currency, account: account, status: "active",
         expected_day_of_month: next_expected_date.day, last_occurrence_date: next_expected_date - 1.month,
-        next_expected_date: next_expected_date, **attrs
-      )
+        next_expected_date: next_expected_date
+      }.merge(attrs))
+    end
+
+    # Creating a series materializes its occurrences.
+    def stored_occurrence(series, original_due_on)
+      series.recurring_occurrences.find_by!(original_due_on: original_due_on)
+    end
+
+    def dates_for(forecast, series)
+      forecast.occurrences.select { |occurrence| occurrence.series == series }.map(&:date)
     end
 end
