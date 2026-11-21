@@ -581,6 +581,207 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_nil statement.sanitized_parser_output.dig("pdf", "balances_source")
   end
 
+  CARD_STATEMENT_TEXT = <<~TEXT
+    Statement period 12 Apr 2024 - 15 May 2024
+    Opening balance $1,066.47
+    Closing balance $435.88 CR
+  TEXT
+
+  # Adds up only as a liability: 1,066.47 + 0.00 - 1,502.35 = -435.88.
+  CARD_SUMMARY_TEXT = <<~TEXT
+    Statement period 12 Apr 2024 - 15 May 2024
+    Opening balance    Debits     Credits      Closing balance
+    $1,066.47          $0.00      $1,502.35    $435.88 CR
+  TEXT
+
+  test "stores a CR closing balance on a credit card as in credit" do
+    statement = upload_card_statement(account: accounts(:credit_card))
+
+    assert_equal BigDecimal("1066.47"), statement.opening_balance
+    assert_equal BigDecimal("-435.88"), statement.closing_balance
+    assert_equal "labels", statement.sanitized_parser_output.dig("pdf", "balances_source")
+    assert_equal({ "amount" => "435.88", "side" => "credit", "currency" => "$" },
+                 statement.sanitized_parser_output.dig("pdf", "balance_readings", "labels", "closing_balance"))
+  end
+
+  test "stores a DR closing balance on a depository account as overdrawn" do
+    statement = upload_card_statement(account: @account, text: CARD_STATEMENT_TEXT.sub(" CR", " DR"))
+
+    assert_equal BigDecimal("-435.88"), statement.closing_balance
+  end
+
+  test "signs an inbox upload's CR balance when it is linked to a credit card" do
+    statement = upload_card_statement(account: nil)
+    assert_equal BigDecimal("435.88"), statement.closing_balance
+
+    statement.link_to_account!(accounts(:credit_card))
+
+    assert_equal BigDecimal("-435.88"), statement.reload.closing_balance
+    assert_equal BigDecimal("1066.47"), statement.opening_balance
+  end
+
+  test "signs a CR balance when the account is set through an edit" do
+    statement = upload_card_statement(account: nil)
+
+    statement.update!(account: accounts(:credit_card))
+
+    assert_equal BigDecimal("-435.88"), statement.reload.closing_balance
+  end
+
+  test "re-signs a CR balance when the statement moves to a depository account" do
+    statement = upload_card_statement(account: accounts(:credit_card))
+
+    statement.unlink!
+    statement.link_to_account!(@account)
+
+    assert_equal BigDecimal("435.88"), statement.reload.closing_balance
+  end
+
+  test "unlinking returns a CR balance to its unsigned inbox value" do
+    statement = upload_card_statement(account: accounts(:credit_card))
+
+    statement.unlink!
+
+    assert_equal BigDecimal("435.88"), statement.reload.closing_balance
+  end
+
+  test "keeps a balance edited by hand before linking" do
+    statement = upload_card_statement(account: nil)
+    statement.update!(closing_balance: 400)
+
+    statement.link_to_account!(accounts(:credit_card))
+
+    assert_equal BigDecimal("400"), statement.reload.closing_balance
+    assert_equal BigDecimal("1066.47"), statement.opening_balance
+  end
+
+  test "keeps a balance typed in the same save that sets the account" do
+    statement = upload_card_statement(account: nil)
+
+    statement.update!(account: @account, closing_balance: -435.88)
+
+    assert_equal BigDecimal("-435.88"), statement.reload.closing_balance
+  end
+
+  test "keeps a deliberately signed balance across relinking" do
+    statement = upload_card_statement(account: accounts(:credit_card))
+    statement.update!(closing_balance: 435.88)
+
+    statement.unlink!
+    statement.link_to_account!(@account)
+    statement.link_to_account!(accounts(:credit_card))
+
+    assert_equal BigDecimal("435.88"), statement.reload.closing_balance
+  end
+
+  test "keeps a CR summary table on a credit card upload" do
+    statement = upload_card_statement(account: accounts(:credit_card), text: CARD_SUMMARY_TEXT)
+
+    assert_equal BigDecimal("-435.88"), statement.closing_balance
+    assert_equal "summary_table", statement.sanitized_parser_output.dig("pdf", "balances_source")
+  end
+
+  test "drops a CR summary table uploaded to a depository account" do
+    statement = upload_card_statement(account: @account, text: CARD_SUMMARY_TEXT)
+
+    assert_nil statement.opening_balance
+    assert_nil statement.closing_balance
+    assert_nil statement.sanitized_parser_output.dig("pdf", "balances_source")
+    assert_equal false, statement.sanitized_parser_output.dig("pdf", "balances_detected")
+  end
+
+  test "drops an inbox summary table when it is linked to an account it does not add up for" do
+    statement = upload_card_statement(account: nil, text: CARD_SUMMARY_TEXT)
+    assert_equal BigDecimal("435.88"), statement.closing_balance
+
+    statement.link_to_account!(@account)
+
+    assert_nil statement.reload.opening_balance
+    assert_nil statement.closing_balance
+    assert_nil statement.sanitized_parser_output.dig("pdf", "balances_source")
+    assert_equal false, statement.sanitized_parser_output.dig("pdf", "balances_detected")
+  end
+
+  test "drops a card upload's summary table when it moves to a depository account" do
+    statement = upload_card_statement(account: accounts(:credit_card), text: CARD_SUMMARY_TEXT)
+
+    statement.unlink!
+    statement.link_to_account!(@account)
+
+    assert_nil statement.reload.opening_balance
+    assert_nil statement.closing_balance
+  end
+
+  test "restores a dropped summary table when relinked to an account it adds up for" do
+    statement = upload_card_statement(account: @account, text: CARD_SUMMARY_TEXT)
+    assert_nil statement.closing_balance
+
+    statement.unlink!
+    statement.link_to_account!(accounts(:credit_card))
+
+    assert_equal BigDecimal("1066.47"), statement.reload.opening_balance
+    assert_equal BigDecimal("-435.88"), statement.closing_balance
+    assert_equal "summary_table", statement.sanitized_parser_output.dig("pdf", "balances_source")
+    assert_equal true, statement.sanitized_parser_output.dig("pdf", "balances_detected")
+  end
+
+  test "keeps an edited balance when the summary table is dropped" do
+    statement = upload_card_statement(account: nil, text: CARD_SUMMARY_TEXT)
+    statement.update!(closing_balance: 400)
+
+    statement.link_to_account!(@account)
+
+    assert_nil statement.reload.opening_balance
+    assert_equal BigDecimal("400"), statement.closing_balance
+  end
+
+  test "unlinking keeps an inbox summary table that adds up only as a card's" do
+    statement = upload_card_statement(account: nil, text: CARD_SUMMARY_TEXT)
+    statement.link_to_account!(accounts(:credit_card))
+
+    statement.unlink!
+
+    assert_equal BigDecimal("1066.47"), statement.reload.opening_balance
+    assert_equal BigDecimal("435.88"), statement.closing_balance
+  end
+
+  test "reads the balances again in the statement's currency when it changes" do
+    @family.update!(currency: "EUR")
+    card = @family.accounts.create!(name: "AUD card", balance: 0, currency: "AUD", accountable: CreditCard.new)
+    statement = upload_card_statement(account: nil)
+    assert_equal "EUR", statement.currency
+    assert_nil statement.closing_balance, "a dollar amount was read as euros"
+
+    statement.link_to_account!(card)
+    statement.update!(currency: "AUD")
+
+    assert_equal BigDecimal("-435.88"), statement.reload.closing_balance
+    assert_equal BigDecimal("1066.47"), statement.opening_balance
+  end
+
+  test "a save that fails validation and is retried does not mark derived balances as edited" do
+    statement = upload_card_statement(account: nil)
+    statement.account = accounts(:credit_card)
+    statement.period_end_on = statement.period_start_on - 1
+    assert_not statement.save
+
+    statement.period_end_on = statement.period_start_on + 30
+    statement.save!
+    statement.unlink!
+
+    assert_empty Array(statement.reload.sanitized_parser_output.dig("pdf", "edited_balances"))
+    assert_equal BigDecimal("435.88"), statement.closing_balance
+  end
+
+  test "leaves statements without balance readings alone when linked" do
+    statement = upload_card_statement(account: nil, text: "nothing to read")
+    statement.update!(closing_balance: 250)
+
+    statement.link_to_account!(accounts(:credit_card))
+
+    assert_equal BigDecimal("250"), statement.reload.closing_balance
+  end
+
   test "does not read a bare MM-YYYY token in the filename as the period" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
@@ -933,6 +1134,15 @@ class AccountStatementTest < ActiveSupport::TestCase
   end
 
   private
+
+    def upload_card_statement(account:, text: CARD_STATEMENT_TEXT)
+      Pdf::TextExtractor.stubs(:pages).returns([ text ])
+      AccountStatement.create_from_upload!(
+        family: @family,
+        account: account,
+        file: uploaded_file(filename: "card.pdf", content_type: "application/pdf", content: "%PDF-1.4 card statement")
+      )
+    end
 
     def create_statement(account:, month:, content:, suggested_account: nil, closing_balance: nil)
       statement = AccountStatement.create_from_upload!(
