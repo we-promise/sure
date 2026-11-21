@@ -6,7 +6,7 @@ module Settings::HostingsHelper
 
   def jev_configured? = Ai::LegacyEnvConfig::Jev.configured?
 
-  def jev_endpoint = Ai::LegacyEnvConfig::Jev.redacted_endpoint(Ai::LegacyEnvConfig::Jev.effective_endpoint)
+  def jev_endpoint = Ai::Instrumentation::Redactor.url(Ai::LegacyEnvConfig::Jev.effective_endpoint)
 
   def jev_model = Ai::LegacyEnvConfig::Jev.effective_model
 

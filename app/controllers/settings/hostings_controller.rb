@@ -274,7 +274,7 @@ class Settings::HostingsController < ApplicationController
     if hosting_params.key?(:jev_endpoint)
       raw_endpoint = hosting_params[:jev_endpoint].to_s.strip
       stored_endpoint = Setting.jev_endpoint
-      if stored_endpoint.present? && raw_endpoint == Ai::LegacyEnvConfig::Jev.redacted_endpoint(stored_endpoint)
+      if stored_endpoint.present? && raw_endpoint == Ai::Instrumentation::Redactor.url(stored_endpoint)
         # The field shows the stored endpoint redacted, and auto-submits on
         # blur, so this is the page echoing it back, not a change. Saving it
         # would strip the credentials the operator put in the URL.

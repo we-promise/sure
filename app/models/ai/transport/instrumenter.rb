@@ -13,7 +13,7 @@ class Ai::Transport::Instrumenter
 
   def instrument(name, payload = {}, &block)
     if name == "request.ruby_llm"
-      check_budget!
+      Ai::CallContext.check_budget!
       block = recording_failure(payload, block) if block
     end
 
@@ -41,12 +41,5 @@ class Ai::Transport::Instrumenter
       { error: mapped.message, error_class: mapped.class.name, http_status_code: mapped.try(:status) }.compact
     rescue StandardError
       nil
-    end
-
-    def check_budget!
-      call = Ai::CallContext.current
-      return unless call&.expired?
-
-      raise Ai::Error::Timeout, "the attempt's time budget was spent before the request was sent"
     end
 end

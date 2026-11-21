@@ -37,7 +37,7 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
 
     assert_equal :openai, endpoint.preset
     assert_nil endpoint.base_url
-    assert endpoint.cloud?
+    assert_equal :cloud, endpoint.location
     assert endpoint.responses_api
     assert endpoint.vector_store?
     assert_equal 90, endpoint.timeout_seconds

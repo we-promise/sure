@@ -17,17 +17,12 @@ class Ai::ProbeJobTest < ActiveSupport::TestCase
     Setting.stubs(:anthropic_access_token).returns(nil)
   end
 
-  test "runs on the background lane's AI queue" do
-    assert_equal Ai::Routes::QUEUES.fetch(:background), Ai::ProbeJob.new.queue_name
-    assert_includes Ai::Capsule::QUEUES, Ai::ProbeJob.new.queue_name
-  end
-
   test "stores fresh results the page reads without probing, and records this worker" do
     stub_probe_answers(passing)
 
     with_openai_token { Ai::ProbeJob.perform_now }
 
-    page = with_openai_token { AiHealth.new(stored_only: true) }
+    page = with_openai_token { AiHealth.new }
     assert page.llm_probe.passing?
     assert_equal :supported, page.function_calling_status
     snapshot = WorkerAiHealth.recent.sole
@@ -41,7 +36,7 @@ class Ai::ProbeJobTest < ActiveSupport::TestCase
 
     assert_nothing_raised { with_openai_token { Ai::ProbeJob.perform_now } }
 
-    page = with_openai_token { AiHealth.new(stored_only: true) }
+    page = with_openai_token { AiHealth.new }
     assert_equal :failing, page.llm_status
     assert_equal :no_credit, page.llm_probe.failure_code
     assert_includes WorkerAiHealth.recent.sole.failure_codes, :no_credit
@@ -54,7 +49,70 @@ class Ai::ProbeJobTest < ActiveSupport::TestCase
     stub_probe_answers(passing)
     with_openai_token { Ai::ProbeJob.perform_now }
 
-    assert with_openai_token { AiHealth.new(stored_only: true) }.llm_probe.passing?
+    assert with_openai_token { AiHealth.new }.llm_probe.passing?
+  end
+
+  test "results written early in a run are still there when the last probe finishes" do
+    AiHealth::Probe.any_instance.stubs(:perform).with { travel AiHealth::Probe.cache_ttl / 2; true }.returns(passing)
+
+    with_openai_token { Ai::ProbeJob.perform_now }
+
+    assert with_openai_token { AiHealth.new }.llm_probe.passing?
+  end
+
+  test "an error from a probe's request reaches the job once, not swallowed and retried" do
+    attempts = 0
+    AiHealth::Probe.any_instance.stubs(:perform).with { attempts += 1 }.raises(Ai::Error::Base, "busy")
+
+    assert_raises(Ai::Error::Base) { with_openai_token { Ai::ProbeJob.perform_now } }
+    assert_equal 1, attempts
+  end
+
+  test "the worker snapshot is kept for the retention window, then dropped" do
+    stub_probe_answers(passing)
+    with_openai_token { Ai::ProbeJob.perform_now }
+
+    travel WorkerAiHealth::STALE_AFTER + 1.second
+    assert_equal :stale, WorkerAiHealth.recent.sole.status
+    travel WorkerAiHealth::RETENTION
+    assert_empty WorkerAiHealth.recent
+  end
+
+  test "the page shows no worker results, rather than failing, when Redis is down" do
+    Ai::SharedState.store.stubs(:read).raises(RedisClient::CannotConnectError)
+
+    assert_empty WorkerAiHealth.recent
+    assert with_openai_token { AiHealth.new }.llm_probe.not_checked?
+  end
+
+  test "a job on an AI queue runs inside the capsule; a job on any other queue doesn't" do
+    seen = []
+    job = Class.new(ApplicationJob) { define_method(:perform) { seen << [ queue_name, Ai::Capsule.inside? ] } }
+
+    (Ai::Routes.ai_queues + %w[high_priority default]).each { job.set(queue: _1).perform_now }
+
+    assert_equal Ai::Routes.ai_queues.map { [ _1, true ] } + [ [ "high_priority", false ], [ "default", false ] ], seen
+    assert_raises(Ai::Capsule::Violation) { Ai::Capsule.check! }
+    assert_nil Ai::Capsule.outside { Ai::Capsule.check! }
+  end
+
+  test "threads a job starts are inside too, and the mark is restored after a raise" do
+    assert with_ai_capsule { Thread.new { Ai::Capsule.inside? }.value }
+    assert_raises(RuntimeError) { with_ai_capsule { raise "boom" } }
+    assert_not Ai::Capsule.inside?
+  end
+
+  test "shared state is JSON in Sidekiq's Redis, and every value must expire" do
+    Ai::SharedState.store = Ai::SharedState::RedisStore.new
+    key = "ai/test/#{SecureRandom.hex(4)}"
+
+    Ai::SharedState.write(key, { "codes" => [ 1 ] }, expires_in: 0.5.seconds)
+
+    assert_equal({ "codes" => [ 1 ] }, Ai::SharedState.read(key))
+    assert_includes 1..500, Sidekiq.redis { _1.call("PTTL", key) }
+    assert_raises(ArgumentError) { Ai::SharedState.write(key, [ 1 ], expires_in: nil) }
+  ensure
+    Ai::SharedState.delete(key)
   end
 
   # The tab's form needs a request's CSRF token, so the job sends a frame that loads itself.
@@ -72,7 +130,7 @@ class Ai::ProbeJobTest < ActiveSupport::TestCase
   private
     def passing = AiHealth::Probe::Result.new(status: :passing, checked_at: Time.current, failure_code: nil, http_status: nil)
 
-    # Each probe's request answers `result`; the caching around it, and the store, are real.
+    # Each probe's request answers `result`; storing it, and reading it back, are real.
     def stub_probe_answers(result)
       AiHealth::Probe.any_instance.stubs(:perform).returns(result)
     end

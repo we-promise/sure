@@ -4,7 +4,7 @@ class AiHealth::ProbeChatOutputTest < ActiveSupport::TestCase
   PROTOCOLS = %i[chat_completions responses anthropic].freeze
 
   setup do
-    @probe = AiHealth::Probe.new(cache: ActiveSupport::Cache::MemoryStore.new)
+    @probe = AiHealth::Probe.new(run: true)
     Rails.logger.stubs(:error)
     DebugLogEntry.stubs(:capture)
   end

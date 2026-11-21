@@ -71,7 +71,7 @@ module Ai::LegacyEnvConfig::Jev
   # openrouter provider; TypeSafe-style URLs keep the `:typesafe` provider.
   def endpoint(url, api_key:, timeout_seconds:, parallel_requests: nil)
     base_url = base_url(url)
-    location = URI.parse(base_url).scheme == "http" ? :local : :cloud
+    location = Ai::Config::Endpoint.location_for(base_url)
     preset = openrouter?(url) ? :jev_openrouter : (location == :cloud ? :jev : :jev_local)
     Ai::Config::Endpoint.new(
       name: "jev", protocol: :jev, preset:, base_url:, api_key:, location:,
@@ -121,19 +121,6 @@ module Ai::LegacyEnvConfig::Jev
 
     "#{uri.scheme}://#{uri.host}#{":#{uri.port}" unless uri.port == uri.default_port}"
   rescue URI::Error
-    "[unparseable endpoint]"
-  end
-
-  # The endpoint without its userinfo, query or fragment, for the settings field, which shows the
-  # admin their own URL. The password is cleared before the user, or the assignment raises.
-  def redacted_endpoint(url)
-    uri = URI.parse(url.to_s)
-    uri.password = nil if uri.respond_to?(:password) && uri.password
-    uri.user = nil if uri.respond_to?(:user) && uri.user
-    uri.query = nil
-    uri.fragment = nil
-    uri.to_s
-  rescue URI::Error, NoMethodError
     "[unparseable endpoint]"
   end
 end
