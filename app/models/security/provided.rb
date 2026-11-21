@@ -390,12 +390,12 @@ module Security::Provided
 
       if response.success?
         # Before the lock: `with_lock` reloads the row, and `store_constituents`
-        # compares the stamp under its own lock with the one this import read
-        # before asking. Reloading first would make another import's set look
-        # like this one's, and replace it.
+        # compares `constituents_replaced_at` under its own lock with the one
+        # this import read before asking. Reloading first would make another
+        # import's set look like this one's, and replace it.
         if wants_constituents
           begin
-            store_constituents(response.data.constituents, provider)
+            store_constituents(response.data.constituents, provider, forced: clear_cache)
           rescue => e
             # A write the pre-checks missed (an invalid byte sequence Postgres
             # refuses) must not cost the security its name and classification,
@@ -522,7 +522,7 @@ module Security::Provided
   # stamp alone, so the next sync asks again: a holdings block the provider's
   # parser could not read, or a non-empty list none of whose rows can be
   # stored.
-  def store_constituents(list, provider = price_data_provider)
+  def store_constituents(list, provider = price_data_provider, forced: false)
     return unless provider&.supplies_constituents?
 
     # An unreadable answer keeps the stored set, but is stamped like any
@@ -551,20 +551,23 @@ module Security::Provided
     # Securities are shared across families, so two syncs can replace one fund
     # at once. The row lock makes the second wait, where its DELETE would
     # otherwise miss the uncommitted rows and its INSERT break the unique
-    # index. Under the lock it reads the stamp again: one written since this
-    # import read it means the other import has stored its answer, and that
-    # set stays. `lock!` is not used: it reloads, and would drop attributes a
-    # failed `update` just left unsaved.
+    # index. Under the lock it reads when the set was last replaced: a time
+    # written since this import read the fund means the other import has
+    # stored its answer, and that set stays. The fetch stamp cannot say so,
+    # since an unreadable answer moves it without replacing anything. `lock!`
+    # is not used: it reloads, and would drop attributes a failed `update` just
+    # left unsaved.
     replaced = transaction do
-      stamp = self.class.where(id: id).lock.pick(:constituents_fetched_at)
-      next false if stamp && stamp != constituents_fetched_at
+      replaced_at = self.class.where(id: id).lock.pick(:constituents_replaced_at)
+      next false if replaced_at && replaced_at != constituents_replaced_at
 
       constituents.delete_all
       Security::Constituent.insert_all!(rows.map { |row| row.merge(security_id: id) }) if rows.any?
-      stamp_constituents(provider)
+      stamp_constituents(provider, replaced: true)
       true
     end
     constituents.reset
+    log_kept_constituents(provider) if forced && !replaced
 
     skipped.each { |reason, entry| log_skipped_constituent(reason, entry, provider) } if replaced
   end
@@ -675,6 +678,19 @@ module Security::Provided
     )
   end
 
+  # A forced refresh that found another import had replaced the holdings
+  # under the lock: the stored set is that import's, not this refresh's.
+  def log_kept_constituents(provider)
+    DebugLogEntry.capture(
+      category: "security_holdings",
+      level: "info",
+      message: "Kept the holdings another import stored during a forced refresh",
+      source: "Security#store_constituents",
+      provider: provider,
+      metadata: { security_id: id, security_ticker: ticker }
+    )
+  end
+
   def log_failed_constituents(provider, error)
     DebugLogEntry.capture(
       category: "security_holdings",
@@ -686,9 +702,14 @@ module Security::Provided
     )
   end
 
-  def stamp_constituents(provider)
-    update_columns(constituents_fetched_at: Time.current,
-                   constituents_fetched_from: self.class.provider_key_for(provider))
+  # One statement and one time for every column. `update_columns` casts the
+  # time to the column's precision in memory too, so the value kept is the one
+  # the lock later compares against.
+  def stamp_constituents(provider, replaced: false)
+    now = Time.current
+    columns = { constituents_fetched_at: now, constituents_fetched_from: self.class.provider_key_for(provider) }
+    columns[:constituents_replaced_at] = now if replaced
+    update_columns(columns)
   end
 
   # Postgres jsonb and the constituents table both refuse NUL bytes, so a
@@ -704,7 +725,7 @@ module Security::Provided
   end
   private :store_constituents, :constituent_rows_from, :constituent_weight_limit,
     :constituent_weight_scale, :log_skipped_constituent, :log_unreadable_constituents, :without_nul,
-    :log_failed_constituents, :stamp_constituents
+    :log_failed_constituents, :log_kept_constituents, :stamp_constituents
 
   # A provider's type says what the wrapper is, not what it holds. "Common
   # stock" is an equity whatever else is true of it, so it maps. An ETF or a

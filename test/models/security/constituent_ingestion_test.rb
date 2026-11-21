@@ -148,7 +148,9 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     security_id = @security.id
     provider.define_singleton_method(:fetch_security_info) do |**|
       Security::Constituent.create!(security_id: security_id, ticker: "AAA", name: "First", weight: 100)
-      Security.where(id: security_id).update_all(constituents_fetched_at: Time.current, constituents_fetched_from: "twelve_data")
+      stored_at = Time.current
+      Security.where(id: security_id).update_all(constituents_fetched_at: stored_at, constituents_fetched_from: "twelve_data",
+                                                 constituents_replaced_at: stored_at)
       response
     end
     @security.stubs(:price_data_provider).returns(provider)
@@ -500,9 +502,9 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_operator lock, :<, delete, "the lock is taken after the old set is deleted"
   end
 
-  # The second of two concurrent imports read the stamp as nil before the
-  # first stored its answer. Once it holds the lock it must see the first's
-  # stamp and leave that set alone, not replace it with its own answer.
+  # The second of two concurrent imports read the fund before the first
+  # stored its answer. Once it holds the lock it must see that the set was
+  # replaced and leave it alone, not replace it with its own answer.
   test "an import that finds the fund stamped under the lock keeps the stored holdings" do
     provider = capable_provider("provider")
     @security.stubs(:price_data_provider).returns(provider)
@@ -511,11 +513,107 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
 
     @security.send(:store_constituents, [ constituent("AAA", "First", 100) ])
     stamped = @security.reload.constituents_fetched_at
+    replaced_at = @security.constituents_replaced_at
 
     stale.send(:store_constituents, [ constituent("BBB", "Second", 100) ])
 
     assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker)
     assert_equal stamped, @security.constituents_fetched_at
+    assert_equal replaced_at, @security.constituents_replaced_at
+  end
+
+  # No replacement time under the lock means no rival replaced the set.
+  test "an import whose fund has no replacement time under the lock stores its answer" do
+    @security.stubs(:price_data_provider).returns(capable_provider("provider"))
+    @security.send(:store_constituents, [ constituent("AAA", "First", 100) ])
+    Security.where(id: @security.id).update_all(constituents_replaced_at: nil)
+
+    @security.send(:store_constituents, [ constituent("BBB", "Second", 100) ])
+
+    assert_equal %w[BBB], @security.reload.constituents.pluck(:ticker)
+  end
+
+  # The time written under the lock must equal the one kept in memory, to the
+  # database's precision, or the same import's next store looks like a rival's.
+  test "a second store on the same import replaces the first" do
+    @security.stubs(:price_data_provider).returns(capable_provider("provider"))
+
+    @security.send(:store_constituents, [ constituent("AAA", "First", 100) ])
+    @security.send(:store_constituents, [ constituent("BBB", "Second", 100) ])
+
+    assert_equal %w[BBB], @security.reload.constituents.pluck(:ticker)
+  end
+
+  # A forced refresh is a person asking for fresh holdings; losing the race to
+  # another import must leave a trace rather than look like a refresh.
+  test "a forced refresh that finds the holdings replaced under the lock logs it" do
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
+    response = provider_success_response(info(constituents: [ constituent("BBB", "Second", 100) ]))
+    security_id = @security.id
+    provider.define_singleton_method(:fetch_security_info) do |**|
+      Security.find(security_id).send(:store_constituents, [ { ticker: "AAA", name: "First", weight: 100 } ], self)
+      response
+    end
+    @security.stubs(:price_data_provider).returns(provider)
+
+    assert_difference -> { holdings_log_count }, 1 do
+      @security.import_provider_details(clear_cache: true, include_constituents: true)
+    end
+
+    assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker)
+    assert_match "another import", last_holdings_log.message
+    assert_equal({ "security_id" => @security.id, "security_ticker" => @security.ticker }, last_holdings_log.metadata)
+  end
+
+  # An unreadable answer stamps the fund but replaces nothing, so a concurrent
+  # import with a readable list must still store it. Otherwise the fund keeps
+  # its old set, and the stamp stops later syncs asking again.
+  test "an unreadable answer stamped after another import read the fund does not stop that import storing" do
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
+    @security.constituents.create!(ticker: "OLD", name: "Old", weight: 100)
+    @security.stubs(:price_data_provider).returns(provider)
+    valid = Security.find(@security.id)
+    valid.stubs(:price_data_provider).returns(provider)
+    refused = Security.find(@security.id)
+    refused.stubs(:price_data_provider).returns(provider)
+    assert_nil valid.constituents_fetched_at
+
+    @security.send(:store_constituents, Provider::SecurityConcept::UNREADABLE_CONSTITUENTS)
+    refused.send(:store_constituents, [ constituent("", "Blank", 100) ])
+    assert_equal %w[OLD], @security.reload.constituents.pluck(:ticker)
+    assert_not_nil @security.constituents_fetched_at
+
+    valid.send(:store_constituents, [ constituent("BBB", "Second", 100) ])
+
+    assert_equal %w[BBB], @security.reload.constituents.pluck(:ticker),
+                 "an unreadable answer's stamp made the readable list look already replaced"
+
+    provider.expects(:fetch_security_info).never
+    @security.import_provider_details(include_constituents: true)
+    assert_equal %w[BBB], @security.reload.constituents.pluck(:ticker)
+  end
+
+  # An empty answer is a replacement: it deletes the stored set. A concurrent
+  # import that read the fund before it must keep that result.
+  test "an empty answer stored after another import read the fund is kept" do
+    provider = capable_provider("provider")
+    @security.constituents.create!(ticker: "OLD", name: "Old", weight: 100)
+    @security.stubs(:price_data_provider).returns(provider)
+    stale = Security.find(@security.id)
+    stale.stubs(:price_data_provider).returns(provider)
+
+    assert_nil @security.constituents_replaced_at
+    @security.send(:store_constituents, [])
+    assert_empty @security.reload.constituents
+    replaced_at = @security.constituents_replaced_at
+    assert_not_nil replaced_at, "an empty answer did not record a replacement"
+
+    stale.send(:store_constituents, [ constituent("BBB", "Second", 100) ])
+
+    assert_empty @security.reload.constituents, "a stale answer replaced the empty set stored after it read the fund"
+    assert_equal replaced_at, @security.constituents_replaced_at
   end
 
   # -------------------------------------------------------- malformed lists
