@@ -8,7 +8,10 @@ class Account < ApplicationRecord
 
   after_destroy_commit :move_account_statements_to_inbox
 
+  normalizes :custom_group, with: ->(value) { value.squish.presence }
+
   validates :name, :balance, :currency, presence: true
+  validates :custom_group, length: { maximum: AccountGrouping::CUSTOM_GROUP_MAX_LENGTH }, allow_nil: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family

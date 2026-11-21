@@ -35,19 +35,13 @@ class BalanceSheet::ClassificationGroup
     accounts.any?(&:syncing?)
   end
 
-  # For now, we group by accountable type. This can be extended in the future to support arbitrary user groupings.
-  def account_groups
+  # Groups by account type unless another dimension is given (see
+  # AccountGrouping). The split into assets and debts always stays above.
+  def account_groups(by: nil, user: nil)
+    return dimension_groups(by, user: user) if by.present? && by.to_s != AccountGrouping::DEFAULT_PRIMARY
+
     groups = accounts.group_by(&:accountable_type)
-                     .transform_keys { |at| Accountable.from_type(at) }
-                     .map do |accountable, account_rows|
-                       BalanceSheet::AccountGroup.new(
-                         name: accountable.display_name,
-                         color: accountable.color,
-                         accountable_type: accountable,
-                         accounts: account_rows,
-                         classification_group: self
-                       )
-                     end
+                     .map { |accountable_type, account_rows| type_group(accountable_type, account_rows) }
 
     # Sort the groups using the manual order defined by Accountable::TYPES so that
     # the UI displays account groups in a predictable, domain-specific sequence.
@@ -60,6 +54,36 @@ class BalanceSheet::ClassificationGroup
 
   private
     attr_reader :accounts
+
+    def type_group(accountable_type, account_rows)
+      accountable = Accountable.from_type(accountable_type)
+
+      BalanceSheet::AccountGroup.new(
+        name: accountable.display_name,
+        color: accountable.color,
+        accountable_type: accountable,
+        accounts: account_rows,
+        classification_group: self
+      )
+    end
+
+    def dimension_groups(dimension, user:)
+      AccountGrouping.new(dimension, user: user).group(accounts).map do |group|
+        next type_group(group.key.accountable_type, group.accounts) if group.key.is_a?(AccountGrouping::TypeFallback)
+
+        # Prefixed so an asset and a debt group with the same value stay apart.
+        key = "#{classification}_#{AccountGrouping.group_key(dimension, group.key)}"
+
+        BalanceSheet::AccountGroup.new(
+          key: key,
+          name: group.name,
+          color: AccountGrouping.color_for(key),
+          accountable_type: nil,
+          accounts: group.accounts,
+          classification_group: self
+        )
+      end
+    end
 
     def normalize_classification!(classification)
       raise ArgumentError, "Invalid classification: #{classification}" unless %w[asset liability].include?(classification)

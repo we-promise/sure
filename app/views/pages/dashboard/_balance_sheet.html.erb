@@ -4,6 +4,7 @@
      data-always-expanded="<%= Current.user.always_expanded_account_groups.to_json %>">
 
   <% balance_sheet.classification_groups.each do |classification_group| %>
+    <% account_groups = account_groups_for(classification_group, view: :dashboard) %>
     <div class="space-y-4 px-4">
       <div class="flex items-center gap-2">
         <h2 class="text-lg font-medium inline-flex items-center gap-1.5">
@@ -11,23 +12,23 @@
             <%= classification_group.name %>
           </span>
 
-          <% if classification_group.account_groups.any? %>
+          <% if account_groups.any? %>
             <span class="text-secondary">&middot;</span>
             <span class="text-secondary font-medium text-lg privacy-sensitive"><%= classification_group.total_money.format(precision: 0) %></span>
           <% end %>
         </h2>
       </div>
 
-      <% if classification_group.account_groups.any? %>
+      <% if account_groups.any? %>
         <div class="space-y-4">
           <div class="flex gap-1">
-            <% classification_group.account_groups.each do |account_group| %>
+            <% account_groups.each do |account_group| %>
               <div class="h-1.5 rounded-sm" style="width: <%= account_group.weight %>%; background-color: <%= account_group.color %>;"></div>
             <% end %>
           </div>
 
           <div class="flex flex-wrap gap-4">
-            <% classification_group.account_groups.each do |account_group| %>
+            <% account_groups.each do |account_group| %>
               <div class="flex items-center gap-2 text-sm">
                 <div class="h-2.5 w-2.5 rounded-full" style="background-color: <%= account_group.color %>;"></div>
                 <p class="text-secondary"><%= account_group.name %></p>
@@ -51,10 +52,10 @@
           </div>
 
           <div class="rounded-lg bg-container font-medium text-sm min-w-fit">
-            <% classification_group.account_groups.each_with_index do |account_group, idx| %>
+            <% account_groups.each_with_index do |account_group, idx| %>
               <details class="group open:bg-container
                 <%= idx == 0 ? "rounded-t-lg" : "" %>
-                <%= idx == classification_group.account_groups.size - 1 ? "rounded-b-lg" : "" %>
+                <%= idx == account_groups.size - 1 ? "rounded-b-lg" : "" %>
               " data-group-key="<%= account_group.key %>"
               <%= "open" if Current.user.always_expanded_account_group?(account_group.key) %>>
                 <summary class="cursor-pointer p-4 group-open:bg-container rounded-lg flex items-center justify-between">
@@ -76,37 +77,56 @@
                 </summary>
 
                 <div>
-                  <% account_group.accounts.each_with_index do |account, idx| %>
-                    <div class="pl-7 pr-4 py-3 flex items-center justify-between text-sm font-medium">
-                      <div class="flex items-center gap-2">
-                        <%= render "accounts/logo", account: account, size: "sm", color: account_group.color %>
+                  <% subgroups = account_subgroups(account_group, view: :dashboard) %>
+                  <% sections = subgroups.any? ? subgroups.map { |subgroup| [ subgroup, subgroup.accounts ] } : [ [ nil, account_group.accounts ] ] %>
+                  <% sections.each do |subgroup, section_accounts| %>
+                    <% if subgroup %>
+                      <div class="pl-7 pr-4 pt-3 pb-1 flex items-center justify-between text-xs font-medium text-secondary" data-subgroup-key="<%= subgroup.key %>">
+                        <p class="truncate"><%= subgroup.name %></p>
 
-                        <%= link_to account.name, account_path(account) %>
-                      </div>
+                        <div class="ml-auto flex items-center text-right gap-2">
+                          <div class="w-20 shrink-0">
+                            <p class="privacy-sensitive"><%= number_to_percentage(subgroup.weight, precision: 0) %></p>
+                          </div>
 
-                      <div class="ml-auto flex items-center text-right gap-2">
-                        <div class="w-20 shrink-0 flex items-center justify-end gap-2">
-                          <%
-                              # Calculate weight as percentage of classification total
-                              classification_total = classification_group.total_money.amount
-                              account_weight = classification_total.zero? ? 0 : account.converted_balance / classification_total * 100
-                          %>
-                          <%= render "pages/dashboard/group_weight", weight: account_weight, color: account_group.color %>
-                        </div>
-
-                        <div class="w-24 shrink-0">
-                          <p class="privacy-sensitive"><%= format_money(account.balance_money, precision: 0) %></p>
+                          <div class="w-24 shrink-0">
+                            <p class="privacy-sensitive"><%= format_money(subgroup.total_money, precision: 0) %></p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    <% end %>
+                    <% section_accounts.each_with_index do |account, idx| %>
+                      <div class="pl-7 pr-4 py-3 flex items-center justify-between text-sm font-medium">
+                        <div class="flex items-center gap-2">
+                          <%= render "accounts/logo", account: account, size: "sm", color: account_group.color_for(account) %>
 
-                    <% if idx < account_group.accounts.size - 1 %>
-                      <%= render "shared/ruler", classes: "ml-21 mr-4" %>
+                          <%= link_to account.name, account_path(account) %>
+                        </div>
+
+                        <div class="ml-auto flex items-center text-right gap-2">
+                          <div class="w-20 shrink-0 flex items-center justify-end gap-2">
+                            <%
+                                # Calculate weight as percentage of classification total
+                                classification_total = classification_group.total_money.amount
+                                account_weight = classification_total.zero? ? 0 : account.converted_balance / classification_total * 100
+                            %>
+                            <%= render "pages/dashboard/group_weight", weight: account_weight, color: account_group.color %>
+                          </div>
+
+                          <div class="w-24 shrink-0">
+                            <p class="privacy-sensitive"><%= format_money(account.balance_money, precision: 0) %></p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <% if idx < section_accounts.size - 1 %>
+                        <%= render "shared/ruler", classes: "ml-21 mr-4" %>
+                      <% end %>
                     <% end %>
                   <% end %>
                 </div>
               </details>
-              <% unless idx == classification_group.account_groups.size - 1 %>
+              <% unless idx == account_groups.size - 1 %>
                 <%= render "shared/ruler", classes: "mx-4 group-ruler" %>
               <% end %>
             <% end %>

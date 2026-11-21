@@ -205,6 +205,32 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     assert_eventually { @user.reload.manual_account_order["depository"]&.first(2) == [ plaid.id, checking.id ] }
   end
 
+  test "moving an account inside a subgroup keeps the other accounts in place" do
+    checking = accounts(:depository)
+    plaid = accounts(:connected)
+    checking.update!(custom_group: "Household")
+    plaid.update!(custom_group: "Household")
+    solo = @user.family.accounts.create!(name: "Solo", currency: "USD", balance: 0, accountable: Depository.new, owner: @user)
+    @user.update_manual_account_order("depository", [ solo.id, checking.id, plaid.id ])
+    @user.update!(preferences: @user.preferences.merge(
+      "preview_features_enabled" => true,
+      "account_grouping" => { "sidebar" => "custom_group" }
+    ))
+
+    visit account_path(checking)
+
+    within_testid("account-sidebar-tabs") do
+      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+
+      handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
+      handle.send_keys(:enter)
+      handle.send_keys(:up)
+      handle.send_keys(:enter)
+    end
+
+    assert_eventually { @user.reload.manual_account_order["depository"]&.first(3) == [ solo.id, plaid.id, checking.id ] }
+  end
+
   test "a drag outside sort mode does not move a row" do
     checking = accounts(:depository)
     plaid = accounts(:connected)
