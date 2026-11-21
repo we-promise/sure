@@ -100,6 +100,12 @@ class QifImport < Import
     @qif_account_type = raw_file_str.present? ? QifParser.account_type(raw_file_str) : nil
   end
 
+  # Account types in the file that are not standard QIF account types and are
+  # imported like a bank account (e.g. "Oth T").
+  def unknown_qif_account_types
+    raw_file_str.present? ? QifParser.unknown_account_types(raw_file_str) : []
+  end
+
   def qif_accounts
     @qif_accounts ||= raw_file_str.present? ? QifParser.parse_accounts(raw_file_str) : []
   end
