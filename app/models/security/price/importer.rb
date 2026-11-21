@@ -3,6 +3,11 @@ class Security::Price::Importer
   MissingStartPriceError    = Class.new(StandardError)
 
   PROVISIONAL_LOOKBACK_DAYS = 7
+  # How far back the carried-forward tail (see refetchable_dates) is asked for
+  # again. It bounds a security the provider has stopped quoting, whose tail
+  # grows every day. PROVISIONAL_LOOKBACK_DAYS would not do: every tail row
+  # that recent is already provisional.
+  CARRIED_FORWARD_REFETCH_DAYS = 30
 
   attr_reader :provider_error
 
@@ -91,14 +96,13 @@ class Security::Price::Importer
       # stored history before its first price is kept.
       replace_db_price = clear_cache && earliest_provider_price.present? && date >= earliest_provider_price.date
 
-      kept_db_price = false
-      chosen_price, chosen_currency = if replace_db_price || is_provisional
-        # For provisional/cache clear: only use provider price, let gap-fill handle missing
+      chosen_price, chosen_currency = if replace_db_price || is_provisional || db_price&.carried_forward
+        # For provisional/carried-forward/cache clear: only use provider price, let gap-fill handle missing.
+        # A carried-forward row is recomputed, so it follows a corrected price before it.
         # This ensures stale DB values don't persist when provider has no weekend data
         [ provider_price_value, provider_currency ]
       elsif has_db_price
-        # For non-provisional with valid DB price: preserve existing value (user edits)
-        kept_db_price = true
+        # For a real DB price: preserve existing value (user edits)
         [ db_price_value, db_price&.currency ]
       else
         # Fill gaps with provider data
@@ -129,9 +133,7 @@ class Security::Price::Importer
         price:       chosen_price,
         currency:    chosen_currency || "USD",
         provisional: provisional,
-        # A kept row keeps its own mark; any other row is carried forward
-        # exactly when it repeats an earlier price.
-        carried_forward: kept_db_price ? db_price.carried_forward : used_locf
+        carried_forward: used_locf
       }
     end
 
@@ -234,7 +236,7 @@ class Security::Price::Importer
     end
 
     def all_prices_exist?
-      return false if has_refetchable_provisional_prices?
+      return false if refetchable_dates.any?
 
       # Count only prices in the clamped range so pre-listing / pre-IPO gaps
       # don't perpetually trip the "expected_count mismatch" re-sync. Query
@@ -247,10 +249,24 @@ class Security::Price::Importer
       persisted_count == expected_count
     end
 
-    def has_refetchable_provisional_prices?
-      Security::Price.where(security_id: security.id, date: start_date..end_date)
-                     .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
-                     .exists?
+    # The stored dates the provider is asked for again: provisional prices from
+    # the last PROVISIONAL_LOOKBACK_DAYS, and the carried-forward tail -- the
+    # carried prices after the security's last real quote, from the last
+    # CARRIED_FORWARD_REFETCH_DAYS. A carried price with a real quote after it
+    # is settled (a weekend, a holiday or a day without trades, whichever days
+    # the market keeps) and is not asked for again.
+    def refetchable_dates
+      @refetchable_dates ||= begin
+        last_quote_on = Security::Price.where(security_id: security.id, carried_forward: false).maximum(:date)
+        tail_from = [ last_quote_on&.next_day, CARRIED_FORWARD_REFETCH_DAYS.days.ago.to_date ].compact.max
+
+        Security::Price
+          .where(security_id: security.id, date: start_date..end_date)
+          .where("(provisional AND date >= :lookback) OR (carried_forward AND date >= :tail_from)",
+                 lookback: PROVISIONAL_LOOKBACK_DAYS.days.ago.to_date, tail_from: tail_from)
+          .pluck(:date)
+          .to_set
+      end
     end
 
     def expected_count
@@ -270,7 +286,7 @@ class Security::Price::Importer
     end
 
     # Skip over ranges that already exist unless clearing cache
-    # Also includes dates with refetchable provisional prices.
+    # Also includes dates with refetchable provisional or carried-forward prices.
     #
     # Iterates from clamped_start_date (not start_date) so pre-listing /
     # pre-IPO gaps don't perpetually trip "first missing date = start_date"
@@ -279,11 +295,6 @@ class Security::Price::Importer
     # refresh can rediscover earlier provider history.
     def effective_start_date
       return start_date if clear_cache
-
-      refetchable_dates = Security::Price.where(security_id: security.id, date: clamped_start_date..end_date)
-                                         .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
-                                         .pluck(:date)
-                                         .to_set
 
       (clamped_start_date..end_date).detect do |d|
         !db_prices.key?(d) || refetchable_dates.include?(d)

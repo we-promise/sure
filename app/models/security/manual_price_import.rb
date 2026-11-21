@@ -56,8 +56,9 @@ class Security::ManualPriceImport
     # Offline with no reason and no assigned provider means no provider ever
     # matched the ticker. Any other offline security is a listed one that is
     # down for now ("health_check_failed", "provider_disabled",
-    # "resolution_pending"). The importer keeps non-provisional rows, so closes
-    # written there would outlast the provider's own once it came back.
+    # "resolution_pending"). The importer keeps real (not carried-forward)
+    # rows, so closes written there would outlast the provider's own once it
+    # came back.
     def untracked?
       security.offline? && security.offline_reason.blank? && security.price_provider.blank?
     end
