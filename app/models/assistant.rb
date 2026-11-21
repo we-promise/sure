@@ -100,6 +100,8 @@ module Assistant
         Function::UpdateRule,
         Function::ApplyRule,
         Function::UpdateTransaction,
+        Function::SplitTransaction,
+        Function::UnsplitTransaction,
         Function::CreateTransaction,
         Function::DeleteTransaction,
         Function::GetTransferMatchCandidates,
