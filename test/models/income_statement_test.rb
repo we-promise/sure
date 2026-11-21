@@ -1414,6 +1414,20 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_empty totals_sql { IncomeStatement.new(@family).expense_totals(period: uncached) }
   end
 
+  test "Totals can't total by window and by month at once" do
+    period = Period.custom(start_date: Date.new(2026, 9, 1), end_date: Date.new(2026, 9, 30))
+
+    assert_raises(ArgumentError) do
+      IncomeStatement::Totals.new(
+        @family,
+        transactions_scope: @family.transactions,
+        date_range: period.date_range,
+        windows: [ period.date_range ],
+        group_by_month: true
+      )
+    end
+  end
+
   private
     def category_totals(period_total)
       period_total.category_totals.reject { |ct| ct.total.zero? }.to_h { |ct| [ ct.category.name, ct.total ] }

@@ -16,6 +16,7 @@ class IncomeStatement::Totals
     @windows = windows
 
     raise ArgumentError, "group_by_month requires include_trades" if @group_by_month && !@include_trades
+    raise ArgumentError, "windows and group_by_month can't be combined" if @windows && @group_by_month
 
     validate_date_range!
   end
