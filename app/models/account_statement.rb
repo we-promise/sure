@@ -63,6 +63,15 @@ class AccountStatement < ApplicationRecord
   validate :original_file_constraints, if: -> { original_file.attached? }
 
   scope :ordered, -> { order(created_at: :desc) }
+  # Newest statement period first; statements whose period wasn't read go
+  # last, and upload order breaks ties.
+  scope :by_period, -> {
+    order(
+      arel_table[:period_end_on].desc.nulls_last,
+      arel_table[:period_start_on].desc.nulls_last,
+      created_at: :desc
+    )
+  }
   scope :with_account, -> { where.not(account_id: nil) }
   scope :unmatched, -> { where(account_id: nil).where(review_status: "unmatched") }
   # Rejecting a suggestion leaves the statement accountless, so it stays in the inbox where it can be found and deleted.

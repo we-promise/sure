@@ -932,6 +932,18 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal "covered", coverage.months.first.status
   end
 
+  test "by_period lists the newest period first and statements without a period last" do
+    march = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 3, 1), period_end_on: Date.new(2024, 3, 31), content: "march")
+    unread = create_statement_with_period(account: @account, period_start_on: nil, period_end_on: nil, content: "unread")
+    january = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 1, 1), period_end_on: Date.new(2024, 1, 31), content: "january")
+    quarter = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 1, 1), period_end_on: Date.new(2024, 3, 31), content: "quarter")
+    january_again = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 1, 1), period_end_on: Date.new(2024, 1, 31), content: "january_again")
+    january.update_columns(created_at: 2.days.ago)
+    january_again.update_columns(created_at: 1.day.ago)
+
+    assert_equal [ march, quarter, january_again, january, unread ], @account.account_statements.by_period.to_a
+  end
+
   private
 
     def create_statement(account:, month:, content:, suggested_account: nil, closing_balance: nil)
