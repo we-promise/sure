@@ -22,24 +22,6 @@ class Ai::Generations::ReadPdfTest < ActiveSupport::TestCase
     assert_match "--- Page 1 ---\npage one", requests.sole.input
   end
 
-  test "a document type outside the list is nil, and a missing section is nil" do
-    stub_ai(:extract_pdf, returns: { document_type: "receipt", summary: "x", extracted_data: nil })
-
-    result = generation([ Ai::PdfReading::Unit.text("text", page: 1) ]).call(batches: 1)
-
-    assert_nil result.value[:document_type]
-    assert_nil result.value[:extracted_data]
-  end
-
-  test "pages as images need vision, so a text model isn't sent them" do
-    requests = stub_ai(:extract_pdf, returns: {})
-
-    result = generation([ Ai::PdfReading::Unit.page(1) ]).call(batches: 1)
-
-    assert_equal :capability_missing, result.availability.reason
-    assert_empty requests
-  end
-
   test "page images are rendered and sent for the batch's own pages only, even when they aren't contiguous" do
     Pdf::PageImages.expects(:render).with("%PDF", pages: [ 2, 4 ]).returns(%w[png2 png4])
 

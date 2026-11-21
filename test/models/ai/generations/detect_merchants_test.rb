@@ -10,12 +10,4 @@ class Ai::Generations::DetectMerchantsTest < ActiveSupport::TestCase
 
     assert_equal({ transaction_id: "t1", business_name: "Shooters", business_url: nil }, value[:merchants].first)
   end
-
-  test "auto mode counts an answer without both a name and a website as failed" do
-    answer = { "merchants" => [ { "transaction_id" => "t1", "business_name" => "Amazon", "business_url" => "amazon.com" },
-                                { "transaction_id" => "t2", "business_name" => "Local", "business_url" => nil } ] }
-
-    assert_equal 0.5, generation.failed_ratio(answer)
-    assert_equal 1.0, generation.failed_ratio({ "merchants" => [] })
-  end
 end

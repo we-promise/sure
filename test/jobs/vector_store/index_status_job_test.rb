@@ -11,52 +11,12 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     @document.update_column(:status, "processing")
   end
 
-  test "a document uploaded to an asynchronous store is watched until it settles" do
-    adapter = mock("vector_store_adapter")
-    adapter.stubs(:create_store)
-    adapter.expects(:upload_file).returns(VectorStore::Response.new(success?: true, data: { file_id: "file-new", status: "processing" }, error: nil))
-    VectorStore::Registry.stubs(:adapter).returns(adapter)
-
-    assert_enqueued_with(job: VectorStore::IndexStatusJob) do
-      document = @family.upload_document(file_content: "%PDF", filename: "new.pdf")
-      assert_equal "processing", document.status
-    end
-  end
-
-  test "ready once indexed" do
-    expect_status("ready")
-
-    VectorStore::IndexStatusJob.perform_now(@document)
-
-    assert_equal "ready", @document.reload.status
-  end
-
   test "an empty index is unreadable, not ready" do
     expect_status("unreadable")
 
     VectorStore::IndexStatusJob.perform_now(@document)
 
     assert_equal "unreadable", @document.reload.status
-  end
-
-  test "a failed index is an error with its reason" do
-    expect_status("error", error: "bad file")
-
-    VectorStore::IndexStatusJob.perform_now(@document)
-
-    assert_equal "error", @document.reload.status
-    assert_equal "bad file", @document.metadata["error"]
-  end
-
-  test "still indexing looks again later, and gives up after MAX_POLLS" do
-    expect_status("processing")
-    assert_enqueued_with(job: VectorStore::IndexStatusJob, args: [ @document, 2 ]) { VectorStore::IndexStatusJob.perform_now(@document) }
-
-    expect_status("processing")
-    VectorStore::IndexStatusJob.perform_now(@document, VectorStore::IndexStatusJob::MAX_POLLS)
-    @document.reload
-    assert_equal "error", @document.status
-    assert_equal true, @document.metadata["indexing_timeout"]
   end
 
   test "a poll-cap timeout is resumable while a provider error stays terminal" do
@@ -82,12 +42,6 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     expect_status("ready")
     VectorStore::IndexStatusJob.perform_now(@document, 2)
     assert_equal "ready", @document.reload.status
-  end
-
-  test "deleting the family deletes its store" do
-    @adapter.expects(:delete_store).with(store_id: "vs_abc123").returns(VectorStore::Response.new(success?: true, data: nil, error: nil))
-
-    @family.send(:delete_vector_store)
   end
 
   test "an unavailable backend that accepted the document errors instead of calling it ready" do

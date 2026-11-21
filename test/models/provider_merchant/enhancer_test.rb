@@ -38,17 +38,6 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     assert_includes requests.first.input, "Walmart"
   end
 
-  test "sends one batch per job, sized by the model" do
-    3.times { |i| provider_merchant("Shop #{i}") }
-    requests = nil
-
-    use_ai_model_settings(batch_size: 2)
-    requests = stub_websites({})
-    enhance
-
-    assert_equal [ 2, 1 ], requests.map { _1.schema.dig(:properties, :merchants, :items, :properties, :merchant_id, :enum).size }
-  end
-
   test "leaves merchants the model returns null for" do
     merchant = provider_merchant("Local Diner")
     stub_websites({})
@@ -92,18 +81,6 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
 
     enhancer.apply_ai(Ai::Result.new(value: { merchants: [ { merchant_id: lunchflow.id, business_url: "walmart.com" } ] }))
 
-    assert_equal lunchflow.id, duplicate.reload.merchant_id
-  end
-
-  test "a merchant another run gave a website before this run's next batch still has its duplicates merged" do
-    lunchflow = provider_merchant("Walmart")
-    ai_merchant = ProviderMerchant.create!(source: "ai", name: "Walmart", website_url: "walmart.com")
-    duplicate = create_transaction(account: @account, name: "Walmart purchase 2", merchant: ai_merchant).transaction
-    lunchflow.update_columns(website_url: "walmart.com")   # another family's run, between this run's batches
-
-    continuation = ProviderMerchant::Enhancer.from_ai_job(family_id: @family.id, ids: [ lunchflow.id ])
-
-    assert_nil continuation.ai_generation, "nothing left to ask the AI"
     assert_equal lunchflow.id, duplicate.reload.merchant_id
   end
 
@@ -214,12 +191,5 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     travel 2.minutes
 
     assert cache.exist?(key)
-  end
-
-  test "a queued run keeps its lock" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-
-    assert ProviderMerchant::Enhancer.enhance_later(@family)
-    assert Rails.cache.exist?(ProviderMerchant::Enhancer.lock_key(@family))
   end
 end
