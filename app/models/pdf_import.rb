@@ -293,7 +293,7 @@ class PdfImport < Import
     read_as = read_as.to_s
     raise ArgumentError, "unknown way #{read_as}" unless READ_AS.include?(read_as)
     return false unless pdf_uploaded?
-    return false if read_as != "auto" && pdf_reading.ways[read_as.to_sym]   # this file can't be read that way
+    return false if read_as != "auto" && !pdf_reading.usable?(read_as)   # this file can't be read that way
 
     previous = nil
     token = with_lock do

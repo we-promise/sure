@@ -168,7 +168,8 @@ module Ai::Transport::RubyLlmAdapter
         when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError
           # The provider's own message only: a diagnostic field elsewhere in the body can quote an
           # earlier "image input is not supported" and turn a retryable 503 into a refusal.
-          Ai::Error.for_status(status || 500, error.message, body:)
+          # RubyLLM also raises OverloadedError for a 400 saying "currently overloaded": still an outage.
+          Ai::Error.for_status([ status.to_i, 500 ].max, error.message, body:)
         when RubyLLM::CancelledError then Ai::Error::Cancelled
         when RubyLLM::ModelNotFoundError then Ai::Error::ModelMissing   # not a RubyLLM::Error
         end

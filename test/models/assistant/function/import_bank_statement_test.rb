@@ -27,6 +27,18 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_equal [ "application/pdf" ], requests.sole.attachments.map(&:content_type)
   end
 
+  test "a statement on an account the user can't see is not found, and its PDF isn't read" do
+    statement = AccountStatement.new(family: @user.family, account: @account)
+    statement.stubs(:viewable_by?).with(@user).returns(false)
+    PdfImport.any_instance.stubs(:account_statement).returns(statement)
+    stub_ai(:extract_pdf) { flunk "the PDF must not be read" }
+
+    result = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert_not result[:success]
+    assert_equal "PDF import not found", result[:error]
+  end
+
   test "a second extraction for the same statement does not leave another live draft" do
     stub_ai(:extract_pdf, returns: statement)
 

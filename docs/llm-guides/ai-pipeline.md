@@ -308,10 +308,11 @@ flowchart LR
 
 **Rules**
 
-- **Decide what to send from capabilities, before sending.** A transport refuses an image to a
-  model without `vision` and a PDF to one without `documents`, and a generation skips such a route
-  (`Ai::Generation#needs`). RubyLLM sends a PDF as a file part to every compatible server, and most
-  refuse it; llama.cpp answers an image it can't read with a 500.
+- **Decide what to send from capabilities, before sending.** In `generate`, a transport refuses an
+  image to a model without `vision` and a PDF to one without `documents`, and a generation skips
+  such a route (`Ai::Generation#needs`). RubyLLM sends a PDF as a file part to every compatible
+  server, and most refuse it; llama.cpp answers an image it can't read with a 500. `ocr` is gated by
+  the `ocr` capability alone and takes page images: OCR-only models have no `vision`.
 - **Files go inline for extraction.** `auto_upload_large_files` stays off, so reading a statement
   never leaves it in a provider's Files API; the preset's inline limit
   (`Ai::Config::Endpoint::PDF_LIMITS`) sends a bigger PDF another way. Indexing is separate: with
