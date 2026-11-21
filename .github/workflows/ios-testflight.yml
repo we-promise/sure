@@ -95,6 +95,8 @@ jobs:
           IOS_DISTRIBUTION_P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
           IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+          IOS_WIDGET_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_WIDGET_PROVISIONING_PROFILE_BASE64 }}
+          IOS_WIDGET_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_WIDGET_PROVISIONING_PROFILE_NAME }}
           IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
           IOS_DISTRIBUTION_CERT_NAME: ${{ secrets.IOS_DISTRIBUTION_CERT_NAME }}
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -109,6 +111,8 @@ jobs:
             IOS_DISTRIBUTION_P12_PASSWORD
             IOS_PROVISIONING_PROFILE_BASE64
             IOS_PROVISIONING_PROFILE_NAME
+            IOS_WIDGET_PROVISIONING_PROFILE_BASE64
+            IOS_WIDGET_PROVISIONING_PROFILE_NAME
             IOS_TEAM_ID
             IOS_DISTRIBUTION_CERT_NAME
             APP_STORE_CONNECT_API_KEY_ID
@@ -179,6 +183,8 @@ jobs:
           DIST_P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
           PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
           PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+          WIDGET_PROFILE_BASE64: ${{ secrets.IOS_WIDGET_PROVISIONING_PROFILE_BASE64 }}
+          WIDGET_PROFILE_NAME: ${{ secrets.IOS_WIDGET_PROVISIONING_PROFILE_NAME }}
         run: |
           set -euo pipefail
 
@@ -201,6 +207,10 @@ jobs:
             echo "$PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
           fi
 
+          # Home screen widget extension (SureWidget target).
+          mkdir -p "$PROFILE_DIR"
+          echo "$WIDGET_PROFILE_BASE64" | base64 --decode > "$PROFILE_DIR/${WIDGET_PROFILE_NAME}.mobileprovision"
+
           rm -f "$CERT_PATH"
           echo "keychain-path=$KEYCHAIN_PATH" >> "$GITHUB_OUTPUT"
 
@@ -212,6 +222,9 @@ jobs:
           APP_BUNDLE_ID: ${{ vars.IOS_APP_BUNDLE_ID || 'am.sure.mobile' }}
           IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
           PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+          WIDGET_BUNDLE_ID: ${{ vars.IOS_WIDGET_BUNDLE_ID || format('{0}.SureWidget', vars.IOS_APP_BUNDLE_ID || 'am.sure.mobile') }}
+          WIDGET_PROFILE_NAME: ${{ secrets.IOS_WIDGET_PROVISIONING_PROFILE_NAME }}
+          APP_GROUP: ${{ vars.IOS_APP_GROUP || 'group.am.sure.mobile' }}
           IOS_DISTRIBUTION_CERT_NAME: ${{ secrets.IOS_DISTRIBUTION_CERT_NAME }}
         run: |
           set -euo pipefail
@@ -252,7 +265,31 @@ jobs:
               return block
 
           text = re.sub(r'isa = XCBuildConfiguration;\n\s+baseConfigurationReference = .*?;\n\s+buildSettings = \{.*?\n\s+name = (?:Debug|Release|Profile);\n\s+\};', patch_block, text, flags=re.S)
+
+          # The widget extension's configs have no baseConfigurationReference,
+          # so they're signed here with their own bundle ID and profile.
+          widget_bundle_id = os.environ["WIDGET_BUNDLE_ID"]
+          widget_profile = os.environ["WIDGET_PROFILE_NAME"]
+
+          def patch_widget_block(match):
+              block = match.group(0)
+              if "INFOPLIST_FILE = SureWidget/Info.plist;" not in block:
+                  return block
+              block = re.sub(r'PRODUCT_BUNDLE_IDENTIFIER = .*?;', f'PRODUCT_BUNDLE_IDENTIFIER = {widget_bundle_id};', block)
+              block = re.sub(r'CODE_SIGN_STYLE = .*?;', 'CODE_SIGN_STYLE = Manual;', block)
+              block = re.sub(r'DEVELOPMENT_TEAM = .*?;', f'DEVELOPMENT_TEAM = {team};\n\t\t\t\t"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "{identity}";\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{widget_profile}";', block)
+              return block
+
+          text = re.sub(r'isa = XCBuildConfiguration;\n\s+buildSettings = \{.*?\n\s+name = (?:Debug|Release|Profile);\n\s+\};', patch_widget_block, text, flags=re.S)
           path.write_text(text)
+
+          # The app and widget share data through this App Group, which must be
+          # registered on both App IDs and included in both profiles.
+          app_group = os.environ["APP_GROUP"]
+          for name in ["ios/Runner/Runner.entitlements", "ios/SureWidget/SureWidget.entitlements",
+                       "ios/Runner/Info.plist", "ios/SureWidget/Info.plist"]:
+              group_file = Path(name)
+              group_file.write_text(group_file.read_text().replace("group.am.sure.mobile", app_group))
           PY
 
           cat > "$EXPORT_PLIST" <<EOF
@@ -270,6 +307,8 @@ jobs:
             <dict>
               <key>${APP_BUNDLE_ID}</key>
               <string>${PROFILE_NAME}</string>
+              <key>${WIDGET_BUNDLE_ID}</key>
+              <string>${WIDGET_PROFILE_NAME}</string>
             </dict>
             <key>uploadBitcode</key>
             <false/>
