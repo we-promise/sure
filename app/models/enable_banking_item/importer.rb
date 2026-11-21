@@ -18,6 +18,16 @@ class EnableBankingItem::Importer
   # incremental_sync_start_date).
   STORED_ROW_LOOKBACK_LIMIT = Provider::EnableBanking::FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.first.days
 
+  # A full-history request (set by complete_authorization) is acted on by syncs
+  # for this long, then dropped even if a fetch kept failing. Enable Banking
+  # says full history is typically only available for about an hour after
+  # authorization (Revolut: 5 minutes), so later retries would not get more.
+  FULL_HISTORY_REQUEST_WINDOW = 1.hour
+
+  # Raw transactions stored by an early fetch are deleted if the account is
+  # still not linked this long after that fetch.
+  UNLINKED_TRANSACTIONS_RETENTION = 7.days
+
   # Prefer booked ledger balances for net worth/current_balance. Available balances
   # can include an arranged overdraft facility for some ASPSPs (for example CGD PT),
   # so they are only a last-resort fallback.
@@ -107,6 +117,11 @@ class EnableBankingItem::Importer
 
     sync_uids_from_accounts_data(session_data[:accounts])
 
+    # Before the linked accounts, so the early fetch runs as soon after the
+    # authorization as possible. The syncer purges stale early rows first.
+    @early_fetch_truncated = 0
+    handle_full_history_request
+
     # Update accounts from session
     accounts_updated = 0
     accounts_failed = 0
@@ -188,6 +203,10 @@ class EnableBankingItem::Importer
       end
     end
 
+    # An authorization that completed while this sync ran reuses it instead
+    # of starting another one, so its request is handled here.
+    handle_full_history_request if newer_full_history_request?
+
     result = {
       success: accounts_failed == 0 && transactions_failed == 0,
       accounts_updated: accounts_updated,
@@ -195,11 +214,47 @@ class EnableBankingItem::Importer
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed,
       balances_failed: balances_failed,
-      transactions_truncated: transactions_truncated
+      transactions_truncated: transactions_truncated + @early_fetch_truncated
     }
 
     result[:error] = @sync_error || I18n.t("enable_banking_items.errors.unexpected") if !result[:success]
     result
+  end
+
+  # Raw transactions stored by an early fetch are deleted if the account is
+  # still unlinked UNLINKED_TRANSACTIONS_RETENTION later (skipped in setup,
+  # or setup never finished). Processing a linked account clears
+  # early_fetched_at, so rows of an account that was linked and later
+  # unlinked are kept, and a relink stays incremental. The syncer runs it at
+  # the start of every sync, before the early fetch, so a payload fetched in
+  # that sync is never deleted.
+  def purge_stale_unlinked_transactions
+    # A linked account keeps its rows even if no sync has processed it yet.
+    # An account being deleted keeps the flag, so its rows are purged once it is unlinked.
+    enable_banking_item.enable_banking_accounts.joins(:account)
+                       .where.not(accounts: { status: "pending_deletion" })
+                       .where.not(early_fetched_at: nil).update_all(early_fetched_at: nil)
+    unlinked_accounts.where(enable_banking_accounts: { early_fetched_at: ...UNLINKED_TRANSACTIONS_RETENTION.ago })
+                     .update_all(raw_transactions_payload: nil, early_fetched_at: nil)
+  rescue => e
+    Rails.logger.warn "EnableBankingItem::Importer - Failed to purge unlinked account transactions: #{e.message}"
+    # Raw rows stay past their retention until a later sync purges them; show
+    # that in /settings/debug. The sync carries on.
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "warn",
+      message: "Enable Banking purge of stale early-fetched transactions failed; unlinked accounts keep their raw transactions until a later sync succeeds",
+      source: self.class.name,
+      provider_key: "enable_banking",
+      # An id, resolved inside capture's own rescue: the database may be what failed.
+      family_id: enable_banking_item.family_id,
+      metadata: {
+        enable_banking_item_id: enable_banking_item.id,
+        retention_days: UNLINKED_TRANSACTIONS_RETENTION.in_days.to_i,
+        error_class: e.class.name,
+        error_message: e.message.to_s.truncate(500)
+      }
+    )
   end
 
   private
@@ -938,6 +993,7 @@ class EnableBankingItem::Importer
 
       transactions_count = all_transactions.count
 
+      stored_payload = enable_banking_account.raw_transactions_payload.as_json
       # A copy: pruning the stored array in place would leave the record dirty,
       # and the guarded write below cannot lock a record with unsaved changes.
       existing_transactions = enable_banking_account.raw_transactions_payload.to_a.dup
@@ -945,10 +1001,7 @@ class EnableBankingItem::Importer
       removed_pending = false
 
       unless include_pending
-        removed_pending = existing_transactions.reject! do |tx|
-          tx = tx.with_indifferent_access
-          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
-        end
+        removed_pending = existing_transactions.reject! { |tx| pending_row?(tx) }
       end
 
       if all_transactions.any?
@@ -973,8 +1026,7 @@ class EnableBankingItem::Importer
         if include_pending
           removed_pending ||= existing_transactions.reject! do |tx|
             tx = tx.with_indifferent_access
-            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
-            next false unless pending_flag
+            next false unless pending_row?(tx)
 
             fp = EnableBankingEntry::Processor.compute_external_id(tx)
             entry_ref = tx[:entry_reference].presence
@@ -983,39 +1035,61 @@ class EnableBankingItem::Importer
           end
         end
 
-        # Ids are computed over stored + fetched rows together so a fetched row
-        # sharing a stored row's transaction_id, but not its entry_reference, is
-        # recognised as new (see EnableBankingEntry::Processor.external_ids_for).
-        ids = EnableBankingEntry::Processor.external_ids_for(existing_transactions + all_transactions)
-        existing_ids = ids.first(existing_transactions.size).compact.to_set
+        # Only a fetched row describing the same movement, or carrying the same id
+        # (the ASPSP corrected its amount, remittance or counterparty), supersedes
+        # a stored one. A row the response left out may lie outside the window the
+        # ASPSP served, or on a page that was never fetched.
+        ids_by_row = external_ids_by_row(existing_transactions + all_transactions)
+        superseded_rows = content_pairs(existing_transactions, all_transactions, ids_by_row, ids_by_row).map(&:first)
+        superseded_set = Set.new.compare_by_identity.merge(superseded_rows)
+        stored_by_id = existing_transactions.group_by { |row| ids_by_row[row] }
+        fetched_by_id = all_transactions.group_by { |row| ids_by_row[row] }
+        existing_transactions.each do |row|
+          id = ids_by_row[row]
+          next if id.blank? || superseded_set.include?(row)
+          next unless stored_by_id[id].one? && fetched_by_id[id]&.one?
+          next unless redelivered_correction?(row, fetched_by_id[id].first)
 
-        new_transactions = all_transactions.each_with_index.select { |_tx, index|
-          ext_id = ids[existing_transactions.size + index]
-          ext_id.present? && !existing_ids.include?(ext_id)
-        }.map(&:first)
+          superseded_rows << row
+          superseded_set << row
+        end
+        retained_transactions = existing_transactions.reject { |tx| superseded_set.include?(tx) }
 
-        if new_transactions.any? || removed_pending
-          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
+        next_snapshot, incoming_transactions = merge_transaction_rows(
+          existing_transactions, retained_transactions, all_transactions, ids_by_row
+        )
+
+        if removed_pending || next_snapshot.as_json != existing_transactions.as_json
+          # The re-keys and the snapshot they describe commit or roll back together.
+          write_snapshot_unless_changed(enable_banking_account, stored_payload) do
+            rekey_rotated_identifiers!(
+              enable_banking_account, existing_transactions, next_snapshot, superseded_rows, incoming_transactions
+            )
+
+            enable_banking_account.upsert_enable_banking_transactions_snapshot!(next_snapshot)
+          end
         end
       elsif removed_pending
-        enable_banking_account.upsert_enable_banking_transactions_snapshot!(
-          existing_transactions
-        )
+        write_snapshot_unless_changed(enable_banking_account, stored_payload) do
+          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions)
+        end
       end
 
       # A completed first fetch always leaves a payload, even an empty one, so
       # the next fetch is incremental (nil means "never fetched").
       if enable_banking_account.raw_transactions_payload.nil?
-        enable_banking_account.upsert_enable_banking_transactions_snapshot!([])
+        write_snapshot_unless_changed(enable_banking_account, stored_payload) do
+          enable_banking_account.upsert_enable_banking_transactions_snapshot!([])
+        end
       end
 
       { success: true, transactions_count: transactions_count, truncated: truncated }
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Error fetching transactions for account #{enable_banking_account.uid}: #{e.message}"
-      { success: false, transactions_count: 0, error: handle_sync_error(e) }
+      { success: false, transactions_count: 0, error: handle_sync_error(e), exception: e }
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching transactions for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
-      { success: false, transactions_count: 0, error: handle_sync_error(e) }
+      { success: false, transactions_count: 0, error: handle_sync_error(e), exception: e }
     end
 
     # Collapse rows the API returns more than once for the same movement.
@@ -1186,20 +1260,146 @@ class EnableBankingItem::Importer
       [ all_transactions, true ]
     end
 
+    # Ids are resolved over stored and fetched rows together so rows sharing a
+    # transaction_id can still be told apart by entry_reference.
+    def external_ids_by_row(rows)
+      rows.zip(EnableBankingEntry::Processor.external_ids_for(rows)).to_h
+    end
+
+    # A fetched row sharing a stored row's id is a corrected redelivery only when
+    # nothing marks it as another movement. A pending row never replaces a booked
+    # one. Rows without an entry_reference can share an id through a reused
+    # transaction_id alone, so they must also share a date.
+    def redelivered_correction?(stored_row, fetched_row)
+      return false if pending_row?(fetched_row) && !pending_row?(stored_row)
+
+      stored_reference = stored_row.with_indifferent_access[:entry_reference].to_s
+      fetched_reference = fetched_row.with_indifferent_access[:entry_reference].to_s
+      return stored_reference == fetched_reference if stored_reference.present? || fetched_reference.present?
+
+      stored_date = row_date(stored_row)
+      stored_date.present? && stored_date == row_date(fetched_row)
+    end
+
+    def merge_transaction_rows(existing_transactions, retained_transactions, fetched_transactions, ids_by_row)
+      retained_ids = retained_transactions.map { |row| ids_by_row[row] }.compact.to_set
+      incoming_transactions = fetched_transactions.select do |row|
+        id = ids_by_row[row]
+        id.present? && !retained_ids.include?(id)
+      end
+
+      stored_positions = existing_transactions.map { |row| ids_by_row[row] }.each_with_index.to_h
+      snapshot = (retained_transactions + incoming_transactions).sort_by.with_index do |row, index|
+        [ stored_positions.fetch(ids_by_row[row], existing_transactions.size), index ]
+      end
+      [ snapshot, incoming_transactions ]
+    end
+
     def filter_transactions_by_date(transactions, start_date)
       return transactions unless start_date
 
       transactions.reject do |tx|
-        tx = tx.with_indifferent_access
-        date_str = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
-        next false if date_str.blank?  # Keep if no date (cannot determine)
+        date = row_date(tx)
+        date.present? && date < start_date
+      end
+    end
 
-        begin
-          Date.parse(date_str.to_s) < start_date
-        rescue ArgumentError
-          false  # Keep if date is unparseable
+    # Pairs stored rows with fetched rows describing the same movement. A row that
+    # kept its id pairs with itself first, so a reordered response cannot hand one
+    # movement's id to another; the rest pair by position, keeping multiplicity.
+    def content_pairs(stored_rows, fetched_rows, stored_ids, fetched_ids)
+      fetched_by_content = fetched_rows.group_by { |row| content_key(row) }
+
+      stored_rows.group_by { |row| content_key(row) }.flat_map do |key, old_rows|
+        new_rows = key && fetched_by_content[key]
+        next [] unless new_rows
+
+        unpaired_new = new_rows.dup
+        unchanged = []
+        rotated = []
+        old_rows.each do |old_row|
+          old_id = stored_ids[old_row]
+          index = old_id.present? && unpaired_new.index { |row| fetched_ids[row] == old_id }
+          index ? unchanged << [ old_row, unpaired_new.delete_at(index) ] : rotated << old_row
+        end
+
+        unchanged + rotated.zip(unpaired_new).select { |_old_row, new_row| new_row }
+      end
+    end
+
+    def content_key(transaction)
+      content_id = EnableBankingEntry::Processor.compute_external_id(
+        transaction.with_indifferent_access.except(:transaction_id, :entry_reference)
+      )
+      [ pending_row?(transaction), content_id ] if content_id.present?
+    end
+
+    # Points existing entries at the ids the ASPSP now uses for the same
+    # movements, so the processor updates them (keeping category, merchant,
+    # notes and transfer links) instead of inserting beside them.
+    def rekey_rotated_identifiers!(enable_banking_account, existing_transactions, next_snapshot, superseded_rows, fetched_rows)
+      account = enable_banking_account.current_account
+      return if account.blank? || superseded_rows.empty?
+
+      processor = EnableBankingEntry::Processor
+      old_ids = existing_transactions.zip(processor.external_ids_for(existing_transactions, account: account)).to_h
+      new_ids = next_snapshot.zip(processor.external_ids_for(next_snapshot, account: account)).to_h
+
+      renames = content_pairs(superseded_rows, fetched_rows, old_ids, new_ids).filter_map do |old_row, new_row|
+        old_id = old_ids[old_row]
+        new_id = new_ids[new_row]
+        [ old_id, new_id, new_row ] if old_id.present? && new_id.present? && old_id != new_id
+      end
+      return if renames.empty?
+
+      entries = account.entries.where(source: "enable_banking")
+      taken_ids = entries.where(external_id: renames.map(&:second)).pluck(:external_id).to_set
+      entries_by_old_id = entries.where(external_id: renames.map(&:first)).includes(:entryable).lock.index_by(&:external_id)
+
+      renames.each do |old_id, new_id, new_row|
+        next if taken_ids.include?(new_id)
+
+        entry = entries_by_old_id[old_id]
+        next unless entry && entry.external_id == old_id
+
+        entry.update_column(:external_id, new_id)
+        taken_ids << new_id
+        if !pending_row?(new_row) && entry.entryable.is_a?(Transaction)
+          new_reference = new_row.with_indifferent_access[:entry_reference].to_s.presence
+          entry.entryable.update_column(:provider_entry_reference, new_reference)
         end
       end
+    end
+
+    # Skips the write when another sync replaced the snapshot after this one read
+    # it; re-keying against a stale snapshot would insert a duplicate entry.
+    def write_snapshot_unless_changed(enable_banking_account, stored_payload)
+      ActiveRecord::Base.transaction do
+        enable_banking_account.lock!
+        if enable_banking_account.raw_transactions_payload.as_json == stored_payload
+          yield
+        else
+          Rails.logger.info "EnableBankingItem::Importer - snapshot for account #{enable_banking_account.uid} changed during sync, skipping write"
+        end
+      end
+    end
+
+    # Dated as EnableBankingEntry::Processor dates the entry, in the family's zone.
+    def row_date(transaction)
+      tx = transaction.with_indifferent_access
+      return nil if (tx[:booking_date] || tx[:value_date] || tx[:transaction_date]).blank?
+
+      EnableBankingEntry::Processor.transaction_date(tx, enable_banking_item.family&.timezone)
+    rescue ArgumentError, TypeError, RangeError
+      nil
+    end
+
+    # A row is pending either as stored (extra.enable_banking.pending, written by
+    # the processor) or as freshly tagged by tag_as_pending during this fetch.
+    def pending_row?(transaction)
+      tx = transaction.with_indifferent_access
+      pending = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
+      pending ? true : false
     end
 
     def tag_as_pending(transactions)
@@ -1240,6 +1440,109 @@ class EnableBankingItem::Importer
     # fetch always stores an array, even an empty one.
     def first_transactions_fetch?(enable_banking_account)
       enable_banking_account.raw_transactions_payload.nil?
+    end
+
+    def full_history_fetch?
+      @full_history_requested_at.present?
+    end
+
+    def handle_full_history_request
+      capture_full_history_request
+      return unless full_history_fetch?
+
+      fetch_unlinked_accounts_after_authorization
+      finish_full_history_request
+    end
+
+    def newer_full_history_request?
+      requested_at = EnableBankingItem.where(id: enable_banking_item.id).pick(:full_history_fetch_requested_at)
+      requested_at.present? && requested_at != @full_history_requested_at
+    end
+
+    # Read from the database rather than the in-memory item, which a sync may
+    # have loaded before the authorization committed. A request older than
+    # FULL_HISTORY_REQUEST_WINDOW is dropped.
+    def capture_full_history_request
+      @full_history_incomplete = false
+      requested_at = EnableBankingItem.where(id: enable_banking_item.id).pick(:full_history_fetch_requested_at)
+
+      if requested_at && requested_at < FULL_HISTORY_REQUEST_WINDOW.ago
+        Rails.logger.warn "EnableBankingItem::Importer - Dropping the full-history request from #{requested_at.iso8601} for item #{enable_banking_item.id}: older than #{FULL_HISTORY_REQUEST_WINDOW.inspect}"
+        clear_full_history_request(requested_at)
+        requested_at = nil
+      end
+
+      @full_history_requested_at = requested_at
+    end
+
+    # The request stays for the next sync unless every early fetch in this one
+    # succeeded. Clearing compares against the value read at the start of this
+    # sync, so an authorization that lands while it runs keeps its own request.
+    def finish_full_history_request
+      clear_full_history_request(@full_history_requested_at) unless @full_history_incomplete
+    end
+
+    def clear_full_history_request(requested_at)
+      EnableBankingItem.where(id: enable_banking_item.id, full_history_fetch_requested_at: requested_at)
+                       .update_all(full_history_fetch_requested_at: nil)
+    end
+
+    def unlinked_accounts
+      enable_banking_item.enable_banking_accounts
+                         .left_joins(:account_provider)
+                         .where(account_providers: { id: nil })
+    end
+
+    # Right after an authorization, also fetch the accounts that are not linked
+    # yet and have never been fetched, so their first (longest) fetch happens
+    # inside the bank's full-history window (Revolut: 5 minutes after SCA)
+    # instead of after the setup modal is submitted. The rows stay raw until
+    # the account is linked. An account with stored rows is left alone: some
+    # banks issue new transaction identifiers in every session, so a second
+    # longest fetch could import its history twice. Failures are retried while
+    # the request is fresh, never fail the sync, and are captured as debug log
+    # entries. Accounts the user ignored are not fetched.
+    def fetch_unlinked_accounts_after_authorization
+      enable_banking_item.enable_banking_accounts.needs_setup.where(raw_transactions_payload: nil).each do |enable_banking_account|
+        # Makes the rows purgeable while the account stays unlinked (see
+        # purge_stale_unlinked_transactions). Set before the fetch, so stored
+        # rows are never left without it.
+        enable_banking_account.update_columns(early_fetched_at: Time.current)
+        result = fetch_and_store_transactions(enable_banking_account)
+        if result[:success]
+          @early_fetch_truncated += 1 if result[:truncated]
+        else
+          @full_history_incomplete = true
+          capture_early_fetch_failure(enable_banking_account, result[:exception])
+        end
+      rescue => e
+        @full_history_incomplete = true
+        Rails.logger.warn "EnableBankingItem::Importer - Early transaction fetch failed for unlinked account #{enable_banking_account.uid}: #{e.message}"
+        capture_early_fetch_failure(enable_banking_account, e)
+      end
+    end
+
+    # Only the provider's own error fields are stored. Other errors keep just
+    # their class, since their message can carry a response body.
+    def capture_early_fetch_failure(enable_banking_account, error)
+      metadata = {
+        enable_banking_item_id: enable_banking_item.id,
+        enable_banking_account_id: enable_banking_account.id,
+        uid: enable_banking_account.uid,
+        full_history_requested_at: @full_history_requested_at&.iso8601,
+        error_class: error&.class&.name
+      }
+      metadata[:provider_error] = sanitized_provider_error(error) if error.is_a?(Provider::EnableBanking::EnableBankingError)
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Enable Banking transaction fetch after authorization failed for an unlinked account; retried while the full-history request is open",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        metadata: metadata
+      )
     end
 
     def determine_sync_start_date(enable_banking_account)

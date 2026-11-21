@@ -1,0 +1,61 @@
+<%# locals: (holding:, lots:, can_edit:, provider_cost: false) %>
+
+<div class="space-y-2 pt-1">
+  <p class="text-xs text-secondary"><%= t("holdings.lots.title") %></p>
+  <% if provider_cost %>
+    <p class="text-xs text-secondary">
+      <%= t("holdings.lots.provider_cost_hint") %>
+      <%= t("holdings.lots.provider_cost_clear_hint") if can_edit && lots.any?(&:manual_cost?) %>
+    </p>
+  <% end %>
+  <ul class="space-y-2">
+    <% lots.each do |lot| %>
+      <li data-lot-id="<%= lot.id %>" class="rounded-lg border border-secondary px-3 py-2 text-sm">
+        <% if can_edit && !provider_cost && !lot.opening? %>
+          <%= render DS::Disclosure.new(variant: :bare, summary_class: "list-none flex items-center justify-between gap-2 focus-ring cursor-pointer") do |disclosure| %>
+            <% disclosure.with_summary_content do %>
+              <%= render "holdings/lot_summary", lot: lot, editable: true %>
+            <% end %>
+
+            <div class="mt-3 space-y-3">
+              <%= styled_form_with url: holding_lot_path(holding, lot),
+                    method: :patch,
+                    scope: :holding_lot,
+                    namespace: dom_id(lot),
+                    class: "space-y-3",
+                    data: { turbo_frame: "_top" } do |f| %>
+                <%= f.money_field :total_cost_basis,
+                      label: t("holdings.lots.total_cost_label"),
+                      hide_currency: true,
+                      currency_value_override: lot.currency,
+                      value: lot.manual_total_cost,
+                      precision: lot.manual_total_cost_precision,
+                      required: true,
+                      placeholder: "0.00",
+                      input_class: "privacy-sensitive privacy-sensitive-interactive",
+                      step: "any",
+                      min: 0 %>
+                <p class="text-xs text-secondary"><%= t("holdings.lots.total_cost_hint") %></p>
+                <div class="flex justify-end">
+                  <%= render DS::Button.new(text: t("holdings.lots.save"), type: "submit") %>
+                </div>
+              <% end %>
+              <% if lot.manual_cost? %>
+                <%= render "holdings/lot_unlock", holding: holding, lot: lot %>
+              <% end %>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="flex items-center justify-between gap-2">
+            <%= render "holdings/lot_summary", lot: lot, editable: false %>
+          </div>
+          <% if can_edit && provider_cost && lot.manual_cost? %>
+            <div class="mt-2">
+              <%= render "holdings/lot_unlock", holding: holding, lot: lot %>
+            </div>
+          <% end %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+</div>

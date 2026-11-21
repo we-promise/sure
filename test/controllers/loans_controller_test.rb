@@ -117,6 +117,15 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "level_term", loan.insurance_rate_type
   end
 
+  # The select passes `label: true`, so its text comes from the Loan model's
+  # attribute name. Without a translation Rails humanizes it to "Subtype" in
+  # every locale.
+  test "the loan type select is labelled from the locale" do
+    get new_loan_url
+    assert_response :success
+    assert_select "label[for=account_accountable_attributes_subtype]", text: "Loan type"
+  end
+
   # The type select's blank option is the form's "None": no type recorded, read
   # as decreasing. It submits an empty string, which must clear the type rather
   # than fail validation (and the column's check constraint, which admits NULL

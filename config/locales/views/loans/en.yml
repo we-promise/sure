@@ -59,6 +59,28 @@ en:
       term: Term
       type: Type
       unknown: Unknown
+    subtypes:
+      auto:
+        long: Auto Loan
+        short: Auto Loan
+      business:
+        long: Business Loan
+        short: Business Loan
+      home_equity:
+        long: Home Equity Loan
+        short: Home Equity
+      line_of_credit:
+        long: Line of Credit
+        short: Line of Credit
+      mortgage:
+        long: Mortgage
+        short: Mortgage
+      other:
+        long: Other Loan
+        short: Other Loan
+      student:
+        long: Student Loan
+        short: Student Loan
     tabs:
       extra_repayments:
         amount_label: Extra repayment

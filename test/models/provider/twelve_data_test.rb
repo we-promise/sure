@@ -1,8 +1,56 @@
 require "test_helper"
 
 class Provider::TwelveDataTest < ActiveSupport::TestCase
+  include ProviderTestHelper
+
   setup do
     @provider = Provider::TwelveData.new("test_api_key")
+  end
+
+  # ================================
+  #            Usage Tests
+  # ================================
+
+  def stub_usage(body)
+    mock_response = mock
+    mock_response.stubs(:body).returns(body.to_json)
+
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+  end
+
+  test "usage reports utilization as a percentage of the daily limit" do
+    stub_usage("plan_category" => "basic", "daily_usage" => 400, "plan_daily_limit" => 800)
+
+    result = @provider.usage
+
+    assert result.success?
+    assert_equal 400, result.data.used
+    assert_equal 800, result.data.limit
+    assert_equal 50.0, result.data.utilization
+  end
+
+  test "usage keeps a fractional utilization below one percent" do
+    stub_usage("plan_category" => "basic", "daily_usage" => 1, "plan_daily_limit" => 800)
+
+    assert_equal 0.1, @provider.usage.data.utilization
+  end
+
+  test "usage fails when the daily limit is zero" do
+    stub_usage("plan_category" => "basic", "daily_usage" => 5, "plan_daily_limit" => 0)
+
+    result = @provider.usage
+
+    assert_not result.success?
+    assert_instance_of Provider::TwelveData::Error, result.error
+  end
+
+  test "usage fails when daily_usage is missing or not a number" do
+    [ {}, { "daily_usage" => "abc" } ].each do |figures|
+      stub_usage({ "plan_category" => "basic", "plan_daily_limit" => 800 }.merge(figures))
+
+      assert_not @provider.usage.success?
+    end
   end
 
   # ================================
@@ -292,5 +340,62 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     ensure
       store.delete(minute_key)
     end
+  end
+
+  test "client sets explicit open and read timeouts" do
+    options = @provider.send(:client).options
+
+    assert_equal 5, options.open_timeout
+    assert_equal 20, options.timeout
+  end
+
+  test "a timed-out request returns a failed response with the provider's Error" do
+    @provider.stubs(:throttle_request)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    search = stub_request(:get, %r{\Ahttps://api\.twelvedata\.com/symbol_search}).to_timeout
+    errors = capture_transformed_errors(@provider)
+
+    response = @provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::TwelveData::Error, response.error
+    assert_requested search, times: 4
+    assert_kind_of Faraday::ConnectionFailed, errors.last
+    assert_kind_of Net::OpenTimeout, errors.last.wrapped_exception
+  end
+
+  test "a read timeout is retried and returns a failed response with the provider's Error" do
+    @provider.stubs(:throttle_request)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    search = stub_request(:get, %r{\Ahttps://api\.twelvedata\.com/symbol_search}).to_raise(Net::ReadTimeout)
+    errors = capture_transformed_errors(@provider)
+
+    response = @provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::TwelveData::Error, response.error
+    assert_requested search, times: 4
+    assert_kind_of Faraday::TimeoutError, errors.last
+  end
+
+  test "time_series history requests get a longer read timeout than the client default" do
+    @provider.stubs(:throttle_request)
+    values = { "values" => [ { "datetime" => "2026-01-02", "close" => "1.5" } ], "meta" => { "currency" => "USD" } }.to_json
+    stub_request(:get, %r{\Ahttps://api\.twelvedata\.com/time_series\?}).to_return(status: 200, body: values)
+    # A pair time_series can't serve falls through to time_series/cross
+    stub_request(:get, %r{\Ahttps://api\.twelvedata\.com/time_series\?})
+      .with(query: hash_including("symbol" => "USD/ZZZ")).to_return(status: 200, body: {}.to_json)
+    stub_request(:get, %r{\Ahttps://api\.twelvedata\.com/time_series/cross}).to_return(status: 200, body: values)
+    stub_request(:get, %r{\Ahttps://api\.twelvedata\.com/symbol_search}).to_return(status: 200, body: { "data" => [] }.to_json)
+    timeouts = capture_request_timeouts(@provider)
+
+    @provider.fetch_security_prices(symbol: "AAPL", exchange_operating_mic: "XNAS", start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 1, 2))
+    @provider.fetch_exchange_rates(from: "USD", to: "EUR", start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 1, 2))
+    @provider.fetch_exchange_rates(from: "USD", to: "ZZZ", start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 1, 2))
+    @provider.search_securities("AAPL")
+
+    assert_requested :get, %r{\Ahttps://api\.twelvedata\.com/time_series/cross}, times: 1
+    # prices, the EUR pair, the ZZZ pair and its cross fallback, then search
+    assert_equal [ 60, 60, 60, 60, 20 ], timeouts
   end
 end
