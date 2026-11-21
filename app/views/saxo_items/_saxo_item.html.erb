@@ -1,26 +1,120 @@
 <%# locals: (saxo_item:, visible_accounts:) %>
 
-<div id="<%= dom_id(saxo_item) %>" class="space-y-3">
-  <div class="flex items-center gap-2">
-    <%= render ProviderLogo.new(provider_key: :saxo) %>
-    <span class="font-medium text-primary"><%= saxo_item.name %></span>
-    <% if saxo_item.requires_update? %>
-      <%= render DS::Pill.new(label: t("saxo.reconnect_required")) %>
+<%= tag.div id: dom_id(saxo_item) do %>
+  <% unlinked_count = saxo_item.unlinked_accounts_count %>
+  <% can_manage = Current.user&.admin? && preview_features_enabled? %>
+  <% sync_error_message = saxo_item.sync_error == "Saxo market data may be unavailable" ? t("saxo.market_data_unavailable") : t("saxo.sync_failed") %>
+
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <%= render ProviderLogo.new(provider_key: :saxo) %>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p saxo_item.institution_display_name, class: "font-medium text-primary" %>
+              <% if saxo_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t("saxo.card.deletion_in_progress") %></p>
+              <% end %>
+            </div>
+            <p class="text-xs text-secondary"><%= t("saxo.card.subtitle") %></p>
+            <% if saxo_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t("saxo.card.syncing") %>
+              </div>
+            <% elsif saxo_item.requires_update? %>
+              <div class="text-warning flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t("saxo.reconnect_required") %>
+              </div>
+            <% elsif saxo_item.sync_error.present? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= render DS::Tooltip.new(text: sync_error_message, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+                <%= tag.span t("saxo.card.error"), class: "text-destructive" %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if saxo_item.last_synced_at %>
+                  <%= t("saxo.card.synced", time: time_ago_in_words(saxo_item.last_synced_at), summary: saxo_item.sync_status_summary) %>
+                <% else %>
+                  <%= t("saxo.card.never_synced") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <% if can_manage %>
+          <div class="flex items-center gap-2">
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_saxo_item_path(saxo_item),
+              disabled: saxo_item.syncing? || saxo_item.scheduled_for_deletion?
+            ) %>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% sync_schedule_menu_item(menu, saxo_item) %>
+              <% unless saxo_item.scheduled_for_deletion? %>
+                <% menu.with_item(
+                  variant: "link",
+                  text: t("saxo.manage"),
+                  icon: "settings",
+                  href: saxo_item_path(saxo_item)
+                ) %>
+                <% menu.with_item(
+                  variant: "button",
+                  text: t("saxo.reconnect"),
+                  icon: "link",
+                  href: reconnect_saxo_item_path(saxo_item),
+                  method: :post,
+                  form: { data: { turbo: false } }
+                ) %>
+                <% menu.with_item(
+                  variant: "button",
+                  text: t("saxo.disconnect"),
+                  icon: "trash-2",
+                  href: saxo_item_path(saxo_item),
+                  method: :delete,
+                  confirm: t("saxo.disconnect_confirmation")
+                ) %>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
     <% end %>
-  </div>
-  <% if saxo_item.sync_error.present? %>
-    <% error_message = saxo_item.sync_error == "Saxo market data may be unavailable" ? t("saxo.market_data_unavailable") : t("saxo.sync_failed") %>
-    <%= render DS::Alert.new(variant: :error, message: error_message) %>
+
+    <% unless saxo_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if saxo_item.sync_error.present? %>
+          <%= render DS::Alert.new(variant: :error, message: sync_error_message) %>
+        <% end %>
+
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+        <% end %>
+
+        <% stats = saxo_item.syncs.ordered.first&.sync_stats || {} %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: saxo_item, show_account_details: visible_accounts.size == saxo_item.accounts.size) %>
+
+        <% if can_manage && unlinked_count > 0 && saxo_item.accounts.empty? %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t("saxo.card.accounts_need_setup") %></p>
+            <p class="text-secondary text-sm"><%= t("saxo.card.accounts_need_setup_description") %></p>
+            <%= render DS::Link.new(
+              text: t("saxo.manage"),
+              icon: "settings",
+              variant: "primary",
+              href: saxo_item_path(saxo_item)
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
   <% end %>
-  <% if visible_accounts.any? %>
-    <%= render "accounts/index/account_groups", accounts: visible_accounts %>
-  <% end %>
-  <% if Current.user.admin? && preview_features_enabled? %>
-    <div class="flex flex-wrap gap-2">
-      <%= render DS::Link.new(text: t("saxo.manage"), href: saxo_item_path(saxo_item), variant: :secondary) %>
-      <%= render DS::Button.new(text: t("saxo.reconnect"), href: reconnect_saxo_item_path(saxo_item), method: :post, variant: :secondary, data: { turbo: false }) %>
-      <%= render DS::Button.new(text: t("saxo.disconnect"), href: saxo_item_path(saxo_item), method: :delete,
-            variant: :destructive, data: { turbo_confirm: t("saxo.disconnect_confirmation") }) %>
-    </div>
-  <% end %>
-</div>
+<% end %>

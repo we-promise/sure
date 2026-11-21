@@ -75,8 +75,10 @@ class SaxoItemsController < ApplicationController
   end
 
   def sync
-    @saxo_item.sync_later(window_start_date: params[:full_history] == "1" ? @saxo_item.sync_start_date : nil)
-    redirect_to saxo_item_path(@saxo_item), notice: t("saxo.sync_started")
+    unless @saxo_item.syncing?
+      @saxo_item.sync_later(window_start_date: params[:full_history] == "1" ? @saxo_item.sync_start_date : nil)
+    end
+    redirect_back_or_to saxo_item_path(@saxo_item), notice: t("saxo.sync_started")
   end
 
   def destroy

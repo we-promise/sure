@@ -27,6 +27,21 @@ fr:
     full_history: "Réconcilier tout l’historique"
     sync_failed: "La synchronisation Saxo a échoué. Veuillez réessayer."
     sync_started: "La synchronisation Saxo est programmée."
+    card:
+      subtitle: "OpenAPI"
+      deletion_in_progress: "Suppression en cours"
+      syncing: "Synchronisation en cours"
+      error: "Erreur"
+      synced: "Synchronisé il y a %{time}. %{summary}."
+      never_synced: "Jamais synchronisé."
+      accounts_need_setup: "Comptes à configurer"
+      accounts_need_setup_description: "Liez les comptes Saxo découverts à des comptes d’investissement Sure."
+    sync_status:
+      no_accounts: "Aucun compte Saxo découvert pour le moment"
+      all_linked:
+        one: "1 compte lié"
+        other: "%{count} comptes liés"
+      partial: "%{linked} liés, %{unlinked} à configurer"
     application_title: "Application Saxo"
     application_help: "Enregistrez une application LIVE avec l’accès Personal Read sur developer.saxo. Configurez-la une fois pour cette instance Sure ; chaque utilisateur autorise ensuite ses comptes directement chez Saxo."
     callback_url: "Enregistrez cette URL de retour exacte chez Saxo : %{url}"

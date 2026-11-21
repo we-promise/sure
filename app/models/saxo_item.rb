@@ -50,8 +50,25 @@ class SaxoItem < ApplicationRecord
     "Saxo Bank"
   end
 
+  def institution_display_name
+    institution_name
+  end
+
   def institution_domain
     "home.saxo"
+  end
+
+  def sync_status_summary
+    linked_count = linked_accounts_count
+    unlinked_count = unlinked_accounts_count
+
+    if total_accounts_count.zero?
+      I18n.t("saxo.sync_status.no_accounts")
+    elsif unlinked_count.zero?
+      I18n.t("saxo.sync_status.all_linked", count: linked_count)
+    else
+      I18n.t("saxo.sync_status.partial", linked: linked_count, unlinked: unlinked_count)
+    end
   end
 
   def linked_accounts

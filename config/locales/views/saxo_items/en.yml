@@ -27,6 +27,21 @@ en:
     full_history: "Reconcile complete history"
     sync_failed: "Saxo synchronization failed. Please try again."
     sync_started: "Saxo synchronization has been scheduled."
+    card:
+      subtitle: "OpenAPI"
+      deletion_in_progress: "Deletion in progress"
+      syncing: "Syncing"
+      error: "Error"
+      synced: "Synced %{time} ago. %{summary}."
+      never_synced: "Never synced."
+      accounts_need_setup: "Accounts need setup"
+      accounts_need_setup_description: "Link the discovered Saxo accounts to Sure investment accounts."
+    sync_status:
+      no_accounts: "No Saxo accounts discovered yet"
+      all_linked:
+        one: "1 account linked"
+        other: "%{count} accounts linked"
+      partial: "%{linked} linked, %{unlinked} need setup"
     application_title: "Saxo application"
     application_help: "Register a LIVE application with Personal Read access at developer.saxo. Configure it once for this Sure instance; users then authorize their accounts directly with Saxo."
     callback_url: "Register this exact redirect URL with Saxo: %{url}"

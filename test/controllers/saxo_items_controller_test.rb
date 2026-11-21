@@ -41,6 +41,26 @@ class SaxoItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("saxo.market_data_unavailable")
   end
 
+  test "the accounts page renders the Saxo connection as a standard provider card" do
+    item = @user.family.saxo_items.create!
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(item)} details"
+    assert_includes response.body, sync_saxo_item_path(item)
+    assert_includes response.body, I18n.t("saxo.card.never_synced")
+  end
+
+  test "syncing from the accounts page returns to it" do
+    item = @user.family.saxo_items.create!
+    SaxoItem.any_instance.expects(:sync_later).once
+
+    post sync_saxo_item_url(item), headers: { "HTTP_REFERER" => accounts_url }
+
+    assert_redirected_to accounts_url
+  end
+
   test "the new connection dialog directs unconfigured instances to hosting settings" do
     Setting.saxo_app_key = nil
     Setting.saxo_app_secret = nil
