@@ -429,6 +429,26 @@ class TransferTest < ActiveSupport::TestCase
     refute transfer.has_fees?
   end
 
+  test "fee_amounts_by_account gives the same fee amounts as the per-transfer sums" do
+    transfer = transfers(:one)
+    source_fee = accounts(:depository).entries.create!(name: "Fee", date: Date.current, amount: 5.25, currency: "USD", entryable: Transaction.new(kind: "standard"))
+    destination_fee = accounts(:credit_card).entries.create!(name: "Fee", date: Date.current, amount: 3, currency: "USD", entryable: Transaction.new(kind: "standard"))
+    transfer.fee_transactions << source_fee.entryable << destination_fee.entryable
+
+    outflow = create_transaction(date: Date.current, account: accounts(:depository), amount: 100, kind: "funds_movement")
+    inflow = create_transaction(date: Date.current, account: accounts(:investment), amount: -100, kind: "funds_movement")
+    without_fees = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction)
+
+    fee_amounts = Transfer.fee_amounts_by_account([ transfer, without_fees ])
+
+    assert_equal BigDecimal("5.25"), transfer.derived_source_fee_amount(fee_amounts)
+    assert_equal BigDecimal("3"), transfer.derived_destination_fee_amount(fee_amounts)
+    assert_equal transfer.derived_source_fee_amount, transfer.derived_source_fee_amount(fee_amounts)
+    assert_equal transfer.derived_destination_fee_amount, transfer.derived_destination_fee_amount(fee_amounts)
+    assert_equal "0.0", without_fees.derived_source_fee_amount(fee_amounts).to_s("F")
+    assert_equal "0.0", without_fees.derived_destination_fee_amount(fee_amounts).to_s("F")
+  end
+
   test "total_fee sums source and destination fees" do
     transfer = transfers(:one)
     entry1 = accounts(:depository).entries.create!(name: "Fee", date: Date.current, amount: 3, currency: "USD", entryable: Transaction.new(kind: "standard"))

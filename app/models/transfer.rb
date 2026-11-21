@@ -45,6 +45,16 @@ class Transfer < ApplicationRecord
         "funds_movement"
       end
     end
+
+    # Fee totals for many transfers in one query, keyed by
+    # [transfer_id, account_id]. Feeds derived_source_fee_amount and
+    # derived_destination_fee_amount when rendering a list.
+    def fee_amounts_by_account(transfers)
+      Transaction.where(transfer_id: transfers.map(&:id))
+        .joins(:entry)
+        .group(:transfer_id, "entries.account_id")
+        .sum("entries.amount")
+    end
   end
 
   def has_source_fee?
@@ -63,11 +73,18 @@ class Transfer < ApplicationRecord
     derived_source_fee_amount + derived_destination_fee_amount
   end
 
-  def derived_source_fee_amount
+  # fee_amounts: the result of Transfer.fee_amounts_by_account for a batch
+  # that includes this transfer, so listing many transfers doesn't run a query
+  # per transfer. Without it, the sum is queried.
+  def derived_source_fee_amount(fee_amounts = nil)
+    return fee_amounts.fetch([ id, from_account.id ], 0.to_d) if fee_amounts
+
     fee_transactions.joins(:entry).where(entries: { account_id: from_account.id }).sum("entries.amount")
   end
 
-  def derived_destination_fee_amount
+  def derived_destination_fee_amount(fee_amounts = nil)
+    return fee_amounts.fetch([ id, to_account.id ], 0.to_d) if fee_amounts
+
     fee_transactions.joins(:entry).where(entries: { account_id: to_account.id }).sum("entries.amount")
   end
 
