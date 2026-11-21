@@ -290,11 +290,16 @@ class Rule < ApplicationRecord
   # transaction ids a rule higher up already set it for; an action leaves those
   # transactions alone ("top rule wins").
   #
+  # Actions that change the same transaction count it once. Executors that
+  # only report a count (Bayes, similar merchants) cannot be deduplicated and
+  # are added as before.
+  #
   # With async (AI) actions, modified_count also counts the transactions handed
   # to the AI; changed_now_count only counts what the other actions changed.
   def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [])
-    total_modified = 0
-    changed_now = 0
+    modified_transaction_ids = Set.new
+    untracked_modified_count = 0
+    async_queued_count = 0
     total_async_jobs = 0
     has_async = false
 
@@ -303,23 +308,38 @@ class Rule < ApplicationRecord
 
       excluded_ids = action.claimed_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
       action_scope = Rule.excluding_transaction_ids(scope, excluded_ids)
-      result = action.apply(action_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
+      action_modified_ids = Set.new
+      result = action.apply(
+        action_scope,
+        ignore_attribute_locks: ignore_attribute_locks,
+        rule_run: rule_run,
+        modified_transaction_ids: action_modified_ids
+      )
+      modified_transaction_ids.merge(action_modified_ids)
 
       if result.is_a?(Hash) && result[:async]
         has_async = true
         total_async_jobs += result[:jobs_count] || 0
-        total_modified += result[:modified_count] || 0
+        async_queued_count += result[:modified_count] || 0
       elsif result.is_a?(Integer)
-        total_modified += result
-        changed_now += result
+        # An executor that changes transactions reports their ids, so its count
+        # is already in the union. Others only report a count.
+        untracked_modified_count += result if action_modified_ids.empty?
       else
         # Log unexpected result type but don't fail
         Rails.logger.warn("Rule#apply: Unexpected result type from action #{action.id}: #{result.class} (value: #{result.inspect})")
       end
     end
 
+    total_modified = modified_transaction_ids.size + untracked_modified_count
+
     if has_async
-      { modified_count: total_modified, changed_now_count: changed_now, async: true, jobs_count: total_async_jobs }
+      {
+        modified_count: total_modified + async_queued_count,
+        changed_now_count: total_modified,
+        async: true,
+        jobs_count: total_async_jobs
+      }
     else
       total_modified
     end

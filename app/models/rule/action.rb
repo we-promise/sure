@@ -96,8 +96,12 @@ class Rule::Action < ApplicationRecord
     CSV.parse_line(str.to_s) || []
   end
 
-  def apply(resource_scope, ignore_attribute_locks: false, rule_run: nil)
-    executor.execute(resource_scope, value: execution_value, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run) || 0
+  def apply(resource_scope, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil)
+    action_executor = executor
+    action_executor.modified_transaction_ids = modified_transaction_ids
+    action_executor.execute(resource_scope, value: execution_value, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run) || 0
+  ensure
+    action_executor&.modified_transaction_ids = nil
   end
 
   def options
