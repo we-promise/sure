@@ -31,6 +31,13 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
     assert VectorStore::Openai.for_store(recorded)
   end
 
+  test "an Anthropic endpoint is never taken for a store's OpenAI server" do
+    anthropic = ai_endpoint(name: "anthropic", protocol: :anthropic, preset: :anthropic, base_url: nil, api_key: "sk-ant-key")
+    Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ anthropic ]))
+
+    assert_nil VectorStore::Openai.for_store("https://api.openai.com/v1")
+  end
+
   test "a gateway path keeps its case when a store's server is matched" do
     upper = ai_endpoint(name: "team_a", base_url: "https://gw.example.test/TeamA/v1", api_key: "a", vector_store: true)
     lower = ai_endpoint(name: "team_b", base_url: "https://gw.example.test/teama/v1", api_key: "b", vector_store: true)

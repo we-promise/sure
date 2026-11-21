@@ -159,6 +159,9 @@ module Family::VectorSearchable
     true
   end
 
+  # The backend that accepted the document, which can differ from the configured one.
+  def document_adapter(document) = store_adapter(document.metadata.to_h["vector_store"].presence || vector_store_backend)
+
   def delete_vector_store
     return if vector_store_id.blank?
 
@@ -185,27 +188,28 @@ module Family::VectorSearchable
   private
 
     def remember_vector_store_cleanup
-      @vector_store_backend = family_documents.where("metadata->>'vector_store' IS NOT NULL")
-                                              .order(created_at: :desc)
-                                              .pick(Arel.sql("metadata->>'vector_store'"))
+      @vector_store_backend = vector_store_backend
       @unattached_file_ids = family_documents.unattached.pluck(:provider_file_id)
     end
 
-    # The configured backend, but an existing OpenAI store stays on the server that created it,
-    # whichever endpoint the embed route uses now. A store from before the server was recorded is
-    # pinned on first use to the one that reaches it, which after the upgrade is its creator.
-    def vector_store_adapter
-      adapter = VectorStore.adapter
-      return adapter unless vector_store_id.present? && adapter.is_a?(VectorStore::Openai)
+    # The configured backend for a new store. An existing store stays on the backend, and the
+    # server, that created it, whatever is configured now.
+    def vector_store_adapter = vector_store_id.present? ? store_adapter(vector_store_backend) : VectorStore.adapter
 
-      VectorStore::Openai.for_store(vector_store_endpoint).tap do |existing|
-        update_column(:vector_store_endpoint, existing.endpoint_url) if existing && vector_store_endpoint.blank?
-      end
+    # The backend that created the store: OpenAI when its server is recorded, otherwise the one its
+    # newest document recorded. nil (before either was recorded) means the configured backend.
+    def vector_store_backend
+      return "openai" if vector_store_endpoint.present?
+
+      family_documents.where("metadata->>'vector_store' IS NOT NULL").order(created_at: :desc)
+                      .pick(Arel.sql("metadata->>'vector_store'"))
     end
 
-    # The backend that accepted the document, which can differ from the configured one.
-    def document_adapter(document)
-      backend = document.metadata.to_h["vector_store"]
-      backend.present? ? VectorStore.adapter_for(backend, endpoint_url: vector_store_endpoint) : vector_store_adapter
+    # An OpenAI store from before its server was recorded is pinned on first use to the server that
+    # reaches it, which after the upgrade is its creator.
+    def store_adapter(backend)
+      VectorStore.adapter_for(backend, endpoint_url: vector_store_endpoint).tap do |adapter|
+        update_column(:vector_store_endpoint, adapter.endpoint_url) if adapter.is_a?(VectorStore::Openai) && vector_store_endpoint.blank?
+      end
     end
 end

@@ -1657,7 +1657,7 @@ Sure reads an uploaded PDF in one of four ways, then checks what the model retur
 
 | Way | When | Sent to the provider |
 |---|---|---|
-| **PDF** | The model reads PDFs natively (Anthropic, OpenAI's own API) and the file is within the provider's inline limit (32 MB or 100 pages) | The PDF file itself |
+| **PDF** | The model reads PDFs natively (Anthropic, OpenAI's own API) and the file is within the provider's inline limit: at most 100 pages, and 32 MB on OpenAI or 23.25 MiB (24,379,392 bytes) on Anthropic, whose 32 MB request limit must also hold the file's base64 encoding | The PDF file itself |
 | **Text** | The PDF has a text layer | The text layer, a batch of pages at a time |
 | **Images** | The model reads images (OpenAI's vision models, Anthropic, and any custom OpenAI-compatible server) | Each page as a 150 dpi image at high detail |
 | **OCR** | An OCR model is set up (from the next config release; see below) | Each page as an image to the OCR model, then its transcription to the text model |
@@ -1719,6 +1719,10 @@ one page image per request) has been tested live; Mistral's hasn't. A llama.cpp 
   (`expected 1024 dimensions, got 3072` in the debug log) and nothing is stored. Resolving a
   model whose size doesn't match the database comes in a later release; until then, see
   [Troubleshooting pgvector and embeddings](#troubleshooting-pgvector-and-embeddings) below.
+- **A custom OpenAI-compatible server (`OPENAI_URI_BASE` with a token) no longer gets OpenAI's
+  vector store by default.** If your proxy serves OpenAI's Files and Vector Stores APIs and you use
+  document search through it, set `VECTOR_STORE_PROVIDER=openai` when you upgrade. Without it,
+  uploads aren't indexed, searches find nothing, and deleting a family can't delete its store.
 - **OpenAI vector store:** documents show *processing* until OpenAI has indexed them, and
   *unreadable* when the index is empty (a scan: OpenAI's file search reads text layers only).
   Removing a document deletes its file from OpenAI's Files API; if that fails, the local row and
@@ -1756,7 +1760,7 @@ Sure's AI assistant can search documents that have been uploaded to a family's v
 
 ##### OpenAI (Default)
 
-No extra configuration is needed. If you already have `OPENAI_ACCESS_TOKEN` set for the AI assistant, document search works automatically. OpenAI manages chunking, embedding, and retrieval.
+No extra configuration is needed. If you already have `OPENAI_ACCESS_TOKEN` set for the AI assistant, document search works automatically. OpenAI manages chunking, embedding, and retrieval. With a custom `OPENAI_URI_BASE`, set `VECTOR_STORE_PROVIDER=openai` too, and only if that server serves OpenAI's Files and Vector Stores APIs.
 
 ```bash
 # Already set for AI chat - document search uses the same token

@@ -97,6 +97,22 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_equal 0.0, check(extraction, source: nil).dates_anchored
   end
 
+  test "a row the model gave no date or a non-numeric amount stays in the extraction and fails the checks" do
+    generation = Ai::Generations::ExtractBankStatement.new(units: [], content: "", family: nil)
+    answer = { "opening_balance" => 100, "closing_balance" => 110, "transactions" => [
+      { "date" => "2019-02-01", "description" => "Fee", "amount" => 10 },
+      { "date" => "", "description" => "In", "amount" => 20 }, { "date" => nil, "description" => "Out", "amount" => -20 },
+      { "date" => "2019-02-02", "description" => "Grouped", "amount" => "1,234.56" }
+    ] }
+    value = generation.coerce(answer)
+
+    assert_equal 4, value[:transactions].size
+    checks = Ai::Generations::ExtractBankStatement.checks(value, source: nil)
+    assert_equal false, checks.reconciles
+    assert_equal 0.0, checks.dates_anchored
+    assert_equal 4, Ai::Generations::ExtractBankStatement.statement(value)[:transactions].size
+  end
+
   test "a date without a year uses the statement period's year" do
     extraction = value([ [ "1/2", -24.5 ] ])   # 1 February, as a batch that doesn't print the year
 

@@ -9,12 +9,12 @@
 #   stay after the document or the family is gone.
 class VectorStore::Openai < VectorStore::Base
   # The client for a store created on `endpoint_url` (Family#vector_store_endpoint), found among
-  # every configured endpoint, so a switch to pgvector or a new embed route still reaches it. A
+  # every configured OpenAI-compatible endpoint, so a switch to pgvector or a new embed route still reaches it. A
   # store whose server is no longer configured gets nil: its id means nothing to another server.
   # A store created before the URL was recorded uses the embed route's endpoint, or failing that
   # the OpenAI one.
   def self.for_store(endpoint_url)
-    endpoints = Ai::Config.current.endpoints.select(&:api_key)
+    endpoints = Ai::Config.current.endpoints.select { _1.protocol == :compatible && _1.api_key }
     endpoint = if endpoint_url.present?
       endpoints.find { Ai::Transport::Http.same_url?(Ai::Transport::Http.openai_base(_1), endpoint_url) }
     else
