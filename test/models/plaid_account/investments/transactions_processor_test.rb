@@ -414,6 +414,7 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
   end
 
   test "a cash withdrawal keeps the Other label whatever its name" do
+    @plaid_account.current_account.update_columns(accountable_type: "Investment", accountable_id: Investment.create!.id)
     row = cash_row("cash_withdraw_1", "withdrawal", "401k withdrawal").merge("amount" => 50)
     entry = process_plaid_transaction(row)
 
