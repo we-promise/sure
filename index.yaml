@@ -2,8 +2,42 @@ apiVersion: v1
 entries:
   sure:
   - apiVersion: v2
+    appVersion: 2026.11.20-alpha
+    created: "2026-11-21T01:28:58.893392979Z"
+    dependencies:
+    - condition: cnpg.enabled
+      name: cloudnative-pg
+      repository: https://cloudnative-pg.github.io/charts
+      version: ~0.27
+    - alias: redisOperator
+      condition: redisOperator.enabled
+      name: redis-operator
+      repository: https://ot-container-kit.github.io/helm-charts
+      version: ~0.23.0
+    description: Official Helm chart for deploying the Sure Rails app (web + Sidekiq)
+      on Kubernetes with optional HA PostgreSQL (CloudNativePG) and Redis.
+    digest: 7eec1490588ab8be3a87493dae784d141bbe95586df4231dc2bf08b39972e3f0
+    home: https://github.com/we-promise/sure
+    keywords:
+    - rails
+    - sidekiq
+    - personal-finance
+    - cloudnativepg
+    - redis
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: Sure maintainers
+      url: https://github.com/we-promise/sure
+    name: sure
+    sources:
+    - https://github.com/we-promise/sure
+    type: application
+    urls:
+    - https://we-promise.github.io/sure/sure-2026.11.20-alpha.tgz
+    version: 2026.11.20-alpha
+  - apiVersion: v2
     appVersion: 2026.11.17-alpha
-    created: "2026-11-17T07:39:27.199893406Z"
+    created: "2026-11-21T01:28:58.877797004Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -37,7 +71,7 @@ entries:
     version: 2026.11.17-alpha
   - apiVersion: v2
     appVersion: 2026.11.14-alpha
-    created: "2026-11-17T07:39:27.188210993Z"
+    created: "2026-11-21T01:28:58.861626193Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -71,7 +105,7 @@ entries:
     version: 2026.11.14-alpha
   - apiVersion: v2
     appVersion: 2026.11.10-alpha
-    created: "2026-11-17T07:39:27.176684904Z"
+    created: "2026-11-21T01:28:58.848952231Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -105,7 +139,7 @@ entries:
     version: 2026.11.10-alpha
   - apiVersion: v2
     appVersion: 2026.11.8-alpha
-    created: "2026-11-17T07:39:27.238142171Z"
+    created: "2026-11-21T01:28:58.938736338Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -139,7 +173,7 @@ entries:
     version: 2026.11.8-alpha
   - apiVersion: v2
     appVersion: 2026.11.4-alpha
-    created: "2026-11-17T07:39:27.223890127Z"
+    created: "2026-11-21T01:28:58.922844378Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -173,7 +207,7 @@ entries:
     version: 2026.11.4-alpha
   - apiVersion: v2
     appVersion: 2026.11.3-alpha
-    created: "2026-11-17T07:39:27.212062562Z"
+    created: "2026-11-21T01:28:58.907941963Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -206,8 +240,42 @@ entries:
     - https://we-promise.github.io/sure/sure-2026.11.3-alpha.tgz
     version: 2026.11.3-alpha
   - apiVersion: v2
+    appVersion: 2026.11.20-alpha
+    created: "2026-11-21T01:28:58.834749822Z"
+    dependencies:
+    - condition: cnpg.enabled
+      name: cloudnative-pg
+      repository: https://cloudnative-pg.github.io/charts
+      version: ~0.27
+    - alias: redisOperator
+      condition: redisOperator.enabled
+      name: redis-operator
+      repository: https://ot-container-kit.github.io/helm-charts
+      version: ~0.23.0
+    description: Official Helm chart for deploying the Sure Rails app (web + Sidekiq)
+      on Kubernetes with optional HA PostgreSQL (CloudNativePG) and Redis.
+    digest: e278882eec6708cf25fdde2884f1b01718adf0717e6b50535fbef8ad0a5a9c8c
+    home: https://github.com/we-promise/sure
+    keywords:
+    - rails
+    - sidekiq
+    - personal-finance
+    - cloudnativepg
+    - redis
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: Sure maintainers
+      url: https://github.com/we-promise/sure
+    name: sure
+    sources:
+    - https://github.com/we-promise/sure
+    type: application
+    urls:
+    - https://we-promise.github.io/sure/sure-0.7.7-alpha.8.tgz
+    version: 0.7.7-alpha.8
+  - apiVersion: v2
     appVersion: 2026.11.17-alpha
-    created: "2026-11-17T07:39:27.163154379Z"
+    created: "2026-11-21T01:28:58.818253731Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -241,7 +309,7 @@ entries:
     version: 0.7.7-alpha.7
   - apiVersion: v2
     appVersion: 2026.11.14-alpha
-    created: "2026-11-17T07:39:27.151324165Z"
+    created: "2026-11-21T01:28:58.801947446Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -275,7 +343,7 @@ entries:
     version: 0.7.7-alpha.6
   - apiVersion: v2
     appVersion: 2026.11.10-alpha
-    created: "2026-11-17T07:39:27.13923886Z"
+    created: "2026-11-21T01:28:58.787791992Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -309,7 +377,7 @@ entries:
     version: 0.7.7-alpha.5
   - apiVersion: v2
     appVersion: 2026.11.8-alpha
-    created: "2026-11-17T07:39:27.128121581Z"
+    created: "2026-11-21T01:28:58.774289232Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -343,7 +411,7 @@ entries:
     version: 0.7.7-alpha.4
   - apiVersion: v2
     appVersion: 2026.11.3-alpha
-    created: "2026-11-17T07:39:27.115465287Z"
+    created: "2026-11-21T01:28:58.760794002Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -377,7 +445,7 @@ entries:
     version: 0.7.7-alpha.3
   - apiVersion: v2
     appVersion: 0.7.7-alpha.2
-    created: "2026-11-17T07:39:27.101897562Z"
+    created: "2026-11-21T01:28:58.746056142Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -411,7 +479,7 @@ entries:
     version: 0.7.7-alpha.2
   - apiVersion: v2
     appVersion: 0.7.7-alpha.1
-    created: "2026-11-17T07:39:27.090077624Z"
+    created: "2026-11-21T01:28:58.730903095Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -445,7 +513,7 @@ entries:
     version: 0.7.7-alpha.1
   - apiVersion: v2
     appVersion: 0.7.6
-    created: "2026-11-17T07:39:27.078451335Z"
+    created: "2026-11-21T01:28:58.715744241Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -479,7 +547,7 @@ entries:
     version: 0.7.6
   - apiVersion: v2
     appVersion: 0.7.6-rc.3
-    created: "2026-11-17T07:39:27.066843798Z"
+    created: "2026-11-21T01:28:58.700177539Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -513,7 +581,7 @@ entries:
     version: 0.7.6-rc.3
   - apiVersion: v2
     appVersion: 0.7.6-rc.2
-    created: "2026-11-17T07:39:27.055952233Z"
+    created: "2026-11-21T01:28:58.684679474Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -547,7 +615,7 @@ entries:
     version: 0.7.6-rc.2
   - apiVersion: v2
     appVersion: 0.7.6-hotfix.1
-    created: "2026-11-17T07:39:27.040855716Z"
+    created: "2026-11-21T01:28:58.671883326Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -581,7 +649,7 @@ entries:
     version: 0.7.6-hotfix.1
   - apiVersion: v2
     appVersion: 0.7.6-alpha.10
-    created: "2026-11-17T07:39:26.931788041Z"
+    created: "2026-11-21T01:28:58.539577766Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -615,7 +683,7 @@ entries:
     version: 0.7.6-alpha.10
   - apiVersion: v2
     appVersion: 0.7.6-alpha.9
-    created: "2026-11-17T07:39:27.029589556Z"
+    created: "2026-11-21T01:28:58.65601473Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -649,7 +717,7 @@ entries:
     version: 0.7.6-alpha.9
   - apiVersion: v2
     appVersion: 0.7.6-alpha.8
-    created: "2026-11-17T07:39:27.017408377Z"
+    created: "2026-11-21T01:28:58.640609836Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -683,7 +751,7 @@ entries:
     version: 0.7.6-alpha.8
   - apiVersion: v2
     appVersion: 0.7.6-alpha.7
-    created: "2026-11-17T07:39:27.006101676Z"
+    created: "2026-11-21T01:28:58.627898612Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -717,7 +785,7 @@ entries:
     version: 0.7.6-alpha.7
   - apiVersion: v2
     appVersion: 0.7.6-alpha.6
-    created: "2026-11-17T07:39:26.992159925Z"
+    created: "2026-11-21T01:28:58.611629257Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -751,7 +819,7 @@ entries:
     version: 0.7.6-alpha.6
   - apiVersion: v2
     appVersion: 0.7.6-alpha.5
-    created: "2026-11-17T07:39:26.979312741Z"
+    created: "2026-11-21T01:28:58.596656836Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -785,7 +853,7 @@ entries:
     version: 0.7.6-alpha.5
   - apiVersion: v2
     appVersion: 0.7.6-alpha.4
-    created: "2026-11-17T07:39:26.965102038Z"
+    created: "2026-11-21T01:28:58.58312258Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -819,7 +887,7 @@ entries:
     version: 0.7.6-alpha.4
   - apiVersion: v2
     appVersion: 0.7.6-alpha.3
-    created: "2026-11-17T07:39:26.953481799Z"
+    created: "2026-11-21T01:28:58.567842582Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -853,7 +921,7 @@ entries:
     version: 0.7.6-alpha.3
   - apiVersion: v2
     appVersion: 0.7.6-alpha.2
-    created: "2026-11-17T07:39:26.94293918Z"
+    created: "2026-11-21T01:28:58.553911532Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -887,7 +955,7 @@ entries:
     version: 0.7.6-alpha.2
   - apiVersion: v2
     appVersion: 0.7.6-alpha.1
-    created: "2026-11-17T07:39:26.917877457Z"
+    created: "2026-11-21T01:28:58.525327285Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -921,7 +989,7 @@ entries:
     version: 0.7.6-alpha.1
   - apiVersion: v2
     appVersion: 0.7.5
-    created: "2026-11-17T07:39:26.903973143Z"
+    created: "2026-11-21T01:28:58.509867241Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -955,7 +1023,7 @@ entries:
     version: 0.7.5
   - apiVersion: v2
     appVersion: 0.7.5-hotfix.3
-    created: "2026-11-17T07:39:26.893543022Z"
+    created: "2026-11-21T01:28:58.492923765Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -989,7 +1057,7 @@ entries:
     version: 0.7.5-hotfix.3
   - apiVersion: v2
     appVersion: 0.7.5-hotfix.2
-    created: "2026-11-17T07:39:26.883134874Z"
+    created: "2026-11-21T01:28:58.475731115Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1023,7 +1091,7 @@ entries:
     version: 0.7.5-hotfix.2
   - apiVersion: v2
     appVersion: 0.7.5-hotfix.1
-    created: "2026-11-17T07:39:26.87270248Z"
+    created: "2026-11-21T01:28:58.461554698Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1057,7 +1125,7 @@ entries:
     version: 0.7.5-hotfix.1
   - apiVersion: v2
     appVersion: 0.7.5-alpha.13
-    created: "2026-11-17T07:39:26.778738751Z"
+    created: "2026-11-21T01:28:58.334976757Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1091,7 +1159,7 @@ entries:
     version: 0.7.5-alpha.13
   - apiVersion: v2
     appVersion: 0.7.5-alpha.12
-    created: "2026-11-17T07:39:26.765232553Z"
+    created: "2026-11-21T01:28:58.319608729Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1125,7 +1193,7 @@ entries:
     version: 0.7.5-alpha.12
   - apiVersion: v2
     appVersion: 0.7.5-alpha.11
-    created: "2026-11-17T07:39:26.753304643Z"
+    created: "2026-11-21T01:28:58.303423571Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1159,7 +1227,7 @@ entries:
     version: 0.7.5-alpha.11
   - apiVersion: v2
     appVersion: 0.7.5-alpha.10
-    created: "2026-11-17T07:39:26.737680288Z"
+    created: "2026-11-21T01:28:58.289421376Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1193,7 +1261,7 @@ entries:
     version: 0.7.5-alpha.10
   - apiVersion: v2
     appVersion: 0.7.5-alpha.9
-    created: "2026-11-17T07:39:26.862197997Z"
+    created: "2026-11-21T01:28:58.445857601Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1227,7 +1295,7 @@ entries:
     version: 0.7.5-alpha.9
   - apiVersion: v2
     appVersion: 0.7.5-alpha.8
-    created: "2026-11-17T07:39:26.851865121Z"
+    created: "2026-11-21T01:28:58.431950904Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1261,7 +1329,7 @@ entries:
     version: 0.7.5-alpha.8
   - apiVersion: v2
     appVersion: 0.7.5-alpha.7
-    created: "2026-11-17T07:39:26.841618685Z"
+    created: "2026-11-21T01:28:58.418863347Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1295,7 +1363,7 @@ entries:
     version: 0.7.5-alpha.7
   - apiVersion: v2
     appVersion: 0.7.5-alpha.6
-    created: "2026-11-17T07:39:26.829686398Z"
+    created: "2026-11-21T01:28:58.404299842Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1329,7 +1397,7 @@ entries:
     version: 0.7.5-alpha.6
   - apiVersion: v2
     appVersion: 0.7.5-alpha.5
-    created: "2026-11-17T07:39:26.819763245Z"
+    created: "2026-11-21T01:28:58.390344778Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1363,7 +1431,7 @@ entries:
     version: 0.7.5-alpha.5
   - apiVersion: v2
     appVersion: 0.7.5-alpha.4
-    created: "2026-11-17T07:39:26.809783408Z"
+    created: "2026-11-21T01:28:58.374974989Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1397,7 +1465,7 @@ entries:
     version: 0.7.5-alpha.4
   - apiVersion: v2
     appVersion: 0.7.5-alpha.3
-    created: "2026-11-17T07:39:26.7997169Z"
+    created: "2026-11-21T01:28:58.36151334Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1431,7 +1499,7 @@ entries:
     version: 0.7.5-alpha.3
   - apiVersion: v2
     appVersion: 0.7.5-alpha.2
-    created: "2026-11-17T07:39:26.789690182Z"
+    created: "2026-11-21T01:28:58.347687757Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1465,7 +1533,7 @@ entries:
     version: 0.7.5-alpha.2
   - apiVersion: v2
     appVersion: 0.7.5-alpha.1
-    created: "2026-11-17T07:39:26.726192926Z"
+    created: "2026-11-21T01:28:58.274315191Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1499,7 +1567,7 @@ entries:
     version: 0.7.5-alpha.1
   - apiVersion: v2
     appVersion: 0.7.4
-    created: "2026-11-17T07:39:26.714847126Z"
+    created: "2026-11-21T01:28:58.260348082Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1533,7 +1601,7 @@ entries:
     version: 0.7.4
   - apiVersion: v2
     appVersion: 0.7.4-rc.4
-    created: "2026-11-17T07:39:26.703018194Z"
+    created: "2026-11-21T01:28:58.244940578Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1567,7 +1635,7 @@ entries:
     version: 0.7.4-rc.4
   - apiVersion: v2
     appVersion: 0.7.4-rc.3
-    created: "2026-11-17T07:39:26.692417729Z"
+    created: "2026-11-21T01:28:58.230306018Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1601,7 +1669,7 @@ entries:
     version: 0.7.4-rc.3
   - apiVersion: v2
     appVersion: 0.7.4-rc.2
-    created: "2026-11-17T07:39:26.680235519Z"
+    created: "2026-11-21T01:28:58.217482383Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1635,7 +1703,7 @@ entries:
     version: 0.7.4-rc.2
   - apiVersion: v2
     appVersion: 0.7.4-rc.1
-    created: "2026-11-17T07:39:26.669194824Z"
+    created: "2026-11-21T01:28:58.202799636Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1669,7 +1737,7 @@ entries:
     version: 0.7.4-rc.1
   - apiVersion: v2
     appVersion: 0.7.4-alpha.11
-    created: "2026-11-17T07:39:26.562975657Z"
+    created: "2026-11-21T01:28:58.07404002Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1703,7 +1771,7 @@ entries:
     version: 0.7.4-alpha.11
   - apiVersion: v2
     appVersion: 0.7.4-alpha.10
-    created: "2026-11-17T07:39:26.551761104Z"
+    created: "2026-11-21T01:28:58.059055723Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1737,7 +1805,7 @@ entries:
     version: 0.7.4-alpha.10
   - apiVersion: v2
     appVersion: 0.7.4-alpha.9
-    created: "2026-11-17T07:39:26.658422552Z"
+    created: "2026-11-21T01:28:58.188399304Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1771,7 +1839,7 @@ entries:
     version: 0.7.4-alpha.9
   - apiVersion: v2
     appVersion: 0.7.4-alpha.8
-    created: "2026-11-17T07:39:26.645606695Z"
+    created: "2026-11-21T01:28:58.173132087Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1805,7 +1873,7 @@ entries:
     version: 0.7.4-alpha.8
   - apiVersion: v2
     appVersion: 0.7.4-alpha.7
-    created: "2026-11-17T07:39:26.633567438Z"
+    created: "2026-11-21T01:28:58.158112675Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1839,7 +1907,7 @@ entries:
     version: 0.7.4-alpha.7
   - apiVersion: v2
     appVersion: 0.7.4-alpha.6
-    created: "2026-11-17T07:39:26.621510016Z"
+    created: "2026-11-21T01:28:58.143757944Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1873,7 +1941,7 @@ entries:
     version: 0.7.4-alpha.6
   - apiVersion: v2
     appVersion: 0.7.4-alpha.5
-    created: "2026-11-17T07:39:26.609129318Z"
+    created: "2026-11-21T01:28:58.130809359Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1907,7 +1975,7 @@ entries:
     version: 0.7.4-alpha.5
   - apiVersion: v2
     appVersion: 0.7.4-alpha.4
-    created: "2026-11-17T07:39:26.598323786Z"
+    created: "2026-11-21T01:28:58.116453995Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1941,7 +2009,7 @@ entries:
     version: 0.7.4-alpha.4
   - apiVersion: v2
     appVersion: 0.7.4-alpha.3
-    created: "2026-11-17T07:39:26.587139347Z"
+    created: "2026-11-21T01:28:58.101219584Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -1975,7 +2043,7 @@ entries:
     version: 0.7.4-alpha.3
   - apiVersion: v2
     appVersion: 0.7.4-alpha.2
-    created: "2026-11-17T07:39:26.574639563Z"
+    created: "2026-11-21T01:28:58.087957981Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2009,7 +2077,7 @@ entries:
     version: 0.7.4-alpha.2
   - apiVersion: v2
     appVersion: 0.7.4-alpha.1
-    created: "2026-11-17T07:39:26.539992282Z"
+    created: "2026-11-21T01:28:58.044256524Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2043,7 +2111,7 @@ entries:
     version: 0.7.4-alpha.1
   - apiVersion: v2
     appVersion: 0.7.3
-    created: "2026-11-17T07:39:26.529750993Z"
+    created: "2026-11-21T01:28:58.030144685Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2077,7 +2145,7 @@ entries:
     version: 0.7.3
   - apiVersion: v2
     appVersion: 0.7.3-rc.2
-    created: "2026-11-17T07:39:26.519830864Z"
+    created: "2026-11-21T01:28:58.016703082Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2111,7 +2179,7 @@ entries:
     version: 0.7.3-rc.2
   - apiVersion: v2
     appVersion: 0.7.3-rc.1
-    created: "2026-11-17T07:39:26.506569682Z"
+    created: "2026-11-21T01:28:58.004481528Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2145,7 +2213,7 @@ entries:
     version: 0.7.3-rc.1
   - apiVersion: v2
     appVersion: 0.7.3-alpha.6
-    created: "2026-11-17T07:39:26.496306991Z"
+    created: "2026-11-21T01:28:57.992371502Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2179,7 +2247,7 @@ entries:
     version: 0.7.3-alpha.6
   - apiVersion: v2
     appVersion: 0.7.3-alpha.5
-    created: "2026-11-17T07:39:26.484210389Z"
+    created: "2026-11-21T01:28:57.98042959Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2213,7 +2281,7 @@ entries:
     version: 0.7.3-alpha.5
   - apiVersion: v2
     appVersion: 0.7.3-alpha.4
-    created: "2026-11-17T07:39:26.472522658Z"
+    created: "2026-11-21T01:28:57.968198631Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2247,7 +2315,7 @@ entries:
     version: 0.7.3-alpha.4
   - apiVersion: v2
     appVersion: 0.7.3-alpha.3
-    created: "2026-11-17T07:39:26.46072995Z"
+    created: "2026-11-21T01:28:57.956072246Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2281,7 +2349,7 @@ entries:
     version: 0.7.3-alpha.3
   - apiVersion: v2
     appVersion: 0.7.3-alpha.2
-    created: "2026-11-17T07:39:26.449375237Z"
+    created: "2026-11-21T01:28:57.943625099Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2315,7 +2383,7 @@ entries:
     version: 0.7.3-alpha.2
   - apiVersion: v2
     appVersion: 0.7.3-alpha.1
-    created: "2026-11-17T07:39:26.435975807Z"
+    created: "2026-11-21T01:28:57.931406352Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2349,7 +2417,7 @@ entries:
     version: 0.7.3-alpha.1
   - apiVersion: v2
     appVersion: 0.7.2
-    created: "2026-11-17T07:39:26.424934784Z"
+    created: "2026-11-21T01:28:57.917728156Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2383,7 +2451,7 @@ entries:
     version: 0.7.2
   - apiVersion: v2
     appVersion: 0.7.2-alpha.12
-    created: "2026-11-17T07:39:26.317064568Z"
+    created: "2026-11-21T01:28:57.793633365Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2417,7 +2485,7 @@ entries:
     version: 0.7.2-alpha.12
   - apiVersion: v2
     appVersion: 0.7.2-alpha.11
-    created: "2026-11-17T07:39:26.305353682Z"
+    created: "2026-11-21T01:28:57.778403628Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2451,7 +2519,7 @@ entries:
     version: 0.7.2-alpha.11
   - apiVersion: v2
     appVersion: 0.7.2-alpha.10
-    created: "2026-11-17T07:39:26.29535763Z"
+    created: "2026-11-21T01:28:57.764527979Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2485,7 +2553,7 @@ entries:
     version: 0.7.2-alpha.10
   - apiVersion: v2
     appVersion: 0.7.2-alpha.9
-    created: "2026-11-17T07:39:26.412519144Z"
+    created: "2026-11-21T01:28:57.90564347Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2519,7 +2587,7 @@ entries:
     version: 0.7.2-alpha.9
   - apiVersion: v2
     appVersion: 0.7.2-alpha.8
-    created: "2026-11-17T07:39:26.398470374Z"
+    created: "2026-11-21T01:28:57.893470707Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2553,7 +2621,7 @@ entries:
     version: 0.7.2-alpha.8
   - apiVersion: v2
     appVersion: 0.7.2-alpha.7
-    created: "2026-11-17T07:39:26.385625984Z"
+    created: "2026-11-21T01:28:57.880142008Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2587,7 +2655,7 @@ entries:
     version: 0.7.2-alpha.7
   - apiVersion: v2
     appVersion: 0.7.2-alpha.6
-    created: "2026-11-17T07:39:26.374343809Z"
+    created: "2026-11-21T01:28:57.866677213Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2621,7 +2689,7 @@ entries:
     version: 0.7.2-alpha.6
   - apiVersion: v2
     appVersion: 0.7.2-alpha.5
-    created: "2026-11-17T07:39:26.363476084Z"
+    created: "2026-11-21T01:28:57.853792244Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2655,7 +2723,7 @@ entries:
     version: 0.7.2-alpha.5
   - apiVersion: v2
     appVersion: 0.7.2-alpha.4
-    created: "2026-11-17T07:39:26.352566136Z"
+    created: "2026-11-21T01:28:57.839697827Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2689,7 +2757,7 @@ entries:
     version: 0.7.2-alpha.4
   - apiVersion: v2
     appVersion: 0.7.2-alpha.3
-    created: "2026-11-17T07:39:26.341554355Z"
+    created: "2026-11-21T01:28:57.825227338Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2723,7 +2791,7 @@ entries:
     version: 0.7.2-alpha.3
   - apiVersion: v2
     appVersion: v0.7.2-alpha.2
-    created: "2026-11-17T07:39:26.329536551Z"
+    created: "2026-11-21T01:28:57.811122532Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2757,7 +2825,7 @@ entries:
     version: 0.7.2-alpha.2
   - apiVersion: v2
     appVersion: v0.7.2-alpha.1
-    created: "2026-11-17T07:39:26.283367587Z"
+    created: "2026-11-21T01:28:57.751473494Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2791,7 +2859,7 @@ entries:
     version: 0.7.2-alpha.1
   - apiVersion: v2
     appVersion: v0.7.1
-    created: "2026-11-17T07:39:26.27217038Z"
+    created: "2026-11-21T01:28:57.736511696Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2825,7 +2893,7 @@ entries:
     version: 0.7.1
   - apiVersion: v2
     appVersion: v0.7.1-rc.2
-    created: "2026-11-17T07:39:26.259726349Z"
+    created: "2026-11-21T01:28:57.719816837Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2859,7 +2927,7 @@ entries:
     version: 0.7.1-rc.2
   - apiVersion: v2
     appVersion: v0.7.1-rc.1
-    created: "2026-11-17T07:39:26.246502311Z"
+    created: "2026-11-21T01:28:57.707583874Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2893,7 +2961,7 @@ entries:
     version: 0.7.1-rc.1
   - apiVersion: v2
     appVersion: v0.7.1-hotfix.1
-    created: "2026-11-17T07:39:26.23475439Z"
+    created: "2026-11-21T01:28:57.685692898Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2927,7 +2995,7 @@ entries:
     version: 0.7.1-hotfix.1
   - apiVersion: v2
     appVersion: v0.7.1-alpha.11
-    created: "2026-11-17T07:39:26.138230626Z"
+    created: "2026-11-21T01:28:57.576503699Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2961,7 +3029,7 @@ entries:
     version: 0.7.1-alpha.11
   - apiVersion: v2
     appVersion: v0.7.1-alpha.10
-    created: "2026-11-17T07:39:26.126307543Z"
+    created: "2026-11-21T01:28:57.561633022Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -2995,7 +3063,7 @@ entries:
     version: 0.7.1-alpha.10
   - apiVersion: v2
     appVersion: v0.7.1-alpha.9
-    created: "2026-11-17T07:39:26.223287981Z"
+    created: "2026-11-21T01:28:57.670921162Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3029,7 +3097,7 @@ entries:
     version: 0.7.1-alpha.9
   - apiVersion: v2
     appVersion: v0.7.1-alpha.7
-    created: "2026-11-17T07:39:26.212661656Z"
+    created: "2026-11-21T01:28:57.657877816Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3063,7 +3131,7 @@ entries:
     version: 0.7.1-alpha.7
   - apiVersion: v2
     appVersion: v0.7.1-alpha.6
-    created: "2026-11-17T07:39:26.198930811Z"
+    created: "2026-11-21T01:28:57.64394376Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3097,7 +3165,7 @@ entries:
     version: 0.7.1-alpha.6
   - apiVersion: v2
     appVersion: v0.7.1-alpha.5
-    created: "2026-11-17T07:39:26.185881404Z"
+    created: "2026-11-21T01:28:57.629198069Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3131,7 +3199,7 @@ entries:
     version: 0.7.1-alpha.5
   - apiVersion: v2
     appVersion: v0.7.1-alpha.4
-    created: "2026-11-17T07:39:26.173891322Z"
+    created: "2026-11-21T01:28:57.615425429Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3165,7 +3233,7 @@ entries:
     version: 0.7.1-alpha.4
   - apiVersion: v2
     appVersion: v0.7.1-alpha.3
-    created: "2026-11-17T07:39:26.162332954Z"
+    created: "2026-11-21T01:28:57.602837764Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3199,7 +3267,7 @@ entries:
     version: 0.7.1-alpha.3
   - apiVersion: v2
     appVersion: v0.7.1-alpha.2
-    created: "2026-11-17T07:39:26.150305405Z"
+    created: "2026-11-21T01:28:57.590528166Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3233,7 +3301,7 @@ entries:
     version: 0.7.1-alpha.2
   - apiVersion: v2
     appVersion: v0.7.1-alpha.1
-    created: "2026-11-17T07:39:26.115109644Z"
+    created: "2026-11-21T01:28:57.547668317Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3267,7 +3335,7 @@ entries:
     version: 0.7.1-alpha.1
   - apiVersion: v2
     appVersion: v0.7.0
-    created: "2026-11-17T07:39:26.103551457Z"
+    created: "2026-11-21T01:28:57.533520284Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3301,7 +3369,7 @@ entries:
     version: 0.7.0
   - apiVersion: v2
     appVersion: v0.7.0-rc.2
-    created: "2026-11-17T07:39:26.091019174Z"
+    created: "2026-11-21T01:28:57.520209487Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3335,7 +3403,7 @@ entries:
     version: 0.7.0-rc.2
   - apiVersion: v2
     appVersion: v0.7.0-rc.1
-    created: "2026-11-17T07:39:26.078101334Z"
+    created: "2026-11-21T01:28:57.50520906Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3369,7 +3437,7 @@ entries:
     version: 0.7.0-rc.1
   - apiVersion: v2
     appVersion: v0.7.0-hotfix.3
-    created: "2026-11-17T07:39:26.066968643Z"
+    created: "2026-11-21T01:28:57.491951265Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3403,7 +3471,7 @@ entries:
     version: 0.7.0-hotfix.3
   - apiVersion: v2
     appVersion: v0.7.0-hotfix.2
-    created: "2026-11-17T07:39:26.05608248Z"
+    created: "2026-11-21T01:28:57.476111871Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3437,7 +3505,7 @@ entries:
     version: 0.7.0-hotfix.2
   - apiVersion: v2
     appVersion: v0.7.0-hotfix.1
-    created: "2026-11-17T07:39:26.044349392Z"
+    created: "2026-11-21T01:28:57.462130554Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3471,7 +3539,7 @@ entries:
     version: 0.7.0-hotfix.1
   - apiVersion: v2
     appVersion: v0.7.0-alpha.7
-    created: "2026-11-17T07:39:26.033884078Z"
+    created: "2026-11-21T01:28:57.447019294Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3505,7 +3573,7 @@ entries:
     version: 0.7.0-alpha.7
   - apiVersion: v2
     appVersion: v0.7.0-alpha.6
-    created: "2026-11-17T07:39:26.023021911Z"
+    created: "2026-11-21T01:28:57.431622958Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3539,7 +3607,7 @@ entries:
     version: 0.7.0-alpha.6
   - apiVersion: v2
     appVersion: v0.7.0-alpha.5
-    created: "2026-11-17T07:39:26.01172914Z"
+    created: "2026-11-21T01:28:57.417845407Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3573,7 +3641,7 @@ entries:
     version: 0.7.0-alpha.5
   - apiVersion: v2
     appVersion: v0.7.0-alpha.4
-    created: "2026-11-17T07:39:26.000371293Z"
+    created: "2026-11-21T01:28:57.403259365Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3607,7 +3675,7 @@ entries:
     version: 0.7.0-alpha.4
   - apiVersion: v2
     appVersion: v0.7.0-alpha.3
-    created: "2026-11-17T07:39:25.988343835Z"
+    created: "2026-11-21T01:28:57.388957859Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3641,7 +3709,7 @@ entries:
     version: 0.7.0-alpha.3
   - apiVersion: v2
     appVersion: v0.7.0-alpha.2
-    created: "2026-11-17T07:39:25.97752387Z"
+    created: "2026-11-21T01:28:57.374949715Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3675,7 +3743,7 @@ entries:
     version: 0.7.0-alpha.2
   - apiVersion: v2
     appVersion: v0.7.0-alpha.1
-    created: "2026-11-17T07:39:25.965868678Z"
+    created: "2026-11-21T01:28:57.360416097Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3709,7 +3777,7 @@ entries:
     version: 0.7.0-alpha.1
   - apiVersion: v2
     appVersion: v0.6.9
-    created: "2026-11-17T07:39:25.954631061Z"
+    created: "2026-11-21T01:28:57.346332435Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3743,7 +3811,7 @@ entries:
     version: 0.6.9
   - apiVersion: v2
     appVersion: v0.6.9-rc.3
-    created: "2026-11-17T07:39:25.943187023Z"
+    created: "2026-11-21T01:28:57.331542701Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3777,7 +3845,7 @@ entries:
     version: 0.6.9-rc.3
   - apiVersion: v2
     appVersion: v0.6.9-rc.2
-    created: "2026-11-17T07:39:25.932049264Z"
+    created: "2026-11-21T01:28:57.318007341Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3811,7 +3879,7 @@ entries:
     version: 0.6.9-rc.2
   - apiVersion: v2
     appVersion: v0.6.9-rc.1
-    created: "2026-11-17T07:39:25.920978556Z"
+    created: "2026-11-21T01:28:57.304410207Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3845,7 +3913,7 @@ entries:
     version: 0.6.9-rc.1
   - apiVersion: v2
     appVersion: v0.6.9-alpha.9
-    created: "2026-11-17T07:39:25.909051467Z"
+    created: "2026-11-21T01:28:57.289839309Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3879,7 +3947,7 @@ entries:
     version: 0.6.9-alpha.9
   - apiVersion: v2
     appVersion: v0.6.9-alpha.8
-    created: "2026-11-17T07:39:25.897790444Z"
+    created: "2026-11-21T01:28:57.274214728Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3913,7 +3981,7 @@ entries:
     version: 0.6.9-alpha.8
   - apiVersion: v2
     appVersion: v0.6.9-alpha.7
-    created: "2026-11-17T07:39:25.885294305Z"
+    created: "2026-11-21T01:28:57.260481774Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3947,7 +4015,7 @@ entries:
     version: 0.6.9-alpha.7
   - apiVersion: v2
     appVersion: v0.6.9-alpha.6
-    created: "2026-11-17T07:39:25.875110252Z"
+    created: "2026-11-21T01:28:57.246972488Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -3981,7 +4049,7 @@ entries:
     version: 0.6.9-alpha.6
   - apiVersion: v2
     appVersion: v0.6.9-alpha.5
-    created: "2026-11-17T07:39:25.862066404Z"
+    created: "2026-11-21T01:28:57.229748755Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -4015,7 +4083,7 @@ entries:
     version: 0.6.9-alpha.5
   - apiVersion: v2
     appVersion: v0.6.9-alpha.4
-    created: "2026-11-17T07:39:25.849692867Z"
+    created: "2026-11-21T01:28:57.214802669Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -4049,7 +4117,7 @@ entries:
     version: 0.6.9-alpha.4
   - apiVersion: v2
     appVersion: v0.6.9-alpha.3
-    created: "2026-11-17T07:39:25.839549345Z"
+    created: "2026-11-21T01:28:57.20061445Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -4083,7 +4151,7 @@ entries:
     version: 0.6.9-alpha.3
   - apiVersion: v2
     appVersion: v0.6.9-alpha.2
-    created: "2026-11-17T07:39:25.829649978Z"
+    created: "2026-11-21T01:28:57.186484827Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -4117,7 +4185,7 @@ entries:
     version: 0.6.9-alpha.2
   - apiVersion: v2
     appVersion: v0.6.9-alpha.1
-    created: "2026-11-17T07:39:25.8183727Z"
+    created: "2026-11-21T01:28:57.170516001Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -4151,7 +4219,7 @@ entries:
     version: 0.6.9-alpha.1
   - apiVersion: v2
     appVersion: v0.6.8
-    created: "2026-11-17T07:39:25.805596041Z"
+    created: "2026-11-21T01:28:57.157323196Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -4185,7 +4253,7 @@ entries:
     version: 0.6.8
   - apiVersion: v2
     appVersion: v0.6.8-alpha.13
-    created: "2026-11-17T07:39:25.793853349Z"
+    created: "2026-11-21T01:28:57.14344014Z"
     dependencies:
     - condition: cnpg.enabled
       name: cloudnative-pg
@@ -4217,4 +4285,4 @@ entries:
     urls:
     - https://we-promise.github.io/sure/sure-0.6.8-alpha.13.tgz
     version: 0.6.8-alpha.13
-generated: "2026-11-17T07:39:25.779682125Z"
+generated: "2026-11-21T01:28:57.126472307Z"
