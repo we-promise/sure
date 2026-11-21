@@ -924,12 +924,12 @@ class Account < ApplicationRecord
 
   # Securities whose calculated position dropped below zero on some day, for
   # example after a sale without its purchase or after deleting a purchase.
-  # The holdings tab shows them instead of hiding the gap.
+  # The account status (Account::HealthStatus) shows them instead of hiding the gap.
   # Linked accounts are left out entirely: their provider's holdings are the
   # truth, so a negative quantity there (reported, or carried back by the
   # reverse calculator) is a short position, not missing data.
   def negative_positions
-    return [] if linked?
+    return [] if linked? || balance_type != :investment
 
     rows = holdings
       .joins(:security)
