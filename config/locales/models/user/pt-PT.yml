@@ -10,6 +10,7 @@ pt-PT:
         last_name: Apelido
         password: Palavra-passe
         password_confirmation: Confirmação da Palavra-passe
+        password_challenge: Palavra-passe Atual
     errors:
       models:
         user:
@@ -19,5 +20,10 @@ pt-PT:
                 enquanto existirem outros utilizadores. Elimine primeiro todos os membros.
               cannot_remove_last_super_admin: Não é possível remover o último super administrador
                 ativo. Promova primeiro outro utilizador a super administrador.
+            password:
+              missing_case: tem de incluir letras maiúsculas e minúsculas
+              missing_number: tem de incluir pelo menos um número
+              missing_special: tem de incluir pelo menos um caráter especial
+              too_long: "é demasiado longa (máximo de %{count} bytes; letras acentuadas e emojis ocupam mais de um byte)"
             profile_image:
               invalid_file_size: o tamanho do ficheiro deve ser inferior a %{max_megabytes}MB

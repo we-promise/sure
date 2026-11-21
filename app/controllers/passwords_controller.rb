@@ -24,7 +24,7 @@ class PasswordsController < ApplicationController
       end
 
       ActiveRecord::Base.transaction do
-        next false unless Current.user.update(password_params)
+        next false unless Current.user.update(password_params.merge(require_password_complexity: true))
 
         SecurityAuditLog.log_password_changed!(user: Current.user, request: request, actor: Current.true_user)
         # A stolen or shared cookie must not outlive a password change

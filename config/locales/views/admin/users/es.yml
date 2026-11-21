@@ -95,6 +95,7 @@ es:
         password_and_family_conflict: No se pueden actualizar a la vez la contraseña y la pertenencia a la familia/grupo.
         password_disabled: No se puede establecer una contraseña porque los usuarios solo pueden iniciar sesión con SSO.
         password_too_short: La contraseña debe tener al menos 8 caracteres.
+        password_too_long: "La contraseña puede tener como máximo %{count} bytes (las letras acentuadas y los emojis ocupan más de un byte)."
         password_missing_case: La contraseña debe incluir mayúsculas y minúsculas.
         password_missing_number: La contraseña debe incluir al menos un número.
         password_missing_special: La contraseña debe incluir al menos un carácter especial.

@@ -94,6 +94,7 @@ zh-CN:
         password_and_family_conflict: "密码和家庭/群组归属无法同时更新。"
         password_disabled: "已禁用设置密码，因为用户只能通过 SSO 登录。"
         password_too_short: "密码长度必须至少为 8 个字符。"
+        password_too_long: "密码最多只能有 %{count} 个字节（带重音的字母、汉字和表情符号占用多个字节）。"
         password_missing_case: "密码必须同时包含大写和小写字母。"
         password_missing_number: "密码必须包含至少一个数字。"
         password_missing_special: "密码必须包含至少一个特殊字符。"

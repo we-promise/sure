@@ -10,11 +10,17 @@ zh-TW:
         last_name: 姓氏
         password: 密碼
         password_confirmation: 確認密碼
+        password_challenge: 目前密碼
     errors:
       models:
         user:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: 當系統內仍有其他使用者時，管理員無法刪除帳號。請先刪除所有成員。
+            password:
+              missing_case: 必須同時包含大寫和小寫字母
+              missing_number: 必須包含至少一個數字
+              missing_special: 必須包含至少一個特殊字元
+              too_long: "過長（最多 %{count} 位元組；中文字元和表情符號各佔多個位元組）"
             profile_image:
               invalid_file_size: 檔案大小必須小於 %{max_megabytes}MB

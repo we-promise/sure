@@ -94,6 +94,7 @@ nl:
         password_and_family_conflict: "Wachtwoord en lidmaatschap van huishouden/groep kunnen niet tegelijk worden bijgewerkt."
         password_disabled: "Een wachtwoord instellen is uitgeschakeld omdat gebruikers alleen via SSO kunnen inloggen."
         password_too_short: "Wachtwoord moet minimaal 8 tekens lang zijn."
+        password_too_long: "Wachtwoord mag hoogstens %{count} bytes lang zijn (letters met accenten en emoji's nemen meer dan één byte in beslag)."
         password_missing_case: "Wachtwoord moet zowel hoofdletters als kleine letters bevatten."
         password_missing_number: "Wachtwoord moet ten minste één cijfer bevatten."
         password_missing_special: "Wachtwoord moet ten minste één speciaal teken bevatten."

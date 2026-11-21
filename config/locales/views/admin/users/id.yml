@@ -94,6 +94,7 @@ id:
         password_and_family_conflict: "Kata sandi dan keanggotaan keluarga/grup tidak dapat diperbarui bersamaan."
         password_disabled: "Mengatur kata sandi dinonaktifkan karena pengguna hanya dapat masuk dengan SSO."
         password_too_short: "Kata sandi harus terdiri dari minimal 8 karakter."
+        password_too_long: "Kata sandi maksimal %{count} byte (huruf beraksen dan emoji memakai lebih dari satu byte)."
         password_missing_case: "Kata sandi harus menyertakan huruf besar maupun huruf kecil."
         password_missing_number: "Kata sandi harus menyertakan setidaknya satu angka."
         password_missing_special: "Kata sandi harus menyertakan setidaknya satu karakter khusus."

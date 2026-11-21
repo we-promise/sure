@@ -32,9 +32,9 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
 
   test "update" do
     patch password_reset_path(token: @user.generate_token_for(:password_reset)),
-      params: { user: { password: "password", password_confirmation: "password" } }
+      params: { user: { password: "NewSecure1!", password_confirmation: "NewSecure1!" } }
     assert_redirected_to new_session_url
-
+    assert @user.reload.authenticate("NewSecure1!")
     assert SecurityAuditLog.exists?(user: @user, event_type: "password_changed")
   end
 
@@ -46,28 +46,51 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "update rejects a mismatched confirmation" do
-    original_digest = @user.password_digest
+  test "update rejects a password that does not meet the sign-up rules" do
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "password", password_confirmation: "password" } }
 
+    assert_response :unprocessable_entity
+    assert_not @user.reload.authenticate("password")
+    assert_select "p.text-destructive", text: /uppercase and lowercase/
+    assert_select "p.text-destructive", text: /at least one number/
+    assert_select "p.text-destructive", text: /at least one special character/
+  end
+
+  test "update rejects a password longer than 72 bytes" do
+    too_long = "Aa1!" + "a" * 69
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: too_long, password_confirmation: too_long } }
+
+    assert_response :unprocessable_entity
+    assert @user.reload.authenticate(user_password_test)
+    assert_select "p.text-destructive", text: /maximum is 72 bytes/
+  end
+
+  test "update rejects a mismatched confirmation" do
     assert_no_difference "SecurityAuditLog.count" do
       patch password_reset_path(token: @user.generate_token_for(:password_reset)),
-        params: { user: { password: "password", password_confirmation: "different" } }
+        params: { user: { password: "NewSecure1!", password_confirmation: "Different1!" } }
     end
 
     assert_response :unprocessable_entity
-    assert_equal original_digest, @user.reload.password_digest
+    assert @user.reload.authenticate(user_password_test)
+    assert_select "p.text-destructive", text: /doesn't match Password/
   end
 
-  test "update with a blank password does not report success or write an audit log" do
-    original_digest = @user.password_digest
+  test "update rejects a blank password and keeps the reset link valid" do
+    token = @user.generate_token_for(:password_reset)
 
     assert_no_difference "SecurityAuditLog.count" do
-      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      patch password_reset_path(token: token),
         params: { user: { password: "", password_confirmation: "" } }
     end
 
     assert_response :unprocessable_entity
-    assert_equal original_digest, @user.reload.password_digest
+    assert @user.reload.authenticate(user_password_test)
+    assert_select "p.text-destructive", text: /can't be blank/
+    assert_equal @user, User.find_by_token_for(:password_reset, token)
   end
 
   test "rolls back the password change when the audit log write fails" do
@@ -75,7 +98,7 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     original_digest = @user.password_digest
 
     patch password_reset_path(token: @user.generate_token_for(:password_reset)),
-      params: { user: { password: "password", password_confirmation: "password" } }
+      params: { user: { password: "NewSecure1!", password_confirmation: "NewSecure1!" } }
 
     assert_response :unprocessable_entity
     assert_equal original_digest, @user.reload.password_digest
