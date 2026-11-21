@@ -64,6 +64,10 @@ class DS::Popover < DesignSystemComponent
     frame_src.present?
   end
 
+  def frame_error_message
+    I18n.t("ds.popover.frame_error")
+  end
+
   # Accessible name for the trigger button. The `:avatar` variant has no
   # visible text, so the caller MUST pass `aria_label:`. `:icon` and
   # `:button` variants fall back to DS::Button's icon-derived label and

@@ -10,7 +10,9 @@
   # Both fields use step="any", so money_field leaves pastes unrounded: a
   # per-share price below a cent (10 x 0.0049) gives the same basis as typing it.
   # The per-share field is required, so an emptied editor is not submitted (and
-  # does not ask to overwrite the basis only to be rejected).
+  # does not ask to overwrite the basis only to be rejected). In the holdings
+  # list the editor arrives in a lazy frame after the popover opened, so it
+  # takes focus through autofocus, which Turbo applies on frame load.
   current_per_share = holding.known_cost_basis
   per_share_precision = current_per_share ? current_per_share.round(4).to_s("F").split(".").last.sub(/0+\z/, "").length.clamp(2, 4) : 2
   current_total = current_per_share && holding.qty.positive? ? (current_per_share * holding.qty).round(2) : nil
@@ -42,6 +44,7 @@
         value: current_per_share,
         precision: per_share_precision,
         required: true,
+        autofocus: context == :popover,
         placeholder: "0.00",
         input_class: "privacy-sensitive privacy-sensitive-interactive",
         step: "any",

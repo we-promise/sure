@@ -20,6 +20,7 @@ class DS::PopoverTest < ViewComponent::TestCase
 
     assert_selector "[data-controller='DS--popover'][data-ds--popover-frame-id-value='tag_dropdown'][data-ds--popover-frame-src-value='/tag/dropdown?entry_id=1']"
     assert_selector "[data-ds--popover-target='frame']", visible: :all
+    assert_selector "[data-ds--popover-frame-error-value='#{I18n.t("ds.popover.frame_error")}']"
     assert_no_selector "turbo-frame", visible: :all
   end
 

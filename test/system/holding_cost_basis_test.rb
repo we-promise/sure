@@ -123,6 +123,25 @@ class HoldingCostBasisTest < ApplicationSystemTestCase
     assert_equal BigDecimal("12.5"), @holding.reload.cost_basis
   end
 
+  test "a holdings-list editor that fails to load says so and loads again on the next open" do
+    account = @holding.account
+    visit account_path(account, tab: "holdings")
+    trigger = find("##{dom_id(@holding, :cost_basis)} [data-DS--popover-target='button']")
+    field = "##{dom_id(@holding, :popover_cost_basis)}_holding_per_share_cost_basis"
+
+    # The editor endpoint answers 404 while the account belongs to another family.
+    account.update_column(:family_id, families(:empty).id)
+    trigger.click
+    assert_text I18n.t("ds.popover.frame_error")
+    assert_no_selector field
+
+    account.update_column(:family_id, @user.family_id)
+    trigger.send_keys(:escape)
+    trigger.click
+    assert_selector field
+    assert_no_text I18n.t("ds.popover.frame_error")
+  end
+
   test "overwriting a cost basis asks first and keeps it when cancelled" do
     @holding.update!(qty: 10, cost_basis: 12.5, cost_basis_source: "manual", cost_basis_locked: true)
 

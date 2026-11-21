@@ -24,6 +24,7 @@ export default class extends Controller {
     mobileFullwidth: { type: Boolean, default: true },
     frameId: String,
     frameSrc: String,
+    frameError: String,
   };
 
   connect() {
@@ -97,13 +98,18 @@ export default class extends Controller {
   // connecting it with a src makes Turbo fetch it. Until then the panel is an
   // empty slot, so a page with hundreds of popovers ships no frame markup
   // for the ones never opened. Turbo marks the frame aria-busy while loading.
+  // A failed load leaves the error text instead of a frame, so the next open
+  // fetches again.
   mountFrame() {
     if (!this.hasFrameTarget || !this.frameSrcValue) return;
-    if (this.frameTarget.childElementCount > 0) return;
+    if (this.frameTarget.querySelector("turbo-frame")) return;
 
     const frame = document.createElement("turbo-frame");
     frame.id = this.frameIdValue;
     frame.setAttribute("src", this.frameSrcValue);
+    frame.addEventListener("turbo:fetch-request-error", this.showFrameError);
+    frame.addEventListener("turbo:before-fetch-response", this.showFrameErrorOnFailure);
+    frame.addEventListener("turbo:frame-missing", this.showFrameError);
     const placeholder = document.createElement("div");
     placeholder.className = "p-6 flex items-center justify-center";
     const skeleton = document.createElement("div");
@@ -112,6 +118,29 @@ export default class extends Controller {
     frame.append(placeholder);
     this.frameTarget.replaceChildren(frame);
   }
+
+  // An error response with an empty body (head :not_found) fires no Turbo
+  // frame event at all, so the status is checked before Turbo handles it.
+  showFrameErrorOnFailure = (event) => {
+    if (event.detail.fetchResponse.succeeded) return;
+
+    this.showFrameError(event);
+  };
+
+  // Covers network errors and error responses without the frame (404, 500).
+  // Turbo would otherwise keep the placeholder or show "Content missing".
+  // Fetch errors of a form inside the loaded frame bubble up here too; those
+  // leave the panel alone so the entered values stay.
+  showFrameError = (event) => {
+    if (event.target !== event.currentTarget) return;
+
+    event.preventDefault();
+    const message = document.createElement("p");
+    message.className = "p-4 text-sm text-secondary";
+    message.setAttribute("role", "alert");
+    message.textContent = this.frameErrorValue;
+    this.frameTarget.replaceChildren(message);
+  };
 
   // Used as an action (a Cancel button in the panel), close() returns focus
   // to the trigger like Escape does, instead of dropping it to <body>.
