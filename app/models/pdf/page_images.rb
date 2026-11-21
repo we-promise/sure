@@ -75,10 +75,10 @@ module Pdf::PageImages
 
   def pages_for(count, pages)
     numbers = case pages
-    when nil then (1..count).to_a
-    when Integer then [ pages ]
-    else pages.to_a
-    end.select { _1.is_a?(Integer) && _1.between?(1, count) }.uniq.sort
+              when nil then (1..count).to_a
+              when Integer then [ pages ]
+              else pages.to_a
+              end.select { _1.is_a?(Integer) && _1.between?(1, count) }.uniq.sort
     raise Error.new("no pages #{pages} in a #{count}-page PDF", code: :unreadable) if numbers.empty?
 
     numbers
