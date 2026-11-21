@@ -289,6 +289,21 @@ en:
       entry_row:
         include_checkbox: "Include %{name}"
         assign_category_select: "Assign category for %{name}"
+    upcoming:
+      ignored_filters: "%{filters} filters apply to posted transactions only and are not used for the forecast."
+      filter_names:
+        tags: Tag
+        status: Status
+        ai_status: AI
+        attachment_status: Attachment
+        reconcile_status: Reconcile
+    forecast_summary:
+      forecast: Forecast
+      window: "Actual + forecast, forecast from %{start} to %{end}"
+      forecast_count:
+        one: "incl. %{count} forecast"
+        other: "incl. %{count} forecast"
+      forecast_amount: "incl. %{amount} forecast"
     list:
       drag_drop_title: Drop CSV to import
       drag_drop_subtitle: Upload transactions directly
