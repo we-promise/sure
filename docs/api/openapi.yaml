@@ -3670,7 +3670,10 @@ components:
               id:
                 type: string
                 description: Stable direction-prefixed category identifier or structural
-                  identifier
+                  identifier. A parent category with subcategories on a side also
+                  has a <side>_sub_<parent id>_own node for its own transactions,
+                  branching off it beside the subcategories, so every category node
+                  passes on what it takes in
               name:
                 type: string
               kind:
@@ -3694,6 +3697,8 @@ components:
                 type: string
                 format: uuid
                 nullable: true
+                description: On a <side>_sub_<parent id>_own node, the parent category
+                  id (the same as its root node)
               filter_value:
                 type: string
                 nullable: true

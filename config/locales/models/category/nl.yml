@@ -2,6 +2,7 @@
 nl:
   models:
     category:
+      own_share: "%{category} (geen subcategorie)"
       uncategorized: "Ongecategoriseerd"
       other_investments: "Overige beleggingen"
       investment_contributions: "Investeringsbijdragen"

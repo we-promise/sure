@@ -1971,11 +1971,11 @@ RSpec.configure do |config|
               nodes: { type: :array, items: {
                 type: :object, required: %w[id name kind value percentage category_id filter_value color],
                 properties: {
-                  id: { type: :string, description: 'Stable direction-prefixed category identifier or structural identifier' },
+                  id: { type: :string, description: 'Stable direction-prefixed category identifier or structural identifier. A parent category with subcategories on a side also has a <side>_sub_<parent id>_own node for its own transactions, branching off it beside the subcategories, so every category node passes on what it takes in' },
                   name: { type: :string }, kind: { type: :string, enum: %w[income expense cash_flow account surplus deficit invested] },
                   value: { type: :string, description: 'Nonnegative decimal in envelope currency' },
                   percentage: { type: :string, description: 'Percentage of parent, or side total for root categories; structural balancing nodes use central capacity' },
-                  category_id: { type: :string, format: :uuid, nullable: true },
+                  category_id: { type: :string, format: :uuid, nullable: true, description: 'On a <side>_sub_<parent id>_own node, the parent category id (the same as its root node)' },
                   filter_value: { type: :string, nullable: true, description: 'Web transaction category filter; null means no category drill-down' },
                   color: { type: :string, nullable: true, description: 'User category color; structural colors belong to the client' }
                 }
