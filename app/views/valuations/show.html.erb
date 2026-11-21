@@ -62,7 +62,7 @@
                 entry_path(entry),
                 method: :delete,
                 class: "rounded-lg px-3 py-2 text-red-500 text-sm font-medium border border-secondary",
-                data: { turbo_confirm: CustomConfirm.for_resource_deletion("value update").to_data_attribute, turbo_frame: "_top" } %>
+                data: { turbo_confirm: CustomConfirm.for_noun_deletion("value update").to_data_attribute, turbo_frame: "_top" } %>
         </div>
       </div>
     <% end %>
