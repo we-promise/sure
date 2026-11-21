@@ -74,6 +74,43 @@ class Transactions::FiltersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "preserves the reconciliation filter checked state and offers clear filters" do
+    @user.family.update!(manual_reconciliation: true)
+
+    get filters_transactions_url(q: { reconcile_status: [ "reconciled" ] }),
+        headers: { "Turbo-Frame" => "transaction-filters" }
+
+    assert_response :success
+    assert_select "input[name='q[reconcile_status][]'][value='reconciled'][checked]"
+    assert_select "input[name='q[reconcile_status][]'][value='unreconciled'][checked]", count: 0
+    assert_select "input[name='q[reconcile_status][]'][value='cleared'][checked]", count: 0
+    assert_select "turbo-frame#transaction-filters" do
+      assert_select "a[href=?][data-turbo-frame='_top']", transactions_path(clear_filters: true)
+    end
+  end
+
+  test "checks no reconciliation box for an unknown or absent status" do
+    @user.family.update!(manual_reconciliation: true)
+
+    [ { reconcile_status: [ "bogus" ] }, {} ].each do |q|
+      get filters_transactions_url(q: q), headers: { "Turbo-Frame" => "transaction-filters" }
+
+      assert_response :success
+      assert_select "input[name='q[reconcile_status][]']", count: Entry.reconciled_statuses.size
+      assert_select "input[name='q[reconcile_status][]'][checked]", count: 0
+    end
+  end
+
+  test "omits the reconciliation filter when manual reconciliation is off" do
+    @user.family.update!(manual_reconciliation: false)
+
+    get filters_transactions_url(q: { reconcile_status: [ "reconciled" ] }),
+        headers: { "Turbo-Frame" => "transaction-filters" }
+
+    assert_response :success
+    assert_select "input[name='q[reconcile_status][]']", count: 0
+  end
+
   test "filter menu loads the merchant list on demand and keeps selected merchants in the form" do
     get filters_transactions_url(q: { merchants: [ "Amazon" ] }),
         headers: { "Turbo-Frame" => "transaction-filters" }
