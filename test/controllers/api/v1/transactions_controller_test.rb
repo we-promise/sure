@@ -774,6 +774,24 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Rent", outflow.reload.notes
   end
 
+  test "update refuses a currency change on a transfer leg and accepts its own currency" do
+    transfer = create_transfer_between_accounts
+    outflow = transfer.outflow_transaction.entry
+
+    put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: { currency: "EUR" } }, headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_equal "A transfer's currency cannot be changed through one of its transactions", JSON.parse(response.body)["message"]
+    assert_equal "USD", outflow.reload.currency
+
+    put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: { currency: "NOPE", amount: 120 } }, headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_equal "Unknown currency: NOPE", JSON.parse(response.body)["message"]
+
+    put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: { currency: "usd", notes: "Rent" } }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal [ "USD", "Rent" ], [ outflow.reload.currency, outflow.notes ]
+  end
+
   test "create and update refuse a nature outside the documented values" do
     entry = create_transaction(account: @account, amount: 40, name: "Bad nature")
 

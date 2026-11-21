@@ -337,7 +337,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               currency: {
                 type: :string,
                 description: 'Currency code Sure supports (ISO 4217, or a crypto code such as BTC), case-insensitive. The amount is kept as stored, only its currency changes. ' \
-                             'An unknown code returns 422, as does a change on a split parent.'
+                             'An unknown code returns 422, as does a change on a split parent or a transfer leg.'
               },
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
@@ -384,7 +384,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - unknown nature, an amount or nature change on a transfer, malformed tag_ids, an unknown currency, or a tag, category or merchant id the family cannot use' do
+      response '422', 'validation error - unknown nature, an unknown currency, an amount, nature or currency change on a transfer, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { transaction: { tag_ids: [ SecureRandom.uuid ] } } }

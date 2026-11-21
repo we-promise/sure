@@ -157,16 +157,17 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     return render_validation_error(INVALID_NATURE_MESSAGE) if invalid_nature?
-    # The web UI hides amount and nature on a transfer: one leg alone cannot
-    # change them without breaking Transfer#transfer_has_opposite_amounts.
-    if @entry.transaction.transfer && transfer_amount_changed?
-      return render_validation_error("A transfer's amount and nature cannot be changed through one of its transactions")
+    return render_unknown_currency if unknown_currency?
+    # The web UI hides amount, nature and currency on a transfer: one leg alone
+    # cannot change them without breaking Transfer#transfer_has_opposite_amounts.
+    if @entry.transaction.transfer
+      return render_validation_error("A transfer's amount and nature cannot be changed through one of its transactions") if transfer_amount_changed?
+      return render_validation_error("A transfer's currency cannot be changed through one of its transactions") if currency_changed?
     end
     return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
     return render_validation_error("Unknown tag id") if tags_provided? && unknown_tag_ids?
     return render_validation_error("Unknown category id") if unknown_category_id?
     return render_validation_error("Unknown merchant id") if unknown_merchant_id?
-    return render_unknown_currency if unknown_currency?
 
     rule_input = @entry.rule_input_snapshot
     updated = false
@@ -505,6 +506,11 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       true
     end
 
+    # Re-sending the stored code, in any case, is not a change.
+    def currency_changed?
+      requested_currency.present? && requested_currency != canonical_currency(@entry.currency)
+    end
+
     def render_unknown_currency
       render_validation_error("Unknown currency: #{requested_currency}")
     end
@@ -520,7 +526,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def split_financial_fields_changed?
       params.dig(:transaction, :amount).present? ||
-        (requested_currency.present? && requested_currency != canonical_currency(@entry.currency)) ||
+        currency_changed? ||
         params.dig(:transaction, :date).present? ||
         params.dig(:transaction, :nature).present?
     end
