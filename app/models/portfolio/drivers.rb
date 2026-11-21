@@ -177,23 +177,26 @@ class Portfolio::Drivers
   # "Unexplained $0.00" row, which is alarming and wrong.
   #
   # Named here so that anything presenting these figures reads the same
-  # tolerance #reconciles? applies, rather than writing out its own literal:
-  # two copies drift, and a period then reconciles in one place and not in
-  # the other.
-  #
-  # Known limitation: one minor unit assumes two decimal places. JPY, KRW and
-  # CLP carry `default_precision: 0` in config/currencies.yml, so a residual of
-  # 0.3 JPY is above this and the row prints "Unexplained JPY 0". Expressing
-  # the tolerance in the family currency's own minor unit is a change of
-  # meaning, not of this constant.
+  # tolerance #reconciles? applies, through .tolerance_for, rather than
+  # writing out its own literal: two copies drift, and a period then
+  # reconciles in one place and not in the other.
   RECONCILE_TOLERANCE = BigDecimal("0.01")
+
+  # One unit of the currency's smallest denomination where that is coarser
+  # than a cent: JPY, KRW and CLP carry `default_precision: 0` in
+  # config/currencies.yml, so a residual of 0.3 JPY is dust there and would
+  # otherwise print "Unexplained JPY 0". Never finer than the cent, so a
+  # currency with three or more decimals keeps the slack it had.
+  def self.tolerance_for(currency)
+    [ BigDecimal(Money::Currency.new(currency).step.to_s), RECONCILE_TOLERANCE ].max
+  end
 
   # A real check: `unexplained` is measured independently of the components
   # it is compared against, so this returns false when the decomposition does
   # not hold. It speaks to the rows as recorded and to nothing else: over a
   # suppressed journal day it is true while `market` is wrong (see
   # #suppressed_dates), so it is read together with #complete?.
-  def reconciles?(tolerance: RECONCILE_TOLERANCE)
+  def reconciles?(tolerance: self.class.tolerance_for(daily_returns.currency))
     unexplained.abs <= tolerance
   end
 
