@@ -39,6 +39,55 @@ class Provider::CoinstatsTest < ActiveSupport::TestCase
     assert_equal "ethereum", result.data.first[:blockchain]
   end
 
+  # Every request besides the wallet ones, with the HTTP verb it uses and
+  # arguments that are enough to call it.
+  PACED_REQUESTS = {
+    get_blockchains: [ :get, {} ],
+    get_exchanges: [ :get, {} ],
+    connect_portfolio_exchange: [ :post, { connection_id: "binance", connection_fields: { apiKey: "key" } } ],
+    get_portfolio_coins: [ :get, { portfolio_id: "portfolio-1" } ],
+    get_portfolio_transactions: [ :get, { portfolio_id: "portfolio-1" } ],
+    get_exchange_transactions: [ :get, { portfolio_id: "portfolio-1" } ],
+    get_portfolio_sync_status: [ :get, { portfolio_id: "portfolio-1" } ],
+    sync_portfolio: [ :patch, { portfolio_id: "portfolio-1" } ],
+    sync_exchange: [ :patch, { portfolio_id: "portfolio-1" } ]
+  }.freeze
+
+  PACED_REQUESTS.each do |method, (verb, args)|
+    test "#{method} waits for the request interval" do
+      @provider.expects(:throttle_request).once
+      Provider::Coinstats.expects(verb).once.returns(coinstats_response(200, {}))
+
+      assert @provider.public_send(method, **args).success?
+    end
+  end
+
+  test "paces the pages of a paginated listing" do
+    first_page = coinstats_response(200, { result: [ { id: "tx-1" } ] })
+    last_page = coinstats_response(200, { result: [] })
+    Provider::Coinstats.expects(:get).twice.returns(first_page, last_page)
+
+    # The first request goes out at once; the second waits out the interval.
+    @provider.expects(:sleep).with { |seconds| seconds.positive? && seconds <= Provider::Coinstats::MIN_REQUEST_INTERVAL }.once
+
+    transactions = @provider.list_exchange_transactions(portfolio_id: "portfolio-1", limit: 1)
+    assert_equal [ "tx-1" ], transactions.map { |transaction| transaction[:id] }
+  end
+
+  test "retries portfolio requests on rate limit with retry after" do
+    rate_limited = coinstats_response(429, { message: "Too Many Requests" }, { "Retry-After" => "2" })
+    success = coinstats_response(200, { data: [ { id: "tx-1" } ] })
+
+    @provider.stubs(:min_request_interval).returns(0)
+    @provider.expects(:sleep).with(2).once
+    Provider::Coinstats.expects(:get).twice.returns(rate_limited, success)
+
+    result = @provider.get_portfolio_transactions(portfolio_id: "portfolio-1")
+
+    assert result.success?
+    assert_equal [ { id: "tx-1" } ], result.data[:data]
+  end
+
   test "maps CoinStats credit limit responses without retrying" do
     response = Struct.new(:code, :body, :headers)
     credit_limited_response = response.new(
@@ -230,4 +279,9 @@ class Provider::CoinstatsTest < ActiveSupport::TestCase
 
     assert_equal 1, result.size
   end
+
+  private
+    def coinstats_response(code, body, headers = {})
+      Struct.new(:code, :body, :headers).new(code, body.to_json, headers)
+    end
 end
