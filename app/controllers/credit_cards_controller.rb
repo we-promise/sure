@@ -29,17 +29,33 @@ class CreditCardsController < ApplicationController
 
   private
     def update_enable_banking_settings
-      eb_params = params.permit(account: { enable_banking: [ :treat_balance_as_available_credit ] })
+      eb_params = params.permit(account: { enable_banking: [ :treat_balance_as_available_credit, :invert_transaction_signs ] })
         .dig(:account, :enable_banking)
       return if eb_params.blank?
 
-      update_provider_setting(
-        provider_type: "EnableBankingAccount",
-        attribute: :treat_balance_as_available_credit,
-        value: ActiveModel::Type::Boolean.new.cast(eb_params[:treat_balance_as_available_credit])
-      ) do |provider_account|
-        # Re-sync so the balance is reinterpreted right away instead of on the next scheduled sync
-        provider_account.enable_banking_item.sync_later
+      # A form without a flag keeps it: only write the flags actually
+      # submitted, so a partial submission never writes nil into the
+      # other NOT NULL boolean column.
+      if eb_params.key?(:treat_balance_as_available_credit)
+        update_provider_setting(
+          provider_type: "EnableBankingAccount",
+          attribute: :treat_balance_as_available_credit,
+          value: ActiveModel::Type::Boolean.new.cast(eb_params[:treat_balance_as_available_credit])
+        ) do |provider_account|
+          # Re-sync so the balance is reinterpreted right away instead of on the next scheduled sync
+          provider_account.enable_banking_item.sync_later
+        end
+      end
+
+      if eb_params.key?(:invert_transaction_signs)
+        update_provider_setting(
+          provider_type: "EnableBankingAccount",
+          attribute: :invert_transaction_signs,
+          value: ActiveModel::Type::Boolean.new.cast(eb_params[:invert_transaction_signs])
+        ) do |provider_account|
+          # Re-sync so transactions are re-imported with corrected signs right away
+          provider_account.enable_banking_item.sync_later
+        end
       end
     end
 

@@ -84,6 +84,91 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  # --- invert_transaction_signs ---
+
+  test "inverts purchase and refund signs when invert_transaction_signs is enabled" do
+    @enable_banking_account.update!(invert_transaction_signs: true)
+
+    purchase = {
+      entry_reference: "mps_purchase_1",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "1.35", currency: "EUR" },
+      creditor: { name: "Merchant A" },
+      credit_debit_indicator: "CRDT",
+      status: "BOOK"
+    }
+    refund = {
+      entry_reference: "mps_refund_1",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "1.35", currency: "EUR" },
+      creditor: { name: "Merchant A" },
+      credit_debit_indicator: "DBIT",
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(purchase, enable_banking_account: @enable_banking_account).process
+    EnableBankingEntry::Processor.new(refund, enable_banking_account: @enable_banking_account).process
+
+    assert_equal BigDecimal("1.35"),
+      @account.entries.find_by!(external_id: "enable_banking_mps_purchase_1", source: "enable_banking").amount,
+      "Purchase must be a positive outflow in Sure convention"
+    assert_equal BigDecimal("-1.35"),
+      @account.entries.find_by!(external_id: "enable_banking_mps_refund_1", source: "enable_banking").amount,
+      "Refund must be a negative inflow in Sure convention"
+  end
+
+  test "keeps the standard sign convention when invert_transaction_signs is disabled" do
+    purchase = {
+      entry_reference: "std_purchase_1",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "1.35", currency: "EUR" },
+      creditor: { name: "Merchant A" },
+      credit_debit_indicator: "CRDT",
+      status: "BOOK"
+    }
+    refund = {
+      entry_reference: "std_refund_1",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "1.35", currency: "EUR" },
+      creditor: { name: "Merchant A" },
+      credit_debit_indicator: "DBIT",
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(purchase, enable_banking_account: @enable_banking_account).process
+    EnableBankingEntry::Processor.new(refund, enable_banking_account: @enable_banking_account).process
+
+    assert_equal BigDecimal("-1.35"),
+      @account.entries.find_by!(external_id: "enable_banking_std_purchase_1", source: "enable_banking").amount
+    assert_equal BigDecimal("1.35"),
+      @account.entries.find_by!(external_id: "enable_banking_std_refund_1", source: "enable_banking").amount
+  end
+
+  test "does not invert unidentified holds when invert_transaction_signs is enabled" do
+    @enable_banking_account.update!(invert_transaction_signs: true)
+
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+
+    assert_not_nil entry
+    assert_equal BigDecimal("14.97"), entry.amount, "Hold must stay a positive outflow in Sure convention"
+    assert_equal "Card Authorization Hold", entry.name
+  end
+
   # --- compute_external_id unit tests ---
 
   test "compute_external_id returns transaction_id-based id when present" do

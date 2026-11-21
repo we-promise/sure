@@ -43,6 +43,8 @@ en:
         an ambiguous sign. Automatic continues using transaction history and the
         provider balance.
       simplefin_balance_sign_label: SimpleFIN balance meaning
+      invert_transaction_signs_description: Enable if your bank reports this card's purchases as credits and refunds as debits, reversing the transaction signs. Purchases are then recorded as expenses and refunds as income.
+      invert_transaction_signs_label: Invert transaction signs
       treat_balance_as_available_credit_description: Enable if your bank reports
         this card's balance as remaining available credit instead of the amount
         owed. The debt is then derived from the credit limit reported by your
