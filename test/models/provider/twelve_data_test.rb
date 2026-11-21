@@ -398,4 +398,50 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     # prices, the EUR pair, the ZZZ pair and its cross fallback, then search
     assert_equal [ 60, 60, 60, 60, 20 ], timeouts
   end
+
+  test "an invalid TWELVE_DATA_MAX_REQUESTS_PER_MINUTE falls back to the default and logs the variable" do
+    Provider::EnvTuning::WARNED.clear
+    Rails.logger.expects(:warn).with(regexp_matches(/\ATWELVE_DATA_MAX_REQUESTS_PER_MINUTE must be a positive whole number, got "abc"/))
+
+    with_env_overrides("TWELVE_DATA_MAX_REQUESTS_PER_MINUTE" => "abc") do
+      assert_equal 7, @provider.send(:max_requests_per_minute)
+    end
+  end
+
+  test "a valid TWELVE_DATA_MAX_REQUESTS_PER_MINUTE is honoured and a blank one is treated as unset" do
+    Rails.logger.expects(:warn).never
+
+    with_env_overrides("TWELVE_DATA_MAX_REQUESTS_PER_MINUTE" => "30") do
+      assert_equal 30, @provider.send(:max_requests_per_minute)
+    end
+
+    with_env_overrides("TWELVE_DATA_MAX_REQUESTS_PER_MINUTE" => "") do
+      assert_equal 7, @provider.send(:max_requests_per_minute)
+    end
+  end
+
+  test "an invalid TWELVE_DATA_MIN_REQUEST_INTERVAL falls back to 1.0 and logs the variable" do
+    Provider::EnvTuning::WARNED.clear
+    Rails.logger.expects(:warn).with(regexp_matches(/\ATWELVE_DATA_MIN_REQUEST_INTERVAL must be a number of seconds, 0 or more, got "abc"/))
+
+    with_env_overrides("TWELVE_DATA_MIN_REQUEST_INTERVAL" => "abc") do
+      assert_equal Provider::TwelveData::MIN_REQUEST_INTERVAL, @provider.send(:min_request_interval)
+    end
+  end
+
+  test "a valid TWELVE_DATA_MIN_REQUEST_INTERVAL is honoured, 0 turns pacing off, and a blank one is treated as unset" do
+    Rails.logger.expects(:warn).never
+
+    with_env_overrides("TWELVE_DATA_MIN_REQUEST_INTERVAL" => "2.5") do
+      assert_equal 2.5, @provider.send(:min_request_interval)
+    end
+
+    with_env_overrides("TWELVE_DATA_MIN_REQUEST_INTERVAL" => "0") do
+      assert_equal 0.0, @provider.send(:min_request_interval)
+    end
+
+    with_env_overrides("TWELVE_DATA_MIN_REQUEST_INTERVAL" => "") do
+      assert_equal Provider::TwelveData::MIN_REQUEST_INTERVAL, @provider.send(:min_request_interval)
+    end
+  end
 end

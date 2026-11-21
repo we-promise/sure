@@ -644,6 +644,27 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     assert_equal [ 60, 20 ], timeouts
   end
 
+  test "an invalid EODHD_MAX_REQUESTS_PER_DAY falls back to the default and logs the variable" do
+    Provider::EnvTuning::WARNED.clear
+    Rails.logger.expects(:warn).with(regexp_matches(/\AEODHD_MAX_REQUESTS_PER_DAY must be a positive whole number, got "abc"/))
+
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "abc") do
+      assert_equal Provider::Eodhd::MAX_REQUESTS_PER_DAY, @provider.send(:max_requests_per_day)
+    end
+  end
+
+  test "a valid EODHD_MAX_REQUESTS_PER_DAY is honoured and a blank one is treated as unset" do
+    Rails.logger.expects(:warn).never
+
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "400") do
+      assert_equal 400, @provider.send(:max_requests_per_day)
+    end
+
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "") do
+      assert_equal Provider::Eodhd::MAX_REQUESTS_PER_DAY, @provider.send(:max_requests_per_day)
+    end
+  end
+
   private
     # The real client routes every HTTP attempt through count_request_attempt!;
     # these tests stub the client, so the hook is stubbed off the request path
