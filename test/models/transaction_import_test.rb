@@ -19,6 +19,15 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal "1,234.56", @import.number_format
   end
 
+  test "syncing one import's mappings leaves every other import's mappings alone" do
+    other = imports(:trade)
+    kept = other.mappings.create!(key: "Elsewhere", create_when_empty: true, type: "Import::CategoryMapping")
+
+    @import.sync_mappings
+
+    assert Import::Mapping.exists?(kept.id)
+  end
+
   test "does not treat the transaction import template as a Sure export" do
     @import.raw_file_str = @import.csv_template.to_csv
 

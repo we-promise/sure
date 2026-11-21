@@ -17,6 +17,10 @@ class FamilyDocument < ApplicationRecord
   validate :account_belongs_to_family
 
   scope :ready, -> { where(status: "ready") }
+  # Rows that only keep an uploaded file's id for cleanup: its attachment and its compensating
+  # deletion both failed (Family#upload_document). They are not search copies.
+  scope :unattached, -> { where.not("metadata->>'cleanup_error' IS NULL") }
+  scope :search_copies, -> { where("metadata->>'cleanup_error' IS NULL") }
 
   # The documents a user may read: those on an account they can reach, and those with no
   # account. The store is family-wide, so this is the only filter between members. A statement

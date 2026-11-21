@@ -28,6 +28,17 @@ module VectorStore
     Registry.adapter
   end
 
+  # The store that accepted a family's documents, which can differ from the one configured now.
+  # A document predating the recorded backend uses the configured adapter.
+  def self.adapter_for(backend, endpoint_url: nil)
+    return adapter if backend.blank?
+    return Openai.for_store(endpoint_url) if backend == "openai"
+    return Pgvector.new if backend == "pgvector" && Pgvector.available?
+
+    configured = adapter
+    configured if configured && backend_name(configured) == backend
+  end
+
   def self.configured?
     Registry.configured?
   end

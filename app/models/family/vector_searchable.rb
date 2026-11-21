@@ -2,9 +2,10 @@ module Family::VectorSearchable
   extend ActiveSupport::Concern
 
   included do
-    # Remember which backend created the store before the dependent destroy removes the documents
-    # that recorded it; the store itself is deleted only after the family deletion commits.
-    before_destroy :remember_vector_store_backend
+    # Remember which backend created the store, and the files it never attached, before the
+    # dependent destroy removes the documents that recorded them; the store and those files are
+    # deleted only after the family deletion commits.
+    before_destroy :remember_vector_store_cleanup
     has_many :family_documents, dependent: :destroy
     after_destroy_commit :delete_vector_store
   end
@@ -22,7 +23,7 @@ module Family::VectorSearchable
     response = adapter.create_store(name: "Family #{id} Documents")
     return nil unless response.success?
 
-    if update(vector_store_id: response.data[:id])
+    if update(vector_store_id: response.data[:id], vector_store_endpoint: adapter.try(:endpoint_url))
       @vector_store_backend = VectorStore.backend_name(adapter)
       vector_store_id
     else
@@ -97,12 +98,13 @@ module Family::VectorSearchable
     metadata = (metadata || {}).merge("vector_store" => VectorStore.backend_name(adapter))
 
     # A failed compensating deletion leaves an uploaded file with no store attachment. Keep its
-    # id in an error row so a later remove_file can still find and delete it.
+    # id in an error row so a later remove_file, or deleting the family, can still delete it. The
+    # upload still failed: the row is not a search copy, so a later upload can try again.
     unless response.success?
       error = response.error
       return nil unless error.is_a?(VectorStore::UploadCleanupError)
 
-      return create_document_row!(adapter, store_id, error.file_id,
+      create_document_row!(adapter, store_id, error.file_id,
         filename: filename,
         content_type: Marcel::MimeType.for(name: filename),
         file_size: file_content.bytesize,
@@ -112,6 +114,7 @@ module Family::VectorSearchable
         metadata: metadata.merge("upload_error" => "attachment and cleanup failed",
                                  "cleanup_error" => error.cleanup_error.class.name)
       )
+      return nil
     end
 
     # An OpenAI store indexes in the background: the document is `processing` until
@@ -133,10 +136,11 @@ module Family::VectorSearchable
     family_documents.create!(**attributes)
   rescue StandardError
     begin
-      adapter.remove_file(store_id:, file_id:)
+      removed = adapter.remove_file(store_id:, file_id:).success?
     rescue StandardError => cleanup_error
-      Rails.logger.warn("[Family] couldn't remove unrecorded file #{file_id}: #{cleanup_error.class}")
+      removed = false
     end
+    Rails.logger.warn("[Family] couldn't remove unrecorded file #{file_id}: #{cleanup_error&.class || 'unsuccessful response'}") unless removed
     raise
   end
 
@@ -158,10 +162,18 @@ module Family::VectorSearchable
   def delete_vector_store
     return if vector_store_id.blank?
 
-    adapter = vector_store_adapter_for(@vector_store_backend)
+    adapter = VectorStore.adapter_for(@vector_store_backend, endpoint_url: vector_store_endpoint)
     unless adapter
       Rails.logger.warn("[Family] no #{@vector_store_backend || 'configured'} vector store adapter to delete store #{vector_store_id} for family #{id}")
       return
+    end
+
+    # The store lists only attached files, so files whose attachment failed are deleted by id.
+    Array(@unattached_file_ids).each do |file_id|
+      removed = adapter.remove_file(store_id: vector_store_id, file_id:).success?
+      Rails.logger.warn("[Family] couldn't delete unattached file #{file_id} for family #{id}") unless removed
+    rescue StandardError => error
+      Rails.logger.warn("[Family] couldn't delete unattached file #{file_id} for family #{id}: #{error.class}")
     end
 
     response = adapter.delete_store(store_id: vector_store_id)
@@ -172,19 +184,11 @@ module Family::VectorSearchable
 
   private
 
-    def remember_vector_store_backend
+    def remember_vector_store_cleanup
       @vector_store_backend = family_documents.where("metadata->>'vector_store' IS NOT NULL")
                                               .order(created_at: :desc)
                                               .pick(Arel.sql("metadata->>'vector_store'"))
-    end
-
-    def vector_store_adapter_for(backend)
-      return vector_store_adapter if backend.blank?
-      return VectorStore::Openai.from_config if backend == "openai"
-      return VectorStore::Pgvector.new if backend == "pgvector" && VectorStore::Pgvector.available?
-
-      configured = vector_store_adapter
-      configured if configured && VectorStore.backend_name(configured) == backend
+      @unattached_file_ids = family_documents.unattached.pluck(:provider_file_id)
     end
 
     def vector_store_adapter
