@@ -358,6 +358,59 @@ class RulesTest < ApplicationSystemTestCase
     assert_operator new_rule.native.rect.x + new_rule.native.rect.width, :<=, viewport_width
   end
 
+  test "removing a saved condition group deletes it and its sub-conditions on save" do
+    rule = rule_with_condition_group(sub_values: [ "Coffee" ])
+    group = rule.conditions.find_by!(condition_type: "compound")
+    sub_ids = group.sub_conditions.pluck(:id)
+
+    visit edit_rule_path(rule)
+
+    within "dialog" do
+      condition_group_row.find(:xpath, "./div/button").click
+      assert_no_text I18n.t("rule.conditions.condition_group.of_the_following_conditions")
+      submit_renamed_rule(rule)
+    end
+
+    rule.reload
+    assert_equal 0, rule.conditions.where(condition_type: "compound").count
+    assert_empty Rule::Condition.where(id: sub_ids)
+    assert_equal [ "Groceries" ], rule.conditions.pluck(:value)
+  end
+
+  test "removing an unsaved condition group leaves the saved conditions unchanged" do
+    rule = rule_with_condition_group(sub_values: [ "Coffee" ])
+    before = rule.conditions.order(:id).pluck(:id, :condition_type)
+
+    visit edit_rule_path(rule)
+
+    within "dialog" do
+      click_on "Add condition group"
+      assert_selector "[data-rules-target='conditionsList'] > li.border", count: 2
+      all("[data-rules-target='conditionsList'] > li.border").last.find(:xpath, "./div/button").click
+      assert_selector "[data-rules-target='conditionsList'] > li.border", count: 1
+      submit_renamed_rule(rule)
+    end
+    assert_equal before, rule.reload.conditions.order(:id).pluck(:id, :condition_type)
+    assert_equal 1, rule.conditions.find_by!(condition_type: "compound").sub_conditions.count
+  end
+
+  test "removing one sub-condition of a saved condition group keeps the group" do
+    rule = rule_with_condition_group(sub_values: [ "Coffee", "Tea" ])
+    group = rule.conditions.find_by!(condition_type: "compound")
+
+    visit edit_rule_path(rule)
+
+    within "dialog" do
+      within condition_group_row do
+        sub = find("[data-rule--conditions-target='subConditionsList'] > li", match: :first)
+        sub.find("button[data-action*='rule--conditions#remove']").click
+      end
+      submit_renamed_rule(rule)
+    end
+    assert Rule::Condition.exists?(group.id)
+    assert_equal [ "Tea" ], group.reload.sub_conditions.pluck(:value)
+  end
+
   private
     def create_exclude_rule(name, group: nil, active: true)
       @user.family.rules.create!(name: name, resource_type: "transaction", rule_group: group, active: active,
@@ -389,5 +442,38 @@ class RulesTest < ApplicationSystemTestCase
       sleep 0.05 until family.rules.ordered.pluck(:id) == ids ||
         Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
       assert_equal ids, family.rules.ordered.pluck(:id)
+    end
+
+    def rule_with_condition_group(sub_values:)
+      @user.family.rules.create!(
+        name: "Grouped rule",
+        resource_type: "transaction",
+        conditions: [
+          Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Groceries"),
+          Rule::Condition.new(
+            condition_type: "compound", operator: "or",
+            sub_conditions: sub_values.map { |value| Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: value) }
+          )
+        ],
+        actions: [
+          Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id)
+        ]
+      )
+    end
+
+    def condition_group_row
+      find("[data-rules-target='conditionsList'] > li.border")
+    end
+
+    # Renames the rule in the same submit and waits for the new name to be
+    # saved, so the assertions that follow read the saved state rather than
+    # racing the request.
+    def submit_renamed_rule(rule)
+      fill_in "rule[name]", with: "Grouped rule saved"
+      click_button "Update Rule"
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 15
+      sleep 0.05 until rule.reload.name == "Grouped rule saved" ||
+        Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+      assert_equal "Grouped rule saved", rule.name
     end
 end
