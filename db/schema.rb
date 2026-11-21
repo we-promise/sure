@@ -628,6 +628,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.string "account_id"
     t.string "account_status"
     t.string "account_type"
+    t.decimal "anchor_pending_total", precision: 19, scale: 4
     t.boolean "balance_evidence_verified", default: false, null: false
     t.boolean "balance_verified", default: false, null: false
     t.datetime "created_at", null: false
@@ -641,6 +642,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
     t.string "name"
+    t.decimal "pending_total", precision: 19, scale: 4
     t.string "product"
     t.string "provider"
     t.jsonb "raw_payload"
