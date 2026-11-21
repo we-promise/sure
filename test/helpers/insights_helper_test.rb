@@ -300,6 +300,15 @@ class InsightsHelperTest < ActionView::TestCase
     assert_not insight_dig_in_available?(insight)
   end
 
+  test "fixed commitments ratio warns, leads with the ratio and links to recurring transactions" do
+    insight = build_insight("fixed_commitments_ratio", metadata: { "current_ratio" => 35.0, "previous_ratio" => 30.0 },
+                                                       facts: { "current_ratio" => "35.0" })
+
+    assert_equal :warning, insight_sentiment(insight)
+    assert_equal [ "35.0%", "of income" ], insight_key_figure(insight)
+    assert_equal recurring_transactions_path, insight_action(insight)[:href]
+  end
+
   test "loan payment change reads its direction for sentiment and leads with the new payment" do
     up = build_insight("loan_payment_change",
                        metadata: { "account_id" => accounts(:loan).id, "previous_payment" => 1424.0, "new_payment" => 1616.0 },

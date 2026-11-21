@@ -432,11 +432,14 @@ class Family < ApplicationRecord
   end
 
   # Runs Bayes over the uncategorized transactions in scope the user hasn't
-  # locked, transfer legs aside (they never belong in Uncategorized); those
-  # it isn't sure about are tried again with a better model next time.
-  # Returns the modified count.
+  # locked, transfer legs aside (they never belong in Uncategorized), and
+  # excluded transactions aside too, as the uncategorized badge and Quick
+  # Categorize already do (Entry.uncategorized_transactions); those it isn't
+  # sure about are tried again with a better model next time. Returns the
+  # modified count.
   def bayes_categorize_uncategorized(scope = categorizable_transactions)
-    scope = scope.where(category_id: nil).where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS).enrichable(:category_id)
+    scope = scope.with_entry.where(entries: { excluded: false }, category_id: nil)
+                 .where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS).enrichable(:category_id)
     requested = scope.count
     return 0 if requested.zero?
 

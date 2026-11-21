@@ -81,7 +81,21 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
     # 2. Build the import object with permitted config attributes
     @import = family.imports.build(import_config_params.merge(type: type))
-    @import.account_id = params[:account_id] if params[:account_id].present?
+
+    # The target account must be one the API user can write to.
+    if params[:account_id].present?
+      account = visible_import_account
+      unless account
+        return render json: {
+          error: "validation_failed",
+          message: "Import could not be created",
+          errors: [ "Account not found" ]
+        }, status: :unprocessable_entity
+      end
+      return unless require_api_account_permission!(account)
+
+      @import.account = account
+    end
 
     # 3. Attach the uploaded file if present (with validation)
     if params[:file].present?
@@ -161,6 +175,12 @@ class Api::V1::ImportsController < Api::V1::BaseController
   end
 
   def preflight
+    if params[:account_id].present?
+      account = visible_import_account
+      raise ActiveRecord::RecordNotFound unless account
+      return unless require_api_account_permission!(account)
+    end
+
     preflight_result = Import::Preflight.new(family: current_resource_owner.family, params: preflight_params).call
     render json: preflight_result.payload, status: preflight_result.status
   rescue ActiveRecord::RecordNotFound
@@ -243,6 +263,18 @@ class Api::V1::ImportsController < Api::V1::BaseController
         :amount_type_inflow_value,
         :rows_to_skip
       )
+    end
+
+    # The import's target account, when the API user can see it. Unknown,
+    # malformed, cross-family and unshared ids all give nil, so the response
+    # does not reveal which accounts exist; a visible account the user cannot
+    # write to is then a 403, as in the rest of the API.
+    def visible_import_account
+      return unless valid_uuid?(params[:account_id])
+
+      current_resource_owner.family.accounts
+        .accessible_by(current_resource_owner)
+        .find_by(id: params[:account_id])
     end
 
     def preflight_params

@@ -39,6 +39,13 @@ sync_hourly:
   queue: "scheduled"
   description: "Syncs provider items that opt-in to hourly syncing"
 
+recover_push_deliveries:
+  cron: "*/15 * * * *" # PushDelivery::CLAIM_TIMEOUT
+  class: "RecoverPushDeliveriesJob"
+  active_job: true
+  queue: "scheduled"
+  description: "Re-enqueues push deliveries whose enqueue failed or whose claim was abandoned"
+
 sync_scheduled_items:
   cron: "*/15 * * * *" # SyncSchedule::TICK
   class: "SyncScheduledItemsJob"

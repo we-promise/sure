@@ -209,9 +209,14 @@ class Family::AutoCategorizer
       )
     end
 
+    # Excluded transactions are out of every report on purpose; a guessed
+    # category on them is noise, so the LLM is never asked about them.
+    # `preload`, not `includes`: the entries condition would turn `includes` into
+    # outer joins, and Postgres refuses the apply step's FOR UPDATE on those.
     def scope
-      family.transactions.where(id: transaction_ids, category_id: nil)
+      family.transactions.with_entry
+                         .where(id: transaction_ids, category_id: nil, entries: { excluded: false })
                          .enrichable(:category_id)
-                         .includes(:category, :merchant, :entry)
+                         .preload(:category, :merchant, :entry)
     end
 end

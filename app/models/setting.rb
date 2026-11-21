@@ -4,13 +4,19 @@ class Setting < RailsSettings::Base
 
   cache_prefix { "v1" }
 
+  # Compose files pass unset variables through as "", which `to_i` would turn
+  # into 0 and show in number fields whose minimum is above 0.
+  def self.integer_from_env(name)
+    ENV[name].to_s.strip.presence&.to_i
+  end
+
   # Third-party API keys
   field :twelve_data_api_key, type: :string, default: ENV["TWELVE_DATA_API_KEY"]
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
-  field :openai_request_timeout, type: :integer, default: ENV["OPENAI_REQUEST_TIMEOUT"]&.to_i
+  field :openai_request_timeout, type: :integer, default: integer_from_env("OPENAI_REQUEST_TIMEOUT")
   field :anthropic_access_token, type: :string, default: ENV["ANTHROPIC_ACCESS_TOKEN"].presence || ENV["ANTHROPIC_API_KEY"].presence
   field :anthropic_model, type: :string, default: ENV["ANTHROPIC_MODEL"]
   field :anthropic_base_url, type: :string, default: ENV["ANTHROPIC_BASE_URL"]
@@ -31,21 +37,21 @@ class Setting < RailsSettings::Base
   # merchant detection, enhance-merchants, PDF processing). Defaults track
   # Ollama's historical 2048-token baseline so local small-context models work
   # out of the box. ENV overrides Setting at read time in Provider::Openai.
-  field :llm_context_window, type: :integer, default: ENV["LLM_CONTEXT_WINDOW"]&.to_i
-  field :llm_max_response_tokens, type: :integer, default: ENV["LLM_MAX_RESPONSE_TOKENS"]&.to_i
-  field :llm_max_items_per_call, type: :integer, default: ENV["LLM_MAX_ITEMS_PER_CALL"]&.to_i
+  field :llm_context_window, type: :integer, default: integer_from_env("LLM_CONTEXT_WINDOW")
+  field :llm_max_response_tokens, type: :integer, default: integer_from_env("LLM_MAX_RESPONSE_TOKENS")
+  field :llm_max_items_per_call, type: :integer, default: integer_from_env("LLM_MAX_ITEMS_PER_CALL")
 
   # How long the chat UI waits for an assistant response before treating it as
   # undelivered. Self-hosted users running local models on slow hardware need
   # this well above the 90s default — a local model that takes minutes to
   # generate would otherwise always trip the watchdog. Read via
   # `Chat.response_timeout`, which applies ENV > Setting > default precedence.
-  field :ai_response_timeout, type: :integer, default: ENV["AI_RESPONSE_TIMEOUT"]&.to_i
+  field :ai_response_timeout, type: :integer, default: integer_from_env("AI_RESPONSE_TIMEOUT")
   # Per-request bound for the admin "Run checks" AI probes on System Health.
   # The PDF probes do a full extraction round trip, which cloud models often
   # can't finish inside the 5s default. Read via `AiHealth::Probe.timeout`,
   # which applies ENV > Setting > default precedence.
-  field :ai_health_probe_timeout, type: :integer, default: ENV["AI_HEALTH_PROBE_TIMEOUT"]&.to_i
+  field :ai_health_probe_timeout, type: :integer, default: integer_from_env("AI_HEALTH_PROBE_TIMEOUT")
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
   field :external_assistant_model, type: :string
@@ -122,6 +128,10 @@ class Setting < RailsSettings::Base
   field :chimnie_api_key, type: :string, default: ENV["CHIMNIE_API_KEY"]
   field :terrascoutx_api_key, type: :string, default: ENV["TERRASCOUTX_API_KEY"]
 
+  # Instance-wide Plaid credentials; provider configuration handles ENV fallback.
+  field :plaid_secret, type: :string
+  field :plaid_eu_secret, type: :string
+
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
   # reads (decrypt) and writes (encrypt) while `super` delegates to the
@@ -145,6 +155,8 @@ class Setting < RailsSettings::Base
       anthropic_access_token
       jev_api_key
       external_assistant_token
+      plaid_secret
+      plaid_eu_secret
     ].freeze
 
     ENCRYPTED_FIELDS.each do |field_name|
