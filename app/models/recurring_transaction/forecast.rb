@@ -25,20 +25,28 @@ class RecurringTransaction::Forecast
     @end_date = parse_date(@filters[:end_date]) || Date.current + DEFAULT_DAYS
   end
 
-  # The series with at least one occurrence in the window. Only IDs are
-  # cached: cached ActiveRecord objects outlive schema changes across upgrades
-  # and raise MissingAttributeError for columns added since.
-  def series
-    @series ||= begin
-      ids = Rails.cache.fetch(cache_key, expires_in: 1.day) { filtered_scope.pluck(:id) }
-      ids.empty? ? [] : family.recurring_transactions.where(id: ids).includes(merchant: { logo_attachment: :blob }).to_a
+  # Stored occurrences are the schedule: a series forecasts its open ones, on
+  # their effective (moved or snoozed) date, so a cycle already paid, skipped
+  # or missed is not forecast again. Past the last stored occurrence the
+  # schedule continues. A series with nothing stored yet falls back to its
+  # cached next_expected_date, as RecurringTransaction#next_due_date does.
+  def occurrences
+    @occurrences ||= begin
+      open = open_occurrences.group_by(&:recurring_transaction_id)
+      stored_through = stored_horizons
+      candidates.flat_map { |series|
+        dates = if stored_through.key?(series.id)
+          stored_dates(series, open.fetch(series.id, []), stored_through[series.id])
+        else
+          hinted_dates(series)
+        end
+        dates.select { |date| date.between?(start_date, end_date) }.uniq.sort.map { |date| Occurrence.new(date:, series:) }
+      }.sort_by(&:date)
     end
   end
 
-  def occurrences
-    @occurrences ||= series
-      .flat_map { |s| s.projected_due_dates(through: end_date).select { |date| date >= start_date }.map { |date| Occurrence.new(date:, series: s) } }
-      .sort_by(&:date)
+  def series
+    occurrences.map(&:series).uniq
   end
 
   # Transfers count as occurrences but not as income or expense, as in
@@ -73,9 +81,45 @@ class RecurringTransaction::Forecast
   private
     attr_reader :user, :filters
 
+    # The active series matching the filters. Only IDs are cached: cached
+    # ActiveRecord objects outlive schema changes across upgrades and raise
+    # MissingAttributeError for columns added since.
+    def candidates
+      @candidates ||= begin
+        ids = Rails.cache.fetch(cache_key, expires_in: 1.day) { filtered_scope.pluck(:id) }
+        ids.empty? ? [] : family.recurring_transactions.where(id: ids)
+                                .includes(:recurrence_rules, merchant: { logo_attachment: :blob }).to_a
+      end
+    end
+
+    def stored_dates(series, open, stored_through)
+      beyond = series.schedule.occurrences_between([ start_date, stored_through + 1 ].max, end_date)
+      open.map(&:effective_due_on) + beyond
+    end
+
+    def hinted_dates(series)
+      hint = series.next_expected_date
+      first = hint <= Date.current ? hint : [ hint, series.schedule.next_occurrence_from_today ].compact.min
+      [ first ] + series.schedule.occurrences_between(first + 1, end_date)
+    end
+
+    def open_occurrences
+      return [] if candidates.empty?
+
+      RecurringOccurrence.open_status.where(recurring_transaction_id: candidates.map(&:id))
+        .where("GREATEST(due_on, COALESCE(snoozed_until, due_on)) BETWEEN ? AND ?", start_date, end_date).to_a
+    end
+
+    # The last stored schedule date of each candidate that has any.
+    def stored_horizons
+      return {} if candidates.empty?
+
+      RecurringOccurrence.where(recurring_transaction_id: candidates.map(&:id))
+        .group(:recurring_transaction_id).maximum(:original_due_on)
+    end
+
     def filtered_scope
       scope = family.recurring_transactions.accessible_by(user).active
-        .where(next_expected_date: Date.current..end_date)
 
       scope = filter_accounts(scope)
       scope = filter_categories(scope)
@@ -154,16 +198,15 @@ class RecurringTransaction::Forecast
       end
     end
 
-    # The amount a projected row shows: the running average for a manual
-    # series that tracks one, otherwise the fixed amount.
     def expected_amount(series)
       series.manual? && series.expected_amount_avg.present? ? series.expected_amount_avg : series.amount
     end
 
+    # Which series match does not depend on the window, so it is not in the key.
     def cache_key
       applied = filters.except(*IGNORED_FILTERS, :start_date, :end_date).sort.to_h
       [
-        "transactions_projected_recurring/v7", family.id, user.id, Date.current, start_date, end_date,
+        "transactions_projected_recurring/v8", family.id, user.id, Date.current,
         Digest::SHA256.hexdigest(applied.to_json), @cache_version
       ].join("/")
     end

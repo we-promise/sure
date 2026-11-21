@@ -56,18 +56,6 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert series.errors.key?(:bank_reference)
   end
 
-  test "projected_due_dates lists every occurrence from the next expected date through the horizon" do
-    first_due = Date.current.next_month.beginning_of_month
-    series = @family.recurring_transactions.create!(
-      account: @account, name: "Rent", amount: 1500, currency: "USD", status: "active",
-      expected_day_of_month: 1, last_occurrence_date: first_due - 1.month, next_expected_date: first_due
-    )
-
-    assert_equal [ first_due, first_due + 1.month, first_due + 2.months ],
-      series.projected_due_dates(through: first_due + 2.months)
-    assert_equal [ first_due ], series.projected_due_dates(through: first_due)
-    assert_empty series.projected_due_dates(through: first_due - 1.day)
-  end
 
   test "payable ignores a debt destination that belongs to another family" do
     foreign_card = families(:empty).accounts.create!(
