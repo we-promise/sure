@@ -4,6 +4,7 @@ tr:
     errors:
       models:
         rule:
+          conflicting_note_actions: "Bir kural işlem notlarını aynı anda hem değiştirip hem de bir satır ekleyemez"
           duplicate_actions: 'Kural yinelenen eylemler içeremez: %{types}'
           min_actions: en az bir eylem içermelidir
           nested_conditions: Bileşik koşullar iç içe olamaz

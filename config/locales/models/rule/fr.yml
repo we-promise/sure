@@ -4,6 +4,7 @@ fr:
     errors:
       models:
         rule:
+          conflicting_note_actions: "Une règle ne peut pas à la fois remplacer et compléter les notes de la transaction"
           duplicate_actions: La règle ne peut pas avoir d'actions en double %{types}
           min_actions: doit avoir au moins une action
           nested_conditions: Les conditions composées ne peuvent pas être imbriquées

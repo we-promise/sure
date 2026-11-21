@@ -5,6 +5,7 @@ uk:
       models:
         rule:
           min_actions: "повинно мати принаймні одну дію"
+          conflicting_note_actions: "Правило не може одночасно замінювати нотатки транзакції та додавати до них рядок"
           duplicate_actions: "Правило не може мати дублікатів дій %{types}"
           nested_conditions: "Складні умови не можуть бути вкладеними"
   rule:

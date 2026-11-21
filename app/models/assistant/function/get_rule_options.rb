@@ -82,6 +82,8 @@ class Assistant::Function::GetRuleOptions < Assistant::Function
       when "transaction_type", "set_investment_activity_label" then allowed_values(key)
       when "transaction_amount" then "number (absolute amount, in the account's currency)"
       when "set_transaction_name" then "the new transaction name"
+      when "set_transaction_notes" then "the new notes, replacing the current ones"
+      when "append_transaction_notes" then "one or more lines of text; each line is added to the notes unless a line already equals it"
       else "text"
       end
     end

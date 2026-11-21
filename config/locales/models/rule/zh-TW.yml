@@ -5,5 +5,6 @@ zh-TW:
       models:
         rule:
           min_actions: 至少須有一個動作
+          conflicting_note_actions: "規則不能同時設定並附加交易備註"
           duplicate_actions: 規則不能有重複的動作 %{types}
           nested_conditions: 複合條件不能巢狀使用

@@ -3,6 +3,9 @@ de:
   rules:
     no_action: Keine Aktion
     no_condition: Keine Bedingung
+    action_executors:
+      append_transaction_notes: Zeile an Notiz anhängen
+      set_transaction_notes: Notiz ersetzen
     notification_baseline_timed_out: Diese Regel ist weiterhin ausgeschaltet. Die Prüfung, welche Transaktionen sie bereits erfasst, hat zu lange gedauert – ohne diese Prüfung würde sie zu allen eine E-Mail senden. Vereinfache ihre Bedingungen und schalte sie dann erneut ein.
     category_rule_cta:
       close: Schließen
