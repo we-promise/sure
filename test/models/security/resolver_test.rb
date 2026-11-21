@@ -526,4 +526,98 @@ class Security::ResolverTest < ActiveSupport::TestCase
       assert_instance_of Provider::TwelveData, resolved.price_data_provider
     end
   end
+
+  test "a successful search settles a resolution_pending placeholder in place" do
+    placeholder = Security.create!(ticker: "PNDX", offline: true, offline_reason: "resolution_pending")
+    stub_listed_search("PNDX")
+
+    assert_no_difference "Security.count" do
+      resolved = Security::Resolver.new("PNDX").resolve
+
+      assert_equal placeholder, resolved
+      resolved.reload
+      assert_equal "XNAS", resolved.exchange_operating_mic
+      assert_equal "US", resolved.country_code
+      assert_equal "Pending Co", resolved.name
+      refute resolved.offline?
+      assert_nil resolved.offline_reason
+    end
+  end
+
+  test "a ticker resolved through a failed, a successful and a failed search stays one security" do
+    failing = mock("failing_provider")
+    failing.stubs(:class).returns(Provider::YahooFinance)
+    failing.stubs(:search_securities).raises(StandardError, "rate limited")
+    Security.stubs(:providers).returns([ failing ])
+    Security.stubs(:enabled_securities_providers).returns([ "yahoo_finance" ])
+
+    placeholder = Security::Resolver.new("PNDU").resolve
+    assert_equal "resolution_pending", placeholder.offline_reason
+
+    Security.unstub(:providers)
+    stub_listed_search("PNDU")
+    assert_equal placeholder, Security::Resolver.new("PNDU").resolve
+
+    Security.unstub(:search_provider)
+    Security.stubs(:providers).returns([ failing ])
+    assert_equal placeholder, Security::Resolver.new("PNDU").resolve
+    assert_equal 1, Security.where(ticker: "PNDU").count
+  end
+
+  test "a successful search merges a resolution_pending placeholder into the listed security" do
+    placeholder = Security.create!(ticker: "PNDY", offline: true, offline_reason: "resolution_pending")
+    listed = Security.create!(ticker: "PNDY", exchange_operating_mic: "XNAS", country_code: "US", price_provider: "yahoo_finance")
+    holding = accounts(:investment).holdings.create!(security: placeholder, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    stub_listed_search("PNDY")
+    Account.any_instance.expects(:sync_later).once
+
+    resolved = Security::Resolver.new("PNDY").resolve
+
+    assert_equal listed, resolved
+    assert_not Security.exists?(placeholder.id)
+    assert_equal listed.id, holding.reload.security_id
+  end
+
+  test "retries the provider for a ticker with a placeholder even when the listed row sorts first" do
+    listed = Security.create!(id: "00000000-0000-4000-8000-000000000001", ticker: "PNDZ", exchange_operating_mic: "XNAS", country_code: "US", price_provider: "yahoo_finance")
+    placeholder = Security.create!(id: "ffffffff-ffff-4fff-bfff-ffffffffffff", ticker: "PNDZ", offline: true, offline_reason: "resolution_pending")
+    stub_listed_search("PNDZ")
+
+    assert_equal listed, Security::Resolver.new("PNDZ").resolve
+    assert_not Security.exists?(placeholder.id)
+  end
+
+  test "leaves a confirmed no-match blank-MIC security alone when a search later lists the ticker" do
+    unlisted = Security.create!(ticker: "PNDW", offline: true)
+    stub_listed_search("PNDW")
+
+    assert_difference "Security.count", 1 do
+      resolved = Security::Resolver.new("PNDW", exchange_operating_mic: "XNAS").resolve
+
+      assert_not_equal unlisted, resolved
+      assert_equal "XNAS", resolved.exchange_operating_mic
+    end
+    assert unlisted.reload.offline?
+  end
+
+  test "does not settle a placeholder for a different ticker than the search matched" do
+    placeholder = Security.create!(ticker: "PNDV", offline: true, offline_reason: "resolution_pending")
+    stub_listed_search("PNDV", match_ticker: "PNDVX")
+
+    resolved = Security::Resolver.new("PNDV").resolve
+
+    assert_equal "PNDVX", resolved.ticker
+    placeholder.reload
+    assert_nil placeholder.exchange_operating_mic
+    assert_equal "resolution_pending", placeholder.offline_reason
+  end
+
+  private
+    def stub_listed_search(symbol, match_ticker: symbol)
+      provider = mock("listed_provider")
+      Security.stubs(:provider_for).with("yahoo_finance").returns(provider)
+      Security.stubs(:search_provider).with { |query, **| query == symbol }.returns([
+        Security.new(ticker: match_ticker, name: "Pending Co", exchange_operating_mic: "XNAS", country_code: "US", price_provider: "yahoo_finance")
+      ])
+    end
 end

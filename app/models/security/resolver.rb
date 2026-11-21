@@ -101,7 +101,11 @@ class Security::Resolver
       # confirmed no-match. Skip the DB fast path so this resolution attempt
       # actually retries the provider instead of returning the same stale
       # offline record forever.
-      return nil if security.offline? && security.offline_reason == "resolution_pending"
+      return nil if resolution_pending?(security)
+      # Without an exchange, the lookup above returns whichever row for the
+      # ticker sorts first. While a placeholder exists, retry the provider
+      # so a successful search can fold it into the listed row.
+      return nil if exchange_operating_mic.blank? && pending_placeholder_for(symbol)
 
       # When the caller provides an explicit provider (e.g. user selected from
       # search results), honor that choice. Automated syncs (Plaid, SimpleFIN)
@@ -174,6 +178,7 @@ class Security::Resolver
         ticker: match.ticker,
         exchange_operating_mic: match.exchange_operating_mic
       )
+      security = settle_pending_placeholder(security, match)
 
       security.country_code = match.country_code
 
@@ -203,6 +208,35 @@ class Security::Resolver
       reactivate_if_provider_available!(security)
 
       security
+    end
+
+    # A search that fails technically for a ticker without an exchange leaves
+    # a blank-MIC "resolution_pending" placeholder. Once a search places the
+    # ticker on an exchange, that placeholder is the same instrument: it
+    # becomes the listed row, or is merged into it when one already exists.
+    # Left alone, it would keep receiving holdings whenever a later search
+    # failed, splitting one position across two securities.
+    def settle_pending_placeholder(security, match)
+      return security if security.exchange_operating_mic.blank?
+
+      placeholder = pending_placeholder_for(match.ticker)
+      return security unless placeholder
+
+      if security.new_record?
+        placeholder.exchange_operating_mic = security.exchange_operating_mic
+        placeholder
+      else
+        Security::Merger.new(from: placeholder, into: security).merge!.reload
+      end
+    end
+
+    def pending_placeholder_for(ticker)
+      placeholder = Security.find_by_ticker_and_exchange(ticker: ticker, match_blank_mic: true)
+      placeholder if placeholder && resolution_pending?(placeholder)
+    end
+
+    def resolution_pending?(security)
+      security.offline? && security.offline_reason == "resolution_pending"
     end
 
     # If a security was marked offline, bring it back online whenever we have
