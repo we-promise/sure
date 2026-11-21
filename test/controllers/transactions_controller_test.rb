@@ -77,6 +77,36 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/für die am .* fällige Rechnung/, response.body)
   end
 
+  test "the drawer lists only the active bill a payment paid, not an ended twin's allocation" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    due = Date.current.beginning_of_month + 8
+    series_for = lambda do |name, status|
+      series = @user.family.recurring_transactions.create!(
+        account: accounts(:depository), name: name, amount: 2000,
+        currency: "USD", expected_day_of_month: 9, status: status, manual: true,
+        bill_type: "bill", last_occurrence_date: Date.current,
+        next_expected_date: Date.current
+      )
+      series.recurring_occurrences.destroy_all
+      series.recurring_occurrences.create!(
+        family: @user.family, original_due_on: due, due_on: due,
+        currency: "USD", expected_amount: 2000, status: "scheduled"
+      )
+    end
+    ended = series_for.call("Ended Twin", "ended")
+    active = series_for.call("Active Twin", "active")
+    [ ended, active ].each do |occurrence|
+      occurrence.allocations.create!(entry: @entry, allocated_amount: 2000, currency: "USD",
+                                     source: "auto_matched", state: "confirmed")
+    end
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match "Active Twin", response.body
+    assert_no_match "Ended Twin", response.body
+  end
+
   # The dialog route is GET only. Rendered as a button_to, "Create a bill"
   # POSTed to it and the modal frame showed "Content Missing".
   test "create a bill opens the prefilled dialog with a GET" do

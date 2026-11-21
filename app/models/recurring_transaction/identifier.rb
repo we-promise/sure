@@ -125,7 +125,9 @@ class RecurringTransaction
         if claimed
           # Manual rows are refreshed by the dedicated variance pass; ended
           # rows are tombstones (the user dismissed or cancelled the bill).
-          next if claimed.manual? || claimed.ended?
+          # A reference-only series is tracked by its note alone, not by the
+          # name or merchant groups this pass refreshes it from.
+          next if claimed.manual? || claimed.ended? || claimed.reference_only?
 
           update_claimed_series(claimed, pattern)
           next
@@ -139,7 +141,7 @@ class RecurringTransaction
           # save. Re-read and treat it as the claimed series.
           racer = family.recurring_transactions.find_by(identity_conditions(pattern, scoped: candidates.any?))
           next unless racer
-          next if racer.manual? || racer.ended?
+          next if racer.manual? || racer.ended? || racer.reference_only?
 
           update_claimed_series(racer, pattern)
         end
@@ -343,7 +345,7 @@ class RecurringTransaction
       def preload_series_to_refresh(recurring_patterns, existing_by_identity)
         to_refresh = recurring_patterns.filter_map do |pattern|
           claimed = nearest_within_tolerance(existing_by_identity[pattern_identity(pattern)] || [], pattern[:expected_amount_avg])
-          claimed unless claimed.nil? || claimed.manual? || claimed.ended?
+          claimed unless claimed.nil? || claimed.manual? || claimed.ended? || claimed.reference_only?
         end.uniq
 
         return if to_refresh.empty?
@@ -522,6 +524,8 @@ class RecurringTransaction
       end
 
       def manual_recurring_matches_entry?(recurring, entry)
+        # Identified by its note alone; the matcher tracks it, not name and day.
+        return false if recurring.reference_only?
         return false unless entry.currency == recurring.currency
         return false if recurring.account_id.present? && entry.account_id != recurring.account_id
         # Anchor on the row's stable, user-set seed amount (not
