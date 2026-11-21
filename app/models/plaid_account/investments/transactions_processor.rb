@@ -30,6 +30,9 @@ class PlaidAccount::Investments::TransactionsProcessor
       "dividend" => "Dividend",
       "qualified dividend" => "Dividend",
       "non-qualified dividend" => "Dividend",
+      # A fund's capital-gain distribution is income paid in cash, as a dividend is.
+      "long-term capital gain" => "Dividend",
+      "short-term capital gain" => "Dividend",
       "interest" => "Interest"
     },
     "buy" => {
@@ -64,7 +67,7 @@ class PlaidAccount::Investments::TransactionsProcessor
     end
 
     def cash_transaction?(transaction)
-      %w[cash fee transfer contribution withdrawal].include?(transaction["type"])
+      %w[cash fee transfer contribution withdrawal].include?(transaction["type"]&.downcase)
     end
 
     def find_or_create_trade_entry(transaction)
@@ -127,10 +130,11 @@ class PlaidAccount::Investments::TransactionsProcessor
     def derived_qty(transaction)
       reported_qty = transaction["quantity"]
       abs_qty = reported_qty.abs
+      plaid_type = transaction["type"]&.downcase
 
-      if transaction["type"] == "sell" || transaction["amount"] < 0
+      if plaid_type == "sell" || transaction["amount"] < 0
         -abs_qty
-      elsif transaction["type"] == "buy" || transaction["amount"] > 0
+      elsif plaid_type == "buy" || transaction["amount"] > 0
         abs_qty
       else
         reported_qty

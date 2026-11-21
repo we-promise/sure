@@ -735,6 +735,23 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal 0.91, entry.entryable.exchange_rate
   end
 
+  test "re-importing a trade keeps the label of a user-modified entry and relabels an untouched one" do
+    adapter = Account::ProviderImportAdapter.new(accounts(:investment))
+    import = ->(external_id) do
+      adapter.import_trade(external_id: external_id, security: securities(:aapl), quantity: 1, price: 100, amount: 100,
+                           currency: "USD", date: Date.current, source: "plaid", activity_label: "Reinvestment")
+    end
+    edited = import.call("plaid_label_user")
+    untouched = import.call("plaid_label_sync")
+    [ edited, untouched ].each { |entry| entry.trade.update!(investment_activity_label: "Buy") }
+    edited.mark_user_modified!
+
+    import.call("plaid_label_user")
+    import.call("plaid_label_sync")
+
+    assert_equal [ "Buy", "Reinvestment" ], [ edited, untouched ].map { |entry| entry.trade.reload.investment_activity_label }
+  end
+
   # So user-entered fees aren't erased by syncing from providers that don't report fees
   test "preserves existing trade fee when reimport omits it" do
     investment_account = accounts(:investment)

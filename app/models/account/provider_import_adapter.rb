@@ -737,13 +737,16 @@ class Account::ProviderImportAdapter
         raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
       end
 
-      # Always update Trade attributes (works for both new and existing records)
+      # Always update Trade attributes (works for both new and existing records),
+      # except a label the user set by editing the trade.
+      label = activity_label || (quantity > 0 ? "Buy" : "Sell")
+      label = entry.entryable.investment_activity_label if entry.user_modified? && entry.entryable.investment_activity_label.present?
       trade_attributes = {
         security: security,
         qty: quantity,
         price: price,
         currency: currency,
-        investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
+        investment_activity_label: label
       }
       trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
       trade_attributes[:fee] = fee unless fee.nil?

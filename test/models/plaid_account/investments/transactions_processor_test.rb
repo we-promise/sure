@@ -362,6 +362,49 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal "Reinvestment", entry.trade.investment_activity_label
   end
 
+  test "a cash capital-gain distribution is labelled Dividend and classified as income" do
+    long_term = process_plaid_transaction(cash_row("ltcg_1", "long-term capital gain", "Long-term capital gain VTI"))
+    short_term = process_plaid_transaction(cash_row("stcg_1", "short-term capital gain", "Short-term capital gain VTI"))
+
+    assert_equal [ "Dividend", "Dividend" ], [ long_term, short_term ].map { |e| e.transaction.investment_activity_label }
+    assert_equal [ :income, :income ], [ long_term, short_term ].map { |e| classify(e) }
+  end
+
+  test "a capitalised cash type is routed as a cash transaction" do
+    row = cash_row("div_type_case_1", "dividend", "Dividend AAPL").merge("type" => "Cash")
+
+    assert_difference -> { Trade.count } => 0, -> { Transaction.count } => 1 do
+      entry = process_plaid_transaction(row)
+      assert_equal "Dividend", entry.transaction.investment_activity_label
+    end
+  end
+
+  test "a capitalised sell type still makes the quantity negative" do
+    row = trade_row("sell_case_1", "Sell", "sell").merge("quantity" => 0.1, "amount" => 12.5)
+
+    assert_equal BigDecimal("-0.1"), process_plaid_transaction(row).trade.qty
+  end
+
+  test "a dividend and its reversal net to zero income" do
+    dividend = process_plaid_transaction(cash_row("div_rev_1", "dividend", "Dividend AAPL"))
+    reversal = process_plaid_transaction(cash_row("div_rev_2", "dividend", "Dividend AAPL reversal").merge("amount" => 12.5))
+
+    assert_equal [ "Dividend", "Dividend" ], [ dividend, reversal ].map { |e| e.transaction.investment_activity_label }
+    assert_equal [ :income, :income ], [ dividend, reversal ].map { |e| classify(e) }
+    totals = InvestmentStatement::Totals.new(dividend.account.family, account_ids: [ dividend.account_id ], date_range: Date.current..Date.current).call
+    assert_equal 0, totals[:dividends]
+  end
+
+  test "re-syncing keeps a label the user set on a trade" do
+    entry = process_plaid_transaction(trade_row("drip_user_1", "buy", "dividend reinvestment"))
+    entry.trade.update!(investment_activity_label: "Buy")
+    entry.mark_user_modified!
+
+    assert_no_changes -> { entry.trade.reload.investment_activity_label } do
+      PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+    end
+  end
+
   private
 
     def cash_row(id, subtype, name)
