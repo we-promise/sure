@@ -42,6 +42,57 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       book.disposals.map { |d| [ d.lot_source_id, d.qty, d.unit_cost ] }
   end
 
+  test "under fifo a split keeps an older shortfall ahead of a later sale's" do
+    book = Holding::LotBook.new(method: "fifo")
+    book.apply(nil, -10, source_id: "s1")
+    book.split(Rational(2, 1))
+    book.apply(nil, -10, source_id: "s2")
+
+    book.apply(BigDecimal("100"), 20, source_id: "b1")
+    book.apply(BigDecimal("200"), 10, source_id: "b2")
+
+    # s1's 20 post-split shares are filled first, all by b1, and keep their
+    # unknown cost because the cover is in other shares than s1 sold. Only then
+    # does b2 price s2.
+    assert_equal [ [ "s1", nil, 10, nil ], [ "s2", "b2", 10, 200 ] ],
+      book.disposals.map { |d| [ d.sale_id, d.lot_source_id, d.qty, d.unit_cost ] }
+    assert_empty book.lots
+  end
+
+  test "under fifo a split that does not divide evenly leaves no sliver of an older shortfall queued" do
+    book = Holding::LotBook.new(method: "fifo")
+    book.apply(nil, -2, source_id: "s1")
+    book.apply(nil, -2, source_id: "s2")
+    book.split(Rational(1, 3))
+    # Covers the 4/3 short shares, leaving 26/3 as a lot.
+    book.apply(BigDecimal("30"), 10, source_id: "cover")
+
+    book.apply(nil, -20, source_id: "s3")
+    book.apply(BigDecimal("10"), 20, source_id: "b2")
+
+    s3 = book.disposals.select { |d| d.sale_id == "s3" }
+    assert_equal %w[cover b2], s3.map(&:lot_source_id),
+      "the later short sale is priced in full, with no unknown-cost sliver left by the split's rounding"
+    assert_equal 20, s3.sum(&:qty)
+  end
+
+  test "under fifo a shortfall that a split scales to nothing fills nothing" do
+    book = Holding::LotBook.new(method: "fifo")
+    book.apply(nil, BigDecimal("-0.000000000000000001"), source_id: "s1")
+    book.apply(nil, -2, source_id: "s2")
+    book.split(Rational(1, 3))
+    # The position is 2.000000000000000001 short, 0.666666666666666667 after
+    # the split; s1's entry scales to nothing, so all of it is s2's.
+    book.apply(BigDecimal("30"), BigDecimal("0.666666666666666667"), source_id: "cover")
+
+    book.apply(nil, -1, source_id: "s3")
+    book.apply(BigDecimal("10"), 1, source_id: "b2")
+
+    assert_equal [ [ "b2", 1, 10 ] ],
+      book.disposals.select { |d| d.sale_id == "s3" }.map { |d| [ d.lot_source_id, d.qty, d.unit_cost ] }
+    assert_equal 0, book.open_qty
+  end
+
   test "under average the book records no disposals" do
     book = Holding::LotBook.new
     book.apply(BigDecimal("12"), 60, source_id: "first")

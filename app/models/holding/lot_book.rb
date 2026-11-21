@@ -124,10 +124,26 @@ class Holding::LotBook
   # is restated the same way.
   def split(ratio)
     @total_qty = Security::Split.scale(@total_qty, ratio)
-    @shortfall = Security::Split.scale(@shortfall, ratio)
     # A cover after the split is in other shares than the sale it would price,
-    # so a sale short across a split keeps its unknown cost.
-    @uncovered.clear
+    # so a sale short across a split keeps its unknown cost. Its scaled
+    # shortfall keeps its place in the queue, with no disposal to price, so a
+    # later acquisition still fills the older shortfall before a newer sale's.
+    # Each entry is scaled as the difference of its scaled running totals, so
+    # the queue adds up to exactly the scaled shortfall, as the calculators
+    # scale the position once: a cover of the whole shortfall leaves no sliver
+    # of an entry queued. An entry that scales to nothing is passed over by
+    # #cover without filling anything.
+    scaled_total = BigDecimal("0")
+    total = BigDecimal("0")
+    @uncovered.map! do |_index, short|
+      total += short
+      before = scaled_total
+      scaled_total = Security::Split.scale(total, ratio)
+      [ nil, scaled_total - before ]
+    end
+    # Under fifo every shortfall is queued, so the queue's total is the
+    # shortfall; under average nothing is queued.
+    @shortfall = @fifo ? scaled_total : Security::Split.scale(@shortfall, ratio)
     rescale_lots(Security::Split.scale(open_qty, ratio)) do |lot|
       lot.with(
         qty: Security::Split.scale(lot.qty, ratio),
@@ -241,7 +257,9 @@ class Holding::LotBook
 
     # Moves `qty` of the oldest shortfall onto the acquisition that filled it,
     # at its cost. Each shortfall is queued with its disposal's index, or nil
-    # for a transfer out, which recorded none but is still filled in turn. A
+    # when there is nothing to price: a transfer out, which recorded no
+    # disposal, or a sale whose shortfall was carried across a split, which
+    # keeps its unknown cost. Both are still filled in turn. A
     # covered part leaves its disposal at a lower quantity, which #disposals
     # drops once it reaches zero.
     def cover(qty, source_id, unit_cost)
