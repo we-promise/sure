@@ -12,7 +12,8 @@ class ProviderLogoTest < ViewComponent::TestCase
     render_inline(ProviderLogo.new(provider_key: :example))
 
     assert_selector "img[src='https://cdn.brandfetch.io/example.com/icon/fallback/404/w/40/h/40?c=test-client-id']"
-    assert_selector "img[onerror='#{ProviderLogo::REMOVE_ON_ERROR}']"
+    assert_selector "img[data-controller='image-fallback'][data-action='error->image-fallback#remove']"
+    assert_no_selector "img[onerror]"
     assert_selector "span[aria-hidden='true'] + img"
   end
 

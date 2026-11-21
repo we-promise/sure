@@ -13,10 +13,10 @@
   </div>
 
   <div class="text-center">
-    <%= render DS::Link.new(
+    <%= render DS::Button.new(
       text: t("doorkeeper.authorizations.error.go_back"),
-      href: "javascript:history.back()",
-      variant: :secondary
+      variant: :secondary,
+      data: { controller: "history-back", action: "click->history-back#back" }
     ) %>
   </div>
 </div>
