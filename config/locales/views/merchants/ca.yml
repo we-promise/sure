@@ -21,7 +21,7 @@ ca:
       website_hint: Introdueix el lloc web del comerç per mostrar-ne automàticament
         el logotip
       iban_placeholder: "IBAN (opcional)"
-      iban_set_placeholder: "•••• •••• •••• •••• — IBAN desat, introdueix un valor nou per substituir-lo"
+      iban_set_placeholder: "%{masked} — IBAN desat, introdueix un valor nou per substituir-lo"
       iban_hint: "Les transaccions importades d'aquest número de compte s'assignen a aquest comerç. Si diversos comerços comparteixen el número, decideix el nom"
       iban_remove_label: "Elimina l'IBAN"
       website_placeholder: Lloc web (p. ex., starbucks.com)

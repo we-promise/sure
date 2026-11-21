@@ -102,14 +102,18 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#family_merchant_remove_iban_label", text: I18n.t("family_merchants.form.iban_remove_label")
   end
 
-  test "iban field masks keystrokes like a password field and signals a stored value" do
+  test "iban field is a plain text field that shows only the stored last four" do
     @merchant.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
 
     get edit_family_merchant_url(@merchant)
 
     assert_response :success
-    assert_select "input[type=password][name='family_merchant[iban]']", 1
-    assert_select "input[name='family_merchant[iban]'][placeholder^=?]", "••••"
+    # Not type=password: password managers would offer to fill the login
+    # password into it, and it would then be saved as the IBAN.
+    assert_select "input[type=password][name='family_merchant[iban]']", 0
+    assert_select "input[type=text][name='family_merchant[iban]'][autocomplete=off]:not([value])", 1
+    assert_select "input[name='family_merchant[iban]'][placeholder^=?]", "•••3201"
+    refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
   end
 
   test "edit form does not render a remove_iban toggle when no iban is stored" do
@@ -235,6 +239,18 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 1
+  end
+
+  test "iban field placeholder keeps the stored last four after a failed update" do
+    merchant = FamilyMerchant.create!(name: "Stored Landlord", family: @user.family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch family_merchant_url(merchant), params: {
+      family_merchant: { name: "", iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='family_merchant[iban]'][placeholder^=?]", "•••3201"
+    refute_includes response.body, "DE89370400440532013000" # pipelock:ignore IBAN
   end
 
   test "a failed conversion preserves the submitted color" do
