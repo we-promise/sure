@@ -361,6 +361,61 @@ class BrexItem::ImporterTest < ActiveSupport::TestCase
     )
   end
 
+  {
+    "an accounts response that is not a Hash" => [ -> { [] }, "Invalid accounts response format", nil ],
+    "an accounts response that cannot be parsed" => [ -> { raise JSON::ParserError, "unexpected token" }, "Failed to parse accounts response", "JSON::ParserError" ],
+    "an unexpected accounts fetch error" => [ -> { raise ArgumentError, "boom" }, "Unexpected error fetching accounts", "ArgumentError" ]
+  }.each do |name, (response, message, error_class)|
+    test "#{name} records a debug log entry" do
+      provider = Object.new
+      provider.define_singleton_method(:get_accounts) { response.call }
+
+      assert_difference -> { DebugLogEntry.where(message: message).count }, 1 do
+        assert_not BrexItem::Importer.new(@brex_item, brex_provider: provider).import[:success]
+      end
+      assert_equal({ "error_class" => error_class }.compact, DebugLogEntry.find_by!(message: message).metadata.slice("error_class"))
+    end
+  end
+
+  {
+    "a transactions response that is not a Hash" => [ -> { [] }, "Invalid transactions response format", nil ],
+    "a transactions response that cannot be parsed" => [ -> { raise JSON::ParserError, "unexpected token" }, "Failed to parse transactions response", "JSON::ParserError" ],
+    "an unexpected transactions fetch error" => [ -> { raise ArgumentError, "boom" }, "Unexpected error fetching transactions", "ArgumentError" ]
+  }.each do |name, (response, message, error_class)|
+    test "#{name} records a debug log entry for the account" do
+      accounts = { accounts: [ cash_account_payload ] }
+      provider = Object.new
+      provider.define_singleton_method(:get_accounts) { accounts }
+      provider.define_singleton_method(:get_cash_transactions) { |*, **| response.call }
+
+      result = nil
+      assert_difference -> { DebugLogEntry.where(message: message).count }, 1 do
+        result = BrexItem::Importer.new(@brex_item, brex_provider: provider).import
+      end
+
+      assert_equal 1, result[:transactions_failed]
+      entry = DebugLogEntry.find_by!(message: message)
+      assert_equal @brex_account.account_provider, entry.account_provider
+      assert_equal [ "cash_1", error_class ], entry.metadata.values_at("account_id", "error_class")
+    end
+  end
+
+  test "a transactions failure outside the fetch records a debug log entry for the account" do
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])
+    BrexItem::Importer.any_instance.stubs(:fetch_and_store_transactions).raises(ArgumentError, "boom")
+
+    result = nil
+    assert_difference -> { DebugLogEntry.where(message: "Failed to import transactions").count }, 1 do
+      result = BrexItem::Importer.new(@brex_item, brex_provider: provider).import
+    end
+
+    assert_equal 1, result[:transactions_failed]
+    entry = DebugLogEntry.find_by!(message: "Failed to import transactions")
+    assert_equal @brex_account.account_provider, entry.account_provider
+    assert_equal [ "cash_1", "ArgumentError" ], entry.metadata.values_at("account_id", "error_class")
+  end
+
   test "a credential failure is logged once, by the syncer, not by the importer" do
     Provider::Brex.any_instance.stubs(:get_accounts).raises(
       Provider::Brex::BrexError.new("Invalid Brex API token", :unauthorized, http_status: 401, trace_id: "trace_401")
