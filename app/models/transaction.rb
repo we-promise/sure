@@ -194,6 +194,7 @@ class Transaction < ApplicationRecord
       .join(" OR ")
       .then { |predicate| "(#{predicate})" }
   end
+  private_class_method :pending_expression_sql
 
   # Fixed-alias fragment for correlated SQL over `transactions t`, for every
   # provider.
