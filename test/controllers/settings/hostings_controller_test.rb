@@ -368,6 +368,37 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the exchange-rate select shows the ENV provider over a saved setting" do
+    Setting.exchange_rate_provider = "twelve_data"
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select#setting_exchange_rate_provider[disabled] option[selected]", count: 1
+        assert_select "select#setting_exchange_rate_provider option[selected][value=yahoo_finance]"
+      end
+    end
+  ensure
+    Setting.exchange_rate_provider = nil
+  end
+
+  test "the exchange-rate select shows the saved setting when ENV is unset" do
+    Setting.exchange_rate_provider = "frankfurter"
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select#setting_exchange_rate_provider:not([disabled]) option[selected][value=frankfurter]"
+      end
+    end
+  ensure
+    Setting.exchange_rate_provider = nil
+  end
+
   test "can update terrascoutx api key when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { terrascoutx_api_key: "terrascoutx-token" } }
