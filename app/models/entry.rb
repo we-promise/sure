@@ -716,12 +716,12 @@ class Entry < ApplicationRecord
   # and two edits can't both insert children. Returns false when the entry is no longer a split
   # parent. Editing an existing split doesn't re-check whether the parent is pending or a transfer:
   # it creates no new split. Raises SplitPartTransferredError while a part is a leg of a confirmed transfer.
-  def resplit!(splits)
+  def resplit!(splits, lock_attributes: false)
     with_split_lock do
       next false unless split_parent?
 
       unsplit!
-      split!(splits)
+      split!(splits, lock_attributes: lock_attributes)
       true
     end
   end
