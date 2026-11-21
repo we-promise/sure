@@ -66,6 +66,67 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal [ 1.2, 1.25, 1.3, 1.3 ], forward_rates.map(&:rate)
   end
 
+  # A rate stored where there was none is one a balance may have had to do
+  # without, so it is passed to the balance refresh. A row that already
+  # existed was usable, whether the import leaves it or corrects it, so it is
+  # not.
+  test "passes only the rates it newly stored to the balance refresh" do
+    ExchangeRate.delete_all
+    yesterday = 1.day.ago.to_date
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: yesterday, rate: 1.3)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: yesterday, rate: (BigDecimal("1") / BigDecimal("1.3")).round(12))
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(yesterday), end_date: Date.current)
+             .returns(provider_success_response([
+               OpenStruct.new(from: "USD", to: "EUR", date: yesterday, rate: 1.35),
+               OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.4)
+             ]))
+
+    refreshed = nil
+    ExchangeRateBalanceRefreshJob.expects(:perform_later).with { |rates| refreshed = rates }.once
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: yesterday,
+      end_date: Date.current,
+      clear_cache: true
+    ).import_provider_rates
+
+    assert_equal [ [ "EUR", "USD", Date.current ], [ "USD", "EUR", Date.current ] ],
+                 refreshed.map { |rate| [ rate[:from], rate[:to], rate[:date] ] }.sort
+    assert_equal BigDecimal("1.35"), ExchangeRate.find_by(from_currency: "USD", to_currency: "EUR", date: yesterday).rate,
+                 "precondition: the existing row was corrected, not left alone"
+    refreshed.each do |rate|
+      stored = ExchangeRate.find_by!(from_currency: rate[:from], to_currency: rate[:to], date: rate[:date])
+      assert_equal stored.created_at, rate[:stored_at], "each rate carries the time it was stored"
+    end
+  end
+
+  # The rates are stored either way; a queue that cannot take the refresh is
+  # recorded for support rather than failing the import.
+  test "a refresh that cannot be queued is logged and the import completes" do
+    ExchangeRate.delete_all
+    @provider.expects(:fetch_exchange_rates)
+             .returns(provider_success_response([ OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.4) ]))
+    ExchangeRateBalanceRefreshJob.expects(:perform_later).raises(StandardError, "queue unavailable")
+
+    assert_difference -> { DebugLogEntry.where(category: "exchange_rates").count }, 1 do
+      ExchangeRate::Importer.new(
+        exchange_rate_provider: @provider,
+        from: "USD",
+        to: "EUR",
+        start_date: Date.current,
+        end_date: Date.current,
+        clear_cache: true
+      ).import_provider_rates
+    end
+
+    assert ExchangeRate.exists?(from_currency: "USD", to_currency: "EUR", date: Date.current)
+  end
+
   test "no provider calls when all rates exist" do
     ExchangeRate.delete_all
 

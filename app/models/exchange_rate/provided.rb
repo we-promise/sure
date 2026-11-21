@@ -113,6 +113,14 @@ module ExchangeRate::Provided
           Rails.logger.warn("Could not replace unusable exchange rate #{rate.from}/#{rate.to} on #{rate.date}: #{e.message}")
         end
       end
+
+      # Reached only when no usable rate was stored for the date, so this one
+      # is a rate a balance may have had to do without
+      # (ExchangeRate::BalanceRefresh).
+      ExchangeRate::BalanceRefresh.enqueue(
+        [ { from: stored.from_currency, to: stored.to_currency, date: stored.date, stored_at: stored.created_at } ],
+        source: "ExchangeRate.find_or_fetch_rate", provider: provider
+      )
       rate
     end
 
