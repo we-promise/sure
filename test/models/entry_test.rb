@@ -132,6 +132,19 @@ class EntryTest < ActiveSupport::TestCase
     assert_transaction_row_first { entry.reload.destroy! }
   end
 
+  test "bulk_update! locks the selected rows once, not again per row" do
+    entries = Array.new(3) { create_transaction(account: accounts(:depository)) }
+
+    assert_queries_match(/FOR UPDATE/, count: 2) do
+      Entry.where(id: entries.map(&:id)).bulk_update!({ category_id: categories(:income).id, tag_ids: [ tags(:one).id ] }, update_tags: true)
+    end
+
+    entries.each do |entry|
+      assert entry.reload.transaction.locked?(:category_id)
+      assert entry.transaction.locked?(:tag_ids)
+    end
+  end
+
   test "bulk_update! with a block reads the tags of all entries in one query" do
     entries = Array.new(3) { create_transaction(account: accounts(:depository)) }
     yielded = []

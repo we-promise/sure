@@ -195,6 +195,30 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal provider_logo, merchant.logo_url
   end
 
+  test "locking the merchant keeps a category lock the user saved during detection" do
+    merchant = ProviderMerchant.create!(source: "plaid", name: "Gas Station")
+    entry = create_transaction(account: @account, name: "GAS 77", merchant: merchant)
+    txn = entry.transaction
+
+    provider_response = provider_success_response([
+      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Gas Station", business_url: "gasstation.example")
+    ])
+    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+
+    detector = Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ])
+    # The user categorizes the transaction after the detector loaded it.
+    detector.expects(:enhance_provider_merchant).with { |*|
+      user_entry = Entry.find(entry.id)
+      user_entry.save_and_lock_attributes { user_entry.transaction.update(category: categories(:food_and_drink)) }
+    }.returns(true)
+
+    detector.auto_detect
+
+    txn.reload
+    assert txn.locked?(:merchant_id)
+    assert txn.locked?(:category_id)
+  end
+
   test "enhancing a provider merchant without a logo builds the logo from the website's domain" do
     merchant = ProviderMerchant.create!(source: "plaid", name: "Book Store")
     txn = create_transaction(account: @account, name: "BOOK STORE 42", merchant: merchant).transaction

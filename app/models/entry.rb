@@ -471,22 +471,17 @@ class Entry < ApplicationRecord
   #   when it has tags, :always even when the edit removed them all
   # @yieldreturn [Boolean] whether the save succeeded
   # @return [Boolean] the block's result
-  def save_and_lock_attributes(user_modified: false, lock_tags: nil)
-    saved = false
-    self.class.transaction(requires_new: true) do
-      reload_locked_attributes_for_update if persisted?
-      raise ActiveRecord::Rollback unless yield
-
-      lock_saved_attributes!
-      # After lock_saved_attributes!: lock_attr! saves the transaction again,
-      # which replaces the saved changes that method reads.
+  def save_and_lock_attributes(user_modified: false, lock_tags: nil, &block)
+    # After lock_saved_attributes!: these save again, which replaces the saved
+    # changes that method reads.
+    after_lock = -> do
       if transaction? && (lock_tags == :always || (lock_tags == :if_any && transaction.tags.any?))
         transaction.lock_attr!(:tag_ids)
       end
       mark_user_modified! if user_modified
-      saved = true
     end
-    saved
+
+    super(after_lock: after_lock, &block)
   end
 
   # Locks the entryable's row, then this entry's, and refreshes the locks of
@@ -508,8 +503,13 @@ class Entry < ApplicationRecord
   #
   # @raise [ActiveRecord::RecordNotFound] when the entry was deleted meanwhile
   def lock_with_entryable!
-    lock_entryable_row
+    # Loading the locked entryable whole spares the query that would fetch it
+    # again: lock! reloads this entry and drops its loaded associations.
+    locked_entryable = entryable_class.uncached { entryable_class.unscoped.lock.find(entryable_id) }
     lock!
+    association(:entryable).target = locked_entryable
+    locked_entryable.remember_row_lock
+    remember_row_lock
   end
 
   # Columns no rule condition or action reads: how an entry was edited, and
@@ -966,6 +966,12 @@ class Entry < ApplicationRecord
           records: locked_entries,
           associations: [ :account, :entryable ]
         ).call
+        # Loaded under the row locks above, so their locks are current and
+        # lock_attr! need not read them again.
+        locked_entries.each do |entry|
+          entry.remember_row_lock
+          entry.entryable.remember_row_lock if entry.transaction?
+        end
 
         # Resolve the matched-transfer set inside the transaction, after the
         # locks, so it reflects a match that committed before the lock.

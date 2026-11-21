@@ -277,6 +277,24 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "after_delete", imported.reload.external_id
   end
 
+  test "loads an existing entry's transaction once, with its row lock" do
+    @adapter.import_transaction(
+      external_id: "lock_once", amount: 10, currency: "USD",
+      date: Date.current, name: "Before", source: "plaid"
+    )
+
+    assert_queries_match(/FOR UPDATE/, count: 2) do
+      assert_queries_match(/FROM "transactions" WHERE "transactions"."id" = /, count: 1) do
+        @adapter.import_transaction(
+          external_id: "lock_once", amount: 10, currency: "USD",
+          date: Date.current, name: "After", source: "plaid"
+        )
+      end
+    end
+
+    assert_equal "After", @account.entries.find_by(external_id: "lock_once").name
+  end
+
   test "imports transaction with minimal parameters" do
     assert_difference "@account.entries.count", 1 do
       entry = @adapter.import_transaction(

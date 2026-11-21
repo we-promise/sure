@@ -50,7 +50,7 @@ class Account::ProviderImportAdapter
       # === TYPE COLLISION CHECK: Must happen before protection check ===
       # If entry exists but is a different type (e.g., Trade), that's an error.
       # This prevents external_id collisions across different entryable types.
-      if entry.persisted? && !entry.entryable.is_a?(Transaction)
+      if entry.persisted? && entry.entryable_type != "Transaction"
         raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
       end
 

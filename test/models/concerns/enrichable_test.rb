@@ -22,6 +22,29 @@ class EnrichableTest < ActiveSupport::TestCase
     assert_equal "Single Update", @enrichable.name
   end
 
+  test "lock_attr! keeps a lock saved after the record was loaded" do
+    stale = Account.find(@enrichable.id)
+    @enrichable.lock_attr!(:name)
+
+    stale.lock_attr!(:balance)
+
+    stale.reload
+    assert stale.locked?(:name)
+    assert stale.locked?(:balance)
+  end
+
+  test "unlock_attr! keeps a lock saved after the record was loaded" do
+    @enrichable.lock_attr!(:balance)
+    stale = Account.find(@enrichable.id)
+    @enrichable.lock_attr!(:name)
+
+    stale.unlock_attr!(:balance)
+
+    stale.reload
+    assert stale.locked?(:name)
+    assert_not stale.locked?(:balance)
+  end
+
   test "can lock an attribute" do
     refute @enrichable.locked?(:name)
 

@@ -164,12 +164,14 @@ module Enrichable
     !locked?(attr)
   end
 
+  # Merges into the locks as committed now, not as loaded with the record, so
+  # a lock another writer saved meanwhile is kept.
   def lock_attr!(attr)
-    update!(locked_attributes: locked_attributes.merge(attr.to_s => Time.current))
+    write_locked_attributes { |locks| locks.merge(attr.to_s => Time.current) }
   end
 
   def unlock_attr!(attr)
-    update!(locked_attributes: locked_attributes.except(attr.to_s))
+    write_locked_attributes { |locks| locks.except(attr.to_s) }
   end
 
   def lock_saved_attributes!
@@ -188,14 +190,18 @@ module Enrichable
   # false the transaction (a savepoint inside an outer one) rolls back, so
   # nothing the block wrote is kept.
   #
+  # @param after_lock [Proc, nil] runs after the locks are saved, in the same
+  #   transaction, for writes that would replace the saved changes they read
   # @yieldreturn [Boolean] whether the save succeeded
   # @return [Boolean] the block's result
-  def save_and_lock_attributes
+  def save_and_lock_attributes(after_lock: nil)
     saved = false
     self.class.transaction(requires_new: true) do
+      reload_locked_attributes_for_update if persisted?
       raise ActiveRecord::Rollback unless yield
 
       lock_saved_attributes!
+      after_lock&.call
       saved = true
     end
     saved
@@ -250,19 +256,48 @@ module Enrichable
   # Loads the committed locks with a row lock held until the surrounding
   # transaction ends, so lock_attr! merges into current locks rather than the
   # ones loaded with the record. An unsaved change to the locks is kept.
+  # Skipped while a row lock this record took is still held: nothing else can
+  # have written the locks since.
   #
   # @return [void]
   def reload_locked_attributes_for_update
+    return if row_locked?
+
     # unscoped: called inside a class method on a relation (Entry.bulk_update!),
     # where the class's own queries would otherwise inherit that relation.
     fresh = self.class.uncached { self.class.unscoped.where(id: id).lock.pick(:locked_attributes) }
+    remember_row_lock
     return if locked_attributes_changed?
 
     self.locked_attributes = fresh || {}
     clear_attribute_changes([ :locked_attributes ])
   end
 
+  # Records that this record's row was just locked with its current values,
+  # for #row_locked?.
+  #
+  # @return [void]
+  def remember_row_lock
+    @row_lock_transaction = self.class.current_transaction
+  end
+
   private
+    # Whether the database transaction that locked this record's row is still
+    # open. Rolling back to a savepoint releases the locks taken after it, and
+    # that transaction then no longer reports open.
+    def row_locked?
+      persisted? && @row_lock_transaction&.open? || false
+    end
+
+    def write_locked_attributes
+      return update!(locked_attributes: yield(locked_attributes)) if new_record? || row_locked?
+
+      self.class.transaction(requires_new: true) do
+        reload_locked_attributes_for_update
+        update!(locked_attributes: yield(locked_attributes))
+      end
+    end
+
     # The rollback removes the join rows a collection setter such as tag_ids=
     # inserted, but not the records it loaded into the association. Resetting
     # makes the next read go to the database, so the instance stops reporting
