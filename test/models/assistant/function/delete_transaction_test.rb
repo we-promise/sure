@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     @transaction = transactions(:one)
@@ -73,6 +75,19 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     assert_equal false, result[:success]
     assert_equal "split_child", result[:error]
     assert Transaction.exists?(@transaction.id)
+  end
+
+  test "refuses deleting a split whose part is linked as a transfer" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    transfer = link_split_part_to_loan(part)
+
+    result = @function.call("id" => parent.transaction.id)
+
+    assert_equal false, result[:success]
+    assert_equal "split_part_transferred", result[:error]
+    assert Entry.exists?(parent.id)
+    assert Transfer.exists?(transfer.id)
   end
 
   test "returns delete_aborted when a before_destroy guard aborts the destroy" do

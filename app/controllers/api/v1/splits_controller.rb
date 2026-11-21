@@ -79,7 +79,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
     render_split
   rescue NotSplit
     render_not_split
-  rescue ActiveRecord::RecordInvalid => e
+  rescue Entry::SplitPartTransferredError, ActiveRecord::RecordInvalid => e
     render_unprocessable(e.message)
   end
 
@@ -93,7 +93,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
     head :no_content
   rescue NotSplit
     render_not_split
-  rescue ActiveRecord::RecordInvalid => e
+  rescue Entry::SplitPartTransferredError, ActiveRecord::RecordInvalid => e
     render_unprocessable(e.message)
   end
 

@@ -10062,6 +10062,9 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Split"
+        '422':
+          description: a part of the split is linked as a transfer; remove that transfer
+            first
       requestBody:
         content:
           application/json:
@@ -10077,6 +10080,9 @@ paths:
       responses:
         '204':
           description: split removed
+        '422':
+          description: a part of the split is linked as a transfer; remove that transfer
+            first
         '404':
           description: transaction is not split
   "/api/v1/syncs":
@@ -11012,6 +11018,13 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: the transaction is split and a part is linked as a transfer;
+            remove that transfer first
           content:
             application/json:
               schema:
