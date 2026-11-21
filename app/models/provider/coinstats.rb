@@ -37,8 +37,10 @@ class Provider::Coinstats < Provider
   # https://coinstats.app/api-docs/openapi/get-blockchains
   def get_blockchains
     with_provider_response do
-      res = self.class.get("#{BASE_URL}/wallet/blockchains", headers: auth_headers)
-      handle_response(res)
+      with_retries("GET /wallet/blockchains") do
+        res = self.class.get("#{BASE_URL}/wallet/blockchains", headers: auth_headers)
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: GET /wallet/blockchains failed: #{e.class}: #{e.message}"
@@ -81,8 +83,10 @@ class Provider::Coinstats < Provider
   # https://coinstats.app/api-docs/openapi/get-exchanges
   def get_exchanges
     with_provider_response do
-      res = self.class.get("#{BASE_URL}/exchange/support", headers: auth_headers)
-      handle_response(res)
+      with_retries("GET /exchange/support") do
+        res = self.class.get("#{BASE_URL}/exchange/support", headers: auth_headers)
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: GET /exchange/support failed: #{e.class}: #{e.message}"
@@ -124,16 +128,18 @@ class Provider::Coinstats < Provider
   # https://coinstats.app/api-docs/openapi/connect-portfolio-exchange
   def connect_portfolio_exchange(connection_id:, connection_fields:, name: nil)
     with_provider_response do
-      res = self.class.post(
-        "#{BASE_URL}/portfolio/exchange",
-        headers: auth_headers.merge("Content-Type" => "application/json"),
-        body: {
-          connectionId: connection_id,
-          connectionFields: connection_fields,
-          name: name
-        }.compact.to_json
-      )
-      handle_response(res)
+      with_retries("POST /portfolio/exchange") do
+        res = self.class.post(
+          "#{BASE_URL}/portfolio/exchange",
+          headers: auth_headers.merge("Content-Type" => "application/json"),
+          body: {
+            connectionId: connection_id,
+            connectionFields: connection_fields,
+            name: name
+          }.compact.to_json
+        )
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: POST /portfolio/exchange failed: #{e.class}: #{e.message}"
@@ -144,16 +150,18 @@ class Provider::Coinstats < Provider
   # https://coinstats.app/api-docs/openapi/get-portfolio-coins
   def get_portfolio_coins(portfolio_id:, page: 1, limit: 100)
     with_provider_response do
-      res = self.class.get(
-        "#{BASE_URL}/portfolio/coins",
-        headers: auth_headers,
-        query: {
-          portfolioId: portfolio_id,
-          page: page,
-          limit: limit
-        }
-      )
-      handle_response(res)
+      with_retries("GET /portfolio/coins") do
+        res = self.class.get(
+          "#{BASE_URL}/portfolio/coins",
+          headers: auth_headers,
+          query: {
+            portfolioId: portfolio_id,
+            page: page,
+            limit: limit
+          }
+        )
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: GET /portfolio/coins failed: #{e.class}: #{e.message}"
@@ -184,20 +192,22 @@ class Provider::Coinstats < Provider
   # https://coinstats.app/api-docs/openapi/get-portfolio-transactions
   def get_portfolio_transactions(portfolio_id:, currency: "USD", page: 1, limit: 100, from: nil, to: nil, coin_id: nil)
     with_provider_response do
-      res = self.class.get(
-        "#{BASE_URL}/portfolio/transactions",
-        headers: auth_headers,
-        query: {
-          portfolioId: portfolio_id,
-          currency: currency,
-          page: page,
-          limit: limit,
-          from: from,
-          to: to,
-          coinId: coin_id
-        }.compact
-      )
-      handle_response(res)
+      with_retries("GET /portfolio/transactions") do
+        res = self.class.get(
+          "#{BASE_URL}/portfolio/transactions",
+          headers: auth_headers,
+          query: {
+            portfolioId: portfolio_id,
+            currency: currency,
+            page: page,
+            limit: limit,
+            from: from,
+            to: to,
+            coinId: coin_id
+          }.compact
+        )
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: GET /portfolio/transactions failed: #{e.class}: #{e.message}"
@@ -235,19 +245,21 @@ class Provider::Coinstats < Provider
   # https://coinstats.app/api-docs/openapi/get-exchange-transactions
   def get_exchange_transactions(portfolio_id:, currency: "USD", page: 1, limit: 100, from: nil, to: nil)
     with_provider_response do
-      res = self.class.get(
-        "#{BASE_URL}/exchange/transactions",
-        headers: auth_headers,
-        query: {
-          portfolioId: portfolio_id,
-          currency: currency,
-          page: page,
-          limit: limit,
-          from: from,
-          to: to
-        }.compact
-      )
-      handle_response(res)
+      with_retries("GET /exchange/transactions") do
+        res = self.class.get(
+          "#{BASE_URL}/exchange/transactions",
+          headers: auth_headers,
+          query: {
+            portfolioId: portfolio_id,
+            currency: currency,
+            page: page,
+            limit: limit,
+            from: from,
+            to: to
+          }.compact
+        )
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: GET /exchange/transactions failed: #{e.class}: #{e.message}"
@@ -285,12 +297,14 @@ class Provider::Coinstats < Provider
   # https://coinstats.app/api-docs/openapi/sync-portfolio
   def sync_portfolio(portfolio_id:)
     with_provider_response do
-      res = self.class.patch(
-        "#{BASE_URL}/portfolio/sync",
-        headers: auth_headers,
-        query: { portfolioId: portfolio_id }
-      )
-      handle_response(res)
+      with_retries("PATCH /portfolio/sync") do
+        res = self.class.patch(
+          "#{BASE_URL}/portfolio/sync",
+          headers: auth_headers,
+          query: { portfolioId: portfolio_id }
+        )
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: PATCH /portfolio/sync failed: #{e.class}: #{e.message}"
@@ -301,12 +315,14 @@ class Provider::Coinstats < Provider
   # https://coinstats.app/api-docs/openapi/exchange-sync-status
   def sync_exchange(portfolio_id:)
     with_provider_response do
-      res = self.class.patch(
-        "#{BASE_URL}/exchange/sync",
-        headers: auth_headers,
-        query: { portfolioId: portfolio_id }
-      )
-      handle_response(res)
+      with_retries("PATCH /exchange/sync") do
+        res = self.class.patch(
+          "#{BASE_URL}/exchange/sync",
+          headers: auth_headers,
+          query: { portfolioId: portfolio_id }
+        )
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: PATCH /exchange/sync failed: #{e.class}: #{e.message}"
@@ -317,12 +333,14 @@ class Provider::Coinstats < Provider
   # https://coinstats.app/api-docs/openapi/get-portfolio-sync-status
   def get_portfolio_sync_status(portfolio_id:)
     with_provider_response do
-      res = self.class.get(
-        "#{BASE_URL}/portfolio/status",
-        headers: auth_headers,
-        query: { portfolioId: portfolio_id }
-      )
-      handle_response(res)
+      with_retries("GET /portfolio/status") do
+        res = self.class.get(
+          "#{BASE_URL}/portfolio/status",
+          headers: auth_headers,
+          query: { portfolioId: portfolio_id }
+        )
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: GET /portfolio/status failed: #{e.class}: #{e.message}"
