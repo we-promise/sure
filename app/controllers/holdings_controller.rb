@@ -94,16 +94,16 @@ class HoldingsController < ApplicationController
     new_security.failed_fetch_count = 0
     new_security.failed_fetch_at = nil
 
+    # Saving the security, the remap and the re-materialization with the new
+    # security's prices commit together under the account row lock, taken
+    # first as a sync and a lot edit take it, so a failure at any step leaves
+    # nothing changed and the alert below is true. The materializer's own
+    # lock! reloads the account, so it reads no associations cached before
+    # the remap.
+    # The around_action :switch_timezone already sets the family timezone
+    # for this request, so Date.current is correct here.
+    account = Account.find(@holding.account_id)
     begin
-      # Saving the security, the remap and the re-materialization with the
-      # new security's prices commit together under the account row lock,
-      # taken first as a sync and a lot edit take it, so a failure at any step
-      # leaves nothing changed and the alert below is true. The materializer's
-      # own lock! reloads the account, so it reads no associations cached
-      # before the remap.
-      # The around_action :switch_timezone already sets the family timezone
-      # for this request, so Date.current is correct here.
-      account = Account.find(@holding.account_id)
       account.with_lock do
         new_security.save!
         @holding.remap_security!(new_security)
@@ -164,12 +164,12 @@ class HoldingsController < ApplicationController
     security_ids = [ @holding.security_id, @holding.provider_security_id ]
     reset = @holding.provider_security_id.present?
 
+    # The reset and the re-materialization of both securities, as a remap
+    # re-materializes its target, commit together under the account row lock,
+    # so the lots and holdings each takes back match before the next sync,
+    # and a failure at any step rolls both back.
+    account = Account.find(@holding.account_id)
     begin
-      # The reset and the re-materialization of both securities, as a remap
-      # re-materializes its target, commit together under the account row
-      # lock, so the lots and holdings each takes back match before the next
-      # sync, and a failure at any step rolls both back.
-      account = Account.find(@holding.account_id)
       account.with_lock do
         @holding.reset_security_to_provider!
         if reset

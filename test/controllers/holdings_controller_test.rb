@@ -303,6 +303,8 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
   test "a reset whose restatement fails is not applied" do
     @holding.account.update!(plaid_account: plaid_accounts(:one))
     @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+    create_trade(securities(:msft), account: @account, qty: 3, price: 10, date: Date.current)
+    HoldingLot.create!(account: @account, security: securities(:msft), origin_security: securities(:aapl), qty: 3, currency: "USD")
     Balance::Materializer.any_instance.stubs(:materialize_balances).raises(RuntimeError, "restatement failed")
 
     assert_error_reported(RuntimeError) { post reset_security_holding_path(@holding) }
@@ -310,16 +312,8 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("holdings.reset_security.failed"), flash[:alert]
     @holding.reload
     assert_equal [ securities(:msft), securities(:aapl) ], [ @holding.security, @holding.provider_security ]
-  end
-
-  test "a remap whose restatement fails is not applied" do
-    original = @holding.security
-    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(RuntimeError, "restatement failed")
-
-    assert_error_reported(RuntimeError) { patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" } }
-
-    assert_equal I18n.t("holdings.remap_security.failed"), flash[:alert]
-    assert_equal original, @holding.reload.security
+    assert_equal 1, @account.trades.where(security: securities(:msft)).count, "the trade stays on the remapped security"
+    assert_equal 1, @account.holding_lots.where(security: securities(:msft)).count, "the lot stays on the remapped security"
   end
 
   # Both take the account row lock before any write, as a sync and a lot edit
@@ -335,7 +329,7 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
   test "a remap locks the account before changing anything" do
     linked_remapped_holding
-    expect_locked_change(:remap_security!)
+    expect_locked_change(:remap_security!, saving: Security)
 
     patch remap_security_holding_path(@holding), params: { security_id: "NVDA|XNAS" }
 
@@ -506,9 +500,11 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     # Mocha verifies these at teardown, so a request that skips the lock, the
     # change or the restatement fails.
-    def expect_locked_change(change)
+    # `saving` names a model whose save! must come after the lock too.
+    def expect_locked_change(change, saving: nil)
       order = sequence(change.to_s)
       Account.any_instance.expects(:lock!).at_least_once.in_sequence(order).returns(true)
+      saving.any_instance.expects(:save!).in_sequence(order).returns(true) if saving
       Holding.any_instance.expects(change).in_sequence(order).returns(true)
       Balance::Materializer.any_instance.expects(:materialize_balances).in_sequence(order)
     end
