@@ -2522,6 +2522,68 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       "the provider's own namespace should still refresh"
   end
 
+  # Lunch Flow always sends its namespace, even when it has nothing to store, so
+  # that the replacement above clears a stale raw branch. Persisting the empty
+  # branch itself would render an empty details section and stop the row matching
+  # rules that test extra for emptiness.
+  test "drops a replaced namespace that ends up empty" do
+    entry = @adapter.import_transaction(
+      external_id: "empty_namespace",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Lunch Flow",
+      source: "lunchflow",
+      extra: { "lunchflow" => { "raw" => { "reference" => "OLD" } }, "exchange_rate" => "1.23" },
+      replace_extra_namespaces: [ "lunchflow" ],
+      drop_empty_extra_namespaces: true
+    )
+
+    @adapter.import_transaction(
+      external_id: "empty_namespace",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Lunch Flow",
+      source: "lunchflow",
+      extra: { "lunchflow" => {} },
+      replace_extra_namespaces: [ "lunchflow" ],
+      drop_empty_extra_namespaces: true
+    )
+
+    extra = entry.reload.transaction.extra
+    refute extra.key?("lunchflow"), "an empty replaced namespace must be removed"
+    assert_equal "1.23", extra["exchange_rate"]
+  end
+
+  # Plaid relies on keeping its branch even when every field is absent: it records
+  # that the transaction came from Plaid. Dropping empties is opt-in for that reason.
+  test "keeps an empty replaced namespace unless dropping is requested" do
+    entry = @adapter.import_transaction(
+      external_id: "empty_namespace_kept",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "pending" => false } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    @adapter.import_transaction(
+      external_id: "empty_namespace_kept",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => {} },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    assert_equal({}, entry.reload.transaction.extra["plaid"])
+  end
+
   # A provider key holding anything but an object says nothing about that
   # provider, and Transaction.pending_extra? skips it the way pending_sql does.
   # Hash#dig raised TypeError on such a value instead, and these reads sit

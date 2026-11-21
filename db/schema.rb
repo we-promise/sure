@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_20_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1668,6 +1668,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.string "status", default: "good"
     t.datetime "sync_start_date"
     t.datetime "updated_at", null: false
+    t.boolean "include_raw_data", default: false, null: false
     t.index ["family_id"], name: "index_lunchflow_items_on_family_id"
     t.index ["status"], name: "index_lunchflow_items_on_status"
   end

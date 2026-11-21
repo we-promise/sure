@@ -328,6 +328,11 @@ module TransactionsHelper
         raw: nil
       }
     else
+      # A namespace that exists but holds nothing (a provider writing an empty
+      # branch) is still nothing to show. Without this the raw dump opened the
+      # section around `{"lunchflow": {}}`.
+      return nil if extra.is_a?(Hash) && extra.values.all? { |value| blank_provider_extra?(value) }
+
       {
         kind: :raw,
         simplefin: {},

@@ -42,6 +42,16 @@
                         max: Date.current,
                         help_text: t("settings.providers.lunchflow_panel.sync_start_date_help") %>
 
+    <div class="flex items-center justify-between gap-3 py-2">
+      <div class="space-y-1">
+        <p class="text-sm text-primary" id="lunchflow_include_raw_data_label"><%= t("settings.providers.lunchflow_panel.include_raw_data_label") %></p>
+        <p class="text-secondary text-sm" id="lunchflow_include_raw_data_help"><%= t("settings.providers.lunchflow_panel.include_raw_data_help") %></p>
+      </div>
+      <%= form.toggle :include_raw_data,
+                      "aria-labelledby": "lunchflow_include_raw_data_label",
+                      "aria-describedby": "lunchflow_include_raw_data_help" %>
+    </div>
+
     <div class="flex justify-end">
       <%= form.submit is_new_record ? t("settings.providers.lunchflow_panel.save_and_connect") : t("settings.providers.lunchflow_panel.update_connection") %>
     </div>

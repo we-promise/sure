@@ -214,6 +214,14 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_nil details
   end
 
+  # Rows written before the importer stopped persisting an empty namespace still
+  # carry one until their next sync, so the drawer must not open on it either.
+  test "returns nil when the only provider namespace is empty" do
+    details = build_transaction_extra_details(transaction_with({ "lunchflow" => {} }))
+
+    assert_nil details, "an empty namespace is nothing to show"
+  end
+
   test "still returns SimpleFIN details when the provider sent something to show" do
     details = build_transaction_extra_details(transaction_with({
       "simplefin" => { "pending" => false, "payee" => "Whole Foods" }

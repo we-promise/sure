@@ -248,6 +248,8 @@ en:
         base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
         sync_start_date_label: "Import transactions from"
         sync_start_date_help: "Leave blank to import everything Lunch Flow has. Moving the date earlier imports the missing period on the next sync. Moving it later doesn't affect transactions already imported."
+        include_raw_data_label: "Include raw transaction data"
+        include_raw_data_help: "Store the provider's original payload for each transaction and show it under Additional details. Uses more storage."
         save_and_connect: "Save and connect"
         update_connection: "Update connection"
       akahu_panel:

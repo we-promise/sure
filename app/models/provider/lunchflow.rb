@@ -27,8 +27,10 @@ class Provider::Lunchflow
 
   # Get transactions for a specific account
   # Returns: { transactions: [...], total: N }
-  # Transaction structure: { id, accountId, amount, currency, date, merchant, description, isPending }
-  def get_account_transactions(account_id, start_date: nil, end_date: nil, include_pending: false)
+  # Transaction structure: { id, accountId, amount, currency, date, merchant, description, isPending, raw }
+  # `raw` is only returned when include_raw: true; the API documents the flag on
+  # this endpoint alone (accounts, balance and holdings have no such parameter).
+  def get_account_transactions(account_id, start_date: nil, end_date: nil, include_pending: false, include_raw: false)
     query_params = {}
 
     if start_date
@@ -41,6 +43,10 @@ class Provider::Lunchflow
 
     if include_pending
       query_params[:include_pending] = true
+    end
+
+    if include_raw
+      query_params[:include_raw] = true
     end
 
     path = "/accounts/#{ERB::Util.url_encode(account_id.to_s)}/transactions"
