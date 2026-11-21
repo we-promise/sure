@@ -76,11 +76,14 @@ class ProxyConfigurableTest < ActiveSupport::TestCase
     assert_equal [ "proxy.internal", 8888, nil, nil ], ProxyConfigurable.net_http_args("https://agent.example.test", env:)
   end
 
-  test "a proxy that cannot be read is ignored with a warning" do
-    Rails.logger.expects(:warn).with("[ProxyConfigurable] Invalid proxy URL ignored").twice
-
-    assert_nil ProxyConfigurable.url_for("https://agent.example.test", env: { "HTTPS_PROXY" => "http://bad host:8888" })
-    assert_equal [ nil, nil, nil, nil ], ProxyConfigurable.net_http_args("https://agent.example.test", env: { "HTTPS_PROXY" => "http://" })
+  test "a proxy that cannot be read raises instead of going direct" do
+    assert_raises(ProxyConfigurable::InvalidProxyError) do
+      ProxyConfigurable.url_for("https://agent.example.test", env: { "HTTPS_PROXY" => "http://bad host:8888" })
+    end
+    error = assert_raises(ProxyConfigurable::InvalidProxyError) do
+      ProxyConfigurable.net_http_args("https://agent.example.test", env: { "HTTPS_PROXY" => "http://user:secret@" })
+    end
+    assert_not_includes error.message, "secret"
   end
 
   test "an extending class gains only the two prefixed methods" do

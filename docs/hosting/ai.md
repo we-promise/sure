@@ -1128,7 +1128,7 @@ Sure resolves the proxy the same way for every client it builds itself: `HTTPS_P
 as `10.0.0.0/8` included). Loopback addresses (`127.0.0.0/8`, `::1`, `localhost`) never go
 through the proxy. `NO_PROXY` matches a host exactly as written: `127.0.0.1` doesn't cover
 `localhost`. A proxy value without a scheme (`proxy.internal:8888`) is read as `http://`; one
-that can't be read is ignored, with a warning in the log.
+that can't be read fails the call rather than sending it direct.
 
 This covers the OpenAI and OpenAI-compatible clients, the external assistant and its agent
 discovery, the AI health probes, Langfuse exports, Trade Republic login and session calls, and
