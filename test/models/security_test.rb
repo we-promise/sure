@@ -454,6 +454,16 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal [ Money.new(7, "EUR"), Money.new(8, "EUR") ], security.price_series.values.map(&:value)
   end
 
+  test "price_series for All Time covers every close, not just the family's activity window" do
+    security = Security.create!(ticker: "PSALL", name: "Price series all time")
+    security.prices.create!(date: 10.years.ago.to_date, price: 5, currency: "USD")
+    security.prices.create!(date: 1.day.ago.to_date, price: 9, currency: "USD")
+    period = Period.custom(start_date: 1.month.ago.to_date, end_date: Date.current)
+    period.stubs(:key).returns("all_time")
+
+    assert_equal [ 10.years.ago.to_date, 1.day.ago.to_date ], security.price_series(period: period).values.map(&:date)
+  end
+
   test "price_series is nil when the period holds fewer than two closes" do
     security = Security.create!(ticker: "PSNO", name: "Price series none")
     assert_nil security.price_series

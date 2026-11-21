@@ -333,14 +333,19 @@ class Security < ApplicationRecord
     Money.new(@current_price.price, @current_price.currency)
   end
 
-  # Stored closes over the period, in the currency of the latest stored close,
+  # Stored closes over the period (every close for All Time), in the currency
+  # of the latest stored close,
   # since a security can carry prices in more than one currency. Nil when
   # fewer than two closes fall in the period, as a line needs two points.
   def price_series(period: Period.last_30_days)
     currency = prices.order(date: :desc, created_at: :desc).pick(:currency)
     return nil unless currency
 
-    rows = prices.where(currency: currency, date: period.date_range).pluck(:date, :price)
+    scope = prices.where(currency: currency)
+    # All Time is anchored to the family's first activity, which can be later
+    # than the security's first close; for a price chart it means every close.
+    scope = scope.where(date: period.date_range) unless period.key == "all_time"
+    rows = scope.pluck(:date, :price)
     return nil if rows.size < 2
 
     Series.from_raw_values(rows.map { |date, price| { date: date, value: Money.new(price, currency) } })
