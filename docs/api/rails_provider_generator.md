@@ -470,7 +470,7 @@ panel in place through `render_provider_panel`.
 One line, inserted straight after the `provider_items` concern's definition:
 
 ```ruby
-resources :my_bank_items, only: %i[index new create show edit update destroy], concerns: :provider_items
+resources :my_bank_items, only: %i[create update destroy], concerns: :provider_items
 ```
 
 The concern adds the selection and linking collection routes and the `sync` and setup member
