@@ -38,8 +38,11 @@ class Account::ProviderImportAdapter
   # @param remove_extra_keys [Hash{String=>Array<String>}] Provider-owned keys, per namespace,
   #   to delete from an import_locked entry's extra. Such entries skip the namespace refresh,
   #   so this is the only way stale provider data leaves them. The lock is untouched.
+  # @param drop_empty_extra_namespaces [Boolean] Drop a replaced namespace when the merged
+  #   branch is empty. For a provider whose empty branch means "nothing to store", keeping
+  #   it would render an empty details section and hide the row from emptiness rules.
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {}, remove_extra_keys: {})
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {}, remove_extra_keys: {}, drop_empty_extra_namespaces: false)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -112,7 +115,7 @@ class Account::ProviderImportAdapter
           if skip_reason == "user_modified" && !entry.import_locked?
             owned = extra.is_a?(Hash) ? extra.deep_stringify_keys.slice(*replace_extra_namespaces.map(&:to_s)) : nil
             owned = keep_name_sources(entry, owned, name_extra_keys)
-            apply_provider_extra(entry, owned, replace_extra_namespaces)
+            apply_provider_extra(entry, owned, replace_extra_namespaces, drop_empty_extra_namespaces)
           end
 
           # Import-locked entries skip the refresh above, so provider-only keys the
@@ -256,7 +259,7 @@ class Account::ProviderImportAdapter
       end
 
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
-      apply_provider_extra(entry, extra, replace_extra_namespaces)
+      apply_provider_extra(entry, extra, replace_extra_namespaces, drop_empty_extra_namespaces)
 
       # Auto-detect investment activity labels for investment accounts
       detected_label = investment_activity_label
@@ -1200,18 +1203,30 @@ class Account::ProviderImportAdapter
     # forever and the drawer would keep showing it. Only namespaces the incoming
     # payload actually carries are replaced.
     #
+    # A replaced namespace that ends up empty is dropped when the caller opts in.
+    # An empty branch can mean "the provider had nothing to store", and persisting
+    # it would render an empty Additional details section and stop the row matching
+    # rules that test extra for emptiness. Plaid keeps its branch in that case: its
+    # empty snapshot still records that the transaction was imported.
+    #
     # @param entry [Entry] the entry being imported
     # @param extra [Hash, nil] provider metadata to apply
     # @param replace_extra_namespaces [Array<String>] branches to replace wholesale
+    # @param drop_empty_extra_namespaces [Boolean] drop a replaced branch left empty
     # @return [void]
-    def apply_provider_extra(entry, extra, replace_extra_namespaces)
+    def apply_provider_extra(entry, extra, replace_extra_namespaces, drop_empty_extra_namespaces = false)
       return unless extra.present? && entry.entryable.is_a?(Transaction)
 
       existing = entry.transaction.extra || {}
       incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
       replaced = replace_extra_namespaces.map(&:to_s).select { |ns| incoming.key?(ns) }
 
-      entry.transaction.extra = existing.except(*replaced).deep_merge(incoming)
+      merged = existing.except(*replaced).deep_merge(incoming)
+      if drop_empty_extra_namespaces
+        replaced.each { |ns| merged.delete(ns) if merged[ns].respond_to?(:empty?) && merged[ns].empty? }
+      end
+
+      entry.transaction.extra = merged
       entry.transaction.save!
     end
 

@@ -100,6 +100,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not transaction.pending?
     assert_nil transaction.extra.dig("lunchflow", "pending")
     assert_nil transaction.extra.dig("lunchflow")
+    refute transaction.extra.key?("lunchflow"), "an empty details namespace must not be persisted"
   end
 
   test "handles string true value for isPending" do
@@ -222,6 +223,57 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     raw = result.entryable.reload.extra.dig("lunchflow", "raw")
     assert_equal "NEW", raw["reference"]
     assert_not raw.key?("dropped"), "stale raw keys must not survive a sync"
+  end
+
+  # The namespace is sent even when empty so replacement clears a stale raw branch,
+  # but storing the empty branch would leave every plain transaction with an empty
+  # "Additional details" section.
+  test "drops the lunchflow namespace when a later sync carries no metadata" do
+    base_data = {
+      id: "lf_txn_namespace_cleared",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction"
+    }
+
+    LunchflowEntry::Processor.new(
+      base_data.merge(raw: { "reference" => "OLD" }),
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    result = LunchflowEntry::Processor.new(base_data, lunchflow_account: @lunchflow_account).process
+
+    transaction = result.entryable.reload
+    assert_empty transaction.extra
+    refute transaction.extra.key?("lunchflow")
+  end
+
+  test "clearing the lunchflow namespace leaves user-owned extra alone" do
+    base_data = {
+      id: "lf_txn_namespace_foreign",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction"
+    }
+
+    entry = LunchflowEntry::Processor.new(
+      base_data.merge(raw: { "reference" => "OLD" }),
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    entry.transaction.update!(extra: entry.transaction.extra.merge("exchange_rate" => "1.23"))
+
+    LunchflowEntry::Processor.new(base_data, lunchflow_account: @lunchflow_account).process
+
+    extra = entry.reload.transaction.extra
+    assert_equal "1.23", extra["exchange_rate"]
+    refute extra.key?("lunchflow")
   end
 
   test "drops stored raw from an import-locked entry once raw is no longer sent" do

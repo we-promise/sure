@@ -68,6 +68,9 @@ class LunchflowEntry::Processor
         # The whole `lunchflow` branch is provider-owned: replacing it (rather than
         # deep-merging) drops raw sub-keys the provider stopped sending.
         replace_extra_namespaces: [ "lunchflow" ],
+        # An empty branch is how this processor clears a stale `raw`; it must not be
+        # persisted, or every plain transaction shows an empty details section.
+        drop_empty_extra_namespaces: true,
         # Import-locked entries skip that replacement; drop their stored raw
         # when this row carries none (setting turned off, or not sent).
         remove_extra_keys: data[:raw].present? ? {} : { "lunchflow" => [ "raw" ] }
@@ -234,6 +237,9 @@ class LunchflowEntry::Processor
       # references, counterparty details). Store it verbatim so the drawer can show it.
       lunchflow[:raw] = data[:raw] if data[:raw].present?
 
+      # Always send the namespace, even when it ends up empty: its presence is what
+      # makes replace_extra_namespaces drop a stale `raw` branch. apply_provider_extra
+      # removes the namespace again when nothing was stored.
       { lunchflow: lunchflow }
     end
 
