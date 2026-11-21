@@ -117,6 +117,41 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
       "the preview-gated bill link must not render for a user without the flag"
   end
 
+  test "upcoming follows the date range of the filter bar" do
+    bill = create_upcoming_bill("Distant Rent", due_on: 40.days.from_now.to_date)
+
+    get transactions_url
+    assert_no_match bill.name, response.body
+
+    get transactions_url(q: { end_date: 60.days.from_now.to_date.iso8601 })
+    assert_match bill.name, response.body
+
+    get transactions_url(q: { start_date: 50.days.from_now.to_date.iso8601, end_date: 60.days.from_now.to_date.iso8601 })
+    assert_no_match bill.name, response.body
+  end
+
+  test "upcoming lists a monthly bill once per due date in the range" do
+    first_due = Date.current.next_month.beginning_of_month
+    bill = create_upcoming_bill("Monthly Rent", due_on: first_due)
+
+    get transactions_url(q: { end_date: (first_due + 2.months).iso8601 })
+    assert_response :success
+
+    groups = css_select("#upcoming [id^='upcoming-group-']").select { |group| group.text.include?(bill.name) }
+    assert_equal [ first_due, first_due + 1.month, first_due + 2.months ].map(&:iso8601),
+      groups.map { |group| group["id"].delete_prefix("upcoming-group-") }
+  end
+
+  test "one filter bar serves both tabs and the session remembers the tab" do
+    put current_session_url, params: { current_session: { tab_key: "transactions_tab", tab_value: "upcoming" } }
+
+    get transactions_url
+    assert_response :success
+    assert_select "form#transactions-search", count: 1
+    assert_select "[role=tabpanel][data-id=upcoming]:not(.hidden)"
+    assert_select "[role=tabpanel][data-id=transactions].hidden"
+  end
+
   test "index explains a pending transfer match in its tooltip and opens the transfer" do
     outflow = create_transaction(account: accounts(:depository), name: "Match outflow", amount: 320, date: Date.current)
     inflow = create_transaction(account: accounts(:credit_card), name: "Match inflow", amount: -320, date: Date.current)
@@ -2638,6 +2673,14 @@ end
   end
 
   private
+    def create_upcoming_bill(name, due_on:)
+      @user.family.recurring_transactions.create!(
+        account: accounts(:depository), name: name, amount: 50, currency: "USD",
+        expected_day_of_month: 1, status: "active", manual: true, bill_type: "bill",
+        last_occurrence_date: Date.current, next_expected_date: due_on
+      )
+    end
+
     def create_immediate_rule
       @user.family.rules.create!(
         name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,

@@ -6,6 +6,9 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 
+  TRANSACTIONS_TAB_KEY = "transactions_tab".freeze
+  TRANSACTIONS_TABS = %w[transactions upcoming].freeze
+
   helper_method :new_transaction_idempotency_key
 
   def show
@@ -81,24 +84,12 @@ class TransactionsController < ApplicationController
       Current.annotatable_entries.uncategorized_transactions.count
     end
 
-    # Load projected recurring transactions for next 10 days. Only the IDs are
-    # cached: cached ActiveRecord objects outlive schema changes across
-    # upgrades and raise MissingAttributeError for columns added since.
-    projected_recurring_ids = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
-      Current.family.recurring_transactions
-                    .accessible_by(Current.user)
-                    .active
-                    .where("next_expected_date <= ? AND next_expected_date >= ?",
-                           10.days.from_now.to_date,
-                           Date.current)
-                    .pluck(:id)
-    end
-    @projected_recurring = if projected_recurring_ids.empty?
-      []
-    else
-      Current.family.recurring_transactions.accessible_by(Current.user)
-                    .where(id: projected_recurring_ids).includes(merchant: { logo_attachment: :blob }).to_a
-    end
+    # The Upcoming tab projects recurring transactions through the same filters.
+    @forecast = RecurringTransaction::Forecast.new(
+      Current.family, user: Current.user, filters: @q, cache_version: projected_recurring_cache_version
+    )
+    @projected_recurring = @forecast.series
+    @active_tab = transactions_tab
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
   end
@@ -593,10 +584,15 @@ class TransactionsController < ApplicationController
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 
-    def projected_recurring_cache_key
-      "transactions_projected_recurring/v6/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
-        "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
+    def projected_recurring_cache_version
+      "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
         "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
+    end
+
+    # The tab to open: an explicit ?tab=, else the one last picked this session,
+    # so applying a filter from the Upcoming tab stays on it.
+    def transactions_tab
+      [ params[:tab], Current.session.get_preferred_tab(TRANSACTIONS_TAB_KEY) ].find { |tab| TRANSACTIONS_TABS.include?(tab) } || "transactions"
     end
 
     def covering_series_for(entry)

@@ -1,4 +1,4 @@
-<%# locals: (transactions:, projected_recurring:, q:, pagy:, toolbar: true) %>
+<%# locals: (transactions:, projected_recurring:, q:, pagy:, toolbar: true, search: true) %>
 <div id="transactions"
   data-controller="bulk-select checkbox-toggle<%= " drag-and-drop-import" if toolbar %>"
   data-bulk-select-singular-label-value="<%= t(".transaction") %>"
@@ -14,7 +14,9 @@
     <% end %>
 
     <%= render "imports/drag_drop_overlay", title: t(".drag_drop_title"), subtitle: t(".drag_drop_subtitle") %>
+  <% end %>
 
+  <% if toolbar && search %>
     <%= render "transactions/searches/search" %>
   <% else %>
     <div class="flex justify-end mb-4 lg:hidden">
