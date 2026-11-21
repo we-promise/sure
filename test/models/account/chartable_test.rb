@@ -789,6 +789,34 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert unlinked.net_contributions_comparable?(value_dates: [ day_one ]), "an unlinked account counts from its first balance"
   end
 
+  # The chart asks for the anchor three times per render: whether to compare,
+  # whether the line is incomplete, and the line itself. Each read is an
+  # entries and a holdings query, so the account keeps the first. A reload
+  # reads it again.
+  test "one chart's comparison checks read the net contributions anchor once" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(family: families(:empty))
+    account.stubs(:linked?).returns(true)
+    lay_balance account: account, date: day_one, opening: 1_000, closing: 1_600, cash_flow: 500, market_flow: 100
+    provider_deposit account: account, date: day_one, amount: 500
+    period = Period.custom(start_date: day_one, end_date: day_one)
+    value = account.balance_series(period: period, interval: "1 day")
+    dates = value.values.map(&:date)
+
+    anchor_reads = 0
+    counter = ->(*, payload) { anchor_reads += 1 if payload[:sql].include?("array_agg(security_id") }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      assert account.net_contributions_comparable?(value_dates: dates)
+      account.net_contributions_incomplete?(period: period, interval: "1 day", value_dates: dates)
+      account.balance_series(period: period, view: :net_contributions, interval: "1 day", value_series: value)
+    end
+    assert_equal 1, anchor_reads
+
+    provider_deposit account: account, date: day_one - 1, amount: 100
+    refute account.net_contributions_comparable?(value_dates: [ day_one - 1 ]), "kept until reloaded"
+    assert account.reload.net_contributions_comparable?(value_dates: [ day_one - 1 ]), "a reload reads the earlier deposit"
+  end
+
   private
     # Value minus net contributions at each point: what the chart reads as
     # performance.
