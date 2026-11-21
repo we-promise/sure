@@ -45,7 +45,7 @@
                                     data: { turbo: false } do %>
                         <%= t(".sync") %>
                     <% end %>
-                    <% elsif item.session_expired? %>
+                    <% elsif item.session_expired? && item.aspsp_name.present? %>
                     <%= button_to reauthorize_enable_banking_item_path(item),
                                     method: :post,
                                     class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-warning hover:opacity-90 transition-colors",

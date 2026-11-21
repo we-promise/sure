@@ -39,6 +39,7 @@ en:
         only_manual: Only manual accounts can be linked
         invalid_enable_banking_account: Invalid Enable Banking account selected
     enable_banking_item:
+      connect_bank: Connect bank
       deletion_in_progress: Deletion in progress
       provider_name: Enable Banking
       syncing: Syncing...
@@ -116,8 +117,10 @@ en:
       setup_step_4: Return here to link your accounts
       go_to_provider_settings: Go to Provider Settings
     reauthorize:
+      bank_required: This connection has no bank selected. Please connect your bank again.
       invalid_redirect: The authorization URL received is invalid. Please try again.
       reauthorization_failed: Reauthorization failed
+      unexpected_error: An unexpected error occurred. Please try again.
     select_bank:
       beta_label: Beta
       cancel: Cancel
