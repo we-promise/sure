@@ -76,9 +76,10 @@ export default class extends Controller {
     }));
     const comparisonPoints = comparisons.flatMap((c) => c.series);
 
-    const maxValue =
-      d3.max([...current, ...comparisonPoints], (d) => d.value) || 0;
-    if (maxValue <= 0) return;
+    const values = [...current, ...comparisonPoints];
+    const maxValue = Math.max(0, d3.max(values, (d) => d.value) || 0);
+    const minValue = Math.min(0, d3.min(values, (d) => d.value) || 0);
+    if (maxValue === 0 && minValue === 0) return;
 
     // With one compared month the header already names both lines.
     if (comparisons.length > 1) this._drawLegend(comparisons);
@@ -112,7 +113,7 @@ export default class extends Controller {
     const x = d3.scaleLinear().domain([1, days]).range([0, innerWidth]);
     const y = d3
       .scaleLinear()
-      .domain([0, maxValue * 1.05])
+      .domain([minValue * 1.05, maxValue * 1.05])
       .nice()
       .range([innerHeight, 0]);
 

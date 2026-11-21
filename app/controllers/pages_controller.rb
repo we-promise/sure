@@ -320,6 +320,7 @@ class PagesController < ApplicationController
         dashboard_income_statement.income_totals(period: @period),
         dashboard_income_statement.expense_totals(period: @period),
         Current.family.currency,
+        refund_totals: dashboard_income_statement.refund_totals(period: @period),
         invested_total: dashboard_income_statement.invested_total(period: @period)
       )
     end
@@ -389,7 +390,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, invested_total: nil)
+    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, refund_totals:, invested_total: nil)
       nodes = []
       links = []
       node_indices = {}
@@ -407,11 +408,16 @@ class PagesController < ApplicationController
 
       # Central Cash Flow node, sized to whichever side is larger so a deficit
       # (outflows above income) still balances, as IncomeStatement::Sankey does
-      capacity = [ total_income, (total_expense + total_invested).round(2) ].max
+      refund_credit = net_totals.net_expense_categories.sum { |ct| ct.total.negative? ? -ct.total : 0 }.to_f
+      capacity = [ total_income + refund_credit, (total_expense + refund_credit + total_invested).round(2) ].max
       cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", capacity, 100.0, "var(--color-success)")
 
-      # Build netted subcategory data from raw totals
-      net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals)
+      # Gross child flows can exceed a net parent or imply fictitious income
+      # when a child has a refund. Flatten only the affected parent categories.
+      refund_parent_ids = refund_totals.category_totals.filter_map do |ct|
+        ct.category.parent_id || ct.category.id if ct.total.positive?
+      end
+      net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals).except(*refund_parent_ids)
 
       # Process net income categories (flow: subcategory -> parent -> cash_flow)
       process_net_category_nodes(
@@ -428,7 +434,7 @@ class PagesController < ApplicationController
       # Process net expense categories (flow: cash_flow -> parent -> subcategory)
       process_net_category_nodes(
         categories: net_totals.net_expense_categories,
-        total: total_expense,
+        total: net_totals.net_expense_categories.sum { |ct| [ ct.total, 0 ].max }.to_f.round(2),
         prefix: "expense",
         net_subcategories_by_parent: net_subcategories_by_parent,
         add_node: add_node,
@@ -506,6 +512,13 @@ class PagesController < ApplicationController
       categories.each do |ct|
         val = ct.total.to_f.round(2)
         next if val.zero?
+
+        if val.negative?
+          color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR
+          idx = add_node.call("refund_#{ct.category.id || ct.category.name}", t("refunds.category_credit", category: ct.category.name), -val, 0, color)
+          links << { source: idx, target: cash_flow_idx, value: -val, color: color, percentage: 0 }
+          next
+        end
 
         percentage = total.zero? ? 0 : (val / total * 100).round(1)
         color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR
@@ -614,8 +627,8 @@ class PagesController < ApplicationController
       net = total_income - total_expense
       ring_total = [ total_income, total_expense ].max
 
-      inflows = cashflow_donut_segments(net_totals.net_income_categories, "income", ring_total)
-      outflows = cashflow_donut_segments(net_totals.net_expense_categories, "expense", ring_total)
+      inflows = cashflow_donut_segments(net_totals.net_income_categories, "income", ring_total, net_total: total_income)
+      outflows = cashflow_donut_segments(net_totals.net_expense_categories, "expense", ring_total, net_total: total_expense)
       has_categories = inflows.any? || outflows.any?
 
       # "unused"/"overage" are the donut controller's special segment ids:
@@ -661,19 +674,32 @@ class PagesController < ApplicationController
     # Percentages are shares of the ring (the larger of income and spending),
     # so they match the arc each segment draws and sum to 100 with the
     # unused/overage segment.
-    def cashflow_donut_segments(category_totals, id_prefix, ring_total)
+    def cashflow_donut_segments(category_totals, id_prefix, ring_total, net_total:)
+      positive_total = category_totals.sum { |ct| [ ct.total.to_d, 0.to_d ].max }
+      scale = if net_total.to_d <= 0
+        0.to_d
+      elsif positive_total > net_total.to_d
+        net_total.to_d / positive_total
+      else
+        1.to_d
+      end
+
       category_totals
         .reject { |ct| ct.total.zero? }
         .sort_by { |ct| -ct.total }
         .map do |ct|
           clickable = !ct.category.other_investments?
+          amount = ([ ct.total.to_d, 0.to_d ].max * scale).round(2)
           {
             id: "#{id_prefix}_#{IncomeStatement::CategoryNetting.key(ct.category)}",
             name: ct.category.name,
             filter_value: clickable ? ct.category.filter_value : nil,
-            amount: ct.total.to_f.round(2),
+            amount: amount.to_f,
+            # Keep the signed total for the list/tooltip; the arc itself must be
+            # nonnegative and share one scale with the unused/overage segment.
+            display_amount: ct.total.round(2).to_f,
             currency: ct.currency,
-            percentage: ring_total.zero? ? 0 : (ct.total.to_f / ring_total.to_f * 100).round(1),
+            percentage: ring_total.zero? ? 0 : (amount.to_f / ring_total.to_f * 100).round(1),
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
             icon: ct.category.lucide_icon,
             clickable: clickable
@@ -687,6 +713,7 @@ class PagesController < ApplicationController
         name: name,
         filter_value: nil,
         amount: amount.to_f.round(2),
+        display_amount: amount.to_f.round(2),
         currency: currency,
         percentage: ring_total.zero? ? 0 : (amount.to_f / ring_total.to_f * 100).round(1),
         color: color,

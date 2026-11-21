@@ -32,6 +32,7 @@ json.external_id transaction.entry.external_id
 json.source transaction.entry.source
 json.user_modified transaction.entry.user_modified
 json.classification transaction.entry.classification
+json.merge! refund_details.for(transaction)
 
 # How budgets and reports treat the row: loan_payment counts as an expense
 # whatever the amount's sign; investment_contribution does too unless the

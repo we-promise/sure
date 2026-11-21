@@ -152,7 +152,9 @@ class Assistant::Function::GetUncategorizedTransactionsTest < ActiveSupport::Tes
   # list (#3293), so the count is pinned to the shared scope.
   test "counts exactly the rows of Sure's shared uncategorized definition" do
     Transaction.kinds.each_key.with_index do |kind, index|
-      entry = create_uncategorized(name: "PRLV SEPA KIND#{index}", amount: 10 + index)
+      # Refunds are incoming credits; the model rejects a positive amount.
+      amount = kind == "refund" ? -(10 + index) : (10 + index)
+      entry = create_uncategorized(name: "PRLV SEPA KIND#{index}", amount: amount)
       entry.entryable.update!(kind: kind)
     end
 

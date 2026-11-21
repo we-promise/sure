@@ -268,6 +268,9 @@ class ImportSession < ApplicationRecord
       process_chunk!(import)
     end
 
+    Family::DataImporter.resolve_pending_refund_links!(family, import_session: self)
+    Family::DataImporter.resolve_deferred_recurring_allocations!(family, import_session: self)
+
     update!(status: :complete, summary: aggregate_chunk_summaries, error_details: {})
     enqueue_family_sync
     EntryScheduledSyncJob.schedule_for_entries(Entry.where(import_id: imports.select(:id)))

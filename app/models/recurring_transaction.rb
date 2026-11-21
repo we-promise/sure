@@ -776,15 +776,14 @@ class RecurringTransaction < ApplicationRecord
       # charges that happen to share a merchant/day get averaged together
       # (see issue #2936 follow-up).
       .where("entries.amount BETWEEN ? AND ?", amount_low, amount_high)
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+      .where.not(transactions: { kind: "refund" })
       .order(date: :desc)
 
     # Filter by merchant or name
     if merchant_id.present?
-      # Join with transactions table to filter by merchant_id in SQL (avoids N+1)
-      entries
-        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
-        .where(transactions: { merchant_id: merchant_id })
-        .to_a
+      # Filter by merchant_id in SQL (avoids N+1)
+      entries.where(transactions: { merchant_id: merchant_id }).to_a
     else
       entries.where(name: name).to_a
     end
@@ -828,7 +827,12 @@ class RecurringTransaction < ApplicationRecord
     # Amount/cadence-scoped Transaction entries on this account (or family).
     base = account.present? ? account.entries : family.entries
     entries = day_of_month_scope(
-      amount_window_scope(base.where(entryable_type: "Transaction").where(currency: currency))
+      amount_window_scope(
+        base.where(entryable_type: "Transaction")
+          .where(currency: currency)
+          .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+          .where.not(transactions: { kind: "refund" })
+      )
     ).order(date: :desc)
 
     # Filter by merchant or name

@@ -1,5 +1,5 @@
 class Transaction < ApplicationRecord
-  include Entryable, Transferable, Ruleable, Splittable
+  include Entryable, Transferable, Ruleable, Splittable, Refundable
 
   belongs_to :category, optional: true
   belongs_to :merchant, optional: true
@@ -83,6 +83,7 @@ class Transaction < ApplicationRecord
   public
 
   enum :kind, {
+    refund: "refund", # A purchase refund, reduces expenses without generating income
     standard: "standard", # A regular transaction, included in budget analytics
     funds_movement: "funds_movement", # Movement of funds between accounts, excluded from budget analytics
     cc_payment: "cc_payment", # A CC payment, excluded from budget analytics (CC payments offset the sum of expense transactions)
@@ -562,6 +563,14 @@ class Transaction < ApplicationRecord
     merge_succeeded = false
 
     ApplicationRecord.transaction(requires_new: true) do
+      # Refund linking, splitting and amount edits take Transaction locks before
+      # Entry locks. Lock both transactions in the same deterministic order so
+      # a merge cannot hold an entry while waiting for one of those operations.
+      transaction_ids = [ pending_entry, posted_entry ].filter_map do |record|
+        record.entryable_id if record.transaction?
+      end
+      Transaction.where(id: transaction_ids).order(:id).lock.load
+
       # Row-level locks prevent concurrent merges on the same pair of entries.
       # If a concurrent request already destroyed the pending entry, lock! raises
       # RecordNotFound — treat that as an idempotent success.
@@ -579,6 +588,22 @@ class Transaction < ApplicationRecord
         raise ActiveRecord::Rollback
       end
 
+      # A provider post plus a refund classification can land between the
+      # pending read and the locks. Recheck under the locks so a refund link
+      # is never destroyed with the pending entry.
+      pending_transaction = pending_entry.transaction
+      begin
+        pending_transaction&.reload
+      rescue ActiveRecord::RecordNotFound
+        Rails.logger.info("Pending transaction for entry #{pending_entry_id} already destroyed (concurrent merge), skipping")
+        return true
+      end
+
+      unless pending_transaction&.pending? && !pending_transaction.refund? && !pending_transaction.refund_linked?
+        Rails.logger.info("Pending entry #{pending_entry_id} is no longer a pending non-refund; aborting merge")
+        raise ActiveRecord::Rollback
+      end
+
       # Capture after lock! (which reloads) to guarantee DB-fresh values and avoid
       # stale in-memory cached associations (e.g., loaded via touch: true).
       external_id        = pending_entry.external_id
@@ -586,10 +611,9 @@ class Transaction < ApplicationRecord
 
       # Batch all changes to the surviving posted Transaction into a single update!
       # to avoid firing after_save callbacks twice on the same row.
-      # Lock the Transaction row so concurrent merges into the same posted entry
-      # cannot race on reading/writing extra (e.g., the manual_merge array).
+      # Its Transaction row is already locked; load through the refreshed entry
+      # so concurrent metadata changes are retained (e.g., the manual_merge array).
       posted_tx = posted_entry.entryable
-      posted_tx.lock! if posted_tx.is_a?(Transaction)
 
       # Moving the attachments bypasses validation, so refuse a merge that would
       # leave the posted transaction over the limit instead of dropping files.

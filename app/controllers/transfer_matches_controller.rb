@@ -16,6 +16,11 @@ class TransferMatchesController < ApplicationController
 
     @transfer = build_transfer
     Transfer.transaction do
+      # Refund linking locks the transaction row. Lock the persisted legs in a
+      # deterministic order before validation so a concurrent classification
+      # cannot land between the refund check and the transfer insert.
+      [ @transfer.inflow_transaction, @transfer.outflow_transaction ]
+        .compact.select(&:persisted?).uniq.sort_by(&:id).each(&:lock!)
       @transfer.save!
       @transfer.confirm!
     end
@@ -30,6 +35,8 @@ class TransferMatchesController < ApplicationController
     end
 
     redirect_back_or_to transactions_path, notice: t(".success")
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_back_or_to transactions_path, alert: error.record.errors.full_messages.to_sentence
   end
 
   # "Not a transfer" on the list's transfer hint.

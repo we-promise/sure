@@ -257,6 +257,360 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "creates an income entry as a linked refund when the preview refund option is checked" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    purchase = create_transaction(amount: 1000, category: categories(:one))
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Returned order",
+          date: Date.current,
+          currency: "USD",
+          amount: 800,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          refund: "1",
+          refund_of_entry_id: purchase.id,
+          entryable_attributes: { category_id: categories(:food_and_drink).id }
+        }
+      }
+    end
+
+    refund = Entry.find_by!(name: "Returned order")
+
+    assert_redirected_to account_url(refund.account)
+    assert_equal(-800, refund.amount)
+    assert refund.transaction.refund?
+    assert_equal purchase.transaction, refund.transaction.refund_of
+    assert_equal purchase.transaction.category, refund.transaction.category
+  end
+
+  test "creates an unlinked refund when no purchase is selected" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Unlinked return",
+          date: Date.current,
+          currency: "USD",
+          amount: 400,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          refund: "1",
+          entryable_attributes: { category_id: categories(:one).id }
+        }
+      }
+    end
+
+    refund = Entry.find_by!(name: "Unlinked return")
+
+    assert refund.transaction.refund?
+    assert_nil refund.transaction.refund_of
+  end
+
+  test "rejects a refund flag on an outflow without creating an entry" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Wrong direction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          refund: "1",
+          entryable_attributes: { category_id: categories(:one).id }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("transactions.form.refund_requires_income"), response.body
+  end
+
+  test "rejects a refund flag without preview access instead of saving it as income" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Sneaky refund",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          refund: "1",
+          entryable_attributes: { category_id: categories(:one).id }
+        }
+      }
+    end
+
+    assert_redirected_to root_path
+    assert_equal I18n.t("preview.not_enabled"), flash[:alert]
+  end
+
+  test "rejects a refund linked to an inaccessible purchase" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    account = families(:empty).accounts.create!(name: "Private", balance: 1000, currency: "USD", accountable: Depository.new)
+    private_purchase = create_transaction(account: account)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Private refund",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          refund: "1",
+          refund_of_entry_id: private_purchase.id,
+          entryable_attributes: { category_id: categories(:one).id }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("transactions.form.refund_purchase_not_found"), response.body
+  end
+
+  test "rejects a refund linked to a purchase that is not refundable" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    purchase = create_transaction(amount: 1000)
+    purchase.update!(excluded: true)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Excluded purchase refund",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          refund: "1",
+          refund_of_entry_id: purchase.id,
+          entryable_attributes: { category_id: categories(:one).id }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("transactions.form.refund_purchase_invalid"), response.body
+  end
+
+  test "ignores a selected purchase when the refund flag is off" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    purchase = create_transaction(amount: 1000)
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Ordinary income",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          refund: "0",
+          refund_of_entry_id: purchase.id,
+          entryable_attributes: { category_id: categories(:one).id }
+        }
+      }
+    end
+
+    entry = Entry.find_by!(name: "Ordinary income")
+
+    assert entry.transaction.standard?
+    assert_nil entry.transaction.refund_of
+  end
+
+  test "rejects a malformed purchase id without a server error" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Malformed refund",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          refund: "1",
+          refund_of_entry_id: "not-a-uuid",
+          entryable_attributes: { category_id: categories(:one).id }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("transactions.form.refund_purchase_not_found"), response.body
+  end
+
+  test "a failed refund create keeps the income tab and refund selection" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "Stale purchase refund",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        refund: "1",
+        refund_of_entry_id: SecureRandom.uuid,
+        entryable_attributes: { category_id: categories(:one).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='entry[nature]'][value='inflow']"
+    assert_select "input[name='entry[amount]'][value='100.00']"
+    assert_select "#entry_refund[checked]"
+    assert_match I18n.t("transactions.form.refund_purchase_not_found"), response.body
+  end
+
+  test "a purchase disappearing during classification re-renders with an error" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    purchase = create_transaction(amount: 1000, name: "Vanishing purchase")
+    Transaction.any_instance.stubs(:mark_as_refund!).raises(ActiveRecord::RecordNotFound)
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "Vanishing purchase refund",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        refund: "1",
+        refund_of_entry_id: purchase.id,
+        entryable_attributes: { category_id: categories(:one).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil Entry.find_by(name: "Vanishing purchase refund")
+    assert_match I18n.t("transactions.form.refund_purchase_not_found"), response.body
+  end
+
+  test "a classification failure re-renders a fresh, unsaved form" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    error = ActiveRecord::RecordInvalid.new(Transaction.new)
+    error.record.errors.add(:base, "Refund failed")
+    Transaction.any_instance.stubs(:mark_as_refund!).raises(error)
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "Race refund",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        refund: "1",
+        entryable_attributes: { category_id: categories(:one).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil Entry.find_by(name: "Race refund")
+    assert_select "input[name='_method'][value='patch']", count: 0
+    assert_select "input[name='entry[entryable_attributes][id]']", count: 0
+    assert_match "Refund failed", response.body
+  end
+
+  test "a failed refund keeps a selected purchase visible outside the recent list" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    purchase = create_transaction(amount: 1000, name: "Old purchase")
+    Transaction::RefundablePurchases.any_instance.stubs(:call).returns([])
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "Outflow refund",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "outflow",
+        entryable_type: "Transaction",
+        refund: "1",
+        refund_of_entry_id: purchase.id,
+        entryable_attributes: { category_id: categories(:one).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "[role='option'][data-value=?]", purchase.id
+  end
+
+  test "new income form offers the refund toggle and purchase picker for preview users" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    purchase = create_transaction(amount: 1000, name: "Linkable purchase")
+
+    get new_transaction_path(nature: "inflow")
+
+    assert_response :success
+    assert_select "#entry_refund"
+    assert_select "#entry_refund[data-action=?]", "change->transaction-type-tabs#toggleRefundFields"
+    assert_select "#entry_refund[data-transaction-type-tabs-target=?]", "refundToggle"
+    assert_select "input[name='entry[refund_of_entry_id]']"
+    assert_select "[data-transaction-type-tabs-target='refundFields'].privacy-sensitive"
+    assert_select "[data-transaction-type-tabs-target='inflowOnly']:not(.hidden)"
+    assert_select "[role='option'][data-value=?]", purchase.id
+  end
+
+  test "new income form hides the refund toggle without preview access" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+
+    get new_transaction_path(nature: "inflow")
+
+    assert_response :success
+    assert_select "#entry_refund", count: 0
+  end
+
+  test "create ignores a nested entryable id so it cannot adopt another transaction" do
+    other = create_transaction(name: "Existing", amount: 50)
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Fresh create",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: { id: other.entryable_id, category_id: categories(:one).id }
+        }
+      }
+    end
+
+    created = Entry.find_by!(name: "Fresh create")
+
+    assert_not_equal other.entryable_id, created.entryable_id
+    assert_nil other.transaction.reload.category
+  end
+
   test "resubmitting the same idempotency key does not create a duplicate transaction" do
     idempotency_key = SecureRandom.uuid
     params = {
@@ -505,6 +859,26 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
   # Regression: the sync window must start at the old date, or the incremental
   # balance calculation counts the moved transaction twice.
+  test "create without an account ignores a nested entryable id" do
+    other = create_transaction(name: "Other", amount: 50, category: categories(:food_and_drink))
+
+    post transactions_url, params: {
+      entry: {
+        account_id: "",
+        name: "New transaction",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "outflow",
+        entryable_type: "Transaction",
+        entryable_attributes: { id: other.entryable_id, category_id: categories(:one).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='entry[entryable_attributes][id]']", count: 0
+  end
+
   test "moving a transaction later syncs from its original date" do
     original_date = 5.days.ago.to_date
     @entry.update!(date: original_date)
@@ -580,6 +954,59 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
     assert_response :success
     assert_match "Starbucks", response.body
+  end
+
+  test "array-shaped entryable attributes are rejected before assignment" do
+    entry = create_transaction(account: @entry.account, amount: 10, name: "Array shape")
+    category = categories(:food_and_drink)
+
+    patch transaction_url(entry), params: {
+      entry: { entryable_attributes: [ { category_id: category.id } ] }
+    }
+
+    assert_response :bad_request
+    assert_nil entry.transaction.reload.category_id
+  end
+
+  test "turbo update refreshes refund details after a purchase amount edit" do
+    purchase = create_transaction(account: @entry.account, amount: 100, name: "Shirts")
+    refund = create_transaction(account: @entry.account, amount: -20, name: "Return")
+    refund.transaction.mark_as_refund!(purchase: purchase.transaction)
+
+    patch transaction_url(purchase), params: { entry: { amount: 120 } }, as: :turbo_stream
+
+    assert_response :success
+    assert_includes response.body, ActionView::RecordIdentifier.dom_id(purchase, :refund_details)
+    assert_includes response.body, "$100.00"
+
+    patch transaction_url(purchase), params: { entry: { amount: 130 } }, as: :turbo_stream
+
+    assert_response :success
+    assert_includes response.body, ActionView::RecordIdentifier.dom_id(purchase, :refund_details)
+    assert_includes response.body, "$110.00"
+  end
+
+  test "update rechecks the refund transition after taking the transaction lock" do
+    entry = create_transaction(account: @entry.account, amount: -100, name: "Generic kind update")
+    # The request loads this stale standard copy; the stored row is a refund by
+    # the time the action takes the transaction lock.
+    stale = Entry.find(entry.id)
+    assert stale.transaction.standard?
+    Transaction.find(entry.entryable_id).mark_as_refund!
+
+    relation = stub("entries")
+    relation.stubs(:joins).returns(relation)
+    relation.stubs(:merge).returns(relation)
+    relation.stubs(:find).returns(stale)
+    Family.any_instance.stubs(:entries).returns(relation)
+
+    patch transaction_url(entry), params: {
+      entry: { entryable_attributes: { kind: "one_time" } }
+    }
+
+    assert_redirected_to transaction_url(entry)
+    assert_equal I18n.t("activerecord.errors.messages.invalid_refund"), flash[:alert]
+    assert entry.transaction.reload.refund?
   end
 
   test "updates with transaction details" do
@@ -1112,6 +1539,7 @@ end
       excluded_scheduled_count: 0,
       expense_money: Money.new(10000, "USD"),
       income_money: Money.new(0, "USD"),
+      refund_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(0, "USD"),
       transfer_outflow_money: Money.new(0, "USD")
     )
@@ -1137,6 +1565,7 @@ end
       excluded_scheduled_count: 0,
       expense_money: Money.new(10000, "USD"),
       income_money: Money.new(0, "USD"),
+      refund_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(0, "USD"),
       transfer_outflow_money: Money.new(0, "USD")
     )
@@ -1161,6 +1590,7 @@ end
       excluded_scheduled_count: 0,
       expense_money: Money.new(0, "USD"),
       income_money: Money.new(0, "USD"),
+      refund_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(5000, "USD"),
       transfer_outflow_money: Money.new(3000, "USD")
     )
@@ -1443,6 +1873,31 @@ end
     assert_operator seen[:create].first, :>, outside, "the create ran outside a transaction"
     assert seen[:check].last, "the check ran without the entry lock"
     assert seen[:create].last, "the create ran without the entry lock"
+  end
+
+  test "mark_as_recurring reloads a refund committed after the request loaded the transaction" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: account, amount: -100, name: "INCOMING CREDIT")
+
+    # The request loads this stale standard copy; the committed row is already
+    # a refund by the time the action takes the transaction lock.
+    stale = Transaction.find(entry.entryable_id)
+    Transaction.find(entry.entryable_id).mark_as_refund!
+
+    relation = stub("accessible transactions")
+    relation.stubs(:includes).returns(relation)
+    relation.stubs(:find).returns(stale)
+    TransactionsController.any_instance.stubs(:accessible_transactions).returns(relation)
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(entry.entryable)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal I18n.t("activerecord.errors.messages.refund_links_present"), flash[:alert]
+    assert entry.transaction.reload.refund?
   end
 
   test "mark_as_recurring shows already-exists alert when a concurrent request wins the race" do
