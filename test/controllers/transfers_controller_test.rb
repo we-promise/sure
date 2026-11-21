@@ -1149,6 +1149,30 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, transfer.reload.derived_source_fee_amount
   end
 
+  test "rejecting a transfer gone by its lock writes nothing and says it was removed" do
+    transfer = transfers(:one)
+    Transfer.any_instance.stubs(:lock!).raises(ActiveRecord::RecordNotFound)
+
+    assert_no_difference -> { RejectedTransfer.count } do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transfers.update.removed"), flash[:alert]
+    assert Transfer.exists?(transfer.id)
+  end
+
+  test "a deadlock while rejecting a transfer rolls it back and asks to try again" do
+    transfer = transfers(:one)
+    Transfer.any_instance.stubs(:reject!).raises(ActiveRecord::Deadlocked)
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transfers.update.busy"), flash[:alert]
+    assert Transfer.exists?(transfer.id)
+  end
+
   test "a record missing inside a transfer edit is not reported as removed" do
     transfer = transfers(:one)
     TransfersController.any_instance.stubs(:update_transfer_details).raises(ActiveRecord::RecordNotFound)

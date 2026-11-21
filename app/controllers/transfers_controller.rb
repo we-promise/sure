@@ -254,8 +254,15 @@ class TransfersController < ApplicationController
       @view_ctx = view_ctx_from_referer
       # Locked, so a confirmation landing meanwhile cannot change what the
       # rejection undoes after the response was chosen.
-      in_place = @transfer.with_lock do
-        rejection_redraws_in_place?.tap { @transfer.reject! }
+      begin
+        in_place = @transfer.with_edit_lock do
+          rejection_redraws_in_place?.tap { @transfer.reject! }
+        end
+      rescue Transfer::Removed
+        return redirect_after_unsaved_update(t(".removed"))
+      rescue ActiveRecord::LockWaitTimeout, ActiveRecord::Deadlocked => e
+        Rails.logger.error("Failed to reject transfer #{@transfer.id}: #{e.message}")
+        return redirect_after_unsaved_update(t(".busy"))
       end
 
       respond_to do |format|
