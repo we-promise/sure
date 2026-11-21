@@ -1,6 +1,6 @@
 # Linear AI generation runs: windowed requesters and a run snapshot
 
-Status: analysis and plan, 2026-11-21 · Companion to [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md)
+Status: built 2026-11-22 as `feat/ai-generation-windowing`, #5521, the fourth PR of the 3a stack (§7.2) · Companion to [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md)
 and [`pr-2c-generations.md`](pr-2c-generations.md). The problem comes from #5077, comment 6
 (raised in review of #4775). The implementation is its own PR, stacked on 3a (§7).
 
@@ -400,8 +400,24 @@ after PR 4, not part of it. **[product, if it's ever proposed]**
 
 ### 7.2 Position in the stack
 
-**Stacked on 3a. Merged after 3a, before or after PR 4, whichever is ready first.**
-**[product: the order is @josh-sanders' call]**
+**Built 2026-11-22 on top of 3a-tests (#5503), as the fourth PR of the stack** (call by
+@josh-sanders): 3a ← 3a-tidy ← 3a-tests ← windowing. Its tests then edit the trimmed keepers rather
+than the files 3a-tests deletes. PR 4 still starts from 3a-tidy; whichever of the two lands second
+rebases over `Ai::GenerationJob`.
+
+Calls made while building it, against the code:
+
+- **No upgrade forwarder** (§4.5). `Ai::GenerationJob`'s `ids:` arguments exist only on the
+  unreleased `refactor/ai-plumbing`, and 2c's upgrade note already covers main's old jobs.
+- **One enqueue helper**, `Ai::GenerationRun.enqueue`, which deletes the run when its first job
+  can't be queued. `Rule::ActionExecutor#enqueue_ai_job` is unchanged.
+- **`Ai::ShadowJob` builds from plain ids** through `from_shadow_job(ids:, family_id:)`.
+- **`outstanding` counts the pending ids not yet examined**, so a give-up before the window is read
+  still releases them.
+- The 1,000-transaction rule run (§5) is a small run over several windows with locked and
+  categorised transactions; scale is covered by the linearity test and the benchmark.
+
+The original placement analysis, kept for the record:
 
 - **Not in 2f.** 2f is the release branch for 2a–2e and is in review. A migration and a change to
   the job's arguments would widen it, and the quadratic is slow but correct.
