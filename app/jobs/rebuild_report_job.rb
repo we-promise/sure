@@ -4,7 +4,8 @@
 class RebuildReportJob < ApplicationJob
   queue_as :low_priority
 
-  def perform(user, query)
-    ReportsController.warm_body_cache(user: user, query: query)
+  # `locale` keeps the rebuild in the language the stale build was made in.
+  def perform(user, query, locale = nil)
+    ReportsController.warm_body_cache(user: user, query: query, locale: locale)
   end
 end

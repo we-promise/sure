@@ -411,7 +411,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
         @family.entries.first.touch
         ReportsController.any_instance.expects(:render_report_body).never
 
-        assert_enqueued_with(job: RebuildReportJob, args: [ @user, { period_type: "ytd" } ]) do
+        assert_enqueued_with(job: RebuildReportJob, args: [ @user, { period_type: "ytd" }, "en" ]) do
           get reports_path(period_type: :ytd)
         end
         assert_response :ok
@@ -551,7 +551,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       travel Setting.page_cache_cooldown + 1.minute do
         @family.entries.first.touch
         assert_enqueued_with(job: RebuildReportJob,
-          args: [ @user, { filter_account_id: accounts(:depository).id, period_type: "ytd", sort_by: "count" } ]) do
+          args: [ @user, { filter_account_id: accounts(:depository).id, period_type: "ytd", sort_by: "count" }, "en" ]) do
           get reports_path(period_type: :ytd, sort_by: "count", filter_account_id: accounts(:depository).id)
         end
       end
@@ -567,6 +567,44 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       ReportsController.any_instance.expects(:render_report_body).never
       get reports_path(period_type: :ytd)
       assert_response :ok
+    end
+  end
+
+  test "a stale build in the language the page asked for is rebuilt in that language" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd, locale: "de")
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        @family.entries.first.touch
+        assert_enqueued_with(job: RebuildReportJob, args: [ @user, { period_type: "ytd" }, "de" ]) do
+          get reports_path(period_type: :ytd, locale: "de")
+        end
+        perform_enqueued_jobs(only: RebuildReportJob)
+
+        ReportsController.any_instance.expects(:render_report_body).never
+        get reports_path(period_type: :ytd, locale: "de")
+        assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating", locale: :de)}/, count: 0
+      end
+    end
+  end
+
+  test "the plain Reports page is served from the build warmed for this month" do
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :monthly })
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path
+      assert_response :ok
+    end
+  end
+
+  test "changing whether investment contributions count as spending builds the report again" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      @family.update!(investment_contributions_as_spending: !@family.investment_contributions_as_spending)
+
+      ReportsController.any_instance.expects(:render_report_body).once.returns({ notes: "", has_transactions: false, summary: "", sections: [] })
+      get reports_path(period_type: :ytd)
     end
   end
 

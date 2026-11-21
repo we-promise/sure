@@ -35,7 +35,7 @@ class ReportsController < ApplicationController
       family: Current.family,
       user: Current.user,
       refresh: refresh,
-      rebuild_later: -> { RebuildReportJob.perform_later(Current.user, report_query) }
+      rebuild_later: -> { RebuildReportJob.perform_later(Current.user, report_query, I18n.locale.to_s) }
     ) { render_report_body }
     # A refresh is rebuilt above; drop it from the URL so reloading doesn't
     # rebuild again. A page too big to keep is shown as built instead, since
@@ -61,9 +61,12 @@ class ReportsController < ApplicationController
   # what the page's URL would carry (period_type, start_date, end_date,
   # filter_tag_ids). Returns whether it had to build the body: one already
   # built from the current data is left alone.
-  def self.warm_body_cache(user:, query: {})
+  # `locale` is the one the cached build was made in, when a request chose it
+  # (a ?locale= or the browser's language); without it the member's own applies.
+  def self.warm_body_cache(user:, query: {}, locale: nil)
     controller = new
-    request = ActionDispatch::Request.new(Rack::MockRequest.env_for("/reports?#{query.to_query}"))
+    url_query = locale.present? ? query.merge(locale: locale) : query
+    request = ActionDispatch::Request.new(Rack::MockRequest.env_for("/reports?#{url_query.to_query}"))
     request.routes = _routes
     controller.set_request!(request)
     controller.set_response!(make_response!(request))
@@ -254,6 +257,9 @@ class ReportsController < ApplicationController
       query = params.permit(*REPORT_BODY_PARAMS, filter_tag_ids: []).to_h.symbolize_keys
       query[:filter_tag_ids] = filter_tags.map(&:id).sort if filter_tags.any?
       query.except!(:filter_tag_ids) if filter_tags.none?
+      # The page opens on this month when no period is given; naming it keeps one
+      # key for /reports and its warmed ?period_type=monthly build.
+      query[:period_type] = "monthly" if query[:period_type].blank?
       query.compact_blank.sort.to_h
     end
 
@@ -268,7 +274,8 @@ class ReportsController < ApplicationController
     # report can't show an account the member has just lost.
     def report_body_cache_key
       [
-        "reports_body", REPORT_BODY_CACHE_VERSION, Current.family.id, Current.user.id, report_member_version, I18n.locale,
+        "reports_body", REPORT_BODY_CACHE_VERSION, Current.family.id, Current.user.id, report_member_version,
+        report_family_settings_version, I18n.locale,
         report_access_digest, Digest::SHA256.hexdigest(report_query.to_query)
       ].join("/")
     end
@@ -277,6 +284,17 @@ class ReportsController < ApplicationController
       Digest::SHA256.hexdigest([
         accessible_accounts.map(&:id).sort.join(","),
         Current.user.finance_accounts.pluck(:id).sort.join(",")
+      ].join("|"))
+    end
+
+    # The family's settings that change a report's figures or how it reads
+    # (currency is already in family.build_cache_key). Part of the key, not the
+    # version: a build made under other settings is never served.
+    def report_family_settings_version
+      family = Current.family
+      Digest::SHA256.hexdigest([
+        family.investment_contributions_as_spending, family.month_start_day, family.date_format,
+        family.household_budget_enabled, family.personal_budgets, family.moniker
       ].join("|"))
     end
 

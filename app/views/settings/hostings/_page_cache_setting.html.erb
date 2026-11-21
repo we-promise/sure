@@ -1,7 +1,7 @@
 <%# locals: (name:, label:, description:) %>
 <%# One page cache number (see Setting::PAGE_CACHE_SETTINGS), saved on change. %>
 <% range, default = Setting::PAGE_CACHE_SETTINGS.fetch(name) %>
-<% from_env = ENV[name.to_s.upcase].present? %>
+<% from_env = Setting.page_cache_env_value(name).present? %>
 <div class="flex items-center justify-between gap-4">
   <div class="space-y-1">
     <p class="text-sm"><%= label %></p>

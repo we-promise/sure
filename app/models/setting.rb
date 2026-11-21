@@ -281,8 +281,16 @@ class Setting < RailsSettings::Base
 
   def self.page_cache_value(name)
     range, default = PAGE_CACHE_SETTINGS.fetch(name)
+    page_cache_env_value(name) || [ public_send(name) ].find { |value| value && range.cover?(value) } || default
+  end
+
+  # The environment's value when it is a usable override (a whole number in
+  # range), else nil: an invalid one is ignored, so it neither applies nor
+  # locks the setting.
+  def self.page_cache_env_value(name)
+    range, _default = PAGE_CACHE_SETTINGS.fetch(name)
     from_env = Integer(ENV[name.to_s.upcase].to_s.strip, 10, exception: false)
-    [ from_env, public_send(name) ].find { |value| value && range.cover?(value) } || default
+    from_env if from_env && range.cover?(from_env)
   end
 
   def self.page_cache_ttl

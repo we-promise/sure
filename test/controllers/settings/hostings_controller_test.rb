@@ -1377,6 +1377,31 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an environment value the cache ignores doesn't lock its setting" do
+    with_self_hosting do
+      with_env_overrides("PAGE_CACHE_MAX_MB" => "0") do
+        get settings_hosting_url
+        assert_select "input[name='setting[page_cache_max_mb]'][disabled]", count: 0
+
+        patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250" } }
+        assert_equal 250, Setting.page_cache_max_mb
+      end
+    end
+  end
+
+  test "a valid environment value locks its setting" do
+    with_self_hosting do
+      with_env_overrides("PAGE_CACHE_MAX_MB" => "300") do
+        get settings_hosting_url
+        assert_select "input[name='setting[page_cache_max_mb]'][disabled]"
+
+        patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250" } }
+        assert_not_equal 250, Setting.page_cache_max_mb
+        assert_equal 300.megabytes, PageCache.max_bytes
+      end
+    end
+  end
+
   test "rejects a cache size or cooldown out of range" do
     with_self_hosting do
       { page_cache_max_mb: %w[0 100001], page_cache_cooldown_minutes: %w[-1 10081] }.each do |key, values|

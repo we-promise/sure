@@ -296,7 +296,7 @@ class Settings::HostingsController < ApplicationController
     end
 
     Setting::PAGE_CACHE_SETTINGS.each do |key, (range, _default)|
-      next unless hosting_params.key?(key) && ENV[key.to_s.upcase].blank?
+      next unless hosting_params.key?(key) && Setting.page_cache_env_value(key).nil?
 
       raw = hosting_params[key].to_s.strip
       value = raw.presence && (Integer(raw, 10) rescue nil)
