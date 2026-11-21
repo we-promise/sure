@@ -183,10 +183,28 @@ class SimplefinAccount::Investments::HoldingsProcessor
         raw = simplefin_holding[key]
         next if raw.nil? || raw.to_s.strip.empty?
 
-        return [ parse_decimal(raw), key ]
+        value = parse_decimal(raw)
+        return [ value, key ] unless value&.zero?
+
+        return purchase_price_basis(simplefin_holding) || [ value, key ]
       end
 
-      [ nil, nil ]
+      purchase_price_basis(simplefin_holding) || [ nil, nil ]
+    end
+
+    # SimpleFIN's purchase_price is the per-share average cost. Some
+    # brokerages, and some Fidelity accounts, send cost_basis: 0 and carry
+    # the cost only there, so it stands in when the basis is zero or
+    # missing. Not when market_value is missing, though: the holding is then
+    # priced from purchase_price too, and the basis would show an invented
+    # 0% return. Being per share, it is never divided by qty; lot combining
+    # weights it by each lot's shares.
+    def purchase_price_basis(simplefin_holding)
+      market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
+      return unless market_value&.positive?
+
+      purchase_price = parse_decimal(simplefin_holding["purchase_price"])
+      [ purchase_price, "purchase_price" ] if purchase_price&.positive?
     end
 
     # Sure stores holding cost_basis as per-share average cost. SimpleFIN
@@ -196,6 +214,8 @@ class SimplefinAccount::Investments::HoldingsProcessor
     #     spec and observed payloads; divide by qty unconditionally.
     #   - cost_basis / basis: the spec calls this per-share, and most
     #     brokerages comply. Keep these values unchanged by default.
+    #   - purchase_price: per-share in every observed payload, including
+    #     those of the allowlisted brokerages below; never divided.
     #
     # Exception: a small allowlist of brokerages (Vanguard, Fidelity, Schwab)
     # is known to populate cost_basis with the total position cost in
