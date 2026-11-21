@@ -7,6 +7,7 @@ require "turbo/broadcastable/test_helper"
 # toast makes each browser re-fetch its own, filtered page instead.
 class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
   include Turbo::Broadcastable::TestHelper
+  include ActiveJob::TestHelper
 
   PROVIDERS = %w[
     binance_item coinspot_item fio_item ibkr_item indexa_capital_item kraken_item
@@ -20,7 +21,7 @@ class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
       Current.reset
 
       streams = capture_turbo_stream_broadcasts(item.family) do
-        "#{provider.camelize}::SyncCompleteEvent".constantize.new(item).broadcast
+        perform_enqueued_jobs(only: FamilySyncToastJob) { "#{provider.camelize}::SyncCompleteEvent".constantize.new(item).broadcast }
       end
       targets = streams.map { |stream| stream["target"] }
 
@@ -35,7 +36,7 @@ class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
     Current.reset
 
     streams = capture_turbo_stream_broadcasts(item.family) do
-      SimplefinItem::SyncCompleteEvent.new(item).broadcast
+      perform_enqueued_jobs(only: FamilySyncToastJob) { SimplefinItem::SyncCompleteEvent.new(item).broadcast }
     end
     targets = streams.map { |stream| stream["target"] }
 
@@ -56,7 +57,7 @@ class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
       Current.reset
 
       streams = capture_turbo_stream_broadcasts(item.family) do
-        "#{provider.camelize}::SyncCompleteEvent".constantize.new(item).broadcast
+        perform_enqueued_jobs(only: FamilySyncToastJob) { "#{provider.camelize}::SyncCompleteEvent".constantize.new(item).broadcast }
       end
       targets = streams.map { |stream| stream["target"] }
 
@@ -76,7 +77,7 @@ class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
       job.instance_variable_set(:"@#{fixture.to_s.singularize}", provider_account)
       Current.reset
 
-      streams = capture_turbo_stream_broadcasts(item.family) { job.send(:broadcast_updates) }
+      streams = capture_turbo_stream_broadcasts(item.family) { perform_enqueued_jobs(only: FamilySyncToastJob) { job.send(:broadcast_updates) } }
       targets = streams.map { |stream| stream["target"] }
 
       assert_not_includes targets, ActionView::RecordIdentifier.dom_id(item)

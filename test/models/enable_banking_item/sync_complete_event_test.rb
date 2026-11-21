@@ -4,6 +4,7 @@ require "turbo/broadcastable/test_helper"
 
 class EnableBankingItem::SyncCompleteEventTest < ActiveSupport::TestCase
   include Turbo::Broadcastable::TestHelper
+  include ActiveJob::TestHelper
 
   setup do
     @family = families(:dylan_family)
@@ -23,7 +24,7 @@ class EnableBankingItem::SyncCompleteEventTest < ActiveSupport::TestCase
   # client certificate.
   test "a finished sync does not stream the settings panel to the family" do
     streams = capture_turbo_stream_broadcasts(@family) do
-      EnableBankingItem::SyncCompleteEvent.new(@item).broadcast
+      perform_enqueued_jobs(only: FamilySyncToastJob) { EnableBankingItem::SyncCompleteEvent.new(@item).broadcast }
     end
 
     assert_empty streams.select { |stream| stream["target"] == "enable_banking-providers-panel" }
@@ -34,7 +35,7 @@ class EnableBankingItem::SyncCompleteEventTest < ActiveSupport::TestCase
   # panel is not streamed.
   test "a finished sync still sends the sync toast" do
     targets = capture_turbo_stream_broadcasts(@family) do
-      EnableBankingItem::SyncCompleteEvent.new(@item).broadcast
+      perform_enqueued_jobs(only: FamilySyncToastJob) { EnableBankingItem::SyncCompleteEvent.new(@item).broadcast }
     end.map { |stream| stream["target"] }
 
     assert_includes targets, "sync-toast"
