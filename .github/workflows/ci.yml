@@ -223,6 +223,58 @@ jobs:
           echo "Unit test shards: ${RESULT}"
           [ "$RESULT" = "success" ]
 
+  # The rswag specs generate docs/api/openapi.yaml. Running them checks that
+  # every documented request still gets the documented response.
+  test_api_docs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    env:
+      PLAID_CLIENT_ID: foo
+      PLAID_SECRET: bar
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432 # pipelock:ignore
+      REDIS_URL: redis://localhost:6379
+      RAILS_ENV: test
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y curl libvips postgresql-client libpq-dev
+
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@f9c4492e86def3e644ab32a0ef185eda5b0c20d0 # v1.342.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: DB setup
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: API documentation specs
+        run: bundle exec rspec
+
   # System tests run serially (they flake when parallel workers compete for
   # the runner's CPUs), so they are split by file across several runners.
   test_system_shard:

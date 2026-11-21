@@ -213,11 +213,28 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
     response = stub(ok?: false, status: "410", body: { "reason" => "Unregistered" })
     Apns::Client.any_instance.stubs(:deliver).returns(response)
 
-    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
+    # Called without perform_now's discard_on: the ledger, not a swallowed
+    # RecordNotFound, finishes the attempt.
+    DeliverInsightNotificationJob.new.perform(push_delivery_id: delivery.id)
 
     assert_not PushSubscription.exists?(@subscription.id)
     assert_not PushDelivery.exists?(delivery.id)
     assert_not PushDelivery.exists?(sibling.id)
+  end
+
+  test "a device that registers again while APNs answers 410 keeps its subscription" do
+    delivery = record_delivery
+    Apns::Client.any_instance.stubs(:deliver).with do |**_arguments|
+      travel 1.second do
+        PushSubscription.find(@subscription.id).update!(last_registered_at: Time.current)
+      end
+      true
+    end.returns(stub(ok?: false, status: "410", body: {}))
+
+    DeliverInsightNotificationJob.new.perform(push_delivery_id: delivery.id)
+
+    assert PushSubscription.exists?(@subscription.id)
+    assert_equal "rejected", delivery.reload.status
   end
 
   test "self hosted mode records no apns rows and cannot execute a stale row" do
