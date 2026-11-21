@@ -29,12 +29,9 @@ class Transaction < ApplicationRecord
 
   # A tag can be applied to a transaction only once, but assigning the same
   # tag twice would insert two taggings. Collapse repeats first, comparing
-  # ids as the database does. The original values go on to `super`: Rails
-  # drops blanks before it casts, so passing a malformed id cast to nil would
-  # discard it silently instead of raising RecordNotFound.
+  # ids as the database does (distinct_tag_ids).
   def tag_ids=(ids)
-    id_type = Tag.type_for_attribute(:id)
-    wanted = Array(ids).uniq { |id| id_type.cast(id) || id }
+    wanted = distinct_tag_ids(ids)
     retrying_tagging_conflict { super(wanted) }
   end
 
@@ -708,12 +705,21 @@ class Transaction < ApplicationRecord
   end
 
   private
-    # tag_ids= casts its ids as uuids, so ids differing only in case name one tag.
-    def enrichable_array_values(attr, values)
+    # The ids tag_ids= stores: blanks dropped, as Rails drops them, and each
+    # uuid once whatever its case. The original values are kept: a malformed
+    # id cast to nil would otherwise be discarded silently instead of raising
+    # RecordNotFound.
+    def distinct_tag_ids(ids)
+      id_type = Tag.type_for_attribute(:id)
+      Array(ids).compact_blank.uniq { |id| id_type.cast(id) || id }
+    end
+
+    # tag_ids is stored as a set, so an enrichment of it matches in any order.
+    def enrichable_set(attr, values)
       return super unless attr.to_s == "tag_ids"
 
       id_type = Tag.type_for_attribute(:id)
-      values.map { |id| id_type.cast(id) || id }
+      distinct_tag_ids(values).map { |id| (id_type.cast(id) || id).to_s }.sort
     end
 
     # Another writer can tag this transaction between it loading its tags and

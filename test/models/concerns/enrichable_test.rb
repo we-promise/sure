@@ -240,8 +240,9 @@ class EnrichableTest < ActiveSupport::TestCase
     end
   end
 
-  # The provenance is what tag_ids= stored, which clearing the AI cache
-  # compares the transaction's tags against before it unlocks them.
+  # The provenance is the ids the AI passed, repeats and case included;
+  # clearing the AI cache compares them with the transaction's tags as
+  # tag_ids= stores them before it unlocks them.
   test "an AI tag enrichment with a repeated id unlocks when the AI cache is cleared" do
     txn = transactions(:transfer_out)
     tag = tags(:one)
@@ -254,5 +255,78 @@ class EnrichableTest < ActiveSupport::TestCase
     txn.clear_ai_cache
 
     assert_not txn.reload.locked?(:tag_ids)
+  end
+
+  # tag_ids= drops blank ids, so a blank among them is no change.
+  test "a blank tag id beside the transaction's tag is not an enrichment" do
+    txn = transactions(:transfer_out)
+    tag = tags(:one)
+    txn.update!(tag_ids: [ tag.id ])
+
+    assert_no_difference "DataEnrichment.count" do
+      refute txn.enrich_attribute(:tag_ids, [ nil, "", tag.id ], source: "rule")
+    end
+  end
+
+  test "AI tag ids logged with a blank unlock when the AI cache is cleared" do
+    txn = transactions(:transfer_out)
+    tag = tags(:one)
+    txn.update!(tag_ids: [ tag.id ])
+    txn.data_enrichments.create!(attribute_name: "tag_ids", source: "ai", value: [ "", tag.id ])
+    txn.lock_attr!(:tag_ids)
+
+    txn.clear_ai_cache
+
+    assert_not txn.reload.locked?(:tag_ids)
+  end
+
+  test "AI tag ids the user changed stay locked when the AI cache is cleared" do
+    txn = transactions(:transfer_out)
+    txn.update!(tag_ids: [])
+    assert txn.enrich_attribute(:tag_ids, [ tags(:one).id ], source: "ai")
+    txn.lock_attr!(:tag_ids)
+    txn.update!(tag_ids: [ tags(:two).id ])
+
+    txn.reload.clear_ai_cache
+
+    assert txn.reload.locked?(:tag_ids)
+  end
+
+  # Only an attribute the model stores as a set (enrichable_set) matches in
+  # any order when the AI cache is cleared; any other array, such as
+  # tagging_ids, must match as logged.
+  test "clearing the AI cache matches array order unless the model stores a set" do
+    txn = transactions(:transfer_out)
+    txn.update!(tag_ids: [ tags(:one).id, tags(:two).id ])
+    txn.reload
+    txn.data_enrichments.create!(attribute_name: "tag_ids", source: "ai", value: txn.tag_ids.reverse)
+    txn.data_enrichments.create!(attribute_name: "tagging_ids", source: "ai", value: txn.tagging_ids.reverse)
+    txn.lock_attr!(:tag_ids)
+    txn.lock_attr!(:tagging_ids)
+
+    txn.clear_ai_cache
+
+    assert_not txn.reload.locked?(:tag_ids), "tag_ids is a set: the reversed ids match"
+    assert txn.locked?(:tagging_ids), "a plain array: the reversed ids do not match"
+  end
+
+  # A plain array is still compared in any order when enriching, as before.
+  test "a plain array attribute in another order is not an enrichment" do
+    txn = transactions(:transfer_out)
+    txn.update!(tag_ids: [ tags(:one).id, tags(:two).id ])
+
+    assert_no_difference "DataEnrichment.count" do
+      refute txn.enrich_attribute(:tagging_ids, txn.reload.tagging_ids.reverse, source: "rule")
+    end
+  end
+
+  test "a tag id in another case is not an enrichment" do
+    txn = transactions(:transfer_out)
+    tag = tags(:one)
+    txn.update!(tag_ids: [ tag.id ])
+
+    assert_no_difference "DataEnrichment.count" do
+      refute txn.enrich_attribute(:tag_ids, [ tag.id.upcase ], source: "rule")
+    end
   end
 end
