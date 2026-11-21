@@ -39,6 +39,7 @@ class RackAttackTest < ActionDispatch::IntegrationTest
       oidc_account_link/ip oidc_account_link/email
       api_login/ip api_login/email
       api_sso_link/ip api_sso_link/email
+      api_password_reset/ip api_password_reset/email
       password_change/ip password_change/user
     ].each do |name|
       assert_includes throttles, name, "#{name} should have rate limiting configured"
@@ -114,6 +115,51 @@ class RackAttackTest < ActionDispatch::IntegrationTest
 
     malformed_request = throttle_request("/api/v1/auth/login", method: "POST", json_body_raw: "not json")
     assert_nil api_login_email_block.call(malformed_request)
+  end
+
+  test "api password-reset request throttle matches its path, json email and format suffix" do
+    ip_block = Rack::Attack.throttles["api_password_reset/ip"].block
+    email_block = Rack::Attack.throttles["api_password_reset/email"].block
+
+    request = throttle_request("/api/v1/auth/password_reset", method: "POST",
+      json_body: { email: " User@Example.com " })
+    assert_equal "203.0.113.5", ip_block.call(request)
+    assert_equal "user@example.com", email_block.call(request)
+
+    # The controller must still read the body after Rack::Attack peeked at it.
+    assert_equal({ "email" => " User@Example.com " }, JSON.parse(request.body.read))
+
+    # A .json suffix must not bypass the throttle.
+    suffixed = throttle_request("/api/v1/auth/password_reset.json", method: "POST",
+      json_body: { email: "user@example.com" })
+    assert_equal "203.0.113.5", ip_block.call(suffixed)
+
+    # Unrelated API paths are not matched.
+    other = throttle_request("/api/v1/auth/login", method: "POST", json_body: { email: "user@example.com" })
+    assert_nil ip_block.call(other)
+  end
+
+  test "credential email throttle keys on the query email, matching the controller" do
+    email_block = Rack::Attack.throttles["api_password_reset/email"].block
+
+    # Rails' params[:email] lets the query value win over a form body. The
+    # throttle must bucket the same address or a caller could vary the body to
+    # keep the real recipient's bucket from filling.
+    conflicting = throttle_request("/api/v1/auth/password_reset?email=query@example.com",
+      method: "POST", params: { "email" => "body@example.com" })
+    assert_equal "query@example.com", email_block.call(conflicting)
+  end
+
+  test "api password-reset throttle ignores the token-submission PATCH" do
+    ip_block = Rack::Attack.throttles["api_password_reset/ip"].block
+    email_block = Rack::Attack.throttles["api_password_reset/email"].block
+
+    # The PATCH that submits a new password carries no email and must not spend
+    # the request throttle's budget; it stays bounded by the general api/ip throttle.
+    patch_request = throttle_request("/api/v1/auth/password_reset", method: "PATCH",
+      json_body: { token: "t", password: "newpassword123" })
+    assert_nil ip_block.call(patch_request)
+    assert_nil email_block.call(patch_request)
   end
 
   test "password change throttles discriminate by ip and signed-in user, and ignore unrelated requests" do

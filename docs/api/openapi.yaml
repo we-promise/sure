@@ -5850,6 +5850,82 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/auth/password_reset":
+    post:
+      summary: Request a password-reset email
+      tags:
+      - Auth
+      parameters: []
+      responses:
+        '200':
+          description: generic acknowledgement (returned whether or not an account
+            exists, to prevent account enumeration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+              - email
+        required: true
+    patch:
+      summary: Reset a password using an emailed token
+      tags:
+      - Auth
+      parameters: []
+      responses:
+        '200':
+          description: password updated; every session and token for the account is
+            revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '422':
+          description: invalid or expired token, SSO-only account, or password validation
+            failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: password features are disabled on this instance
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: Reset token from the emailed link (valid for 15 minutes)
+                password:
+                  type: string
+                password_confirmation:
+                  type: string
+              required:
+              - token
+              - password
+              - password_confirmation
+        required: true
   "/api/v1/balance_sheet":
     get:
       summary: Show balance sheet

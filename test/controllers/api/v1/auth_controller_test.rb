@@ -1482,4 +1482,116 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [], JSON.parse(response.body)["providers"]
   end
+
+  # --- Password reset -------------------------------------------------------
+
+  test "request_password_reset enqueues the reset job for a known email" do
+    assert_enqueued_with(job: MobilePasswordResetJob) do
+      post "/api/v1/auth/password_reset", params: { email: users(:family_admin).email }, as: :json
+    end
+
+    assert_response :success
+    assert_match "If an account exists", response.parsed_body["message"]
+  end
+
+  test "request_password_reset enqueues the same job for an unknown email" do
+    # The lookup happens in the job, so the controller does identical work and
+    # returns the same response whether or not the account exists.
+    assert_enqueued_with(job: MobilePasswordResetJob) do
+      post "/api/v1/auth/password_reset", params: { email: "nobody@example.com" }, as: :json
+    end
+
+    assert_response :success
+    assert_match "If an account exists", response.parsed_body["message"]
+  end
+
+  test "reset_password changes the password, revokes sessions and logs the change" do
+    user = users(:family_admin)
+    user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+    token = user.generate_token_for(:password_reset)
+
+    assert_difference -> { SecurityAuditLog.count }, 1 do
+      patch "/api/v1/auth/password_reset", params: {
+        token: token, password: "newpassword123", password_confirmation: "newpassword123"
+      }, as: :json
+    end
+
+    assert_response :success
+    assert user.reload.authenticate("newpassword123")
+    assert_empty user.sessions.reload
+  end
+
+  test "reset_password rejects an invalid token" do
+    patch "/api/v1/auth/password_reset", params: {
+      token: "not-a-real-token", password: "newpassword123", password_confirmation: "newpassword123"
+    }, as: :json
+
+    assert_response :unprocessable_entity
+  end
+
+  test "reset_password rejects a confirmation mismatch" do
+    token = users(:family_admin).generate_token_for(:password_reset)
+
+    patch "/api/v1/auth/password_reset", params: {
+      token: token, password: "newpassword123", password_confirmation: "different456"
+    }, as: :json
+
+    assert_response :unprocessable_entity
+  end
+
+  test "reset_password requires a matching password confirmation" do
+    user = users(:family_admin)
+    token = user.generate_token_for(:password_reset)
+
+    # Omitting the confirmation must not slip through (Rails skips the
+    # confirmation check when it is nil).
+    patch "/api/v1/auth/password_reset", params: {
+      token: token, password: "newpassword123"
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_not user.reload.authenticate("newpassword123")
+  end
+
+  test "reset_password rejects a blank password" do
+    token = users(:family_admin).generate_token_for(:password_reset)
+
+    patch "/api/v1/auth/password_reset", params: {
+      token: token, password: "", password_confirmation: ""
+    }, as: :json
+
+    assert_response :unprocessable_entity
+  end
+
+  test "reset_password rejects a non-string password without raising" do
+    token = users(:family_admin).generate_token_for(:password_reset)
+
+    patch "/api/v1/auth/password_reset", params: {
+      token: token, password: 12345, password_confirmation: 12345
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "Password can't be blank", response.parsed_body["error"]
+  end
+
+  test "reset_password rejects an SSO-only account" do
+    token = users(:sso_only).generate_token_for(:password_reset)
+
+    patch "/api/v1/auth/password_reset", params: {
+      token: token, password: "newpassword123", password_confirmation: "newpassword123"
+    }, as: :json
+
+    assert_response :unprocessable_entity
+  end
+
+  test "reset_password is forbidden when password features are disabled" do
+    AuthConfig.stubs(:password_features_enabled?).returns(false)
+    token = users(:family_admin).generate_token_for(:password_reset)
+
+    patch "/api/v1/auth/password_reset", params: {
+      token: token, password: "newpassword123", password_confirmation: "newpassword123"
+    }, as: :json
+
+    assert_response :forbidden
+  end
 end

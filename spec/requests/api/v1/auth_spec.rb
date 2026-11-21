@@ -592,4 +592,83 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
     end
   end
+
+  path '/api/v1/auth/password_reset' do
+    post 'Request a password-reset email' do
+      tags 'Auth'
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        properties: {
+          email: { type: :string, format: :email }
+        },
+        required: %w[email]
+      }
+
+      response '200', 'generic acknowledgement (returned whether or not an account exists, to prevent account enumeration)' do
+        schema type: :object,
+               properties: {
+                 message: { type: :string }
+               }
+        let(:body) { { email: user.email } }
+        run_test!
+      end
+    end
+
+    patch 'Reset a password using an emailed token' do
+      tags 'Auth'
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        properties: {
+          token: { type: :string, description: 'Reset token from the emailed link (valid for 15 minutes)' },
+          password: { type: :string },
+          password_confirmation: { type: :string }
+        },
+        required: %w[token password password_confirmation]
+      }
+
+      response '200', 'password updated; every session and token for the account is revoked' do
+        schema type: :object,
+               properties: {
+                 message: { type: :string }
+               }
+        let(:body) do
+          {
+            token: user.generate_token_for(:password_reset),
+            password: 'New-Docs-Pass1!',
+            password_confirmation: 'New-Docs-Pass1!'
+          }
+        end
+        run_test!
+      end
+
+      response '422', 'invalid or expired token, SSO-only account, or password validation failed' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:body) do
+          {
+            token: 'invalid-or-expired-token',
+            password: 'New-Docs-Pass1!',
+            password_confirmation: 'New-Docs-Pass1!'
+          }
+        end
+        run_test!
+      end
+
+      response '403', 'password features are disabled on this instance' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        before { allow(AuthConfig).to receive(:password_features_enabled?).and_return(false) }
+        let(:body) do
+          {
+            token: 'any-token',
+            password: 'New-Docs-Pass1!',
+            password_confirmation: 'New-Docs-Pass1!'
+          }
+        end
+        run_test!
+      end
+    end
+  end
 end
