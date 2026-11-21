@@ -53,7 +53,8 @@ class Rule::LocalizationTest < ActiveSupport::TestCase
   test "AI action labels localize configured unknown and missing costs without changing English" do
     family = @rule.family
     family.stubs(:self_hoster?).returns(true)
-    family.stubs(:categorization_model_name).returns("example-model")
+    model = Struct.new(:name).new("example-model")
+    Ai.stubs(:plan).with(:categorize, family: family).returns(Struct.new(:model).new(model))
     executor = Rule::ActionExecutor::AutoCategorize.new(@rule)
     LlmUsage.stubs(:estimate_auto_categorize_cost).returns(BigDecimal("0.0123"))
 
@@ -61,7 +62,7 @@ class Rule::LocalizationTest < ActiveSupport::TestCase
       assert_equal "Назначить категории с помощью ИИ (~$0.0123 за 20 операций)", executor.label
       LlmUsage.stubs(:estimate_auto_categorize_cost).returns(nil)
       assert_equal "Назначить категории с помощью ИИ (стоимость неизвестна)", executor.label
-      family.stubs(:categorization_model_name).returns(nil)
+      Ai.stubs(:plan).with(:categorize, family: family).returns(nil)
       assert_equal "Назначить категории с помощью ИИ (поставщик категоризации не настроен)", executor.label
       assert_equal "Определить продавцов с помощью ИИ ($$)", Rule::ActionExecutor::AutoDetectMerchants.new(@rule).label
     end
