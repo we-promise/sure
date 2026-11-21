@@ -6,10 +6,14 @@ class PlaidItem::Importer
 
   def import
     fetch_and_import_item_data
-    fetch_and_import_accounts_data
+    warnings = fetch_and_import_accounts_data
     plaid_item.good! if plaid_item.requires_update?
+    warnings
   rescue Plaid::ApiError => e
     handle_plaid_error(e)
+    # The handled login error preserves the existing reconnect behavior, but
+    # update!'s Boolean must not be interpreted as a data-quality warning.
+    []
   end
 
   private
@@ -67,6 +71,8 @@ class PlaidItem::Importer
         # Once we know all data has been imported, save the cursor to avoid re-fetching the same data next time
         plaid_item.update!(next_cursor: snapshot.transactions_cursor)
       end
+
+      snapshot.warnings
     end
 
     def plaid_account_for(raw_account, returned_ids:)

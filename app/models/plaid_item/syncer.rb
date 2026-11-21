@@ -15,7 +15,7 @@ class PlaidItem::Syncer
 
     # Phase 1: Import data from Plaid API
     sync.update!(status_text: "Importing accounts from Plaid...") if sync.respond_to?(:status_text)
-    plaid_item.import_latest_plaid_data
+    warnings = Array(plaid_item.import_latest_plaid_data)
 
     # Phase 2: Process the raw Plaid data and create/update internal domain objects
     # This must happen before the linked/unlinked check because process_accounts
@@ -56,6 +56,10 @@ class PlaidItem::Syncer
 
     # Mark sync health
     collect_health_stats(sync, errors: nil)
+    merge_sync_stats(sync, {
+      "data_warnings" => warnings.size,
+      "data_quality_details" => warnings.map(&:stringify_keys)
+    })
   rescue => e
     collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
     raise
