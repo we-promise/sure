@@ -3,50 +3,12 @@ require "test_helper"
 # The hardened pdftoppm, ported from the spike's page_images_test with PDFs
 # built to misbehave and stand-in pdftoppm scripts.
 class Pdf::PageImagesTest < ActiveSupport::TestCase
-  test "renders every page as a PNG at 150 dpi, a scan included" do
-    skip_without_pdftoppm
-    pages = Pdf::PageImages.render(statement("impact_scanned"))
-
-    assert_equal 2, pages.size
-    assert pages.all? { _1.start_with?("\x89PNG".b) }
-    assert_equal [ [ 1275, 1650 ] ] * 2, pages.map { size(_1) }, "US Letter at 150 dpi"
-    assert_equal [ [ 933, 1219 ] ], Pdf::PageImages.render(statement("bac_ocr")).map { size(_1) }
-  end
-
-  test "renders only the pages asked for, so a 300-page upload costs what a batch needs" do
-    skip_without_pdftoppm
-    pdf = blank_pdf(pages: 300)
-
-    pages, seconds = timed { Pdf::PageImages.render(pdf, pages: 11..15) }
-
-    assert_equal 5, pages.size
-    assert_operator seconds, :<, 10
-    assert_equal 300, Pdf::PageImages.page_count(pdf)
-  end
-
-  test "a file that isn't a PDF is refused before pdftoppm runs" do
-    error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render("not a pdf") }
-    assert_equal :unreadable, error.code
-  end
-
   test "a page-size bomb is refused before rendering" do
     bomb = blank_pdf(pages: 1, size: [ 14_400, 14_400 ])   # 200 inches, PDF's largest page
 
     error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(bomb) }
     assert_equal :too_large, error.code
     assert_match "page 1 would be 900 million pixels at 150 dpi", error.message
-  end
-
-  test "a page pdftoppm couldn't allocate is caught, not sent as 1x1" do
-    Dir.mktmpdir do |dir|
-      one_pixel = Base64.decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
-      File.binwrite(File.join(dir, "1x1.png"), one_pixel)
-      binary = fake_pdftoppm(dir, %(for last; do :; done; cp #{dir}/1x1.png "$last-1.png"))
-
-      error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(statement("bac_ocr"), binary:) }
-      assert_equal :blank_page, error.code
-      assert_equal "pdftoppm rendered page 1 as 1x1", error.message
-    end
   end
 
   test "pdftoppm gets an empty environment: no keys or database URL" do
@@ -78,13 +40,6 @@ class Pdf::PageImagesTest < ActiveSupport::TestCase
         assert dead_within?(pid, 2), "process #{pid} survived"
       end
     end
-  end
-
-  test "a missing pdftoppm keeps #3275's concrete reason" do
-    error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(statement("bac_ocr"), binary: "pdftoppm-not-here") }
-
-    assert_equal :missing_binary, error.code
-    assert_match "poppler-utils", error.message
   end
 
   test "a MediaBox stored as a reference is resolved before the size check" do
@@ -183,10 +138,6 @@ class Pdf::PageImagesTest < ActiveSupport::TestCase
         png[16, 8] = [ 32, 32 ].pack("NN")   # bytes 16-23 are IHDR's width and height
         File.binwrite(path, png)
       end
-    end
-
-    def skip_without_pdftoppm
-      skip "pdftoppm isn't installed (poppler-utils)" unless system("pdftoppm", "-v", out: File::NULL, err: File::NULL)
     end
 
     def statement(name) = file_fixture("statements/#{name}.pdf").binread

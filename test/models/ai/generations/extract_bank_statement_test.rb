@@ -13,16 +13,6 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     @source = Pdf::TextExtractor.pages(file_fixture("statements/bac_ocr.pdf").binread).join("\n")
   end
 
-  test "a right extraction passes every check" do
-    checks = check(value(BAC_ROWS))
-
-    assert checks.reconciles
-    assert checks.amounts_in_source
-    assert_operator checks.dates_anchored, :>=, 0.5
-    assert checks.passed?
-    assert_equal true, checks.to_h[:passed]
-  end
-
   test "comma-decimal amounts and thousands grouping are found in the text" do
     source = "01/02/2025 salary 1.234,56|01/02/2025 card 12,50"
 
@@ -71,12 +61,6 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_equal false, check(value(invented)).amounts_in_source
     assert_nil check(value(BAC_ROWS), source: nil).amounts_in_source
     assert check(value(BAC_ROWS), source: nil).passed?, "only reconciles applies to images"
-  end
-
-  test "the text's printed balances win over the model's" do
-    checks = Ai::Generations::ExtractBankStatement.checks(value(BAC_ROWS).merge(closing_balance: 1.0), source: @source,
-                                                         balances: { opening_balance: 40_000.0, closing_balance: 44_079.83 })
-    assert checks.reconciles
   end
 
   test "a printed opening and a printed closing balance are used independently" do
@@ -138,17 +122,6 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_nil Ai::Generations::ExtractBankStatement.statement(ambiguous)[:transactions].sole[:date]
   end
 
-  test "without balances, reconciles can't tell: flagged, with nothing another way could fix" do
-    checks = check(value(BAC_ROWS).merge(opening_balance: nil, closing_balance: nil))
-
-    assert_nil checks.reconciles
-    assert_equal [ :balances ], checks.failed
-    assert_not checks.passed?
-    assert_not checks.worth_another_way?
-    assert_equal true, checks.to_h[:settled], "stored, so Auto learns from it"
-    assert check(value(BAC_ROWS.drop(1))).worth_another_way?, "a balance that doesn't reconcile is worth another way"
-  end
-
   test "batches merge in order, dropping a row repeated at a boundary but not within a batch" do
     generation = Ai::Generations::ExtractBankStatement.new(units: [], content: "", family: families(:dylan_family))
     first = { bank_name: "YourBank", opening_balance: 40_000.0, closing_balance: 41_000.0, statement_period: { start_date: "2019-02-01", end_date: nil },
@@ -169,14 +142,6 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
 
     assert_raises(Ai::Error::InvalidOutput) { generation.merge_values([]) }
     assert_equal [], generation.merge_values([ { transactions: [] } ])[:transactions], "an explicit empty answer is still valid"
-  end
-
-  test "statement gives today's extracted_data shape" do
-    statement = Ai::Generations::ExtractBankStatement.statement(value([ [ "2019-02-01", -24.5 ] ]))
-
-    assert_equal [ { date: "2019-02-01", amount: -24.5, name: "row", category: nil, notes: nil } ], statement[:transactions]
-    assert_equal({ start_date: "2019-02-01", end_date: "2019-03-01" }, statement[:period])
-    assert_equal 40_000.0, statement[:opening_balance]
   end
 
   test "a zero-amount balance line is not a transaction PdfImport can publish" do

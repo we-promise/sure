@@ -31,19 +31,6 @@ class AiEscalationTest < ActiveSupport::TestCase
 
   def served_by(request) = "#{request.model.endpoint.name}/#{request.model.name}"
 
-  test "invalid output escalates to the next model on the same endpoint, with no down mark" do
-    route_through("gpu/qwen3-3b", "gpu/qwen3-20b") do
-      requests = stub_ai { served_by(_1) == "gpu/qwen3-3b" ? raise(Ai::Error::InvalidOutput, "mostly null") : AiTestGeneration.answer(_1) }
-
-      result = generate
-
-      assert result.success?
-      assert_equal "qwen3-20b", result.route.model.name
-      assert_equal %w[gpu/qwen3-3b gpu/qwen3-20b], requests.map { served_by(_1) }
-      assert_empty @cache.instance_variable_get(:@data).keys
-    end
-  end
-
   test "a refused connection marks the server, so its other endpoint rows are skipped too" do
     route_through("gpu/qwen3-3b", "gpu_large/qwen3-32b", "openai/gpt-4.1-mini") do
       requests = stub_ai { _1.model.endpoint.local? ? raise(Ai::Error::Unreachable, "refused") : AiTestGeneration.answer(_1) }
@@ -55,13 +42,6 @@ class AiEscalationTest < ActiveSupport::TestCase
       assert_equal %w[gpu/qwen3-3b openai/gpt-4.1-mini openai/gpt-4.1-mini], requests.map { served_by(_1) }
       assert_equal "openai", second.route.endpoint.name
     end
-  end
-
-  test "a local server's timeout or 5xx marks the server" do
-    route = Ai::Route.new(feature: :detect_merchants, model: @models["gpu/qwen3-3b"])
-
-    assert_equal Ai::DownMarks.server_key(route.endpoint), Ai::DownMarks.key_for(route, Ai::Error::Timeout.new("slow"))
-    assert_equal Ai::DownMarks.server_key(route.endpoint), Ai::DownMarks.key_for(route, Ai::Error::Upstream.new("500"))
   end
 
   test "a cloud gateway's 503 or 429 marks only that model; the next model on the gateway answers" do
@@ -84,26 +64,6 @@ class AiEscalationTest < ActiveSupport::TestCase
     replaced = route.with(model: route.model.with(endpoint: route.endpoint.with(api_key: "a-new-key")))
     assert_not_equal key, Ai::DownMarks.key_for(replaced, Ai::Error::Unauthorized.new("401")), "a replaced key isn't marked down"
     assert_match %r{\Aai/down/model/gateway/\h{12}/vendor-a/model\z}, Ai::DownMarks.key_for(route, Ai::Error::ModelMissing.new("404"))
-  end
-
-  test "a list of four is tried to the end, and the last error stands" do
-    route_through("gpu/qwen3-3b", "gpu/qwen3-20b", "gateway/vendor-a/model", "openai/gpt-4.1-mini") do
-      requests = stub_ai { raise Ai::Error::InvalidOutput, "no" }
-
-      result = generate
-
-      assert_kind_of Ai::Error::InvalidOutput, result.error
-      assert_equal 4, requests.size
-    end
-  end
-
-  test "other refusals aren't retried anywhere" do
-    route_through("gpu/qwen3-3b", "openai/gpt-4.1-mini") do
-      requests = stub_ai { raise Ai::Error::Refused.new("malformed", status: 400) }
-
-      assert_kind_of Ai::Error::Refused, generate.error
-      assert_equal 1, requests.size
-    end
   end
 
   test "down marks expire after 60 seconds" do

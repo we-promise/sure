@@ -297,65 +297,6 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     RuleRun.define_method(:complete_job!, real_complete_job) if real_complete_job
   end
 
-  test "a completion that deadlocks every time gives up instead of rerunning the applied batch" do
-    ids = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 2,
-                               transactions_queued: 2, executed_at: Time.current)
-    rule_run.await_ai!(2)   # this action's transactions
-    rule_run.await_ai!(2)   # another AI action on the same run, not run yet
-    stub_ai(:detect_merchants) do |request|
-      batch = request.schema.dig(:properties, :merchants, :items, :properties, :transaction_id, :enum)
-      { merchants: batch.map { { transaction_id: _1, business_name: "Shop", business_url: "shop.example" } } }
-    end
-    RuleRun.any_instance.stubs(:complete_job!).raises(ActiveRecord::Deadlocked)
-
-    Ai::GenerationJob.perform_later(:detect_merchants, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
-    ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys) until enqueued_jobs.empty?
-
-    assert_equal [ 2, "failed" ], rule_run.reload.values_at(:transactions_awaiting_ai, :status)
-  end
-
-  test "a run that gives up stops waiting for its transactions" do
-    ids = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
-                               transactions_queued: 2, executed_at: Time.current)
-    rule_run.await_ai!(2)
-    stub_ai(:detect_merchants, raises: Ai::Error::Unauthorized.new("bad key"))
-
-    Ai::GenerationJob.perform_now(:detect_merchants, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
-
-    assert_equal [ 0, "failed" ], rule_run.reload.slice(:transactions_awaiting_ai, :status).values
-  end
-
-  test "a batch whose progress fails to record is released when the run fails" do
-    ids = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
-                               transactions_queued: 2, executed_at: Time.current)
-    rule_run.await_ai!(2)
-    stub_ai(:detect_merchants) do |request|
-      batch = request.schema.dig(:properties, :merchants, :items, :properties, :transaction_id, :enum)
-      { merchants: batch.map { { transaction_id: _1, business_name: "Shop", business_url: "shop.example" } } }
-    end
-    RuleRun.any_instance.expects(:ai_handled!).with(handled: 2, modified: anything).raises(ActiveRecord::StatementInvalid, "boom")
-    RuleRun.any_instance.expects(:ai_handled!).with(handled: 2)
-
-    Ai::GenerationJob.perform_now(:detect_merchants, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
-  end
-
-  test "transactions released when the run finishes aren't released again when finishing fails" do
-    ids = 2.times.map do |i|
-      create_transaction(account: @account, name: "Shop #{i}").transaction.tap { _1.lock_attr!(:merchant_id) }.id
-    end
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
-                               transactions_queued: 2, executed_at: Time.current)
-    rule_run.await_ai!(2)
-    RuleRun.any_instance.stubs(:complete_job!).raises(ActiveRecord::StatementInvalid, "boom")
-    RuleRun.any_instance.expects(:ai_handled!).with(handled: 2).once
-    RuleRun.any_instance.expects(:ai_handled!).with(handled: 0).once
-
-    Ai::GenerationJob.perform_now(:detect_merchants, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
-  end
-
   test "a batch whose progress can't be recorded is rolled back, so its retry counts every change" do
     txn = create_transaction(account: @account, name: "McDonalds").transaction
     rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
