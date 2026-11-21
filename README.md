@@ -7,10 +7,14 @@ Multi-part series branch https://github.com/we-promise/sure/tree/refactor/ai-plu
 - https://github.com/we-promise/sure/pull/5209 CI: refuse provider HTTP outside live tests. merged on branch
 - https://github.com/we-promise/sure/pull/4765 2d. Jev and shadow runs. merged on branch
 - https://github.com/we-promise/sure/pull/3422 bridge the statement vault to search and let tools read a file. merged on branch
-- https://github.com/we-promise/sure/pull/4771 2e. PDF import and document search.
-- https://github.com/we-promise/sure/pull/4892 2f. ruby_llm 2.2, Jev via OpenRouter, review fixes. under review & cleanup
+- https://github.com/we-promise/sure/pull/4771 2e. PDF import and document search. merged on branch
+- https://github.com/we-promise/sure/pull/4892 2f. ruby_llm 2.2.3, Jev via OpenRouter, review fixes. merged on branch
+- main merged into the branch on 2026-11-21
 - https://github.com/we-promise/sure/pull/4425 Propose a transaction split from an attached receipt.
-- 3a Capsule, shared state and probes. developed, will push after stage 2 is merged. milestone to merge with main. stacked PR from here on
+- https://github.com/we-promise/sure/stack/5504 stack from here on: 3a, 3a-tidy and the test trim. milestone to merge with main. under review
+  - https://github.com/we-promise/sure/pull/5501 3a. Capsule, shared state and probes off the web thread.
+  - https://github.com/we-promise/sure/pull/5502 3a-tidy. Fixes for 3b and PR 4; dead code from 2a-2f.
+  - https://github.com/we-promise/sure/pull/5503 Keep a few comprehensive AI tests per layer.
 - 3b Bill suggestions and stopping AI work.
 - 3c Documents and MCP tools.
 - 3d Enforcement.
@@ -19,6 +23,7 @@ Multi-part series branch https://github.com/we-promise/sure/tree/refactor/ai-plu
 - 7 Configuration in the database.
 - 8 Health and settings pages. 
 - 9 Allowed endpoints, own keys and the member switch.
+- https://github.com/we-promise/sure/issues/5077 follow-up work deferred from these PRs.
 
 
 [![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/we-promise/sure)
