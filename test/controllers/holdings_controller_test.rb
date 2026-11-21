@@ -299,25 +299,21 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # The reset and its restatement are one change: a restatement that fails
-  # leaves the holding, its trades and its lots where they were.
+  # leaves the holding, its trades and its lots where they were, and says so.
   test "a reset whose restatement fails is not applied" do
     @holding.account.update!(plaid_account: plaid_accounts(:one))
     @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+    create_trade(securities(:msft), account: @account, qty: 3, price: 10, date: Date.current)
+    HoldingLot.create!(account: @account, security: securities(:msft), origin_security: securities(:aapl), qty: 3, currency: "USD")
     Balance::Materializer.any_instance.stubs(:materialize_balances).raises(RuntimeError, "restatement failed")
 
-    assert_raises(RuntimeError) { post reset_security_holding_path(@holding) }
+    assert_error_reported(RuntimeError) { post reset_security_holding_path(@holding) }
 
+    assert_equal I18n.t("holdings.reset_security.failed"), flash[:alert]
     @holding.reload
     assert_equal [ securities(:msft), securities(:aapl) ], [ @holding.security, @holding.provider_security ]
-  end
-
-  test "a remap whose restatement fails is not applied" do
-    original = @holding.security
-    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(RuntimeError, "restatement failed")
-
-    assert_raises(RuntimeError) { patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" } }
-
-    assert_equal original, @holding.reload.security
+    assert_equal 1, @account.trades.where(security: securities(:msft)).count, "the trade stays on the remapped security"
+    assert_equal 1, @account.holding_lots.where(security: securities(:msft)).count, "the lot stays on the remapped security"
   end
 
   # Both take the account row lock before any write, as a sync and a lot edit
@@ -333,7 +329,7 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
   test "a remap locks the account before changing anything" do
     linked_remapped_holding
-    expect_locked_change(:remap_security!)
+    expect_locked_change(:remap_security!, saving: Security)
 
     patch remap_security_holding_path(@holding), params: { security_id: "NVDA|XNAS" }
 
@@ -397,7 +393,106 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Yahoo Finance rate limit exceeded", flash[:alert]
   end
 
+  test "remap_security on a negative-amount holding redirects with success notice" do
+    # The materializer writes such rows with upsert_all, skipping validations.
+    @holding.update_columns(qty: -22, amount: BigDecimal("-3187.80"))
+    msft = securities(:msft)
+    Balance::Materializer.any_instance.stubs(:materialize_balances)
+
+    patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" }
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.success"), flash[:notice]
+    assert_nil flash[:alert]
+    @holding.reload
+    assert_equal msft.id, @holding.security_id
+    assert @holding.security_locked?
+  end
+
+  test "remap_security rolls the remap back when re-materialising fails" do
+    old_security_id = @holding.security_id
+    create_trade(@holding.security, account: @account, qty: 3, price: 10, date: Date.current)
+    trades_before = @account.trades.where(security_id: old_security_id).count
+    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(StandardError, "forced test failure")
+
+    assert_error_reported(StandardError) do
+      assert_no_difference -> { Security.count } do
+        patch remap_security_holding_path(@holding), params: { security_id: "NEWREMAP|XNAS" }
+      end
+    end
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.failed"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_equal old_security_id, @holding.reload.security_id
+    assert_not @holding.security_locked?
+    assert_equal trades_before, @account.trades.where(security_id: old_security_id).count
+  end
+
+  test "remap_security with a security that cannot be saved shows an alert" do
+    # An unknown price provider fails the Security inclusion validation.
+    old_security_id = @holding.security_id
+
+    assert_no_difference -> { Security.count } do
+      patch remap_security_holding_path(@holding), params: { security_id: "NEWREMAP|XNAS|not_a_provider" }
+    end
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.failed"), flash[:alert]
+    assert_equal old_security_id, @holding.reload.security_id
+  end
+
+  # The drawer's remap form submits as a turbo-stream inside the drawer's
+  # turbo-frame, where a plain redirect lands as "Content missing".
+  test "remap_security failure answers a turbo-stream request with a redirect action" do
+    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(StandardError, "forced test failure")
+
+    assert_error_reported(StandardError) do
+      patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" }, as: :turbo_stream
+    end
+
+    assert_turbo_stream_redirect_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.failed"), flash[:alert]
+  end
+
+  test "remap_security without a ticker answers a turbo-stream request with a redirect action" do
+    patch remap_security_holding_path(@holding), params: { security_id: "" }, as: :turbo_stream
+
+    assert_turbo_stream_redirect_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.security_not_found"), flash[:alert]
+  end
+
+  test "reset_security rolls the reset back when a holding write fails" do
+    original = @holding.security
+    remapped = securities(:msft)
+    create_trade(original, account: @account, qty: 3, price: 10, date: Date.current)
+    @holding.remap_security!(remapped)
+    trades_on_remapped = @account.trades.where(security: remapped).count
+    assert_operator trades_on_remapped, :>, 0
+
+    # Fail the last step, the lot move, after the holdings and the trades have
+    # already been written back, so the rollback has real writes to undo.
+    HoldingLot.stubs(:move!).raises(ActiveRecord::StatementInvalid, "forced test failure")
+
+    assert_error_reported(ActiveRecord::StatementInvalid) do
+      post reset_security_holding_path(@holding)
+    end
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.reset_security.failed"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_equal remapped.id, @holding.reload.security_id
+    assert_equal trades_on_remapped, @account.trades.where(security: remapped).count
+  end
+
   private
+    def assert_turbo_stream_redirect_to(url)
+      assert_response :success
+      assert_equal "text/vnd.turbo-stream.html", response.media_type
+      assert_includes response.body, %(action="redirect")
+      assert_includes response.body, %(target="#{ERB::Util.html_escape(url)}")
+    end
+
     def linked_remapped_holding
       @holding.account.update!(plaid_account: plaid_accounts(:one))
       @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
@@ -405,9 +500,11 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     # Mocha verifies these at teardown, so a request that skips the lock, the
     # change or the restatement fails.
-    def expect_locked_change(change)
+    # `saving` names a model whose save! must come after the lock too.
+    def expect_locked_change(change, saving: nil)
       order = sequence(change.to_s)
       Account.any_instance.expects(:lock!).at_least_once.in_sequence(order).returns(true)
+      saving.any_instance.expects(:save!).in_sequence(order).returns(true) if saving
       Holding.any_instance.expects(change).in_sequence(order).returns(true)
       Balance::Materializer.any_instance.expects(:materialize_balances).in_sequence(order)
     end
