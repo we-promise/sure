@@ -948,6 +948,15 @@ class RecurringTransaction < ApplicationRecord
     Schedule.for(self)
   end
 
+  # Due dates from next_expected_date through `through`, so a projection over
+  # a longer window shows every occurrence (rent three times over three
+  # months), not only the next one.
+  def projected_due_dates(through:)
+    return [] if next_expected_date.blank? || next_expected_date > through
+
+    ([ next_expected_date ] + schedule.occurrences_between(next_expected_date + 1, through)).uniq
+  end
+
   # Calculate the next expected date based on the last occurrence
   def calculate_next_expected_date(from_date = last_occurrence_date)
     schedule.next_occurrence_after(from_date)
