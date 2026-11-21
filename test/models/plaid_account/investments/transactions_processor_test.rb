@@ -405,6 +405,21 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     end
   end
 
+  # The adapter labels by name only on an investment account.
+  test "a cash row with an unmapped subtype is labelled from its name" do
+    @plaid_account.current_account.update_columns(accountable_type: "Investment", accountable_id: Investment.create!.id)
+    entry = process_plaid_transaction(cash_row("misc_div_1", "miscellaneous", "Dividend AAPL"))
+
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+  end
+
+  test "a cash withdrawal keeps the Other label whatever its name" do
+    row = cash_row("cash_withdraw_1", "withdrawal", "401k withdrawal").merge("amount" => 50)
+    entry = process_plaid_transaction(row)
+
+    assert_equal [ "Other", "standard" ], [ entry.transaction.investment_activity_label, entry.transaction.kind ]
+  end
+
   private
 
     def cash_row(id, subtype, name)
