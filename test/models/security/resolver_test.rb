@@ -587,6 +587,36 @@ class Security::ResolverTest < ActiveSupport::TestCase
     assert_not Security.exists?(placeholder.id)
   end
 
+  test "falls back to the listed row when the retry for a placeholder fails" do
+    listed = Security.create!(ticker: "PNDT", exchange_operating_mic: "XNAS", country_code: "US", price_provider: "yahoo_finance")
+    placeholder = Security.create!(ticker: "PNDT", offline: true, offline_reason: "resolution_pending")
+
+    failing = mock("failing_provider")
+    failing.stubs(:class).returns(Provider::YahooFinance)
+    failing.expects(:search_securities).raises(StandardError, "rate limited")
+    Security.stubs(:providers).returns([ failing ])
+    Security.stubs(:enabled_securities_providers).returns([ "yahoo_finance" ])
+
+    assert_equal listed, Security::Resolver.new("PNDT").resolve
+
+    refute listed.reload.offline?
+    assert_nil listed.offline_reason
+    assert_equal "resolution_pending", placeholder.reload.offline_reason
+  end
+
+  test "a lookup for an explicit exchange leaves the placeholder for exchange-less lookups to settle" do
+    placeholder = Security.create!(ticker: "PNDS", offline: true, offline_reason: "resolution_pending")
+    stub_listed_search("PNDS")
+
+    resolved = Security::Resolver.new("PNDS", exchange_operating_mic: "XNAS").resolve
+
+    assert_not_equal placeholder, resolved
+    assert_equal "XNAS", resolved.exchange_operating_mic
+    placeholder.reload
+    assert_nil placeholder.exchange_operating_mic
+    assert_equal "resolution_pending", placeholder.offline_reason
+  end
+
   test "leaves a confirmed no-match blank-MIC security alone when a search later lists the ticker" do
     unlisted = Security.create!(ticker: "PNDW", offline: true)
     stub_listed_search("PNDW")

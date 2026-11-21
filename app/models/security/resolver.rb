@@ -17,6 +17,7 @@ class Security::Resolver
     exact_match_from_db ||
       exact_match_from_provider ||
       close_match_from_provider ||
+      db_match_held_for_retry ||
       offline_security(reason: provider_search_technical_failure? ? "resolution_pending" : nil)
   end
 
@@ -96,17 +97,36 @@ class Security::Resolver
 
       return nil unless security
 
+      # Without an exchange, the lookup above returns whichever row for the
+      # ticker sorts first. While a placeholder exists, retry the provider so
+      # a successful search can fold it into the listed row, and fall back to
+      # the listed row if the search fails or finds nothing.
+      if exchange_operating_mic.blank? && (placeholder = pending_placeholder_for(symbol))
+        @db_match_held_for_retry = resolution_pending?(security) ? listed_row_besides(placeholder) : security
+        return nil
+      end
+
       # A "resolution_pending" record means the last provider search failed
       # technically (rate limit/timeout), not that the security is a
       # confirmed no-match. Skip the DB fast path so this resolution attempt
       # actually retries the provider instead of returning the same stale
       # offline record forever.
       return nil if resolution_pending?(security)
-      # Without an exchange, the lookup above returns whichever row for the
-      # ticker sorts first. While a placeholder exists, retry the provider
-      # so a successful search can fold it into the listed row.
-      return nil if exchange_operating_mic.blank? && pending_placeholder_for(symbol)
 
+      use_db_match(security)
+    end
+
+    def listed_row_besides(placeholder)
+      scope = Security.where("UPPER(ticker) = ?", symbol).where.not(id: placeholder.id).order(:id)
+      scope = scope.where(country_code: country_code) if country_code.present?
+      scope.detect { |security| !resolution_pending?(security) }
+    end
+
+    def db_match_held_for_retry
+      use_db_match(@db_match_held_for_retry) if @db_match_held_for_retry
+    end
+
+    def use_db_match(security)
       # When the caller provides an explicit provider (e.g. user selected from
       # search results), honor that choice. Automated syncs (Plaid, SimpleFIN)
       # pass price_provider: nil and will not overwrite.
@@ -211,13 +231,15 @@ class Security::Resolver
     end
 
     # A search that fails technically for a ticker without an exchange leaves
-    # a blank-MIC "resolution_pending" placeholder. Once a search places the
-    # ticker on an exchange, that placeholder is the same instrument: it
-    # becomes the listed row, or is merged into it when one already exists.
-    # Left alone, it would keep receiving holdings whenever a later search
-    # failed, splitting one position across two securities.
+    # a blank-MIC "resolution_pending" placeholder. Once an exchange-less
+    # lookup, the kind that created it, finds the ticker on an exchange, the
+    # placeholder is that instrument: it becomes the listed row, or is merged
+    # into it when one already exists. Left alone, it would keep receiving
+    # holdings whenever a later search failed, splitting one position across
+    # two securities. A lookup for an explicit exchange says nothing about
+    # which listing the placeholder stood for.
     def settle_pending_placeholder(security, match)
-      return security if security.exchange_operating_mic.blank?
+      return security if exchange_operating_mic.present? || security.exchange_operating_mic.blank?
 
       placeholder = pending_placeholder_for(match.ticker)
       return security unless placeholder
