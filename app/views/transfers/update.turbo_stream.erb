@@ -1,4 +1,8 @@
 <% unless @transfer.destroyed? %>
+  <%= turbo_stream.replace dom_id(@transfer, :display_name),
+                          partial: "transfers/display_name",
+                          locals: { transfer: @transfer } %>
+
   <%= turbo_stream.replace @transfer.inflow_transaction.entry,
                           partial: "entries/entry",
                           locals: { entry: @transfer.inflow_transaction.entry, view_ctx: @view_ctx } %>

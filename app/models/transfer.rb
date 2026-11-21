@@ -78,9 +78,53 @@ class Transfer < ApplicationRecord
   def name
     acc = to_account
     if payment?
-      acc ? "Payment to #{acc.name}" : "Payment"
+      acc ? I18n.t("transfer.payment_name", to_account: acc.name) : I18n.t("transfer.contextual.payment")
     else
-      acc ? "Transfer to #{acc.name}" : "Transfer"
+      acc ? I18n.t("transfer.name", to_account: acc.name) : I18n.t("transfer.contextual.transfer")
+    end
+  end
+
+  # A shared name means the user (or the importer) gave both legs the same
+  # label; otherwise use a contextual type so neither leg's name looks like the
+  # name for both.
+  def shared_name
+    outflow_name = outflow_transaction&.entry&.name
+    inflow_name = inflow_transaction&.entry&.name
+
+    outflow_name if outflow_name.present? && outflow_name == inflow_name
+  end
+
+  def display_name
+    shared_name || contextual_name
+  end
+
+  def contextual_name
+    return I18n.t("transfer.contextual.credit_card_payment") if to_account&.credit_card?
+    return I18n.t("transfer.contextual.loan_payment") if to_account&.loan?
+    return I18n.t("transfer.contextual.investment_contribution") if investment_contribution?
+    return I18n.t("transfer.contextual.payment") if payment?
+
+    I18n.t("transfer.contextual.transfer")
+  end
+
+  # Renames both legs. A blank name raises ActiveRecord::RecordInvalid from
+  # Entry's presence validation, so the rule has a single owner and a partial
+  # rename never lands (the caller's transaction rolls back). A changed entry
+  # locks its name so provider syncs do not overwrite it, without freezing
+  # unrelated provider enrichment.
+  def rename_entries!(outflow_name:, inflow_name:)
+    names = {
+      outflow_transaction.entry => outflow_name.to_s.strip,
+      inflow_transaction.entry => inflow_name.to_s.strip
+    }
+
+    Transfer.transaction do
+      names.each do |entry, new_name|
+        next if entry.name == new_name
+
+        entry.update!(name: new_name)
+        entry.lock_saved_attributes!
+      end
     end
   end
 

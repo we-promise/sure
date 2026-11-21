@@ -43,6 +43,9 @@ en:
       mark_recurring_title: Mark transfer as recurring
       note_label: Notes
       note_placeholder: Add a note to this transfer
+      transaction_name: Transaction name
+      transaction_name_aria: "Transaction name (%{account})"
+      transaction_name_help: Each account's transaction can have its own name.
       overview: Overview
       settings: Settings
       from: From
@@ -56,4 +59,5 @@ en:
       category: Category
       uncategorized: Uncategorized
     update:
+      name_required: Transfer names cannot be blank
       success: Transfer updated

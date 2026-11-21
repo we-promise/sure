@@ -437,7 +437,85 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal 5, transfer.total_fee
   end
 
+  test "rename_entries! renames both legs and strips whitespace" do
+    transfer = transfers(:one)
+
+    transfer.rename_entries!(outflow_name: "  Rent  ", inflow_name: " Rent received ")
+
+    assert_equal "Rent", transfer.outflow_transaction.entry.reload.name
+    assert_equal "Rent received", transfer.inflow_transaction.entry.reload.name
+  end
+
+  test "rename_entries! rejects blank names without changing either leg" do
+    transfer = transfers(:one)
+    outflow_name = transfer.outflow_transaction.entry.name
+    inflow_name = transfer.inflow_transaction.entry.name
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      transfer.rename_entries!(outflow_name: "  ", inflow_name: "Rent received")
+    end
+
+    assert error.record.errors.of_kind?(:name, :blank)
+    assert_equal outflow_name, transfer.outflow_transaction.entry.reload.name
+    assert_equal inflow_name, transfer.inflow_transaction.entry.reload.name
+  end
+
+  test "rename_entries! locks only the names of changed legs" do
+    transfer = transfers(:one)
+    outflow_entry = transfer.outflow_transaction.entry
+    inflow_entry = transfer.inflow_transaction.entry
+
+    transfer.rename_entries!(outflow_name: "Rent", inflow_name: inflow_entry.name)
+
+    assert outflow_entry.reload.locked?(:name)
+    assert_not outflow_entry.locked?(:date)
+    assert_not inflow_entry.reload.locked?(:name)
+  end
+
+  test "rename_entries! locks the edited name against provider enrichment" do
+    transfer = transfers(:one)
+    entry = transfer.outflow_transaction.entry
+
+    transfer.rename_entries!(outflow_name: "Rent", inflow_name: transfer.inflow_transaction.entry.name)
+
+    assert_not entry.reload.enrich_attribute(:name, "Provider name", source: "test")
+    assert_equal "Rent", entry.reload.name
+  end
+
+  test "display_name uses a shared leg name" do
+    transfer = transfers(:one)
+
+    transfer.outflow_transaction.entry.update!(name: "Rent")
+    transfer.inflow_transaction.entry.update!(name: "Rent")
+
+    assert_equal "Rent", transfer.display_name
+  end
+
+  test "display_name uses the destination type when the leg names differ" do
+    assert_equal "Credit card payment", transfers(:one).display_name
+    assert_equal "Loan payment", contextual_name_for(accounts(:loan))
+    assert_equal "Investment contribution", contextual_name_for(accounts(:investment))
+    assert_equal "Payment", contextual_name_for(accounts(:other_liability))
+    assert_equal "Transfer", contextual_name_for(accounts(:other_asset))
+  end
+
+  test "name stays derived after renaming the entries" do
+    transfer = transfers(:one)
+    derived_name = transfer.name
+
+    transfer.rename_entries!(outflow_name: "Rent", inflow_name: "Rent received")
+
+    assert_equal derived_name, transfer.name
+  end
+
   private
+    def contextual_name_for(to)
+      transfer = create_pending_transfer(from: accounts(:depository), to:)
+      transfer.outflow_transaction.entry.update!(name: "Source")
+      transfer.inflow_transaction.entry.update!(name: "Destination")
+      transfer.display_name
+    end
+
     def create_pending_transfer(from:, to:)
       outflow_entry = create_transaction(date: Date.current, account: from, amount: 500)
       inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)

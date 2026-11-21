@@ -1,0 +1,61 @@
+<%# locals: (transfer:, form: nil) %>
+
+<% if form %>
+  <p class="text-xs text-secondary"><%= t("transfers.show.transaction_name_help") %></p>
+<% end %>
+
+<%# DS::DetailRow renders a dt/dd row, not a list, so each section groups its
+    rows in a single <dl> (see merchants/show.html.erb). %>
+<div class="space-y-3">
+  <dl>
+    <%= render DS::DetailRow.new(label: t("transfers.show.from")) do |row| %>
+      <% row.with_value do %>
+        <span class="flex items-center gap-2 font-medium">
+          <%= render "accounts/logo", account: transfer.from_account, size: "sm" %>
+          <%= link_to transfer.from_account.name, account_path(transfer.from_account), data: { turbo_frame: "_top" } %>
+        </span>
+      <% end %>
+    <% end %>
+    <% if form %>
+      <%= render "transfers/name_row",
+            form: form,
+            method: :outflow_name,
+            account: transfer.from_account,
+            value: transfer.outflow_transaction.entry.name %>
+    <% end %>
+    <%= render DS::DetailRow.new(label: t("transfers.show.date"), value: l(transfer.outflow_transaction.entry.date, format: :long), value_class: "font-medium") %>
+    <%= render DS::DetailRow.new(label: t("transfers.show.transfer_amount"), value: format_money(transfer.outflow_transaction.entry.amount_money * -1), value_class: "font-medium text-destructive privacy-sensitive") %>
+    <% if transfer.has_source_fee? %>
+      <%= render DS::DetailRow.new(label: t("transfers.show.source_fee"), value: format_money(Money.new(transfer.derived_source_fee_amount, transfer.from_account.currency) * -1), value_class: "font-medium text-destructive privacy-sensitive") %>
+      <%= render DS::DetailRow.new(label: t("transfers.show.total"), value: format_money((transfer.outflow_transaction.entry.amount_money + Money.new(transfer.derived_source_fee_amount, transfer.from_account.currency)) * -1), class: "pt-1 border-t border-alpha-black-50", value_class: "font-medium text-destructive privacy-sensitive") %>
+    <% end %>
+  </dl>
+</div>
+
+<%= render "shared/ruler", classes: "my-2" %>
+
+<div class="space-y-3">
+  <dl>
+    <%= render DS::DetailRow.new(label: t("transfers.show.to")) do |row| %>
+      <% row.with_value do %>
+        <span class="flex items-center gap-2 font-medium">
+          <%= render "accounts/logo", account: transfer.to_account, size: "sm" %>
+          <%= link_to transfer.to_account.name, account_path(transfer.to_account), data: { turbo_frame: "_top" } %>
+        </span>
+      <% end %>
+    <% end %>
+    <% if form %>
+      <%= render "transfers/name_row",
+            form: form,
+            method: :inflow_name,
+            account: transfer.to_account,
+            value: transfer.inflow_transaction.entry.name %>
+    <% end %>
+    <%= render DS::DetailRow.new(label: t("transfers.show.date"), value: l(transfer.inflow_transaction.entry.date, format: :long), value_class: "font-medium") %>
+    <%= render DS::DetailRow.new(label: t("transfers.show.transfer_amount"), value: "+#{format_money(transfer.inflow_transaction.entry.amount_money * -1)}", value_class: "font-medium text-success privacy-sensitive") %>
+    <% if transfer.has_destination_fee? %>
+      <%= render DS::DetailRow.new(label: t("transfers.show.destination_fee"), value: format_money(Money.new(transfer.derived_destination_fee_amount, transfer.to_account.currency) * -1), value_class: "font-medium text-destructive privacy-sensitive") %>
+      <%= render DS::DetailRow.new(label: t("transfers.show.total"), value: "+#{format_money((transfer.inflow_transaction.entry.amount_money * -1) - Money.new(transfer.derived_destination_fee_amount, transfer.to_account.currency))}", class: "pt-1 border-t border-alpha-black-50", value_class: "font-medium text-success privacy-sensitive") %>
+    <% end %>
+  </dl>
+</div>

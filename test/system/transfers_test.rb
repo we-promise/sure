@@ -27,6 +27,29 @@ class TransfersTest < ApplicationSystemTestCase
     end
   end
 
+  test "can rename both sides of a transfer" do
+    transfer = transfers(:one)
+    transfer.confirm!
+    date = transfer.outflow_transaction.entry.date
+
+    visit transactions_url
+    find("a", text: transfer.outflow_transaction.entry.name, match: :first).click
+
+    assert_selector "details[open] input[name='transfer[outflow_name]']"
+    assert_text I18n.t("transfers.show.transaction_name_help")
+    find("input[name='transfer[outflow_name]']").set("Rent")
+    find("input[name='transfer[inflow_name]']").set("Rent")
+    find("input[name='transfer[inflow_name]']").send_keys(:tab)
+
+    within "#display_name_transfer_#{transfer.id}" do
+      assert_text "Rent"
+    end
+
+    within "#entry-group-#{date}" do
+      assert_text "Rent"
+    end
+  end
+
   test "shows exchange rate field for different currencies" do
     # Create an account with a different currency
     eur_account = @user.family.accounts.create!(
