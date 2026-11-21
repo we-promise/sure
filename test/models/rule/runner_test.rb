@@ -221,6 +221,54 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal 1, runs.last.transactions_queued
   end
 
+  test "a rule with an AI action records its other actions' changes as modified" do
+    Family.any_instance.stubs(:auto_categorize_transactions_later)
+    rule = create_rule("Mixed", "o", tags: [ @tag_a ])
+    rule.actions.create!(action_type: "auto_categorize")
+
+    runner = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual")
+    run = runner.run.first
+
+    assert_equal 2, runner.changed_now_count
+    assert_equal "pending", run.status
+    assert_equal 2, run.transactions_queued
+    assert_equal 2, run.transactions_processed
+    assert_equal 2, run.transactions_modified
+
+    run.complete_job!(modified_count: 1)
+
+    assert_equal "success", run.reload.status
+    assert_equal 3, run.transactions_modified
+    assert_equal 0, run.transactions_blocked
+  end
+
+  test "a rule with only an AI action records nothing modified until its job reports" do
+    Family.any_instance.stubs(:auto_categorize_transactions_later)
+    rule = @family.rules.create!(
+      name: "AI only",
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+    )
+
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first
+
+    assert_equal "pending", run.status
+    assert_equal 2, run.transactions_processed
+    assert_equal 0, run.transactions_modified
+  end
+
+  test "a rule without an AI action records processed and modified as before" do
+    @whole_foods.tags << @tag_a
+    rule = create_rule("Tags", "o", tags: [ @tag_a ])
+
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first
+
+    assert_equal "success", run.status
+    assert_equal 2, run.transactions_processed
+    assert_equal 1, run.transactions_modified
+  end
+
   test "a failing rule is recorded and the remaining rules still run" do
     top = create_rule("Top", "Whole Foods", category: @groceries)
     create_rule("Bottom", "Hardware", name: "Renamed")
