@@ -37,11 +37,15 @@ module IncomeStatement::ScopedTransactionsQuery
 
     # One rate per (currency, date) for the entries a query converts, by
     # ExchangeRate.rate_sql's rule, so each pair is looked up once rather than
-    # once per entry. transactions_scope: the query's own transactions, which
-    # already join their entries, for exactly their pairs; without it, every
-    # entry of the family, which covers any query over the family's
-    # transactions.
+    # once per entry. transactions_scope: the query's own transactions, for
+    # exactly their pairs; it must join `entries` unaliased, since the pairs
+    # read entries.currency and entries.date. Without it, every entry of the
+    # family, which covers any query over the family's transactions.
     def fx_rates_cte_sql(transactions_scope = nil)
+      if transactions_scope && !joins_entries?(transactions_scope)
+        raise ArgumentError, "transactions_scope must join entries to collect its exchange rate pairs"
+      end
+
       pairs = if transactions_scope
         transactions_scope.unscope(:select, :order)
                           .where.not(entries: { currency: @family.currency })
@@ -61,6 +65,10 @@ module IncomeStatement::ScopedTransactionsQuery
 
     def fx_rates_join_sql
       "LEFT JOIN fx_rates fxr ON fxr.currency = ae.currency AND fxr.date = ae.date"
+    end
+
+    def joins_entries?(relation)
+      relation.arel.join_sources.any? { |join| join.left.respond_to?(:name) && join.left.name.to_s == "entries" }
     end
 
     def entries_join_sql(t)
