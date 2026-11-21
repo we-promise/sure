@@ -2038,13 +2038,33 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     carried = Security.create!(ticker: "CARRY", name: "Carried forward")
     Security::Price.create!(security: carried, date: as_of - 10.days, price: 10, currency: "USD")
     (0..2).each do |days_ago|
-      Security::Price.create!(security: carried, date: as_of - days_ago.days, price: 10, currency: "USD", provisional: true)
+      Security::Price.create!(security: carried, date: as_of - days_ago.days, price: 10, currency: "USD", provisional: true, carried_forward: true)
     end
     Holding.create!(account: account, security: carried, date: as_of, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
 
     stale = @statement.data_quality_issues(as_of: as_of).select { |i| i.kind == :stale_price }
 
     assert_equal [ [ "CARRY", as_of - 10.days ] ], stale.map { |i| [ i.security.ticker, i.detail ] }
+  end
+
+  # Carried-forward rows older than the provisional lookback are stored
+  # non-provisional, so they need their own mark to stay out of freshness.
+  test "data_quality_issues does not count old carried-forward prices as quotes" do
+    account = create_investment_account(balance: 5000)
+    as_of = Date.current - 8.days
+    last_quote = Date.current - 15.days
+    security = Security.create!(ticker: "GAPPED", name: "Gap filled")
+    provider = mock
+    provider.stubs(:fetch_security_prices).returns(Provider::Response.new(success?: true, error: nil, data: [
+      OpenStruct.new(security: security, date: last_quote, price: 10, currency: "USD")
+    ]))
+    Security::Price::Importer.new(security: security, security_provider: provider, start_date: last_quote, end_date: Date.current).import_provider_prices
+    Holding.create!(account: account, security: security, date: as_of, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+
+    assert_not Security::Price.find_by!(security: security, date: as_of).provisional, "the precondition: the filled row at as_of is not provisional"
+    stale = @statement.data_quality_issues(as_of: as_of).select { |i| i.kind == :stale_price }
+
+    assert_equal [ [ "GAPPED", last_quote ] ], stale.map { |i| [ i.security.ticker, i.detail ] }
   end
 
   # One account can hold the same security in two currencies. Without a cost

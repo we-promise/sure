@@ -872,7 +872,7 @@ class InvestmentStatement
     # Latest price date per held security on or before as_of, so a price
     # recorded after as_of cannot make a past check look fresh.
     # The last quote on or before `as_of` per held security: a real price row
-    # (not a provisional one carried forward, nor a zero placeholder, which
+    # (not one the importer carried forward, nor a zero placeholder, which
     # the price importer skips too), or the date of a holding a provider
     # synced with its own price, whichever is later.
     def latest_quote_dates(as_of)
@@ -884,7 +884,7 @@ class InvestmentStatement
       security_ids = current_holdings.map(&:security_id).uniq
       priced = Security::Price
         .where(security_id: security_ids)
-        .where(date: ..as_of, provisional: false)
+        .where(date: ..as_of, carried_forward: false)
         .where("price > 0")
         .group(:security_id)
         .maximum(:date)

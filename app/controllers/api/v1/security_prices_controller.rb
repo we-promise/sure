@@ -124,6 +124,9 @@ class Api::V1::SecurityPricesController < Api::V1::BaseController
         provisional = parse_boolean_filter_param(:provisional)
         query = query.where(provisional: provisional)
       end
+      if params.key?(:carried_forward)
+        query = query.where(carried_forward: parse_boolean_filter_param(:carried_forward))
+      end
       query
     end
 end

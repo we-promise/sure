@@ -1878,7 +1878,7 @@ RSpec.configure do |config|
           },
           SecurityPrice: {
             type: :object,
-            required: %w[id date price price_amount currency provisional security created_at updated_at],
+            required: %w[id date price price_amount currency provisional carried_forward security created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               date: { type: :string, format: :date },
@@ -1886,6 +1886,7 @@ RSpec.configure do |config|
               price_amount: { type: :string, description: 'Exact decimal security price' },
               currency: { type: :string },
               provisional: { type: :boolean },
+              carried_forward: { type: :boolean, description: 'The price repeats an earlier one: no quote was available for this date' },
               security: {
                 type: :object,
                 required: %w[id ticker],

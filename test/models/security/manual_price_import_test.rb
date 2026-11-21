@@ -33,6 +33,14 @@ class Security::ManualPriceImportTest < ActiveSupport::TestCase
     assert_not existing.provisional
   end
 
+  test "a close over a carried-forward price counts as a real quote" do
+    existing = @security.prices.create!(date: 1.day.ago.to_date, price: 20, currency: "AUD", carried_forward: true)
+
+    import([ row(1.day.ago, "23") ])
+
+    assert_not existing.reload.carried_forward
+  end
+
   test "one bad row leaves every row in the batch unwritten" do
     @security.prices.create!(date: 5.days.ago.to_date, price: 19, currency: "AUD")
 
