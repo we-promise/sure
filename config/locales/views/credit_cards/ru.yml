@@ -47,6 +47,8 @@ ru:
     tabs:
       overview:
         above_minimum: Сумма выписки — %{balance}, что больше минимального платежа %{minimum}. Если внести только минимум, остаток долга сохранится и на него будут начисляться проценты по указанной годовой ставке.
+        balance_updates: Обновления остатка
+        payments_applied: Учтённые платежи
         apr: Годовая ставка (APR)
         closes_on: Следующая выписка закроется %{date}
         credit_toward_next: Переплата в счёт следующей выписки
@@ -64,6 +66,23 @@ ru:
         monthly_rate_label: "Месячная ставка"
         payments_credits: "Платежи/зачисления"
         per_month: "%{amount}/месяц"
+        closes_on_days:
+          zero: Выписка закроется %{date} (сегодня)
+          one: Выписка закроется %{date} (через 1 день)
+          few: Выписка закроется %{date} (через %{count} дня)
+          many: Выписка закроется %{date} (через %{count} дней)
+          other: Выписка закроется %{date} (через %{count} дня)
+        due_overdue_days:
+          one: Срок оплаты %{date} истёк 1 день назад
+          few: Срок оплаты %{date} истёк %{count} дня назад
+          many: Срок оплаты %{date} истёк %{count} дней назад
+          other: Срок оплаты %{date} истёк %{count} дня назад
+        due_on_days:
+          zero: Оплатить до %{date} (сегодня)
+          one: Оплатить до %{date} (через 1 день)
+          few: Оплатить до %{date} (через %{count} дня)
+          many: Оплатить до %{date} (через %{count} дней)
+          other: Оплатить до %{date} (через %{count} дня)
         remaining_due: "Осталось оплатить: %{amount}"
         scheduled_payment: "Запланированный платёж %{amount} на %{date}"
         status_paid: "Оплачено"

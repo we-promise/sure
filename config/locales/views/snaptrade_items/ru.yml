@@ -50,6 +50,13 @@ ru:
       oauth_setup_step_3: Задайте SNAPTRADE_OAUTH_CLIENT_ID в окружении и перезапустите приложение. Этого достаточно для входа по коду устройства; для входа через браузер добавьте также SNAPTRADE_OAUTH_CLIENT_SECRET
       oauth_status_ready_device: Авторизуйте Sure с помощью кода устройства, чтобы получать данные ваших счетов SnapTrade.
       oauth_device_button: Использовать код устройства
+      personal_key_title: Личный API-ключ SnapTrade
+      personal_key_description_html: 'Используйте бесплатный личный ключ для своих брокерских счетов. Создайте его на <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a> и вставьте сюда ID клиента и ключ потребителя.'
+      personal_key_client_id_label: ID клиента
+      personal_key_consumer_key_label: Ключ потребителя
+      personal_key_save_button: Сохранить ключ
+      oauth_alternative: 'Запускаете Sure для других пользователей? Вместо этого зарегистрируйте OAuth-приложение SnapTrade:'
+      oauth_status_personal_key: Синхронизация с личным API-ключом SnapTrade. Авторизация OAuth переключит это подключение на OAuth.
       manage_at_snaptrade: Управлять подключениями в SnapTrade
   snaptrade_item:
     brokerage_summary:
@@ -104,6 +111,9 @@ ru:
       connection_failed: 'Не удалось подключиться к SnapTrade: %{message}'
       decryption_failed: Не удалось прочитать учетные данные SnapTrade. Пожалуйста,
         удалите и создайте это подключение заново.
+    personal_key:
+      success: Личный API-ключ SnapTrade сохранён. Синхронизация счетов…
+      missing_fields: Введите ID клиента SnapTrade и ключ потребителя.
     connections:
       unknown_brokerage: Неизвестный брокер
     default_name: Подключение SnapTrade

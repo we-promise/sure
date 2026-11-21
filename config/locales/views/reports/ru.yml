@@ -41,6 +41,7 @@ ru:
       next_year: Следующий год
       period_label:
         last_6_months: "%{start} – %{end}"
+        all_time: "%{start} – %{end}"
         past_year: "%{year}"
         quarterly: Квартал %{quarter} %{year}
         ytd: С начала года %{year}
@@ -48,6 +49,7 @@ ru:
         quarter: Квартал %{quarter} %{year}
         ytd: С начала года %{year}
       periods:
+        all_time: За всё время
         custom: Пользовательский диапазон
         last_6_months: Последние 6 месяцев
         monthly: Ежемесячно

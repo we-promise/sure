@@ -41,6 +41,7 @@ ru:
       around: около %{date}
       overview: Обзор
       rules: Как распознаётся этот платёж
+      once_kind_hint: Отметьте операцию как разовую, чтобы не учитывать её в средних значениях.
       rule_named: «%{name}»
       rule_amount_range: от %{min} до %{max}
       rule_aliases: Также распознаётся как %{names}

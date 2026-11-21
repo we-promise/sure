@@ -59,6 +59,7 @@ ru:
         no_change: "(без изменений)"
         reconciled_status_hint: "Применимо только к счетам с ручным вводом (без синхронизации с банком)."
         reconciled_status_label: "Статус сверки"
+        transfer_fields_hint: Для переводов дата и продавец не меняются. Категория применяется только к исходящим переводам, для которых она доступна.
     categorizes:
       create:
         categorized:
@@ -179,6 +180,7 @@ ru:
       submit: Добавить операцию
       tag_search_placeholder: Найти или создать тег
       tags_label: Теги
+      tags_save_error: Не удалось сохранить теги. Измените их ещё раз или перезагрузите страницу.
       transfer: Перевод
       category_search_placeholder: Поиск категорий
       create_category: Создать «%{name}»
@@ -251,6 +253,7 @@ ru:
         ai: 'ИИ'
         attachment: 'Вложение'
         reconcile_status: "Сверка"
+        reconcile_status_hint: Включены только счета с ручным вводом.
     searches:
       filters:
         balance_updates_filter:

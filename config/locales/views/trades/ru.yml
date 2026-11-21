@@ -58,6 +58,9 @@ ru:
       exclude_subtitle: Эта операция не будет включена в отчёты и расчёты
       exclude_title: Исключить из аналитики
       fee_label: Комиссия за операцию
+      lot_label: Продано из лота
+      lot_oldest_first: Сначала самые старые
+      lot_option: "%{date} · %{qty} по %{price}"
       no_category: Без категории
       note_label: Заметка
       note_placeholder: Добавьте любые дополнительные заметки здесь...

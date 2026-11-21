@@ -26,6 +26,12 @@ ru:
         logo: Иконка
         name: Имя
         subtype: Подтип
+      depository:
+        subtype: Тип счёта
+      investment:
+        subtype: Тип инвестиций
+      loan:
+        subtype: Тип кредита
     errors:
       models:
         account:

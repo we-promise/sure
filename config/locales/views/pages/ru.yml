@@ -125,6 +125,12 @@ ru:
         date_range_short: '%{start_date} – %{end_day}, %{year}'
         date_range_short_single: '%{date} %{year}'
         month_picker_aria_label: Выбрать месяц
+        compare_picker_aria_label: Выбрать месяцы для сравнения
+        compare_months:
+          one: по сравнению с прошлым месяцем
+          few: по сравнению с прошлыми %{count} месяцами
+          many: по сравнению с прошлыми %{count} месяцами
+          other: по сравнению с прошлыми %{count} месяцами
         period_scope_hint: Показывает месяц, выбранный здесь, — независимо от периода панели вверху.
         no_data: Нет данных о расходах за этот месяц
         previous_comparison_days: (1–%{end_day})

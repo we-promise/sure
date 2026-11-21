@@ -51,6 +51,28 @@ ru:
       type: Тип
       unknown: Неизвестно
       original_payoff_date: Первоначальная дата погашения
+    subtypes:
+      auto:
+        long: Автокредит
+        short: Автокредит
+      business:
+        long: Кредит для бизнеса
+        short: Кредит для бизнеса
+      home_equity:
+        long: Кредит под залог жилья
+        short: Под залог жилья
+      line_of_credit:
+        long: Кредитная линия
+        short: Кредитная линия
+      mortgage:
+        long: Ипотека
+        short: Ипотека
+      other:
+        long: Другой кредит
+        short: Другой кредит
+      student:
+        long: Студенческий кредит
+        short: Студенческий кредит
     tabs:
       overview:
         edit_loan_details: Редактировать детали кредита

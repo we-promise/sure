@@ -38,6 +38,7 @@ ru:
       bill_not_covered: "Платежи"
       loan_payment_change: "Платёж по кредиту"
       bank_fees: "Комиссии"
+      fixed_commitments_ratio: Постоянные обязательства
     meta:
       next_n_days:
         one: Следующий %{count} день
@@ -56,6 +57,7 @@ ru:
       on_pace: по текущему темпу
       of_budget: от бюджета
       need_attention: требуют внимания
+      of_income: от дохода
       days_overdue:
         one: просрочено на %{count} день
         few: просрочено на %{count} дня
@@ -84,6 +86,7 @@ ru:
       bill_not_covered: "Перейти к счёту"
       loan_payment_change: "Открыть кредит"
       bank_fees: "Посмотреть комиссии"
+      fixed_commitments_ratio: Проверить регулярные операции
     titles:
       spending_anomaly:
         above: Расходы в категории «%{category}» растут
@@ -109,6 +112,9 @@ ru:
         up: "Платёж по счёту «%{account}» увеличится"
         down: "Платёж по счёту «%{account}» уменьшится"
       bank_fees: "Комиссии по счёту «%{account}»"
+      fixed_commitments_ratio:
+        up: Постоянные обязательства занимают всё большую долю дохода
+        over_half: Постоянные обязательства теперь составляют половину дохода или больше
     templates:
       spending_anomaly:
         above: При текущем темпе вы потратите в этом месяце %{projected_spend} в категории «%{category}» — примерно на %{deviation_pct}% больше вашего обычного среднемесячного уровня %{baseline_spend}.
@@ -135,6 +141,13 @@ ru:
       bank_fees:
         recurring: "За последние %{days} дн. по счёту «%{account}» списано комиссий на %{amount}."
         new: "За последние %{days} дн. по счёту «%{account}» списано комиссий на %{amount}, а в предыдущие %{days} дн. комиссий не было."
+      fixed_commitments_ratio: "Регулярные обязательства на %{commitments} в месяц составляют %{current_ratio}% вашего обычного ежемесячного дохода %{income}, по сравнению с %{previous_ratio}% шесть месяцев назад. %{explanation}"
+    fixed_commitments_ratio:
+      contributors: "Основные изменения: %{list}."
+      contributor:
+        new: "%{name} (новое, %{amount} в месяц)"
+        raised: "%{name} (на %{amount} в месяц больше)"
+      income_fell: Ваш обычный ежемесячный доход снизился с %{previous_income} до %{current_income}.
     dig_in:
       prompt: |-
         Помоги разобраться с этим инсайтом.

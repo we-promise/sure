@@ -125,6 +125,20 @@ ru:
         счёта.
     setup_accounts:
       account_type_label: 'Тип счёта:'
+      account_types:
+        skip: Пропустить этот счёт
+        depository: Текущий или сберегательный счёт
+        credit_card: Кредитная карта
+        investment: Инвестиционный счёт
+        loan: Кредит или ипотека
+        other_asset: Другой актив
+      subtype_labels:
+        depository: 'Подтип счёта:'
+        investment: 'Тип инвестиционного счёта:'
+        loan: 'Тип кредита:'
+      subtype_messages:
+        credit_card: Кредитные карты будут созданы как счета кредитных карт.
+        other_asset: Прочие активы будут созданы как обычные активы.
       balance: Баланс
       cancel: Отмена
       choose_account_type: 'Выберите правильный тип счёта для каждого счёта Enable
@@ -139,5 +153,7 @@ ru:
       sync_start_date_label: 'Начать синхронизацию операций с:'
       title: Настройте ваши счета Enable Banking
       skip_notice: 'Пропущенные счета сохраняются: Sure не импортирует их, пока вы не свяжете их со счётом.'
+      select_subtype: Выберите подтип
+      select_type: Выберите тип
     update:
       success: Конфигурация Enable Banking обновлена.
