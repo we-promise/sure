@@ -161,8 +161,8 @@ Sure replaces the old row so queued jobs cannot reach the new account through it
 Every channel uses one policy, `Insight#notifies?`: an enabled device receives
 new or materially resurfaced, high-priority active insights visible to the
 family, including over-budget `budget_at_risk` warnings. Enabling a device does
-not send a backlog. **Budget warnings** is a per-user preference, off by
-default, that adds the medium-priority near-limit `budget_at_risk` insights on
+not send a backlog. **Budget warnings**, under **Push notifications** in
+Preferences, is a per-user setting, off by default, that adds the medium-priority near-limit `budget_at_risk` insights on
 all of that user's push devices, browser and iOS. `budget_on_track` is low
 priority and never pushed. Existing financial generators and category
 thresholds are unchanged.

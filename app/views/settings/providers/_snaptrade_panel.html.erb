@@ -8,7 +8,10 @@
 
   <%
     items = local_assigns[:snaptrade_items] || @snaptrade_items || Current.family.snaptrade_items.active.ordered
-    snaptrade_item = items.reject(&:scheduled_for_deletion?).first
+    # Same item SnaptradeItemsController#current_snaptrade_item acts on: the
+    # newest authorized one, else the newest.
+    active_items = items.reject(&:scheduled_for_deletion?)
+    snaptrade_item = active_items.find(&:credentials_configured?) || active_items.first
     oauth_env_configured = Provider::Snaptrade.oauth_configured?
     redirect_flow_available = Provider::Snaptrade.authorization_code_configured?
     oauth_active = snaptrade_item&.oauth_token_active?
@@ -16,6 +19,34 @@
   %>
 
   <% if !oauth_env_configured %>
+    <%# Without an OAuth app, a SnapTrade Personal API key (the family's own %>
+    <%# clientId + consumerKey) is how this instance reads SnapTrade data. %>
+    <%= render layout: "settings/providers/snaptrade_credential_card",
+               locals: {
+                 title: t("providers.snaptrade.personal_key_title"),
+                 description: t("providers.snaptrade.personal_key_description_html").html_safe
+               } do %>
+      <%= styled_form_with url: personal_key_snaptrade_items_path,
+                           scope: :snaptrade_item,
+                           method: :post,
+                           data: { turbo: true },
+                           class: "space-y-3" do |form| %>
+        <%= form.text_field :client_id,
+                            label: t("providers.snaptrade.personal_key_client_id_label"),
+                            autocomplete: "off",
+                            value: nil %>
+
+        <%= form.text_field :consumer_key,
+                            label: t("providers.snaptrade.personal_key_consumer_key_label"),
+                            type: :password,
+                            autocomplete: "off",
+                            value: nil %>
+
+        <%= form.submit t("providers.snaptrade.personal_key_save_button") %>
+      <% end %>
+    <% end %>
+
+    <p class="text-sm text-secondary"><%= t("providers.snaptrade.oauth_alternative") %></p>
     <%= render "settings/providers/setup_steps",
                steps: [
                  t("providers.snaptrade.oauth_setup_step_1_html").html_safe,
@@ -23,25 +54,19 @@
                  t("providers.snaptrade.oauth_setup_step_3")
                ] %>
   <% else %>
-    <div class="bg-surface-inset rounded-xl p-4 space-y-3">
-      <div class="flex items-start gap-3">
-        <span class="w-9 h-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-          <%= icon "key-round", class: "w-4 h-4 text-success" %>
-        </span>
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-primary"><%= t("providers.snaptrade.oauth_title") %></p>
-          <p class="text-sm text-secondary">
-            <% if oauth_active %>
-              <%= t("providers.snaptrade.oauth_status_authorized") %>
-            <% elsif redirect_flow_available %>
-              <%= t("providers.snaptrade.oauth_status_ready") %>
-            <% else %>
-              <%= t("providers.snaptrade.oauth_status_ready_device") %>
-            <% end %>
-          </p>
-        </div>
-      </div>
-
+    <%
+      oauth_status = if oauth_active
+        t("providers.snaptrade.oauth_status_authorized")
+      elsif snaptrade_item&.personal_key_configured? && !snaptrade_item.requires_update?
+        t("providers.snaptrade.oauth_status_personal_key")
+      elsif redirect_flow_available
+        t("providers.snaptrade.oauth_status_ready")
+      else
+        t("providers.snaptrade.oauth_status_ready_device")
+      end
+    %>
+    <%= render layout: "settings/providers/snaptrade_credential_card",
+               locals: { title: t("providers.snaptrade.oauth_title"), description: oauth_status } do %>
       <%# Both grants end with the same access token; which ones are offered %>
       <%# depends only on what this deployment configured. %>
       <% if redirect_flow_available %>
@@ -71,9 +96,13 @@
           frame: :drawer
         ) %>
       <% end %>
-    </div>
+    <% end %>
+  <% end %>
 
-    <% if snaptrade_item&.persisted? && snaptrade_item.oauth_configured? %>
+    <%# An OAuth token needs the instance's OAuth app to keep working, so it only %>
+    <%# lists connections while that app is configured. A Personal key carries %>
+    <%# its own credentials and lists them either way. %>
+    <% if snaptrade_item&.persisted? && (snaptrade_item.personal_key_configured? || (oauth_env_configured && snaptrade_item.oauth_configured?)) %>
       <div class="border-t border-primary pt-4 mt-4">
         <%# "Manage Connections" in the item menu links here with ?manage=1. %>
         <%# The row's auto-open reads and drops it, so open from the server. %>
@@ -115,5 +144,4 @@
         <% end %>
       </div>
     <% end %>
-  <% end %>
 </div>
