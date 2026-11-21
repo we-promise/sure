@@ -321,7 +321,7 @@ class RedbarkItem::Importer
         rescue Provider::Redbark::AuthenticationError
           raise
         rescue Provider::Redbark::Error => account_error
-          log.call("Account details fetch failed for account; keeping previous details", account_error, account_id: account_id)
+          log.call("Account details fetch failed for account", account_error, account_id: account_id)
           []
         end
       end
