@@ -53,6 +53,7 @@
     <%= render "summary", totals: @search.totals, transactions_count: @pagy.count %>
     <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
   <% else %>
+    <% totals = @search.totals %>
     <%# One filter bar for both tabs: the Upcoming forecast follows the same filters. %>
     <%= render "transactions/searches/search", selection_toggle: false %>
 
@@ -64,7 +65,7 @@
 
       <% tabs.with_panel(tab_id: "transactions") do %>
         <div class="space-y-4">
-          <%= render "summary", totals: @search.totals, transactions_count: @pagy.count %>
+          <%= render "summary", totals: totals, transactions_count: @pagy.count %>
           <div class="bg-container rounded-xl shadow-border-xs">
             <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy, search: false %>
           </div>
@@ -72,8 +73,11 @@
       <% end %>
 
       <% tabs.with_panel(tab_id: "upcoming") do %>
-        <div class="bg-container rounded-xl shadow-border-xs">
-          <%= render "transactions/upcoming", forecast: @forecast %>
+        <div class="space-y-4">
+          <%= render "forecast_summary", totals: totals, transactions_count: @pagy.count, forecast: @forecast %>
+          <div class="bg-container rounded-xl shadow-border-xs">
+            <%= render "transactions/upcoming", forecast: @forecast %>
+          </div>
         </div>
       <% end %>
     <% end %>

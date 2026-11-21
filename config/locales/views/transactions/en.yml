@@ -297,6 +297,13 @@ en:
         ai_status: AI
         attachment_status: Attachment
         reconcile_status: Reconcile
+    forecast_summary:
+      forecast: Forecast
+      window: "Actual + forecast, forecast from %{start} to %{end}"
+      forecast_count:
+        one: "incl. %{count} forecast"
+        other: "incl. %{count} forecast"
+      forecast_amount: "incl. %{amount} forecast"
     list:
       drag_drop_title: Drop CSV to import
       drag_drop_subtitle: Upload transactions directly

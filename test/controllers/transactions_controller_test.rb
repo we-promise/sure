@@ -152,6 +152,19 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[role=tabpanel][data-id=transactions].hidden"
   end
 
+  test "upcoming summary adds the forecast to the actual totals" do
+    create_upcoming_bill("Soon Bill", due_on: 3.days.from_now.to_date)
+
+    get transactions_url
+    assert_response :success
+
+    actual = css_select("#total-transactions").first.text.to_i
+    forecast = css_select("#upcoming [id^='upcoming-group-'] .group").size
+    assert_operator forecast, :>=, 1
+    assert_select "#forecast-summary", text: /Forecast/
+    assert_select "#forecast-total-transactions", text: (actual + forecast).to_s
+  end
+
   test "index explains a pending transfer match in its tooltip and opens the transfer" do
     outflow = create_transaction(account: accounts(:depository), name: "Match outflow", amount: 320, date: Date.current)
     inflow = create_transaction(account: accounts(:credit_card), name: "Match inflow", amount: -320, date: Date.current)
