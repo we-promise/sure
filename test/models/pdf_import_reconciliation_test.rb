@@ -138,6 +138,32 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert first.reload.statement_reconciled?, "the replacement reading writes its own mark"
   end
 
+  test "clearing a reading releases legacy statement-only marks but keeps other imports' marks" do
+    legacy = create_transaction(account: @account, date: @date, amount: 7, name: "Legacy mark")
+    elsewhere = create_transaction(account: @account, date: @date, amount: 9, name: "Other statement mark")
+    other_entry = create_transaction(account: @account, date: @date, amount: 12.34, name: "Unique Second")
+    other_statement = create_statement(filename: "other-statement.pdf", content: file_fixture("imports/sample_bank_statement.pdf").binread + "\n%other")
+    other_import = PdfImport.create!(family: @family, account: @account, account_statement: @statement,
+                                     date_format: @family.date_format, status: :pending)
+
+    legacy.update_columns(reconciled_at: Time.current, reconciled_by_statement_id: @statement.id,
+                          reconciled_by_import_id: nil)
+    elsewhere.update_columns(reconciled_at: Time.current, reconciled_by_statement_id: other_statement.id,
+                             reconciled_by_import_id: nil)
+
+    other_entry.update_columns(reconciled_at: Time.current, reconciled_by_statement_id: @statement.id,
+                               reconciled_by_import_id: other_import.id)
+
+    assert other_entry.statement_reconciled?
+
+    @import.clear_reading!
+
+    assert_not legacy.reload.statement_reconciled?, "a NULL-owner mark on this statement is released"
+    assert_nil legacy.reconciled_by_statement_id
+    assert elsewhere.reload.statement_reconciled?, "a legacy mark on another statement stays"
+    assert other_entry.reload.statement_reconciled?, "another import's owned mark stays"
+  end
+
   test "reassigning the account re-judges the rows and releases the old reconciliation" do
     other = @family.accounts.create!(
       name: "Second Checking", balance: 0, currency: "USD", accountable: Depository.new
@@ -598,14 +624,14 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   private
 
-    def create_statement
+    def create_statement(filename: "statement.pdf", content: file_fixture("imports/sample_bank_statement.pdf").binread)
       AccountStatement.create_from_upload!(
         family: @family,
         account: @account,
         file: uploaded_file(
-          filename: "statement.pdf",
+          filename: filename,
           content_type: "application/pdf",
-          content: file_fixture("imports/sample_bank_statement.pdf").binread
+          content: content
         )
       )
     end

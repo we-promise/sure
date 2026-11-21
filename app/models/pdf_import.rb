@@ -331,11 +331,19 @@ class PdfImport < Import
       return false if reread_token.present? && !(importing? && self.reread_token == reread_token)
 
       # Another import on the same statement may rely on marks it wrote itself.
-      # Only this reading's marks go; its replacement re-judges the statement
-      # and writes its own when it generates rows.
-      Entry.where(reconciled_by_import_id: id).update_all(
-        reconciled_at: nil, reconciled_by_statement_id: nil, reconciled_by_import_id: nil, updated_at: Time.current
-      )
+      # Release this reading's owned marks and older statement-only marks from
+      # before owner ids existed. A NULL statement id matches nothing; a mark
+      # owned by another import is never this reading's to release.
+      statement_id = account_statement&.id
+      Entry.where(account_id:)
+           .where(
+             "reconciled_by_import_id = :import_id OR " \
+             "(reconciled_by_import_id IS NULL AND reconciled_by_statement_id = :statement_id)",
+             import_id: id, statement_id: statement_id
+           )
+           .update_all(
+             reconciled_at: nil, reconciled_by_statement_id: nil, reconciled_by_import_id: nil, updated_at: Time.current
+           )
       rows.delete_all
       self.class.reset_counters(id, :rows)
       update!(ai_summary: nil, document_type: nil, extracted_data: nil, extraction_checks: nil, read_with: nil, read_model: nil,

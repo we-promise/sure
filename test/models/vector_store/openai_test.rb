@@ -44,6 +44,20 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
     assert_requested delete
   end
 
+  test "a file whose compensating deletion also fails keeps its id for the caller" do
+    stub_json(:post, "/files", { id: "file-xyz" })
+    stub_request(:post, "#{BASE}/vector_stores/vs_abc123/files").to_return(status: 500, body: "boom")
+    stub_request(:delete, "#{BASE}/files/file-xyz").to_return(status: 500, body: "boom")
+
+    response = @adapter.upload_file(store_id: "vs_abc123", file_content: "x", filename: "a.txt")
+
+    assert_not response.success?
+    assert_kind_of VectorStore::UploadCleanupError, response.error
+    assert_equal "file-xyz", response.error.file_id
+    assert_kind_of StandardError, response.error.attachment_error
+    assert_kind_of StandardError, response.error.cleanup_error
+  end
+
   test "file_status: ready, unreadable for an empty index, processing, or error" do
     { { status: "completed", usage_bytes: 2048 } => "ready", { status: "completed", usage_bytes: 0 } => "unreadable",
       { status: "in_progress" } => "processing", { status: "failed", last_error: { message: "bad file" } } => "error" }.each do |file, expected|

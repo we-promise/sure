@@ -175,13 +175,16 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   rescue Ai::Error::Unavailable => e
     # Model-facing and not localized: the assistant words it for the user.
     { success: false, error: "unavailable", reason: e.reason.to_s, message: "No way to read this PDF is available (#{e.reason})." }
+  # Provider messages can quote the statement (an account number, for example), so neither the
+  # log nor the model-facing answer carries raw exception text. The correlation id ties the
+  # failure to the traced request instead.
   rescue Ai::Error::Base, Pdf::PageImages::Error, Timeout::Error, RuntimeError => e
-    Rails.logger.error("ImportBankStatement error: #{e.class.name} - #{e.message}")
+    Rails.logger.error("ImportBankStatement error: #{e.class.name} (correlation: #{Ai::CallContext.correlation_id})")
     Rails.logger.error(e.backtrace.first(10).join("\n"))
     {
       success: false,
       error: "extraction_failed",
-      message: "Failed to extract transactions: #{e.message.truncate(200)}"
+      message: "The statement could not be extracted. Try again or choose another way to read it."
     }
   end
 

@@ -241,7 +241,16 @@ class Ai::PdfReading
           blank_pages << index + 1
           next
         end
-        (0...text.length).step(limit).each { units << Ai::PdfReading::Unit.text(text[_1, limit], page: index + 1) }
+        position = 0
+        while position < text.length
+          finish = [ position + limit, text.length ].min
+          if finish < text.length
+            newline = text.rindex("\n", finish - 1)
+            finish = newline + 1 if newline && newline >= position
+          end
+          units << Ai::PdfReading::Unit.text(text[position...finish], page: index + 1)
+          position = finish
+        end
       end
       raise Ai::Error::Unavailable, :no_text_layer if units.empty?
 

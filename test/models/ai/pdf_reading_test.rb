@@ -56,6 +56,17 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_match "Cardpayment-HighStPetrolStation", requests.sole.input
   end
 
+  test "long text pages are chunked at line boundaries unless a line itself is too long" do
+    reader = reading("page one")
+    reader.stubs(:chunk_chars).returns(12)
+    text = "one two\nthree four\n#{"x" * 20}\nlast line"
+
+    units, = reader.send(:text_units, [ text ])
+
+    assert_equal [ "one two\n", "three four\n", "x" * 12, "x" * 8 + "\n", "last line" ], units.map(&:text)
+    assert_equal [ 1, 1, 1, 1, 1 ], units.map(&:first_page)
+  end
+
   test "a scan with no vision model and no OCR is unavailable: an empty text layer is never sent" do
     requests = stub_ai(:extract_pdf, returns: statement([]))
 

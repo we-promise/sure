@@ -56,6 +56,8 @@ class ImportsController < ApplicationController
     redirect_to import_path(@import), alert: t(".already_claimed")
   rescue Import::MaxRowCountExceededError
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
+  rescue Import::InvalidRowDataError => error
+    redirect_to import_clean_path(@import, view: "errors"), alert: error.message
   end
 
   # Statement imports only: what became of each extracted transaction. Without it

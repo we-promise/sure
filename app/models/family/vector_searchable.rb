@@ -94,9 +94,25 @@ module Family::VectorSearchable
       family: self
     )
 
-    return nil unless response.success?
-
     metadata = (metadata || {}).merge("vector_store" => VectorStore.backend_name(adapter))
+
+    # A failed compensating deletion leaves an uploaded file with no store attachment. Keep its
+    # id in an error row so a later remove_file can still find and delete it.
+    unless response.success?
+      error = response.error
+      return nil unless error.is_a?(VectorStore::UploadCleanupError)
+
+      return create_document_row!(adapter, store_id, error.file_id,
+        filename: filename,
+        content_type: Marcel::MimeType.for(name: filename),
+        file_size: file_content.bytesize,
+        provider_file_id: error.file_id,
+        status: "error",
+        account_id: accounts.where(id: metadata["account_id"]).pick(:id),
+        metadata: metadata.merge("upload_error" => "attachment and cleanup failed",
+                                 "cleanup_error" => error.cleanup_error.class.name)
+      )
+    end
 
     # An OpenAI store indexes in the background: the document is `processing` until
     # VectorStore::IndexStatusJob records the outcome, not `ready` before it can be found.

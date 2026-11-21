@@ -414,7 +414,7 @@ class Ai::Generation
     def bisect(route, items, depth = 1, offset = 0)
       each_piece(Ai::Batch.halves(items), offset) do |half, at|
         split_on(route, half, at)
-      rescue Ai::Error::InvalidOutput
+      rescue Ai::Error::InvalidOutput, Ai::Error::UnsupportedInput
         depth < BISECT_DEPTH && half.size > 1 ? bisect(route, half, depth + 1, at) : [ [], half ]
       rescue Ai::Error::ContextTooLong
         [ [], half ]

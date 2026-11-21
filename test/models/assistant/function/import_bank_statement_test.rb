@@ -101,6 +101,16 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert result[:message].present?, "the refusal carries the reason worded for the user"
   end
 
+  test "a provider error never puts its message in the log or the model's answer" do
+    Ai::PdfReading.any_instance.stubs(:extract)
+                  .raises(Ai::Error::Upstream, "503: account 12345678 could not be read")
+    result = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert_equal "extraction_failed", result[:error]
+    assert_not_includes result[:message], "12345678"
+    assert_not_includes result[:message], "could not be read"
+  end
+
   test "read_as left out is Auto, whatever the import was saved with" do
     @import.update!(read_as: "text")
     reading = Ai::PdfReading.any_instance

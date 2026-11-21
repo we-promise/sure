@@ -176,7 +176,8 @@ class SureImport < Import
     end
   end
 
-  def publish
+  def publish(publish_token: nil)
+    _ = publish_token # SureImport has no reread claim; ImportJob still passes the base keyword.
     raise MaxRowCountExceededError if row_count_exceeded?
 
     validate_sure_preflight!
