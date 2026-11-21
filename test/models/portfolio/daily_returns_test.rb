@@ -1095,6 +1095,1162 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     refute returns.any?
   end
 
+  # A security transferred in from a broker OUTSIDE the scope raises the
+  # closing value without any money crossing the boundary the flow sum could
+  # see: the journal carries amount 0 (Questrade writes price: 0, amount: 0)
+  # and external_flow was amount-weighted, so the arriving position landed in
+  # the numerator with an unchanged denominator and read as a 50% day.
+  #
+  # It is valued from the position -- qty x the holding's price for that
+  # date -- so the flow joins the denominator and the day returns what the
+  # portfolio actually earned, which is nothing.
+  test "a security journalled in from outside the scope is a flow rather than a return" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 100
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow,
+                 "the arriving position is an external flow at its value on the day"
+    assert_equal BigDecimal("1500"), second.denominator,
+                 "so it joins the start-of-day capital"
+
+    returns = daily_returns.returns.map(&:last)
+    assert_in_delta 0.0, returns.last.to_f, 0.000001,
+                    "receiving a position you already owned elsewhere earns nothing"
+
+    # The assertion whose deletion lets the identity break: the value is
+    # an external flow now, so it must have stopped being a market move. If both
+    # carried it, this would be -500.
+    assert_equal BigDecimal("0"), second.unexplained,
+                 "the journal is a flow OR a market move, never both"
+  end
+
+  # Five shares leave one account by journal while the other account buys
+  # five of the same with its own cash, labelled Transfer. The purchase is not
+  # where the journalled shares went, so the portfolio lost 500 to a
+  # withdrawal and nothing to the market. Read as one internal move, the
+  # 2,500 -> 2,000 drop was a 20% loss.
+  test "a cash purchase mirroring a journal out does not hide the withdrawal" do
+    buyer = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    lay_balance account: buyer, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: buyer, date: @day_two, opening: 1_000, closing: 1_000
+    security_journal account: @account, date: @day_two, qty: -5, price: 100
+    buyer.entries.create!(
+      name: "Transfer in", date: @day_two, amount: 500, currency: buyer.currency,
+      entryable: Trade.new(security: security_under_test, qty: 5, price: 100,
+                           currency: buyer.currency, investment_activity_label: "Transfer")
+    )
+
+    series = daily_returns(account_ids: [ @account.id, buyer.id ])
+    second = series.rows.last
+
+    assert_equal BigDecimal("-500"), second.external_flow, "the journalled shares left the portfolio"
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, series.returns.last.last.to_f, 0.000001
+  end
+
+  # One leg out and two legs in on the same day, the same security and
+  # quantity. Only one of the arrivals can be the departure; with no telling
+  # which, every leg is a flow, so the second five shares are capital that
+  # arrived rather than a 100% market gain.
+  test "one journal out does not cancel two journals in" do
+    second_account = create_portfolio_account(family: @family)
+    third_account = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 500, closing: 500
+    lay_balance account: @account, date: @day_two, opening: 500, closing: 0, market_flow: -500
+    [ second_account, third_account ].each do |account|
+      lay_balance account: account, date: @day_one, opening: 0, closing: 0
+      lay_balance account: account, date: @day_two, opening: 0, closing: 500, market_flow: 500
+    end
+    security_journal account: @account, date: @day_two, qty: -5, price: 100
+    security_journal account: second_account, date: @day_two, qty: 5, price: 100
+    security_journal account: third_account, date: @day_two, qty: 5, price: 100
+
+    series = daily_returns(account_ids: [ @account.id, second_account.id, third_account.id ])
+    second = series.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow, "the out and one in net to zero; the other five shares arrived"
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, series.returns.last.last.to_f, 0.000001
+  end
+
+  # The journal predicate is a fragment with a quoted label in it, like the
+  # classifier's CASE, so it is spliced in after the binds rather than scanned
+  # with them. A `:word` inside it would otherwise be read as a bind and raise.
+  test "a colon word inside the journal predicate is not read as a bind" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 100
+
+    expected = daily_returns.rows
+    original = daily_returns.send(:journal_predicate)
+    Portfolio::DailyReturns.any_instance.stubs(:journal_predicate)
+      .returns("(#{original}) AND ':probe' = ':probe'")
+
+    probed = daily_returns.rows
+
+    assert_equal BigDecimal("500"), probed.last.external_flow, "the journal is still valued from the position"
+    assert_equal expected, probed
+  end
+
+  # The mirror case, and it fails differently: a journal OUT understates,
+  # because the departing value leaves the close while nothing leaves the
+  # denominator.
+  test "a security journalled out of the scope is a negative flow" do
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    security_journal account: @account, date: @day_two, qty: -5, price: 100
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("-500"), second.external_flow
+    assert_equal BigDecimal("1000"), second.denominator
+
+    assert_in_delta 0.0, daily_returns.returns.map(&:last).last.to_f, 0.000001,
+                    "giving a position away loses nothing"
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # The unpriced half of the case above. With no price for the security,
+  # Holding::PortfolioCache keeps the journal trade's zero price and the
+  # forward calculator writes the emptied position as a qty-0, price-0 row, so
+  # the balance still drops by what it carried the position at the day before
+  # (5 x 100). That value left through net_market_flows, and it is the flow:
+  # valued from the previous day's holding row, it comes out of `market` and
+  # the day is a zero return. Suppressed with no flow instead, the 500 stayed
+  # in `market` as a loss that reconciled, and a money-weighted return read
+  # the giveaway as one.
+  test "an unpriced journal out of a whole position is valued at the price the balance carried it at" do
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    security_journal account: @account, date: @day_two, qty: -5, price: 0
+
+    returns = daily_returns
+    second = returns.rows.last
+
+    assert_equal BigDecimal("-500"), second.external_flow
+    assert_equal BigDecimal("0"), second.market
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_not second.suppressed, "the departing value is known, so the day is complete"
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
+  end
+
+  # A split going ex on the journal's date applies before the journal, so the
+  # quantity is in post-split shares while the earlier row's price is not.
+  # Unscaled, 10 shares at the pre-split 100 left as 1,000 when the balance
+  # dropped by 500, and the 500 difference read as a +100% day.
+  test "an unpriced journal out on a split's ex date is valued at the split adjusted price" do
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    Security::Split.create!(security: security_under_test, ex_date: @day_two, numerator: 2, denominator: 1, source: "manual")
+    security_journal account: @account, date: @day_two, qty: -10, price: 0
+
+    returns = daily_returns
+    second = returns.rows.last
+
+    assert_equal BigDecimal("-500"), second.external_flow
+    assert_equal BigDecimal("0"), second.market
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
+  end
+
+  # Part of a position journalled out on an unpriced day: the units that left
+  # are valued the same way, but the units that stayed sit at the journal's
+  # zero price until a price arrives, so the day is still suppressed.
+  test "an unpriced journal out of part of a position is valued but still suppresses the day" do
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    security_journal account: @account, date: @day_two, qty: -3, price: 0, holding_qty: 2
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("-300"), second.external_flow
+    assert_equal BigDecimal("-200"), second.market, "the units still held were marked to the zero price"
+    assert second.suppressed
+  end
+
+  # No earlier row to read a value from: nothing says what left, so the day
+  # stays suppressed as before.
+  test "an unpriced journal out with no earlier holding row still suppresses the day" do
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    security_journal account: @account, date: @day_two, qty: -5, price: 0
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("0"), second.external_flow
+    assert second.suppressed
+  end
+
+  # A journal is a Transfer-labelled trade with `price: 0, amount: 0`, and a
+  # predicate that only read the label would be wrong. A Transfer trade that
+  # carries a real cash amount is ordinary -- the onchain processor, the web
+  # edit form, the API update and any Buy relabelled Transfer all write
+  # `amount = qty x price` -- and for one of those the balance calculator has
+  # already booked a cash-settled purchase, so the close does not move and there
+  # is no market flow to take the value out of.
+  #
+  # Valued from the position anyway, the day read: external_flow 500, market
+  # -500, denominator 1500, unexplained 0 and a -33% return -- a phantom loss
+  # that reconciles, which is worse than one the drivers table would flag.
+  # Keyed on the amount as well, the trade is left to the classifier, which
+  # reads its cash amount as a purchase (internal), and the day stays flat.
+  test "a Transfer labelled trade that carries a cash amount is not valued as a journal" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+
+    @account.entries.create!(
+      name: "Transfer in", date: @day_two, amount: 500, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 5, price: 100,
+                           currency: @account.currency, investment_activity_label: "Transfer")
+    )
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 100,
+      amount: BigDecimal(500), currency: @account.currency
+    )
+
+    series = daily_returns
+    second = series.rows.last
+
+    assert_equal BigDecimal("0"), second.external_flow, "a purchase is no flow, and not the position's worth"
+    assert_equal BigDecimal("0"), second.market,
+                 "and nothing is subtracted from market for a purchase the close already absorbed"
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, series.returns.last.last.to_f, 0.000001, "neither the -33% phantom nor any other return"
+  end
+
+  # The same purchase on a day with no price is still a purchase. Read as a
+  # journal by its label alone, it would suppress the day as unpriced.
+  test "a Transfer labelled trade that carries a cash amount does not suppress an unpriced day" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+
+    @account.entries.create!(
+      name: "Transfer in", date: @day_two, amount: 500, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 5, price: 100,
+                           currency: @account.currency, investment_activity_label: "Transfer")
+    )
+
+    assert_not daily_returns.rows.last.suppressed
+  end
+
+  # The flow is qty x price, NOT the holding row's `amount`. `amount` is the
+  # whole position for that security in the account, so when a journal tops up
+  # something the scope already held, valuing the flow from it counts the units
+  # that were there all along as though they had just arrived.
+  #
+  # Here the account already holds 10 units and 5 are journalled in. The holding
+  # row reads 15 x 100 = 1,500; the flow is 500.
+  test "a journal that tops up an existing position is valued on what arrived" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 100, holding_qty: 15
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow,
+                 "five units arrived, not fifteen"
+    assert_equal BigDecimal("1500"), second.denominator
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # The reason suppression keys on the PRICE rather than on the row.
+  #
+  # When Holding::PortfolioCache finds no other price for a journal date -- an
+  # instance with no feed, a security never priced -- it prices the day at the
+  # journal trade's zero, so the journal still writes a holding row, valued at
+  # qty x 0. A fallback keyed on "no row exists" would never fire, and the
+  # phantom gain would simply move to the day the price appears.
+  test "a journal with no usable price suppresses the day rather than valuing it at nothing" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+
+    second = daily_returns.rows.last
+
+    assert second.suppressed, "a journal valued at zero is not a journal worth zero"
+    assert_not second.computable?
+
+    # A suppressed day is still listed; it contributes zero rather than the 50%
+    # the unvalued journal would otherwise have produced.
+    suppressed_return = daily_returns.returns.find { |date, _| date == @day_two }&.last
+    assert_equal BigDecimal("0"), suppressed_return,
+                 "a suppressed day contributes nothing, not the phantom gain"
+  end
+
+  # Suppressed for a journal is told apart from suppressed for a denominator,
+  # because only the first leaves a flow out of the sums.
+  test "a day suppressed for an unvalued journal says so, and one suppressed for its denominator does not" do
+    lay_balance account: @account, date: @day_one, opening: 0, closing: 0
+    lay_balance account: @account, date: @day_two, opening: 0, closing: 500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+
+    first, second = daily_returns.rows
+
+    assert first.suppressed
+    assert_not first.unvalued_journal, "an empty opening is a denominator, not a journal"
+    assert second.suppressed
+    assert second.unvalued_journal
+  end
+
+  test "a journal with no holding row at all suppresses the day" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5
+
+    row = daily_returns.rows.last
+    assert row.suppressed
+    # Suppressed because the position could not be valued -- NOT because a
+    # currency had no rate. Reporting both would give the reader two
+    # contradictory explanations and no figures.
+    assert_not row.rate_missing,
+               "an unpriced journal is a valuation gap, not a missing exchange rate"
+  end
+
+  # `trades.qty` is nullable in the schema; only Trade's presence validation
+  # keeps it filled, and an import or a console edit can bypass that. With no
+  # quantity the journal has no value, exactly as with no price: valued at
+  # nothing, the arriving position would read as a gain again. It suppresses
+  # the day, the same rule as an unpriced journal.
+  test "a journal with no quantity suppresses the day rather than valuing it at nothing" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    journal = security_journal(account: @account, date: @day_two, qty: 5, price: 100)
+
+    assert_not daily_returns.rows.last.suppressed, "priced and quantified, the day is computable"
+
+    journal.trade.update_columns(qty: nil)
+
+    assert daily_returns.rows.last.suppressed,
+           "a journal with no quantity is a journal that could not be valued"
+  end
+
+  # A quantity of 0 is not a missing quantity: it moves no units, writes no
+  # holding row and has nothing to value, so the day is computable and
+  # nothing is reported missing. The carried pass already skips it.
+  test "a zero-quantity journal does not suppress the day" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    security_journal(account: @account, date: @day_two, qty: 0)
+
+    second = daily_returns.rows.last
+
+    assert_not second.suppressed
+    assert_not second.unvalued_journal
+    assert_equal BigDecimal("0"), second.external_flow
+  end
+
+  # Nor does it need a rate: it moves no units, so its holding's currency
+  # converts nothing, whether or not that currency has a pair, even when that
+  # holding carries a price.
+  test "a zero-quantity journal on a holding with no rate does not flag a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    security_journal(account: @account, date: @day_two, qty: 0, currency: "EUR", price: 10)
+
+    refute daily_returns.rate_missing?
+  end
+
+  # A journal is valued from its holding's price only when that price is
+  # positive. At a zero price it is carried, and settled at the first priced
+  # row's currency, so the zero-priced row's currency needs no rate.
+  test "a journal at a zero price on a holding with no rate does not flag a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    security_journal(account: @account, date: @day_two, qty: 5, currency: "EUR", price: 0)
+
+    refute daily_returns.rate_missing?
+  end
+
+  # A whole position journalled out of a holding the balance carried at a
+  # zero price left at nothing, in any currency, so its rate is not missing
+  # and the day is complete. Priced above zero, the same journal needs the
+  # rate it lacks.
+  test "an unpriced journal out of a zero priced holding needs no rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, market_flow: 100
+    prior = @account.holdings.create!(security: security_under_test, date: @day_one, qty: 5, price: 0,
+                                      amount: 0, currency: "EUR")
+    security_journal account: @account, date: @day_two, qty: -5, currency: "EUR", price: 0
+
+    returns = daily_returns
+    refute returns.rate_missing?
+    assert_not returns.rows.last.suppressed
+    assert_in_delta 0.10, returns.returns.last.last.to_f, 0.000001
+
+    prior.update!(price: 10, amount: 50)
+    returns = daily_returns
+
+    assert returns.rate_missing?, "a position carried at a price converts from EUR, which has no rate"
+    assert returns.rows.last.suppressed
+  end
+
+  # Carried, the same journal is still one that could not be valued. Its
+  # zero-priced row left the position at nothing, so the first priced day's
+  # jump is the zero price undoing itself; dropped from the carry, that jump
+  # read as a gain.
+  test "a journal with no quantity suppresses its first priced day" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    journal = security_journal(account: @account, date: @day_two, qty: 5, price: 0)
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    assert_not daily_returns(end_date: day_three).rows.last.suppressed,
+               "with its quantity, the arrival is carried and the day is complete"
+
+    journal.trade.update_columns(qty: nil)
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert third.suppressed, "with none, the repriced units are unaccounted for"
+    assert third.unvalued_journal
+    assert_equal BigDecimal("0"), third.external_flow, "a journal with no quantity carries no flow"
+
+    # The same journal with no zero-priced row to measure the repriced units
+    # by: the first priced row opens from an earlier priced one instead, and
+    # the journal's units are still unknown.
+    @account.holdings.where(date: @day_two).delete_all
+    @account.holdings.create!(security: security_under_test, date: @day_one, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    assert daily_returns(end_date: day_three).rows.last.suppressed,
+           "an unknown quantity is unaccounted for whatever the first priced row opens from"
+  end
+
+  # One journal that cannot be valued suppresses the whole day, even beside
+  # others that can. The return is the scope's, not a security's: the unvalued
+  # position's value is in the close and missing from the denominator, so no
+  # figure computed for that day is the portfolio's return.
+  test "one unpriced journal suppresses a day that also carries a priced one" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 2_000, market_flow: 1_000
+    security_journal account: @account, date: @day_two, qty: 5, price: 100
+
+    other = Security.create!(ticker: "OTH#{SecureRandom.hex(4)}", name: "Other Security")
+    @account.entries.create!(
+      name: "Journal", date: @day_two, amount: 0, currency: @account.currency,
+      entryable: Trade.new(security: other, qty: 5, price: 0, currency: @account.currency,
+                           investment_activity_label: "Transfer")
+    )
+
+    other_holding = @account.holdings.create!(security: other, date: @day_two, qty: 5, price: 100,
+                                              amount: 500, currency: @account.currency)
+
+    assert_not daily_returns.rows.last.suppressed, "both journals priced, the day is computable"
+
+    other_holding.update_columns(price: 0, amount: 0)
+
+    assert daily_returns.rows.last.suppressed,
+           "one journal valued at zero suppresses the day, whatever the others are worth"
+  end
+
+  # Suppressing the journal day is only half of it. Holding.gapfill carries the
+  # unpriced journal's zero price forward, so the position sits in the balance
+  # at nothing until a price arrives, and on that first priced day it jumps
+  # from 0 to qty x price with no entry dated there. Read as market, the
+  # arrival was a 5% gain the portfolio never made. The journal is carried to
+  # that day and booked there as the flow it is.
+  test "an inbound journal on an unpriced day does not show the position as return on the first priced day" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    returns = daily_returns(end_date: day_three)
+    third = returns.rows.last
+
+    assert returns.rows.second.suppressed, "the journal day itself still could not be valued"
+    assert_not third.suppressed, "every unit repriced from zero arrived from outside, so the day is complete"
+    assert_equal BigDecimal("50"), third.external_flow, "the arrival is booked on the day it was first priced"
+    assert_equal BigDecimal("0"), third.market, "and taken out of the market move it was read as"
+    assert_equal BigDecimal("0"), third.unexplained
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
+  end
+
+  # What decides the carry is the first priced day, not the journal's own
+  # date. A journal dated the day before the period, first priced inside it,
+  # put the position's whole value into that day's market, and `unexplained`
+  # stayed 0, so nothing flagged it. The first priced day can be the period's
+  # first day too, where value_open reads that row's own start_balance.
+  # A position journalled in and out again before it was ever priced never
+  # reached the balance at a value, so nothing arrives on the first priced day:
+  # the row there holds none of it. Carried anyway, Monday read as a 500
+  # contribution that lost 500.
+  test "an inbound journal that leaves again before it is priced is not carried" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_000
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    security_journal account: @account, date: day_three, qty: -5, price: 0
+    @account.holdings.create!(security: security_under_test, date: day_four, qty: 0, price: 100,
+                              amount: 0, currency: @account.currency)
+
+    returns = daily_returns(end_date: day_four)
+    fourth = returns.rows.last
+
+    assert_equal BigDecimal("0"), fourth.external_flow
+    assert_equal BigDecimal("0"), fourth.market
+    assert_not returns.rows.third.suppressed, "the journal out left a position the balance carried at nothing"
+  end
+
+  # Part of it left: what is still held on the first priced day is what
+  # arrives there.
+  test "an inbound journal carried to its first priced day is capped at what is still held" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_200, market_flow: 200
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    security_journal account: @account, date: day_three, qty: -3, price: 0, holding_qty: 2
+    @account.holdings.create!(security: security_under_test, date: day_four, qty: 2, price: 100,
+                              amount: 200, currency: @account.currency)
+
+    fourth = daily_returns(end_date: day_four).rows.last
+
+    assert_equal BigDecimal("200"), fourth.external_flow
+    assert_equal BigDecimal("0"), fourth.market
+  end
+
+  # Two journals waiting for the same first priced row share what it holds.
+  # Capped one at a time, each could claim the whole row: 5 + 5 arrived, 7
+  # left before any price, and the 3 still held were carried as 6.
+  test "inbound journals carried to the same first priced day share its cap" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_300, market_flow: 300
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    security_journal account: @account, date: day_three, qty: 5
+    security_journal account: @account, date: day_three, qty: -7, price: 0, holding_qty: 3
+    @account.holdings.create!(security: security_under_test, date: day_four, qty: 3, price: 100,
+                              amount: 300, currency: @account.currency)
+
+    fourth = daily_returns(end_date: day_four).rows.last
+
+    assert_equal BigDecimal("300"), fourth.external_flow
+    assert_equal BigDecimal("0"), fourth.market
+  end
+
+  # A split between the journal and its first priced day changes the count
+  # the journal's units became. The holding calculators apply a split at the
+  # open of its ex-date, so the first priced row already counts post-split
+  # shares at a post-split price, and the journal's quantity is scaled to
+  # match before it is capped and valued. Unscaled, 5 units that became 10
+  # were carried as 5 at the halved price.
+  test "an inbound journal carried across a split is scaled to the first priced row's shares" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_100, market_flow: 100
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    Security::Split.create!(security: security_under_test, ex_date: day_three, numerator: 2, denominator: 1, source: "manual")
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 10, price: 10,
+                              amount: 100, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_equal BigDecimal("100"), third.external_flow
+    assert_equal BigDecimal("0"), third.market
+  end
+
+  # Several splits between the journal and its first priced day compound, and
+  # the product is taken through logs (split_product_sql). 2:1, 3:1 and 3:2
+  # multiply to 9 exactly, so 5 units carried become 45 at the post-split
+  # price, not 44.999... or 45.000...1.
+  test "an inbound journal carried across several splits is scaled by their exact product" do
+    days = (0..4).map { |offset| @day_one + offset.days }
+    days.each { |date| lay_balance account: @account, date: date, opening: 1_000, closing: date == days.last ? 1_450 : 1_000, market_flow: date == days.last ? 450 : 0 }
+    security_journal account: @account, date: days[1], qty: 5, price: 0
+    [ [ days[2], 2, 1 ], [ days[3], 3, 1 ], [ days[4], 3, 2 ] ].each do |ex_date, numerator, denominator|
+      Security::Split.create!(security: security_under_test, ex_date: ex_date, numerator: numerator, denominator: denominator, source: "manual")
+    end
+    @account.holdings.create!(security: security_under_test, date: days[4], qty: 45, price: 10,
+                              amount: 450, currency: @account.currency)
+
+    last = daily_returns(end_date: days[4]).rows.last
+
+    assert_equal BigDecimal("450"), last.external_flow
+    assert_equal BigDecimal("0"), last.market
+  end
+
+  # A split going ex on the journal's own date applied before the journal, so
+  # its quantity is already in post-split shares and is not scaled again.
+  test "a split on the journal's own date does not scale the carried journal" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_100, market_flow: 100
+    security_journal account: @account, date: @day_two, qty: 5, price: 0, holding_qty: 10
+    Security::Split.create!(security: security_under_test, ex_date: @day_two, numerator: 2, denominator: 1, source: "manual")
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 10, price: 10,
+                              amount: 100, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_equal BigDecimal("50"), third.external_flow, "only the 5 journalled units are the flow"
+  end
+
+  # An unpriced journal writes the WHOLE position at price 0 for the day, and
+  # gapfill carries that forward, so units already held drop to nothing on
+  # the (suppressed) journal day and jump back on the first priced day. Only
+  # the journalled units are a flow there; the rest of the jump is the
+  # zero-price artefact undoing itself, which read as a gain. The day is
+  # suppressed, as the journal day is, for the units that were not a flow.
+  test "a journal topping up a position on an unpriced day suppresses the first priced day" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_100, closing: 1_100
+    lay_balance account: @account, date: @day_two, opening: 1_100, closing: 1_000, market_flow: -100
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_150, market_flow: 150
+    @account.holdings.create!(security: security_under_test, date: @day_one, qty: 10, price: 10,
+                              amount: 100, currency: @account.currency)
+    security_journal account: @account, date: @day_two, qty: 5, price: 0, holding_qty: 15
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 15, price: 10,
+                              amount: 150, currency: @account.currency)
+
+    returns = daily_returns(end_date: day_three)
+    third = returns.rows.last
+
+    assert third.suppressed, "the 10 units already held came back from zero, which is not a return"
+    assert third.unvalued_journal
+    assert_equal BigDecimal("50"), third.external_flow, "the 5 journalled units are still the flow"
+    assert_equal BigDecimal("0"), returns.returns.last.last
+  end
+
+  # Part of a position journalled out on an unpriced day leaves the rest at
+  # price 0 until a price arrives. Nothing is carried for a journal out, so
+  # that jump read as a gain of the whole remainder.
+  test "a partial journal out on an unpriced day suppresses the first priced day" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_100, closing: 1_100
+    lay_balance account: @account, date: @day_two, opening: 1_100, closing: 1_000, market_flow: -100
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_060, market_flow: 60
+    @account.holdings.create!(security: security_under_test, date: @day_one, qty: 10, price: 10,
+                              amount: 100, currency: @account.currency)
+    security_journal account: @account, date: @day_two, qty: -4, price: 0, holding_qty: 6
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 6, price: 10,
+                              amount: 60, currency: @account.currency)
+
+    returns = daily_returns(end_date: day_three)
+    third = returns.rows.last
+
+    assert third.suppressed
+    assert_equal BigDecimal("0"), third.external_flow
+  end
+
+  # What is repriced from zero is what the zero-priced row held going into
+  # the day, not what the first priced row holds: a position emptied by an
+  # unpriced journal out and bought again on a priced day has nothing at zero.
+  test "a position emptied by an unpriced journal out and bought again later is not suppressed" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_100, closing: 1_100
+    lay_balance account: @account, date: @day_two, opening: 1_100, closing: 1_000, market_flow: -100
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_010, market_flow: 10
+    @account.holdings.create!(security: security_under_test, date: @day_one, qty: 10, price: 10,
+                              amount: 100, currency: @account.currency)
+    security_journal account: @account, date: @day_two, qty: -10, price: 0
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 10, price: 11,
+                              amount: 110, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_not third.suppressed
+    assert_equal BigDecimal("0"), third.external_flow
+  end
+
+  # Units bought on the first priced day were bought at its price, so they
+  # are not repriced from zero and cannot be carried: 5 arrived, 3 left
+  # before any price, and the 5 bought that day lifted the row to 7, but only
+  # the 2 left at zero arrive there.
+  test "units bought on the first priced day are not carried" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_020, market_flow: 20
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    security_journal account: @account, date: day_three, qty: -3, price: 0, holding_qty: 2
+    @account.holdings.create!(security: security_under_test, date: day_four, qty: 7, price: 10,
+                              amount: 70, currency: @account.currency)
+
+    fourth = daily_returns(end_date: day_four).rows.last
+
+    assert_equal BigDecimal("20"), fourth.external_flow
+    assert_equal BigDecimal("0"), fourth.market
+    assert_not fourth.suppressed, "the 2 units at zero were all journalled in from outside"
+  end
+
+  # A journal whose day left no zero-priced row (no holding row was written
+  # for it) has nothing to read the repriced units from, so the carry falls
+  # back to what the first priced row holds, as before, and only the units
+  # journalled in are the flow.
+  test "a journal that left no holding row is still carried to its first priced day" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: 5
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_equal BigDecimal("50"), third.external_flow
+    assert_not third.suppressed
+  end
+
+  # With no earlier row at all, every unit the first priced row holds appeared
+  # from nothing. Units moved in from another selected account are no flow, so
+  # nothing takes them out of `market`, and the day has to be suppressed or
+  # the arrival reads as a gain.
+  test "an internal journal with no earlier holding row suppresses its first priced day" do
+    day_three = @day_two + 1.day
+    source = create_portfolio_account(family: @family)
+    holding_snapshot account: source, date: @day_one, qty: 5, price: 10, cost_basis: 10
+    lay_balance account: source, date: @day_one, opening: 50, closing: 50
+    lay_balance account: source, date: @day_two, opening: 50, closing: 0, market_flow: -50
+    lay_balance account: source, date: day_three, opening: 0, closing: 0
+    security_journal account: source, date: @day_two, qty: -5, price: 10
+
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: 5
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    third = daily_returns(account_ids: [ @account.id, source.id ], end_date: day_three).rows.last
+
+    assert_equal BigDecimal("0"), third.external_flow, "an internal move is no flow"
+    assert third.suppressed, "the arriving units are in market, so the day cannot be a return"
+  end
+
+  # A zero-priced row can be stored in a currency other than the first priced
+  # row's. Reading only that currency, the carry found the earlier priced row,
+  # took nothing as repriced from zero, and the units held at nothing came back
+  # as a market gain. A zero-priced row in another currency leaves the carry
+  # incomplete instead.
+  test "a zero priced row in another currency suppresses the first priced day" do
+    day_three = @day_two + 1.day
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 10, cost_basis: 10
+    lay_balance account: @account, date: @day_one, opening: 1_050, closing: 1_050
+    lay_balance account: @account, date: @day_two, opening: 1_050, closing: 1_000, market_flow: -50
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_100, market_flow: 100
+    security_journal account: @account, date: @day_two, qty: 5, currency: "EUR", price: 0, holding_qty: 10
+    # The priced row gapfill can leave beside it on the same date.
+    @account.holdings.create!(security: security_under_test, date: @day_two, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 10, price: 10,
+                              amount: 100, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert third.suppressed, "the 5 units held at nothing on day two are not a return"
+  end
+
+  # The other side: when the zero-priced row in another currency holds only
+  # what the journal brought in, every repriced unit is a flow and the day is
+  # valued, not suppressed.
+  test "a journal whose zero priced row is in another currency is carried in full" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: 5, currency: "EUR", price: 0
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_not third.suppressed
+    assert_equal BigDecimal("50"), third.external_flow
+  end
+
+  # Units journalled in from outside and journalled out again before any price
+  # are gone; units arriving later from another selected account are not them.
+  # Counting the first journal's gross quantity carried the internal arrival
+  # as a 500 contribution and left the day unsuppressed.
+  test "external units that left before pricing do not cover a later internal arrival" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    day_five = day_four + 1.day
+    source = create_portfolio_account(family: @family)
+    holding_snapshot account: source, date: day_three, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: source, date: @day_one, opening: 500, closing: 500
+    lay_balance account: source, date: @day_two, opening: 500, closing: 500
+    lay_balance account: source, date: day_three, opening: 500, closing: 500
+    lay_balance account: source, date: day_four, opening: 500, closing: 0, market_flow: -500
+    lay_balance account: source, date: day_five, opening: 0, closing: 0
+    security_journal account: source, date: day_four, qty: -5, price: 0
+
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_five, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    security_journal account: @account, date: day_three, qty: -5, price: 0
+    security_journal account: @account, date: day_four, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: day_five, qty: 5, price: 100,
+                              amount: 500, currency: @account.currency)
+
+    fifth = daily_returns(account_ids: [ @account.id, source.id ], end_date: day_five).rows.last
+
+    assert_equal BigDecimal("0"), fifth.external_flow, "the units that arrived from outside had already left"
+    assert fifth.suppressed, "the internal units repriced from zero are not a return"
+  end
+
+  # An out before the first external arrival cannot be those units leaving,
+  # so it is not netted: the position was emptied, then refilled from
+  # outside, and the refill is the flow on the first priced day.
+  test "a journal out before the external arrival is not netted against it" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: -5, price: 0
+    security_journal account: @account, date: day_three, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: day_four, qty: 5, price: 100,
+                              amount: 500, currency: @account.currency)
+
+    fourth = daily_returns(end_date: day_four).rows.last
+
+    assert_equal BigDecimal("500"), fourth.external_flow
+    assert_not fourth.suppressed
+  end
+
+  # The out may have taken units held before the arrival rather than the
+  # arrival itself, and with the last earlier row priced there is no
+  # zero-priced row to measure what is missing. Netted to nothing and left
+  # unsuppressed, the arrival's units read as market movement.
+  test "a netted carry with no zero priced row to measure it by suppresses the day" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    holding_snapshot account: @account, date: @day_one, qty: 10, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_000
+    security_journal account: @account, date: @day_two, qty: 5
+    security_journal account: @account, date: day_three, qty: -5
+    @account.holdings.create!(security: security_under_test, date: day_four, qty: 10, price: 100,
+                              amount: 1_000, currency: @account.currency)
+
+    fourth = daily_returns(end_date: day_four).rows.last
+
+    assert_equal BigDecimal("0"), fourth.external_flow
+    assert fourth.suppressed, "which units left cannot be told, so the day is not a return"
+  end
+
+  test "an unpriced journal dated before the period is carried to its first priced day in the period" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_one - 1.day, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: @day_two, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    returns = daily_returns
+    second = returns.rows.last
+
+    assert_equal BigDecimal("50"), second.external_flow, "the arrival is booked on its first priced day"
+    assert_equal BigDecimal("0"), second.market, "and taken out of the market move it was read as"
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
+  end
+
+  test "an unpriced journal dated before the period is carried to the period's first day when priced there" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_050, market_flow: 50
+    lay_balance account: @account, date: @day_two, opening: 1_050, closing: 1_050
+    security_journal account: @account, date: @day_one - 1.day, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: @day_one, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    returns = daily_returns
+    first = returns.rows.first
+
+    assert_equal BigDecimal("50"), first.external_flow, "the arrival is booked on the period's first day"
+    assert_equal BigDecimal("0"), first.market
+    assert_equal BigDecimal("0"), first.unexplained
+    assert_in_delta 0.0, returns.returns.first.last.to_f, 0.000001
+  end
+
+  # The other side of that boundary: a journal first priced before the period
+  # arrived before it, so the period's own price moves are returns.
+  test "an unpriced journal first priced before the period is not carried into it" do
+    lay_balance account: @account, date: @day_one, opening: 1_050, closing: 1_050
+    lay_balance account: @account, date: @day_two, opening: 1_050, closing: 1_055, market_flow: 5
+    security_journal account: @account, date: @day_one - 2.days, qty: 5, price: 0
+    [ [ @day_one - 1.day, 10 ], [ @day_one, 10 ], [ @day_two, 11 ] ].each do |date, price|
+      @account.holdings.create!(security: security_under_test, date: date, qty: 5, price: price,
+                                amount: 5 * price, currency: @account.currency)
+    end
+
+    rows = daily_returns.rows
+
+    assert_equal [ BigDecimal("0"), BigDecimal("0") ], rows.map(&:external_flow)
+    assert_equal BigDecimal("5"), rows.last.market, "the period's price move is a return"
+  end
+
+  # The control: a journal priced on its own day is booked there, and the
+  # next day's price move is a real return. Carrying it as well would book the
+  # position a second time and erase that day's gain.
+  test "a journal priced on its own day is not carried to a later one" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_050, market_flow: 50
+    lay_balance account: @account, date: day_three, opening: 1_050, closing: 1_055, market_flow: 5
+    security_journal account: @account, date: @day_two, qty: 5, price: 10
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 11,
+                              amount: 55, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_equal BigDecimal("0"), third.external_flow
+    assert_equal BigDecimal("5"), third.market, "the next day's price move is a return"
+  end
+
+  # The internal case. A position moved between two selected accounts on a day
+  # with no price leaves the source at its value and lands in the destination
+  # at zero, so the day read as a 2.5% loss; and on the destination's first
+  # priced day it came back as a gain. Neither is the portfolio's return.
+  test "a security moved between two selected accounts on an unpriced day is suppressed rather than read as a loss" do
+    other = create_portfolio_account(family: @family)
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 950, market_flow: -50
+    lay_balance account: @account, date: day_three, opening: 950, closing: 950
+    lay_balance account: other, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: other, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: other, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: -5, price: 10
+    security_journal account: other, date: @day_two, qty: 5, price: 0
+    other.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                           amount: 50, currency: other.currency)
+
+    returns = daily_returns(account_ids: [ @account.id, other.id ], end_date: day_three)
+
+    assert returns.rows.second.suppressed, "an internal move that could not be valued is not a loss"
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001,
+                    "nor is the destination's first priced day a gain"
+
+    # The units came from inside the scope, so they are not an external flow;
+    # their repricing from zero is suppressed like any other carried at zero.
+    third = returns.rows.last
+    assert_equal BigDecimal("0"), third.external_flow
+    assert third.suppressed
+    assert third.unvalued_journal
+  end
+
+  # `holdings` is unique on (account_id, security_id, date, CURRENCY), so one
+  # security can carry several rows for one day and Balance::SyncCache sums them
+  # all. A journal join without the currency matched every row and valued the
+  # journal once per row -- two rows, twice the flow.
+  #
+  # The row matching the entry's own currency is the one used, since that is the
+  # unit the quantity is priced in.
+  test "a journal is valued once when the security has rows in several currencies" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 100
+
+    # A second row for the same security and day, in another currency, which the
+    # schema allows and a provider reporting in the security's own currency
+    # produces.
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 80,
+      amount: BigDecimal(400), currency: "EUR"
+    )
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.25
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow,
+                 "five units arrived once, however many currencies the position is recorded in"
+    assert_equal BigDecimal("1500"), second.denominator
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # A position quoted in another currency converts from the HOLDING's
+  # currency, at the previous day's rate like every start-of-day flow.
+  test "a journal priced in a foreign currency converts at the previous day's rate" do
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.2
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_550, market_flow: 550
+    security_journal account: @account, date: @day_two, qty: 5, price: 100, currency: "EUR"
+
+    assert_equal BigDecimal("550"), daily_returns.rows.last.external_flow
+  end
+
+  # The entry is in the account's currency, so the entry-level rate check sees
+  # nothing wrong. The position is quoted in a currency with no rate, so the
+  # journal cannot be valued, and the day has to say which fact it lacks.
+  test "a journal priced in a currency with no rate is flagged as a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 100, amount: 500, currency: "EUR"
+    )
+
+    returns = daily_returns
+
+    assert returns.rate_missing?, "a journal that could not be converted must be flagged"
+    assert returns.rows.last.suppressed
+  end
+
+  # The same rule on the day a carried journal lands. Its first priced row is
+  # quoted in a currency with no rate, so the carry converts to nothing and
+  # the arrival stays in `market` as a gain. On its own day such a journal
+  # suppresses the day; carried, it must too, not only flag the rate.
+  test "a carried journal priced in a currency with no rate suppresses its first priced day" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: 5, price: 0, currency: "EUR"
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: "EUR")
+
+    returns = daily_returns(end_date: day_three)
+    third = returns.rows.last
+
+    assert third.rate_missing, "the carry could not be converted"
+    assert third.suppressed, "an arrival valued at nothing is not a return"
+    assert third.unvalued_journal
+    assert_equal BigDecimal("0"), returns.returns.last.last
+  end
+
+  # The other direction. A journal is valued from its holding, so the rate it
+  # needs is the HOLDING's. Its entry carries a zero amount in a currency that
+  # may have no rate at all, and that rate converts nothing: zero times any
+  # rate is zero. Here the position is priced in USD, the family's currency,
+  # so the journal is fully valued and nothing is missing.
+  test "a journal valued from a holding in a rated currency does not flag the entry currency's missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, currency: "EUR"
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 100, amount: 500, currency: "USD"
+    )
+    # No EUR -> USD rate exists at all.
+
+    returns = daily_returns
+    second = returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow, "the journal is valued from its USD holding"
+    assert_not second.suppressed
+    assert_not returns.rate_missing?,
+               "the entry's own currency converts a zero amount, so its missing rate withholds nothing"
+  end
+
+  # Only a Transfer is a journal. A Contribution labelled trade that records no
+  # cash contributed nothing, and must not be revalued from the position.
+  test "a contribution labelled trade with no cash amount is not valued as a journal" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    @account.entries.create!(
+      name: "Contribution", date: @day_two, amount: 0, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 5, price: 0,
+                           currency: @account.currency, investment_activity_label: "Contribution")
+    )
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 100, amount: 500, currency: @account.currency
+    )
+
+    assert_equal BigDecimal("0"), daily_returns.rows.last.external_flow
+  end
+
+  # The flow classifier makes a Contribution or Withdrawal labelled Trade
+  # external too, and those carry a real cash amount. Valuing every external
+  # Trade from its position would have turned one with qty 0 into a flow of nothing.
+  test "a contribution written as a trade still flows at its cash amount" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, cash_flow: 500
+
+    @account.entries.create!(
+      name: "Contribution", date: @day_two, amount: -500, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 0, price: 0,
+                           currency: @account.currency, investment_activity_label: "Contribution")
+    )
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow,
+                 "a cash contribution flows at its amount, whatever entryable carries it"
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # The journal suppression is about a JOURNAL that could not be valued, and a
+  # journal is a Transfer-labelled trade. Keyed on `entryable_type = 'Trade'` alone it
+  # also caught the Contribution and Withdrawal labelled trades, whose
+  # flow comes from `-entries.amount` and never touches a holdings price. Such a
+  # trade on a day with no holdings row for its security -- qty 0 writes none,
+  # and a cash contribution recorded as a trade is exactly that -- suppressed a
+  # day whose figures were complete, and the real return it carried was dropped
+  # from the chain instead of contributing to it.
+  test "a contribution written as a trade is not suppressed by a price it never needed" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_650,
+                cash_flow: 500, market_flow: 150
+
+    @account.entries.create!(
+      name: "Contribution", date: @day_two, amount: -500, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 0, price: 0,
+                           currency: @account.currency, investment_activity_label: "Contribution")
+    )
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow
+    assert_equal BigDecimal("1500"), second.denominator
+    assert_not second.suppressed,
+               "nothing here is valued from a position, so no price is missing"
+
+    second_return = daily_returns.returns.find { |date, _| date == @day_two }&.last
+    assert_in_delta 0.10, second_return.to_f, 0.000001,
+                    "the day returned 10% and must contribute it"
+  end
+
+  # The negative control. A journal between two accounts the scope CONTAINS is
+  # internal and moves nothing across the boundary, so it must not be
+  # valued as a flow however well the valuation works.
+  test "a journal between two in-scope accounts is not an external flow" do
+    other = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 500, market_flow: -500
+    lay_balance account: other, date: @day_one, opening: 0, closing: 0
+    lay_balance account: other, date: @day_two, opening: 0, closing: 500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: -5, price: 100
+    security_journal account: other, date: @day_two, qty: 5, price: 100
+
+    scope = daily_returns(account_ids: [ @account.id, other.id ])
+
+    assert_equal BigDecimal("0"), scope.rows.last.external_flow,
+                 "a position moved between accounts the scope holds crosses no boundary"
+  end
+
   # Regression. When the period starts after the last balance row, that row is
   # carried forward by the `lb` lateral. It was read for BOTH boundaries --
   # value_close from its end_balance, value_open from its start_balance -- so
