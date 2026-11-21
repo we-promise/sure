@@ -382,6 +382,32 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_nil @security.reload.first_provider_price_on
   end
 
+  test "prices stored in two currencies on one day do not count as two days" do
+    Security::Price.delete_all
+
+    day1 = Date.parse("2024-03-04")
+    (day1..day1 + 1.day).each do |date|
+      Security::Price.create!(security: @security, date: date, price: 100, currency: "USD")
+      Security::Price.create!(security: @security, date: date, price: 150, currency: "AUD")
+    end
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: day1 + 2.days, price: 110, currency: "USD"),
+      OpenStruct.new(security: @security, date: day1 + 3.days, price: 120, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: day1,
+      end_date: day1 + 3.days,
+      clear_cache: false
+    ).import_provider_prices
+
+    stored = Security::Price.where(security: @security, date: (day1 + 2.days)..(day1 + 3.days), currency: "USD")
+    assert_equal [ 110, 120 ], stored.order(:date).map(&:price)
+  end
+
   test "pre-listing fallback picks earliest VALID provider row, skipping nil/zero leaders" do
     # Regression: if the provider returns a row with a nil/zero price as its
     # earliest entry (e.g. a listing-day or halted-day placeholder), the
