@@ -28,6 +28,14 @@
 
       <% popover.with_custom_content do %>
         <%= turbo_frame_tag "transaction-filters", src: filters_transactions_path(q: @q), loading: :lazy do %>
+          <%# Keeps the active filters in a search submitted before the frame loads;
+              the frame's editable inputs replace these. The search field above
+              already submits :search. %>
+          <% @q.except(:search).each do |key, value| %>
+            <% Array.wrap(value).each do |item| %>
+              <%= hidden_field_tag value.is_a?(Array) ? "q[#{key}][]" : "q[#{key}]", item, id: nil %>
+            <% end %>
+          <% end %>
           <div class="flex items-center justify-center h-[50vh] md:h-80 w-full md:w-[540px] p-6">
             <p class="text-sm text-secondary animate-pulse"><%= t("transactions.searches.menu.loading") %></p>
           </div>

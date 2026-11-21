@@ -44,6 +44,67 @@ class TransactionsTest < ApplicationSystemTestCase
     end
   end
 
+  test "searching before opening the filter menu keeps the active filters" do
+    start_date = 2.days.ago.to_date
+    visit transactions_url(per_page: @page_size, q: { categories: [ categories(:food_and_drink).name ], start_date: start_date })
+
+    within "form#transactions-search" do
+      fill_in "Search transactions ...", with: "e"
+      find("#q_search").send_keys(:tab)
+    end
+
+    within "#transaction-search-filters" do
+      assert_text "\"e\""
+      assert_text categories(:food_and_drink).name
+      assert_text start_date.to_s
+    end
+    assert_selector "#" + dom_id(@transaction), count: 1
+    assert_no_selector "#" + dom_id(@user.family.entries.find_by!(name: "one"))
+  end
+
+  test "editing an existing search keeps the active filters and applies the new text" do
+    start_date = 2.days.ago.to_date
+    old_match = create_transaction("Coffee shop", Date.current, 20, category: categories(:food_and_drink))
+    new_match = create_transaction("Lunch spot", Date.current, 20, category: categories(:food_and_drink))
+    uncategorized = create_transaction("Lunch elsewhere", Date.current, 20)
+
+    visit transactions_url(per_page: @page_size, q: { search: "Coffee", categories: [ categories(:food_and_drink).name ], start_date: start_date })
+    assert_selector "#" + dom_id(old_match), count: 1
+
+    within "form#transactions-search" do
+      fill_in "Search transactions ...", with: "Lunch"
+      find("#q_search").send_keys(:tab)
+    end
+
+    within "#transaction-search-filters" do
+      assert_text "\"Lunch\""
+      assert_no_text "\"Coffee\""
+      assert_text categories(:food_and_drink).name
+      assert_text start_date.to_s
+    end
+    assert_selector "#" + dom_id(new_match), count: 1
+    assert_no_selector "#" + dom_id(old_match)
+    assert_no_selector "#" + dom_id(uncategorized)
+  end
+
+  test "unchecking a filter in the loaded menu removes it" do
+    visit transactions_url(per_page: @page_size, q: { categories: [ categories(:food_and_drink).name ] })
+    assert_no_selector "#" + dom_id(@uncategorized_transaction)
+
+    find("#transaction-filters-button").click
+
+    within "#transaction-filters-menu" do
+      click_button "Category"
+      uncheck(categories(:food_and_drink).name)
+      click_button "Apply"
+    end
+
+    assert_selector "#" + dom_id(@uncategorized_transaction), count: 1
+    within "#transaction-search-filters" do
+      assert_no_text categories(:food_and_drink).name
+    end
+  end
+
   test "can open filters and apply one or more" do
     find("#transaction-filters-button").click
 
