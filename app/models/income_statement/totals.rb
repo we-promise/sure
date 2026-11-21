@@ -49,6 +49,7 @@ class IncomeStatement::Totals
     # Combined query that includes both transactions and trades
     def combined_query_sql
       <<~SQL
+        WITH #{fx_rates_cte_sql(@transactions_scope)}
         SELECT
           category_id,
           parent_category_id,
@@ -69,6 +70,7 @@ class IncomeStatement::Totals
     # Original transactions-only query (for backwards compatibility)
     def transactions_only_query_sql
       <<~SQL
+        WITH #{fx_rates_cte_sql(@transactions_scope)}
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
@@ -79,6 +81,7 @@ class IncomeStatement::Totals
         FROM (#{@transactions_scope.to_sql}) at
         #{entries_join_sql("at")}
         #{accounts_join_sql}
+        #{fx_rates_join_sql}
         LEFT JOIN categories c ON c.id = at.category_id
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           AND ae.excluded = false
@@ -103,6 +106,7 @@ class IncomeStatement::Totals
         FROM (#{@transactions_scope.to_sql}) at
         #{entries_join_sql("at")}
         #{accounts_join_sql}
+        #{fx_rates_join_sql}
         LEFT JOIN categories c ON c.id = at.category_id
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           #{investment_activity_label_sql("at")}
