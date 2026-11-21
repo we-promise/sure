@@ -33,9 +33,30 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
   let(:'X-Api-Key') { api_key.plain_key }
 
+  let(:read_only_transaction) do
+    owner = family.users.create!(
+      email: 'api-owner@example.com',
+      password: 'password123',
+      password_confirmation: 'password123'
+    )
+    shared_account = Account.create!(
+      family: family,
+      owner: owner,
+      name: 'Shared Checking',
+      balance: 1000,
+      currency: 'USD',
+      accountable: Depository.new
+    )
+    shared_account.account_shares.create!(user: user, permission: 'read_only', include_in_finances: true)
+    shared_account.entries.create!(
+      name: 'Shared transaction', amount: 10, currency: 'USD', date: Date.current, entryable: Transaction.new
+    ).transaction
+  end
+
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Checking Account',
       balance: 1000,
       currency: 'USD',
@@ -346,7 +367,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               currency: { type: :string, description: 'Currency code' },
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
-              nature: { type: :string, enum: %w[income expense inflow outflow] },
+              nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Sign of the amount. Without amount, applies to the stored amount.' },
               tag_ids: {
                 type: :array,
                 items: { type: :string, format: :uuid },
@@ -373,6 +394,14 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
+      response '403', 'account is shared with you without permission to change this transaction' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_transaction.id }
+
+        run_test!
+      end
+
       response '404', 'transaction not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -381,7 +410,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - malformed tag_ids, or a tag, category or merchant id the family cannot use' do
+      response '422', 'validation error - unknown nature, an amount or nature change on a transfer, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { transaction: { tag_ids: [ SecureRandom.uuid ] } } }
@@ -399,6 +428,14 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
       response '200', 'transaction deleted' do
         schema '$ref' => '#/components/schemas/DeleteResponse'
+
+        run_test!
+      end
+
+      response '403', 'account is shared with you without full control' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_transaction.id }
 
         run_test!
       end

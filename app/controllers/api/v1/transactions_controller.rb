@@ -4,12 +4,16 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   include Pagy::Backend
   include Api::V1::TransactionLookup
 
+  NATURES = %w[income expense inflow outflow].freeze
+  INVALID_NATURE_MESSAGE = "nature must be one of: #{NATURES.join(", ")}".freeze
+
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
   # Outside index's catch-all rescue so a bad filter is a 404/422, not a 500.
   before_action :set_report_filters, only: :index
+  before_action :ensure_write_permission, only: [ :update, :destroy ]
 
   def index
     transactions_query = @budget ? budget_transactions : accessible_transactions
@@ -96,6 +100,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return render_existing_idempotent_entry(existing_entry)
     end
 
+    return render_validation_error(INVALID_NATURE_MESSAGE) if invalid_nature?
     return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
     return render_validation_error("Unknown tag id") if unknown_tag_ids?
     return render_validation_error("Unknown category id") if unknown_category_id?
@@ -108,6 +113,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.mark_user_modified! if user_modified_requested?
       @entry.sync_account_later
+      @entry.apply_immediate_rules_later
 
       @transaction = @entry.transaction
       render :show, status: :created
@@ -146,10 +152,19 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
+    return render_validation_error(INVALID_NATURE_MESSAGE) if invalid_nature?
+    # The web UI hides amount and nature on a transfer: one leg alone cannot
+    # change them without breaking Transfer#transfer_has_opposite_amounts.
+    if @entry.transaction.transfer && transfer_amount_changed?
+      return render_validation_error("A transfer's amount and nature cannot be changed through one of its transactions")
+    end
     return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
     return render_validation_error("Unknown tag id") if tags_provided? && unknown_tag_ids?
     return render_validation_error("Unknown category id") if unknown_category_id?
     return render_validation_error("Unknown merchant id") if unknown_merchant_id?
+
+    rule_input = @entry.rule_input_snapshot
+    updated = false
 
     Entry.transaction do
       if @entry.update(entry_params_for_update)
@@ -168,6 +183,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         @entry.mark_user_modified! if user_modified_requested?
 
         @transaction = @entry.transaction
+        updated = true
         render :show
       else
         render json: {
@@ -178,6 +194,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         raise ActiveRecord::Rollback
       end
     end
+
+    # After the commit, so the enqueue runs here and not in a deferred
+    # after-commit callback once the response is already rendered.
+    @entry.apply_immediate_rules_later(changed_from: rule_input) if updated
 
   rescue => e
     Rails.logger.error "TransactionsController#update error: #{e.message}"
@@ -216,6 +236,27 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def set_transaction
       load_accessible_transaction(params[:id])
+    end
+
+    # Reading needs access to the account. Deleting, or changing anything
+    # outside the annotate fields, needs the write tier (AccountPolicy#update?);
+    # a member in the annotate tier may only change the AccountShare annotate
+    # fields (notes, category, merchant, tags), the same split the web UI
+    # applies in TransactionsController#permitted_entry_params. A refused request is a 403,
+    # not a silently trimmed update, so the client learns nothing was applied.
+    def ensure_write_permission
+      level = action_name == "update" && annotate_only_update? ? :annotate : :write
+
+      require_api_account_permission!(@entry.account, level, resource: "transaction")
+    end
+
+    # Judged on the permitted params, not raw params: keys outside
+    # transaction_params are ignored on update for every role (account_id
+    # included), so they cannot widen what an annotate-tier member changes.
+    def annotate_only_update?
+      transaction_params.except(
+        *AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES
+      ).empty?
     end
 
     def ensure_read_scope
@@ -369,7 +410,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     def apply_search(query)
-      search_term = "%#{params[:search]}%"
+      # Escape the caller's term so "%" and "_" match literally instead of
+      # acting as ILIKE wildcards, where a bare "%" returns everything.
+      search_term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search].to_s)}%"
 
       query
         .left_joins(:merchant)
@@ -436,9 +479,11 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         }.compact_blank
       }
 
-      # Only update amount if provided
+      # A nature without an amount applies to the stored amount.
       if transaction_params[:amount].present?
         entry_params[:amount] = calculate_signed_amount
+      elsif transaction_params[:nature].present?
+        entry_params[:amount] = calculate_signed_amount(@entry.amount)
       end
 
       entry_params.compact
@@ -562,11 +607,20 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       render :show, status: :ok
     end
 
-    def calculate_signed_amount
-      amount = transaction_params[:amount].to_f
+    def invalid_nature?
+      nature = transaction_params[:nature]
+      nature.present? && NATURES.exclude?(nature.to_s.downcase)
+    end
+
+    def transfer_amount_changed?
+      amount = entry_params_for_update[:amount]
+      amount.present? && amount.to_d != @entry.amount
+    end
+
+    def calculate_signed_amount(amount = transaction_params[:amount].to_f)
       nature = transaction_params[:nature]
 
-      case nature&.downcase
+      case nature.to_s.downcase
       when "income", "inflow"
         -amount.abs  # Income is negative
       when "expense", "outflow"
