@@ -17,6 +17,10 @@
 # helpers are private to this module, so they can't clash with the class's own methods.
 module ProxyConfigurable
   PROXY_VARIABLES = %w[HTTPS_PROXY https_proxy HTTP_PROXY http_proxy].freeze
+
+  # A proxy is configured but has no host Sure can read. Raised rather than going direct, so a
+  # typo can't quietly route calls around the proxy. The message never carries the value.
+  class InvalidProxyError < StandardError; end
   DIRECT = [ nil, nil, nil, nil ].freeze
 
   # The proxy URL for a request to `url`, or nil to go direct.
@@ -34,7 +38,7 @@ module ProxyConfigurable
     # `*` means every host, as curl reads it. A leading dot is dropped, as curl does, so
     # `.agents.example.com` covers `agents.example.com` itself as well as its subdomains.
     # A proxy without a scheme (`proxy.internal:8888`) is read as http://, as curl reads it;
-    # one that still has no host is ignored with a warning.
+    # one that still has no host raises InvalidProxyError.
     def url_for(url, env: ENV)
       target = parse(url)
       return if target&.host.blank? || loopback?(target.host)
@@ -49,8 +53,7 @@ module ProxyConfigurable
       proxy = "http://#{proxy}" unless proxy.match?(%r{\A[a-z][a-z\d+.-]*://}i)
       return proxy if parse(proxy)&.host.present?
 
-      Rails.logger.warn("[ProxyConfigurable] Invalid proxy URL ignored")
-      nil
+      raise InvalidProxyError, "The outbound proxy URL cannot be read"
     end
 
     def net_http_args(url, env: ENV)
