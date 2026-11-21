@@ -4,13 +4,10 @@ uk:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
-    providers:
-      twelve_data: "Twelve Data"
-      yahoo_finance: "Yahoo Finance"
-      tiingo: "Tiingo"
-      eodhd: "EODHD"
-      alpha_vantage: "Alpha Vantage"
-      mfapi: "MFAPI.in"
-      binance_public: "Binance"
-      moex_public: "MOEX"
-      mansa: Mansa
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (за замовчуванням)"
+      offline: "%{provider} (призупинено)"
+      unavailable: "%{provider} (недоступний)"
+      none: "Немає, немає активного постачальника цін"
+    unknown_provider: "Невідомо"

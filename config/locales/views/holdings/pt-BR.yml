@@ -24,6 +24,7 @@ pt-BR:
         seus retornos ou valor.
       missing_data: Dados em falta
     show:
+      price_source_label: "Fonte de cotações"
       avg_cost_label: Custo Médio
       current_market_price_label: Preço de Mercado Atual
       delete: Excluir

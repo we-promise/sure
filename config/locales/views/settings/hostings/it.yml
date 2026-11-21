@@ -57,6 +57,7 @@ it:
           binance_public: Binance
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
+          mansa: Mansa
       assistant_settings:
         title: Assistente IA
         description: Scegli come risponde l'assistente chat. Integrato usa il tuo provider LLM configurato direttamente. Esterno delega a un agente IA remoto che può richiamare gli strumenti finanziari di Sure tramite MCP.

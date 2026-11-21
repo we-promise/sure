@@ -36,6 +36,14 @@ pt-BR:
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+          tiingo: Tiingo
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
+          binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          mansa: Mansa
       brand_fetch_settings:
         description: Insira o Client ID fornecido pelo Brandfetch
         label: Client ID

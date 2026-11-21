@@ -48,6 +48,7 @@ tr:
     reset_security:
       success: Menkul kıymet sağlayıcı değerine sıfırlandı.
     show:
+      price_source_label: "Fiyat kaynağı"
       avg_cost_label: Ortalama Maliyet
       book_value_label: Defter Değeri
       cancel: İptal

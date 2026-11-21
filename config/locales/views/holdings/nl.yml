@@ -101,3 +101,4 @@ nl:
       last_price_update: "Laatste koersupdate"
       syncing: "Synchroniseren..."
       never: "Nooit"
+      price_source_label: "Koersbron"

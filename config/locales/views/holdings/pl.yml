@@ -52,6 +52,7 @@ pl:
     reset_security:
       success: Zresetowano papier wartościowy do wartości od dostawcy.
     show:
+      price_source_label: "Źródło kursów"
       avg_cost_label: Średni koszt
       book_value_label: Wartość księgowa
       cancel: Anuluj

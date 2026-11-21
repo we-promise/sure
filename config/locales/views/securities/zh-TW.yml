@@ -4,12 +4,10 @@ zh-TW:
     combobox:
       display: '%{symbol} - %{name}（%{exchange}）'
       exchange_label: '%{symbol}（%{exchange}）'
-    providers:
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance
-      tiingo: Tiingo
-      eodhd: EODHD
-      alpha_vantage: Alpha Vantage
-      mfapi: MFAPI.in
-      binance_public: Binance
-      moex_public: MOEX
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider}（預設）"
+      offline: "%{provider}（已暫停）"
+      unavailable: "%{provider}（無法使用）"
+      none: "無，沒有啟用的價格提供者"
+    unknown_provider: "未知"

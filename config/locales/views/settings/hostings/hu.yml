@@ -56,6 +56,8 @@ hu:
           mfapi: MFAPI.in
           binance_public: Binance
           moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          mansa: Mansa
       assistant_settings:
         title: AI-asszisztens
         description: Válaszd ki, hogyan válaszoljon a csevegési asszisztens. A beépített mód közvetlenül a beállított LLM-szolgáltatót használja. A külső mód egy távoli AI-ügynökhöz továbbítja a kérést, amely MCP-n keresztül hozzáférhet a Sure pénzügyi eszközeihez.

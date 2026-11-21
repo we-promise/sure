@@ -49,6 +49,7 @@ ca:
     reset_security:
       success: Valor restablert al del proveïdor.
     show:
+      price_source_label: "Font de preus"
       avg_cost_label: Cost mitjà
       book_value_label: Valor comptable
       cancel: Cancel·la

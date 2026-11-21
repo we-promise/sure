@@ -4,12 +4,10 @@ hu:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
-    providers:
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance
-      tiingo: Tiingo
-      eodhd: EODHD
-      alpha_vantage: Alpha Vantage
-      mfapi: MFAPI.in
-      binance_public: Binance
-      moex_public: MOEX
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (alapértelmezett)"
+      offline: "%{provider} (szüneteltetve)"
+      unavailable: "%{provider} (nem elérhető)"
+      none: "Nincs, nincs aktív árszolgáltató"
+    unknown_provider: "Ismeretlen"
