@@ -153,10 +153,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     return render_unknown_currency if unknown_currency?
 
-    if @entry.split_parent? && split_financial_fields_changed?
-      render json: { error: "validation_failed", message: "Split parent amount, currency, date, and type cannot be changed directly. Use the split editor." }, status: :unprocessable_entity
-      return
-    end
+    return render_split_parent_change if split_financial_fields_changed? && @entry.split_parent?
 
     return render_validation_error(INVALID_NATURE_MESSAGE) if invalid_nature?
     # The web UI hides amount, nature and currency on a transfer: one leg alone
@@ -174,6 +171,17 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     updated = false
 
     Entry.transaction do
+      # A split committed since the check above would leave the parent's amount,
+      # date, nature or currency apart from its children's: re-check under the
+      # lock split_once! takes.
+      if split_financial_fields_changed?
+        @entry.lock_for_split!
+        if @entry.split_parent?
+          render_split_parent_change
+          raise ActiveRecord::Rollback
+        end
+      end
+
       if @entry.update(entry_params_for_update)
         sync_needed = @entry.saved_changes_affect_balances?
 
@@ -510,6 +518,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # Re-sending the stored code, in any case, is not a change.
     def currency_changed?
       requested_currency.present? && requested_currency != canonical_currency(@entry.currency)
+    end
+
+    def render_split_parent_change
+      render_validation_error("Split parent amount, currency, date, and type cannot be changed directly. Use the split editor.")
     end
 
     def render_unknown_currency

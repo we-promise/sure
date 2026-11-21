@@ -726,6 +726,17 @@ class Entry < ApplicationRecord
     end
   end
 
+  # Takes FOR UPDATE on the transaction row, then on this entry (lock! also reloads both), always
+  # in that order so the split methods can't deadlock each other. Call it inside a transaction:
+  # a write that must not race a split re-checks split_parent? after it. Returns the
+  # transaction, or nil for other entryables.
+  def lock_for_split!
+    txn = entryable if entryable.is_a?(Transaction)
+    txn&.lock!
+    lock!
+    txn
+  end
+
   def split_child?
     parent_entry_id.present?
   end
@@ -1045,19 +1056,10 @@ class Entry < ApplicationRecord
       end
     end
 
-    # Takes FOR UPDATE on the transaction row, then on this entry (lock! also reloads both), always
-    # in that order so the split methods can't deadlock each other. Yields the transaction, or nil
-    # for other entryables.
-    #
     # Explicit transaction + lock!, not with_lock: Entry#transaction is the delegated_type
     # accessor for the Transaction entryable, so with_lock silently never yields.
     def with_split_lock
-      self.class.transaction do
-        txn = entryable if entryable.is_a?(Transaction)
-        txn&.lock!
-        lock!
-        yield txn
-      end
+      self.class.transaction { yield lock_for_split! }
     end
 
     # Remembers the earliest date this entry had before any save that changed

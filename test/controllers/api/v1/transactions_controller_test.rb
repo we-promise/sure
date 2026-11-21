@@ -918,6 +918,33 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Same currency re-sent", parent.reload.notes
   end
 
+  # The split lands after the unlocked split-parent check and before the write,
+  # as a split committed by another request in that gap would.
+  test "update re-checks for a split under the split lock before changing amount, date, nature or currency" do
+    [ { amount: 120 }, { date: 2.days.ago.to_date.iso8601 }, { nature: "income" }, { currency: "EUR" } ].each do |change|
+      entry = create_transaction(account: @account, amount: 100, currency: "USD", name: "Racing split")
+      before = entry.attributes.slice("amount", "date", "currency")
+      split_in_the_gap(entry)
+
+      patch api_v1_transaction_url(entry.transaction), params: { transaction: change }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, change.inspect
+      assert_match "Use the split editor", JSON.parse(response.body)["message"], change.inspect
+      assert_equal before, entry.reload.attributes.slice("amount", "date", "currency"), change.inspect
+      assert_equal 2, entry.child_entries.count, change.inspect
+    end
+  end
+
+  test "update of other fields does not take the split lock" do
+    entry = create_transaction(account: @account, amount: 100, currency: "USD", name: "Racing split")
+    Entry.any_instance.expects(:lock_for_split!).never
+
+    patch api_v1_transaction_url(entry.transaction), params: { transaction: { notes: "Just notes", currency: "usd" } }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal "Just notes", entry.reload.notes
+  end
+
   test "update accepts the current currency on a split parent stored in lower case" do
     parent = create_transaction(account: @account, amount: 100, currency: "USD", name: "Split parent")
     parent.split!([ { name: "One", amount: 60 }, { name: "Two", amount: 40 } ])
@@ -1948,6 +1975,17 @@ end
 
       ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
       queries
+    end
+
+    # Splits the entry, through its own record as another request would, the
+    # first time the update reads its rule snapshot: after the unlocked
+    # split-parent check, before the write.
+    def split_in_the_gap(entry)
+      split = false
+      Entry.any_instance.stubs(:rule_input_snapshot).with do
+        Entry.find(entry.id).split!([ { name: "One", amount: 60 }, { name: "Two", amount: 40 } ]) unless split
+        split = true
+      end.returns(nil)
     end
 
     def create_transfer_between_accounts
