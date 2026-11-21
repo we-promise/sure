@@ -150,6 +150,10 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
   # draws a halo'd shortfall label beside the halo'd target label.
   test "in the dark theme every halo and ring matches the card" do
     @user.update!(theme: "dark")
+    # A request on the real clock, between the setup sign-in and travel_to:
+    # the setup session must still be live for it.
+    visit root_path
+    assert_no_current_path new_session_path
     travel_to TODAY do
       visit_goal(target: 10_000, saved: 3_000, pace: 200)
       assert_selector "html[data-theme='dark']"
