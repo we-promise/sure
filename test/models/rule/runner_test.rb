@@ -221,6 +221,83 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal 1, runs.last.transactions_queued
   end
 
+  test "a rule with an AI action records its other actions' changes as modified" do
+    Family.any_instance.stubs(:auto_categorize_transactions_later)
+    @whole_foods.tags << @tag_a
+    rule = create_rule("Mixed", "o", tags: [ @tag_a ])
+    rule.actions.create!(action_type: "auto_categorize")
+
+    runner = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual")
+    run = runner.run.first
+
+    # Whole Foods already carries the tag, so only the other match changes now.
+    assert_equal 1, runner.changed_now_count
+    assert_equal "pending", run.status
+    assert_equal 2, run.transactions_queued
+    assert_equal 2, run.transactions_processed
+    assert_equal 1, run.transactions_modified
+
+    assert_equal 0, run.transactions_blocked
+
+    # The AI's changes cannot take modified past the matched count.
+    run.complete_job!(modified_count: 2)
+
+    assert_equal "success", run.reload.status
+    assert_equal 2, run.transactions_modified
+    assert_equal 0, run.transactions_blocked
+  end
+
+  test "a rule with only an AI action records nothing modified until its job reports" do
+    Family.any_instance.stubs(:auto_categorize_transactions_later)
+    rule = @family.rules.create!(
+      name: "AI only",
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+    )
+
+    runner = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual")
+    run = runner.run.first
+
+    assert_equal 0, runner.changed_now_count
+    assert_equal "pending", run.status
+    assert_equal 2, run.transactions_processed
+    assert_equal 0, run.transactions_modified
+  end
+
+  test "a rule without an AI action records processed and modified as before" do
+    @whole_foods.tags << @tag_a
+    rule = create_rule("Tags", "o", tags: [ @tag_a ])
+
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first
+
+    assert_equal "success", run.status
+    assert_equal 2, run.transactions_processed
+    assert_equal 1, run.transactions_modified
+  end
+
+  test "a run never records more modified than it matched" do
+    rule = create_rule("Two actions", "o", category: @groceries, tags: [ @tag_a ])
+
+    runner = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual")
+    run = runner.run.first
+
+    assert_equal 2, run.transactions_queued
+    assert_equal 2, run.transactions_modified
+    assert_equal 2, runner.changed_now_count
+  end
+
+  test "a run with an AI action never records more modified than it matched" do
+    Family.any_instance.stubs(:auto_categorize_transactions_later)
+    rule = create_rule("Two actions and AI", "o", name: "Renamed", tags: [ @tag_a ])
+    rule.actions.create!(action_type: "auto_categorize")
+
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first
+
+    assert_equal "pending", run.status
+    assert_equal 2, run.transactions_modified
+  end
+
   test "a failing rule is recorded and the remaining rules still run" do
     top = create_rule("Top", "Whole Foods", category: @groceries)
     create_rule("Bottom", "Hardware", name: "Renamed")

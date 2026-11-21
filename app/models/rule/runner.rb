@@ -139,8 +139,9 @@ class Rule::Runner
           skip_action_types: skip_action_types
         )
 
-        rule_run.update!(**run_counts(result, queued: matched_ids.size, rule: rule))
-        @changed_now_count += changed_now(result)
+        counts = run_counts(result, queued: matched_ids.size, rule: rule)
+        rule_run.update!(**counts)
+        @changed_now_count += counts[:transactions_modified]
       rescue => e
         rule_run = record_failure(rule, rule_run, e, executed_at: executed_at, queued: matched_ids.size)
       ensure
@@ -152,25 +153,18 @@ class Rule::Runner
       rule_run
     end
 
+    # transactions_modified is what the run changed itself, without the AI
+    # jobs. Rule#apply counts per action, so a transaction two actions change
+    # counts twice; the cap keeps it within the matched transactions.
     def run_counts(result, queued:, rule:)
       if result.is_a?(Hash) && result[:async]
-        # The async jobs report the modified count back via RuleRun#complete_job!
-        { status: "pending", transactions_processed: result[:modified_count] || 0, pending_jobs_count: result[:jobs_count] || 0 }
+        # The AI jobs add their own changes via RuleRun#complete_job!
+        { status: "pending", transactions_processed: queued, transactions_modified: [ result[:modified_count] || 0, queued ].min, pending_jobs_count: result[:jobs_count] || 0 }
       elsif result.is_a?(Integer)
-        { status: "success", transactions_processed: queued, transactions_modified: result }
+        { status: "success", transactions_processed: queued, transactions_modified: [ result, queued ].min }
       else
         Rails.logger.warn("Rule::Runner: Unexpected result type from rule.apply: #{result.class} for rule #{rule.id}")
-        { status: "success" }
-      end
-    end
-
-    def changed_now(result)
-      if result.is_a?(Hash) && result[:async]
-        result[:changed_now_count] || 0
-      elsif result.is_a?(Integer)
-        result
-      else
-        0
+        { status: "success", transactions_modified: 0 }
       end
     end
 

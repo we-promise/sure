@@ -7,6 +7,7 @@ class RuleRun < ApplicationRecord
   validates :transactions_queued, numericality: { greater_than_or_equal_to: 0 }
   validates :transactions_processed, numericality: { greater_than_or_equal_to: 0 }
   validates :transactions_modified, numericality: { greater_than_or_equal_to: 0 }
+  validates :job_transactions_modified, numericality: { greater_than_or_equal_to: 0 }
   validates :pending_jobs_count, numericality: { greater_than_or_equal_to: 0 }
 
   scope :recent, -> { order(executed_at: :desc) }
@@ -27,7 +28,11 @@ class RuleRun < ApplicationRecord
     status == "failed"
   end
 
+  # AI jobs still to report may yet change the transactions, so nothing is
+  # blocked until the last one is done, even after another job failed.
   def transactions_blocked
+    return 0 if pending_jobs_count.positive?
+
     [ transactions_processed - transactions_modified, 0 ].max
   end
 
@@ -48,13 +53,17 @@ class RuleRun < ApplicationRecord
     nil
   end
 
-  # Thread-safe method to complete a job and update the run
+  # Thread-safe method to complete a job and update the run.
+  # transactions_modified also holds the rule's other actions' changes and is
+  # counted per change, so it is capped at the matched transactions;
+  # job_transactions_modified is what the AI jobs changed.
   def complete_job!(modified_count: 0)
     drained = false
 
     with_lock do
       drained = pending_jobs_count == 1
-      self.transactions_modified += modified_count
+      self.job_transactions_modified += modified_count
+      self.transactions_modified = [ transactions_modified + modified_count, transactions_queued ].min
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
 
       # Preserve a previously recorded failure while still draining pending jobs.
@@ -94,7 +103,7 @@ class RuleRun < ApplicationRecord
     # The jobs of an immediate run with AI actions offer what they changed once
     # the last one is done; ApplyImmediateRulesJob offers the run's other changes.
     def offer_job_results
-      return unless execution_type == "immediate" && transactions_modified.positive?
+      return unless execution_type == "immediate" && job_transactions_modified.positive?
 
       self.class.offer_immediate_result(rule.family)
     end
