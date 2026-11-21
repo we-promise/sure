@@ -162,12 +162,52 @@ class HoldingLotTest < ActiveSupport::TestCase
 
       lots = HoldingLot.where(account: @account, security: security)
       assert_equal BigDecimal("10"), lots.sum(:qty)
+      assert_includes HoldingLot.in_partition([ @account.id ], [ security.id ]), [ @account.id, security.id ]
       assert_equal [ BigDecimal("7"), BigDecimal("3") ], [ lots.opening.sole.qty, lots.derived.sole.qty ], "only the opening lot moved"
     end
   end
 
+  test "absorbing the residual records no disposal and moves no other lot under the average method" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("SPL4", 30)
+      trade(security, 2, 10, 2)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 3, denominator: 2, source: "manual")
+      @account.holdings.create!(security: security, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD", account_provider: @account_provider)
+
+      assert_no_difference "HoldingLotDisposal.count" do
+        materialize(:reverse)
+      end
+      lots = HoldingLot.where(account: @account, security: security)
+      assert_equal BigDecimal("3"), lots.derived.sole.qty
+      assert_equal BigDecimal("10"), lots.sum(:qty)
+      assert_includes HoldingLot.in_partition([ @account.id ], [ security.id ]), [ @account.id, security.id ]
+    end
+  end
+
+  # A FIFO sale takes the opening lot first; the rounding it carried is then
+  # in the lots left, and the last of them takes it.
+  test "once a fifo sale has taken the opening lot, the last open lot takes the residual" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      @account.update!(cost_basis_method: "fifo")
+      security = priced_security("SPL5", 30)
+      trade(security, 2, 10, 2)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 3, denominator: 2, source: "manual")
+      trade(security, -8, 30, 5)
+      @account.holdings.create!(security: security, date: d(10), qty: 2, price: 30, amount: 60, currency: "USD", account_provider: @account_provider)
+
+      materialize(:reverse)
+
+      assert_equal BigDecimal("2"), HoldingLot.where(account: @account, security: security).sum(:qty)
+      assert_includes HoldingLot.in_partition([ @account.id ], [ security.id ]), [ @account.id, security.id ]
+    end
+  end
+
   # Fixtures only ever leave 10^-18; a real gap is far wider and is not
-  # rounding, so it stays a difference the lots show.
+  # rounding, so it stays for in_partition to catch.
   test "the opening lot does not absorb a residual above the bound" do
     book = Holding::LotBook.new
     book.add_unknown(BigDecimal("10"))
@@ -270,7 +310,6 @@ class HoldingLotTest < ActiveSupport::TestCase
 
       clamped = HoldingLot.opening.find_by!(security: @gapped)
       assert_equal [ 0, true ], [ clamped.qty, clamped.clamped ]
-      assert_equal 125, @account.holdings.find_by!(security: @gapped, date: d(8)).cost_basis, "the figure is today's"
       assert_equal [ @gapped.id ], HoldingLot.where(clamped: true).pluck(:security_id), "nothing flagged on the controls"
     end
   end
@@ -314,12 +353,14 @@ class HoldingLotTest < ActiveSupport::TestCase
       materialize(:reverse)
       lot = HoldingLot.opening.find_by!(security: @opening)
       assert_equal [ BigDecimal("1.333333333333333333"), false ], [ lot.qty, lot.clamped ]
+      assert_equal BigDecimal("102.5"), @account.holdings.find_by!(security: @opening, date: d(9)).cost_basis
 
       @account.holdings.find_by!(security: @opening, date: d(10)).update!(qty: 5, amount: 150)
       materialize(:reverse)
 
       lot.reload
       assert_equal [ 0, true ], [ lot.qty, lot.clamped ], "5 reported against 8 traded"
+      assert_nil @account.holdings.find_by!(security: @opening, date: d(9)).cost_basis, "the stored figure is cleared"
     end
   end
 
@@ -552,7 +593,7 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
-  test "remap onto a position with its own opening lot leaves one opening lot there" do
+  test "remap onto a position with its own opening lot merges the two" do
     setup_account
     old_security = priced_security("LOTQ", 30)
     new_security = priced_security("LOTW", 30)
@@ -562,8 +603,337 @@ class HoldingLotTest < ActiveSupport::TestCase
 
     holding.remap_security!(new_security)
 
-    assert_equal [ kept.id ], HoldingLot.opening.where(security: new_security).pluck(:id)
-    assert_not HoldingLot.exists?(moved.id), "restated into the target's opening lot by the next materialization"
+    assert_equal [ kept.id ], HoldingLot.opening.where(security: new_security).pluck(:id), "the target keeps its row"
+    assert_equal 10, kept.reload.qty, "4 moved onto the target's 6"
+    assert_not HoldingLot.exists?(moved.id)
+  end
+
+  test "merged opening lot keeps its cost only when both sides agree" do
+    [ [ 25, 25, 25 ], [ 25, 30, nil ], [ nil, 30, nil ], [ 25, nil, nil ] ].each do |moved_cost, kept_cost, merged_cost|
+      setup_account
+      old_security = priced_security("LOTM#{moved_cost}#{kept_cost}", 30)
+      new_security = priced_security("LOTK#{moved_cost}#{kept_cost}", 30)
+      holding = @account.holdings.create!(security: old_security, date: d(10), qty: 4, price: 30, amount: 120, currency: "USD")
+      opening_lot(old_security, 4).update!(unit_cost: moved_cost)
+      kept = opening_lot(new_security, 6)
+      kept.update!(unit_cost: kept_cost)
+
+      holding.remap_security!(new_security)
+
+      message = "moved #{moved_cost.inspect} onto #{kept_cost.inspect}"
+      if merged_cost.nil?
+        assert_nil kept.reload.unit_cost, message
+      else
+        assert_equal merged_cost, kept.reload.unit_cost, message
+      end
+    end
+  end
+
+  test "merged opening lot drops its cost when the two costs are in different currencies" do
+    setup_account
+    old_security = priced_security("LOTMC", 30)
+    new_security = priced_security("LOTKC", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 4, price: 30, amount: 120, currency: "USD")
+    opening_lot(old_security, 4).update!(unit_cost: 25, currency: "EUR")
+    kept = opening_lot(new_security, 6)
+    kept.update!(unit_cost: 25)
+
+    holding.remap_security!(new_security)
+
+    assert_equal 10, kept.reload.qty
+    assert_nil kept.unit_cost, "25 EUR and 25 USD are not one cost"
+  end
+
+  # A lot with no units has no cost to disagree with, and a clamp row is
+  # exactly that.
+  test "merging an opening lot with no units leaves the target's cost" do
+    setup_account
+    old_security = priced_security("LOTZ", 30)
+    new_security = priced_security("LOTY", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 0, price: 30, amount: 0, currency: "USD")
+    empty = opening_lot(old_security, 0)
+    empty.update!(clamped: true)
+    kept = opening_lot(new_security, 5)
+    kept.update!(unit_cost: 50)
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 5, 50 ], [ kept.reload.qty, kept.unit_cost ]
+    assert_not HoldingLot.exists?(empty.id)
+  end
+
+  # A clamp row holds no units, so the units moved onto it keep their cost,
+  # and the merged lot is no longer a clamp.
+  test "merging an opening lot onto a clamp row keeps the moved lot's cost" do
+    setup_account
+    old_security = priced_security("LOTZ", 30)
+    new_security = priced_security("LOTY", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD")
+    opening_lot(old_security, 10).update!(unit_cost: 5)
+    clamp = opening_lot(new_security, 0)
+    clamp.update!(clamped: true)
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 10, 5, false ], [ clamp.reload.qty, clamp.unit_cost, clamp.clamped ]
+  end
+
+  # With nothing to merge into, the clamp row moves as any opening lot does.
+  # Dropping it would lose the flag that keeps the position's basis unknown.
+  test "an opening lot with no units and no target moves with its clamp" do
+    setup_account
+    old_security = priced_security("LOTZ", 30)
+    new_security = priced_security("LOTY", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 0, price: 30, amount: 0, currency: "USD")
+    empty = opening_lot(old_security, 0)
+    empty.update!(clamped: true)
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ new_security.id, true ], [ empty.reload.security_id, empty.clamped ]
+  end
+
+  # The drop is keyed on the units, not the clamp: an unclamped lot with no
+  # units is dropped as well.
+  test "an unclamped opening lot with no units is dropped, not merged" do
+    setup_account
+    old_security = priced_security("LOTZ", 30)
+    new_security = priced_security("LOTY", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 0, price: 30, amount: 0, currency: "USD")
+    empty = opening_lot(old_security, 0)
+    kept = opening_lot(new_security, 5)
+    kept.update!(unit_cost: 50)
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 5, 50 ], [ kept.reload.qty, kept.unit_cost ]
+    assert_not HoldingLot.exists?(empty.id)
+  end
+
+  # --- User-set lot cost --------------------------------------------------------
+
+  test "a user-set cost on a transfer-in lot resolves the position, forward" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTU", 30)
+      transfer = trade(security, 60, 30, 2, label: Trade::TRANSFER_LABEL)
+      trade(security, 40, 20, 3)
+      materialize(:forward)
+      assert_nil @account.holdings.find_by!(security: security, date: d(10)).cost_basis, "unknown before"
+
+      HoldingLot.find_by!(source_entry: transfer).set_manual_total_cost!(720)
+      materialize(:forward)
+
+      assert_equal BigDecimal("15.2"), @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+      assert_equal 12, HoldingLot.find_by!(source_entry: transfer).unit_cost
+    end
+  end
+
+  test "a user-set cost on a transfer-in lot resolves the position, reverse" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTV", 30)
+      transfer = trade(security, 60, 30, 2, label: Trade::TRANSFER_LABEL)
+      trade(security, 40, 20, 3)
+      provider_holding(security, 100, nil)
+      materialize(:reverse)
+      # d(10) is the provider's own row, which the materializer leaves alone.
+      assert_nil @account.holdings.find_by!(security: security, date: d(9)).cost_basis, "unknown before"
+
+      HoldingLot.find_by!(source_entry: transfer).set_manual_total_cost!(720)
+      materialize(:reverse)
+
+      assert_equal BigDecimal("15.2"), @account.holdings.find_by!(security: security, date: d(9)).cost_basis
+    end
+  end
+
+  test "a user-set cost replaces a buy's price, and unlocking returns it to the trade" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTP", 30)
+      trade(security, 60, 12, 2)
+      buy = trade(security, 40, 20, 3)
+      materialize(:forward)
+      assert_equal BigDecimal("15.2"), @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+
+      lot = HoldingLot.find_by!(source_entry: buy)
+      lot.set_manual_total_cost!(600)
+      materialize(:forward)
+      assert_equal BigDecimal("13.2"), @account.holdings.find_by!(security: security, date: d(10)).cost_basis, "(720 + 600) / 100"
+
+      lot.reload.unlock_cost!
+      materialize(:forward)
+      assert_equal BigDecimal("15.2"), @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+      assert_nil lot.reload.manual_total_cost
+    end
+  end
+
+  test "a user-set lot cost survives a split and a partial sale" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTS", 30)
+      buy = trade(security, 10, 100, 2)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 2, denominator: 1, source: "manual")
+      trade(security, -5, 90, 6)
+      materialize(:forward)
+      lot = HoldingLot.find_by!(source_entry: buy)
+      assert_equal [ 15, 50 ], [ lot.qty, lot.unit_cost ], "20 after the split, 5 sold"
+
+      lot.set_manual_total_cost!(1500)
+      materialize(:forward)
+
+      assert_equal 75, lot.reload.unit_cost, "1500 over the 10 bought, halved by the split"
+      assert_equal 75, @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+    end
+  end
+
+  test "a whole-position lock outranks a user-set lot cost" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTL", 30)
+      buy = trade(security, 10, 20, 2)
+      materialize(:forward)
+      @account.holdings.find_by!(security: security, date: d(10)).set_manual_cost_basis!(99)
+
+      HoldingLot.find_by!(source_entry: buy).set_manual_total_cost!(150)
+      materialize(:forward)
+
+      assert_equal 99, @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+    end
+  end
+
+  # --- Clamped positions ---------------------------------------------------------
+
+  test "provider quantity below trade-derived quantity makes the position unknown" do
+    travel_to TODAY do
+      build_reverse_fixture
+      materialize(:reverse)
+
+      assert_nil @account.holdings.find_by!(security: @gapped, date: d(9)).cost_basis, "trades alone give 125"
+      assert_equal BigDecimal("102.5"), @account.holdings.find_by!(security: @opening, date: d(9)).cost_basis, "the control keeps its figure"
+    end
+  end
+
+  test "the avg-cost fallback answers nil for a clamped position" do
+    travel_to TODAY do
+      build_reverse_fixture
+      materialize(:reverse)
+      gapped = @account.holdings.find_by!(security: @gapped, date: d(10))
+      control = @account.holdings.find_by!(security: @opening, date: d(10))
+
+      assert_nil Holding.find(gapped.id).avg_cost, "trades alone give 125"
+      assert_not_nil Holding.find(control.id).avg_cost
+    end
+  end
+
+  # --- The fallback reads user-set lot costs ------------------------------------
+
+  # The fallback divides by the trades' own quantities, which a later split
+  # does not restate, so a user-set cost spread over them would read high.
+  # Across a split the transferred units stay unknown, as before the cost was
+  # set, in both the single and the batched path.
+  test "the avg-cost fallback leaves a costed transfer unknown across a later split" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTS2", 30)
+      transfer = trade(security, 10, 30, 2, label: Trade::TRANSFER_LABEL)
+      security.splits.create!(ex_date: d(5), numerator: 2, denominator: 1, source: "manual")
+      provider_row = provider_holding(security, 20, nil)
+      materialize(:reverse)
+
+      HoldingLot.find_by!(source_entry: transfer).set_manual_total_cost!(1500)
+
+      assert_nil Holding.find(provider_row.id).avg_cost, "not 1500 / 10, the unsplit units"
+      batch = [ Holding.find(provider_row.id) ]
+      Holding.preload_avg_costs(batch)
+      assert_nil batch.first.avg_cost
+    end
+  end
+
+  test "the avg-cost fallback counts a user-set lot cost, so a linked position resolves" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTR", 30)
+      transfer = trade(security, 60, 30, 2, label: Trade::TRANSFER_LABEL)
+      buy = trade(security, 40, 20, 3)
+      provider_row = provider_holding(security, 100, nil)
+      materialize(:reverse)
+      assert_nil Holding.find(provider_row.id).avg_cost, "unknown before"
+
+      HoldingLot.find_by!(source_entry: transfer).set_manual_total_cost!(720)
+      assert_equal BigDecimal("15.2"), Holding.find(provider_row.id).avg_cost.amount
+
+      HoldingLot.find_by!(source_entry: buy).set_manual_total_cost!(600)
+      assert_equal BigDecimal("13.2"), Holding.find(provider_row.id).avg_cost.amount, "(720 + 600) / 100"
+    end
+  end
+
+  test "a user-set lot cost of zero is the holding's cost, alone and in a batch" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTN", 60)
+      buy = trade(security, 10, 50, 2)
+      materialize(:forward)
+
+      HoldingLot.find_by!(source_entry: buy).set_manual_total_cost!(0)
+      materialize(:forward)
+
+      holding = @account.holdings.find_by!(security: security, date: d(10))
+      assert_equal [ 0, "calculated", false ], [ holding.cost_basis, holding.cost_basis_source, holding.cost_basis_locked ]
+      assert_equal Money.new(0, "USD"), holding.avg_cost
+
+      batched = Holding.find(holding.id)
+      Holding.preload_avg_costs([ batched ])
+      assert_equal Money.new(0, "USD"), batched.avg_cost
+    end
+  end
+
+  # With no rate for the buy's currency, the trade's own price converts to
+  # nothing, so clearing the user's figure leaves the cost unknown.
+  test "clearing a lot cost whose buy has no rate leaves the basis unknown, forward" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTX", 60)
+      buy = create_trade(security, account: @account, qty: 10, price: 45, currency: "EUR", date: d(2))
+      lot_cost_set_then_cleared(security, buy, date: d(10)) { materialize(:forward) }
+    end
+  end
+
+  test "clearing a lot cost whose buy has no rate leaves the basis unknown, reverse" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTW", 60)
+      buy = create_trade(security, account: @account, qty: 10, price: 45, currency: "EUR", date: d(2))
+      provider_holding(security, 10, nil)
+      # d(10) is the provider's own row, which the materializer leaves alone.
+      lot_cost_set_then_cleared(security, buy, date: d(9)) { materialize(:reverse) }
+    end
+  end
+
+  # A trade can move to another security before its lot does, and a run
+  # scoped to the new security still reads the user's figure for it.
+  test "a user-set lot cost holds for a trade moved ahead of its lot" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      old_security = priced_security("LOTA", 60)
+      new_security = priced_security("LOTB", 60)
+      buy = trade(old_security, 10, 80, 2)
+      provider_holding(old_security, 10, nil)
+      materialize(:reverse)
+      HoldingLot.find_by!(source_entry: buy).set_manual_total_cost!(500)
+
+      Trade.where(id: buy.entryable_id).update_all(security_id: new_security.id)
+      @account.holdings.where(security: old_security).update_all(security_id: new_security.id)
+      assert_equal old_security.id, HoldingLot.find_by!(source_entry: buy).security_id, "the lot has not moved"
+      materialize(:reverse, security_ids: [ new_security.id ])
+
+      assert_equal 50, @account.holdings.find_by!(security: new_security, date: d(9)).cost_basis
+    end
   end
 
   # A run scoped to one security (a remap, a price sync) books lots for that
@@ -579,20 +949,18 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
-  # A cost per unit in the account's currency can pass 10^9 where the trade's
-  # own currency is far stronger: one share at USD 700,000 in a VND account.
-  test "a position costing 10^9 or more a unit in the account's currency syncs and stores its lots" do
+  test "a fifo sale of a position costing 10^9 or more a unit stores its disposal" do
     travel_to TODAY do
-      @account = families(:empty).accounts.create!(name: "VND", balance: 0, cash_balance: 0, currency: "VND", accountable: Investment.new)
-      security = Security.create!(ticker: "BRKV", name: "BRKV")
+      @account = families(:empty).accounts.create!(name: "VND", balance: 0, cash_balance: 0, currency: "VND", cost_basis_method: "fifo", accountable: Investment.new)
+      security = Security.create!(ticker: "BRKD", name: "BRKD")
       Security::Price.insert_all((d(1)..d(10)).map { |date| { security_id: security.id, date: date, price: 700_000, currency: "USD" } })
       ExchangeRate.insert_all((d(1)..d(10)).map { |date| { from_currency: "USD", to_currency: "VND", date: date, rate: 25_000 } })
-      create_trade(security, account: @account, qty: 1, price: 700_000, currency: "USD", date: d(2))
+      create_trade(security, account: @account, qty: 2, price: 700_000, currency: "USD", date: d(2))
+      sale = create_trade(security, account: @account, qty: -1, price: 700_000, currency: "USD", date: d(3))
 
       materialize(:forward)
 
-      assert_equal BigDecimal("17500000000"), HoldingLot.find_by!(account: @account, security: security).unit_cost
-      assert_equal BigDecimal("17500000000"), @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+      assert_equal BigDecimal("17500000000"), HoldingLotDisposal.find_by!(sale_entry_id: sale.id).unit_cost
     end
   end
 
@@ -654,6 +1022,21 @@ class HoldingLotTest < ActiveSupport::TestCase
       provider_holding(@provider_only, 10, 50)
       provider_holding(@opening, 10, nil)
       provider_holding(@gapped, 3, nil)
+    end
+
+    def lot_cost_set_then_cleared(security, buy, date:)
+      yield
+      lot = HoldingLot.find_by!(source_entry: buy)
+      lot.set_manual_total_cost!(500)
+      yield
+      assert_equal 50, @account.holdings.find_by!(security: security, date: date).cost_basis
+
+      lot.reload.unlock_cost!
+      yield
+
+      holding = @account.holdings.find_by!(security: security, date: date)
+      assert_nil holding.cost_basis
+      assert_nil holding.avg_cost
     end
 
     def materialize(strategy, security_ids: nil)

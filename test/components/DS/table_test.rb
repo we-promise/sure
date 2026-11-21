@@ -120,6 +120,56 @@ class DS::TableTest < ViewComponent::TestCase
     assert_selector "div#bills-table.hidden > div.table-scroll"
   end
 
+  test "marks the sorted column's header with aria-sort and leaves the rest without it" do
+    render_inline(DS::Table.new(rows: ROWS)) do |table|
+      table.with_column("Name", aria_sort: "ascending") { |row| row[:name] }
+      table.with_column("Amount", numeric: true) { |row| row[:amount] }
+    end
+
+    assert_selector "thead th:first-child[aria-sort='ascending']"
+    assert_selector "thead th[aria-sort]", count: 1
+  end
+
+  # A detail row sits straight after the row it belongs to, hidden, spanning
+  # every column, under an id the row's own cells can point a toggle at.
+  test "renders a hidden detail row after each row the row_detail proc answers for" do
+    detail = ->(row) { "Paid monthly" if row[:name] == "Rent" }
+    render_inline(DS::Table.new(rows: ROWS, id: "bills", row_detail: detail)) do |table|
+      table.with_column("Name") { |row, index| ApplicationController.helpers.tag.button(row[:name], aria: { controls: table.row_detail_id(index) }) }
+      table.with_column("Amount", numeric: true) { |row| row[:amount] }
+    end
+
+    assert_selector "tbody tr", count: 3, visible: :all
+    assert_selector "tbody tr:nth-child(2)#bills-detail-0[hidden] td[colspan='2']", text: "Paid monthly", visible: :all
+    assert_selector "tbody tr:nth-child(1) button[aria-controls='bills-detail-0']"
+    assert_selector "tbody tr:nth-child(3) td:first-child", text: "Internet"
+  end
+
+  test "renders no detail rows without a row_detail proc" do
+    render_table(id: "bills")
+
+    assert_selector "tbody tr", count: 2
+    assert_no_selector "tbody tr[hidden]", visible: :all
+  end
+
+  # Detail ids are prefixed with the table's id; two tables without one would
+  # hand out the same ids and a toggle would open the other table's row.
+  test "requires an id when given a row_detail proc" do
+    error = assert_raises(ArgumentError) { DS::Table.new(rows: ROWS, row_detail: ->(_row) { "x" }) }
+    assert_match "id:", error.message
+
+    assert_nothing_raised { DS::Table.new(rows: ROWS, id: "bills", row_detail: ->(_row) { "x" }) }
+    assert_nothing_raised { DS::Table.new(rows: ROWS) }
+  end
+
+  # Detail ids land in aria-controls, which reads a space as a second id.
+  test "a table with detail rows refuses an id with whitespace" do
+    error = assert_raises(ArgumentError) { DS::Table.new(rows: ROWS, id: "payment schedule", row_detail: ->(_row) { "x" }) }
+    assert_match "whitespace", error.message
+
+    assert_nothing_raised { DS::Table.new(rows: ROWS, id: "payment schedule") }
+  end
+
   private
     def render_table(**options)
       render_inline(DS::Table.new(rows: ROWS, **options)) do |table|
