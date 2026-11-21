@@ -674,6 +674,64 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "create on a shared account the member cannot write is forbidden" do
+    %w[read_only read_write].each do |permission|
+      key, entry = shared_member_key_and_entry(permission)
+
+      assert_no_difference "Entry.count" do
+        post api_v1_transactions_url,
+             params: { transaction: { account_id: entry.account_id, name: "Member purchase", amount: 5,
+                                      date: Date.current, currency: "USD", nature: "expense" } },
+             headers: api_headers(key)
+      end
+
+      assert_response :forbidden, "expected a #{permission} share to be refused"
+      response_data = JSON.parse(response.body)
+      assert_equal "forbidden", response_data["error"]
+      assert_equal "You do not have write access to this account", response_data["message"]
+    end
+  end
+
+  test "create on a full_control shared account succeeds" do
+    key, entry = shared_member_key_and_entry("full_control")
+
+    assert_difference "entry.account.entries.count", 1 do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: entry.account_id, name: "Member purchase", amount: 5,
+                                    date: Date.current, currency: "USD", nature: "expense" } },
+           headers: api_headers(key)
+    end
+
+    assert_response :created
+  end
+
+  test "create on an account the caller cannot see is not found" do
+    [ SecureRandom.uuid, families(:empty).accounts.create!(name: "Other family", balance: 0, currency: "USD",
+                                                           accountable: Depository.new).id ].each do |account_id|
+      assert_no_difference "Entry.count" do
+        post api_v1_transactions_url,
+             params: { transaction: reference_create_params({}).merge(account_id: account_id) },
+             headers: api_headers(@api_key)
+      end
+
+      assert_response :not_found
+      assert_equal "record_not_found", JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "an unexpected error during create is still a 500" do
+    Entry.any_instance.stubs(:save).raises(StandardError, "boom")
+
+    assert_no_difference "Entry.count" do
+      post api_v1_transactions_url,
+           params: { transaction: reference_create_params({}) },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :internal_server_error
+    assert_equal "internal_server_error", JSON.parse(response.body)["error"]
+  end
+
   test "should reject create with invalid parameters" do
     transaction_params = {
       transaction: {
