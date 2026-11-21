@@ -23,6 +23,9 @@ class Ai::Router
 
     capable = listed.select { |route| route.agent? || route.model_capable?(Ai::Routes.needs_for(feature)) }
     return Ai::Availability.unavailable(feature, :capability_missing) if capable.empty?
+    if (part = spec[:requires]) && capable.none? { _1.model_capable?(Ai::Routes.needs_for(feature)[part]) }
+      return Ai::Availability.unavailable(feature, :capability_missing)
+    end
 
     Ai::Plan.new(feature:, lane: spec[:lane], routes: capable)
   end

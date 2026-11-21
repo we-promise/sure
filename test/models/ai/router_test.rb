@@ -107,4 +107,11 @@ class Ai::RouterTest < ActiveSupport::TestCase
     assert_not_includes availability.message_for(member), "Settings"
     assert_nil Ai::Availability.available(:chat).message_for(member)
   end
+  test "PDF import with only an OCR model isn't available: something has to read the transcription" do
+    endpoint = ai_endpoint(name: "mistral", preset: :mistral, base_url: nil)
+    ocr = ai_model(name: "mistral-ocr-latest", endpoint:, capabilities: %i[ocr])
+    Ai::Config.override = AiTestHelper.build_ai_config([ ocr ], { extract_pdf: [ "mistral/mistral-ocr-latest" ] })
+
+    assert_equal :capability_missing, Ai.availability(:extract_pdf, family: @family, user: @user).reason
+  end
 end

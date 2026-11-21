@@ -19,6 +19,8 @@ class Import::Row < ApplicationRecord
   end
 
   def date_iso
+    raise Import::InvalidRowDataError, Import.blank_date_error_message if date.blank?
+
     Date.strptime(date, import.date_format).iso8601
   end
 

@@ -200,7 +200,29 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
     assert_equal false, second[:has_more_pages]
   end
 
+  test "a scan's note suggests the Read as way this install can read it with" do
+    use_ai_routes
+    statement = create_statement
+    PDF::Reader.stubs(:new).returns(stub(pages: [ stub(text: "") ], page_count: 1))
+
+    result = @fn.call("account_statement_id" => statement.id)
+
+    assert_match(/"Read as" set to PDF/, result[:note], "the test setup's OpenAI model reads PDFs itself")
+  end
+
+  test "a scan too large to send as a PDF is pointed at Images instead" do
+    use_ai_routes
+    statement = create_statement
+    PDF::Reader.stubs(:new).returns(stub(pages: [ stub(text: "") ]))
+    Ai::PdfReading.any_instance.stubs(:ways).returns({ pdf: :too_large, text: :no_text_layer, images: nil, ocr: :needs_ocr_route })
+
+    result = @fn.call("account_statement_id" => statement.id)
+
+    assert_match(/"Read as" set to Images/, result[:note])
+  end
+
   test "reports a scan with no text layer as unreadable and names the reason" do
+    use_no_ai   # no model that could read it, whatever the machine running the test has
     statement = create_statement
 
     blank_pages = [ stub(text: "  "), stub(text: "") ]
@@ -210,7 +232,7 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
 
     assert_equal false, result[:extractable]
     assert_equal 2, result[:page_count]
-    assert_match(/no OCR/i, result[:note])
+    assert_match(/No model set up on this install can read scanned pages/i, result[:note])
     assert_not result.key?(:pages), "an empty pages array would read as a document that says nothing"
   end
 

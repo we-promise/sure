@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_17_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_21_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -731,6 +731,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_000000) do
     t.string "reconciled_status", default: "unreconciled", null: false
     t.string "plaid_id"
     t.datetime "reconciled_at"
+    t.uuid "reconciled_by_import_id"
     t.uuid "reconciled_by_statement_id"
     t.string "source"
     t.datetime "updated_at", null: false
@@ -887,6 +888,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_000000) do
     t.string "stripe_customer_id"
     t.string "timezone"
     t.datetime "updated_at", null: false
+    t.string "vector_store_endpoint"
     t.string "vector_store_id"
     t.index ["bills_feed_token"], name: "index_families_on_bills_feed_token", unique: true
     t.check_constraint "categorization_confidence_threshold >= 0::numeric AND categorization_confidence_threshold <= 1::numeric", name: "chk_families_categorization_confidence_threshold"
@@ -1433,6 +1435,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_000000) do
     t.string "exchange_operating_mic_col_label"
     t.jsonb "expected_record_counts", default: {}, null: false
     t.jsonb "extracted_data"
+    t.jsonb "extraction_checks"
     t.uuid "family_id", null: false
     t.uuid "import_session_id"
     t.string "name_col_label"
@@ -1442,17 +1445,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_000000) do
     t.string "price_col_label"
     t.string "qty_col_label"
     t.string "raw_file_str"
+    t.string "read_as"
+    t.string "read_model"
+    t.string "read_with"
     t.jsonb "readback_verification", default: {}, null: false
+    t.string "reread_token"
     t.integer "rows_count", default: 0, null: false
     t.integer "rows_to_skip", default: 0, null: false
     t.integer "sequence"
     t.string "signage_convention", default: "inflows_positive"
+    t.uuid "source_pdf_import_id"
     t.string "status"
     t.jsonb "summary", default: {}, null: false
     t.string "tags_col_label"
     t.string "ticker_col_label"
     t.string "type", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_id", "read_model", "updated_at"], name: "index_pdf_imports_on_account_and_read_model", where: "(((type)::text = 'PdfImport'::text) AND (read_with IS NOT NULL))"
     t.index ["account_statement_id"], name: "index_imports_on_account_statement_id"
     t.index ["family_id"], name: "index_imports_on_family_id"
     t.index ["import_session_id", "client_chunk_id"], name: "idx_imports_on_session_client_chunk", unique: true, where: "((import_session_id IS NOT NULL) AND (client_chunk_id IS NOT NULL))"

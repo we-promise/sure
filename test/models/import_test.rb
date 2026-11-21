@@ -3,6 +3,62 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  test "publish_later releases the claim when enqueueing raises" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    ImportJob.stubs(:perform_later).raises(StandardError, "queue down")
+
+    assert_raises(Import::EnqueueFailedError) { import.publish_later }
+
+    assert import.reload.pending?, "the failed enqueue must not block a retry"
+  end
+
+  test "publish_later releases the claim when enqueueing returns nothing" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    ImportJob.stubs(:perform_later).returns(nil)
+
+    assert_raises(Import::EnqueueFailedError) { import.publish_later }
+
+    assert import.reload.pending?
+  end
+
+  test "publish_later invalidates a reread claim when it takes the publish claim" do
+    import = imports(:pdf_with_rows)
+    import.update!(status: :pending, reread_token: "old-attempt")
+    import.stubs(:publishable?).returns(true)
+
+    assert_enqueued_with(job: ImportJob) { import.publish_later }
+
+    import.reload
+    assert import.importing?
+    assert_not_equal "old-attempt", import.reread_token, "a delayed reread must not find its claim on a published import"
+  end
+
+  test "publish_later does not release a newer claim when an older enqueue fails" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    newer_token = SecureRandom.uuid
+    ImportJob.stubs(:perform_later)
+              .with { import.reload.update!(status: :importing, reread_token: newer_token); true }
+              .raises(StandardError, "queue down")
+
+    assert_raises(Import::EnqueueFailedError) { import.publish_later }
+
+    import.reload
+    assert import.importing?
+    assert_equal newer_token, import.reread_token
+  end
+
+  test "publish_later refuses an import already reverting" do
+    import = imports(:transaction)
+    import.update!(status: :reverting)
+    import.stubs(:publishable?).returns(true)
+
+    assert_raises(Import::AlreadyClaimedError) { import.publish_later }
+    assert import.reload.reverting?, "a second claim must not take over a revert in flight"
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")
@@ -40,6 +96,77 @@ class ImportTest < ActiveSupport::TestCase
     import.publish
 
     assert_equal "reverting", import.reload.status
+  end
+
+  test "publish_later enqueues the publish with its claim token" do
+    import = imports(:pdf_with_rows)
+    import.update!(status: :pending, reread_token: "old-attempt")
+    import.stubs(:publishable?).returns(true)
+
+    assert_enqueued_with(job: ImportJob) { import.publish_later }
+
+    token = import.reload.reread_token
+    assert_equal token, enqueued_jobs.last[:args].last.with_indifferent_access[:publish_token]
+  end
+
+  test "publish with a stale token leaves a newer reread claim intact" do
+    import = imports(:pdf_with_rows)
+    import.update_columns(status: "importing", reread_token: "current")
+    import.expects(:import!).never
+
+    import.publish(publish_token: "stale")
+
+    import.reload
+    assert import.importing?
+    assert_equal "current", import.reread_token
+  end
+
+  test "publish with the current token consumes the claim before importing" do
+    import = imports(:transaction)
+    import.update_columns(status: "importing", reread_token: "current")
+    import.stubs(:import!)
+
+    import.publish(publish_token: "current")
+
+    assert import.reload.complete?
+    assert_nil import.reread_token
+  end
+
+  test "publish_later refuses blank row dates with a correction message" do
+    import = imports(:transaction)
+    import.update_columns(status: "pending", reread_token: nil)
+    import.rows.first.update_columns(date: "")
+    import.stubs(:publishable?).returns(true)
+
+    assert_no_enqueued_jobs do
+      error = assert_raises(Import::InvalidRowDataError) { import.publish_later }
+      assert_equal I18n.t("imports.errors.blank_dates"), error.message
+    end
+
+    assert import.reload.pending?
+    assert_nil import.reread_token
+  end
+
+  test "publish refuses blank row dates before importing" do
+    import = imports(:transaction)
+    import.update_columns(status: "pending", reread_token: nil)
+    import.rows.first.update_columns(date: "")
+    import.expects(:import!).never
+
+    import.publish
+
+    assert import.reload.failed?
+    assert_equal I18n.t("imports.errors.blank_dates"), import.error
+  end
+
+  test "a blank row date is reported as a row data error" do
+    import = imports(:transaction)
+    row = import.rows.first
+    row.update_columns(date: "")
+
+    error = assert_raises(Import::InvalidRowDataError) { row.date_iso }
+
+    assert_equal I18n.t("imports.errors.blank_dates"), error.message
   end
 
   test "clean fails stuck imports but leaves PdfImports to their own reclaim" do

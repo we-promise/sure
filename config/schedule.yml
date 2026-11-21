@@ -18,6 +18,13 @@ process_financekit_inbox:
   queue: "high_priority"
   description: "Applies durable FinanceKit publisher batches and retries downstream work"
 
+requeue_vector_store_index_polls:
+  cron: "*/5 * * * *"
+  class: "VectorStore::RequeueIndexPollsJob"
+  active_job: true
+  queue: "ai_low_priority"
+  description: "Restarts vector store indexing polls lost to rejected enqueues"
+
 run_security_health_checks:
   cron: "0 2 * * 1-5" # 2:00 AM EST / 3:00 AM EDT (NY time) Monday through Friday
   class: "SecurityHealthCheckJob"

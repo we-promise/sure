@@ -4,9 +4,7 @@ class VectorStore::EmbeddableTest < ActiveSupport::TestCase
   class EmbeddableHost
     include VectorStore::Embeddable
     # Expose private methods for testing
-    public :extract_text, :chunk_text, :embed, :embed_batch,
-           :embedding_model, :embedding_dimensions, :embedding_uri_base,
-           :embedding_access_token
+    public :extract_text, :chunk_text
   end
 
   setup do
@@ -113,106 +111,4 @@ class VectorStore::EmbeddableTest < ActiveSupport::TestCase
         "Chunk too large: #{chunk.length} chars"
     end
   end
-
-  # --- embed ---
-
-  test "embed calls embedding endpoint and returns vector" do
-    expected_vector = [ 0.1, 0.2, 0.3 ]
-    stub_response = { "data" => [ { "embedding" => expected_vector, "index" => 0 } ] }
-
-    mock_client = mock("faraday")
-    mock_client.expects(:post).with("embeddings").yields(mock_request).returns(
-      OpenStruct.new(body: stub_response)
-    )
-    @host.instance_variable_set(:@embedding_client, mock_client)
-
-    result = @host.embed("test text")
-    assert_equal expected_vector, result
-  end
-
-  test "embed raises on failed response" do
-    mock_client = mock("faraday")
-    mock_client.expects(:post).with("embeddings").yields(mock_request).returns(
-      OpenStruct.new(body: { "error" => "bad request" })
-    )
-    @host.instance_variable_set(:@embedding_client, mock_client)
-
-    assert_raises(VectorStore::Error) { @host.embed("test text") }
-  end
-
-  test "embedding configuration delegates to the shared runtime configuration" do
-    VectorStore.expects(:embedding_model).returns("model")
-    VectorStore.expects(:embedding_dimensions).returns(3)
-    VectorStore.expects(:embedding_uri_base).returns("https://embeddings.example.test/v1")
-    VectorStore.expects(:embedding_access_token).returns("token")
-
-    assert_equal "model", @host.embedding_model
-    assert_equal 3, @host.embedding_dimensions
-    assert_equal "https://embeddings.example.test/v1", @host.embedding_uri_base
-    assert_equal "token", @host.embedding_access_token
-  end
-
-  # --- embed_batch ---
-
-  test "embed_batch processes texts and returns ordered vectors" do
-    texts = [ "first", "second", "third" ]
-    vectors = [ [ 0.1 ], [ 0.2 ], [ 0.3 ] ]
-    stub_response = {
-      "data" => [
-        { "embedding" => vectors[0], "index" => 0 },
-        { "embedding" => vectors[1], "index" => 1 },
-        { "embedding" => vectors[2], "index" => 2 }
-      ]
-    }
-
-    mock_client = mock("faraday")
-    mock_client.expects(:post).with("embeddings").yields(mock_request).returns(
-      OpenStruct.new(body: stub_response)
-    )
-    @host.instance_variable_set(:@embedding_client, mock_client)
-
-    result = @host.embed_batch(texts)
-    assert_equal vectors, result
-  end
-
-  test "embed_batch handles multiple batches" do
-    # Override batch size constant for testing
-    original = VectorStore::Embeddable::EMBED_BATCH_SIZE
-    VectorStore::Embeddable.send(:remove_const, :EMBED_BATCH_SIZE)
-    VectorStore::Embeddable.const_set(:EMBED_BATCH_SIZE, 2)
-
-    texts = [ "a", "b", "c" ]
-
-    batch1_response = {
-      "data" => [
-        { "embedding" => [ 0.1 ], "index" => 0 },
-        { "embedding" => [ 0.2 ], "index" => 1 }
-      ]
-    }
-    batch2_response = {
-      "data" => [
-        { "embedding" => [ 0.3 ], "index" => 0 }
-      ]
-    }
-
-    mock_client = mock("faraday")
-    mock_client.expects(:post).with("embeddings").twice
-      .yields(mock_request)
-      .returns(OpenStruct.new(body: batch1_response))
-      .then.returns(OpenStruct.new(body: batch2_response))
-    @host.instance_variable_set(:@embedding_client, mock_client)
-
-    result = @host.embed_batch(texts)
-    assert_equal [ [ 0.1 ], [ 0.2 ], [ 0.3 ] ], result
-  ensure
-    VectorStore::Embeddable.send(:remove_const, :EMBED_BATCH_SIZE)
-    VectorStore::Embeddable.const_set(:EMBED_BATCH_SIZE, original)
-  end
-
-  private
-
-    def mock_request
-      request = OpenStruct.new(body: nil)
-      request
-    end
 end

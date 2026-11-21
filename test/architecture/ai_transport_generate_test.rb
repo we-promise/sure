@@ -256,6 +256,12 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
     assert_equal FULL.deep_stringify_keys, event.payload[:output]
   end
 
+  test "a 503 stays a retryable outage when only another field quotes an image refusal" do
+    stub_chat([ 503, { error: { message: "Service unavailable" }, detail: "earlier: image input is not supported" } ])
+
+    assert_raises(Ai::Error::Upstream) { generate(json_mode: :none, endpoint: { max_retries: 0 }) }
+  end
+
   private
     def generate(json_mode:, reasoning_effort: nil, failed_ratio: nil, endpoint: {}, endpoint_value: nil, max_output_tokens: nil, schema: SCHEMA)
       endpoint_value ||= ai_endpoint(name: "llm", base_url: "https://llm.example.test/v1", **endpoint)

@@ -1,6 +1,18 @@
 require "test_helper"
 
 class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
+  TraceObservation = Struct.new(:log) do
+    def generation(**attributes) = tap { log << [ :generation, attributes ] }
+    def end(**attributes) = log << [ :end, attributes ]
+  end
+
+  TraceClient = Struct.new(:log) do
+    def trace(**attributes)
+      log << [ :trace, attributes ]
+      TraceObservation.new(log)
+    end
+  end
+
   setup do
     @user = users(:family_admin)
     @function = Assistant::Function::SearchFamilyFiles.new(@user)
@@ -67,30 +79,42 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal "no_vector_store", result[:reason]
   end
 
-  test "answers with the router's reason when document search is unavailable" do
+  test "the router's refusal falls back with the router's own message" do
     @user.family.update!(vector_store_id: "vs_test123")
     use_no_ai
 
     result = @function.call("query" => "tax return")
 
-    assert_equal false, result[:success]
-    assert_equal "ai_unavailable", result[:error]
-    assert_equal "not_configured", result[:reason]
+    assert_equal true, result[:success]
+    assert_equal "not_configured", result[:reason], "the router's reason"
+    assert_match(/isn't set up/, result[:message])
   end
 
-  test "degrades to metadata search when no adapter is available and says why" do
+  test "a search route with no vector store adapter falls back and says how to set one up" do
     @user.family.update!(vector_store_id: "vs_test123")
-    VectorStore::Registry.stubs(:adapter).returns(nil)
+    VectorStore.stubs(:adapter).returns(nil)
 
     result = @function.call("query" => "tax return")
 
-    assert_equal true, result[:success]
-    assert_equal "provider_not_configured", result[:reason]
+    assert_equal "metadata_only", result[:search_mode]
+    assert_equal "not_configured", result[:reason]
     assert_match(/VECTOR_STORE_PROVIDER/, result[:message])
+  end
+
+  test "a store on a server that is no longer configured falls back to metadata search" do
+    @user.family.update!(vector_store_id: "vs_test123")
+    VectorStore.stubs(:adapter).returns(mock("vector_store_adapter"))
+    Family.any_instance.stubs(:search_document_hits).returns([ [], nil ])
+
+    result = @function.call("query" => "tax return")
+
+    assert_equal "metadata_only", result[:search_mode]
+    assert_equal "not_configured", result[:reason]
   end
 
   test "returns search results on success" do
     @user.family.update!(vector_store_id: "vs_test123")
+    @user.family.family_documents.create!(filename: "2024_tax_return.pdf", provider_file_id: "file-abc", status: "ready")
 
     mock_adapter = mock("vector_store_adapter")
     mock_adapter.stubs(:search).returns(
@@ -130,6 +154,27 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_empty result[:results]
   end
 
+  test "an unreadable first hit doesn't hide a readable one at max_results 1" do
+    @user.family.update!(vector_store_id: "vs_test123")
+    @user.family.family_documents.create!(filename: "tax.pdf", provider_file_id: "file-tax", status: "ready")
+    untracked = { content: "secret", filename: "lost.pdf", score: 0.99, file_id: "file-untracked" }
+    readable = { content: "allowed", filename: "tax.pdf", score: 0.8, file_id: "file-tax" }
+    limits = []
+    mock_adapter = mock("vector_store_adapter")
+    mock_adapter.stubs(:search).with do |max_results:, **|
+      limits << max_results
+      true
+    end.returns(VectorStore::Response.new(success?: true, data: [ untracked ] * 3, error: nil),
+                VectorStore::Response.new(success?: true, data: [ untracked ] * 5 + [ readable ], error: nil))
+    VectorStore::Registry.stubs(:adapter).returns(mock_adapter)
+
+    result = @function.call("query" => "income", "max_results" => 1)
+
+    assert_equal true, result[:success]
+    assert_equal "allowed", result[:results].sole[:content]
+    assert_equal [ 3, 6 ], limits, "the pool widens when the first hit is filtered out"
+  end
+
   test "handles search failure gracefully" do
     @user.family.update!(vector_store_id: "vs_test123")
 
@@ -157,12 +202,17 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     mock_adapter.expects(:search).with(
       store_id: "vs_test123",
       query: "test",
-      max_results: 20
-    ).returns(VectorStore::Response.new(success?: true, data: [], error: nil))
+      max_results: 50,
+      family: @user.family,
+      user: @user
+    ).returns(VectorStore::Response.new(success?: true, data: Array.new(21) { { content: "hit", filename: "f.pdf", score: 0.5 } }, error: nil))
 
     VectorStore::Registry.stubs(:adapter).returns(mock_adapter)
 
-    @function.call("query" => "test", "max_results" => 50)
+    result = @function.call("query" => "test", "max_results" => 50)
+
+    assert result[:success]
+    assert_equal 20, result[:results].size, "the tool caps readable hits independently of the adapter's candidate limit"
   end
 
   test "never claims nothing was uploaded when statements are on file" do
@@ -220,6 +270,7 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
       provider_file_id: "file-private", status: "ready",
       account: private_account
     )
+    family.family_documents.create!(filename: "quittance.pdf", provider_file_id: "file-shared", status: "ready")
 
     mock_adapter = mock("vector_store_adapter")
     mock_adapter.stubs(:search).returns(
@@ -249,7 +300,7 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     result = Assistant::Function::SearchFamilyFiles.new(@user).call("query" => "anything")
 
     assert_equal 0, result[:result_count]
-    assert_match(/genuinely nothing on file/, result[:message])
+    assert_match(/No stored statement is available to this user/, result[:message])
   end
 
   # The fallback returns the most recent statements when nothing matches, which
@@ -284,20 +335,38 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal 1, result[:result_count]
   end
 
-  test "returns the search failure when tracing finalization also fails" do
+  test "a failing search says so, and emits no tool-level trace" do
     @user.family.update!(vector_store_id: "vs_test123")
     adapter = mock
     adapter.expects(:search).raises(StandardError, "Search unavailable")
     VectorStore::Registry.stubs(:adapter).returns(adapter)
-    trace = mock
-    trace.expects(:end).with(output: { error: "Search unavailable" }, level: "ERROR").raises(StandardError, "Tracing unavailable")
-    @function.stubs(:create_langfuse_trace).returns(trace)
-    Rails.logger.expects(:warn).with("Langfuse trace finalization failed: StandardError: Tracing unavailable")
+
+    traces = []
+    subscriber = Ai::Instrumentation::LangfuseSubscriber.new(client: TraceClient.new(traces))
+    subscription = ActiveSupport::Notifications.subscribe(/\.ai\z/, subscriber)
 
     result = @function.call("query" => "tax return")
 
     assert_equal false, result[:success]
     assert_equal "search_failed", result[:error]
     assert_equal "An error occurred while searching documents: Search unavailable", result[:message]
+    trace_names = traces.select { _1.first == :trace }.map { _1.last[:name] }
+    assert_empty trace_names.grep(/\Asearch_family_files\./), "the tool itself must not emit a trace"
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscription) if subscription
+  end
+
+  test "a search route whose model can't embed falls back to metadata search, saying the router's reason" do
+    @user.family.update!(vector_store_id: "vs_test123")
+    use_ai_routes(embed: %w[gpu/qwen3-8b])   # a chat model: no `embedding`
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:search).never
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    result = @function.call("query" => "tax return")
+
+    assert_equal "metadata_only", result[:search_mode]
+    assert_equal "capability_missing", result[:reason]
+    assert_no_match(/No documents have been uploaded/i, result[:message])
   end
 end

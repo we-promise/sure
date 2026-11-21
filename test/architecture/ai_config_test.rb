@@ -13,11 +13,18 @@ class AiConfigTest < ActiveSupport::TestCase
     @user = users(:family_admin)   # AI switch on
   end
 
+  # Setups where PDF import refuses to run: its model has no PDF support (extract_pdf's route
+  # lists only a model with `vision`).
+  PDF_IMPORT_OFF = %w[C8].freeze
+
   SETUPS.each_key do |id|
     test "#{id}: every non-chat feature's first route is today's provider and model" do
       in_ai_setup(id, family: @family) do
-        today = Provider::Registry.preferred_llm_provider
-        LLM_FEATURES.each { |feature| assert_same_route(today, Ai.plan(feature, family: @family, user: @user), "#{id} #{feature}") }
+        today = Assistant.builtin_provider
+        LLM_FEATURES.each do |feature|
+          expected = feature == :extract_pdf && PDF_IMPORT_OFF.include?(id) ? nil : today
+          assert_same_route(expected, Ai.plan(feature, family: @family, user: @user), "#{id} #{feature}")
+        end
 
         assert_same_route(jev_chosen? ? :jev : today, Ai.plan(:categorize, family: @family), "#{id} categorize")
         assert_operator Ai::Config.current.routes_for(:categorize).size, :<=, 1, "#{id} categorize lists one model"
@@ -28,6 +35,13 @@ class AiConfigTest < ActiveSupport::TestCase
 
   # The instance's choice: Jev for every family when it's chosen and reachable,
   # the preferred LLM otherwise, and the shadow route runs the other one.
+
+  test "C7's LLM_PROVIDER=anthropic picks Anthropic, so its routes are compared against Anthropic's" do
+    in_ai_setup("C7", family: @family) do
+      assert_kind_of Provider::Anthropic, Assistant.builtin_provider
+      assert_equal "anthropic", Ai.plan(:extract_pdf, family: @family, user: @user).route.endpoint.name
+    end
+  end
 
   test "a setup's settings take effect after an earlier setup in the same test, as ai_agreement_test runs them" do
     in_ai_setup("C1", family: @family) { }
@@ -41,7 +55,7 @@ class AiConfigTest < ActiveSupport::TestCase
     in_ai_setup("M1", family: @family) do
       [ @family, families(:empty) ].each do |family|
         assert_equal "jev", Ai.plan(:categorize, family:).route.endpoint.name
-        assert_same_route(Provider::Registry.preferred_llm_provider, Ai.plan(:shadow_categorize, family:), "M1 shadow_categorize")
+        assert_same_route(Assistant.builtin_provider, Ai.plan(:shadow_categorize, family:), "M1 shadow_categorize")
       end
     end
 
@@ -50,14 +64,14 @@ class AiConfigTest < ActiveSupport::TestCase
     end
   end
 
-  # Provider::Registry.preferred_llm_provider raises at a preferred provider it can't build
-  # (Anthropic on a custom URL with no model), so today nothing runs. The router plans nothing
-  # either, rather than falling through to OpenAI.
+  # The registry can't build the preferred provider (Anthropic on a custom URL with no model),
+  # so today nothing runs. The router plans nothing either, rather than falling through to
+  # OpenAI.
   test "a preferred provider that can't be built: nothing runs today, and the router plans nothing" do
     broken = OPENAI.merge(ANTHROPIC).merge("LLM_PROVIDER" => "anthropic", "ANTHROPIC_BASE_URL" => "https://gateway.example.test")
 
     with_env_overrides(CONTROLLED.index_with { nil }.merge(broken)) do
-      assert_raises(Provider::Error) { Provider::Registry.preferred_llm_provider }
+      assert_raises(Provider::Error) { Assistant.builtin_provider }   # stops at the broken preferred provider
       (LLM_FEATURES + %i[categorize]).each { |feature| assert_nil Ai.plan(feature, family: @family, user: @user), feature }
     end
   end

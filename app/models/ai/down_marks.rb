@@ -15,6 +15,15 @@ module Ai::DownMarks
   # Failovers that pass on their own; the others (a bad key, no credit, a missing model) need a fix.
   PASSING = [ Ai::Error::Timeout, Ai::Error::Upstream, Ai::Error::RateLimited, Ai::Error::Unreachable ].freeze
 
+  # For a diagnostic (AiHealth::Probe): neither reads nor writes production's marks.
+  module Ignored
+    module_function
+
+    def state(_route) = :up
+    def down?(_route) = false
+    def mark(_route, _error) = nil
+  end
+
   module_function
 
   def mark(route, error)

@@ -8,7 +8,7 @@ class VectorStore::Registry
   class << self
     # Returns the configured adapter instance. Which store is used comes from
     # Ai::Config (Ai::LegacyEnvConfig keeps the rule: VECTOR_STORE_PROVIDER,
-    # else pgvector on Anthropic installs, else OpenAI's store with an OpenAI key).
+    # else pgvector on Anthropic installs, else OpenAI's store when the key is for OpenAI itself).
     def adapter
       name = adapter_name
       return nil unless name
@@ -53,7 +53,7 @@ class VectorStore::Registry
         endpoint = Ai::Config.current.routes_for(:embed).map(&:endpoint).find(&:vector_store?)
         return nil unless endpoint&.api_key
 
-        VectorStore::Openai.new(access_token: endpoint.api_key, uri_base: endpoint.base_url)
+        VectorStore::Openai.new(endpoint:)
       end
 
       def build_pgvector

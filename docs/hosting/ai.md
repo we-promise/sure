@@ -160,14 +160,9 @@ GPT-6.1 Sol and GPT-6 Sol use the native Responses API for assistant tools.
 Leave the custom Base URL setting empty when connecting directly to OpenAI.
 GPT-6.1 Sol does not support tool calling in Chat Completions, or the `none`
 and `minimal` reasoning efforts. See the [model documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
-Native GPT-6.1 Sol, GPT-6 Sol,
-`o1`, and `o3` PDF vision requests use `max_completion_tokens`, which includes
-reasoning and visible output, when an output limit is explicitly configured.
-Set `LLM_MAX_RESPONSE_TOKENS` to a positive value to bound each such request;
-the default 512-token context reserve is not sent as a provider limit.
-Text extraction keeps its existing request behavior. Custom endpoints retain
-their existing token parameters. Increase the LLM context budget for cloud
-reasoning models; the default 2048-token context is intended for small local models.
+Increase the LLM context budget for cloud reasoning models; the default 2048-token
+context is intended for small local models. PDF import is described in
+[PDF import](#pdf-import).
 
 ### Anthropic (native)
 
@@ -272,7 +267,7 @@ CATEGORIZATION_PROVIDER=jev                            # or choose it on the Sel
 ```
 
 - **One choice for the instance.** Since v0.7.7 the Jev choice applies to every family on the instance (it was per family before). On upgrade, an instance with one family keeps that family's choice; on an instance with several, every family goes back to the LLM provider until an admin chooses Jev again. Per-feature model lists come with the AI settings pages in a later release.
-- **Endpoints.** Only TypeSafe-style endpoints ending in `/v1/systemone` work, including a self-hosted server. Jev through OpenRouter (`https://openrouter.ai/api/alpha/decisions`) stops working in v0.7.7 and comes back with a later release; any other path isn't supported. Sure leaves an unsupported endpoint out, logs a warning and categorizes with the LLM provider, and the settings form refuses one.
+- **Endpoints.** Only TypeSafe-style endpoints ending in `/v1/systemone` work, including a self-hosted server. Jev through OpenRouter (`https://openrouter.ai/api/alpha/decisions`) stops working in v0.7.7 and comes back with a later release; OpenRouter's free decisions model is `parallel/decisions-fast:free`, used in the live tests for that route. Any other path isn't supported. Sure leaves an unsupported endpoint out, logs a warning and categorizes with the LLM provider, and the settings form refuses one.
 - **Self-hosted servers.** An `http://` endpoint is treated as a server on your own network, on any host (not only localhost). Sure sends it one request at a time; set `JEV_CONCURRENCY` to send more.
 - **Confidence threshold.** Only answers from TypeSafe's own API (`api.typesafe.ai`) are held back by the threshold, since only its confidence has been checked. A self-hosted server's answers always apply, on `http` or `https`.
 - **No failover.** When Jev is chosen and fails, the batch is never sent to the LLM provider instead. A timeout, rate limit or outage is retried later; a rejected key or spent credit ends the run, so start it again once the key or credit is fixed.
@@ -313,7 +308,7 @@ Behavior:
 - Values are stringified: nested JSON objects/arrays become Ruby inspect-style strings, not valid JSON. Header values must be plain strings.
 - User headers merge over the client's managed headers — setting `Authorization` here would override the access token.
 - Unset, blank, malformed, or non-object JSON is ignored with an error in the logs; chat keeps working. The raw value is never logged.
-- These headers are NOT sent to embedding, vector-store, or AI-health-probe calls — those build separate clients. A gateway requiring the header on those endpoints is not supported.
+- These headers are NOT sent to embedding or AI-health-probe calls — those build separate clients. Static headers are sent on OpenAI vector-store calls, which use the same client builder. A gateway requiring the header on the other endpoints is not supported.
 - ENV-only: there is no settings-page equivalent. The value is re-read every time a provider client is built (nothing is cached), but updating the environment requires restarting the app.
 
 ## Local LLM Setup (Ollama)
@@ -1656,7 +1651,94 @@ These are defined in `app/models/assistant/function/`. Preview tools
 (Statement Vault, `get_valuations`, `get_insights`) are listed in
 [mcp.md](mcp.md#preview-tools).
 
+### PDF import
+
+Sure reads an uploaded PDF in one of four ways, then checks what the model returned:
+
+| Way | When | Sent to the provider |
+|---|---|---|
+| **PDF** | The model reads PDFs natively (Anthropic, OpenAI's own API) and the file is within the provider's inline limit: at most 100 pages, and 32 MiB on OpenAI or 23.25 MiB (24,379,392 bytes) on Anthropic, whose 32 MB request limit must also hold the file's base64 encoding | The PDF file itself |
+| **Text** | The PDF has a text layer | The text layer, a batch of pages at a time |
+| **Images** | The model reads images (OpenAI's vision models, Anthropic, and any custom OpenAI-compatible server) | Each page as a 150 dpi image at high detail |
+| **OCR** | An OCR model is set up (from the next config release; see below) | Each page as an image to the OCR model, then its transcription to the text model |
+
+- **PDF import runs only on a model with PDF support, as before:** OpenAI's vision models,
+  Claude, and a custom OpenAI-compatible server unless `OPENAI_SUPPORTS_PDF_PROCESSING=false`,
+  which turns PDF import off.
+- **Auto, the default, tries them in that order**, skipping a way the model can't do. A scan
+  with no text layer is never sent as empty text. The next statement for the same account and
+  model starts from the way that last passed.
+- **"Read as"** on the upload form, and on the chat tool, picks one way. A way the model can't do
+  is greyed out with the reason. An import can be **read again** another way before anything is
+  published.
+- **Pages are batched, not capped at five.** Transaction extraction can batch pages across a long
+  statement once the document has been classified as a statement, so a long statement costs more
+  requests, and a scan costs more image tokens than it did at the old low detail. Classification
+  reads at most three batches before giving up, so a document it doesn't recognize as a statement
+  may not have every page read.
+- **Checks.** Every statement extraction is checked without knowing the answer: the opening
+  balance plus every row makes the closing balance (using the balances printed in the text when
+  they're found, or those the model reported for an image-only scan). Amount and date checks run
+  only when source text is available — a text layer or an OCR transcription — so every amount
+  appears in that text and most dates match the date printed next to their amount. When Auto's
+  extraction fails, it tries the next way. If none passes, the best one is kept and flagged: the
+  import shows which checks failed, and publishing asks for confirmation. The date check is a
+  heuristic tuned on two statements.
+- **Pages are rendered by `pdftoppm`** (poppler-utils, in the Docker image) in a child process
+  with an empty environment, a 30-second timeout, CPU and memory limits, and a page range; a page
+  over 25 million pixels is refused. A missing `pdftoppm` shows as such on the AI status page.
+- **OpenAI-compatible servers never get the PDF file itself**: llama.cpp and Gemini's compatible
+  API refuse it, and OpenRouter charges to parse it.
+
+**OCR.** OCR models (a local model such as Unlimited-OCR-2 on llama.cpp, read through chat with
+its own prompt, or Mistral and Cohere's OCR services) are supported in the code, but there is no
+setting for them yet: they become configurable with the AI settings tables. Until then "Read as:
+OCR" is greyed out, and a scan is read as images on a vision model. Cohere's OCR (`parse-v5.0`,
+one page image per request) has been tested live; Mistral's hasn't. A llama.cpp OCR model needs
+`--special` so its table tags reach Sure.
+
 ### Vector Store (Document Search)
+
+**Since the AI plumbing's documents release:**
+
+- When the backend asks Sure to embed, embeddings go through the same HTTP stack as every other
+  AI call (proxy, retries, usage rows on the usage page under `embed` and `search_documents`).
+  That's pgvector, whose column size comes from `EMBEDDING_DIMENSIONS`, as before. OpenAI's own
+  vector store embeds the files and the query on its side, so don't expect a `search_documents`
+  embedding usage row from that backend.
+- Searches drop matches scoring under 0.3, the default threshold, on OpenAI's vector store and
+  on pgvector. It's a score cutoff, not a guarantee: in the example measured on OpenAI's store it
+  removed the other statements a question about one statement used to get as context, but a
+  passage from another document can still score above it. **The threshold is calibrated on OpenAI's store** (a relevant hit scored 0.84, wrong ones
+  0.14–0.17). pgvector's scores depend on the embedding model: in testing, unrelated text scored
+  0.47 on Gemini's `gemini-embedding-001` and 0.77 on `granite-embedding-small-english-r2`, so
+  0.3 rarely filters there. **From a later release the threshold is a setting per embedding
+  model**, for both stores, with 0.3 as the default.
+- **Embedding dimensions must still match the chunks table.** Sure doesn't ask the model for a
+  size (some models refuse it). A model that returns a different size fails clearly
+  (`expected 1024 dimensions, got 3072` in the debug log) and nothing is stored. Resolving a
+  model whose size doesn't match the database comes in a later release; until then, see
+  [Troubleshooting pgvector and embeddings](#troubleshooting-pgvector-and-embeddings) below.
+- **A custom OpenAI-compatible server (`OPENAI_URI_BASE` with a token) no longer gets OpenAI's
+  vector store by default.** If your proxy serves OpenAI's Files and Vector Stores APIs and you use
+  document search through it, set `VECTOR_STORE_PROVIDER=openai` when you upgrade. Without it,
+  uploads aren't indexed, searches find nothing, and deleting a family can't delete its store.
+- **OpenAI vector store:** documents show *processing* until OpenAI has indexed them, and
+  *unreadable* when the index is empty (a scan: OpenAI's file search reads text layers only).
+  Removing a document deletes its file from OpenAI's Files API; if that fails, the local row and
+  the store attachment are kept, so retrying the removal can find and delete the file. Deleting a
+  family removes its store on a best-effort basis: the adapter keeps the store and its attachments
+  when any file deletion fails, but the family's store id is gone, so there is no later retry.
+  **Files left behind by a family deletion, or documents removed before this release, can't be
+  traced to a row and stay in your OpenAI account**: check the cleanup warnings, then list them in
+  OpenAI's dashboard (Storage → Files, purpose `assistants`). Delete only files you can confirm
+  nothing uses any more: an unfamiliar name doesn't make a file an orphan, as it may belong to a
+  current Sure document or another app. When you can't tell, leave it.
+- New statements uploaded directly to the vault are indexed for search only if the uploader's AI
+  switch is on (checked again when the indexing job runs). Indexing triggered by an explicit PDF
+  import doesn't depend on that switch, and jobs queued before this check was added have no
+  uploader to recheck.
+
 
 Sure's AI assistant can search documents that have been uploaded to a family's vault. Under the hood, documents are indexed in a **vector store** so the assistant can retrieve relevant passages when answering questions (Retrieval-Augmented Generation).
 
@@ -1678,7 +1760,7 @@ Sure's AI assistant can search documents that have been uploaded to a family's v
 
 ##### OpenAI (Default)
 
-No extra configuration is needed. If you already have `OPENAI_ACCESS_TOKEN` set for the AI assistant, document search works automatically. OpenAI manages chunking, embedding, and retrieval.
+No extra configuration is needed. If you already have `OPENAI_ACCESS_TOKEN` set for the AI assistant, document search works automatically. OpenAI manages chunking, embedding, and retrieval. With a custom `OPENAI_URI_BASE`, set `VECTOR_STORE_PROVIDER=openai` too, and only if that server serves OpenAI's Files and Vector Stores APIs.
 
 ```bash
 # Already set for AI chat - document search uses the same token

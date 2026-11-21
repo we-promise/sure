@@ -91,6 +91,9 @@ class Ai::LegacyEnvConfig
     reached = reachable_llm_models(llm)
     preferred = [ reached.first ].compact
     routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
+    # PDF import uses only a model with `vision`, so OPENAI_SUPPORTS_PDF_PROCESSING=false, which
+    # takes `vision` away, keeps it off.
+    routes[:extract_pdf] = route_list(:extract_pdf, preferred.select { _1.capable?(:vision) }.map { pdf_model(_1) })
     routes[:chat] = route_list(:chat, reached + [ agent_model ].compact)
     # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM; the shadow
     # route runs the other one.
@@ -122,8 +125,13 @@ class Ai::LegacyEnvConfig
         timeout_seconds: Provider::Openai.request_timeout, responses_api: provider&.supports_responses_endpoint? || false,
         vector_store:, json_mode: openai_json_mode
       )
-      model = provider && llm_model(endpoint, provider, context_window: custom ? context_window : explicit_context_window,
-                                    max_output_tokens: positive(env("LLM_MAX_RESPONSE_TOKENS"), Setting.llm_max_response_tokens))
+      name = Provider::Openai.effective_model
+      flag = ENV["OPENAI_SUPPORTS_PDF_PROCESSING"]   # raw: set but empty was an opt-out, and stays one
+      vision = (flag.nil? || flag.downcase.in?(%w[true 1 yes])) &&
+               (custom || Provider::Openai::VISION_CAPABLE_MODEL_PREFIXES.any? { name.start_with?(_1) })
+      model = provider && llm_model(endpoint, provider, name, context_window: custom ? context_window : explicit_context_window,
+                                    max_output_tokens: positive(env("LLM_MAX_RESPONSE_TOKENS"), Setting.llm_max_response_tokens),
+                                    vision:, documents: vision && !custom)
       [ endpoint, model ]
     end
 
@@ -134,22 +142,29 @@ class Ai::LegacyEnvConfig
       base_url = env("ANTHROPIC_BASE_URL") || Setting.anthropic_base_url.presence
       provider = buildable(:anthropic) { Provider::Registry.get_provider(:anthropic) }
       endpoint = Ai::Config::Endpoint.new(
-        name: "anthropic", protocol: :anthropic, preset: (:anthropic unless base_url), base_url:, api_key: token,
+        name: "anthropic", protocol: :anthropic, preset: (:anthropic if anthropic_native?(base_url)), base_url:, api_key: token,
         location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       )
-      model = provider && llm_model(endpoint, provider,
+      name = Provider::Anthropic.effective_model
+      vision = base_url.present? || Provider::Anthropic::VISION_CAPABLE_MODEL_PREFIXES.any? { name.to_s.start_with?(_1) }
+      model = provider && llm_model(endpoint, provider, name,
                                     context_window: explicit_context_window,
-                                    max_output_tokens: positive(env("ANTHROPIC_MAX_TOKENS")) || ANTHROPIC_MAX_TOKENS)
+                                    max_output_tokens: positive(env("ANTHROPIC_MAX_TOKENS")) || ANTHROPIC_MAX_TOKENS,
+                                    vision:, documents: vision)
       [ endpoint, model ]
     end
 
-    # What the providers accept: chat's prefix allow-list decides `tools` and `streaming`, and
-    # PDF support decides `vision` and `documents`. Every LLM model does structured output.
-    def llm_model(endpoint, provider, context_window:, max_output_tokens:)
-      name = provider.default_model
+    # What the providers accept: chat's prefix allow-list decides `tools` and `streaming`, and PDF
+    # support decides `vision` (a custom server is trusted with images unless
+    # OPENAI_SUPPORTS_PDF_PROCESSING is off, which also keeps it out of PDF import). `documents`, a
+    # PDF sent as a file, only where the provider reads one natively: Anthropic and OpenAI's own
+    # API. llama.cpp and Gemini's compatible API refuse RubyLLM's file part, and OpenRouter bills
+    # parsing it. Every LLM model does structured output.
+    def llm_model(endpoint, provider, name, context_window:, max_output_tokens:, vision:, documents:)
       capabilities = %i[structured_output]
       capabilities += %i[tools streaming] if provider.supports_model?(name)
-      capabilities += %i[vision documents] if provider.supports_pdf_processing?(model: name)
+      capabilities << :vision if vision
+      capabilities << :documents if documents
       Ai::Config::Model.new(endpoint:, name:, capabilities:, context_window:, max_output_tokens:, batch_size:)
     end
 
@@ -157,6 +172,14 @@ class Ai::LegacyEnvConfig
     # a guard for small local models); the response cap only when someone set one; and
     # LLM_MAX_ITEMS_PER_CALL items per call.
     def context_window = Assistant::TokenBudget.context_window
+
+    # PDF import never assumed the 2,048-token baseline chat and categorization assume: it sent
+    # the pages in one request and the text in 3,000-character chunks. So unless the operator set
+    # LLM_CONTEXT_WINDOW, extract_pdf's model has no window, which Ai::PdfReading reads the same
+    # way, splitting a batch only when the server says it's too long.
+    def pdf_model(model)
+      positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window) ? model : model.with(context_window: nil)
+    end
 
     # A cloud model's real window is far larger than the 2048 guard, which would split its batches
     # into several calls, so native OpenAI and Anthropic are token-sliced only when one is set.
@@ -197,12 +220,14 @@ class Ai::LegacyEnvConfig
       Ai::Config::Model.new(endpoint:, name: config.model)
     end
 
-    # The vector store rule VectorStore::Registry used: VECTOR_STORE_PROVIDER, else pgvector on
-    # Anthropic installs, else OpenAI's store when there's an OpenAI key.
+    # VECTOR_STORE_PROVIDER, else pgvector on Anthropic installs, else OpenAI's store when the
+    # OpenAI key is for OpenAI itself. A custom URL (OpenRouter, llama.cpp, Ollama) has no vector
+    # stores, so documents stay off until VECTOR_STORE_PROVIDER names a store.
     def vector_store_backend
       explicit = env("VECTOR_STORE_PROVIDER")&.to_sym
       return explicit if explicit && VectorStore::Registry::ADAPTERS.key?(explicit)
       return :pgvector if Setting.llm_provider == "anthropic"
+      return if Provider::Openai.custom_endpoint?(openai_uri_base)   # OpenAI's own URL, regional ones included, keeps it
 
       :openai if env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.present?
     end
@@ -214,14 +239,28 @@ class Ai::LegacyEnvConfig
       when :openai
         Ai::Config::Model.new(endpoint: openai.first, name: VECTOR_STORE_MODEL, capabilities: %i[embedding]) if openai
       when :pgvector
-        embed_model if VectorStore::Pgvector.available?
+        embed_model if VectorStore::Pgvector.available? && usable_embedding_server?(embed_model)
       when :qdrant
-        embed_model
+        embed_model if usable_embedding_server?(embed_model)
       end
     end
 
+    # The default embedding server is OpenAI's, which needs a key: an Anthropic-only install
+    # has none, so it gets no `embed` route until EMBEDDING_URI_BASE names a server. Compared as
+    # the transport sends them, so a trailing slash doesn't make it another server.
+    def usable_embedding_server?(model)
+      model.endpoint.base_url.to_s.chomp("/") != VectorStore::DEFAULT_EMBEDDING_URI_BASE.chomp("/") || model.endpoint.api_key.present?
+    end
+
+    # Anthropic's own API, written out or not: it keeps the preset, and with it the PDF limits.
+    def anthropic_native?(url)
+      url.blank? || URI.parse(url.to_s).host.to_s.casecmp?("api.anthropic.com")
+    rescue URI::InvalidURIError
+      false
+    end
+
     # The URL and key fall back to the OpenAI values saved in Settings too. The URL is used as
-    # written, as VectorStore::Embeddable uses EMBEDDING_URI_BASE.
+    # written, without `/v1`: EMBEDDING_URI_BASE has always been the base `embeddings` is posted to.
     def embedding_model
       base_url = env("EMBEDDING_URI_BASE") || openai_uri_base || VectorStore::DEFAULT_EMBEDDING_URI_BASE
       api_key = env("EMBEDDING_ACCESS_TOKEN") || env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.presence

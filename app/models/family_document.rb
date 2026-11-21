@@ -9,32 +9,55 @@ class FamilyDocument < ApplicationRecord
   SUPPORTED_EXTENSIONS = VectorStore::Base::SUPPORTED_EXTENSIONS
 
   validates :filename, presence: true
-  validates :status, inclusion: { in: %w[pending processing ready error] }
+  # unreadable: indexed with no text (a scan an OpenAI store's file search can't read).
+  STATUSES = %w[pending processing ready unreadable error].freeze
+  validates :status, inclusion: { in: STATUSES }
 
-  # The account, when there is one, has to belong to the same family as the
-  # document. Every write path today scopes its lookup, but the column is a
-  # plain reference and a direct create or update would otherwise attach one
-  # family's document to another family's account, which readable_by then
-  # evaluates against the wrong owner.
+  # readable_by trusts the account, so it has to be the document's family's.
   validate :account_belongs_to_family
 
   scope :ready, -> { where(status: "ready") }
+  # Rows that only keep an uploaded file's id for cleanup: its attachment and its compensating
+  # deletion both failed (Family#upload_document). They are not search copies.
+  scope :unattached, -> { where.not("metadata->>'cleanup_error' IS NULL") }
+  scope :search_copies, -> { where("metadata->>'cleanup_error' IS NULL") }
 
-  # A document is readable when it names no account, or names one the user can
-  # reach. The store itself is family-wide, so this is the only thing standing
-  # between one member's statements and another member's search.
-  #
-  # An account statement uploaded before anyone matched it has no account, and
-  # "no account" must not mean "everyone": AccountStatement#viewable_by? gates
-  # an unlinked statement on statement_manager?, so a guest reaching the vault
-  # through search would otherwise read its text. Documents that are not
-  # statements (a tax return, a contract) keep the family-wide behaviour.
+  # The documents a user may read: those on an account they can reach, and those with no
+  # account. The store is family-wide, so this is the only filter between members. A statement
+  # not yet matched to an account follows AccountStatement#viewable_by?: statement managers
+  # only. Other documents without an account (a tax return) are the whole family's.
   scope :readable_by, ->(user) {
     unlinked = where(account_id: nil)
     unlinked = unlinked.where("metadata->>'account_statement_id' IS NULL") unless AccountStatement.statement_manager?(user)
 
     unlinked.or(where(account_id: Account.accessible_by(user).select(:id)))
   }
+
+  # Watches an asynchronous index until it settles (VectorStore::IndexStatusJob). The enqueue runs
+  # after commit, so a queue failure must not fail the insert: the row and its file are already in
+  # the store and can be polled again.
+  after_create_commit :poll_index_later, if: -> { status == "processing" }
+
+  # Recovery for a copy still `processing` whose poll was lost (the queue was down when it was
+  # created, or a requeue was rejected): polling again is harmless.
+  def self.requeue_index_polls = where(status: "processing").find_each(&:poll_index_later)
+
+  def poll_index_later
+    return false unless status == "processing"
+
+    VectorStore::IndexStatusJob.perform_later(self)
+    true
+  rescue StandardError => e
+    DebugLogEntry.capture(
+      category: "documents",
+      level: "warn",
+      message: "Couldn't queue an index poll for an uploaded document: #{e.class}",
+      source: "FamilyDocument#poll_index_later",
+      family: family,
+      metadata: { family_document_id: id }
+    )
+    false
+  end
 
   def mark_ready!
     update!(status: "ready")

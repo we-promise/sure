@@ -1,29 +1,26 @@
-# Pushes a Statement Vault upload into the searchable Document Store.
-#
-# Enqueued from AccountStatement's after_create_commit, so it covers all three
-# producers at once: the web Vault, the MCP upload_account_statement tool, and
-# PdfImport. Failing here must never fail the upload, which has already
-# succeeded and whose bytes are safely stored.
-#
-# Indexing calls an embeddings or hosted vector store provider, so it runs in
-# the AI capsule alongside ProcessPdfJob rather than competing with syncs.
+# Makes a stored statement's search copy (AccountStatement#index_in_vector_store!), on `embed`'s
+# lane. The upload has already succeeded, so a failure here is logged for support, never raised.
 class IndexAccountStatementJob < ApplicationJob
-  queue_as :ai_low_priority
+  queue_as { Ai::Routes.queue_for(:embed) }
 
-  def perform(statement_id)
+  # uploader_id: whose AI switch allowed the upload; checked again here, as it may have been turned
+  # off while the job waited. A job queued without one predates the check.
+  def perform(statement_id, uploader_id = nil)
     statement = AccountStatement.find_by(id: statement_id)
     return unless statement
 
+    family = statement.family
+    uploader = User.find_by(id: uploader_id) if uploader_id.present?
+    return if uploader_id.present? && !statement.ai_indexing_allowed?(uploader)
+    return unless Ai.available?(:embed, family:)
+    # A job with no recorded uploader can't re-check their switch; with nobody in the family still
+    # opted in, sending the statement to a provider would ignore a later "AI off".
+    return if uploader.nil? && family.users.none?(&:ai_enabled?)
+
     return if statement.index_in_vector_store!
     return if statement.indexed_in_vector_store?
-    # index_in_vector_store! also returns false when nothing is attached, which
-    # is a different story from a provider saying no.
-    return unless statement.original_file.attached?
-
-    # false is the ordinary answer on an install with no vector store provider,
-    # and it was also the answer when a configured provider refused the upload.
-    # Only the second is a problem, and it left no trace anywhere.
-    return if VectorStore.adapter.nil?
+    # Only a configured store refusing the upload is worth recording.
+    return unless statement.original_file.attached? && VectorStore.configured?
 
     DebugLogEntry.capture(
       category: "documents",

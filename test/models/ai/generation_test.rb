@@ -100,6 +100,20 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_equal %w[t1 t2], result.remaining_ids.sort
   end
 
+  test "an outage on a later batch keeps the answered batches and leaves the rest for a later job" do
+    use_ai_model_settings(batch_size: 2)
+    stub_ai(:detect_merchants) do |request|
+      raise Ai::Error::Timeout, "slow" if request.input.include?("t2")
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = generation(5).call
+
+    assert_equal %w[t0 t1], answered_ids(result)
+    assert_equal %w[t2 t3 t4], result.remaining_ids
+  end
+
   test "an error after every route is the result's error, and call! raises it" do
     stub_ai(:detect_merchants, raises: Ai::Error::Refused.new("bad request", status: 400))
 
@@ -120,6 +134,41 @@ class Ai::GenerationTest < ActiveSupport::TestCase
 
     assert_equal %w[t0 t1 t2 t3 t4], answered_ids(result)
     assert_equal [ 5, 2, 2, 1 ], requests.map { _1.input.scan("- ID:").size }
+  end
+
+  test "a fallback answering a noncontiguous pending run keeps the original item order" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    use_ai_model_settings("openai/gpt-4.1-mini", batch_size: 1)
+    stub_ai(:detect_merchants) do |request|
+      # The first route answers t1 and t2 but can't fit t0 and t3; the fallback answers those two.
+      raise Ai::Error::ContextTooLong, "too long" if request.model.endpoint.name == "gpu" && request.input.match?(/ID: t[03],/)
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = generation(4).call(batches: 1)
+
+    assert_equal %w[t0 t1 t2 t3], answered_ids(result), "t3 must not be merged ahead of t2"
+  end
+
+  test "a fallback with a larger batch_size keeps noncontiguous pending inputs in order" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    use_ai_model_settings("openai/gpt-4.1-mini", batch_size: 2)
+    requests = stub_ai(:detect_merchants) do |request|
+      ids = request.input.scan(/ID: (t\d)/).flatten
+      if request.model.endpoint.name == "gpu" && (ids.include?("t0") || ids.include?("t3"))
+        raise Ai::Error::ContextTooLong, "too long"
+      end
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = generation(4).call(batches: 1)
+
+    assert_equal %w[t0 t1 t2 t3], answered_ids(result)
+    fallback = requests.select { _1.model.endpoint.name == "openai" }
+    assert_equal [ %w[t0], %w[t3] ], fallback.map { _1.input.scan(/ID: (t\d)/).flatten },
+                 "the noncontiguous pending inputs are sent as separate runs"
   end
 
   test "an item no route can fit is skipped and logged, and the items after it still run" do
@@ -170,6 +219,23 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_equal %w[gpu], result.failed_over_from.map { _1.endpoint.name }
   end
 
+  test "unsupported singleton answers during bisection keep the halves already answered" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b])
+    use_ai_model_settings(batch_size: 2)
+    stub_ai(:detect_merchants) do |request|
+      ids = request.input.scan(/ID: (t\d)/).flatten
+      raise Ai::Error::InvalidOutput, "garbage" if ids == %w[t2 t3]
+      raise Ai::Error::UnsupportedInput, "image input is not supported" if ids == %w[t2] || ids == %w[t3]
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = generation(4).call
+
+    assert_equal %w[t0 t1], answered_ids(result)
+    assert_equal %w[t2 t3], result.skipped.map { _1[:id] }
+  end
+
   test "items a route can't fit wait for an escalation route that is only marked down" do
     use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     Ai::DownMarks.stubs(:state).returns(:up)
@@ -205,6 +271,64 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_equal %w[gpu], result.failed_over_from.map { _1.endpoint.name }
     fallback = requests.select { _1.model.endpoint.name == "openai" }
     assert_equal [ %w[t1] ], fallback.map { _1.input.scan(/ID: (t\d)/).flatten }, "t0 was answered already"
+  end
+
+  test "an unsupported input on a later piece keeps the pieces answered and retries only the rest" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    requests = stub_ai(:detect_merchants) do |request|
+      ids = request.input.scan(/ID: (t\d)/).flatten
+      if request.model.endpoint.name == "gpu"
+        raise Ai::Error::ContextTooLong, "too long" if ids.size > 1
+        raise Ai::Error::UnsupportedInput, "image input is not supported" if ids == %w[t1]
+      end
+
+      AiTestGeneration.answer(request)
+    end
+    Ai::DownMarks.expects(:mark).never
+
+    result = generation(2).call
+
+    assert_equal %w[t0 t1], answered_ids(result).sort
+    assert_empty result.remaining
+    assert_empty result.failed_over_from.to_a
+    fallback = requests.select { _1.model.endpoint.name == "openai" }
+    assert_equal [ %w[t1] ], fallback.map { _1.input.scan(/ID: (t\d)/).flatten }, "t0 was answered already"
+  end
+
+  test "unsupported input no route can take is skipped once, keeping the pieces that were answered" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    use_ai_model_settings("openai/gpt-4.1-mini", batch_size: 1)
+    stub_ai(:detect_merchants) do |request|
+      ids = request.input.scan(/ID: (t\d)/).flatten
+      raise Ai::Error::ContextTooLong, "too long" if request.model.endpoint.name == "gpu" && ids.size > 1
+      raise Ai::Error::UnsupportedInput, "image input is not supported" if ids.include?("t1")
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = nil
+    assert_difference -> { DebugLogEntry.where(message: "Items no route could answer were left unanswered").count } do
+      result = generation(2).call
+    end
+
+    assert_equal %w[t0], answered_ids(result)
+    assert_equal [ "t1" ], result.skipped.map { _1[:id] }
+  end
+
+  test "a fallback recovering an earlier piece keeps the input order" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    use_ai_model_settings("openai/gpt-4.1-mini", batch_size: 2)
+    stub_ai(:detect_merchants) do |request|
+      ids = request.input.scan(/ID: (t\d)/).flatten
+      if request.model.endpoint.name == "gpu"
+        raise Ai::Error::ContextTooLong, "too long" if ids.size > 2
+        raise Ai::Error::InvalidOutput, "garbage" if ids == %w[t0 t1]
+      end
+
+      AiTestGeneration.answer(request)
+    end
+
+    assert_equal %w[t0 t1 t2 t3], answered_ids(generation(4).call)
   end
 
   test "an unusable answer on a later piece keeps the pieces answered and escalates only the rest" do
@@ -368,5 +492,53 @@ class Ai::GenerationTest < ActiveSupport::TestCase
 
     assert_equal %w[t0], answered_ids(result)
     assert_equal [ "t1" ], DebugLogEntry.order(:created_at).last.metadata["item_ids"]
+  end
+  test "a model that can't take the input passes the batch to the next route, without marking itself down" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    stub_ai(:detect_merchants) do |request|
+      raise Ai::Error::UnsupportedInput, "image input is not supported" if request.model.name == "qwen3-8b"
+
+      AiTestGeneration.answer(request)
+    end
+    Ai::DownMarks.expects(:mark).never
+
+    result = generation(2).call
+
+    assert result.success?
+    assert_equal "openai", result.route.endpoint.name
+  end
+  test "two equal items are two inputs: answering one doesn't drop the other" do
+    item = { id: "t0", description: "SHOP", merchant: nil }
+    use_ai_model_settings(batch_size: 1)
+    requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+
+    AiTestGeneration.new(transactions: [ item, item ], family: @family).call
+
+    assert_equal 2, requests.size
+  end
+
+  test "two equal skipped items are skipped twice but logged once" do
+    use_ai_model_settings(batch_size: 1)
+    stub_ai(:detect_merchants) do |request|
+      raise Ai::Error::ContextTooLong, "too long" if request.input.include?("t1")
+
+      AiTestGeneration.answer(request)
+    end
+    repeated = { id: "t1", description: "SHOP 1", merchant: nil }
+
+    result = nil
+    assert_difference -> { DebugLogEntry.where(message: "Items no route could answer were left unanswered").count }, 1 do
+      result = AiTestGeneration.new(transactions: [ transactions(1).first, repeated, repeated ], family: @family).call
+    end
+
+    assert_equal %w[t0], answered_ids(result)
+    assert_equal 2, result.skipped.size
+    assert_equal [ "t1" ], DebugLogEntry.where(message: "Items no route could answer were left unanswered").last.metadata["item_ids"]
+  end
+
+  test "a 5xx that names image support in another field stays an outage" do
+    body = { "error" => { "message" => "internal server error" }, "model" => { "image_support" => true } }
+
+    assert_equal Ai::Error::Upstream, Ai::Error.for_status(503, nil, body:)
   end
 end

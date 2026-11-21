@@ -20,4 +20,12 @@ class Ai::Transport::RubyLlmAdapterTest < ActiveSupport::TestCase
   test "a wrong call into RubyLLM stays a bug" do
     assert_raises(ArgumentError) { @transport.send(:mapping_errors) { RubyLLM::Attachment.new } }
   end
+
+  test "an overload reported as a 400 stays a retryable outage" do
+    response = Struct.new(:status, :body).new(400, { error: { message: "The model is currently overloaded" } }.to_json)
+
+    assert_raises(Ai::Error::Upstream) do
+      @transport.send(:mapping_errors) { raise RubyLLM::OverloadedError.new("The model is currently overloaded", response:) }
+    end
+  end
 end

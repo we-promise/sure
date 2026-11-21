@@ -34,7 +34,7 @@ class Bills::AiReviewsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "forbidden without an LLM provider" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    Assistant.stubs(:builtin_provider).returns(nil)
 
     post ai_review_bills_url
 
@@ -58,6 +58,6 @@ class Bills::AiReviewsControllerTest < ActionDispatch::IntegrationTest
   private
 
     def stub_provider
-      Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+      Assistant.stubs(:builtin_provider).returns(Object.new)
     end
 end

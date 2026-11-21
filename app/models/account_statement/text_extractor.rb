@@ -1,34 +1,23 @@
 class AccountStatement
-  # Reads a stored statement's text, page by page.
+  # Reads a stored statement's text, page by page, for get_document_text: a tool client can't
+  # reach the file itself, which Active Storage serves only to a signed-in browser.
   #
-  # Every MCP tool over the Statement Vault returns metadata only: an assistant
-  # handed a loan amortization schedule got back a filename and a byte size, and
-  # the user had to retype the contents. The bytes are held in Active Storage
-  # but served only to an authorized browser session
-  # (config/initializers/active_storage_authorization.rb), so a tool client has
-  # no route to them at all.
-  #
-  # PDFs are read through Pdf::TextExtractor, the same extraction that backs
-  # VectorStore::Embeddable and the statement metadata detector. Image-only
-  # PDFs return no text, which is reported rather than hidden, because there is
-  # no OCR in this codebase and pretending otherwise would send an assistant
-  # hunting for figures that were never extracted.
+  # PDFs are read through Pdf::TextExtractor, with no AI call. A scan has no text, which is
+  # reported with the way PDF import could read it on this install (images, OCR or nothing), so
+  # an assistant doesn't hunt for figures that were never extracted.
   class TextExtractor
-    # CSV membership is AccountStatement's to decide: it accepts four content
-    # types for .csv and a second partial list here reported a statement stored
-    # as application/csv or application/vnd.ms-excel as unreadable.
+    # Besides CSV, which AccountStatement#csv? decides.
     TEXT_CONTENT_TYPES = %w[text/plain application/json text/markdown].freeze
 
-    # A text file has no pages, so it is cut into fixed-size chunks. Returning
-    # the whole file as a single page defeated get_document_text's per-call
-    # character budget: its window keeps the first page whole whatever its size,
-    # so a large CSV came back entire in one response.
+    # A text file has no pages, so it's cut into pages of this size, to keep within
+    # get_document_text's budget per call.
     TEXT_PAGE_CHARS = 3_000
 
     Result = Data.define(:pages, :page_count, :extractable, :note)
 
-    def initialize(statement)
+    def initialize(statement, user: nil)
       @statement = statement
+      @user = user
     end
 
     def extract
@@ -56,14 +45,30 @@ class AccountStatement
             page_count: pages.size,
             extractable: false,
             note: "The PDF has #{pages.size} page(s) but contains no extractable text layer, which means it is " \
-                  "a scan. There is no OCR in this application, so its contents cannot be read here. Ask the " \
-                  "user for the figures directly rather than guessing."
+                  "a scan, so its contents cannot be read here. #{scan_hint(content)}"
           )
         end
 
         Result.new(pages: pages, page_count: pages.size, extractable: true, note: nil)
       rescue PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError => e
         unsupported("The PDF could not be parsed (#{e.class.name.demodulize}).")
+      end
+
+      # What PDF import's "Read as" can do with this scan for this family and user: a way whose
+      # routes are set up but can't take this file (too large for inline PDF) isn't suggested.
+      def scan_hint(content)
+        reasons = begin
+          Ai::PdfReading.new(content:, family: @statement.family, filename: @statement.filename, user: @user).ways
+        rescue Ai::Error::Unavailable
+          {}
+        end
+        way = %i[pdf images ocr].find { reasons.key?(_1) && reasons[_1].nil? }
+        if way
+          "Importing it as a statement with \"Read as\" set to #{{ pdf: "PDF", images: "Images", ocr: "OCR" }.fetch(way)} can read the " \
+            "scanned pages; suggest that, or ask the user for the figures. Don't guess."
+        else
+          "No model set up on this install can read scanned pages. Ask the user for the figures directly rather than guessing."
+        end
       end
 
       def paginate_text(text)

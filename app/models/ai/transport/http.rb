@@ -67,6 +67,18 @@ module Ai::Transport::Http
       url.include?("v1") ? url : "#{url}/v1"
     end
 
+    # The base URL an endpoint's ruby-openai client uses, with the default filled in.
+    def openai_base(endpoint) = compatible_base(endpoint.base_url.presence || (OPENROUTER_BASE if endpoint.preset == :openrouter))
+
+    # Whether two URLs name the same server and path. Scheme and host ignore case and a trailing
+    # slash doesn't count, but the path keeps its case: `/TeamA/v1` and `/teama/v1` differ.
+    def same_url?(a, b)
+      left, right = [ a, b ].map { parse(_1.to_s.strip.chomp("/")) }
+      return false unless left&.host && right&.host
+
+      [ left, right ].map { [ _1.scheme.downcase, _1.host.downcase, _1.port, _1.path ] }.uniq.one?
+    end
+
     # Headers sent on every request. Values holding `{session_id}` are filled per chat request
     # by Provider::Openai, so they're left out here.
     def headers(endpoint) = endpoint.extra_headers.reject { |_, value| value.to_s.include?("{session_id}") }
@@ -83,15 +95,6 @@ module Ai::Transport::Http
       options[:extra_headers] = static if static.any?
 
       ::OpenAI::Client.new(**options, &faraday_options(base || OPENAI_BASE))
-    end
-
-    # The anthropic gem's client, for the Anthropic PDF probe, as PDF import uses it. It takes no
-    # proxy or TLS options, so it ignores HTTPS_PROXY and SSL_VERIFY=false, as PDF import does
-    # until it moves onto RubyLLM.
-    def anthropic_client(endpoint, timeout: endpoint.timeout_seconds)
-      options = { api_key: endpoint.api_key.to_s, max_retries: 0, timeout: }
-      options[:base_url] = endpoint.base_url if endpoint.base_url.present?
-      ::Anthropic::Client.new(**options)
     end
 
     # A plain Faraday connection for a request no client library makes (Anthropic's model lookup),

@@ -1,6 +1,9 @@
+# Always listed: it searches documents' contents when `search_documents` is
+# available, and otherwise falls back to #3422's metadata search over the vault, saying why with
+# the router's reason, never "no documents have been uploaded". On pgvector and Qdrant the query's
+# embedding is an `embed.ai` call, traced and recorded like any other; OpenAI's store embeds the
+# query itself, inside its search API, so that path has no `embed.ai` event.
 class Assistant::Function::SearchFamilyFiles < Assistant::Function
-  include LangfuseTraceable
-
   class << self
     def name
       "search_family_files"
@@ -57,51 +60,29 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
     Rails.logger.debug("[SearchFamilyFiles] query=#{query.inspect} max_results=#{max_results} family_id=#{family.id}")
 
-    # "No documents have been uploaded" was answered whenever no vector store
-    # had ever been created, which is a different statement entirely and was
-    # read as fact by assistants while the user's file sat in the database. Both
-    # unconfigured cases now fall back to what CAN be searched without
-    # embeddings, so the answer is "here is what exists, full-text search is
-    # unavailable" rather than "you uploaded nothing".
+    availability = Ai.availability(:search_documents, family:, user:)
+    unless availability.available?
+      Rails.logger.debug("[SearchFamilyFiles] search_documents unavailable: #{availability.reason}")
+      return statement_fallback(query, max_results, reason: availability.reason.to_s, availability:)
+    end
+
     unless family.vector_store_id.present?
       Rails.logger.debug("[SearchFamilyFiles] family #{family.id} has no vector_store_id")
       return statement_fallback(query, max_results, reason: "no_vector_store")
     end
 
-    availability = Ai.availability(:search_documents, family:, user:)
-    unless availability.available?
-      return { success: false, error: "ai_unavailable", reason: availability.reason.to_s, message: availability.message_for(user) }
-    end
-
     adapter = VectorStore.adapter
-    unless adapter
-      Rails.logger.debug("[SearchFamilyFiles] no VectorStore adapter configured")
-      return statement_fallback(query, max_results, reason: "provider_not_configured")
-    end
+    return statement_fallback(query, max_results, reason: "not_configured") unless adapter
 
-    store_id = family.vector_store_id
-    Rails.logger.debug("[SearchFamilyFiles] searching store_id=#{store_id} via #{adapter.class.name}")
-
-    trace = create_langfuse_trace(
-      name: "search_family_files",
-      input: { query: query, max_results: max_results, store_id: store_id },
-      user_identifier: user.id&.to_s
-    )
-
-    response = adapter.search(
-      store_id: store_id,
-      query: query,
-      max_results: max_results
-    )
+    # The same candidate retrieval as Family#search_documents: a restricted hit must not spend the
+    # caller's limit. Keep this tool's explicit provider-error response rather than the family's [].
+    results, response = family.search_document_hits(query, max_results: max_results, user: user)
+    # nil: the server that holds the family's store is no longer configured.
+    return statement_fallback(query, max_results, reason: "not_configured") if response.nil?
 
     unless response.success?
       error_msg = response.error&.message
       Rails.logger.debug("[SearchFamilyFiles] search failed: #{error_msg}")
-      begin
-        finish_langfuse_trace(trace: trace, output: { error: error_msg }, level: "ERROR")
-      rescue => e
-        Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
-      end
       return {
         success: false,
         error: "search_failed",
@@ -109,9 +90,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       }
     end
 
-    results = response.data
-
-    Rails.logger.debug("[SearchFamilyFiles] #{results.size} chunk(s) returned")
+    Rails.logger.debug("[SearchFamilyFiles] #{results.size} readable chunk(s) returned")
 
     results.each_with_index do |r, i|
       Rails.logger.debug(
@@ -120,30 +99,16 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       )
     end
 
-    mapped = family.readable_documents(results, user).map do |result|
+    mapped = results.map do |result|
       { content: result[:content], filename: result[:filename], score: result[:score] }
     end
 
-    output = if mapped.empty?
+    if mapped.empty?
       { success: true, results: [], message: "No matching documents found for the query." }
     else
       { success: true, query: query, result_count: mapped.size, results: mapped }
     end
-
-    begin
-      if trace
-        finish_langfuse_trace(trace: trace, output: {
-          result_count: mapped.size,
-          chunks: mapped.map { |r| { filename: r[:filename], score: r[:score], content_length: r[:content]&.length } }
-        })
-      end
-    rescue => e
-      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
-    end
-
-    output
   rescue => e
-    finish_langfuse_trace(trace: trace, output: { error: e.message }, level: "ERROR")
     Rails.logger.error("[SearchFamilyFiles] error: #{e.class.name} - #{e.message}")
     {
       success: false,
@@ -153,18 +118,10 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
   end
 
   private
-    # Metadata-only search over the Statement Vault: filename, institution and
-    # account hints. No document CONTENT, because extracting it is exactly what
-    # needs the machinery that is missing here. get_document_text reads one
-    # statement's text directly and is the right next call.
-    def statement_fallback(query, max_results, reason:)
-      # The same gate every other vault tool opens with (GetDocumentText,
-      # ListAccountStatements, GetAccountStatement, UploadAccountStatement).
-      # Full-text search being unconfigured must not become a way around the
-      # role check: this tool is not preview-gated and no controller filters on
-      # role, so a guest reaches it, and the vault inventory, filenames and
-      # institution hints included, is not theirs to list. Unlinked statements
-      # in particular require statement_manager? per AccountStatement#viewable_by?.
+    # Search over the vault's metadata (filename, institution and account hints), not contents;
+    # get_document_text reads one statement's text. The role check every vault tool makes comes
+    # first: guests reach this tool, and the vault's inventory isn't theirs to list.
+    def statement_fallback(query, max_results, reason:, availability: nil)
       return not_a_manager_result(query, reason) unless AccountStatement.statement_manager?(user)
 
       statements, matched = matching_statements(query, max_results)
@@ -174,20 +131,16 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
         search_mode: "metadata_only",
         reason: reason,
         query: query,
-        # Whether these rows answer the query or are simply what is on file.
-        # Returning a recency listing under the same shape as a real match let
-        # an assistant present unrelated statements as search hits, which is the
-        # same class of mistake as the message this fallback was built to undo.
+        # Whether these rows match the query or are only the latest on file, so an assistant
+        # doesn't present the latter as answers.
         listing: matched ? "matched" : "most_recent",
         result_count: statements.size,
         results: statements.map { |statement| statement_result(statement) },
-        message: fallback_message(reason, statements.size, matched)
+        message: fallback_message(reason, statements.size, matched, availability:)
       }
     end
 
-    # Distinguished from an empty vault on purpose: "you may not list this" and
-    # "there is nothing here" are different answers, and collapsing them is the
-    # mistake this whole fallback exists to undo.
+    # "You may not list this", not "there is nothing here".
     def not_a_manager_result(query, reason)
       {
         success: true,
@@ -217,9 +170,8 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
           )
         end.limit(max_results).to_a
 
-        # An over-specific query must not read as "nothing was ever uploaded",
-        # so an empty match falls back to the most recent statements. The caller
-        # is told which of the two it got.
+        # No match falls back to the latest statements, so an over-specific query doesn't read as
+        # an empty vault.
         return [ matched, true ] if matched.any?
       end
 
@@ -237,16 +189,24 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       }.compact
     end
 
-    def fallback_message(reason, count, matched = true)
-      base = if reason == "provider_not_configured"
-        "No vector store is configured, so documents cannot be searched by their contents. " \
-        "Set VECTOR_STORE_PROVIDER (openai | pgvector | qdrant), or for an Anthropic-only install " \
-        "enable the pgvector adapter and point EMBEDDING_URI_BASE at an embeddings endpoint."
-      else
+    def fallback_message(reason, count, matched = true, availability: nil)
+      base = case reason
+      when "no_vector_store"
         "No document has been indexed for full-text search yet, so only stored statements are listed."
+      when "not_configured"
+        if availability
+          "Searching documents by their contents isn't set up: #{availability.message_for(user)}"
+        else
+          "No vector store is configured, so documents cannot be searched by their contents. " \
+          "Set VECTOR_STORE_PROVIDER (openai | pgvector | qdrant), or for an Anthropic-only install " \
+          "enable the pgvector adapter and point EMBEDDING_URI_BASE at an embeddings endpoint."
+        end
+      else
+        "Searching documents by their contents isn't available for this user (#{reason}): " \
+        "#{availability&.message_for(user) || reason}."
       end
 
-      return "#{base} No statement is stored either, so there is genuinely nothing on file." if count.zero?
+      return "#{base} No stored statement is available to this user either." if count.zero?
 
       listing = if matched
         "#{count} stored statement(s) match the query by filename or institution"

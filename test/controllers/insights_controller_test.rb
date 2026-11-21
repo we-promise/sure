@@ -17,7 +17,7 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "insight cards offer Dig in with AI, which opens a new chat about the insight" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(mock)
+    Assistant.stubs(:builtin_provider).returns(mock)
 
     get insights_url
 
@@ -26,7 +26,7 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "insight cards hide Dig in with AI without an LLM provider" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    Assistant.stubs(:builtin_provider).returns(nil)
 
     get insights_url
 
