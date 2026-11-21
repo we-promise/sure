@@ -228,9 +228,28 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal "Balance::SyncCache", log.source
     assert_equal "warn", log.level
     assert_equal @account, log.account
-    assert_equal Setting.exchange_rate_provider, log.provider_key
+    assert_equal ExchangeRate.provider_name, log.provider_key
     assert_equal 2, log.metadata["unconvertible_entry_count"]
     assert_equal [ "EUR->USD", "GBP->USD" ], log.metadata["missing_rate_pairs"].sort
+  end
+
+  test "labels missing-rate debug entries with Frankfurter when Twelve Data has no key" do
+    @account.entries.create!(
+      date: Date.current,
+      name: "EUR Transaction",
+      amount: 100,
+      currency: "EUR",
+      entryable: Transaction.new(extra: {})
+    )
+    Setting.stubs(:exchange_rate_provider).returns("twelve_data")
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => nil) do
+      Balance::SyncCache.new(@account).send(:converted_entries)
+    end
+
+    assert_equal "frankfurter", DebugLogEntry.order(:created_at).last.provider_key
   end
 
   test "records no debug log entry when every entry converts" do
