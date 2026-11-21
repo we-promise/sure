@@ -832,7 +832,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       @statement.day_change
     end
 
-    holdings_queries = queries.grep(/MAX\(provider_holdings\.updated_at::date\)/)
+    holdings_queries = queries.grep(/MAX\(provider_holdings\.date\)/)
     assert_equal 1, holdings_queries.size,
       "current_holdings should only run its holdings query once per instance, not once per caller"
   end
@@ -1872,7 +1872,45 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal expected + [ [ "CASH", 4300, 47.78, nil, nil ] ], figures.call(InvestmentStatement.new(@family, user: nil).allocation)
   end
 
+  # Syncs run in the family's time zone (Sync#perform), so a New York
+  # evening sync writes rows dated that local day while their updated_at is
+  # already the next UTC day. The dashboard must still read the latest
+  # snapshot, the same one the account's holdings page shows.
+  test "dashboard holdings follow the latest provider snapshot for a family west of UTC" do
+    family = families(:dylan_family)
+    family.update!(timezone: "America/New_York")
+    snaptrade_account = snaptrade_accounts(:fidelity_401k)
+    account = family.accounts.create!(name: "Linked brokerage", balance: 3000, cash_balance: 1500, currency: "USD", accountable: Investment.new)
+    snaptrade_account.ensure_account_provider!(account)
+
+    sync_snaptrade_positions!(snaptrade_account, %w[AAPL MSFT], at: Time.utc(2026, 12, 18, 2))  # NY 12-17 21:00
+    sync_snaptrade_positions!(snaptrade_account, %w[AAPL], at: Time.utc(2026, 12, 18, 14))      # NY 12-18 09:00, MSFT sold
+
+    expected = account.reload.current_holdings.map { |h| h.security.ticker }
+    assert_equal %w[AAPL], expected
+
+    statement = InvestmentStatement.new(family.reload, user: nil)
+    assert_equal expected, statement.current_holdings.select { |h| h.account_id == account.id }.map { |h| h.security.ticker }
+    assert_not_includes statement.top_holdings(limit: 10).map(&:ticker), "MSFT"
+  end
+
   private
+    # A SnapTrade sync of the given tickers (10 shares at 150 each), run at
+    # `at` in the family's time zone the way Sync#perform runs it.
+    def sync_snaptrade_positions!(snaptrade_account, tickers, at:)
+      family = snaptrade_account.snaptrade_item.family
+      travel_to(at) do
+        Time.use_zone(family.resolved_time_zone) do
+          positions = tickers.map do |ticker|
+            { "instrument" => { "kind" => "stock", "symbol" => ticker }, "units" => "10", "price" => "150.00", "currency" => "USD" }
+          end
+          snaptrade_account.update!(currency: "USD", cash_balance: 1500, current_balance: 1500 + 1500 * tickers.size,
+            last_holdings_sync: Time.current, raw_holdings_payload: positions, raw_activities_payload: [])
+          SnaptradeAccount::Processor.new(snaptrade_account.reload).process
+        end
+      end
+    end
+
     def materialize_two_parcel_example(first_parcel_label:)
       account = create_investment_account(balance: 1800)
       security = create_portfolio_security

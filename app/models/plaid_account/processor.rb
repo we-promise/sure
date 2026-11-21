@@ -5,8 +5,10 @@ class PlaidAccount::Processor
 
   attr_reader :plaid_account, :as_of
 
-  # `as_of` is the sync's date. Only the loan liability processors read it, to
-  # date a variable rate change.
+  # `as_of` is the sync's date, captured once so one snapshot is not split
+  # across two days when processing runs past midnight. It dates the balance
+  # anchor and the investment holdings, and the loan liability processors read
+  # it to date a variable rate change.
   def initialize(plaid_account, as_of: Date.current)
     @plaid_account = plaid_account
     @as_of = as_of
@@ -157,7 +159,8 @@ class PlaidAccount::Processor
       PlaidAccount::Investments::HoldingsProcessor.new(
         plaid_account,
         security_resolver: security_resolver,
-        currency: plaid_account.currency
+        currency: plaid_account.currency,
+        as_of: as_of
       ).process
       true
     rescue => e
@@ -185,33 +188,13 @@ class PlaidAccount::Processor
       report_exception(e)
     end
 
-    # Plaid dates each holding with the institution's price date, which for a
-    # sync run before the close is the previous session's; the total it reports
-    # alongside is as of that same date. Anchoring that total on today would
-    # set it against holdings later repriced for today, and the difference
-    # would read as cash on every day in between -- the shift #3815 removed
-    # from IBKR. The anchor goes on the newest date the holdings carry; a
-    # snapshot with no dated holdings is today's.
+    # Plaid's total and the holdings it is made of must sit on one date. The
+    # holdings are dated by the sync day (HoldingsProcessor), so the anchor is
+    # too. On any other day the reverse calculator would value the holdings at
+    # a different price than Plaid's total and read the gap as cash on every
+    # day before it.
     def balance_date
-      return Date.current unless plaid_account.plaid_type == "investment"
-
-      # A holding dated ahead of today is discounted on its own, so one bad
-      # feed does not pull the anchor off the date the rest agree on.
-      dated = holdings.filter_map { |holding| parse_date(holding["institution_price_as_of"]) }
-      dated.reject { |date| date > Date.current }.max || Date.current
-    end
-
-    def holdings
-      plaid_account.raw_holdings_payload&.dig("holdings") || []
-    end
-
-    def parse_date(value)
-      return nil if value.blank?
-      return value.to_date if value.respond_to?(:to_date) && !value.is_a?(String)
-
-      Date.parse(value.to_s)
-    rescue ArgumentError, TypeError
-      nil
+      as_of
     end
 
     def balance_calculator
