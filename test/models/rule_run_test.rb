@@ -216,6 +216,19 @@ class RuleRunTest < ActiveSupport::TestCase
     assert_equal 15, rule_run.reload.transactions_blocked
   end
 
+  test "a failed run blocks nothing while its other AI jobs are pending" do
+    rule_run = create_rule_run(pending_jobs_count: 2, transactions_modified: 2)
+
+    rule_run.fail_job!(error: StandardError.new("provider down"), source: "test")
+
+    assert_equal "failed", rule_run.reload.status
+    assert_equal 0, rule_run.transactions_blocked
+
+    rule_run.complete_job!(modified_count: 3)
+
+    assert_equal 15, rule_run.reload.transactions_blocked
+  end
+
   private
     def create_rule_run(status: "pending", pending_jobs_count: 1, transactions_modified: 0)
       @rule.rule_runs.create!(

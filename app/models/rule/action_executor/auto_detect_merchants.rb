@@ -27,9 +27,10 @@ class Rule::ActionExecutor::AutoDetectMerchants < Rule::ActionExecutor
 
     batch_size = Provider::LlmConcept.max_items_per_call
     jobs_count = 0
+    enrichable_count = enrichable_transactions.count
 
     enrichable_transactions.in_batches(of: batch_size).each_with_index do |transactions, idx|
-      Rails.logger.info("Scheduling auto-merchant-enrichment for batch #{idx + 1} of #{enrichable_transactions.count}")
+      Rails.logger.info("Scheduling auto-merchant-enrichment for batch #{idx + 1} of #{enrichable_count}")
       rule.family.auto_detect_transaction_merchants_later(transactions, rule_run_id: rule_run&.id)
       jobs_count += 1
     end

@@ -28,9 +28,10 @@ class RuleRun < ApplicationRecord
     status == "failed"
   end
 
-  # The AI jobs of a pending run have not reported yet, so nothing is blocked.
+  # AI jobs still to report may yet change the transactions, so nothing is
+  # blocked until the last one is done, even after another job failed.
   def transactions_blocked
-    return 0 if pending?
+    return 0 if pending_jobs_count.positive?
 
     [ transactions_processed - transactions_modified, 0 ].max
   end

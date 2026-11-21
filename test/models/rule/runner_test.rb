@@ -286,6 +286,17 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal 2, runner.changed_now_count
   end
 
+  test "a run with an AI action never records more modified than it matched" do
+    Family.any_instance.stubs(:auto_categorize_transactions_later)
+    rule = create_rule("Two actions and AI", "o", name: "Renamed", tags: [ @tag_a ])
+    rule.actions.create!(action_type: "auto_categorize")
+
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first
+
+    assert_equal "pending", run.status
+    assert_equal 2, run.transactions_modified
+  end
+
   test "a failing rule is recorded and the remaining rules still run" do
     top = create_rule("Top", "Whole Foods", category: @groceries)
     create_rule("Bottom", "Hardware", name: "Renamed")

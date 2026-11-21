@@ -139,9 +139,9 @@ class Rule::Runner
           skip_action_types: skip_action_types
         )
 
-        modified = modified_count(result, queued: matched_ids.size)
-        rule_run.update!(**run_counts(result, queued: matched_ids.size, modified: modified, rule: rule))
-        @changed_now_count += modified
+        counts = run_counts(result, queued: matched_ids.size, rule: rule)
+        rule_run.update!(**counts)
+        @changed_now_count += counts[:transactions_modified]
       rescue => e
         rule_run = record_failure(rule, rule_run, e, executed_at: executed_at, queued: matched_ids.size)
       ensure
@@ -153,32 +153,19 @@ class Rule::Runner
       rule_run
     end
 
-    def run_counts(result, queued:, modified:, rule:)
+    # transactions_modified is what the run changed itself, without the AI
+    # jobs. Rule#apply counts per action, so a transaction two actions change
+    # counts twice; the cap keeps it within the matched transactions.
+    def run_counts(result, queued:, rule:)
       if result.is_a?(Hash) && result[:async]
         # The AI jobs add their own changes via RuleRun#complete_job!
-        { status: "pending", transactions_processed: queued, transactions_modified: modified, pending_jobs_count: result[:jobs_count] || 0 }
+        { status: "pending", transactions_processed: queued, transactions_modified: [ result[:modified_count] || 0, queued ].min, pending_jobs_count: result[:jobs_count] || 0 }
       elsif result.is_a?(Integer)
-        { status: "success", transactions_processed: queued, transactions_modified: modified }
+        { status: "success", transactions_processed: queued, transactions_modified: [ result, queued ].min }
       else
         Rails.logger.warn("Rule::Runner: Unexpected result type from rule.apply: #{result.class} for rule #{rule.id}")
-        { status: "success" }
+        { status: "success", transactions_modified: 0 }
       end
-    end
-
-    # What the run changed itself, without the AI jobs. Rule#apply counts
-    # per action, so a transaction two actions change counts twice; the cap
-    # keeps modified within the matched transactions.
-    def modified_count(result, queued:)
-      count =
-        if result.is_a?(Hash) && result[:async]
-          result[:modified_count] || 0
-        elsif result.is_a?(Integer)
-          result
-        else
-          0
-        end
-
-      [ count, queued ].min
     end
 
     def record_failure(rule, rule_run, error, executed_at:, queued:)
