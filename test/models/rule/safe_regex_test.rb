@@ -44,12 +44,13 @@ class Rule::SafeRegexTest < ActiveSupport::TestCase
   end
 
   # Postgres needs a few milliseconds of CPU to give up on this pattern, so under
-  # a loaded suite the probe's time limit could fire first. The limit is lifted
-  # here: this test is about Postgres' verdict, the next one about the limit.
+  # a loaded suite the probe's time limit could fire first. A statement_timeout
+  # of 0 lifts the limit here: this test is about Postgres' verdict, the next
+  # one about the limit.
   test "a pattern Postgres calls too complex is refused" do
-    Rule::SafeRegex.stubs(:with_timeout).yields
-
-    assert_equal :invalid, Rule::SafeRegex.error_for("^(a{1,255}){1,255}(b)")
+    stub_const(Rule::SafeRegex, :PROBE_TIMEOUT_MS, 0) do
+      assert_equal :invalid, Rule::SafeRegex.error_for("^(a{1,255}){1,255}(b)")
+    end
   end
 
   test "a pattern whose probe runs out of time is refused as too complex" do
