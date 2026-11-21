@@ -1,3 +1,4 @@
+<%# locals: (selection_toggle: true) %>
 <%= form_with url: transactions_path,
               id: "transactions-search",
               scope: :q,
@@ -35,15 +36,17 @@
       <% end %>
     <% end %>
 
-    <%= button_tag type: "button",
-        id: "toggle-checkboxes-button",
-        aria: { label: t(".toggle_selection_checkboxes") },
-        class: "lg:hidden font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
-        data: {
-          action: "click->checkbox-toggle#toggle",
-          checkbox_toggle_target: "toggleButton"
-        } do %>
-      <%= icon("list-todo") %>
+    <% if selection_toggle %>
+      <%= button_tag type: "button",
+          id: "toggle-checkboxes-button",
+          aria: { label: t(".toggle_selection_checkboxes") },
+          class: "lg:hidden font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
+          data: {
+            action: "click->checkbox-toggle#toggle",
+            checkbox_toggle_target: "toggleButton"
+          } do %>
+        <%= icon("list-todo") %>
+      <% end %>
     <% end %>
   </div>
 <% end %>

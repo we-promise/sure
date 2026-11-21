@@ -15,7 +15,7 @@ class Session < ApplicationRecord
   # Only keys actually rendered by DS::Tabs (session_key:) may be persisted.
   # Without this, PUT /current_session accepts any tab_key/tab_value pair
   # from the client and writes it straight into this record's jsonb column.
-  ALLOWED_TAB_KEYS = %w[account_sidebar_tab].freeze
+  ALLOWED_TAB_KEYS = %w[account_sidebar_tab transactions_tab].freeze
 
   # How often an active session's `updated_at` is bumped. Touching on every
   # request would mean a write per page load; this keeps the inactivity
