@@ -1283,6 +1283,41 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_empty explicit_empty_child.transaction.tags
   end
 
+  # An export taken while a transaction carried a tag twice lists the tag id
+  # twice, and the import must not fail on the unique index because of it.
+  test "imports a repeated tag id once" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" } },
+      { type: "Tag", data: { id: "tag-1", name: "Repeated" } },
+      {
+        type: "Transaction",
+        data: {
+          id: "plain", account_id: "checking", date: "2024-01-15", amount: "10.00",
+          name: "Plain", currency: "USD", tag_ids: [ "tag-1", "tag-1" ]
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "split-parent", account_id: "checking", date: "2024-01-15", amount: "30.00",
+          name: "Split parent", currency: "USD", tag_ids: [ "tag-1", "tag-1" ],
+          split_lines: [
+            { id: "inherits", amount: "10.00", name: "Inherits" },
+            { id: "explicit", amount: "20.00", name: "Explicit", tag_ids: [ "tag-1", "tag-1" ] }
+          ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    tag = @family.tags.find_by!(name: "Repeated")
+    [ "Plain", "Inherits", "Explicit" ].each do |name|
+      transaction = @family.entries.find_by!(name: name).transaction
+      assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id), "#{name} should carry the tag once"
+    end
+  end
+
   test "session transaction reimport only replaces current family taggings" do
     session = @family.import_sessions.create!(expected_chunks: 1)
     account = @family.accounts.create!(
@@ -2389,6 +2424,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           budget_id: "budget-1",
           category_id: "cat-groceries",
           budgeted_spending: "500.00",
+          rollover_enabled: true,
           currency: "USD"
         }
       }
@@ -2402,6 +2438,79 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not_nil budget_category
     assert_equal "Groceries", budget_category.category.name
     assert_equal 500.0, budget_category.budgeted_spending.to_f
+    assert budget_category.rollover_enabled?
+  end
+
+  test "imports a budget_category with only its required fields" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    budget_category = @family.budgets.first.budget_categories.first
+    assert_equal 0, budget_category.budgeted_spending
+    assert_not budget_category.rollover_enabled?
+  end
+
+  test "keeps the stored amount and rollover of a budget category when a later line omits them" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", rollover_enabled: true } },
+      { type: "BudgetCategory", data: { id: "bc-2", budget_id: "budget-1", category_id: "cat-groceries" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    budget_category = @family.budgets.first.budget_categories.first
+    assert_equal 500, budget_category.budgeted_spending
+    assert budget_category.rollover_enabled?
+  end
+
+  test "treats a blank rollover_enabled as absent" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", rollover_enabled: true } },
+      { type: "BudgetCategory", data: { id: "bc-2", budget_id: "budget-1", category_id: "cat-groceries", rollover_enabled: "" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert @family.budgets.first.budget_categories.first.rollover_enabled?
+  end
+
+  test "recomputes the carried-over amount of restored rollover budgets" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", budgeted_spending: "500.00", expected_income: "1000.00", currency: "USD" } },
+      { type: "Budget", data: { id: "budget-2", start_date: "2024-02-01", end_date: "2024-02-29", budgeted_spending: "500.00", expected_income: "1000.00", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", rollover_enabled: true } },
+      { type: "BudgetCategory", data: { id: "bc-2", budget_id: "budget-2", category_id: "cat-groceries", budgeted_spending: "500.00", rollover_enabled: true } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    february = @family.budgets.find_by!(start_date: Date.new(2024, 2, 1))
+    assert_equal 500, february.budget_categories.first.rolled_over_amount
+  end
+
+  test "keeps the import when recomputing rollover amounts fails, and logs it" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", budgeted_spending: "500.00", expected_income: "1000.00", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", rollover_enabled: true } }
+    ])
+    Budget::RolloverCalculator.any_instance.stubs(:recompute!).raises(StandardError, "boom")
+
+    assert_difference -> { DebugLogEntry.where(family: @family, category: "import").count }, 1 do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
+
+    assert @family.budgets.first.budget_categories.first.rollover_enabled?
   end
 
   test "reuses an untouched default budget for the same period" do

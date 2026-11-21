@@ -57,8 +57,13 @@ class IncomeStatement::ScopedTransactionsQueryEquivalenceTest < ActiveSupport::T
         args = { transactions_scope: transactions_scope, date_range: @period.date_range,
                  include_trades: include_trades, included_account_ids: included_account_ids }
 
+        # Monthly grouping adds a dimension; ungrouped totals keep it nil.
+        expected_rows = LegacyIncomeStatementTotals.new(@family, **args).call.map do |row|
+          row.to_h.merge(month: nil)
+        end
+
         assert_equal_rows(
-          LegacyIncomeStatementTotals.new(@family, **args).call,
+          expected_rows,
           IncomeStatement::Totals.new(@family, **args).call,
           "Totals (include_trades: #{include_trades}, included_account_ids: #{included_account_ids.inspect})"
         )

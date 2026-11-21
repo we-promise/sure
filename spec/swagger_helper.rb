@@ -433,7 +433,7 @@ RSpec.configure do |config|
           },
           AccountDetail: {
             type: :object,
-            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status created_at updated_at],
+            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status exclude_from_reports created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
@@ -446,6 +446,7 @@ RSpec.configure do |config|
               account_type: { type: :string, nullable: true },
               subtype: { type: :string, nullable: true },
               status: { type: :string, enum: %w[active draft disabled pending_deletion] },
+              exclude_from_reports: { type: :boolean, readOnly: true, description: 'Whether this account is excluded from financial reports' },
               institution_name: { type: :string, nullable: true },
               institution_domain: { type: :string, nullable: true },
               created_at: { type: :string, format: :'date-time' },
@@ -1176,27 +1177,6 @@ RSpec.configure do |config|
             required: %w[message],
             properties: {
               message: { type: :string }
-            }
-          },
-          TransactionResponse: {
-            type: :object,
-            required: %w[id date amount currency name entryable_type account],
-            properties: {
-              id: { type: :string, format: :uuid },
-              date: { type: :string, format: :date },
-              amount: { type: :string },
-              currency: { type: :string },
-              name: { type: :string },
-              entryable_type: { type: :string },
-              account: {
-                type: :object,
-                required: %w[id name account_type],
-                properties: {
-                  id: { type: :string, format: :uuid },
-                  name: { type: :string },
-                  account_type: { type: :string, nullable: true }
-                }
-              }
             }
           },
           ImportConfiguration: {

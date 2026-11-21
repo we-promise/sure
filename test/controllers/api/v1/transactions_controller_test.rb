@@ -9,7 +9,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
     @family = @user.family
     @account = @family.accounts.first
-    @transaction = @family.transactions.first
+    @transaction = transactions(:one)
 
     # Destroy existing active API keys to avoid validation errors
     @user.api_keys.active.destroy_all
@@ -736,6 +736,62 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Transaction Name", response_data["name"]
   end
 
+  test "update with only a nature applies it to the stored amount" do
+    entry = create_transaction(account: @account, amount: 40, name: "Nature only")
+
+    [ [ "income", -40 ], [ "inflow", -40 ], [ "expense", 40 ], [ "outflow", 40 ] ].each do |nature, expected|
+      put api_v1_transaction_url(entry.transaction), params: { transaction: { nature: nature } }, headers: api_headers(@api_key)
+
+      assert_response :success, nature
+      assert_equal expected, entry.reload.amount, nature
+    end
+  end
+
+  test "update with only a nature syncs the account when the sign flips" do
+    entry = create_transaction(account: @account, amount: 40, name: "Nature flip")
+
+    assert_enqueued_with(job: SyncJob) do
+      put api_v1_transaction_url(entry.transaction), params: { transaction: { nature: "income" } }, headers: api_headers(@api_key)
+    end
+    assert_response :success
+  end
+
+  test "update refuses a nature or amount that would break a transfer's legs" do
+    transfer = create_transfer_between_accounts
+    outflow = transfer.outflow_transaction.entry
+    inflow = transfer.inflow_transaction.entry
+
+    [ { nature: "income" }, { amount: 120 }, { amount: 100, nature: "inflow" } ].each do |change|
+      put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: change }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, change.inspect
+      assert_equal 100, outflow.reload.amount, change.inspect
+      assert_equal(-100, inflow.reload.amount, change.inspect)
+    end
+
+    put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: { nature: "outflow", notes: "Rent" } }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal "Rent", outflow.reload.notes
+  end
+
+  test "create and update refuse a nature outside the documented values" do
+    entry = create_transaction(account: @account, amount: 40, name: "Bad nature")
+
+    [ "inlfow", 1, true ].each do |nature|
+      put api_v1_transaction_url(entry.transaction), params: { transaction: { nature: nature } }, headers: api_headers(@api_key), as: :json
+
+      assert_response :unprocessable_entity, nature.inspect
+      assert_equal 40, entry.reload.amount, nature.inspect
+
+      assert_no_difference("@account.entries.count", nature.inspect) do
+        post api_v1_transactions_url,
+             params: { transaction: { account_id: @account.id, name: "Bad", amount: 5, date: Date.current, nature: nature } },
+             headers: api_headers(@api_key), as: :json
+      end
+      assert_response :unprocessable_entity, nature.inspect
+    end
+  end
+
   test "should not sync the account when only notes change" do
     assert_no_enqueued_jobs only: SyncJob do
       put api_v1_transaction_url(@transaction),
@@ -1249,6 +1305,124 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
            headers: api_headers(@api_key)
     end
     assert_response :unprocessable_entity
+  end
+
+  test "should store a repeated tag id once in update" do
+    tag = @family.tags.first
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ tag.id, tag.id ] } },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal [ tag.id ], @transaction.reload.taggings.pluck(:tag_id)
+  end
+
+  test "update with a malformed tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ "not-a-uuid" ] } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "create with a malformed tag id is refused and creates nothing" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Tagged", amount: 25.00, date: Date.current,
+                                    currency: "USD", nature: "expense", tag_ids: [ "not-a-uuid" ] } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  # Strong parameters drop a scalar where a list is permitted, so a check made
+  # after `permit` saw no tags, and the update cleared every tag it held.
+  test "update with a scalar tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: "not-a-uuid" } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "update with a tag id that is not a string leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ { id: @family.tags.first.id } ] } }.to_json,
+        headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  # `compact_blank` would drop an empty object or `false` before the check,
+  # and then `permit` drops the whole list, or the id writer drops `false`:
+  # either way the tags were cleared.
+  test "update with a blank non-string tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    [ [ @family.tags.first.id, {} ], [ false ] ].each do |tag_ids|
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { tag_ids: tag_ids } }.to_json,
+          headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+      assert_response :unprocessable_entity, "tag_ids: #{tag_ids.inspect}"
+      assert_equal "validation_failed", JSON.parse(response.body)["error"], "tag_ids: #{tag_ids.inspect}"
+      assert_equal before_ids, @transaction.reload.tag_ids.sort, "tag_ids: #{tag_ids.inspect}"
+    end
+  end
+
+  test "update with an object for its tag ids leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: {} } }.to_json,
+        headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "create with a scalar tag id is refused and creates nothing" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Tagged", amount: 25.00, date: Date.current,
+                                    currency: "USD", nature: "expense", tag_ids: "not-a-uuid" } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "update with a blank tag id list still clears the tags" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ "" ] } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty @transaction.reload.tag_ids
   end
 
   test "should clear tags when empty tag_ids explicitly provided in update" do

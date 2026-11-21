@@ -556,6 +556,49 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show lists positions that went below zero in the account status" do
+    account = accounts(:investment)
+    # An import that records a sale without its purchase, as a provider or CSV can.
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "[data-testid='account-health-status']", text: /Microsoft \(MSFT\): below zero from/
+  end
+
+  test "show has no account status for a healthy account" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-testid='account-health-status']", count: 0
+  end
+
+  test "a member who cannot open the account does not see its status" do
+    account = accounts(:investment)
+    account.syncs.create!(status: :failed, failed_at: 1.hour.ago)
+    sign_in users(:family_member)
+
+    get account_url(account)
+
+    assert_response :not_found
+    assert_not_includes response.body, I18n.t("accounts.health_status.sync_failed.message")
+  end
+
+  test "a member sees the status of an account shared with them" do
+    @account.syncs.create!(status: :failed, failed_at: 1.hour.ago)
+    sign_in users(:family_member)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-testid='account-health-status']", text: /#{I18n.t("accounts.health_status.sync_failed.message")}/
+  end
+
   test "show renders the scheduled balance tooltip when a scheduled transaction exists" do
     create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
 
