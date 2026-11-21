@@ -374,7 +374,10 @@ class Ai::Generation
         starts << offset + index
         index = finish
       end
-      each_piece(runs, offsets: starts) { |run, at| split_on(route, run, at) }
+      values, unfit = answer_pieces(route, runs, offset, offsets: starts)
+      raise Interrupted.new(values, unfit.flatten(1), Ai::Error::ContextTooLong.new("a pending run doesn't fit #{route.model.name}")) if unfit.any?
+
+      [ values, [] ]
     end
 
     # Answers `slice` on one route: in pieces of the route's batch_size when it holds more (a
@@ -397,8 +400,8 @@ class Ai::Generation
       answer_pieces(route, Ai::Batch.halves(slice), offset)
     end
 
-    def answer_pieces(route, pieces, offset = 0)
-      values, unfit = each_piece(pieces, offset) do |piece, at|
+    def answer_pieces(route, pieces, offset = 0, offsets: nil)
+      values, unfit = each_piece(pieces, offset, offsets:) do |piece, at|
         split_on(route, piece, at)
       rescue Ai::Error::ContextTooLong
         [ [], piece ]   # a single item that can't fit here

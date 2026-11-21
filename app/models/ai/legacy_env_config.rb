@@ -261,10 +261,10 @@ class Ai::LegacyEnvConfig
     end
 
     # The default embedding server is OpenAI's, which needs a key: an Anthropic-only install
-    # has none, so it gets no `embed` route until EMBEDDING_URI_BASE names a server. Compared as
-    # the transport sends them, so a trailing slash doesn't make it another server.
+    # has none, so it gets no `embed` route until EMBEDDING_URI_BASE names a server. URL
+    # equivalents (case, port, trailing slash) still name OpenAI, so use the hosted predicate.
     def usable_embedding_server?(model)
-      model.endpoint.base_url.to_s.chomp("/") != VectorStore::DEFAULT_EMBEDDING_URI_BASE.chomp("/") || model.endpoint.api_key.present?
+      !Provider::Openai.hosted_endpoint?(model.endpoint.base_url) || model.endpoint.api_key.present?
     end
 
     # Anthropic's own API, written out or not: it keeps the preset, and with it the PDF limits.

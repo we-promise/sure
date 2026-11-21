@@ -141,6 +141,13 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_equal({ start_date: "2019-02-01", end_date: "2019-03-01" }, merged[:statement_period])
   end
 
+  test "no answer at all is not an empty statement" do
+    generation = Ai::Generations::ExtractBankStatement.new(units: [], content: "", family: families(:dylan_family))
+
+    assert_raises(Ai::Error::InvalidOutput) { generation.merge_values([]) }
+    assert_equal [], generation.merge_values([ { transactions: [] } ])[:transactions], "an explicit empty answer is still valid"
+  end
+
   test "statement gives today's extracted_data shape" do
     statement = Ai::Generations::ExtractBankStatement.statement(value([ [ "2019-02-01", -24.5 ] ]))
 
@@ -157,6 +164,14 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     )
 
     assert_equal 1.0, checks.dates_anchored
+  end
+
+  test "a month-name date inside a longer printed day doesn't anchor a different row" do
+    extraction = value([ [ "2019-01-05", -5.0 ] ])
+
+    checks = Ai::Generations::ExtractBankStatement.checks(extraction, source: "15 January Fee 5.00")
+
+    assert_equal 0.0, checks.dates_anchored
   end
 
   test "an amount inside a longer printed number isn't in the source" do

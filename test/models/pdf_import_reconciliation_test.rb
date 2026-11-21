@@ -138,6 +138,28 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert first.reload.statement_reconciled?, "the replacement reading writes its own mark"
   end
 
+  test "clearing one of two overlapping readings hands the shared mark to the other" do
+    existing = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+    other_import = PdfImport.create!(family: @family, account: @account, account_statement: @statement,
+                                     date_format: @family.date_format, status: :pending)
+    row = extracted(date: @date, amount: -50, name: "Coffee Shop")
+
+    @import.update!(extracted_data: { "transactions" => [ row ] })
+    @import.generate_rows_from_extracted_data
+    other_import.update!(extracted_data: { "transactions" => [ row ] })
+    other_import.generate_rows_from_extracted_data
+
+    assert_equal other_import.id, existing.reload.reconciled_by_import_id
+    assert_equal [ existing.id.to_s ], @import.extraction_dependencies
+    assert_equal [ existing.id.to_s ], other_import.extraction_dependencies
+
+    other_import.clear_reading!
+
+    existing.reload
+    assert existing.statement_reconciled?, "the surviving reading still needs this entry"
+    assert_equal @import.id, existing.reconciled_by_import_id
+  end
+
   test "clearing a reading releases legacy statement-only marks but keeps other imports' marks" do
     legacy = create_transaction(account: @account, date: @date, amount: 7, name: "Legacy mark")
     elsewhere = create_transaction(account: @account, date: @date, amount: 9, name: "Other statement mark")
@@ -153,6 +175,9 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
     other_entry.update_columns(reconciled_at: Time.current, reconciled_by_statement_id: @statement.id,
                                reconciled_by_import_id: other_import.id)
+    other_import.update_column(:extracted_data, {
+      "transactions" => [], PdfImport::RECONCILED_IDS_KEY => [ other_entry.id ]
+    })
 
     assert other_entry.statement_reconciled?
 

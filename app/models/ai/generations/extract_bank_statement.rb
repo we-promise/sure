@@ -110,6 +110,10 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
   # the cut row), the first batch's opening figures and the last batch's closing ones. Equal rows
   # anywhere else are two purchases, and both are kept.
   def merge_values(values)
+    # A run with every slice skipped is not an empty statement: no model answered. Fail the way
+    # so Auto can try another, and keep an explicit empty transactions list from a real answer.
+    raise Ai::Error::InvalidOutput, "no extraction answered" if values.empty?
+
     batches = values.map { Array(_1[:transactions]) }
     kept = batches.each_with_index.flat_map do |rows, i|
       previous = i.positive? ? batches[i - 1].last : nil

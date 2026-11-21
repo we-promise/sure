@@ -28,6 +28,9 @@ class Ai::PdfReading
   STATEMENT_TYPES = %w[bank_statement credit_card_statement].freeze
   # Characters per text unit for a model whose window isn't known.
   UNKNOWN_WINDOW_CHUNK_CHARS = 3_000
+  # One page can exceed the renderer's size limit while the rest render. Those failures leave that
+  # page untranscribed; a missing renderer or unreadable file is failure of the way as a whole.
+  PAGE_LOCAL_RENDER_ERRORS = %i[too_large blank_page timeout failed].freeze
 
   Outcome = Data.define(:value, :way, :model, :checks, :usage, :attempts) do
     def passed? = checks.nil? || checks.passed?
@@ -158,8 +161,12 @@ class Ai::PdfReading
   def text_layer? = text_pages.any? { _1.strip.present? }
 
   def page_count
-    @page_count ||= Pdf::PageImages.page_count(content)
-  rescue Pdf::PageImages::Error
+    return @page_count if defined?(@page_count)
+
+    @page_count = Pdf::PageImages.page_count(content)
+  rescue Pdf::PageImages::Error => error
+    @page_count = nil
+    @page_count_error = error.code
     nil
   end
 
@@ -199,7 +206,7 @@ class Ai::PdfReading
     # A scan nothing on the route can read is `no_text_layer`; otherwise the last
     # way's reason. A failed renderer's code stays on the error for the admin's status page.
     def raise_unavailable(attempts)
-      render_error = attempts.filter_map { _1[:render_error] }.last
+      render_error = attempts.filter_map { _1[:render_error] }.last || @page_count_error
       reason = text_layer? ? attempts.filter_map { _1[:error] }.last || ways.values.compact.first :
                render_error ? :unreadable : :no_text_layer
       raise Ai::Error::Unavailable.new(reason || :no_way_to_read, code: render_error)
@@ -300,7 +307,14 @@ class Ai::PdfReading
 
     # [the page's text, or nil when every route refused or couldn't read it].
     def transcribe_page(number, routes, timed_out:, cancelled:)
-      png = Pdf::PageImages.render(content, pages: [ number ]).first
+      png = begin
+        Pdf::PageImages.render(content, pages: [ number ]).first
+      rescue Pdf::PageImages::Error => error
+        raise unless error.code.in?(PAGE_LOCAL_RENDER_ERRORS)
+
+        Rails.logger.warn("[Ai::PdfReading] OCR page #{number} couldn't be rendered: #{error.code}")
+        return [ nil, error.code ]
+      end
       routes.each do |route|
         next if timed_out.include?(route) || Ai::DownMarks.down?(route)
         raise Ai::Error::Cancelled, "cancelled" if cancelled&.call

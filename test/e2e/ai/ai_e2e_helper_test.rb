@@ -26,6 +26,15 @@ class AiE2eHelperTest < ActiveSupport::TestCase
     end
   end
 
+  test "a Kilo run ignores the host's stored Jev key while a Jev run keeps it" do
+    with_env_overrides("JEV_API_KEY" => nil) do
+      Setting.stubs(:jev_api_key).returns("host-key")
+
+      with_live_ai { assert_not Ai::LegacyEnvConfig::Jev.configured? }
+      with_live_ai(jev: true) { assert Ai::LegacyEnvConfig::Jev.configured? }
+    end
+  end
+
   test "the Kilo gateway URL can be overridden for both live suites" do
     with_env_overrides("KILO_BASE_URL" => "https://gateway.example.test/v1") do
       assert_equal "https://gateway.example.test/v1", send(:kilo_env)[:OPENAI_URI_BASE]

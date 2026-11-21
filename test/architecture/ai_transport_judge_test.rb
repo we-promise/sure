@@ -8,10 +8,19 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
   OPTIONS = { "Coffee Shops" => "Subcategory of Food", "Salary" => nil, "__uncategorized__" => "No listed category is a reasonable fit" }.freeze
   QUESTIONS = { category: { type: :choice, instructions: "Which category fits?", options: OPTIONS } }.freeze
+  # OpenRouter's decisions API requires a description for every choice. Keep the TypeSafe case's
+  # nil option, but never send it to that gateway.
+  OPENROUTER_OPTIONS = { "Coffee Shops" => "Subcategory of Food", "Salary" => "Salary",
+                         "__uncategorized__" => "No listed category is a reasonable fit" }.freeze
+  OPENROUTER_QUESTIONS = { category: { type: :choice, instructions: "Which category fits?", options: OPENROUTER_OPTIONS } }.freeze
 
   setup do
     @family = families(:dylan_family)
     Ai::Transport::Base.any_instance.stubs(:retry_delay).returns(0)
+  end
+
+  test "OpenRouter questions give every choice a description" do
+    assert OPENROUTER_OPTIONS.values.none?(&:nil?)
   end
 
   test "sends one System One request per state and reads the typed answer" do
@@ -56,10 +65,13 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
 
   test "an OpenRouter decisions preset posts the OpenRouter dialect to the decisions URL" do
     decisions_url = "https://openrouter.ai/api/alpha/decisions"
-    stub_request(:post, decisions_url).to_return(status: 200, headers: JSON_HEADERS, body: answer("Salary", 0.8).to_json)
+    stub_request(:post, decisions_url).with { |request|
+      criteria = JSON.parse(request.body).dig("questions", "category", "criteria") || {}
+      criteria.any? && criteria.values.none?(&:nil?)
+    }.to_return(status: 200, headers: JSON_HEADERS, body: answer("Salary", 0.8).to_json)
 
     response = judge({ "txn_1" => { description: "ACME CORP", amount: 10.0 } },
-                     preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1")
+                     questions: OPENROUTER_QUESTIONS, preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1")
 
     assert_equal "Salary", response.answers.fetch("txn_1").fetch(:category).choice
     assert_requested(:post, decisions_url,
@@ -75,7 +87,7 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
                                                      body: { error: { code: status, message: "err" } }.to_json)
 
       assert_raises(expected) { judge({ "txn_1" => { description: "x" } },
-                                       preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
+                                       questions: OPENROUTER_QUESTIONS, preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
       WebMock.reset!
     end
 
@@ -85,7 +97,7 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     )
 
     assert_equal "Salary", judge({ "txn_1" => { description: "x" } }, max_retries: 1,
-                                 preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1")
+                                 questions: OPENROUTER_QUESTIONS, preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1")
                           .answers["txn_1"][:category].choice
   end
 
@@ -95,7 +107,7 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
                                                    body: { error: { code: 500, message: "upstream is down" } }.to_json)
 
     assert_raises(Ai::Error::Upstream) { judge({ "txn_1" => { description: "x" } },
-                                                preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
+                                                questions: OPENROUTER_QUESTIONS, preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
   end
 
   test "an OpenRouter decisions 503 after the retries fails the batch for failover" do
@@ -104,7 +116,7 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
                                                    body: { error: { code: 503, message: "down" } }.to_json)
 
     assert_raises(Ai::Error::Upstream) { judge({ "txn_1" => { description: "x" } }, max_retries: 1,
-                                                preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
+                                                questions: OPENROUTER_QUESTIONS, preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
   end
 
   test "fans a batch out on at most parallel_requests threads" do

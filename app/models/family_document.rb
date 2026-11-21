@@ -41,6 +41,11 @@ class FamilyDocument < ApplicationRecord
   def self.requeue_index_polls = where(status: "processing").find_each(&:poll_index_later)
 
   def poll_index_later
+    # A reread of the same document resumes a copy whose poll cap was reached while the provider
+    # was still indexing. Other errors stay terminal: they need a new upload/copy, not another poll.
+    if status == "error" && metadata.to_h["indexing_timeout"]
+      update!(status: "processing", metadata: metadata.to_h.except("indexing_timeout"))
+    end
     return false unless status == "processing"
 
     VectorStore::IndexStatusJob.perform_later(self)

@@ -110,10 +110,12 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # Two live drafts from one statement could both publish overlapping rows as
     # new transactions. Reuse the waiting draft instead of leaving another one
     # to publish on top of it.
-    live_draft = family.imports.find_by(
-      type: "TransactionImport", source_pdf_import_id: pdf_import.id, account_id: account.id,
-      status: %w[pending importing complete]
-    )
+    live_draft = family.imports.where(
+      type: "TransactionImport", source_pdf_import_id: pdf_import.id, account_id: account.id
+    ).where(
+      "status IN (?) OR EXISTS (SELECT 1 FROM entries WHERE entries.import_id = imports.id)",
+      %w[pending importing complete reverting revert_failed]
+    ).first
     if live_draft
       return {
         success: false,

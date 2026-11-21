@@ -104,18 +104,8 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     process_result = Struct.new(:document_type).new("bank_statement")
 
     @import.expects(:process_with_ai).once.returns(process_result)
-    @import.expects(:extract_transactions).once do
-      @import.update!(
-        extracted_data: {
-          "transactions" => [
-            {
-              "date" => "2024-01-01",
-              "amount" => "10.00",
-              "name" => "Coffee Shop"
-            }
-          ]
-        }
-      )
+    @import.define_singleton_method(:extract_transactions) do |reread_token: nil|
+      { "transactions" => [] }
     end
     @import.expects(:sync_mappings).once
     @import.stubs(:send_next_steps_email)
@@ -152,14 +142,14 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "database down", error.message, "a generic error isn't swallowed by discard_on(Ai::Error::Base)"
   end
 
-  test "a provider's error shows its own message, as Provider::Error did, not the class name" do
+  test "an account error shows fixed text rather than the provider's message" do
     attach_pdf!(@import)
     @import.expects(:process_with_ai).once.raises(Ai::Error::NoCredit.new("Your credit balance is too low to access the Anthropic API.", status: 400))
 
     assert_nothing_raised { ProcessPdfJob.perform_now(@import) }
 
     assert_equal "failed", @import.reload.status
-    assert_equal "Your credit balance is too low to access the Anthropic API.", @import.error
+    assert_equal I18n.t("imports.pdf_import.account_errors.no_credit"), @import.error
   end
 
   test "a rendering failure keeps its concrete reason (#3275)" do
@@ -244,6 +234,33 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal 0, import.rows_count
   end
 
+  test "a stale reread cannot overwrite a replacement claim or its data" do
+    import = imports(:pdf_with_rows)
+    family = import.family
+    attach_pdf!(import)
+    replacement_data = { "transactions" => [ { "date" => "2024-01-01", "amount" => "10.00", "name" => "Replacement" } ] }
+    import.update!(status: :importing, reread_token: "stale", extracted_data: replacement_data, rows_count: 1)
+    import.define_singleton_method(:process_with_ai) do |reread_token:|
+      # Another reread takes over while this long read is still running.
+      update!(reread_token: "replacement", extracted_data: replacement_data)
+      update_column(:rows_count, 1)
+      Struct.new(:document_type).new("bank_statement")
+    end
+
+    family.expects(:upload_document).never
+    import.expects(:extract_transactions).never
+    import.expects(:send_next_steps_email).never
+
+    ProcessPdfJob.perform_now(import, reread: true, reread_token: "stale")
+
+    import.reload
+    assert_equal "importing", import.status
+    assert_equal "replacement", import.reread_token
+    assert_equal replacement_data, import.extracted_data, "the stale job must not clear newer data"
+    assert_equal 1, import.rows_count
+    assert_nil import.error
+  end
+
   test "a reread's failure is recorded before the job is discarded" do
     import = imports(:pdf_with_rows)
     attach_pdf!(import)
@@ -254,7 +271,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
     import.reload
     assert import.failed?
-    assert_equal "No credit", import.error
+    assert_equal I18n.t("imports.pdf_import.account_errors.no_credit"), import.error
   end
 
   test "a provider's own error message never reaches the import's error or the log" do

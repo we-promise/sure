@@ -3,6 +3,8 @@ require "test_helper"
 # The chat and MCP tool reads a statement through Ai::PdfReading, with an
 # optional "Read as".
 class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     use_ai_routes
     @user = users(:family_admin)
@@ -41,6 +43,33 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_match(/delete draft import/i, second[:available_actions].sole)
     assert_match(/delete its draft import/i, Assistant::Function::ImportBankStatement.description)
     assert_equal 1, @user.family.imports.where(type: "TransactionImport", source_pdf_import_id: @import.id).count
+  end
+
+  test "a failed revert that restored entries still blocks another draft" do
+    stub_ai(:extract_pdf, returns: statement)
+    first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+    draft = @user.family.imports.find(first[:import_id])
+    create_transaction(account: @account, import: draft, name: "Restored entry", amount: 10)
+    draft.update!(status: :revert_failed)
+
+    second = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert_not second[:success]
+    assert_equal "draft_already_exists", second[:error]
+    assert_equal draft.id, second[:import_id]
+  end
+
+  test "a failed import that still owns committed entries blocks another draft" do
+    stub_ai(:extract_pdf, returns: statement)
+    first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+    draft = @user.family.imports.find(first[:import_id])
+    create_transaction(account: @account, import: draft, name: "Committed entry", amount: 10)
+    draft.update!(status: :failed)
+
+    second = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert_not second[:success]
+    assert_equal "draft_already_exists", second[:error]
   end
 
   test "a row-generation failure rolls the draft back so a retry can recreate it" do

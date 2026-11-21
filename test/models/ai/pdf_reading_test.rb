@@ -332,6 +332,44 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "a page-local render failure leaves that page untranscribed and keeps the others" do
+    reader = reading(@scan)
+    Pdf::PageImages.stubs(:page_count).returns(3)
+    Pdf::PageImages.stubs(:render).with(@scan, pages: [ 1 ]).returns([ "page-1" ])
+    Pdf::PageImages.stubs(:render).with(@scan, pages: [ 2 ])
+                                  .raises(Pdf::PageImages::Error.new("page too large", code: :too_large))
+    Pdf::PageImages.stubs(:render).with(@scan, pages: [ 3 ]).returns([ "page-3" ])
+    stub_ai(:extract_pdf) do |request|
+      "text from #{request.pages.first.filename}"
+    end
+
+    with_reading_routes(text_model, ocr_model) do
+      transcription = reader.send(:transcribe)
+
+      assert_equal [ "text from page-1.png", "", "text from page-3.png" ], transcription.pages
+      assert_equal [ 2 ], transcription.untranscribed_pages
+    end
+  end
+
+  test "a page-count failure keeps the unreadable reason for Images but not for Text on a scan" do
+    stub_ai(:extract_pdf)
+    Pdf::PageImages.stubs(:page_count).raises(Pdf::PageImages::Error.new("PDF does not contain EOF marker", code: :unreadable))
+
+    with_reading_routes(vision_model, text_model) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read(read_as: :images) }
+
+      assert_equal :unreadable, error.reason
+      assert_equal :unreadable, error.code
+    end
+
+    Pdf::PageImages.unstub(:page_count)
+    with_reading_routes(text_model) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read(read_as: :text) }
+
+      assert_equal :no_text_layer, error.reason
+    end
+  end
+
   test "an OCR route marked down after the check ends that way before any page is rendered" do
     reader = reading(@scan)
     reader.stubs(:ocr_route).returns(nil)

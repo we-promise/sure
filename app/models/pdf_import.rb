@@ -3,6 +3,11 @@ class PdfImport < Import
 
   # "Read as", per upload: Auto, or one way of reading the PDF.
   READ_AS = Ai::PdfReading::READ_AS.map(&:to_s).freeze
+  # Reconciliation dependencies ride in extracted_data: a statement's own reading, not a new
+  # schema, owns the list of existing entries it decided were already recorded. A later import
+  # on the same statement can claim the same entry, so clearing one reading must hand that mark
+  # back to another reading that still needs it.
+  RECONCILED_IDS_KEY = "_reconciled_entry_ids".freeze
   # What ReadPdf says the document is.
   Analysis = Data.define(:summary, :document_type, :extracted_data)
 
@@ -244,19 +249,20 @@ class PdfImport < Import
   end
 
   # What the document is (Ai::Generations::ReadPdf), read the way the upload asked for.
-  def process_with_ai
+  def process_with_ai(reread_token: nil)
     outcome = pdf_reading.read(read_as: requested_way)
     analysis = Analysis.new(summary: outcome.value[:summary], document_type: outcome.value[:document_type] || "other",
                             extracted_data: outcome.value[:extracted_data])
-    update!(ai_summary: analysis.summary, document_type: analysis.document_type)
-    sync_statement_metadata_from_process_result(analysis)
+    return unless with_claim(reread_token) { update!(ai_summary: analysis.summary, document_type: analysis.document_type) }
+    return unless with_claim(reread_token) { sync_statement_metadata_from_process_result(analysis); true }
+
     analysis
   end
 
   # The statement's rows (Ai::Generations::ExtractBankStatement), read the way the upload asked
   # for, or by Auto starting from the way that last passed for this account and model. A failing
   # extraction is kept and flagged for review, never dropped.
-  def extract_transactions
+  def extract_transactions(reread_token: nil)
     return unless statement_with_transactions?
 
     reading = pdf_reading
@@ -264,9 +270,12 @@ class PdfImport < Import
     # String keys: every reader here digs with strings, and jsonb keeps the hash as assigned
     # until the record is reloaded.
     data = Ai::Generations::ExtractBankStatement.statement(outcome.value).deep_stringify_keys
-    update!(extracted_data: data, read_with: outcome.way.to_s, read_model: outcome.model,
-            extraction_checks: (outcome.checks&.to_h || {}).merge(attempts: outcome.attempts).deep_stringify_keys)
-    sync_statement_metadata_from_extracted_data(data)
+    return unless with_claim(reread_token) do
+      update!(extracted_data: data, read_with: outcome.way.to_s, read_model: outcome.model,
+              extraction_checks: (outcome.checks&.to_h || {}).merge(attempts: outcome.attempts).deep_stringify_keys)
+    end
+    return unless with_claim(reread_token) { sync_statement_metadata_from_extracted_data(data); true }
+
     data
   end
 
@@ -322,6 +331,18 @@ class PdfImport < Import
     :enqueue_failed
   end
 
+  # Runs a write only while this attempt still owns the import. A long OCR read can outlive the
+  # claim's recovery window; once another reread takes over, the stale job must leave the new
+  # attempt's data and token alone. A blank token is a direct read/publish on an unclaimed import.
+  def with_claim(token)
+    with_lock do
+      next false if token.blank? && reread_token.present?
+      next false if token.present? && !(importing? && reread_token == token)
+
+      yield
+    end
+  end
+
   # When a reread's job starts and still holds its own claim: the previous
   # reading goes, rows and all. A delayed job from an earlier attempt returns
   # false, leaving a newer reread or a publish intact. The token is kept so a retry after this
@@ -331,19 +352,26 @@ class PdfImport < Import
       return false if reread_token.present? && !(importing? && self.reread_token == reread_token)
 
       # Another import on the same statement may rely on marks it wrote itself.
-      # Release this reading's owned marks and older statement-only marks from
-      # before owner ids existed. A NULL statement id matches nothing; a mark
-      # owned by another import is never this reading's to release.
+      # Hand a shared mark to a surviving import instead of clearing it, then release only the
+      # marks and older statement-only marks this reading solely supported. A NULL statement id
+      # matches nothing; a mark owned by another import is never this reading's to release.
       statement_id = account_statement&.id
-      Entry.where(account_id:)
-           .where(
-             "reconciled_by_import_id = :import_id OR " \
-             "(reconciled_by_import_id IS NULL AND reconciled_by_statement_id = :statement_id)",
-             import_id: id, statement_id: statement_id
-           )
-           .update_all(
-             reconciled_at: nil, reconciled_by_statement_id: nil, reconciled_by_import_id: nil, updated_at: Time.current
-           )
+      owned_ids = Entry.where(account_id:).where(reconciled_by_import_id: id).pluck(:id)
+      survivors = surviving_owners_for(owned_ids)
+      now = Time.current
+      owned_ids.each do |entry_id|
+        if (owner_id = survivors[entry_id])
+          Entry.where(id: entry_id).update_all(reconciled_by_import_id: owner_id, updated_at: now)
+        else
+          Entry.where(id: entry_id).update_all(
+            reconciled_at: nil, reconciled_by_statement_id: nil, reconciled_by_import_id: nil, updated_at: now
+          )
+        end
+      end
+      if statement_id.present?
+        Entry.where(account_id:, reconciled_by_import_id: nil, reconciled_by_statement_id: statement_id)
+             .update_all(reconciled_at: nil, reconciled_by_statement_id: nil, updated_at: now)
+      end
       rows.delete_all
       self.class.reset_counters(id, :rows)
       update!(ai_summary: nil, document_type: nil, extracted_data: nil, extraction_checks: nil, read_with: nil, read_model: nil,
@@ -431,6 +459,8 @@ class PdfImport < Import
 
     Entry.reconciled_by_statement(account_statement)
   end
+
+  def extraction_dependencies = Array(extracted_data&.dig(RECONCILED_IDS_KEY)).map(&:to_s)
 
   # The half of reconciled_entries this import did not create -- transactions the
   # account already held when the statement arrived. Everything this import
@@ -557,6 +587,18 @@ class PdfImport < Import
   private
     def requested_way = read_as.presence&.to_sym || :auto
 
+    # A shared entry can be owned by only one import at a time. Another reading on the same
+    # statement and account that recorded the same entry as its dependency still needs the mark,
+    # so clearing this reading reassigns ownership to it rather than dropping the evidence.
+    def surviving_owners_for(entry_ids)
+      return {} if entry_ids.empty?
+
+      wanted = entry_ids.map(&:to_s)
+      self.class.where(account_id:, account_statement_id:).where.not(id:).find_each.each_with_object({}) do |other, owners|
+        (other.extraction_dependencies & wanted).each { owners[_1] ||= other.id }
+      end
+    end
+
     # A statement's posting date routinely differs by a day or two from the date
     # a provider recorded for the same transaction, so matching allows a small
     # window rather than demanding an exact date.
@@ -623,12 +665,17 @@ class PdfImport < Import
     def reconcile_entries!(entries, at: Time.current)
       return if entries.blank?
 
-      Entry.where(id: entries.map(&:id)).update_all(
+      ids = entries.map { _1.id.to_s }
+      Entry.where(id: ids).update_all(
         reconciled_at: at,
         reconciled_by_statement_id: account_statement&.id,
         reconciled_by_import_id: id,
         updated_at: at
       )
+      data = extracted_data.to_h
+      recorded = Array(data[RECONCILED_IDS_KEY])
+      data[RECONCILED_IDS_KEY] = (recorded + ids).uniq
+      update_column(:extracted_data, data)
     end
 
     # Regeneration can empty the row set (everything now matches) or refill it

@@ -54,6 +54,23 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
 
     expect_status("processing")
     VectorStore::IndexStatusJob.perform_now(@document, VectorStore::IndexStatusJob::MAX_POLLS)
+    @document.reload
+    assert_equal "error", @document.status
+    assert_equal true, @document.metadata["indexing_timeout"]
+  end
+
+  test "a poll-cap timeout is resumable while a provider error stays terminal" do
+    expect_status("processing")
+    VectorStore::IndexStatusJob.perform_now(@document, VectorStore::IndexStatusJob::MAX_POLLS)
+    assert_equal true, @document.reload.metadata["indexing_timeout"]
+
+    assert_enqueued_with(job: VectorStore::IndexStatusJob) { assert @document.poll_index_later }
+    @document.reload
+    assert_equal "processing", @document.status
+    assert_nil @document.metadata["indexing_timeout"]
+
+    @document.mark_error!("bad file")
+    assert_not @document.poll_index_later
     assert_equal "error", @document.reload.status
   end
 

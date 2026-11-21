@@ -424,4 +424,12 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
 
     assert_empty config.routes_for(:embed)
   end
+
+  test "equivalent hosted OpenAI embedding URLs still need a key" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    config = build("VECTOR_STORE_PROVIDER" => "pgvector",
+                   "EMBEDDING_URI_BASE" => "https://API.OPENAI.COM:443/v1/")
+
+    assert_empty config.routes_for(:embed), "a differently spelled api.openai.com is still OpenAI"
+  end
 end
