@@ -3,6 +3,10 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  test "the API can create every import type except Monarch" do
+    assert_equal Import::TYPES - %w[MonarchImport], Import.api_creatable_types
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

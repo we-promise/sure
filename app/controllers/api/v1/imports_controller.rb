@@ -70,19 +70,19 @@ class Api::V1::ImportsController < Api::V1::BaseController
     unless Import::TYPES.include?(type)
       return render json: {
         error: "invalid_import_type",
-        message: "type must be one of: #{Import::TYPES.join(', ')}"
+        message: "type must be one of: #{Import.api_creatable_types.join(', ')}"
       }, status: :unprocessable_entity
     end
-    return create_sure_import(family) if type == "SureImport"
 
     # A Monarch import combines two exports and per-account choices, which
     # only the web import flow collects.
-    if type == "MonarchImport"
+    unless type.constantize.api_creatable?
       return render json: {
         error: "unsupported_type",
         message: "Monarch imports need per-account choices that only the web app collects. Use the import flow in the web app."
       }, status: :unprocessable_entity
     end
+    return create_sure_import(family) if type == "SureImport"
 
     # 2. Build the import object with permitted config attributes
     @import = family.imports.build(import_config_params.merge(type: type))

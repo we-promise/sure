@@ -8214,7 +8214,6 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
-                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
@@ -8223,8 +8222,8 @@ paths:
                   - SureImport
                   description: Import type (defaults to TransactionImport when omitted).
                     MonarchImport is created in the web app and the API refuses it
-                    with 422 unsupported_type. A type outside this list returns 422
-                    invalid_import_type.
+                    with 422 unsupported_type. Any other type outside this list returns
+                    422 invalid_import_type.
                 account_id:
                   type: string
                   format: uuid
@@ -8330,7 +8329,6 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
-                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
@@ -8339,8 +8337,8 @@ paths:
                   - SureImport
                   description: Import type (defaults to TransactionImport when omitted).
                     MonarchImport is created in the web app and the API refuses it
-                    with 422 unsupported_type. A type outside this list returns 422
-                    invalid_import_type.
+                    with 422 unsupported_type. Any other type outside this list returns
+                    422 invalid_import_type.
                 account_id:
                   type: string
                   format: uuid

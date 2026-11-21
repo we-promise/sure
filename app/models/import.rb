@@ -122,6 +122,16 @@ class Import < ApplicationRecord
   has_many :entries, dependent: :destroy
 
   class << self
+    # Whether POST /api/v1/imports can create this type. A subclass whose
+    # setup only the web flow collects overrides it to false.
+    def api_creatable?
+      true
+    end
+
+    def api_creatable_types
+      TYPES.select { |type| type.constantize.api_creatable? }
+    end
+
     # Reaps imports whose job died mid-flight. import! runs in a single DB
     # transaction, so which side of its commit the worker died on is
     # observable: no rows attached → the data rolled back, failing the record

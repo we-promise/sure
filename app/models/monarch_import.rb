@@ -15,6 +15,11 @@ class MonarchImport < Import
   before_destroy :restore_existing_accounts!, if: :changed_existing_accounts?
   after_destroy_commit -> { family.sync_later }, unless: :pending?
 
+  # Its two exports and per-account choices are collected by the web flow.
+  def self.api_creatable?
+    false
+  end
+
   def requires_csv_workflow?
     false
   end
