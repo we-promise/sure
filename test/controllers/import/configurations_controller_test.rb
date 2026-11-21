@@ -11,6 +11,18 @@ class Import::ConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # The assistant can choose a two-digit-year format for a trade CSV; the trade
+  # form must offer it, or saving the form to fix another column replaces it.
+  test "the trade form keeps a two-digit-year date format" do
+    import = imports(:trade)
+    import.update!(date_format: "%d/%m/%y")
+
+    get import_configuration_url(import)
+
+    assert_response :success
+    assert_select "select[name='import[date_format]'] option[selected][value=?]", "%d/%m/%y"
+  end
+
   test "template suggestion renders German copy and preserves action destinations" do
     ensure_tailwind_build
     @user.update!(locale: "de")
