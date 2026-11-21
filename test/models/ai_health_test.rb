@@ -228,7 +228,7 @@ class AiHealthTest < ActiveSupport::TestCase
           "VECTOR_STORE_PROVIDER" => "qdrant"
         )
       ) do
-        yield AiHealth.new(stored_only: true)
+        yield AiHealth.new
       end
     end
 end

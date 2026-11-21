@@ -91,10 +91,10 @@ class Ai::Generation
     end
   end
 
-  attr_reader :family, :user, :locale
+  attr_reader :family, :user
 
-  def initialize(family:, user: nil, locale: nil)
-    @family, @user, @locale = family, user, locale
+  def initialize(family:, user: nil)
+    @family, @user = family, user
   end
 
   def schema = static_schema
@@ -149,8 +149,6 @@ class Ai::Generation
     routes = plan.routes.select { servable?(_1) }
     return Ai::Result.unavailable(Ai::Availability.unavailable(feature_key, :capability_missing)) if routes.empty?
 
-    @usage = nil
-    @failed_over_from = []
     @logged_ids = Set.new
     @skipped = []
     @skipped_in_slice = Set.new
@@ -158,7 +156,7 @@ class Ai::Generation
     Ai::Shadow.enqueue(self, result) if shadow && !shadow_run?
     result
   rescue Ai::Error::Base => error
-    Ai::Result.failure(error, usage: @usage, failed_over_from: @failed_over_from.presence, correlation_id: Ai::CallContext.correlation_id)
+    Ai::Result.failure(error)
   end
 
   # The share of this batch's items the model left blank or missed.
@@ -362,7 +360,6 @@ class Ai::Generation
 
     def fail_over(route, error)
       @down_marks.mark(route, error)
-      @failed_over_from << route
       error
     end
 
@@ -406,7 +403,7 @@ class Ai::Generation
     # could be answered. Positions are relative to `slice`, so a piece recovered later by another
     # route can be put back where it belongs.
     def split_on(route, slice, offset = 0)
-      cap = route.model.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE
+      cap = route.model.batch_size
       return answer_pieces(route, slice.each_slice(cap).to_a, offset) if slice && slice.size > cap
 
       answer_whole(route, slice, offset)
@@ -491,18 +488,12 @@ class Ai::Generation
         json_mode: route.effective_json_mode, failed_ratio: (generation.method(:failed_ratio) if batch_key && blank_item_check),
         attachments: generation.attachments
       )
-      response = route.transport.generate(request)
-      add_usage(response.usage)
-      generation.coerce(response.json)
+      generation.coerce(route.transport.generate(request).json)
     end
 
     def judge(route, generation)
-      value, usage = judgement_class.new(**generation.arguments, family:).run(route, feature: request_feature)
-      add_usage(usage)
-      value
+      judgement_class.new(**generation.arguments, family:).run(route, feature: request_feature)
     end
-
-    def add_usage(usage) = @usage = [ @usage, usage ].compact.reduce(:+)
 
     # Items the answer left out: an answer missing up to half of its items is still accepted.
     def log_omitted(items, values)
@@ -554,10 +545,9 @@ class Ai::Generation
     def shadow_run? = request_feature != feature_key
 
     # The user's locale when a user started the work, otherwise the family's.
-    def prompt_locale = locale || user&.locale.presence || family&.locale.presence
+    def prompt_locale = user&.locale.presence || family&.locale.presence
 
     def result(value:, route:, remaining: [], answered_by: {})
-      Ai::Result.new(value:, usage: @usage, route:, failed_over_from: @failed_over_from.presence, remaining:,
-                     correlation_id: Ai::CallContext.correlation_id, answered_by:, skipped: @skipped.dup)
+      Ai::Result.new(value:, route:, remaining:, answered_by:, skipped: @skipped.dup)
     end
 end

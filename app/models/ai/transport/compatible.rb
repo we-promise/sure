@@ -15,15 +15,6 @@ class Ai::Transport::Compatible < Ai::Transport::Base
   private
     def run_generate(request) = generate_with_json_mode(request)
 
-    def run_probe(model, check, timeout:)
-      case check
-      when :models then probe_models(model, timeout:)
-      when :chat then probe_chat(model, timeout:)
-      when :tools then probe_tools(model, timeout:)
-      when :embedding then probe_embedding(model, timeout:)
-      end
-    end
-
     # Model listing stays on ruby-openai, built by Ai::Transport::Http: RubyLLM has no public
     # per-context model listing (Provider#list_models is :nodoc:).
     def probe_models(model, timeout:)

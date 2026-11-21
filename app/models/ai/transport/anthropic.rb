@@ -15,9 +15,9 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
     # reminder retry (#4178, #4513). Reasoning effort isn't sent.
     def run_generate(request)
       native = request.with(schema: native_schema(request.schema))
-      text, usage, raw_id, finish_reason = attempt { complete_json(native) }
+      text, usage, finish_reason = attempt { complete_json(native) }
       json = parsed!(text, finish_reason, :schema)
-      Response.new(json:, usage:, raw_id:, finish_reason:, json_mode: :schema)
+      Response.new(json:, usage:, finish_reason:, json_mode: :schema)
     end
 
     def native_schema(node)
@@ -34,19 +34,11 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
       rest.except(*NUMERIC_LIMITS).merge(description: [ node[:description], note ].compact.join(". "))
     end
 
-    def run_probe(model, check, timeout:)
-      case check
-      when :models then probe_models(model, timeout:)
-      when :chat then probe_chat(model, timeout:)
-      when :tools then probe_tools(model, timeout:)
-      when :embedding then raise Ai::Error::Refused, "Anthropic has no embedding models"
-      end
-    end
+    def probe_embedding(_model, timeout:) = raise(Ai::Error::Refused, "Anthropic has no embedding models")
 
     # RubyLLM has no public per-context model listing, so this is a plain GET through
-    # Faraday with Ai::Transport::Http's proxy and TLS options, as every other call gets. The
-    # anthropic gem, used here before, reads only HTTP_PROXY: live, it went direct when only
-    # HTTPS_PROXY was set, so the probe checked a different path from the calls it vouches for.
+    # Faraday with Ai::Transport::Http's proxy and TLS options, as every other call gets, so the
+    # probe takes the same path as the calls it vouches for.
     def probe_models(model, timeout:)
       url = "#{ruby_llm_api_base.delete_suffix("/")}/v1/models/#{ERB::Util.url_encode(model.name)}"
       mapping_errors do
@@ -75,7 +67,6 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
     end
 
     def ruby_llm_provider = :anthropic
-    def ruby_llm_protocol = nil
     def ruby_llm_api_base = endpoint.base_url.presence || DEFAULT_BASE
 
     def configure_provider(config)

@@ -2,11 +2,9 @@
 # debug page with its feature, route and error, never its key or prompt. Health probes are
 # skipped: AiHealth::Probe logs its own failures, with its failure codes.
 class Ai::Instrumentation::DebugLogSubscriber
-  SKIPPED = %w[probe.ai].freeze
-
   def call(event)
     payload = event.payload
-    return if payload[:error].blank? || SKIPPED.include?(event.name)
+    return if payload[:error].blank? || event.name == "probe.ai"
 
     DebugLogEntry.capture(
       category: "ai",

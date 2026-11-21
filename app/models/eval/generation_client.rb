@@ -9,8 +9,6 @@ class Eval::GenerationClient
   end
   DetectedMerchant = Data.define(:transaction_id, :business_name, :business_url)
 
-  FEATURES = %i[categorize detect_merchants].freeze
-
   delegate :chat_response, to: :chat_provider
 
   # How many items `client` takes per call for `feature`, so a runner slices samples the way the

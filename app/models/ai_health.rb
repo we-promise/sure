@@ -22,13 +22,11 @@ class AiHealth
               :function_calling_probe, :pdf_text_extraction_probe,
               :pdf_vision_processing_probe, :vector_store_probe, :embedding_probe
 
-  # Ai::ProbeJob runs the probes in a worker (`force_probes: true`) and stores
-  # the results; the admin page reads them (`stored_only: true`) and calls no
-  # model. A check with no stored result reads as not checked.
-  def initialize(force_probes: false, stored_only: false, probe_cache: Probe::Store.new)
-    @force_probes = force_probes
-    @stored_only = stored_only
-    @probe_cache = probe_cache
+  # Ai::ProbeJob runs the probes in a worker (`run_probes: true`) and stores
+  # the results; the admin page reads them and calls no model. A check with no
+  # stored result reads as not checked.
+  def initialize(run_probes: false)
+    @run_probes = run_probes
     load_llm_status
     load_vector_store_status
     load_probes
@@ -191,7 +189,7 @@ class AiHealth
       @vector_store_probe = vector_store_adapter.present? ? Probe.not_checked : Probe.not_configured
       @embedding_probe = vector_store_adapter == :pgvector ? Probe.not_checked : Probe.not_configured
 
-      probe = Probe.new(force: @force_probes, stored_only: @stored_only, cache: @probe_cache)
+      probe = Probe.new(run: @run_probes)
       if llm_configured?
         @llm_probe = probe.llm(
           provider: @effective_llm_protocol,
@@ -211,8 +209,7 @@ class AiHealth
             provider: @effective_llm_protocol,
             endpoint: @llm_raw_endpoint,
             access_token: @llm_access_token,
-            model: llm_model,
-            openai_compatible: openai_compatible_endpoint?
+            model: llm_model
           )
         end
         if @pdf_vision_processing_capable
@@ -220,8 +217,7 @@ class AiHealth
             provider: @effective_llm_protocol,
             endpoint: @llm_raw_endpoint,
             access_token: @llm_access_token,
-            model: llm_model,
-            openai_compatible: @effective_llm_protocol == :openai && openai_compatible_endpoint?
+            model: llm_model
           )
         end
       end
@@ -243,6 +239,8 @@ class AiHealth
           dimensions: embedding_dimensions
         )
       end
+
+      probe.store!
     end
 
     def pdf_probe_status(probe, capable:)

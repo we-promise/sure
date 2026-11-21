@@ -1,5 +1,4 @@
-# How a compatible endpoint is asked for JSON, the one copy of what the three
-# workers' auto modes and bill setup's fallback did.
+# How a compatible endpoint is asked for JSON.
 #
 # - The Responses API always takes the strict schema.
 # - Chat completions follow the route's JSON mode. `auto` walks strict, json_object, none: it
@@ -39,7 +38,7 @@ module Ai::Transport::JsonMode
         mode = modes[index]
         last = index == modes.size - 1
         begin
-          text, tokens, raw_id, finish_reason = attempt { complete_in_mode(request, mode, effort) }
+          text, tokens, finish_reason = attempt { complete_in_mode(request, mode, effort) }
         rescue Ai::Error::Refused => error
           raise unless rejection?(error, effort) && !retried && (mode != :none || effort)
 
@@ -65,7 +64,7 @@ module Ai::Transport::JsonMode
           next
         end
 
-        return Ai::Transport::Base::Response.new(json:, usage:, raw_id:, finish_reason:, json_mode: mode)
+        return Ai::Transport::Base::Response.new(json:, usage:, finish_reason:, json_mode: mode)
       end
     end
 
@@ -73,14 +72,14 @@ module Ai::Transport::JsonMode
     def generate_with_responses(request)
       effort = request.reasoning_effort
       begin
-        text, usage, raw_id, finish_reason = attempt { complete_in_mode(request, :strict, effort) }
+        text, usage, finish_reason = attempt { complete_in_mode(request, :strict, effort) }
       rescue Ai::Error::Refused => error
         raise unless effort && rejection?(error, effort)
 
         effort = nil
         retry
       end
-      Ai::Transport::Base::Response.new(json: parsed!(text, finish_reason, :strict), usage:, raw_id:, finish_reason:, json_mode: :strict)
+      Ai::Transport::Base::Response.new(json: parsed!(text, finish_reason, :strict), usage:, finish_reason:, json_mode: :strict)
     end
 
     def complete_in_mode(request, mode, effort)
