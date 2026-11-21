@@ -369,6 +369,11 @@ class EnableBankingEntry::Processor
         allow_heuristic_matching: !plain_sibling_pending_match?,
         notes: notes,
         extra: extra,
+        # extra is a full snapshot of the enable_banking branch (fx, MCC, pending,
+        # counterparty_address), so the branch is replaced rather than merged --
+        # otherwise a value the ASPSP stopped sending (say a counterparty_address
+        # that a later payload omits) would linger and keep driving rules.
+        replace_extra_namespaces: [ "enable_banking" ],
         investment_activity_label: investment_activity_label,
         # Claims that exact pending entry before the adapter falls back to
         # matching any pending entry of the same amount.
@@ -387,6 +392,13 @@ class EnableBankingEntry::Processor
     end
 
     store_entry_reference(entry) if import_adapter.skipped_entries.size == skips
+    # extra carries no branch when the payload has no details, and the adapter only
+    # replaces a namespace the payload carries -- so a branch an earlier sync stored
+    # has to be dropped here. Otherwise a counterparty_address the ASPSP has stopped
+    # reporting would linger and keep driving the rule that names the transaction
+    # from it. Provider metadata is not user-owned, so this follows the adapter's
+    # own rule: an import-locked entry keeps everything it has.
+    clear_stale_enable_banking_extra(entry) if entry && extra.nil? && !entry.import_locked?
     capture_unidentified_hold_diagnostic(entry, external_id: safe_id) if first_hold_import && entry
     pending_external_ids.delete(settled_pending_id) if entry && settled_pending_id
 
@@ -438,6 +450,21 @@ class EnableBankingEntry::Processor
       return if reference.blank? || data[:transaction_id].blank? || pending_payload? || !entry&.entryable.is_a?(Transaction)
 
       entry.transaction.update_column(:provider_entry_reference, reference) unless entry.transaction.provider_entry_reference == reference
+    end
+
+    # Drops the enable_banking branch when the payload brought no details for it.
+    # Written the way store_entry_reference is: the column only, without disturbing
+    # the rest of the entry.
+    #
+    # @param entry [Entry, nil] the entry the import produced
+    # @return [void]
+    def clear_stale_enable_banking_extra(entry)
+      return unless entry.entryable.is_a?(Transaction)
+
+      stored = entry.transaction.extra
+      return unless stored.is_a?(Hash) && stored.key?("enable_banking")
+
+      entry.transaction.update_columns(extra: stored.except("enable_banking"))
     end
 
     def name
@@ -552,9 +579,14 @@ class EnableBankingEntry::Processor
       end
 
       eb[:merchant_category_code] = data[:merchant_category_code] if data[:merchant_category_code].present?
+      eb[:counterparty_address] = counterparty_address if counterparty_address.present?
       eb[:pending] = true if pending_payload?
 
       eb.compact!
+      # No branch when there is nothing to put in it: a row with no details keeps
+      # `extra` empty, which is what an "additional details is empty" rule and the
+      # drawer's Additional details section read. A refresh that drops the last
+      # detail clears the branch through #clear_stale_enable_banking_extra.
       eb.empty? ? nil : { enable_banking: eb }
     end
 
@@ -605,6 +637,45 @@ class EnableBankingEntry::Processor
         data.dig(:debtor, :name).presence || data[:debtor_name].presence
       else
         data.dig(:creditor, :name).presence || data[:creditor_name].presence
+      end
+    end
+
+    # The counterparty's PSD2 postal address, flattened to one line, or nil when
+    # the ASPSP sent none.
+    #
+    # Some ASPSPs leave the counterparty name blank and put the merchant
+    # descriptor in the address instead -- ING Bank Śląski sends card purchases
+    # with an empty creditor.name and the merchant in creditor.postal_address.
+    # Exposing it here (rather than naming the transaction from it) lets a user
+    # rule do that mapping, so a provider quirk stays out of this processor.
+    # Reads the same side as #counterparty_name: the creditor for an outgoing
+    # payment, the debtor for an incoming one.
+    #
+    # @return [String, nil]
+    def counterparty_address
+      party = credit_debit_indicator == "CRDT" ? data[:debtor] : data[:creditor]
+      return nil unless party.is_a?(Hash)
+
+      postal_address = party[:postal_address]
+      lines = Array.wrap(postal_address.is_a?(Hash) ? postal_address[:address_line] : nil)
+        .map { |line| line.to_s.squish }
+        .reject(&:blank?)
+      # PSD2 allows a structured address (street_name, town_name, ...) with no
+      # address_line; flatten it too so an address the ASPSP did send is not lost.
+      lines = structured_address_lines(postal_address) if lines.empty?
+
+      lines.join(", ").presence&.truncate(200)
+    end
+
+    # The PSD2 postal_address fields, in address order, for an address sent
+    # without address_line.
+    #
+    # @return [Array<String>]
+    def structured_address_lines(postal_address)
+      return [] unless postal_address.is_a?(Hash)
+
+      %i[street_name building_number post_code town_name country].filter_map do |key|
+        postal_address[key].to_s.squish.presence
       end
     end
 
