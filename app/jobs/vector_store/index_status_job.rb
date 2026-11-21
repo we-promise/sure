@@ -18,7 +18,7 @@ class VectorStore::IndexStatusJob < ApplicationJob
 
     # Another store can't speak for this one's file (pgvector would call any id ready).
     accepted_by = document.metadata.to_h["vector_store"]
-    adapter = VectorStore.adapter_for(accepted_by, endpoint_url: family.vector_store_endpoint)
+    adapter = family.document_adapter(document)
     if adapter.nil?
       message = accepted_by.present? ? "the vector store changed from #{accepted_by} while it indexes" : "vector store no longer configured"
       return mark_error_if_processing(document, message)

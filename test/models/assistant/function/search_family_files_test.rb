@@ -101,6 +101,17 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_match(/VECTOR_STORE_PROVIDER/, result[:message])
   end
 
+  test "a store on a server that is no longer configured falls back to metadata search" do
+    @user.family.update!(vector_store_id: "vs_test123")
+    VectorStore.stubs(:adapter).returns(mock("vector_store_adapter"))
+    Family.any_instance.stubs(:search_document_hits).returns([ [], nil ])
+
+    result = @function.call("query" => "tax return")
+
+    assert_equal "metadata_only", result[:search_mode]
+    assert_equal "not_configured", result[:reason]
+  end
+
   test "returns search results on success" do
     @user.family.update!(vector_store_id: "vs_test123")
     @user.family.family_documents.create!(filename: "2024_tax_return.pdf", provider_file_id: "file-abc", status: "ready")

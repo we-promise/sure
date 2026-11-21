@@ -311,7 +311,7 @@ class Ai::PdfReading
         rescue *NEXT_WAY, Ai::Error::Timeout => error
           # A refusal, unusable answer or timeout ends this route's try at this page, not the
           # whole way: a later OCR route may still transcribe it.
-          Rails.logger.warn("[Ai::PdfReading] OCR page #{number} on #{route.model.name}: #{error.class.name}: #{error.message}")
+          Rails.logger.warn("[Ai::PdfReading] OCR page #{number} on #{route.model.name}: #{error.class.name}")
         end
       end
       [ nil, :unreadable ]

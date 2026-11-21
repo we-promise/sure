@@ -153,6 +153,19 @@ class Family::VectorSearchableTest < ActiveSupport::TestCase
     @family.search_documents("rent")
   end
 
+  test "an OpenAI store stays on OpenAI for search and upload after the backend switches to pgvector" do
+    @family.update!(vector_store_endpoint: "https://a.example.test/v1")
+    VectorStore::Registry.stubs(:adapter).returns(mock("pgvector").tap { _1.expects(:search).never; _1.expects(:upload_file).never })
+    original = mock("server_a")
+    original.expects(:search).returns(VectorStore::Response.new(success?: true, data: [], error: nil))
+    original.expects(:upload_file).with(has_entry(store_id: "vs_test"))
+            .returns(VectorStore::Response.new(success?: false, data: nil, error: VectorStore::Error.new("down")))
+    VectorStore::Openai.stubs(:for_store).with("https://a.example.test/v1").returns(original)
+
+    @family.search_documents("rent")
+    assert_nil @family.upload_document(file_content: "x", filename: "a.pdf")
+  end
+
   test "a store from before its server was recorded is pinned to the one that reaches it" do
     configured = VectorStore::Openai.new(endpoint: ai_endpoint(name: "openai", base_url: "https://vs.example.test/v1", api_key: "k"))
     configured.stubs(:search).returns(VectorStore::Response.new(success?: true, data: [], error: nil))
