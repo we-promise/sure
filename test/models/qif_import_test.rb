@@ -319,6 +319,60 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal "Bank", QifParser.account_type(qif)
   end
 
+  # Lexware FinanzManager exports some accounts with the non-standard type "Oth T".
+  QIF_WITH_UNKNOWN_ACCOUNT_TYPE = <<~QIF
+    !Type:Cat
+    NFood
+    DFood expenses
+    ^
+    !Type:Oth T
+    D1/ 1'20
+    T500.00
+    POpening Balance
+    L[Tagesgeld]
+    ^
+    D3/ 1'20
+    T-25.00
+    PGrocery Store
+    LFood
+    ^
+  QIF
+
+  test "account_type reads an unknown account type as Bank" do
+    assert_equal "Bank", QifParser.account_type(QIF_WITH_UNKNOWN_ACCOUNT_TYPE)
+  end
+
+  test "account_type ignores Class and Memorized sections" do
+    qif = "!Type:Class\nNBusiness\n^\n!Type:Memorized\nKC\nPRent\n^\n!Type:CCard\nD1/1'24\nT-10.00\nPTest\n^\n"
+    assert_equal "CCard", QifParser.account_type(qif)
+    assert_empty QifParser.unknown_account_types(qif)
+  end
+
+  test "account_type matches standard account types regardless of case" do
+    qif = "!Type:ccard\nD1/1'24\nT-10.00\nPTest\n^\n"
+
+    assert_equal "CCard", QifParser.account_type(qif)
+    assert_empty QifParser.unknown_account_types(qif)
+    assert_equal [ "CCard" ], QifParser.parse(qif).map(&:account_type)
+  end
+
+  test "unknown_account_types lists each non-standard account type once" do
+    qif = QIF_WITH_UNKNOWN_ACCOUNT_TYPE + "!Type:Oth T\nD4/1'20\nT-5.00\nPKiosk\n^\n!Type:Bank\nD5/1'20\nT-1.00\nPBakery\n^\n"
+
+    assert_equal [ "Oth T" ], QifParser.unknown_account_types(qif)
+    assert_empty QifParser.unknown_account_types(SAMPLE_QIF)
+    assert_empty QifParser.unknown_account_types(nil)
+  end
+
+  test "parse reads the transactions of an unknown account type like a bank account" do
+    transactions = QifParser.parse(QIF_WITH_UNKNOWN_ACCOUNT_TYPE)
+
+    assert_equal [ "Grocery Store" ], transactions.map(&:payee)
+    assert_equal [ "Bank" ], transactions.map(&:account_type)
+    assert_equal BigDecimal("500"), QifParser.parse_opening_balance(QIF_WITH_UNKNOWN_ACCOUNT_TYPE)[:amount]
+    assert_equal [ "1/1/2020", "3/1/2020" ], QifParser.extract_raw_dates(QIF_WITH_UNKNOWN_ACCOUNT_TYPE)
+  end
+
   test "parse_accounts extracts QIF account metadata" do
     accounts = QifParser.parse_accounts(QIF_WITH_ACCOUNTS)
 
@@ -571,6 +625,29 @@ class QifImportTest < ActiveSupport::TestCase
   test "qif_account_type returns CCard for credit card QIF" do
     @import.update!(raw_file_str: SAMPLE_QIF)
     assert_equal "CCard", @import.qif_account_type
+  end
+
+  test "an unknown account type is imported like a bank account" do
+    @import.update!(raw_file_str: QIF_WITH_UNKNOWN_ACCOUNT_TYPE)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_equal "Bank", @import.qif_account_type
+    assert_equal [ "Oth T" ], @import.unknown_qif_account_types
+    assert_not_empty @import.valid_date_formats_with_preview
+    assert_equal [ "Grocery Store" ], @import.rows.map(&:name)
+    assert_equal [ "Food" ], @import.row_categories
+
+    @import.import!
+
+    manager = Account::OpeningBalanceManager.new(@account)
+    assert_equal Date.new(2020, 1, 1), manager.opening_date
+    assert_equal BigDecimal("500"), manager.opening_balance
+  end
+
+  test "unknown_qif_account_types is empty for standard QIF files" do
+    @import.update!(raw_file_str: SAMPLE_QIF)
+    assert_empty @import.unknown_qif_account_types
   end
 
   test "row_categories excludes blank categories" do
