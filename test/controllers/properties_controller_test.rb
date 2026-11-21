@@ -898,6 +898,155 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='family-currency-trend']", text: /€/, count: 0
   end
 
+  test "updates the property's cost tag" do
+    tag = @account.family.tags.create!(name: "Land costs")
+
+    patch property_path(@account), params: {
+      account: { accountable_attributes: { id: @account.accountable.id, cost_tag_id: tag.id } }
+    }
+
+    assert_response :success
+    assert_equal tag.id, @account.property.reload.cost_tag_id
+  end
+
+  test "rejects a cost tag from another family" do
+    other_tag = families(:empty).tags.create!(name: "Not ours")
+
+    patch property_path(@account), params: {
+      account: { accountable_attributes: { id: @account.accountable.id, cost_tag_id: other_tag.id } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil @account.property.reload.cost_tag_id
+  end
+
+  test "rejects a cost tag that no longer exists" do
+    tag = @account.family.tags.create!(name: "Land costs")
+    tag.destroy!
+
+    patch property_path(@account), params: {
+      account: { accountable_attributes: { id: @account.accountable.id, cost_tag_id: tag.id } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil @account.property.reload.cost_tag_id
+  end
+
+  test "edit form offers the family's tags as the cost tag" do
+    get edit_property_path(@account)
+
+    assert_response :success
+    assert_select "input[name='account[accountable_attributes][cost_tag_id]']"
+    assert_select "[role='option']", text: tags(:one).name
+  end
+
+  test "overview shows the purchase costs, cost basis and gain after costs" do
+    tag = cost_tagged_property
+    create_cost(accounts(:depository), 8_000, tag)
+    create_cost(accounts(:credit_card), 2_000, tag)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']" do
+      assert_select "h4", text: "Purchase costs"
+      assert_select "*", text: /\$10,000/
+      assert_select "a[href*='tags']", text: "2 transactions tagged Land costs"
+      # Costs in closed accounts count too, so the list it opens includes them.
+      assert_select "a[href*='active_accounts_only%5D=false']"
+      # Outside the blurred value, so privacy mode leaves the link clickable.
+      assert_select ".privacy-sensitive a", count: 0
+      assert_select ".privacy-sensitive", text: /\$10,000/
+      assert_select "*", text: /\$510,000/
+      assert_select "span", text: /\$40,000/
+      assert_select "span", text: "(7.8%)"
+    end
+  end
+
+  test "the cost link leaves out transfers, pending transactions and accounts the viewer can't see" do
+    tag = cost_tagged_property
+    create_cost(accounts(:depository), 8_000, tag)
+    create_cost(accounts(:credit_card), 2_000, tag)
+    # A tagged transfer is not a cost.
+    accounts(:depository).entries.create!(
+      date: 1.year.ago.to_date, name: "To savings", amount: 5_000, currency: "USD",
+      entryable: Transaction.new(tags: [ tag ], kind: "funds_movement")
+    )
+    # Pending at the bank, so not counted yet.
+    accounts(:depository).entries.create!(
+      date: 1.year.ago.to_date, name: "Pending deposit", amount: 1_000, currency: "USD",
+      entryable: Transaction.new(tags: [ tag ], extra: { "simplefin" => { "pending" => true } })
+    )
+    # Not shared with the member.
+    create_cost(accounts(:investment), 3_000, tag)
+    AccountShare.create!(account: @account, user: users(:family_member), permission: "read_only")
+    sign_in users(:family_member)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']" do
+      assert_select "*", text: /\$10,000/
+      assert_select "a[href*='tags']", text: "2 transactions tagged Land costs"
+    end
+
+    # The list the link opens leaves the transfer and the pending one out too.
+    get css_select("[data-testid='purchase-costs'] a[href*='tags']").first["href"]
+    assert_response :success
+    assert_includes response.body, "Notary"
+    assert_not_includes response.body, "To savings"
+    assert_not_includes response.body, "Pending deposit"
+  end
+
+  test "overview says the rate is unavailable for a cost without a stored rate" do
+    tag = cost_tagged_property
+    eur_account = @account.family.accounts.create!(name: "Euro bank", balance: 0, currency: "EUR", owner: @user, accountable: Depository.new)
+    create_cost(eur_account, 1_000, tag, currency: "EUR")
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']", text: /Exchange rate unavailable/
+    assert_select "[data-testid='purchase-costs'] h4", text: "Gain after costs"
+  end
+
+  test "overview shows the costs of a foreign-currency property in the family currency" do
+    purchase_date = 1.year.ago.to_date
+    tag = cost_tagged_property
+    @account.family.update!(currency: "EUR")
+    eur_account = @account.family.accounts.create!(name: "Euro bank", balance: 0, currency: "EUR", owner: @user, accountable: Depository.new)
+    pyg_account = @account.family.accounts.create!(name: "Guarani bank", balance: 0, currency: "PYG", owner: @user, accountable: Depository.new)
+    create_cost(eur_account, 9_000, tag, currency: "EUR")
+    create_cost(pyg_account, 8_000_000, tag, currency: "PYG")
+    # The pairs sync stores: each account's currency into the family's, and the inverse.
+    [ [ "USD", purchase_date, 1.0 ], [ "USD", Date.current, 0.9 ], [ "PYG", purchase_date, 0.000125 ] ].each do |currency, date, rate|
+      ExchangeRate.create!(from_currency: currency, to_currency: "EUR", date: date, rate: rate)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: currency, date: date, rate: 1 / rate.to_d)
+    end
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']" do
+      assert_select "h4", text: "Purchase costs in EUR"
+      assert_select "h4", text: "Cost basis in EUR"
+      assert_select "h4", text: "Gain after costs in EUR"
+      assert_select "*", text: /€10[.,]000/
+      assert_select "*", text: /€510[.,]000/
+      assert_select "span", text: /-€15[.,]000/
+      assert_select "*", text: /Exchange rate unavailable/, count: 0
+    end
+  end
+
+  test "overview has no purchase costs without a cost tag" do
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']", count: 0
+  end
+
   test "overview has no family-currency trend when the property is in the family currency" do
     get account_path(@account, tab: "overview")
 
@@ -906,6 +1055,25 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def cost_tagged_property
+      tag = @account.family.tags.create!(name: "Land costs")
+      @account.property.update!(cost_tag: tag)
+      @account.entries.valuations.destroy_all
+      @account.entries.create!(
+        date: 1.year.ago.to_date, name: "Original purchase price", amount: 500_000, currency: "USD",
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+      @account.update!(balance: 550_000)
+      tag
+    end
+
+    def create_cost(account, amount, tag, currency: "USD")
+      account.entries.create!(
+        date: 1.year.ago.to_date, name: "Notary", amount: amount, currency: currency,
+        entryable: Transaction.new(tags: [ tag ])
+      )
+    end
+
     def foreign_property_with_value(purchase_date:, purchase_amount: 100_000)
       @account.family.update!(currency: "EUR")
       @account.entries.valuations.destroy_all
