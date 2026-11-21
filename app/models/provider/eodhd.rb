@@ -249,7 +249,8 @@ class Provider::Eodhd < Provider
         kind: general.dig("Type"),
         exchange_operating_mic: exchange_operating_mic,
         sector: general.dig("Sector"),
-        industry: general.dig("Industry")
+        industry: general.dig("Industry"),
+        fund_weights: fund_weights_from(parsed["ETF_Data"] || parsed["MutualFund_Data"], category: fund_category(parsed))
       )
     end
   end
@@ -364,6 +365,131 @@ class Provider::Eodhd < Provider
       cache_keys.lazy.map { |key| Rails.cache.read(key) }.find(&:present?) ||
         EXCHANGE_CURRENCY[eodhd_exchange] ||
         EXCHANGE_CURRENCY[exchange_operating_mic]
+    end
+
+    # EODHD's fund breakdown labels, mapped to Security::ASSET_CLASSES and
+    # Security::REGION_KEYS. ETF_Data and MutualFund_Data use different labels
+    # for the same buckets. "Other", "NotClassified", "Preferred" and
+    # "Convertible" map to nothing: they count towards the fund but not
+    # towards any class.
+    FUND_ASSET_CLASSES = {
+      "Stock US" => "equity", "Stock non-US" => "equity", "US Stocks" => "equity", "Non US Stocks" => "equity",
+      "Bond" => "fixed_income", "Bonds" => "fixed_income",
+      "Cash" => "liquidity"
+    }.freeze
+
+    # A fund's category (Morningstar-style: "Large Blend", "Commodities Broad
+    # Basket", "Trading--Inverse Equity", "Money Market-Taxable") says what it
+    # is for when its holdings cannot: a commodity-futures ETF holds mostly
+    # T-bills as collateral, and an inverse ETF holds a short position plus
+    # cash. First match wins, so an inverse commodity fund is inverse.
+    FUND_CATEGORIES = [
+      [ /leverag|inverse/i, :leveraged_or_inverse ],
+      [ /equity/i, nil ], # "Equity Precious Metals" (GDX) holds miners, not metal
+      [ /commodit|precious metal/i, "commodity" ],
+      [ /money market/i, "liquidity" ]
+    ].freeze
+
+    FUND_REGIONS = {
+      "North America" => "north_america",
+      "Latin America" => "latin_america",
+      "United Kingdom" => "europe", "Europe Developed" => "europe", "Europe Emerging" => "europe",
+      "Africa/Middle East" => "middle_east_africa",
+      "Japan" => "asia_pacific", "Australasia" => "asia_pacific",
+      "Asia Developed" => "asia_pacific", "Asia Emerging" => "asia_pacific"
+    }.freeze
+
+    # ETF_Data keys its breakdowns by label:
+    #   "Asset_Allocation" => { "Stock US" => { "Net_Assets_%" => "60.1" } }
+    #   "World_Regions"    => { "North America" => { "Equity_%" => "61.2" } }
+    #   "Sector_Weights"   => { "Technology" => { "Equity_%" => "24.5" } }
+    # MutualFund_Data groups regions and sectors into lists:
+    #   "Asset_Allocation" => { "US Stocks" => { "Net_%" => "60.1" } }
+    #   "World_Regions"    => { "Americas" => [ { "Name" => "North America", "Stocks_%" => "61.2" } ] }
+    #   "Sector_Weights"   => { "Cyclical" => [ { "Type" => "Basic Materials", "Amount_%" => "2.5" } ] }
+    #
+    # World_Regions and Sector_Weights are percentages of the fund's EQUITY
+    # sleeve (Equity_%, Stocks_%), not of the whole fund.
+    #
+    # A negative net allocation (a short position) marks the fund as
+    # leveraged or inverse, the same as a category that says so.
+    def fund_weights_from(fund_data, category: nil)
+      return nil unless fund_data.is_a?(Hash)
+
+      category_answer = FUND_CATEGORIES.find { |pattern, _| category.to_s.match?(pattern) }&.last
+      net_keys = %w[Net_Assets_% Net_%]
+      # Settlement and TBA rolls leave long-only funds a few percent short on cash.
+      short = fund_net_allocations(fund_data["Asset_Allocation"], net_keys).any? { |percent| percent < -::Security::Provided::FUND_WEIGHT_TOLERANCE }
+
+      weights = {
+        asset_class: sum_fund_weights(fund_data["Asset_Allocation"], FUND_ASSET_CLASSES, net_keys),
+        equity_region: sum_fund_weights(fund_data["World_Regions"], FUND_REGIONS, %w[Equity_% Stocks_%]),
+        equity_sector: sum_fund_weights(fund_data["Sector_Weights"], nil, %w[Equity_% Amount_%]),
+        category_asset_class: category_answer.is_a?(String) ? category_answer : nil,
+        leveraged_or_inverse: (short || category_answer == :leveraged_or_inverse) || nil
+      }.compact_blank
+
+      weights.presence
+    end
+
+    def fund_category(parsed)
+      fund_data = parsed["ETF_Data"] || parsed["MutualFund_Data"]
+      fund_data = {} unless fund_data.is_a?(Hash)
+      general = parsed["General"].is_a?(Hash) ? parsed["General"] : {}
+
+      [ general["Category"], general["Fund_Category"], fund_data["Category"], fund_data["Fund_Category"] ]
+        .find { |value| value.is_a?(String) && value.present? }
+    end
+
+    # Every net percentage in the allocation, mapped or not ("Other" counts too).
+    def fund_net_allocations(section, value_keys)
+      return [] unless section.is_a?(Hash)
+
+      section.values.filter_map do |row|
+        next unless row.is_a?(Hash)
+
+        value_keys.lazy.map { |key| row[key] }.find(&:present?)&.to_f
+      end
+    end
+
+    # Sums each entry's percentage into its mapped bucket. With no mapping the
+    # provider's own label is the bucket (sectors are free text).
+    #
+    # Rows come in three shapes: keyed by label (ETF_Data), a list under a
+    # group, or indexed ("0", "1") either at the top level or under a group
+    # (MutualFund_Data). An indexed or listed row names itself in Name or Type.
+    def sum_fund_weights(section, mapping, value_keys)
+      entries =
+        case section
+        when Hash
+          section.flat_map do |label, value|
+            if value.is_a?(Array)
+              named_fund_rows(value)
+            elsif value.is_a?(Hash) && value.values.any? { |child| child.is_a?(Hash) }
+              named_fund_rows(value.values)
+            elsif value.is_a?(Hash) && label.to_s.match?(/\A\d+\z/)
+              named_fund_rows([ value ])
+            else
+              [ [ label, value ] ]
+            end
+          end
+        else
+          []
+        end
+
+      entries.each_with_object(Hash.new(0.0)) do |(label, row), totals|
+        next unless row.is_a?(Hash)
+
+        bucket = mapping ? mapping[label] : label.presence
+        percent = value_keys.lazy.map { |key| row[key] }.find(&:present?)
+        next if bucket.nil? || percent.nil?
+
+        totals[bucket] += percent.to_f
+      end.to_h
+    end
+
+    def named_fund_rows(rows)
+      rows.filter_map { |row| [ row["Name"] || row["Type"], row ] if row.is_a?(Hash) }
     end
 
     # Cache key for tracking daily API usage
