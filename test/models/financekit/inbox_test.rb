@@ -227,6 +227,15 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_not_nil second.reload.downstream_completed_at
   end
 
+  test "the rules run after a capture warms Reports once they finish" do
+    batch, = accept_batch
+    assert Financekit::Processor.new(@item).apply_next!.present?
+
+    assert_enqueued_with(job: ApplyRulesJob, args: [ @item.family, { warm_reports: true } ]) do
+      Financekit::Downstream.new(@item, FinancekitBatch.where(id: batch.id)).perform!
+    end
+  end
+
   test "overlapping downstream workers fan out once" do
     batch, = accept_batch
     assert Financekit::Processor.new(@item).apply_next!.present?

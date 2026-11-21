@@ -15,6 +15,9 @@ en:
         apply: Apply
       section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
       sections_aria: Reports sections
+      built_at: Updated %{time} ago
+      updating: updating in the background
+      refresh: Refresh
       periods:
         monthly: Monthly
         quarterly: Quarterly
