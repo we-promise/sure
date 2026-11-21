@@ -1,0 +1,10 @@
+<%# locals: (limit:) %>
+<%= render DS::SegmentedControl.new(aria_label: t("reports.biggest_expenses.limit_aria")) do |sc| %>
+  <% User::REPORTS_BIGGEST_EXPENSES_LIMITS.each do |option| %>
+    <% sc.with_segment(option.to_s, active: option == limit, data: {
+          action: "reports-section#savePreferenceValue",
+          reports_section_key_param: "reports_biggest_expenses_limit",
+          reports_section_value_param: option
+        }) %>
+  <% end %>
+<% end %>

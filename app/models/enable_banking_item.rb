@@ -1,6 +1,41 @@
 class EnableBankingItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
+  COUNTRIES = [
+    [ "Austria (AT)", "AT" ],
+    [ "Belgium (BE)", "BE" ],
+    [ "Bulgaria (BG)", "BG" ],
+    [ "Croatia (HR)", "HR" ],
+    [ "Cyprus (CY)", "CY" ],
+    [ "Czech Republic (CZ)", "CZ" ],
+    [ "Denmark (DK)", "DK" ],
+    [ "Estonia (EE)", "EE" ],
+    [ "Finland (FI)", "FI" ],
+    [ "France (FR)", "FR" ],
+    [ "Germany (DE)", "DE" ],
+    [ "Greece (GR)", "GR" ],
+    [ "Hungary (HU)", "HU" ],
+    [ "Iceland (IS)", "IS" ],
+    [ "Ireland (IE)", "IE" ],
+    [ "Italy (IT)", "IT" ],
+    [ "Latvia (LV)", "LV" ],
+    [ "Liechtenstein (LI)", "LI" ],
+    [ "Lithuania (LT)", "LT" ],
+    [ "Luxembourg (LU)", "LU" ],
+    [ "Malta (MT)", "MT" ],
+    [ "Netherlands (NL)", "NL" ],
+    [ "Norway (NO)", "NO" ],
+    [ "Poland (PL)", "PL" ],
+    [ "Portugal (PT)", "PT" ],
+    [ "Romania (RO)", "RO" ],
+    [ "Slovakia (SK)", "SK" ],
+    [ "Slovenia (SI)", "SI" ],
+    [ "Spain (ES)", "ES" ],
+    [ "Sweden (SE)", "SE" ],
+    [ "United Kingdom (GB)", "GB" ]
+  ].freeze
+  COUNTRY_CODES = COUNTRIES.map(&:last).freeze
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
@@ -278,7 +313,7 @@ class EnableBankingItem < ApplicationRecord
   end
 
   def unlinked_accounts_count
-    enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    enable_banking_accounts.needs_setup.count
   end
 
   def total_accounts_count
@@ -305,7 +340,7 @@ class EnableBankingItem < ApplicationRecord
     else
       total_accounts = enable_banking_accounts.count
       linked_count = accounts.count
-      unlinked_count = total_accounts - linked_count
+      unlinked_count = unlinked_accounts_count
 
       if total_accounts == 0
         "No accounts found"
@@ -434,8 +469,10 @@ class EnableBankingItem < ApplicationRecord
         next unless uid.present?
 
         enable_banking_account = enable_banking_accounts.find_or_initialize_by(uid: uid)
-        enable_banking_account.upsert_enable_banking_snapshot!(account_data)
-        enable_banking_account.save!
+        # An ignored account keeps only its session identifiers current.
+        unless enable_banking_account.upsert_enable_banking_snapshot!(account_data)
+          enable_banking_account.refresh_session_identifiers!(account_data)
+        end
       end
     end
 end
