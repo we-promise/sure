@@ -18,7 +18,7 @@ class SaxoItem::Importer
         opening_date: raw["CreationDate"].present? ? Provider::Saxo::Normalizer.date(raw["CreationDate"]) : nil
       )
     end
-    linked = @item.saxo_accounts.joins(:account_provider).includes(:account_provider, :account)
+    linked = @item.saxo_accounts.joins(:account_provider).includes(:account_provider, :account).to_a
     staged = linked.map do |account|
       raise Provider::Saxo::Error, "A linked Saxo account is missing" unless identifiers.include?(account.account_id)
       unless account.currency == account.account.currency
