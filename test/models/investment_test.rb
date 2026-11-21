@@ -133,7 +133,7 @@ class InvestmentTest < ActiveSupport::TestCase
   end
 
   test "all subtypes have valid region values" do
-    valid_regions = [ "us", "uk", "ca", "au", "eu", "in", nil ]
+    valid_regions = [ *Investment::REGIONS, nil ]
 
     Investment::SUBTYPES.each do |key, metadata|
       assert_includes valid_regions, metadata[:region],
@@ -154,7 +154,7 @@ class InvestmentTest < ActiveSupport::TestCase
     assert_equal "in", Investment::SUBTYPES.dig("epf", :region)
     assert_equal "Employees' Provident Fund", Investment::SUBTYPES.dig("epf", :long)
 
-    india_group = Investment.subtypes_grouped_for_select(currency: "INR").first[1]
+    india_group = Investment.subtypes_grouped_for_select(country: "IN").first[1]
     assert_includes india_group.map(&:last), "epf"
   end
 
@@ -178,10 +178,64 @@ class InvestmentTest < ActiveSupport::TestCase
     end
   end
 
-  test "subtypes_grouped_for_select places India region first for INR users" do
-    grouped = Investment.subtypes_grouped_for_select(currency: "INR")
-    assert grouped.any?, "grouped should not be empty"
-    first_group_label = grouped.first[0]
-    assert_equal I18n.t("accounts.subtype_regions.in"), first_group_label
+  test "subtypes_grouped_for_select places the family's country first" do
+    grouped = Investment.subtypes_grouped_for_select(country: "IN")
+    assert_equal I18n.t("accounts.subtype_regions.in"), grouped.first[0]
+    assert_equal I18n.t("accounts.subtype_regions.generic"), grouped.second[0]
+  end
+
+  test "subtypes_grouped_for_select maps GB to the UK group" do
+    grouped = Investment.subtypes_grouped_for_select(country: "GB")
+    assert_equal I18n.t("accounts.subtype_regions.uk"), grouped.first[0]
+  end
+
+  test "subtypes_grouped_for_select limits country groups but always shows General" do
+    labels = Investment.subtypes_grouped_for_select(country: "SE", regions: [ "se" ]).map(&:first)
+
+    assert_equal [ "accounts.subtype_regions.se", "accounts.subtype_regions.generic" ].map { |key| I18n.t(key) }, labels
+  end
+
+  test "subtypes_grouped_for_select keeps the selected subtype's group visible" do
+    grouped = Investment.subtypes_grouped_for_select(country: "SE", regions: [ "se" ], selected: "pea")
+
+    assert_includes grouped.flat_map { |_, options| options.map(&:last) }, "pea"
+  end
+
+  # Regional account types
+
+  test "French, German and Swiss subtypes sit in their own country groups" do
+    assert_equal "fr", Investment::SUBTYPES.dig("assurance_vie", :region)
+    assert_equal "fr", Investment::SUBTYPES.dig("pea", :region)
+    assert_equal "de", Investment::SUBTYPES.dig("riester", :region)
+    assert_equal "ch", Investment::SUBTYPES.dig("pillar_3a", :region)
+  end
+
+  test "Swedish subtypes have the expected tax treatment" do
+    expected = {
+      "isk" => :tax_advantaged, "kapitalforsakring" => :tax_advantaged, "aktie_och_fondkonto" => :taxable,
+      "tjanstepension" => :tax_deferred, "premiepension" => :tax_deferred, "ips" => :tax_deferred,
+      "pensionsforsakring" => :tax_deferred
+    }
+
+    expected.each do |subtype, treatment|
+      assert_equal "se", Investment::SUBTYPES.dig(subtype, :region)
+      assert_equal treatment, Investment.new(subtype: subtype).tax_treatment, "Expected #{subtype} to be #{treatment}"
+    end
+  end
+
+  test "brokerage is a General subtype" do
+    assert_nil Investment::SUBTYPES.dig("brokerage", :region)
+  end
+
+  test "default regions follow the country, or include every region for countries without their own" do
+    assert_equal [ "se" ], Investment.default_regions_for_country("SE")
+    assert_equal [ "uk" ], Investment.default_regions_for_country("GB")
+    assert_equal Investment::REGIONS, Investment.default_regions_for_country("JP")
+  end
+
+  test "every region has a label" do
+    [ *Investment::REGIONS, nil ].each do |region|
+      assert_not_includes Investment.region_label_for(region), "Translation missing"
+    end
   end
 end

@@ -299,6 +299,36 @@
       <% end %>
     </div>
   <% end %>
+  <%= settings_section title: t(".investment_subtypes_title"), subtitle: t(".investment_subtypes_subtitle") do %>
+    <% enabled_regions = @user.family.investment_subtype_region_codes %>
+    <%= styled_form_with model: @user, class: "space-y-3", data: { controller: "auto-submit-form" } do |form| %>
+      <%= form.hidden_field :redirect_to, value: "preferences" %>
+      <%= hidden_field_tag "user[family_attributes][id]", @user.family.id %>
+      <p class="text-sm text-secondary">
+        <%= @user.family.investment_subtype_regions.nil? ? t(".investment_subtypes_automatic") : t(".investment_subtypes_custom") %>
+      </p>
+      <div class="rounded-xl border border-secondary divide-y divide-alpha-black-100 theme-dark:divide-alpha-white-100">
+        <% Investment::REGIONS.each do |region| %>
+          <div class="flex items-center justify-between gap-4 px-4 py-3">
+            <p class="text-sm text-primary" id="<%= "investment_subtype_region_#{region}_label" %>"><%= Investment.region_label_for(region) %></p>
+            <%= render DS::Toggle.new(id: "investment_subtype_region_#{region}",
+                  name: "user[family_attributes][investment_subtype_regions][]",
+                  checked: enabled_regions.include?(region), checked_value: region, unchecked_value: "",
+                  "aria-labelledby": "investment_subtype_region_#{region}_label",
+                  data: { auto_submit_form_target: "auto" }) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+    <% unless @user.family.investment_subtype_regions.nil? %>
+      <%= styled_form_with model: @user, class: "flex justify-end" do |form| %>
+        <%= form.hidden_field :redirect_to, value: "preferences" %>
+        <%= hidden_field_tag "user[family_attributes][id]", @user.family.id %>
+        <%= hidden_field_tag "user[family_attributes][follow_country_for_investment_subtypes]", "1" %>
+        <%= render DS::Button.new(text: t(".investment_subtypes_follow_country"), type: :submit, variant: :outline, size: :sm) %>
+      <% end %>
+    <% end %>
+  <% end %>
   <%= settings_section title: t(".sharing_title", moniker: family_moniker), subtitle: t(".sharing_subtitle", moniker: family_moniker_downcase) do %>
     <div>
       <%= styled_form_with model: @user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>

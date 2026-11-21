@@ -850,6 +850,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.string "enabled_currencies", array: true
     t.boolean "household_budget_enabled", default: true, null: false
     t.boolean "investment_contributions_as_spending", default: true, null: false
+    t.string "investment_subtype_regions", array: true
     t.datetime "last_sync_all_attempted_at"
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }

@@ -175,6 +175,7 @@ class Family < ApplicationRecord
 
   before_validation :normalize_currency
   before_validation :normalize_enabled_currencies!
+  before_validation :normalize_investment_subtype_regions!
   after_create_commit :add_classifier_rules
 
   def primary_currency_code
@@ -229,6 +230,18 @@ class Family < ApplicationRecord
     end
 
     normalize_currency_codes([ *selected_codes, *Array(extra) ])
+  end
+
+  # Country groups offered when picking an investment account subtype. nil
+  # means "follow the family's country", so a country change carries over;
+  # any saved selection, even one matching that default, is kept as chosen.
+  def investment_subtype_region_codes
+    investment_subtype_regions.nil? ? Investment.default_regions_for_country(country) : investment_subtype_regions
+  end
+
+  # Form-facing switch back to following the family's country.
+  def follow_country_for_investment_subtypes=(value)
+    self.investment_subtype_regions = nil if ActiveModel::Type::Boolean.new.cast(value)
   end
 
   def enabled_currency_objects(extra: [])
@@ -951,6 +964,12 @@ class Family < ApplicationRecord
       all_codes = Money::Currency.as_options.map(&:iso_code)
       all_selected = normalized_codes.size == all_codes.size && (normalized_codes - all_codes).empty?
       self.enabled_currencies = all_selected ? nil : normalized_codes
+    end
+
+    def normalize_investment_subtype_regions!
+      return if investment_subtype_regions.nil?
+
+      self.investment_subtype_regions = Investment::REGIONS & Array(investment_subtype_regions)
     end
 
     def normalize_currency

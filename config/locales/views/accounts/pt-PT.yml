@@ -187,7 +187,10 @@ pt-PT:
       uk: Reino Unido
       ca: Canadá
       au: Austrália
-      eu: Europa
+      fr: França
+      de: Alemanha
+      ch: Suíça
+      se: Suécia
       in: Índia
       generic: Geral
     confirm_unlink:

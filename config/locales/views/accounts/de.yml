@@ -168,7 +168,10 @@ de:
       uk: Vereinigtes Königreich
       ca: Kanada
       au: Australien
-      eu: Europa
+      fr: Frankreich
+      de: Deutschland
+      ch: Schweiz
+      se: Schweden
       generic: Generisch
       in: Indien
     tax_treatments:

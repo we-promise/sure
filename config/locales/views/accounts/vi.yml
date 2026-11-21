@@ -174,7 +174,10 @@ vi:
       uk: Vương quốc Anh
       ca: Canada
       au: Úc
-      eu: Châu Âu
+      fr: Pháp
+      de: Đức
+      ch: Thụy Sĩ
+      se: Thụy Điển
       in: Ấn Độ
       generic: Chung
     confirm_unlink:

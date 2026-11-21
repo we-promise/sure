@@ -234,7 +234,10 @@ nl:
       uk: "Verenigd Koninkrijk"
       ca: "Canada"
       au: "Australië"
-      eu: "Europa"
+      fr: "Frankrijk"
+      de: "Duitsland"
+      ch: "Zwitserland"
+      se: "Zweden"
       in: "India"
       generic: "Algemeen"
     confirm_unlink:

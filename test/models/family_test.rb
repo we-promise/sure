@@ -387,6 +387,49 @@ class FamilyTest < ActiveSupport::TestCase
     assert_includes family.available_merchants.map(&:name), "Recently Unlinked Merchant"
   end
 
+  test "investment subtype regions follow the country until customised" do
+    family = families(:dylan_family)
+    family.update!(country: "SE", investment_subtype_regions: nil)
+    assert_equal [ "se" ], family.investment_subtype_region_codes
+
+    family.update!(investment_subtype_regions: [ "", "fr", "se", "xx" ])
+    assert_equal [ "fr", "se" ], family.reload.investment_subtype_regions
+
+    family.update!(investment_subtype_regions: [ "" ])
+    assert_equal [], family.reload.investment_subtype_region_codes
+  end
+
+  test "a saved investment subtype selection matching the country default stays custom" do
+    family = families(:dylan_family)
+    family.update!(country: "SE", investment_subtype_regions: [ "", "se" ])
+    assert_equal [ "se" ], family.reload.investment_subtype_regions
+
+    family.update!(country: "DE")
+    assert_equal [ "se" ], family.reload.investment_subtype_region_codes
+  end
+
+  test "following the country again clears a custom investment subtype selection" do
+    family = families(:dylan_family)
+    family.update!(country: "SE", investment_subtype_regions: [ "fr" ])
+
+    family.update!(follow_country_for_investment_subtypes: "0")
+    assert_equal [ "fr" ], family.reload.investment_subtype_regions
+
+    family.update!(follow_country_for_investment_subtypes: "1")
+    assert_nil family.reload.investment_subtype_regions
+    assert_equal [ "se" ], family.investment_subtype_region_codes
+  end
+
+  test "changing country keeps a custom investment subtype selection" do
+    family = families(:dylan_family)
+    family.update!(country: "SE", investment_subtype_regions: [ "fr" ])
+
+    family.update!(country: "FR")
+    family.update!(country: "DE")
+
+    assert_equal [ "fr" ], family.reload.investment_subtype_region_codes
+  end
+
   test "enabled currencies always include the base currency" do
     family = families(:dylan_family)
     family.update!(currency: "SGD", enabled_currencies: [ "USD" ])

@@ -181,7 +181,10 @@ fr:
     subtype_regions:
       au: Australie
       ca: Canada
-      eu: Europe
+      fr: France
+      de: Allemagne
+      ch: Suisse
+      se: Suède
       generic: Général
       in: Inde
       uk: Royaume-Uni
