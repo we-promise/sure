@@ -1,5 +1,5 @@
 class EnableBankingAccount < ApplicationRecord
-  include CurrencyNormalizable, Encryptable, IgnorableProviderAccount
+  include CurrencyNormalizable, Encryptable, IbanNormalizable, IgnorableProviderAccount
 
   # Encrypt raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
@@ -132,6 +132,8 @@ class EnableBankingAccount < ApplicationRecord
       }.compact,
       raw_payload: account_snapshot
     )
+
+    propagate_iban_to_account!
   end
 
   # Keeps the session-scoped identifiers current without storing anything else,
@@ -147,6 +149,48 @@ class EnableBankingAccount < ApplicationRecord
     )
 
     save!
+  end
+
+  # Only fills a blank Account#iban with the provider value, and never a
+  # blank the user set deliberately (see Enrichable) -- a plain
+  # target.iban.blank? check can't tell "never touched" apart from "user
+  # cleared it on purpose", and this must not undo the latter.
+  #
+  # Public (not called only from #upsert_enable_banking_snapshot!): account
+  # discovery runs before the linking AccountProvider exists, so this is a
+  # no-op at that point (current_account is nil). EnableBankingItemsController
+  # calls this again right after creating the AccountProvider, once there is
+  # actually a target to propagate to.
+  def propagate_iban_to_account!
+    return if iban.blank?
+
+    target = current_account
+    return if target.nil? || !target.supports_iban?
+
+    # #with_lock reloads target under SELECT FOR UPDATE before the block
+    # runs, so a concurrent manual edit that lands between our earlier
+    # load of `target` and this write can't be silently clobbered by the
+    # sync (a plain `target.iban.present?` check followed by `update` has
+    # no such guarantee).
+    target.with_lock do
+      next if target.iban.present? || target.locked?(:iban)
+
+      # A locked iban (the user set or cleared it via the account form --
+      # lock_saved_attributes! locks either way) is skipped above. A plain
+      # update, not enrich_attribute: that logs the value to
+      # data_enrichments, which is not encrypted.
+      target.update(iban: iban)
+    end
+  end
+
+  # On relink the IBAN follows the provider to the chosen account. The
+  # previously linked account (deleted only after the relink commits, if at
+  # all) would otherwise keep holding it, and two accounts with one IBAN
+  # leave counterparty matching ambiguous.
+  def release_iban_from!(previous_account)
+    return if iban.blank? || previous_account.iban != iban
+
+    previous_account.update_column(:iban, nil)
   end
 
   writes_unless_ignored :upsert_enable_banking_snapshot!, :upsert_enable_banking_transactions_snapshot!

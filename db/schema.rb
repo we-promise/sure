@@ -105,6 +105,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.boolean "enable_category_matcher", default: true, null: false
     t.boolean "exclude_from_reports", default: false, null: false
     t.uuid "family_id", null: false
+    t.string "iban"
     t.uuid "import_id"
     t.string "institution_domain"
     t.string "institution_name"

@@ -292,6 +292,68 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert account.reload.logo_automatic?
   end
 
+  test "imports a manually entered account iban" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Test Checking",
+          balance: "1500.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" },
+          iban: "DE89370400440532013000" # pipelock:ignore IBAN
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    result = importer.import!
+
+    assert_equal "DE89370400440532013000", Account.find(result[:account_ids].first).iban # pipelock:ignore IBAN
+  end
+
+  test "keeps an existing account iban when a re-imported file omits the key" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    account_data = {
+      id: "old-account-1",
+      name: "Test Checking",
+      balance: "1500.00",
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: { subtype: "checking" }
+    }
+
+    Family::DataImporter.new(@family, build_ndjson([
+      { type: "Account", data: account_data.merge(iban: "DE89370400440532013000") } # pipelock:ignore IBAN
+    ]), import_session: session).import!
+
+    Family::DataImporter.new(@family, build_ndjson([
+      { type: "Account", data: account_data }
+    ]), import_session: session).import!
+
+    assert_equal 1, @family.accounts.count
+    assert_equal "DE89370400440532013000", @family.accounts.first.iban # pipelock:ignore IBAN
+  end
+
+  test "ignores an iban on an account type without one" do
+    account_data = {
+      balance: "100.00",
+      currency: "USD",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    }
+
+    result = Family::DataImporter.new(@family, build_ndjson([
+      { type: "Account", data: account_data.merge(id: "old-account-1", name: "Checking", accountable_type: "Depository", accountable: { subtype: "checking" }) },
+      { type: "Account", data: account_data.merge(id: "old-account-2", name: "Car", accountable_type: "Vehicle", accountable: {}) }
+    ])).import!
+
+    accounts = Account.where(id: result[:account_ids]).index_by(&:name)
+    assert_nil accounts["Car"].reload.iban
+    assert_equal "DE89370400440532013000", accounts["Checking"].reload.iban # pipelock:ignore IBAN
+  end
+
   test "restores an account's cost basis method" do
     ndjson = build_ndjson([
       {

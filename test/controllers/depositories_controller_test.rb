@@ -81,6 +81,94 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(created) # not the external URL
   end
 
+  test "create persists a manually entered iban" do
+    post depositories_path, params: {
+      account: { name: "IBAN Checking", currency: "USD", balance: 100, accountable_type: "Depository", iban: "de89 3704 0044 0532 0130 00" }
+    }
+
+    created = Account.order(:created_at).last
+    assert_equal "DE89370400440532013000", created.iban # pipelock:ignore IBAN
+  end
+
+  test "create does not choke on a stray remove_iban param" do
+    assert_difference -> { Account.count } => 1 do
+      post depositories_path, params: {
+        account: { name: "No Iban Checking", currency: "USD", balance: 100, accountable_type: "Depository", remove_iban: "1" }
+      }
+    end
+
+    created = Account.order(:created_at).last
+    assert_nil created.iban
+  end
+
+  test "update persists a manually entered iban through the shared update action" do
+    linked_account = accounts(:connected)
+
+    patch depository_path(linked_account), params: {
+      account: { iban: "AT611904300234573201" } # pipelock:ignore IBAN
+    }
+
+    assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "update with a blank iban field leaves the stored iban unchanged" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { name: "Renamed", iban: "" }
+    }
+
+    assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
+    assert_equal "Renamed", linked_account.reload.name
+  end
+
+  test "update with an iban that normalizes to nothing leaves the stored iban unchanged" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { iban: " - " }
+    }
+
+    assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "a failed update still offers to remove the stored iban" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { name: "", remove_iban: "1" }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=checkbox][name='account[remove_iban]']", 1
+  end
+
+  test "create re-renders the form with a stray remove_iban when the account must be rebuilt" do
+    # A failure whose record is neither the account nor tied to one makes
+    # #create rebuild the account from the submitted params.
+    Account.any_instance.stubs(:lock_saved_attributes!).raises(ActiveRecord::RecordInvalid.new(Depository.new))
+
+    post depositories_path, params: {
+      account: { name: "Rebuilt Checking", currency: "USD", balance: 100, accountable_type: "Depository", remove_iban: "1" }
+    }
+
+    assert_response :unprocessable_entity
+  end
+
+  test "update with remove_iban checked clears the stored iban even with a blank field" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { iban: "", remove_iban: "1" }
+    }
+
+    assert_nil linked_account.reload.iban
+  end
+
   test "an edit saved through Turbo returns to the page it was opened on with a refresh" do
     patch depository_path(@account),
       params: { account: { name: "Renamed", accountable_type: "Depository" } },
@@ -135,6 +223,56 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert linked_account.reload.enable_category_matcher?
+  end
+
+  test "edit form never renders the stored iban" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    get edit_account_url(linked_account)
+
+    assert_response :success
+    refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
+    assert_select "input[type=checkbox][name='account[remove_iban]'][aria-labelledby='account_remove_iban_label']", 1
+    assert_select "#account_remove_iban_label", text: I18n.t("accounts.form.iban_remove_label")
+  end
+
+  test "iban field is a plain text field that shows only the stored last four" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    get edit_account_url(linked_account)
+
+    assert_response :success
+    # Not type=password: password managers would offer to fill the login
+    # password into it, and it would then be saved as the IBAN.
+    assert_select "input[type=password][name='account[iban]']", 0
+    assert_select "input[type=text][name='account[iban]'][autocomplete=off]:not([value])", 1
+    assert_select "input[name='account[iban]'][placeholder^=?]", "•••3201"
+    refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
+  end
+
+  test "iban field placeholder keeps the stored last four after a failed update" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { name: "", iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[iban]'][placeholder^=?]", "•••3201"
+    refute_includes response.body, "DE89370400440532013000" # pipelock:ignore IBAN
+  end
+
+  test "edit form does not render a remove_iban toggle when no iban is stored" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: nil)
+
+    get edit_account_url(linked_account)
+
+    assert_response :success
+    assert_select "input[type=checkbox][name='account[remove_iban]']", 0
   end
 
   test "edit form renders category matcher toggle only for accounts that support it" do

@@ -101,6 +101,10 @@ class Investment < ApplicationRecord
   end
 
   class << self
+    def supports_iban?
+      true
+    end
+
     def color
       "#1570EF"
     end

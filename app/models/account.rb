@@ -1,7 +1,21 @@
 class Account < ApplicationRecord
-  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Logoable
+  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable, IbanNormalizable, Logoable
+
+  # Not deterministic: an IBAN is never looked up by value in SQL. Code that
+  # matches IBANs loads the family's few accounts and compares in Ruby, so
+  # equal IBANs need not share a ciphertext.
+  if encryption_ready?
+    encrypts :iban
+  end
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
+  # Covers every writer (form, Enable Banking, data import), so a type
+  # without an IBAN never keeps one.
+  before_validation :clear_unsupported_iban
+  # IbanNormalizable strips everything but letters/digits and upcases, so
+  # IBANs from Enable Banking ("DE893704...") and manually-entered ones in any
+  # formatting style ("DE89 3704...", "DE89.3704...", "DE89-3704...")
+  # normalize to the same value and compare equal.
 
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
@@ -716,6 +730,10 @@ class Account < ApplicationRecord
     self.class.normalize_institution_domain(read_attribute(:institution_domain)) || provider&.institution_domain
   end
 
+  def supports_iban?
+    Accountable.from_type(accountable_type)&.supports_iban? || false
+  end
+
   def manual_crypto_exchange?
     accountable_type == "Crypto" &&
       accountable&.subtype == "exchange" &&
@@ -1020,6 +1038,10 @@ class Account < ApplicationRecord
   end
 
   private
+    def clear_unsupported_iban
+      self.iban = nil if iban.present? && !supports_iban?
+    end
+
     # [date, signed amount in account currency] for each scheduled entry that
     # contributes to the projection.
     def scheduled_entry_flows

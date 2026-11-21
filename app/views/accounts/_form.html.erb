@@ -90,6 +90,31 @@
           </div>
         <% end %>
 
+        <% if account.supports_iban? %>
+          <%# Never pre-filled with the stored value: a blank submit means
+              "unchanged" and the "Remove IBAN" toggle below is the only way
+              to clear it. Only the stored last four show, in the placeholder,
+              so people can check what they entered. A plain text field, not a
+              password field, so password managers don't fill in the login
+              password and save it as the IBAN. %>
+          <%= form.text_field :iban,
+              value: nil,
+              autocomplete: "off",
+              spellcheck: false,
+              label: t(".iban_label"),
+              placeholder: account.iban_in_database.present? ? t(".iban_set_placeholder", masked: mask_last4(account.iban_in_database)) : t(".iban_placeholder") %>
+
+          <% if account.iban_in_database.present? %>
+            <div class="flex items-center justify-between gap-2">
+              <span id="account_remove_iban_label" class="text-sm"><%= t(".iban_remove_label") %></span>
+              <%# Not a real model attribute (the field is write-only, so there's
+                  no stored value to reflect back) -- rendered directly rather
+                  than via form.toggle, which would call account.remove_iban. %>
+              <%= render DS::Toggle.new(id: "account_remove_iban", name: "account[remove_iban]", checked: false, "aria-labelledby": "account_remove_iban_label") %>
+            </div>
+          <% end %>
+        <% end %>
+
         <%= form.text_area :notes,
             label: t(".notes_label"),
             placeholder: t(".notes_placeholder"),

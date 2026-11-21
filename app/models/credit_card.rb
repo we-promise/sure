@@ -19,6 +19,10 @@ class CreditCard < ApplicationRecord
             allow_nil: true
 
   class << self
+    def supports_iban?
+      true
+    end
+
     def color
       "#F13636"
     end

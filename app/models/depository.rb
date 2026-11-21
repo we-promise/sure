@@ -35,6 +35,10 @@ class Depository < ApplicationRecord
   end
 
   class << self
+    def supports_iban?
+      true
+    end
+
     def color
       "#875BF7"
     end

@@ -91,6 +91,25 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "form has no iban field because a vehicle has no bank account" do
+    get new_vehicle_path
+
+    assert_response :success
+    assert_select "input[name='account[iban]']", 0
+  end
+
+  test "create ignores an iban sent for a vehicle" do
+    assert_difference "Account.count", 1 do
+      post vehicles_path, params: {
+        account: { name: "IBAN Car", balance: 30000, currency: "USD", accountable_type: "Vehicle", iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+      }
+    end
+
+    created = Account.find_by!(name: "IBAN Car")
+    assert_redirected_to created
+    assert_nil created.iban
+  end
+
   test "creates with a purchase price below the current value" do
     post vehicles_path, params: {
       account: {
