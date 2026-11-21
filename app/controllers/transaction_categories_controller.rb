@@ -8,6 +8,8 @@ class TransactionCategoriesController < ApplicationController
     # read-only (Transaction#category_set_on_transfer_outflow?).
     return head(:unprocessable_entity) if @entry.transaction.category_set_on_transfer_outflow?
 
+    rule_input = @entry.rule_input_snapshot
+
     transaction = @entry.transaction
 
     @entry.save_and_lock_attributes do
@@ -24,6 +26,8 @@ class TransactionCategoriesController < ApplicationController
       end
       true
     end
+
+    @entry.apply_immediate_rules_later(changed_from: rule_input)
 
     in_split_group = helpers.in_split_group?(@entry, params[:grouped])
     respond_to do |format|
