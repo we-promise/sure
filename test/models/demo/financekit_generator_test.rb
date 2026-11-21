@@ -115,7 +115,10 @@ class Demo::FinancekitGeneratorTest < ActiveSupport::TestCase
       transaction.update!(category: family.categories.find_by!(name: "Shopping"),
         extra: transaction.extra.except("demo_financekit_activity_version"))
     end
-    source_records = item.financekit_accounts.flat_map { |mapping| mapping.financekit_transactions.pluck(:id, :entry_id, :raw_payload) }
+    # Ordered by id: without ORDER BY Postgres returns rows in physical order,
+    # which can differ between the two reads (CI saw the same rows reordered).
+    source_records = -> { FinancekitTransaction.where(financekit_account: item.financekit_accounts).order(:id).pluck(:id, :entry_id, :raw_payload) }
+    original_source_records = source_records.call
     balances = [ card.balance, cash.balance ]
 
     assert_difference [ "Entry.count", "Transfer.count" ], 1 do
@@ -129,7 +132,7 @@ class Demo::FinancekitGeneratorTest < ActiveSupport::TestCase
     assert_equal @checking, payment.reload.entryable.transfer.from_account
     assert_nil payment.entryable.category
     assert_equal balances, [ card.reload.balance, cash.reload.balance ]
-    assert_equal source_records, item.financekit_accounts.flat_map { |mapping| mapping.financekit_transactions.pluck(:id, :entry_id, :raw_payload) }
+    assert_equal original_source_records, source_records.call
   end
 
   test "standalone demo uses a funded synthetic checking account when demo checking is absent" do
