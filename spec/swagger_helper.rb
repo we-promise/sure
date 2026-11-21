@@ -103,6 +103,38 @@ RSpec.configure do |config|
               children: { type: :array, items: { '$ref' => '#/components/schemas/SplitChild' } }
             }
           },
+          ReceiptItemization: {
+            type: :object,
+            required: %w[id status result_url],
+            properties: {
+              id: { type: :string, format: :uuid },
+              status: { type: :string, enum: %w[pending completed failed] },
+              result_url: { type: :string },
+              proposal: { '$ref' => '#/components/schemas/SplitReceiptProposal' },
+              error: { type: :string }
+            }
+          },
+          SplitReceiptProposal: {
+            allOf: [
+              { '$ref' => '#/components/schemas/SplitRequest' },
+              {
+                type: :object,
+                required: %w[transaction_id attachment_id currency receipt_total unmatched_amount],
+                properties: {
+                  transaction_id: { type: :string, format: :uuid },
+                  attachment_id: { type: :string, description: 'The receipt attachment that was read' },
+                  merchant_name: { type: :string, nullable: true },
+                  currency: { type: :string },
+                  receipt_total: { type: :string, description: 'What the receipt lines, tax and discounts add up to' },
+                  unmatched_amount: {
+                    type: :string,
+                    description: 'Part of the transaction the receipt does not account for (a tip, a fee). ' \
+                                 'When not zero it is the last split row, named like the transaction.'
+                  }
+                }
+              }
+            ]
+          },
           SplitChild: {
             allOf: [
               { '$ref' => '#/components/schemas/Transaction' },
@@ -912,6 +944,26 @@ RSpec.configure do |config|
             required: %w[data],
             properties: {
               data: { '$ref' => '#/components/schemas/RuleRun' }
+            }
+          },
+          RuleRunProgress: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: {
+                type: :object,
+                required: %w[rule_run_id status transactions_queued transactions_awaiting_ai transactions_modified finished updated_at],
+                properties: {
+                  rule_run_id: { type: :string, format: :uuid },
+                  status: { type: :string, enum: %w[pending success failed] },
+                  transactions_queued: { type: :integer, minimum: 0 },
+                  transactions_awaiting_ai: { type: :integer, minimum: 0,
+                                              description: 'Transactions still waiting for an AI answer; counts down to 0 as batches are applied' },
+                  transactions_modified: { type: :integer, minimum: 0 },
+                  finished: { type: :boolean, description: 'True once the run is no longer pending and none of its jobs is still running; a failed run with a job still running is not finished yet' },
+                  updated_at: { type: :string, format: :'date-time' }
+                }
+              }
             }
           },
           RuleRunCollection: {

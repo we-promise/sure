@@ -114,6 +114,30 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal "not-a-number", row.amount
   end
 
+  test "clearing a reading releases only the reconciliation marks it wrote" do
+    first = create_transaction(account: @account, date: @date, amount: 50, name: "First coffee")
+    second = create_transaction(account: @account, date: @date, amount: 12, name: "Second book")
+    other_import = PdfImport.create!(family: @family, account: @account, account_statement: @statement,
+                                     date_format: @family.date_format, status: :pending)
+
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "First") ] })
+    @import.generate_rows_from_extracted_data
+    other_import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -12, name: "Second") ] })
+    other_import.generate_rows_from_extracted_data
+
+    assert first.reload.statement_reconciled?
+    assert second.reload.statement_reconciled?
+
+    @import.clear_reading!
+
+    assert_not first.reload.statement_reconciled?, "the discarded reading's mark is released"
+    assert second.reload.statement_reconciled?, "another import's mark on the same statement stays"
+
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "First") ] })
+    @import.generate_rows_from_extracted_data
+    assert first.reload.statement_reconciled?, "the replacement reading writes its own mark"
+  end
+
   test "reassigning the account re-judges the rows and releases the old reconciliation" do
     other = @family.accounts.create!(
       name: "Second Checking", balance: 0, currency: "USD", accountable: Depository.new
@@ -132,12 +156,8 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   test "extract_transactions stores string keys so rows can actually be generated" do
     use_ai_routes
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(success?: true, data: { transactions: [ { date: @date.to_s, amount: "-5.0", name: "Coffee" } ] })
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: { transactions: [ { date: @date.to_s, amount: "-5.0", description: "Coffee" } ] })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     @import.extract_transactions
 
@@ -148,22 +168,15 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   test "extract_transactions syncs period and balances to statement_backed import" do
     use_ai_routes
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-10-09", end_date: "2026-11-06" },
-          opening_balance: 325.0,
-          closing_balance: 3176.22,
-          bank_name: "American Express",
-          account_number: "2007",
-          transactions: [ { date: "2026-10-15", amount: "-10.0", name: "Lunch" } ]
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-10-09", end_date: "2026-11-06" },
+      opening_balance: 325.0,
+      closing_balance: 3176.22,
+      bank_name: "American Express",
+      account_number: "2007",
+      transactions: [ { date: "2026-10-15", amount: "-10.0", description: "Lunch" } ]
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     @import.extract_transactions
 
@@ -178,22 +191,15 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   test "extract_transactions ignores inverted dates while syncing valid balances and hints" do
     use_ai_routes
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-11-06", end_date: "2026-10-09" },
-          opening_balance: 100.0,
-          closing_balance: 200.0,
-          bank_name: "Chase",
-          account_number: "1234",
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-11-06", end_date: "2026-10-09" },
+      opening_balance: 100.0,
+      closing_balance: 200.0,
+      bank_name: "Chase",
+      account_number: "1234",
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
     initial_start = @statement.period_start_on
     initial_end = @statement.period_end_on
 
@@ -212,28 +218,23 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   test "extract_transactions handles unparseable date independently without dropping balances" do
     use_ai_routes
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-02-30", end_date: "2026-11-06" },
-          opening_balance: 50.0,
-          closing_balance: 150.0,
-          bank_name: "Wells Fargo",
-          account_number: "5678",
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-02-30", end_date: "2026-11-06" },
+      opening_balance: 50.0,
+      closing_balance: 150.0,
+      bank_name: "Wells Fargo",
+      account_number: "5678",
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
+    initial_start = @statement.period_start_on
 
-    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
-      @import.extract_transactions
-    end
+    # ExtractBankStatement drops a date it can't parse, so only the valid end date reaches the statement.
+    @import.extract_transactions
 
     @statement.reload
+    assert_equal initial_start, @statement.period_start_on
+    assert_equal Date.parse("2026-11-06"), @statement.period_end_on
     assert_equal 50.0, @statement.opening_balance
     assert_equal 150.0, @statement.closing_balance
     assert_equal "Wells Fargo", @statement.institution_name_hint
@@ -242,20 +243,13 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   test "extract_transactions rejects dates outside Import.reasonable_date_range" do
     use_ai_routes
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "1950-01-01", end_date: "2026-11-06" },
-          opening_balance: 50.0,
-          closing_balance: 150.0,
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "1950-01-01", end_date: "2026-11-06" },
+      opening_balance: 50.0,
+      closing_balance: 150.0,
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
       @import.extract_transactions
@@ -266,21 +260,14 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     use_ai_routes
     @statement.update!(currency: "USD", opening_balance: 10.0)
 
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
-          opening_balance: 50.0,
-          closing_balance: 150.0,
-          currency: "EUR",
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+      opening_balance: 50.0,
+      closing_balance: 150.0,
+      currency: "EUR",
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
       @import.extract_transactions
@@ -295,20 +282,13 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     use_ai_routes
     @statement.update!(currency: "USD", opening_balance: 10.0, sanitized_parser_output: { "extracted_currency" => "EUR" })
 
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
-          opening_balance: 50.0,
-          closing_balance: 150.0,
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+      opening_balance: 50.0,
+      closing_balance: 150.0,
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
       @import.extract_transactions
@@ -340,22 +320,15 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     use_ai_routes
     @statement.update!(institution_name_hint: "Existing Bank", account_last4_hint: "9999")
 
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
-          opening_balance: 10.0,
-          closing_balance: 20.0,
-          bank_name: "New Bank",
-          account_number: "1111",
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+      opening_balance: 10.0,
+      closing_balance: 20.0,
+      bank_name: "New Bank",
+      account_number: "1111",
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     @import.extract_transactions
 

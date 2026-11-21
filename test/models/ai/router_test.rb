@@ -87,19 +87,13 @@ class Ai::RouterTest < ActiveSupport::TestCase
     assert_kind_of Ai::Plan, Ai::Router.new(family: @family, user: @user, config:).resolve(:chat)
   end
 
-  test "a Jev entry serves only families that chose Jev" do
+  test "a judge model serves categorize; a feature without a judgement skips it" do
     jev = AiTestHelper.test_config.model(:jev, "jev-latest")
-    llm = AiTestHelper.test_config.model(:openai, "gpt-4.1-mini")
-    config = Ai::Config.new(routes: { categorize: [
-      Ai::Route.new(feature: :categorize, model: jev, condition: :jev_family),
-      Ai::Route.new(feature: :categorize, model: llm)
-    ] })
+    config = Ai::Config.new(routes: %i[categorize detect_merchants].index_with { [ Ai::Route.new(feature: _1, model: jev) ] })
+    router = Ai::Router.new(family: @family, config:)
 
-    @family.update!(categorization_provider: "llm")
-    assert_equal "gpt-4.1-mini", Ai::Router.new(family: @family, config:).resolve(:categorize).model.name
-
-    @family.update!(categorization_provider: "jev")
-    assert_equal "jev-latest", Ai::Router.new(family: @family, config:).resolve(:categorize).model.name
+    assert_equal "jev-latest", router.resolve(:categorize).model.name
+    assert_equal :capability_missing, router.resolve(:detect_merchants).reason
   end
 
   test "the message tells an instance admin what to set up and anyone else only why" do
@@ -112,5 +106,12 @@ class Ai::RouterTest < ActiveSupport::TestCase
     assert_includes availability.message_for(admin), "Merchants"
     assert_not_includes availability.message_for(member), "Settings"
     assert_nil Ai::Availability.available(:chat).message_for(member)
+  end
+  test "PDF import with only an OCR model isn't available: something has to read the transcription" do
+    endpoint = ai_endpoint(name: "mistral", preset: :mistral, base_url: nil)
+    ocr = ai_model(name: "mistral-ocr-latest", endpoint:, capabilities: %i[ocr])
+    Ai::Config.override = AiTestHelper.build_ai_config([ ocr ], { extract_pdf: [ "mistral/mistral-ocr-latest" ] })
+
+    assert_equal :capability_missing, Ai.availability(:extract_pdf, family: @family, user: @user).reason
   end
 end

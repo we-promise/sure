@@ -3,6 +3,62 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  test "publish_later releases the claim when enqueueing raises" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    ImportJob.stubs(:perform_later).raises(StandardError, "queue down")
+
+    assert_raises(Import::EnqueueFailedError) { import.publish_later }
+
+    assert import.reload.pending?, "the failed enqueue must not block a retry"
+  end
+
+  test "publish_later releases the claim when enqueueing returns nothing" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    ImportJob.stubs(:perform_later).returns(nil)
+
+    assert_raises(Import::EnqueueFailedError) { import.publish_later }
+
+    assert import.reload.pending?
+  end
+
+  test "publish_later invalidates a reread claim when it takes the publish claim" do
+    import = imports(:pdf_with_rows)
+    import.update!(status: :pending, reread_token: "old-attempt")
+    import.stubs(:publishable?).returns(true)
+
+    assert_enqueued_with(job: ImportJob) { import.publish_later }
+
+    import.reload
+    assert import.importing?
+    assert_not_equal "old-attempt", import.reread_token, "a delayed reread must not find its claim on a published import"
+  end
+
+  test "publish_later does not release a newer claim when an older enqueue fails" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    newer_token = SecureRandom.uuid
+    ImportJob.stubs(:perform_later)
+              .with { import.reload.update!(status: :importing, reread_token: newer_token); true }
+              .raises(StandardError, "queue down")
+
+    assert_raises(Import::EnqueueFailedError) { import.publish_later }
+
+    import.reload
+    assert import.importing?
+    assert_equal newer_token, import.reread_token
+  end
+
+  test "publish_later refuses an import already reverting" do
+    import = imports(:transaction)
+    import.update!(status: :reverting)
+    import.stubs(:publishable?).returns(true)
+
+    assert_raises(Import::AlreadyClaimedError) { import.publish_later }
+    assert import.reload.reverting?, "a second claim must not take over a revert in flight"
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

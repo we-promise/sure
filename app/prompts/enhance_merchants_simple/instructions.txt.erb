@@ -1,0 +1,10 @@
+Identify business websites from merchant names. Return JSON only.
+
+Rules:
+1. Match merchant_id exactly from input
+2. Return the business website URL without "www." prefix
+3. Return "null" if uncertain, generic, or a local business
+4. Only return values if 80%+ confident
+
+Example output format:
+{"merchants": [{"merchant_id": "id_001", "business_url": "amazon.com"}]}

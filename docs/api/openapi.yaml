@@ -116,6 +116,58 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/SplitChild"
+    ReceiptItemization:
+      type: object
+      required:
+      - id
+      - status
+      - result_url
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - pending
+          - completed
+          - failed
+        result_url:
+          type: string
+        proposal:
+          "$ref": "#/components/schemas/SplitReceiptProposal"
+        error:
+          type: string
+    SplitReceiptProposal:
+      allOf:
+      - "$ref": "#/components/schemas/SplitRequest"
+      - type: object
+        required:
+        - transaction_id
+        - attachment_id
+        - currency
+        - receipt_total
+        - unmatched_amount
+        properties:
+          transaction_id:
+            type: string
+            format: uuid
+          attachment_id:
+            type: string
+            description: The receipt attachment that was read
+          merchant_name:
+            type: string
+            nullable: true
+          currency:
+            type: string
+          receipt_total:
+            type: string
+            description: What the receipt lines, tax and discounts add up to
+          unmatched_amount:
+            type: string
+            description: Part of the transaction the receipt does not account for
+              (a tip, a fee). When not zero it is the last split row, named like the
+              transaction.
     SplitChild:
       allOf:
       - "$ref": "#/components/schemas/Transaction"
@@ -1639,6 +1691,50 @@ components:
       properties:
         data:
           "$ref": "#/components/schemas/RuleRun"
+    RuleRunProgress:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          required:
+          - rule_run_id
+          - status
+          - transactions_queued
+          - transactions_awaiting_ai
+          - transactions_modified
+          - finished
+          - updated_at
+          properties:
+            rule_run_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum:
+              - pending
+              - success
+              - failed
+            transactions_queued:
+              type: integer
+              minimum: 0
+            transactions_awaiting_ai:
+              type: integer
+              minimum: 0
+              description: Transactions still waiting for an AI answer; counts down
+                to 0 as batches are applied
+            transactions_modified:
+              type: integer
+              minimum: 0
+            finished:
+              type: boolean
+              description: True once the run is no longer pending and none of its
+                jobs is still running; a failed run with a job still running is not
+                finished yet
+            updated_at:
+              type: string
+              format: date-time
     RuleRunCollection:
       type: object
       required:
@@ -9571,6 +9667,49 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/rule_runs/{rule_run_id}/progress":
+    parameters:
+    - name: rule_run_id
+      in: path
+      required: true
+      description: Rule run ID
+      schema:
+        type: string
+        format: uuid
+    get:
+      summary: Retrieve a rule run's progress
+      description: 'Poll a rule run while its AI actions work: transactions_awaiting_ai
+        counts down to 0 as each batch is applied, and finished turns true once the
+        run ends and none of its jobs is still running.'
+      tags:
+      - Rule Runs
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: progress retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RuleRunProgress"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: rule run not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/rules":
     get:
       summary: List rules
@@ -10079,6 +10218,76 @@ paths:
           description: split removed
         '404':
           description: transaction is not split
+  "/api/v1/transactions/{transaction_id}/split/itemize":
+    parameters:
+    - name: transaction_id
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      summary: Queue a receipt split proposal
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Queues receipt extraction on the interactive AI queue. Poll result_url
+        until status is completed or failed. A completed proposal is never saved as
+        a split automatically; review proposal.split before submitting it to the split
+        endpoint. Requires AI consent and write access.
+      parameters:
+      - name: attachment_id
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '202':
+          description: proposal queued or terminal enqueue failure
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ReceiptItemization"
+        '401':
+          description: unauthorized
+        '403':
+          description: AI unavailable or write access missing
+        '404':
+          description: transaction not found
+        '422':
+          description: no receipt or transaction cannot be split
+  "/api/v1/transactions/{transaction_id}/split/itemization/{receipt_itemization_id}":
+    parameters:
+    - name: transaction_id
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: receipt_itemization_id
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Read a receipt split proposal
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Returns only a result requested by the authenticated user for this
+        accessible transaction. Pending results omit proposal; failed results contain
+        a generic error without receipt text.
+      responses:
+        '200':
+          description: pending, completed or failed proposal
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ReceiptItemization"
+        '401':
+          description: unauthorized
+        '404':
+          description: transaction or result not found
   "/api/v1/syncs":
     get:
       summary: Lists sync history

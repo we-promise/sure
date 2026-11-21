@@ -176,6 +176,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.index ["addressable_type", "addressable_id"], name: "index_addresses_on_addressable"
   end
 
+  create_table "ai_comparisons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "agreed", null: false
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "feature", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.decimal "primary_confidence", precision: 5, scale: 4
+    t.jsonb "primary_route", default: {}, null: false
+    t.string "primary_value"
+    t.decimal "shadow_confidence", precision: 5, scale: 4
+    t.jsonb "shadow_route", default: {}, null: false
+    t.string "shadow_value"
+    t.uuid "subject_id"
+    t.string "subject_type"
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "feature", "agreed", "created_at"], name: "index_ai_comparisons_on_family_feature_agreement"
+    t.index ["subject_type", "subject_id"], name: "index_ai_comparisons_on_subject_type_and_subject_id"
+  end
+
   create_table "akahu_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "account_id"
     t.string "account_status"
@@ -404,22 +423,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.datetime "updated_at", null: false
     t.index ["family_id", "last_used_at"], name: "index_categories_on_family_id_and_last_used_at"
     t.index ["family_id", "name"], name: "index_categories_on_family_id_and_name", unique: true
-  end
-
-  create_table "categorization_comparisons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.boolean "agreed", null: false
-    t.string "applied_category_name"
-    t.string "applied_provider", null: false
-    t.datetime "created_at", null: false
-    t.uuid "family_id", null: false
-    t.string "shadow_category_name"
-    t.decimal "shadow_confidence", precision: 5, scale: 4
-    t.jsonb "shadow_probabilities", default: {}, null: false
-    t.string "shadow_provider", null: false
-    t.uuid "transaction_id"
-    t.datetime "updated_at", null: false
-    t.index ["family_id", "agreed", "created_at"], name: "index_categorization_comparisons_on_family_agreement"
-    t.index ["transaction_id"], name: "index_categorization_comparisons_on_transaction_id"
   end
 
   create_table "chats", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -710,6 +713,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.string "reconciled_status", default: "unreconciled", null: false
     t.string "plaid_id"
     t.datetime "reconciled_at"
+    t.uuid "reconciled_by_import_id"
     t.uuid "reconciled_by_statement_id"
     t.string "source"
     t.datetime "updated_at", null: false
@@ -838,7 +842,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.string "bills_feed_token"
     t.boolean "categories_locked", default: false, null: false
     t.decimal "categorization_confidence_threshold", precision: 3, scale: 2, default: "0.7", null: false
-    t.string "categorization_provider", default: "llm", null: false
     t.decimal "categorization_shadow_rate", precision: 3, scale: 2, default: "0.0", null: false
     t.string "country", default: "US"
     t.datetime "created_at", null: false
@@ -866,13 +869,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.string "vector_store_id"
     t.index ["bills_feed_token"], name: "index_families_on_bills_feed_token", unique: true
     t.check_constraint "categorization_confidence_threshold >= 0::numeric AND categorization_confidence_threshold <= 1::numeric", name: "chk_families_categorization_confidence_threshold"
-    t.check_constraint "categorization_provider::text = ANY (ARRAY['llm'::character varying::text, 'jev'::character varying::text])", name: "chk_families_categorization_provider"
     t.check_constraint "categorization_shadow_rate >= 0::numeric AND categorization_shadow_rate <= 1::numeric", name: "chk_families_categorization_shadow_rate"
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
   create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id"
     t.string "content_type"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
@@ -882,6 +885,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.string "provider_file_id"
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_family_documents_on_account_id"
     t.index ["family_id"], name: "index_family_documents_on_family_id"
     t.index ["provider_file_id"], name: "index_family_documents_on_provider_file_id"
     t.index ["status"], name: "index_family_documents_on_status"
@@ -1393,6 +1397,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.string "exchange_operating_mic_col_label"
     t.jsonb "expected_record_counts", default: {}, null: false
     t.jsonb "extracted_data"
+    t.jsonb "extraction_checks"
     t.uuid "family_id", null: false
     t.uuid "import_session_id"
     t.string "name_col_label"
@@ -1402,17 +1407,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.string "price_col_label"
     t.string "qty_col_label"
     t.string "raw_file_str"
+    t.string "read_as"
+    t.string "read_model"
+    t.string "read_with"
     t.jsonb "readback_verification", default: {}, null: false
+    t.string "reread_token"
     t.integer "rows_count", default: 0, null: false
     t.integer "rows_to_skip", default: 0, null: false
     t.integer "sequence"
     t.string "signage_convention", default: "inflows_positive"
+    t.uuid "source_pdf_import_id"
     t.string "status"
     t.jsonb "summary", default: {}, null: false
     t.string "tags_col_label"
     t.string "ticker_col_label"
     t.string "type", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_id", "read_model", "updated_at"], name: "index_pdf_imports_on_account_and_read_model", where: "(((type)::text = 'PdfImport'::text) AND (read_with IS NOT NULL))"
     t.index ["account_statement_id"], name: "index_imports_on_account_statement_id"
     t.index ["family_id"], name: "index_imports_on_family_id"
     t.index ["import_session_id", "client_chunk_id"], name: "idx_imports_on_session_client_chunk", unique: true, where: "((import_session_id IS NOT NULL) AND (client_chunk_id IS NOT NULL))"
@@ -1586,6 +1597,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.datetime "created_at", null: false
     t.decimal "estimated_cost", precision: 10, scale: 6
     t.uuid "family_id", null: false
+    t.string "finish_reason"
     t.jsonb "metadata", default: {}
     t.string "model", null: false
     t.string "operation", null: false
@@ -2078,6 +2090,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.index ["status"], name: "index_questrade_items_on_status"
   end
 
+  create_table "receipt_itemizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "transaction_id", null: false
+    t.uuid "user_id", null: false
+    t.uuid "attachment_id", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "proposal", default: {}, null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["attachment_id"], name: "index_receipt_itemizations_on_attachment_id"
+    t.index ["transaction_id"], name: "index_receipt_itemizations_on_transaction_id"
+    t.index ["user_id"], name: "index_receipt_itemizations_on_user_id"
+  end
+
   create_table "recurrence_rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "day_of_month"
@@ -2316,6 +2342,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.uuid "rule_id", null: false
     t.string "rule_name"
     t.string "status", null: false
+    t.integer "transactions_awaiting_ai", default: 0, null: false
     t.integer "transactions_modified", default: 0, null: false
     t.integer "transactions_processed", default: 0, null: false
     t.integer "transactions_queued", default: 0, null: false
@@ -3156,6 +3183,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
   add_foreign_key "accounts", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "ai_comparisons", "families"
   add_foreign_key "akahu_accounts", "akahu_items"
   add_foreign_key "akahu_items", "families"
   add_foreign_key "api_keys", "users"
@@ -3171,8 +3199,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
   add_foreign_key "budgets", "families"
   add_foreign_key "budgets", "users", on_delete: :cascade
   add_foreign_key "categories", "families"
-  add_foreign_key "categorization_comparisons", "families"
-  add_foreign_key "categorization_comparisons", "transactions", on_delete: :nullify
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
   add_foreign_key "coinbase_items", "families"
@@ -3194,6 +3220,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"
   add_foreign_key "eval_samples", "eval_datasets"
+  add_foreign_key "family_documents", "accounts", on_delete: :nullify
   add_foreign_key "family_documents", "families"
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"
@@ -3279,6 +3306,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"
+  add_foreign_key "receipt_itemizations", "active_storage_attachments", column: "attachment_id", on_delete: :cascade
+  add_foreign_key "receipt_itemizations", "transactions", on_delete: :cascade
+  add_foreign_key "receipt_itemizations", "users", on_delete: :cascade
   add_foreign_key "recurrence_rules", "recurring_transactions", on_delete: :cascade
   add_foreign_key "recurring_allocations", "entries", on_delete: :nullify
   add_foreign_key "recurring_allocations", "recurring_occurrences", column: ["recurring_occurrence_id", "currency"], primary_key: ["id", "currency"], name: "fk_recurring_allocations_currency_matches_occurrence", on_delete: :cascade

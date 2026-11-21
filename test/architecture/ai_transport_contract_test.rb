@@ -1,7 +1,8 @@
 require "test_helper"
 
 # One contract every transport passes: error mapping, retries, usage normalisation, the
-# proxy, and that clients are built only by Ai::Transport::Http.
+# proxy, and that clients are built only by Ai::Transport::Http. Attachments, embed and ocr
+# have their own contract tests beside this one.
 class AiTransportContractTest < ActiveSupport::TestCase
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
 
@@ -62,6 +63,14 @@ class AiTransportContractTest < ActiveSupport::TestCase
 
       stub_request(:post, spec[:url]).to_raise(Net::ReadTimeout)
       assert_raises(Ai::Error::Timeout) { probe(protocol, :chat) }
+    end
+
+    # Deliberately fail-fast: Retry is for a server that answered, not for one that never did.
+    test "#{protocol}: an unreachable server is never retried, whatever the retry budget" do
+      stub_request(:post, spec[:url]).to_raise(Errno::ECONNREFUSED)
+
+      assert_raises(Ai::Error::Unreachable) { probe(protocol, :chat, max_retries: 3) }
+      assert_requested :post, spec[:url], times: 1
     end
 
     test "#{protocol}: retries follow the endpoint, not RubyLLM's defaults" do
@@ -131,12 +140,11 @@ class AiTransportContractTest < ActiveSupport::TestCase
 
     test "#{protocol}: RubyLLM's requests get Sure's TLS settings" do
       Ai::Transport::Http.stubs(:faraday_ssl_options).returns(verify: false)
-      adapter = Ai::Transport.for(endpoint(protocol)).send(:ruby_llm_context).config.faraday_adapter
-      env = Faraday::Env.from(url: URI("https://self-hosted.example.test/v1"), request: Faraday::RequestOptions.new, ssl: Faraday::SSLOptions.new)
+      transport = Ai::Transport.for(endpoint(protocol))
+      # The Faraday connection RubyLLM's own requests use (Provider#connection is :nodoc:, read here only).
+      chat = transport.send(:ruby_llm_chat, ai_model(endpoint: endpoint(protocol)))
 
-      http = adapter.new.build_connection(env)
-
-      assert_equal OpenSSL::SSL::VERIFY_NONE, http.verify_mode
+      assert_equal false, chat.provider.connection.connection.ssl.verify
     end
 
     test "#{protocol}: one probe.ai event per call, with the route and the error class but never the key" do
@@ -158,7 +166,7 @@ class AiTransportContractTest < ActiveSupport::TestCase
         assert_equal "http://proxy.internal:8888", transport.send(:ruby_llm_context).config.http_proxy
         # The proxy RubyLLM's own Faraday connection uses (Provider#connection is :nodoc:, read here only).
         chat = transport.send(:ruby_llm_chat, ai_model(endpoint: endpoint(protocol)))
-        assert_equal "http://proxy.internal:8888", chat.instance_variable_get(:@provider).connection.connection.proxy.uri.to_s
+        assert_equal "http://proxy.internal:8888", chat.provider.connection.connection.proxy.uri.to_s
 
         host = URI(spec[:url]).host
         with_env_overrides("NO_PROXY" => host) do
@@ -172,7 +180,7 @@ class AiTransportContractTest < ActiveSupport::TestCase
   # request Sure's resolver sends direct. RubyLLM's adapter applies Sure's decision instead.
   test "RubyLLM's adapter connects as Sure's proxy resolver decides, port-qualified NO_PROXY included" do
     with_env_overrides("HTTP_PROXY" => "http://proxy.internal:8888", "HTTPS_PROXY" => nil, "NO_PROXY" => "10.0.0.5:8080") do
-      adapter = Ai::Transport::Http::TlsNetHttp.new(->(_env) { })
+      adapter = Ai::Transport::Http::ProxyNetHttp.new(->(_env) { })
       connect = ->(url) { adapter.send(:build_connection, Faraday::Env.from(url: URI(url), request: Faraday::RequestOptions.new)) }
 
       assert_not connect.("http://10.0.0.5:8080/v1/chat/completions").proxy?, "NO_PROXY's host:port goes direct"
@@ -222,7 +230,18 @@ class AiTransportContractTest < ActiveSupport::TestCase
     assert_raises(Ai::Error::InvalidOutput) { probe(:compatible, :chat) }
   end
 
-  test "an embedding endpoint with static headers is refused, since RubyLLM 2.1.1 can't send them" do
+  test "a transport without OCR refuses before reaching a missing run_ocr" do
+    endpoint = ai_endpoint(name: "plain", base_url: "https://llm.example.test/v1")
+    transport = Ai::Transport::Base.new(endpoint)
+    model = ai_model(name: "ocr", endpoint:, capabilities: %i[ocr])
+    request = Ai::Transport::Base::OcrRequest.new(feature: :extract_pdf, model:, pages: [ Ai::Attachment.png("png", filename: "page.png") ])
+
+    assert_not transport.ocr?
+    assert_raises(Ai::Error::Refused) { transport.ocr(request) }
+    assert Ai::Transport.for(endpoint).ocr?, "the compatible transport transcribes"
+  end
+
+  test "an embedding endpoint with static headers is refused, since RubyLLM can't send them" do
     model_endpoint = ai_endpoint(name: "embed", base_url: "https://llm.example.test/v1", extra_headers: { "X-Gateway-Key" => "k" })
 
     assert_raises(Ai::Error::Refused) { Ai::Transport.for(model_endpoint).probe(ai_model(endpoint: model_endpoint), :embedding) }
@@ -255,15 +274,23 @@ class AiTransportContractTest < ActiveSupport::TestCase
   # RubyLLM hides internal helpers from its documented API between releases (RubyLLM #1438). These are
   # the public methods Sure relies on; an upgrade that drops one fails here, not in production.
   test "the RubyLLM surface Sure uses is still public" do
-    { RubyLLM => %i[context workflow with_usage_owner], RubyLLM::OpenTelemetry => %i[enable] }.each do |owner, methods|
+    { RubyLLM => %i[context workflow with_owner render_prompt], RubyLLM::OpenTelemetry => %i[enable] }.each do |owner, methods|
       methods.each { assert owner.respond_to?(_1), "RubyLLM.#{_1}" }
     end
-    { RubyLLM::Context => %i[chat embed], RubyLLM::Chat => %i[generate add_message with_headers with_max_output_tokens with_tools],
-      RubyLLM::Message => %i[content model tokens cost tool_calls], RubyLLM::ToolCall => %i[name arguments], RubyLLM::Embedding => %i[vectors],
-      RubyLLM::Tokens => %i[input output cache_read cache_write reported_cost] }.each do |klass, methods|
+    { RubyLLM::Context => %i[chat embed judge ocr],
+      RubyLLM::Judgment => %i[answers tokens model []], RubyLLM::Choice => %i[choice probabilities confidence to_h],
+      RubyLLM::Chat => %i[generate add_message with_headers with_max_output_tokens with_tools with_instructions with_schema
+                          with_thinking with_provider_options],
+      RubyLLM::Message => %i[content model tokens cost tool_calls finish_reason raw], RubyLLM::ToolCall => %i[name arguments],
+      RubyLLM::Embedding => %i[vectors],
+      RubyLLM::Tokens => %i[input output cache_read cache_write reported_cost],
+      RubyLLM::Attachment => %i[filename mime_type resolution] }.each do |klass, methods|
       methods.each { assert klass.public_method_defined?(_1), "#{klass}##{_1}" }
     end
+    assert_includes RubyLLM::Attachment::RESOLUTIONS, :high
     assert_kind_of RubyLLM::Error, RubyLLM::PaymentRequiredError.new
+    assert_includes RubyLLM::Configuration.instance_methods, :typesafe_api_base=
+    assert_includes RubyLLM::Configuration.instance_methods, :typesafe_api_key=
   end
 
   private

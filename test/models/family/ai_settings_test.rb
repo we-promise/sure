@@ -21,10 +21,9 @@ class Family::AiSettingsTest < ActiveSupport::TestCase
 
   test "the settings' constants and validations are still Family's" do
     assert_equal %w[builtin external mcp_only], Family::ASSISTANT_TYPES
-    assert_equal %w[llm jev], Family::CATEGORIZATION_PROVIDERS
 
-    @family.categorization_provider = "other"
+    @family.categorization_shadow_rate = 2
     assert_not @family.valid?
-    assert @family.errors.key?(:categorization_provider)
+    assert @family.errors.key?(:categorization_shadow_rate)
   end
 end

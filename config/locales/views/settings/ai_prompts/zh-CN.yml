@@ -3,10 +3,7 @@ zh-CN:
   settings:
     ai_prompts:
       prompt_field:
-        provider_label: 提供商
-        prompt_label: 提示词
         provider_openai: OpenAI
-        provider_anthropic: Anthropic
         reset: 恢复为默认
         reset_confirm_title: 恢复为默认提示词？
         reset_confirm_body: 这将放弃您的自定义提示词并恢复内置的默认指令。

@@ -181,6 +181,9 @@ class AiHealth
     private
       attr_reader :cache, :force
 
+      # The synthetic statement through ReadPdf on a one-entry plan, the production path:
+      # its text layer, or for the vision check the page as an image (the PDF itself on Anthropic,
+      # which reads PDFs natively).
       def pdf_processing(provider:, endpoint:, access_token:, model:, openai_compatible:, component:, verification:,
                          processing_mode:)
         run(
@@ -191,32 +194,39 @@ class AiHealth
           credential: access_token,
           verification: verification
         ) do
-          result = Timeout.timeout(timeout) do
-            case provider
-            when :openai
-              Provider::Openai::PdfProcessor.new(
-                Ai::Transport::Http.openai_client(config_endpoint(provider:, base_url: endpoint, api_key: access_token), timeout:),
-                model: model,
-                pdf_content: SyntheticPdf.bytes,
-                custom_provider: openai_compatible,
-                max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
-                processing_mode: processing_mode
-              ).process
-            when :anthropic
-              raise Failure, :unsupported_provider unless processing_mode == :vision
-
-              Provider::Anthropic::PdfProcessor.new(
-                Ai::Transport::Http.anthropic_client(config_endpoint(provider:, base_url: endpoint, api_key: access_token), timeout:),
-                model: model,
-                pdf_content: SyntheticPdf.bytes
-              ).process
-            else
-              raise Failure, :unsupported_provider
+          raise_unsupported_provider!(provider)
+          config = config_endpoint(provider:, base_url: endpoint, api_key: access_token)
+          route_model = Ai::Config::Model.new(endpoint: config, name: model, capabilities: %i[structured_output vision documents],
+                                              max_output_tokens: production_pdf_output_tokens(provider:, endpoint:, model:))
+          plan = Ai::Plan.new(feature: :extract_pdf, lane: :prompt, routes: [ Ai::Route.new(feature: :extract_pdf, model: route_model) ])
+          units =
+            if processing_mode == :text then [ Ai::PdfReading::Unit.text(Pdf::TextExtractor.pages(SyntheticPdf.bytes).join("\n"), page: 1) ]
+            elsif provider.to_sym == :anthropic then [ Ai::PdfReading::Unit.pdf(1) ]
+            else [ Ai::PdfReading::Unit.page(1) ]
             end
-          end
 
-          raise Failure, :invalid_response unless SyntheticPdf.valid_result?(result)
+          value = Timeout.timeout(timeout) do
+            Ai::Generations::ReadPdf.new(units:, content: SyntheticPdf.bytes, family: nil).call(batches: 1, plan:, down_marks: false).value!
+          rescue Pdf::PageImages::Error => error
+            raise Failure, error.code   # :missing_binary and the like, not a generic request failure
+          end
+          raise Failure, :invalid_response unless SyntheticPdf.valid_result?(value)
         end
+      end
+
+      # The probe must fit what the production `extract_pdf` route asks of the same model, not
+      # an arbitrary smaller answer: a route's own output limit is part of the request it makes.
+      # An ad-hoc probe of a server Sure hasn't configured keeps the conservative fallback.
+      def production_pdf_output_tokens(provider:, endpoint:, model:)
+        plan = Ai::Router.new(family: nil).resolve(:extract_pdf)
+        return PDF_MAX_RESPONSE_TOKENS unless plan.is_a?(Ai::Plan)
+
+        configured = configured_endpoint(provider.to_sym)
+        names = [ "#{configured&.name}/#{model}", model ]
+        route = plan.routes.find { names.include?("#{_1.model.endpoint.name}/#{_1.model.name}") && _1.model.name == model } ||
+                plan.routes.find { _1.model.name == model }
+        limit = route&.model&.max_output_tokens.to_i
+        limit.positive? ? limit : PDF_MAX_RESPONSE_TOKENS
       end
 
       def run(component:, provider_key:, endpoint: nil, model: nil, credential: nil, dimensions: nil, verification: nil)

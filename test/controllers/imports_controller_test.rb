@@ -263,6 +263,78 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.pdf_processing"), flash[:notice]
   end
 
+  test "the upload offers Read as, greying out what the route can't do" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes(extract_pdf: %w[gpu/qwen3-8b])
+
+    get new_import_url
+
+    assert_select "select[name='import[read_as]'] option[value=auto]:not([disabled])"
+    assert_select "select[name='import[read_as]'] option[value=text]:not([disabled])"
+    assert_select "select[name='import[read_as]'] option[value=images][disabled]", text: /needs a vision model/
+    assert_select "select[name='import[read_as]'] option[value=ocr][disabled]"
+  end
+
+  test "a PDF upload keeps its Read as" do
+    use_ai_routes
+
+    post imports_url, params: { import: { import_file: file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf"),
+                                          read_as: "images" } }
+
+    assert_equal "images", PdfImport.order(:created_at).last.read_as
+  end
+
+  test "reads a PDF import again another way" do
+    use_ai_routes
+    import = imports(:pdf_with_rows)
+    PdfImport.any_instance.stubs(:pdf_uploaded?).returns(true)
+    PdfImport.any_instance.stubs(:pdf_reading).returns(stub(ways: { text: nil }))
+
+    assert_enqueued_with(job: ProcessPdfJob) do
+      post reread_import_url(import), params: { import: { read_as: "text" } }
+    end
+
+    assert_redirected_to import_url(import)
+    assert_equal "text", import.reload.read_as
+    assert import.importing?, "claimed until the job reads it again"
+  end
+
+  test "reading again needs extract_pdf" do
+    use_no_ai
+    import = imports(:pdf_with_rows)
+
+    post reread_import_url(import), params: { import: { read_as: "text" } }
+
+    assert_no_enqueued_jobs only: ProcessPdfJob
+    assert_nil import.reload.read_as
+  end
+
+  test "a reread that could not be queued says the reading was kept, not that it was published" do
+    use_ai_routes
+    import = imports(:pdf_with_rows)
+    PdfImport.any_instance.stubs(:reread!).returns(:enqueue_failed)
+
+    post reread_import_url(import), params: { import: { read_as: "text" } }
+
+    assert_redirected_to import_url(import)
+    assert_equal I18n.t("imports.pdf_import.reread.enqueue_failed"), flash[:alert]
+  end
+
+  test "a flagged extraction shows its failed checks and asks before publishing" do
+    use_ai_routes
+    import = imports(:pdf_with_rows)
+    import.update!(read_with: "text", extraction_checks: { "passed" => false, "reconciles" => false })
+    PdfImport.any_instance.stubs(uploaded?: true, publishable?: true)
+
+    get import_url(import)
+
+    assert_includes response.body, I18n.t("imports.pdf_import.review_flag.title")
+    assert_includes response.body, CGI.escapeHTML(I18n.t("imports.pdf_import.review_flag.checks.reconciles"))
+    assert_select "[data-turbo-confirm]"
+  end
+
   test "guest cannot create statement backed pdf import" do
     sign_in users(:intro_user)
 
@@ -515,6 +587,36 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "Your import has started in the background.", flash[:notice]
     assert_redirected_to import_path(import)
+  end
+
+  test "a lost publish race is reported without starting a second publish" do
+    import = imports(:transaction)
+    TransactionImport.any_instance.expects(:publish_later).raises(Import::AlreadyClaimedError)
+
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.already_claimed"), flash[:alert]
+  end
+
+  test "publishing an import another request already completed is refused" do
+    import = imports(:transaction)
+    import.update_columns(status: "complete")
+
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.already_claimed"), flash[:alert]
+  end
+
+  test "a publish that could not be queued is reported as not published" do
+    import = imports(:transaction)
+    TransactionImport.any_instance.stubs(:publish_later).raises(Import::EnqueueFailedError)
+
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.enqueue_failed"), flash[:alert]
   end
 
   test "member cannot publish import targeting a read only shared account" do
@@ -792,6 +894,16 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select 'select[name="import[account_id]"] option', text: "Collectable Account", count: 0
     assert_select 'select[name="import[account_id]"] option', text: "IOU (personal debt to friend)", count: 0
     assert_select 'select[name="import[account_id]"] option', text: "Plaid Depository Account", count: 0
+  end
+
+  test "a reread whose import param isn't a form is refused, not an error" do
+    use_ai_routes
+    import = imports(:pdf_with_rows)
+
+    post reread_import_url(import), params: { import: "text" }
+
+    assert_redirected_to import_url(import)
+    assert_equal I18n.t("imports.pdf_import.reread.not_allowed"), flash[:alert]
   end
 
   private

@@ -1,12 +1,15 @@
 class ImportsController < ApplicationController
+  include AiFeatureGuard
   include SettingsHelper
 
-  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
-  before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
-  before_action :require_writable_import_accounts!, only: %i[publish revert destroy]
+  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary reread]
+  before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel reread]
+  before_action :require_writable_import_accounts!, only: %i[publish revert destroy reread]
   before_action :reject_guest_family_config_import!, except: %i[index new show summary]
   before_action :require_guest_writable_created_accounts!, only: %i[revert destroy]
   before_action :reject_guest_new_categories_or_tags!, only: :publish
+
+  requires_ai :extract_pdf, only: :reread
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -45,6 +48,12 @@ class ImportsController < ApplicationController
     @import.publish_later
 
     redirect_to import_path(@import), notice: t(".started")
+  rescue Import::EnqueueFailedError
+    redirect_to import_path(@import), alert: t(".enqueue_failed")
+  rescue Import::AlreadyClaimedError
+    # Another publish or a reread got the row lock first; its job is the one
+    # that will publish, so this request must not enqueue a second one.
+    redirect_to import_path(@import), alert: t(".already_claimed")
   rescue Import::MaxRowCountExceededError
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
   end
@@ -55,6 +64,23 @@ class ImportsController < ApplicationController
   # found".
   def summary
     raise ActiveRecord::RecordNotFound unless @import.is_a?(PdfImport)
+  end
+
+  # "Read again as…" on a PDF import: reads the statement another way, before
+  # anything is published.
+  def reread
+    import_params = params[:import]
+    read_as = import_params.is_a?(ActionController::Parameters) ? import_params[:read_as].to_s : ""
+    result = @import.is_a?(PdfImport) && PdfImport::READ_AS.include?(read_as) && @import.reread!(read_as)
+
+    case result
+    when true
+      redirect_to import_path(@import), notice: t("imports.pdf_import.reread.success")
+    when :enqueue_failed
+      redirect_to import_path(@import), alert: t("imports.pdf_import.reread.enqueue_failed")
+    else
+      redirect_to import_path(@import), alert: t("imports.pdf_import.reread.not_allowed")
+    end
   end
 
   def cancel
@@ -192,7 +218,7 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:import_file)
+      params.require(:import).permit(:import_file, :read_as)
     end
 
     def reject_guest_family_config_import!
@@ -251,7 +277,8 @@ class ImportsController < ApplicationController
       return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user)
       return redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte) if file.size > Import::MAX_PDF_SIZE
 
-      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
+      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user,
+                                                 read_as: import_params[:read_as])
       pdf_import.process_with_ai_later
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
     rescue AccountStatement::DuplicateUploadError

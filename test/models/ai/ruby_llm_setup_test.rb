@@ -3,7 +3,7 @@ require "test_helper"
 # RubyLLM is set up as config/initializers/ruby_llm.rb describes.
 class Ai::RubyLlmSetupTest < ActiveSupport::TestCase
   test "the gem is on the 2.x line the plan builds on" do
-    assert Gem::Requirement.new("~> 2.1").satisfied_by?(Gem::Version.new(RubyLLM::VERSION)), RubyLLM::VERSION
+    assert Gem::Requirement.new("~> 2.2").satisfied_by?(Gem::Version.new(RubyLLM::VERSION)), RubyLLM::VERSION
   end
 
   # Sure records usage in llm_usages; RubyLLM's ledger writes a row per attempt only once its

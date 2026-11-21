@@ -20,11 +20,13 @@ class Api::V1::SplitsController < Api::V1::BaseController
   # 15 integer digits. Oversized amounts that cancel out pass split!'s sum
   # check and then overflow the column, which surfaces as a 500.
   AMOUNT_LIMIT = BigDecimal(10)**15
-  before_action :ensure_read_scope, only: [ :show ]
-  before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
+  before_action :ensure_read_scope, only: [ :show, :itemization ]
+  before_action :ensure_write_scope, only: [ :create, :update, :destroy, :itemize ]
+  # Itemizing sends the receipt to the family's LLM provider.
+  before_action :require_receipt_ai, only: [ :itemize ]
   before_action :set_transaction
   before_action :resolve_to_parent
-  before_action :ensure_account_write_permission, only: [ :create, :update, :destroy ]
+  before_action :ensure_account_write_permission, only: [ :create, :update, :destroy, :itemize ]
 
   # GET /api/v1/transactions/:transaction_id/split
   def show
@@ -83,6 +85,19 @@ class Api::V1::SplitsController < Api::V1::BaseController
     render_unprocessable(e.message)
   end
 
+  # Queues a private proposal; the client fetches the result before saving a split.
+  def itemize
+    request = ReceiptItemization.start!(transaction: @transaction, user: current_resource_owner, attachment_id: params[:attachment_id])
+    render_itemization(request, status: :accepted)
+  rescue Transaction::ReceiptItemizer::Error => e
+    render_unprocessable("Could not itemize the receipt", [ e.message ])
+  end
+
+  def itemization
+    request = ReceiptItemization.where(transaction_id: @transaction.id, user: current_resource_owner).find(params[:receipt_itemization_id])
+    render_itemization(request)
+  end
+
   # DELETE /api/v1/transactions/:transaction_id/split
   def destroy
     return render_not_split unless @entry.split_parent?
@@ -98,6 +113,20 @@ class Api::V1::SplitsController < Api::V1::BaseController
   end
 
   private
+    def require_receipt_ai
+      user = current_resource_owner
+      availability = Ai.availability(:extract_receipt, family: user.family, user:)
+      render json: { error: "ai_unavailable", reason: availability.reason }, status: :forbidden unless availability.available?
+    end
+
+    def render_itemization(request, status: :ok)
+      body = { id: request.id, status: request.status,
+        result_url: itemization_api_v1_transaction_split_path(params[:transaction_id], receipt_itemization_id: request.id) }
+      body[:proposal] = request.proposal if request.status == "completed"
+      body[:error] = "receipt_itemization_failed" if request.status == "failed"
+      render json: body, status:
+    end
+
 
     def ensure_read_scope
       authorize_scope!(:read)

@@ -11,19 +11,34 @@ class Ai::CallContextTest < ActiveSupport::TestCase
     )
   end
 
-  test "RubyLLM's usage event carries the family, and the call id" do
+  test "RubyLLM's usage event carries the family, the call id and the job's correlation id" do
     usage = capture_ai_events("usage.ruby_llm") do
-      with_ai_call_context(feature: :bill_setup, model: @model, family: @family) do |call|
-        @call = call
-        Ai::Transport.for(@model.endpoint).send(:probe_chat, @model)
+      Ai::CallContext.job("rule_run:42") do
+        with_ai_call_context(feature: :bill_setup, model: @model, family: @family) do |call|
+          @call = call
+          Ai::Transport.for(@model.endpoint).send(:probe_chat, @model)
+        end
       end
     end.sole.payload
 
     assert_equal @family, usage[:owner]
     assert_equal @call.call_id, usage[:workflow_id]
-    assert_equal({ "feature" => "bill_setup", "call_id" => @call.call_id,
+    assert_equal "rule_run:42", usage[:workflow_parent_id]
+    assert_equal({ "feature" => "bill_setup", "call_id" => @call.call_id, "correlation_id" => "rule_run:42",
                    "family_id" => @family.id.to_s, "endpoint" => "test", "model" => "test-model" },
                  usage[:workflow_metadata].transform_keys(&:to_s))
+  end
+
+  test "a pool thread started inside the call keeps the job as its requests' parent" do
+    usage = capture_ai_events("usage.ruby_llm") do
+      Ai::CallContext.job("rule_run:42") do
+        with_ai_call_context(feature: :categorize, model: @model, family: @family) do
+          Thread.new { Ai::Transport.for(@model.endpoint).send(:probe_chat, @model) }.join
+        end
+      end
+    end.sole.payload
+
+    assert_equal "rule_run:42", usage[:workflow_parent_id]
   end
 
   test "the context is fiber storage, so threads started inside a call inherit it" do
@@ -41,8 +56,7 @@ class Ai::CallContextTest < ActiveSupport::TestCase
       call.call_id
     end
 
-    row = @family.llm_usages.sole
-    assert_equal call_id, row.call_id
+    row = @family.llm_usages.find_by!(call_id: call_id)
     assert_equal "chat", row.operation
   end
 

@@ -1,6 +1,6 @@
 <%
   locked = ENV["CATEGORIZATION_PROVIDER"].present?
-  effective = Current.family.effective_categorization_provider
+  effective = effective_categorization_provider
   jev_active = effective == "jev"
   threshold_locked = ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].present?
   shadow_locked = ENV["CATEGORIZATION_SHADOW_RATE"].present?
@@ -19,9 +19,9 @@
     <% end %>
   </div>
 
-  <%# Scoped to the family, not a global Setting: this decides whose transaction
-      descriptions leave the instance. Mirrors the assistant_type selector. %>
-  <%= styled_form_with model: Current.family,
+  <%# The instance's choice, for every family. Only whoever manages instance
+      settings can save it. %>
+  <%= styled_form_with model: Setting.new,
                        url: settings_hosting_path,
                        method: :patch,
                        class: "space-y-4",
@@ -38,7 +38,7 @@
                       effective
                     ),
                     { label: t(".provider_label") },
-                    { disabled: locked,
+                    { disabled: locked || !local_assigns[:manages_instance_settings],
                       data: { "auto-submit-form-target": "auto" } } %>
   <% end %>
 
@@ -49,8 +49,12 @@
       panel had to explain that a key alone changes nothing. Same shape as the
       external-assistant fields in _assistant_settings. %>
   <% if jev_active %>
+    <% if jev_unreachable_reason %>
+      <p class="text-sm text-warning"><%= t(".unsupported_env_endpoint") %></p>
+    <% end %>
+
     <div class="flex items-center gap-2 text-sm">
-      <% if Provider::Jev.configured? %>
+      <% if jev_configured? %>
         <span class="inline-block w-2 h-2 rounded-full bg-success"></span>
         <span class="text-secondary"><%= t(".jev_configured") %></span>
       <% else %>
@@ -91,8 +95,8 @@
         wrong whenever a gateway is in front of it — the descriptions transit
         that party too. %>
     <%= render DS::Note.new(title: t(".data_retention_heading")) do %>
-      <% if Provider::Jev.effective_proxied? %>
-        <p><%= t(".data_retention_proxied", host: Provider::Jev.effective_host) %></p>
+      <% if jev_effective_proxied? %>
+        <p><%= t(".data_retention_proxied", host: jev_effective_host) %></p>
       <% else %>
         <p><%= t(".data_retention_direct") %></p>
       <% end %>

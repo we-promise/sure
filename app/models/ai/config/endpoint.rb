@@ -5,9 +5,13 @@
 # - vector_store: the endpoint offers OpenAI-style vector stores, which the `embed` route uses.
 # - agent: the endpoint is an external assistant, which serves only `chat`, for families whose
 #   chat mode is external. agent_settings holds its allowed emails, agent id and session key.
+# - json_mode: how chat completions ask for JSON. A route entry can override it. The Responses
+#   API and Anthropic always send the schema.
+# - parallel_requests: how many requests one call may have in flight. Only the Jev transport
+#   fans out; nil uses its preset's default.
 class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :api_key, :extra_headers, :location,
                                          :timeout_seconds, :max_retries, :responses_api, :probe_check, :vector_store,
-                                         :agent, :agent_settings, :exact_base_url)
+                                         :agent, :agent_settings, :json_mode, :parallel_requests, :exact_base_url)
   PROTOCOLS = %i[compatible anthropic jev].freeze
   LOCATIONS = %i[local cloud].freeze
   # What a health probe checks:
@@ -17,24 +21,39 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
   PROBE_CHECKS = %i[models chat].freeze
   # exact_base_url: the base URL is used as written, without the `/v1` Ai::Transport::Http.compatible_base
   # adds, as VectorStore::Embeddable posts `embeddings` straight onto EMBEDDING_URI_BASE.
+  JSON_MODES = %i[auto strict json_object none].freeze
 
   def initialize(name:, protocol:, preset: nil, base_url: nil, api_key: nil, extra_headers: {}, location: :cloud,
                  timeout_seconds: 60, max_retries: 0, responses_api: false, probe_check: :models, vector_store: false,
-                 agent: false, agent_settings: {}, exact_base_url: false)
+                 agent: false, agent_settings: {}, json_mode: :auto, parallel_requests: nil,
+                 exact_base_url: false)
     protocol = protocol.to_sym
     location = location.to_sym
     probe_check = probe_check.to_sym
+    json_mode = json_mode.to_sym
     raise ArgumentError, "unknown protocol #{protocol.inspect}" unless PROTOCOLS.include?(protocol)
     raise ArgumentError, "unknown location #{location.inspect}" unless LOCATIONS.include?(location)
     raise ArgumentError, "unknown probe check #{probe_check.inspect}" unless PROBE_CHECKS.include?(probe_check)
+    raise ArgumentError, "unknown JSON mode #{json_mode.inspect}" unless JSON_MODES.include?(json_mode)
+    parallel_requests = parallel_requests && Integer(parallel_requests)
+    raise ArgumentError, "parallel_requests must be at least 1, got #{parallel_requests}" if parallel_requests&.< 1
 
     super(name: name.to_s, protocol:, preset: preset&.to_sym, base_url: base_url.presence, api_key: api_key.presence,
           extra_headers: extra_headers.to_h.transform_keys(&:to_s).freeze, location:, timeout_seconds: Integer(timeout_seconds),
           max_retries: Integer(max_retries), responses_api: responses_api ? true : false, probe_check:,
           vector_store: vector_store ? true : false, agent: agent ? true : false,
-          agent_settings: agent_settings.to_h.transform_keys(&:to_sym).freeze,
-          exact_base_url: exact_base_url ? true : false)
+          agent_settings: agent_settings.to_h.transform_keys(&:to_sym).freeze, json_mode:,
+          parallel_requests:, exact_base_url: exact_base_url ? true : false)
   end
+
+  # What a provider takes inline as a PDF, by preset. A bigger file is read through its text
+  # layer or page images instead.
+  PDF_LIMITS = {
+    anthropic: { bytes: 32.megabytes, pages: 100 },
+    openai: { bytes: 32.megabytes, pages: 100 }
+  }.freeze
+
+  def pdf_limits = PDF_LIMITS[preset]
 
   def local? = location == :local
   def cloud? = location == :cloud

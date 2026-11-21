@@ -19,12 +19,11 @@ module AiHealth::Probe::SyntheticPdf
     @bytes ||= build.freeze
   end
 
-  # Whether a PDF processor read this statement: a bank statement naming INSTITUTION.
+  # Whether the model read this statement: a bank statement naming INSTITUTION. ReadPdf answers
+  # a hash of its schema, so the check reads its fields.
   def valid_result?(result)
-    result.is_a?(Provider::LlmConcept::PdfProcessingResult) &&
-      result.document_type == "bank_statement" &&
-      result.extracted_data.is_a?(Hash) &&
-      result.extracted_data["institution_name"] == INSTITUTION
+    result.is_a?(Hash) && result[:document_type] == "bank_statement" &&
+      result.dig(:extracted_data, :institution_name) == INSTITUTION
   end
 
   def build

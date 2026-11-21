@@ -1,0 +1,130 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.kilo.ai/api/gateway/v1/responses
+    body:
+      encoding: UTF-8
+      string: '{"model":"~openai/gpt-luna-latest","input":[{"role":"user","content":"CHARGE
+        HISTORY (date amount description):\n- 2026-09-03 15.49 NETFLIX.COM\n- 2026-10-03
+        15.49 NETFLIX.COM\n\nAVAILABLE CATEGORIES: Entertainment"}],"instructions":"You
+        configure recurring-bill records for a personal finance app. Given the dated\ncharge
+        history for one obligation, propose the bill''s configuration as JSON only.\n\nRules:\n-
+        Infer the cadence from the gaps between the dates, never from the row count.\n  frequency
+        is one of: monthly, weekly, biweekly, semimonthly, quarterly, semiannual,
+        annual.\n- amount is the typical recent charge as a positive number; when
+        amounts drift,\n  prefer the most recent ones.\n- day_of_month is the modal
+        charge day (monthly-style cadences only); weekday\n  (0=Sunday) only for weekly/biweekly;
+        month_of_year only for annual.\n- category_name must EXACTLY match one of
+        the provided categories, or null.\n- bill_type: \"subscription\" for digital
+        services and memberships, \"installment\"\n  for finite payment plans, otherwise
+        \"bill\".\n- autopay true only when the history shows automatic-payment markers
+        (ACH, AUTOPAY).\n- Set any field the history cannot support to null. Never
+        guess.\n- confidence is 0 to 1 for the proposal overall; rationale is one
+        short sentence.\n\nOutput JSON only, exactly this shape (no markdown, no explanation):\n{\"name\":
+        ..., \"amount\": ..., \"frequency\": ..., \"day_of_month\": ..., \"weekday\":
+        ...,\n \"month_of_year\": ..., \"category_name\": ..., \"bill_type\": ...,
+        \"autopay\": ...,\n \"confidence\": ..., \"rationale\": ...}\n","stream":false,"store":false,"include":["reasoning.encrypted_content"],"max_output_tokens":1024,"text":{"format":{"type":"json_schema","name":"bill_setup_suggestion","schema":{"type":"object","properties":{"name":{"type":["string","null"]},"amount":{"type":["number","null"]},"frequency":{"type":["string","null"],"enum":["monthly","weekly","biweekly","semimonthly","quarterly","semiannual","annual",null]},"day_of_month":{"type":["integer","null"],"minimum":1,"maximum":31},"weekday":{"type":["integer","null"],"minimum":0,"maximum":6},"month_of_year":{"type":["integer","null"],"minimum":1,"maximum":12},"category_name":{"type":["string","null"]},"bill_type":{"type":["string","null"],"enum":["bill","subscription","installment",null]},"autopay":{"type":["boolean","null"]},"confidence":{"type":["number","null"]},"rationale":{"type":["string","null"]}},"required":["name","amount","frequency","day_of_month","weekday","month_of_year","category_name","bill_type","autopay","confidence","rationale"],"additionalProperties":false},"strict":true}}}'
+    headers:
+      X-Kilocode-Organizationid:
+      - "<KILO_ORG_ID>"
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer <KILO_API_KEY>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Cache-Control:
+      - no-cache, no-transform
+      Content-Security-Policy-Report-Only:
+      - 'default-src ''self''; base-uri ''self''; object-src ''none''; frame-ancestors
+        ''self''; form-action ''self''; script-src ''self'' ''unsafe-inline'' ''wasm-unsafe-eval''
+        https://www.googletagmanager.com https://utt.impactcdn.com https://login.kilo.ai
+        https://login-test.kilo.ai https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://cdn.platform.openai.com/deployments/watchwood/watchwood.js
+        https://widget.usepylon.com https://assets.churnkey.co; connect-src ''self''
+        https://auth.kilo.ai https://us.i.posthog.com https://us-assets.i.posthog.com
+        https://api.stripe.com https://api.openai.com/v1/watchwood/ https://r.stripe.com
+        https://m.stripe.com https://checkout.stripe.com https://utt.impactcdn.com
+        https://cdn.jsdelivr.net https://unpkg.com https://widget.usepylon.com https://assets.churnkey.co
+        https://api.churnkey.co https://*.churnkey.co https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com
+        wss://cloud-agent-next.kilosessions.ai wss://ingest.kilosessions.ai; img-src
+        ''self'' data: blob: https://lh3.googleusercontent.com https://avatars.githubusercontent.com
+        https://secure.gravatar.com https://gravatar.com https://media.licdn.com https://cdn.discordapp.com
+        https://gitlab.com https://*.stripe.com https://www.googletagmanager.com https://utt.impactcdn.com
+        https://widget.usepylon.com https://assets.churnkey.co https://*.churnkey.co
+        https://www.gravatar.com https://openrouter.ai https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com;
+        style-src ''self'' ''unsafe-inline''; font-src ''self'' data:; frame-src ''self''
+        https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://www.youtube.com https://widget.usepylon.com
+        https://assets.churnkey.co https://*.churnkey.co; worker-src ''self'' blob:;
+        media-src ''self'' blob:; manifest-src ''self'''
+      Content-Type:
+      - application/json
+      Cross-Origin-Embedder-Policy-Report-Only:
+      - require-corp
+      Cross-Origin-Opener-Policy:
+      - same-origin
+      Cross-Origin-Resource-Policy:
+      - same-origin
+      Date:
+      - Thu, 12 Nov 2026 11:10:00 GMT
+      Permissions-Policy:
+      - geolocation=(self), camera=(), microphone=()
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Server:
+      - Vercel
+      Set-Cookie:
+      - _vcrr_29a0f54ab1d200c5=dpl_E5WZ2EhqVY1ht53HvMmB4JXcEdBh|0.4797; Path=/; Secure;
+        HttpOnly; SameSite=None
+      - _vcrr_99197b56da7577df=dpl_7g9fgyVjZm2sDWzdv6Szf54uyXDw|0.984; Path=/; Secure;
+        HttpOnly; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Matched-Path:
+      - "/api/v1/[...path]"
+      X-Vercel-Cache:
+      - MISS
+      X-Vercel-Id:
+      - syd1:syd1:syd1::sfo1::f92j6-1794481800350-a44fc00e1de8
+      X-Xss-Protection:
+      - '0'
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: UTF-8
+      string: '{"id":"gen_01M77Q6HD68KTSW8D91VEKV11A","object":"response","created_at":1794481803,"status":"completed","completed_at":1794481803,"incomplete_details":null,"error":null,"output":[{"type":"reasoning","id":"rs_0d637fd09d518b97016af59e894f7c87d2a5075471dac7d9af","summary":[],"encrypted_content":"gAAAAABq9Z6LOeTJc7MKVEG7YRAXdY9wY2OwBkzU4Hy8Ypt-nYRjcOuy_k24GCNGSf2konEifBGqYm8C-Pz9duW1M_9eYZCPueRWhhkPupPzlyLGy-JfA4TiU4l5MBmxDz3PTZG_s3FrlhU_wPPfRZqlDO_5wRsN5UnaSj4Yshp6ECQFqRg748CP6r7Z7fd3gPx4Tnvdc6SAIsY925ebfVoMkn73W2tD7NCJd6twgUal47Tp6YH189PZGa6PEox_G_ozbgNd-gPM-A77ExLONdiw2uUUpxY6hyiet_pdsjGaMxEn4nuw14SzVmggr_lfuRsrPyTn41jUUjeRWRWQ9xcRZcpfM2JHY_AdiO4WyEN_fqfIi80r4lS4Z1IaxT9iVmfqkUPtoo35mojQgRxlfNaLg0RDGpfyZT5M5Pd2UrgfwsMLvMznugc-fanMpYVY-Su23D_mJGllI2-__w7nueGWL3h467TlrdJzyCjWcOJdKDRh2nGRIcjseke-K5ujwzyMblWM9z1xQI5qSq1zHwXtaZEsUFIdcL3QUZ2Fuij4qSPbDAFALJ_RVL77nYnV1LmWgWOwbp4X8hNWEytIVdLNpAAX_58dPON875fVPTjOTiFMoxXM4k3lDBfvElVEJWTFFwz6uvt9xngrD8_WDIh_N3rqPhe2rZxGYuVHlFQdJ0OKjlCdxPzxhy-GizXmcff_rFW-sOEtwt1eYWP-dK0hoeaes1flmJn06cpchP9qDP58bRgd15XrrkB7h453KB9KIQo7vLEqW6RhZxp9vMzh0EsiKeVraudkSM-Spn95jrIe2y5xkG98xIlWNWV0C-b7JyBwTrnvZVkcXyQqXWWX0fLJd0av7WxVep80dSAYkPvvn44UjleKg6yIXRD42Rx3p1TVSHTZjYQEdSwCVu3zioy-Na_5YopXpnWfIkiYLC8nEgQ3uilptVNVGE8R9usSdbNQZUpFmqDbssxngFCPyFRh03xXfYwNV5lMR_zyyGIy1KysagtJP8crXLBnCUpv8scZmqqgq-m7DE46e_TmsMy6w9MNn2OGcT-YHUw35H-g1mIk_i3eAukUIJCzJCp9aSKjGryBCTPJZjrUKSDfyN0SUmI6OQvLn3vRb5hzyeIb76CdcyALa_32FaHsW-AAKxB-YZXkNl2WTPUNwHhF717mrOO5kayxNJyTwZ9GJO--FTPn2sVeH48fmAoWq7Rzngh3fkFvSiBz90PHRdg_99WWh00SFiJVFrHnnl4a49d3lhdksbTn8UZQznvaDEZeFxfq2vvn-GG1bUxYsSlUFKH5aZKg5ZFtd6LYCKapCgqxUWXtd6wKD4EOK8ikoCFT-HaZk5Nc7S36Qicm1BAFpJy67WsYnP2fZSO1ErIdCD7JBEQMNSqNaho1in0QhBbY3BMnJiL9I9lkQfMRkBWfhOO5ehaHjjhoF7YzHebQ-5bCqZF3De7yRsge0GEcSZeUKUwvJA0goDTh9zIdYkyuSyqMNlHzAm6DlPzWCWqUoifHndVXxvP9KQkD39bKNzta8TALPtywH4TOnY8ZL7c7GKieB323wdpDDK5CCl28pBfLyBpZSMzzA7-Y7CU1rFxs_3DG-d5ZdELzQom1DqYDkU8mouv8S-9wIH3Wo_zU__WwM92mfv5nKl0t1XZFbXrsdpEWe7yV9_AWLzIXrEljJSL8CjR5eWK0dqsqubl42G6xf8JoJHUwIO2Zrpre8J-CdGA81-Hw1kX7GBZsDWmik7rCnei4yTVPyvnW_bd4RNjgXar5i2l8s7Kn2odJNyz77AiL4MIX_qegiv1-d_A5qmQxKugZPU2XPnjkYeFtG43mdNcwT90YNfjl2_EQKJaxmpIo4SPPns8ghpYcBIGYMSaQMxfZ0bThVetruPLrF8WyYoxNiZzSfIOFTbwvfoJQQ0jzqfl_NhJIbJ4dWTUns4u5M8rBNam5gve_eLkn2k1flbTKcFyBY2MTrs1DVb701z4_GTBNgknpusz_dIvucTgfiG8ybuFKiyfOi9EP9kp4bni1W2oEoNrhjLXueQ5ynKnDPZ-O802rrT-VSsfM5FLz18sKVxmEx3_2oChF8q_qqu1hBKIcRCA2Pm4IahvorLFO6masOqqExsFv2GI_zLIBFLTfKeOboVv9mEp7lbNj3NT_F8I1Hwxhx2oangIeJ6NbYYLCqc59iWmEnMxBjUNplfgfELNyN7fpizd2LHvT3NZ8FLnh0gFyGB21rOUAgwMoC2Hi6cLkyZZNEU87Iv5w1jNh8C54nwTdu9afdlH7kW4QLvrNP8a672xbMSXxKr69VjEEQIkbe2Wj46z5xblTpKBk17GKCqYCAOfvowpdr8TjwJfc-uSXJT5xQZ3N5Nmj5ThkgIBSy5vVHGeleN_0DabMpySpBGnlp_ex7B56Hs9PJMgv22c25g-19UcCWv-oSNK1YjwcQxXYDgDU_5apU5lqlkpJnolqpV2fWlalFHVnkWoeo1uIBgev485fkul58sfaCgR4aiRtqji8WqvA0Ubu9BYUL0uzAGgA_R_gB4wCsrbPUciBi4EasAU4JrPO0o0COCqzDGfM0NYxrpJR9A_5hrKQrSBdYeraTFYuWAKayWe5ntl3b18qtzIdLzYa7riDjBkNxFQJUeE-6nyrrrBjgQQgSKtP0uacu5ItZFxaG1T3nZkdPFTtqct4k_tNA1EtxLu693TCJE0Jm1EiCH6b3zUphnQxafr8VnXASqdhn2fFUKdHMoLz-VNv2uH16dJiiH08BzBU5vGzGTsJJgN_mqICJhKVbrPGwp3pPFomdFOgJ1-OEgUxXXn82C37B9Hll224SB62QRs4ET-Yqd_6Jh7Nf24WXFMlwV4sWwD_owkaSk_ClbaP9fRjyrD8fVwpBnM8HFKvKXzxvvEBHL6HDA=="},{"type":"message","id":"msg_1794481803245_hhen09kp7p","status":"completed","role":"assistant","content":[{"type":"output_text","text":"{\"name\":\"Netflix\",\"amount\":15.49,\"frequency\":\"monthly\",\"day_of_month\":3,\"weekday\":null,\"month_of_year\":null,\"category_name\":\"Entertainment\",\"bill_type\":\"subscription\",\"autopay\":null,\"confidence\":0.91,\"rationale\":\"Two
+        consecutive charges on the 3rd support a monthly Netflix subscription at $15.49.\"}","annotations":[],"logprobs":[]}],"phase":"final_answer"}],"usage":{"input_tokens":521,"output_tokens":187,"total_tokens":708,"input_tokens_details":{"cached_tokens":0,"cache_write_tokens":0},"output_tokens_details":{"reasoning_tokens":99},"cost":0.000146,"is_byok":false,"cost_details":{"upstream_inference_cost":0.000146}},"model":"openai/gpt-6-luna","instructions":"You
+        configure recurring-bill records for a personal finance app. Given the dated\ncharge
+        history for one obligation, propose the bill''s configuration as JSON only.\n\nRules:\n-
+        Infer the cadence from the gaps between the dates, never from the row count.\n  frequency
+        is one of: monthly, weekly, biweekly, semimonthly, quarterly, semiannual,
+        annual.\n- amount is the typical recent charge as a positive number; when
+        amounts drift,\n  prefer the most recent ones.\n- day_of_month is the modal
+        charge day (monthly-style cadences only); weekday\n  (0=Sunday) only for weekly/biweekly;
+        month_of_year only for annual.\n- category_name must EXACTLY match one of
+        the provided categories, or null.\n- bill_type: \"subscription\" for digital
+        services and memberships, \"installment\"\n  for finite payment plans, otherwise
+        \"bill\".\n- autopay true only when the history shows automatic-payment markers
+        (ACH, AUTOPAY).\n- Set any field the history cannot support to null. Never
+        guess.\n- confidence is 0 to 1 for the proposal overall; rationale is one
+        short sentence.\n\nOutput JSON only, exactly this shape (no markdown, no explanation):\n{\"name\":
+        ..., \"amount\": ..., \"frequency\": ..., \"day_of_month\": ..., \"weekday\":
+        ...,\n \"month_of_year\": ..., \"category_name\": ..., \"bill_type\": ...,
+        \"autopay\": ...,\n \"confidence\": ..., \"rationale\": ...}\n","previous_response_id":null,"temperature":1,"top_p":1,"max_output_tokens":1024,"presence_penalty":0,"frequency_penalty":0,"top_logprobs":0,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"max_tool_calls":null,"text":{"format":{"type":"json_schema","name":"bill_setup_suggestion","schema":{"type":"object","properties":{"name":{"type":["string","null"]},"amount":{"type":["number","null"]},"frequency":{"type":["string","null"],"enum":["monthly","weekly","biweekly","semimonthly","quarterly","semiannual","annual",null]},"day_of_month":{"type":["integer","null"],"minimum":1,"maximum":31},"weekday":{"type":["integer","null"],"minimum":0,"maximum":6},"month_of_year":{"type":["integer","null"],"minimum":1,"maximum":12},"category_name":{"type":["string","null"]},"bill_type":{"type":["string","null"],"enum":["bill","subscription","installment",null]},"autopay":{"type":["boolean","null"]},"confidence":{"type":["number","null"]},"rationale":{"type":["string","null"]}},"required":["name","amount","frequency","day_of_month","weekday","month_of_year","category_name","bill_type","autopay","confidence","rationale"],"additionalProperties":false},"strict":true}},"truncation":"disabled","reasoning":{"summary":"auto"},"store":false,"background":false,"service_tier":"default","metadata":{},"safety_identifier":"43amqyVw3j6pyw01k5oGXRnje58bALy0nanLB/naNFI=","prompt_cache_key":null,"prompt_cache_retention":null}'
+  recorded_at: Thu, 12 Nov 2026 11:10:03 GMT
+recorded_with: VCR 6.3.1

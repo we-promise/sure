@@ -13,9 +13,7 @@ ca:
           subtitle: La IA identifica i enriqueix les dades de transaccions amb informació
             de comerç
           title: Detector de comerços
-        openai_label: OpenAI
         page_title: Prompts d'IA
-        prompt_instructions: Instruccions del prompt
         transaction_categorizer:
           subtitle: La IA categoritza automàticament les teves transaccions segons
             les categories definides
@@ -28,10 +26,7 @@ ca:
           cancel: Cancel·la
           confirm: Confirma
       prompt_field:
-        provider_label: Proveïdor
-        prompt_label: Prompt
         provider_openai: OpenAI
-        provider_anthropic: Anthropic
         reset: Restableix el predeterminat
         reset_confirm_title: Vols restablir el prompt predeterminat?
         reset_confirm_body: Això descartarà el teu prompt personalitzat i restaurarà les instruccions predeterminades integrades.

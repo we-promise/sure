@@ -104,7 +104,7 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
 
     # Its AI job offers the result once it has changed something (RuleRun#complete_job!).
     Family.any_instance.expects(:broadcast_replace_to).never
-    assert_enqueued_jobs 1, only: AutoCategorizeJob do
+    assert_enqueued_jobs 1, only: Ai::GenerationJob do
       ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
     end
   end
@@ -121,7 +121,7 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
     )
 
     RuleRun.expects(:offer_immediate_result).with(@family).once
-    assert_enqueued_jobs 1, only: AutoCategorizeJob do
+    assert_enqueued_jobs 1, only: Ai::GenerationJob do
       ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
     end
     assert_equal [ tag ], @changed.reload.tags

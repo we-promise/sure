@@ -9,22 +9,12 @@ class PdfImportTest < ActiveSupport::TestCase
     @import_with_rows = imports(:pdf_with_rows)
   end
 
-  test "processing without a model that can read statements fails with the router's reason" do
+  test "processing without a model that can read statements is unavailable with the router's reason" do
     use_ai_routes(extract_pdf: %w[embed/nomic-embed-text])
-    Provider::Registry.expects(:preferred_llm_provider).never
 
-    error = assert_raises(Provider::Error) { @import.process_with_ai }
+    error = assert_raises(Ai::Error::Unavailable) { @import.process_with_ai }
 
-    assert_equal Ai::Availability.unavailable(:extract_pdf, :capability_missing).message_for(nil), error.message
-  end
-
-  test "a key cleared after the availability check is the same refusal, not a NoMethodError" do
-    Ai.stubs(:availability).returns(Ai::Availability.available(:extract_pdf))
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
-
-    error = assert_raises(Provider::Error) { @import.process_with_ai }
-
-    assert_equal Ai::Availability.unavailable(:extract_pdf, :not_configured).message_for(nil), error.message
+    assert_equal :capability_missing, error.reason
   end
 
   test "pdf_uploaded? returns false when no file attached" do
@@ -41,12 +31,15 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal statement.filename, import.pdf_filename
   end
 
-  test "ai_processed? returns false when no summary present" do
+  test "ai_processed? returns false before ReadPdf has answered" do
     assert_not @import.ai_processed?
   end
 
-  test "ai_processed? returns true when summary present" do
+  test "ai_processed? returns true once a document type is stored, with or without a summary" do
     assert @processed_import.ai_processed?
+
+    @processed_import.update!(ai_summary: nil)
+    assert @processed_import.reload.ai_processed?, "the summary is optional prose"
   end
 
   test "uploaded? delegates to pdf_uploaded?" do
@@ -139,6 +132,62 @@ class PdfImportTest < ActiveSupport::TestCase
 
     assert_not import.process_with_ai_later
     assert_equal "pending", import.reload.status
+  end
+
+  test "reading again claims the import and keeps the previous reading until the job clears it" do
+    import = @import_with_rows
+    import.stubs(:pdf_uploaded?).returns(true)
+    rows = import.rows_count
+
+    assert_enqueued_with(job: ProcessPdfJob) { assert import.reread!("auto") }
+
+    assert import.reload.importing?
+    assert_equal rows, import.rows_count, "nothing is cleared before the job starts"
+    import.clear_reading!
+    assert_equal 0, import.reload.rows_count
+    assert_not import.ai_processed?
+  end
+
+  test "a reread that can't be queued loses nothing and gives the import back" do
+    import = @import_with_rows
+    import.stubs(:pdf_uploaded?).returns(true)
+    rows = import.rows_count
+    ProcessPdfJob.stubs(:perform_later).raises(StandardError, "queue offline")
+
+    assert_equal :enqueue_failed, import.reread!("auto")
+
+    assert import.reload.pending?
+    assert_equal rows, import.rows_count
+    assert import.ai_processed?
+    assert_nil import.reread_token
+  end
+
+  test "reading again a way this file can't be read changes nothing" do
+    import = @import_with_rows
+    import.stubs(:pdf_uploaded?).returns(true)
+    import.stubs(:pdf_reading).returns(stub(ways: { images: :needs_vision }))
+
+    assert_no_enqueued_jobs(only: ProcessPdfJob) { assert_not import.reread!("images") }
+    assert import.reload.pending?
+  end
+
+  test "a reread and a publish can't both claim the import" do
+    import = @import_with_rows
+    import.stubs(:publishable?).returns(true)
+    import.update!(status: :importing)   # a reread claimed it
+
+    assert_raises(RuntimeError) { import.publish_later }
+  end
+
+  test "a flagged reading that completed without rows can be read again; a published one can't" do
+    import = @processed_import
+    import.update!(status: :complete, extraction_checks: { "passed" => false, "reconciles" => false })
+    assert import.rereadable?
+
+    # The first call saw no entries; one created after it must still close the guard.
+    import.entries.create!(account: accounts(:depository), date: Date.current, name: "Published row",
+                           amount: -1, currency: "USD", entryable: Transaction.new)
+    assert_not import.rereadable?
   end
 
   test "generate_rows_from_extracted_data creates import rows" do
@@ -314,6 +363,16 @@ class PdfImportTest < ActiveSupport::TestCase
 
     assert_not import.valid?
     assert import.errors[:account_statement].present?
+  end
+
+  test "a duplicate upload doesn't change the way a claimed import is being read" do
+    statement = create_pdf_statement
+    import = PdfImport.create_from_statement!(statement:, read_as: "text")
+    import.update!(status: :importing)
+
+    PdfImport.create_from_statement!(statement:, read_as: "images")
+
+    assert_equal "text", import.reload.read_as
   end
 
   private

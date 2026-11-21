@@ -11,7 +11,7 @@ class Ai::RoutesTest < ActiveSupport::TestCase
     assert_equal :embed, Ai::Routes.consent_key(:search_documents)
     assert_equal :detect_merchants, Ai::Routes.consent_key(:enhance_merchants)
     assert_equal :shadow_categorize, Ai::Routes.consent_key(:shadow_categorize)
-    assert_equal %i[chat bill_setup extract_pdf embed categorize detect_merchants], Ai::Routes.consent_keys
+    assert_equal %i[chat bill_setup extract_receipt extract_pdf embed categorize detect_merchants], Ai::Routes.consent_keys
   end
 
   test "a shadow shows under its primary's row; routing through another feature doesn't move a row" do

@@ -30,6 +30,11 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         ```
 
         If account_id is not provided, you should ask the user which account to import to.
+
+        read_as is optional: leave it out (Auto) unless the user asks for a way. If an earlier
+        extraction came out badly, ask the user to delete its draft import first; publishing or
+        reviewing that draft does not allow a second extraction, and read_as alone won't create one
+        while the draft exists.
       INSTRUCTIONS
     end
   end
@@ -49,6 +54,11 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         account_id: {
           type: "string",
           description: "The ID of the account to import transactions into. If not provided, will return available accounts."
+        },
+        read_as: {
+          type: "string",
+          enum: PdfImport::READ_AS,
+          description: "How to read the PDF: auto (the default), pdf, images, ocr or text."
         }
       }
     )
@@ -97,28 +107,29 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     availability = Ai.availability(:extract_pdf, family:, user:)
     return ai_unavailable(availability) unless availability.available?
 
-    # The first provider in extract_pdf's route. Settings can clear the last key between the
-    # availability check and this lookup, so a missing provider is the same refusal
-    # (PdfImport::AiProcessor#route_provider refuses the same way).
-    provider = Provider::Registry.preferred_llm_provider
-    return ai_unavailable(Ai::Availability.unavailable(:extract_pdf, :not_configured)) unless provider
-
-    response = provider.extract_bank_statement(
-      pdf_content: pdf_import.pdf_file_content,
-      model: model_for(provider),
-      family: family
+    # Two live drafts from one statement could both publish overlapping rows as
+    # new transactions. Reuse the waiting draft instead of leaving another one
+    # to publish on top of it.
+    live_draft = family.imports.find_by(
+      type: "TransactionImport", source_pdf_import_id: pdf_import.id, account_id: account.id,
+      status: %w[pending importing complete]
     )
-
-    unless response.success?
-      error_message = response.error&.message || "Unknown extraction error"
+    if live_draft
       return {
         success: false,
-        error: "extraction_failed",
-        message: "Failed to extract transactions: #{error_message}"
+        error: "draft_already_exists",
+        import_id: live_draft.id,
+        message: "This statement already has a draft for that account (import #{live_draft.id}). " \
+                 "Delete that draft first; reviewing or publishing it does not allow a second extraction, " \
+                 "and read_as alone cannot create another draft while it exists.",
+        available_actions: [ "Ask the user to delete draft import #{live_draft.id}, then call this tool again" ]
       }
     end
 
-    result = response.data
+    read_as = params["read_as"].presence_in(PdfImport::READ_AS) || "auto"   # omitted is Auto, as the tool says
+    reading = Ai::PdfReading.new(content: pdf_import.pdf_file_content, filename: pdf_import.pdf_filename, family:, user:)
+    outcome = reading.extract(read_as: read_as.to_sym, start: PdfImport.last_passing_way(account:, model: reading.model&.name))
+    result = Ai::Generations::ExtractBankStatement.statement(outcome.value)
 
     if result[:transactions].blank?
       return {
@@ -131,21 +142,26 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # Create a CSV from extracted transactions
     csv_content = generate_csv(result[:transactions])
 
-    # Create a TransactionImport
-    import = family.imports.create!(
-      type: "TransactionImport",
-      account: account,
-      raw_file_str: csv_content,
-      date_col_label: "date",
-      amount_col_label: "amount",
-      name_col_label: "name",
-      category_col_label: "category",
-      notes_col_label: "notes",
-      date_format: "%Y-%m-%d",
-      signage_convention: "inflows_positive"
-    )
+    # A row-generation failure must roll the draft back too, or a retry meets an empty
+    # draft and can only report draft_already_exists.
+    import = family.imports.transaction do
+      created = family.imports.create!(
+        type: "TransactionImport",
+        account: account,
+        raw_file_str: csv_content,
+        source_pdf_import_id: pdf_import.id,
+        date_col_label: "date",
+        amount_col_label: "amount",
+        name_col_label: "name",
+        category_col_label: "category",
+        notes_col_label: "notes",
+        date_format: "%Y-%m-%d",
+        signage_convention: "inflows_positive"
+      )
 
-    import.generate_rows_from_csv
+      created.generate_rows_from_csv
+      created
+    end
 
     {
       success: true,
@@ -154,9 +170,16 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       transactions_preview: result[:transactions].first(5),
       statement_period: result[:period],
       account_holder: result[:account_holder],
-      message: "Successfully extracted #{result[:transactions].size} transactions. Import created with ID: #{import.id}. Review and publish when ready."
+      read_as: outcome.way.to_s,
+      checks_passed: outcome.passed?,
+      message: "Successfully extracted #{result[:transactions].size} transactions. Import created with ID: #{import.id}. " \
+               "#{check_note(outcome.checks)}" \
+               "Review and publish when ready."
     }
-  rescue Provider::Error, Faraday::Error, Timeout::Error, RuntimeError => e
+  rescue Ai::Error::Unavailable => e
+    # Model-facing and not localized: the assistant words it for the user.
+    { success: false, error: "unavailable", reason: e.reason.to_s, message: "No way to read this PDF is available (#{e.reason})." }
+  rescue Ai::Error::Base, Pdf::PageImages::Error, Timeout::Error, RuntimeError => e
     Rails.logger.error("ImportBankStatement error: #{e.class.name} - #{e.message}")
     Rails.logger.error(e.backtrace.first(10).join("\n"))
     {
@@ -173,6 +196,15 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       { success: false, error: "ai_unavailable", reason: availability.reason.to_s, message: availability.message_for(user) }
     end
 
+    # What the assistant should tell the user about the extraction's checks.
+    def check_note(checks)
+      if checks.passed? then ""
+      elsif checks.failed == [ :balances ]
+        "The statement's balances weren't found, so the rows couldn't be checked; ask the user to review them. "
+      else "The extraction failed its checks, so some rows may be wrong or missing; tell the user. "
+      end
+    end
+
     def generate_csv(transactions)
       CSV.generate do |csv|
         csv << %w[date amount name category notes]
@@ -186,11 +218,5 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
           ]
         end
       end
-    end
-
-    # Only OpenAI takes the OpenAI model setting; other providers (Anthropic)
-    # resolve their own default when given nil.
-    def model_for(provider)
-      Provider::Openai.effective_model if provider.is_a?(Provider::Openai)
     end
 end

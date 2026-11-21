@@ -11,6 +11,17 @@ module Ai::Error
     end
   end
 
+  # Raised by `call!` on a feature that resolves unavailable.
+  class Unavailable < Base
+    attr_reader :reason, :code
+
+    def initialize(reason, code: nil)
+      @reason = reason
+      @code = code
+      super("AI unavailable: #{reason}")
+    end
+  end
+
   Cancelled      = Class.new(Base)
   Unreachable    = Class.new(Base)   # connection refused, DNS, TLS: no response came back
   Timeout        = Class.new(Base)
@@ -21,7 +32,10 @@ module Ai::Error
   ModelMissing   = Class.new(Base)   # the endpoint doesn't have the model
   ContextTooLong = Class.new(Base)   # 400 saying the input is too long
   InvalidOutput  = Class.new(Base)   # parse or schema failure after the transport's fallbacks
+  OutputCut      = Class.new(ContextTooLong)   # the answer stopped at the output limit: split the batch
   Refused        = Class.new(Base)   # any other 4xx: not retried anywhere
+  # The model can't take this input (an image to a model without vision): the next route may.
+  UnsupportedInput = Class.new(Refused)
 
   # Errors a transport retries itself, up to the endpoint's max_retries.
   RETRYABLE = [ RateLimited, Upstream, Timeout ].freeze
@@ -43,6 +57,11 @@ module Ai::Error
   # Ollama: 404 "model 'x' not found". OpenAI: 404 model_not_found, "The model `x` does not exist".
   MODEL_MISSING = [ /model_not_found/i, /model\b.{0,120}\bnot found/im, /model\b.{0,120}\bdoes not exist/im ].freeze
 
+  # llama.cpp and Ollama: 500 "image input is not supported" from a model without a vision
+  # projector. The model can't do it, so it's a refusal, not an outage to retry or mark down; the
+  # next route is still tried (Ai::Generation), as it may have vision.
+  UNSUPPORTED_INPUT = [ /image input is not supported/i ].freeze
+
   module_function
 
   def for_status(status, message = nil, body: nil)
@@ -59,7 +78,12 @@ module Ai::Error
       elsif matches?(text, NO_CREDIT) then NoCredit
       else Refused
       end
-    when 500..599 then Upstream
+    when 500..599
+      # Only the provider's own message says the model refused an image. A client gem's
+      # `message`, and a gateway's other fields, can quote an earlier refusal from a diagnostic;
+      # neither may turn a retryable 503 into a refusal.
+      message_text = provider_message(body) || (body.nil? ? message : nil)
+      matches?(message_text.to_s, UNSUPPORTED_INPUT) ? UnsupportedInput : Upstream
     else Refused
     end
   end
@@ -101,5 +125,16 @@ module Ai::Error
   end
 
   def matches?(text, patterns) = patterns.any? { text.match?(_1) }
-  private_class_method :status_and_body, :matches?
+
+  # The provider's `error.message`, when the body is a JSON object. Not the whole body: a
+  # gateway may put an earlier provider message in another field as a diagnostic.
+  def provider_message(body)
+    parsed = body.is_a?(String) ? (JSON.parse(body) rescue nil) : body
+    error = parsed.is_a?(Hash) ? parsed["error"] || parsed[:error] : nil
+    case error
+    when Hash then error["message"] || error[:message]
+    when String then error
+    end
+  end
+  private_class_method :status_and_body, :matches?, :provider_message
 end

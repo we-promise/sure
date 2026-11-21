@@ -9,10 +9,12 @@ class Settings::AiPromptsController < ApplicationController
       [ t("breadcrumbs.ai_prompts"), nil ]
     ]
     @family ||= Current.family
+    @dropped_overrides = @family.dropped_ai_prompt_overrides
   end
 
   def update
     Current.family.update!(prompt_params)
+    Current.family.clear_dropped_ai_prompt_overrides
 
     redirect_to settings_ai_prompts_path, notice: t(".success")
   rescue ActiveRecord::RecordInvalid => e

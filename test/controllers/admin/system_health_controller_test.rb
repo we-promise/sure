@@ -266,7 +266,10 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
         password: "uri-secret",
         query: "api_key=query-secret"
       ),
-      "OPENAI_MODEL" => "qwen3:8b"
+      "OPENAI_MODEL" => "qwen3:8b",
+      # A custom endpoint gets no vector store until VECTOR_STORE_PROVIDER
+      # names one; opting into OpenAI's keeps the pairing warning exercised.
+      "VECTOR_STORE_PROVIDER" => "openai"
     ) do
       AiHealth::Probe.any_instance.stubs(:openai_vector_store).returns(
         probe_result(:failing, failure_code: :request_failed, http_status: 404)

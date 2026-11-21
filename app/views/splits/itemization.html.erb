@@ -1,0 +1,11 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("splits.new.fill_from_receipt")) %>
+  <% dialog.with_body do %>
+    <%= turbo_stream_from @receipt_itemization %>
+    <div data-controller="polling"
+         data-polling-url-value="<%= new_transaction_split_path(@entry, receipt_itemization_id: @receipt_itemization.id) %>"
+         data-polling-frame-id-value="modal">
+      <%= render DS::Alert.new(message: t("splits.itemize.pending"), live: :status) %>
+    </div>
+  <% end %>
+<% end %>

@@ -3,13 +3,20 @@
 <%= t(".intro", product: product_name) %>
 
 <%= t(".document_type_label") %>
-<%= @pdf_import.document_type ? t("imports.document_types.#{@pdf_import.document_type}") : t("imports.document_types.unknown") %>
+<%= @document_type ? t("imports.document_types.#{@document_type}") : t("imports.document_types.unknown") %>
 
 <%= t(".summary_label") %>
-<%= @pdf_import.ai_summary %>
+<%= @summary %>
 
-<% if @pdf_import.document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
+<% if @extractable %>
 <%= t(".transactions_note") %>
+<% if @failed_checks == %w[balances] %>
+
+<%= t(".unchecked_note") %>
+<% elsif @failed_checks.any? %>
+
+<%= t(".review_flag_note") %>
+<% end %>
 <% else %>
 <%= t(".document_stored_note") %>
 <% end %>
@@ -17,7 +24,7 @@
 <%= t(".next_steps_label") %>
 <%= t(".next_steps_intro") %>
 
-<% if @pdf_import.document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
+<% if @extractable %>
 - <%= t(".option_extract_transactions") %>
 <% end %>
 - <%= t(".option_keep_reference") %>

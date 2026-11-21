@@ -24,6 +24,25 @@ class Ai::ErrorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a server without a vision projector refusing images is UnsupportedInput, a refusal, not an outage" do
+    message = "image input is not supported - hint: if this is unexpected, you may need to provide the mmproj"   # llama.cpp, Ollama
+
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, message)
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { "error" => { "code" => 500, "message" => message } })
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { "error" => { "message" => message } }.to_json)
+    # Some servers put the message directly under "error" rather than in an object.
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { "error" => message })
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(500, nil, body: { error: message }.to_json)
+    assert_operator Ai::Error::UnsupportedInput, :<, Ai::Error::Refused
+  end
+
+  test "a gateway diagnostic quoting an earlier image refusal doesn't make a 5xx a refusal" do
+    body = { error: { message: "Service unavailable" }, detail: "earlier: image input is not supported" }
+
+    assert_equal Ai::Error::Upstream, Ai::Error.for_status(503, "the server responded with status 503", body:)
+    assert_equal Ai::Error::Upstream, Ai::Error.for_status(503, "the server responded with status 503", body: body.to_json)
+  end
+
   test "a spent balance is NoCredit, however the provider says it" do
     assert_equal Ai::Error::NoCredit, Ai::Error.for_status(400, "Your credit balance is too low to access the Anthropic API")
     assert_equal Ai::Error::NoCredit, Ai::Error.for_status(429, "You exceeded your current quota", body: { "error" => { "code" => "insufficient_quota" } })
@@ -59,5 +78,12 @@ class Ai::ErrorTest < ActiveSupport::TestCase
     assert_instance_of Ai::Error::InvalidOutput, Ai::Error.from_exception(garbled)
 
     assert_nil Ai::Error.from_exception(RuntimeError.new("ours"))
+  end
+
+  test "Unavailable carries its reason" do
+    error = Ai::Error::Unavailable.new(:not_configured)
+
+    assert_equal :not_configured, error.reason
+    assert_equal "AI unavailable: not_configured", error.message
   end
 end

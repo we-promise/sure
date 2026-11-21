@@ -105,6 +105,39 @@ class Rule::ActionExecutor
     end
 
   private
+    # For an AI action: one Ai::GenerationJob for every transaction in `scope`, which sends one batch
+    # sized for the model and queues the rest behind other families' work. The run awaits the
+    # transactions until the job counts them down, and hears back once (RuleRun#complete_job!). The
+    # block queues the job and returns whether it was queued; when it wasn't, or raised, the
+    # transactions stop waiting and the error is raised.
+    def enqueue_ai_job(scope, rule_run:)
+      transactions = scope.select(:id).to_a   # one read, so the count matches what's queued
+      count = transactions.size
+      Rails.logger.info("Scheduling #{key} for #{count} transactions")
+      rule_run&.await_ai!(count)
+
+      queued = begin
+        yield(transactions)
+      rescue StandardError
+        release_ai_wait(rule_run, count)
+        raise
+      end
+      unless queued
+        release_ai_wait(rule_run, count)
+        raise ActiveJob::EnqueueError, "the AI job couldn't be queued"
+      end
+
+      { async: true, modified_count: count, jobs_count: 1 }
+    end
+
+    # No job will count these down. A failure here is logged, so it doesn't replace the error that
+    # stopped the job being queued.
+    def release_ai_wait(rule_run, count)
+      rule_run&.ai_handled!(handled: count)
+    rescue StandardError => error
+      Rails.logger.error("[#{self.class.name}] couldn't release #{count} awaited transactions: #{error.class}: #{error.message}")
+    end
+
     attr_reader :rule
 
     def family

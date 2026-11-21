@@ -1,0 +1,105 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://opencode.ai/zen/v1/systemone
+    body:
+      encoding: UTF-8
+      string: '{"model":"jev-1.13-free","state":{"description":"STARBUCKS 1234 SEATTLE","classification":"expense","merchant":"Starbucks","amount":4.5},"questions":{"category":{"type":"choice","instructions":"Which
+        spending category best fits this bank transaction? Pick `__uncategorized__`
+        only if no category is a reasonable fit.","criteria":{"Food & Drink":"Food
+        & Drink","Coffee Shops":"Subcategory of Food & Drink","Salary":"Salary","Transportation":"Transportation","__uncategorized__":"No
+        listed category is a reasonable fit"}}}}'
+    headers:
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer public
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Thu, 12 Nov 2026 11:15:23 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cf-Placement:
+      - remote-IAD
+      Server-Timing:
+      - gateway;dur=36, upstream;dur=39, total;dur=75
+      X-Opencode-Log-Id:
+      - 01a1cf78-30e2-7e26-aa9f-ae11b63820ca
+      X-Zen-Model:
+      - jev-1.13-free
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - a5951e53d85ed725-BNE
+    body:
+      encoding: ASCII-8BIT
+      string: '{"model":"jev-1.13-free","answers":{"category":{"type":"choice","choice":"Coffee
+        Shops","confidence":0.95,"probabilities":{"Food & Drink":0.04,"Coffee Shops":0.96,"Salary":0,"Transportation":0,"__uncategorized__":0}}},"usage":{"input_tokens":434,"output_tokens":63,"cost":0,"opencode":{"billing_source":"free","list_cost":0,"tokens":{"input":434,"output":63,"reasoning":0,"cache_read":0,"cache_write_5m":0,"cache_write_1h":0}}}}'
+  recorded_at: Thu, 12 Nov 2026 11:15:23 GMT
+- request:
+    method: post
+    uri: https://opencode.ai/zen/v1/systemone
+    body:
+      encoding: UTF-8
+      string: '{"model":"jev-1.13-free","state":{"description":"ACME CORP PAYROLL","classification":"income","amount":2500.0},"questions":{"category":{"type":"choice","instructions":"Which
+        spending category best fits this bank transaction? Pick `__uncategorized__`
+        only if no category is a reasonable fit.","criteria":{"Food & Drink":"Food
+        & Drink","Coffee Shops":"Subcategory of Food & Drink","Salary":"Salary","Transportation":"Transportation","__uncategorized__":"No
+        listed category is a reasonable fit"}}}}'
+    headers:
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer public
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Thu, 12 Nov 2026 11:15:23 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cf-Placement:
+      - remote-IAD
+      Server-Timing:
+      - gateway;dur=36, upstream;dur=56, total;dur=93
+      X-Opencode-Log-Id:
+      - 01a1cf78-30ee-7042-a3fe-283aec1b7463
+      X-Zen-Model:
+      - jev-1.13-free
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - a5951e53e8c55e8e-BNE
+    body:
+      encoding: ASCII-8BIT
+      string: '{"model":"jev-1.13-free","answers":{"category":{"type":"choice","choice":"Salary","confidence":1,"probabilities":{"Food
+        & Drink":0,"Coffee Shops":0,"Salary":1,"Transportation":0,"__uncategorized__":0}}},"usage":{"input_tokens":419,"output_tokens":62,"cost":0,"opencode":{"billing_source":"free","list_cost":0,"tokens":{"input":419,"output":62,"reasoning":0,"cache_read":0,"cache_write_5m":0,"cache_write_1h":0}}}}'
+  recorded_at: Thu, 12 Nov 2026 11:15:23 GMT
+recorded_with: VCR 6.3.1
