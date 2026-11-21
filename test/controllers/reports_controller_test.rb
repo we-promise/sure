@@ -1613,6 +1613,44 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-section-key=biggest_expenses] tbody tr:first-child", text: /\$1,200\.00/
   end
 
+  # The income statement leaves pending and future-dated transactions out, so
+  # they must not take a slot from a settled expense either.
+  test "biggest expenses leaves out a pending transaction" do
+    settled = seed_five_settled_expenses
+    create_transaction(name: "Card hold", amount: 500, date: BIGGEST_MONTH + 3)
+      .entryable.update!(extra: { "simplefin" => { "pending" => true } })
+    create_transaction(name: "Settled card charge", amount: 450, date: BIGGEST_MONTH + 3)
+      .entryable.update!(extra: { "simplefin" => { "pending" => false } })
+
+    get biggest_expenses_reports_path
+
+    assert_equal [ "Settled card charge", *settled.first(4) ], biggest_expense_names
+  end
+
+  test "biggest expenses leaves out a future-dated transaction and keeps one dated today" do
+    travel_to BIGGEST_MONTH + 14 do
+      settled = seed_five_settled_expenses
+      create_transaction(name: "Scheduled payment", amount: 400, date: Date.current + 1)
+      create_transaction(name: "Paid today", amount: 300, date: Date.current)
+
+      get biggest_expenses_reports_path
+
+      assert_equal [ "Paid today", *settled.first(4) ], biggest_expense_names
+    end
+  end
+
+  test "biggest expenses leaves out a pending foreign-currency transaction" do
+    eur = @family.accounts.create!(owner: @user, name: "Paris", balance: 0, currency: "EUR", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: BIGGEST_MONTH + 2, rate: 2)
+    settled = seed_five_settled_expenses
+    create_transaction(account: eur, name: "Paris hotel hold", amount: 400, currency: "EUR", date: BIGGEST_MONTH + 2)
+      .entryable.update!(extra: { "simplefin" => { "pending" => true } })
+
+    get biggest_expenses_reports_path
+
+    assert_equal settled, biggest_expense_names
+  end
+
   test "biggest expenses shows as many rows as the user chose" do
     12.times { |i| create_transaction(name: "Expense #{i}", amount: 100 + i, date: BIGGEST_MONTH + 1) }
 
@@ -1679,6 +1717,16 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     def biggest_expense_names
       css_select("[data-section-key=biggest_expenses] tbody tr td:first-child a").map { |node| node.text.strip }
+    end
+
+    # Five settled expenses in BIGGEST_MONTH with the list limited to five, so
+    # any other row that gets in pushes a settled one out. Returns their names,
+    # largest first.
+    def seed_five_settled_expenses
+      @user.update_columns(preferences: (@user.preferences || {}).merge("reports_biggest_expenses_limit" => 5))
+      [ 120, 110, 100, 90, 80 ].map do |amount|
+        create_transaction(name: "Settled #{amount}", amount: amount, date: BIGGEST_MONTH + 1).name
+      end
     end
 
     # Travel, Work and Other tags on a month of their own, away from the
