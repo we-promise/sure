@@ -10796,6 +10796,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '403':
+          description: account is shared with you without full control
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: validation error - missing required fields, malformed tag_ids,
             or a tag, category or merchant id the family cannot use
