@@ -4,8 +4,8 @@
 #
 # Ai::Generations::CategorizeTransactions answers on an LLM, and its judgement
 # (Ai::Judgements::CategorizeTransaction) on Jev, in one shape. Answers from a model with
-# `calibrated_confidence` (TypeSafe's own Jev API) can be withheld by the family's threshold; the others
-# always apply. Shadow runs are the generation's own (Ai::ShadowJob).
+# `calibrated_confidence` (TypeSafe's Jev, directly or through OpenRouter) can be withheld by the
+# family's threshold; the others always apply. Shadow runs are the generation's own (Ai::ShadowJob).
 class Family::AutoCategorizer
   include Ai::Requester
   include RuleRun::AiProgress
@@ -135,7 +135,7 @@ class Family::AutoCategorizer
       DebugLogEntry.capture(
         category: "auto_categorization", level: "error", message: "Jev is misconfigured; falling back to the LLM provider",
         source: self.class.name, family:, provider: "jev",
-        metadata: { endpoint: Ai::LegacyEnvConfig::Jev.redacted_endpoint(endpoint), reason:,
+        metadata: { endpoint: Ai::LegacyEnvConfig::Jev.endpoint_origin(endpoint), reason:,
                     detail: Ai::LegacyEnvConfig::Jev::UNSUPPORTED.fetch(reason) }
       )
     end

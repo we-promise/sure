@@ -178,7 +178,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   test "the Anthropic models probe takes its proxy from Sure's resolver, as the calls it checks do" do
     url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
     Ai::Transport::Http.stubs(:proxy_for).returns(nil)
-    Ai::Transport::Http.expects(:proxy_for).with(url).returns("http://proxy.example.test:3128").at_least_once
+    Ai::Transport::Http.expects(:proxy_for).with(url, any_parameters).returns("http://proxy.example.test:3128").at_least_once
     stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-sonnet-4-6" }.to_json)
 
     result = @probe.llm(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "anthropic-token", model: "claude-sonnet-4-6")

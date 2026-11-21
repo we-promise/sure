@@ -1,7 +1,7 @@
 require "test_helper"
 
 # The `embed` half of the transport contract: what the compatible transport
-# sends, the vector checks RubyLLM 2.1.1 doesn't make, error mapping, the `embed.ai` event and
+# sends, the vector checks on top of RubyLLM's own, error mapping, the `embed.ai` event and
 # usage rows; and Ai::Embeddings on the `embed` route. Stubbed through WebMock.
 class AiTransportEmbedTest < ActiveSupport::TestCase
   URL = "http://embed.local:8081/v1/embeddings".freeze
@@ -15,11 +15,28 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
   test "sends today's request, the model and the texts, and returns a vector per text" do
     bodies = stub_embeddings(rows([ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ]))
 
-    response = embed(%w[first second], task_type: "RETRIEVAL_DOCUMENT")
+    response = embed(%w[first second])
 
     assert_equal({ "model" => "nomic-embed-text", "input" => %w[first second] }, bodies.first)
     assert_equal [ [ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ] ], response.vectors
     assert_equal 7, response.usage.input_tokens
+  end
+
+  test "embeddings follow the returned index and reject a bad permutation" do
+    reordered = rows([ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ])
+    reordered[:data].reverse!
+    stub_embeddings(reordered)
+
+    assert_equal [ [ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ] ], embed(%w[first second]).vectors,
+                 "the first text keeps the vector the server indexed 0"
+
+    WebMock.reset!
+    invalid = rows([ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ])
+    invalid[:data].first[:index] = 2
+    stub_embeddings(invalid)
+
+    error = assert_raises(Ai::Error::InvalidOutput) { embed(%w[first second]) }
+    assert_match(/Invalid or duplicate embedding record positions/, error.message)
   end
 
   test "a single text still comes back as a list of one vector" do
@@ -28,17 +45,29 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     assert_equal [ [ 0.1, 0.2, 0.3 ] ], embed([ "only" ]).vectors
   end
 
-  test "fewer vectors than texts is InvalidOutput, which RubyLLM 2.1.1 doesn't check (#1269)" do
+  test "fewer vectors than texts is InvalidOutput, which RubyLLM raises over the 200" do
     stub_embeddings(rows([ 0.1, 0.2, 0.3 ]))
 
     error = assert_raises(Ai::Error::InvalidOutput) { embed(%w[first second]) }
-    assert_match(/expected 2 vectors, got 1/, error.message)
+    assert_match(/Expected 2 embeddings, got 1/, error.message)
   end
 
   test "a vector of the wrong size is InvalidOutput" do
     stub_embeddings(rows([ 0.1, 0.2 ]))
 
     assert_raises(Ai::Error::InvalidOutput) { embed([ "only" ]) }
+  end
+
+  test "a single-text probe with extra vectors is InvalidOutput" do
+    # RubyLLM skips its own count check when the input is a string, so this guard is the only
+    # thing stopping an extra vector from being treated as the probe's answer.
+    stub_embeddings(rows([ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ]))
+
+    endpoint = ai_endpoint(name: "embed", base_url: "http://embed.local:8081/v1", location: :local)
+    model = ai_model(name: "nomic-embed-text", endpoint:, capabilities: %i[embedding], embedding_dimensions: 3)
+
+    error = assert_raises(Ai::Error::InvalidOutput) { Ai::Transport.for(endpoint).probe(model, :embedding) }
+    assert_match(/expected 1 vectors, got 2/, error.message)
   end
 
   test "maps a 401 and retries a 503" do
@@ -83,7 +112,6 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     assert_equal 768, query.size
     assert_equal [ 50, 1, 1 ], requests.map { _1.texts.size }
     assert_equal %i[embed embed search_documents], requests.map(&:feature)
-    assert_equal %w[RETRIEVAL_DOCUMENT RETRIEVAL_DOCUMENT RETRIEVAL_QUERY], requests.map(&:task_type)
     assert_equal [ "nomic-embed-text" ], requests.map { _1.model.name }.uniq
   end
 
@@ -115,10 +143,10 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
   end
 
   private
-    def embed(texts, task_type: nil, family: nil, max_retries: 0)
+    def embed(texts, family: nil, max_retries: 0)
       endpoint = ai_endpoint(name: "embed", base_url: "http://embed.local:8081/v1", location: :local, max_retries:)
       model = ai_model(name: "nomic-embed-text", endpoint:, capabilities: %i[embedding], embedding_dimensions: 3)
-      request = Ai::Transport::Base::EmbedRequest.new(feature: :embed, family:, model:, texts:, task_type:)
+      request = Ai::Transport::Base::EmbedRequest.new(feature: :embed, family:, model:, texts:)
       Ai::Transport.for(endpoint).embed(request)
     end
 

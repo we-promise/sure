@@ -36,8 +36,8 @@ class Ai::Judgements::CategorizeTransaction < Ai::Judgement
   end
 
   private
-    # Categories carry no description, so the hint comes from the hierarchy; nil means the name
-    # speaks for itself.
+    # Every option has a description, as OpenRouter's decisions gateway refuses a null one: a
+    # subcategory names its parent, and a top-level category its own name.
     def options
       if @categories.size >= MAX_OPTIONS
         raise Ai::Error::Refused, "too many categories for one Choice question: at most #{MAX_OPTIONS - 1} plus the opt-out"
@@ -46,7 +46,7 @@ class Ai::Judgements::CategorizeTransaction < Ai::Judgement
       by_id = @categories.index_by { _1[:id].to_s }
       @categories.each_with_object({}) do |category, options|
         parent = by_id[category[:parent_id].to_s]
-        options[category[:name].to_s] = parent ? "Subcategory of #{parent[:name]}" : nil
+        options[category[:name].to_s] = parent ? "Subcategory of #{parent[:name]}" : category[:name].to_s
       end.merge(UNCATEGORIZED => "No listed category is a reasonable fit")
     end
 

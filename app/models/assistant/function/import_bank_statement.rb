@@ -31,8 +31,10 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
 
         If account_id is not provided, you should ask the user which account to import to.
 
-        read_as is optional: leave it out (Auto) unless the user asks for a way, or a statement came
-        out badly and should be read again another way (pdf, images, ocr or text).
+        read_as is optional: leave it out (Auto) unless the user asks for a way. If an earlier
+        extraction came out badly, a second one needs its import gone first: the tool's
+        draft_already_exists answer says what the user must do (delete it, or revert a published one
+        and then delete it).
       INSTRUCTIONS
     end
   end
@@ -110,18 +112,8 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # Two live drafts from one statement could both publish overlapping rows as
     # new transactions. Reuse the waiting draft instead of leaving another one
     # to publish on top of it.
-    live_draft = family.imports.find_by(
-      type: "TransactionImport", source_pdf_import_id: pdf_import.id, account_id: account.id,
-      status: %w[pending importing complete]
-    )
-    if live_draft
-      return {
-        success: false,
-        error: "draft_already_exists",
-        import_id: live_draft.id,
-        message: "This statement already has a draft for that account (import #{live_draft.id}). " \
-                 "Review or publish that draft before extracting it again."
-      }
+    if (draft = live_draft(pdf_import, account))
+      return draft_exists(draft)
     end
 
     read_as = params["read_as"].presence_in(PdfImport::READ_AS) || "auto"   # omitted is Auto, as the tool says
@@ -141,8 +133,13 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     csv_content = generate_csv(result[:transactions])
 
     # A row-generation failure must roll the draft back too, or a retry meets an empty
-    # draft and can only report draft_already_exists.
-    import = family.imports.transaction do
+    # draft and can only report draft_already_exists. The draft is checked again under the source
+    # import's lock: another call may have created one while this one extracted.
+    import = pdf_import.with_lock do
+      if (draft = live_draft(pdf_import, account))
+        return draft_exists(draft)
+      end
+
       created = family.imports.create!(
         type: "TransactionImport",
         account: account,
@@ -204,6 +201,33 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         "The statement's balances weren't found, so the rows couldn't be checked; ask the user to review them. "
       else "The extraction failed its checks, so some rows may be wrong or missing; tell the user. "
       end
+    end
+
+    # A draft that still waits, runs or published rows from this statement for this account.
+    def live_draft(pdf_import, account)
+      family.imports.where(type: "TransactionImport", source_pdf_import_id: pdf_import.id, account_id: account.id)
+            .where("status IN (?) OR EXISTS (SELECT 1 FROM entries WHERE entries.import_id = imports.id)",
+                   %w[pending importing complete reverting revert_failed])
+            .first
+    end
+
+    # What clears the guard: deleting the draft, after reverting it if it published anything.
+    # Both need write access to the account.
+    def draft_exists(draft)
+      step = if draft.complete? || draft.entries.exists?
+        "revert import #{draft.id} on the imports page, which removes the transactions it published, then delete it"
+      else
+        "delete draft import #{draft.id}"
+      end
+      {
+        success: false,
+        error: "draft_already_exists",
+        import_id: draft.id,
+        message: "This statement already has an import for that account (import #{draft.id}). To extract it again, " \
+                 "the user must #{step}; that needs write access to the account. Reviewing or publishing it does " \
+                 "not allow a second extraction, and read_as alone cannot create another while it exists.",
+        available_actions: [ "Ask the user to #{step}, then call this tool again" ]
+      }
     end
 
     def generate_csv(transactions)

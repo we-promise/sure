@@ -153,12 +153,6 @@ class VectorStore::Pgvector < VectorStore::Base
 
   private
 
-    # Provisions the chunks table on first use, mirroring the
-    # CreateVectorStoreChunks migration. Migrations cover db:migrate
-    # upgrades, but fresh installs go through db:prepare → schema:load
-    # (bin/docker-entrypoint), which marks conditional migrations as applied
-    # without running them — and the table can't live in schema.rb because it
-    # requires the vector extension. Idempotent; memoized per instance.
     # The chunks table's column fixes the size; a model that returns another one would only fail in
     # PostgreSQL, with nothing saying why.
     def check_dimensions!(vector)
@@ -175,6 +169,12 @@ class VectorStore::Pgvector < VectorStore::Base
       SQL
     end
 
+    # Provisions the chunks table on first use, mirroring the
+    # CreateVectorStoreChunks migration. Migrations cover db:migrate
+    # upgrades, but fresh installs go through db:prepare → schema:load
+    # (bin/docker-entrypoint), which marks conditional migrations as applied
+    # without running them — and the table can't live in schema.rb because it
+    # requires the vector extension. Idempotent; memoized per instance.
     def ensure_schema!
       return if @schema_ensured
       if connection.table_exists?(TABLE_NAME)

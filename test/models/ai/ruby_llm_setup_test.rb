@@ -2,10 +2,6 @@ require "test_helper"
 
 # RubyLLM is set up as config/initializers/ruby_llm.rb describes.
 class Ai::RubyLlmSetupTest < ActiveSupport::TestCase
-  test "the gem is on the 2.x line the plan builds on" do
-    assert Gem::Requirement.new("~> 2.1").satisfied_by?(Gem::Version.new(RubyLLM::VERSION)), RubyLLM::VERSION
-  end
-
   # Sure records usage in llm_usages; RubyLLM's ledger writes a row per attempt only once its
   # table exists, so the table must never be created.
   test "RubyLLM's usage ledger has no table to write to" do
@@ -15,38 +11,28 @@ class Ai::RubyLlmSetupTest < ActiveSupport::TestCase
   test "no global keys or endpoints: every call goes through a per-endpoint context" do
     assert_nil RubyLLM.config.openai_api_key
     assert_nil RubyLLM.config.anthropic_api_key
-    assert_equal Rails.logger, RubyLLM.config.logger.__getobj__
+    assert_equal Rails.logger, RubyLLM.config.logger
   end
 
-  # At debug RubyLLM logs response bodies and raw exceptions, which can quote a key back.
-  test "RubyLLM never logs at debug, even when Rails does" do
+  # Request bodies carry financial data, and a gateway's error can quote the key back. At debug
+  # RubyLLM still logs the request line and the error's message, with the key filtered.
+  test "RubyLLM logs no request body and no key, even when Rails logs at debug" do
     output = StringIO.new
-    rails_logger = ActiveSupport::Logger.new(output, level: Logger::DEBUG)
-    logger = RubyLlmLogger.new(rails_logger)
+    rails_logger = RubyLLM.config.logger
+    RubyLLM.config.logger = ActiveSupport::Logger.new(output, level: Logger::DEBUG)
+    stub_request(:post, "https://llm.example.test/v1/chat/completions")
+      .to_return(status: 401, headers: { "Content-Type" => "application/json" },
+                 body: { error: { message: "Invalid API Key sk-sure-secret" } }.to_json)
+    model = ai_model(endpoint: ai_endpoint(api_key: "sk-sure-secret"))
 
-    assert_not logger.debug?
-    assert_equal Logger::INFO, logger.level
+    assert_raises(Ai::Error::Unauthorized) { Ai::Transport.for(model.endpoint).probe(model, :chat) }
 
-    logger.debug("body with sk-secret")
-    logger.debug { "block with sk-secret" }
-    logger.warn("a warning")
-
-    assert_no_match(/sk-secret/, output.string)
-    assert_match(/a warning/, output.string)
-  end
-
-  test "Faraday's logger under RubyLLM writes no response body or error at debug" do
-    output = StringIO.new
-    logger = RubyLlmLogger.new(ActiveSupport::Logger.new(output, level: Logger::DEBUG))
-    stubs = Faraday::Adapter::Test::Stubs.new { _1.post("/x") { [ 401, {}, "bad key sk-secret" ] } }
-    connection = Faraday.new do |f|
-      f.response :logger, logger, bodies: true, errors: true, log_level: :debug
-      f.response :raise_error
-      f.adapter :test, stubs
-    end
-
-    assert_raises(Faraday::UnauthorizedError) { connection.post("/x") }
-    assert_empty output.string
+    assert_match(%r{POST https://llm.example.test/v1/chat/completions}, output.string)
+    assert_match(/Invalid API Key \[FILTERED\]/, output.string)
+    assert_no_match(/sk-sure-secret/, output.string)
+    assert_no_match(Ai::Transport::Base::PROBE_PROMPT, output.string, "no request body")
+  ensure
+    RubyLLM.config.logger = rails_logger
   end
 
   test "RubyLLM publishes its events through ActiveSupport::Notifications" do

@@ -29,6 +29,36 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_equal "gpt-4.1-mini", outcome.model
   end
 
+  test "each document route takes the PDF only within its own limits" do
+    skip_without_pdftoppm
+    limited = Ai::Config::Model.new(endpoint: Ai::Config::Endpoint.new(name: :limited, protocol: :compatible, preset: :openai,
+                                                                        base_url: "https://api.openai.com/v1"),
+                                    name: "gpt-4.1-mini", capabilities: %i[structured_output documents])
+    unlimited = Ai::Config::Model.new(endpoint: Ai::Config::Endpoint.new(name: :unlimited, protocol: :compatible,
+                                                                          base_url: "http://docs.local:8080/v1", location: :local),
+                                      name: "doc-reader", capabilities: %i[structured_output documents])
+
+    with_reading_routes(limited, unlimited) do
+      reader = reading(blank_pdf(pages: 101))   # over the OpenAI preset's 100 pages
+
+      assert_nil reader.ways[:pdf], "the second route can take it"
+      assert_equal [ unlimited ], reader.send(:plan_for, :pdf).routes.map(&:model)
+    end
+  end
+
+  test "a scan too large for the PDF limits, read as PDF, says it's too large" do
+    skip_without_pdftoppm
+    limited = Ai::Config::Model.new(endpoint: Ai::Config::Endpoint.new(name: :limited, protocol: :compatible, preset: :openai,
+                                                                        base_url: "https://api.openai.com/v1"),
+                                    name: "gpt-4.1-mini", capabilities: %i[structured_output documents])
+
+    with_reading_routes(limited) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(blank_pdf(pages: 101)).extract(read_as: :pdf) }
+
+      assert_equal :too_large, error.reason
+    end
+  end
+
   test "a text model reads the text layer, page by page, and every check runs on it" do
     requests = stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
 
@@ -231,6 +261,8 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
       outcome = reading(@scan).extract(read_as: :ocr)
 
       assert outcome.checks.reconciles, "the printed closing balance, not the model's"
+      assert_equal 0.0, outcome.value[:opening_balance], "the validated balances are kept for the import"
+      assert_equal 2550.5, outcome.value[:closing_balance], "not the model's 2575.0"
     end
   end
 
@@ -332,6 +364,58 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "read keeps the first answer when a lookahead batch cannot render" do
+    units = [ Ai::PdfReading::Unit.text("COVER", page: 1), Ai::PdfReading::Unit.text("TRANSACTIONS", page: 2) ]
+    first = Ai::Result.new(value: { document_type: "other", summary: nil, extracted_data: nil }, remaining: [ units.last ])
+    failing = stub
+    failing.stubs(:call).raises(Pdf::PageImages::Error.new("render failed", code: :unreadable))
+    Ai::Generations::ReadPdf.stubs(:new).returns(stub(call: first), failing)
+    reader = reading(@bac)
+    reader.stubs(:units_for).returns([ units, "COVER\nTRANSACTIONS" ])
+
+    with_reading_routes(text_model.with(batch_size: 1)) do
+      assert_equal "other", reader.read.value[:document_type]
+    end
+  end
+
+  test "a page-local render failure leaves that page untranscribed and keeps the others" do
+    reader = reading(@scan)
+    Pdf::PageImages.stubs(:page_count).returns(3)
+    Pdf::PageImages.stubs(:render).with(@scan, pages: [ 1 ]).returns([ "page-1" ])
+    Pdf::PageImages.stubs(:render).with(@scan, pages: [ 2 ])
+                                  .raises(Pdf::PageImages::Error.new("page too large", code: :too_large))
+    Pdf::PageImages.stubs(:render).with(@scan, pages: [ 3 ]).returns([ "page-3" ])
+    stub_ai(:extract_pdf) do |request|
+      "text from #{request.pages.first.filename}"
+    end
+
+    with_reading_routes(text_model, ocr_model) do
+      transcription = reader.send(:transcribe)
+
+      assert_equal [ "text from page-1.png", "", "text from page-3.png" ], transcription.pages
+      assert_equal [ 2 ], transcription.untranscribed_pages
+    end
+  end
+
+  test "a page-count failure keeps the unreadable reason for Images but not for Text on a scan" do
+    stub_ai(:extract_pdf)
+    Pdf::PageImages.stubs(:page_count).raises(Pdf::PageImages::Error.new("PDF does not contain EOF marker", code: :unreadable))
+
+    with_reading_routes(vision_model, text_model) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read(read_as: :images) }
+
+      assert_equal :unreadable, error.reason
+      assert_equal :unreadable, error.code
+    end
+
+    Pdf::PageImages.unstub(:page_count)
+    with_reading_routes(text_model) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read(read_as: :text) }
+
+      assert_equal :no_text_layer, error.reason
+    end
+  end
+
   test "an OCR route marked down after the check ends that way before any page is rendered" do
     reader = reading(@scan)
     reader.stubs(:ocr_route).returns(nil)
@@ -400,6 +484,58 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
       assert outcome.value.present?, "the backup OCR route produced the reading"
     end
     assert_equal %w[unlimited-ocr-2 parse-v5.0], calls, "the timeout ended this route's try, not the OCR way"
+  end
+
+  test "a timed-out OCR route is skipped on later pages" do
+    skip_without_pdftoppm
+    calls = []
+    stub_ai(:extract_pdf) do |request|
+      if request.is_a?(Ai::Transport::Base::OcrRequest)
+        page = request.pages.first.filename
+        calls << [ request.model.name, page ]
+        raise Ai::Error::Timeout, "slow" if request.model.name == "unlimited-ocr-2"
+
+        "1 February Cardpayment 24.50"
+      else
+        next { document_type: "bank_statement", summary: nil, extracted_data: nil } if request.schema_name == "document_analysis"
+
+        statement([ [ "2019-02-01", -24.5 ] ], opening: 0.0, closing: 24.5)
+      end
+    end
+
+    with_reading_routes(text_model, ocr_model, backup_ocr_model) do
+      reading(blank_pdf(pages: 2)).extract(read_as: :ocr)
+    end
+
+    assert_equal [ [ "unlimited-ocr-2", "page-1.png" ], [ "parse-v5.0", "page-1.png" ],
+                   [ "parse-v5.0", "page-2.png" ] ], calls
+  end
+
+  test "an OCR failover logs the class and status, never the provider's message" do
+    skip_without_pdftoppm
+    warnings = []
+    Rails.logger.stubs(:warn).with { |message| warnings << message; true }
+    stub_ai(:extract_pdf) do |request|
+      if request.is_a?(Ai::Transport::Base::OcrRequest)
+        raise Ai::Error::Refused.new("400: account 12345678 is invalid", status: 400) if request.model.name == "unlimited-ocr-2"
+
+        "1 February Cardpayment 24.50"
+      else
+        next { document_type: "bank_statement", summary: nil, extracted_data: nil } if request.schema_name == "document_analysis"
+
+        statement([ [ "2019-02-01", -24.5 ] ], opening: 0.0, closing: 24.5)
+      end
+    end
+
+    with_reading_routes(text_model, ocr_model, backup_ocr_model) do
+      assert_equal :ocr, reading(blank_pdf(pages: 1)).extract(read_as: :ocr).way
+    end
+
+    warning = warnings.find { _1.include?("unlimited-ocr-2") }
+    assert warning, "the failed route must still be logged"
+    assert_includes warning, "Ai::Error::Refused"
+    assert_includes warning, "status=400"
+    assert_not_includes warning, "12345678"
   end
 
   test "OCR checks cancellation between pages" do

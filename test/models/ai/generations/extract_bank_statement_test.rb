@@ -23,6 +23,31 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_equal true, checks.to_h[:passed]
   end
 
+  test "comma-decimal amounts and thousands grouping are found in the text" do
+    source = "01/02/2025 salary 1.234,56|01/02/2025 card 12,50"
+
+    checks = check(value([ [ "2025-02-01", 1234.56 ], [ "2025-02-01", -12.5 ] ]), source:)
+
+    assert checks.amounts_in_source
+    assert_operator checks.dates_anchored, :>=, 0.5
+  end
+
+  test "a space-grouped amount is found whole, but its last group isn't an amount of its own" do
+    assert check(value([ [ "2025-02-01", 1234.56 ] ]), source: "01/02/2025 salary 1 234,56").amounts_in_source
+    assert check(value([ [ "2025-02-01", 234.56 ] ]), source: "01/02/2025 salary 234,56").amounts_in_source
+    assert_equal false, check(value([ [ "2025-02-01", 234.56 ] ]), source: "01/02/2025 salary 1 234,56").amounts_in_source
+    assert check(value([ [ "2025-02-01", 234.56 ] ]), source: "01/02/2025 fee 120.00 234.56").amounts_in_source, "after a whole amount"
+  end
+
+  test "a dotted date anchors its amount" do
+    assert_equal 1.0, check(value([ [ "2025-01-05", -12.5 ] ]), source: "05.01.2025 fee 12,50").dates_anchored
+  end
+
+  test "a localized month name anchors its amount, including one of several words" do
+    assert_equal 1.0, check(value([ [ "2025-01-05", -12.5 ] ]), source: "5 janvier fee 12,50").dates_anchored
+    assert_equal 1.0, check(value([ [ "2025-01-05", -12.5 ] ]), source: "5 Am Faoilleach fee 12,50").dates_anchored
+  end
+
   test "a flipped sign, a missing row or a merged row fails reconciles" do
     flipped = BAC_ROWS.map { |date, amount| amount == -78.34 ? [ date, 78.34 ] : [ date, amount ] }
     missing = BAC_ROWS - [ [ "2019-02-11", 300.0 ] ]
@@ -139,12 +164,25 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     assert_equal({ start_date: "2019-02-01", end_date: "2019-03-01" }, merged[:statement_period])
   end
 
+  test "no answer at all is not an empty statement" do
+    generation = Ai::Generations::ExtractBankStatement.new(units: [], content: "", family: families(:dylan_family))
+
+    assert_raises(Ai::Error::InvalidOutput) { generation.merge_values([]) }
+    assert_equal [], generation.merge_values([ { transactions: [] } ])[:transactions], "an explicit empty answer is still valid"
+  end
+
   test "statement gives today's extracted_data shape" do
     statement = Ai::Generations::ExtractBankStatement.statement(value([ [ "2019-02-01", -24.5 ] ]))
 
     assert_equal [ { date: "2019-02-01", amount: -24.5, name: "row", category: nil, notes: nil } ], statement[:transactions]
     assert_equal({ start_date: "2019-02-01", end_date: "2019-03-01" }, statement[:period])
     assert_equal 40_000.0, statement[:opening_balance]
+  end
+
+  test "a zero-amount balance line is not a transaction PdfImport can publish" do
+    statement = Ai::Generations::ExtractBankStatement.statement(value([ [ "2019-02-01", 0.0 ], [ "2019-02-01", -24.5 ] ]))
+
+    assert_equal [ -24.5 ], statement[:transactions].map { _1[:amount] }
   end
 
   test "a date form inside a longer printed day doesn't anchor a different row" do
@@ -155,6 +193,14 @@ class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
     )
 
     assert_equal 1.0, checks.dates_anchored
+  end
+
+  test "a month-name date inside a longer printed day doesn't anchor a different row" do
+    extraction = value([ [ "2019-01-05", -5.0 ] ])
+
+    checks = Ai::Generations::ExtractBankStatement.checks(extraction, source: "15 January Fee 5.00")
+
+    assert_equal 0.0, checks.dates_anchored
   end
 
   test "an amount inside a longer printed number isn't in the source" do

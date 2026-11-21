@@ -41,6 +41,16 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_equal %w[gpu], Ai::Config.current.routes_for(:detect_merchants).map { _1.endpoint.name }
   end
 
+  test "a batch slice that is a prefix keeps value-equal twins later in the list as remaining" do
+    use_ai_model_settings(batch_size: 2)
+    stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    twins = Array.new(4) { { id: "t0", description: "SHOP", merchant: nil } }
+
+    result = AiTestGeneration.new(transactions: twins, family: @family).call(batches: 1)
+
+    assert_equal 2, result.remaining.size
+  end
+
   test "batches by the model's batch size; call(batches: 1) leaves the rest as remaining" do
     use_ai_model_settings(batch_size: 2)
     requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
@@ -293,6 +303,30 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_empty result.failed_over_from.to_a
     fallback = requests.select { _1.model.endpoint.name == "openai" }
     assert_equal [ %w[t1] ], fallback.map { _1.input.scan(/ID: (t\d)/).flatten }, "t0 was answered already"
+  end
+
+  test "an overflow on a later pending run keeps the answers from earlier runs" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    use_ai_model_settings("gpu/qwen3-8b", batch_size: 2)
+    stub_ai(:detect_merchants) do |request|
+      ids = request.input.scan(/ID: (t\d)/).flatten
+      if request.model.endpoint.name == "gpu"
+        raise Ai::Error::ContextTooLong, "too long" if ids.include?("t0") || ids.include?("t3")
+      elsif ids == [ "t3" ]
+        raise Ai::Error::ContextTooLong, "too long"
+      end
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = nil
+    assert_difference -> { DebugLogEntry.where(message: "Items no route could answer were left unanswered").count } do
+      result = generation(4).call
+    end
+
+    assert_equal %w[t0 t1 t2], answered_ids(result).sort
+    assert_empty result.remaining
+    assert_equal %w[t3], result.skipped.map { _1[:id] }
   end
 
   test "unsupported input no route can take is skipped once, keeping the pieces that were answered" do

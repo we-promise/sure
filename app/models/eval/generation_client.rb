@@ -46,7 +46,7 @@ class Eval::GenerationClient
   def ai_config(feature, json_mode: nil)
     judge = @endpoint.protocol == :jev
     model = Ai::Config::Model.new(endpoint: @endpoint, name: @model_name,
-                                  capabilities: judge ? Ai::LegacyEnvConfig::Jev.capabilities(@endpoint) : %i[structured_output],
+                                  capabilities: judge ? Ai::LegacyEnvConfig::Jev.capabilities(@endpoint, model: @model_name) : %i[structured_output],
                                   context_window: (@budget ? @budget.context_window : (Assistant::TokenBudget.context_window if Provider::Openai.custom_endpoint?(@endpoint.base_url)) unless judge),
                                   max_output_tokens: @budget&.max_output_tokens,
                                   batch_size: @budget&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE)

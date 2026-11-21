@@ -59,8 +59,13 @@ module Ai::Error
 
   # llama.cpp and Ollama: 500 "image input is not supported" from a model without a vision
   # projector. The model can't do it, so it's a refusal, not an outage to retry or mark down; the
-  # next route is still tried (Ai::Generation), as it may have vision.
-  UNSUPPORTED_INPUT = [ /image input is not supported/i ].freeze
+  # next route is still tried (Ai::Generation), as it may have vision. Anchored to the provider's
+  # own statement: a gateway can quote an earlier refusal inside a later, retryable error.
+  UNSUPPORTED_INPUT = [
+    /\Aimage input is not supported\b/i,
+    /\Aimages? (?:are|is) not supported\b/i,
+    /\A(?:the )?model (?:does not|doesn't|cannot|can't) (?:support|accept) images?\b/i
+  ].freeze
 
   module_function
 
@@ -74,7 +79,9 @@ module Ai::Error
     when 408 then Timeout
     when 429 then matches?(text, NO_CREDIT) ? NoCredit : RateLimited
     when 400, 413
+      # The provider's own image refusal wins over a credit phrase in another field.
       if matches?(text, CONTEXT_TOO_LONG) then ContextTooLong
+      elsif direct_image_refusal?(body, message) then UnsupportedInput
       elsif matches?(text, NO_CREDIT) then NoCredit
       else Refused
       end
@@ -82,8 +89,7 @@ module Ai::Error
       # Only the provider's own message says the model refused an image. A client gem's
       # `message`, and a gateway's other fields, can quote an earlier refusal from a diagnostic;
       # neither may turn a retryable 503 into a refusal.
-      message_text = provider_message(body) || (body.nil? ? message : nil)
-      matches?(message_text.to_s, UNSUPPORTED_INPUT) ? UnsupportedInput : Upstream
+      direct_image_refusal?(body, message) ? UnsupportedInput : Upstream
     else Refused
     end
   end
@@ -126,6 +132,11 @@ module Ai::Error
 
   def matches?(text, patterns) = patterns.any? { text.match?(_1) }
 
+  def direct_image_refusal?(body, message)
+    text = provider_message(body) || (body.nil? ? message : nil)
+    matches?(text.to_s, UNSUPPORTED_INPUT)
+  end
+
   # The provider's `error.message`, when the body is a JSON object. Not the whole body: a
   # gateway may put an earlier provider message in another field as a diagnostic.
   def provider_message(body)
@@ -136,5 +147,5 @@ module Ai::Error
     when String then error
     end
   end
-  private_class_method :status_and_body, :matches?, :provider_message
+  private_class_method :status_and_body, :matches?, :direct_image_refusal?, :provider_message
 end

@@ -18,17 +18,11 @@ class Ai::Instrumentation::UsageSubscriber
   end
 
   private
-    # RubyLLM 2.1.1 keeps the usage owner and workflow in Thread.current, so a request from a thread
-    # started inside a call has neither (2.2 moves them to fiber storage, RubyLLM #1327). Sure's
-    # own call context is in fiber storage, which threads inherit, so it fills the gap.
+    # The owner and the call's identity, as RubyLLM carried them into the event: both live in
+    # fiber storage, which Jev's pool threads inherit, so the payload is complete even from a
+    # fan-out thread.
     def owner_and_call(payload)
-      call = (payload[:workflow_metadata] || {}).to_h.stringify_keys
-      return [ payload[:owner], call ] if call["call_id"].present?
-
-      context = Ai::CallContext.current
-      return [ payload[:owner], call ] if context.nil?
-
-      [ payload[:owner] || (Family.find_by(id: context.family_id) if context.family_id), context.metadata.stringify_keys ]
+      [ payload[:owner], (payload[:workflow_metadata] || {}).to_h.stringify_keys ]
     end
 
     def record_request(payload)

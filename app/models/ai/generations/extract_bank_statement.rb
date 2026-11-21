@@ -26,6 +26,21 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
 
   DATE_WINDOW = 120
   MIN_DATES_ANCHORED = 0.5
+  DATE_FORMATS = %w[%m/%d %-m/%-d %d/%m %-d/%-m %d.%m %-d.%-m %-d%B %-d%b %B%-d %b%-d %Y-%m-%d].freeze
+  # strftime's %B/%b are English; statements use whichever locale the bank prints. Build the
+  # month names once from Rails' locale data instead of keeping an English-only list.
+  LOCALIZED_MONTH_NAMES = I18n.available_locales.each_with_object({}) do |locale, names|
+    %w[month_names abbr_month_names].each do |key|
+      month_names = I18n.t("date.#{key}", locale:, default: nil)
+      next unless month_names.is_a?(Array)
+
+      month_names.each_with_index do |name, month|
+        next if month.zero? || name.blank?
+
+        (names[month] ||= []) << name.downcase.gsub(/\s+/, "")   # as the source text is normalized
+      end
+    end
+  end.transform_values(&:uniq).freeze
 
   schema({
     type: "object",
@@ -95,6 +110,10 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
   # the cut row), the first batch's opening figures and the last batch's closing ones. Equal rows
   # anywhere else are two purchases, and both are kept.
   def merge_values(values)
+    # A run with every slice skipped is not an empty statement: no model answered. Fail the way
+    # so Auto can try another, and keep an explicit empty transactions list from a real answer.
+    raise Ai::Error::InvalidOutput, "no extraction answered" if values.empty?
+
     batches = values.map { Array(_1[:transactions]) }
     kept = batches.each_with_index.flat_map do |rows, i|
       previous = i.positive? ? batches[i - 1].last : nil
@@ -135,6 +154,7 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
     return Checks.new(reconciles:, amounts_in_source: nil, dates_anchored: invalid_date ? 0.0 : nil) if text.blank? || rows.empty?
 
     dates = dated.flat_map { |row| printed_dates(row[:date]).map { [ _1, row[:date] ] } }.uniq
+                 .map { |form, date| [ form_pattern(form), form.length, date ] }
     Checks.new(reconciles:, amounts_in_source: dated.all? { |row| row[:amount] && text.match?(amount_pattern(row[:amount])) },
                dates_anchored: invalid_date ? 0.0 : (dated.count { date_anchored?(_1, dates, text) } / dated.size.to_f).round(2))
   end
@@ -188,44 +208,52 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
 
       # Some occurrence of the row's amount has, as the last date printed in the DATE_WINDOW
       # characters before it, the row's own date. `dates`: every row's printed forms, as
-      # [form, the row's date].
+      # [form_pattern, the form's length, the row's date]. Where two forms end at the same place,
+      # the longer one is the printed date.
       def date_anchored?(row, dates, text)
         positions(text, amount_pattern(row[:amount])).any? do |at|
           before = text[[ at - DATE_WINDOW, 0 ].max...at]
-          dates.filter_map { |form, date| (index = last_form_index(before, form)) && [ index, form.length, date ] }
+          dates.filter_map { |pattern, length, date| (index = before.rindex(pattern)) && [ index, length, date ] }
                .max_by { |index, length, _| [ index, length ] }&.last == row[:date]
         end
       end
 
       # Date forms must not be part of a longer number ("1february" isn't the
       # "11february" printed on the row), but a letter-form may sit beside other
-      # letters. Where both forms end at the same place, the longer one is the
-      # printed date.
-      def last_form_index(text, form)
+      # letters.
+      def form_pattern(form)
         pattern = Regexp.escape(form)
         pattern = "(?<!\\d)#{pattern}" if form.match?(/\A\d/)
         pattern = "#{pattern}(?!\\d)" if form.match?(/\d\z/)
-        text.rindex(/#{pattern}/)
+        Regexp.new(pattern)
       end
 
       def positions(text, pattern) = text.enum_for(:scan, pattern).map { Regexp.last_match.begin(0) }
 
       # The amount as a whole number in the text, not part of a longer one: "20.00" isn't in
-      # "120.00", "1,020.00" or "20.005"; after a word or a comma ("Ford, 50.00") it is.
+      # "120.00", "1,020.00" or "20.005"; after a word or a comma ("Ford, 50.00") it is. Whole
+      # groups of three digits after a space may be the tail of a space-grouped number: "234,56"
+      # isn't in "1 234,56", but is in "120.00 234,56", after a whole amount.
       def amount_pattern(amount)
-        /(?<!\d)(?<!\d[.,])(?:#{printed_amounts(amount).map { Regexp.escape(_1) }.join("|")})(?!\d)/
+        whole = format("%.2f", amount.to_f.abs).split(".").first
+        group_tail = "(?:(?<!\\d\\|)|(?<=[.,]\\d\\d\\|))" if whole.length % 3 == 0
+        /(?<!\d)(?<!\d[.,])#{group_tail}(?:#{printed_amounts(amount).map { Regexp.escape(_1) }.join("|")})(?!\d)/
       end
 
-      # 2575.0 as "2575.00", "2,575.00" or "2 575.00"; 0.26 also as ".26".
+      # 2575.0 as "2575.00", "2,575.00" or "1.234,56", with spaces between digits normalized to
+      # "|" upstream; 0.26 also as ".26" or ",26". Dot-decimal forms stay first.
       def printed_amounts(amount)
-        plain = format("%.2f", amount.to_f.abs)
-        [ plain, plain.gsub(/(\d)(?=(\d{3})+\.)/, '\1,'), plain.gsub(/(\d)(?=(\d{3})+\.)/, '\1|'), plain.sub(/\A0\./, ".") ].uniq
+        whole, cents = format("%.2f", amount.to_f.abs).split(".")
+        grouped = ->(separator) { whole.gsub(/(?<=\d)(?=(\d{3})+\z)/, separator) }
+        [ "#{whole}.#{cents}", "#{grouped.call(',')}.#{cents}", "#{grouped.call('|')}.#{cents}", (".#{cents}" if whole == "0"),
+          "#{whole},#{cents}", "#{grouped.call('.')},#{cents}", "#{grouped.call('|')},#{cents}", (",#{cents}" if whole == "0") ].compact.uniq
       end
 
-      # 2019-02-01 as "02/01", "2/1", "01/02", "1february", "1feb", "february1"...
+      # 2019-02-01 as "02/01", "2/1", "01/02", "05.01", "1february", "1feb", "5janvier"...
       def printed_dates(date)
         day = Date.iso8601(date.to_s)
-        %w[%m/%d %-m/%-d %d/%m %-d/%-m %-d%B %-d%b %B%-d %b%-d %Y-%m-%d].map { day.strftime(_1).downcase }.uniq
+        localized = LOCALIZED_MONTH_NAMES.fetch(day.month, []).flat_map { |name| [ "#{day.day}#{name}", "#{name}#{day.day}" ] }
+        (DATE_FORMATS.map { day.strftime(_1).downcase } + localized).uniq
       rescue Date::Error
         []
       end

@@ -16,15 +16,16 @@ class Ai::Comparison < ApplicationRecord
   scope :disagreements, -> { where(agreed: false) }
   scope :chronological, -> { order(:created_at) }
 
-  # Share of compared items where both routes gave the same answer, as a percentage; nil with
-  # none. Both declining to answer counts as agreement.
-  def self.agreement_rate
-    # One query, so both counts come from the same snapshot while shadow jobs insert rows.
+  # Sample size and share of agreement, as a percentage, from one query so a shadow job
+  # inserting a row can't give the rate a different sample than the panel reports. Nil rate
+  # with no samples; both declining to answer counts as agreement.
+  def self.sample_and_agreement
     total, agreed = pick(Arel.sql("COUNT(*)"), Arel.sql("COUNT(*) FILTER (WHERE agreed)"))
-    return nil if total.to_i.zero?
-
-    (agreed.to_f / total * 100).round(2)
+    total = total.to_i
+    [ total, total.zero? ? nil : (agreed.to_f / total * 100).round(2) ]
   end
+
+  def self.agreement_rate = sample_and_agreement.last
 
   def primary_endpoint = primary_route.to_h["endpoint"]
   def shadow_endpoint = shadow_route.to_h["endpoint"]
@@ -33,9 +34,12 @@ class Ai::Comparison < ApplicationRecord
   def primary_label = route_label(primary_route)
   def shadow_label = route_label(shadow_route)
 
-  # The family's category names for these categorize comparisons' values, by id.
+  # The family's category names for these categorize comparisons' values, by id. The values
+  # are strings, so one that isn't a UUID is dropped before it reaches the uuid column.
   def self.category_names(comparisons, family)
-    ids = comparisons.flat_map { [ _1.primary_value, _1.shadow_value ] }.compact
+    ids = comparisons.flat_map { [ _1.primary_value, _1.shadow_value ] }.compact.select { UuidFormat.valid?(_1) }
+    return {} if ids.empty?
+
     family.categories.where(id: ids).pluck(:id, :name).to_h.transform_keys(&:to_s)
   end
 

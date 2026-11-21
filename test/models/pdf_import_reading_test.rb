@@ -37,6 +37,14 @@ class PdfImportReadingTest < ActiveSupport::TestCase
     assert_equal "images", PdfImport.last_passing_way(account: @account, model: "gpt-4.1-mini")
   end
 
+  test "Auto's way is keyed by the model it started from, even when a fallback answered" do
+    imports(:pdf).update!(account: @account, read_with: "images", read_model: "fallback-model",
+                          extraction_checks: { "passed" => true, "tuned_model" => "gpt-4.1-mini" })
+
+    assert_equal "images", PdfImport.last_passing_way(account: @account, model: "gpt-4.1-mini")
+    assert_nil PdfImport.last_passing_way(account: @account, model: "fallback-model")
+  end
+
   test "a job's ReadPdf and extraction share one reader, so the PDF is downloaded once" do
     @import.expects(:pdf_file_content).once.returns("%PDF-1.4")
 

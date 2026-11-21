@@ -134,6 +134,45 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal "pending", import.reload.status
   end
 
+  test "process_with_ai_later gives the import back when the queue declines without raising" do
+    import = PdfImport.create_from_statement!(statement: create_pdf_statement)
+    ProcessPdfJob.stubs(:perform_later).returns(false)
+
+    assert_not import.process_with_ai_later
+    assert_equal "pending", import.reload.status
+  end
+
+  test "a lost reread that had already cleared the reading fails, so it can be read again" do
+    import = @import_with_rows
+    import.update_columns(status: "importing", reread_token: "attempt-1", updated_at: 7.hours.ago)
+    import.rows.delete_all
+    PdfImport.reset_counters(import.id, :rows)
+
+    PdfImport.reap_stuck!(import.reload)
+
+    assert import.reload.failed?
+    assert_nil import.reread_token
+  end
+
+  test "an initial reading lost after classifying the document fails, so it can be read again" do
+    import = PdfImport.create_from_statement!(statement: create_pdf_statement)
+    import.update_columns(status: "importing", document_type: "bank_statement", updated_at: 7.hours.ago)
+
+    PdfImport.reap_stuck!(import.reload)
+
+    assert import.reload.failed?
+    assert import.rereadable?
+  end
+
+  test "reading again after the last route was removed is refused, not raised" do
+    import = @import_with_rows
+    import.stubs(:pdf_uploaded?).returns(true)
+    import.stubs(:pdf_reading).returns(stub.tap { _1.stubs(:usable?).raises(Ai::Error::Unavailable, "not_configured") })
+
+    assert_equal false, import.reread!("images")
+    assert import.reload.pending?
+  end
+
   test "reading again claims the import and keeps the previous reading until the job clears it" do
     import = @import_with_rows
     import.stubs(:pdf_uploaded?).returns(true)
@@ -184,7 +223,9 @@ class PdfImportTest < ActiveSupport::TestCase
     import.update!(status: :complete, extraction_checks: { "passed" => false, "reconciles" => false })
     assert import.rereadable?
 
-    import.stubs(:imported_count).returns(3)
+    # The first call saw no entries; one created after it must still close the guard.
+    import.entries.create!(account: accounts(:depository), date: Date.current, name: "Published row",
+                           amount: -1, currency: "USD", entryable: Transaction.new)
     assert_not import.rereadable?
   end
 

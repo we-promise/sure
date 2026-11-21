@@ -6,4 +6,4 @@ You read a bank statement and return its contents as JSON.
 - opening_balance and closing_balance: the balances at the start and end of the statement period, as printed.
 - account_number: the last 4 digits only.
 - You may be given part of a statement. Return the transactions in that part, and null for anything it doesn't show.
-- If you can't read the statement, or it has no transactions, return an empty transactions list and null for every other field. Never guess.
+- If you can't read the statement, return an empty transactions list and null for the fields you can't read. A readable statement with no transactions still gets an empty transactions list, but keep any visible balances, account number, period and other metadata. Never guess.

@@ -4,6 +4,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
   include EntriesTestHelper, ProviderTestHelper, ActiveJob::TestHelper
 
   setup do
+    Ai::LegacyEnvConfig.unreachably_warned = nil   # one-shot latch fires per process; reset it so tests see identical counts
     @family = families(:dylan_family)
     @account = @family.accounts.create!(name: "Rule test", balance: 100, currency: "USD", accountable: Depository.new)
     use_ai_routes
@@ -338,7 +339,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
       "OPENAI_ACCESS_TOKEN" => "sk-test", "CATEGORIZATION_PROVIDER" => "jev", "JEV_API_KEY" => "test_api_key",
       "JEV_ENDPOINT" => "https://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET#frag" # pipelock:ignore Credential in URL
     ) do
-      assert_difference "DebugLogEntry.count", 2 do
+      assert_difference "DebugLogEntry.count", 3 do  # was 2; the config build now logs its own one-shot capture
         categorize([ txn.id ])
       end
     end
@@ -349,12 +350,31 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal "error", entry.level
     assert_equal "jev", entry.provider_key
     assert_equal @family, entry.family
-    assert_equal "https://gw.example.com/v1", entry.metadata["endpoint"]
+    assert_equal "https://gw.example.com", entry.metadata["endpoint"]
     assert_equal "path", entry.metadata["reason"]
     serialized = entry.metadata.to_json
     assert_not_includes serialized, "s3cret"
     assert_not_includes serialized, "QUERYSECRET"
     assert_not_includes serialized, "frag"
+  end
+
+  test "a Jev outage never falls back to the LLM: no LLM route is attempted" do
+    Ai::Config.override = nil
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    requests = stub_ai(:categorize) { raise Ai::Error::Upstream, "Jev unreachable" }
+
+    # A JEV_ENDPOINT inherited from the host (e.g. an OpenRouter decisions URL) would build a
+    # different route; this test is about the default TypeSafe endpoint going down. Setting's
+    # default is read from that same ENV at boot, so clear it too.
+    Setting.stubs(:jev_endpoint).returns(nil)
+    with_env_overrides("OPENAI_ACCESS_TOKEN" => "sk-test", "CATEGORIZATION_PROVIDER" => "jev", "JEV_API_KEY" => "test_api_key",
+                       "JEV_ENDPOINT" => nil) do
+      categorize([ txn.id ])
+    end
+
+    assert requests.any?, "the Jev route was attempted"
+    assert requests.all? { _1.is_a?(Ai::Transport::Base::JudgeRequest) },
+         "no LLM request was attempted: #{requests.map { |r| r.class.name }.inspect}"
   end
 
   # Confidence has to change behaviour, not just appear in logs. Below the threshold the answer

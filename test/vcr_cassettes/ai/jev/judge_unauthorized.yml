@@ -7,11 +7,11 @@ http_interactions:
       encoding: UTF-8
       string: '{"model":"jev-1.13-free","state":{"description":"STARBUCKS","classification":"expense","amount":4.5},"questions":{"category":{"type":"choice","instructions":"Which
         spending category best fits this bank transaction? Pick `__uncategorized__`
-        only if no category is a reasonable fit.","criteria":{"Coffee Shops":null,"__uncategorized__":"No
-        listed category is a reasonable fit"}}}}'
+        only if no category is a reasonable fit.","criteria":{"Coffee Shops":"Coffee
+        Shops","__uncategorized__":"No listed category is a reasonable fit"}}}}'
     headers:
       User-Agent:
-      - Faraday v2.14.3
+      - Faraday v2.15.1
       Authorization:
       - Bearer not-a-real-key
       Content-Type:
@@ -26,7 +26,7 @@ http_interactions:
       message: Unauthorized
     headers:
       Date:
-      - Tue, 10 Nov 2026 00:00:07 GMT
+      - Thu, 12 Nov 2026 11:15:23 GMT
       Content-Type:
       - application/json
       Content-Length:
@@ -36,15 +36,15 @@ http_interactions:
       Cf-Placement:
       - remote-IAD
       Server-Timing:
-      - gateway;dur=36, total;dur=36
+      - gateway;dur=18, total;dur=18
       X-Opencode-Log-Id:
-      - 01a1c2c1-414c-73d9-af4a-674c3f34b343
+      - 01a1cf78-32a2-78ea-9a50-03bd3a65dab8
       Server:
       - cloudflare
       Cf-Ray:
-      - a580c66e1d04f0d6-MEL
+      - a5951e56a948d71f-BNE
     body:
       encoding: UTF-8
       string: '{"error":{"type":"authentication_error","message":"Invalid credential"}}'
-  recorded_at: Tue, 10 Nov 2026 00:00:07 GMT
+  recorded_at: Thu, 12 Nov 2026 11:15:23 GMT
 recorded_with: VCR 6.3.1

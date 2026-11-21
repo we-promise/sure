@@ -624,6 +624,11 @@ en:
       unknown_state_description: This import is in an unexpected state. Please return to imports.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Processing failed: %{error}"
+      account_errors:
+        no_credit: The AI provider account has no credit remaining.
+        unauthorized: The AI provider rejected its API key.
+        rate_limited: The AI provider is rate limiting its account.
+        model_missing: The AI provider does not have the configured model.
       errors:
         unavailable:
           default: No model set up on this instance can read this PDF.

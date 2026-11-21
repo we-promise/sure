@@ -80,6 +80,14 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert claude.capable?(:vision, :documents)
   end
 
+  test "a custom Anthropic gateway is trusted with images but not native PDFs" do
+    claude = first_model(build("ANTHROPIC_API_KEY" => "sk-ant", "ANTHROPIC_MODEL" => "claude-haiku-4-5",
+                               "ANTHROPIC_BASE_URL" => "https://gateway.example.test", "LLM_PROVIDER" => "anthropic"), :extract_pdf)
+
+    assert claude.capable?(:vision)
+    assert_not claude.capable?(:documents)
+  end
+
   test "OPENAI_SUPPORTS_PDF_PROCESSING=false keeps PDF import off, as today" do
     config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1",
                    "OPENAI_MODEL" => "qwen3", "OPENAI_SUPPORTS_PDF_PROCESSING" => "false")
@@ -309,7 +317,8 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
   end
 
   test "a Jev endpoint RubyLLM can't reach is left out with a warning" do
-    { "https://openrouter.ai/api/alpha/decisions" => /RubyLLM 2.2/, "https://gw.example.test/v1/jev" => %r{/v1/systemone} }.each do |url, reason|
+    { "https://openrouter.ai/api/v1/chat/completions" => /v1\/systemone/,
+      "https://gw.example.test/v1/jev" => /v1\/systemone/ }.each do |url, reason|
       Rails.logger.expects(:warn).with(regexp_matches(reason))
 
       config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => url)
@@ -318,13 +327,66 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     end
   end
 
+  test "a misconfigured Jev endpoint is logged once per process, not once per build" do
+    Ai::LegacyEnvConfig.unreachably_warned = nil
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      2.times { build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://gw.example.test/key-s3cret/v1/jev") }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "ai_configuration", entry.category
+    assert_equal "error", entry.level
+    assert_equal "jev", entry.provider_key
+    assert_equal "path", entry.metadata["reason"]
+    assert_equal "https://gw.example.test", entry.metadata["endpoint"], "a gateway path can carry a key"
+  end
+
+  test "a Jev diagnostic that couldn't be written is tried again on the next build" do
+    Ai::LegacyEnvConfig.unreachably_warned = nil
+    env = { "OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://gw.example.test/v1/jev" }
+
+    DebugLogEntry.expects(:capture).twice.returns(nil).then.returns(DebugLogEntry.new)
+    3.times { build(env) }
+  end
+
+  test "an OpenRouter decisions URL routes categorize through the openrouter preset" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_MODEL" => "~typesafe/jev-latest",
+                   "JEV_ENDPOINT" => "https://openrouter.ai/api/alpha/decisions", "CATEGORIZATION_PROVIDER" => "jev")
+
+    jev = config.routes_for(:categorize).first
+    assert_equal :jev_openrouter, jev.endpoint.preset
+    assert_equal "https://openrouter.ai/api/v1", jev.endpoint.base_url
+    assert jev.model.capable?(:calibrated_confidence), "TypeSafe's Jev through OpenRouter's gateway"
+    assert_equal :cloud, jev.endpoint.location
+    assert jev.model.capable?(:judge)
+  end
+
+  test "another decision model through OpenRouter has no calibrated confidence: only TypeSafe's is checked" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_MODEL" => "parallel/decisions-fast:free",
+                   "JEV_ENDPOINT" => "https://openrouter.ai/api/alpha/decisions", "CATEGORIZATION_PROVIDER" => "jev")
+
+    jev = config.routes_for(:categorize).first
+    assert jev.model.capable?(:judge)
+    assert_not jev.model.capable?(:calibrated_confidence)
+  end
+
   test "one answer to whether a Jev endpoint can be reached" do
     jev = Ai::LegacyEnvConfig::Jev
 
     assert_nil jev.unreachable_reason("https://api.typesafe.ai/v1/systemone")
-    assert_equal :openrouter, jev.unreachable_reason("https://openrouter.ai/api/alpha/decisions")
+    assert_nil jev.unreachable_reason("https://openrouter.ai/api/alpha/decisions")
+    assert_nil jev.unreachable_reason("https://eu.openrouter.ai/api/alpha/decisions")
     assert_equal :path, jev.unreachable_reason("https://gw.example.test/v1/jev")
     assert_equal :path, jev.unreachable_reason("ftp://jev.example.test/v1/systemone")
+  end
+
+  test "an OpenRouter decisions URL derives the /v1 api base for the provider's relative judgments path" do
+    jev = Ai::LegacyEnvConfig::Jev
+
+    assert_equal "https://openrouter.ai/api/v1", jev.base_url("https://openrouter.ai/api/alpha/decisions")
+    assert_equal "https://openrouter.ai/v1", jev.base_url("https://openrouter.ai/alpha/decisions")
+    assert_equal "https://gw.example.test/or/api/v1", jev.base_url("https://gw.example.test/or/api/alpha/decisions")
   end
 
   test "the external assistant is an agent endpoint at the end of chat's list" do
@@ -370,5 +432,14 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     config = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => without_slash)
 
     assert_empty config.routes_for(:embed)
+  end
+
+  test "equivalent hosted OpenAI embedding URLs still need a key" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns(nil)   # a host's OPENAI_ACCESS_TOKEN at boot would leak in
+    config = build("VECTOR_STORE_PROVIDER" => "pgvector",
+                   "EMBEDDING_URI_BASE" => "https://API.OPENAI.COM:443/v1/")
+
+    assert_empty config.routes_for(:embed), "a differently spelled api.openai.com is still OpenAI"
   end
 end

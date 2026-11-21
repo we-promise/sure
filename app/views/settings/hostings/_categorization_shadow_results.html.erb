@@ -2,11 +2,11 @@
     switching provider. Leaving that in the database means reaching for a Rails
     console, which defeats the point — so the summary lives here. %>
 <%
-  comparisons = Current.family.ai_comparisons.for_feature(:categorize)
-  sampled = comparisons.count
-  agreement = comparisons.agreement_rate
-  recent_disagreements = comparisons.disagreements.order(created_at: :desc).limit(5).to_a
-  names = Ai::Comparison.category_names(recent_disagreements, Current.family)
+  shadow = categorization_shadow_summary(Current.family)
+  sampled = shadow[:sampled]
+  agreement = shadow[:agreement]
+  recent_disagreements = shadow[:disagreements]
+  names = shadow[:names]
 %>
 
 <%= render DS::Note.new(title: t(".shadow_results_heading")) do %>

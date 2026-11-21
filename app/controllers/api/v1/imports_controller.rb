@@ -145,6 +145,16 @@ class Api::V1::ImportsController < Api::V1::BaseController
       }, status: :unprocessable_entity
     end
 
+  rescue Import::EnqueueFailedError => e
+    # The import and its rows are saved; publish_later restored the claim so a retry can queue it.
+    # Return the id so the caller can resume instead of creating a duplicate.
+    Rails.logger.error "ImportsController#create enqueue error: #{e.message}"
+    render json: {
+      error: "publish_failed",
+      message: "Import was created but could not be queued for processing. The API can't publish an existing import: " \
+               "publish it from the imports page in the web app (import_id identifies it) rather than creating it again.",
+      import_id: @import&.id
+    }, status: :internal_server_error
   rescue StandardError => e
     Rails.logger.error "ImportsController#create error: #{e.message}"
     render json: { error: "internal_server_error", message: "An unexpected error occurred." }, status: :internal_server_error

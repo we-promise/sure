@@ -54,6 +54,26 @@ class Ai::Instrumentation::UsageSubscriberTest < ActiveSupport::TestCase
     assert_nil row.metadata["tokens_unknown"]
   end
 
+  test "a 5xx before any answer records zero too: RubyLLM 2.2 counts it as refused" do
+    stub_request(:post, URL).to_return(status: 503, body: { error: { message: "busy" } }.to_json, headers: json)
+
+    assert_raises(Ai::Error::Upstream) { run_call(feature: :bill_setup) }
+
+    row = @family.llm_usages.where(family: @family, status: "failed").order(:created_at).last
+    assert_equal 0, row.estimated_cost
+    assert_nil row.metadata["tokens_unknown"]
+  end
+
+  test "a request lost after it was sent keeps its cost and tokens unknown: it may have been billed" do
+    stub_request(:post, URL).to_raise(Net::ReadTimeout)
+
+    assert_raises(Ai::Error::Timeout) { run_call(feature: :bill_setup) }
+
+    row = @family.llm_usages.where(family: @family, status: "failed").order(:created_at).last
+    assert_nil row.estimated_cost
+    assert_equal true, row.metadata["tokens_unknown"]
+  end
+
   test "the answering request's row records the answer's finish reason; the failed retry does not" do
     body = [ 200, { id: "c1", model: "gpt-4.1",
                     choices: [ { index: 0, message: { role: "assistant", content: '{"items":[]}' }, finish_reason: "stop" } ],
