@@ -52,7 +52,7 @@ class Security::Merger
 
       referencing_account_ids.tap do
         now = Time.current
-        move_holdings!(now)
+        move_holdings!
         @counts[:trades] = Trade.where(security_id: from.id).update_all(security_id: into.id, updated_at: now)
         move_lots!(now)
         move_unless_target_has(Security::Price, :date, :currency)
@@ -80,7 +80,10 @@ class Security::Merger
       [ holdings, trade_entries, lots ].flat_map { |scope| scope.distinct.pluck(:account_id) }.uniq
     end
 
-    def move_holdings!(now)
+    # Holdings keep the time they were written: it decides which row wins a
+    # collision with a later source in the group, and the current provider
+    # holdings are read by their latest write date.
+    def move_holdings!
       collisions = Holding.where(security_id: from.id)
         .joins(Holding.sanitize_sql_array([ <<~SQL, into.id ]))
           INNER JOIN holdings kept ON kept.security_id = ?
@@ -93,12 +96,12 @@ class Security::Merger
       stale_ids = collisions.map { |id, updated_at, kept_id, kept_updated_at| updated_at > kept_updated_at ? kept_id : id }
       @counts[:holdings_removed] = Holding.where(id: stale_ids).delete_all
 
-      @counts[:holdings_moved] = Holding.where(security_id: from.id).update_all(security_id: into.id, updated_at: now)
-      @counts[:references] += Holding.where(provider_security_id: from.id).update_all(provider_security_id: into.id, updated_at: now)
+      @counts[:holdings_moved] = Holding.where(security_id: from.id).update_all(security_id: into.id)
+      @counts[:references] += Holding.where(provider_security_id: from.id).update_all(provider_security_id: into.id)
       # A holding remapped away from a provider security that is now the
       # security it points to is no longer remapped.
       Holding.where(security_id: into.id, provider_security_id: into.id)
-        .update_all(provider_security_id: nil, security_locked: false, updated_at: now)
+        .update_all(provider_security_id: nil, security_locked: false)
     end
 
     def move_lots!(now)

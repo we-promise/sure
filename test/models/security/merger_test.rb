@@ -154,6 +154,40 @@ class Security::MergerTest < ActiveSupport::TestCase
     assert_equal @listed.id, first_holding.reload.security_id
   end
 
+  test "a group keeps the most recently written holding when two sources collide" do
+    Account.any_instance.stubs(:sync_later)
+
+    [ %i[older newer], %i[newer older] ].each do |order|
+      sources = {
+        older: Security.create!(ticker: "MRGA", offline: true),
+        newer: Security.create!(ticker: "MRGB", offline: true)
+      }
+      create_holding(sources[:older], date: 1.day.ago.to_date, qty: 1).update_columns(updated_at: 2.days.ago)
+      create_holding(sources[:newer], date: 1.day.ago.to_date, qty: 2).update_columns(updated_at: 1.hour.ago)
+
+      Security::Merger.merge_group!(sources.values_at(*order), into: @listed)
+
+      assert_equal [ 2 ], @account.holdings.where(security: @listed).pluck(:qty).map(&:to_i), "merged #{order.join(' then ')}"
+      @account.holdings.where(security: @listed).delete_all
+    end
+  end
+
+  test "moved and repointed holdings keep their original write time" do
+    other = Security.create!(ticker: "MRGY", exchange_operating_mic: "XNAS")
+    written_at = 3.days.ago.change(usec: 0)
+    moved = create_holding(@placeholder, date: 2.days.ago.to_date, qty: 1)
+    remapped_to_listed = create_holding(@listed, date: Date.current, qty: 1, provider_security: @placeholder, security_locked: true)
+    remapped_elsewhere = create_holding(other, date: Date.current, qty: 1, provider_security: @placeholder, security_locked: true)
+    [ moved, remapped_to_listed, remapped_elsewhere ].each { |holding| holding.update_columns(updated_at: written_at) }
+
+    Security::Merger.new(from: @placeholder, into: @listed).merge!
+
+    assert_equal @listed.id, moved.reload.security_id
+    assert_nil remapped_to_listed.reload.provider_security_id
+    assert_equal @listed.id, remapped_elsewhere.reload.provider_security_id
+    assert_equal [ written_at ] * 3, [ moved, remapped_to_listed, remapped_elsewhere ].map(&:updated_at)
+  end
+
   test "keeps every family's tags, and one tagging where the target already has the tag" do
     other_tag = families(:empty).tags.create!(name: "Another household's scheme")
     Tagging.create!(tag: tags(:one), taggable: @listed)
