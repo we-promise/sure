@@ -73,6 +73,17 @@ vi:
         manual_entry: Nhập số dư tài khoản
         title: Bạn muốn thêm bằng cách nào?
       title: Bạn muốn thêm gì?
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): dưới 0 từ %{date}, thấp nhất %{qty}"
+        hint: "Có thể thiếu một giao dịch mua hoặc chuyển khoản. Hãy thêm vào hoặc sửa các giao dịch đã đưa vị thế xuống dưới 0."
+        link: "Xem lại danh mục nắm giữ"
+        message: "Một số vị thế đã xuống dưới 0"
+      sync_failed:
+        message: "Lần đồng bộ gần nhất đã thất bại"
+      sync_hint: "Số liệu ở đây có thể đã cũ. Hãy đồng bộ lại để cập nhật."
+      sync_stale:
+        message: "Lần đồng bộ gần nhất chưa hoàn tất"
     show:
       limited_fx_history_warning: "Lịch sử tỷ giá hối đoái chỉ khả dụng từ %{date} trở đi. Các giao dịch trước ngày này sử dụng chuyển đổi tiền tệ xấp xỉ."
       tabs:

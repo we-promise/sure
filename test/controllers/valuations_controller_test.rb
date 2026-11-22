@@ -112,4 +112,24 @@ class ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_match I18n.t("valuations.errors.amount_required"), response.body
   end
+
+  test "clearing a note saves it cleared" do
+    @entry.update!(notes: "Old note")
+
+    patch valuation_url(@entry), params: { entry: { notes: "" } }
+
+    assert_redirected_to account_url(@entry.account)
+    assert_nil @entry.reload.notes
+  end
+
+  test "a balance update without the notes field keeps the note" do
+    @entry.update!(notes: "Keep me")
+
+    patch valuation_url(@entry), params: { entry: { amount: 22000, date: Date.current } }
+
+    assert_redirected_to account_url(@entry.account)
+    @entry.reload
+    assert_equal 22000, @entry.amount
+    assert_equal "Keep me", @entry.notes
+  end
 end

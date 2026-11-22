@@ -18,6 +18,7 @@ fr:
       chimnie: Chimnie
       realie: Realie
       rentcast: RentCast
+      terrascoutx: TerraScoutX
     balances:
       market_value_label: Valeur marchande estimée
       market_value_tooltip: La valeur marchande estimée de votre propriété. Ce numéro
@@ -63,6 +64,8 @@ fr:
         medium: Moyenne
       avm_county_label: Comté (facultatif)
       avm_description: Saisissez un nom pour le bien et son adresse. %{provider} recherchera pour vous les caractéristiques du bien et sa valeur de marché estimée.
+      avm_descriptions:
+        terrascoutx: Saisissez un nom pour le bien et son adresse. %{provider} recherchera les caractéristiques du bien et la valeur fixée par le comté dans son dernier rôle d'imposition. Il ne s'agit pas d'une estimation actuelle du marché.
       avm_option: Ajouter via %{provider}
       avm_postcode_label: Code postal
       avm_preview_back: Retour
@@ -73,6 +76,8 @@ fr:
       avm_preview_range: Fourchette d'estimation
       avm_preview_title: Confirmer les informations du bien
       avm_preview_uprn: UPRN
+      avm_roll_value_notes:
+        terrascoutx: "%{provider} indique la valeur fixée par le comté dans son dernier rôle d'imposition. Ce n'est pas une estimation actuelle du marché : elle peut donc différer du prix auquel le bien se vendrait."
       avm_submit: Rechercher le bien
       avm_title: Ajouter un bien via %{provider}
       avm_town_label: Ville
@@ -130,8 +135,10 @@ fr:
         living_area: Surface habitable
         market_value: Valeur marchande
         purchase_price: Prix d'achat
+        rate_unavailable: Taux de change indisponible
         refresh_valuation: Actualiser l'estimation
         trend: Tendance
+        trend_in_currency: Tendance en %{currency}
         unknown: Inconnu
         valuation_source: Estimé par %{provider}, dernière mise à jour le %{date}
         year_built: Année de construction

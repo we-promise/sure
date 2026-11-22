@@ -128,6 +128,17 @@ es:
         manual_entry: Introducir saldo de la cuenta
         title: ¿Cómo te gustaría añadirla?
       title: ¿Qué te gustaría añadir?
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): por debajo de cero desde el %{date}, mínimo %{qty}"
+        hint: "Probablemente falta una compra o un traspaso. Añádela o corrige las operaciones que dejaron la posición por debajo de cero."
+        link: Revisar posiciones
+        message: "Algunas posiciones quedaron por debajo de cero"
+      sync_failed:
+        message: La última sincronización falló
+      sync_hint: Las cifras pueden estar desactualizadas. Vuelve a sincronizar para ponerlas al día.
+      sync_stale:
+        message: La última sincronización no terminó
     show:
       limited_fx_history_warning: El historial de tipos de cambio solo está disponible desde %{date}. Las transacciones anteriores a esa fecha usan conversiones de divisa aproximadas; esto puede ocurrir cuando el proveedor de tipos de cambio solo ofrece una ventana histórica limitada.
       tabs:
