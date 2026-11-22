@@ -19,8 +19,8 @@ class AddMonteCarloToRetirementPlansMigrationTest < ActiveSupport::TestCase
     migrate(:up)
 
     assert_equal before, shape
-    assert_equal [ "numeric(5,4)", BigDecimal("0.12"), false ], before[:columns]["return_volatility"]
-    assert_equal [ "numeric(5,4)", BigDecimal("0.9"), false ], before[:columns]["success_target"]
+    assert_equal [ "numeric(5,4)", "0.12", false ], before[:columns]["return_volatility"]
+    assert_equal [ "numeric(5,4)", "0.9", false ], before[:columns]["success_target"]
     assert_equal %w[0 1], before[:constraints]["chk_retirement_plans_return_volatility"]
     assert_equal %w[0 1], before[:constraints]["chk_retirement_plans_success_target"]
   end
