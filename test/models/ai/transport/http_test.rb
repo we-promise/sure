@@ -60,4 +60,13 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
       assert_nil connection.proxy
     end
   end
+
+  test "an unreadable proxy raises Ai::Error::Unreachable" do
+    with_env_overrides("HTTPS_PROXY" => "http://bad host:8888", "https_proxy" => nil, "HTTP_PROXY" => nil, "http_proxy" => nil, "NO_PROXY" => nil, "no_proxy" => nil) do
+      error = assert_raises(Ai::Error::Unreachable) { Http.proxy_for("https://llm.example.test/v1") }
+
+      assert_not_includes Ai::Error::RETRYABLE, error.class
+      refute_includes error.message, "bad host"
+    end
+  end
 end

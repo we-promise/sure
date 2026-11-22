@@ -99,6 +99,18 @@ class Assistant::External::ModelCatalogTest < ActiveSupport::TestCase
     assert_not connection.use_ssl?
   end
 
+  test "an unreadable proxy fails discovery with ModelCatalog::Error" do
+    stub_request(:get, "https://agent.example.test/v1/models").to_return(status: 200, body: { data: [] }.to_json)
+
+    error = with_proxy_env(https: "http://bad host:8888") do
+      assert_raises(Assistant::External::ModelCatalog::Error) { catalog("https://agent.example.test/v1/chat/completions").models }
+    end
+
+    assert_equal "Agent discovery is unavailable: The outbound proxy URL cannot be read", error.message
+    refute_includes error.message, "bad host"
+    assert_not_requested :get, "https://agent.example.test/v1/models"
+  end
+
   private
     def catalog(url)
       Assistant::External::ModelCatalog.new(url:, token: "secret")

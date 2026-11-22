@@ -48,6 +48,8 @@ class Assistant::External::ModelCatalog
     end
   rescue JSON::ParserError, URI::InvalidURIError => e
     raise Error, "Agent discovery returned an invalid response: #{e.message}"
+  rescue ProxyConfigurable::InvalidProxyError => e
+    raise Error, "Agent discovery is unavailable: #{e.message}"
   rescue *CONNECTION_ERRORS => e
     raise Error, "Agent discovery is unavailable: #{e.message}"
   end

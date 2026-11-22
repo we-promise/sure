@@ -13,8 +13,13 @@ module Ai::Transport::Http
   OPENROUTER_BASE = "https://openrouter.ai/api/v1".freeze
 
   class << self
-    # The proxy URL for a request to `url`, or nil to go direct, from ProxyConfigurable.
-    def proxy_for(url, env: ENV) = ProxyConfigurable.url_for(url, env:)
+    # The proxy URL for a request to `url`, or nil to go direct, from ProxyConfigurable. An
+    # unreadable proxy is Unreachable: never retried, and never sent direct instead.
+    def proxy_for(url, env: ENV)
+      ProxyConfigurable.url_for(url, env:)
+    rescue ProxyConfigurable::InvalidProxyError => e
+      raise Ai::Error::Unreachable, e.message
+    end
 
     # One base URL rule for every OpenAI-compatible server, the same as ruby-openai's, so an
     # endpoint configured for ruby-openai keeps its URL: a URL that contains "v1" is used as given
