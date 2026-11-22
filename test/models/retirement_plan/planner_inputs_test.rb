@@ -328,13 +328,17 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("15000"), @plan.reload.simulation(as_of: AS_OF).rows.find { |r| r.year == 2040 }.withdrawal
   end
 
-  test "a stream with no rate into the family's currency is left out of the simulation" do
+  test "a stream with no rate into the family's currency is left out of the simulation, and counted" do
     @plan.update!(inflation_rate: 0, end_age: 70, retirement_date: Date.new(2040, 1, 1))
     @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 30_000)
+    assert_equal 0, RetirementPlan.find(@plan.id).unconverted_stream_count(as_of: AS_OF)
+
     @plan.streams.create!(kind: "expense", name: "Rent", annual_amount: 1_000, currency: "EUR")
     ExchangeRate.stubs(:provider).returns(nil)
+    plan = RetirementPlan.find(@plan.id)
 
-    assert_equal BigDecimal("30000"), @plan.simulation(as_of: AS_OF).rows.find { |r| r.year == 2040 }.withdrawal
+    assert_equal BigDecimal("30000"), plan.simulation(as_of: AS_OF).rows.find { |r| r.year == 2040 }.withdrawal
+    assert_equal 1, plan.unconverted_stream_count(as_of: AS_OF)
   end
 
   test "without a birth year there is no simulation and no solution" do

@@ -152,6 +152,13 @@ class RetirementPlan < ApplicationRecord
     assets_as_of(as_of).unconverted_count
   end
 
+  # Streams left out of the simulation for want of an exchange rate into the
+  # family's currency. An expense left out makes the plan look better than it
+  # is, so the page should warn when this is above zero.
+  def unconverted_stream_count(as_of:)
+    streams_as_of(as_of).unconverted_count
+  end
+
   private
     def non_numeric_percents
       @non_numeric_percents ||= Set.new
@@ -162,6 +169,7 @@ class RetirementPlan < ApplicationRecord
     end
 
     AssetTotal = Data.define(:total, :unconverted_count)
+    SimulationStreams = Data.define(:streams, :unconverted_count)
 
     # A plan runs from the reference year to the end-age year. With the owner
     # born after the reference year, or the end age already past, there are
@@ -183,19 +191,26 @@ class RetirementPlan < ApplicationRecord
         annual_contribution: projection(as_of: as_of).annual_contribution,
         expected_annual_return: expected_annual_return,
         inflation_rate: inflation_rate,
-        streams: simulation_streams(as_of),
+        streams: streams_as_of(as_of).streams,
         birth_year: birth_year,
         end_age: end_age
       }
     end
 
     # Each stream in the family's currency. A stream with no rate into it is
-    # left out, as an account with none is left out of the asset total.
-    def simulation_streams(as_of)
-      streams.filter_map do |stream|
-        stream.to_simulation_stream(currency: user.family.currency, date: as_of)
-      rescue Money::ConversionError
-        nil
+    # left out and counted (see #unconverted_stream_count), as an account with
+    # none is left out of the asset total.
+    def streams_as_of(as_of)
+      @streams_as_of ||= {}
+      @streams_as_of[as_of] ||= begin
+        unconverted = 0
+        converted = streams.filter_map do |stream|
+          stream.to_simulation_stream(currency: user.family.currency, date: as_of)
+        rescue Money::ConversionError
+          unconverted += 1
+          nil
+        end
+        SimulationStreams.new(streams: converted, unconverted_count: unconverted)
       end
     end
 
