@@ -1635,6 +1635,22 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Flight" ], biggest_expense_names
   end
 
+  test "biggest expenses leaves out pending and future-dated transactions" do
+    travel_to Date.new(2026, 6, 15) do
+      month_start = Date.current.beginning_of_month
+      create_transaction(name: "Rent", amount: 120, date: month_start)
+      create_transaction(name: "Utilities", amount: 100, date: month_start)
+      create_transaction(name: "Coffee", amount: 80, date: month_start)
+      create_transaction(name: "Pending hold", amount: 500, date: month_start + 1,
+                         entryable: Transaction.new(extra: { "simplefin" => { "pending" => true } }))
+      create_transaction(name: "Future payment", amount: 400, date: Date.current + 1.day)
+
+      get reports_path(period_type: :custom, start_date: month_start, end_date: month_start.end_of_month)
+
+      assert_equal [ "Rent", "Utilities", "Coffee" ], biggest_expense_names
+    end
+  end
+
   test "biggest expenses is hidden when the period has no expenses" do
     create_transaction(name: "Salary", amount: -3_000, date: BIGGEST_MONTH + 1)
 

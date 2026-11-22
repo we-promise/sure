@@ -478,6 +478,8 @@ class ReportsController < ApplicationController
       # Loan payments and investment contributions are expenses whatever their
       # sign (some importers store them negative), as in the income statement.
       expenses = report_transactions_scope(excluded_kinds: Current.family.analytics_excluded_kinds - [ "one_time" ])
+        .excluding_pending
+        .merge(Entry.excluding_scheduled)
         .where("entries.amount > 0 OR (entries.amount < 0 AND transactions.kind IN (?))", SIGN_AGNOSTIC_EXPENSE_KINDS)
       expense_amount_sql = Arel.sql(ActiveRecord::Base.sanitize_sql_array([
         "CASE WHEN transactions.kind IN (?) THEN ABS(entries.amount) ELSE entries.amount END DESC", SIGN_AGNOSTIC_EXPENSE_KINDS
