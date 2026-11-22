@@ -234,8 +234,8 @@ class InvestmentStatement
   end
 
   STALE_PRICE_AFTER_DAYS = 5
-  DATA_QUALITY_KINDS = %i[missing_cost_basis stale_price provider].freeze
-  DataQualityIssue = Data.define(:kind, :holding, :security, :detail)
+  DATA_QUALITY_KINDS = %i[missing_cost_basis stale_price provider negative_position].freeze
+  DataQualityIssue = Data.define(:kind, :holding, :security, :detail, :account)
 
   # Holdings the user should look at before trusting the figures: no cost
   # basis anywhere (Holding#avg_cost is nil: nothing stored and nothing the
@@ -247,20 +247,27 @@ class InvestmentStatement
   # sort by kind, ticker, security and account, so ties keep their order
   # between requests. The cost bases come from the batched preload and the
   # quote dates from two queries, so the list is bounded regardless of the
-  # number of holdings. `as_of` is the price cut-off only; the holdings are
-  # today's.
+  # number of holdings. A position that went below zero on any day
+  # (Account#negative_positions, the account page's warning) is flagged even
+  # once it recovered, so it reads a few queries per investment account.
+  # `as_of` is the price cut-off only; the holdings are today's.
   def data_quality_issues(as_of: Date.current)
     as_of = as_of.to_date
     holdings = holdings_with_avg_costs
-    return [] if holdings.empty?
 
     issues = []
+
+    investment_accounts.each do |account|
+      account.negative_positions.each do |position|
+        issues << DataQualityIssue.new(kind: :negative_position, holding: nil, security: position.security, detail: position, account: account)
+      end
+    end
 
     holdings.each do |holding|
       next if holding.security.cash?
 
       if holding.avg_cost.nil?
-        issues << DataQualityIssue.new(kind: :missing_cost_basis, holding: holding, security: holding.security, detail: nil)
+        issues << DataQualityIssue.new(kind: :missing_cost_basis, holding: holding, security: holding.security, detail: nil, account: holding.account)
       end
     end
 
@@ -269,18 +276,18 @@ class InvestmentStatement
 
       status = security.provider_status
       if status != :ok
-        issues << DataQualityIssue.new(kind: :provider, holding: nil, security: security, detail: status)
+        issues << DataQualityIssue.new(kind: :provider, holding: nil, security: security, detail: status, account: nil)
         next
       end
 
       latest = latest_quote_dates(as_of)[security.id]
       if latest.nil? || latest < as_of - STALE_PRICE_AFTER_DAYS
-        issues << DataQualityIssue.new(kind: :stale_price, holding: nil, security: security, detail: latest)
+        issues << DataQualityIssue.new(kind: :stale_price, holding: nil, security: security, detail: latest, account: nil)
       end
     end
 
     issues.sort_by do |issue|
-      [ DATA_QUALITY_KINDS.index(issue.kind), issue.security.ticker.to_s, issue.security.id.to_s, issue.holding&.account_id.to_s,
+      [ DATA_QUALITY_KINDS.index(issue.kind), issue.security.ticker.to_s, issue.security.id.to_s, issue.account&.id.to_s,
         issue.holding&.id.to_s ]
     end
   end

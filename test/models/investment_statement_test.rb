@@ -1892,6 +1892,43 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal :offline, issues.find { |i| i.kind == :provider && i.security == offline }.detail
   end
 
+  test "data_quality_issues flags a position that went below zero, with its account" do
+    account = create_investment_account(balance: 5000)
+    security = create_portfolio_security
+    create_portfolio_trade(account: account, security: security, qty: -3, price: 10, date: 3.days.ago.to_date)
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    issue = @statement.data_quality_issues.find { |i| i.kind == :negative_position }
+
+    assert_equal [ security, account ], [ issue&.security, issue&.account ]
+    assert_equal(-3, issue.detail.lowest_qty)
+    assert_equal 3.days.ago.to_date, issue.detail.first_date
+  end
+
+  test "data_quality_issues still flags a negative position that later recovered" do
+    account = create_investment_account(balance: 5000)
+    security = create_portfolio_security
+    create_portfolio_trade(account: account, security: security, qty: -3, price: 10, date: 5.days.ago.to_date)
+    create_portfolio_trade(account: account, security: security, qty: 5, price: 10, date: 2.days.ago.to_date)
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    assert_equal [ 2 ], @statement.current_holdings.where(security: security).pluck(:qty)
+
+    issues = @statement.data_quality_issues.select { |i| i.kind == :negative_position }
+
+    assert_equal [ [ security, -3 ] ], issues.map { |i| [ i.security, i.detail.lowest_qty ] }
+  end
+
+  test "data_quality_issues flags a negative position with no holding left today" do
+    account = create_investment_account(balance: 5000)
+    security = create_portfolio_security
+    create_portfolio_trade(account: account, security: security, qty: -3, price: 10, date: 5.days.ago.to_date)
+    create_portfolio_trade(account: account, security: security, qty: 3, price: 10, date: 2.days.ago.to_date)
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    assert_empty @statement.current_holdings
+
+    assert_equal [ [ :negative_position, security ] ], @statement.data_quality_issues.map { |i| [ i.kind, i.security ] }
+  end
+
   test "data_quality_issues issues a bounded number of queries" do
     account = create_investment_account(balance: 5000)
     6.times do |i|
@@ -1904,8 +1941,10 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     # Four: the cost-basis preload, the read of which accounts use FIFO (these
     # holdings have no buy on record, so Holding.preload_avg_costs asks), the
     # latest prices, and one settings read for the enabled securities
-    # providers, which is cached after the first.
-    assert_operator queries.size, :<=, 4, "expected the cost-basis preload, FIFO accounts, latest prices and settings queries only, got:\n#{queries.join("\n")}"
+    # providers, which is cached after the first. Then three for negative
+    # positions: the investment accounts, and for this one account whether
+    # it is linked and its holdings below zero.
+    assert_operator queries.size, :<=, 7, "expected the cost-basis preload, FIFO accounts, latest prices, settings and negative-position queries only, got:\n#{queries.join("\n")}"
   end
 
   # With a securities provider configured, a healthy link is not flagged, so
