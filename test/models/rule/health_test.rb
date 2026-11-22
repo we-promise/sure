@@ -272,6 +272,49 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_equal [ [ same_merchant, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
   end
 
+  test "different merchants inside OR groups do not keep text alternatives apart" do
+    uber = @family.merchants.create!(name: "Uber")
+    deliveroo = @family.merchants.create!(name: "Deliveroo")
+    above = create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ merchant_condition(uber), name_condition("like", "uber") ]),
+      category: @groceries
+    )
+    below = create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ merchant_condition(deliveroo), name_condition("like", "uber eats zz") ]),
+      category: @dining
+    )
+
+    assert_equal [ [ below, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+  end
+
+  test "required name conditions that cannot all hold are not an overlap" do
+    create_rule(name_condition("starts_with", "uber"), name_condition("ends_with", "taxi"), category: @groceries)
+    create_rule(name_condition("starts_with", "uber"), name_condition("ends_with", "eats"), category: @dining)
+
+    assert_empty health.overlaps
+
+    @family.rules.destroy_all
+    create_rule(name_condition("starts_with", "uber"), name_condition("like", "eats"), category: @groceries)
+    create_rule(name_condition("starts_with", "deliveroo"), name_condition("like", "eats"), category: @dining)
+
+    assert_empty health.overlaps
+
+    @family.rules.destroy_all
+    create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "and", sub_conditions: [ name_condition("=", "Uber Eats"), name_condition("like", "uber") ]),
+      category: @groceries
+    )
+    create_rule(name_condition("=", "Uber Taxi"), name_condition("like", "uber"), category: @dining)
+
+    assert_empty health.overlaps
+
+    @family.rules.destroy_all
+    above = create_rule(name_condition("starts_with", "uber"), name_condition("ends_with", "eats"), category: @groceries)
+    below = create_rule(name_condition("starts_with", "uber zz"), name_condition("ends_with", "eats"), category: @dining)
+
+    assert_equal [ [ below, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+  end
+
   test "prefixes that cannot both hold are not an overlap" do
     above = create_rule(name_condition("starts_with", "uber"), category: @groceries)
     create_rule(name_condition("starts_with", "eats uber"), category: @dining)
