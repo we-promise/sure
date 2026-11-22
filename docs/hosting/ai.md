@@ -1889,11 +1889,11 @@ non-destructive live checks against the effective configuration:
 The checks run in a Sidekiq worker, where AI work runs, never in the web
 request: opening the tab makes no AI request. **Run checks again** queues them
 (`Ai::ProbeJob`, on the AI capsule's low-priority queue), and the tab reloads
-with the results when the worker finishes. A click while a run is queued adds
-nothing. So the checks need a worker running the AI capsule
-(`RAILS_AI_MAX_THREADS` of at least 1); with none, the tab says the worker
-appears to be down. The automatic reload needs Action Cable on Redis; in
-development, reload the tab to see the results.
+with the results when the worker finishes. A click while a run is queued
+queues another; running the checks twice is harmless. So the checks need a
+worker running the AI capsule (`RAILS_AI_MAX_THREADS` of at least 1); with
+none, the tab says the worker appears to be down. The automatic reload needs
+Action Cable on Redis; in development, reload the tab to see the results.
 
 When `OPENAI_URI_BASE` points outside OpenAI's hosted API, the page labels the
 selected provider **OpenAI-compatible** and identifies a known effective
