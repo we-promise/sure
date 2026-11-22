@@ -87,6 +87,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert settings["list_open"]
     assert_equal [ accounts(:investment).id ], settings["hidden_account_ids"]
     assert_not settings.key?("unknown")
+    assert_not @user.preferences.fetch("account_balances").key?("unknown"), "unknown keys are not stored either"
 
     patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: 7 } } }, as: :json
     assert_equal 6, @user.reload.account_balances_settings["horizon"], "an unsupported forecast length is ignored"
