@@ -22,6 +22,13 @@ module Family::AutoTransferMatchable
   TRANSFER_HINT_DATE_WINDOW = 2
   TRANSFER_HINT_EXCHANGE_RATE_TOLERANCE = 0.03
 
+  # A run skipped because the family's lock is held queues one retry for this
+  # long after. The guard against queuing another expires before the retry is
+  # due, so a retry that is itself skipped can always queue the next one; a
+  # skip in the last few seconds may add a second retry, never a pile of them.
+  AUTO_MATCH_RETRY_WAIT = 1.minute
+  AUTO_MATCH_RETRY_GUARD_TTL = 50.seconds
+
   # Read at call time rather than frozen into a constant at boot, so a bad value falls back
   # instead of raising inside every sync: Family::Syncer and Account::Syncer both call
   # auto_match_transfers! without a tolerance of their own.
@@ -131,7 +138,7 @@ module Family::AutoTransferMatchable
       # waiting could stall a caller that holds row locks of its own. So the
       # skipped run queues a family-wide one for shortly after.
       unless lock_auto_match_transfers!
-        AutoMatchTransfersJob.set(wait: 1.minute).perform_later(self)
+        queue_auto_match_transfers_retry
         next
       end
 
@@ -186,6 +193,20 @@ module Family::AutoTransferMatchable
   end
 
   private
+    # Several runs skipped together (one per account of a provider sync) queue
+    # one retry between them. The guard is explicit because sidekiq-unique-jobs'
+    # lock options don't take effect on ActiveJob jobs here.
+    def queue_auto_match_transfers_retry
+      queued = Sidekiq.redis do |conn|
+        conn.call("SET", auto_match_retry_guard_key, "1", "NX", "EX", AUTO_MATCH_RETRY_GUARD_TTL.to_i)
+      end
+      AutoMatchTransfersJob.set(wait: AUTO_MATCH_RETRY_WAIT).perform_later(self) if queued
+    end
+
+    def auto_match_retry_guard_key
+      "auto_match_transfers:retry:#{id}"
+    end
+
     # True when this transaction now holds the family's auto-match lock.
     def lock_auto_match_transfers!
       key = Digest::SHA1.hexdigest("auto_match_transfers:#{id}").to_i(16) % (2**63)

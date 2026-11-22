@@ -730,11 +730,29 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   end
 
   test "a run skipped because the family's lock is held queues a family-wide retry" do
-    @family.stubs(:lock_auto_match_transfers!).returns(false)
+    family = Family.create!(name: "Retry", currency: "USD")
+    family.stubs(:lock_auto_match_transfers!).returns(false)
 
-    assert_enqueued_with(job: AutoMatchTransfersJob, args: [ @family ]) do
-      @family.auto_match_transfers!(account: @depository)
+    assert_enqueued_with(job: AutoMatchTransfersJob, args: [ family ]) do
+      family.auto_match_transfers!
     end
+  end
+
+  # Fresh families, so parallel workers sharing Redis never share a key.
+  test "runs skipped together queue one retry per family" do
+    family = Family.create!(name: "Retry", currency: "USD")
+    other_family = Family.create!(name: "Other retry", currency: "USD")
+    [ family, other_family ].each do |f|
+      Sidekiq.redis { |conn| conn.call("DEL", f.send(:auto_match_retry_guard_key)) }
+      f.stubs(:lock_auto_match_transfers!).returns(false)
+    end
+
+    assert_enqueued_jobs 2, only: AutoMatchTransfersJob do
+      3.times { family.auto_match_transfers! }
+      other_family.auto_match_transfers!
+    end
+    assert_equal [ [ family ], [ other_family ] ],
+      enqueued_jobs.select { |job| job["job_class"] == "AutoMatchTransfersJob" }.map { |job| ActiveJob::Arguments.deserialize(job["arguments"]) }
   end
 
   test "a pair recategorized apart after selection does not displace the guess" do
