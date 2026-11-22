@@ -20,6 +20,23 @@ class DS::LocationPickerTest < ViewComponent::TestCase
     assert_text "Barcelona, Spain"
   end
 
+  test "disables the search input and clear button when can_annotate is false" do
+    entry = entries(:transaction)
+
+    render_inline(DS::LocationPicker.new(form: form_builder_for(entry, "entry"), entry: entry, can_annotate: false))
+
+    assert_selector "[data-location-picker-target='searchInput'][disabled]"
+    assert_selector "[data-location-picker-target='display'] button[disabled]"
+  end
+
+  test "does not disable the search input when can_annotate is true" do
+    entry = entries(:transaction)
+
+    render_inline(DS::LocationPicker.new(form: form_builder_for(entry, "entry"), entry: entry, can_annotate: true))
+
+    assert_no_selector "[data-location-picker-target='searchInput'][disabled]"
+  end
+
   private
     def form_builder_for(object, name)
       StyledFormBuilder.new(name, object, vc_test_controller.view_context, {})

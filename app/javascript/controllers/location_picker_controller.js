@@ -15,9 +15,15 @@ export default class extends Controller {
     "confirmMap",
   ];
 
+  static values = {
+    searchUnavailable: String,
+    noMatches: String,
+  };
+
   connect() {
     this.marker = null;
     this.confirmMapInstance = null;
+    this.dragGeneration = 0;
   }
 
   disconnect() {
@@ -50,7 +56,7 @@ export default class extends Controller {
     this.confirmMapTarget.classList.add("hidden");
     this.confirmMapInstance?.remove();
     this.confirmMapInstance = null;
-    this.element.closest("form").requestSubmit();
+    this.#submitForm();
   }
 
   async #fetchSuggestions(query) {
@@ -62,14 +68,14 @@ export default class extends Controller {
     );
 
     if (!response.ok) {
-      this.suggestionsTarget.innerHTML = `<li>${this.#t("search_unavailable")}</li>`;
+      this.suggestionsTarget.innerHTML = `<li>${this.searchUnavailableValue}</li>`;
       return;
     }
 
     const results = await response.json();
 
     if (results.length === 0) {
-      this.suggestionsTarget.innerHTML = `<li>${this.#t("no_matches")}</li>`;
+      this.suggestionsTarget.innerHTML = `<li>${this.noMatchesValue}</li>`;
       return;
     }
 
@@ -109,10 +115,11 @@ export default class extends Controller {
     );
     this.marker.on("dragend", () => this.#onDrag());
 
-    this.element.closest("form").requestSubmit();
+    this.#submitForm();
   }
 
   async #onDrag() {
+    const generation = ++this.dragGeneration;
     const { lat, lng } = this.marker.getLatLng();
     this.latTarget.value = lat;
     this.lngTarget.value = lng;
@@ -124,20 +131,23 @@ export default class extends Controller {
       },
     );
 
+    if (generation !== this.dragGeneration) return;
+
     if (response.ok) {
       const result = await response.json();
+      if (generation !== this.dragGeneration) return;
       this.nameTarget.value = result.display_name;
       this.displayTextTarget.textContent = result.display_name;
     }
 
-    this.element.closest("form").requestSubmit();
+    this.#submitForm();
   }
 
-  #t(key) {
-    const messages = {
-      search_unavailable: "Search unavailable, try again",
-      no_matches: "No matches, try a different search",
-    };
-    return messages[key];
+  #submitForm() {
+    const form = this.element.closest("form");
+    const controllers = (form?.dataset.controller || "").split(/\s+/);
+    if (form && controllers.includes("auto-submit-form")) {
+      form.requestSubmit();
+    }
   }
 }

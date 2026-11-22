@@ -133,6 +133,8 @@ en:
       search_placeholder: Search icons...
     location_picker:
       search_placeholder: "Search a place..."
+      search_unavailable: "Search unavailable, try again"
+      no_matches: "No matches, try a different search"
   provider_sync_summary:
     title: Sync summary
     last_sync: "Last sync: %{time_ago} ago"

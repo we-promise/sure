@@ -1,4 +1,6 @@
-<div data-controller="location-picker" data-location-picker-located-value="<%= located? %>">
+<div data-controller="location-picker"
+     data-location-picker-search-unavailable-value="<%= helpers.t("ds.location_picker.search_unavailable") %>"
+     data-location-picker-no-matches-value="<%= helpers.t("ds.location_picker.no_matches") %>">
   <%= form.hidden_field :location_lat, value: entry.location_lat, data: { "location-picker-target": "lat" } %>
   <%= form.hidden_field :location_lng, value: entry.location_lng, data: { "location-picker-target": "lng" } %>
   <%= form.hidden_field :location_name, value: entry.location_name, data: { "location-picker-target": "name" } %>
