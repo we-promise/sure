@@ -215,6 +215,18 @@ class Rack::Attack
     request.ip if request.post? && request.path == "/settings/background_jobs/cancel"
   end
 
+  # LocationSearchesController#index and #reverse proxy every request to
+  # Nominatim (OpenStreetMap's free geocoder), which asks callers to stay
+  # near 1 req/sec from a single identifying User-Agent. That User-Agent
+  # (Geocoding::NominatimClient::USER_AGENT) is shared by every self-hosted
+  # instance of this app, so one authenticated user hammering either action
+  # risks Nominatim rate-limiting or banning the string for everyone, not
+  # just the abuser. Burst-tolerant budget roughly matching Nominatim's own
+  # policy, rather than a strict 1/sec that would reject normal typing.
+  throttle("location_searches/ip", limit: 20, period: 20.seconds) do |request|
+    request.ip if request.get? && request.path.start_with?("/location_searches")
+  end
+
   # Determine limits based on self-hosted mode
   self_hosted = Rails.application.config.app_mode.self_hosted?
 
