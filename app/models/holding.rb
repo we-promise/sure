@@ -427,14 +427,18 @@ class Holding < ApplicationRecord
           merge_attrs[:account_provider_id] ||= holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
           merge_attrs[:security_locked] = true # Lock merged holding to prevent provider overwrites
 
-          existing.update!(merge_attrs)
+          # A merged row can be negative (a full transfer out on either side),
+          # which the user-edit validations would reject. The materializer
+          # rebuilds it, so move the row as it stands.
+          existing.assign_attributes(merge_attrs)
+          existing.save!(validate: false)
           holding.destroy!
         else
           # No collision: update to new security
           holding.provider_security_id ||= old_security.id
           holding.security = new_security
           holding.security_locked = true
-          holding.save!
+          holding.save!(validate: false)
         end
       end
 
@@ -475,11 +479,14 @@ class Holding < ApplicationRecord
 
       # Reset ALL holdings that were remapped from this provider_security
       account.holdings.where(security: current_security, provider_security: original_security).find_each do |holding|
-        holding.update!(
+        # As in remap_security!: a negative row is legitimate and the
+        # materializer rebuilds it, so the user-edit validations do not apply.
+        holding.assign_attributes(
           security: original_security,
           security_locked: false,
           provider_security_id: nil
         )
+        holding.save!(validate: false)
       end
     end
 

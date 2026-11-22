@@ -699,6 +699,36 @@ class HoldingTest < ActiveSupport::TestCase
     assert_nil @amzn.provider_security_id
   end
 
+  test "remap_security! moves a holding with a negative quantity" do
+    old_security = @amzn.security
+    new_security = create_security("GOOGN", prices: [ { date: Date.current, price: 100.00 } ])
+    @amzn.update_columns(qty: -22, amount: -3187.80, price: 144.90)
+
+    @amzn.remap_security!(new_security)
+
+    @amzn.reload
+    assert_equal new_security, @amzn.security
+    assert_equal BigDecimal("-22"), @amzn.qty
+    assert_equal BigDecimal("-3187.8"), @amzn.amount
+    assert @amzn.security_locked?
+    assert_equal old_security, @amzn.provider_security
+  end
+
+  test "remap_security! merges into a row that becomes negative" do
+    new_security = create_security("GOOGM", prices: [ { date: Date.current, price: 100.00 } ])
+    existing = @account.holdings.create!(
+      date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: "USD"
+    )
+    @amzn.update_columns(qty: -10, amount: -1000, price: 100)
+
+    @amzn.remap_security!(new_security)
+
+    existing.reload
+    assert_equal BigDecimal("-5"), existing.qty
+    assert_equal BigDecimal("-500"), existing.amount
+    assert existing.security_locked?
+  end
+
   test "remap_security! merges holdings on collision by combining qty and amount" do
     new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
 
@@ -812,6 +842,23 @@ class HoldingTest < ActiveSupport::TestCase
     @amzn.reset_security_to_provider!
     assert_equal 0, @account.trades.where(security: new_security).count
     assert_equal 1, @account.trades.where(security: old_security).count
+  end
+
+  test "reset_security_to_provider! moves a negative holding back" do
+    old_security = @amzn.security
+    new_security = create_security("GOOGR", prices: [ { date: Date.current, price: 100.00 } ])
+
+    @amzn.remap_security!(new_security)
+    @amzn.reload.update_columns(qty: -22, amount: -3187.80, price: 144.90)
+
+    @amzn.reset_security_to_provider!
+
+    @amzn.reload
+    assert_equal old_security, @amzn.security
+    assert_equal BigDecimal("-22"), @amzn.qty
+    assert_equal BigDecimal("-3187.8"), @amzn.amount
+    assert_not @amzn.security_locked?
+    assert_nil @amzn.provider_security_id
   end
 
   test "reset_security_to_provider! does nothing if not remapped" do

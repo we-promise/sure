@@ -268,6 +268,31 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal securities(:aapl), @holding.reload.security
   end
 
+  test "remap_security moves a holding with a negative quantity" do
+    original = @holding.security
+    @holding.update_columns(qty: -22, amount: -3187.80, price: 144.90)
+
+    patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" }
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.success"), flash[:notice]
+    @holding.reload
+    assert_equal securities(:msft), @holding.security
+    assert_equal original, @holding.provider_security
+  end
+
+  test "reset_security moves a negative holding back to the provider security" do
+    @holding.account.update!(plaid_account: plaid_accounts(:one))
+    @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+    @holding.update_columns(qty: -22, amount: -3187.80, price: 144.90)
+
+    post reset_security_holding_path(@holding)
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.reset_security.success"), flash[:notice]
+    assert_equal securities(:aapl), @holding.reload.security
+  end
+
   # A remap onto a position with its own opening lot merges the two. The
   # reset restates both securities, as a remap restates its target, so the
   # lots match the holdings straight away rather than at the next sync.
