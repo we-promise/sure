@@ -284,6 +284,28 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal 0, run.transactions_modified
   end
 
+  test "a rule with only an AI action counts a locked match as processed" do
+    handed_to_ai = []
+    Family.any_instance.stubs(:auto_categorize_transactions_later).with do |transactions, rule_run_id:|
+      handed_to_ai.concat(transactions.pluck(:id))
+      true
+    end
+    @whole_foods.lock_attr!(:category_id)
+    rule = @family.rules.create!(
+      name: "AI only",
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+    )
+
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first
+
+    # The lock keeps Whole Foods from the AI, yet the run still processed it.
+    assert_equal [ @other.id ], handed_to_ai
+    assert_equal 2, run.transactions_queued
+    assert_equal 2, run.transactions_processed
+  end
+
   test "a rule without an AI action records processed and modified as before" do
     @whole_foods.tags << @tag_a
     rule = create_rule("Tags", "o", tags: [ @tag_a ])

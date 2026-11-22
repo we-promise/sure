@@ -3,9 +3,10 @@
 require "test_helper"
 require Rails.root.join("db/migrate/20261121093556_add_job_transactions_modified_to_rule_runs")
 
-# Before the column, a run's transactions_modified held only what its AI jobs
-# had changed, so a run still waiting on its jobs carries that over. The
-# schema changes roll back with the test's transaction.
+# Up copies transactions_modified to job_transactions_modified on runs it finds
+# still waiting on their AI jobs, whose transactions_modified holds only what
+# those jobs have reported. The schema changes roll back with the test's
+# transaction.
 class AddJobTransactionsModifiedToRuleRunsMigrationTest < ActiveSupport::TestCase
   teardown { RuleRun.reset_column_information }
 
