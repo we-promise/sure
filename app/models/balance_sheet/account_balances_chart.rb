@@ -33,7 +33,7 @@ class BalanceSheet::AccountBalancesChart
     attr_reader :family, :user, :accounts, :period, :today, :horizon, :currency
 
     def build
-      history = accounts.to_h { |a| [ a.id, history_for(a) ] }
+      history = balances_by_account
       dates = history.values.flat_map(&:keys).uniq.sort
       events = bill_events
       future_transaction_events.each { |account_id, list| events[account_id].concat(list) }
@@ -47,7 +47,7 @@ class BalanceSheet::AccountBalancesChart
           type_label: account_type_label(account.accountable_type),
           color: Accountable.from_type(account.accountable_type)&.color || Category::UNCATEGORIZED_COLOR,
           liability: account.liability?,
-          history: forward_filled(dates.map { |date| history[account.id][date] }),
+          history: forward_filled(dates.map { |date| history.dig(account.id, date) }),
           start: signed_balance(account, balances_today[account.id]).to_f.round(2),
           events: (events.delete(account.id) || []).sort_by { |e| e[:date] }
         }
@@ -76,13 +76,34 @@ class BalanceSheet::AccountBalancesChart
       }
     end
 
-    # Balance::ChartSeriesBuilder handles currency conversion, gaps and the
-    # period's interval. With favorable_direction "up" a liability comes out
-    # negative (net of assets minus liabilities), which is what the stack wants.
-    def history_for(account)
-      Balance::ChartSeriesBuilder.new(
-        account_ids: [ account.id ], currency: currency, period: period, favorable_direction: "up"
-      ).balance_series.values.to_h { |v| [ v.date.to_date, v.value.amount.to_f.round(2) ] }
+    # Every account's history in one query. Balance::ChartSeriesBuilder handles
+    # currency conversion, gaps and the period's interval; an account without a
+    # usable rate drops out (0) instead of counting at 1. With
+    # favorable_direction "up" a liability comes out negative, which is what
+    # the stack wants. Cached like BalanceSheet::NetWorthSeriesBuilder.
+    def balances_by_account
+      return {} if accounts.empty?
+
+      Rails.cache.fetch(history_cache_key) do
+        Balance::ChartSeriesBuilder.new(
+          account_ids: accounts.map(&:id), currency: currency, period: period, favorable_direction: "up"
+        ).end_balances_by_account
+      end
+    end
+
+    def history_cache_key
+      key = [
+        "account_balances_chart_history",
+        ExchangeRate::CONVERSION_CACHE_VERSION,
+        ExchangeRate.updated_at_version,
+        user.id,
+        AccountShare.where(user: user).maximum(:updated_at)&.to_i,
+        Digest::MD5.hexdigest(accounts.map(&:id).sort.join(",")),
+        period.start_date,
+        period.end_date
+      ].compact.join("_")
+
+      family.build_cache_key(key, invalidate_on_data_updates: true)
     end
 
     # A day missing from one account's series would drop its layer to zero

@@ -33,6 +33,22 @@ class Balance::ChartSeriesBuilder
     raise
   end
 
+  # End balance per account and date in one query: the same query as
+  # balance_series (conversion, gaps, interval, an account without a usable
+  # rate dropping out), grouped by account as well as by date.
+  # Returns { account_id => { date => amount } } with plain floats.
+  def end_balances_by_account
+    rows = Balance.find_by_sql([ query(by_account: true), query_params ])
+    rows.each_with_object({}) do |row, balances|
+      next if row.account_id.nil? # a date no selected account is active on
+
+      (balances[row.account_id] ||= {})[row.date.to_date] = row.end_balance.to_f.round(2)
+    end
+  rescue => e
+    Rails.logger.error "Balances by account error: #{e.message} for accounts #{@account_ids}"
+    raise
+  end
+
   # Builds an unrealized-gains series from the latest holding snapshot per security.
   # For each date, it sums market value minus cost basis across
   # the latest holding snapshot per security. Holdings without a usable cost basis
@@ -105,21 +121,22 @@ class Balance::ChartSeriesBuilder
     end
 
     def query_data
-      @query_data ||= Balance.find_by_sql([
-        query,
-        {
-          account_ids: account_ids,
-          target_currency: currency,
-          start_date: period.start_date,
-          end_date: period.end_date,
-          interval: interval,
-          sign_multiplier: sign_multiplier,
-          account_active_until_dates_json: account_active_until_dates.to_json
-        }
-      ])
+      @query_data ||= Balance.find_by_sql([ query, query_params ])
     rescue => e
       Rails.logger.error "Query data error: #{e.message} for accounts #{account_ids}, period #{period.start_date} to #{period.end_date}"
       raise
+    end
+
+    def query_params
+      {
+        account_ids: account_ids,
+        target_currency: currency,
+        start_date: period.start_date,
+        end_date: period.end_date,
+        interval: interval,
+        sign_multiplier: sign_multiplier,
+        account_active_until_dates_json: account_active_until_dates.to_json
+      }
     end
 
     # Executes the gains query and memoizes the per-date rows
@@ -157,7 +174,7 @@ class Balance::ChartSeriesBuilder
       "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END"
     end
 
-    def query
+    def query(by_account: false)
       <<~SQL
         WITH dates AS (
           SELECT generate_series(DATE :start_date, DATE :end_date, :interval::interval)::date AS date
@@ -178,7 +195,7 @@ class Balance::ChartSeriesBuilder
           WHERE accounts.id = ANY(array[:account_ids]::uuid[])
         )
         SELECT
-          d.date,
+          d.date,#{"\n          accounts.id AS account_id," if by_account}
           MIN(accounts.currency) FILTER (
             WHERE accounts.currency <> :target_currency
               AND last_bal.end_balance <> 0 AND (er.rate IS NULL OR er.rate <= 0)
@@ -240,7 +257,7 @@ class Balance::ChartSeriesBuilder
              LIMIT 1)
           ) AS rate
         ) er ON TRUE
-        GROUP BY d.date
+        GROUP BY d.date#{", accounts.id" if by_account}
         ORDER BY d.date
       SQL
     end

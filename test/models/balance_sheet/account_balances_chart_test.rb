@@ -92,6 +92,24 @@ class BalanceSheet::AccountBalancesChartTest < ActiveSupport::TestCase
       "more bills and occurrences do not add queries"
   end
 
+  test "builds the history without a query per account" do
+    two = [ @checking, @card ]
+    chart_for(@admin, two).to_h # warm-up: first-use lookups are not per account
+    queries = count_queries { chart_for(@admin, two).to_h }
+
+    all = @family.accounts.visible.to_a
+    assert all.size > two.size + 2
+    assert_equal queries, count_queries { chart_for(@admin, all).to_h }, "more accounts do not add queries"
+  end
+
+  test "the history is per account and matches the account's own balance series" do
+    data = chart_for(@admin, [ @checking, @card ]).to_h
+    expected = Balance::ChartSeriesBuilder.new(account_ids: [ @checking.id ], currency: @family.currency, period: @period, favorable_direction: "up")
+                                          .balance_series.values.map { |v| v.value.amount.to_f.round(2) }
+
+    assert_equal expected, series(data, @checking)[:history]
+  end
+
   private
     def chart_for(user, accounts)
       BalanceSheet::AccountBalancesChart.new(@family, user: user, accounts: accounts, period: @period)
