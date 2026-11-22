@@ -52,6 +52,41 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
       "an AI-applied cadence is user intent by proxy; detection must not move it back"
   end
 
+  test "bank_reference is set and cleared like the edit dialog does" do
+    series = create_series(name: "Water", amount: 80)
+
+    result = call_tool(series.id, "bank_reference" => "VN 4711")
+    assert result[:updated]
+    assert_includes result[:changed_fields], "bank_reference"
+    assert_equal "VN 4711", series.reload.bank_reference
+
+    call_tool(series.id, "bank_reference" => "")
+    assert_nil series.reload.bank_reference
+  end
+
+  test "reference_only is set through the tool and reported effective only with a reference" do
+    series = create_series(name: "Water", amount: 80)
+
+    result = call_tool(series.id, "bank_reference" => "VN 4711", "reference_only" => true)
+
+    assert result[:updated]
+    assert_includes result[:changed_fields], "reference_only"
+    assert series.reload.reference_only?
+    assert_equal true, result[:bill][:reference_only]
+
+    assert call_tool(series.id, "reference_only" => false)[:updated]
+    assert_not series.reload.reference_only?
+  end
+
+  test "a too short bank_reference is refused with the validation message" do
+    series = create_series(name: "Water", amount: 80)
+
+    result = call_tool(series.id, "bank_reference" => "ab")
+
+    assert result[:error].present?
+    assert_nil series.reload.bank_reference
+  end
+
   test "paused maps to the stored value the UI's own Pause writes" do
     series = create_series(name: "Gym", amount: 40)
 
