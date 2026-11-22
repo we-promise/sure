@@ -42,6 +42,20 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       book.disposals.map { |d| [ d.lot_source_id, d.qty, d.unit_cost ] }
   end
 
+  test "under fifo a split keeps an earlier shortfall's place in the queue" do
+    book = Holding::LotBook.new(method: "fifo")
+    book.apply(nil, -10, source_id: "s1")
+    book.split(Rational(2, 1))
+    book.apply(nil, -10, source_id: "s2")
+
+    book.apply(BigDecimal("100"), 10, source_id: "b1")
+    book.apply(BigDecimal("200"), 21, source_id: "b2")
+
+    assert_equal [ [ "s1", nil, 10, nil ], [ "s2", "b2", 10, 200 ] ],
+      book.disposals.map { |d| [ d.sale_id, d.lot_source_id, d.qty, d.unit_cost ] }
+    assert_equal [ [ "b2", 1 ] ], book.lots.map { |lot| [ lot.source_id, lot.qty ] }
+  end
+
   test "under average the book records no disposals" do
     book = Holding::LotBook.new
     book.apply(BigDecimal("12"), 60, source_id: "first")

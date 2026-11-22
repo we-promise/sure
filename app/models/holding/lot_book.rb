@@ -126,8 +126,10 @@ class Holding::LotBook
     @total_qty = Security::Split.scale(@total_qty, ratio)
     @shortfall = Security::Split.scale(@shortfall, ratio)
     # A cover after the split is in other shares than the sale it would price,
-    # so a sale short across a split keeps its unknown cost.
-    @uncovered.clear
+    # so a sale short across a split keeps its unknown cost. Its scaled
+    # quantity stays queued, without its disposal, so later acquisitions fill
+    # it before they price a newer shortfall.
+    @uncovered = @uncovered.map { |_index, short| [ nil, Security::Split.scale(short, ratio) ] }
     rescale_lots(Security::Split.scale(open_qty, ratio)) do |lot|
       lot.with(
         qty: Security::Split.scale(lot.qty, ratio),
