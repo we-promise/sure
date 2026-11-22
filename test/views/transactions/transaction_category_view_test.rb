@@ -56,6 +56,33 @@ class Transactions::TransactionCategoryViewTest < ActionView::TestCase
     assert_includes html, I18n.t("transactions.transaction_category.set_on_outflow")
   end
 
+  test "renders the set-on-outflow tooltip as a span trigger, not a button" do
+    category = categories(:income)
+    outflow_tx = Transaction.create!(kind: "investment_contribution", category: category)
+    Entry.create!(
+      account: accounts(:depository), entryable: outflow_tx,
+      name: "Contribution", amount: 500, currency: "USD", date: Date.today
+    )
+
+    inflow_tx = Transaction.create!(kind: "funds_movement")
+    Entry.create!(
+      account: accounts(:investment), entryable: inflow_tx,
+      name: "Contribution", amount: -500, currency: "USD", date: Date.today
+    )
+
+    Transfer.create!(inflow_transaction: inflow_tx, outflow_transaction: outflow_tx, status: "confirmed")
+
+    html = Nokogiri::HTML.fragment(render(partial: "transactions/transaction_category", locals: {
+      transaction: inflow_tx.reload, variant: "desktop", in_split_group: false
+    }))
+
+    tooltip = html.at_css("[role=tooltip]")
+    assert tooltip, "expected the set-on-outflow tooltip"
+    assert_equal I18n.t("transactions.transaction_category.set_on_outflow"), tooltip.text.strip
+    assert_nil html.at_css("button[aria-describedby]"), "inline tooltip must not add a button trigger"
+    assert html.at_css("span[aria-describedby]"), "inline tooltip should use a span trigger"
+  end
+
   test "hides the outflow's category when the viewer cannot access the outflow's account" do
     category = categories(:income)
     owner_only = accounts(:investment).family.accounts.create!(

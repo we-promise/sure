@@ -12,7 +12,7 @@
           <%= render "categories/badge", category: category %>
         </div>
         <% if set_on_outflow %>
-          <%= render DS::Tooltip.new(text: t("transactions.transaction_category.set_on_outflow")) %>
+          <%= render DS::Tooltip.new(text: t("transactions.transaction_category.set_on_outflow"), as: :span) %>
         <% end %>
       </div>
     <% end %>
