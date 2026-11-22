@@ -225,6 +225,14 @@ class Transfer < ApplicationRecord
       inflow_transaction.update!(kind: "funds_movement")
       outflow_transaction.update!(outflow_attrs)
     end
+
+    # The legs just stopped being ordinary transactions, so a bill suggestion
+    # detected from them can now be retired. A family that never syncs would
+    # otherwise keep it until someone reruns detection by hand. Scheduling
+    # waits for every enclosing transaction: the debounce timestamp lives in
+    # the cache, and a rolled-back confirmation must not supersede a queued run.
+    family = to_account.family
+    ActiveRecord.after_all_transactions_commit { RecurringTransaction.identify_patterns_for(family) }
   end
 
   # Whether each leg carries either its standard kind or the kind

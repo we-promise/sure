@@ -16,6 +16,11 @@ class Provider::Eodhd < Provider
   # EODHD bills each fundamentals request as 10 API calls against the daily allowance
   FUNDAMENTALS_REQUEST_COST = 10
 
+  # A fundamentals response is large and slow to start, so it gets a 60 s read
+  # limit rather than the client's 20 s: each retry after a timeout bills
+  # another ten calls.
+  FUNDAMENTALS_READ_TIMEOUT = 60
+
   # The free tier provides ~1 year of EOD data; paid plans go back 30+ years.
   # Raising EODHD_MAX_REQUESTS_PER_DAY above the free cap signals a paid key.
   def max_history_days
@@ -196,6 +201,7 @@ class Provider::Eodhd < Provider
         @last_counted_on = nil
 
         response = client.get("#{base_url}/api/fundamentals/#{CGI.escape(ticker)}") do |req|
+          req.options.timeout = FUNDAMENTALS_READ_TIMEOUT
           req.params["api_token"] = api_key
           req.params["fmt"] = "json"
         end
@@ -301,6 +307,9 @@ class Provider::Eodhd < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        faraday.options.open_timeout = 5
+        faraday.options.timeout      = 20
+
         faraday.request(:retry, {
           max: 3,
           interval: 1.0,

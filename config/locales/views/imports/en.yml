@@ -24,6 +24,13 @@ en:
         split_warning_title: Split transactions detected
         split_warning_description: "This QIF file contains split transactions. Review the detected split categories and tags below before importing."
         split_badge: split
+        unknown_account_type_name: "“%{type}”"
+        unknown_account_type_title:
+          one: Unknown account type
+          other: Unknown account types
+        unknown_account_type_description:
+          one: "This QIF file contains the account type %{types}, which %{product_name} doesn't recognize. Its transactions will be imported like a bank account."
+          other: "This QIF file contains the account types %{types}, which %{product_name} doesn't recognize. Their transactions will be imported like a bank account."
         empty_state_primary: No categories or tags were found in this QIF file.
         empty_state_secondary: All transactions will be imported without categories or tags.
         submit: Continue to review

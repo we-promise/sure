@@ -12,6 +12,13 @@
 #   !Type:CCard / !Type:Bank / !Type:Cash / !Type:Oth L  – transactions
 #   !Type:Invst    – investment transactions
 #
+# Account sections with a type outside TRANSACTION_TYPES (e.g. "Oth T" from
+# Lexware FinanzManager) are read like "Bank" sections; see
+# unknown_account_types.
+#
+# An optional "!Option:MDY" or "!Option:DMY" line declares whether numeric
+# dates put the month or the day first.
+#
 # Transaction field codes:
 #   D  date        M/ D'YY  or  MM/DD'YYYY
 #   T  amount      may include commas, e.g. "-1,234.56"
@@ -33,6 +40,13 @@ module QifParser
   TRANSACTION_TYPES = %w[CCard Bank Cash Invst Oth\ L Oth\ A].freeze
   GENERIC_TRANSACTION_TYPES = TRANSACTION_TYPES - [ "Invst" ]
 
+  # Payees that mark an account's starting balance. Quicken writes
+  # "Opening Balance"; German exports (e.g. Lexware FinanzManager) write
+  # "Eröffnungssaldo". Names from exports in other languages belong here too.
+  # Not an I18n lookup: the name comes from the program that wrote the file,
+  # not from the importing user's locale, so every known name must match.
+  OPENING_BALANCE_PAYEES = [ "Opening Balance", "Eröffnungssaldo" ].freeze
+
   # Investment action types that create Trade records (buy or sell shares).
   BUY_LIKE_ACTIONS  = %w[Buy ReinvDiv Cover].freeze
   SELL_LIKE_ACTIONS = %w[Sell ShtSell].freeze
@@ -41,6 +55,12 @@ module QifParser
   # Investment action types that create Transaction records.
   INFLOW_TRANSACTION_ACTIONS  = %w[Div IntInc XIn CGLong CGShort MiscInc].freeze
   OUTFLOW_TRANSACTION_ACTIONS = %w[XOut MiscExp].freeze
+
+  # Sections that hold lists rather than an account's transactions.
+  NON_ACCOUNT_TYPES = %w[Tag Cat Class Security Prices Memorized].freeze
+
+  # Account sections of a type outside TRANSACTION_TYPES are read as this type.
+  FALLBACK_ACCOUNT_TYPE = "Bank"
 
   ParsedTransaction = Struct.new(
     :date, :amount, :payee, :memo, :category, :tags, :check_num, :cleared,
@@ -106,14 +126,37 @@ module QifParser
   end
 
   # Returns the transaction account type string (e.g. "CCard", "Bank", "Invst").
-  # Skips metadata sections (Tag, Cat, Security, Prices) which are not account data.
+  # Skips sections that are not account data (NON_ACCOUNT_TYPES); unknown
+  # account types are returned as FALLBACK_ACCOUNT_TYPE.
   def self.account_type(content)
     return nil if content.blank?
 
     content.scan(/^!Type:(.+)/i).flatten
-           .map(&:strip)
-           .reject { |t| %w[Tag Cat Security Prices].include?(t) }
+           .filter_map { |type| section_account_type(type) }
            .first
+  end
+
+  # Returns the distinct account section types (as written in the file) that
+  # are not in TRANSACTION_TYPES and are read as FALLBACK_ACCOUNT_TYPE.
+  def self.unknown_account_types(content)
+    return [] unless valid?(content)
+
+    content = normalize_encoding(content)
+
+    content.scan(/^!Type:(.+)/i).flatten.map(&:strip).uniq.select do |type|
+      known_type(type, NON_ACCOUNT_TYPES).nil? && known_type(type, TRANSACTION_TYPES).nil?
+    end
+  end
+
+  # Returns "MDY" or "DMY" when the file declares its date order with an
+  # "!Option:MDY" or "!Option:DMY" line, otherwise nil.
+  def self.date_order(content)
+    return nil if content.blank?
+
+    content = normalize_encoding(content)
+    content = normalize_line_endings(content).delete_prefix("\uFEFF")
+
+    content.match(/^!Option:(MDY|DMY)[ \t]*$/i)&.captures&.first&.upcase
   end
 
   # Parses all transactions from the file, excluding the Opening Balance entry.
@@ -138,8 +181,9 @@ module QifParser
 
   # Returns the opening balance entry from the QIF file, if present.
   # In Quicken's QIF format, the first transaction of a bank/cash account is often
-  # an "Opening Balance" record with payee "Opening Balance".  This entry is NOT a
-  # real transaction – it is the account's starting balance.
+  # an "Opening Balance" record with payee "Opening Balance" (see
+  # OPENING_BALANCE_PAYEES).  This entry is NOT a real transaction – it is the
+  # account's starting balance.
   #
   # Returns a hash { date: Date, amount: BigDecimal } or nil.
   def self.parse_opening_balance(content, date_format: "%m/%d/%Y")
@@ -155,7 +199,7 @@ module QifParser
     content = normalize_line_endings(content)
 
     transaction_sections(content).filter_map do |section|
-      record = parse_records(section[:content]).find { |r| r["P"]&.strip == "Opening Balance" }
+      record = parse_records(section[:content]).find { |r| opening_balance_record?(r) }
       next unless record
 
       date   = parse_qif_date(record["D"], date_format: date_format)
@@ -309,10 +353,10 @@ module QifParser
       end
 
       if (match = line.match(/^!Type:(.+)/i))
-        type = match[1].strip
+        type = section_account_type(match[1])
         section_content, index = collect_section_lines(lines, index + 1)
 
-        if TRANSACTION_TYPES.include?(type)
+        if type
           sections << {
             type: type,
             account: current_account,
@@ -329,6 +373,31 @@ module QifParser
     sections
   end
   private_class_method :transaction_sections
+
+  # Maps a "!Type:" value to its TRANSACTION_TYPES entry, ignoring case and
+  # surrounding spaces. Returns nil for blank values and NON_ACCOUNT_TYPES and
+  # FALLBACK_ACCOUNT_TYPE for any other type.
+  def self.section_account_type(raw_type)
+    type = raw_type.to_s.strip
+    return nil if type.empty? || known_type(type, NON_ACCOUNT_TYPES)
+
+    known_type(type, TRANSACTION_TYPES) || FALLBACK_ACCOUNT_TYPE
+  end
+  private_class_method :section_account_type
+
+  # The "T" type of an "!Account" record overrides the type of the sections
+  # that follow it, so only a standard type (matched regardless of case) is
+  # kept. Any other value is dropped and the section type applies.
+  def self.standard_account_type(raw_type)
+    type = raw_type.to_s.strip
+    known_type(type, TRANSACTION_TYPES) unless type.empty?
+  end
+  private_class_method :standard_account_type
+
+  def self.known_type(type, types)
+    types.find { |known| known.casecmp?(type.strip) }
+  end
+  private_class_method :known_type
 
   def self.collect_section_lines(lines, index)
     section_lines = []
@@ -347,7 +416,7 @@ module QifParser
 
     ParsedAccount.new(
       name: record["N"].strip,
-      account_type: record["T"]&.strip,
+      account_type: standard_account_type(record["T"]),
       description: record["D"]&.strip
     )
   end
@@ -393,10 +462,15 @@ module QifParser
   end
   private_class_method :parse_records
 
+  def self.opening_balance_record?(record)
+    OPENING_BALANCE_PAYEES.include?(record["P"]&.strip)
+  end
+  private_class_method :opening_balance_record?
+
   def self.build_transaction(record, date_format: "%m/%d/%Y", account: nil, account_type: nil)
     # "Opening Balance" is a Quicken convention for the account's starting balance –
     # it is not a real transaction and must not be imported as one.
-    return nil if record["P"]&.strip == "Opening Balance"
+    return nil if opening_balance_record?(record)
 
     raw_date   = record["D"]
     raw_amount = record["T"] || record["U"]
@@ -542,7 +616,7 @@ module QifParser
     try_parse_date(date_str, date_format: date_format)
   end
 
-  # Extracts all raw date strings from D-fields in transaction sections only.
+  # Extracts all raw date strings from D-fields in every transaction section.
   # Skips metadata sections (Cat, Tag, Security) where D means "description".
   # Used by Import.detect_date_format to sample dates before parsing.
   def self.extract_raw_dates(content)
@@ -551,8 +625,7 @@ module QifParser
     content = normalize_encoding(content)
     content = normalize_line_endings(content)
 
-    transaction_sections = TRANSACTION_TYPES.filter_map { |type| extract_section(content, type) }
-    transaction_sections.flat_map { |section| section.scan(/^D(.+)$/i).flatten }
+    transaction_sections(content).flat_map { |section| section[:content].scan(/^D(.+)$/i).flatten }
                         .map { |d| normalize_qif_date(d) }
                         .compact
   end
