@@ -3,9 +3,12 @@ class TransferMatchesController < ApplicationController
 
   def new
     # Preloaded for the logo selects, which call Account#logo_url per option.
-    @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
-      .includes(:account_providers, logo_attachment: :blob)
-    @candidate_entries = writable_candidate_entries
+    writable_accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
+      .includes(:account_providers, logo_attachment: :blob).to_a
+    # Archived accounts are left out of the select for a new counterpart, but
+    # an existing transaction on an archived account can still be matched.
+    @accounts = writable_accounts.reject(&:archived?)
+    @candidate_entries = writable_candidate_entries(writable_accounts)
   end
 
   def create
@@ -52,13 +55,13 @@ class TransferMatchesController < ApplicationController
     # Counterpart entries of the family-wide candidates, in candidate order and
     # limited to accounts the user can write to (create would reject the others
     # anyway).
-    def writable_candidate_entries
+    def writable_candidate_entries(writable_accounts)
       counterpart_ids = @entry.transaction.transfer_match_candidates.map do |candidate|
         @entry.amount.negative? ? candidate.outflow_transaction_id : candidate.inflow_transaction_id
       end
 
       entries_by_transaction_id = Entry
-        .where(entryable_type: "Transaction", entryable_id: counterpart_ids, account_id: @accounts.map(&:id))
+        .where(entryable_type: "Transaction", entryable_id: counterpart_ids, account_id: writable_accounts.map(&:id))
         .includes(account: [ :account_providers, { logo_attachment: :blob } ])
         .index_by(&:entryable_id)
 

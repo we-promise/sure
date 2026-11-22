@@ -91,6 +91,20 @@ class Account < ApplicationRecord
   # Accounts whose data should be included in financial reports, dashboards,
   # and exports. Excludes accounts where the user has opted to suppress them.
   scope :included_in_reports, -> { where(exclude_from_reports: false) }
+  # Accounts offered in pickers and listed in the sidebar. An archived account
+  # is still synced and still counts in reports and net worth; it is only kept
+  # out of the places where a user picks or browses accounts. Archiving is
+  # separate from `visible`, which decides what counts in calculations.
+  scope :selectable, -> { where(archived: false) }
+  # Selectable accounts plus the given ones, so a form for a record that
+  # already points at an archived account still offers that account and saving
+  # the form does not drop it.
+  scope :selectable_or_including, ->(ids) {
+    ids = Array(ids).compact_blank
+    next selectable if ids.empty?
+
+    where(arel_table[:archived].eq(false).or(arel_table[:id].in(ids)))
+  }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
@@ -902,7 +916,7 @@ class Account < ApplicationRecord
   end
 
   def eligible_for_transaction_default?
-    supports_default? && active? && !linked?
+    supports_default? && active? && !linked? && !archived?
   end
 
   # Determines if this account supports manual trade entry

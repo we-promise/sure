@@ -33,6 +33,9 @@ en:
       exclude_from_reports: Exclude from all reports
       include_in_reports: Include in reports
       excluded_from_reports_indicator: Excluded from reports
+      archive: Archive account
+      unarchive: Unarchive account
+      archived_indicator: "Archived: left out of the sidebar and account pickers"
       set_default: Set as default
       remove_default: Unset default
       default_label: Default
@@ -100,6 +103,8 @@ en:
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
       exclude_from_reports: Exclude from all reports
+      archived_label: Archive account
+      archived_hint: Keeps the account in net worth and reports for the whole family, but leaves it out of the sidebar and account pickers.
       enable_category_matcher_label: Enable category matcher
       enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.
       cost_basis_method_label: Cost basis method
@@ -203,6 +208,8 @@ en:
         statements: Statements
         exclude_from_reports: Exclude from all reports
         include_in_reports: Include in reports
+        archive: Archive account
+        unarchive: Unarchive account
     update:
       success: "%{type} account updated"
       logo_not_applied: The account was saved, but the chosen icon could not be downloaded. Try again or upload your own.
@@ -220,6 +227,9 @@ en:
       new_account_group: "New %{account_group}"
       expand_all: Expand all
       collapse_all: Collapse all
+      archived_accounts:
+        one: "%{count} archived account"
+        other: "%{count} archived accounts"
       reorder_account: "Move %{account}"
       reorder_hint: Drag to reorder. With the keyboard, press Enter, then the arrow keys.
       sort_mode:

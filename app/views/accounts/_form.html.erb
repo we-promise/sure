@@ -99,6 +99,14 @@
           <span class="text-sm"><%= t(".exclude_from_reports") %></span>
           <%= form.toggle :exclude_from_reports %>
         </div>
+
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <%= form.label :archived, t(".archived_label"), class: "text-sm" %>
+            <p id="account_archived_hint" class="text-xs text-secondary"><%= t(".archived_hint") %></p>
+          </div>
+          <%= form.toggle :archived, aria: { describedby: "account_archived_hint" } %>
+        </div>
       </div>
     </details>
   </div>
