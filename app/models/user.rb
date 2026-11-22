@@ -1015,7 +1015,8 @@ class User < ApplicationRecord
     raw = raw.to_h.stringify_keys
     boolean = ActiveModel::Type::Boolean.new
     {}.tap do |clean|
-      clean["horizon"] = raw["horizon"].to_i if raw.key?("horizon") && ACCOUNT_BALANCES_HORIZONS.include?(raw["horizon"].to_i)
+      horizon = raw["horizon"].is_a?(Integer) || raw["horizon"].is_a?(String) ? Integer(raw["horizon"], exception: false) : nil
+      clean["horizon"] = horizon if ACCOUNT_BALANCES_HORIZONS.include?(horizon)
       %w[hide_negative show_transactions list_open].each do |key|
         clean[key] = boolean.cast(raw[key]) == true if raw.key?(key)
       end

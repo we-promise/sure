@@ -90,6 +90,11 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: 7 } } }, as: :json
     assert_equal 6, @user.reload.account_balances_settings["horizon"], "an unsupported forecast length is ignored"
+
+    patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: [] } } }, as: :json
+    assert_response :success
+    patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: "soon" } } }, as: :json
+    assert_equal 6, @user.reload.account_balances_settings["horizon"], "a non-numeric length is dropped, not read as 0 (Off)"
   end
 
   test "the account balances widget can be hidden and shown like the others" do
