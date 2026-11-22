@@ -269,7 +269,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal 0, rule_run.pending_jobs_count
   end
 
-  test "a deadlock while completing is retried in place, so the run's other AI action is still awaited" do
+  test "a deadlock while completing rolls the last step back, so its retry counts the batch once and the other action is still awaited" do
     ids = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
     rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: 2, executed_at: Time.current)
@@ -295,6 +295,32 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal [ 2, 1 ], rule_run.reload.values_at(:transactions_awaiting_ai, :pending_jobs_count)
   ensure
     RuleRun.define_method(:complete_job!, real_complete_job) if real_complete_job
+  end
+
+  test "a give-up whose failure record deadlocks rolls the release back, so the retry releases once" do
+    ids = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
+                               transactions_queued: 2, executed_at: Time.current)
+    rule_run.await_ai!(2)   # this action's transactions
+    rule_run.await_ai!(2)   # another AI action on the same run, not run yet
+    stub_ai(:detect_merchants, raises: Ai::Error::Refused)
+    calls = 0
+    real_fail_job = RuleRun.instance_method(:fail_job!)
+    RuleRun.define_method(:fail_job!) do |**kwargs|   # deadlocks once, then records the failure for real
+      calls += 1
+      raise ActiveRecord::Deadlocked, "deadlock detected" if calls == 1
+
+      real_fail_job.bind_call(self, **kwargs)
+    end
+    Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ids, family: @family, rule_run_id: rule_run.id))
+    job = enqueued_jobs.shift.stringify_keys
+
+    assert_raises(ActiveRecord::Deadlocked) { ActiveJob::Base.execute(job) }
+    ActiveJob::Base.execute(job)   # Sidekiq's retry
+
+    assert_equal [ 2, 1, "failed" ], rule_run.reload.values_at(:transactions_awaiting_ai, :pending_jobs_count, :status)
+  ensure
+    RuleRun.define_method(:fail_job!, real_fail_job) if real_fail_job
   end
 
   test "a batch whose progress can't be recorded is rolled back, so its retry counts every change" do

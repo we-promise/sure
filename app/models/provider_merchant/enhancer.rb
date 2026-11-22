@@ -85,10 +85,11 @@ class ProviderMerchant::Enhancer
     enhanced
   end
 
-  def ai_finished(_count) = Rails.cache.delete(self.class.lock_key(@family))
+  # Called inside the job's transaction that ends the run: the lock goes once that commits.
+  def ai_finished(_count) = release_lock_after_commit
 
   def ai_failed(error)
-    Rails.cache.delete(self.class.lock_key(@family))
+    release_lock_after_commit
     DebugLogEntry.capture(
       category: "merchant_enhancement", level: "error", message: "AI merchant enhancement failed",
       source: self.class.name, family: @family,
@@ -109,6 +110,11 @@ class ProviderMerchant::Enhancer
     end
 
     def hold_lock = Rails.cache.write(self.class.lock_key(@family), true, expires_in: LOCK_TTL)
+
+    def release_lock_after_commit
+      key = self.class.lock_key(@family)
+      ActiveRecord.after_all_transactions_commit { Rails.cache.delete(key) }
+    end
 
     def deduplicate_by_website(target_merchant, website_url)
       # Read under the lock, and another writer may have cleared it: a blank website would match

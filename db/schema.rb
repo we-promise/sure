@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_22_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_22_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -207,6 +207,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_22_120000) do
     t.integer "item_count", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "step", default: 0, null: false
+    t.jsonb "next_job"
     t.index ["updated_at"], name: "index_ai_generation_runs_on_updated_at"
     t.index ["family_id"], name: "index_ai_generation_runs_on_family_id"
   end

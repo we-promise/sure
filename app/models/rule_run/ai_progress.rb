@@ -53,22 +53,21 @@ module RuleRun::AiProgress
         end
     end
 
-    # From apply_ai, inside its transaction: the batch's transactions are handled, and `modified`
-    # of them changed. Counted as reported only once that commits; a batch that fails to record or
-    # rolls back is left for release_unhandled.
+    # From apply_ai, inside the job's transaction: the batch's transactions are handled, and
+    # `modified` of them changed. A last step releases the rest in that same transaction, so the
+    # batch counts as reported at once; a batch that rolls back is left for release_unhandled again.
     def report_batch(result, modified:)
       handled = transaction_ids.size - result.remaining.size
       @rule_run&.ai_handled!(handled:, modified:)
-      ActiveRecord.after_all_transactions_commit { @handled = handled }
+      before, @handled = @handled, handled
+      ActiveRecord::Base.current_transaction.after_rollback { @handled = before }
     end
 
     # From ai_finished and ai_failed: this job's transactions that no batch reported, and the run's
-    # ids no job read. Once: ai_failed after a failed ai_finished releases nothing more.
+    # ids no job read. Both run in the job's transaction that ends the run (Ai::GenerationJob), so
+    # it's released once per run.
     def release_unhandled
-      return if @released
-
       @rule_run&.ai_handled!(handled: transaction_ids.size - @handled.to_i + @window&.outstanding.to_i)
-      @released = true
     end
 
     # Only those of `ids` this job's transactions include: an answer naming any other is ignored.
