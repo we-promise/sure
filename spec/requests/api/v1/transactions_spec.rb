@@ -226,6 +226,42 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
+      response '403', 'account is shared with you without write access' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            transaction: {
+              account_id: read_only_transaction.entry.account.id,
+              date: Date.current.to_s,
+              amount: 50.00,
+              name: 'Test purchase',
+              nature: 'expense'
+            }
+          }
+        end
+
+        run_test!
+      end
+
+      response '404', 'account not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            transaction: {
+              account_id: SecureRandom.uuid,
+              date: Date.current.to_s,
+              amount: 50.00,
+              name: 'Test purchase',
+              nature: 'expense'
+            }
+          }
+        end
+
+        run_test!
+      end
+
       response '200', 'transaction already exists for external idempotency key' do
         schema '$ref' => '#/components/schemas/Transaction'
 

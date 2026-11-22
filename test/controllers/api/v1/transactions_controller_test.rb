@@ -674,6 +674,49 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "create on a read-only shared account is forbidden and creates nothing" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member RW", key: ApiKey.generate_secure_key, scopes: %w[read_write], source: "web")
+    Redis.new.del("api_rate_limit:#{key.id}")
+
+    assert_no_difference "Entry.count" do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: accounts(:credit_card).id, name: "Nope", amount: 10, date: Date.current, nature: "expense" } },
+           headers: api_headers(key)
+    end
+
+    assert_response :forbidden
+    assert_equal "forbidden", JSON.parse(response.body)["error"]
+    assert_equal "You do not have write access to this account", JSON.parse(response.body)["message"]
+  end
+
+  test "create with an unknown account id is not found and creates nothing" do
+    assert_no_difference "Entry.count" do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: SecureRandom.uuid, name: "Nope", amount: 10, date: Date.current, nature: "expense" } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :not_found
+    assert_equal "record_not_found", JSON.parse(response.body)["error"]
+  end
+
+  test "create with another family's account is not found and creates nothing" do
+    foreign_account = families(:empty).accounts.create!(
+      name: "Foreign Checking", owner: users(:empty), balance: 0, currency: "USD", accountable: Depository.new
+    )
+
+    assert_no_difference "Entry.count" do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: foreign_account.id, name: "Nope", amount: 10, date: Date.current, nature: "expense" } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :not_found
+    assert_equal "record_not_found", JSON.parse(response.body)["error"]
+  end
+
   test "should reject create with invalid parameters" do
     transaction_params = {
       transaction: {
