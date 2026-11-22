@@ -1,6 +1,12 @@
 en:
   maps:
     show:
+      title: "Map"
+      empty:
+        title: "No transactions have a location yet"
+        description: "Open any transaction and add a location to see it here."
+      filters:
+        all_accounts: "All accounts"
       located_count:
         zero: "No transactions have a location yet."
         one: "1 transaction has a location."

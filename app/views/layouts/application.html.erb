@@ -15,6 +15,7 @@ else
     { name: t(".nav.reports"), path: reports_path, icon: "chart-bar", icon_custom: false, active: page_active?(reports_path) },
     plan_nav_item,
     portfolio_nav_item,
+    map_nav_item,
     ({ name: t(".nav.assistant"), path: chats_path, icon: "icon-assistant", icon_custom: true, active: page_active?(chats_path), mobile_only: true } if assistant_enabled)
   ].compact
 end %>

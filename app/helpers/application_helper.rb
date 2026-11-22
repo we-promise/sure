@@ -170,6 +170,20 @@ module ApplicationHelper
     )
   end
 
+  # The family-wide locations map. Preview-gated like Portfolio: hidden
+  # entirely without the flag, violet-dotted with it.
+  def map_nav_item
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.map"),
+        path: map_path,
+        icon: "map-pin",
+        icon_custom: false,
+        active: page_active?(map_path)
+      }
+    )
+  end
+
   # Wrapper around I18n.l to support custom date formats
   def format_date(object, format = :default, options = {})
     date = object.to_date
