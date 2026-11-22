@@ -1354,7 +1354,7 @@ export default class extends Controller {
       <div class="text-xs text-secondary mt-1 space-y-0.5">${largest
         .map(
           (item) =>
-            `<div class="flex justify-between gap-4"><span class="truncate max-w-56">${escapeHtml(item.name)}</span><span class="tabular-nums">${this.fmtSigned(item.amount)}</span></div>`,
+            `<div class="flex justify-between gap-4"><span class="truncate max-w-56">${escapeHtml(item.name)}</span><span class="tabular-nums">${item.display === undefined ? this.fmtSigned(item.amount) : escapeHtml(item.display)}</span></div>`,
         )
         .join("")}</div>
       <div class="text-xs text-secondary mt-1 pt-1 border-t border-secondary">${escapeHtml(this.t("click_zoom"))}</div>`;

@@ -43,6 +43,18 @@ class AccountBalanceTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @range[:start_date], body["covered_from"]
   end
 
+  test "a transaction without a usable exchange rate has no converted amount, never a 1:1 one" do
+    yen = @admin.family.accounts.create!(name: "Yen savings", owner: @admin, currency: "JPY", balance: 0, accountable: Depository.new)
+    entry = create_transaction(account: yen, amount: 30_000, currency: "JPY", name: "Yen deposit", date: 1.day.ago.to_date)
+
+    sign_in @admin
+    get dashboard_account_balance_transactions_path, params: @range
+
+    item = response.parsed_body["items"].find { |i| i["id"] == entry.id }
+    assert_nil item["amount"], "left out of totals, like the chart leaves the account out"
+    assert_includes item["display"], "30,000"
+  end
+
   test "at the cap, drops the partially covered oldest day and says where coverage starts" do
     # Only this account's transactions, so the cut is predictable.
     @admin.family.accounts.where.not(owner: nil).find_each { |account| account.update_column(:status, "disabled") }

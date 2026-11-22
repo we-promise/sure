@@ -117,6 +117,8 @@ class BalanceSheet::AccountBalancesChart
     # adds those on their own dates, so it starts from today's recorded balance.
     def signed_balance(account, recorded_today)
       amount = to_family_currency((recorded_today || account.balance).to_d, account.currency)
+      return 0 if amount.nil?
+
       account.liability? ? -amount : amount
     end
 
@@ -131,12 +133,15 @@ class BalanceSheet::AccountBalancesChart
       Accountable.from_type(type)&.display_name || type
     end
 
+    # nil when there is no usable rate: like the history (see
+    # Balance::ChartSeriesBuilder#balance_rate_sql) the amount is left out
+    # rather than counted at 1.
     def to_family_currency(amount, from_currency)
       return amount if from_currency.blank? || from_currency == currency
 
       Money.new(amount, from_currency).exchange_to(currency).amount
     rescue Money::ConversionError
-      amount
+      nil
     end
 
     # Every account a bill names (source and, for transfers, destination)
@@ -170,8 +175,8 @@ class BalanceSheet::AccountBalancesChart
 
       viewable_bills.each do |bill|
         bill_occurrences(bill).each do |date, amount|
-          amount = to_family_currency(amount, bill.currency).to_f.round(2)
-          next if amount.zero?
+          amount = to_family_currency(amount, bill.currency)&.to_f&.round(2)
+          next if amount.nil? || amount.zero?
 
           event = { date: date.iso8601, name: bill.display_name, source: "bill" }
           if bill.typed_transfer? && bill.destination_account_id
@@ -191,9 +196,11 @@ class BalanceSheet::AccountBalancesChart
     def future_transaction_events
       Entry.where(account_id: accounts.map(&:id), entryable_type: "Transaction", date: (today + 1)..horizon)
            .group_by(&:account_id).transform_values do |entries|
-        entries.map do |entry|
-          { date: entry.date.iso8601, amount: to_family_currency(-entry.amount.to_d, entry.currency).to_f.round(2),
-            name: entry.name, source: "transaction" }
+        entries.filter_map do |entry|
+          amount = to_family_currency(-entry.amount.to_d, entry.currency)
+          next if amount.nil?
+
+          { date: entry.date.iso8601, amount: amount.to_f.round(2), name: entry.name, source: "transaction" }
         end
       end
     end

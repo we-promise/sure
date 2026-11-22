@@ -41,7 +41,9 @@ class AccountBalanceTransactionsController < ApplicationController
     end
 
     # amount: the change to the account as charted (Sure stores outflows as
-    # positive amounts), in the family currency; display: in the entry's own.
+    # positive amounts), in the family currency, or nil when there is no
+    # usable rate (left out of totals, like the chart); display: in the
+    # entry's own currency.
     def entry_json(entry, currency)
       transaction = entry.entryable
       change = -entry.amount.to_d
@@ -51,7 +53,7 @@ class AccountBalanceTransactionsController < ApplicationController
         begin
           Money.new(change, entry.currency).exchange_to(currency, date: entry.date).amount
         rescue Money::ConversionError
-          change
+          nil
         end
       end
 
@@ -60,7 +62,7 @@ class AccountBalanceTransactionsController < ApplicationController
         date: entry.date.iso8601,
         account_id: entry.account_id,
         name: entry.name,
-        amount: converted.to_f.round(2),
+        amount: converted&.to_f&.round(2),
         display: Money.new(change, entry.currency).format,
         category: transaction.category&.name,
         category_color: transaction.category&.color,

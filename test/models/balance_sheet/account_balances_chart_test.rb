@@ -110,6 +110,19 @@ class BalanceSheet::AccountBalancesChartTest < ActiveSupport::TestCase
     assert_equal expected, series(data, @checking)[:history]
   end
 
+  test "an account whose currency has no exchange rate is left out everywhere, never counted 1:1" do
+    yen = @family.accounts.create!(name: "Yen savings", owner: @admin, currency: "JPY", balance: 1_000_000, accountable: Depository.new)
+    bill(name: "Yen rent", account: yen, amount: 80_000, currency: "JPY")
+    create_transaction(account: yen, date: 5.days.from_now.to_date, amount: 30_000, currency: "JPY", name: "Yen deposit")
+    assert_raises(Money::ConversionError) { Money.new(1, "JPY").exchange_to(@family.currency) }
+
+    layer = series(chart_for(@admin, [ @checking, yen ]).to_h, yen)
+
+    assert_equal 0, layer[:start], "the start agrees with the history, which leaves the account out"
+    assert layer[:history].all?(&:zero?)
+    assert_empty layer[:events], "bills and future transactions in the unconvertible currency are left out too"
+  end
+
   private
     def chart_for(user, accounts)
       BalanceSheet::AccountBalancesChart.new(@family, user: user, accounts: accounts, period: @period)
@@ -119,9 +132,9 @@ class BalanceSheet::AccountBalancesChartTest < ActiveSupport::TestCase
       data[:accounts].find { |a| a[:id] == account.id }
     end
 
-    def bill(name:, account:, amount:, **attributes)
+    def bill(name:, account:, amount:, currency: "USD", **attributes)
       @family.recurring_transactions.create!(
-        name: name, account: account, amount: amount, currency: "USD",
+        name: name, account: account, amount: amount, currency: currency,
         expected_day_of_month: 5, last_occurrence_date: Date.current, next_expected_date: 1.month.from_now.to_date,
         status: "active", manual: true, **attributes
       )
