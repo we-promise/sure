@@ -11,23 +11,35 @@ class Security::Merger
   attr_reader :counts, :account_ids
 
   # Merges each of `sources` into `into` in one transaction, so a group
-  # merges whole or not at all, then syncs each affected account once.
-  # Returns the summed counts.
-  def self.merge_group!(sources, into:)
+  # merges whole or not at all, and adds the accounts it touched to
+  # `account_ids` once it commits. Returns the summed counts. A task merging
+  # several groups calls sync_accounts after its last merge: a sync queued
+  # between merges can be absorbed by one already running.
+  def self.merge_group!(sources, into:, account_ids:)
     counts = COUNTS.index_with(0)
-    account_ids = Set.new
+    touched = Set.new
 
     Security.transaction do
       sources.each do |source|
         merger = new(from: source, into: into)
         merger.merge!(sync: false)
         merger.counts.each { |key, value| counts[key] += value }
-        account_ids.merge(merger.account_ids)
+        touched.merge(merger.account_ids)
       end
     end
 
-    Account.where(id: account_ids.to_a).find_each(&:sync_later)
+    account_ids.merge(touched)
     counts
+  end
+
+  # Queues one sync per account. A failed dispatch is logged and the rest
+  # still go out: the merges are committed, so a rerun cannot repeat them.
+  def self.sync_accounts(account_ids)
+    Account.where(id: account_ids.to_a).find_each do |account|
+      account.sync_later
+    rescue StandardError => e
+      Rails.logger.error("Security merge: sync dispatch failed for account #{account.id}: #{e.message}")
+    end
   end
 
   def initialize(from:, into:)

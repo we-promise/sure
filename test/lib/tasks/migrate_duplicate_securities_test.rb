@@ -38,4 +38,18 @@ class MigrateDuplicateSecuritiesTest < ActiveSupport::TestCase
     assert_not Security.exists?(@duplicate.id)
     assert_equal "Dup Y again", @keeper.reload.name
   end
+
+  test "an account touched by two groups is synced once, after both" do
+    other_keeper = Security.create!(ticker: "DUPW", exchange_operating_mic: "XNAS", name: "Dup W")
+    other_duplicate = travel_to(1.minute.from_now) { Security.new(ticker: "dupw", exchange_operating_mic: "xnas").tap { |s| s.save!(validate: false) } }
+    Holding.create!(account: @account, security: @duplicate, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    Holding.create!(account: @account, security: other_duplicate, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    duplicate_ids = [ @duplicate.id, other_duplicate.id ]
+
+    Account.any_instance.expects(:sync_later).once.with { Security.where(id: duplicate_ids).none? }
+
+    capture_io { Rake::Task["data_migration:migrate_duplicate_securities"].invoke }
+
+    assert_equal 1, Holding.where(account: @account, security: other_keeper).count
+  end
 end

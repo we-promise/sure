@@ -17,6 +17,7 @@ namespace :securities do
   desc "De-duplicate securities based on ticker + exchange_operating_mic"
   task :deduplicate, [ :dry_run ] => :environment do |_t, args|
     dry_run = args[:dry_run].present?
+    account_ids = Set.new
     puts "Starting securities de-duplication... #{dry_run ? '(DRY RUN)' : ''}"
 
     # First handle securities without exchange_operating_mic
@@ -52,8 +53,8 @@ namespace :securities do
         unless dry_run
           begin
             # Moves everything that references the duplicate, lots and splits
-            # included, deletes it and syncs the affected accounts.
-            counts = Security::Merger.merge_group!([ security ], into: canonical)
+            # included, and deletes it. The affected accounts sync at the end.
+            counts = Security::Merger.merge_group!([ security ], into: canonical, account_ids: account_ids)
             puts "  ✓ Successfully merged and removed duplicate: #{merge_summary.call(counts)}"
           rescue => e
             puts "  ✗ Error processing #{security.ticker}: #{e.message}"
@@ -111,13 +112,16 @@ namespace :securities do
       unless dry_run
         begin
           # The whole group in one transaction: it merges whole or not at all.
-          counts = Security::Merger.merge_group!(duplicates, into: canonical)
+          counts = Security::Merger.merge_group!(duplicates, into: canonical, account_ids: account_ids)
           puts "  ✓ Successfully merged and removed duplicates: #{merge_summary.call(counts)}"
         rescue => e
           puts "  ✗ Error processing #{ticker}: #{e.message}"
         end
       end
     end
+
+    # Once every merge has landed, so no sync runs against a half-merged set.
+    Security::Merger.sync_accounts(account_ids)
 
     puts "\nSummary:"
     puts "  Total duplicate sets: #{duplicates.length}"

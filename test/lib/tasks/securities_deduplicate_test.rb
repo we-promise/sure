@@ -62,6 +62,34 @@ class SecuritiesDeduplicateTest < ActiveSupport::TestCase
     end
   end
 
+  # A sync queued between merges can be absorbed by one already running
+  # before the later merges land, so each account is synced once, at the end.
+  test "an account touched by two merges is synced once, after both" do
+    other_canonical = Security.create!(ticker: "DUPZ", exchange_operating_mic: "XNAS", name: "Dup Z")
+    other_duplicate = Security.create!(ticker: "DUPZ", exchange_operating_mic: nil, name: "Dup Z without MIC")
+    Holding.create!(account: @account, security: @duplicate, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    Holding.create!(account: @account, security: other_duplicate, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    duplicate_ids = [ @duplicate.id, other_duplicate.id ]
+
+    Account.any_instance.expects(:sync_later).once.with { Security.where(id: duplicate_ids).none? }
+
+    capture_io { Rake::Task["securities:deduplicate"].invoke }
+
+    assert_equal 1, Holding.where(account: @account, security: other_canonical).count
+  end
+
+  test "a sync dispatch that fails for one account still syncs the others" do
+    other_account = accounts(:depository)
+    Holding.create!(account: @account, security: @duplicate, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    Holding.create!(account: other_account, security: @duplicate, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    Account.any_instance.expects(:sync_later).twice.raises(StandardError, "queue down").then.returns(nil)
+    Rails.logger.expects(:error).with(regexp_matches(/queue down/)).once
+
+    capture_io { Rake::Task["securities:deduplicate"].invoke }
+
+    assert_not Security.exists?(@duplicate.id)
+  end
+
   test "a dry run changes nothing and reports the lots and references it would move" do
     HoldingLot.create!(account: @account, security: @duplicate, qty: 4, currency: "USD")
     other = Security.create!(ticker: "REFX", name: "Referencing")

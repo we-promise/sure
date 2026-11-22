@@ -31,7 +31,8 @@ namespace :data_migration do
   #   3. Merges the group into the keeper with Security::Merger, in one
   #      transaction: holdings (a colliding row keeps the more recently
   #      written one), trades, lots, prices, splits and tags move, the
-  #      duplicates are deleted and each affected account is synced once
+  #      duplicates are deleted
+  #   4. Syncs each affected account once, after the last group
   task migrate_duplicate_securities: :environment do
     puts "==> Scanning for duplicate securities…"
 
@@ -44,6 +45,7 @@ namespace :data_migration do
       .to_a
 
     puts "Found #{duplicate_sets.size} duplicate groups."
+    account_ids = Set.new
 
     duplicate_sets.each_with_index do |set, idx|
       # Fetch duplicates ordered by creation; the first row becomes keeper
@@ -64,7 +66,7 @@ namespace :data_migration do
 
       begin
         # The whole group in one transaction: it merges whole or not at all.
-        counts = Security::Merger.merge_group!(duplicates.to_a, into: keeper)
+        counts = Security::Merger.merge_group!(duplicates.to_a, into: keeper, account_ids: account_ids)
 
         puts "[#{idx + 1}/#{duplicate_sets.size}] Merged #{dup_ids.join(', ')} → #{keeper.id} " \
              "(#{counts[:holdings_moved]} holdings moved, #{counts[:holdings_removed]} colliding holdings removed, " \
@@ -75,6 +77,8 @@ namespace :data_migration do
       end
     end
 
+    # Once every group has merged, so no sync runs against a half-merged set.
+    Security::Merger.sync_accounts(account_ids)
     puts "✅  Duplicate security migration complete."
   end
 

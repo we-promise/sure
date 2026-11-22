@@ -134,24 +134,29 @@ class Security::MergerTest < ActiveSupport::TestCase
     assert_equal "Merge Z", keeper.reload.name
   end
 
-  test "a group merges whole or not at all, and syncs each account once" do
+  test "a group merges whole or not at all, and leaves the syncs to its caller" do
     second = Security.create!(ticker: "MRGX", exchange_operating_mic: "XNYS")
     first_holding = create_holding(@placeholder, date: 1.day.ago.to_date, qty: 1)
     create_holding(second, date: 2.days.ago.to_date, qty: 1)
+    account_ids = Set.new
 
-    Account.any_instance.expects(:sync_later).once
-    counts = Security::Merger.merge_group!([ @placeholder, second ], into: @listed)
+    Account.any_instance.expects(:sync_later).never
+    counts = Security::Merger.merge_group!([ @placeholder, second ], into: @listed, account_ids: account_ids)
     assert_equal 2, counts[:holdings_moved]
+    assert_equal Set[@account.id], account_ids
 
     third = Security.create!(ticker: "MRGW", offline: true)
     fourth = Security.create!(ticker: "MRGV", offline: true)
     third_holding = create_holding(third, date: 2.days.ago.to_date, qty: 1)
     Security::Merger.any_instance.stubs(:move_taggings!).returns(nil).then.raises(RuntimeError, "boom")
 
-    assert_raises(RuntimeError) { Security::Merger.merge_group!([ third, fourth ], into: @listed) }
+    rolled_back_ids = Set.new
+
+    assert_raises(RuntimeError) { Security::Merger.merge_group!([ third, fourth ], into: @listed, account_ids: rolled_back_ids) }
     assert Security.exists?(third.id), "the first merge is rolled back"
     assert_equal third.id, third_holding.reload.security_id
     assert_equal @listed.id, first_holding.reload.security_id
+    assert_empty rolled_back_ids, "a rolled-back group adds no accounts to sync"
   end
 
   test "a group keeps the most recently written holding when two sources collide" do
@@ -165,7 +170,7 @@ class Security::MergerTest < ActiveSupport::TestCase
       create_holding(sources[:older], date: 1.day.ago.to_date, qty: 1).update_columns(updated_at: 2.days.ago)
       create_holding(sources[:newer], date: 1.day.ago.to_date, qty: 2).update_columns(updated_at: 1.hour.ago)
 
-      Security::Merger.merge_group!(sources.values_at(*order), into: @listed)
+      Security::Merger.merge_group!(sources.values_at(*order), into: @listed, account_ids: Set.new)
 
       assert_equal [ 2 ], @account.holdings.where(security: @listed).pluck(:qty).map(&:to_i), "merged #{order.join(' then ')}"
       @account.holdings.where(security: @listed).delete_all
