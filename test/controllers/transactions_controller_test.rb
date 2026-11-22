@@ -21,6 +21,19 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
   end
 
+  test "index keeps active filters in the search form while the filter frame is lazy" do
+    get transactions_url(q: { search: "coffee", categories: [ "Food & Drink" ], start_date: "2026-11-01", amount: "10", amount_operator: "gte" })
+
+    assert_response :success
+    assert_select "form#transactions-search turbo-frame#transaction-filters" do
+      assert_select "input[type=hidden][name='q[categories][]'][value='Food & Drink']"
+      assert_select "input[type=hidden][name='q[start_date]'][value='2026-11-01']"
+      assert_select "input[type=hidden][name='q[amount]'][value='10']"
+      assert_select "input[type=hidden][name='q[amount_operator]'][value='gte']"
+      assert_select "input[type=hidden][name='q[search]']", count: 0
+    end
+  end
+
   test "show lists split rows in the order they were entered" do
     entry = create_transaction(amount: 100, name: "Split parent", account: accounts(:depository))
     entry.split!([ { name: "Part 1", amount: 60 }, { name: "Part 2", amount: 40 } ])
