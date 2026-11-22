@@ -730,6 +730,21 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "li.hidden input[name$='[_destroy]'][value='true']", count: 2
   end
 
+  test "removing an unsupported action while adding a similar one saves rather than erroring" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+    edited = create_similar_rule("Woolworths imported", "woolworths", category: dining)
+    unsupported = edited.actions.first
+    unsupported.update_column(:action_type, "unknown_action")
+
+    patch rule_url(edited), params: { rule: { actions_attributes: {
+      "0" => { id: unsupported.id, _destroy: "1" },
+      "1" => { action_type: "set_transaction_category", value: groceries.id }
+    } } }
+
+    assert_response :redirect
+    assert_equal [ [ "set_transaction_category", groceries.id ] ], edited.reload.actions.map { |action| [ action.action_type, action.value ] }
+  end
+
   test "a similar rule wins over a rule moved into a new group, which runs after it" do
     edited = create_similar_rule("Woolworths dining", "woolworths", category: dining)
     below = create_similar_rule("Woolworths", "woolworths", category: groceries)
