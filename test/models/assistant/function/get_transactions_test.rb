@@ -87,6 +87,24 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
     assert_not_includes result_ids, truly_uncategorized_entry.entryable.id
   end
 
+  test "accepts array filters sent as a JSON-encoded string" do
+    category = categories(:food_and_drink)
+    entry = Entry.create!(
+      account: accounts(:depository),
+      name: "AI json string category lookup",
+      date: Date.current,
+      amount: 42,
+      currency: "USD",
+      entryable: Transaction.new(category: category)
+    )
+
+    result = assert_nothing_raised do
+      @function.call("categories" => [ category.name ].to_json)
+    end
+
+    assert_includes result[:transactions].map { |t| t[:id] }, entry.entryable.id
+  end
+
   test "schema no longer inlines user data enums" do
     schema = @function.params_schema
 

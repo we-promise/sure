@@ -1,4 +1,6 @@
 class Assistant::Function::GetTransactions < Assistant::Function
+  ARRAY_FILTERS = %w[types statuses account_ids accounts categories merchants tags].freeze
+
   class << self
     def default_page_size
       50
@@ -172,6 +174,9 @@ class Assistant::Function::GetTransactions < Assistant::Function
 
   def call(params = {})
     search_params = params.except("order", "page", "page_size", "sort_by")
+    ARRAY_FILTERS.each do |key|
+      search_params[key] = parse_array_param(search_params[key]) if search_params[key].is_a?(String)
+    end
     search_params["status"] = search_params.delete("statuses") if search_params.key?("statuses")
 
     # The categories filter now matches Category::UNCATEGORIZED_FILTER_VALUE, a stable
@@ -261,6 +266,16 @@ class Assistant::Function::GetTransactions < Assistant::Function
   end
 
   private
+    # Non-strict providers can send an array filter as a JSON-encoded string
+    # (e.g. "[\"Travel\"]"). Parse it so the filter still matches; a plain
+    # string is treated as a single value.
+    def parse_array_param(value)
+      parsed = JSON.parse(value)
+      parsed.is_a?(Array) ? parsed : [ value ]
+    rescue JSON::ParserError
+      [ value ]
+    end
+
     # Raw bank labels ("CB 02/09 CARREFOUR MARKET") are what most rows carry
     # when no merchant was ever detected, and they defeat both grouping and
     # categorization. The cleaned form is emitted only when it actually differs,
