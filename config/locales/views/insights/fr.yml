@@ -5,9 +5,13 @@ fr:
       title: Nouvelle analyse financière
       body: Ouvrez Sure pour consulter votre dernière analyse.
     actions:
+      bank_fees: Voir les frais
+      bill_not_covered: Aller au compte
       budget: Voir le budget
       cash_flow_warning: Vérifier les transactions récurrentes
+      fixed_commitments_ratio: Vérifier les transactions récurrentes
       idle_cash: Aller au compte
+      loan_payment_change: Voir le prêt
       maintained_goal_depleted: Voir la réserve
       net_worth_milestone: Voir le rapport de patrimoine net
       savings_rate_change: Voir les transactions de ces mois
@@ -30,12 +34,17 @@ fr:
       days_overdue:
         one: "%{count} jour de retard"
         other: "%{count} jours de retard"
+      fee_charges:
+        one: "%{count} prélèvement"
+        other: "%{count} prélèvements"
       idle_days:
         one: inactif depuis %{count} jour
         other: inactif depuis %{count} jours
       need_attention: requièrent votre attention
       of_budget: du budget
+      of_income: des revenus
       on_pace: au rythme actuel
+      short_on: manquants le %{date}
       today: aujourd'hui
       vs_previous_three_months: vs les trois mois précédents
     index:
@@ -65,6 +74,14 @@ fr:
           %{budget_spent_pct}% de votre budget total jusqu'à présent."
       budget_on_track: Vous avez dépensé %{spent} sur votre budget de %{budgeted}
         (%{budget_spent_pct}%) et tout reste dans les limites.
+      bill_not_covered: "%{name} (%{amount}) arrive à échéance le %{due_on} sur %{account}. En comptant les autres factures et revenus prévus sur ce compte d'ici là, il manquera environ %{shortfall}."
+      loan_payment_change:
+        up: L'échéance de %{account} passe de %{previous_payment} à %{new_payment} le %{effective_on}, soit %{change_pct}% de plus, selon l'échéancier du prêt et ses taux enregistrés.
+        down: L'échéance de %{account} passe de %{previous_payment} à %{new_payment} le %{effective_on}, soit %{change_pct}% de moins, selon l'échéancier du prêt et ses taux enregistrés.
+      bank_fees:
+        recurring: "%{account} a supporté %{amount} de frais au cours des %{days} derniers jours."
+        new: "%{account} a supporté %{amount} de frais au cours des %{days} derniers jours, contre aucun sur les %{days} jours précédents."
+      fixed_commitments_ratio: Des engagements récurrents de %{commitments} par mois représentent %{current_ratio}% de votre revenu mensuel habituel de %{income}, contre %{previous_ratio}% il y a six mois. %{explanation}
       maintained_goal_depleted: "%{goal} détient %{saved} sur les %{target} qu'elle doit conserver. Il manque %{missing}."
       cash_flow_warning:
         low: D'après vos prochaines transactions récurrentes et vos dépenses habituelles,
@@ -91,11 +108,25 @@ fr:
       subscription_audit: "%{name} (%{amount}) n'est pas réapparu depuis la date
         prévue du %{expected_on}. Il est possible que l'abonnement ait été annulé
         ou que le prélèvement ait changé de date."
+    fixed_commitments_ratio:
+      contributors: 'Principaux changements : %{list}.'
+      contributor:
+        new: "%{name} (nouveau, %{amount} par mois)"
+        raised: "%{name} (%{amount} de plus par mois)"
+      income_fell: Votre revenu mensuel habituel est passé de %{previous_income} à %{current_income}.
     titles:
       budget_at_risk:
         one: Une catégorie de votre budget nécessite votre attention
         other: "%{count} catégories de votre budget nécessitent votre attention"
       budget_on_track: Votre budget est sur la bonne voie
+      bill_not_covered: "%{account} risque de ne pas couvrir %{name}"
+      loan_payment_change:
+        up: L'échéance de %{account} augmente
+        down: L'échéance de %{account} diminue
+      bank_fees: Frais sur %{account}
+      fixed_commitments_ratio:
+        up: Les engagements fixes absorbent une part croissante de vos revenus
+        over_half: Les engagements fixes absorbent désormais la moitié de vos revenus ou plus
       cash_flow_warning:
         low: Votre solde de trésorerie pourrait devenir faible
         negative: Votre solde de trésorerie pourrait devenir négatif
@@ -110,10 +141,14 @@ fr:
         below: Les dépenses de %{category} sont en baisse
       subscription_audit: "%{name} est-il toujours actif ?"
     types:
+      bank_fees: Frais
+      bill_not_covered: Factures
       budget_at_risk: Budget
       budget_on_track: Budget
       cash_flow_warning: Trésorerie
+      fixed_commitments_ratio: Engagements fixes
       idle_cash: Liquidités inactives
+      loan_payment_change: Échéance de prêt
       maintained_goal_depleted: Réserve
       net_worth_milestone: Patrimoine net
       savings_rate_change: Taux d'épargne
