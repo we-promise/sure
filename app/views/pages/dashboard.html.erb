@@ -124,7 +124,7 @@
         data-sortable-list-id="<%= section[:key] %>"
         data-section-key="<%= section[:key] %>"
         <%= "autofocus" if @just_shown_section == section[:key] %>
-        data-controller="dashboard-section<%= " cashflow-expand" if section[:key] == "cashflow_sankey" %>"
+        data-controller="dashboard-section<%= " cashflow-expand" if section[:key] == "cashflow_sankey" || section[:expandable] %>"
         data-dashboard-section-section-key-value="<%= section[:key] %>"
         data-dashboard-section-collapsed-value="<%= Current.user.dashboard_section_collapsed?(section[:key]) %>"
         draggable="true"
@@ -173,7 +173,8 @@
                 <span data-icon="collapse" aria-hidden="true" style="display:none"><%= icon("chevrons-down-up", size: "sm", class: "!w-3.5 !h-3.5") %></span>
               </button>
             <% end %>
-            <% if section[:key] == "cashflow_sankey" && section[:locals][:sankey_data][:links].present? %>
+            <%# A section with expandable: true renders a <dialog> in its partial; this opens it full screen. %>
+            <% if (section[:key] == "cashflow_sankey" && section[:locals][:sankey_data][:links].present?) || section[:expandable] %>
               <button
                 type="button"
                 class="flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ml-auto lg:ml-0"
