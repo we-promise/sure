@@ -92,6 +92,11 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: 7 } } }, as: :json
     assert_equal 6, @user.reload.account_balances_settings["horizon"], "an unsupported forecast length is ignored"
 
+    patch "/dashboard/preferences", params: { preferences: { account_balances: { shown_account_ids: [ accounts(:depository).id ] } } }, as: :json
+    assert_equal [ accounts(:depository).id ], @user.reload.account_balances_settings["shown_account_ids"], "a mostly hidden selection is saved as the shown list"
+    patch "/dashboard/preferences", params: { preferences: { account_balances: { shown_account_ids: nil } } }, as: :json
+    assert_nil @user.reload.account_balances_settings["shown_account_ids"], "and cleared again"
+
     patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: [] } } }, as: :json
     assert_response :success
     patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: "soon" } } }, as: :json

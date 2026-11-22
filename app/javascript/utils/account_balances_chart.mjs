@@ -48,6 +48,24 @@ export function groupingFor(moneyFormat) {
   return moneyFormat.indian_grouping ? [3, 2] : [3]
 }
 
+// The account selection as saved: the hidden ids, or, when more than half
+// are hidden, the shown ones (shown_account_ids wins when present), so the
+// saved list never exceeds half the accounts.
+export function selectionToSave(excluded, allIds) {
+  const shown = allIds.filter((id) => !excluded.has(id))
+  return shown.length < excluded.size
+    ? { hidden_account_ids: [], shown_account_ids: shown }
+    : { hidden_account_ids: [...excluded], shown_account_ids: null }
+}
+
+export function excludedFromSettings(settings, allIds) {
+  if (Array.isArray(settings.shown_account_ids)) {
+    const shown = new Set(settings.shown_account_ids)
+    return new Set(allIds.filter((id) => !shown.has(id)))
+  }
+  return new Set(settings.hidden_account_ids || [])
+}
+
 // Fills "%{name}" placeholders in a translated string.
 export function interpolate(template, vars = {}) {
   return String(template).replace(/%\{(\w+)\}/g, (match, key) => (key in vars ? String(vars[key]) : match))

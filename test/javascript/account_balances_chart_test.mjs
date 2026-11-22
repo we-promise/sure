@@ -6,6 +6,7 @@ import {
   clusterByDistance,
   columnSplit,
   currencyAffixes,
+  excludedFromSettings,
   extendSignRuns,
   formatDay,
   groupingFor,
@@ -13,6 +14,7 @@ import {
   monthFormatFor,
   parseDay,
   pluralForm,
+  selectionToSave,
   stackRows,
 } from "../../app/javascript/utils/account_balances_chart.mjs"
 
@@ -69,6 +71,27 @@ describe("groupingFor", () => {
   it("groups by three, or 3-then-2 for Indian grouping (1,23,456)", () => {
     assert.deepEqual(groupingFor({ indian_grouping: false }), [3])
     assert.deepEqual(groupingFor({ indian_grouping: true }), [3, 2])
+  })
+})
+
+describe("selectionToSave / excludedFromSettings", () => {
+  const all = Array.from({ length: 250 }, (_, i) => `a${i}`)
+
+  it("saves the shorter list, so None fits however many accounts there are", () => {
+    const none = selectionToSave(new Set(all), all)
+    assert.deepEqual(none, { hidden_account_ids: [], shown_account_ids: [] })
+    assert.equal(excludedFromSettings(none, all).size, 250)
+
+    const few = selectionToSave(new Set(["a1", "a2"]), all)
+    assert.deepEqual(few, { hidden_account_ids: ["a1", "a2"], shown_account_ids: null })
+    assert.deepEqual([...excludedFromSettings(few, all)], ["a1", "a2"])
+  })
+
+  it("round-trips a mostly hidden selection through the shown list", () => {
+    const hidden = new Set(all.slice(1))
+    const saved = selectionToSave(hidden, all)
+    assert.deepEqual(saved.shown_account_ids, ["a0"])
+    assert.deepEqual([...excludedFromSettings(saved, all)].sort(), [...hidden].sort())
   })
 })
 

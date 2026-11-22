@@ -6,6 +6,7 @@ import {
   clusterByDistance,
   columnSplit,
   currencyAffixes,
+  excludedFromSettings,
   extendSignRuns,
   formatDay,
   groupingFor,
@@ -13,6 +14,7 @@ import {
   monthFormatFor,
   parseDay,
   pluralForm,
+  selectionToSave,
   stackRows,
 } from "utils/account_balances_chart";
 import {
@@ -66,7 +68,10 @@ export default class extends Controller {
     this.horizon = settings.horizon;
     this.hideNegative = settings.hide_negative;
     this.showTransactions = settings.show_transactions;
-    this.excluded = new Set(settings.hidden_account_ids);
+    this.excluded = excludedFromSettings(
+      settings,
+      this.chartData.accounts.map((a) => a.id),
+    );
     this.listOpen = settings.list_open;
     this.openGroups = new Set(settings.open_groups);
     this.zoom = null;
@@ -165,7 +170,10 @@ export default class extends Controller {
               horizon: this.horizon,
               hide_negative: this.hideNegative,
               show_transactions: this.showTransactions,
-              hidden_account_ids: [...this.excluded],
+              ...selectionToSave(
+                this.excluded,
+                this.chartData.accounts.map((a) => a.id),
+              ),
               list_open: this.listOpen,
               open_groups: [...this.openGroups],
             },

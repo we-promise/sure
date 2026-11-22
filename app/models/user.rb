@@ -999,12 +999,13 @@ class User < ApplicationRecord
   ACCOUNT_BALANCES_HORIZONS = [ 0, 1, 3, 6, 12 ].freeze
   ACCOUNT_BALANCES_DEFAULTS = {
     "horizon" => 3, "hide_negative" => false, "show_transactions" => false,
-    "hidden_account_ids" => [], "list_open" => false, "open_groups" => []
+    "hidden_account_ids" => [], "shown_account_ids" => nil, "list_open" => false, "open_groups" => []
   }.freeze
 
   # Account Balances widget settings: forecast length in months, whether the
   # axis hides the negative side, whether the transaction lane shows, which
-  # accounts are left out of the chart, and the state of its account list.
+  # accounts are left out of the chart (or, when most are, which are shown),
+  # and the state of its account list.
   def account_balances_settings
     ACCOUNT_BALANCES_DEFAULTS.merge(self.class.sanitize_account_balances_settings(preferences&.dig("account_balances") || {}))
   end
@@ -1021,7 +1022,12 @@ class User < ApplicationRecord
         clean[key] = boolean.cast(raw[key]) == true if raw.key?(key)
       end
       %w[hidden_account_ids open_groups].each do |key|
-        clean[key] = Array(raw[key]).map(&:to_s).reject(&:blank?).uniq.first(200) if raw.key?(key)
+        clean[key] = Array(raw[key]).map(&:to_s).reject(&:blank?).uniq.first(1000) if raw.key?(key)
+      end
+      # Saved instead of hidden_account_ids when most accounts are hidden;
+      # nil clears it.
+      if raw.key?("shown_account_ids")
+        clean["shown_account_ids"] = raw["shown_account_ids"].nil? ? nil : Array(raw["shown_account_ids"]).map(&:to_s).reject(&:blank?).uniq.first(1000)
       end
     end
   end
