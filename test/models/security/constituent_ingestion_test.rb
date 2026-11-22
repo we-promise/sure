@@ -515,7 +515,9 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     stamped = @security.reload.constituents_fetched_at
     replaced_at = @security.constituents_replaced_at
 
-    stale.send(:store_constituents, [ constituent("BBB", "Second", 100) ])
+    assert_no_difference -> { DebugLogEntry.where(message: "Kept the holdings another import stored during a forced refresh").count } do
+      stale.send(:store_constituents, [ constituent("BBB", "Second", 100) ])
+    end
 
     assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker)
     assert_equal stamped, @security.constituents_fetched_at
