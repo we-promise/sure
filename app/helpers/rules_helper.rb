@@ -44,7 +44,8 @@ module RulesHelper
   end
 
   # e.g. "Set transaction category to Groceries", as the rules list shows a
-  # rule's first action.
+  # rule's first action. An action type that is no longer offered has no
+  # executor to label it.
   def rule_action_label(action)
     if action.nil?
       t("rules.no_action")
@@ -53,6 +54,8 @@ module RulesHelper
     else
       action.executor.label
     end
+  rescue Rule::Registry::UnsupportedActionError
+    t("rules.unsupported_action")
   end
 
   # e.g. "category and merchant", for the fields a Rule::Health entry names.
