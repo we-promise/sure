@@ -49,7 +49,7 @@
               <%= form.text_field :account_last4_hint, label: t(".account_last4_hint") %>
               <%= form.select :currency,
                               account_statement_currency_options(@statement),
-                              { label: t(".currency"), selected: @statement.statement_currency } %>
+                              { label: t(".currency"), selected: @statement.currency, include_blank: t(".currency_detect") } %>
               <%= form.date_field :period_start_on, label: t(".period_start_on") %>
               <%= form.date_field :period_end_on, label: t(".period_end_on") %>
               <%= form.number_field :opening_balance, label: t(".opening_balance"), step: "0.01" %>

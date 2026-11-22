@@ -327,6 +327,20 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name='account_statement[account_id]']", 0
   end
 
+  test "metadata form offers to detect the currency for an accountless statement" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: nil,
+      file: uploaded_file(filename: "unmatched_statement.csv", content_type: "text/csv")
+    )
+
+    get account_statement_url(statement)
+
+    assert_response :success
+    assert_select "select[name='account_statement[currency]'] option[value='']",
+      text: I18n.t("account_statements.show.currency_detect")
+  end
+
   test "links suggested statement" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,

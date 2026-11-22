@@ -72,6 +72,7 @@ en:
       account_name_hint: Account name hint
       closing_balance: Closing balance
       currency: Currency
+      currency_detect: Detect from document
       delete: Delete
       difference: Difference
       download: Download
