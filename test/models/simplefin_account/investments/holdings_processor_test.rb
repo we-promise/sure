@@ -375,6 +375,48 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_equal "USD", recorder.calls.first[:currency]
   end
 
+  test "a holding in a real ISO currency keeps that currency (#2856)" do
+    security = securities(:aapl)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+
+    processor.stubs(:holdings_data).returns([
+      {
+        "id" => "eur-fund",
+        "symbol" => "VWCE",
+        "description" => "Vanguard FTSE All-World",
+        "shares" => "10",
+        "market_value" => "1200.00",
+        "currency" => "eur"
+      }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
+    )
+
+    recorder = Class.new do
+      attr_reader :calls
+
+      def initialize = @calls = []
+
+      def import_holding(**kwargs)
+        @calls << kwargs
+        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
+              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
+                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
+      end
+    end.new
+
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size
+    assert_equal "EUR", recorder.calls.first[:currency]
+  end
+
   test "an investment account keeps an ETF ticker out of the crypto namespace (#2856)" do
     assert_resolves(account: accounts(:investment), symbol: "ETH",
                     description: "Grayscale Ethereum Mini Trust ETF", expected: "ETH")
@@ -390,11 +432,22 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
                     expected: "CRYPTO:BTC")
   end
 
+  test "a crypto-named investment account namespaces tickers outside the known list" do
+    assert_resolves(account: accounts(:investment), symbol: "ADA", description: "Cardano",
+                    simplefin_name: "Crypto Portfolio", expected: "CRYPTO:ADA")
+  end
+
+  test "a crypto-named investment account keeps an ETF ticker out of the crypto namespace" do
+    assert_resolves(account: accounts(:investment), symbol: "ETH",
+                    description: "Grayscale Ethereum Mini Trust ETF",
+                    simplefin_name: "Crypto Portfolio", expected: "ETH")
+  end
+
   private
-    def assert_resolves(account:, symbol:, description:, expected:)
+    def assert_resolves(account:, symbol:, description:, expected:, simplefin_name: "Wealthfront")
       processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
       processor.stubs(:account).returns(account)
-      processor.stubs(:simplefin_account).returns(stub(name: "Wealthfront"))
+      processor.stubs(:simplefin_account).returns(stub(name: simplefin_name))
 
       resolved_symbol = nil
       Security::Resolver.stubs(:new).with { |value| resolved_symbol = value; true }

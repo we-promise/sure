@@ -84,9 +84,12 @@ class SimplefinAccount::Investments::HoldingsProcessor
         next if qty.to_d.zero? && computed_amount.to_d.zero?
 
         # SimpleFIN sometimes reports a ticker (e.g. "ETH" for the Grayscale
-        # Ethereum Mini Trust ETF) in the holding currency field. Value
-        # holdings in the account's valuation currency instead (#2856).
-        currency = simplefin_account.currency.presence || account&.currency.presence || "USD"
+        # Ethereum Mini Trust ETF) in the holding currency field. Keep a real
+        # ISO currency; fall back to the account's valuation currency (#2856).
+        currency = holding_currency(simplefin_holding["currency"]) ||
+                   simplefin_account.currency.presence ||
+                   account&.currency.presence ||
+                   "USD"
         position = positions[[ security.id, currency, holding_date ]] ||= {
           security: security,
           currency: currency,
@@ -181,6 +184,19 @@ class SimplefinAccount::Investments::HoldingsProcessor
       simplefin_account.raw_holdings_payload || []
     end
 
+    # Returns the holding's currency only when it is a fiat ISO code. Crypto
+    # codes in config/currencies.yml (ETH, BTC, …) have no ISO numeric code,
+    # so a ticker in the currency field falls back to the account currency.
+    def holding_currency(value)
+      code = value.to_s.strip.upcase
+      return nil unless code.match?(/\A[A-Z]{3}\z/)
+
+      currency = Money::Currency.new(code)
+      currency.iso_code if currency.iso_numeric.present?
+    rescue Money::Currency::UnknownCurrencyError
+      nil
+    end
+
     def cost_basis_from(simplefin_holding)
       %w[cost_basis basis total_cost value].each do |key|
         raw = simplefin_holding[key]
@@ -244,6 +260,14 @@ class SimplefinAccount::Investments::HoldingsProcessor
     FUND_DESCRIPTION = /\b(etf|etn|trust|fund|index|shares?)\b/i
     CRYPTO_SYMBOLS = %w[BTC ETH SOL DOGE LTC BCH].freeze
 
+    # An exchange connection inferred as Investment still holds crypto, so a
+    # crypto-named account namespaces its tickers. A fund/trust description
+    # wins, so an ETF in such an account stays an equity.
+    def crypto_named_account?(description)
+      simplefin_account.name.to_s.downcase.include?("crypto") &&
+        !description.to_s.match?(FUND_DESCRIPTION)
+    end
+
     def resolve_security(symbol, description)
       # Normalize crypto tickers to a distinct namespace so they don't collide
       # with equities. The linked account type is the main discriminator; an
@@ -251,7 +275,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
       # inferred as Investment), so a known crypto symbol stays namespaced
       # unless the description names a fund or trust (#2856).
       sym = symbol.to_s.upcase
-      is_crypto_account = account&.accountable_type == "Crypto"
+      is_crypto_account = account&.accountable_type == "Crypto" || crypto_named_account?(description)
       is_crypto_symbol = CRYPTO_SYMBOLS.include?(sym) && !description.to_s.match?(FUND_DESCRIPTION)
       mentions_crypto = description.to_s.downcase.include?("crypto")
 
