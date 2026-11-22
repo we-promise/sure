@@ -66,6 +66,18 @@ class AccountStatement < ApplicationRecord
   validate :original_file_constraints, if: -> { original_file.attached? }
 
   scope :ordered, -> { order(created_at: :desc) }
+  # Statements with a known period first, newest period first. A period
+  # counts as known only with both ends, as account_statement_period shows
+  # it; the rest follow in upload order, which also breaks ties.
+  scope :by_period, -> {
+    known = "account_statements.period_start_on IS NOT NULL AND account_statements.period_end_on IS NOT NULL"
+    order(
+      Arel.sql("CASE WHEN #{known} THEN 0 ELSE 1 END"),
+      Arel.sql("CASE WHEN #{known} THEN account_statements.period_end_on END DESC"),
+      Arel.sql("CASE WHEN #{known} THEN account_statements.period_start_on END DESC"),
+      created_at: :desc
+    )
+  }
   scope :with_account, -> { where.not(account_id: nil) }
   scope :unmatched, -> { where(account_id: nil).where(review_status: "unmatched") }
   # Rejecting a suggestion leaves the statement accountless, so it stays in the inbox where it can be found and deleted.
