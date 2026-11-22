@@ -78,8 +78,11 @@ module Ai::Transport::Http
       url = base_url.to_s.strip.chomp("/").delete_suffix("/chat/completions")
       return OPENAI_BASE if url.blank?
 
-      path = URI.parse(url).path
-      path.match?(%r{/v\d+[a-z0-9]*(/openai)?\z}i) ? url : "#{url}/v1"
+      uri = URI.parse(url)
+      return url if uri.path.to_s.match?(%r{/v\d+[a-z0-9]*(/openai)?\z}i)
+
+      uri.path = "#{uri.path.chomp("/")}/v1"   # before any query, which stays as written
+      uri.to_s
     rescue URI::InvalidURIError
       url.include?("v1") ? url : "#{url}/v1"
     end
