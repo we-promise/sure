@@ -199,6 +199,27 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert runs.last.finished?
   end
 
+  test "a rule's first AI job finishing before its second action queues doesn't finish the run" do
+    use_ai_routes
+    rule = ai_rule("AI", "Whole Foods", "auto_categorize", "auto_detect_merchants")
+    seen = []
+    Ai::GenerationJob.stubs(:perform_later).with do |*|
+      run = RuleRun.last
+      run.complete_job! if seen.empty?   # the first job is done before the second action counts its own
+      seen << run.reload.values_at(:status, :pending_jobs_count)
+      true
+    end.returns(true)
+
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.last.reload
+
+    assert_equal [ "pending", 1 ], seen.first, "the runner's hold kept the run open"
+    assert_equal [ "pending", 1 ], run.values_at(:status, :pending_jobs_count), "the second job is still out"
+    assert_not run.finished?
+
+    run.complete_job!
+    assert_equal "success", run.reload.status
+  end
+
   test "a run whose second AI action can't be queued still waits for the first action's job" do
     use_ai_routes
     rule = ai_rule("AI", "Whole Foods", "auto_categorize", "auto_detect_merchants")
@@ -252,6 +273,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     runs = runner.run
 
     assert_equal "failed", runs.first.status
+    assert runs.first.reload.finished?, "the failed rule let go of the runner's hold"
     assert_equal top, runs.first.rule
     assert_equal "Renamed", @other.reload.entry.name
     assert_equal [ "boom" ], runner.errors.map(&:message)
