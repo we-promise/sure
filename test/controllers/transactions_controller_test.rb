@@ -761,6 +761,39 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tag.id ], child.reload.entryable.tag_ids
   end
 
+  test "split child drawer lets the user change category and merchant but not the name" do
+    parent = create_transaction(account: accounts(:depository), amount: 100)
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.first
+
+    get transaction_url(child), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "[data-category-select-disabled-value='false']", count: 1
+    assert_select "[data-merchant-select-disabled-value='false']", count: 1
+    assert_select "input[name='entry[name]'][disabled]", count: 1
+  end
+
+  test "category and merchant changed on a split child are kept and locked" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, merchant: merchants(:amazon))
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.find_by(name: "Part 1")
+    sibling = parent.child_entries.find_by(name: "Part 2")
+
+    patch transaction_url(child), params: {
+      entry: { entryable_attributes: { id: child.entryable_id, category_id: categories(:food_and_drink).id, merchant_id: merchants(:netflix).id } }
+    }
+
+    assert_response :redirect
+    transaction = child.reload.entryable
+    assert_equal categories(:food_and_drink), transaction.category
+    assert_equal merchants(:netflix), transaction.merchant
+    assert transaction.locked?(:category_id)
+    assert transaction.locked?(:merchant_id)
+    assert_equal merchants(:amazon), parent.reload.entryable.merchant
+    assert_equal merchants(:amazon), sibling.reload.entryable.merchant
+  end
+
   test "can update tags through tag-only endpoint" do
     patch tags_transaction_url(@entry, format: :json), params: {
       tag_ids: [ tags(:one).id, tags(:two).id ]
