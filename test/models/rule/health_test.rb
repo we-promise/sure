@@ -241,6 +241,23 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_includes health.match_nothing, on_savings
   end
 
+  test "a rule below a split that reads the new children is not listed as matching nothing" do
+    create_rule(name_condition("like", "hardware"), split_into: [ "Materials", "Labour" ])
+    on_labour = create_rule(name_condition("like", "labour"), category: @dining)
+
+    assert_not_includes health.match_nothing, on_labour
+
+    runs = Rule::Runner.new(@family, rules: @family.rules.where(active: true), execution_type: "manual").run
+    assert runs.find { |run| run.rule == on_labour }.transactions_queued.positive?
+  end
+
+  test "a split rule that matches nothing leaves the verdicts below it standing" do
+    create_rule(name_condition("like", "no such shop"), split_into: [ "Materials", "Labour" ])
+    on_labour = create_rule(name_condition("like", "labour"), category: @dining)
+
+    assert_includes health.match_nothing, on_labour
+  end
+
   test "an inactive rule that matches nothing is not listed" do
     create_rule(name_condition("like", "no such shop"), category: @groceries, active: false)
     active = create_rule(name_condition("like", "no such place"), category: @groceries)
@@ -304,12 +321,16 @@ class Rule::HealthTest < ActiveSupport::TestCase
       Rule::Health.new(@family)
     end
 
-    def create_rule(*conditions, category: nil, tags: nil, name: nil, transfer_to: nil, active: true, stop_processing: false, effective_date: nil)
+    def create_rule(*conditions, category: nil, tags: nil, name: nil, transfer_to: nil, split_into: nil, active: true, stop_processing: false, effective_date: nil)
       actions = []
       actions << Rule::Action.new(action_type: "set_transaction_name", value: name) if name
       actions << Rule::Action.new(action_type: "set_transaction_category", value: category.id) if category
       actions << Rule::Action.new(action_type: "set_transaction_tags", value: tags.map(&:id)) if tags
       actions << Rule::Action.new(action_type: "set_as_transfer_or_payment", value: transfer_to.id) if transfer_to
+      if split_into
+        splits = split_into.map { |split_name| { type: "percentage", name: split_name, share: (100.0 / split_into.size).to_s } }
+        actions << Rule::Action.new(action_type: "split_transaction", value: { splits: splits }.to_json)
+      end
       @family.rules.create!(resource_type: "transaction", active: active, stop_processing: stop_processing,
         effective_date: effective_date, conditions: conditions, actions: actions)
     end
