@@ -107,13 +107,19 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
 
   # 50,000 left is behind the contract's 49,400 or so: the contracted
   # repayment no longer clears it by maturity, so there is no payoff year.
-  test "a loan its contracted repayment no longer clears seeds nothing" do
+  # The contract still asks for the repayment until maturity.
+  test "a loan its contracted repayment no longer clears seeds its repayment until maturity" do
     loan_account = own_loan(balance: 50_000, term_months: 60)
     assert_nil Loan::PayoffProjection.new(loan_account.loan, as_of: AS_OF).payoff_date, "precondition: no payoff date"
+    schedule = loan_account.loan.amortization_schedule
 
     @plan.seed_streams!(as_of: AS_OF)
+    stream = @plan.streams.find_by!(source: "seeded_loan")
 
-    assert_not @plan.streams.exists?(source: "seeded_loan")
+    assert_equal schedule.payment_in_force(AS_OF).amount * 12, stream.annual_amount
+    assert_equal (AS_OF - 12.months + 60.months).year, schedule.payoff_date.year, "precondition: maturity"
+    assert_equal schedule.payoff_date.year, stream.end_year
+    assert_equal AS_OF, @plan.reload.streams_seeded_on
   end
 
   test "a loan with nothing left to pay seeds nothing" do

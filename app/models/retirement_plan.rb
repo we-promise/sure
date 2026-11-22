@@ -222,25 +222,29 @@ class RetirementPlan < ApplicationRecord
     end
 
     # Each loan's repayment, at the payment in force on the reference date,
-    # until the year its projection pays it off. A loan whose projection does
-    # not apply (nothing left to pay, or a payment that never clears it) seeds
-    # nothing rather than an invented figure. Returns how many loans were
-    # skipped for want of an exchange rate.
+    # until the year its projection pays it off. A loan its repayment no
+    # longer clears has no payoff date, but the contract still asks for that
+    # repayment until maturity, so its stream ends there. A loan whose
+    # projection does not apply (nothing left to pay, or no payments left)
+    # seeds nothing rather than an invented figure. Returns how many loans
+    # were skipped for want of an exchange rate.
     def seed_loans(as_of)
       seeded = streams.where(source: "seeded_loan").pluck(:account_id).compact
       skipped = 0
 
       finance_accounts.where(accountable_type: "Loan").where.not(id: seeded).includes(:accountable).find_each do |account|
         projection = Loan::PayoffProjection.new(account.accountable, as_of: as_of)
-        next unless projection.applicable? && projection.payoff_date
+        next unless projection.applicable?
 
-        payment = account.accountable.amortization_schedule&.payment_in_force(as_of)
+        schedule = account.accountable.amortization_schedule
+        payment = schedule&.payment_in_force(as_of)
         next if payment.nil?
 
+        end_date = projection.payoff_date || schedule.payoff_date
         # Twelve: AmortizationSchedule#payment_schedule is monthly.
         annual = payment.exchange_to(user.family.currency, date: as_of).amount * 12
         streams.create!(kind: "expense", source: "seeded_loan", indexed: false, account: account,
-                        name: account.name, annual_amount: annual, end_year: projection.payoff_date.year)
+                        name: account.name, annual_amount: annual, end_year: end_date.year)
       rescue Money::ConversionError
         skipped += 1
       end
