@@ -36,6 +36,76 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
     assert_equal [ "AAPL", "MSFT" ], tickers({})
   end
 
+  test "get_holdings omits a position whose latest holding has zero quantity" do
+    security = Security.create!(ticker: "CLOSED", name: "Closed")
+    @account.holdings.create!(security: security, date: 2.days.ago.to_date, qty: 10, price: 10, amount: 100, currency: "USD")
+    @account.holdings.create!(security: security, date: Date.current, qty: 0, price: 0, amount: 0, currency: "USD")
+
+    result = @fn.call("page" => 1, "securities" => [ "CLOSED" ])
+
+    assert_empty result[:holdings]
+    assert_equal 0, result[:total_results]
+    assert_equal "$0.00", result[:total_value]
+  end
+
+  test "get_holdings returns a position reopened after a zero closure with its newest values" do
+    security = Security.create!(ticker: "REOPEN", name: "Reopen")
+    @account.holdings.create!(security: security, date: 3.days.ago.to_date, qty: 5, price: 10, amount: 50, currency: "USD")
+    @account.holdings.create!(security: security, date: 2.days.ago.to_date, qty: 0, price: 0, amount: 0, currency: "USD")
+    @account.holdings.create!(security: security, date: Date.current, qty: 7, price: 20, amount: 140, currency: "USD")
+
+    row = @fn.call("page" => 1, "securities" => [ "REOPEN" ])[:holdings].sole
+
+    assert_equal 7.0, row[:quantity]
+    assert_equal 140.0, row[:amount]
+    assert_equal Date.current, row[:date]
+  end
+
+  test "get_holdings selects each account's latest row for the same security independently" do
+    other = @user.family.accounts.create!(name: "Second Brokerage", accountable: Investment.new, balance: 0, currency: "USD", owner: @user)
+    security = Security.create!(ticker: "SHARED", name: "Shared")
+    @account.holdings.create!(security: security, date: Date.current, qty: 4, price: 10, amount: 40, currency: "USD")
+    other.holdings.create!(security: security, date: 2.days.ago.to_date, qty: 3, price: 10, amount: 30, currency: "USD")
+    other.holdings.create!(security: security, date: Date.current, qty: 0, price: 0, amount: 0, currency: "USD")
+
+    rows = @fn.call("page" => 1, "securities" => [ "SHARED" ])[:holdings]
+
+    assert_equal [ @account.name ], rows.map { |row| row[:account] }
+  end
+
+  test "get_holdings keeps the latest provider snapshot authoritative over calculated rows" do
+    coinstats_item = @user.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    account_provider = AccountProvider.create!(
+      account: @account,
+      provider: coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
+    )
+    security = Security.create!(ticker: "PROV", name: "Prov")
+    provider_holding = @account.holdings.create!(
+      security: security, date: 1.day.ago.to_date, qty: 2, price: 100, amount: 200, currency: "USD",
+      account_provider: account_provider
+    )
+    provider_holding.update_columns(updated_at: 1.day.ago)
+    @account.holdings.create!(security: security, date: Date.current, qty: 9, price: 100, amount: 900, currency: "USD")
+
+    row = @fn.call("page" => 1, "securities" => [ "PROV" ])[:holdings].sole
+
+    assert_equal 2.0, row[:quantity]
+  end
+
+  test "get_holdings total_value and total_results ignore a closed position" do
+    closed = Security.create!(ticker: "DEMO_CLOSED", name: "Demo Closed")
+    current = Security.create!(ticker: "DEMO_CURRENT", name: "Demo Current")
+    @account.holdings.create!(security: closed, date: 2.days.ago.to_date, qty: 10, price: 10, amount: 100, currency: "USD")
+    @account.holdings.create!(security: closed, date: Date.current, qty: 0, price: 0, amount: 0, currency: "USD")
+    @account.holdings.create!(security: current, date: Date.current, qty: 20, price: 20, amount: 400, currency: "USD")
+
+    result = @fn.call("page" => 1, "securities" => [ "DEMO_CLOSED", "DEMO_CURRENT" ])
+
+    assert_equal [ "DEMO_CURRENT" ], result[:holdings].map { |row| row[:ticker] }
+    assert_equal 1, result[:total_results]
+    assert_equal "$400.00", result[:total_value]
+  end
+
   # With no stored cost the figure is the fallback, which on a FIFO account
   # reads the open lots; the assistant must answer what the drawer shows.
   test "get_holdings average_cost equals the drawer figure" do
