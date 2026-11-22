@@ -382,6 +382,39 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(200, "USD"), totals.income_money  # $200
   end
 
+  test "totals skips excluded transactions but still counts them" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    create_transaction(account: @checking_account, amount: -200, kind: "standard", excluded: true)
+    create_transaction(account: @checking_account, amount: 50, kind: "standard", excluded: true)
+
+    totals = Transaction::Search.new(@family).totals
+
+    assert_equal 3, totals.count
+    assert_equal Money.new(100, "USD"), totals.expense_money
+    assert_equal Money.new(0, "USD"), totals.income_money
+  end
+
+  test "totals skips excluded transfer legs" do
+    create_transaction(account: @checking_account, amount: -300, kind: "funds_movement", excluded: true)
+    create_transaction(account: @checking_account, amount: 300, kind: "funds_movement", excluded: true)
+
+    totals = Transaction::Search.new(@family).totals
+
+    assert_equal 2, totals.count
+    assert_equal Money.new(0, "USD"), totals.transfer_inflow_money
+    assert_equal Money.new(0, "USD"), totals.transfer_outflow_money
+  end
+
+  test "totals counts a NULL excluded flag as live" do
+    entry = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    entry.update_column(:excluded, nil)
+
+    totals = Transaction::Search.new(@family).totals
+
+    assert_equal 1, totals.count
+    assert_equal Money.new(100, "USD"), totals.expense_money
+  end
+
   test "totals excludes scheduled (future-dated) transactions by default" do
     create_transaction(account: @checking_account, amount: 100, kind: "standard", date: Date.current)
     create_transaction(account: @checking_account, amount: 5000, kind: "standard", date: 3.days.from_now.to_date)
@@ -547,7 +580,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     key2 = search2.cache_key_base
 
     assert_equal key1, key2
-    assert_not_nil cache.read("transaction_search_totals/v4/#{ExchangeRate::CONVERSION_CACHE_VERSION}/#{key2}")
+    assert_not_nil cache.read("transaction_search_totals/v5/#{ExchangeRate::CONVERSION_CACHE_VERSION}/#{key2}")
     assert_equal result1, search2.totals
   end
 
