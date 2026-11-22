@@ -11,15 +11,22 @@
 #      kept only when opening + in - out == closing.
 #   2. An opening and a closing balance, each on the same line as its label
 #      ("Alter Kontostand 1.234,56 EUR" ... "Neuer Kontostand 2.000,00 EUR").
-#   Both balances must carry the same currency.
+# - An opening or closing balance may carry a CR or DR marker ("$435.88 CR").
+#
+# Both candidates are returned as printed, in `balance_readings`: amount,
+# marker and currency token of each balance, and the kinds of account the
+# summary table adds up as. .balances_for turns them into the balances for an
+# account and a statement currency.
 #
 # Month names and labels cover Italian, English, German, French, Spanish,
 # Dutch and Portuguese. Anything it can't read is left blank, so a statement
 # it doesn't understand falls back to filename detection.
 class AccountStatement::TextMetadataParser
   Result = Data.define(
-    :period_start_on, :period_end_on, :opening_balance, :closing_balance, :currency, :iban_last4, :balances_source
+    :period_start_on, :period_end_on, :iban_last4, :balance_readings
   )
+  Balances = Data.define(:opening_balance, :closing_balance, :currency, :source)
+  CLASSIFICATIONS = %w[asset liability].freeze
 
   # Month tokens are matched in full, then on their first four and three
   # letters, which covers abbreviations ("Sept.", "févr.") and full names.
@@ -84,42 +91,91 @@ class AccountStatement::TextMetadataParser
   CURRENCY_MARK = /€|£|\$|\b[A-Z]{3}\b/
   # "1.234,56 €", "+1.234,56      €", "1.234,56 EUR", "-1.234,56 €", "€1,234.56",
   # "-€1,234.56", "€-1,234.56", "EUR 1.234,56" or a bare "1.234,56".
-  AMOUNT_PATTERN = Regexp.union(
-    /(?<prefix_sign>[-+])?(?<prefix_currency>#{CURRENCY_MARK})\p{Blank}*(?<inner_sign>[-+])?(?<prefix_number>#{AMOUNT_NUMBER})/,
-    /(?<suffix_sign>[-+])?(?<suffix_number>#{AMOUNT_NUMBER})(?:\p{Blank}*(?<suffix_currency>#{CURRENCY_MARK}))?/
-  )
+  # Either form may be followed, directly or after one space, by a CR or DR
+  # marker: "$435.88 CR", "435.88Cr".
+  AMOUNT_PATTERN = /
+    (?:#{Regexp.union(
+      /(?<prefix_sign>[-+])?(?<prefix_currency>#{CURRENCY_MARK})\p{Blank}*(?<inner_sign>[-+])?(?<prefix_number>#{AMOUNT_NUMBER})/,
+      /(?<suffix_sign>[-+])?(?<suffix_number>#{AMOUNT_NUMBER})(?:\p{Blank}*(?<suffix_currency>#{CURRENCY_MARK}))?/
+    )})
+    (?:\p{Blank}?(?<side>(?i:cr|dr))\b)?
+  /x
+  SIDES = { "cr" => :credit, "dr" => :debit }.freeze
   CURRENCY_SYMBOLS = { "€" => "EUR", "£" => "GBP" }.freeze
   # The rest of the line after "IBAN": one unspaced token, or the printed
   # groups of four ("DE89 3704 0044 0532 0130 00").
   IBAN_PATTERN = /IBAN[:\s]*([A-Z]{2}\d{2}[A-Z0-9 ]*)/
   TOLERANCE = BigDecimal("0.01")
 
-  Amount = Data.define(:value, :currency)
+  # value carries only a "-" sign; currency is the token as printed ("$",
+  # "EUR"); side is the CR/DR marker, if any.
+  Amount = Data.define(:value, :currency, :side)
+  BALANCE_FIELDS = %w[opening_balance closing_balance].freeze
 
-  # currency: the statement's currency, used to read an ambiguous symbol
-  # such as "$" when the statement is in a dollar currency.
-  def self.parse(text, currency: nil)
-    new(text, currency: currency).parse
+  def self.parse(text)
+    new(text).parse
   end
 
-  def initialize(text, currency: nil)
+  # The balances `readings` give for an account of `classification` ("asset",
+  # "liability", or nil when there is none) and a statement in `currency`:
+  # the summary table when it adds up for that account (for either, with
+  # none), otherwise the labelled balances, whichever first has both balances
+  # in `currency`. A marked balance is its absolute value, negative for CR on
+  # a liability or DR on an asset, unsigned with no account.
+  def self.balances_for(readings, classification:, currency:)
+    readings = readings.to_h
+    table = readings["summary_table"]
+    candidates = []
+    candidates << [ "summary_table", table ] if table && (classification.nil? || Array(table["adds_up_as"]).include?(classification))
+    candidates << [ "labels", readings["labels"] ] if readings["labels"]
+
+    candidates.each do |source, pair|
+      currencies = BALANCE_FIELDS.map { |field| resolve_currency(pair.dig(field, "currency"), currency) }
+      next unless currencies.uniq.size == 1 && currencies.first.present?
+      next if currency.present? && currencies.first != currency.to_s.upcase
+
+      opening, closing = BALANCE_FIELDS.map do |field|
+        signed_amount(BigDecimal(pair.dig(field, "amount")), pair.dig(field, "side")&.to_sym, classification)
+      end
+      return Balances.new(opening_balance: opening, closing_balance: closing, currency: currencies.first, source: source)
+    end
+    nil
+  end
+
+  # "$" is read as the statement's currency when that is a dollar currency.
+  def self.resolve_currency(token, statement_currency)
+    return nil if token.blank?
+    return CURRENCY_SYMBOLS[token] if CURRENCY_SYMBOLS.key?(token)
+    if token == "$"
+      return Money::Currency.new(statement_currency).symbol == "$" ? statement_currency.to_s.upcase : nil
+    end
+
+    Money::Currency.new(token).iso_code
+  rescue Money::Currency::UnknownCurrencyError, ArgumentError
+    nil
+  end
+
+  def self.signed_amount(value, side, classification)
+    return value unless SIDES.value?(side)
+
+    negative = (side == :credit && classification == "liability") || (side == :debit && classification == "asset")
+    negative ? -value.abs : value.abs
+  end
+
+  def initialize(text)
     @text = text.to_s.dup.force_encoding(Encoding::UTF_8).scrub
-    @currency_hint = currency.to_s.upcase.presence
   end
 
   def parse
     period = parse_period
-    balances, source = parse_balances
-    return nil if period.nil? && balances.nil?
+    readings = balance_readings
+    return nil if period.nil? && readings.empty?
 
     Result.new(
       period_start_on: period&.first,
       period_end_on: period&.last,
-      opening_balance: balances&.first&.value,
-      closing_balance: balances&.last&.value,
-      currency: balances&.first&.currency,
       iban_last4: parse_iban_last4,
-      balances_source: source
+      balance_readings: readings
     )
   end
 
@@ -191,14 +247,20 @@ class AccountStatement::TextMetadataParser
       MONTHS[token] || MONTHS[token[0, 4]] || MONTHS[token[0, 3]]
     end
 
-    def parse_balances
-      summary = parse_summary_table
-      return [ summary, "summary_table" ] if summary
-
+    def balance_readings
+      table, adds_up_as = parse_summary_table
       labelled = parse_labelled_balances
-      return [ labelled, "labels" ] if labelled
 
-      nil
+      readings = {}
+      readings["summary_table"] = reading(table).merge("adds_up_as" => adds_up_as) if table
+      readings["labels"] = reading(labelled) if labelled
+      readings
+    end
+
+    def reading(pair)
+      BALANCE_FIELDS.zip(pair).to_h do |field, amount|
+        [ field, { "amount" => amount.value.to_s("F"), "side" => amount.side&.to_s, "currency" => amount.currency } ]
+      end
     end
 
     def parse_summary_table
@@ -208,10 +270,17 @@ class AccountStatement::TextMetadataParser
       amounts = amounts_in(@text[header_index..]).first(4)
       return nil if amounts.size < 4
 
-      opening, money_in, money_out, closing = amounts
-      return nil unless (opening.value + money_in.value - money_out.value - closing.value).abs <= TOLERANCE
+      adds_up_as = CLASSIFICATIONS.select { |classification| adds_up?(amounts, classification) }
+      [ [ amounts.first, amounts.last ], adds_up_as ] if adds_up_as.any?
+    end
 
-      same_currency(opening, closing)
+    # Only the balances take their sign from a marker; the money in and out
+    # columns are totals and are read as printed.
+    def adds_up?(amounts, classification)
+      opening, money_in, money_out, closing = amounts
+      opening = self.class.signed_amount(opening.value, opening.side, classification)
+      closing = self.class.signed_amount(closing.value, closing.side, classification)
+      (opening + money_in.value - money_out.value - closing).abs <= TOLERANCE
     end
 
     def parse_labelled_balances
@@ -219,7 +288,7 @@ class AccountStatement::TextMetadataParser
       closing = amount_after_label(CLOSING_PATTERN)
       return nil unless opening && closing
 
-      same_currency(opening, closing)
+      [ opening, closing ]
     end
 
     # The first amount after the label on its line, or on the next non-blank
@@ -243,12 +312,6 @@ class AccountStatement::TextMetadataParser
       nil
     end
 
-    def same_currency(opening, closing)
-      return nil unless opening.currency == closing.currency
-
-      [ opening, closing ]
-    end
-
     def amounts_in(text)
       text.to_enum(:scan, AMOUNT_PATTERN).filter_map do
         match = Regexp.last_match
@@ -256,7 +319,11 @@ class AccountStatement::TextMetadataParser
         next unless value
 
         negative = [ match[:prefix_sign], match[:inner_sign], match[:suffix_sign] ].include?("-")
-        Amount.new(value: negative ? -value : value, currency: resolve_currency(match[:prefix_currency] || match[:suffix_currency]))
+        Amount.new(
+          value: negative ? -value : value,
+          currency: match[:prefix_currency] || match[:suffix_currency],
+          side: SIDES[match[:side]&.downcase]
+        )
       end
     end
 
@@ -269,22 +336,6 @@ class AccountStatement::TextMetadataParser
 
       BigDecimal("#{integer_part.delete(".,")}.#{fraction}")
     rescue ArgumentError
-      nil
-    end
-
-    def resolve_currency(token)
-      return nil if token.blank?
-      return CURRENCY_SYMBOLS[token] if CURRENCY_SYMBOLS.key?(token)
-      return dollar_hint if token == "$"
-
-      Money::Currency.new(token).iso_code
-    rescue Money::Currency::UnknownCurrencyError
-      nil
-    end
-
-    def dollar_hint
-      @currency_hint if @currency_hint && Money::Currency.new(@currency_hint).symbol == "$"
-    rescue Money::Currency::UnknownCurrencyError
       nil
     end
 

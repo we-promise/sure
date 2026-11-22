@@ -73,6 +73,7 @@ fr:
         other: "%{count} comptes disponibles"
       cancel: Annuler
       creating: Importation…
+      historical_import: Import de l'historique
       import_selected: Importer la sélection
       instructions: Sélectionnez les portefeuilles Binance que vous souhaitez importer.
         Seuls les portefeuilles avec un solde sont affichés.
