@@ -112,6 +112,11 @@ class Provider::TradeRepublicClient
   QUOTATION_TITLES = [ "quotation" ].freeze
   BOND_TOTAL_TITLES = [ "summe", "total" ].freeze
   SELL_SUBTITLE_MARKERS = %w[sell verkauf verkaufen verkopen].freeze
+  # A single separator followed by three digits is ambiguous: "1,500" may be
+  # 1.5 (decimal comma) or 1500 (thousands separator). The booked amount and
+  # the share price settle it.
+  QUANTITY_SCALE_FACTORS = [ 1_000, 1_000_000 ].freeze
+  QUANTITY_MATCH_TOLERANCE = 0.01
   MAX_TIMELINE_PAGES = 50
   TIMELINE_TOPICS = %w[timelineTransactions timelineActivityLog].freeze
   # A history backfill that keeps failing on the same cursor (for example an
@@ -1799,6 +1804,12 @@ class Provider::TradeRepublicClient
         gross = quantity.negative? ? amount.abs + deductions : amount.abs - deductions
         price = gross / quantity.abs if gross.positive?
       end
+      quantity = reconcile_quantity(
+        quantity,
+        amount: amount,
+        price: price,
+        costs: fee_amount.to_d.abs + tax_amount.to_d.abs
+      )
       note = find_note(raw)
       return nil if quantity.nil? && amount.nil? && note.nil?
 
@@ -1883,6 +1894,32 @@ class Provider::TradeRepublicClient
       BigDecimal(normalized)
     rescue ArgumentError
       nil
+    end
+
+    # The detail text cannot tell "1,500" (1.5) from "1,500" (1500). Compare
+    # the parsed quantity with the quantity the cash amount implies and, when
+    # the parsed value is a thousandth or a millionth of it, use the scaled
+    # value. The displayed price is often rounded, so the implied quantity is
+    # only a cross-check, never the result.
+    def reconcile_quantity(quantity, amount:, price:, costs:)
+      return quantity if quantity.nil? || quantity.zero? || amount.nil? || price.nil? || !price.positive?
+
+      gross = quantity.negative? ? amount.abs + costs : amount.abs - costs
+      return quantity unless gross.positive?
+
+      implied = gross / price.abs
+      return quantity if quantity_matches?(quantity.abs, implied)
+
+      QUANTITY_SCALE_FACTORS.each do |factor|
+        scaled = quantity.abs * factor
+        return quantity.negative? ? -scaled : scaled if quantity_matches?(scaled, implied)
+      end
+
+      quantity
+    end
+
+    def quantity_matches?(value, implied)
+      implied.positive? && ((value - implied).abs / implied) <= QUANTITY_MATCH_TOLERANCE
     end
 
     def quantity_from_raw(raw)

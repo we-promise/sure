@@ -1507,6 +1507,84 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "normalize_event_detail reads an English thousands separator in the share count" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Overview", "data" => [
+          { "title" => "Shares", "detail" => { "text" => "1,500" } },
+          { "title" => "Share price", "detail" => { "text" => "€7.982" } },
+          { "title" => "Total", "detail" => { "text" => "€11,973.00" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+      ]
+    }, item: { "title" => "Apple", "subtitle" => "Buy" })
+
+    assert_equal "1500.0", detail["quantity"]
+    assert_equal "7.982", detail["price"]
+    assert_equal "11973.0", detail["amount"]
+  end
+
+  test "normalize_event_detail reads a German thousands separator in the share count" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Übersicht", "data" => [
+          { "title" => "Aktien", "detail" => { "text" => "1.500" } },
+          { "title" => "Aktienkurs", "detail" => { "text" => "7,982 €" } },
+          { "title" => "Gesamt", "detail" => { "text" => "11.973,00 €" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+      ]
+    }, item: { "title" => "Apple", "subtitle" => "Kauf" })
+
+    assert_equal "1500.0", detail["quantity"]
+    assert_equal "7.982", detail["price"]
+  end
+
+  test "normalize_event_detail reads a thousands separator from the Transaction row" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Overview", "data" => [
+          { "title" => "Transaction", "detail" => { "text" => "1,500 × €7.982" } },
+          { "title" => "Total", "detail" => { "text" => "€11,973.00" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+      ]
+    }, item: { "title" => "Apple", "subtitle" => "Buy" })
+
+    assert_equal "1500.0", detail["quantity"]
+    assert_equal "7.982", detail["price"]
+  end
+
+  test "normalize_event_detail keeps a sell quantity negative when scaling a thousands separator" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Overview", "data" => [
+          { "title" => "Shares", "detail" => { "text" => "1,500" } },
+          { "title" => "Share price", "detail" => { "text" => "€7.982" } },
+          { "title" => "Total", "detail" => { "text" => "€11,973.00" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+      ]
+    }, item: { "title" => "Apple", "subtitle" => "Sell" })
+
+    assert_equal "-1500.0", detail["quantity"]
+  end
+
+  test "normalize_event_detail leaves a matching fractional share count alone" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Overview", "data" => [
+          { "title" => "Shares", "detail" => { "text" => "1.5" } },
+          { "title" => "Share price", "detail" => { "text" => "€100.00" } },
+          { "title" => "Total", "detail" => { "text" => "€150.00" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+      ]
+    }, item: { "title" => "Apple", "subtitle" => "Buy" })
+
+    assert_equal "1.5", detail["quantity"]
+  end
+
   test "trade_detail_needs_price_backfill detects complete trades without a price read from the detail" do
     trade = ->(detail) { { "category" => "orderExecution", "eventType" => "TRADING_TRADE_EXECUTED", "detail" => detail } }
 
