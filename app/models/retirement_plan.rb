@@ -65,12 +65,17 @@ class RetirementPlan < ApplicationRecord
   # `as_of` dates the balances and the planning years. The spending and income
   # medians are always today's: IncomeStatement takes them over the history up
   # to now, so call this with today's date rather than a past one.
+  #
+  # The assets come first: converting them can fetch and store a missing rate,
+  # and the medians read stored rates only.
   def projection(as_of:)
+    current_assets = assets_as_of(as_of).total
+
     RetirementPlan::Projection.new(
       as_of: as_of,
       annual_expenses: income_statement.median_expense(interval: "month", excluding_kinds: SAVING_KINDS).to_d * 12,
       annual_income: income_statement.median_income(interval: "month").to_d * 12,
-      current_assets: assets_as_of(as_of).total,
+      current_assets: current_assets,
       safe_withdrawal_rate: safe_withdrawal_rate,
       expected_annual_return: expected_annual_return,
       savings_rate: savings_rate,

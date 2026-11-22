@@ -154,6 +154,25 @@ class RetirementPlanTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1100"), RetirementPlan.for(@member).projection(as_of: AS_OF).current_assets
   end
 
+  # Converting the assets can fetch and store a missing rate. The spending
+  # median reads stored rates only, so it has to come after, or the first
+  # projection for a new currency pair counts that spending as nothing.
+  test "spending reads the rate the asset conversion fetched" do
+    account = own_account(owner: @member, amount: 1_000, currency: "EUR")
+    create_transaction(account: account, date: AS_OF, amount: 1_000, currency: "EUR")
+    provider = mock
+    provider.stubs(:fetch_exchange_rate).returns(Provider::Response.new(
+      success?: true, error: nil,
+      data: Provider::ExchangeRateConcept::Rate.new(date: AS_OF, from: "EUR", to: "USD", rate: 1.1)
+    ))
+    ExchangeRate.stubs(:provider).returns(provider)
+
+    projection = RetirementPlan.for(@member).projection(as_of: AS_OF)
+
+    assert_equal BigDecimal("1100"), projection.current_assets
+    assert_equal BigDecimal("13200"), projection.annual_expenses
+  end
+
   test "an account with no exchange rate is left out, and the plan says how many were" do
     own_account(owner: @member, amount: 1_000)
     own_account(owner: @member, amount: 500, currency: "GBP")
