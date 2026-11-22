@@ -1820,12 +1820,14 @@ end
       { "X-Api-Key" => api_key.display_key }
     end
 
+    # Counts every statement, including the ones the query cache answers. The
+    # cache hides a preload whose IN list happens to match an earlier one in the
+    # same order, and that order follows the rows' physical order, so skipping
+    # cached statements made the count change from run to run. It would also
+    # hide a repeated per-row query.
     def count_db_queries(&block)
       queries = 0
       callback = lambda do |_name, _started, _finished, _unique_id, payload|
-        # Query-cache hits count too: whether a repeated preload query is served
-        # from the cache depends on the order of the ids in its IN list, which
-        # follows the row order Postgres returns.
         return if payload[:name].in?(%w[SCHEMA TRANSACTION])
 
         queries += 1
