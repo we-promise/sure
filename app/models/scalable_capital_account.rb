@@ -22,6 +22,7 @@ class ScalableCapitalAccount < ApplicationRecord
       accountable_attributes: { subtype: subtype }
     )
     create_account_provider!(account: account)
+    account.auto_share_with_family! if account.family.share_all_by_default?
     account
   end
 end

@@ -22,7 +22,7 @@
                          data: { turbo_frame: "_top" }, class: "space-y-3" do |form| %>
       <%= form.text_field :portfolio_id, label: t("scalable_capital_items.panel.portfolio_id"), required: true %>
       <%= form.text_field :savings_id, label: t("scalable_capital_items.panel.savings_id") %>
-      <%= render DS::Button.new(text: t("scalable_capital_items.panel.connect"), type: "submit") %>
+      <%= form.submit t("scalable_capital_items.panel.connect") %>
     <% end %>
   <% else %>
     <%= render DS::Alert.new(message: t("scalable_capital_items.panel.unavailable"), variant: :info) %>

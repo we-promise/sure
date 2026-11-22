@@ -13,6 +13,7 @@ class ScalableCapitalItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[name='scalable_capital_item[portfolio_id]']"
     assert_includes response.body, I18n.t("scalable_capital_items.panel.trust_statement")
+    assert_select "#scalable-capital-providers-panel button[type=submit].w-full", text: I18n.t("scalable_capital_items.panel.connect")
 
     assert_difference -> { @admin.family.scalable_capital_items.count } do
       post scalable_capital_items_path, params: { scalable_capital_item: { portfolio_id: "portfolio" } }

@@ -88,6 +88,8 @@ class ScalableCapitalItem::Syncer
         result[snapshot.fetch(:kind)] = Account::ProviderImportAdapter.new(account)
       end
 
+      securities.resolve_pending! if adapters[:brokerage]
+
       snapshots.each do |snapshot|
         adapter = adapters[snapshot.fetch(:kind)]
         next unless adapter
@@ -121,7 +123,7 @@ class ScalableCapitalItem::Syncer
     def update_balance(adapter, snapshot, securities)
       account = adapter.account
       date = snapshot.fetch(:date)
-      return if account.current_anchor_date && account.current_anchor_date > date
+      return if account.has_current_anchor? && account.current_anchor_date > date
 
       if snapshot.fetch(:kind) == :brokerage
         provider = account.account_providers.find_by!(provider_type: "ScalableCapitalAccount")
@@ -177,8 +179,11 @@ class ScalableCapitalItem::Syncer
 
       # Write a zero snapshot for exited positions so reverse materialization
       # stops carrying the old quantity while keeping its historical snapshots.
-      previous = provider.holdings.where(date: ..date).includes(:provider_security, :security).order(date: :desc).to_a
-      previous.uniq { |holding| holding.provider_security_id || holding.security_id }.each do |holding|
+      previous = provider.holdings.where(date: ..date)
+        .select("DISTINCT ON (COALESCE(provider_security_id, security_id)) holdings.*")
+        .order(Arel.sql("COALESCE(provider_security_id, security_id), date DESC, id DESC"))
+        .includes(:provider_security, :security)
+      previous.each do |holding|
         security = holding.provider_security || holding.security
         next if holding.qty.zero? || incoming.include?(security.id)
 

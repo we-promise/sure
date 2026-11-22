@@ -16,7 +16,7 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
                            country_code: "DE", exchange_operating_mic: "XETR")
     unrelated = Security.new(ticker: "WRONG", search_isin: "US0378331005", search_currency: "EUR",
                              country_code: "DE", exchange_operating_mic: "XETR")
-    Security.expects(:search_provider).with(isin, country_code: "DE").once.returns([ unrelated, correct ])
+    Security.expects(:search_provider).with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([ unrelated, correct ])
 
     stub_snapshot
     run_sync
@@ -81,6 +81,117 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_not_nil outgoing.entryable.transfer
     assert_nil cash.entries.find_by(external_id: "pending")
     assert_nil cash.entries.find_by(external_id: "cancelled")
+  end
+
+  test "applies default household sharing to every new Scalable account" do
+    admin = users(:family_admin)
+    member = users(:family_member)
+    @family.update!(default_account_sharing: "shared")
+    @item.update!(owner: admin)
+    stub_snapshot
+    run_sync
+
+    assert_equal 3, @item.accounts.accessible_by(member).count
+    @item.accounts.each do |account|
+      assert_equal admin.id, account.owner_id
+      assert_equal "read_write", account.account_shares.find_by!(user: member).permission
+    end
+  end
+
+  test "preserves private household sharing on new Scalable accounts" do
+    @family.update!(default_account_sharing: "private")
+    @item.update!(owner: users(:family_admin))
+    stub_snapshot
+    run_sync
+
+    assert_equal 3, @item.accounts.count
+    assert_empty @item.accounts.accessible_by(users(:family_member))
+  end
+
+  test "first sync saves dated holdings and anchor and protects a later anchor" do
+    date = Date.current.yesterday
+    stub_snapshot(valuation_at: 1.day.ago)
+    run_sync
+
+    broker = @item.scalable_capital_accounts.brokerage.sole.account
+    assert_predicate broker, :has_current_anchor?
+    assert_equal date, broker.current_anchor_date
+    assert_equal date, broker.holdings.where.not(account_provider_id: nil).sole.date
+
+    stub_snapshot(valuation_at: 2.days.ago, securities_value: "0", positions: [])
+    run_sync
+
+    assert_equal date, broker.reload.current_anchor_date
+    assert_equal 1000.to_d, broker.balance
+    assert_equal 2.5.to_d, broker.holdings.where.not(account_provider_id: nil).sole.qty
+  end
+
+  test "temporary security lookup failure retries without duplicating holdings or trades" do
+    isin = position.fetch("isin")
+    stub_snapshot
+    with_failed_security_lookup(isin) { run_sync }
+
+    placeholder = Security.find(@item.reload.security_ids.fetch(isin))
+    assert_predicate placeholder, :offline?
+    assert_equal "resolution_pending", placeholder.offline_reason
+
+    # Exercise an exchange security already referenced elsewhere.
+    listing = Security.create!(ticker: "EUNL", name: "Example ETF", exchange_operating_mic: "XETR")
+    listing.search_isin = isin
+    listing.search_currency = "EUR"
+    Security.expects(:search_provider)
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([ listing ])
+    travel 1.day
+    stub_snapshot
+    @client.expects(:trade).never
+    run_sync
+
+    broker = @item.scalable_capital_accounts.brokerage.sole.account
+    assert_equal listing.id, @item.reload.security_ids.fetch(isin)
+    assert_equal [ 2.5.to_d, 2.5.to_d ], broker.holdings.where.not(account_provider_id: nil).order(:date).pluck(:qty)
+    assert_equal [ listing.id ], broker.holdings.distinct.pluck(:security_id)
+    assert_equal [ listing.id, listing.id ], broker.trades.pluck(:security_id)
+    assert_not Security.exists?(placeholder.id)
+  end
+
+  test "retries a trade-only ISIN after its history window has passed" do
+    isin = position.fetch("isin")
+    stub_snapshot(positions: [], securities_value: "0")
+    with_failed_security_lookup(isin) { run_sync }
+
+    placeholder = Security.find(@item.reload.security_ids.fetch(isin))
+    listing = Security.new(ticker: "EUNL", name: "Example ETF", search_isin: isin, exchange_operating_mic: "XETR")
+    Security.expects(:search_provider)
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([ listing ])
+    travel 1.day
+    stub_snapshot(positions: [], securities_value: "0")
+    @client.expects(:trade).never
+    run_sync
+
+    assert_equal placeholder.id, @item.reload.security_ids.fetch(isin)
+    assert_equal "EUNL", placeholder.reload.ticker
+    refute_predicate placeholder, :offline?
+    assert_nil placeholder.offline_reason
+  end
+
+  test "caches an ISIN after a successful lookup confirms no listing" do
+    isin = position.fetch("isin")
+    stub_snapshot
+    with_failed_security_lookup(isin) { run_sync }
+
+    placeholder = Security.find(@item.reload.security_ids.fetch(isin))
+    Security.expects(:search_provider)
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([])
+    travel 1.day
+    stub_snapshot
+    run_sync
+    assert_nil placeholder.reload.offline_reason
+
+    Security.expects(:search_provider).never
+    travel 1.day
+    stub_snapshot
+    run_sync
+    assert_equal placeholder.id, @item.reload.security_ids.fetch(isin)
   end
 
   test "zero Tagesgeld waits for a positive balance and existing account can return to zero" do
@@ -151,6 +262,12 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
 
     account = @item.scalable_capital_accounts.brokerage.first.account
     assert_equal [ 2.5.to_d, 0.to_d ], account.holdings.where.not(account_provider_id: nil).order(:date).pluck(:qty)
+
+    travel 1.day
+    stub_snapshot(positions: [], securities_value: "0")
+    assert_no_difference -> { account.holdings.where.not(account_provider_id: nil).count } do
+      run_sync
+    end
   end
 
   private
@@ -160,9 +277,22 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
       ScalableCapitalItem::Syncer.new(@item, client: @client).perform_sync(sync)
     end
 
-    def stub_snapshot(positions: [ position ], securities_value: "1000", savings_history_id: "savings", savings_balance: "50")
+    def with_failed_security_lookup(isin)
+      Security.stubs(:search_provider).with do |symbol, options|
+        next false unless symbol == isin
+
+        options.fetch(:technical_failure).call(nil)
+        true
+      end.returns([])
+      yield
+    ensure
+      Security.unstub(:search_provider)
+    end
+
+    def stub_snapshot(positions: [ position ], securities_value: "1000", savings_history_id: "savings",
+                      savings_balance: "50", valuation_at: Time.current)
       @client.stubs(:overview).with("portfolio").returns(broker({
-        "timestamps" => { "valuation_timestamp_utc" => Time.current.iso8601 },
+        "timestamps" => { "valuation_timestamp_utc" => valuation_at.iso8601 },
         "valuation" => { "total" => "1255.25", "securities" => securities_value, "crypto" => "0" }
       }))
       @client.stubs(:cash).with("portfolio").returns(broker({ "cash_balance" => "255.25" }))
