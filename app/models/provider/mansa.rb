@@ -92,7 +92,7 @@ class Provider::Mansa < Provider
 
   def usage
     with_provider_response do
-      used = Rails.cache.read(daily_cache_key).to_i
+      used = Rails.cache.read(daily_cache_key, raw: true).to_i
 
       UsageData.new(
         used: used,
@@ -114,9 +114,6 @@ class Provider::Mansa < Provider
       # rather than broadening the search to unrelated exchanges.
       mansa_exchange = mansa_exchange_for(exchange_operating_mic)
       next [] if exchange_operating_mic.present? && mansa_exchange.nil?
-
-      enforce_daily_limit!
-      throttle_request
 
       response = client.get("#{base_url}/api/v1/markets/search") do |req|
         req.params["q"] = symbol
@@ -229,9 +226,6 @@ class Provider::Mansa < Provider
       mansa_exchange = mansa_exchange_for(exchange_operating_mic)
       raise InvalidSecurityPriceError, "Mansa does not support exchange #{exchange_operating_mic}" if mansa_exchange.nil?
 
-      enforce_daily_limit!
-      throttle_request
-
       response = client.get("#{base_url}/api/v1/markets/exchanges/#{mansa_exchange}/stocks/#{CGI.escape(symbol)}")
 
       parsed = JSON.parse(response.body)
@@ -256,6 +250,9 @@ class Provider::Mansa < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        faraday.options.open_timeout = 5
+        faraday.options.timeout      = 20
+
         faraday.request(:retry, {
           max: 3,
           interval: 1.0,
@@ -263,6 +260,13 @@ class Provider::Mansa < Provider
           backoff_factor: 2,
           exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed ]
         })
+        # After the retry middleware, so every attempt — not only the first —
+        # is counted against the daily request limit and throttled. The limit is
+        # checked first so an over-quota attempt fails fast instead of sleeping.
+        faraday.use RateLimitable::BeforeEachAttempt, ->(_env) {
+          enforce_daily_limit!
+          throttle_request
+        }
 
         faraday.request :json
         faraday.response :raise_error
@@ -274,6 +278,8 @@ class Provider::Mansa < Provider
       "mansa:daily:#{Date.current}"
     end
 
+    # Runs through BeforeEachAttempt on every HTTP attempt, so a retried
+    # request is counted again, not only the initial one.
     def enforce_daily_limit!
       new_count = Rails.cache.increment(daily_cache_key, 1, expires_in: 24.hours).to_i
 
