@@ -449,6 +449,23 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-rule-health-entry='overlaps'] a[href='#{edit_rule_path(contained)}']"
   end
 
+  test "the overlaps shared line agrees with the number of shared matches" do
+    family = @user.family
+    account = family.accounts.create!(name: "Health", balance: 1000, currency: "USD", accountable: Depository.new)
+    [ "zqone alpha", "zqone beta", "zqtwo zqtwox a", "zqtwo zqtwox b", "zqtwo c" ].each do |name|
+      create_transaction(date: Date.current, account: account, name: name)
+    end
+    create_health_rule(family, "zqone alpha", action: category_action(categories(:food_and_drink)))
+    create_health_rule(family, "zqtwox", action: category_action(categories(:food_and_drink)))
+    create_health_rule(family, "zqone", action: category_action(categories(:income)))
+    create_health_rule(family, "zqtwo", action: category_action(categories(:income)))
+
+    get health_rules_url, headers: { "Turbo-Frame" => "rule_health_report" }
+
+    assert_select "[data-rule-health-entry='overlaps']", text: /1 of its 2 matches is also matched by the rule above\./
+    assert_select "[data-rule-health-entry='overlaps']", text: /2 of its 3 matches are also matched by the rule above\./
+  end
+
   test "a guest can read the health report but gets no edit links" do
     first, second = 2.times.map { create_health_rule(@user.family, "woolworths") }
     sign_in family_guest

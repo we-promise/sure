@@ -42,7 +42,7 @@
             <% when :overlaps %>
               <p><%= t("rules.health.overlaps.entry_html", rule: ref.(entry.rule), other: ref.(entry.other), attributes: rule_health_attributes(entry.attributes)) %></p>
               <% if entry.shared_count.positive? %>
-                <p class="text-secondary"><%= t("rules.health.overlaps.shared", shared: entry.shared_count, count: entry.match_count) %></p>
+                <p class="text-secondary"><%= t("rules.health.overlaps.shared", count: entry.shared_count, total: entry.match_count) %></p>
               <% end %>
               <% if entry.same_text %>
                 <p class="text-secondary"><%= t("rules.health.overlaps.same_text") %></p>
