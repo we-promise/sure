@@ -80,7 +80,9 @@ class Provider::YourProvider < Provider
         logo_url:               parsed["logo"],
         description:            parsed["description"],
         kind:                   parsed["type"],       # e.g. "common stock", "etf"
-        exchange_operating_mic: exchange_operating_mic
+        exchange_operating_mic: exchange_operating_mic,
+        sector:                 parsed["sector"],     # optional, free text
+        industry:               parsed["industry"]    # optional, free text
       )
     end
   end
@@ -119,6 +121,22 @@ class Provider::YourProvider < Provider
       end
     end
   end
+
+  # Return true when fetch_security_info answers a classification worth a
+  # request of its own: the importers then ask for it even when the security
+  # already has a name and logo, and only then may `kind` set the asset class
+  # and claim `provider` as its source. Sector and industry returned anyway are
+  # stored either way. Return false when the call is costly or often refused:
+  # Alpha Vantage returns sector and industry, but OVERVIEW is premium, so it
+  # declares false. Defaults to false.
+  def supplies_classification?
+    true
+  end
+
+  # Only if fetch_security_info also returns `constituents:`, a fund's own
+  # holdings as [{ ticker:, name:, weight: }] with weight in percent of fund
+  # assets: declare `supplies_constituents?` true as well. Defaults to false,
+  # and the importers never ask a provider for holdings without it.
 
   # Optional: limit how far back the importer fetches history.
   # nil = unlimited. Free tiers often have limits.
@@ -180,7 +198,15 @@ All methods must return these exact types (wrapped in `with_provider_response`):
 
 ```ruby
 SecurityConcept::Security    = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency)
-SecurityConcept::SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic)
+SecurityConcept::SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
+                                            :sector, :industry, :constituents, :fund_weights) do
+  # sector, industry, constituents and fund_weights are optional and default
+  # to nil; the initialize override is what supplies the defaults
+  def initialize(symbol:, name:, links:, logo_url:, description:, kind:, exchange_operating_mic:,
+                 sector: nil, industry: nil, constituents: nil, fund_weights: nil)
+    super
+  end
+end
 SecurityConcept::Price       = Data.define(:symbol, :date, :price, :currency, :exchange_operating_mic)
 ```
 

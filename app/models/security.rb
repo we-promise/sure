@@ -133,6 +133,10 @@ class Security < ApplicationRecord
   # and would delete other families' taggings or attach a tag the family does
   # not own.
   has_many :taggings, as: :taggable, dependent: :destroy
+  # One DELETE: a world fund lists thousands of rows, and Security::Constituent
+  # has no callbacks for a per-row destroy to run.
+  has_many :constituents, class_name: "Security::Constituent", dependent: :delete_all
+  has_many :classification_proposals, class_name: "Security::ClassificationProposal", dependent: :delete_all
 
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
@@ -410,6 +414,19 @@ class Security < ApplicationRecord
     splits.where(ex_date: (from + 1)..to).reduce(Rational(1)) { |factor, split| factor * split.ratio }
   end
 
+  # The fund expanded into what it actually holds, as fractions of the fund,
+  # keyed by [ticker, exchange].
+  #
+  # A whole-fund list (summing to 99 or more) is normalised against its actual
+  # sum, so rounding drift does not under-report every constituent. A partial
+  # list is divided by 100 and its fractions sum to less than 1: the rest of the
+  # fund is unlisted, not the listed names' to carry. The rule lives in
+  # `Security::Constituent.fund_shares`.
+  def look_through_weights
+    rows = constituents.pluck(:ticker, :exchange, :weight).map { |values| Security::Constituent::Row.new(*values) }
+    Security::Constituent.fund_shares(rows).listed
+  end
+
   def to_combobox_option
     ComboboxOption.new(
       symbol: ticker,
@@ -450,10 +467,10 @@ class Security < ApplicationRecord
     # safe on every save, which is also how an existing security picks these
     # up: as it is next written to, with no backfill job.
     #
-    # The order is a contract for the writers that follow, not something this
-    # code enforces: nothing yet reads `classification_source` to let a
-    # stronger writer replace a `default`. That arrives with provider
-    # classification ingestion; until then a stored default stays put.
+    # The stronger writers enforce the order, not this code: the provider
+    # writer, `Security::Provided#classification_attributes_from`, reads
+    # `classification_source` and replaces a `default`, but never `manual` or
+    # `ai`.
     def apply_classification_defaults
       return if classification_locked?
 
@@ -514,6 +531,12 @@ class Security < ApplicationRecord
         return
       end
       return if offline?
+      # A fund's listing country says nothing about what it holds, so its
+      # region comes from the provider's breakdown of its holdings, or not at
+      # all. It does not follow a country correction either: a region that
+      # equals the old listing's may have come from the holdings, and nothing
+      # records which.
+      return if asset_sub_class.in?(%w[etf mutual_fund])
 
       derived = REGIONS.dig(country_code.to_s.upcase, "region")
 
