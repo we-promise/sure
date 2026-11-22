@@ -730,11 +730,29 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   end
 
   test "a run skipped because the family's lock is held queues a family-wide retry" do
-    @family.stubs(:lock_auto_match_transfers!).returns(false)
+    family = Family.create!(name: "Retry", currency: "USD")
+    family.stubs(:lock_auto_match_transfers!).returns(false)
 
-    assert_enqueued_with(job: AutoMatchTransfersJob, args: [ @family ]) do
-      @family.auto_match_transfers!(account: @depository)
+    assert_enqueued_with(job: AutoMatchTransfersJob, args: [ family ]) do
+      family.auto_match_transfers!
     end
+  end
+
+  # Fresh families, so parallel workers sharing Redis never share a key.
+  test "runs skipped together queue one retry per family" do
+    family = Family.create!(name: "Retry", currency: "USD")
+    other_family = Family.create!(name: "Other retry", currency: "USD")
+    [ family, other_family ].each do |f|
+      Sidekiq.redis { |conn| conn.call("DEL", f.send(:auto_match_retry_guard_key)) }
+      f.stubs(:lock_auto_match_transfers!).returns(false)
+    end
+
+    assert_enqueued_jobs 2, only: AutoMatchTransfersJob do
+      3.times { family.auto_match_transfers! }
+      other_family.auto_match_transfers!
+    end
+    assert_equal [ [ family ], [ other_family ] ],
+      enqueued_jobs.select { |job| job["job_class"] == "AutoMatchTransfersJob" }.map { |job| ActiveJob::Arguments.deserialize(job["arguments"]) }
   end
 
   test "a pair recategorized apart after selection does not displace the guess" do
@@ -811,6 +829,50 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
     first_lock = locks.compact.uniq
     assert_equal %w[transfers transactions entries], first_lock, "locks taken in order: #{locks.inspect}"
+  end
+
+  # Deleting a leg locks entry, then transfer, then transaction: no order of
+  # displacement's locks avoids crossing it, so displacement doesn't wait.
+  test "displacement takes its row locks without waiting" do
+    pending_cross_currency_guess
+    create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+
+    locks = {}
+    callback = lambda do |*, payload|
+      sql = payload[:sql]
+      table = sql[/FROM "?(transfers|transactions|entries)"?/, 1]
+      locks[table] ||= sql if table && sql.include?("FOR UPDATE")
+    end
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      assert_queries_match(/FOR UPDATE NOWAIT/) { @family.auto_match_transfers! }
+    end
+
+    assert_equal %w[entries transactions transfers], locks.keys.sort
+    locks.each { |table, sql| assert_includes sql, "FOR UPDATE NOWAIT", "#{table} lock waits: #{sql}" }
+  end
+
+  test "a guess whose rows are locked elsewhere survives, and the run goes on" do
+    outflow, guess = pending_cross_currency_guess
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+    other_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -250)
+    other_outflow = create_transaction(date: Date.current, account: @depository, amount: 250)
+
+    # A real 55P03 aborts the statement, as a NOWAIT lock held by a sync
+    # deleting the leg would.
+    contended_inflow_id = real_inflow.entryable_id
+    original = @family.method(:exact_pair_under_lock?)
+    @family.define_singleton_method(:exact_pair_under_lock?) do |match, **options|
+      if match.inflow_transaction_id == contended_inflow_id
+        Transfer.connection.execute("DO $$ BEGIN RAISE EXCEPTION 'row locked' USING ERRCODE = '55P03'; END $$")
+      end
+      original.call(match, **options)
+    end
+
+    @family.auto_match_transfers!
+
+    assert guess.reload.pending?
+    assert_not Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+    assert Transfer.exists?(inflow_transaction_id: other_inflow.entryable_id, outflow_transaction_id: other_outflow.entryable_id)
   end
 
   test "a pair that stopped being exact after selection does not displace the guess" do

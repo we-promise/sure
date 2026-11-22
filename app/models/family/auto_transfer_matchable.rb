@@ -22,6 +22,13 @@ module Family::AutoTransferMatchable
   TRANSFER_HINT_DATE_WINDOW = 2
   TRANSFER_HINT_EXCHANGE_RATE_TOLERANCE = 0.03
 
+  # A run skipped because the family's lock is held queues one retry for this
+  # long after. The guard against queuing another expires before the retry is
+  # due, so a retry that is itself skipped can always queue the next one; a
+  # skip in the last few seconds may add a second retry, never a pile of them.
+  AUTO_MATCH_RETRY_WAIT = 1.minute
+  AUTO_MATCH_RETRY_GUARD_TTL = 50.seconds
+
   # Read at call time rather than frozen into a constant at boot, so a bad value falls back
   # instead of raising inside every sync: Family::Syncer and Account::Syncer both call
   # auto_match_transfers! without a tolerance of their own.
@@ -131,7 +138,7 @@ module Family::AutoTransferMatchable
       # waiting could stall a caller that holds row locks of its own. So the
       # skipped run queues a family-wide one for shortly after.
       unless lock_auto_match_transfers!
-        AutoMatchTransfersJob.set(wait: 1.minute).perform_later(self)
+        queue_auto_match_transfers_retry
         next
       end
 
@@ -186,6 +193,20 @@ module Family::AutoTransferMatchable
   end
 
   private
+    # Several runs skipped together (one per account of a provider sync) queue
+    # one retry between them. The guard is explicit because sidekiq-unique-jobs'
+    # lock options don't take effect on ActiveJob jobs here.
+    def queue_auto_match_transfers_retry
+      queued = Sidekiq.redis do |conn|
+        conn.call("SET", auto_match_retry_guard_key, "1", "NX", "EX", AUTO_MATCH_RETRY_GUARD_TTL.to_i)
+      end
+      AutoMatchTransfersJob.set(wait: AUTO_MATCH_RETRY_WAIT).perform_later(self) if queued
+    end
+
+    def auto_match_retry_guard_key
+      "auto_match_transfers:retry:#{id}"
+    end
+
     # True when this transaction now holds the family's auto-match lock.
     def lock_auto_match_transfers!
       key = Digest::SHA1.hexdigest("auto_match_transfers:#{id}").to_i(16) % (2**63)
@@ -280,6 +301,11 @@ module Family::AutoTransferMatchable
       # ...and even for :taken, only accept it once the exact (inflow, outflow) row is
       # confirmed present; otherwise the :taken came from a different pairing.
       existing_transfer(match)
+    rescue ActiveRecord::LockWaitTimeout
+      # Displacement found a row locked elsewhere (a confirm, or a sync deleting
+      # a leg). The savepoint is rolled back, so the guess stays and the pair is
+      # tried again on the next run.
+      nil
     end
 
     # Destroys the pending cross-currency auto-match suggestions holding either leg
@@ -302,12 +328,14 @@ module Family::AutoTransferMatchable
       Transfer.uncached do
         # Locks are taken transfers, then transactions, then entries: the order
         # a confirm takes them (AutoMatchesController#bulk_update locks the
-        # transfer, then saves its transactions, which touch their entries), so
-        # the two can't deadlock. A confirm holding the transfer finishes first.
+        # transfer, then saves its transactions, which touch their entries).
+        # Deleting a leg takes entry, transfer, then transaction, which no order
+        # avoids crossing, so none of these locks waits: a row held elsewhere
+        # raises LockWaitTimeout and find_or_create_transfer! skips the pair.
         locked_ids = Transfer.where(inflow_transaction_id: leg_ids)
           .or(Transfer.where(outflow_transaction_id: leg_ids))
           .order(:id)
-          .lock
+          .lock("FOR UPDATE NOWAIT")
           .pluck(:id)
 
         # Nothing holds either leg, so there is nothing to displace: the pair is
@@ -344,9 +372,9 @@ module Family::AutoTransferMatchable
     def exact_pair_under_lock?(match, also_lock: [])
       leg_ids = [ match.inflow_transaction_id, match.outflow_transaction_id ]
       lock_ids = (leg_ids + also_lock).compact.uniq
-      categories = Transaction.where(id: lock_ids).order(:id).lock.pluck(:id, :category_id).to_h
+      categories = Transaction.where(id: lock_ids).order(:id).lock("FOR UPDATE NOWAIT").pluck(:id, :category_id).to_h
       entries = Entry.where(entryable_type: "Transaction", entryable_id: lock_ids)
-        .order(:id).lock.to_a.index_by(&:entryable_id)
+        .order(:id).lock("FOR UPDATE NOWAIT").to_a.index_by(&:entryable_id)
       inflow = entries[match.inflow_transaction_id]
       outflow = entries[match.outflow_transaction_id]
       inflow_category = categories[match.inflow_transaction_id]
