@@ -1644,6 +1644,54 @@ end
     assert transaction_data["transfer"].key?("other_account")
   end
 
+  test "a transfer names the account on the other leg" do
+    transfer = create_transfer_between_accounts
+
+    get api_v1_transaction_url(transfer.inflow_transaction), headers: api_headers(@api_key)
+    assert_response :success
+
+    other_account = JSON.parse(response.body).dig("transfer", "other_account")
+    assert_equal transfer.from_account.id, other_account["id"]
+    assert_equal "Transfer From Account", other_account["name"]
+  end
+
+  test "a transfer leaves out the other leg's account when the caller cannot open it" do
+    key, transfer = member_transfer_to_hidden_account
+
+    get api_v1_transaction_url(transfer.outflow_transaction), headers: api_headers(key)
+    assert_response :success
+
+    data = JSON.parse(response.body)["transfer"]
+    assert_equal transfer.id, data["id"]
+    assert data.key?("other_account")
+    assert_nil data["other_account"]
+    assert_not_includes data.to_json, hidden_account_id(transfer)
+  end
+
+  test "a transfer takes its amount from the visible leg when the other one is hidden" do
+    key, transfer = member_transfer_to_hidden_account
+    transfer.inflow_transaction.entry.update_columns(amount: -92, currency: "EUR")
+
+    get api_v1_transaction_url(transfer.outflow_transaction), headers: api_headers(key)
+    assert_response :success
+
+    data = JSON.parse(response.body)["transfer"]
+    assert_equal "USD", data["currency"]
+    assert_equal Money.new(100, "USD").format, data["amount"]
+  end
+
+  test "index leaves out the other leg's account when the caller cannot open it" do
+    key, transfer = member_transfer_to_hidden_account
+
+    get api_v1_transactions_url, params: { per_page: 100 }, headers: api_headers(key)
+    assert_response :success
+
+    row = JSON.parse(response.body)["transactions"].find { |t| t["id"] == transfer.outflow_transaction_id }
+    assert_not_nil row
+    assert_nil row.dig("transfer", "other_account")
+    assert_not_includes response.body, hidden_account_id(transfer)
+  end
+
   test "index renders transfer rows without per-transfer transaction lookups" do
     transfer = create_transfer_between_accounts
 
@@ -1814,6 +1862,35 @@ end
       account.account_shares.create!(user: member, permission: permission, include_in_finances: true)
       entry = account.entries.create!(name: "Shared txn", amount: 42, currency: "USD", date: Date.current, entryable: Transaction.new)
       [ key, entry ]
+    end
+
+    # A transfer from an account shared read-only with the member to one the
+    # member cannot open, plus a read-only key for the member.
+    def member_transfer_to_hidden_account
+      member = users(:family_member)
+      member.api_keys.active.destroy_all
+      key = ApiKey.create!(user: member, name: "Member RO", key: ApiKey.generate_secure_key, scopes: %w[read], source: "web")
+      Redis.new.del("api_rate_limit:#{key.id}")
+
+      shared = @family.accounts.create!(name: "Shared Checking", owner: @user, balance: 1_000,
+                                        currency: "USD", accountable: Depository.new)
+      shared.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+      hidden = @family.accounts.create!(name: "Hidden Savings", owner: @user, balance: 0,
+                                        currency: "USD", accountable: Depository.new)
+
+      transfer = Transfer::Creator.new(
+        family: @family,
+        source_account_id: shared.id,
+        destination_account_id: hidden.id,
+        date: Date.current,
+        amount: 100
+      ).create
+
+      [ key, transfer ]
+    end
+
+    def hidden_account_id(transfer)
+      transfer.inflow_transaction.entry.account_id
     end
 
     def api_headers(api_key)

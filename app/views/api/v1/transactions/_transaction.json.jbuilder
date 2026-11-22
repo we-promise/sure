@@ -102,15 +102,24 @@ if transfer.present?
       other_transaction = inflow_transaction
     end
 
-    json.amount inflow_transaction.entry.amount_money.abs.format
-    json.currency inflow_transaction.entry.currency
+    # The other leg can sit on an account this user cannot open, as in the web
+    # transaction list. Its account is then null, and the amount comes from this
+    # leg, so the other account's currency does not show either.
+    other_account = other_transaction&.entry&.account
+    other_account = nil unless other_account && api_accessible_account?(other_account)
+    amount_entry = (other_account ? inflow_transaction : transaction).entry
 
-    if other_transaction.present?
+    json.amount amount_entry.amount_money.abs.format
+    json.currency amount_entry.currency
+
+    if other_account
       json.other_account do
-        json.id other_transaction.entry.account.id
-        json.name other_transaction.entry.account.name
-        json.account_type other_transaction.entry.account.accountable_type.underscore
+        json.id other_account.id
+        json.name other_account.name
+        json.account_type other_account.accountable_type.underscore
       end
+    else
+      json.other_account nil
     end
   end
 else
