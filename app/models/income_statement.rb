@@ -88,6 +88,36 @@ class IncomeStatement
     @bill_expense_totals_by_period[key] = build_period_total(classification: "expense", period: period, rows: rows)
   end
 
+  # Loads the totals behind expense_totals and income_totals for several
+  # periods at once: one query for those not already cached, stored under the
+  # same cache entries a single period uses. Later calls for these periods
+  # then don't query one by one.
+  def preload_totals(periods)
+    @totals_for_period ||= {}
+    pending = periods.uniq { |p| period_cache_key(p) }.reject { |p| @totals_for_period.key?(period_cache_key(p)) }
+    return if pending.empty?
+
+    keys = pending.to_h { |p| [ p, totals_cache_key(transactions_scope: period_transactions_scope(p), date_range: p.date_range) ] }
+    rows = Rails.cache.read_multi(*keys.values)
+    missing = pending.reject { |p| rows.key?(keys[p]) }
+
+    if missing.any?
+      covering = Period.custom(start_date: missing.map(&:start_date).min, end_date: missing.map(&:end_date).max)
+      by_window = Totals.new(
+        family,
+        transactions_scope: period_transactions_scope(covering),
+        date_range: covering.date_range,
+        included_account_ids: included_account_ids,
+        windows: missing.map(&:date_range)
+      ).call_by_window
+      fetched = missing.each_with_index.to_h { |p, idx| [ keys[p], by_window[idx] ] }
+      Rails.cache.write_multi(fetched)
+      rows.merge!(fetched)
+    end
+
+    pending.each { |p| @totals_for_period[period_cache_key(p)] = rows[keys[p]] }
+  end
+
   def income_totals(period: Period.current_month)
     key = period_cache_key(period)
     @income_totals_by_period ||= {}
@@ -301,10 +331,11 @@ class IncomeStatement
     def totals_for_period(period)
       @totals_for_period ||= {}
       @totals_for_period[period_cache_key(period)] ||=
-        totals_query(
-          transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
-          date_range: period.date_range
-        )
+        totals_query(transactions_scope: period_transactions_scope(period), date_range: period.date_range)
+    end
+
+    def period_transactions_scope(period)
+      family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period)
     end
 
     def unfiltered_daily_expense_series(period)
@@ -416,11 +447,17 @@ class IncomeStatement
     # `freshness` adds whatever else the scope reads beyond the entries the
     # default key already tracks.
     def totals_query(transactions_scope:, date_range:, freshness: nil)
+      Rails.cache.fetch(totals_cache_key(transactions_scope:, date_range:, freshness:)) do
+        Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call
+      end
+    end
+
+    def totals_cache_key(transactions_scope:, date_range:, freshness: nil)
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
-      Rails.cache.fetch([
+      [
         "income_statement", "totals_query", Totals::CACHE_VERSION, ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key, *freshness
-      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
+      ]
     end
 
     def monthly_totals_query(transactions_scope:, date_range:)

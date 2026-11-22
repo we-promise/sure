@@ -85,6 +85,19 @@ class IncomeStatement::SpendingComparisonTest < ActiveSupport::TestCase
     assert_in_delta 0, travel.ratio, 0.01
   end
 
+  test "an unfinished period reads its own and its baseline months' totals in one query" do
+    (Date.new(2025, 9, 1)..Date.new(2026, 8, 31)).step(7) { |d| create_transaction(account: @account, date: d, amount: 10, category: @travel) }
+    create_transaction(account: @account, date: Date.new(2026, 9, 3), amount: 10, category: @travel)
+
+    queries = 0
+    count = ->(*, payload) { queries += 1 if payload[:sql].include?("SUM(entry_count) as transactions_count") }
+    ActiveSupport::Notifications.subscribed(count, "sql.active_record") do
+      comparison(history_start: @baseline_start, as_of: Date.new(2026, 9, 10)).rows
+    end
+
+    assert_equal 1, queries
+  end
+
   test "an unfinished quarter compares only with days before it" do
     # 10 a day for the year before the quarter, 30 a day in it: three times normal
     quarter = Period.custom(start_date: Date.new(2026, 10, 1), end_date: Date.new(2026, 12, 31))
