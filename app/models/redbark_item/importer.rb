@@ -25,8 +25,8 @@ class RedbarkItem::Importer
 
     # Step 2: For linked accounts only, fetch transactions and balances.
     # Unlinked accounts just need basic info (name, institution) for the setup modal.
-    # `account_provider: :account` is preloaded because the loan filter in
-    # import_loan_account_details reads `current_account` for every linked
+    # `account_provider: :account` is preloaded because the accountable-type
+    # filter in import_account_details reads `current_account` for every linked
     # account, which is a query each without it.
     linked_accounts = redbark_item.linked_redbark_accounts.includes(account_provider: :account).to_a
 
@@ -37,7 +37,7 @@ class RedbarkItem::Importer
     end
 
     import_balances(linked_accounts)
-    import_loan_account_details(linked_accounts)
+    import_account_details(linked_accounts)
 
     # Store import stats on the item as the raw snapshot
     redbark_item.upsert_redbark_snapshot!(stats)
@@ -208,17 +208,18 @@ class RedbarkItem::Importer
       end
     end
 
-    # Loans only, and only when there are any: `account-details` is the one
-    # endpoint that reports a rate (we-promise/sure#3891), and for every other account type it
-    # would be a request per sync for something nothing reads.
+    # Loans and credit cards only, and only when there are any:
+    # `account-details` is the one endpoint that reports a rate
+    # (we-promise/sure#3891), and for every other account type it would be a
+    # request per sync for something nothing reads.
     #
     # A failure here leaves the payload untouched and the sync green, exactly as
     # a failed balances fetch does. The processor treats "never fetched" and
     # "fetch failed" alike, because for a rate they mean the same thing:
     # nothing was reported.
-    def import_loan_account_details(linked_accounts)
+    def import_account_details(linked_accounts)
       eligible_accounts = balance_eligible_accounts(linked_accounts).select do |redbark_account|
-        redbark_account.current_account&.accountable_type == "Loan"
+        %w[Loan CreditCard].include?(redbark_account.current_account&.accountable_type)
       end
       account_ids = eligible_accounts.map(&:redbark_account_id).compact
       return if account_ids.empty?

@@ -44,10 +44,12 @@ class RedbarkAccount::Processor
       )
     end
 
-    # A loan's rate, read from what the bank reported. After transactions, so a
-    # failure here cannot cost the user their entries; a raise would be caught
-    # by RedbarkItem#process_accounts and logged per account.
+    # A loan's rate and a card's APR, read from what the bank reported. After
+    # transactions, so a failure here cannot cost the user their entries; a
+    # raise would be caught by RedbarkItem#process_accounts and logged per
+    # account.
     RedbarkAccount::LoanDetailsProcessor.new(redbark_account, as_of: as_of).process
+    RedbarkAccount::CreditCardDetailsProcessor.new(redbark_account, as_of: as_of).process
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     account.broadcast_sync_complete

@@ -407,6 +407,21 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal day_one, preserved.entry.date
   end
 
+  test "processor fills a credit card's APR from the account details" do
+    card, ra = link(CreditCard, provider: "fiskil", balance: "100")
+    ra.update!(
+      raw_account_details_payload: {
+        "accountId" => ra.redbark_account_id,
+        "lendingRates" => [ { "rateType" => "PURCHASE", "rate" => "0.1999" } ]
+      },
+      account_details_fetched_at: Time.current
+    )
+
+    RedbarkAccount::Processor.new(ra, as_of: Date.current).process
+
+    assert_equal BigDecimal("19.99"), card.reload.accountable.apr
+  end
+
   private
 
     def link(accountable_class, provider:, balance:)
