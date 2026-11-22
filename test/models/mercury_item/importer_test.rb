@@ -89,6 +89,23 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
            "first-sync start date must be within 90 days"
   end
 
+  test "uses the connection's sync_start_date for an account's first sync" do
+    chosen_start = 2.years.ago.to_date
+    @item.update!(sync_start_date: chosen_start)
+    create_linked_account("acc_configured")
+    @provider.stubs(:get_accounts).returns({ accounts: [ account_payload("acc_configured", "Checking") ] })
+
+    captured_start = nil
+    @provider.stubs(:get_account_transactions).with do |_id, opts|
+      captured_start = opts[:start_date]
+      true
+    end.returns({ transactions: [] })
+
+    run_import
+
+    assert_equal chosen_start, captured_start.to_date
+  end
+
   test "uses last_synced_at minus 7 days when account has existing transactions" do
     ten_days_ago = 10.days.ago
     _account, mercury_account = create_linked_account("acc_resync",

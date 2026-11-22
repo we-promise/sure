@@ -160,6 +160,32 @@ class BrexItem::ImporterTest < ActiveSupport::TestCase
     assert result[:success]
   end
 
+  test "uses the connection's sync_start_date for an account's first sync" do
+    chosen_start = Date.new(2025, 1, 15)
+    @brex_item.update!(sync_start_date: chosen_start)
+
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])
+    provider.expects(:get_cash_transactions).with("cash_1", start_date: chosen_start).returns(transactions: [])
+
+    result = BrexItem::Importer.new(@brex_item, brex_provider: provider).import
+
+    assert result[:success]
+  end
+
+  test "prefers an explicit sync window over the connection's sync_start_date" do
+    @brex_item.update!(sync_start_date: Date.new(2025, 1, 15))
+    window_start = Date.new(2026, 1, 1)
+
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])
+    provider.expects(:get_cash_transactions).with("cash_1", start_date: window_start).returns(transactions: [])
+
+    result = BrexItem::Importer.new(@brex_item, brex_provider: provider, sync_start_date: window_start).import
+
+    assert result[:success]
+  end
+
   test "imports aggregate card transactions only into the selected connection" do
     first_card_account = @family.accounts.create!(
       name: "First Brex Card",

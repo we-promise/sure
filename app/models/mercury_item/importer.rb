@@ -298,6 +298,9 @@ class MercuryItem::Importer
         end
       else
         # Account has no stored transactions - this is a first sync for this account
+        configured_start = mercury_item.sync_start_date
+        return configured_start.to_date if configured_start.present?
+
         # Use account creation date or a generous historical window
         account_baseline = mercury_account.created_at || Time.current
         first_sync_window = [ account_baseline - 7.days, 90.days.ago ].max

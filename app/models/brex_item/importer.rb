@@ -224,6 +224,9 @@ class BrexItem::Importer
       if brex_account.raw_transactions_payload.to_a.any?
         brex_item.last_synced_at ? brex_item.last_synced_at - 7.days : 90.days.ago
       else
+        configured_start = brex_item.sync_start_date
+        return configured_start.to_date if configured_start.present?
+
         account_baseline = brex_account.created_at || Time.current
         [ account_baseline - 7.days, 90.days.ago ].max
       end
