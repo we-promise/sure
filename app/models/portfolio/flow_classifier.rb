@@ -29,7 +29,8 @@
 # for an unlabelled Transaction its `kind`; and for a transfer, whether the
 # counterpart leg's account is inside the scope. Direction for an external
 # flow comes from the Trade's quantity sign or the Transaction's amount sign
-# (negative amount = money in).
+# (negative amount = money in); a zero-quantity trade has no quantity sign,
+# so its amount sign decides.
 #
 # What a caller must do with the answer:
 #
@@ -191,8 +192,8 @@ class Portfolio::FlowClassifier
 
       case rule
       when nil then :internal
-      when :external then trade_direction(trade)
-      when :transfer then security_transfer_counterpart_in_scope?(entry, trade) ? :internal : trade_direction(trade)
+      when :external then trade_direction(entry, trade)
+      when :transfer then security_transfer_counterpart_in_scope?(entry, trade) ? :internal : trade_direction(entry, trade)
       else rule
       end
     end
@@ -220,8 +221,11 @@ class Portfolio::FlowClassifier
       end
     end
 
-    def trade_direction(trade)
-      trade.qty.negative? ? :external_outflow : :external_inflow
+    # A cash-only trade has no quantity to sign, so its amount decides.
+    def trade_direction(entry, trade)
+      return trade.qty.negative? ? :external_outflow : :external_inflow unless trade.qty.zero?
+
+      entry.amount.negative? ? :external_inflow : :external_outflow
     end
 
     def transaction_direction(entry)
@@ -270,7 +274,13 @@ class Portfolio::FlowClassifier
     def direction_sql
       <<~SQL.squish
         CASE
-          WHEN entries.entryable_type = 'Trade' THEN CASE WHEN trades.qty < 0 THEN 'external_outflow' ELSE 'external_inflow' END
+          WHEN entries.entryable_type = 'Trade' THEN
+            CASE
+              WHEN trades.qty < 0 THEN 'external_outflow'
+              WHEN trades.qty > 0 THEN 'external_inflow'
+              WHEN entries.amount < 0 THEN 'external_inflow'
+              ELSE 'external_outflow'
+            END
           WHEN entries.amount < 0 THEN 'external_inflow'
           ELSE 'external_outflow'
         END

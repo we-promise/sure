@@ -284,6 +284,26 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_inflow, @family_scope.classify(inflow_transaction)
   end
 
+  # A cash-only trade (a qty-0 Fee or Interest relabelled Withdrawal,
+  # Contribution or Transfer) has no quantity to sign, so the amount decides.
+  test "a zero-quantity external trade takes its direction from the amount" do
+    withdrawal = create_portfolio_trade(account: @brokerage, qty: 0, price: 0, label: "Withdrawal")
+    withdrawal.update!(amount: 500)
+    contribution = create_portfolio_trade(account: @brokerage, qty: 0, price: 0, label: "Contribution")
+    contribution.update!(amount: -500)
+    transfer = create_portfolio_trade(account: @brokerage, qty: 0, price: 0, label: "Transfer")
+    transfer.update!(amount: 500)
+
+    assert_equal :external_outflow, @family_scope.classify(withdrawal.reload)
+    assert_equal :external_inflow, @family_scope.classify(contribution.reload)
+    assert_equal :external_outflow, @family_scope.classify(transfer.reload)
+
+    by_sql = @family_scope.classify_ids([ withdrawal.id, contribution.id, transfer.id ])
+    assert_equal :external_outflow, by_sql[withdrawal.id]
+    assert_equal :external_inflow, by_sql[contribution.id]
+    assert_equal :external_outflow, by_sql[transfer.id]
+  end
+
   test "every activity label has a rule" do
     assert_equal Transaction::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
     assert_equal Trade::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
@@ -363,6 +383,8 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
       entries << create_labelled_transaction(account: @ira, label: "Contribution", amount: -300, kind: "funds_movement")
       entries << create_portfolio_trade(account: @brokerage, qty: 5, price: 10, label: "Contribution")
       entries << create_portfolio_trade(account: @brokerage, qty: -5, price: 10, label: "Withdrawal")
+      entries << create_portfolio_trade(account: @brokerage, qty: 0, price: 0, label: "Withdrawal").tap { |e| e.update!(amount: 500) }
+      entries << create_portfolio_trade(account: @brokerage, qty: 0, price: 0, label: "Contribution").tap { |e| e.update!(amount: -500) }
 
       internal_transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400, source_fee_amount: 1)
       entries << internal_transfer.outflow_transaction.entry
