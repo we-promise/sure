@@ -42,10 +42,12 @@ export function pluralForm(forms, count, locale = "en") {
   return forms[new Intl.PluralRules(locale).select(count)] ?? forms.other
 }
 
-// d3 digit grouping for a money format: thousands, or 3-then-2 for Indian
-// grouping (1,23,456).
+// d3 digit grouping for a money format: thousands, or Indian grouping
+// (1,23,45,678): three, then twos. d3 cycles the grouping array, so the twos
+// are spelled out for up to 17 integer digits rather than [3, 2], which
+// would cycle back to a three.
 export function groupingFor(moneyFormat) {
-  return moneyFormat.indian_grouping ? [3, 2] : [3]
+  return moneyFormat.indian_grouping ? [3, 2, 2, 2, 2, 2, 2, 2] : [3]
 }
 
 // The account selection as saved: the hidden ids, or, when more than half

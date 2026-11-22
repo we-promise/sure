@@ -1,5 +1,6 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
+import { formatLocale } from "../../vendor/javascript/d3-format.js"
 import {
   addMonths,
   buildLanePoints,
@@ -70,9 +71,19 @@ describe("pluralForm", () => {
 })
 
 describe("groupingFor", () => {
-  it("groups by three, or 3-then-2 for Indian grouping (1,23,456)", () => {
-    assert.deepEqual(groupingFor({ indian_grouping: false }), [3])
-    assert.deepEqual(groupingFor({ indian_grouping: true }), [3, 2])
+  // The vendored d3-format the browser uses; it cycles the grouping array.
+  const format = (moneyFormat) =>
+    formatLocale({ decimal: ".", thousands: ",", grouping: groupingFor(moneyFormat), currency: ["", ""] }).format(",.0f")
+
+  it("groups by three", () => {
+    assert.equal(format({ indian_grouping: false })(1234567890), "1,234,567,890")
+  })
+
+  it("groups 3-then-2 all the way for Indian grouping", () => {
+    const indian = format({ indian_grouping: true })
+    assert.equal(indian(123456), "1,23,456")
+    assert.equal(indian(12345678), "1,23,45,678")
+    assert.equal(indian(1234567890123), "12,34,56,78,90,123")
   })
 })
 
