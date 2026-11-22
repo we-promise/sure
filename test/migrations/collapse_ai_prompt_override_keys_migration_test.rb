@@ -12,7 +12,7 @@ class CollapseAiPromptOverrideKeysMigrationTest < ActiveSupport::TestCase
 
   def run_migration(direction = :up)
     ActiveRecord::Migration.suppress_messages { CollapseAiPromptOverrideKeys.new.public_send(direction) }
-    @family.reload.ai_prompt_overrides
+    @family.reload.ai_prompt_overrides.except(CollapseAiPromptOverrideKeys::DROPPED_KEY)
   end
 
   def save_setting(var, value)
@@ -22,7 +22,7 @@ class CollapseAiPromptOverrideKeysMigrationTest < ActiveSupport::TestCase
     ]))
   end
 
-  def dropped = DebugLogEntry.where(family: @family, category: CollapseAiPromptOverrideKeys::DROPPED_CATEGORY)
+  def dropped = @family.reload.ai_prompt_overrides.fetch(CollapseAiPromptOverrideKeys::DROPPED_KEY, {})
 
   test "one override per provider becomes the feature's override" do
     overrides!("categorizer_anthropic" => "Sort carefully", "merchant_openai" => "Find shops", "chat_system" => "Be terse")
@@ -39,9 +39,9 @@ class CollapseAiPromptOverrideKeysMigrationTest < ActiveSupport::TestCase
       assert_equal({ "categorize_transactions" => "Claude version" }, run_migration)
     end
 
-    entry = dropped.sole
-    assert_equal({ "key" => "categorize_transactions", "text" => "OpenAI version" }, entry.metadata)
+    assert_equal({ "categorize_transactions" => "OpenAI version" }, dropped)
     assert_equal [ { key: "categorize_transactions", text: "OpenAI version" } ], @family.dropped_ai_prompt_overrides
+    assert @family.valid?, "the set-aside override passes the family's validation"
   end
 
   test "the chosen provider without a key falls back to the one with a key, as the calls do" do
@@ -109,7 +109,7 @@ class CollapseAiPromptOverrideKeysMigrationTest < ActiveSupport::TestCase
                        "OPENAI_ACCESS_TOKEN" => "k", "OPENAI_URI_BASE" => nil) do
       assert_equal({ "detect_merchants" => "Same", "categorize_transactions" => "A" }, run_migration)
     end
-    assert_equal [ "B" ], dropped.map { _1.metadata["text"] }
+    assert_equal({ "categorize_transactions" => "B" }, dropped)
   end
 
   test "families without old keys are left alone, and down restores both keys" do

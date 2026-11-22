@@ -69,13 +69,21 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
   end
 
   test "the key collapse's dropped overrides are listed until cleared" do
-    DebugLogEntry.create!(category: Family::AiPromptable::DROPPED_CATEGORY, level: "warn", message: "dropped", source: "test",
-                          family: @family, metadata: { key: "categorize_transactions", text: "My Anthropic prompt" })
+    @family.update!(ai_prompt_overrides: { "chat_system" => "Be terse.", "dropped" => { "categorize_transactions" => "My Anthropic prompt" } })
 
     assert_equal [ { key: "categorize_transactions", text: "My Anthropic prompt" } ], @family.dropped_ai_prompt_overrides
 
     @family.clear_dropped_ai_prompt_overrides
-    assert_empty @family.dropped_ai_prompt_overrides
+    assert_empty @family.reload.dropped_ai_prompt_overrides
+    assert_equal({ "chat_system" => "Be terse." }, @family.ai_prompt_overrides)
+  end
+
+  test "a set-aside override must name a prompt key and be text" do
+    @family.ai_prompt_overrides = { "dropped" => { "not_a_prompt" => "x" } }
+    assert_not @family.valid?
+
+    @family.ai_prompt_overrides = { "dropped" => { "categorize_transactions" => 1 } }
+    assert_not @family.valid?
   end
 
   test "a blank value resets the key rather than storing an empty prompt" do
