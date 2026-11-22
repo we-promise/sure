@@ -109,9 +109,6 @@ class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
     assert_equal 0, plan.annual_contribution
   end
 
-  # Date-sensitive models take the reference date as an argument and never
-  # derive it. Scanning the source is the only test that fails the moment
-  # someone reaches for the clock inside a method body.
   # Integer#clamp hands back the bound itself, so a clamped or guarded zero
   # comes out as an Integer unless the bounds are BigDecimal.
   test "a zero or clamped rate and amount are still BigDecimal" do
@@ -128,15 +125,25 @@ class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
     assert_kind_of BigDecimal, below_zero.bar_progress
   end
 
-  test "nothing under the retirement plan reads the clock or the current request" do
-    sources = [ Rails.root.join("app/models/retirement_plan.rb"), *Dir[Rails.root.join("app/models/retirement_plan/**/*.rb")] ]
-    offenders = sources.flat_map do |path|
-      File.readlines(path).each_with_index.filter_map do |line, index|
-        code = line.sub(/#.*/, "")
-        "#{File.basename(path)}:#{index + 1}" if code.match?(/Date\.(current|today)|Time\.(current|now)|Time\.zone\.(now|today)|DateTime\.(current|now)|\bCurrent\./)
+  # The reference date is an argument: two runs on different days, with no
+  # query and no request, must give the same figures.
+  test "the projection reads neither the clock, the database nor the current request" do
+    Current.expects(:user).never
+    Current.expects(:family).never
+
+    runs = [ Date.new(2026, 3, 1), Date.new(2031, 9, 30) ].map do |today|
+      travel_to(today) do
+        figures = nil
+        assert_queries_count(0) do
+          figures = [ projection(retirement_date: Date.new(2040, 6, 1)), projection ].map do |p|
+            [ p.fi_number, p.progress, p.bar_progress, p.financially_independent?, p.effective_savings_rate,
+              p.annual_contribution, p.years_to_retirement, p.yearly_series, p.projected_total ]
+          end
+        end
+        figures
       end
     end
 
-    assert_empty offenders
+    assert_equal runs.first, runs.last
   end
 end

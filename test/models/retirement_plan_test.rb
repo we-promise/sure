@@ -256,6 +256,17 @@ class RetirementPlanTest < ActiveSupport::TestCase
     assert_equal AS_OF, projection.as_of
   end
 
+  test "the plan's figures come from its own user, never the current request" do
+    mine = own_account(owner: @member, amount: 1_000)
+    create_transaction(account: mine, date: AS_OF, amount: 1_000)
+    plan = RetirementPlan.new(user: @member)
+    Current.expects(:user).never
+    Current.expects(:family).never
+
+    assert_equal BigDecimal("1000"), plan.projection(as_of: AS_OF).current_assets
+    assert_equal 0, plan.unconverted_account_count(as_of: AS_OF)
+  end
+
   private
     def own_account(owner:, amount:, currency: "USD", accountable: Depository.new, date: AS_OF)
       account = Account.create!(
