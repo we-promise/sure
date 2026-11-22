@@ -160,6 +160,26 @@ class Security::ResolverTest < ActiveSupport::TestCase
     assert_equal "binance_public", resolved.price_provider
   end
 
+  # A result with no country (crypto, or a provider that leaves it out) says
+  # nothing about where the row is listed, so the row keeps its own.
+  test "a provider match with no country keeps the row's trusted country" do
+    existing = Security.create!(ticker: "NOCTRY", exchange_operating_mic: "XNAS", country_code: "US")
+    assert_equal "north_america", existing.region
+    match = Security.new(ticker: "NOCTRY", exchange_operating_mic: "XNAS", country_code: nil)
+
+    Security.expects(:search_provider)
+            .with("NOCTRY", exchange_operating_mic: "XNAS", country_code: "GB", technical_failure: anything)
+            .returns([ match ])
+
+    resolved = Security::Resolver.new("NOCTRY", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+
+    assert_equal existing, resolved
+    resolved.reload
+    assert_equal "US", resolved.country_code
+    assert_nil resolved.country_source
+    assert_equal "north_america", resolved.region
+  end
+
   test "resolved provider match copies name but not logo_url from the search result" do
     # Name is backfilled directly from the search match (it's already known
     # at resolve time and some providers, e.g. TwelveData on lower plan

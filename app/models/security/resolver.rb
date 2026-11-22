@@ -175,7 +175,9 @@ class Security::Resolver
         exchange_operating_mic: match.exchange_operating_mic
       )
 
-      security.assign_country(match.country_code, source: "provider")
+      # A result with no country (crypto, or a provider that leaves it out)
+      # says nothing about the listing, so the row keeps its own.
+      security.assign_country(match.country_code, source: "provider") if match.country_code.present?
 
       # Backfill the name straight from the search result — it's already
       # available here and doesn't depend on a later, separate

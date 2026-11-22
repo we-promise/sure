@@ -1909,8 +1909,8 @@ class Family::DataImporter
       assign_if_blank(security, :exchange_operating_mic, attributes[:exchange_operating_mic].presence&.upcase)
       assign_if_blank(security, :exchange_mic, attributes[:exchange_mic].presence)
       assign_if_blank(security, :exchange_acronym, attributes[:exchange_acronym].presence)
-      # A country with no recorded source is trusted, as it is in the database.
-      # One a provider gave replaces a hint.
+      # A file's country fills a blank country, with the file's source (trusted
+      # when it names none); only a country a provider gave replaces a hint.
       country = attributes[:country_code].presence
       source = attributes[:country_source].presence_in(Security::COUNTRY_SOURCES)
       if country && (security.country_code.blank? || (source == "provider" && security.country_hint?))
