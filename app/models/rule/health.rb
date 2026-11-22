@@ -171,12 +171,13 @@ class Rule::Health
     end
 
     # Tags claim nothing, but a tag condition below still reads them. A
-    # transfer creates its counterpart on the target account.
+    # transfer creates its counterpart on the target account, and a split
+    # creates its children.
     def changed_fields(rule)
       rule.actions.flat_map do |action|
         case action.action_type
         when "set_transaction_tags" then [ :tags ]
-        when "set_as_transfer_or_payment" then claimed_attributes(action).to_a + [ :new_transactions ]
+        when "set_as_transfer_or_payment", "split_transaction" then claimed_attributes(action).to_a + [ :new_transactions ]
         else claimed_attributes(action).to_a
         end
       end
