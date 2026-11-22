@@ -19,10 +19,14 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
     # Check if there are still incomplete syncs - if so, skip and let the last sync trigger it
     return if family_has_incomplete_syncs?(family)
 
-    # Use advisory lock as final safety net against concurrent execution
-    RecurringTransaction::Pipeline.with_family_lock(family_id) do
+    # Use advisory lock as final safety net against concurrent execution. A
+    # run already holding it may have read the data before the change that
+    # scheduled this one (a transfer confirmed mid-run), so retry rather than
+    # drop it.
+    acquired = RecurringTransaction::Pipeline.with_family_lock(family_id) do
       RecurringTransaction::Pipeline.new(family).run!
     end
+    retry_job(wait: DEBOUNCE_DELAY) unless acquired
   end
 
   def self.schedule_for(family)

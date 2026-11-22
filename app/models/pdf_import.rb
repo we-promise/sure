@@ -612,13 +612,14 @@ class PdfImport < Import
       end
 
       # Only sync balances when currency is compatible with the statement's currency,
-      # matching AccountStatement::MetadataDetector#detect_from_pdf behavior.
+      # as AccountStatement does for the balances it reads from the statement text.
       target_currency = updates[:currency] || account_statement.statement_currency
       currency_compatible = currency.blank? || target_currency.blank? || currency.to_s.casecmp?(target_currency)
 
       if currency_compatible
-        updates[:opening_balance] = opening_balance if opening_balance.present?
-        updates[:closing_balance] = closing_balance if closing_balance.present?
+        # The statement text's own figure keeps its account-derived sign.
+        updates[:opening_balance] = opening_balance if opening_balance.present? && !account_statement.detected_balance?(:opening_balance, opening_balance)
+        updates[:closing_balance] = closing_balance if closing_balance.present? && !account_statement.detected_balance?(:closing_balance, closing_balance)
       else
         DebugLogEntry.capture(
           category: "import",

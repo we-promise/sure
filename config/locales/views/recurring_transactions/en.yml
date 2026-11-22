@@ -151,7 +151,7 @@ en:
       frequency_label: How often
       frequency_hint: How often this bill comes due. Pick the day details to match your statement.
       once_on_label: Due on
-      income_once_on_label: On
+      income_once_on_label: "On"
       once_hint: Due once, on this date. It will not repeat. Mark the transaction as one-time to keep it out of your averages.
       income_once_hint: Arrives once, on this date. It will not repeat. Mark the transaction as one-time to keep it out of your averages.
       once_new_hint: Due once, on the date above. It will not repeat. Mark the transaction as one-time to keep it out of your averages.

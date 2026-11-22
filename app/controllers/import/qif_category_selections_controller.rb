@@ -16,6 +16,7 @@ class Import::QifCategorySelectionsController < ApplicationController
     @tag_counts           = compute_tag_counts
     @split_categories      = @import.split_categories
     @has_split_transactions = @import.has_split_transactions?
+    @unknown_account_types  = @import.unknown_qif_account_types
   end
 
   def update
