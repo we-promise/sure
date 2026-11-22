@@ -193,6 +193,50 @@ class Security::TagsTest < ActiveSupport::TestCase
     assert_equal [ @other_tag ], @security.tags_for(@other_family).to_a
   end
 
+  # An omitted selection (a nil param) means "no change", not "clear them all".
+  test "a missing selection leaves the family's tags alone" do
+    existing = @security.taggings.create!(tag: @tag)
+
+    @security.set_tags_for(@family, nil)
+
+    assert_equal [ existing.id ], Tagging.where(taggable: @security).pluck(:id)
+  end
+
+  # Array() turns a hash into key/value pairs, which are not ids.
+  test "a selection that is not a list of ids is refused and changes nothing" do
+    existing = @security.taggings.create!(tag: @tag)
+
+    [ { "0" => @second_tag.id }, @second_tag.id, [ @second_tag.id, { "id" => @tag.id } ] ].each do |bad|
+      assert_raises(ArgumentError) { @security.set_tags_for(@family, bad) }
+    end
+
+    assert_equal [ existing.id ], Tagging.where(taggable: @security).pluck(:id)
+  end
+
+  # Tag ids are uuids: an integer or a malformed string matches no tag, so
+  # accepted it would clear the family's tags exactly as an empty list does.
+  test "an id that is not a uuid is refused and changes nothing" do
+    existing = @security.taggings.create!(tag: @tag)
+
+    [ [ 123 ], [ "nope" ], [ @second_tag.id, "nope" ], [ nil ] ].each do |bad|
+      assert_raises(ArgumentError, "for #{bad.inspect}") { @security.set_tags_for(@family, bad) }
+    end
+
+    assert_equal [ existing.id ], Tagging.where(taggable: @security).pluck(:id)
+  end
+
+  test "several new tags are inserted in one statement" do
+    inserts = 0
+    counter = ->(*, payload) { inserts += 1 if payload[:sql].match?(/\AINSERT INTO "taggings"/) }
+
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      @security.set_tags_for(@family, [ @tag.id, @second_tag.id ])
+    end
+
+    assert_equal 1, inserts
+    assert_equal [ @tag, @second_tag ].map(&:id).sort, @security.taggings.map(&:tag_id).sort
+  end
+
   test "tagging an unsaved security says so instead of failing on the lock" do
     error = assert_raises(ArgumentError) { Security.new(ticker: "NEW").set_tags_for(@family, [ @tag.id ]) }
     assert_match(/save/i, error.message)

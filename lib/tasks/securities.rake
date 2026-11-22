@@ -26,11 +26,17 @@ namespace :securities do
         holdings_count = Holding.where(security_id: security.id).count
         trades_count = Trade.where(security_id: security.id).count
         prices_count = Security::Price.where(security_id: security.id).count
+        # A tag the canonical security already carries is not moved; the
+        # duplicate's row goes with it.
+        taggings_count = Tagging.where(taggable_type: "Security", taggable_id: security.id)
+          .where.not(tag_id: Tagging.where(taggable_type: "Security", taggable_id: canonical.id).select(:tag_id))
+          .count
 
         puts "  Would update:"
         puts "    - #{holdings_count} holdings"
         puts "    - #{trades_count} trades"
         puts "    - #{prices_count} prices"
+        puts "    - #{taggings_count} taggings"
 
         unless dry_run
           begin
@@ -64,6 +70,7 @@ namespace :securities do
     total_holdings = 0
     total_trades = 0
     total_prices = 0
+    total_taggings = 0
 
     duplicates.each do |ticker, exchange_operating_mic|
       securities = Security.where(ticker: ticker, exchange_operating_mic: exchange_operating_mic)
@@ -80,15 +87,22 @@ namespace :securities do
       holdings_count = Holding.where(security_id: duplicates).count
       trades_count = Trade.where(security_id: duplicates).count
       prices_count = Security::Price.where(security_id: duplicates).count
+      # Each tag moves once (the first duplicate carries it over), and not at
+      # all when the canonical security already has it.
+      taggings_count = Tagging.where(taggable_type: "Security", taggable_id: duplicates.map(&:id))
+        .where.not(tag_id: Tagging.where(taggable_type: "Security", taggable_id: canonical.id).select(:tag_id))
+        .distinct.count(:tag_id)
 
       total_holdings += holdings_count
       total_trades += trades_count
       total_prices += prices_count
+      total_taggings += taggings_count
 
       puts "  Would update:"
       puts "    - #{holdings_count} holdings"
       puts "    - #{trades_count} trades"
       puts "    - #{prices_count} prices"
+      puts "    - #{taggings_count} taggings"
 
       unless dry_run
         begin
@@ -115,6 +129,7 @@ namespace :securities do
     puts "    - #{total_holdings} holdings"
     puts "    - #{total_trades} trades"
     puts "    - #{total_prices} prices"
+    puts "    - #{total_taggings} taggings"
     puts "  Mode: #{dry_run ? 'Dry run (no changes made)' : 'Live run (changes applied)'}"
     puts "\nDe-duplication complete!"
   end
