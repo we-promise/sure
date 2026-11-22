@@ -689,6 +689,22 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Test notes", transfer.reload.notes
   end
 
+  test "editing a transfer locks the transfer before its legs" do
+    transfer = transfers(:one)
+    locking = []
+    record = ->(*, payload) do
+      sql = payload[:sql]
+      locking << sql if sql.include?("FOR UPDATE") || sql.match?(/\A\s*(UPDATE|DELETE)\b/i)
+    end
+
+    ActiveSupport::Notifications.subscribed(record, "sql.active_record") do
+      patch transfer_url(transfer), params: { transfer: { category_id: categories(:food_and_drink).id, notes: "Rent" } }
+    end
+
+    assert_redirected_to transactions_url
+    assert_match(/FROM "transfers".*FOR UPDATE/, locking.first)
+  end
+
   test "confirming a transfer keeps the outflow category" do
     transfer = transfers(:one)
     transfer.outflow_transaction.update!(category: categories(:food_and_drink))

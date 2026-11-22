@@ -100,6 +100,9 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
     Transfer.transaction do
+      # The transfer row before any leg, the order unlinking, confirm! and
+      # Entry#unsplit! take them in, so an edit racing an unlink cannot deadlock.
+      Transfer.lock.find(@transfer.id)
       update_transfer_status
       update_transfer_fees_and_amount
       update_transfer_details
