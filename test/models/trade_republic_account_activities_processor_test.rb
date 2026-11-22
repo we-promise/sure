@@ -954,7 +954,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.40"), cash_entry.amount
     assert_equal "Buy", cash_entry.transaction.investment_activity_label
     assert_equal "investment_contribution", cash_entry.transaction.kind
-    assert_nil cash_entry.transaction.category_id
+    assert_equal @family.investment_contributions_category, cash_entry.transaction.category
     assert_equal "SPARE_CHANGE_AGGREGATE", cash_entry.transaction.extra.dig("trade_republic", "event_type")
 
     counterpart = @account.entries.find_by!(external_id: "trade_republic_settlement_evt_round_up")
@@ -1344,7 +1344,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Core S&P 500 USD (Acc)", buy_cash.name
     assert_equal "Buy", buy_cash.transaction.investment_activity_label
     assert_equal "investment_contribution", buy_cash.transaction.kind
-    assert_nil buy_cash.transaction.category_id
+    assert_equal @family.investment_contributions_category, buy_cash.transaction.category
 
     sell_cash = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_settle_sell")
     assert_equal BigDecimal("-529.0"), sell_cash.amount
@@ -1379,6 +1379,19 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
       TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
     end
     assert_equal buy_transfer, buy_cash.transaction.reload.transfer
+  end
+
+  test "a buy settlement's cash outflow gets the Investment Contributions category" do
+    cash_account, cash_sure = create_linked_cash_account!
+    buy = order_execution_detail(event_id: "evt_settle_category", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
+    @tr_account.update!(raw_timeline_payload: [ buy ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    cash_entry = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_settle_category")
+    assert_equal "investment_contribution", cash_entry.transaction.kind
+    assert_equal @family.investment_contributions_category, cash_entry.transaction.category
   end
 
   test "settlement counterpart is removed with its trade and never relinked after the user unlinks it" do

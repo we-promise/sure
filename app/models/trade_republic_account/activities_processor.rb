@@ -564,6 +564,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       return if RejectedTransfer.exists?(inflow_transaction_id: inflow.id, outflow_transaction_id: outflow.id)
 
       Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+        .apply_investment_contribution_category!
     end
 
     # Trade Republic settles in the currency of the portfolio and Crypto

@@ -193,15 +193,10 @@ class Transfer < ApplicationRecord
 
       # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
       outflow_kind = Transfer.kind_for_account(to_account, from_account: from_account)
-      outflow_attrs = { kind: outflow_kind }
-
-      if outflow_kind == "investment_contribution" && outflow_transaction.category_id.blank?
-        category = to_account.family.investment_contributions_category
-        outflow_attrs[:category] = category if category.present?
-      end
 
       inflow_transaction.update!(kind: "funds_movement")
-      outflow_transaction.update!(outflow_attrs)
+      outflow_transaction.update!(kind: outflow_kind)
+      apply_investment_contribution_category!
     end
 
     # The legs just stopped being ordinary transactions, so a bill suggestion
@@ -211,6 +206,17 @@ class Transfer < ApplicationRecord
     # the cache, and a rolled-back confirmation must not supersede a queued run.
     family = to_account.family
     ActiveRecord.after_all_transactions_commit { RecurringTransaction.identify_patterns_for(family) }
+  end
+
+  # Assigns the Investment Contributions category to the outflow of a
+  # contribution that has none. Provider syncs create confirmed transfers
+  # directly, so they call this instead of confirm!.
+  def apply_investment_contribution_category!
+    return unless Transfer.kind_for_account(to_account, from_account: from_account) == "investment_contribution"
+    return if outflow_transaction.category_id.present?
+
+    category = to_account.family.investment_contributions_category
+    outflow_transaction.update!(category: category) if category.present?
   end
 
   def date
