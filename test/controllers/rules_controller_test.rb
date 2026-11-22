@@ -636,6 +636,26 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_not duplicate.reload.active?
   end
 
+  test "turning on apply immediately alone saves a duplicate rule, but an edit that sends it is still checked" do
+    existing = create_similar_rule("Woolworths", "woolworths", category: groceries)
+    duplicate = create_similar_rule("Woolworths again", "woolworths", category: groceries)
+
+    patch rule_url(duplicate), params: { rule: { apply_immediately: "1" } }
+
+    assert_redirected_to rules_url
+    assert duplicate.reload.apply_immediately?
+
+    edited = create_similar_rule("Hardware", "hardware", category: dining)
+    params = edit_params(edited, "woolworths", category: groceries)
+    params[:rule][:apply_immediately] = "1"
+
+    patch rule_url(edited), params: params
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}']"
+    assert_not edited.reload.apply_immediately?
+  end
+
   test "the shared count is the transactions both rules match" do
     create_transaction(name: "Woolworths")
     create_transaction(name: "Woolworths Metro")
