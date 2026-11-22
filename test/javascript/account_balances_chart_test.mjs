@@ -1,0 +1,108 @@
+import { describe, it } from "node:test"
+import assert from "node:assert/strict"
+import {
+  addMonths,
+  buildRows,
+  clusterByDistance,
+  columnSplit,
+  currencyAffixes,
+  formatDay,
+  interpolate,
+  monthFormatFor,
+  parseDay,
+  stackRows,
+} from "../../app/javascript/utils/account_balances_chart.mjs"
+
+describe("addMonths", () => {
+  it("keeps the day of the month, clamped to shorter months", () => {
+    assert.equal(formatDay(addMonths(parseDay("2026-01-31"), 1)), "2026-02-28")
+    assert.equal(formatDay(addMonths(parseDay("2026-11-22"), 3)), "2027-02-22")
+  })
+})
+
+describe("monthFormatFor", () => {
+  it("drops the day and one separator from every family date format", () => {
+    const cases = {
+      "%m-%d-%Y": "%m-%Y",
+      "%d.%m.%Y": "%m.%Y",
+      "%d-%m-%Y": "%m-%Y",
+      "%Y-%m-%d": "%Y-%m",
+      "%d/%m/%Y": "%m/%Y",
+      "%Y/%m/%d": "%Y/%m",
+      "%m/%d/%Y": "%m/%Y",
+      "%e/%m/%Y": "%m/%Y",
+      "%Y.%m.%d": "%Y.%m",
+      "%Y%m%d": "%Y%m",
+      "%d %b %Y": "%b %Y",
+    }
+    for (const [dateFormat, month] of Object.entries(cases)) assert.equal(monthFormatFor(dateFormat), month, dateFormat)
+  })
+})
+
+describe("currencyAffixes", () => {
+  it("places the unit as the currency format says", () => {
+    assert.deepEqual(currencyAffixes("%u%n", "$"), ["$", ""])
+    assert.deepEqual(currencyAffixes("%u %n", "CHF"), ["CHF ", ""])
+    assert.deepEqual(currencyAffixes("%n %u", "€"), ["", " €"])
+  })
+})
+
+describe("interpolate", () => {
+  it("fills known placeholders and leaves unknown ones", () => {
+    assert.equal(interpolate("%{shown} of %{count} shown", { shown: 3, count: 9 }), "3 of 9 shown")
+    assert.equal(interpolate("before %{date}", {}), "before %{date}")
+  })
+})
+
+describe("buildRows", () => {
+  const data = {
+    today: "2026-11-22",
+    dates: ["2026-11-20", "2026-11-21", "2026-11-22"],
+    accounts: [
+      { id: "checking", start: 100, history: [80, 90, 95], events: [{ date: "2026-11-24", amount: -30, name: "Rent" }] },
+      { id: "card", start: -50, history: [-40, -45, -45], events: [] },
+    ],
+  }
+
+  it("uses history before today and today's recorded balance from today on", () => {
+    const { rows } = buildRows(data, 0)
+    assert.deepEqual(rows.map((r) => formatDay(r.date)), ["2026-11-20", "2026-11-21", "2026-11-22"])
+    assert.equal(rows[2].values.checking, 100, "today is the recorded balance, not the history point")
+    assert.equal(rows.at(-1).forecast, false)
+  })
+
+  it("applies each event on its own day and keeps it on that day's row", () => {
+    const { rows } = buildRows(data, 1)
+    const day = (iso) => rows.find((r) => formatDay(r.date) === iso)
+    assert.equal(day("2026-11-23").values.checking, 100)
+    assert.equal(day("2026-11-24").values.checking, 70)
+    assert.equal(day("2026-11-24").events[0].account, "checking")
+    assert.equal(formatDay(rows.at(-1).date), "2026-12-22")
+    assert.equal(rows.at(-1).forecast, true)
+  })
+})
+
+describe("stackRows", () => {
+  it("hangs negatives below zero and stacks positives from the lowest point", () => {
+    const rows = [{ values: { savings: 100, checking: 40, card: -30 } }]
+    const [savings, checking, card] = stackRows(rows, ["savings", "checking", "card"])
+    assert.deepEqual([card[0][0], card[0][1]], [-30, 0])
+    assert.equal(card[0].negative, true)
+    assert.deepEqual([savings[0][0], savings[0][1]], [-30, 70])
+    assert.deepEqual([checking[0][0], checking[0][1]], [70, 110], "the top edge is the total (100 + 40 - 30)")
+  })
+})
+
+describe("clusterByDistance", () => {
+  it("merges points closer than the gap to the cluster's first point", () => {
+    const clusters = clusterByDistance([{ x: 0 }, { x: 10 }, { x: 19 }, { x: 40 }], 20)
+    assert.deepEqual(clusters.map((c) => c.members.length), [3, 1])
+  })
+})
+
+describe("columnSplit", () => {
+  it("splits where the running weight first reaches half", () => {
+    assert.equal(columnSplit([3, 3, 4, 8, 2]), 3)
+    assert.equal(columnSplit([5]), 1)
+  })
+})

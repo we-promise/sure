@@ -1,0 +1,85 @@
+<%# locals: (chart:, period:, settings:) %>
+<%
+  labels = t("pages.dashboard.account_balances").except(:title, :forecast_hint)
+  # The settings popover's controls; the chart controller keeps them in sync
+  # (the full-screen dialog renders the same chart, list and stats).
+  horizons = User::ACCOUNT_BALANCES_HORIZONS
+%>
+<div class="@container px-4 space-y-3"
+     data-controller="account-balances-chart"
+     data-account-balances-chart-data-value="<%= chart.to_h.to_json %>"
+     data-account-balances-chart-settings-value="<%= settings.to_json %>"
+     data-account-balances-chart-labels-value="<%= labels.to_json %>"
+     data-account-balances-chart-transactions-url-value="<%= dashboard_account_balance_transactions_path %>"
+     data-account-balances-chart-preferences-url-value="<%= dashboard_preferences_path %>"
+     data-action="keydown->account-balances-chart#stopKeydown">
+  <div class="flex items-start justify-between gap-3">
+    <div class="flex flex-wrap gap-x-8 gap-y-2 privacy-sensitive" data-account-balances-chart-target="stats" aria-live="polite"></div>
+
+    <%= render DS::Popover.new(variant: :icon, icon: "settings-2", placement: "bottom-end", aria_label: t(".settings")) do |popover| %>
+      <% popover.with_custom_content do %>
+        <div class="p-3 w-64 space-y-4 text-sm">
+          <div class="space-y-1.5">
+            <p class="text-xs font-medium text-secondary"><%= t(".forecast_length") %></p>
+            <%= render DS::SegmentedControl.new(full_width: true, aria_label: t(".forecast_length")) do |sc| %>
+              <% horizons.each do |months| %>
+                <% sc.with_segment(
+                     months.zero? ? t(".forecast_off") : t(".forecast_months", count: months),
+                     active: settings["horizon"] == months,
+                     class: "text-xs",
+                     data: { action: "account-balances-chart#setHorizon", months: months, account_balances_chart_target: "horizonSegment" }
+                   ) %>
+              <% end %>
+            <% end %>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-3">
+              <label for="account-balances-hide-negative" class="text-primary"><%= t(".hide_negative") %></label>
+              <%= render DS::Toggle.new(id: "account-balances-hide-negative", checked: settings["hide_negative"],
+                    data: { action: "account-balances-chart#toggleHideNegative", account_balances_chart_target: "hideNegativeToggle" }) %>
+            </div>
+            <p class="text-xs text-secondary" data-account-balances-chart-target="hideNegativeNote"><%= t(".hide_negative_hint") %></p>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-3">
+              <label for="account-balances-show-transactions" class="text-primary"><%= t(".show_transactions") %></label>
+              <%= render DS::Toggle.new(id: "account-balances-show-transactions", checked: settings["show_transactions"],
+                    data: { action: "account-balances-chart#toggleShowTransactions", account_balances_chart_target: "showTransactionsToggle" }) %>
+            </div>
+            <p class="text-xs text-secondary" data-account-balances-chart-target="showTransactionsNote"><%= t(".show_transactions_hint") %></p>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="relative w-full min-h-52 privacy-sensitive" style="height: var(--dash-widget-h, 18rem);"
+       data-account-balances-chart-target="chart" draggable="false"></div>
+
+  <div class="text-sm privacy-sensitive" data-account-balances-chart-target="list" draggable="false"></div>
+
+  <p class="flex items-start gap-1.5 text-xs text-secondary">
+    <%= icon("info", size: "xs", class: "mt-0.5 shrink-0") %>
+    <span><%= t(".forecast_hint", count: chart.bill_count) %></span>
+  </p>
+
+  <%# Icons the controller clones into the HTML it renders (no raw SVG in JS). %>
+  <template data-account-balances-chart-target="icons">
+    <span data-icon="warning"><%= icon("triangle-alert", size: "xs", class: "inline-block align-[-2px]") %></span>
+    <span data-icon="chevron"><%= icon("chevron-right", size: "xs") %></span>
+  </template>
+
+  <%= render DS::Dialog.new(id: "account-balances-expanded-dialog", auto_open: false, width: "expanded", disable_frame: true,
+        data: { action: "close->cashflow-expand#restore" }) do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <div class="flex flex-wrap gap-x-8 gap-y-2 privacy-sensitive" data-account-balances-chart-target="stats"></div>
+        <div class="relative w-full h-[62dvh] min-h-80 privacy-sensitive" data-account-balances-chart-target="chart"></div>
+        <div class="text-sm privacy-sensitive" data-account-balances-chart-target="list"></div>
+      </div>
+    <% end %>
+  <% end %>
+</div>

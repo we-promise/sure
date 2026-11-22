@@ -63,6 +63,43 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "account", @user.reload.cashflow_sankey_group_by
   end
 
+  test "dashboard renders the account balances widget with its full-screen dialog" do
+    get root_path
+    assert_response :ok
+
+    assert_select "section[data-section-key='account_balances']" do
+      assert_select "[data-controller='account-balances-chart']"
+      assert_select "button[data-action='click->cashflow-expand#open']"
+      assert_select "dialog#account-balances-expanded-dialog"
+    end
+    assert_select "section[data-section-key='account_balances'][data-controller~='cashflow-expand']"
+  end
+
+  test "update_preferences saves the account balances settings, keeping only valid values" do
+    patch "/dashboard/preferences", params: {
+      preferences: { account_balances: { horizon: 6, hide_negative: true, hidden_account_ids: [ accounts(:investment).id ], list_open: true, unknown: "x" } }
+    }, as: :json
+    assert_response :success
+
+    settings = @user.reload.account_balances_settings
+    assert_equal 6, settings["horizon"]
+    assert settings["hide_negative"]
+    assert settings["list_open"]
+    assert_equal [ accounts(:investment).id ], settings["hidden_account_ids"]
+    assert_not settings.key?("unknown")
+
+    patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: 7 } } }, as: :json
+    assert_equal 6, @user.reload.account_balances_settings["horizon"], "an unsupported forecast length is ignored"
+  end
+
+  test "the account balances widget can be hidden and shown like the others" do
+    patch dashboard_section_hidden_path("account_balances"), params: { hidden: true }
+    assert_includes @user.reload.dashboard_hidden_sections, "account_balances"
+
+    patch dashboard_section_hidden_path("account_balances"), params: { hidden: false }
+    assert_not_includes @user.reload.dashboard_hidden_sections, "account_balances"
+  end
+
   test "update_preferences persists dashboard section width" do
     patch "/dashboard/preferences", params: {
       preferences: { dashboard_section_layout: { cashflow_sankey: { col_span: "single" } } }

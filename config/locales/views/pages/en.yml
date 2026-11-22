@@ -61,6 +61,66 @@ en:
         compact: "Compact"
         auto: "Auto"
         tall: "Tall"
+      account_balances:
+        title: Account balances
+        forecast_hint:
+          one: "Forecast = today's balance, moved by the %{count} active bill on its account and by transactions already recorded with a future date. Accounts with neither stay flat."
+          other: "Forecast = today's balance, moved by the %{count} active bills on their accounts and by transactions already recorded with a future date. Accounts with neither stay flat."
+        unassigned: Bills without an account
+        unassigned_group: Bills
+        settings: Chart settings
+        forecast_length: Forecast length
+        forecast_off: "Off"
+        forecast_months: "%{count}M"
+        hide_negative: Hide below zero
+        hide_negative_hint: Starts the axis at zero. The top of the stack is still the total.
+        hide_negative_unavailable: "Not available: the total of the selected accounts goes below zero on %{date}."
+        show_transactions: Show transactions
+        show_transactions_hint: Dots above the dates, one per day, or one per transaction when zoomed in far enough. Click a group to zoom in, a single transaction to open it. Hollow dots are upcoming bills.
+        transactions_loading: Loading transactions…
+        transactions_error: Could not load transactions.
+        chart_aria_label: Stacked account balances with forecast
+        no_history: No balance history for this period.
+        no_accounts_selected: No accounts selected.
+        today_forecast: Today → forecast
+        forecast: forecast
+        total: Total
+        recorded: recorded
+        drag_to_zoom: Drag to zoom
+        double_click_reset: double-click to reset
+        reset_zoom: Reset zoom
+        stat_today: Selected accounts today
+        stat_forecast: "Forecast %{date}"
+        stat_vs_today: "%{amount} vs today"
+        stat_lowest: Lowest point
+        goes_negative: "Goes below zero: %{accounts}"
+        goes_negative_on: "Goes below zero on %{date}"
+        list_title: Accounts
+        list_shown_all: "all %{count} shown"
+        list_shown_some: "%{shown} of %{count} shown"
+        list_all: All
+        list_cash_only: Cash only
+        list_none: None
+        list_account: Account
+        list_today: Today
+        list_change: Change
+        list_hidden: "%{hidden} of %{count} hidden"
+        list_expand: "Expand %{name}"
+        list_collapse: "Collapse %{name}"
+        upcoming_bill: upcoming bill
+        upcoming_bills: upcoming bills
+        planned_bill: planned bill
+        click_open: Click to open
+        click_zoom: Click to zoom in
+        more_items: "+ %{count} more (total of all %{total_count}: %{amount})"
+        transactions_one: 1 transaction
+        transactions_other: "%{count} transactions"
+        bills_suffix_one: (1 upcoming bill)
+        bills_suffix_other: "(%{count} upcoming bills)"
+        older_not_loaded: "Transactions before %{date} not loaded, zoom in to load them"
+        older_loading: Loading older transactions…
+        older_failed: "Couldn't load transactions before %{date}; zoom again to retry"
+        spread_note: "Sure records dates, not times: a day's transactions are spread evenly across it"
       net_worth_chart:
         data_not_available: Data not available for the selected period
         title: Net Worth

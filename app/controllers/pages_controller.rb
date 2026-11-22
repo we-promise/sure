@@ -20,6 +20,7 @@ class PagesController < ApplicationController
     "cashflow_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
     "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
+    "account_balances"   => { col_span: "full",   grow: true,  min_height: 288, width_toggle: true },
     "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
   }.freeze
 
@@ -141,6 +142,7 @@ class PagesController < ApplicationController
         permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout].respond_to?(:to_unsafe_h)
         permitted["cashflow_sankey_group_by"] = prefs[:cashflow_sankey_group_by] if User::CASHFLOW_SANKEY_GROUPINGS.include?(prefs[:cashflow_sankey_group_by])
         permitted["cashflow_preview_enabled"] = ActiveModel::Type::Boolean.new.cast(prefs[:cashflow_preview_enabled]) if prefs.key?(:cashflow_preview_enabled)
+        permitted["account_balances"] = User.sanitize_account_balances_settings(prefs[:account_balances].to_unsafe_h) if prefs[:account_balances].respond_to?(:to_unsafe_h)
       end
     end
 
@@ -268,6 +270,19 @@ class PagesController < ApplicationController
             locals: { balance_sheet: @balance_sheet, period: @period },
             visible: @accounts.any?,
             collapsible: true
+          }
+        },
+        "account_balances" => -> {
+          chart = BalanceSheet::AccountBalancesChart.new(Current.family, user: Current.user, accounts: @accounts, period: @period)
+          {
+            key: "account_balances",
+            title: "pages.dashboard.account_balances.title",
+            partial: "pages/dashboard/account_balances",
+            layout: section_layout("account_balances"),
+            locals: { chart: chart, period: @period, settings: Current.user.account_balances_settings },
+            visible: @accounts.any?,
+            collapsible: true,
+            expandable: true
           }
         },
         "balance_sheet" => -> {

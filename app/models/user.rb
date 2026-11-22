@@ -996,6 +996,35 @@ class User < ApplicationRecord
     preferences&.dig("cashflow_preview_enabled") == true
   end
 
+  ACCOUNT_BALANCES_HORIZONS = [ 0, 1, 3, 6, 12 ].freeze
+  ACCOUNT_BALANCES_DEFAULTS = {
+    "horizon" => 3, "hide_negative" => false, "show_transactions" => false,
+    "hidden_account_ids" => [], "list_open" => false, "open_groups" => []
+  }.freeze
+
+  # Account Balances widget settings: forecast length in months, whether the
+  # axis hides the negative side, whether the transaction lane shows, which
+  # accounts are left out of the chart, and the state of its account list.
+  def account_balances_settings
+    ACCOUNT_BALANCES_DEFAULTS.merge(self.class.sanitize_account_balances_settings(preferences&.dig("account_balances") || {}))
+  end
+
+  # Keeps only known keys with values of the right shape, so the widget can
+  # save its settings through the generic dashboard preferences endpoint.
+  def self.sanitize_account_balances_settings(raw)
+    raw = raw.to_h.stringify_keys
+    boolean = ActiveModel::Type::Boolean.new
+    {}.tap do |clean|
+      clean["horizon"] = raw["horizon"].to_i if raw.key?("horizon") && ACCOUNT_BALANCES_HORIZONS.include?(raw["horizon"].to_i)
+      %w[hide_negative show_transactions list_open].each do |key|
+        clean[key] = boolean.cast(raw[key]) == true if raw.key?(key)
+      end
+      %w[hidden_account_ids open_groups].each do |key|
+        clean[key] = Array(raw[key]).map(&:to_s).reject(&:blank?).uniq.first(200) if raw.key?(key)
+      end
+    end
+  end
+
   private
     def apply_ui_layout_defaults
       self.ui_layout = (ui_layout.presence || self.class.default_ui_layout)
