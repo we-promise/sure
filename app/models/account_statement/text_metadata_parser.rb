@@ -30,6 +30,8 @@ class AccountStatement::TextMetadataParser
 
   # Month tokens are matched in full, then on their first four and three
   # letters, which covers abbreviations ("Sept.", "févr.") and full names.
+  # The two-digit-year format matches them in full only, here or in
+  # FULL_MONTHS.
   MONTHS = {
     "jan" => 1, "gen" => 1, "ene" => 1, "janv" => 1,
     "feb" => 2, "fév" => 2, "fev" => 2, "févr" => 2, "fevr" => 2,
@@ -39,7 +41,7 @@ class AccountStatement::TextMetadataParser
     "jun" => 6, "giu" => 6, "juin" => 6,
     "jul" => 7, "lug" => 7, "juil" => 7,
     "aug" => 8, "ago" => 8, "aoû" => 8, "aou" => 8,
-    "sep" => 9, "set" => 9,
+    "sep" => 9, "sept" => 9, "set" => 9,
     "oct" => 10, "ott" => 10, "okt" => 10, "out" => 10,
     "nov" => 11,
     "dec" => 12, "dic" => 12, "dez" => 12, "déc" => 12
@@ -77,7 +79,7 @@ class AccountStatement::TextMetadataParser
   # The month must be a whole MONTHS or FULL_MONTHS token ("2 Marketing 21" is
   # not a date), and any space counts, as PDF extractors may emit
   # non-breaking ones.
-  TWO_DIGIT_YEAR_DATE = /(?<day>\d{1,2})#{ORDINAL}[[:space:]]+(?<month_name>[[:alpha:]]+)\.?[[:space:]]+(?<year>\d{2})(?!\d)/
+  TWO_DIGIT_YEAR_DATE = /(?<!\d)(?<day>\d{1,2})#{ORDINAL}[[:space:]]+(?<month_name>[[:alpha:]]+)\.?[[:space:]]+(?<year>\d{2})(?!\d)/
   TWO_DIGIT_YEAR = TWO_DIGIT_YEAR_DATE.source.gsub(/\(\?<\w+>/, "(?:")
   TWO_DIGIT_YEAR_PERIOD = /(?<start>#{TWO_DIGIT_YEAR})[[:space:]]*#{RANGE_WORD}[[:space:]]*(?<end>#{TWO_DIGIT_YEAR})/
   # Annual statements span a year; anything longer isn't one period.

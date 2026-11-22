@@ -427,6 +427,11 @@ class AccountStatement::TextMetadataParserTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2021, 12, 4), Date.new(2022, 1, 3) ], period_of("Period 4 December 21 - 3 January 22")
   end
 
+  test "reads a two-digit-year period with Sept as the month" do
+    assert_equal [ Date.new(2021, 9, 3), Date.new(2021, 10, 1) ], period_of("Period 3 Sept 21 - 1 Oct 21")
+    assert_equal [ Date.new(2021, 9, 3), Date.new(2021, 10, 1) ], period_of("Période 3 sept. 21 au 1 oct. 21")
+  end
+
   test "reads a two-digit-year period separated by a word" do
     assert_equal [ Date.new(2021, 9, 3), Date.new(2021, 10, 1) ], period_of("Period 3 Sep 21 to 1 Oct 21")
   end
@@ -441,6 +446,7 @@ class AccountStatement::TextMetadataParserTest < ActiveSupport::TestCase
     assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "03/09/21 - 01/10/21"))
     assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "2 Marketing 21 - 5 Marketing 21"))
     assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "2 Marketing 21 - 3 Marketing 21"))
+    assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "Ref 5123 Sep 21 - 1 Oct 21"))
     assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "1 Sep 20 - 1 Sep 2021"))
     assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "11:28PM 14NOV - 11:30PM 15NOV $21.00"))
   end
