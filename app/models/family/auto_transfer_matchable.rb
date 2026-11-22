@@ -280,6 +280,11 @@ module Family::AutoTransferMatchable
       # ...and even for :taken, only accept it once the exact (inflow, outflow) row is
       # confirmed present; otherwise the :taken came from a different pairing.
       existing_transfer(match)
+    rescue ActiveRecord::LockWaitTimeout
+      # Displacement found a row locked elsewhere (a confirm, or a sync deleting
+      # a leg). The savepoint is rolled back, so the guess stays and the pair is
+      # tried again on the next run.
+      nil
     end
 
     # Destroys the pending cross-currency auto-match suggestions holding either leg
@@ -302,12 +307,14 @@ module Family::AutoTransferMatchable
       Transfer.uncached do
         # Locks are taken transfers, then transactions, then entries: the order
         # a confirm takes them (AutoMatchesController#bulk_update locks the
-        # transfer, then saves its transactions, which touch their entries), so
-        # the two can't deadlock. A confirm holding the transfer finishes first.
+        # transfer, then saves its transactions, which touch their entries).
+        # Deleting a leg takes entry, transfer, then transaction, which no order
+        # avoids crossing, so none of these locks waits: a row held elsewhere
+        # raises LockWaitTimeout and find_or_create_transfer! skips the pair.
         locked_ids = Transfer.where(inflow_transaction_id: leg_ids)
           .or(Transfer.where(outflow_transaction_id: leg_ids))
           .order(:id)
-          .lock
+          .lock("FOR UPDATE NOWAIT")
           .pluck(:id)
 
         # Nothing holds either leg, so there is nothing to displace: the pair is
@@ -344,9 +351,9 @@ module Family::AutoTransferMatchable
     def exact_pair_under_lock?(match, also_lock: [])
       leg_ids = [ match.inflow_transaction_id, match.outflow_transaction_id ]
       lock_ids = (leg_ids + also_lock).compact.uniq
-      categories = Transaction.where(id: lock_ids).order(:id).lock.pluck(:id, :category_id).to_h
+      categories = Transaction.where(id: lock_ids).order(:id).lock("FOR UPDATE NOWAIT").pluck(:id, :category_id).to_h
       entries = Entry.where(entryable_type: "Transaction", entryable_id: lock_ids)
-        .order(:id).lock.to_a.index_by(&:entryable_id)
+        .order(:id).lock("FOR UPDATE NOWAIT").to_a.index_by(&:entryable_id)
       inflow = entries[match.inflow_transaction_id]
       outflow = entries[match.outflow_transaction_id]
       inflow_category = categories[match.inflow_transaction_id]
