@@ -12,6 +12,7 @@ import {
   formatDay,
   groupingFor,
   interpolate,
+  laneBills,
   monthFormatFor,
   parseDay,
   pluralForm,
@@ -1177,13 +1178,11 @@ export default class extends Controller {
     const transactions = (this.transactions || [])
       .filter((t) => selected.has(t.account_id))
       .map((t) => ({ ...t, account: t.account_id }));
-    const bills = this.chartData.accounts
-      .filter((account) => selected.has(account.id))
-      .flatMap((account) =>
-        account.events
-          .filter((e) => e.source === "bill" && e.date > this.chartData.today)
-          .map((e) => ({ ...e, account: account.id })),
-      );
+    const bills = laneBills(
+      this.chartData.accounts,
+      selected,
+      this.chartData.today,
+    );
     const points = buildLanePoints(transactions, bills, perItem).map((p) => ({
       ...p,
       color: p.accounts.length === 1 ? this.colors[p.accounts[0]] : null,

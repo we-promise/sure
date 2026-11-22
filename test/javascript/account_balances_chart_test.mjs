@@ -13,6 +13,7 @@ import {
   formatDay,
   groupingFor,
   interpolate,
+  laneBills,
   monthFormatFor,
   parseDay,
   pluralForm,
@@ -123,6 +124,22 @@ describe("buildLanePoints", () => {
     assert.equal(points.length, 2)
     assert.notEqual(points[0].t, points[1].t)
     assert.deepEqual(points.map((p) => p.planned).sort(), [false, true])
+  })
+})
+
+describe("laneBills", () => {
+  it("includes bills due today (the forecast applies them on the first projected day) and skips hidden accounts", () => {
+    const accounts = [
+      { id: "a", events: [
+        { date: "2026-11-22", source: "bill", name: "Due today" },
+        { date: "2026-11-23", source: "bill", name: "Tomorrow" },
+        { date: "2026-11-24", source: "transaction", name: "Recorded" },
+      ] },
+      { id: "b", events: [{ date: "2026-11-23", source: "bill", name: "Hidden account" }] },
+    ]
+    const bills = laneBills(accounts, new Set(["a"]), "2026-11-22")
+    assert.deepEqual(bills.map((b) => b.name), ["Due today", "Tomorrow"])
+    assert.equal(bills[0].account, "a")
   })
 })
 

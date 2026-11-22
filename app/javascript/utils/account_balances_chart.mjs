@@ -183,6 +183,19 @@ export function buildLanePoints(transactions, bills, perItem) {
   return points
 }
 
+// The upcoming bills the lane shows: on the selected accounts, from today on
+// (a bill due today is applied on the first projected day, and the lane
+// shows it on its own date).
+export function laneBills(accounts, selected, today) {
+  return accounts
+    .filter((account) => selected.has(account.id))
+    .flatMap((account) =>
+      account.events
+        .filter((event) => event.source === "bill" && event.date >= today)
+        .map((event) => ({ ...event, account: account.id })),
+    )
+}
+
 // The zoom range for a click on a group spanning [t0, t1): widened to the
 // minimum zoom around its middle, or null when that would not narrow the
 // current view, i.e. zooming cannot split the group any further.
