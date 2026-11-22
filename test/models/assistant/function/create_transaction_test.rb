@@ -298,6 +298,6 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
 
     assert_equal true, result[:created]
     entry = Entry.find_by(name: "Immediate Rule Target", account: @account)
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ entry.entryable_id ] } ])
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ entry.entryable_id ], user: @user } ])
   end
 end

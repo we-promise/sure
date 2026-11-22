@@ -104,7 +104,7 @@ class Assistant::Function::ApplyRule < Assistant::Function
       )
     end
 
-    rule.apply_later(ignore_attribute_locks: override_locked)
+    rule.apply_later(ignore_attribute_locks: override_locked, user: user)
 
     {
       success: true,

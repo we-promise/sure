@@ -292,7 +292,7 @@ class Rule < ApplicationRecord
   #
   # With async (AI) actions, modified_count also counts the transactions handed
   # to the AI; changed_now_count only counts what the other actions changed.
-  def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [])
+  def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [], user: nil)
     total_modified = 0
     changed_now = 0
     total_async_jobs = 0
@@ -303,7 +303,7 @@ class Rule < ApplicationRecord
 
       excluded_ids = action.claimed_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
       action_scope = Rule.excluding_transaction_ids(scope, excluded_ids)
-      result = action.apply(action_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
+      result = action.apply(action_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run, user: user)
 
       if result.is_a?(Hash) && result[:async]
         has_async = true
@@ -331,13 +331,15 @@ class Rule < ApplicationRecord
   # run applies the rules anyway, so a failed enqueue must not fail the request.
   # Callers inside a database transaction call this after it, so the enqueue
   # is not deferred to an after-commit callback outside this rescue.
-  def self.apply_immediately_later(family, transaction_ids)
+  # user: the person who made the change (see Rule::AiEnrichment). The
+  # assistant runs outside a request, so it passes its user.
+  def self.apply_immediately_later(family, transaction_ids, user: Current.user)
     transaction_ids = Array(transaction_ids).compact.uniq
     return if transaction_ids.empty? || !family.rules.applied_immediately.exists?
 
     # perform_later returns false instead of raising when the adapter
     # refuses the job (see RulesController#enqueue_clear_ai_cache).
-    return if ApplyImmediateRulesJob.perform_later(family, transaction_ids: transaction_ids)
+    return if ApplyImmediateRulesJob.perform_later(family, transaction_ids: transaction_ids, user: user)
 
     Rails.logger.error("Rule.apply_immediately_later could not enqueue ApplyImmediateRulesJob for family #{family.id}")
     nil
@@ -346,8 +348,9 @@ class Rule < ApplicationRecord
     nil
   end
 
-  def apply_later(ignore_attribute_locks: false)
-    RuleJob.perform_later(self, ignore_attribute_locks: ignore_attribute_locks)
+  # user: the person applying the rule (see Rule::AiEnrichment).
+  def apply_later(ignore_attribute_locks: false, user: nil)
+    RuleJob.perform_later(self, ignore_attribute_locks: ignore_attribute_locks, user: user)
   end
 
   def primary_condition_title

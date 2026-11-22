@@ -2,6 +2,7 @@ require "test_helper"
 
 class ApplyImmediateRulesJobTest < ActiveJob::TestCase
   include EntriesTestHelper
+  include AiRuleScopeTestHelper
 
   setup do
     @family = families(:empty)
@@ -99,13 +100,32 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
     ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
   end
 
+  test "AI actions take the changed transactions the person who changed them may categorize" do
+    create_rule("AI", apply_immediately: true, action: Rule::Action.new(action_type: "auto_categorize"))
+
+    ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ], user: @account.owner)
+
+    assert_equal [ @changed.id ], ai_batch_ids
+  end
+
+  # Without a person (e.g. a change from a sync) they only take accounts every
+  # active member can see, and this family has members the account isn't
+  # shared with.
+  test "AI actions leave out an account some active member cannot see when nobody made the change" do
+    create_rule("AI", apply_immediately: true, action: Rule::Action.new(action_type: "auto_categorize"))
+
+    assert_no_enqueued_jobs only: AutoCategorizeJob do
+      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
+    end
+  end
+
   test "leaves the toast of a rule that only hands transactions to the AI to its AI jobs" do
     create_rule("AI", apply_immediately: true, action: Rule::Action.new(action_type: "auto_categorize"))
 
     # Its AI job offers the result once it has changed something (RuleRun#complete_job!).
     Family.any_instance.expects(:broadcast_replace_to).never
     assert_enqueued_jobs 1, only: AutoCategorizeJob do
-      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
+      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ], user: @account.owner)
     end
   end
 
@@ -122,7 +142,7 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
 
     RuleRun.expects(:offer_immediate_result).with(@family).once
     assert_enqueued_jobs 1, only: AutoCategorizeJob do
-      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
+      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ], user: @account.owner)
     end
     assert_equal [ tag ], @changed.reload.tags
   end

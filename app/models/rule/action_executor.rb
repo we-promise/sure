@@ -55,6 +55,13 @@ class Rule::ActionExecutor
     true
   end
 
+  # The part of the matched transactions the action works on when +user+
+  # runs the rule, or nobody does (user nil, e.g. after a sync). Rules act on
+  # the whole family; Rule::AiEnrichment narrows this.
+  def actionable_scope(scope, user:)
+    scope
+  end
+
   def execute(scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     raise NotImplementedError, "Action executor #{self.class.name} must implement #execute"
   end

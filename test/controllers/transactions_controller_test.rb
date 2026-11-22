@@ -2601,7 +2601,7 @@ end
     }
 
     created_entry = Entry.order(:created_at).last
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ created_entry.entryable_id ] } ])
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ created_entry.entryable_id ], user: @user } ])
   end
 
   test "changing a transaction runs rules set to apply immediately" do
@@ -2609,7 +2609,7 @@ end
 
     patch transaction_url(@entry), params: { entry: { name: "Renamed" } }
 
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ] } ])
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ], user: @user } ])
   end
 
   test "changing a transaction queues nothing without immediate rules" do
@@ -2652,7 +2652,7 @@ end
 
     patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
 
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ] } ])
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ], user: @user } ])
   end
 
   # A rule can change these fields while the drawer is open. Sharing a form

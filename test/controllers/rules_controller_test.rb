@@ -2,6 +2,7 @@ require "test_helper"
 
 class RulesControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
+  include AiRuleScopeTestHelper
   setup do
     # Exercise controller jobs independently of the daily login sync.
     families(:dylan_family).update!(auto_sync_on_login: false)
@@ -792,6 +793,26 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("rules.update.success"), flash[:notice]
     assert_nil flash[:alert]
     assert rule.reload.active?
+  end
+
+  test "applying an AI rule as a member leaves out accounts not shared with them" do
+    sign_in users(:family_member)
+    probes = ai_scope_probes
+    rule = ai_scope_rule(active: false)
+
+    perform_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
+
+    assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids
+  end
+
+  test "applying all rules as a member leaves out accounts not shared with them" do
+    sign_in users(:family_member)
+    probes = ai_scope_probes
+    ai_scope_rule(active: false)
+
+    perform_enqueued_jobs(only: ApplyAllRulesJob) { post apply_all_rules_url }
+
+    assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids
   end
 
   test "member can create rule" do

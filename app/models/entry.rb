@@ -484,11 +484,11 @@ class Entry < ApplicationRecord
   # Rules set to "apply immediately" run for this transaction after a person
   # created or changed it. With changed_from (a rule_input_snapshot from before
   # the edit) they only run when the edit changed something.
-  def apply_immediate_rules_later(changed_from: nil)
+  def apply_immediate_rules_later(changed_from: nil, user: Current.user)
     return unless transaction?
     return if changed_from && changed_from == rule_input_snapshot
 
-    Rule.apply_immediately_later(account.family, entryable_id)
+    Rule.apply_immediately_later(account.family, entryable_id, user: user)
   end
 
   # Enqueues an account sync whose window starts at the earliest date this

@@ -63,7 +63,7 @@ class RulesController < ApplicationController
       return
     end
 
-    @rule.apply_later(ignore_attribute_locks: true)
+    @rule.apply_later(ignore_attribute_locks: true, user: Current.user)
     redirect_back_or_to rules_path, notice: "#{@rule.resource_type.humanize} rule activated"
   end
 
@@ -134,7 +134,7 @@ class RulesController < ApplicationController
   end
 
   def apply_all
-    ApplyAllRulesJob.perform_later(Current.family)
+    ApplyAllRulesJob.perform_later(Current.family, user: Current.user)
     redirect_back_or_to rules_path, notice: t("rules.apply_all.success")
   end
 

@@ -1,4 +1,6 @@
 class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
+  include Rule::AiEnrichment
+
   def label
     base_label = "Auto-categorize transactions with AI"
 

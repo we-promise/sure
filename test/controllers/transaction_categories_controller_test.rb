@@ -17,7 +17,7 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
       params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: categories(:income).id } } },
       as: :turbo_stream
 
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @entry.account.family, { transaction_ids: [ @transaction.id ] } ])
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @entry.account.family, { transaction_ids: [ @transaction.id ], user: users(:family_admin) } ])
   end
 
   test "assigning a category touches its last_used_at" do

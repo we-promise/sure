@@ -613,11 +613,24 @@ class RuleTest < ActiveSupport::TestCase
 
     create_category_rule("Immediate", apply_immediately: true)
 
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ transaction.id ] } ]) do
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ transaction.id ], user: nil } ]) do
       Rule.apply_immediately_later(@family, [ transaction.id, transaction.id, nil ])
     end
     assert_no_enqueued_jobs(only: ApplyImmediateRulesJob) do
       Rule.apply_immediately_later(@family, [])
+    end
+  end
+
+  # The AI actions of the run take what the person who made the change may
+  # categorize (see Rule::AiEnrichment).
+  test "apply_immediately_later hands the run the person signed in" do
+    transaction = create_transaction(account: @account, name: "Whole Foods").transaction
+    create_category_rule("Immediate", apply_immediately: true)
+    user = @family.users.first
+    Current.stubs(:user).returns(user)
+
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ transaction.id ], user: user } ]) do
+      Rule.apply_immediately_later(@family, transaction.id)
     end
   end
 

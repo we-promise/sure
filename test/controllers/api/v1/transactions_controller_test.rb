@@ -364,11 +364,11 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
          headers: api_headers(@api_key)
     assert_response :created
     created_id = JSON.parse(response.body)["id"]
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ created_id ] } ])
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ created_id ], user: @user } ])
 
     put api_v1_transaction_url(@transaction), params: { transaction: { name: "API rename" } }, headers: api_headers(@api_key)
     assert_response :success
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ @transaction.id ] } ])
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ @transaction.id ], user: @user } ])
   end
 
   test "an API update that changes nothing runs no immediate rules" do

@@ -2,6 +2,8 @@ require "test_helper"
 
 class Rule::RunnerTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include ActiveJob::TestHelper
+  include AiRuleScopeTestHelper
 
   setup do
     @family = families(:empty)
@@ -337,7 +339,78 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     other&.close
   end
 
+  # An AI action hands the transactions to the provider, so it only takes
+  # those the person running the rule may categorize, plus the accounts every
+  # active member can see. A run nobody started takes only the latter.
+  test "AI actions take the accounts the member running the rule may categorize" do
+    probes = ai_scope_probes
+
+    run_ai_rule("auto_categorize", user: users(:family_member))
+
+    assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids
+  end
+
+  test "AI actions run by an admin leave out a member's account not shared with them" do
+    probes = ai_scope_probes
+
+    run_ai_rule("auto_categorize", user: users(:family_admin))
+
+    assert_equal probes.values_at(:shared, :admin_private).sort, ai_batch_ids
+  end
+
+  test "AI actions in a run nobody started take only accounts every active member can see" do
+    probes = ai_scope_probes
+
+    run_ai_rule("auto_categorize", user: nil, execution_type: "scheduled")
+
+    assert_equal [ probes[:shared] ], ai_batch_ids
+  end
+
+  test "merchant detection takes the same accounts as AI categorization" do
+    probes = ai_scope_probes
+
+    run_ai_rule("auto_detect_merchants", user: users(:family_member))
+
+    assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids(AutoDetectMerchantsJob)
+  end
+
+  test "AI actions skip an account once it stops being shared" do
+    probes = ai_scope_probes
+    account_shares(:depository_shared_with_member).destroy!
+
+    run_ai_rule("auto_categorize", user: users(:family_member))
+
+    assert_equal [ probes[:member_private] ], ai_batch_ids
+  end
+
+  test "AI actions leave out an account shared read-only with the member running the rule" do
+    families(:dylan_family).users.create!(email: "third-member@example.com", password: "password123", role: :member)
+    probes = ai_scope_probes
+    read_only = create_transaction(account: accounts(:credit_card), name: "AI scope probe read only").entryable_id
+
+    run_ai_rule("auto_categorize", user: users(:family_member))
+
+    assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids
+    assert_not_includes ai_batch_ids, read_only
+  end
+
+  test "AI actions leave the other actions of the rule on every matched account" do
+    probes = ai_scope_probes
+    family = families(:dylan_family)
+    category = family.categories.create!(name: "AI scope category")
+    rule = ai_scope_rule
+    rule.actions.create!(action_type: "set_transaction_category", value: category.id)
+
+    Rule::Runner.new(family, rules: [ rule ], execution_type: "manual", user: users(:family_member)).run
+
+    assert_equal probes.values.sort, Transaction.where(category: category).pluck(:id).sort
+  end
+
   private
+    def run_ai_rule(action_type, user:, execution_type: "manual")
+      Rule::Runner.new(families(:dylan_family), rules: [ ai_scope_rule(action_type) ], execution_type: execution_type, user: user).run
+    end
+
     def run_active_rules
       Rule::Runner.new(@family, rules: @family.rules.where(active: true), execution_type: "scheduled").run
     end
