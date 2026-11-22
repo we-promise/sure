@@ -42,4 +42,20 @@ class ExchangeRate::StoredRateTableTest < ActiveSupport::TestCase
     first = @d1 - 30
     assert_equal count.([ first, @d3 ]), count.((0..40).map { |i| first + i }), "more dates do not add queries"
   end
+
+  test "more currencies do not add queries either" do
+    count = ->(currencies) do
+      n = 0
+      counter = ->(*, payload) { n += 1 unless payload[:name] == "SCHEMA" }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+        ExchangeRate::StoredRateTable.new(from: currencies, to: "USD", dates: [ @d3 ])
+      end
+      n
+    end
+
+    # One range query plus at most two fallback queries (before, then after),
+    # however many currencies.
+    assert_equal count.(%w[JPY CHF]), count.(%w[JPY CHF GBP CAD AUD])
+    assert_operator count.(%w[JPY CHF GBP CAD AUD]), :<=, 3
+  end
 end

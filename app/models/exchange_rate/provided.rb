@@ -46,6 +46,14 @@ module ExchangeRate::Provided
       any_stored_rates([ from ], to: to, date: date)[from]
     end
 
+    # find_stored_rate for several currencies at once, in at most two
+    # queries: { from_currency => ExchangeRate }, a currency without any
+    # usable stored rate left out.
+    def find_stored_rates(from:, to:, date: Date.current)
+      currencies = Array(from).uniq
+      currencies.empty? ? {} : any_stored_rates(currencies, to: to, date: date)
+    end
+
     # A stored rate of zero or below is skipped, as everywhere else (see
     # #usable_rates), so the provider is still asked; its answer replaces the
     # unusable row rather than leaving it to be skipped on every request.

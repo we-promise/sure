@@ -2,8 +2,8 @@
 # front. For each date it picks what ExchangeRate.find_stored_rate would: the
 # usable rate on or before the date, however old, else the earliest after it
 # (the rule Balance::ChartSeriesBuilder converts balances with). Never calls a
-# provider, so it is safe while serving a request; the query count does not
-# grow with the number of dates.
+# provider, so it is safe while serving a request; the query count grows
+# with neither the number of dates nor the number of currencies.
 class ExchangeRate::StoredRateTable
   def initialize(from:, to:, dates:)
     @to = to
@@ -21,7 +21,7 @@ class ExchangeRate::StoredRateTable
                 .each { |currency, date, rate| (@rates[currency] ||= []) << [ date, rate ] }
 
     # Covers dates before the first rate inside the range.
-    currencies.each { |currency| @fallback[currency] = ExchangeRate.find_stored_rate(from: currency, to: to, date: first)&.rate }
+    @fallback = ExchangeRate.find_stored_rates(from: currencies, to: to, date: first).transform_values(&:rate)
   end
 
   def rate(from, date)
