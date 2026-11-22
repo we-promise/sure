@@ -246,6 +246,14 @@ describe("parseAmountPaste", () => {
       assert.equal(parseAmountPaste("-150.000", { precision: 0 }), -150000)
     })
 
+    it('rejects a decimal-bearing "150.000,00" instead of multiplying it', () => {
+      assert.equal(parseAmountPaste("150.000,00", { precision: 0 }), null)
+    })
+
+    it('rejects a malformed grouping "150.00.000"', () => {
+      assert.equal(parseAmountPaste("150.00.000", { precision: 0 }), null)
+    })
+
     it("leaves a precision-bearing currency's separator hint intact", () => {
       assert.equal(parseAmountPaste("150.000", { separator: ".", precision: 2 }), 150)
     })

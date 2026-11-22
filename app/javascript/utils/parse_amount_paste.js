@@ -23,6 +23,10 @@ const GROUPED_NUMBER = /^([+-]?)(\d[\d.,\u0020\u00a0\u202f]*)$/
 // is grouping), while this marks every shape a hint should settle.
 const AMBIGUOUS_SEPARATOR = /^[^.,]*[.,]\d{3}$/
 
+// A zero-decimal currency has no decimal point, so a pasted amount must be a
+// whole number with optional groups of three using one repeated separator.
+const ZERO_DECIMAL_GROUPED = /^\d+$|^\d{1,3}(?:([.,\s])\d{3})(?:\1\d{3})*$/
+
 const stripCurrency = (value) =>
   value
     .replace(new RegExp(`^${CURRENCY_SYMBOL}\\s*`), "")
@@ -72,13 +76,17 @@ export default function parseAmountPaste(text, options = {}) {
   // A zero-decimal currency has no decimal point, so every separator (and
   // grouping space) is thousands grouping: "150.000.000" is 150000000, not
   // 150. The hint path below would otherwise read the last dot as a decimal.
-  const parsed =
-    precision === 0
-      ? Number.parseFloat(match[2].replace(/[.,\s]/g, ""))
-      : parseLocaleFloat(
-          match[2],
-          AMBIGUOUS_SEPARATOR.test(match[2]) ? { separator } : {},
-        )
+  // Reject a decimal-bearing paste ("150.000,00") rather than multiplying it.
+  let parsed
+  if (precision === 0) {
+    if (!ZERO_DECIMAL_GROUPED.test(match[2])) return null
+    parsed = Number.parseFloat(match[2].replace(/[.,\s]/g, ""))
+  } else {
+    parsed = parseLocaleFloat(
+      match[2],
+      AMBIGUOUS_SEPARATOR.test(match[2]) ? { separator } : {},
+    )
+  }
   if (!Number.isFinite(parsed)) return null
 
   return negative ? -Math.abs(parsed) : parsed
