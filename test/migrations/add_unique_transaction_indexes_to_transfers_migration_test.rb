@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require Rails.root.join("db/migrate/20261120080000_add_unique_transaction_indexes_to_transfers")
+require Rails.root.join("db/migrate/20261122060000_add_unique_transaction_indexes_to_transfers")
 
 # The index swap builds concurrently, which cannot run inside a transaction, so
 # these tests commit their DDL and put the schema's index back afterwards.
