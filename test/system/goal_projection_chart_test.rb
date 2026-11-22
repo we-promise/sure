@@ -18,10 +18,11 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       preferences: (@user.preferences || {}).merge("preview_features_enabled" => true),
       show_ai_sidebar: false
     )
-    # Stays on TODAY until each test's own travel_to: a request the signed-in
-    # page makes at the real date would find a session last touched on TODAY,
-    # expire it once TODAY is Session::INACTIVITY_TIMEOUT behind, and log out.
-    travel_to TODAY
+    # Sign in on the real clock. A session dated TODAY is idle past
+    # Session::INACTIVITY_TIMEOUT by the real clock, so any request the browser
+    # makes between travel_to blocks would end it and land on the login page.
+    # TODAY is in the past, so a session from the real clock never looks idle
+    # inside travel_to(TODAY).
     sign_in @user
   end
 
@@ -93,7 +94,7 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
 
   test "a window of daily ticks keeps the label of every month it covers" do
     travel_to Date.new(2027, 1, 25) do
-      # The setup session is three months old by now.
+      # By this date the setup session can be idle past the timeout.
       sign_in @user
       visit_goal(target: 10_000, target_date: Date.new(2027, 2, 1))
       resize_chart(428)
@@ -149,6 +150,10 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
   # draws a halo'd shortfall label beside the halo'd target label.
   test "in the dark theme every halo and ring matches the card" do
     @user.update!(theme: "dark")
+    # A request on the real clock, between the setup sign-in and travel_to:
+    # the setup session must still be live for it.
+    visit root_path
+    assert_no_current_path new_session_path
     travel_to TODAY do
       visit_goal(target: 10_000, saved: 3_000, pace: 200)
       assert_selector "html[data-theme='dark']"
