@@ -857,8 +857,10 @@ class InvestmentStatement
     # than portfolio_value: Account#balance can lag the holdings (a stale zero)
     # or fall below them (margin, an unsettled buy) and push a weight past
     # 100%. Account cash is positive only, so the denominator is never below
-    # the holdings. It equals portfolio_value unless an account's balance is
-    # below its holdings.
+    # the holdings. The weights are shares of the valued portfolio: it equals
+    # portfolio_value unless an account's balance is below its holdings, and
+    # falls below it when an account holds an unrated position, whose value
+    # and the account's cash are both left out.
     def weight_denominator(holdings_total)
       holdings_total + account_cash_total
     end
