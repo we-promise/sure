@@ -54,7 +54,7 @@ class Ai::GenerationJob < ApplicationJob
       end
       # Only once committed: a deadlock in the step retries the whole job, which would sample again.
       Ai::Shadow.enqueue(generation, result)
-      enqueue_next(next_job) unless last
+      enqueue_next if !last && become(next_job)
     end
   rescue StepTaken
     Rails.logger.info("[Ai::GenerationJob] #{feature} step #{@step} was committed by another copy; stopping")
@@ -86,27 +86,34 @@ class Ai::GenerationJob < ApplicationJob
     Rails.logger.info("[Ai::GenerationJob] #{arguments.first} gave up: #{error.class.name.demodulize} #{error.message.truncate(200)}")
     return if requester.nil?
 
-    ActiveRecord::Base.transaction do
-      requester.ai_failed(error) if end_run(@committed ? @step + 1 : @step)
-    end
+    ActiveRecord::Base.transaction { end_run { requester.ai_failed(error) } }
   end
 
   private
     # One transaction claims this step, runs the block (the batch's apply) and saves the next job
     # the block returns or, on the last step, ends the run. Returns the block's value.
     def commit_step(last:)
-      value = ActiveRecord::Base.transaction do
-        claimed = last ? end_run(@step) : runs.where(step: @step).update_all(step: @step + 1, updated_at: Time.current).positive?
-        raise StepTaken unless claimed
+      ActiveRecord::Base.transaction do
+        if last
+          raise StepTaken unless end_run { yield }
+        else
+          raise StepTaken unless runs.where(step: @step).update_all(step: @step + 1, updated_at: Time.current).positive?
 
-        yield.tap { |next_job| runs.update_all(next_job:) unless last }
+          yield.tap { |next_job| runs.update_all(next_job:) }
+        end
       end
-      @committed = true
-      value
     end
 
-    # Deletes the run, its items with it, if it's still at `step`: whether this job ended it.
-    def end_run(step) = runs.where(step:).delete_all.positive?
+    # If the run is still at this job's step: locks it, so no other copy can end it, runs the
+    # block (the requester hearing the end, which may read the window's items) and deletes the run
+    # with its items. Returns whether it ended the run.
+    def end_run
+      return false unless runs.lock.find_by(step: @step)
+
+      yield
+      runs.delete_all
+      true
+    end
 
     def runs = Ai::GenerationRun.where(id: @window.run.id)
 
@@ -117,14 +124,20 @@ class Ai::GenerationJob < ApplicationJob
       run = @window.run
       return unless run.step == @step + 1 && run.next_job
 
-      @committed = true
-      enqueue_next(run.next_job.symbolize_keys)
+      enqueue_next if become(run.next_job.deep_symbolize_keys)
+    end
+
+    # From here the job stands for the step it queues, so giving up releases that step's window
+    # and the ids after it, not this step's, which committed. Returns the new requester.
+    def become(next_job)
+      self.arguments = [ arguments.first, next_job[:args], next_job[:applied], next_job[:answered_before] ]
+      remove_instance_variable(:@requester)
+      requester
     end
 
     # An enqueue that fails returns false rather than raising, and would leave the requester waiting.
-    def enqueue_next(job)
-      queued = self.class.perform_later(arguments.first, job[:args].to_h.symbolize_keys, job[:applied], job[:answered_before])
-      raise ActiveJob::EnqueueError, "the next batch couldn't be queued" unless queued
+    def enqueue_next
+      raise ActiveJob::EnqueueError, "the next batch couldn't be queued" unless self.class.perform_later(*arguments)
     end
 
     # Inside commit_step, which has ended the run.

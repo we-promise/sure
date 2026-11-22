@@ -323,6 +323,30 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     RuleRun.define_method(:fail_job!, real_fail_job) if real_fail_job
   end
 
+  test "a replay whose saved next job can't be queued releases the rest of the run once, not its own committed batch" do
+    use_ai_model_settings(batch_size: 1)
+    ids = 3.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
+                               transactions_queued: 3, executed_at: Time.current)
+    rule_run.await_ai!(3)   # this action's transactions
+    rule_run.await_ai!(2)   # another AI action on the same run, not run yet
+    stub_ai(:detect_merchants) do |request|
+      batch = request.schema.dig(:properties, :merchants, :items, :properties, :transaction_id, :enum)
+      { merchants: batch.map { { transaction_id: _1, business_name: "Shop", business_url: "shop.example" } } }
+    end
+    Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ids, family: @family, rule_run_id: rule_run.id))
+    first = enqueued_jobs.shift.stringify_keys
+    ActiveJob::Base.execute(first)   # step 0 commits one transaction; its next job is lost with the worker
+    enqueued_jobs.clear
+    assert_equal 4, rule_run.reload.transactions_awaiting_ai
+
+    Ai::GenerationJob.stubs(:perform_later).returns(false)
+    ActiveJob::Base.execute(first)   # the replay can't queue step 1 either, so it gives up for it
+
+    assert_equal [ 2, 1, "failed" ], rule_run.reload.values_at(:transactions_awaiting_ai, :pending_jobs_count, :status)
+    assert_equal 0, Ai::GenerationRun.count
+  end
+
   test "a batch whose progress can't be recorded is rolled back, so its retry counts every change" do
     txn = create_transaction(account: @account, name: "McDonalds").transaction
     rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
