@@ -1,4 +1,5 @@
 class Import::CleansController < ApplicationController
+  include ViewableImports
   layout "imports"
 
   before_action :set_import
@@ -20,6 +21,6 @@ class Import::CleansController < ApplicationController
 
   private
     def set_import
-      @import = Current.family.imports.find(params[:import_id])
+      @import = viewable_imports.find(params[:import_id])
     end
 end

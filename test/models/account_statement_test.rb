@@ -1222,6 +1222,29 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal [ march, start_only, end_only, unread ], @account.account_statements.by_period.to_a
   end
 
+  test "viewable_by lists exactly the statements viewable_by? accepts" do
+    guest = @family.users.create!(first_name: "Guest", last_name: "Viewer", email: "guest-#{SecureRandom.hex(4)}@example.com",
+                                  password: "password", role: "guest", onboarded_at: Time.current)
+    accounts(:credit_card).share_with!(guest)
+    statements = [ accounts(:investment), accounts(:depository), accounts(:credit_card), nil ].each_with_index.map do |account, index|
+      create_statement(account: account, month: Date.new(2024, index + 1, 1), content: "viewable-#{index}")
+    end
+    other_family = families(:empty)
+    statements << AccountStatement.create_from_upload!(
+      family: other_family,
+      account: nil,
+      file: uploaded_file(filename: "other.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\nother\n")
+    )
+
+    [ users(:family_admin), users(:family_member), guest, users(:empty) ].each do |user|
+      expected = statements.select { |statement| statement.viewable_by?(user) }.map(&:id).sort
+      actual = AccountStatement.viewable_by(user).where(id: statements.map(&:id)).pluck(:id).sort
+
+      assert_equal expected, actual, "for #{user.role} #{user.email}"
+    end
+    assert_equal [ statements[2].id ], AccountStatement.viewable_by(guest).where(id: statements.map(&:id)).pluck(:id)
+  end
+
   private
 
     def upload_card_statement(account:, text: CARD_STATEMENT_TEXT)

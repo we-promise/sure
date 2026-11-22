@@ -1,4 +1,5 @@
 class Import::QifCategorySelectionsController < ApplicationController
+  include ViewableImports
   include ImportGuestGuardable
 
   layout "imports"
@@ -82,7 +83,7 @@ class Import::QifCategorySelectionsController < ApplicationController
   private
 
     def set_import
-      @import = Current.family.imports.find(params[:import_id])
+      @import = viewable_imports.find(params[:import_id])
 
       unless @import.is_a?(QifImport)
         redirect_to imports_path and return

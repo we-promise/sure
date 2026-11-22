@@ -90,6 +90,13 @@ class Import < ApplicationRecord
 
   scope :ordered, -> { order(created_at: :desc) }
   scope :ordered_by_sequence, -> { order(:sequence, :created_at) }
+  # The imports +user+ may view. A statement-backed import is as private as its
+  # statement; any other import is visible to the whole family.
+  scope :viewable_by, ->(user) {
+    family_imports = where(family_id: user.family_id)
+    family_imports.where(account_statement_id: nil)
+      .or(family_imports.where(account_statement_id: AccountStatement.viewable_by(user).select(:id)))
+  }
 
   enum :status, {
     pending: "pending",
@@ -494,10 +501,8 @@ class Import < ApplicationRecord
     FAMILY_CONFIG_TYPES.include?(type)
   end
 
-  # A statement-backed import is as private as its statement; any other import
-  # is visible to the whole family.
   def viewable_by?(user)
-    account_statement.blank? || account_statement.viewable_by?(user)
+    user.present? && self.class.viewable_by(user).exists?(id)
   end
 
   # Guests may view family configuration but not change it, so they may only
