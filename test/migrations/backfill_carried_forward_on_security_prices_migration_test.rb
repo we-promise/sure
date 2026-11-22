@@ -14,10 +14,14 @@ class BackfillCarriedForwardOnSecurityPricesMigrationTest < ActiveSupport::TestC
     rows = (0..2).map { |day| price(FRIDAY + day.days, 100, provisional: true) }
     migration = BackfillCarriedForwardOnSecurityPrices.new
     migration.stubs(:batch_size).returns(1)
+    updates = 0
+    migration.define_singleton_method(:exec_update) { |*args| updates += 1; super(*args) }
 
     ActiveRecord::Migration.suppress_messages { migration.up }
 
     assert_equal [ true ] * 3, rows.map { |p| p.reload.carried_forward }
+    # One update per row, then the empty one that ends the loop.
+    assert_equal 4, updates
   end
 
   # A weekend row repeating Friday may be a pegged or crypto quote.
