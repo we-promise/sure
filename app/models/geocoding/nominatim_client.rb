@@ -1,12 +1,15 @@
 require "net/http"
 require "json"
+require "digest"
 
 class Geocoding::NominatimClient
+  extend SslConfigurable
+
   BASE_URL = "https://nominatim.openstreetmap.org"
   USER_AGENT = "Sure (self-hosted personal finance app; https://github.com/we-promise/sure)"
   CACHE_EXPIRY = 1.day
 
-  Result = Struct.new(:lat, :lng, :display_name, keyword_init: true)
+  Result = Data.define(:lat, :lng, :display_name)
 
   class RequestFailed < StandardError; end
 
@@ -16,7 +19,7 @@ class Geocoding::NominatimClient
 
     Rails.cache.fetch(cache_key("search", query), expires_in: CACHE_EXPIRY) do
       response = get("/search", q: query, format: "json", limit: 5)
-      Array(response).map { |place| to_result(place) }
+      response.is_a?(Array) ? response.map { |place| to_result(place) } : []
     end
   end
 
@@ -39,7 +42,7 @@ class Geocoding::NominatimClient
     end
 
     def cache_key(action, value)
-      "geocoding/nominatim/#{action}/#{value}"
+      "geocoding/nominatim/#{action}/#{Digest::SHA256.hexdigest(value.to_s)}"
     end
 
     def get(path, params)
@@ -49,7 +52,14 @@ class Geocoding::NominatimClient
       request = Net::HTTP::Get.new(uri)
       request["User-Agent"] = USER_AGENT
 
-      response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(request) }
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      http.open_timeout = 5
+      http.read_timeout = 10
+      http.verify_mode = self.class.net_http_verify_mode
+      http.ca_file = self.class.ssl_ca_file if self.class.ssl_ca_file.present?
+
+      response = http.start { |conn| conn.request(request) }
 
       raise RequestFailed, "Nominatim returned #{response.code}" unless response.is_a?(Net::HTTPSuccess)
 

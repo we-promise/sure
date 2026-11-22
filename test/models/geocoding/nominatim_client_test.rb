@@ -58,4 +58,13 @@ class Geocoding::NominatimClientTest < ActiveSupport::TestCase
     results = @client.search("Malaga, Spain")
     assert_not_empty results
   end
+
+  test "search raises RequestFailed on a non-2xx response" do
+    stub_request(:get, /nominatim.openstreetmap.org\/search/).to_return(status: 500, body: "")
+
+    error = assert_raises(Geocoding::NominatimClient::RequestFailed) do
+      @client.search("anywhere")
+    end
+    assert_match(/500/, error.message)
+  end
 end
