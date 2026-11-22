@@ -2460,6 +2460,34 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert departure_day.contribution_rate_missing, "the departing value the line counts converted to nothing"
   end
 
+  # A departure reports two things apart: its cut-off row was valued at 1:1
+  # (the day's figures are unreliable) and its own currency had no rate (the
+  # composition_flow the contributions line adds converted to nothing).
+  test "a departure at 1:1 with no rate flags the day and the contributions line apart" do
+    eur = create_portfolio_account(family: @family, currency: "EUR")
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    cut_off = lay_balance account: eur, date: @day_one, opening: 500, closing: 500, holdings_valued_at_parity: true
+
+    departure_day = lambda do
+      Portfolio::DailyReturns.new(
+        account_ids: [ @account.id, eur.id ],
+        currency: @family.currency,
+        period: Period.custom(start_date: @day_one, end_date: @day_two),
+        active_until_dates: { eur.id => @day_one }
+      ).rows.last
+    end
+
+    flagged = departure_day.call
+    assert flagged.rate_missing, "the value carried out was built at 1:1"
+    assert flagged.contribution_rate_missing, "the value carried out converted to nothing"
+
+    cut_off.update_columns(holdings_valued_at_parity: false)
+    unflagged = departure_day.call
+    assert_not unflagged.rate_missing, "with no 1:1 mark nothing else flags the departure day"
+    assert unflagged.contribution_rate_missing, "the missing rate still leaves the line short"
+  end
+
   # An empty account brings nothing in or out, so with no rate there is no
   # value left unconverted and the line is complete.
   test "an empty arrival with no rate leaves contributions complete" do
