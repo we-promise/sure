@@ -74,6 +74,22 @@ class AccountBalanceTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, body["items"].count { |item| item["date"] == 1.day.ago.to_date.iso8601 }
   end
 
+  test "at the cap, keeps the last day when the next row is from an older day" do
+    @admin.family.accounts.where.not(owner: nil).find_each { |account| account.update_column(:status, "disabled") }
+    account = @admin.family.accounts.create!(name: "Cap test", owner: @admin, currency: "USD", balance: 0, accountable: Depository.new)
+    complete_day = 1.day.ago.to_date
+    3.times { |i| create_transaction(account: account, amount: 1 + i, date: complete_day, name: "Day #{i}") }
+    create_transaction(account: account, amount: 9, date: 3.days.ago.to_date, name: "Older")
+
+    sign_in @admin
+    with_limit(3) { get dashboard_account_balance_transactions_path, params: { start_date: 5.days.ago.to_date.iso8601, end_date: Date.current.iso8601 } }
+
+    body = response.parsed_body
+    assert body["truncated"]
+    assert_equal 3, body["items"].size, "the cap holds the whole day"
+    assert_equal complete_day.iso8601, body["covered_from"]
+  end
+
   private
     def api_key
       ApiKey.create!(user: @admin, name: "Lane Read", scopes: [ "read" ], display_key: "test_ro_#{SecureRandom.hex(8)}", source: "mobile")

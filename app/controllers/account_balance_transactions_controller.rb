@@ -1,8 +1,8 @@
 # Transactions for the Account Balances widget's transaction lane, loaded
 # only when the viewer turns the lane on. Newest first and capped: when the
-# cap cuts the range, the oldest returned day may be incomplete, so it is
-# dropped and covered_from says from which day the items are complete. The
-# widget fetches older days when the chart is zoomed into them.
+# cap cuts through a day, that day is dropped, and covered_from says from
+# which day the items are complete. The widget fetches older days when the
+# chart is zoomed into them.
 class AccountBalanceTransactionsController < ApplicationController
   LIMIT = 5000
 
@@ -22,9 +22,16 @@ class AccountBalanceTransactionsController < ApplicationController
     truncated = entries.size > LIMIT
     covered_from = start_date
     if truncated
-      oldest = entries[LIMIT - 1].date
-      entries = entries.first(LIMIT).reject { |entry| entry.date == oldest }
-      covered_from = oldest + 1
+      # The lookahead row tells whether the last kept day continues past the
+      # cap: if it is from an older day, the last kept day is complete.
+      last_kept, lookahead = entries[LIMIT - 1].date, entries[LIMIT].date
+      entries = entries.first(LIMIT)
+      if lookahead == last_kept
+        entries = entries.reject { |entry| entry.date == last_kept }
+        covered_from = last_kept + 1
+      else
+        covered_from = last_kept
+      end
     end
 
     currency = Current.family.currency
