@@ -68,6 +68,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     # In incremental mode: load the persisted end-of-day balance for window_start_date - 1
     # from the DB and use that as the seed. Falls back to full recalculation when:
     #   - No prior balance record exists in the DB, or
+    #   - The account is a loan whose principal is replayed from origination, or
     #   - The prior balance has a non-zero non-cash component (e.g. investment holdings)
     #     because Holding::Materializer always does a full recalc, which could make the
     #     persisted non-cash seed stale relative to freshly-computed holding prices.
@@ -75,6 +76,14 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
       if @window_start_date.present?
         if multi_currency_account?
           Rails.logger.info("Account has multi-currency entries or is foreign, falling back to full recalculation")
+          @fell_back = true
+          return opening_starting_balances
+        end
+
+        # A windowed cache would hand the loan replay only the window's
+        # entries, so it would charge interest the earlier payments covered.
+        if loan_principal_replayed?
+          Rails.logger.info("Loan principal is replayed from origination, falling back to full recalculation")
           @fell_back = true
           return opening_starting_balances
         end
