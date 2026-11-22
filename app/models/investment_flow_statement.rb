@@ -67,17 +67,20 @@ class InvestmentFlowStatement
         .or(matched_flow(base, label: "Withdrawal", leg: :outflow_transaction_id, counterpart: :inflow_transaction))
     end
 
+    # A part of a split whose parent is the leg counts too: editing a split after its match is
+    # confirmed recreates the parts as funds_movement, and the parent itself is excluded.
     def matched_flow(base, label:, leg:, counterpart:)
-      base
+      legs = Transfer
+        .joins(counterpart => { entry: :account })
+        .where(accounts: { family_id: family.id })
+        .where.not(accounts: { accountable_type: INVESTMENT_ACCOUNT_TYPES })
+        .select(leg)
+      flows = base
         .where(kind: "funds_movement")
         .where("transactions.investment_activity_label = ?", label)
         .where(entries: { account_id: family.accounts.where(accountable_type: INVESTMENT_ACCOUNT_TYPES).select(:id) })
-        .where(
-          id: Transfer
-            .joins(counterpart => { entry: :account })
-            .where(accounts: { family_id: family.id })
-            .where.not(accounts: { accountable_type: INVESTMENT_ACCOUNT_TYPES })
-            .select(leg)
-        )
+
+      flows.where(id: legs)
+        .or(flows.where(entries: { parent_entry_id: Entry.where(entryable_type: "Transaction", entryable_id: legs).select(:id) }))
     end
 end

@@ -111,6 +111,30 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_equal before, after
   end
 
+  test "a split contribution confirmed as a transfer and then edited still counts once" do
+    family = families(:dylan_family)
+    period = Period.custom(start_date: Date.current, end_date: Date.current)
+    inflow = accounts(:investment).entries.create!(
+      name: "Contribution", amount: -250, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "standard", investment_activity_label: "Contribution")
+    )
+    accounts(:depository).entries.create!(
+      name: "Transfer out", amount: 250, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "standard")
+    )
+    family.auto_match_transfers!
+    transfer = inflow.transaction.reload.transfer
+    assert transfer&.pending?, "expected a proposed match"
+
+    inflow.split!([ { name: "Part 1", amount: -150 }, { name: "Part 2", amount: -100 } ])
+    transfer.confirm!
+    assert inflow.reload.resplit!([ { name: "Part 1", amount: -200 }, { name: "Part 2", amount: -50 } ])
+    assert_equal %w[funds_movement funds_movement], Entry.where(parent_entry_id: inflow.id).map { _1.transaction.kind }
+
+    totals = InvestmentFlowStatement.new(family).period_totals(period: period)
+    assert_equal Money.new(250, "USD"), totals.contributions
+  end
+
   test "movements between investment and crypto accounts are not contributions" do
     family = families(:dylan_family)
     period = Period.custom(start_date: Date.current, end_date: Date.current)
