@@ -90,10 +90,12 @@ class Provider::Mfapi < Provider
       historical_data = fetch_security_prices(symbol:, exchange_operating_mic:, start_date: date - 7.days, end_date: date)
 
       raise historical_data.error if historical_data.error.present?
-      raise InvalidSecurityPriceError, "No NAV found for scheme #{symbol} on or before #{date}" if historical_data.data.blank?
 
       # Find exact date or closest previous
-      historical_data.data.select { |p| p.date <= date }.max_by(&:date) || historical_data.data.first
+      price = historical_data.data.select { |p| p.date <= date }.max_by(&:date)
+      raise InvalidSecurityPriceError, "No NAV found for scheme #{symbol} on or before #{date}" if price.nil?
+
+      price
     end
   end
 

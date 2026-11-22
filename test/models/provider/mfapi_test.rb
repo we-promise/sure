@@ -41,4 +41,92 @@ class Provider::MfapiTest < ActiveSupport::TestCase
     assert_requested search, times: 4
     assert_kind_of Faraday::TimeoutError, errors.last
   end
+
+  test "fetch_security_price with only later NAVs returns a failed response" do
+    provider = Provider::Mfapi.new
+    provider.stubs(:throttle_request)
+    stub_nav_response(
+      symbol: "119551",
+      start_date: Date.new(2024, 2, 29),
+      end_date: Date.new(2024, 3, 7),
+      data: [
+        { "date" => "09-03-2024", "nav" => "1660.00000" },
+        { "date" => "08-03-2024", "nav" => "1650.00000" }
+      ]
+    )
+
+    response = provider.fetch_security_price(symbol: "119551", exchange_operating_mic: "XBOM", date: Date.new(2024, 3, 7))
+
+    assert_not response.success?
+    assert_equal "No NAV found for scheme 119551 on or before 2024-03-07", response.error.message
+  end
+
+  test "fetch_security_price returns the nearest NAV on or before the date" do
+    provider = Provider::Mfapi.new
+    provider.stubs(:throttle_request)
+    stub_nav_response(
+      symbol: "119551",
+      start_date: Date.new(2024, 2, 29),
+      end_date: Date.new(2024, 3, 7),
+      data: [
+        { "date" => "09-03-2024", "nav" => "1660.00000" },
+        { "date" => "06-03-2024", "nav" => "1640.00000" },
+        { "date" => "05-03-2024", "nav" => "1630.00000" }
+      ]
+    )
+
+    response = provider.fetch_security_price(symbol: "119551", exchange_operating_mic: "XBOM", date: Date.new(2024, 3, 7))
+
+    assert response.success?
+    assert_equal Date.new(2024, 3, 6), response.data.date
+    assert_equal 1640.0, response.data.price
+  end
+
+  test "fetch_security_price prefers a NAV dated on the requested day over a later one" do
+    provider = Provider::Mfapi.new
+    provider.stubs(:throttle_request)
+    stub_nav_response(
+      symbol: "119551",
+      start_date: Date.new(2024, 2, 29),
+      end_date: Date.new(2024, 3, 7),
+      data: [
+        { "date" => "09-03-2024", "nav" => "1660.00000" },
+        { "date" => "07-03-2024", "nav" => "1650.00000" }
+      ]
+    )
+
+    response = provider.fetch_security_price(symbol: "119551", exchange_operating_mic: "XBOM", date: Date.new(2024, 3, 7))
+
+    assert response.success?
+    assert_equal Date.new(2024, 3, 7), response.data.date
+    assert_equal 1650.0, response.data.price
+  end
+
+  test "fetch_security_price with an empty window returns a failed response" do
+    provider = Provider::Mfapi.new
+    provider.stubs(:throttle_request)
+    stub_nav_response(
+      symbol: "119551",
+      start_date: Date.new(2024, 2, 29),
+      end_date: Date.new(2024, 3, 7),
+      data: []
+    )
+
+    response = provider.fetch_security_price(symbol: "119551", exchange_operating_mic: "XBOM", date: Date.new(2024, 3, 7))
+
+    assert_not response.success?
+    assert_equal "No NAV found for scheme 119551 on or before 2024-03-07", response.error.message
+  end
+
+  private
+
+    def stub_nav_response(symbol:, start_date:, end_date:, data:)
+      stub_request(:get, "https://api.mfapi.in/mf/#{symbol}")
+        .with(query: { "startDate" => start_date.to_s, "endDate" => end_date.to_s })
+        .to_return(
+          status: 200,
+          body: { data: data }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+    end
 end
