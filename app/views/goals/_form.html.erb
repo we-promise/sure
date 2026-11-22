@@ -6,7 +6,9 @@
      came back empty and picking "Reserve to maintain" never hid the date. %>
 <div data-controller="goal-form goal-kind"
      data-goal-form-currency-value="<%= goal.currency.presence || Current.family.primary_currency_code %>"
+     data-goal-form-locale-value="<%= I18n.locale %>"
      data-goal-form-require-account-value="<%= !goal.persisted? %>"
+     data-goal-form-suggested-accounts-value="<%= t("goals.goal_card.accounts").to_json %>"
      data-goal-form-suggested-with-date-value="<%= t("goals.form.suggested_with_date") %>"
      data-goal-form-suggested-no-date-value="<%= t("goals.form.suggested_no_date") %>"
      data-goal-kind-amount-label-value="<%= t("goals.form.fields.target_amount") %>"

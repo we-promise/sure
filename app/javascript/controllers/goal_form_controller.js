@@ -26,8 +26,10 @@ export default class extends Controller {
 
   static values = {
     currency: { type: String, default: "USD" },
+    locale: { type: String, default: "en" },
     suggestedWithDate: { type: String, default: "Save {monthly}/mo across {accounts} to hit it on time." },
     suggestedNoDate: { type: String, default: "Set a target date to project a finish line." },
+    suggestedAccounts: { type: Object, default: { one: "1 account", other: "%{count} accounts" } },
     // Only the create form must pick an account. On edit the checkboxes are
     // populated from visible accounts only, so a goal backed by a now-hidden
     // account renders none — and the controller preserves existing links when
@@ -171,7 +173,7 @@ export default class extends Controller {
         return;
       }
       const perMonth = Math.ceil(amount / months);
-      const accountLabel = `${checkedCount} ${checkedCount === 1 ? "account" : "accounts"}`;
+      const accountLabel = this.#accountLabel(checkedCount);
       text = this.suggestedWithDateValue
         .replace("{monthly}", this.#money(perMonth))
         .replace("{accounts}", accountLabel);
@@ -215,6 +217,13 @@ export default class extends Controller {
 
     const precision = precisionFromStep(this.amountInputTarget.step);
     return precision === null ? result : Number(result.toFixed(precision));
+  }
+
+  #accountLabel(count) {
+    const translations = this.suggestedAccountsValue || {};
+    const category = new Intl.PluralRules(this.localeValue || undefined).select(count);
+    const template = translations[category] || translations.other || "%{count}";
+    return template.replace("%{count}", count);
   }
 
   #money(value) {
