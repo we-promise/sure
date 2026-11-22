@@ -271,6 +271,28 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_equal [ "18000", "18000" ], options.map { |option| option.last["data-price-cents"].to_s }
   end
 
+  # Regression: a quote worth less than a cent after conversion (1 JPY is about
+  # 0.0066 USD) was truncated to 0 cents, so the price check divided by zero
+  # and warned about a mismatch even when the entered price matched the quote.
+  test "the convert-to-trade picker keeps fractional cents of a converted quote" do
+    security = securities(:aapl)
+    security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 1, currency: "JPY", date: Date.current))
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(ExchangeRate.new(rate: 0.0066))
+
+    options = convert_to_trade_security_options([ security ], "USD")
+
+    assert_in_delta 0.66, options.first.last["data-price-cents"], 0.0001
+  end
+
+  test "the convert-to-trade picker omits the price check for a zero quote" do
+    security = securities(:aapl)
+    security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 0, currency: "USD", date: Date.current))
+
+    options = convert_to_trade_security_options([ security ], "USD")
+
+    assert_nil options.first.last["data-price-cents"]
+  end
+
   test "investment_activity_label_name translates the stored label" do
     I18n.with_locale(:ru) do
       assert_equal "Перевод", investment_activity_label_name("Transfer")
