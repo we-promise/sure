@@ -6,6 +6,8 @@ zh-TW:
       enable_label: 啟用自動配對
       enable_description: 每次同步時自動偵測並建議帳戶之間的轉帳配對。
       admin_only: 只有管理員可以變更此設定。
+      confirm_label: "確認配對後再將其計為轉帳"
+      confirm_description: "開啟時，建議的配對在你確認之前仍計入收入與支出。關閉時，建議會立即從收入與支出中排除，拒絕某筆建議會將其重新計入。"
     update_settings:
       settings_updated: 自動配對設定已更新
     bulk_update:

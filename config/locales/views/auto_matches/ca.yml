@@ -6,6 +6,8 @@ ca:
       enable_label: Activa la coincidència automàtica
       enable_description: Detecta i suggereix automàticament coincidències de transferències entre comptes a cada sincronització.
       admin_only: Només els administradors poden canviar aquesta configuració.
+      confirm_label: "Confirma les coincidències abans de comptar-les com a transferències"
+      confirm_description: "Si està activat, una coincidència suggerida continua comptant com a ingrés i despesa fins que la confirmis. Si està desactivat, els suggeriments s'exclouen de seguida dels ingressos i les despeses, i en rebutjar-ne un torna a comptar."
     update_settings:
       settings_updated: S'ha actualitzat la configuració de coincidència automàtica
     bulk_update:

@@ -6,6 +6,8 @@ hu:
       enable_label: Automatikus egyeztetés engedélyezése
       enable_description: Minden szinkronizáláskor automatikusan felismeri és javasolja az átutalások egyeztetését a számlák között.
       admin_only: Ezt a beállítást csak adminisztrátorok módosíthatják.
+      confirm_label: "Egyezések megerősítése, mielőtt átutalásnak számítanak"
+      confirm_description: "Ha be van kapcsolva, a javasolt egyezés bevételnek és kiadásnak számít, amíg meg nem erősíted. Ha ki van kapcsolva, a javaslatok azonnal kikerülnek a bevételekből és kiadásokból, egy javaslat elutasítása pedig visszahelyezi."
     update_settings:
       settings_updated: Az automatikus egyeztetés beállításai frissültek
     bulk_update:

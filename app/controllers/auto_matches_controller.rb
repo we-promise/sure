@@ -113,7 +113,13 @@ class AutoMatchesController < ApplicationController
       # isn't one, even when those kinds equal the ones a match would give, so
       # the toggle leaves it in place.
       Current.family.pending_transfer_matches.find_each do |transfer|
-        transfer.destroy! if transfer.match_suggestion?
+        # Locked and re-read, so a match confirmed since the batch was loaded
+        # keeps its transfer and kinds.
+        transfer.with_lock do
+          transfer.destroy! if transfer.match_suggestion?
+        end
+      rescue ActiveRecord::RecordNotFound
+        # Another request already removed it.
       end
     end
 

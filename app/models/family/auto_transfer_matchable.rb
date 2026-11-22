@@ -194,7 +194,7 @@ module Family::AutoTransferMatchable
 
           if required
             transfer.reset_kinds! if transfer.match_kinds_applied?
-          elsif transfer.standard_legs?
+          elsif transfer.standard_legs? && transfer.match_may_set_kinds?
             transfer.apply_kinds!
           end
         end

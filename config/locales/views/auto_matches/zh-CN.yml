@@ -6,6 +6,8 @@ zh-CN:
       enable_label: 启用自动匹配
       enable_description: 每次同步时自动检测并建议账户之间的转账匹配。
       admin_only: 只有管理员可以更改此设置。
+      confirm_label: "确认匹配后再将其计为转账"
+      confirm_description: "开启时，建议的匹配在你确认之前仍计入收入和支出。关闭时，建议会立即从收入和支出中排除，拒绝某条建议会将其重新计入。"
     update_settings:
       settings_updated: 自动匹配设置已更新
     bulk_update:

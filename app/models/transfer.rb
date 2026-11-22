@@ -242,11 +242,12 @@ class Transfer < ApplicationRecord
   end
 
   # Whether the match may give the legs its kinds: each leg is standard or
-  # already a transfer of some kind (a provider marks many), so applying
-  # them overwrites no kind the user chose to count it differently (one_time).
+  # already a transfer of some kind (a provider marks many), and no leg has a
+  # kind the user set by hand (locked, e.g. one_time or loan_payment), so
+  # applying them overwrites no kind the user chose.
   def match_may_set_kinds?
     [ inflow_transaction, outflow_transaction ].all? do |transaction|
-      transaction.standard? || transaction.transfer?
+      !transaction.locked?(:kind) && (transaction.standard? || transaction.transfer?)
     end
   end
 

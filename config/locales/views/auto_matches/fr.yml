@@ -6,6 +6,8 @@ fr:
       enable_label: Activer le rapprochement automatique
       enable_description: Détecte et suggère automatiquement des rapprochements de virements entre comptes à chaque synchronisation.
       admin_only: Seuls les administrateurs peuvent modifier ce paramètre.
+      confirm_label: "Confirmer les rapprochements avant de les compter comme des virements"
+      confirm_description: "Si activé, un rapprochement suggéré compte toujours comme revenu et dépense jusqu'à ce que vous le confirmiez. Si désactivé, les suggestions sont aussitôt exclues des revenus et dépenses, et en rejeter une l'y réintègre."
     update_settings:
       settings_updated: Paramètres de rapprochement automatique mis à jour
     bulk_update:

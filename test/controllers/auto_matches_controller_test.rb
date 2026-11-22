@@ -249,6 +249,42 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "standard", inflow_entry.transaction.reload.kind
   end
 
+  test "update_settings disabling keeps a match confirmed after the cleanup batch was loaded" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    stale_transfer = outflow_entry.transaction.reload.transfer
+
+    # A concurrent request confirms the match after the batch was loaded.
+    Transfer.find(stale_transfer.id).confirm!
+    batch = mock("pending_transfer_matches")
+    batch.stubs(:find_each).yields(stale_transfer)
+    Family.any_instance.stubs(:pending_transfer_matches).returns(batch)
+
+    patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+
+    assert_redirected_to auto_matches_url
+    assert stale_transfer.reload.confirmed?
+    assert_equal "cc_payment", outflow_entry.transaction.reload.kind
+  end
+
+  test "update_settings disabling skips a match another request already removed" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    stale_transfer = outflow_entry.transaction.reload.transfer
+
+    Transfer.find(stale_transfer.id).destroy!
+    batch = mock("pending_transfer_matches")
+    batch.stubs(:find_each).yields(stale_transfer)
+    Family.any_instance.stubs(:pending_transfer_matches).returns(batch)
+
+    patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+
+    assert_redirected_to auto_matches_url
+    assert @family.reload.auto_match_transfers_disabled?
+  end
+
   test "update_settings requires confirmation and returns pending matches to their own kinds" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
     create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)

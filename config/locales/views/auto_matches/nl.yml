@@ -6,6 +6,8 @@ nl:
       enable_label: Automatische matching inschakelen
       enable_description: Detecteert en stelt automatisch overschrijvingsmatches tussen rekeningen voor bij elke synchronisatie.
       admin_only: Alleen beheerders kunnen deze instelling wijzigen.
+      confirm_label: "Matches bevestigen voordat ze als overschrijvingen tellen"
+      confirm_description: "Indien aan, telt een voorgestelde match als inkomsten en uitgaven totdat u deze bevestigt. Indien uit, worden voorstellen meteen uit inkomsten en uitgaven gehaald, en als u er een afwijst, telt deze weer mee."
     update_settings:
       settings_updated: Instellingen voor automatische matching bijgewerkt
     bulk_update:

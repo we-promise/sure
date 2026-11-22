@@ -6,6 +6,8 @@ ro:
       enable_label: Activează potrivirea automată
       enable_description: Detectează și sugerează automat potriviri de transferuri între conturi la fiecare sincronizare.
       admin_only: Doar administratorii pot modifica această setare.
+      confirm_label: "Confirmă potrivirile înainte de a le considera transferuri"
+      confirm_description: "Când este activat, o potrivire sugerată contează în continuare ca venit și cheltuială până când o confirmi. Când este dezactivat, sugestiile sunt excluse imediat din venituri și cheltuieli, iar respingerea uneia o readuce."
     update_settings:
       settings_updated: Setările de potrivire automată au fost actualizate
     bulk_update:

@@ -1127,6 +1127,9 @@ class Family::DataImporter
           transfer.status = transfer_status_for(data["status"])
           transfer.notes = data["notes"]
         end
+        # Read before the kinds are applied: updating the transfer resets it.
+        created = transfer.previously_new_record?
+
         if transfer.confirmed?
           apply_transfer_transaction_kinds!(transfer)
           # Restores a user's explicit choice over the destination's default kind.
@@ -1135,8 +1138,12 @@ class Family::DataImporter
           # A pending match takes its kinds as an auto-match would, unless the
           # family confirms matches first.
           transfer.apply_kinds!
+        elsif @family.require_transfer_match_confirmation? && truthy?(data["match_kinds_applied"])
+          # The legs arrived with the kinds the match gave them in the exporting
+          # family, but this family confirms matches first.
+          transfer.reset_kinds!
         end
-        increment_summary("Transfer", transfer.previously_new_record? ? :created : :updated)
+        increment_summary("Transfer", created ? :created : :updated)
       end
     end
 
