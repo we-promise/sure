@@ -393,13 +393,15 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a built body is kept for as many days as the page cache setting says" do
-    Setting.stubs(:page_cache_days).returns(30)
-    store = ActiveSupport::Cache::MemoryStore.new
-    Rails.stubs(:cache).returns(store)
-    store.stubs(:write).returns(true)
-    store.expects(:write).with(regexp_matches(/\Areports_body\//), anything, expires_in: 30.days).returns(true)
+    with_env_overrides PAGE_CACHE_DAYS: nil do
+      Setting.stubs(:page_cache_days).returns(30)
+      store = ActiveSupport::Cache::MemoryStore.new
+      Rails.stubs(:cache).returns(store)
+      store.stubs(:write).returns(true)
+      store.expects(:write).with(regexp_matches(/\Areports_body\//), anything, expires_in: 30.days).returns(true)
 
-    assert ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      assert ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+    end
   end
 
   test "after the data changes, the old build is served while a rebuild is queued" do

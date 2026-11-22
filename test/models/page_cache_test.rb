@@ -135,6 +135,20 @@ class PageCacheTest < ActiveSupport::TestCase
     end
   end
 
+  test "eviction leaves a page that was replaced after it was chosen" do
+    PageCache.write("page/a", "old", version: "v1", family: @family, user: @user)
+    chosen = PageCacheEntry.where(page_key: "page/a").pluck(:id, :page_key, :bytes, :last_used_at)
+
+    travel 1.minute do
+      PageCache.write("page/a", "replacement body", version: "v2", family: @family, user: @user)
+      PageCache.send(:forget_rows, chosen)
+
+      served = PageCache.serve("page/a", version: "v2", family: @family, user: @user, rebuild_later: -> { }) { flunk "kept" }
+      assert_equal "replacement body", served.body
+      assert PageCacheEntry.exists?(page_key: "page/a")
+    end
+  end
+
   test "a page the cache store refuses is served but not kept" do
     Rails.cache.stubs(:write).returns(false)
 

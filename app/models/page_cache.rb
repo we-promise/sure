@@ -214,9 +214,18 @@ class PageCache
       end
 
       def forget(entries)
-        entries.pluck(:id, :page_key).each_slice(500) do |rows|
-          Rails.cache.delete_multi(rows.map(&:last))
-          PageCacheEntry.where(id: rows.map(&:first)).delete_all
+        forget_rows(entries.pluck(:id, :page_key, :bytes, :last_used_at))
+      end
+
+      # Each page is dropped under its lock, and only if its entry is still the
+      # one chosen: a page replaced meanwhile keeps its new copy and its entry.
+      def forget_rows(rows)
+        rows.each do |id, key, bytes, last_used_at|
+          with_page_lock(key) do
+            next unless PageCacheEntry.where(id: id, bytes: bytes, last_used_at: last_used_at).delete_all.positive?
+
+            Rails.cache.delete(key)
+          end
         end
       end
   end
