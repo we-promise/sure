@@ -183,10 +183,20 @@ class RetirementPlan < ApplicationRecord
         annual_contribution: projection(as_of: as_of).annual_contribution,
         expected_annual_return: expected_annual_return,
         inflation_rate: inflation_rate,
-        streams: streams.map(&:to_simulation_stream),
+        streams: simulation_streams(as_of),
         birth_year: birth_year,
         end_age: end_age
       }
+    end
+
+    # Each stream in the family's currency. A stream with no rate into it is
+    # left out, as an account with none is left out of the asset total.
+    def simulation_streams(as_of)
+      streams.filter_map do |stream|
+        stream.to_simulation_stream(currency: user.family.currency, date: as_of)
+      rescue Money::ConversionError
+        nil
+      end
     end
 
     # Linked accounts when any the user picked can still fund the plan,

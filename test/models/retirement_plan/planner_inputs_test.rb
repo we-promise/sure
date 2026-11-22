@@ -314,6 +314,29 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("30000"), sim.rows.find { |r| r.year == 2040 }.withdrawal
   end
 
+  # A stream keeps the currency it was entered in. After the family changes
+  # its currency, the simulation converts the amount rather than reading
+  # 30,000 dollars as 30,000 euros.
+  test "a stream's amount is converted into the family's current currency" do
+    @plan.update!(inflation_rate: 0, end_age: 70, retirement_date: Date.new(2040, 1, 1))
+    stream = @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 30_000)
+    assert_equal "USD", stream.currency
+
+    @member.family.update_columns(currency: "EUR")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: AS_OF, rate: 0.5)
+
+    assert_equal BigDecimal("15000"), @plan.reload.simulation(as_of: AS_OF).rows.find { |r| r.year == 2040 }.withdrawal
+  end
+
+  test "a stream with no rate into the family's currency is left out of the simulation" do
+    @plan.update!(inflation_rate: 0, end_age: 70, retirement_date: Date.new(2040, 1, 1))
+    @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 30_000)
+    @plan.streams.create!(kind: "expense", name: "Rent", annual_amount: 1_000, currency: "EUR")
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    assert_equal BigDecimal("30000"), @plan.simulation(as_of: AS_OF).rows.find { |r| r.year == 2040 }.withdrawal
+  end
+
   test "without a birth year there is no simulation and no solution" do
     @plan.update!(birth_year: nil, retirement_date: Date.new(2040, 1, 1))
 

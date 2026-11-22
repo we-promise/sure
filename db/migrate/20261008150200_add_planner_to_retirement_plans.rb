@@ -35,6 +35,8 @@ class AddPlannerToRetirementPlans < ActiveRecord::Migration[8.1]
       t.string :kind, null: false
       t.string :name, null: false
       t.decimal :annual_amount, precision: 19, scale: 4, null: false
+      # The currency the amount was entered in: the family's at the time.
+      t.string :currency, null: false
       # Calendar years, inclusive. A blank start runs from today; a blank end
       # runs to the plan's end age.
       t.integer :start_year

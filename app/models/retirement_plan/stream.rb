@@ -13,7 +13,10 @@ class RetirementPlan::Stream < ApplicationRecord
   # user may have edited the stream since.
   belongs_to :account, optional: true
 
+  before_validation :default_currency, on: :create
+
   validates :name, presence: true
+  validates :currency, presence: true
   validates :kind, inclusion: { in: KINDS }
   validates :source, inclusion: { in: SOURCES }
   validates :annual_amount, numericality: { greater_than: 0 }
@@ -24,11 +27,20 @@ class RetirementPlan::Stream < ApplicationRecord
   # block an edit of its seeded repayment.
   validate :account_is_in_the_users_finances, if: :will_save_change_to_account_id?
 
-  def to_simulation_stream
-    RetirementPlan::Simulation::Stream.new(kind:, annual_amount:, start_year:, end_year:, indexed:)
+  # The amount in `currency` at the rate on `date`. Raises
+  # Money::ConversionError when there is no rate.
+  def to_simulation_stream(currency:, date:)
+    amount = Money.new(annual_amount, self.currency).exchange_to(currency, date: date).amount
+    RetirementPlan::Simulation::Stream.new(kind:, annual_amount: amount, start_year:, end_year:, indexed:)
   end
 
   private
+    # The family's currency when the stream is entered, the same default a
+    # Goal or Budget takes.
+    def default_currency
+      self.currency ||= retirement_plan&.user&.family&.currency
+    end
+
     def ends_no_earlier_than_it_starts
       return if start_year.blank? || end_year.blank? || end_year >= start_year
 
