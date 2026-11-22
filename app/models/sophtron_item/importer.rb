@@ -264,6 +264,9 @@ class SophtronItem::Importer
     # 4. Stores new transactions in raw_transactions_payload
     # 5. Updates the account balance
     #
+    # A pending or MFA-blocked refresh still imports the transactions Sophtron
+    # already holds; the item is flagged for re-auth separately.
+    #
     # @param sophtron_account [SophtronAccount] The account to fetch transactions for
     # @return [Hash] Result with keys:
     #   - :success [Boolean] Whether the fetch was successful
@@ -273,10 +276,11 @@ class SophtronItem::Importer
       start_date = determine_sync_start_date(sophtron_account)
       Rails.logger.info "SophtronItem::Importer - Fetching transactions for account #{sophtron_account.account_id} from #{start_date}"
 
+      refresh_result = nil
       begin
         if refresh && !initial_transaction_fetch?(sophtron_account)
           refresh_result = refresh_account_before_transaction_fetch(sophtron_account)
-          return refresh_result if refresh_result.present?
+          return refresh_result if refresh_result.present? && !refresh_result[:transactions_available]
         end
 
         # Fetch transactions
@@ -290,13 +294,13 @@ class SophtronItem::Importer
         # Validate response structure
         unless transactions_data.is_a?(Hash)
           Rails.logger.error "SophtronItem::Importer - Invalid transactions_data format for account #{sophtron_account.account_id}"
-          return { success: false, transactions_count: 0, error: "Invalid response format" }
+          return merge_refresh_result({ success: false, transactions_count: 0, error: "Invalid response format" }, refresh_result)
         end
 
         transactions = transactions_data[:transactions]
         unless transactions.is_a?(Array)
           Rails.logger.error "SophtronItem::Importer - Missing transactions array for account #{sophtron_account.account_id}"
-          return { success: false, transactions_count: 0, error: "Missing transactions array" }
+          return merge_refresh_result({ success: false, transactions_count: 0, error: "Missing transactions array" }, refresh_result)
         end
 
         transactions_count = transactions.count
@@ -330,27 +334,36 @@ class SophtronItem::Importer
             end
           rescue => e
             Rails.logger.error "SophtronItem::Importer - Failed to store transactions for account #{sophtron_account.account_id}: #{e.message}"
-            return { success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }
+            return merge_refresh_result({ success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }, refresh_result)
           end
         else
           Rails.logger.info "SophtronItem::Importer - No transactions to store for account #{sophtron_account.account_id}"
           sophtron_account.upsert_sophtron_transactions_snapshot!([]) if sophtron_account.raw_transactions_payload.nil?
         end
 
-        { success: true, transactions_count: transactions_count }
+        merge_refresh_result({ success: true, transactions_count: transactions_count }, refresh_result)
       rescue Provider::Sophtron::Error => e
         requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
         sophtron_item.update!(status: :requires_update) if requires_update
         Rails.logger.error "SophtronItem::Importer - Sophtron API error for account #{sophtron_account.id}: #{e.message}"
-        { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
+        merge_refresh_result({ success: false, transactions_count: 0, error: e.message, requires_update: requires_update }, refresh_result)
       rescue JSON::ParserError => e
         Rails.logger.error "SophtronItem::Importer - Failed to parse transaction response for account #{sophtron_account.id}: #{e.message}"
-        { success: false, transactions_count: 0, error: "Failed to parse response" }
+        merge_refresh_result({ success: false, transactions_count: 0, error: "Failed to parse response" }, refresh_result)
       rescue => e
         Rails.logger.error "SophtronItem::Importer - Unexpected error fetching transactions for account #{sophtron_account.id}: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
-        { success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }
+        merge_refresh_result({ success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }, refresh_result)
       end
+    end
+
+    def merge_refresh_result(result, refresh_result)
+      return result if refresh_result.blank?
+
+      result.merge(
+        refresh_pending: refresh_result[:refresh_pending],
+        requires_update: result[:requires_update] || refresh_result[:requires_update]
+      ).compact
     end
 
     def refresh_account_before_transaction_fetch(sophtron_account)
@@ -367,7 +380,7 @@ class SophtronItem::Importer
           current_job_id: job_id,
           last_connection_error: "Sophtron refresh requires MFA"
         )
-        return { success: false, transactions_count: 0, error: "Sophtron refresh requires MFA", requires_update: true }
+        return { success: false, transactions_count: 0, error: "Sophtron refresh requires MFA", requires_update: true, transactions_available: true }
       end
 
       if Provider::Sophtron.job_failed?(job)
@@ -381,7 +394,7 @@ class SophtronItem::Importer
           sync: sync
         )
 
-        return { success: true, transactions_count: 0, refresh_pending: true }
+        return { success: true, transactions_count: 0, refresh_pending: true, transactions_available: true }
       end
 
       nil
