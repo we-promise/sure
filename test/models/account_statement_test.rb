@@ -773,6 +773,43 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal BigDecimal("435.88"), statement.closing_balance
   end
 
+  test "balances posted back from a failed save stay derived" do
+    @family.update!(currency: "EUR")
+    statement = upload_card_statement(account: nil)
+    assert_nil statement.closing_balance, "a dollar amount was read as euros"
+    statement.currency = "USD"
+    statement.period_end_on = statement.period_start_on - 1
+    assert_not statement.save
+    assert_equal BigDecimal("435.88"), statement.closing_balance
+
+    # The form re-renders the derived values, and the next request posts them
+    # back on a fresh record.
+    retried = AccountStatement.find(statement.id)
+    retried.update!(
+      currency: "USD",
+      period_end_on: retried.period_start_on + 30,
+      opening_balance: statement.opening_balance.to_s,
+      closing_balance: statement.closing_balance.to_s
+    )
+    retried.link_to_account!(accounts(:credit_card))
+
+    assert_equal BigDecimal("-435.88"), retried.reload.closing_balance
+    assert_empty Array(retried.sanitized_parser_output.dig("pdf", "edited_balances"))
+  end
+
+  test "a retry after an invalid currency re-derives the balances" do
+    statement = upload_card_statement(account: nil)
+    assert_equal "USD", statement.currency
+    statement.currency = "NOPE"
+    assert_not statement.save
+
+    statement.currency = "USD"
+    statement.save!
+
+    assert_equal BigDecimal("435.88"), statement.reload.closing_balance
+    assert_equal BigDecimal("1066.47"), statement.opening_balance
+  end
+
   test "leaves statements without balance readings alone when linked" do
     statement = upload_card_statement(account: nil, text: "nothing to read")
     statement.update!(closing_balance: 250)

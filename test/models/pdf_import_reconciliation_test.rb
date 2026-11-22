@@ -197,6 +197,30 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
                  "the AI's sign was kept over the CR marker on a depository account"
   end
 
+  test "an AI sign correction still applies to a balance printed without a CR/DR marker" do
+    # "Closing balance ($435.88)": the text reads 435.88, with no marker.
+    detect_card_statement!(account: @account, closing_side: nil)
+    stub_extracted_balances(opening: 1066.47, closing: -435.88)
+
+    @import.extract_transactions
+
+    assert_equal BigDecimal("-435.88"), @statement.reload.closing_balance
+  end
+
+  test "an AI balance in a currency the text can't resolve is kept" do
+    detect_card_statement!(account: nil)
+    @statement.update_columns(currency: nil)
+    assert_equal "USD", @statement.reload.statement_currency
+    stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
+
+    @import.extract_transactions
+
+    @statement.reload
+    assert_equal "EUR", @statement.currency
+    assert_equal BigDecimal("1066.47"), @statement.opening_balance
+    assert_equal BigDecimal("435.88"), @statement.closing_balance
+  end
+
   test "extract_transactions writes an AI balance over a hand edit of the same size" do
     detect_card_statement!(account: accounts(:credit_card))
     @statement.update!(closing_balance: 400)
@@ -670,10 +694,10 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
     # Readings as MetadataDetector stores them for "Closing balance $435.88 CR",
     # then a link so the statement works its balances out for `account`.
-    def detect_card_statement!(account:, text: :labels)
+    def detect_card_statement!(account:, text: :labels, closing_side: "credit")
       pair = {
         "opening_balance" => { "amount" => "1066.47", "side" => nil, "currency" => "$" },
-        "closing_balance" => { "amount" => "435.88", "side" => "credit", "currency" => "$" }
+        "closing_balance" => { "amount" => "435.88", "side" => closing_side, "currency" => "$" }
       }
       readings = text == :summary_table ? { "summary_table" => pair.merge("adds_up_as" => [ "liability" ]) } : { "labels" => pair }
       @statement.update_columns(
@@ -683,14 +707,14 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
       @statement.link_to_account!(account) if account
     end
 
-    def stub_extracted_balances(opening:, closing:)
+    def stub_extracted_balances(opening:, closing:, currency: nil)
       use_ai_routes
       provider = mock("llm_provider")
       Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
       provider.stubs(:extract_bank_statement).returns(
         OpenStruct.new(
           success?: true,
-          data: { opening_balance: opening, closing_balance: closing, transactions: [] }
+          data: { opening_balance: opening, closing_balance: closing, currency: currency, transactions: [] }
         )
       )
       @import.stubs(:pdf_file_content).returns("fake-pdf")
