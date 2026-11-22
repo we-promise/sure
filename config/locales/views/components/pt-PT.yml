@@ -77,6 +77,11 @@ pt-PT:
           holdings: Posições
           total_value: Valor total
         vs_available_history: vs. histórico disponível
+        net_contributions:
+          difference: Diferença
+          incomplete: "As contribuições líquidas podem estar incompletas: não foi possível valorizar um depósito ou levantamento."
+          label: Contribuições líquidas
+          legend: Séries do gráfico
       activity_date:
         balance_tooltip: "O saldo no fim do dia, após todas as transações e ajustes"
         no_balance_data: "Sem dados de saldo disponíveis para esta data"

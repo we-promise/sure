@@ -10,8 +10,13 @@ class UI::Account::Chart < ApplicationComponent
   # The page's reference date travels inside the payload (`today`), so the
   # component takes no date of its own. `extra_repayment` is the Extra
   # repayments tab's Loan::ExtraRepayment, which the period picker keeps.
-  def initialize(account:, period: nil, view: nil, loan_chart: nil, extra_repayment: nil)
+  #
+  # `net_contributions` is false when the request only wants a frame the chart
+  # is not in (an activity feed page): Turbo discards the chart, so its
+  # comparison line is not built.
+  def initialize(account:, period: nil, view: nil, loan_chart: nil, extra_repayment: nil, net_contributions: true)
     @account = account
+    @net_contributions = net_contributions
     @period = period
     @view = view
     @loan_chart = loan_chart
@@ -195,6 +200,61 @@ class UI::Account::Chart < ApplicationComponent
     @series ||= account.balance_series(period: period, view: view)
   end
 
+  # The Total value view of an account that holds trades draws a second line:
+  # what has been put in, net of what was taken out. Not for a period whose
+  # value line starts before the line can count (see
+  # Account::Chartable#net_contributions_comparable?).
+  def show_net_contributions?
+    return @show_net_contributions if defined?(@show_net_contributions)
+
+    @show_net_contributions = @net_contributions && view == "balance" && account.supports_trades? &&
+      account.net_contributions_comparable?(value_dates: series.values.map(&:date))
+  end
+
+  # The second line for the chart controller: each point's net contributions
+  # and its difference from total value on the same date, signed, with the
+  # difference as a percentage of net contributions. Rounded as the value
+  # line's own points are, so the tooltip's three figures agree.
+  def net_contributions_comparison
+    @net_contributions_comparison ||= build_net_contributions_comparison
+  end
+
+  # The legend names a dashed line, so it shows only when there is one to
+  # draw: the chart controller draws lines only from two points. Comparison
+  # points sit on the value series' dates, so two of them means two values.
+  def show_net_contributions_legend?
+    show_net_contributions? && series.any? && net_contributions_comparison[:values].size >= 2
+  end
+
+  # A flow the line counts could not be valued (no exchange rate, or a
+  # journalled position with no price that day), so the line leaves it out:
+  # too low for a deposit, too high for a withdrawal, and the gap is off by
+  # the same amount. Said under the legend rather than hidden.
+  def net_contributions_incomplete?
+    account.net_contributions_incomplete?(period: period, value_dates: series.values.map(&:date))
+  end
+
+  # The chart's data. With the comparison line, the tooltip sets the value
+  # line's percentage beside the difference's, so both are written in the
+  # page's locale (#localized_percent).
+  def chart_data_json
+    data = series.as_json
+    return data.to_json unless show_net_contributions?
+
+    data.merge(values: data[:values].map { |value| value.merge(trend: localized_trend(value[:trend])) }).to_json
+  end
+
+  # The legend under the chart names both lines. The value line takes its
+  # trend colour from the series, so its swatch does too; the contributions
+  # swatch is dashed in text-secondary, the colour the controller draws that
+  # line in. Style as well as hue tells them apart, as on the loan legend.
+  def net_contributions_legend
+    [
+      { label: I18n.t("UI.account.chart.views.total_value"), swatch_class: "border-solid", color: series.trend&.color },
+      { label: I18n.t("UI.account.chart.net_contributions.label"), swatch_class: "border-dashed border-current text-secondary", color: nil }
+    ]
+  end
+
   # Current total unrealized gains, taken from the series so the main indicator
   # always matches the last point of the chart (there is no stored gains column).
   def gains_money
@@ -248,6 +308,55 @@ class UI::Account::Chart < ApplicationComponent
   end
 
   private
+    def build_net_contributions_comparison
+      values_by_date = series.values.index_by(&:date)
+
+      points = account.balance_series(period: period, view: :net_contributions, value_series: series).values.filter_map do |point|
+        value_point = values_by_date[point.date]
+        next unless value_point
+
+        contributions = point.value.for_display
+        {
+          date: point.date,
+          value: contributions,
+          difference: comparison_difference(Trend.new(current: value_point.value.for_display, previous: contributions))
+        }
+      end
+
+      {
+        label: I18n.t("UI.account.chart.net_contributions.label"),
+        difference_label: I18n.t("UI.account.chart.net_contributions.difference"),
+        values: points
+      }
+    end
+
+    # The Trend as the tooltip reads it, with its percentage signed and in the
+    # page's locale. Zero over zero has no ratio, so no percentage, where
+    # Trend#percent says 0.0, and neither has a negative base (more taken out
+    # than put in), which Trend would divide by its magnitude. A zero base
+    # under a non-zero value stays infinite: `percent` serializes as null and
+    # the formatted text says so.
+    def comparison_difference(trend)
+      json = trend.as_json
+      return json.merge(percent: nil, percent_formatted: nil) if trend.previous.negative? || (trend.previous.zero? && trend.current.zero?)
+      return json unless trend.percent.finite?
+
+      formatted = localized_percent(trend.percent)
+      json.merge(percent_formatted: trend.percent.positive? ? "+#{formatted}" : formatted)
+    end
+
+    # The value line's point trend with its percentage in the page's locale,
+    # unsigned as the tooltip has always shown it.
+    def localized_trend(trend)
+      return trend unless trend.respond_to?(:percent) && trend.percent.finite?
+
+      trend.as_json.merge(percent_formatted: localized_percent(trend.percent))
+    end
+
+    def localized_percent(percent)
+      ActiveSupport::NumberHelper.number_to_percentage(percent, precision: 1, locale: I18n.locale)
+    end
+
     # Prefixes positive gains with "+"; other views keep plain Money formatting.
     def signed_format(money)
       return money.format unless view == "gains" && money.amount.positive?

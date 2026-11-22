@@ -7,23 +7,47 @@ module Account::Chartable
   end
 
   # Returns the chart Series for this account over the given period.
-  # Supported views: :balance, :cash_balance, :holdings_balance, :gains.
-  def balance_series(period: Period.last_30_days, view: :balance, interval: nil)
-    raise ArgumentError, "Invalid view type" unless [ :balance, :cash_balance, :holdings_balance, :gains ].include?(view.to_sym)
+  # Supported views: :balance, :cash_balance, :holdings_balance, :gains,
+  # :net_contributions.
+  # The net contributions line reads Portfolio::DailyReturns, which covers
+  # accounts that hold trades only; any other account draws its balance.
+  #
+  # `value_series` is for :net_contributions: the Total value series the
+  # caller already built for the same period and interval, so it is not
+  # built again.
+  def balance_series(period: Period.last_30_days, view: :balance, interval: nil, value_series: nil)
+    raise ArgumentError, "Invalid view type" unless [ :balance, :cash_balance, :holdings_balance, :gains, :net_contributions ].include?(view.to_sym)
+    if view.to_sym == :net_contributions
+      return net_contributions_series(period: period, interval: interval, value_series: value_series) if supports_trades?
 
-    @balance_series ||= {}
+      view = :balance
+    end
 
-    memo_key = [ period.start_date, period.end_date, interval ].compact.join("_")
-
-    builder = (@balance_series[memo_key] ||= Balance::ChartSeriesBuilder.new(
-      account_ids: [ id ],
-      currency: self.currency,
-      period: period,
-      favorable_direction: favorable_direction,
-      interval: interval
-    ))
+    builder = chart_series_builder(period: period, interval: interval)
 
     normalize_linked_investment_series(builder.send("#{view}_series"), view: view)
+  end
+
+  # True when a flow the net contributions line counts could not be valued,
+  # so the chart can say the line is incomplete.
+  # `value_dates` are the Total value line's dates, when the caller has them.
+  def net_contributions_incomplete?(period: Period.last_30_days, interval: nil, value_dates: nil)
+    return false unless supports_trades?
+
+    value_dates ||= balance_series(period: period, view: :balance, interval: interval).values.map(&:date)
+
+    chart_series_builder(period: period, interval: interval)
+      .net_contributions_incomplete?(anchor_date: net_contributions_anchor_date, dates: value_dates)
+  end
+
+  # False when the Total value line over `value_dates` kept points from
+  # before a linked investment account's supported history starts. The
+  # normalizer trims the line to that start only when some point is on or
+  # after it, while net contributions always count from it, so there is no
+  # line to set beside those points.
+  def net_contributions_comparable?(value_dates:)
+    anchor_date = net_contributions_anchor_date
+    anchor_date.nil? || value_dates.none? { |date| date < anchor_date }
   end
 
   def sparkline_series
@@ -90,6 +114,86 @@ module Account::Chartable
   end
 
   private
+    # One builder per period and interval, so the views of one chart share its
+    # memoized balance query.
+    def chart_series_builder(period:, interval:)
+      @balance_series ||= {}
+
+      memo_key = [ period.start_date, period.end_date, interval ].compact.join("_")
+
+      @balance_series[memo_key] ||= Balance::ChartSeriesBuilder.new(
+        account_ids: [ id ],
+        currency: self.currency,
+        period: period,
+        favorable_direction: favorable_direction,
+        interval: interval
+      )
+    end
+
+    # Net contributions on the same dates as the Total value line.
+    #
+    # The normalizer does not run on this series: it would prepend a
+    # synthetic opening point of its own. Instead the line is sampled on the
+    # value line's dates, after that line's trim. For a linked investment
+    # account whose value line is trimmed to supported history, the line
+    # starts from the balance held before the trim day's activity and counts
+    # that day's flows, so the gap between the lines is the market's
+    # from the trim date on. The anchor comes from the account's history,
+    # not the period, so it is the same whichever period is shown.
+    #
+    # On the anchor date the line is measured at the same moment as the
+    # value line's own point there. That point is the day's close when the
+    # balance query sampled it unchanged, and the balance before the day's
+    # activity when the normalizer supplied it instead (a coarse interval's
+    # prepended opening, or its reset of the first point).
+    def net_contributions_series(period:, interval:, value_series: nil)
+      builder = chart_series_builder(period: period, interval: interval)
+      value_series ||= balance_series(period: period, view: :balance, interval: interval)
+      value_dates = value_series.values.map(&:date)
+      anchor_date = net_contributions_anchor_date
+      before_activity = value_point_before_activity?(value_series, builder: builder, date: anchor_date)
+      series = builder.net_contributions_series(
+        anchor_date: anchor_date,
+        dates: value_dates,
+        anchor_before_activity: before_activity,
+        anchor_opening: (value_series.values.find { |value| value.date == anchor_date }&.value&.amount if before_activity)
+      )
+
+      Series.new(
+        start_date: value_dates.min || series.start_date,
+        end_date: series.end_date,
+        interval: series.interval,
+        values: series.values,
+        favorable_direction: series.favorable_direction
+      )
+    end
+
+    # True when the value line's point on `date` was supplied by the
+    # normalizer as the balance before the day's activity: prepended on a
+    # date the balance query never sampled (a coarse interval), or a sampled
+    # point reset on the first provider activity date. The
+    # normalizer's rule decides, not the point's value, since a reset point
+    # can equal the day's close (a flow offset by the market). False when
+    # there is no such point.
+    def value_point_before_activity?(value_series, builder:, date:)
+      return false unless date && value_series.values.any? { |value| value.date == date }
+
+      builder.balance_series.values.none? { |value| value.date == date } ||
+        supported_history.resets_point_on?(date)
+    end
+
+    def net_contributions_anchor_date
+      return unless linked? && balance_type == :investment
+
+      supported_history.supported_history_start_date
+    end
+
+    # One per account, so a chart's comparison checks and its line share the
+    # anchor's entries and holdings reads. Account#reload drops it.
+    def supported_history
+      @supported_history ||= Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil)
+    end
+
     def normalize_linked_investment_series(series, view: :balance)
       Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: series, view: view).normalize
     end

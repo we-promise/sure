@@ -166,9 +166,9 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
   end
 
   # The same corruption can make one transaction the outflow of one transfer
-  # and the inflow of another. #classify reads transfer_as_inflow first, so
-  # the lateral prefers the transfer the transaction is the inflow of, and
-  # only then the earliest; otherwise the two forms read different transfers.
+  # and the inflow of another. #classify reads the transfer it is the inflow
+  # of first, so the lateral prefers that one too, and only then the
+  # earliest; otherwise the two forms read different transfers.
   test "sql_joins reads the transfer a leg is the inflow of, as classify does" do
     transfer = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 400)
     inflow = transfer.inflow_transaction.entry
@@ -528,6 +528,30 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     in_leg.update!(date: out_leg.date)
     assert_equal :internal, @family_scope.classify(in_leg), "on one day the same transfer is internal"
     assert_equal :internal, @family_scope.classify_ids([ out_leg.id ])[out_leg.id]
+  end
+
+  # Balance::SyncCache leaves a pending entry out of the balance, so a
+  # counterpart that is still pending has moved nothing yet: the posted leg is
+  # a flow by its own direction that day, in both forms, until the other
+  # posts.
+  test "a linked transfer whose counterpart is still pending is a flow by direction in both forms" do
+    transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400)
+    out_leg = transfer.outflow_transaction.entry
+    in_leg = transfer.inflow_transaction.entry
+    pending = { "plaid" => { "pending" => true } }
+
+    transfer.inflow_transaction.update!(extra: pending)
+    assert_equal :external_outflow, @family_scope.classify(out_leg.reload)
+    assert_equal :external_outflow, @family_scope.classify_ids([ out_leg.id ])[out_leg.id]
+
+    transfer.inflow_transaction.update!(extra: {})
+    transfer.outflow_transaction.update!(extra: pending)
+    assert_equal :external_inflow, @family_scope.classify(in_leg.reload)
+    assert_equal :external_inflow, @family_scope.classify_ids([ in_leg.id ])[in_leg.id]
+
+    transfer.outflow_transaction.update!(extra: {})
+    assert_equal :internal, @family_scope.classify(in_leg.reload), "once both legs post the move is internal"
+    assert_equal :internal, @family_scope.classify_ids([ in_leg.id ])[in_leg.id]
   end
 
   # Entry#split! does not copy the activity label to the children it makes,

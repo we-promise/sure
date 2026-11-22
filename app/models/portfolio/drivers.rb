@@ -1,0 +1,216 @@
+# Where a period's change in portfolio value came from.
+#
+# The components reconcile exactly to the period's change in value:
+#
+#   external_net + composition + income - fees + market + revaluations + fx_effect
+#     == value_close - value_open
+#
+# TWO THINGS ARE EASY TO GET WRONG HERE.
+#
+# First, `balances.net_market_flows` is the change in an investment account's
+# HOLDINGS value less its trades (Balance::BaseCalculator#market_value_change_on_date),
+# and zero for every other account type.
+# A valuation sets the balance, and whatever it moves beyond the holdings lands
+# in cash_adjustments / non_cash_adjustments. A manually valued account holds no
+# securities, so its whole move is there and `net_market_flows` is zero every
+# day; reporting only that as "market" would show a flat zero market return for
+# every such account. Those adjustments are reported here as `revaluations`,
+# and Portfolio::ReturnScope tells the UI which label an account has earned.
+#
+# Second, `fx_effect` is MEASURED, not inferred. Portfolio::DailyReturns computes
+# it per day as the closing local balance times that day's rate change, and the
+# local components are converted at the previous day's rate, so the two halves
+# add up to the day's change by construction rather than by definition.
+#
+# Defining fx_effect as the residual of the equation above would make
+# `reconciles?` a tautology -- it could not return false, so the
+# decomposition would be guarded by an assertion that could not
+# fail, and a portfolio whose value moved for no recorded reason would report
+# the whole move as currency movement. `unexplained` carries that gap openly.
+class Portfolio::Drivers
+  attr_reader :daily_returns
+
+  def initialize(daily_returns)
+    @daily_returns = daily_returns
+  end
+
+  def rows
+    daily_returns.rows
+  end
+
+  # The rows are oldest first: Portfolio::DailyReturns builds each row's
+  # opening value from the row before it, so the first row opens the period
+  # and the last one closes it.
+  def value_open
+    @value_open ||= rows.first&.value_open || BigDecimal(0)
+  end
+
+  def value_close
+    @value_close ||= rows.last&.value_close || BigDecimal(0)
+  end
+
+  def change
+    value_close - value_open
+  end
+
+  # Net external contribution: deposits and transfers in, less withdrawals.
+  def external_net
+    @external_net ||= sum(:external_flow)
+  end
+
+  # Dividends and interest thrown off by the holdings, whether stored as a
+  # Trade or as a Transaction.
+  def income
+    @income ||= sum(:income)
+  end
+
+  # Reported as a positive magnitude; it reduces the change. Returns are net
+  # of fees, because a fee already lowered the balance it was charged from.
+  #
+  # Fees include commissions recorded on trades. Besides the fee entries (a
+  # Fee-labelled trade or transaction, or a transfer's fee leg), a buy's or
+  # sell's `trades.fee` counts when its entry amount includes it -- amount =
+  # qty x price + fee, as the trade form, SnapTrade and IBKR write it.
+  # Balance::BaseCalculator books that commission as a market loss, so
+  # Portfolio::DailyReturns moves it from `market` to here; the change and
+  # the returns are the same either way. A writer that keeps the fee out of
+  # the amount never charged it to the balance, so it is not counted.
+  #
+  # A known limit: Balance::ReverseCalculator (a linked account) pins its
+  # opening-anchor day to the anchor, so a trade that day moves nothing; its
+  # commission shows, if anywhere, in the next day's boundary adjustment, a
+  # revaluation. Moved from `market` anyway, that day reads market +fee and fees
+  # +fee. The period still reconciles; only the split between those drivers is
+  # off, and only for a trade dated on that anchor.
+  #
+  # Another: Trade Republic stores only the commission in `trades.fee` while
+  # its entry amount includes the commission and any tax, so a trade taxed at
+  # half its commission or more does not match amount = qty x price + fee, and
+  # its commission stays in `market`.
+  def fees
+    @fees ||= sum(:fees)
+  end
+
+  # Market movement on trade-tracked accounts.
+  def market
+    @market ||= sum(:market)
+  end
+
+  # Valuation and reconciliation movement. For a valuation-tracked
+  # account this carries the entire market move.
+  def revaluations
+    @revaluations ||= sum(:revaluations)
+  end
+
+  # Measured per day from the rate change, not inferred.
+  def fx_effect
+    @fx_effect ||= sum(:fx_effect)
+  end
+
+  # Value that entered the scope (an account's opening position arriving
+  # mid-period, positive) less value that left it (an account's balance carried
+  # out at its cut-off, negative). A change in what the scope contains, not in
+  # what it is worth.
+  def composition
+    @composition ||= sum(:composition_flow)
+  end
+
+  # What the named components do not account for. Expected to be zero, and a
+  # real assertion because nothing defines it to be.
+  #
+  # An account entering or leaving the scope is described by `composition`, so
+  # it no longer lands here. What is left is value that moved for a reason no
+  # driver records -- and surfacing it is still the honest answer, rather than
+  # folding it into whichever component is defined last.
+  def unexplained
+    @unexplained ||= change - (external_net + composition + income - fees + market + revaluations + fx_effect)
+  end
+
+  # For an account whose scope is :valuation_tracked, the market move lives in
+  # `revaluations`. Callers that want one "the holdings moved" figure without
+  # caring which shape the account is should use this.
+  def market_including_revaluations
+    market + revaluations
+  end
+
+  # Days Portfolio::DailyReturns suppressed. Exposed because neither
+  # `unexplained` nor `reconciles?` can see them.
+  #
+  # A day is suppressed for a non-positive denominator, whose components are
+  # complete, or for a security journal it could not value (no holding row, a
+  # zero price, or no rate for the holding's currency). On the second kind the
+  # journal is not an external flow, so its value stays wherever the balance
+  # row booked it -- in `market` -- and the identity below still holds:
+  # `unexplained` is zero and the period reconciles while `market` carries a
+  # gain the holdings never earned. Nothing here can tell that apart from a
+  # real one, so a caller presenting these figures reads #complete? (or
+  # `suppressed_days` in #to_h) and says that a day was left out.
+  #
+  # The drivers are not withheld for it: they are money, reported on the same
+  # terms as when a rate is missing, and the suppression flag does not record
+  # which kind of day it was, so withholding would also blank the complete
+  # figures of every over-withdrawal.
+  def suppressed_dates
+    @suppressed_dates ||= rows.select(&:suppressed).map(&:date)
+  end
+
+  # True when no day in the period was suppressed, which is the only case in
+  # which every component is known to describe every day.
+  def complete?
+    suppressed_dates.empty?
+  end
+
+  def to_h
+    {
+      value_open: value_open,
+      value_close: value_close,
+      change: change,
+      external_net: external_net,
+      composition: composition,
+      income: income,
+      fees: fees,
+      market: market,
+      revaluations: revaluations,
+      fx_effect: fx_effect,
+      unexplained: unexplained,
+      # A count rather than the dates, so the cached hash stays plain values.
+      suppressed_days: suppressed_dates.size
+    }
+  end
+
+  # One minor unit. Not academic slack: a multi-currency family accumulates
+  # sub-cent residue by construction, because entry flows convert entry ->
+  # family at t-1 while balance-row flows went entry -> account at the entry
+  # date and then account -> family. At exact zero an ordinary residual of
+  # 0.004 raises the "these figures do not reconcile" banner and prints an
+  # "Unexplained $0.00" row, which is alarming and wrong.
+  #
+  # Named here so that anything presenting these figures reads the same
+  # tolerance #reconciles? applies, through .tolerance_for, rather than
+  # writing out its own literal: two copies drift, and a period then
+  # reconciles in one place and not in the other.
+  RECONCILE_TOLERANCE = BigDecimal("0.01")
+
+  # One unit of the currency's smallest denomination where that is coarser
+  # than a cent: JPY, KRW and CLP carry `default_precision: 0` in
+  # config/currencies.yml, so a residual of 0.3 JPY is dust there and would
+  # otherwise print "Unexplained JPY 0". Never finer than the cent, so a
+  # currency with three or more decimals keeps the slack it had.
+  def self.tolerance_for(currency)
+    [ BigDecimal(Money::Currency.new(currency).step.to_s), RECONCILE_TOLERANCE ].max
+  end
+
+  # A real check: `unexplained` is measured independently of the components
+  # it is compared against, so this returns false when the decomposition does
+  # not hold. It speaks to the rows as recorded and to nothing else: over a
+  # suppressed journal day it is true while `market` is wrong (see
+  # #suppressed_dates), so it is read together with #complete?.
+  def reconciles?(tolerance: self.class.tolerance_for(daily_returns.currency))
+    unexplained.abs <= tolerance
+  end
+
+  private
+    def sum(field)
+      rows.sum(BigDecimal(0)) { |row| row.public_send(field) }
+    end
+end
