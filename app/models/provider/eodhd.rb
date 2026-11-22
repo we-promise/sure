@@ -16,6 +16,10 @@ class Provider::Eodhd < Provider
   # EODHD bills each fundamentals request as 10 API calls against the daily allowance
   FUNDAMENTALS_REQUEST_COST = 10
 
+  # A fundamentals call must not take the last calls a price refresh needs that
+  # day, so it is refused while fewer than this many remain.
+  PRICE_RESERVE = FUNDAMENTALS_REQUEST_COST
+
   # A fundamentals response is large and slow to start, so it gets a 60 s read
   # limit rather than the client's 20 s: each retry after a timeout bills
   # another ten calls.
@@ -399,6 +403,8 @@ class Provider::Eodhd < Provider
     # Uses atomic increment-then-check to avoid TOCTOU races between concurrent workers.
     # `cost` is how many API calls EODHD bills for the request. A refused request is
     # taken back off the count, so a refused fundamentals call leaves the rest for prices.
+    # A fundamentals call (cost above one) is also refused while it would leave fewer
+    # than PRICE_RESERVE calls, so a later price refresh still fits.
     # Between the increment and the refund a concurrent request sees the higher count and
     # may be refused although it would fit; that costs it one retry on the next sync.
     # Returns the counter key, so a later refund goes to the same day even after midnight.
@@ -409,6 +415,11 @@ class Provider::Eodhd < Provider
       if new_count > max_requests_per_day
         refund_daily_requests(cost, key: key)
         raise RateLimitError, "EODHD daily rate limit of #{max_requests_per_day} requests exhausted"
+      end
+
+      if cost > 1 && max_requests_per_day - new_count < PRICE_RESERVE
+        refund_daily_requests(cost, key: key)
+        raise RateLimitError, "EODHD daily rate limit leaves fewer than #{PRICE_RESERVE} requests for prices"
       end
 
       key

@@ -72,11 +72,16 @@ class Account::MarketDataImporter
 
     securities = Security.online.where(id: price_windows.keys).index_by(&:id)
 
+    # Prices for every security first: a details call can cost ten of EODHD's
+    # daily calls, so it must not take what a later price request needs.
     price_windows.each do |security_id, window|
       security = securities[security_id]
       next unless security
 
       security.import_provider_prices(start_date: window.start_date, end_date: window.end_date)
+    end
+
+    securities.each_value do |security|
       security.import_provider_details
     end
   end

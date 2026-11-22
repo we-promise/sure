@@ -243,6 +243,34 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     assert_equal 1, Security::Price.where(security: security, date: trade_date).count
   end
 
+  test "prices every security before asking for any details" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "USD",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    securities = %w[AAA BBB].map { |ticker| Security.create!(ticker: ticker, exchange_operating_mic: "XNAS") }
+    trade_date = 10.days.ago.to_date
+
+    securities.each do |security|
+      trade = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+      account.entries.create!(name: "Buy #{security.ticker}", date: trade_date, amount: 100, currency: "USD", entryable: trade)
+    end
+
+    calls = []
+    @provider.stubs(:fetch_security_prices).with { |*| calls << :price; true }.returns(provider_success_response([]))
+    @provider.stubs(:fetch_security_info).with { |*| calls << :details; true }
+             .returns(provider_success_response(OpenStruct.new(name: "Name", logo_url: "logo")))
+
+    Account::MarketDataImporter.new(account).import_security_prices
+
+    assert_equal %i[price price details details], calls
+  end
+
   test "caps a sold security at its closing trade despite later zero holdings" do
     family = Family.create!(name: "Smith", currency: "USD")
 
