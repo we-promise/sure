@@ -588,7 +588,35 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     assert_equal "CHF", converted_price.currency
   end
 
+  test "a price with a blank currency does not abort the calculation" do
+    insert_blank_currency_price(date: Date.current, price: 210)
+
+    cache = Holding::PortfolioCache.new(@account)
+
+    assert_nil cache.get_price(@security.id, Date.current)
+  end
+
+  test "a price with a blank currency does not shadow a valid price on the same day" do
+    insert_blank_currency_price(date: @trade.entry.date, price: 210)
+
+    cache = Holding::PortfolioCache.new(@account)
+
+    assert_equal @trade.price, cache.get_price(@security.id, @trade.entry.date).price
+  end
+
   private
+    def insert_blank_currency_price(date:, price:)
+      Security::Price.insert_all([ {
+        security_id: @security.id,
+        date: date,
+        price: price,
+        currency: "",
+        provisional: false,
+        created_at: Time.current,
+        updated_at: Time.current
+      } ])
+    end
+
     # A holding the provider reported, not one a sync calculated
     def provider_holding(security, date:, price:, currency: "USD")
       @provider_link ||= begin

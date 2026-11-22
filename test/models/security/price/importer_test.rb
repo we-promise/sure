@@ -36,6 +36,33 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal [ 150, 155, 160 ], db_prices.map(&:price)
   end
 
+  test "does not persist a blank provider currency" do
+    Security::Price.delete_all
+
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: 1.day.ago.to_date, price: 150, currency: "USD"),
+      OpenStruct.new(security: @security, date: Date.current, price: 155, currency: "")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(1.day.ago.to_date), end_date: Date.current)
+             .returns(provider_response)
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: 1.day.ago.to_date,
+      end_date: Date.current
+    ).import_provider_prices
+
+    db_prices = Security::Price.where(security: @security).order(:date)
+
+    assert_equal 2, db_prices.count
+    assert db_prices.all? { |price| price.currency.present? }
+    assert_equal "USD", db_prices.last.currency
+  end
+
   test "syncs diff when some prices already exist" do
     Security::Price.delete_all
 

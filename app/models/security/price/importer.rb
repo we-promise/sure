@@ -28,7 +28,7 @@ class Security::Price::Importer
     end
 
     prev_price_value = start_price_value
-    prev_currency = prev_price_currency || db_price_currency || "USD"
+    prev_currency = prev_price_currency.presence || db_price_currency.presence || "USD"
 
     # Fallback for holdings that predate the asset's listing on the provider
     # (e.g. a 2018 BTCEUR trade vs. Binance's 2020-01-03 listing date, or a
@@ -55,7 +55,7 @@ class Security::Price::Importer
           "advancing gapfill start to earliest valid provider date #{earliest_provider_price.date}"
         )
         prev_price_value        = earliest_provider_price.price
-        prev_currency           = earliest_provider_price.currency || prev_currency
+        prev_currency           = earliest_provider_price.currency.presence || prev_currency
         @fill_start_date        = earliest_provider_price.date
         advanced_first_price_on = earliest_provider_price.date
       end
@@ -112,7 +112,7 @@ class Security::Price::Importer
         used_locf = true
       end
       prev_price_value = chosen_price
-      prev_currency = chosen_currency || prev_currency
+      prev_currency = chosen_currency.presence || prev_currency
 
       provisional = determine_provisional_status(
         date: date,
@@ -125,7 +125,7 @@ class Security::Price::Importer
         security_id: security.id,
         date:        date,
         price:       chosen_price,
-        currency:    chosen_currency || "USD",
+        currency:    chosen_currency.presence || prev_currency.presence || "USD",
         provisional: provisional
       }
     end

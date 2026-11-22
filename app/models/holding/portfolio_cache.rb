@@ -47,7 +47,14 @@ class Holding::PortfolioCache
     price = price_with_priority.price
     return nil unless price
 
-    price_money = Money.new(price.price, price.currency)
+    price_money = begin
+      Money.new(price.price, price.currency)
+    rescue Money::Currency::UnknownCurrencyError
+      Rails.logger.warn(
+        "Skipping price for security #{security_id} on #{price.date}: invalid currency #{price.currency.inspect}"
+      )
+      return nil
+    end
 
     begin
       converted_amount = price_money.exchange_to(account.currency, date: date).amount
@@ -188,8 +195,17 @@ class Holding::PortfolioCache
       securities.each do |security|
         Rails.logger.info "Loading security: ID=#{security.id} Ticker=#{security.ticker}"
 
-        # High priority prices from DB (synced from provider)
-        db_prices = (db_prices_by_security_id[security.id] || []).map do |price|
+        # High priority prices from DB (synced from provider). A row with a
+        # blank or unknown currency cannot be converted to money, so it is
+        # dropped here rather than shadowing a valid price for the same day.
+        db_prices = (db_prices_by_security_id[security.id] || []).filter_map do |price|
+          unless valid_price_currency?(price.currency)
+            Rails.logger.warn(
+              "Skipping price for security #{security.id} on #{price.date}: invalid currency #{price.currency.inspect}"
+            )
+            next
+          end
+
           PriceWithPriority.new(
             price: price,
             priority: 1,
@@ -350,6 +366,15 @@ class Holding::PortfolioCache
         price ||= Security::Price.new(security: cached[:security], price: holding.price, currency: holding.currency, date: holding.date)
         cached[:prices_by_date_and_source][key] = PriceWithPriority.new(price: price, priority: 3, source: "holding")
       end
+    end
+
+    def valid_price_currency?(currency)
+      return false if currency.blank?
+
+      Money::Currency.new(currency)
+      true
+    rescue Money::Currency::UnknownCurrencyError
+      false
     end
 
     def unpriced_trade?(trade)

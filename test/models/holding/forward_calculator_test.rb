@@ -38,6 +38,30 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a price with a blank currency does not drop other securities" do
+    broken = Security.create!(ticker: "BRKN", name: "Broken")
+    healthy = Security.create!(ticker: "HLTH", name: "Healthy")
+
+    create_trade(broken, qty: 1, date: 2.days.ago.to_date, price: 100, account: @account)
+    create_trade(healthy, qty: 1, date: 2.days.ago.to_date, price: 200, account: @account)
+
+    Security::Price.insert_all([ {
+      security_id: broken.id,
+      date: Date.current,
+      price: 100,
+      currency: "",
+      provisional: false,
+      created_at: Time.current,
+      updated_at: Time.current
+    } ])
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    security_ids = calculated.map(&:security_id)
+
+    assert_includes security_ids, broken.id
+    assert_includes security_ids, healthy.id
+  end
+
   test "forward portfolio calculation" do
     load_prices
 
