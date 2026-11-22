@@ -99,6 +99,7 @@
       <div class="space-y-4">
         <div class="flex flex-wrap gap-x-8 gap-y-2 privacy-sensitive" data-account-balances-chart-target="stats"></div>
         <div class="relative w-full h-[62dvh] min-h-80 privacy-sensitive" data-account-balances-chart-target="chart"></div>
+        <p class="text-xs text-destructive" role="status" hidden data-account-balances-chart-target="saveError"><%= t(".save_failed") %></p>
         <div class="text-sm privacy-sensitive" data-account-balances-chart-target="list"></div>
       </div>
     <% end %>

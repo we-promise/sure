@@ -70,7 +70,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "section[data-section-key='account_balances']" do
       assert_select "[data-controller='account-balances-chart']"
       assert_select "button[data-action='click->cashflow-expand#open']"
-      assert_select "dialog#account-balances-expanded-dialog"
+      assert_select "dialog#account-balances-expanded-dialog" do
+        assert_select "[data-account-balances-chart-target='saveError'][hidden]", 1, "a failed save is reported in full screen too"
+      end
     end
     assert_select "section[data-section-key='account_balances'][data-controller~='cashflow-expand']"
   end
