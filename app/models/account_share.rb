@@ -9,7 +9,7 @@ class AccountShare < ApplicationRecord
   # Fields those annotate-only tiers may change: notes on the entry, and
   # category, merchant and tags on its transaction. Single-entry edits and
   # bulk edits both filter through these lists.
-  ANNOTATE_ENTRY_ATTRIBUTES = %i[notes].freeze
+  ANNOTATE_ENTRY_ATTRIBUTES = %i[notes location_lat location_lng location_name].freeze
   ANNOTATE_TRANSACTION_ATTRIBUTES = %i[category_id merchant_id tag_ids].freeze
 
   validates :permission, inclusion: { in: PERMISSIONS }

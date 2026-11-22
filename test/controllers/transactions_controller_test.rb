@@ -622,6 +622,43 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "update sets a location on the entry" do
+    entry = entries(:transaction)
+
+    patch transaction_url(entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        location_lat: "41.3851",
+        location_lng: "2.1734",
+        location_name: "Barcelona, Spain"
+      }
+    }
+
+    entry.reload
+    assert_equal 41.3851, entry.location_lat.to_f
+    assert_equal 2.1734, entry.location_lng.to_f
+    assert_equal "Barcelona, Spain", entry.location_name
+  end
+
+  test "update can clear a location" do
+    entry = entries(:transaction)
+    entry.update!(location_lat: 41.3851, location_lng: 2.1734, location_name: "Barcelona, Spain")
+
+    patch transaction_url(entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        location_lat: "",
+        location_lng: "",
+        location_name: ""
+      }
+    }
+
+    entry.reload
+    assert_nil entry.location_lat
+    assert_nil entry.location_lng
+    assert_nil entry.location_name
+  end
+
   test "re-renders show with mark-recurring state when update fails validation" do
     family = families(:empty)
     sign_in users(:empty)

@@ -680,6 +680,7 @@ class TransactionsController < ApplicationController
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
+        :location_lat, :location_lng, :location_name,
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
 
@@ -687,6 +688,9 @@ class TransactionsController < ApplicationController
 
       entry_params.delete(:amount) if entry_params[:amount].blank?
       entry_params.delete(:date) if entry_params[:date].blank?
+      entry_params[:location_lat] = nil if entry_params[:location_lat].blank?
+      entry_params[:location_lng] = nil if entry_params[:location_lng].blank?
+      entry_params[:location_name] = nil if entry_params[:location_name].blank?
 
       if nature.present? && entry_params[:amount].present?
         signed_amount = nature == "inflow" ? -entry_params[:amount].to_d : entry_params[:amount].to_d
