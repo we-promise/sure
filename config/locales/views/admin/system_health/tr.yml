@@ -77,6 +77,7 @@ tr:
           seconds: '%{seconds} sn'
           no_queues: Kayıtlı kuyruk yok. Çalışan çalışmıyor olabilir.
         ai:
+          worker_unhealthy_warning: "Yapay zeka kontrolleri şu anda çalışmayabilir — arka plan çalışanı kapalı veya birikmiş görünüyor. Sidekiq çalışanınızın çalıştığından emin olun."
           run_checks: Kontrolleri yeniden çalıştır
           alerts:
             custom_openai:
@@ -226,6 +227,7 @@ tr:
             request_failed: Hizmet isteği başarısız oldu
             unsupported_provider: Sağlayıcı bu kontrolü desteklemiyor
           worker:
+            run_coverage_notice: "Her kontrol yalnızca tek bir çalışan işlemini -- kontrolü kuyruktan alanı -- doğrular. Birden fazla çalışan replikası varsa, başarılı bir sonuç her çalışanın sağlıklı olduğunu doğrulamaz; başka bir örnek almak için kontrolleri yeniden çalıştırın."
             empty:
               title: Henüz hiçbir çalışan kontrol bildirmedi
             labels:

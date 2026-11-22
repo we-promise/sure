@@ -251,6 +251,7 @@ zh-CN:
           seconds: "%{seconds} 秒"
           no_queues: "未注册任何队列。Worker 可能未在运行。"
         ai:
+          worker_unhealthy_warning: "AI 检查目前可能无法运行 — 后台任务处理进程似乎已停止或发生积压。请检查您的 Sidekiq worker 是否正在运行。"
           run_checks: 重新运行检查
           alerts:
             custom_openai:
@@ -400,6 +401,7 @@ zh-CN:
             request_failed: 服务请求失败
             unsupported_provider: 该提供商不支持此项检查
           worker:
+            run_coverage_notice: "每次检查仅验证领取该任务的单个 Worker 进程。如果有多个 Worker 副本，单次通过并不代表所有 Worker 都健康；可再次运行检查以抽样其他副本。"
             empty:
               title: 尚无 Worker 回报检查结果
             labels:

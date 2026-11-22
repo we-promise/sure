@@ -85,6 +85,15 @@ class Ai::ProbeJobTest < ActiveSupport::TestCase
     assert with_openai_token { AiHealth.new }.llm_probe.not_checked?
   end
 
+  test "when Redis refuses the writes, the job still finishes and the tabs still reload" do
+    stub_probe_answers(passing)
+    Ai::SharedState.store.stubs(:write).raises(RedisClient::CannotConnectError)
+
+    broadcasts = capture_turbo_stream_broadcasts(Ai::ProbeJob::STREAM) { with_openai_token { Ai::ProbeJob.perform_now } }
+
+    assert_equal "refresh", broadcasts.sole["action"]
+  end
+
   test "a job on an AI queue runs inside the capsule; a job on any other queue doesn't" do
     seen = []
     job = Class.new(ApplicationJob) { define_method(:perform) { seen << [ queue_name, Ai::Capsule.inside? ] } }
@@ -115,16 +124,15 @@ class Ai::ProbeJobTest < ActiveSupport::TestCase
     Ai::SharedState.delete(key)
   end
 
-  # The tab's form needs a request's CSRF token, so the job sends a frame that loads itself.
+  # A refresh carries no URL, so each tab reloads its own, with its locale and CSRF token.
   test "has open AI tabs reload their status" do
     stub_probe_answers(passing)
 
     broadcasts = capture_turbo_stream_broadcasts(Ai::ProbeJob::STREAM) { with_openai_token { Ai::ProbeJob.perform_now } }
 
     stream = broadcasts.sole
-    assert_equal [ "replace", "ai_status" ], [ stream["action"], stream["target"] ]
-    assert_equal Rails.application.routes.url_helpers.ai_status_admin_system_health_path,
-                 stream.at_css("turbo-frame#ai_status")["src"]
+    assert_equal "refresh", stream["action"]
+    assert_empty stream.children
   end
 
   private

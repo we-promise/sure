@@ -105,6 +105,7 @@ fr:
         body: "Ceci est une notification push de test pour votre compte Sure."
       show:
         ai:
+          worker_unhealthy_warning: "Les vérifications de l'IA peuvent ne pas s'exécuter actuellement — le worker en arrière-plan semble arrêté ou surchargé. Vérifiez que votre worker Sidekiq est bien démarré."
           adapters:
             openai: Magasin de vecteurs hébergé OpenAI
             pgvector: pgvector
@@ -257,6 +258,7 @@ fr:
             description: La vérification en direct interroge l'API du magasin de vecteurs hébergé, ou teste la table pgvector et crée un court embedding sans le stocker.
             title: Magasin de vecteurs et recherche documentaire
           worker:
+            run_coverage_notice: "Chaque vérification ne contrôle qu'un seul processus worker, celui qui la dépile. Avec plusieurs réplicas de worker, un résultat positif ne garantit pas que tous les workers sont sains ; relancez les vérifications pour en tester un autre."
             configuration_statuses:
               match: Identique au web
               mismatch: Différente du web

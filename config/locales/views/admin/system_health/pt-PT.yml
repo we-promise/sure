@@ -137,6 +137,7 @@ pt-PT:
           seconds: "%{seconds}s"
           no_queues: "Não existem filas registadas. O worker pode não estar a ser executado."
         ai:
+          worker_unhealthy_warning: "As verificações de IA podem não ser executadas neste momento — o worker em segundo plano parece estar em baixo ou sobrecarregado. Verifique se o seu worker Sidekiq está a funcionar."
           run_checks: Executar verificações novamente
           alerts:
             custom_openai:

@@ -348,6 +348,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_nil entry.account
     assert_equal "http://ollama:11434/v1", entry.metadata.fetch("endpoint")
     assert_equal "model_not_available", entry.metadata.fetch("failure_code")
+    assert_equal WorkerAiHealth.current_process_identity, entry.metadata.fetch("process_identity")
     assert_no_match(/secret-token|uri-secret|query-secret/, entry.metadata.to_json)
   end
 

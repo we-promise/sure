@@ -4,6 +4,7 @@ pl:
     system_health:
       show:
         ai:
+          worker_unhealthy_warning: "Testy AI mogą się teraz nie uruchomić: worker w tle wygląda na wyłączony albo zapchany. Sprawdź, czy Twój worker Sidekiq działa."
           adapters:
             openai: Hostowany magazyn wektorowy OpenAI
             pgvector: pgvector
@@ -218,6 +219,7 @@ pl:
               go.
             title: Magazyn wektorowy i wyszukiwanie dokumentów
           worker:
+            run_coverage_notice: "Każdy test sprawdza dokładnie jeden proces workera — ten, który go pobierze z kolejki. Przy więcej niż jednej replice workera pozytywny wynik nie potwierdza, że wszystkie workery działają poprawnie — uruchom testy ponownie, żeby sprawdzić kolejny."
             configuration_statuses:
               match: Zgodne z web
               mismatch: Różni się od web

@@ -251,6 +251,7 @@ nl:
           seconds: "%{seconds}s"
           no_queues: "Er zijn geen wachtrijen geregistreerd. De worker draait mogelijk niet."
         ai:
+          worker_unhealthy_warning: "AI-controles worden mogelijk nu niet uitgevoerd — de achtergrondworker lijkt niet actief of overbelast te zijn. Controleer of uw Sidekiq-worker draait."
           run_checks: "Controles opnieuw uitvoeren"
           alerts:
             custom_openai:
@@ -400,6 +401,7 @@ nl:
             request_failed: "Het verzoek aan de dienst is mislukt"
             unsupported_provider: "De provider ondersteunt deze controle niet"
           worker:
+            run_coverage_notice: "Elke controle verifieert precies één workerproces -- het proces dat de controle uit de wachtrij haalt. Met meer dan één workerreplica bevestigt een geslaagd resultaat niet dat elke worker gezond is; voer de controles opnieuw uit om een andere te testen."
             empty:
               title: "Er heeft zich nog geen worker gemeld"
             labels:
