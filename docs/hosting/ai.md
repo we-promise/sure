@@ -1681,7 +1681,9 @@ EMBEDDING_ACCESS_TOKEN=                   # Falls back to the OpenAI Access Toke
 
 The fallbacks include values saved in **Settings** → **Self-Hosting**. Before this release they
 read only `OPENAI_URI_BASE` and `OPENAI_ACCESS_TOKEN` from the environment, so an install that set
-its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key.
+its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key. The
+access token saved in Settings is sent only to the OpenAI URL it was saved with: a separate
+`EMBEDDING_URI_BASE` needs `EMBEDDING_ACCESS_TOKEN` (or `OPENAI_ACCESS_TOKEN`).
 
 Sure enables the `vector` extension when it first provisions the chunks table,
 provided the database user has permission. If the AI status page reports that
