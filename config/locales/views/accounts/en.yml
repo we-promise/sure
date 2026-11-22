@@ -136,6 +136,17 @@ en:
         manual_entry: Enter account balance
         title: How would you like to add it?
       title: What would you like to add?
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): below zero from %{date}, lowest %{qty}"
+        hint: A purchase or transfer is probably missing. Add it, or correct the trades that took the position below zero.
+        link: Review holdings
+        message: Some positions went below zero
+      sync_failed:
+        message: The last sync failed
+      sync_hint: The figures here may be out of date. Sync again to bring them up to date.
+      sync_stale:
+        message: The last sync did not finish
     show:
       limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
       tabs:

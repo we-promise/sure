@@ -19,6 +19,7 @@ class AccountStatement < ApplicationRecord
 
   PreparedUpload = Data.define(:content, :filename, :content_type, :byte_size, :checksum, :content_sha256)
 
+  BALANCE_FIELDS = %w[opening_balance closing_balance].freeze
   MAX_FILE_SIZE = 25.megabytes
   READ_CHUNK_SIZE = 1.megabyte
   ALLOWED_EXTENSION_CONTENT_TYPES = {
@@ -45,6 +46,8 @@ class AccountStatement < ApplicationRecord
   before_validation :sync_file_metadata, if: -> { original_file.attached? }
   before_validation :normalize_currency
   before_validation :sync_review_status
+  before_validation :note_edited_balances
+  before_validation :derive_detected_balances, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_currency? }
 
   validates :filename, :content_type, :checksum, presence: true
   validates :byte_size, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: MAX_FILE_SIZE }
@@ -63,6 +66,18 @@ class AccountStatement < ApplicationRecord
   validate :original_file_constraints, if: -> { original_file.attached? }
 
   scope :ordered, -> { order(created_at: :desc) }
+  # Statements with a known period first, newest period first. A period
+  # counts as known only with both ends, as account_statement_period shows
+  # it; the rest follow in upload order, which also breaks ties.
+  scope :by_period, -> {
+    known = "account_statements.period_start_on IS NOT NULL AND account_statements.period_end_on IS NOT NULL"
+    order(
+      Arel.sql("CASE WHEN #{known} THEN 0 ELSE 1 END"),
+      Arel.sql("CASE WHEN #{known} THEN account_statements.period_end_on END DESC"),
+      Arel.sql("CASE WHEN #{known} THEN account_statements.period_start_on END DESC"),
+      created_at: :desc
+    )
+  }
   scope :with_account, -> { where.not(account_id: nil) }
   scope :unmatched, -> { where(account_id: nil).where(review_status: "unmatched") }
   # Rejecting a suggestion leaves the statement accountless, so it stays in the inbox where it can be found and deleted.
@@ -367,6 +382,16 @@ class AccountStatement < ApplicationRecord
     pdf_imports.where.not(status: :failed).order(created_at: :desc).first
   end
 
+  # Whether `amount` is the figure the statement text already gave for this
+  # balance, whatever its sign: the detected value, signed for the account,
+  # then stands.
+  def detected_balance?(field, amount)
+    field = field.to_s
+    return false if pdf_output["balance_readings"].blank? || edited_balances.include?(field)
+
+    self[field].present? && amount.present? && self[field].to_d.abs == amount.to_d.abs
+  end
+
   private
 
     def reconciliation_check(key:, statement_amount:, ledger_amount:)
@@ -396,6 +421,51 @@ class AccountStatement < ApplicationRecord
 
     def normalize_currency
       self.currency = currency.to_s.upcase.presence if currency.present?
+    end
+
+    def pdf_output
+      sanitized_parser_output.to_h["pdf"].to_h
+    end
+
+    def edited_balances
+      Array(pdf_output["edited_balances"])
+    end
+
+    def merge_pdf_output(values)
+      self.sanitized_parser_output = sanitized_parser_output.to_h.merge("pdf" => pdf_output.merge(values))
+    end
+
+    # A balance written by anyone but derive_detected_balances (the form, the
+    # AI extraction) is theirs from then on and is never worked out again.
+    # What the derivation wrote is remembered, so a save that fails
+    # validation and is retried does not count it as an edit.
+    def note_edited_balances
+      return if pdf_output["balance_readings"].blank?
+
+      edited = BALANCE_FIELDS.select do |field|
+        will_save_change_to_attribute?(field) && !(@derived_balances&.key?(field) && @derived_balances[field] == self[field])
+      end
+      merge_pdf_output("edited_balances" => (edited_balances | edited)) if edited.any?
+    end
+
+    # The detected balances follow the account and the currency: their CR/DR
+    # sign and whether the summary table adds up come from the account's
+    # classification, and "$" is read in the statement's currency. So they are
+    # worked out from the stored readings on upload and on every link, unlink,
+    # relink and currency change. An edited balance is left as it is.
+    def derive_detected_balances
+      readings = pdf_output["balance_readings"]
+      return if readings.blank?
+
+      balances = TextMetadataParser.balances_for(readings, classification: account&.classification, currency: statement_currency)
+      @derived_balances = (BALANCE_FIELDS - edited_balances).to_h do |field|
+        self[field] = balances&.public_send(field)
+        [ field, self[field] ]
+      end
+      merge_pdf_output(
+        "balances_source" => balances&.source,
+        "balances_detected" => opening_balance.present? && closing_balance.present?
+      )
     end
 
     def sync_review_status

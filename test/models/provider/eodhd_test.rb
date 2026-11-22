@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Provider::EodhdTest < ActiveSupport::TestCase
+  include ProviderTestHelper
+
   FUNDAMENTALS_URL = "https://eodhd.com/api/fundamentals/AAPL.US".freeze
 
   setup do
@@ -586,6 +588,60 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     assert_equal 3, provider.usage.data.used
   ensure
     store&.delete(provider&.send(:daily_cache_key))
+  end
+
+  test "client sets explicit open and read timeouts" do
+    options = @provider.send(:client).options
+
+    assert_equal 5, options.open_timeout
+    assert_equal 20, options.timeout
+  end
+
+  test "a timed-out request returns a failed response with the provider's Error" do
+    @provider.stubs(:enforce_daily_limit!)
+    @provider.stubs(:throttle_request)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    search = stub_request(:get, %r{\Ahttps://eodhd\.com/api/search/TEST}).to_timeout
+    errors = capture_transformed_errors(@provider)
+
+    response = @provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::Eodhd::Error, response.error
+    assert_requested search, times: 4
+    assert_kind_of Faraday::ConnectionFailed, errors.last
+    assert_kind_of Net::OpenTimeout, errors.last.wrapped_exception
+  end
+
+  test "a read timeout is retried and returns a failed response with the provider's Error" do
+    @provider.stubs(:enforce_daily_limit!)
+    @provider.stubs(:throttle_request)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    search = stub_request(:get, %r{\Ahttps://eodhd\.com/api/search/TEST}).to_raise(Net::ReadTimeout)
+    errors = capture_transformed_errors(@provider)
+
+    response = @provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::Eodhd::Error, response.error
+    assert_requested search, times: 4
+    assert_kind_of Faraday::TimeoutError, errors.last
+  end
+
+  test "a fundamentals request gets a longer read timeout than the client default" do
+    stub_quota_hook(@provider)
+    stub_request(:get, FUNDAMENTALS_URL)
+      .with(query: hash_including("fmt" => "json"))
+      .to_return(status: 200, body: { "General" => { "Name" => "Apple Inc" } }.to_json)
+    stub_request(:get, %r{\Ahttps://eodhd\.com/api/search/AAPL}).to_return(status: 200, body: [].to_json)
+    timeouts = capture_request_timeouts(@provider)
+
+    with_fresh_cache do
+      assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+    end
+    assert @provider.search_securities("AAPL").success?
+
+    assert_equal [ 60, 20 ], timeouts
   end
 
   private

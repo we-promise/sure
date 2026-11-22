@@ -54,6 +54,7 @@ RSpec.describe 'API V1 Trades', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Investment Account',
       balance: 50_000,
       currency: 'USD',
@@ -85,6 +86,30 @@ RSpec.describe 'API V1 Trades', type: :request do
       entryable: trade_record
     )
     entry.entryable
+  end
+
+  let(:read_only_trade) do
+    owner = family.users.create!(
+      email: 'api-owner@example.com',
+      password: 'password123',
+      password_confirmation: 'password123'
+    )
+    shared_account = Account.create!(
+      family: family,
+      owner: owner,
+      name: 'Shared Brokerage',
+      balance: 50_000,
+      currency: 'USD',
+      accountable: Investment.create!
+    )
+    shared_account.account_shares.create!(user: user, permission: 'read_only', include_in_finances: true)
+    shared_account.entries.create!(
+      name: 'Buy shared shares',
+      date: Date.current,
+      amount: 1_000,
+      currency: 'USD',
+      entryable: Trade.new(security: security, qty: 10, price: 100, currency: 'USD', investment_activity_label: 'Buy')
+    ).entryable
   end
 
   path '/api/v1/trades' do
@@ -178,6 +203,7 @@ RSpec.describe 'API V1 Trades', type: :request do
               },
               fee: {
                 type: :number,
+                minimum: 0,
                 description: 'Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)'
               },
               type: {
@@ -574,10 +600,10 @@ RSpec.describe 'API V1 Trades', type: :request do
             type: :object,
             properties: {
               date: { type: :string, format: :date },
-              qty: { type: :number },
-              price: { type: :number },
-              type: { type: :string, enum: %w[buy sell sweep_in sweep_out reinvestment] },
-              nature: { type: :string, enum: %w[inflow outflow] },
+              qty: { type: :number, description: 'Positive quantity. Sending qty, price, type or nature recomputes the entry amount as signed qty * price + fee, where qty is negative on a sell; what the request leaves out is taken from the trade.' },
+              price: { type: :number, description: 'Positive price per unit' },
+              type: { type: :string, enum: %w[buy sell sweep_in sweep_out reinvestment], description: 'Side of the trade; takes precedence over nature' },
+              nature: { type: :string, enum: %w[inflow outflow], description: 'inflow is a sell, outflow a buy' },
               name: { type: :string },
               notes: { type: :string },
               currency: { type: :string },
@@ -614,7 +640,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - api key missing read_write scope' do
+      response '403', 'forbidden - api key missing read_write scope, or the account is shared with you without write access' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { trade.id }
@@ -633,10 +659,27 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
+      response '403', 'forbidden - api key missing read_write scope, or the account is shared with you without write access' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_trade.id }
+
+        run_test!
+      end
+
       response '404', 'trade not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '422', 'qty or price is not a positive number, or nature is not inflow or outflow' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { trade.id }
+        let(:body) { { trade: { price: 'abc' } } }
 
         run_test!
       end
@@ -664,7 +707,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - api key missing read_write scope' do
+      response '403', 'forbidden - api key missing read_write scope, or the account is shared with you without write access' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { trade.id }
@@ -679,6 +722,14 @@ RSpec.describe 'API V1 Trades', type: :request do
           )
         end
         let(:'X-Api-Key') { read_only_api_key.plain_key }
+
+        run_test!
+      end
+
+      response '403', 'forbidden - api key missing read_write scope, or the account is shared with you without write access' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_trade.id }
 
         run_test!
       end
