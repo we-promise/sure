@@ -1,6 +1,9 @@
 require "test_helper"
+require Rails.root.join("test/support/web_push_test_helper")
 
 class DemoFamilyRefreshJobTest < ActiveJob::TestCase
+  include WebPushTestHelper
+
   setup do
     @demo_email = "demo-user@example.com"
     Rails.application.stubs(:config_for).with(:demo).returns({ "email" => @demo_email })
@@ -112,6 +115,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     Setting.demo_family_refresh_enabled = true
     @demo_family.start_subscription!(Subscription::DEMO_STRIPE_ID)
     session = Session.create!(user: @demo_user)
+    browser_push = register_web_push(user: @demo_user, session: session)
     app = Doorkeeper::Application.create!(name: "Demo Retirement Test", redirect_uri: "https://example.com/callback", confidential: false)
     token = Doorkeeper::AccessToken.create!( # pipelock:ignore Credential in URL
       application: app, resource_owner_id: @demo_user.id, scopes: "read", expires_in: 1.year)
@@ -131,6 +135,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     end
     assert_not @demo_user.reload.active?
     assert_not Session.exists?(session.id)
+    assert_not WebPushSubscription.exists?(browser_push.id)
     assert key.reload.revoked?
     assert token.reload.revoked_at
     assert grant.reload.revoked_at

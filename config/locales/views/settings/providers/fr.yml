@@ -79,8 +79,8 @@ fr:
         application_id_placeholder_new: Saisissez l'identifiant de l'application
         application_id_placeholder_update: Saisissez le nouvel identifiant pour mettre à jour
         callback_url_instruction: Pour l'URL de rappel, utilisez %{callback_url}.
-        client_certificate_label: Certificat client (avec clé privée)
-        keep_client_certificate_hint: "Laissez vide pour conserver le certificat actuel"
+        client_certificate_label: Clé privée (.pem)
+        keep_client_certificate_hint: "Laissez vide pour conserver la clé privée actuelle"
         config_locked_message: Déconnectez toutes les banques liées avant de modifier ces identifiants.
         config_locked_title: Configuration verrouillée
         configured: Configuré
@@ -98,7 +98,7 @@ fr:
         session_expired_reconnect: Session expirée - reconnecter
         session_expires: "La session expire le : %{date}"
         step_1_html: Allez sur %{link} et récupérez vos identifiants de développeur.
-        step_2: Choisissez votre pays et collez l'identifiant de l'application (Application ID) et le certificat client ci-dessous.
+        step_2: Choisissez votre pays et collez l'identifiant de l'application (Application ID) et la clé privée ci-dessous.
         step_3: Enregistrez, puis utilisez Ajouter une connexion pour lier votre banque.
         sync: Synchroniser
         syncing: Synchronisation...
@@ -223,6 +223,8 @@ fr:
         step_1_html: Allez sur %{link} et créez une clé API.
         step_2: Collez votre clé ci-dessous et connectez-vous.
         step_3: Ensuite, allez dans Comptes pour lier vos comptes synchronisés.
+        sync_start_date_help: Laissez vide pour importer tout ce dont dispose Lunch Flow. Avancer la date importe la période manquante lors de la prochaine synchronisation. La reculer n'affecte pas les transactions déjà importées.
+        sync_start_date_label: Importer les transactions à partir de
         update_connection: Mettre à jour la connexion
       maturity:
         alpha: Alpha
@@ -281,6 +283,22 @@ fr:
       setup_steps:
         eyebrow: Configuration
         need_help: Besoin d'aide ?
+      sharesight_panel:
+        steps:
+          step_1: Demandez au support Sharesight d'activer l'accès à l'API. Il est disponible sur les forfaits payants.
+          step_2: Dans les paramètres de votre compte Sharesight, ouvrez la page API et copiez l'ID client et le secret client.
+          step_3: Collez-les tous les deux ci-dessous et enregistrez. Sure trouve ensuite vos portefeuilles pour que vous puissiez les lier.
+        client_id_label: ID client
+        client_id_placeholder_new: Collez votre ID client Sharesight
+        client_id_placeholder_existing: Laissez vide pour conserver l'ID client actuel
+        client_secret_label: Secret client
+        client_secret_placeholder_new: Collez votre secret client Sharesight
+        client_secret_placeholder_existing: Laissez vide pour conserver le secret client actuel
+        save_configuration: Enregistrer la configuration
+        update_configuration: Mettre à jour la configuration
+        status_configured_prefix: Configuré. Ouvrez l'onglet
+        accounts_tab: Comptes
+        status_configured_suffix: pour lier vos portefeuilles.
       show:
         coinbase_title: Coinbase
       simplefin_panel:
@@ -323,11 +341,13 @@ fr:
         plaid_eu: Connectez des institutions financières européennes via Plaid (PSD2 / Open Banking).
         questrade: Synchronisez directement vos comptes d'investissement Questrade via l'API Questrade.
         redbark: Synchronisez des comptes bancaires australiens via l'open banking Redbark.
+        sharesight: Synchronisez les portefeuilles que vous suivez dans Sharesight grâce à son API.
         simplefin: Connectez des comptes bancaires américains via le protocole ouvert SimpleFIN.
         snaptrade: Connectez vos comptes de courtage via le réseau d'agrégation SnapTrade.
         sophtron: Connectez vos banques et services publics américains et canadiens.
         trade_republic: Synchronisez votre compte d'investissement Trade Republic via une connexion web sécurisée en lecture seule.
         trading212: Synchronisez votre portefeuille d'investissement Trading 212 à l'aide d'une clé d'API en lecture seule.
+        truelayer: Synchronisez vos comptes bancaires et cartes de crédit britanniques via l'open banking TrueLayer.
         up: Synchronisez des comptes bancaires australiens Up avec un jeton d'accès personnel.
         wise: Synchronisez automatiquement vos soldes multi-devises Wise et vos transferts internationaux.
       trade_republic_panel:
