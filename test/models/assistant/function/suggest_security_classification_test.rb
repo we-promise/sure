@@ -1,0 +1,429 @@
+require "test_helper"
+
+# The tool writes PROPOSALS, never classifications. It is registered through
+# `Assistant.function_classes`, which also feeds `/mcp` -- so it is callable by an
+# external agent and re-checks the user's scope itself rather than trusting the
+# caller.
+class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::TestCase
+  setup do
+    @user = users(:family_admin)
+    @family = @user.family
+    @security = securities(:aapl)
+    @function = Assistant::Function::SuggestSecurityClassification.new(@user)
+  end
+
+  test "a proposal is recorded, and the security is left alone" do
+    result = @function.call("proposals" => [ {
+      "ticker" => "AAPL", "asset_class" => "equity", "asset_sub_class" => "stock",
+      "sector" => "Technology", "rationale" => "Common stock listed on XNAS."
+    } ])
+
+    proposal = Security::ClassificationProposal.sole
+    assert_equal @security, proposal.security
+    assert_equal @family, proposal.family
+    assert_equal "equity", proposal.asset_class
+    assert_equal "stock", proposal.asset_sub_class
+    assert_equal "Technology", proposal.sector
+    assert_equal "Common stock listed on XNAS.", proposal.rationale
+    assert proposal.pending?
+
+    assert_nil @security.reload.asset_class, "the tool classified a security directly"
+    assert_equal 1, result[:recorded]
+    assert_empty result[:skipped]
+  end
+
+  test "the ticker is matched without regard to case" do
+    result = @function.call("proposals" => [ { "ticker" => "aapl", "region" => "north_america" } ])
+
+    assert_equal 1, result[:recorded]
+    assert_equal @security, Security::ClassificationProposal.sole.security
+  end
+
+  test "a padded ticker still matches the held security" do
+    result = @function.call("proposals" => [ { "ticker" => " AAPL ", "region" => "north_america" } ])
+
+    assert_equal 1, result[:recorded]
+    assert_equal @security, Security::ClassificationProposal.sole.security
+  end
+
+  test "a security a provider classifies after the tool read it is skipped, not proposed" do
+    # The tool's read of the held securities is from before the provider's
+    # answer landed.
+    @function.stubs(:held_securities).returns([ Security.find(@security.id) ])
+    @security.update_columns(asset_class: "equity", asset_sub_class: "stock", classification_source: "provider")
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "asset_class" => "fixed_income" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_equal [ { ticker: "AAPL", reason: "already classified by a data provider" } ], result[:skipped]
+    assert_not Security::ClassificationProposal.exists?
+  end
+
+  # The tool is reachable over /mcp, so the ticker is resolved within the user's
+  # own holdings rather than across the table. Otherwise an external caller
+  # could queue a proposal against an instrument this family does not hold.
+  test "a ticker the family does not hold is refused" do
+    Security.create!(ticker: "NVDA", exchange_operating_mic: "XNAS", country_code: "US")
+
+    result = @function.call("proposals" => [ {
+      "ticker" => "NVDA", "asset_class" => "equity"
+    } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/not held/i, result[:skipped].first[:reason])
+  end
+
+  # The family holds AAPL, but only in the admin's own investment account, which
+  # is not shared with this member. The admin is allowed through above; the
+  # member must not be, or the tool would reveal and act on a position the
+  # member cannot open.
+  test "a security held only in an account the user cannot see is refused" do
+    member = users(:family_member)
+    assert_not member.accessible_accounts.exists?(accounts(:investment).id), "precondition: the member cannot see the account"
+
+    result = Assistant::Function::SuggestSecurityClassification.new(member).call("proposals" => [ {
+      "ticker" => "AAPL", "asset_class" => "equity"
+    } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/not held/i, result[:skipped].first[:reason])
+  end
+
+  test "a security held only in an account pending deletion is refused" do
+    accounts(:investment).update_columns(status: "pending_deletion")
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "asset_class" => "equity" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+  end
+
+  test "a security the user has already classified is skipped, with a reason" do
+    @security.update!(asset_class: "fixed_income", classification_source: "manual")
+
+    result = @function.call("proposals" => [ {
+      "ticker" => "AAPL", "asset_class" => "equity"
+    } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/by hand/i, result[:skipped].first[:reason])
+  end
+
+  # `propose!` updates an existing proposal in place. The model runs its
+  # manual/locked veto on every save that leaves a proposal pending, and the
+  # tool checks the same veto first, so a re-proposal does not revive a
+  # proposal after the user answered the security by hand.
+  test "re-proposing for a security classified by hand since is skipped" do
+    @function.call("proposals" => [ { "ticker" => "AAPL", "asset_class" => "equity" } ])
+    existing = Security::ClassificationProposal.sole
+    existing.update!(status: "rejected")
+    @security.update!(asset_class: "fixed_income", classification_source: "manual")
+
+    # A fresh call, as a later chat turn or MCP request would make.
+    result = Assistant::Function::SuggestSecurityClassification.new(@user).call(
+      "proposals" => [ { "ticker" => "AAPL", "asset_class" => "equity" } ]
+    )
+
+    assert_equal 0, result[:recorded]
+    assert_equal "rejected", existing.reload.status, "a re-proposal revived a proposal the user had answered"
+    assert_match(/by hand/i, result[:skipped].first[:reason])
+  end
+
+  test "an invalid value is skipped rather than raising" do
+    result = nil
+    assert_nothing_raised do
+      result = @function.call("proposals" => [ {
+        "ticker" => "AAPL", "asset_class" => "nonsense"
+      } ])
+    end
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_equal [ "AAPL" ], result[:skipped].map { |entry| entry[:ticker] }
+  end
+
+  # The schema requires only `ticker`, so the model can send exactly this shape.
+  # Recording it would let approval stamp "ai" on a security with nothing
+  # classified.
+  test "a proposal that answers nothing is skipped" do
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "sector" => "", "rationale" => "No idea." } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/at least one/i, result[:skipped].first[:reason])
+  end
+
+  # `propose!` writes with a bang, and the pre-check makes a failure there
+  # unlikely rather than impossible -- it updates an existing row, so a
+  # validation that depends on persisted state can still refuse. Unrescued, the
+  # user would lose every proposal after the bad one.
+  test "a security that cannot be recorded does not cost the user the rest of the batch" do
+    other = Security.create!(ticker: "MSFT9", exchange_operating_mic: "XNAS", country_code: "US")
+    accounts(:investment).holdings.create!(
+      security: other, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD"
+    )
+
+    # The first ticker refuses at write time; the second must still land, and
+    # it must be the second security that reaches the write.
+    answer = { open_sources: [ nil, "default" ], asset_class: "equity", asset_sub_class: "stock", sector: nil, region: nil, rationale: nil }
+    writes = sequence("writes")
+    Security::ClassificationProposal.expects(:propose!).with(security: @security, family: @family, **answer)
+      .in_sequence(writes).raises(ActiveRecord::RecordInvalid.new(Security::ClassificationProposal.new))
+    Security::ClassificationProposal.expects(:propose!).with(security: other, family: @family, **answer)
+      .in_sequence(writes).returns(Security::ClassificationProposal.new)
+
+    result = @function.call("proposals" => [
+      { "ticker" => "AAPL", "asset_class" => "equity", "asset_sub_class" => "stock" },
+      { "ticker" => "MSFT9", "asset_class" => "equity", "asset_sub_class" => "stock" }
+    ])
+
+    assert_equal 1, result[:recorded], "the batch stopped at the first security it could not record"
+    assert_equal [ "AAPL" ], result[:skipped].map { |entry| entry[:ticker] }
+  end
+
+  # `ticker` is unique per exchange only. Holding the same ticker on two
+  # exchanges used to attach the proposal to whichever row Postgres returned,
+  # and approval would then classify the wrong global security.
+  test "a ticker held on two exchanges is skipped unless the exchange is named" do
+    london = Security.create!(ticker: "AAPL", exchange_operating_mic: "XLON", country_code: "GB")
+    accounts(:investment).holdings.create!(
+      security: london, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD"
+    )
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "region" => "europe" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/XLON/, result[:skipped].first[:reason])
+    assert_match(/XNAS/, result[:skipped].first[:reason])
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "exchange_operating_mic" => "xlon", "region" => "europe" } ])
+
+    assert_equal 1, result[:recorded]
+    assert_equal london, Security::ClassificationProposal.sole.security
+  end
+
+  # A listing stored under a legacy code is the same venue as its ISO MIC,
+  # as `Security` treats it everywhere else.
+  test "a held listing stored under a legacy exchange code is matched by its MIC" do
+    xetra = Security.create!(ticker: "SAP9", exchange_operating_mic: "XETR", country_code: "DE")
+    xetra.update_column(:exchange_operating_mic, "GER")
+    accounts(:investment).holdings.create!(
+      security: xetra, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD"
+    )
+
+    result = @function.call("proposals" => [ { "ticker" => "SAP9", "exchange_operating_mic" => "XETR", "region" => "europe" } ])
+
+    assert_equal 1, result[:recorded], result[:skipped].inspect
+    assert_equal xetra, Security::ClassificationProposal.sole.security
+  end
+
+  # A person's decision stands: the tool says the proposal was already
+  # reviewed rather than reporting a write that did not happen.
+  test "a security whose proposal was already rejected is skipped as reviewed" do
+    Security::ClassificationProposal.propose!(security: @security, family: @family, asset_class: "equity").reject!
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "asset_class" => "commodity" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_equal "already reviewed (rejected)", result[:skipped].first[:reason]
+    assert Security::ClassificationProposal.sole.rejected?
+  end
+
+  test "a security a provider has classified is skipped" do
+    @security.update!(asset_class: "equity", asset_sub_class: "stock", classification_source: "provider")
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "region" => "north_america" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_equal "already classified by a data provider", result[:skipped].first[:reason]
+  end
+
+  # A provider reports a position in the security's currency, not the
+  # account's, and that row is the holding.
+  test "a provider position in a currency other than the account's is held" do
+    euro = Security.create!(ticker: "EURO9", exchange_operating_mic: "XETR", country_code: "DE")
+    provider_holding(euro, qty: 1, currency: "EUR")
+
+    result = @function.call("proposals" => [ { "ticker" => "EURO9", "region" => "europe" } ])
+
+    assert_equal 1, result[:recorded], result[:skipped].inspect
+  end
+
+  # Two stored rows for one venue (a legacy GER and an ISO XETR) are told
+  # apart by the exact code named.
+  test "an exact stored exchange code is preferred over a legacy row for the same venue" do
+    iso = Security.create!(ticker: "SAP8", exchange_operating_mic: "XETR", country_code: "DE")
+    legacy = Security.create!(ticker: "SAP8", exchange_operating_mic: "XFRA", country_code: "DE")
+    legacy.update_column(:exchange_operating_mic, "GER")
+    [ iso, legacy ].each do |security|
+      accounts(:investment).holdings.create!(security: security, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    end
+
+    result = @function.call("proposals" => [ { "ticker" => "SAP8", "exchange_operating_mic" => "XETR", "region" => "europe" } ])
+
+    assert_equal 1, result[:recorded], result[:skipped].inspect
+    assert_equal iso, Security::ClassificationProposal.sole.security
+  end
+
+  test "an entry without a ticker is skipped as needing one" do
+    result = @function.call("proposals" => [ { "asset_class" => "equity" } ])
+
+    assert_equal [ { ticker: nil, reason: "ticker is required" } ], result[:skipped]
+  end
+
+  test "a batch over the limit is refused whole" do
+    entries = Array.new(Assistant::Function::SuggestSecurityClassification::MAX_PROPOSALS + 1) { { "ticker" => "AAPL", "region" => "north_america" } }
+
+    result = @function.call("proposals" => entries)
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+  end
+
+  # MCP passes arguments straight through, so a field that is not text is
+  # refused here rather than coerced into a string by the model.
+  test "a field that is not text is skipped, with a reason" do
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "sector" => [ "Technology" ] } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/sector/, result[:skipped].first[:reason])
+  end
+
+  # A position the user has sold out of is history, not a holding.
+  test "a security the user has sold out of is refused" do
+    sold = Security.create!(ticker: "SOLD9", exchange_operating_mic: "XNAS", country_code: "US")
+    accounts(:investment).holdings.create!(security: sold, date: 3.days.ago.to_date, qty: 5, price: 10, amount: 50, currency: "USD")
+    accounts(:investment).holdings.create!(security: sold, date: Date.current, qty: 0, price: 10, amount: 0, currency: "USD")
+
+    result = @function.call("proposals" => [ { "ticker" => "SOLD9", "region" => "north_america" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_match(/not held/i, result[:skipped].first[:reason])
+  end
+
+  # A linked account's holdings are its provider's latest snapshot. A security
+  # the provider stopped reporting is not held, though its last row is positive.
+  test "a security dropped from the provider's latest snapshot is refused" do
+    dropped = Security.create!(ticker: "DROP9", exchange_operating_mic: "XNAS", country_code: "US")
+    kept = Security.create!(ticker: "KEPT9", exchange_operating_mic: "XNAS", country_code: "US")
+    provider_holding(dropped, qty: 5, imported_on: 2.days.ago.to_date)
+    provider_holding(kept, qty: 5)
+
+    result = @function.call("proposals" => [ { "ticker" => "DROP9", "region" => "north_america" }, { "ticker" => "KEPT9", "region" => "north_america" } ])
+
+    assert_equal 1, result[:recorded], result[:skipped].inspect
+    assert_equal [ { ticker: "DROP9", reason: "not held by this family" } ], result[:skipped]
+  end
+
+  # One snapshot can carry a row per currency: any non-zero row holds the
+  # security, and zero rows in every currency do not.
+  test "a provider snapshot's rows in several currencies hold a security only when one is non-zero" do
+    open_one = Security.create!(ticker: "TIE9", exchange_operating_mic: "XNAS", country_code: "US")
+    all_zero = Security.create!(ticker: "ZERO9", exchange_operating_mic: "XNAS", country_code: "US")
+    provider_holding(open_one, qty: 0, currency: "USD")
+    provider_holding(open_one, qty: 5, currency: "EUR")
+    provider_holding(all_zero, qty: 0, currency: "USD")
+    provider_holding(all_zero, qty: 0, currency: "EUR")
+
+    result = @function.call("proposals" => [ { "ticker" => "TIE9", "region" => "north_america" }, { "ticker" => "ZERO9", "region" => "north_america" } ])
+
+    assert_equal 1, result[:recorded], result[:skipped].inspect
+    assert_equal [ { ticker: "ZERO9", reason: "not held by this family" } ], result[:skipped]
+  end
+
+  # Chat reuses one function instance across tool rounds, so what the user
+  # holds and may see is read on every call, not once.
+  test "holdings are read again on every call" do
+    other = Security.create!(ticker: "GONE9", exchange_operating_mic: "XNAS", country_code: "US")
+    holding = accounts(:investment).holdings.create!(security: other, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    assert_equal 1, @function.call("proposals" => [ { "ticker" => "GONE9", "region" => "north_america" } ])[:recorded]
+
+    holding.destroy!
+    result = @function.call("proposals" => [ { "ticker" => "GONE9", "region" => "europe" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_match(/not held/i, result[:skipped].first[:reason])
+  end
+
+  test "an exchange that does not match the held listing is skipped" do
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "exchange_operating_mic" => "XLON", "region" => "europe" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_match(/not held/i, result[:skipped].first[:reason])
+  end
+
+  # Approving a sub-class alone would write nothing, so the model refuses it and
+  # the tool reports why rather than counting it as recorded.
+  test "a sub-class without an asset class is skipped, with a reason" do
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "asset_sub_class" => "etf" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/asset class/i, result[:skipped].first[:reason])
+  end
+
+  test "an over-long rationale is skipped, with a reason" do
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "asset_class" => "equity", "rationale" => "x" * 2001 } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/rationale/i, result[:skipped].first[:reason])
+  end
+
+  test "an entry that is not an object is skipped rather than costing the batch" do
+    result = @function.call("proposals" => [ "AAPL", { "ticker" => "AAPL", "asset_class" => "equity" } ])
+
+    assert_equal 1, result[:recorded]
+    assert_equal 1, result[:skipped].size
+    assert_match(/object/i, result[:skipped].first[:reason])
+  end
+
+  test "the tool is offered to preview users only" do
+    assert_includes Assistant::PREVIEW_FUNCTION_CLASSES,
+                    Assistant::Function::SuggestSecurityClassification
+
+    plain = users(:family_member)
+    assert_not plain.preview_features_enabled?, "precondition: the plain user has not opted in"
+    assert_not_includes Assistant.function_classes(plain), Assistant::Function::SuggestSecurityClassification,
+                        "a preview tool reached the default surface, which /mcp also serves"
+
+    # The positive half. Membership of PREVIEW_FUNCTION_CLASSES is not the same
+    # as the gate letting a preview user through.
+    preview_user = users(:family_admin)
+    preview_user.update!(preferences: (preview_user.preferences || {}).merge("preview_features_enabled" => true))
+
+    assert_includes Assistant.function_classes(preview_user.reload),
+                    Assistant::Function::SuggestSecurityClassification,
+                    "the gate did not offer the tool to a preview user"
+  end
+
+  # A proposal replaces the family's pending one for that security, so a guest,
+  # who may view the family's setup but not change it, must not be able to
+  # overwrite a member's. The registry feeds chat and /mcp alike.
+  test "a guest is not offered the tool, even with preview features on" do
+    guest = users(:intro_user)
+    assert guest.guest?, "precondition: the fixture is a guest"
+    guest.update!(preferences: (guest.preferences || {}).merge("preview_features_enabled" => true))
+
+    assert_not_includes Assistant.function_classes(guest.reload), Assistant::Function::SuggestSecurityClassification
+  end
+
+  private
+    # A holding imported from a provider on `imported_on`, which makes the
+    # investment account a linked one: its holdings are then its latest
+    # provider snapshot.
+    def provider_holding(security, qty:, currency: "USD", imported_on: Date.current)
+      @account_provider ||= begin
+        item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+        AccountProvider.create!(account: accounts(:investment), provider: item.coinstats_accounts.create!(name: "Brokerage", currency: "USD"))
+      end
+      accounts(:investment).holdings.create!(
+        security: security, date: imported_on, qty: qty, price: 10, amount: qty * 10, currency: currency, account_provider: @account_provider
+      ).tap { |holding| holding.update_columns(updated_at: imported_on.to_time) }
+    end
+end
