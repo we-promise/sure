@@ -356,12 +356,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 	border-radius: 5px;
 	}
 .leaflet-control-layers-toggle {
-	background-image: url(images/layers.png);
+	background-image: url(/leaflet/layers.png);
 	width: 36px;
 	height: 36px;
 	}
 .leaflet-retina .leaflet-control-layers-toggle {
-	background-image: url(images/layers-2x.png);
+	background-image: url(/leaflet/layers-2x.png);
 	background-size: 26px 26px;
 	}
 .leaflet-touch .leaflet-control-layers-toggle {
@@ -403,8 +403,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
 	}
 
 /* Default icon URLs */
+/* Vendored under public/leaflet (not app/assets/images) and referenced by an
+   absolute, undigested path: L.Icon.Default._detectIconPath() reads this
+   rule's resolved background-image URL, strips the "marker-icon.png"
+   suffix, and appends "marker-icon-2x.png"/"marker-shadow.png" from the
+   same directory. Those two files are never referenced by url() in this
+   CSS, but must sit next to marker-icon.png on disk. Serving them through
+   Propshaft would rename marker-icon.png to marker-icon-<digest>.png,
+   breaking that suffix match - hence the undigested public/ path (same
+   pattern as public/favicon.ico, public/logo-offline.svg, etc.). */
 .leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
-	background-image: url(images/marker-icon.png);
+	background-image: url(/leaflet/marker-icon.png);
 	}
 
 
@@ -658,17 +667,4 @@ svg.leaflet-image-layer.leaflet-interactive path {
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
 		}
-	}
-
-/* Vendored override: the importmap pipeline only serves JS, so the
-   relative ./images/*.png paths above 404. Point them at Leaflet's
-   CDN-hosted dist images instead of also vendoring the binary assets. */
-.leaflet-control-layers-toggle {
-	background-image: url(https://unpkg.com/leaflet@1.9.4/dist/images/layers.png);
-	}
-.leaflet-retina .leaflet-control-layers-toggle {
-	background-image: url(https://unpkg.com/leaflet@1.9.4/dist/images/layers-2x.png);
-	}
-.leaflet-default-icon-path {
-	background-image: url(https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png);
 	}
