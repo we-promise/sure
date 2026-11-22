@@ -276,8 +276,19 @@ class ReportsController < ApplicationController
       [
         "reports_body", REPORT_BODY_CACHE_VERSION, Current.family.id, Current.user.id, report_member_version,
         report_family_settings_version, I18n.locale,
-        report_access_digest, Digest::SHA256.hexdigest(report_query.to_query)
+        report_access_digest, Digest::SHA256.hexdigest(report_query.to_query),
+        report_period_start_key
       ].join("/")
+    end
+
+    # A default period starts afresh each month, quarter or year, and the new
+    # one is a different report, not a stale copy of the last, so its start is
+    # part of the name. The end date isn't, so "this year" keeps its build from
+    # one day to the next. All time's start moves whenever older history
+    # arrives; that build is replaced in the background, not while the member
+    # waits, so it's left out.
+    def report_period_start_key
+      @start_date unless @period_type == :all_time
     end
 
     def report_access_digest

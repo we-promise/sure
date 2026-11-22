@@ -621,6 +621,33 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a new month's report is built, not served from last month's" do
+    with_memory_cache do
+      travel_to Date.new(2026, 11, 30).noon do
+        get reports_path
+      end
+
+      travel_to Date.new(2026, 12, 1).noon do
+        ReportsController.any_instance.expects(:render_report_body).once.returns({ notes: "", has_transactions: false, summary: "", sections: [] })
+        get reports_path
+      end
+    end
+  end
+
+  test "year to date keeps its build from one day to the next, though it ends today" do
+    with_memory_cache do
+      travel_to Date.new(2026, 11, 20).noon do
+        get reports_path(period_type: :ytd)
+      end
+
+      travel_to Date.new(2026, 11, 21).noon do
+        ReportsController.any_instance.expects(:render_report_body).never
+        get reports_path(period_type: :ytd)
+        assert_response :ok
+      end
+    end
+  end
+
   test "editing a holding's cost basis marks the cached report stale" do
     with_memory_cache do
       get reports_path(period_type: :ytd)
