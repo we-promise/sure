@@ -11,5 +11,6 @@ class LocationSearchesControllerTest < ActionDispatch::IntegrationTest
     get location_searches_url(q: "Malaga")
 
     assert_redirected_to root_path
+    assert_match(/preview/i, flash[:alert])
   end
 end
