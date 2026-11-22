@@ -21,7 +21,7 @@ en:
       periods:
         monthly: Monthly
         quarterly: Quarterly
-        ytd: Year to Date
+        ytd: Yearly
         last_6_months: Last 6 Months
         all_time: All Time
         custom: Custom Range
