@@ -399,7 +399,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     get connection_status_sophtron_item_url(@item, poll_attempt: 16, post_mfa: true)
 
     assert_response :success
-    assert_includes response.body, "Attempt 16 of #{SophtronItemsController::POST_MFA_CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "Attempt 16 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
     assert_includes response.body, "poll_attempt=17"
     assert_not_includes response.body, "Sophtron did not finish connecting"
     assert_not_equal "requires_update", @item.reload.status
@@ -421,7 +421,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     get connection_status_sophtron_item_url(@item, poll_attempt: 7)
 
     assert_response :success
-    assert_includes response.body, "Attempt 7 of #{SophtronItemsController::LOGIN_PROGRESS_CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "Attempt 7 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
     assert_includes response.body, "poll_attempt=8"
     assert_not_includes response.body, "Sophtron did not finish connecting"
     assert_not_equal "requires_update", @item.reload.status
@@ -453,7 +453,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     get connection_status_sophtron_item_url(@item, poll_attempt: 7)
 
     assert_response :success
-    assert_includes response.body, "Attempt 7 of #{SophtronItemsController::LOGIN_PROGRESS_CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "Attempt 7 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
     assert_includes response.body, "poll_attempt=8"
     assert_not_includes response.body, "Sophtron did not finish connecting"
     assert_not_equal "requires_update", @item.reload.status
@@ -476,7 +476,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     get connection_status_sophtron_item_url(@item, poll_attempt: 7, post_mfa: true)
 
     assert_response :success
-    assert_includes response.body, "Attempt 7 of #{SophtronItemsController::POST_MFA_CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "Attempt 7 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
     assert_includes response.body, "poll_attempt=8"
     assert_not_includes response.body, "Sophtron did not finish connecting"
   end
@@ -540,7 +540,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     get connection_status_sophtron_item_url(@item, poll_attempt: 6, post_mfa: true)
 
     assert_response :success
-    assert_includes response.body, "Attempt 6 of #{SophtronItemsController::POST_MFA_CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "Attempt 6 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
     assert_includes response.body, "poll_attempt=7"
     assert_not_includes response.body, "Sophtron did not finish connecting"
     assert_equal "job-1", @item.reload.current_job_id
