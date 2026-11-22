@@ -128,6 +128,12 @@ class Provider::Simplefin
     with_retries("GET /accounts") do |attempt|
       response = self.class.get(accounts_url, **guarded_request_options(access_url, attempt: attempt))
 
+      # A relative Location cannot change hosts, so following it once keeps the
+      # SSRF check meaningful. Absolute targets still fail below.
+      if (redirect_url = same_host_redirect_url(accounts_url, response))
+        response = self.class.get(redirect_url, **guarded_request_options(redirect_url, attempt: attempt))
+      end
+
       case response.code
       when 200
         JSON.parse(response.body, symbolize_names: true)
@@ -144,6 +150,13 @@ class Provider::Simplefin
       when 500..599
         Rails.logger.error "SimpleFin API: Server error - Code: #{response.code}, Body: #{response.body}"
         raise SimplefinError.new("SimpleFin server error (#{response.code}). Please try again later.", :server_error)
+      when 307, 308
+        location = response.headers["location"]
+        Rails.logger.error "SimpleFin API: Redirect not followed - Code: #{response.code}, Location: #{location}"
+        raise SimplefinError.new(
+          "Failed to fetch accounts: #{response.code} #{response.message} (redirect to #{location})",
+          :fetch_failed
+        )
       else
         Rails.logger.error "SimpleFin API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
         raise SimplefinError.new("Failed to fetch accounts: #{response.code} #{response.message}", :fetch_failed)
@@ -173,6 +186,24 @@ class Provider::Simplefin
   end
 
   private
+    # Returns the redirect target for a 307/308 whose Location is relative
+    # (same host), or nil for absolute/protocol-relative targets and other
+    # responses. Resolving against the requested URL keeps the checked host
+    # and credentials.
+    def same_host_redirect_url(request_url, response)
+      return unless [ 307, 308 ].include?(response.code)
+
+      location = response.headers["location"]
+      return if location.blank?
+
+      target = URI.parse(location)
+      return if target.scheme || target.host
+
+      URI.join(request_url, location).to_s
+    rescue URI::InvalidURIError, URI::BadURIError
+      nil
+    end
+
     # Checks the URL, then pins the connection to one of the checked
     # addresses; each retry moves on to the next one, like the resolver
     # fallback of an unpinned connection. No redirects: a redirect target

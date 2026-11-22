@@ -347,6 +347,63 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
     @provider.get_accounts(@access_url)
   end
 
+  test "get_accounts follows a same-host relative 307 redirect once" do
+    redirect = OpenStruct.new(
+      code: 307,
+      message: "Temporary Redirect",
+      headers: { "location" => "/simplefin/accounts?version=2&pending=1" }
+    )
+    success = OpenStruct.new(code: 200, body: '{"accounts": []}')
+
+    sequence = sequence("redirect")
+    Provider::Simplefin.expects(:get)
+      .with("#{@access_url}/accounts?version=2", has_entry(follow_redirects: false))
+      .in_sequence(sequence).returns(redirect)
+    Provider::Simplefin.expects(:get)
+      .with("https://example.com/simplefin/accounts?version=2&pending=1", has_entry(follow_redirects: false))
+      .in_sequence(sequence).returns(success)
+
+    assert_equal({ accounts: [] }, @provider.get_accounts(@access_url))
+  end
+
+  test "get_accounts does not follow an absolute cross-host redirect" do
+    redirect = OpenStruct.new(
+      code: 307,
+      message: "Temporary Redirect",
+      headers: { "location" => "https://evil.example.net/steal" }
+    )
+
+    Provider::Simplefin.expects(:get).once
+      .with("#{@access_url}/accounts?version=2", has_entry(follow_redirects: false))
+      .returns(redirect)
+
+    error = assert_raises(Provider::Simplefin::SimplefinError) { @provider.get_accounts(@access_url) }
+
+    assert_equal :fetch_failed, error.error_type
+    assert_includes error.message, "https://evil.example.net/steal"
+  end
+
+  test "get_accounts fails when the followed redirect is still a redirect" do
+    first = OpenStruct.new(
+      code: 307,
+      message: "Temporary Redirect",
+      headers: { "location" => "/simplefin/accounts?version=2" }
+    )
+    second = OpenStruct.new(
+      code: 307,
+      message: "Temporary Redirect",
+      headers: { "location" => "/simplefin/accounts?version=2" }
+    )
+
+    sequence = sequence("redirect loop")
+    Provider::Simplefin.expects(:get).in_sequence(sequence).returns(first)
+    Provider::Simplefin.expects(:get).in_sequence(sequence).returns(second)
+
+    error = assert_raises(Provider::Simplefin::SimplefinError) { @provider.get_accounts(@access_url) }
+
+    assert_equal :fetch_failed, error.error_type
+  end
+
   test "get_info rejects a base URL pointing at a disallowed address" do
     @provider.stubs(:resolve_addresses).with("169.254.169.254").returns([ "169.254.169.254" ])
     Provider::Simplefin.expects(:get).never
