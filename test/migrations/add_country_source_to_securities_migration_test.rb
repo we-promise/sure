@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require Rails.root.join("db/migrate/20261121100000_add_country_source_to_securities")
+require Rails.root.join("db/migrate/20261121110000_add_country_source_to_securities")
 
 # `up` marks the hints the resolver's offline fallback wrote, and `down`
 # removes only the column and its constraint. The schema
