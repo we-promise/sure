@@ -55,7 +55,7 @@ class Rule::ActionExecutor::AutoDetectMerchantsTest < ActiveSupport::TestCase
     create_transaction(account: @account, name: "Coffee")
     rule_run = RuleRun.create!(rule: @rule, execution_type: "manual", status: "pending", transactions_queued: 1, executed_at: Time.current)
     Ai::GenerationJob.stubs(:perform_later).raises(RedisClient::CannotConnectError)
-    RuleRun.any_instance.stubs(:ai_handled!).raises(ActiveRecord::StatementInvalid, "connection lost")
+    RuleRun.any_instance.expects(:release_ai_job!).raises(ActiveRecord::StatementInvalid, "connection lost")
 
     assert_raises(RedisClient::CannotConnectError) { @executor.execute(@account.transactions, rule_run:) }
   end

@@ -214,4 +214,16 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "sk-saved", first_model(inherited, :embed).endpoint.api_key
     assert_equal "http://ollama:11434", first_model(written, :embed).endpoint.base_url
   end
+
+  test "the saved key follows the server, not the spelling: a default port is the same server, a path's case isn't" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns("sk-saved")
+    Setting.stubs(:openai_uri_base).returns("https://gateway.example/TenantA/v1")
+
+    port = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://GATEWAY.example:443/TenantA/v1/")
+    other_tenant = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://gateway.example/tenanta/v1")
+
+    assert_equal "sk-saved", first_model(port, :embed).endpoint.api_key
+    assert_nil first_model(other_tenant, :embed).endpoint.api_key
+  end
 end

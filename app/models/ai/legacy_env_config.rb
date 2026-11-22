@@ -290,11 +290,12 @@ class Ai::LegacyEnvConfig
       )
     end
 
-    # Whether two OpenAI-compatible base URLs name one server; a blank one is OpenAI's.
+    # Whether two OpenAI-compatible base URLs name one server (Http.same_url?: the path keeps its
+    # case, a default port is no port); a blank one is OpenAI's.
     def same_server?(url, other)
       return true if [ url, other ].all? { _1.blank? || Provider::Openai.hosted_endpoint?(_1) }
 
-      Ai::Transport::Http.compatible_base(url).casecmp?(Ai::Transport::Http.compatible_base(other))
+      Ai::Transport::Http.same_url?(Ai::Transport::Http.compatible_base(url), Ai::Transport::Http.compatible_base(other))
     end
 
     def route_list(feature, models)

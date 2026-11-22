@@ -58,6 +58,15 @@ class Eval::ProviderFactoryTest < ActiveSupport::TestCase
     end
   end
 
+  test "the gateway written with its default port still gets OPENAI_EXTRA_HEADERS" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"X-Gateway-Key":"tenant-1"}', "OPENAI_URI_BASE" => "https://gateway.example.test/v1") do
+      client = Eval::ProviderFactory.build(provider: "openai", model: "qwen3",
+                                           config: { uri_base: "https://gateway.example.test:443/v1", access_token: "t" })
+
+      assert_equal({ "X-Gateway-Key" => "tenant-1" }, chat_client(client).extra_headers)
+    end
+  end
+
   private
     def chat_provider(client) = client.send(:chat_provider)
 
