@@ -283,65 +283,7 @@ class SophtronItem::Importer
           return refresh_result if refresh_result.present? && !refresh_result[:transactions_available]
         end
 
-        # Fetch transactions
-        transactions_data = Provider::Sophtron.response_data!(
-          sophtron_provider.get_account_transactions(
-            sophtron_account.account_id,
-            start_date: start_date
-          )
-        )
-
-        # Validate response structure
-        unless transactions_data.is_a?(Hash)
-          Rails.logger.error "SophtronItem::Importer - Invalid transactions_data format for account #{sophtron_account.account_id}"
-          return merge_refresh_result({ success: false, transactions_count: 0, error: "Invalid response format" }, refresh_result)
-        end
-
-        transactions = transactions_data[:transactions]
-        unless transactions.is_a?(Array)
-          Rails.logger.error "SophtronItem::Importer - Missing transactions array for account #{sophtron_account.account_id}"
-          return merge_refresh_result({ success: false, transactions_count: 0, error: "Missing transactions array" }, refresh_result)
-        end
-
-        transactions_count = transactions.count
-        Rails.logger.info "SophtronItem::Importer - Fetched #{transactions_count} transactions for account #{sophtron_account.account_id}"
-
-        # Store transactions in the account
-        if transactions.any?
-          begin
-            existing_transactions = sophtron_account.raw_transactions_payload.to_a
-
-            # Build set of existing transaction IDs for efficient lookup
-            existing_ids = existing_transactions.map do |tx|
-              tx.with_indifferent_access[:id]
-            end.to_set
-
-            # Filter to ONLY truly new transactions (skip duplicates)
-            # Transactions are immutable on the bank side, so we don't need to update them
-            new_transactions = transactions.select do |tx|
-              next false unless tx.is_a?(Hash)
-
-              tx_id = tx.with_indifferent_access[:id]
-              tx_id.present? && !existing_ids.include?(tx_id)
-            end
-
-            if new_transactions.any?
-              Rails.logger.info "SophtronItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions.count - new_transactions.count} duplicates skipped) for account #{sophtron_account.account_id}"
-              sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions + new_transactions)
-            else
-              Rails.logger.info "SophtronItem::Importer - No new transactions to store (all #{transactions.count} were duplicates) for account #{sophtron_account.account_id}"
-              sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions) if sophtron_account.raw_transactions_payload.nil?
-            end
-          rescue => e
-            Rails.logger.error "SophtronItem::Importer - Failed to store transactions for account #{sophtron_account.account_id}: #{e.message}"
-            return merge_refresh_result({ success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }, refresh_result)
-          end
-        else
-          Rails.logger.info "SophtronItem::Importer - No transactions to store for account #{sophtron_account.account_id}"
-          sophtron_account.upsert_sophtron_transactions_snapshot!([]) if sophtron_account.raw_transactions_payload.nil?
-        end
-
-        merge_refresh_result({ success: true, transactions_count: transactions_count }, refresh_result)
+        merge_refresh_result(fetch_transactions_result(sophtron_account, start_date), refresh_result)
       rescue Provider::Sophtron::Error => e
         requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
         sophtron_item.update!(status: :requires_update) if requires_update
@@ -355,6 +297,76 @@ class SophtronItem::Importer
         Rails.logger.error e.backtrace.join("\n")
         merge_refresh_result({ success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }, refresh_result)
       end
+    end
+
+    # Returns the raw fetch/store result; the caller merges the refresh state
+    # once, so a new return path cannot forget it.
+    def fetch_transactions_result(sophtron_account, start_date)
+      transactions_data = Provider::Sophtron.response_data!(
+        sophtron_provider.get_account_transactions(
+          sophtron_account.account_id,
+          start_date: start_date
+        )
+      )
+
+      unless transactions_data.is_a?(Hash)
+        Rails.logger.error "SophtronItem::Importer - Invalid transactions_data format for account #{sophtron_account.account_id}"
+        return { success: false, transactions_count: 0, error: "Invalid response format" }
+      end
+
+      transactions = transactions_data[:transactions]
+      unless transactions.is_a?(Array)
+        Rails.logger.error "SophtronItem::Importer - Missing transactions array for account #{sophtron_account.account_id}"
+        return { success: false, transactions_count: 0, error: "Missing transactions array" }
+      end
+
+      transactions_count = transactions.count
+      Rails.logger.info "SophtronItem::Importer - Fetched #{transactions_count} transactions for account #{sophtron_account.account_id}"
+
+      if transactions.any?
+        begin
+          existing_transactions = sophtron_account.raw_transactions_payload.to_a
+
+          existing_ids = existing_transactions.map do |tx|
+            tx.with_indifferent_access[:id]
+          end.to_set
+
+          new_transactions = transactions.select do |tx|
+            next false unless tx.is_a?(Hash)
+
+            tx_id = tx.with_indifferent_access[:id]
+            tx_id.present? && !existing_ids.include?(tx_id)
+          end
+
+          if new_transactions.any?
+            Rails.logger.info "SophtronItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions.count - new_transactions.count} duplicates skipped) for account #{sophtron_account.account_id}"
+            sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions + new_transactions)
+          else
+            Rails.logger.info "SophtronItem::Importer - No new transactions to store (all #{transactions.count} were duplicates) for account #{sophtron_account.account_id}"
+            sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions) if sophtron_account.raw_transactions_payload.nil?
+          end
+        rescue => e
+          Rails.logger.error "SophtronItem::Importer - Failed to store transactions for account #{sophtron_account.account_id}: #{e.message}"
+          return { success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }
+        end
+      else
+        Rails.logger.info "SophtronItem::Importer - No transactions to store for account #{sophtron_account.account_id}"
+        sophtron_account.upsert_sophtron_transactions_snapshot!([]) if sophtron_account.raw_transactions_payload.nil?
+      end
+
+      { success: true, transactions_count: transactions_count }
+    rescue Provider::Sophtron::Error => e
+      requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
+      sophtron_item.update!(status: :requires_update) if requires_update
+      Rails.logger.error "SophtronItem::Importer - Sophtron API error for account #{sophtron_account.id}: #{e.message}"
+      { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
+    rescue JSON::ParserError => e
+      Rails.logger.error "SophtronItem::Importer - Failed to parse transaction response for account #{sophtron_account.id}: #{e.message}"
+      { success: false, transactions_count: 0, error: "Failed to parse response" }
+    rescue => e
+      Rails.logger.error "SophtronItem::Importer - Unexpected error fetching transactions for account #{sophtron_account.id}: #{e.class} - #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      { success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }
     end
 
     def merge_refresh_result(result, refresh_result)
