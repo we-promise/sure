@@ -134,6 +134,13 @@ class BalanceSheet::AccountBalancesChartTest < ActiveSupport::TestCase
     assert events.all? { |e| e[:amount] == -110.0 }
   end
 
+  test "passes Indian digit grouping when the currency uses it" do
+    assert_equal false, chart_for(@admin, [ @checking ]).to_h.dig(:money_format, :indian_grouping)
+
+    @family.update!(currency: "INR")
+    assert_equal true, chart_for(@admin, [ @checking ]).to_h.dig(:money_format, :indian_grouping)
+  end
+
   private
     def chart_for(user, accounts)
       BalanceSheet::AccountBalancesChart.new(@family, user: user, accounts: accounts, period: @period)

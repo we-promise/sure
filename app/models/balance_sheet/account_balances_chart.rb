@@ -67,13 +67,20 @@ class BalanceSheet::AccountBalancesChart
       {
         currency: currency,
         # The family's own number and date conventions, so the chart formats like the rest of Sure.
-        money_format: Money.new(0, currency).format_options.slice(:unit, :delimiter, :separator, :format),
+        money_format: money_format,
         date_format: family.date_format,
         today: today.iso8601,
         horizon: horizon.iso8601,
         dates: dates.map(&:iso8601),
         accounts: series
       }
+    end
+
+    # Sure's own money format for the family currency in the current locale,
+    # including Indian digit grouping (1,23,456) where it applies.
+    def money_format
+      options = Money.new(0, currency).format_options
+      options.slice(:unit, :delimiter, :separator, :format).merge(indian_grouping: options.key?(:delimiter_pattern))
     end
 
     # Every account's history in one query. Balance::ChartSeriesBuilder handles

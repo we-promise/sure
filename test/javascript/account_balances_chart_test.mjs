@@ -8,6 +8,7 @@ import {
   currencyAffixes,
   extendSignRuns,
   formatDay,
+  groupingFor,
   interpolate,
   monthFormatFor,
   parseDay,
@@ -61,6 +62,13 @@ describe("pluralForm", () => {
 
   it("falls back to other when a translation lacks the form", () => {
     assert.equal(pluralForm({ one: "one", other: "other" }, 3, "pl"), "other")
+  })
+})
+
+describe("groupingFor", () => {
+  it("groups by three, or 3-then-2 for Indian grouping (1,23,456)", () => {
+    assert.deepEqual(groupingFor({ indian_grouping: false }), [3])
+    assert.deepEqual(groupingFor({ indian_grouping: true }), [3, 2])
   })
 })
 

@@ -8,6 +8,7 @@ import {
   currencyAffixes,
   extendSignRuns,
   formatDay,
+  groupingFor,
   interpolate,
   monthFormatFor,
   parseDay,
@@ -75,7 +76,7 @@ export default class extends Controller {
     const numberLocale = {
       decimal: money.separator,
       thousands: money.delimiter,
-      grouping: [3],
+      grouping: groupingFor(money),
       minus: "-",
     };
     const currency = d3.formatLocale({

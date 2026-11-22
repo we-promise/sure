@@ -42,6 +42,12 @@ export function pluralForm(forms, count, locale = "en") {
   return forms[new Intl.PluralRules(locale).select(count)] ?? forms.other
 }
 
+// d3 digit grouping for a money format: thousands, or 3-then-2 for Indian
+// grouping (1,23,456).
+export function groupingFor(moneyFormat) {
+  return moneyFormat.indian_grouping ? [3, 2] : [3]
+}
+
 // Fills "%{name}" placeholders in a translated string.
 export function interpolate(template, vars = {}) {
   return String(template).replace(/%\{(\w+)\}/g, (match, key) => (key in vars ? String(vars[key]) : match))
