@@ -52,4 +52,23 @@ class MigrateDuplicateSecuritiesTest < ActiveSupport::TestCase
 
     assert_equal 1, Holding.where(account: @account, security: other_keeper).count
   end
+
+  # The per-group rescue does not catch an Interrupt, so the task stops; the
+  # group that committed before it still gets its sync.
+  test "a task stopped partway still syncs the accounts its committed groups touched" do
+    other_account = accounts(:depository)
+    Security.create!(ticker: "DUPW", exchange_operating_mic: "XNAS", name: "Dup W")
+    other_duplicate = travel_to(1.minute.from_now) { Security.new(ticker: "dupw", exchange_operating_mic: "xnas").tap { |s| s.save!(validate: false) } }
+    Holding.create!(account: @account, security: @duplicate, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    Holding.create!(account: other_account, security: other_duplicate, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    Security::Merger.any_instance.stubs(:move_taggings!).returns(nil).then.raises(Interrupt)
+    synced = nil
+    Security::Merger.expects(:sync_accounts).once.with { |ids| synced = ids.to_a; true }
+
+    assert_raises(Interrupt) { capture_io { Rake::Task["data_migration:migrate_duplicate_securities"].invoke } }
+
+    merged = { @account => @duplicate, other_account => other_duplicate }.reject { |_, duplicate| Security.exists?(duplicate.id) }
+    assert_equal 1, merged.size, "one group committed before the interrupt"
+    assert_equal [ merged.keys.first.id ], synced
+  end
 end

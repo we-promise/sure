@@ -120,9 +120,6 @@ namespace :securities do
       end
     end
 
-    # Once every merge has landed, so no sync runs against a half-merged set.
-    Security::Merger.sync_accounts(account_ids)
-
     puts "\nSummary:"
     puts "  Total duplicate sets: #{duplicates.length}"
     puts "  Total affected records:"
@@ -133,6 +130,10 @@ namespace :securities do
     puts "    - #{total_references} references"
     puts "  Mode: #{dry_run ? 'Dry run (no changes made)' : 'Live run (changes applied)'}"
     puts "\nDe-duplication complete!"
+  ensure
+    # After the last merge, so no sync runs against a half-merged set, and
+    # also when the task stops partway, so committed merges are synced.
+    Security::Merger.sync_accounts(account_ids)
   end
 
   desc "Relabel Warsaw (XWAR/WAR) security_prices wrongly stored as USD to PLN. Args: dry_run (default true)"

@@ -77,9 +77,11 @@ namespace :data_migration do
       end
     end
 
-    # Once every group has merged, so no sync runs against a half-merged set.
-    Security::Merger.sync_accounts(account_ids)
     puts "✅  Duplicate security migration complete."
+  ensure
+    # After the last group, so no sync runs against a half-merged set, and
+    # also when the task stops partway, so committed groups are synced.
+    Security::Merger.sync_accounts(account_ids)
   end
 
   desc "Migrate account valuation anchors"

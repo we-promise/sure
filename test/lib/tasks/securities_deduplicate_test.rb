@@ -90,6 +90,25 @@ class SecuritiesDeduplicateTest < ActiveSupport::TestCase
     assert_not Security.exists?(@duplicate.id)
   end
 
+  # The per-group rescue does not catch an Interrupt, so the task stops; the
+  # merge that committed before it still gets its sync.
+  test "a task stopped partway still syncs the accounts its committed merges touched" do
+    other_account = accounts(:depository)
+    Security.create!(ticker: "DUPZ", exchange_operating_mic: "XNAS", name: "Dup Z")
+    other_duplicate = Security.create!(ticker: "DUPZ", exchange_operating_mic: nil, name: "Dup Z without MIC")
+    Holding.create!(account: @account, security: @duplicate, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    Holding.create!(account: other_account, security: other_duplicate, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    Security::Merger.any_instance.stubs(:move_taggings!).returns(nil).then.raises(Interrupt)
+    synced = nil
+    Security::Merger.expects(:sync_accounts).once.with { |ids| synced = ids.to_a; true }
+
+    assert_raises(Interrupt) { capture_io { Rake::Task["securities:deduplicate"].invoke } }
+
+    merged = { @account => @duplicate, other_account => other_duplicate }.reject { |_, duplicate| Security.exists?(duplicate.id) }
+    assert_equal 1, merged.size, "one merge committed before the interrupt"
+    assert_equal [ merged.keys.first.id ], synced
+  end
+
   test "a dry run changes nothing and reports the lots and references it would move" do
     HoldingLot.create!(account: @account, security: @duplicate, qty: 4, currency: "USD")
     other = Security.create!(ticker: "REFX", name: "Referencing")
