@@ -255,9 +255,13 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     Provider::Registry.any_instance.stubs(:get_provider).with(:yahoo_finance).returns(yahoo)
     Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
 
-    yahoo.expects(:fetch_security_prices).returns(provider_success_response([
-      OpenStruct.new(security: security, date: snapshot_start_date, price: 100, currency: "USD")
-    ]))
+    yahoo.expects(:fetch_security_prices)
+         .with(symbol: "AAPL", exchange_operating_mic: "XNAS",
+               start_date: snapshot_start_date - SECURITY_PRICE_BUFFER,
+               end_date: Date.current.in_time_zone("America/New_York").to_date)
+         .returns(provider_success_response([
+           OpenStruct.new(security: security, date: snapshot_start_date, price: 100, currency: "USD")
+         ]))
     yahoo.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Apple", logo_url: "logo")))
 
     MarketDataImporter.new(mode: :snapshot).import_security_prices

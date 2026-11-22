@@ -1207,6 +1207,47 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "BBCA.JK",     @provider.send(:normalize_symbol, "BBCA", "XIDX")
   end
 
+  test "normalize_symbol gives an ASX listing its .AX suffix once" do
+    assert_equal "BHP.AX", @provider.send(:normalize_symbol, "BHP", "XASX")
+    assert_equal "BHP.AX", @provider.send(:normalize_symbol, "BHP.AX", "XASX")
+  end
+
+  test "venue_supported? accepts unsuffixed US venues and mapped ones, not unmapped ones" do
+    assert Provider::YahooFinance.venue_supported?("XNAS")
+    assert Provider::YahooFinance.venue_supported?("XASX")
+    assert Provider::YahooFinance.venue_supported?(nil)
+    assert_not Provider::YahooFinance.venue_supported?("XHKG")
+  end
+
+  test "venue_supported? accepts every US venue in the exchange list" do
+    us_mics = Security::EXCHANGES.select { |_mic, info| info["country"] == "US" }.keys
+
+    assert_includes us_mics, "XNGS"
+    us_mics.each do |mic|
+      assert Provider::YahooFinance.venue_supported?(mic), "#{mic} should be supported"
+    end
+  end
+
+  test "venue_supported? still refuses a non-US venue with no Yahoo suffix" do
+    assert_not Provider::YahooFinance.venue_supported?("XHKG", ticker: "0005")
+  end
+
+  test "venue_supported? accepts US over-the-counter venues" do
+    %w[OTCM OOTC PINX XOTC PNK].each do |mic|
+      assert Provider::YahooFinance.venue_supported?(mic), "#{mic} should be supported"
+    end
+  end
+
+  test "venue_supported? accepts a ticker that already carries a Yahoo suffix" do
+    assert Provider::YahooFinance.venue_supported?("XHKG", ticker: "0005.HK")
+    assert Provider::YahooFinance.venue_supported?("XJPX", ticker: "7203.T")
+    assert_not Provider::YahooFinance.venue_supported?("XHKG", ticker: "0005")
+  end
+
+  test "venue_supported? rejects a crypto ticker" do
+    assert_not Provider::YahooFinance.venue_supported?(nil, ticker: "CRYPTO:BTC")
+  end
+
   test "normalize_symbol does not double-suffix already suffixed symbols" do
     assert_equal "RELIANCE.NS", @provider.send(:normalize_symbol, "RELIANCE.NS", "XNSE")
     assert_equal "500325.BO",   @provider.send(:normalize_symbol, "500325.BO", "XBOM")
@@ -1215,7 +1256,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
 
   test "normalize_symbol leaves unconfigured MIC symbols unchanged" do
     assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", "XNAS")
-    assert_equal "BHP", @provider.send(:normalize_symbol, "BHP", "XASX")
+    assert_equal "0005", @provider.send(:normalize_symbol, "0005", "XHKG")
     assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", nil)
   end
 

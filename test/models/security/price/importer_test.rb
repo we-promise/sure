@@ -157,6 +157,307 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal listing, @security.reload.first_provider_price_on
   end
 
+  test "the keyless substitute records first_provider_price_on with its source" do
+    Security::Price.delete_all
+    @provider.stubs(:class).returns(Provider::YahooFinance)
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+
+    start_date = Date.parse("2018-06-15")
+    listing    = Date.parse("2020-01-03")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: listing,         price: 6568, currency: "EUR"),
+      OpenStruct.new(security: @security, date: listing + 1.day, price: 6700, currency: "EUR")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: listing + 1.day
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal listing, @security.first_provider_price_on
+    assert_equal "yahoo_finance", @security.first_provider_price_source
+  end
+
+  test "a date another provider recorded does not clamp the current provider" do
+    # Under the keyless substitute an unassigned security records Yahoo's
+    # first date. Once a key is added the same security resolves to Twelve
+    # Data, whose history may start earlier, so Yahoo's date must not stop
+    # the sync from asking for the earlier range.
+    Security::Price.delete_all
+
+    listing  = Date.parse("2020-01-03")
+    end_date = listing + 2.days
+    @security.update!(first_provider_price_on: listing, first_provider_price_source: "yahoo_finance")
+    (listing..end_date).each do |date|
+      Security::Price.create!(security: @security, date: date, price: 6568, currency: "EUR")
+    end
+
+    @provider.expects(:fetch_security_prices).once.returns(provider_success_response([]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: Date.parse("2018-06-15"),
+      end_date: end_date
+    ).import_provider_prices
+  end
+
+  test "a later first date from a different provider replaces the stored one" do
+    Security::Price.delete_all
+
+    stored  = Date.parse("2020-01-03")
+    listing = Date.parse("2021-01-04")
+    @security.update!(first_provider_price_on: stored, first_provider_price_source: "yahoo_finance")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: listing,         price: 50, currency: "USD"),
+      OpenStruct.new(security: @security, date: listing + 1.day, price: 51, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: Date.parse("2018-06-15"),
+      end_date: listing + 1.day
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal listing, @security.first_provider_price_on
+    assert_equal "mock", @security.first_provider_price_source
+  end
+
+  test "a full backfill clears a first date another provider recorded" do
+    # The current provider has history from the requested start, so no
+    # pre-listing fallback is needed. Yahoo's earlier-recorded date must not
+    # survive, or the holding page keeps warning that prices start later.
+    Security::Price.delete_all
+
+    start_date = Date.parse("2018-06-15")
+    @security.update!(first_provider_price_on: Date.parse("2020-01-03"), first_provider_price_source: "yahoo_finance")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: start_date,         price: 50, currency: "USD"),
+      OpenStruct.new(security: @security, date: start_date + 1.day, price: 51, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: start_date + 1.day
+    ).import_provider_prices
+
+    @security.reload
+    assert_nil @security.first_provider_price_on
+    assert_nil @security.first_provider_price_source
+  end
+
+  test "a full backfill keeps a first date the current provider recorded" do
+    Security::Price.delete_all
+
+    start_date = Date.parse("2018-06-15")
+    listing = Date.parse("2020-01-03")
+    @security.update!(first_provider_price_on: listing, first_provider_price_source: "mock")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: listing,         price: 50, currency: "USD"),
+      OpenStruct.new(security: @security, date: listing + 1.day, price: 51, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: listing + 1.day
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal listing, @security.first_provider_price_on
+    assert_equal "mock", @security.first_provider_price_source
+  end
+
+  test "an import that only fills a recent window keeps another provider's first date" do
+    # The provider's history is capped, so the fill starts well after the
+    # requested start and anchors on a stored price. The earlier gap is not
+    # covered, so the date another provider found still describes it.
+    Security::Price.delete_all
+
+    start_date = Date.parse("2018-06-15")
+    end_date   = Date.parse("2020-06-15")
+    window_start = end_date - 10.days
+    @security.update!(first_provider_price_on: Date.parse("2020-01-03"), first_provider_price_source: "yahoo_finance")
+    Security::Price.create!(security: @security, date: window_start - 5.days, price: 40, currency: "USD")
+
+    @provider.stubs(:max_history_days).returns(10)
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: window_start,         price: 50, currency: "USD"),
+      OpenStruct.new(security: @security, date: window_start + 1.day, price: 51, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal Date.parse("2020-01-03"), @security.first_provider_price_on
+    assert_equal "yahoo_finance", @security.first_provider_price_source
+  end
+
+  test "an import anchored at the start keeps the current provider's own first date" do
+    Security::Price.delete_all
+
+    listing = Date.parse("2020-01-03")
+    @security.update!(first_provider_price_on: listing, first_provider_price_source: "mock")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: listing,         price: 50, currency: "USD"),
+      OpenStruct.new(security: @security, date: listing + 1.day, price: 51, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: listing,
+      end_date: listing + 1.day
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal listing, @security.first_provider_price_on
+    assert_equal "mock", @security.first_provider_price_source
+  end
+
+  test "a refresh that starts after another provider's first date keeps it" do
+    # A holding's price refresh re-imports only the last month with a cache
+    # clear. The gap before the stored date is untouched, so it still applies.
+    Security::Price.delete_all
+
+    first_on = Date.parse("2020-01-03")
+    refresh_start = first_on + 60.days
+    @security.update!(first_provider_price_on: first_on, first_provider_price_source: "yahoo_finance")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: refresh_start,         price: 50, currency: "USD"),
+      OpenStruct.new(security: @security, date: refresh_start + 1.day, price: 51, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: refresh_start,
+      end_date: refresh_start + 1.day,
+      clear_cache: true
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal first_on, @security.first_provider_price_on
+    assert_equal "yahoo_finance", @security.first_provider_price_source
+  end
+
+  test "an import that starts after another provider's first date keeps it" do
+    # This provider's earliest price in a late window says nothing about where
+    # its history starts, so the date Yahoo found stays.
+    Security::Price.delete_all
+
+    first_on = Date.parse("2020-01-03")
+    @security.update!(first_provider_price_on: first_on, first_provider_price_source: "yahoo_finance")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: Date.parse("2026-11-20"), price: 50, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: Date.parse("2026-11-10"),
+      end_date: Date.parse("2026-11-20")
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal first_on, @security.first_provider_price_on
+    assert_equal "yahoo_finance", @security.first_provider_price_source
+  end
+
+  test "a capped import with no earlier price keeps another provider's first date" do
+    # The request reaches back past Yahoo's date, but the capped fetch does
+    # not, so its earliest price is the cap, not where the history starts.
+    Security::Price.delete_all
+
+    end_date = Date.parse("2020-06-15")
+    window_start = end_date - 10.days
+    @security.update!(first_provider_price_on: Date.parse("2020-01-03"), first_provider_price_source: "yahoo_finance")
+
+    @provider.stubs(:max_history_days).returns(10)
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: window_start, price: 50, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: Date.parse("2018-06-15"),
+      end_date: end_date
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal Date.parse("2020-01-03"), @security.first_provider_price_on
+    assert_equal "yahoo_finance", @security.first_provider_price_source
+  end
+
+  test "an import anchored on another provider's first date clears it" do
+    Security::Price.delete_all
+
+    first_on = Date.parse("2020-01-03")
+    @security.update!(first_provider_price_on: first_on, first_provider_price_source: "yahoo_finance")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: first_on,         price: 50, currency: "USD"),
+      OpenStruct.new(security: @security, date: first_on + 1.day, price: 51, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: first_on,
+      end_date: first_on + 1.day,
+      clear_cache: true
+    ).import_provider_prices
+
+    assert_nil @security.reload.first_provider_price_on
+  end
+
+  test "prices stored in two currencies on one day do not count as two days" do
+    Security::Price.delete_all
+
+    day1 = Date.parse("2024-03-04")
+    (day1..day1 + 1.day).each do |date|
+      Security::Price.create!(security: @security, date: date, price: 100, currency: "USD")
+      Security::Price.create!(security: @security, date: date, price: 150, currency: "AUD")
+    end
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: day1 + 2.days, price: 110, currency: "USD"),
+      OpenStruct.new(security: @security, date: day1 + 3.days, price: 120, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: day1,
+      end_date: day1 + 3.days,
+      clear_cache: false
+    ).import_provider_prices
+
+    stored = Security::Price.where(security: @security, date: (day1 + 2.days)..(day1 + 3.days), currency: "USD")
+    assert_equal [ 110, 120 ], stored.order(:date).map(&:price)
+  end
+
   test "pre-listing fallback picks earliest VALID provider row, skipping nil/zero leaders" do
     # Regression: if the provider returns a row with a nil/zero price as its
     # earliest entry (e.g. a listing-day or halted-day placeholder), the

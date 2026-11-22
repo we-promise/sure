@@ -143,10 +143,24 @@ class Security::Price::Importer
     # want subsequent syncs to reflect the new earlier clamp. We never
     # move the column forward from a previously-discovered earlier value,
     # since that would silently hide older rows already in the DB.
+    #
+    # The date is stored with the provider that found it. A date another
+    # provider found (Yahoo standing in before a key was added) is replaced
+    # only by a fetch that reaches back to it, as the clearing below requires.
     if advanced_first_price_on.present? &&
-       (security.first_provider_price_on.blank? ||
-        advanced_first_price_on < security.first_provider_price_on)
-      security.update_column(:first_provider_price_on, advanced_first_price_on)
+       (provider_first_price_on.blank? || advanced_first_price_on < provider_first_price_on) &&
+       (!first_price_from_another_provider? ||
+        (provider_fetch_start_date <= start_date && start_date <= security.first_provider_price_on))
+      security.update_columns(first_provider_price_on: advanced_first_price_on,
+                              first_provider_price_source: provider_key)
+    elsif advanced_first_price_on.nil? && fill_start_date <= start_date && first_price_from_another_provider? &&
+          start_date <= security.first_provider_price_on
+      # This provider anchored a price at the requested start, on or before
+      # the date another provider found, so the history no longer starts
+      # there. A fill that starts later (capped history, an incremental sync,
+      # or a refresh of recent prices) leaves the earlier gap as it was, so
+      # the date still describes it.
+      security.update_columns(first_provider_price_on: nil, first_provider_price_source: nil)
     end
 
     result
@@ -154,6 +168,23 @@ class Security::Price::Importer
 
   private
     attr_reader :security, :security_provider, :start_date, :end_date, :clear_cache
+
+    def provider_key
+      security_provider.class.name.demodulize.underscore
+    end
+
+    # The security's first provider price date, if this provider found it.
+    # A date with no source predates the column and is trusted as before.
+    def provider_first_price_on
+      source = security.first_provider_price_source
+      security.first_provider_price_on if source.blank? || source == provider_key
+    end
+
+    def first_price_from_another_provider?
+      security.first_provider_price_on.present? &&
+        security.first_provider_price_source.present? &&
+        security.first_provider_price_source != provider_key
+    end
 
     # The start date sent to the provider API, clamped to the provider's max
     # lookback window when applicable. Computed independently of provider_prices
@@ -235,9 +266,10 @@ class Security::Price::Importer
       # don't perpetually trip the "expected_count mismatch" re-sync. Query
       # directly rather than via db_prices (which stays at the full range to
       # preserve any user-entered rows pre-listing).
+      # Distinct dates: a day can hold a price in more than one currency.
       persisted_count = Security::Price
         .where(security_id: security.id, date: clamped_start_date..end_date)
-        .count
+        .distinct.count(:date)
 
       persisted_count == expected_count
     end
@@ -259,7 +291,7 @@ class Security::Price::Importer
     # to start_date for any security that has never tripped the fallback.
     def clamped_start_date
       @clamped_start_date ||= begin
-        listed = security.first_provider_price_on
+        listed = provider_first_price_on
         listed.present? && listed > start_date ? listed : start_date
       end
     end
