@@ -32,8 +32,8 @@ class CreateUserRetirementPlansMigrationTest < ActiveSupport::TestCase
     migrate(:up)
 
     assert_equal before, shape
-    assert_equal [ "numeric(5,4)", BigDecimal("0.04"), false ], before[:columns]["safe_withdrawal_rate"]
-    assert_equal [ "numeric(6,4)", BigDecimal("0.05"), false ], before[:columns]["expected_annual_return"]
+    assert_equal [ "numeric(5,4)", "0.04", false ], before[:columns]["safe_withdrawal_rate"]
+    assert_equal [ "numeric(6,4)", "0.05", false ], before[:columns]["expected_annual_return"]
     assert_equal [ [ "index_retirement_plans_on_user_id", [ "user_id" ], true ] ], before[:indexes]
     assert_equal [ [ "user_id", "users", :cascade ] ], before[:foreign_keys]
     assert_equal CONSTRAINTS, before[:constraints].keys
