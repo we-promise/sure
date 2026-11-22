@@ -566,7 +566,9 @@ class Account::ProviderImportAdapter
         price: price,
         amount: amount,
         account_provider_id: account_provider_id,
-        external_id: external_id
+        external_id: external_id,
+        # The provider's own price replaces any calculated one priced at 1:1.
+        price_at_parity: false
       }
 
       # Only update security if not locked by user
@@ -621,7 +623,8 @@ class Account::ProviderImportAdapter
             updates = {
               qty: quantity,
               price: price,
-              amount: amount
+              amount: amount,
+              price_at_parity: false
             }
 
             # Reconcile cost_basis to respect priority hierarchy

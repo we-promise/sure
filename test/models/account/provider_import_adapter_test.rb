@@ -807,6 +807,37 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal account_provider.id, holding.account_provider_id
   end
 
+  # The provider's price replaces a calculated one priced at 1:1, so the
+  # row no longer carries that mark.
+  test "a provider price clears the parity mark on a calculated holding it replaces" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+    date = Date.today - 10.days
+    calculated = investment_account.holdings.create!(security: security, date: date, qty: 10, price: 140, amount: 1400, currency: "USD", price_at_parity: true)
+
+    holding = adapter.import_holding(security: security, quantity: 10, amount: 1500, currency: "USD", date: date, price: 150, source: "plaid")
+
+    assert_equal calculated.id, holding.id
+    assert_equal false, calculated.reload.price_at_parity
+  end
+
+  test "a provider adopting a calculated holding on collision clears its parity mark" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+    date = Date.today - 10.days
+    account_provider = AccountProvider.create!(account: investment_account, provider: plaid_accounts(:one))
+    calculated = investment_account.holdings.create!(security: security, date: date, qty: 10, price: 140, amount: 1400, currency: "USD", price_at_parity: true)
+
+    holding = adapter.import_holding(security: security, quantity: 10, amount: 1500, currency: "USD", date: date, price: 150, source: "plaid", external_id: "ext-parity", account_provider_id: account_provider.id)
+
+    calculated.reload
+    assert_equal calculated.id, holding.id
+    assert_equal account_provider.id, calculated.account_provider_id
+    assert_equal false, calculated.price_at_parity
+  end
+
   test "carries a remapped security forward to the next day's holding" do
     account, adapter, account_provider = provider_holding_setup
     reported = Security.create!(ticker: "RPTD", name: "Reported Fund")
