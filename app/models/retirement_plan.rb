@@ -173,8 +173,9 @@ class RetirementPlan < ApplicationRecord
     # Two spending windows, on purpose. The contribution before retirement is
     # #projection's: income less the median month over all history, without
     # contributions. Living costs after it are the seeded stream: the median
-    # of the last 12 whole months, without contributions or loan payments
-    # (each loan seeds its own stream). Not a mismatch to reconcile.
+    # of the months with spending in the last 12 whole months, without
+    # contributions or loan payments (each loan seeds its own stream). Not a
+    # mismatch to reconcile.
     def simulation_inputs(as_of:)
       {
         as_of: as_of,
@@ -200,7 +201,9 @@ class RetirementPlan < ApplicationRecord
       asset_total(as_of, linked).total
     end
 
-    # The 12 whole months before the reference date's month.
+    # The 12 whole months before the reference date's month. The median is
+    # taken over the months in it with spending: a month with none is left
+    # out, not counted as zero.
     def living_costs_period(as_of)
       month_start = as_of.beginning_of_month
       Period.custom(start_date: month_start - 12.months, end_date: month_start - 1.day)

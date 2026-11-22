@@ -220,7 +220,8 @@ class IncomeStatement
 
   # `excluding_kinds` leaves transactions of those kinds out of the monthly
   # totals before the median is taken, and `period` limits the median to the
-  # months inside it. Both default to off, so existing callers are unchanged.
+  # months inside it. Months with no spending are left out either way. Both
+  # default to off, so existing callers are unchanged.
   # The retirement plan passes `investment_contribution`: money moved into an
   # investment account is saving, not spending.
   def median_expense(interval: "month", category: nil, excluding_kinds: [], period: nil)

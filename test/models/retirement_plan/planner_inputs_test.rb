@@ -30,24 +30,27 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     end
   end
 
-  # Months in the window (Mar 2025 to Feb 2026): Jan 2026 spends 1,000 plus a
-  # 500 contribution and a 700 loan payment; Feb 2026 spends 1,000. Outside
-  # it, Jan and Feb 2025 spend 9,000 each. Counting the old months gives a
-  # median of 5,000, counting the contribution gives 1,250, and counting the
-  # loan payment 1,350. Leaving all three out gives 1,000: 12,000 a year.
-  test "living costs are the last 12 months' median, without contributions or loan payments" do
+  # Months in the window (Mar 2025 to Feb 2026) with spending: Dec 2025
+  # spends 1,000; Jan 2026 spends 2,000 plus a 500 contribution and a 700
+  # loan payment; Feb 2026 spends 6,000. The median of those three months is
+  # 2,000 (the mean would be 3,000). Outside the window, Jan and Feb 2025
+  # spend 9,000 each. Counting the old months gives a median of 6,000,
+  # counting the contribution 2,500, and counting the loan payment 2,700.
+  # Leaving all three out gives 2,000: 24,000 a year.
+  test "living costs are the median of the months with spending in the last 12 whole months, without contributions or loan payments" do
     checking = own_account(amount: 1_000)
-    create_transaction(account: checking, date: Date.new(2026, 1, 10), amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2025, 12, 10), amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 1, 10), amount: 2_000)
     create_transaction(account: checking, date: Date.new(2026, 1, 11), amount: 500, kind: "investment_contribution")
     create_transaction(account: checking, date: Date.new(2026, 1, 12), amount: 700, kind: "loan_payment")
-    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 6_000)
     create_transaction(account: checking, date: Date.new(2025, 1, 10), amount: 9_000)
     create_transaction(account: checking, date: Date.new(2025, 2, 10), amount: 9_000)
 
     @plan.seed_streams!(as_of: AS_OF)
     living = @plan.streams.find_by!(source: "seeded_living_costs")
 
-    assert_equal BigDecimal("12000"), living.annual_amount
+    assert_equal BigDecimal("24000"), living.annual_amount
     assert_equal [ "expense", true, nil, nil ], [ living.kind, living.indexed, living.start_year, living.end_year ]
   end
 
