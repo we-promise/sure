@@ -401,6 +401,37 @@ describe("evaluateAmountExpression", () => {
       assert.equal(evaluateAmountExpression("1234", { separator: "." }), 1234)
     })
   })
+
+  describe("zero-decimal currency (precision 0) treats separators as thousands grouping", () => {
+    it("reads a dot-grouped amount as a whole number", () => {
+      assert.equal(evaluateAmountExpression("150.000.000", { precision: 0 }), 150000000)
+      assert.equal(evaluateAmountExpression("500.000", { precision: 0 }), 500000)
+    })
+
+    it("reads a comma-grouped amount as a whole number", () => {
+      assert.equal(evaluateAmountExpression("150,000,000", { precision: 0 }), 150000000)
+      assert.equal(evaluateAmountExpression("1,234", { precision: 0 }), 1234)
+    })
+
+    it("reads a negative grouped amount", () => {
+      assert.equal(evaluateAmountExpression("-150.000", { precision: 0 }), -150000)
+    })
+
+    it("applies grouping to every operand in an expression", () => {
+      assert.equal(evaluateAmountExpression("150.000+50.000", { precision: 0 }), 200000)
+    })
+
+    it("rejects malformed groups instead of guessing", () => {
+      assert.equal(evaluateAmountExpression("1.5", { precision: 0 }), null)
+      assert.equal(evaluateAmountExpression("150.0000", { precision: 0 }), null)
+      assert.equal(evaluateAmountExpression("1.234,567", { precision: 0 }), null)
+    })
+
+    it("leaves a precision-bearing currency's single-separator rule intact", () => {
+      assert.equal(evaluateAmountExpression("150.000.000", { precision: 2 }), null)
+      assert.equal(evaluateAmountExpression("150.000", { precision: 2 }), 150)
+    })
+  })
 })
 
 describe("formatAmountForDisplay", () => {

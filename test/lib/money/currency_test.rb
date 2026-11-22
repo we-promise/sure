@@ -32,6 +32,14 @@ class Money::CurrencyTest < ActiveSupport::TestCase
     assert_equal 0.01, @currency.step
   end
 
+  test "paraguayan guarani groups with dots and has no decimals" do
+    pyg = Money::Currency.new(:pyg)
+
+    assert_equal ",", pyg.separator
+    assert_equal ".", pyg.delimiter
+    assert_equal 0, pyg.default_precision
+  end
+
   test "ethereum uses wei native scale" do
     eth = Money::Currency.new(:eth)
     assert_equal "Ethereum", eth.name

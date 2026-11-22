@@ -43,6 +43,14 @@ class Money::FormattingTest < ActiveSupport::TestCase
     end
   end
 
+  test "PYG groups thousands with dots in an English locale" do
+    money = Money.new(BigDecimal("150000000"), "PYG")
+
+    I18n.with_locale(:en) do
+      assert_equal "₲150.000.000", money.format
+    end
+  end
+
   test "plain formatting does not go through number_to_currency" do
     money = Money.new(BigDecimal("1234.5"), "USD")
     money.expects(:number_to_currency).never

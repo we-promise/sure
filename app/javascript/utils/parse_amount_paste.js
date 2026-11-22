@@ -68,11 +68,17 @@ export default function parseAmountPaste(text, options = {}) {
   if (!match) return null
   if (match[1] === "-") negative = true
 
-  const { separator } = options
-  const parsed = parseLocaleFloat(
-    match[2],
-    AMBIGUOUS_SEPARATOR.test(match[2]) ? { separator } : {},
-  )
+  const { separator, precision } = options
+  // A zero-decimal currency has no decimal point, so every separator (and
+  // grouping space) is thousands grouping: "150.000.000" is 150000000, not
+  // 150. The hint path below would otherwise read the last dot as a decimal.
+  const parsed =
+    precision === 0
+      ? Number.parseFloat(match[2].replace(/[.,\s]/g, ""))
+      : parseLocaleFloat(
+          match[2],
+          AMBIGUOUS_SEPARATOR.test(match[2]) ? { separator } : {},
+        )
   if (!Number.isFinite(parsed)) return null
 
   return negative ? -Math.abs(parsed) : parsed

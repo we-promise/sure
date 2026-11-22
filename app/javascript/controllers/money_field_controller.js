@@ -85,7 +85,7 @@ export default class extends Controller {
       return;
     }
 
-    const result = evaluateAmountExpression(raw);
+    const result = this.#evaluateAmount(raw);
     if (result === null) {
       this.amountTarget.setCustomValidity(
         this.invalidMessageValue || "Enter a valid amount or expression.",
@@ -116,6 +116,9 @@ export default class extends Controller {
   // retype still works.
   guardSeparator(event) {
     if (event.inputType !== "insertText" || !/[.,]/.test(event.data || "")) return;
+    // A zero-decimal currency has no decimal point, so every separator is a
+    // thousands group and a second one is expected ("150.000.000").
+    if (this.#fieldPrecision() === 0) return;
 
     const { selectionStart, selectionEnd, value } = event.target;
     let tokenStart = selectionStart;
@@ -159,7 +162,7 @@ export default class extends Controller {
 
       const rawValue = this.amountTarget.value.trim();
       if (rawValue !== "") {
-        const parsedAmount = evaluateAmountExpression(rawValue);
+        const parsedAmount = this.#evaluateAmount(rawValue);
         if (parsedAmount !== null) {
           const precision =
             this.hasPrecisionValue && Number.isInteger(this.precisionValue)
@@ -193,7 +196,10 @@ export default class extends Controller {
   // that read both ways, so "1,234" in a euro field is 1.234, not 1234.
   pasteAmount(event) {
     const text = (event.clipboardData || window.clipboardData)?.getData("text") ?? "";
-    const parsed = parseAmountPaste(text, { separator: this.#pasteSeparator() });
+    const parsed = parseAmountPaste(text, {
+      separator: this.#pasteSeparator(),
+      precision: this.#fieldPrecision(),
+    });
     if (parsed === null) return;
 
     event.preventDefault();
@@ -221,7 +227,7 @@ export default class extends Controller {
     const raw = this.amountTarget.value;
     if (typeof raw !== "string" || raw.trim() === "") return;
 
-    const result = evaluateAmountExpression(raw);
+    const result = this.#evaluateAmount(raw);
     if (result === null) return;
 
     const precision = this.#fieldPrecision();
@@ -273,7 +279,7 @@ export default class extends Controller {
     const raw = this.amountTarget.value;
     if (typeof raw !== "string" || raw.trim() === "") return;
 
-    const result = evaluateAmountExpression(raw);
+    const result = this.#evaluateAmount(raw);
     if (result === null) return;
 
     const precision = this.#fieldPrecision();
@@ -301,6 +307,12 @@ export default class extends Controller {
     if (!this.hasCurrencySourceValue) return null;
 
     return this.form?.querySelector(this.currencySourceValue) ?? null;
+  }
+
+  // The field's precision tells the parser whether a separator can be a
+  // decimal point at all: zero-decimal currencies treat it as grouping.
+  #evaluateAmount(raw) {
+    return evaluateAmountExpression(raw, { precision: this.#fieldPrecision() });
   }
 
   // The amount input's step already carries the selected currency's precision,

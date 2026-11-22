@@ -48,11 +48,28 @@ const MAX_AMOUNT = 99999999999999
 // in which single character is accepted as the decimal point — a token
 // using the other one is then rejected rather than silently accepted, so
 // once that preference exists there is no ambiguity left to resolve at all.
-function parseTypedNumber(token, { separator } = {}) {
+//
+// A zero-decimal currency (precision 0: PYG, CLP, JPY, ...) has no decimal
+// point at all, so every separator is a thousands group instead. Multiple
+// groups are accepted there ("150.000.000"), but each group after the first
+// must be exactly three digits and use the same character, so a malformed
+// grouping is still rejected rather than silently misread.
+const ZERO_DECIMAL_AMOUNT = /^\d+$|^\d{1,3}(?:([.,])\d{3})(?:\1\d{3})*$/
+
+function parseTypedNumber(token, { separator, precision } = {}) {
   if (token.length > MAX_TOKEN_LENGTH) return null
 
   const negative = token.startsWith("-")
   const unsigned = token.replace(/^[+-]/, "")
+
+  if (precision === 0) {
+    if (!ZERO_DECIMAL_AMOUNT.test(unsigned)) return null
+
+    const value = Number.parseFloat(unsigned.replace(/[.,]/g, ""))
+    if (!Number.isFinite(value) || Math.abs(value) > MAX_AMOUNT) return null
+
+    return negative ? -value : value
+  }
 
   const separators = unsigned.match(/[.,]/g) || []
   if (separators.length > 1) return null

@@ -221,6 +221,36 @@ describe("parseAmountPaste", () => {
     })
   })
 
+  describe("zero-decimal currency (precision 0) treats separators as thousands grouping", () => {
+    it('parses "150.000.000" as 150000000', () => {
+      assert.equal(parseAmountPaste("150.000.000", { precision: 0 }), 150000000)
+    })
+
+    it('parses "₲ 1.500.000" as 1500000', () => {
+      assert.equal(parseAmountPaste("₲ 1.500.000", { precision: 0 }), 1500000)
+    })
+
+    it('parses "150,000,000" as 150000000', () => {
+      assert.equal(parseAmountPaste("150,000,000", { precision: 0 }), 150000000)
+    })
+
+    it('parses "1 500 000" as 1500000', () => {
+      assert.equal(parseAmountPaste("1 500 000", { precision: 0 }), 1500000)
+    })
+
+    it('parses "500.000" as 500000', () => {
+      assert.equal(parseAmountPaste("500.000", { precision: 0 }), 500000)
+    })
+
+    it('parses "-150.000" as -150000', () => {
+      assert.equal(parseAmountPaste("-150.000", { precision: 0 }), -150000)
+    })
+
+    it("leaves a precision-bearing currency's separator hint intact", () => {
+      assert.equal(parseAmountPaste("150.000", { separator: ".", precision: 2 }), 150)
+    })
+  })
+
   describe("rejects multi-cell pastes rather than joining them", () => {
     it('rejects "100\\t200"', () => {
       assert.equal(parseAmountPaste("100\t200"), null)
