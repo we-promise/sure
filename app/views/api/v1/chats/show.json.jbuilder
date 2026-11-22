@@ -26,7 +26,7 @@ end
 if @pagy
   json.pagination do
     json.page @pagy.page
-    json.per_page @pagy.vars[:items]
+    json.per_page @pagy.limit
     json.total_count @pagy.count
     json.total_pages @pagy.pages
   end

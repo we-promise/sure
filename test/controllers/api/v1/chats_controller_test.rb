@@ -85,6 +85,24 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert response_body["messages"].is_a?(Array)
   end
 
+  test "index pages chats 20 at a time" do
+    get "/api/v1/chats", headers: bearer_auth_header(@read_token)
+    assert_response :success
+
+    assert_equal 20, response.parsed_body.dig("pagination", "per_page")
+  end
+
+  test "show pages messages 50 at a time" do
+    25.times { |i| @chat.messages.create!(type: "AssistantMessage", content: "reply #{i}", ai_model: "gpt-4.1") }
+
+    get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
+    assert_response :success
+
+    body = response.parsed_body
+    assert_equal 50, body.dig("pagination", "per_page")
+    assert_equal [ @chat.messages.count, 50 ].min, body["messages"].size
+  end
+
   test "should create chat with write scope" do
     assert_difference "Chat.count" do
       post "/api/v1/chats",
