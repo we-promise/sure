@@ -318,9 +318,7 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_inflow, sql[in_leg.id]
   end
 
-  # Zero is not negative, so a zero-quantity external trade with a zero
-  # amount reads as an outflow on both paths (it was an inflow before
-  # quantity 0 took its direction from the amount).
+  # Zero is not negative, so a zero-quantity external trade with a zero amount reads as an outflow on both paths.
   test "a zero-quantity external trade with a zero amount is an outflow" do
     zero = cash_only_trade(label: "Withdrawal", amount: 0)
 
