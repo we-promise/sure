@@ -656,6 +656,21 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "setup modal shows account types and subtypes in the user's language" do
+    @item.enable_banking_accounts.create!(name: "Checking", uid: "eb_setup_1", currency: "EUR", current_balance: 0)
+
+    get setup_accounts_enable_banking_item_url(@item, locale: :de)
+
+    assert_response :success
+    I18n.with_locale(:de) do
+      assert_select "option[value=Depository]", text: I18n.t("enable_banking_items.setup_accounts.account_types.depository")
+      assert_select "option[value=checking]", text: Depository.long_subtype_label_for("checking")
+      assert_select "option[value=mortgage]", text: Loan.long_subtype_label_for("mortgage")
+      assert_select "label", text: I18n.t("enable_banking_items.setup_accounts.subtype_labels.loan")
+    end
+    assert_no_match(/Checking or Savings Account|Loan or Mortgage|Account Subtype:/, response.body)
+  end
+
   test "setup modal shows a start date that is already set" do
     @item.update!(sync_start_date: Date.new(2024, 1, 15))
     @item.enable_banking_accounts.create!(name: "Checking", uid: "eb_setup_1", currency: "EUR", current_balance: 0)
