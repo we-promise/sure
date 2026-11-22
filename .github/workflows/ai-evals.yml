@@ -29,8 +29,13 @@ env:
   PLAID_CLIENT_ID: foo
   PLAID_SECRET: bar
   EVAL_RECORDED: "1"
-  EVAL_MODEL: gpt-4.1-mini
-  # Replayed answers need no key; the generation client only needs one to build the endpoint.
+  # Recorded against Claude Haiku 5.5 through the Kilo gateway. Replay matches each request by
+  # method and URL, so the URL and the batching settings must be the ones the cassettes were
+  # recorded with. Replayed answers need no key; the client only needs one to build the endpoint.
+  EVAL_MODEL: anthropic/claude-haiku-5.5
+  OPENAI_MODEL: anthropic/claude-haiku-5.5
+  OPENAI_URI_BASE: https://api.kilo.ai/api/gateway
+  LLM_CONTEXT_WINDOW: "32000"
   OPENAI_ACCESS_TOKEN: recorded
 
 jobs:

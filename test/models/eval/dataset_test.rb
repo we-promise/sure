@@ -81,6 +81,18 @@ class Eval::DatasetTest < ActiveSupport::TestCase
     File.delete(file_path) if File.exist?(file_path)
   end
 
+  # The recorded evals replay a model's answers by the ids it was sent, so a reimport must send the same ones.
+  test "a dataset's samples get the same ids on every import" do
+    file_path = Rails.root.join("db/eval_data/categorization_golden_v1_light.yml")
+
+    first = Eval::Dataset.import_from_yaml(file_path).samples.order(:id).pluck(:id)
+    second = Eval::Dataset.import_from_yaml(file_path).samples.order(:id).pluck(:id)
+
+    assert_equal 50, first.size
+    assert_equal first, second
+    assert_includes first, Eval::Dataset.sample_id("categorization_golden_v1_light", 0)
+  end
+
   test "statistics returns sample breakdown" do
     dataset = Eval::Dataset.create!(name: "stats_test", eval_type: "categorization")
 
