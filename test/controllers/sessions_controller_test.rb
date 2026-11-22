@@ -330,6 +330,17 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Local password login is disabled. Please use single sign-on.", flash[:alert]
   end
 
+  test "hides the sign-up tab when local signup is disabled" do
+    AuthConfig.stubs(:local_signup_enabled?).returns(false)
+    AuthConfig.stubs(:sso_providers).returns([
+      { id: "oidc", strategy: "openid_connect", name: "openid_connect", label: "Sign in with Keycloak", icon: "key" }
+    ])
+
+    get new_session_path
+    assert_response :success
+    assert_no_match(/Create account/, @response.body)
+  end
+
   test "renders multiple SSO provider buttons" do
     AuthConfig.stubs(:local_login_form_visible?).returns(true)
     AuthConfig.stubs(:password_features_enabled?).returns(true)

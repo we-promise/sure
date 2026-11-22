@@ -34,6 +34,13 @@ class AuthConfig
       local_login_enabled?
     end
 
+    # Whether local (email/password) account sign-up is allowed. A new local
+    # account could never sign in while local login is off, so sign-up follows
+    # the same switch and accounts are created through SSO instead.
+    def local_signup_enabled?
+      local_login_enabled?
+    end
+
     # Backend check to determine if a given user is allowed to authenticate via
     # local email/password credentials.
     #

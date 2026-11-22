@@ -133,7 +133,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '403', 'registration refused: the instance is closed to new registrations, or an invite code is required or invalid' do
+      response '403', 'registration refused: local account creation is disabled (SSO-only), the instance is closed to new registrations, or an invite code is required or invalid' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { user: { email: 'new-docs-user@example.com', password: password }, device: device } }

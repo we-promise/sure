@@ -3,6 +3,7 @@ class RegistrationsController < ApplicationController
 
   layout "auth"
 
+  before_action :ensure_signup_enabled
   before_action :ensure_signup_open, if: :self_hosted?
   before_action :set_user, only: :create
   before_action :set_invitation
@@ -113,6 +114,12 @@ class RegistrationsController < ApplicationController
       if @user.errors.present?
         render :new, status: :unprocessable_entity
       end
+    end
+
+    def ensure_signup_enabled
+      return if AuthConfig.local_signup_enabled?
+
+      redirect_to new_session_path, alert: t("registrations.disabled")
     end
 
     def ensure_signup_open
