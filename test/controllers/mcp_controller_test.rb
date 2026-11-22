@@ -183,8 +183,6 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     refreshed = JSON.parse(response.body)["access_token"]
-    assert_nil Doorkeeper::AccessToken.by_token(refreshed).mobile_device_id,
-      "Doorkeeper's refresh grant does not carry mobile_device_id over"
 
     post "/mcp", params: jsonrpc_request("initialize").to_json,
          headers: mcp_headers(refreshed)

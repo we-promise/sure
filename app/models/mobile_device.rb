@@ -33,9 +33,8 @@ class MobileDevice < ApplicationRecord
     end
   end
 
-  # Every token the mobile app holds. Doorkeeper's own refresh grant at
-  # /oauth/token does not copy mobile_device_id, so tokens refreshed that way
-  # are found by their client instead.
+  # Every token the mobile app holds: those of a device, and any other token of
+  # the mobile client, such as one whose device was never recorded.
   def self.oauth_access_tokens
     mobile_clients = Doorkeeper::Application.where(name: OAUTH_APPLICATION_NAME, redirect_uri: CALLBACK_URL)
 
