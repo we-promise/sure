@@ -86,7 +86,7 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index pages chats 20 at a time" do
-    get "/api/v1/chats", headers: bearer_auth_header(@read_token)
+    get "/api/v1/chats", headers: api_headers(read_api_key)
     assert_response :success
 
     assert_equal 20, response.parsed_body.dig("pagination", "per_page")
@@ -95,7 +95,7 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
   test "show pages messages 50 at a time" do
     25.times { |i| @chat.messages.create!(type: "AssistantMessage", content: "reply #{i}", ai_model: "gpt-4.1") }
 
-    get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
+    get "/api/v1/chats/#{@chat.id}", headers: api_headers(read_api_key)
     assert_response :success
 
     body = response.parsed_body
@@ -237,5 +237,15 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }
+    end
+
+    def read_api_key
+      ApiKey.create!(
+        user: @user,
+        name: "Read Key",
+        scopes: [ "read" ],
+        source: "web",
+        display_key: "test_read_#{SecureRandom.hex(8)}"
+      )
     end
 end
