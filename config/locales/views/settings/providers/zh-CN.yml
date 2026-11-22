@@ -173,15 +173,15 @@ zh-CN:
         callback_url_instruction: 回调 URL 请使用 %{callback_url}。
         connection_error: 连接错误
         step_1_html: 前往 %{link} 并获取您的开发者凭据。
-        step_2: 选择您的国家/地区，并将 Application ID + Client Certificate 粘贴到下方。
+        step_2: 选择您的国家/地区，并将 Application ID + 私钥粘贴到下方。
         step_3: 保存后使用“添加连接”链接您的银行。
         config_locked_title: 配置已锁定
         config_locked_message: 在更改这些凭据之前，请先断开所有已连接的银行。
         application_id_label: Application ID
         application_id_placeholder_new: 输入 application ID
         application_id_placeholder_update: 输入新 ID 以更新
-        client_certificate_label: Client Certificate（包含 Private Key）
-        keep_client_certificate_hint: "留空以保留当前证书"
+        client_certificate_label: 私钥（.pem）
+        keep_client_certificate_hint: "留空以保留当前私钥"
         save_and_connect: 保存并连接
         update_connection: 更新连接
         connected_bank: 已连接的银行
@@ -405,7 +405,7 @@ zh-CN:
           cash_report_options: 选项：无
           cash_report_fields: 字段：Currency、Ending Cash
           cash_transactions: 现金交易：
-          cash_transactions_options: 选项：Dividends、Deposits & Withdrawals、Detail
+          cash_transactions_options: 选项：Dividends、Deposits & Withdrawals、Payment In Lieu Of Dividends、Withholding Tax、Broker Interest Paid、Broker Interest Received、Bond Interest Paid、Bond Interest Received、Other Fees、Commission Adjustments、Detail
           cash_transactions_fields: 字段：Amount、Conid、Currency、FX Rate To Base、Report Date、Transaction ID、Type
           change_in_position_value_summary: 仓位价值变动汇总：Currency、End Of Period Value
           net_asset_value: 基础币种下的净资产值（NAV）：

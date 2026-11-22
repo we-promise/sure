@@ -245,7 +245,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dashboard skips the data queries of hidden widgets" do
-    %w[cashflow_sankey outflows_donut money_flow spending_trend].each { |key| @user.update_dashboard_section_hidden(key, true) }
+    %w[cashflow_sankey outflows_donut cashflow_donut money_flow spending_trend].each { |key| @user.update_dashboard_section_hidden(key, true) }
     IncomeStatement.any_instance.expects(:income_totals).never
     IncomeStatement.any_instance.expects(:expense_totals).never
     IncomeStatement.any_instance.expects(:net_category_totals).never
@@ -278,6 +278,10 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dashboard memoizes income statement period totals while rendering" do
+    # The cash flow rings have their own month, so they legitimately build a
+    # second period's totals; only the widgets sharing the dashboard period
+    # are under test here.
+    @user.update_dashboard_section_hidden("cashflow_donut", true)
     income_statement = IncomeStatement.new(@family)
     IncomeStatement.stubs(:new).returns(income_statement)
 
@@ -337,6 +341,116 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :ok
     assert_select "[data-controller='sankey-chart']"
+  end
+
+  test "dashboard renders the cash flow rings with unspent income as a muted track on the outflows ring" do
+    create_transaction(account: @family.accounts.first, name: "Salary", amount: -100_000, category: categories(:income))
+    create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
+    create_transaction(account: @family.accounts.first, name: "Cash withdrawal", amount: 50)
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-donut-section"
+    assert_select "#segment_unused"
+    assert_select "#segment_overage", count: 0
+    assert_select "#cashflow-donut-section [data-donut-chart-target='defaultContent']", text: /Spent.*of .* income.* left/m
+
+    inflows, outflows = cashflow_donut_rings
+    assert inflows.any? { |s| s["id"] == "income_#{categories(:income).id}" }
+    assert outflows.any? { |s| s["id"] == "expense_uncategorized" }, "synthetic categories use their invariant key, not a localized name"
+    assert_equal "unused", outflows.last["id"]
+    assert_nil outflows.last["filter_value"]
+    assert_in_delta inflows.sum { |s| s["amount"] }, outflows.sum { |s| s["amount"] }, 0.01
+    # Percentages are shares of the common ring, so each ring's sum to 100.
+    assert_in_delta 100, inflows.sum { |s| s["percentage"] }, 1
+    assert_in_delta 100, outflows.sum { |s| s["percentage"] }, 1
+  end
+
+  test "dashboard renders the cash flow rings with overspend as an overage slice on the inflows ring" do
+    create_transaction(account: @family.accounts.first, name: "Salary", amount: -100, category: categories(:income))
+    create_transaction(account: @family.accounts.first, name: "Rent", amount: 100_000, category: categories(:food_and_drink))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#segment_overage"
+    assert_select "#segment_unused", count: 0
+    assert_select "#cashflow-donut-section [data-donut-chart-target='defaultContent']", text: /over/
+
+    inflows, outflows = cashflow_donut_rings
+    assert_equal "overage", inflows.last["id"]
+    assert_in_delta inflows.sum { |s| s["amount"] }, outflows.sum { |s| s["amount"] }, 0.01
+  end
+
+  test "dashboard scopes the cash flow rings to the selected month and accounts" do
+    account = @family.accounts.create!(name: "Rings Test Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    other_account = @family.accounts.create!(name: "Rings Other Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    other_category = @family.categories.create!(name: "Rings Other Category", color: "#123456")
+    selected_month = 1.month.ago.beginning_of_month.to_date
+    create_transaction(account: account, name: "Paycheck", amount: -3_000, date: selected_month + 1.day, category: categories(:income))
+    create_transaction(account: account, name: "Groceries", amount: 500, date: selected_month + 2.days, category: categories(:food_and_drink))
+    create_transaction(account: other_account, name: "Elsewhere", amount: 999, date: selected_month + 3.days, category: other_category)
+    create_transaction(account: account, name: "This month", amount: 777, date: Date.current, category: other_category)
+
+    get root_path, params: { cashflow_month: selected_month.iso8601, cashflow_account_ids: [ account.id ] }
+
+    assert_response :ok
+    inflows, outflows = cashflow_donut_rings
+    assert_equal 3000.0, inflows.find { |s| s["id"] == "income_#{categories(:income).id}" }["amount"]
+    assert_equal 500.0, outflows.find { |s| s["id"] == "expense_#{categories(:food_and_drink).id}" }["amount"]
+    assert_nil outflows.find { |s| s["id"] == "expense_#{other_category.id}" }, "other account's and other month's spending must be excluded"
+    assert_select "#cashflow-donut-section a[href*='account_ids%5D%5B%5D=#{account.id}']"
+    assert_select "#cashflow-donut-section [data-donut-chart-account-ids-value='#{[ account.id.to_s ].to_json}']"
+  end
+
+  test "the cash flow rings' drill-downs only list confirmed transactions, like the ring amounts" do
+    create_transaction(account: @family.accounts.first, name: "Salary", amount: -1_000, category: categories(:income))
+    create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-donut-section a[href*='q%5Bcategories%5D%5B%5D=#{CGI.escape(categories(:food_and_drink).filter_value)}'][href*='q%5Bstatus%5D%5B%5D=confirmed']"
+    assert_select "#cashflow-donut-section [data-donut-chart-statuses-value='#{[ "confirmed" ].to_json}']"
+  end
+
+  test "dashboard keeps the cash flow rings' controls when the selection has no data" do
+    empty_account = @family.accounts.create!(name: "Rings Empty Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+
+    get root_path, params: { cashflow_account_ids: [ empty_account.id ] }
+
+    assert_response :ok
+    assert_select "#cashflow-donut-section [data-controller='donut-chart']", count: 0
+    assert_select "#cashflow-donut-section", text: /#{I18n.t("pages.dashboard.cashflow_donut.no_data")}/
+    assert_select "#cashflow-donut-section form input[name='cashflow_account_ids[]']"
+  end
+
+  test "the cash flow rings' controls keep the other widgets' months and filters, and vice versa" do
+    account = accounts(:depository)
+    category = categories(:food_and_drink)
+    money_flow_month, cashflow_month, other_month = (1..3).map { |i| i.months.ago.beginning_of_month.to_date.iso8601 }
+
+    get root_path(money_flow_month: money_flow_month, money_flow_account_ids: [ account.id ], spending_category_ids: [ category.id ],
+                  cashflow_month: cashflow_month, cashflow_account_ids: [ account.id ])
+    assert_response :ok
+
+    assert_select "#cashflow-donut-section form input[type='hidden'][name='money_flow_month'][value='#{money_flow_month}']"
+    assert_select "#cashflow-donut-section form input[type='hidden'][name='money_flow_account_ids[]'][value='#{account.id}']"
+    assert_select "#cashflow-donut-section form input[type='hidden'][name='spending_category_ids[]'][value='#{category.id}']"
+    assert_select "#cashflow-donut-section form input[type='hidden'][name='cashflow_account_ids[]']", count: 0
+
+    assert_select "#money-flow-section form input[type='hidden'][name='cashflow_month'][value='#{cashflow_month}']"
+    assert_select "#money-flow-section form input[type='hidden'][name='cashflow_account_ids[]'][value='#{account.id}']"
+
+    link = dashboard_link_params("#cashflow-donut-section a[href*='cashflow_month=#{other_month}']")
+    assert_equal money_flow_month, link["money_flow_month"]
+    assert_equal [ account.id ], link["cashflow_account_ids"]
+  end
+
+  def cashflow_donut_rings
+    chart = css_select("#cashflow-donut-section [data-controller='donut-chart']").first
+    JSON.parse(chart["data-donut-chart-rings-value"])
   end
 
   test "dashboard renders sankey chart zoom controls and stable node ids" do
@@ -688,7 +802,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     chart = spending_trend_chart_data
 
     current = chart.fetch("current")
-    previous = chart.fetch("previous")
+    previous = chart.fetch("comparisons").first.fetch("series")
 
     # Both months are past, so the selected month's curve runs its full
     # length; the previous curve runs its own length unless folded to the
@@ -762,7 +876,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     chart = spending_trend_chart_data
-    previous = chart.fetch("previous")
+    previous = chart.fetch("comparisons").first.fetch("series")
 
     # The January curve is clipped to February's 28-day axis, with day 31's
     # spend folded into the final visible point so it still lands on the
@@ -796,7 +910,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     chart = spending_trend_chart_data
-    previous = chart.fetch("previous")
+    previous = chart.fetch("comparisons").first.fetch("series")
 
     assert_equal 30, chart.fetch("days")
     assert_equal 30, previous.size
@@ -820,8 +934,75 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     # truncated on mobile ("Previous mon…").
     expected_label = I18n.l(previous_month, format: :month_year).capitalize
     assert_select "#spending-trend-section p", text: expected_label
-    chart_element = css_select("[data-controller='spending-chart']").first
-    assert_equal expected_label, chart_element["data-spending-chart-previous-label-value"]
+    assert_equal expected_label, spending_trend_chart_data.fetch("comparisons").first.fetch("label")
+  end
+
+  test "dashboard spending trend compares against the previous month by default" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+
+    assert_response :ok
+    assert_equal 1, spending_trend_chart_data.fetch("comparisons").size
+    assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.compare_months", count: 1)
+  end
+
+  test "dashboard spending trend overlays the last N months on the chart, keeping the header on the previous month" do
+    account, selected_month, previous_month = spending_trend_filter_setup
+    create_transaction(account: account, name: "Selected", amount: 10, date: selected_month)
+    create_transaction(account: account, name: "Previous", amount: 20, date: previous_month)
+    create_transaction(account: account, name: "Two back", amount: 30, date: selected_month - 2.months)
+    create_transaction(account: account, name: "Three back", amount: 40, date: selected_month - 3.months)
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_compare_months: 3 }
+
+    assert_response :ok
+    comparisons = spending_trend_chart_data.fetch("comparisons")
+    # Newest first, each folded onto the selected month's axis.
+    assert_equal (1..3).map { |i| I18n.l(selected_month - i.months, format: :month_year).capitalize }, comparisons.map { |c| c.fetch("label") }
+    assert_equal [ 20.0, 30.0, 40.0 ], comparisons.map { |c| c.fetch("series").last.fetch("value") }
+    comparisons.each { |c| assert_operator c.fetch("series").size, :<=, selected_month.end_of_month.day }
+    assert_equal [ money_text(10), money_text(20) ], spending_trend_header_totals
+    assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.compare_months", count: 3)
+  end
+
+  test "dashboard spending trend falls back to the previous month for invalid compare values" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
+
+    [ "0", "6", "-1", "abc", "2.5" ].each do |value|
+      get root_path, params: { spending_month: selected_month.iso8601, spending_compare_months: value }
+
+      assert_response :ok
+      assert_equal 1, spending_trend_chart_data.fetch("comparisons").size, "for #{value.inspect}"
+    end
+  end
+
+  test "dashboard spending trend keeps the compared months across its month links and category filter" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_compare_months: 3 }
+
+    other_month = selected_month - 1.month
+    assert_select "#spending-trend-section a[href='#{root_path(spending_month: other_month.iso8601, spending_compare_months: 3)}']"
+    assert_select "#spending-trend-section form input[type='hidden'][name='spending_compare_months'][value='3']"
+    # Back to one month drops the param rather than pinning the default.
+    assert_select "#spending-trend-section a[href='#{root_path(spending_month: selected_month.iso8601)}']"
+    assert_select "#spending-trend-section a[href='#{root_path(spending_month: selected_month.iso8601, spending_compare_months: 5)}']"
+  end
+
+  test "dashboard spending trend category filter offers categories from every compared month" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    older = @family.categories.create!(name: "Spending Filter Older Month")
+    create_transaction(account: account, name: "Older", amount: 10, date: selected_month - 3.months, category: older)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+    assert_not_includes spending_trend_category_values, older.id
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_compare_months: 3 }
+    assert_includes spending_trend_category_values, older.id
   end
 
   test "dashboard spending trend renders a compact date range for mobile" do
@@ -870,7 +1051,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       assert_response :ok
 
       chart = spending_trend_chart_data
-      previous_series = chart.fetch("previous")
+      previous_series = chart.fetch("comparisons").first.fetch("series")
       aligned = previous_series.fetch(Date.current.day - 1).fetch("value")
       full_month = previous_series.last.fetch("value")
       current_value = chart.fetch("current").last.fetch("value")
@@ -920,7 +1101,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       get root_path, params: { spending_month: selected_month.iso8601 }
       assert_response :ok
 
-      previous_series = spending_trend_chart_data.fetch("previous")
+      previous_series = spending_trend_chart_data.fetch("comparisons").first.fetch("series")
       _current_total, previous_total = spending_trend_header_totals
 
       assert_equal previous_month.end_of_month.iso8601, previous_series.last.fetch("date")
@@ -943,7 +1124,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path, params: { spending_month: selected_month.iso8601 }
     assert_response :ok
 
-    previous_series = spending_trend_chart_data.fetch("previous")
+    previous_series = spending_trend_chart_data.fetch("comparisons").first.fetch("series")
     _current_total, previous_total = spending_trend_header_totals
 
     # A month that has fully elapsed is still compared whole-to-whole.
@@ -969,7 +1150,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path, params: { spending_month: selected_month.iso8601 }
     assert_response :ok
 
-    previous_series = spending_trend_chart_data.fetch("previous")
+    previous_series = spending_trend_chart_data.fetch("comparisons").first.fetch("series")
     _current_total, previous_total = spending_trend_header_totals
 
     # Both months are over, so both are compared whole - the selected month
@@ -1002,7 +1183,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       get root_path, params: { spending_month: selected_month.iso8601 }
       assert_response :ok
 
-      previous_series = spending_trend_chart_data.fetch("previous")
+      previous_series = spending_trend_chart_data.fetch("comparisons").first.fetch("series")
       _current_total, previous_total = spending_trend_header_totals
 
       # There is no day 30 in February: the previous month has fully elapsed, so
@@ -1011,6 +1192,48 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       assert_equal money_text(previous_series.last.fetch("value")), previous_total
       refute_equal money_text(0), previous_total
     end
+  end
+
+  test "dashboard says which currencies are left out of its totals" do
+    @family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from KRW to USD is stored yet, so some totals may leave out amounts in KRW/
+  end
+
+  test "dashboard does not name the currency of an account the member cannot see" do
+    @family.accounts.create!(name: "Admin KRW", owner: users(:family_admin), balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+    sign_in users(:family_member)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
+  end
+
+  test "dashboard shows no exchange rate notes when every rate is current" do
+    @family.accounts.create!(name: "EUR Savings", balance: 100, currency: "EUR", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: Date.current, rate: 1.1)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
+    assert_select "[data-testid='stale-exchange-rates']", count: 0
+  end
+
+  test "dashboard says when today's totals use an out-of-date rate" do
+    rate_date = 30.days.ago.to_date
+    @family.accounts.create!(name: "JPY Savings", balance: 1_000_000, currency: "JPY", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: rate_date, rate: 0.0067)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='stale-exchange-rates']", text: /JPY from #{Regexp.escape(I18n.l(rate_date, format: :long))}/
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
   end
 
   test "dashboard spending trend category filter narrows both months and the header totals" do
@@ -1028,7 +1251,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     chart = spending_trend_chart_data
     assert_equal 30.0, chart.fetch("current").last.fetch("value")
-    assert_equal 20.0, chart.fetch("previous").last.fetch("value")
+    assert_equal 20.0, chart.fetch("comparisons").first.fetch("series").last.fetch("value")
     assert_equal [ money_text(30), money_text(20) ], spending_trend_header_totals
     assert_equal money_text(10), spending_trend_header_delta
     assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories", count: 1)

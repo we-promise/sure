@@ -166,6 +166,49 @@ class SettingTest < ActiveSupport::TestCase
     assert_nil Setting.brand_fetch_icon_url("example.com")
   end
 
+  test "transform_brand_fetch_url renders a stored logo with the current client id and size" do
+    Setting.stubs(:brand_fetch_client_id).returns("new-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    assert_equal(
+      "https://cdn.brandfetch.io/walmart.com/icon/fallback/lettermark/w/120/h/120?c=new-client-id",
+      Setting.transform_brand_fetch_url("https://cdn.brandfetch.io/walmart.com/icon/fallback/lettermark/w/40/h/40?c=old-client-id")
+    )
+    assert_equal(
+      "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/120/h/120?c=new-client-id",
+      Setting.transform_brand_fetch_url("https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/40/h/40?c=old-client-id")
+    )
+  end
+
+  test "transform_brand_fetch_url keeps the stored client id when none is configured" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
+
+    stored = "https://cdn.brandfetch.io/walmart.com/icon/fallback/lettermark/w/40/h/40?c=old-client-id"
+    assert_equal stored, Setting.transform_brand_fetch_url(stored)
+  end
+
+  test "transform_brand_fetch_url leaves other logo URLs alone" do
+    Setting.stubs(:brand_fetch_client_id).returns("new-client-id")
+
+    assert_equal "https://plaid.com/walmart.png?c=old-client-id", Setting.transform_brand_fetch_url("https://plaid.com/walmart.png?c=old-client-id")
+    assert_nil Setting.transform_brand_fetch_url(nil)
+  end
+
+  test "integer_from_env treats a blank variable as unset" do
+    with_env_overrides("LLM_CONTEXT_WINDOW" => "") do
+      assert_nil Setting.integer_from_env("LLM_CONTEXT_WINDOW")
+    end
+
+    with_env_overrides("LLM_CONTEXT_WINDOW" => " 8192 ") do
+      assert_equal 8192, Setting.integer_from_env("LLM_CONTEXT_WINDOW")
+    end
+
+    with_env_overrides("LLM_CONTEXT_WINDOW" => nil) do
+      assert_nil Setting.integer_from_env("LLM_CONTEXT_WINDOW")
+    end
+  end
+
   test "LLM_PROVIDER env wins over a stored llm_provider" do
     original = Setting.raw_llm_provider
     Setting.llm_provider = "anthropic"
@@ -204,6 +247,55 @@ class SettingTest < ActiveSupport::TestCase
     # the field's default.
     Setting.securities_providers = original_providers.presence || ""
     Setting.securities_provider = original_provider.presence || "twelve_data"
+  end
+
+  test "Plaid secrets use declared encrypted settings through bracket and named accessors" do
+    %w[plaid_secret plaid_eu_secret].each do |key|
+      secret = "synthetic-#{key}"
+      Setting[key] = secret
+
+      stored = Setting.find_by!(var: key).value
+      refute_includes stored, secret
+      assert_equal secret, Setting[key]
+      assert_equal secret, Setting.public_send(key)
+      assert_not Setting.exists?(var: "dynamic:#{key}")
+
+      Setting.public_send("#{key}=", "replacement-secret")
+      assert_equal "replacement-secret", Setting[key]
+      Setting[key] = nil
+      assert_nil Setting[key]
+    end
+  end
+
+  test "Plaid provider configuration retains ENV fallback and stored-secret precedence" do
+    { Provider::PlaidAdapter => "PLAID_SECRET", Provider::PlaidEuAdapter => "PLAID_EU_SECRET" }.each do |adapter, env_key|
+      key = adapter.configuration.fields.find { |field| field.name == :secret }.setting_key
+      Setting[key] = nil
+
+      with_env_overrides(env_key => "synthetic-env-secret") do
+        assert_no_changes -> { Setting.find_by(var: key.to_s)&.value } do
+          assert_equal "synthetic-env-secret", adapter.config_value(:secret)
+        end
+
+        Setting[key] = "synthetic-stored-secret"
+        assert_equal "synthetic-stored-secret", adapter.config_value(:secret)
+
+        Setting[key] = nil
+        assert_equal "synthetic-env-secret", adapter.config_value(:secret)
+      end
+    end
+  end
+
+  test "Plaid declared settings retain the existing plaintext-read compatibility" do
+    %w[plaid_secret plaid_eu_secret].each do |key|
+      store_raw_setting(key, "synthetic-legacy-secret")
+
+      assert_equal "synthetic-legacy-secret", Setting[key]
+      assert_equal "synthetic-legacy-secret", Setting.find_by!(var: key).value
+
+      Setting[key] = Setting[key]
+      refute_includes Setting.find_by!(var: key).value, "synthetic-legacy-secret"
+    end
   end
 
   test "reencrypt_secrets_from moves values from the old key to the current key" do
