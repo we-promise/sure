@@ -1236,11 +1236,13 @@ export default class extends Controller {
         .attr("fill-opacity", 0.05);
       const note = this.transactionsLoading
         ? this.t("older_loading")
-        : this.transactionsFailed
-          ? this.t("older_failed", { date: this.isoLabel(this.coveredFrom) })
-          : this.t("older_not_loaded", {
-              date: this.isoLabel(this.coveredFrom),
-            });
+        : this.transactionsStuck
+          ? this.t("older_stuck", { date: this.isoLabel(this.coveredFrom) })
+          : this.transactionsFailed
+            ? this.t("older_failed", { date: this.isoLabel(this.coveredFrom) })
+            : this.t("older_not_loaded", {
+                date: this.isoLabel(this.coveredFrom),
+              });
       svg
         .append("text")
         .attr("x", margin.left + 4)

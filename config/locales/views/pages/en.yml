@@ -128,6 +128,7 @@ en:
           other: "(%{count} upcoming bills)"
         older_not_loaded: "Transactions before %{date} not loaded, zoom in to load them"
         older_loading: Loading older transactions…
+        older_stuck: "Transactions before %{date} are not shown: one day holds more than the lane can load"
         older_failed: "Couldn't load transactions before %{date}; zoom again to retry"
         spread_note: "Sure records dates, not times: a day's transactions are spread evenly across it"
       net_worth_chart:
