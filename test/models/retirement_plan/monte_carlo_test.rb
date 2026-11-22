@@ -183,10 +183,23 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
     assert_equal [ [ 1.0 ] * 5 ] * 2, mc.heatmap.first(2).map { |row| row.map { |cell| cell[:success_rate] } }
   end
 
-  test "nothing in the Monte Carlo engine reads the clock, the database or the current request" do
-    # Comments are left out, so a note about the contract cannot trip it.
-    code = Rails.root.join("app/models/retirement_plan/monte_carlo.rb").readlines.map { |line| line.sub(/#.*/, "") }.join
+  # The seed and the reference date are arguments: two runs on different
+  # days, with no query and no request, must give the same answers.
+  test "the Monte Carlo run reads neither the clock, the database nor the current request" do
+    Current.expects(:user).never
+    Current.expects(:family).never
 
-    assert_no_match(/Date\.(current|today)|Time\.(current|now|zone)|DateTime\.(current|now)|Current\.|ActiveRecord|\.where\(|\.find/, code)
+    runs = [ Date.new(2026, 3, 1), Date.new(2031, 9, 30) ].map do |today|
+      travel_to(today) do
+        figures = nil
+        assert_queries_count(0) do
+          mc = monte_carlo(paths: 50)
+          figures = [ mc.success_rate, mc.percentiles, mc.stress_success_rate, mc.confident_year(BigDecimal("0.5")), mc.heatmap ]
+        end
+        figures
+      end
+    end
+
+    assert_equal runs.first, runs.last
   end
 end
