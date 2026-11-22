@@ -31,6 +31,8 @@ const SAVE_DELAY = 400;
 // shows the same chart as the widget.
 export default class extends Controller {
   static targets = [
+    "secondaryInk",
+    "subduedInk",
     "chart",
     "list",
     "stats",
@@ -203,6 +205,13 @@ export default class extends Controller {
         accounts.filter((a) => !CASH_TYPES.has(a.type)).map((a) => a.id),
       );
     this.#changed();
+  }
+
+  // The background a chart sits on: the dialog in full screen, else the card.
+  #surface(el) {
+    return getComputedStyle(
+      el.closest("dialog") || this.element.closest("section") || document.body,
+    ).backgroundColor;
   }
 
   // --- data ---
@@ -653,9 +662,7 @@ export default class extends Controller {
       .domain([low, high])
       .nice()
       .range([height - margin.bottom, margin.top]);
-    const surface = getComputedStyle(
-      el.closest("dialog") || this.element.closest("section") || document.body,
-    ).backgroundColor;
+    const surface = this.#surface(el);
     const ink = getComputedStyle(this.element).color;
     const plotWidth = width - margin.left - margin.right;
 
@@ -947,7 +954,7 @@ export default class extends Controller {
       .append("circle")
       .attr("r", 4)
       .attr("fill", getComputedStyle(this.element).color)
-      .attr("stroke", "white")
+      .attr("stroke", this.#surface(el))
       .attr("stroke-width", 2)
       .attr("opacity", 0);
     const names = Object.fromEntries(
@@ -1167,9 +1174,9 @@ export default class extends Controller {
       .sort((a, b) => a.x - b.x || a.planned - b.planned);
     const clusters = clusterByDistance(visible, LANE_GAP);
 
-    const style = getComputedStyle(this.element);
-    const muted = style.getPropertyValue("--color-gray-500").trim() || ink; // a day spanning several accounts
-    const ring = style.getPropertyValue("--color-gray-400").trim() || ink;
+    // Design-system ink, read off hidden text-secondary / text-subdued elements.
+    const muted = getComputedStyle(this.secondaryInkTarget).color; // a day spanning several accounts
+    const ring = getComputedStyle(this.subduedInkTarget).color;
     const lane = svg.append("g");
     lane
       .append("line")

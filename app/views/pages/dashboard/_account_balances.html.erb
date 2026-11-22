@@ -65,6 +65,10 @@
     <span><%= t(".forecast_hint", count: chart.bill_count) %></span>
   </p>
 
+  <%# Design-system ink for the transaction lane, read by the controller. %>
+  <span hidden class="text-secondary" data-account-balances-chart-target="secondaryInk"></span>
+  <span hidden class="text-subdued" data-account-balances-chart-target="subduedInk"></span>
+
   <%# Icons the controller clones into the HTML it renders (no raw SVG in JS). %>
   <template data-account-balances-chart-target="icons">
     <span data-icon="warning"><%= icon("triangle-alert", size: "xs", class: "inline-block align-[-2px]") %></span>
