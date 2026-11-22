@@ -6,7 +6,7 @@
 # Ai::LegacyEnvConfig::Jev), this calls it, so the router and chat, which still calls the
 # providers, can't disagree. test/architecture/ai_config_test checks that over every documented setup. The
 # one deliberate difference: embeddings fall back to the OpenAI values saved in Settings, as every
-# other AI setting does.
+# other AI setting does (the saved key only for the OpenAI URL).
 #
 # It's built in every process. The release that stops reading the old variables deletes this file.
 class Ai::LegacyEnvConfig
@@ -270,11 +270,16 @@ class Ai::LegacyEnvConfig
       false
     end
 
-    # The URL and key fall back to the OpenAI values saved in Settings too. The URL is used as
-    # written, without `/v1`: EMBEDDING_URI_BASE has always been the base `embeddings` is posted to.
+    # EMBEDDING_URI_BASE is used as written, without `/v1`: it has always been the base `embeddings`
+    # is posted to. An inherited OpenAI URL is normalized as the OpenAI client normalizes it. The
+    # key saved in Settings goes only to that OpenAI URL, never to a separate embedding server;
+    # OPENAI_ACCESS_TOKEN falls back as it always has.
     def embedding_model
-      base_url = env("EMBEDDING_URI_BASE") || openai_uri_base || VectorStore::DEFAULT_EMBEDDING_URI_BASE
-      api_key = env("EMBEDDING_ACCESS_TOKEN") || env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.presence
+      own_url = env("EMBEDDING_URI_BASE")
+      inherited_url = Ai::Transport::Http.compatible_base(openai_uri_base) if openai_uri_base
+      base_url = own_url || inherited_url || VectorStore::DEFAULT_EMBEDDING_URI_BASE
+      saved_key = Setting.openai_access_token.presence if own_url.nil? || same_server?(own_url, openai_uri_base)
+      api_key = env("EMBEDDING_ACCESS_TOKEN") || env("OPENAI_ACCESS_TOKEN") || saved_key
       endpoint = Ai::Config::Endpoint.new(
         name: "embed", protocol: :compatible, base_url:, api_key:, location: Ai::Config::Endpoint.location_for(base_url),
         timeout_seconds: EMBEDDING_TIMEOUT, exact_base_url: true
@@ -283,6 +288,13 @@ class Ai::LegacyEnvConfig
         endpoint:, name: ENV.fetch("EMBEDDING_MODEL", VectorStore::DEFAULT_EMBEDDING_MODEL), capabilities: %i[embedding],
         embedding_dimensions: ENV.fetch("EMBEDDING_DIMENSIONS", VectorStore::DEFAULT_EMBEDDING_DIMENSIONS).to_i
       )
+    end
+
+    # Whether two OpenAI-compatible base URLs name one server; a blank one is OpenAI's.
+    def same_server?(url, other)
+      return true if [ url, other ].all? { _1.blank? || Provider::Openai.hosted_endpoint?(_1) }
+
+      Ai::Transport::Http.compatible_base(url).casecmp?(Ai::Transport::Http.compatible_base(other))
     end
 
     def route_list(feature, models)

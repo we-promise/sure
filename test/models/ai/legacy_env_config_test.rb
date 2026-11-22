@@ -179,4 +179,39 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
 
     assert_empty config.routes_for(:embed), "a differently spelled api.openai.com is still OpenAI"
   end
+
+  test "the OpenAI key saved in Settings goes only to the OpenAI URL, not to a separate embedding server" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns("sk-saved")
+
+    separate = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://ollama:11434/v1")
+    inherited = build("VECTOR_STORE_PROVIDER" => "pgvector")
+    same = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://api.openai.com/v1/")
+
+    assert_nil first_model(separate, :embed).endpoint.api_key
+    assert_equal "sk-saved", first_model(inherited, :embed).endpoint.api_key
+    assert_equal "sk-saved", first_model(same, :embed).endpoint.api_key, "OpenAI's own URL written out is the same server"
+  end
+
+  test "OPENAI_ACCESS_TOKEN still reaches a separate embedding server, as it always has" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns(nil)
+
+    config = build("VECTOR_STORE_PROVIDER" => "pgvector", "OPENAI_ACCESS_TOKEN" => "sk-env", "EMBEDDING_URI_BASE" => "http://ollama:11434/v1")
+
+    assert_equal "sk-env", first_model(config, :embed).endpoint.api_key
+  end
+
+  test "an inherited OpenAI URL without a version gets /v1 for embeddings, as for chat; EMBEDDING_URI_BASE stays as written" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns("sk-saved")
+    Setting.stubs(:openai_uri_base).returns("https://gateway.example/")
+
+    inherited = build("VECTOR_STORE_PROVIDER" => "pgvector")
+    written = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://ollama:11434")
+
+    assert_equal "https://gateway.example/v1", first_model(inherited, :embed).endpoint.base_url
+    assert_equal "sk-saved", first_model(inherited, :embed).endpoint.api_key
+    assert_equal "http://ollama:11434", first_model(written, :embed).endpoint.base_url
+  end
 end
