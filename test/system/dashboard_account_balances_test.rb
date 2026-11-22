@@ -98,6 +98,35 @@ class DashboardAccountBalancesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a slow older save finishing last does not hide a newer save's failure" do
+    sign_in @user
+    within "section[data-section-key='account_balances']" do
+      find("[data-list-toggle]", match: :first).click
+      assert_selector "[data-group='CreditCard'] [data-group-check]"
+    end
+    # The first settings save is slow and succeeds; every later one fails at once.
+    page.execute_script(<<~JS)
+      window.realFetch = window.fetch;
+      let saves = 0;
+      window.fetch = (url, options) => {
+        if (!(options && options.method === "PATCH" && String(url).includes("/dashboard/preferences"))) return window.realFetch(url, options);
+        saves += 1;
+        return saves === 1
+          ? new Promise((resolve) => setTimeout(() => resolve(new Response("", { status: 200 })), 1500))
+          : Promise.resolve(new Response("", { status: 422 }));
+      };
+    JS
+
+    within "section[data-section-key='account_balances']" do
+      find("[data-group='CreditCard'] [data-group-check]").click
+      sleep 0.6 # the first save is sent
+      find("[data-group='Depository'] [data-group-check]").click
+      assert_text "Couldn't save these settings"
+      sleep 1.5 # the first, older save completes successfully
+      assert_text "Couldn't save these settings"
+    end
+  end
+
   test "opens full screen from the widget header" do
     sign_in @user
 

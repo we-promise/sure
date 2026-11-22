@@ -161,6 +161,10 @@ export default class extends Controller {
     clearTimeout(this.saveTimer);
     if (!this.savePending) return;
     this.savePending = false;
+    // Saves are not serialized: only the latest one sent may change the
+    // saved/unsaved state, so an older request finishing last is ignored.
+    this.saveRevision = (this.saveRevision || 0) + 1;
+    const revision = this.saveRevision;
     const token = document.querySelector('meta[name="csrf-token"]')?.content;
     try {
       const response = await fetch(this.preferencesUrlValue, {
@@ -189,10 +193,10 @@ export default class extends Controller {
           response.status,
         );
       }
-      this.#saveFailed(!response.ok);
+      if (revision === this.saveRevision) this.#saveFailed(!response.ok);
     } catch (error) {
       console.error("[Account Balances] Network error saving settings:", error);
-      this.#saveFailed(true);
+      if (revision === this.saveRevision) this.#saveFailed(true);
     }
   }
 
