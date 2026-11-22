@@ -40,6 +40,18 @@
       <% end %>
     <% end %>
 
+    <%# ── Unknown account types ───────────────────────────────── %>
+    <% if @unknown_account_types.any? %>
+      <%= render DS::Alert.new(
+            variant: :warning,
+            title: t(".unknown_account_type_title", count: @unknown_account_types.size),
+            message: t(".unknown_account_type_description",
+                       count: @unknown_account_types.size,
+                       types: @unknown_account_types.map { |type| t(".unknown_account_type_name", type: type) }.to_sentence,
+                       product_name: product_name)
+          ) %>
+    <% end %>
+
     <%# ── Split transaction warning ────────────────────────────── %>
     <% if @has_split_transactions %>
       <div class="flex gap-3 items-start rounded-xl border border-warning bg-warning/5 px-4 py-3">
