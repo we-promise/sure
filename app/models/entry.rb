@@ -28,12 +28,12 @@ class Entry < ApplicationRecord
   # assignment surfaces a validation error rather than a StatementInvalid.
   validates :reconciled_at, presence: true, if: -> { reconciled_by_statement_id.present? }
 
-  validates :location_lng, presence: { message: "can't be blank if location_lat is present" }, if: -> { location_lat.present? }
-  validates :location_lat, presence: { message: "can't be blank if location_lng is present" }, if: -> { location_lng.present? }
+  validates :location_lng, presence: { message: :missing_pair }, if: -> { location_lat.present? }
+  validates :location_lat, presence: { message: :missing_pair }, if: -> { location_lng.present? }
   validates :location_lat, numericality: { greater_than_or_equal_to: -90, less_than_or_equal_to: 90 }, allow_nil: true
   validates :location_lng, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }, allow_nil: true
 
-  scope :located, -> { where.not(location_lat: nil) }
+  scope :located, -> { where.not(location_lat: nil).where.not(location_lng: nil) }
 
   def located?
     location_lat.present? && location_lng.present?

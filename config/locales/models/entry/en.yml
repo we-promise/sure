@@ -8,3 +8,7 @@ en:
             base:
               invalid_sell_quantity: cannot sell %{sell_qty} shares of %{ticker} because
                 you only own %{current_qty} shares
+            location_lat:
+              missing_pair: "can't be blank if location_lng is present"
+            location_lng:
+              missing_pair: "can't be blank if location_lat is present"
