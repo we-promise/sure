@@ -2,6 +2,7 @@ import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import {
   addMonths,
+  buildLanePoints,
   buildRows,
   clusterByDistance,
   columnSplit,
@@ -16,6 +17,7 @@ import {
   pluralForm,
   selectionToSave,
   stackRows,
+  zoomTarget,
 } from "../../app/javascript/utils/account_balances_chart.mjs"
 
 describe("addMonths", () => {
@@ -92,6 +94,35 @@ describe("selectionToSave / excludedFromSettings", () => {
     const saved = selectionToSave(hidden, all)
     assert.deepEqual(saved.shown_account_ids, ["a0"])
     assert.deepEqual([...excludedFromSettings(saved, all)].sort(), [...hidden].sort())
+  })
+})
+
+describe("buildLanePoints", () => {
+  const recorded = { date: "2026-12-05", account: "a", amount: -10 }
+  const planned = { date: "2026-12-05", account: "a", amount: -20, source: "bill" }
+
+  it("puts a day's recorded and planned items on one spot at day level", () => {
+    const points = buildLanePoints([recorded], [planned], false)
+    assert.equal(points.length, 2)
+    assert.equal(points[0].t, points[1].t)
+  })
+
+  it("spreads recorded and planned items of a day apart together once zoomed in", () => {
+    const points = buildLanePoints([recorded], [planned], true)
+    assert.equal(points.length, 2)
+    assert.notEqual(points[0].t, points[1].t)
+    assert.deepEqual(points.map((p) => p.planned).sort(), [false, true])
+  })
+})
+
+describe("zoomTarget", () => {
+  const DAY_MS = 86400000
+  it("zooms into a range narrower than the view", () => {
+    assert.deepEqual(zoomTarget(0, DAY_MS, [0, 10 * DAY_MS], DAY_MS / 4), [0, DAY_MS])
+  })
+
+  it("returns null when zooming cannot narrow the view any further", () => {
+    assert.equal(zoomTarget(0, DAY_MS / 100, [0, DAY_MS / 4], DAY_MS / 4), null)
   })
 })
 

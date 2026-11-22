@@ -115,10 +115,14 @@ en:
         planned_bill: planned bill
         click_open: Click to open
         click_zoom: Click to zoom in
+        click_list: Click to list them in Transactions
         more_items: "+ %{count} more (total of all %{total_count}: %{amount})"
         transactions:
           one: "%{count} transaction"
           other: "%{count} transactions"
+        upcoming_bills_count:
+          one: "%{count} upcoming bill"
+          other: "%{count} upcoming bills"
         bills_suffix:
           one: "(%{count} upcoming bill)"
           other: "(%{count} upcoming bills)"

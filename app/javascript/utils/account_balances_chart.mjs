@@ -147,6 +147,55 @@ export function extendSignRuns(points) {
   return extended
 }
 
+// The transaction lane's points. Each has [t0, t1) (the time span it stands
+// for, its zoom target) and t (where it sits). At day level a day's recorded
+// transactions share one point and its planned bills another, both at noon.
+// Zoomed in (perItem), every item of a day, recorded or planned, gets its
+// own slot spread evenly across the day (Sure stores dates, not times), so
+// items on the same day can always be told apart.
+export function buildLanePoints(transactions, bills, perItem) {
+  const byDate = new Map()
+  const add = (item, planned) => {
+    if (!byDate.has(item.date)) byDate.set(item.date, [])
+    byDate.get(item.date).push({ item, planned })
+  }
+  for (const item of transactions) add(item, false)
+  for (const item of bills) add(item, true)
+
+  const points = []
+  for (const [date, entries] of byDate) {
+    const start = +parseDay(date)
+    if (perItem && entries.length > 1) {
+      const step = DAY / entries.length
+      entries.forEach(({ item, planned }, k) => {
+        points.push({ date, planned, items: [item], accounts: [item.account], t0: start + k * step, t1: start + (k + 1) * step, t: start + (k + 0.5) * step })
+      })
+    } else {
+      for (const planned of [false, true]) {
+        const items = entries.filter((e) => e.planned === planned).map((e) => e.item)
+        if (!items.length) continue
+        points.push({ date, planned, items, accounts: [...new Set(items.map((i) => i.account))], t0: start, t1: start + DAY, t: start + DAY / 2 })
+      }
+    }
+  }
+  return points
+}
+
+// The zoom range for a click on a group spanning [t0, t1): widened to the
+// minimum zoom around its middle, or null when that would not narrow the
+// current view, i.e. zooming cannot split the group any further.
+export function zoomTarget(t0, t1, domain, minZoom) {
+  let a = t0
+  let b = t1
+  if (b - a < minZoom) {
+    const mid = (a + b) / 2
+    a = mid - minZoom / 2
+    b = mid + minZoom / 2
+  }
+  const current = +domain[1] - +domain[0]
+  return b - a < current * 0.98 ? [a, b] : null
+}
+
 // Greedy left-to-right clustering of points sorted by x: a point closer than
 // `minGap` px to the first point of the current cluster joins it.
 export function clusterByDistance(points, minGap) {

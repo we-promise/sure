@@ -37,6 +37,22 @@ class DashboardAccountBalancesTest < ApplicationSystemTestCase
     assert_eventually { @user.reload.account_balances_settings["hidden_account_ids"].include?(accounts(:credit_card).id) }
   end
 
+  test "a lane transaction is a keyboard button: focus names it, Enter opens it" do
+    entry = create_transaction(account: accounts(:depository), amount: 42, name: "Keyboard bakery", date: 12.days.ago.to_date)
+    @user.update!(preferences: @user.preferences.merge("account_balances" => { "show_transactions" => true }))
+    sign_in @user
+
+    within "section[data-section-key='account_balances']" do
+      dot = find("[data-account-balances-chart-target='chart'] [data-transaction-id='#{entry.id}'][role='button'][tabindex='0']", match: :first)
+      assert_includes dot["aria-label"], "Keyboard bakery"
+      dot.send_keys(:enter)
+    end
+
+    within "#drawer" do
+      assert_field with: "Keyboard bakery"
+    end
+  end
+
   test "a change made right before leaving the dashboard is still saved" do
     sign_in @user
 

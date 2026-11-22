@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import {
   DAY,
+  buildLanePoints,
   buildRows,
   clusterByDistance,
   columnSplit,
@@ -16,6 +17,7 @@ import {
   pluralForm,
   selectionToSave,
   stackRows,
+  zoomTarget,
 } from "utils/account_balances_chart";
 import {
   CHART_TOOLTIP_CLASSES,
@@ -56,6 +58,7 @@ export default class extends Controller {
     settings: Object,
     labels: Object,
     transactionsUrl: String,
+    transactionsIndexUrl: String,
     locale: String,
     preferencesUrl: String,
   };
@@ -1167,54 +1170,20 @@ export default class extends Controller {
     const pxPerDay = x(new Date(+d0 + DAY)) - x(d0);
     const perItem = pxPerDay >= ITEM_PX * 2;
 
-    const days = new Map();
-    const add = (date, item, planned) => {
-      const key = `${date}|${planned ? "p" : "t"}`;
-      if (!days.has(key)) days.set(key, { date, planned, items: [] });
-      days.get(key).items.push(item);
-    };
-    for (const t of this.transactions || []) {
-      if (selected.has(t.account_id))
-        add(t.date, { ...t, account: t.account_id }, false);
-    }
-    for (const account of this.chartData.accounts) {
-      if (!selected.has(account.id)) continue;
-      for (const event of account.events) {
-        if (event.source === "bill" && event.date > this.chartData.today)
-          add(event.date, { ...event, account: account.id }, true);
-      }
-    }
-
-    // [t0, t1) is the time span a point stands for (its zoom target).
-    const points = [];
-    for (const day of days.values()) {
-      const start = +parseDay(day.date);
-      const accounts = [...new Set(day.items.map((i) => i.account))];
-      if (perItem && day.items.length > 1) {
-        const step = DAY / day.items.length;
-        day.items.forEach((item, k) => {
-          points.push({
-            date: day.date,
-            planned: day.planned,
-            items: [item],
-            accounts: [item.account],
-            color: this.colors[item.account],
-            t0: start + k * step,
-            t1: start + (k + 1) * step,
-            t: start + (k + 0.5) * step,
-          });
-        });
-      } else {
-        points.push({
-          ...day,
-          accounts,
-          color: accounts.length === 1 ? this.colors[accounts[0]] : null,
-          t0: start,
-          t1: start + DAY,
-          t: start + DAY / 2,
-        });
-      }
-    }
+    const transactions = (this.transactions || [])
+      .filter((t) => selected.has(t.account_id))
+      .map((t) => ({ ...t, account: t.account_id }));
+    const bills = this.chartData.accounts
+      .filter((account) => selected.has(account.id))
+      .flatMap((account) =>
+        account.events
+          .filter((e) => e.source === "bill" && e.date > this.chartData.today)
+          .map((e) => ({ ...e, account: account.id })),
+      );
+    const points = buildLanePoints(transactions, bills, perItem).map((p) => ({
+      ...p,
+      color: p.accounts.length === 1 ? this.colors[p.accounts[0]] : null,
+    }));
     const visible = points
       .filter((p) => p.t >= +d0 && p.t <= +d1)
       .map((p) => ({ ...p, x: x(new Date(p.t)) }))
@@ -1327,9 +1296,22 @@ export default class extends Controller {
           .style("fill", single && !single.planned ? surface : ink);
       }
       const zoomable = count > 1;
-      if (single && !zoomable && !single.planned)
-        g.attr("data-transaction-id", single.items[0].id);
-      g.on("pointerenter", () => {
+      const recorded = cluster.members.flatMap((p) =>
+        p.planned ? [] : p.items,
+      );
+      const opensOne = single && !zoomable && !single.planned;
+      if (opensOne) g.attr("data-transaction-id", single.items[0].id);
+      // Zoom while that can still split the group; when it cannot (several
+      // items squeezed into the smallest zoom), list them in Transactions.
+      const target = zoomable ? zoomTarget(t0, t1, x.domain(), MIN_ZOOM) : null;
+      const actionKey = opensOne
+        ? "click_open"
+        : target
+          ? "click_zoom"
+          : recorded.length
+            ? "click_list"
+            : null;
+      const show = () => {
         guide.attr("x1", cluster.x).attr("x2", cluster.x).attr("opacity", 0.4);
         if (single)
           this.#itemsTip(
@@ -1339,17 +1321,106 @@ export default class extends Controller {
             cluster.x,
             laneY,
             width,
-            this.t(zoomable ? "click_zoom" : "click_open"),
+            actionKey && this.t(actionKey),
           );
-        else this.#clusterTip(el, tip, cluster, count, laneY, width);
-      })
+        else
+          this.#clusterTip(
+            el,
+            tip,
+            cluster,
+            laneY,
+            width,
+            actionKey && this.t(actionKey),
+          );
+      };
+      const activate = () => {
+        hideTip();
+        if (opensOne) this.#openTransaction(single.items[0]);
+        else if (target)
+          this.#setZoom(new Date(target[0]), new Date(target[1]));
+        else if (recorded.length) this.#openTransactionList(recorded);
+      };
+      // Keyboard: every dot is a focusable button with a name; Enter or
+      // Space does what a click does, and focus shows its tooltip and a ring.
+      const focusRing = g
+        .append("circle")
+        .attr("r", 13)
+        .attr("fill", "none")
+        .attr("stroke", ink)
+        .attr("stroke-width", 2)
+        .attr("opacity", 0)
+        .style("pointer-events", "none");
+      g.attr("tabindex", 0)
+        .attr("role", "button")
+        .attr("aria-label", this.#laneLabel(cluster, single, actionKey))
+        .style("outline", "none")
+        .on("pointerenter", show)
         .on("pointerleave", hideTip)
-        .on("click", () => {
+        .on("focus", () => {
+          focusRing.attr("opacity", 1);
+          show();
+        })
+        .on("blur", () => {
+          focusRing.attr("opacity", 0);
           hideTip();
-          if (zoomable) this.#setZoom(new Date(t0), new Date(t1));
-          else if (!single.planned) this.#openTransaction(single.items[0]);
+        })
+        .on("click", activate)
+        .on("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          activate();
         });
     }
+  }
+
+  // The accessible name of a lane dot: its date(s), what it holds, and what
+  // activating it does.
+  #laneLabel(cluster, single, actionKey) {
+    const first = cluster.members[0].date;
+    const last = cluster.members[cluster.members.length - 1].date;
+    const range =
+      first === last
+        ? this.isoLabel(first)
+        : `${this.isoLabel(first)} – ${this.isoLabel(last)}`;
+    const items = cluster.members.flatMap((p) => p.items);
+    const what =
+      single && items.length === 1
+        ? `${items[0].name} ${items[0].display ?? this.fmtSigned(items[0].amount)}`
+        : this.#countText(cluster);
+    return [`${range}: ${what}`, actionKey && this.t(actionKey)]
+      .filter(Boolean)
+      .join(". ");
+  }
+
+  // "3 transactions (1 upcoming bill)", or only the bills when the group
+  // holds no recorded transactions.
+  #countText(cluster) {
+    const bills = cluster.members
+      .filter((p) => p.planned)
+      .reduce((sum, p) => sum + p.items.length, 0);
+    const recorded = cluster.members
+      .filter((p) => !p.planned)
+      .reduce((sum, p) => sum + p.items.length, 0);
+    if (!recorded) return this.tp("upcoming_bills_count", bills);
+    return bills
+      ? `${this.tp("transactions", recorded)} ${this.tp("bills_suffix", bills)}`
+      : this.tp("transactions", recorded);
+  }
+
+  // The Transactions list narrowed to these transactions' dates and accounts.
+  #openTransactionList(items) {
+    const dates = items.map((item) => item.date).sort();
+    const params = new URLSearchParams([
+      ["q[start_date]", dates[0]],
+      ["q[end_date]", dates[dates.length - 1]],
+      ...[...new Set(items.map((item) => item.account))].map((id) => [
+        "q[account_ids][]",
+        id,
+      ]),
+    ]);
+    const dialog = this.element.querySelector("dialog");
+    if (dialog?.open) dialog.close();
+    window.Turbo.visit(`${this.transactionsIndexUrlValue}?${params}`);
   }
 
   #itemsTip(el, tip, point, px, laneY, width, action) {
@@ -1385,33 +1456,31 @@ export default class extends Controller {
             )}</div>`
           : ""
       }
-      ${point.planned && point.items.length === 1 ? "" : `<div class="text-xs text-secondary mt-1 pt-1 border-t border-secondary">${escapeHtml(action)}</div>`}`;
+      ${action ? `<div class="text-xs text-secondary mt-1 pt-1 border-t border-secondary">${escapeHtml(action)}</div>` : ""}`;
     this.#placeTip(el, tip, px, laneY, width);
   }
 
-  #clusterTip(el, tip, cluster, count, laneY, width) {
+  #clusterTip(el, tip, cluster, laneY, width, action) {
     const items = cluster.members.flatMap((p) => p.items);
-    const bills = items.filter((item) => item.source === "bill").length;
     const first = cluster.members[0].date;
     const last = cluster.members[cluster.members.length - 1].date;
     const largest = d3
       .sort(items, (item) => -Math.abs(item.amount))
       .slice(0, 3);
-    const countText = this.tp("transactions", count);
-    const billsText = bills ? ` ${this.tp("bills_suffix", bills)}` : "";
+    const countText = this.#countText(cluster);
     const range =
       first === last
         ? this.isoLabel(first)
         : `${this.isoLabel(first)} – ${this.isoLabel(last)}`;
     tip.innerHTML = `<div class="${CHART_TOOLTIP_CONTEXT_CLASSES}">${range}</div>
-      <div class="flex justify-between gap-4"><span>${escapeHtml(countText + billsText)}</span><span class="${CHART_TOOLTIP_VALUE_CLASSES}">${this.fmtSigned(d3.sum(items, (item) => item.amount))}</span></div>
+      <div class="flex justify-between gap-4"><span>${escapeHtml(countText)}</span><span class="${CHART_TOOLTIP_VALUE_CLASSES}">${this.fmtSigned(d3.sum(items, (item) => item.amount))}</span></div>
       <div class="text-xs text-secondary mt-1 space-y-0.5">${largest
         .map(
           (item) =>
             `<div class="flex justify-between gap-4"><span class="truncate max-w-56">${escapeHtml(item.name)}</span><span class="tabular-nums">${item.display === undefined ? this.fmtSigned(item.amount) : escapeHtml(item.display)}</span></div>`,
         )
         .join("")}</div>
-      <div class="text-xs text-secondary mt-1 pt-1 border-t border-secondary">${escapeHtml(this.t("click_zoom"))}</div>`;
+      ${action ? `<div class="text-xs text-secondary mt-1 pt-1 border-t border-secondary">${escapeHtml(action)}</div>` : ""}`;
     this.#placeTip(el, tip, cluster.x, laneY, width);
   }
 
