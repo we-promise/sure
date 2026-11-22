@@ -137,4 +137,21 @@ class TradeImportTest < ActiveSupport::TestCase
     assert_equal "Buy", buy_trade.investment_activity_label, "Buy trade should have 'Buy' activity label"
     assert_equal "Sell", sell_trade.investment_activity_label, "Sell trade should have 'Sell' activity label"
   end
+
+  test "dry_run includes accounts to create when no account is preselected" do
+    @import.update_columns(rows_count: 2)
+    @import.mappings.create! key: "TestAccount1", create_when_empty: true, type: "Import::AccountMapping"
+
+    dry_run = @import.dry_run
+
+    assert_equal 2, dry_run[:transactions]
+    assert_equal 1, dry_run[:accounts]
+  end
+
+  test "dry_run omits accounts when an account is preselected" do
+    @import.update!(account: accounts(:investment))
+    @import.mappings.create! key: "TestAccount1", create_when_empty: true, type: "Import::AccountMapping"
+
+    assert_not @import.dry_run.key?(:accounts)
+  end
 end

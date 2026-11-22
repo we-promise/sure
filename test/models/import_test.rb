@@ -245,4 +245,20 @@ class ImportTest < ActiveSupport::TestCase
 
     assert_equal [ "'+44 Taxis", "+44 Taxis" ], csv["name"]
   end
+
+  test "dry_run includes accounts to create when no account is preselected" do
+    import = imports(:transaction)
+    import.update_columns(rows_count: 1)
+    import.mappings.create! key: "New Account", create_when_empty: true, type: "Import::AccountMapping"
+
+    assert_equal 1, import.dry_run[:accounts]
+  end
+
+  test "dry_run omits accounts when an account is preselected" do
+    import = imports(:transaction)
+    import.update!(account: accounts(:depository))
+    import.mappings.create! key: "New Account", create_when_empty: true, type: "Import::AccountMapping"
+
+    assert_not import.dry_run.key?(:accounts)
+  end
 end
