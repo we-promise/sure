@@ -693,7 +693,7 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 0, budget.surplus_percent
   end
 
-  test "a household budget bootstrapped for a member reads only what that member can see" do
+  test "a household budget bootstrapped for a member reads only the accounts that member can see" do
     family = families(:dylan_family)
     admin = users(:family_admin)
     member = users(:family_member)
@@ -705,19 +705,19 @@ class BudgetTest < ActiveSupport::TestCase
     admin_before = figures.(bootstrap.(admin))
     member_before = figures.(bootstrap.(member))
 
-    private_account = Account.create!(
-      family: family,
-      owner: admin,
-      accountable: Depository.new,
-      name: "Admin private savings",
-      status: "active",
-      currency: "USD",
-      balance: 700
-    )
+    new_account = ->(name, balance) do
+      Account.create!(family: family, owner: admin, accountable: Depository.new, name: name, status: "active", currency: "USD", balance: balance)
+    end
+    private_account = new_account.("Admin private savings", 700)
+    shared_account = new_account.("Joint savings", 300)
+    AccountShare.create!(account: shared_account, user: member, permission: "read_only", include_in_finances: true)
     create_transaction(account: private_account, amount: 400, date: Date.current)
+    create_transaction(account: shared_account, amount: 60, date: Date.current)
 
     refute_includes family.accounts.accessible_by(member), private_account
     refute_includes member.finance_accounts, private_account
+    assert_includes family.accounts.accessible_by(member), shared_account
+    assert_includes member.finance_accounts, shared_account
 
     admin_budget = bootstrap.(admin)
     member_budget = bootstrap.(member)
@@ -725,17 +725,18 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal admin_budget.id, member_budget.id
     assert_nil member_budget.user_id
 
-    private_entries = ->(budget) { budget.transactions.joins(:entry).where(entries: { account_id: private_account.id }).count }
-    assert_equal 1, private_entries.(admin_budget)
-    assert_equal 0, private_entries.(member_budget)
+    entries_on = ->(budget, account) { budget.transactions.joins(:entry).where(entries: { account_id: account.id }).count }
+    assert_equal [ 1, 1 ], [ entries_on.(admin_budget, private_account), entries_on.(admin_budget, shared_account) ]
+    assert_equal [ 0, 1 ], [ entries_on.(member_budget, private_account), entries_on.(member_budget, shared_account) ]
 
     assert_includes admin_budget.cash_accounts, private_account
     refute_includes member_budget.cash_accounts, private_account
+    assert_includes member_budget.cash_accounts, shared_account
 
-    assert_equal 700, admin_budget.available_cash - admin_before[:cash]
-    assert_equal 0, member_budget.available_cash - member_before[:cash]
+    assert_equal 1000, admin_budget.available_cash - admin_before[:cash]
+    assert_equal 300, member_budget.available_cash - member_before[:cash]
 
-    assert_equal 400, admin_budget.actual_spending - admin_before[:spending]
-    assert_equal 0, member_budget.actual_spending - member_before[:spending]
+    assert_equal 460, admin_budget.actual_spending - admin_before[:spending]
+    assert_equal 60, member_budget.actual_spending - member_before[:spending]
   end
 end
