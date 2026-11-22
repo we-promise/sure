@@ -137,12 +137,27 @@ class RetirementPlan::SimulationTest < ActiveSupport::TestCase
     assert_equal [ AS_OF.year ], simulation(birth_year: 1936, end_age: 90).rows.map(&:year)
   end
 
-  test "nothing in the engine reads the clock, the database or the current request" do
-    # Comments are left out, so a note about the contract cannot trip it.
-    code = Rails.root.glob("app/models/retirement_plan/{simulation,solver}.rb")
-                .flat_map { |path| path.readlines.map { |line| line.sub(/#.*/, "") } }.join
+  # The reference date is an argument: two runs on different days, with no
+  # query and no request, must give the same rows and the same solved year.
+  test "the simulation and solver read neither the clock, the database nor the current request" do
+    Current.expects(:user).never
+    Current.expects(:family).never
+    streams = [ Stream.new(kind: "expense", annual_amount: 30_000), Stream.new(kind: "one_off", annual_amount: 5_000, start_year: 2030) ]
+    inputs = { as_of: AS_OF, current_assets: 100_000, annual_contribution: 10_000, expected_annual_return: BigDecimal("0.05"),
+               inflation_rate: BigDecimal("0.02"), streams: streams, birth_year: 1980, end_age: 90 }
 
-    assert_no_match(/Date\.(current|today)|Time\.(current|now|zone)|DateTime\.(current|now)|Current\.|ActiveRecord|\.where\(|\.find/, code)
+    runs = [ Date.new(2026, 3, 1), Date.new(2031, 9, 30) ].map do |today|
+      travel_to(today) do
+        figures = nil
+        assert_queries_count(0) do
+          sim = RetirementPlan::Simulation.new(**inputs, retirement_year: 2040)
+          figures = [ sim.rows, sim.survives?, sim.depletion_age, RetirementPlan::Solver.new(**inputs).call ]
+        end
+        figures
+      end
+    end
+
+    assert_equal runs.first, runs.last
   end
 
   private
