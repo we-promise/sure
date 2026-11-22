@@ -376,44 +376,32 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
   end
 
   test "an investment account keeps an ETF ticker out of the crypto namespace (#2856)" do
-    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
-    processor.stubs(:account).returns(accounts(:investment))
-    processor.stubs(:simplefin_account).returns(stub(name: "Wealthfront"))
-
-    resolved_symbol = nil
-    Security::Resolver.stubs(:new).with { |symbol| resolved_symbol = symbol; true }
-      .returns(stub(resolve: securities(:aapl)))
-
-    processor.send(:resolve_security, "ETH", "Grayscale Ethereum Mini Trust ETF")
-
-    assert_equal "ETH", resolved_symbol
+    assert_resolves(account: accounts(:investment), symbol: "ETH",
+                    description: "Grayscale Ethereum Mini Trust ETF", expected: "ETH")
   end
 
   test "a crypto account still namespaces its tickers as crypto (#2856)" do
-    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
-    processor.stubs(:account).returns(accounts(:crypto))
-    processor.stubs(:simplefin_account).returns(stub(name: "Coinbase"))
-
-    resolved_symbol = nil
-    Security::Resolver.stubs(:new).with { |symbol| resolved_symbol = symbol; true }
-      .returns(stub(resolve: securities(:aapl)))
-
-    processor.send(:resolve_security, "ETH", "Ethereum")
-
-    assert_equal "CRYPTO:ETH", resolved_symbol
+    assert_resolves(account: accounts(:crypto), symbol: "ETH", description: "Ethereum",
+                    expected: "CRYPTO:ETH")
   end
 
   test "an investment account inferred for a crypto exchange still namespaces crypto (#2856)" do
-    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
-    processor.stubs(:account).returns(accounts(:investment))
-    processor.stubs(:simplefin_account).returns(stub(name: "Coinbase"))
-
-    resolved_symbol = nil
-    Security::Resolver.stubs(:new).with { |symbol| resolved_symbol = symbol; true }
-      .returns(stub(resolve: securities(:aapl)))
-
-    processor.send(:resolve_security, "BTC", "Bitcoin")
-
-    assert_equal "CRYPTO:BTC", resolved_symbol
+    assert_resolves(account: accounts(:investment), symbol: "BTC", description: "Bitcoin",
+                    expected: "CRYPTO:BTC")
   end
+
+  private
+    def assert_resolves(account:, symbol:, description:, expected:)
+      processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+      processor.stubs(:account).returns(account)
+      processor.stubs(:simplefin_account).returns(stub(name: "Wealthfront"))
+
+      resolved_symbol = nil
+      Security::Resolver.stubs(:new).with { |value| resolved_symbol = value; true }
+        .returns(stub(resolve: securities(:aapl)))
+
+      processor.send(:resolve_security, symbol, description)
+
+      assert_equal expected, resolved_symbol
+    end
 end
