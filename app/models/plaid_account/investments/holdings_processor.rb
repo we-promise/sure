@@ -23,6 +23,10 @@ class PlaidAccount::Investments::HoldingsProcessor
       # Compute amount using BigDecimal arithmetic to avoid floating point drift
       amount_bd = quantity_bd * price_bd
 
+      # Plaid reports cost_basis as the total for the position; Sure stores it per share
+      cost_basis_bd = parse_decimal(plaid_holding["cost_basis"])
+      cost_basis_per_share = cost_basis_bd / quantity_bd if cost_basis_bd && quantity_bd.nonzero?
+
       # Normalize date - handle string, Date, or nil
       holding_date = parse_date(plaid_holding["institution_price_as_of"]) || Date.current
 
@@ -33,6 +37,7 @@ class PlaidAccount::Investments::HoldingsProcessor
         currency: plaid_holding["iso_currency_code"] || @currency || account.currency,
         date: holding_date,
         price: price_bd,
+        cost_basis: cost_basis_per_share,
         account_provider_id: plaid_account.account_provider&.id,
         source: "plaid",
         delete_future_holdings: false  # Plaid doesn't allow holdings deletion

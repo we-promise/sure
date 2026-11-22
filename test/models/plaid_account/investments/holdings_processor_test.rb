@@ -366,4 +366,108 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     holding = account.holdings.find_by(security: securities(:aapl))
     assert_equal "EUR", holding.currency  # Should use account's currency
   end
+
+  test "stores Plaid's total cost basis as a per-share value" do
+    holding_date = Date.current
+    @plaid_account.update!(
+      raw_holdings_payload: {
+        securities: [],
+        holdings: [
+          {
+            "security_id" => "with_basis",
+            "quantity" => 10,
+            "institution_price" => 150,
+            "cost_basis" => 1000,
+            "iso_currency_code" => "USD",
+            "institution_price_as_of" => holding_date
+          }
+        ],
+        transactions: []
+      }
+    )
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "with_basis")
+                      .returns(OpenStruct.new(security: securities(:aapl)))
+
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    holding = @plaid_account.current_account.holdings.find_by!(
+      security: securities(:aapl),
+      date: holding_date,
+      currency: "USD"
+    )
+
+    assert_equal BigDecimal("100"), holding.cost_basis
+    assert_equal "provider", holding.cost_basis_source
+  end
+
+  test "leaves cost basis nil when Plaid omits it" do
+    holding_date = Date.current
+    @plaid_account.update!(
+      raw_holdings_payload: {
+        securities: [],
+        holdings: [
+          {
+            "security_id" => "no_basis",
+            "quantity" => 10,
+            "institution_price" => 150,
+            "iso_currency_code" => "USD",
+            "institution_price_as_of" => holding_date
+          }
+        ],
+        transactions: []
+      }
+    )
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "no_basis")
+                      .returns(OpenStruct.new(security: securities(:aapl)))
+
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    holding = @plaid_account.current_account.holdings.find_by!(
+      security: securities(:aapl),
+      date: holding_date,
+      currency: "USD"
+    )
+
+    assert_nil holding.cost_basis
+  end
+
+  test "does not divide cost basis when quantity is zero" do
+    holding_date = Date.current
+    @plaid_account.update!(
+      raw_holdings_payload: {
+        securities: [],
+        holdings: [
+          {
+            "security_id" => "zero_quantity",
+            "quantity" => 0,
+            "institution_price" => 150,
+            "cost_basis" => 1000,
+            "iso_currency_code" => "USD",
+            "institution_price_as_of" => holding_date
+          }
+        ],
+        transactions: []
+      }
+    )
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "zero_quantity")
+                      .returns(OpenStruct.new(security: securities(:aapl)))
+
+    assert_difference "Holding.count", 1 do
+      PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+    end
+
+    holding = @plaid_account.current_account.holdings.find_by!(
+      security: securities(:aapl),
+      date: holding_date,
+      currency: "USD"
+    )
+
+    assert_nil holding.cost_basis
+  end
 end
