@@ -2,7 +2,6 @@
 
 class CoinspotItem::Importer
   class OrderHistoryUnavailableError < StandardError; end
-  class MissingAssetPriceError < StandardError; end
 
   # CoinSpot's history endpoints default to the last 24 hours when `startdate`
   # is omitted, so an initial sync with no user-configured sync_start_date
@@ -219,17 +218,19 @@ class CoinspotItem::Importer
           amount_aud = balance * rate_aud if !amount_aud&.nonzero? && rate_aud&.positive?
         end
 
+        # A delisted asset can still hold a balance after CoinSpot stops
+        # quoting it. Keep the holding at a zero AUD valuation and flag it in
+        # price_metadata rather than failing the whole sync.
         if !aud_asset && balance.nonzero? && !amount_aud&.nonzero?
           DebugLogEntry.capture(
             category: "provider_sync_error",
-            level: "error",
-            message: "CoinSpot returned #{symbol.to_s.upcase} without an AUD valuation",
+            level: "warn",
+            message: "CoinSpot returned #{symbol.to_s.upcase} without an AUD valuation; recording zero value",
             source: self.class.name,
             provider_key: "coinspot",
             family: coinspot_item.family,
             metadata: { coinspot_item_id: coinspot_item.id, symbol: symbol.to_s.upcase, balance: balance.to_s("F") }
           )
-          raise MissingAssetPriceError, "CoinSpot returned #{symbol.to_s.upcase} without an AUD balance or rate"
         end
 
         amount_aud ||= 0.to_d
