@@ -285,6 +285,57 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_equal [ "simplefin_lot-a_#{first_day}", "simplefin_lot-a_#{first_day + 1}" ], holdings.map(&:external_id)
   end
 
+  test "an explicit zero market_value is stored as zero, not the purchase price" do
+    # A delisted, worthless position reports market_value "0.00" alongside its
+    # original purchase_price. Treating the zero as missing stored the position
+    # at cost, overstating holdings and pushing derived cash negative (#5337).
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:holdings_data).returns([
+      { "id" => "lot-zero", "symbol" => "AAPL", "shares" => "1.00",
+        "market_value" => "0.00", "cost_basis" => "100.00", "purchase_price" => "100.00" }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(securities(:aapl))
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+    )
+
+    recorder = recording_import_adapter
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size
+    position = recorder.calls.first
+    assert_equal BigDecimal("0"), position[:amount]
+    assert_equal BigDecimal("0"), position[:price]
+  end
+
+  test "a missing market_value still falls back to the purchase price" do
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:holdings_data).returns([
+      { "id" => "lot-missing", "symbol" => "AAPL", "shares" => "2.00",
+        "cost_basis" => "100.00", "purchase_price" => "50.00" }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(securities(:aapl))
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+    )
+
+    recorder = recording_import_adapter
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size
+    position = recorder.calls.first
+    assert_equal BigDecimal("100"), position[:amount]
+    assert_equal BigDecimal("50"), position[:price]
+  end
+
   test "a position with any unknown-basis lot reports no aggregate basis" do
     # Averaging only the lots that reported a basis would apply that figure to
     # shares whose cost is unknown, fabricating cost and gain/loss.
@@ -302,19 +353,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
       stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
     )
 
-    recorder = Class.new do
-      attr_reader :calls
-
-      def initialize = @calls = []
-
-      def import_holding(**kwargs)
-        @calls << kwargs
-        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
-              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
-                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
-      end
-    end.new
-
+    recorder = recording_import_adapter
     processor.stubs(:import_adapter).returns(recorder)
 
     processor.process
@@ -329,4 +368,21 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     # but the basis is unknown for the position as a whole, NOT $100/share
     assert_nil position[:cost_basis]
   end
+
+  private
+
+    def recording_import_adapter
+      Class.new do
+        attr_reader :calls
+
+        def initialize = @calls = []
+
+        def import_holding(**kwargs)
+          @calls << kwargs
+          Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
+                .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
+                     kwargs[:currency], kwargs[:date], kwargs[:external_id])
+        end
+      end.new
+    end
 end

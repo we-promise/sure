@@ -54,20 +54,26 @@ class SimplefinAccount::Investments::HoldingsProcessor
         # because some brokerages (e.g. Vanguard, Fidelity) use "value" to mean cost basis,
         # which would cause the system to display average cost as current price. (GH #1182)
         qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
-        market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
+        # An explicit market_value of 0 is a real zero, not a missing value.
+        # Fall back to cost/price fields only when the provider omitted it or
+        # sent something unparseable (#5337).
+        raw_market_value = any_of(simplefin_holding, %w[market_value current_value])
+        market_value = parse_decimal_or_nil(raw_market_value)
+        has_market_value = !market_value.nil?
+        market_value ||= 0
         raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
         cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, institution_reports_total_basis?)
 
         # Derive price from market_value when possible; otherwise fall back to any price field
         fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
-        price = if qty > 0 && market_value > 0
+        price = if has_market_value && qty > 0
           market_value / qty
         else
           fallback_price || 0
         end
 
         # Compute an amount we can persist (some providers omit market_value)
-        computed_amount = if market_value > 0
+        computed_amount = if has_market_value
           market_value
         elsif qty > 0 && price > 0
           qty * price
@@ -298,7 +304,13 @@ class SimplefinAccount::Investments::HoldingsProcessor
     end
 
     def parse_decimal(value)
-      return 0 unless value.present?
+      parse_decimal_or_nil(value) || 0
+    end
+
+    # Returns nil when the value is missing or unparseable, so callers can tell
+    # "no value reported" apart from a genuine zero.
+    def parse_decimal_or_nil(value)
+      return nil if value.nil? || value.to_s.strip.empty?
 
       case value
       when String
@@ -310,6 +322,6 @@ class SimplefinAccount::Investments::HoldingsProcessor
       end
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse SimpleFin decimal value #{value}: #{e.message}"
-      BigDecimal("0")
+      nil
     end
 end
