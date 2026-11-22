@@ -1210,7 +1210,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_22_120000) do
     t.string "currency", null: false
     t.date "date", null: false
     t.string "external_id"
-    t.decimal "price", precision: 19, scale: 10, null: false
+    t.decimal "price", precision: 28, scale: 10, null: false
     t.uuid "provider_security_id"
     t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "security_id", null: false
