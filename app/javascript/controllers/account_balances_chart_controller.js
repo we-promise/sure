@@ -51,6 +51,9 @@ export default class extends Controller {
   };
 
   connect() {
+    // Stimulus parses an Object value's JSON on every read; parse once.
+    this.chartData = this.dataValue;
+    this.labels = this.labelsValue;
     const settings = this.settingsValue;
     this.horizon = settings.horizon;
     this.hideNegative = settings.hide_negative;
@@ -61,7 +64,7 @@ export default class extends Controller {
     this.zoom = null;
 
     // Numbers and dates follow the family's currency and date settings.
-    const money = this.dataValue.money_format;
+    const money = this.chartData.money_format;
     const [prefix, suffix] = currencyAffixes(money.format, money.unit);
     const numberLocale = {
       decimal: money.separator,
@@ -82,7 +85,7 @@ export default class extends Controller {
       Math.abs(v) >= 1000
         ? `${number.format(",.0f")(v / 1000)}k`
         : number.format(",.0f")(v);
-    const dateFormat = this.dataValue.date_format || "%Y-%m-%d";
+    const dateFormat = this.chartData.date_format || "%Y-%m-%d";
     this.dayLabel = d3.utcFormat(dateFormat);
     this.monthLabel = d3.utcFormat(monthFormatFor(dateFormat));
     this.timeLabel = d3.utcFormat(`${dateFormat} %H:%M`);
@@ -192,7 +195,7 @@ export default class extends Controller {
   }
 
   #preset(name) {
-    const accounts = this.dataValue.accounts;
+    const accounts = this.chartData.accounts;
     if (name === "all") this.excluded = new Set();
     if (name === "none") this.excluded = new Set(accounts.map((a) => a.id));
     if (name === "cash")
@@ -204,7 +207,7 @@ export default class extends Controller {
 
   // --- data ---
   t(key, vars) {
-    return interpolate(this.labelsValue[key] ?? key, vars);
+    return interpolate(this.labels[key] ?? key, vars);
   }
 
   #icon(name) {
@@ -221,7 +224,7 @@ export default class extends Controller {
   #assignColors() {
     const colors = {};
     for (const members of d3
-      .group(this.dataValue.accounts, (a) => a.type)
+      .group(this.chartData.accounts, (a) => a.type)
       .values()) {
       const base = d3.hcl(members[0].color);
       const n = members.length;
@@ -242,8 +245,8 @@ export default class extends Controller {
   }
 
   #model() {
-    const { rows, today } = buildRows(this.dataValue, this.horizon);
-    const keys = this.dataValue.accounts
+    const { rows, today } = buildRows(this.chartData, this.horizon);
+    const keys = this.chartData.accounts
       .map((a) => a.id)
       .filter((id) => !this.excluded.has(id));
     const net = (row) => keys.reduce((sum, key) => sum + row.values[key], 0);
@@ -252,7 +255,7 @@ export default class extends Controller {
     const last = rows[rows.length - 1];
     const future = rows.filter((row) => row.forecast);
     const goesNegative = new Map(
-      this.dataValue.accounts
+      this.chartData.accounts
         .filter(
           (a) =>
             !a.liability &&
@@ -319,7 +322,7 @@ export default class extends Controller {
         this.dayLabel(low.date),
       );
       const names = Object.fromEntries(
-        this.dataValue.accounts.map((a) => [a.id, a.name]),
+        this.chartData.accounts.map((a) => [a.id, a.name]),
       );
       const negative = [...goesNegative].filter(([id]) => keys.includes(id));
       if (negative.length) {
@@ -340,7 +343,7 @@ export default class extends Controller {
   // and bills without an account hang below zero and come last.
   #groups() {
     const byType = new Map();
-    for (const account of this.dataValue.accounts) {
+    for (const account of this.chartData.accounts) {
       if (!byType.has(account.type)) {
         byType.set(account.type, {
           type: account.type,
@@ -365,7 +368,7 @@ export default class extends Controller {
     const focused = el.contains(document.activeElement)
       ? document.activeElement.dataset.focusKey
       : null;
-    const accounts = this.dataValue.accounts;
+    const accounts = this.chartData.accounts;
     const shown = accounts.filter((a) => !this.excluded.has(a.id)).length;
     const rowClass = withForecast
       ? "grid grid-cols-[minmax(0,1fr)_5.75rem_5.75rem_5.25rem] @max-md:grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] gap-x-3 items-center px-1.5 py-0.5 min-h-7 rounded-md"
@@ -948,7 +951,7 @@ export default class extends Controller {
       .attr("stroke-width", 2)
       .attr("opacity", 0);
     const names = Object.fromEntries(
-      this.dataValue.accounts.map((a) => [a.id, a.name]),
+      this.chartData.accounts.map((a) => [a.id, a.name]),
     );
     const rowAt = d3.bisector((row) => row.date).right;
     const hide = () => {
@@ -1050,8 +1053,8 @@ export default class extends Controller {
     if (!range) this.transactionsState = "loading";
     this.#syncSettings();
     const [start, end] = range || [
-      this.dataValue.dates[0] || this.dataValue.today,
-      this.dataValue.horizon,
+      this.chartData.dates[0] || this.chartData.today,
+      this.chartData.horizon,
     ];
     try {
       const url = `${this.transactionsUrlValue}?${new URLSearchParams({ start_date: start, end_date: end })}`;
@@ -1120,10 +1123,10 @@ export default class extends Controller {
       if (selected.has(t.account_id))
         add(t.date, { ...t, account: t.account_id }, false);
     }
-    for (const account of this.dataValue.accounts) {
+    for (const account of this.chartData.accounts) {
       if (!selected.has(account.id)) continue;
       for (const event of account.events) {
-        if (event.source === "bill" && event.date > this.dataValue.today)
+        if (event.source === "bill" && event.date > this.chartData.today)
           add(event.date, { ...event, account: account.id }, true);
       }
     }
@@ -1297,7 +1300,7 @@ export default class extends Controller {
 
   #itemsTip(el, tip, point, px, laneY, width, action) {
     const names = Object.fromEntries(
-      this.dataValue.accounts.map((a) => [a.id, a.name]),
+      this.chartData.accounts.map((a) => [a.id, a.name]),
     );
     const byAccount = d3.groups(
       point.items.slice(0, TIP_ITEMS),
