@@ -98,6 +98,30 @@ describe("buildRows", () => {
   })
 })
 
+describe("buildRows with a bill due today", () => {
+  const data = {
+    today: "2026-11-22",
+    dates: ["2026-11-21"],
+    accounts: [{ id: "checking", start: 100, history: [100], events: [{ date: "2026-11-22", amount: -30, name: "Rent" }] }],
+  }
+
+  it("keeps today's row at the recorded balance, forecast off or on", () => {
+    for (const horizon of [0, 1]) {
+      const today = buildRows(data, horizon).rows.find((r) => formatDay(r.date) === "2026-11-22")
+      assert.equal(today.values.checking, 100, `horizon ${horizon}`)
+      assert.equal(today.events.length, 0)
+    }
+  })
+
+  it("applies the due-today bill once, on the first projected day", () => {
+    const { rows } = buildRows(data, 1)
+    const tomorrow = rows.find((r) => formatDay(r.date) === "2026-11-23")
+    assert.equal(tomorrow.values.checking, 70)
+    assert.deepEqual(tomorrow.events.map((e) => e.name), ["Rent"])
+    assert.equal(rows.filter((r) => r.events.some((e) => e.name === "Rent")).length, 1)
+  })
+})
+
 describe("stackRows", () => {
   it("hangs negatives below zero and stacks positives from the lowest point", () => {
     const rows = [{ values: { savings: 100, checking: 40, card: -30 } }]

@@ -49,7 +49,8 @@ export function interpolate(template, vars = {}) {
 
 // History rows before today, then one row per day from today to the end of
 // the forecast. Today's row holds each account's recorded balance; each later
-// row adds the events (bills, future-dated transactions) due that day.
+// row adds the events (bills, future-dated transactions) due that day, and the
+// first projected day also takes the ones due today.
 // Row: { date, forecast, values: { accountId: amount }, events: [...] }.
 export function buildRows(data, horizonMonths) {
   const today = parseDay(data.today)
@@ -70,10 +71,12 @@ export function buildRows(data, horizonMonths) {
     const events = []
     const values = {}
     for (const cursor of cursors) {
-      while (cursor.next < cursor.events.length && cursor.events[cursor.next].date <= key) {
+      // Today's row is the recorded balance; events due today (an unpaid
+      // bill) apply from the first projected day on, once.
+      while (time > +today && cursor.next < cursor.events.length && cursor.events[cursor.next].date <= key) {
         const event = cursor.events[cursor.next++]
         cursor.value += event.amount
-        if (event.date === key && time > +today) events.push({ ...event, account: cursor.id })
+        events.push({ ...event, account: cursor.id })
       }
       values[cursor.id] = cursor.value
     }
