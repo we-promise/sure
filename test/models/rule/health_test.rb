@@ -564,6 +564,32 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_equal [ 2 ], similar.map(&:shared_count)
   end
 
+  test "a name condition marked for destruction no longer contradicts a similar rule" do
+    existing = create_rule(name_condition("starts_with", "uber"), category: @groceries)
+    edited = create_rule(name_condition("starts_with", "uber eats"), name_condition("starts_with", "taxi"), category: @groceries)
+    edited.reload.conditions.find { |condition| condition.value == "taxi" }.mark_for_destruction
+
+    assert_equal [ existing ], health.similar_to(edited).map(&:rule)
+  end
+
+  test "a name condition marked for destruction in an AND group no longer contradicts a similar rule" do
+    existing = create_rule(name_condition("starts_with", "uber"), category: @groceries)
+    edited = create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "and", sub_conditions: [ name_condition("starts_with", "uber eats"), name_condition("starts_with", "taxi") ]),
+      category: @groceries
+    )
+    edited.reload.conditions.to_a.sole.sub_conditions.find { |condition| condition.value == "taxi" }.mark_for_destruction
+
+    assert_equal [ existing ], health.similar_to(edited).map(&:rule)
+  end
+
+  test "a kept name condition that contradicts still keeps the rules apart" do
+    create_rule(name_condition("starts_with", "uber"), category: @groceries)
+    edited = create_rule(name_condition("starts_with", "uber eats"), name_condition("starts_with", "taxi"), category: @groceries)
+
+    assert_empty health.similar_to(edited.reload)
+  end
+
   private
     def health
       Rule::Health.new(@family)

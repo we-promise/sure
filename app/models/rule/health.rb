@@ -337,12 +337,13 @@ class Rule::Health
       end
     end
 
-    # Conditions every match meets: those at the top level and in AND groups.
+    # Conditions every match meets: those at the top level and in AND groups,
+    # leaving out any the form marked for destruction.
     def required_conditions(rule)
-      rule.conditions.flat_map do |condition|
+      rule.conditions.reject(&:marked_for_destruction?).flat_map do |condition|
         next [ condition ] unless condition.compound?
 
-        condition.operator == "and" ? condition.sub_conditions.to_a : []
+        condition.operator == "and" ? condition.sub_conditions.reject(&:marked_for_destruction?) : []
       end
     end
 
