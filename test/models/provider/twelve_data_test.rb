@@ -133,6 +133,16 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     assert_instance_of Provider::TwelveData::RateLimitError, result.error
   end
 
+  # time_series rejects cross-only pairs with an HTTP 400/404, which raise
+  # before the `data.nil?` fallback is reached.
+  test "falls back to the cross API when time_series rejects the pair with a 404" do
+    assert_cross_rate_fallback(status: 404)
+  end
+
+  test "falls back to the cross API when time_series rejects the pair with a 400" do
+    assert_cross_rate_fallback(status: 400)
+  end
+
   # ================================
   #   Error Transformer Tests
   # ================================
@@ -398,4 +408,37 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     # prices, the EUR pair, the ZZZ pair and its cross fallback, then search
     assert_equal [ 60, 60, 60, 60, 20 ], timeouts
   end
+
+  private
+    def assert_cross_rate_fallback(status:)
+      @provider.stubs(:throttle_request)
+      direct = stub_request(:get, %r{\Ahttps://api\.twelvedata\.com/time_series\?})
+        .with(query: hash_including("symbol" => "KGS/EUR"))
+        .to_return(status: status, body: {
+          "code" => status,
+          "message" => "**symbol** or **figi** parameter is missing or invalid.",
+          "status" => "error"
+        }.to_json)
+      cross = stub_request(:get, %r{\Ahttps://api\.twelvedata\.com/time_series/cross})
+        .with(query: hash_including("base" => "KGS", "quote" => "EUR"))
+        .to_return(status: 200, body: {
+          "meta" => { "base_instrument" => "USD/KGS" },
+          "values" => [
+            { "datetime" => "2026-01-02", "close" => "0.000011" },
+            { "datetime" => "2026-01-03", "close" => "0.000012" }
+          ],
+          "status" => "ok"
+        }.to_json)
+
+      result = @provider.fetch_exchange_rates(from: "KGS", to: "EUR", start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 1, 3))
+
+      assert result.success?, result.error&.message
+      assert_equal 2, result.data.size
+      assert_equal Date.new(2026, 1, 2), result.data.first.date
+      assert_equal "KGS", result.data.first.from
+      assert_equal "EUR", result.data.first.to
+      assert_in_delta 0.000011, result.data.first.rate.to_f, 1e-12
+      assert_requested direct, times: 1
+      assert_requested cross, times: 1
+    end
 end
