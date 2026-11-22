@@ -32,7 +32,7 @@ module RulesHelper
     reference = if Current.user&.guest?
       tag.span(label, class: "font-medium text-primary")
     else
-      link_to(label, edit_rule_path(rule), class: "font-medium text-primary underline", data: { turbo_frame: "modal" })
+      render DS::Link.new(text: label, href: edit_rule_path(rule), variant: :default, frame: :modal)
     end
     rule.active? ? reference : safe_join([ reference, tag.span(t("rules.health.inactive"), class: "text-secondary") ], " ")
   end

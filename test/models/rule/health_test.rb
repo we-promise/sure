@@ -72,6 +72,25 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_equal [ [ upper, lower ] ], health.conflicts.map(&:rules)
   end
 
+  test "an additional detail value keeps its inner spacing" do
+    double = create_rule(detail_condition("=", "reference=A  B"), category: @groceries)
+    create_rule(detail_condition("=", " reference = A B "), category: @dining)
+    padded = create_rule(detail_condition("=", "reference = A  B "), category: @dining)
+
+    report = health
+    assert_equal [ [ double, padded ] ], report.conflicts.map(&:rules)
+    assert_empty report.duplicates
+  end
+
+  test "a transaction details value is compared as typed, apart from the case of a contains value" do
+    create_rule(details_condition("like", "Ref  A"), category: @groceries)
+    create_rule(details_condition("like", "Ref A "), category: @dining)
+    folded = create_rule(details_condition("like", "ref a"), category: @groceries)
+    upper = create_rule(details_condition("like", "REF A"), category: @dining)
+
+    assert_equal [ [ folded, upper ] ], health.conflicts.map(&:rules)
+  end
+
   test "rules with the same conditions that set a field to different values conflict, and the higher active one wins" do
     higher = create_rule(name_condition("like", "woolworths"), category: @groceries)
     lower = create_rule(name_condition("like", "Woolworths"), category: @dining)
@@ -203,6 +222,32 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_empty nothing - matched_nothing
   end
 
+  test "a rule below a transfer action that reads the new counterparts is not listed as matching nothing" do
+    savings = @family.accounts.create!(name: "Savings", balance: 0, currency: "USD", accountable: Depository.new)
+    create_rule(name_condition("like", "hardware"), transfer_to: savings)
+    on_savings = create_rule(select_condition("transaction_account", savings.id), category: @dining)
+
+    assert_not_includes health.match_nothing, on_savings
+
+    runs = Rule::Runner.new(@family, rules: @family.rules.where(active: true), execution_type: "manual").run
+    assert runs.find { |run| run.rule == on_savings }.transactions_queued.positive?
+  end
+
+  test "a transfer rule that matches nothing leaves the verdicts below it standing" do
+    savings = @family.accounts.create!(name: "Savings", balance: 0, currency: "USD", accountable: Depository.new)
+    create_rule(name_condition("like", "no such shop"), transfer_to: savings)
+    on_savings = create_rule(select_condition("transaction_account", savings.id), category: @dining)
+
+    assert_includes health.match_nothing, on_savings
+  end
+
+  test "an inactive rule that matches nothing is not listed" do
+    create_rule(name_condition("like", "no such shop"), category: @groceries, active: false)
+    active = create_rule(name_condition("like", "no such place"), category: @groceries)
+
+    assert_equal [ active ], health.match_nothing
+  end
+
   test "lists the rules that match nothing today" do
     nothing = create_rule(name_condition("like", "no such shop"), category: @groceries)
     create_rule(name_condition("like", "woolworths"), category: @groceries)
@@ -259,11 +304,12 @@ class Rule::HealthTest < ActiveSupport::TestCase
       Rule::Health.new(@family)
     end
 
-    def create_rule(*conditions, category: nil, tags: nil, name: nil, active: true, stop_processing: false, effective_date: nil)
+    def create_rule(*conditions, category: nil, tags: nil, name: nil, transfer_to: nil, active: true, stop_processing: false, effective_date: nil)
       actions = []
       actions << Rule::Action.new(action_type: "set_transaction_name", value: name) if name
       actions << Rule::Action.new(action_type: "set_transaction_category", value: category.id) if category
       actions << Rule::Action.new(action_type: "set_transaction_tags", value: tags.map(&:id)) if tags
+      actions << Rule::Action.new(action_type: "set_as_transfer_or_payment", value: transfer_to.id) if transfer_to
       @family.rules.create!(resource_type: "transaction", active: active, stop_processing: stop_processing,
         effective_date: effective_date, conditions: conditions, actions: actions)
     end
@@ -278,6 +324,10 @@ class Rule::HealthTest < ActiveSupport::TestCase
 
     def detail_condition(operator, value)
       Rule::Condition.new(condition_type: "transaction_additional_detail", operator: operator, value: value)
+    end
+
+    def details_condition(operator, value)
+      Rule::Condition.new(condition_type: "transaction_details", operator: operator, value: value)
     end
 
     def amount_condition(operator = ">", value = "10")
