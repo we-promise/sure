@@ -40,6 +40,13 @@ module QifParser
   TRANSACTION_TYPES = %w[CCard Bank Cash Invst Oth\ L Oth\ A].freeze
   GENERIC_TRANSACTION_TYPES = TRANSACTION_TYPES - [ "Invst" ]
 
+  # Payees that mark an account's starting balance. Quicken writes
+  # "Opening Balance"; German exports (e.g. Lexware FinanzManager) write
+  # "Eröffnungssaldo". Names from exports in other languages belong here too.
+  # Not an I18n lookup: the name comes from the program that wrote the file,
+  # not from the importing user's locale, so every known name must match.
+  OPENING_BALANCE_PAYEES = [ "Opening Balance", "Eröffnungssaldo" ].freeze
+
   # Investment action types that create Trade records (buy or sell shares).
   BUY_LIKE_ACTIONS  = %w[Buy ReinvDiv Cover].freeze
   SELL_LIKE_ACTIONS = %w[Sell ShtSell].freeze
@@ -174,8 +181,9 @@ module QifParser
 
   # Returns the opening balance entry from the QIF file, if present.
   # In Quicken's QIF format, the first transaction of a bank/cash account is often
-  # an "Opening Balance" record with payee "Opening Balance".  This entry is NOT a
-  # real transaction – it is the account's starting balance.
+  # an "Opening Balance" record with payee "Opening Balance" (see
+  # OPENING_BALANCE_PAYEES).  This entry is NOT a real transaction – it is the
+  # account's starting balance.
   #
   # Returns a hash { date: Date, amount: BigDecimal } or nil.
   def self.parse_opening_balance(content, date_format: "%m/%d/%Y")
@@ -191,7 +199,7 @@ module QifParser
     content = normalize_line_endings(content)
 
     transaction_sections(content).filter_map do |section|
-      record = parse_records(section[:content]).find { |r| r["P"]&.strip == "Opening Balance" }
+      record = parse_records(section[:content]).find { |r| opening_balance_record?(r) }
       next unless record
 
       date   = parse_qif_date(record["D"], date_format: date_format)
@@ -454,10 +462,15 @@ module QifParser
   end
   private_class_method :parse_records
 
+  def self.opening_balance_record?(record)
+    OPENING_BALANCE_PAYEES.include?(record["P"]&.strip)
+  end
+  private_class_method :opening_balance_record?
+
   def self.build_transaction(record, date_format: "%m/%d/%Y", account: nil, account_type: nil)
     # "Opening Balance" is a Quicken convention for the account's starting balance –
     # it is not a real transaction and must not be imported as one.
-    return nil if record["P"]&.strip == "Opening Balance"
+    return nil if opening_balance_record?(record)
 
     raw_date   = record["D"]
     raw_amount = record["T"] || record["U"]
