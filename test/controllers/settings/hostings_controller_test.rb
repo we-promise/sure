@@ -1499,19 +1499,25 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       Setting.llm_max_items_per_call = 10
       Setting.llm_max_response_tokens = 256
+      Setting.llm_context_window = 4096
+      Setting.ai_response_timeout = 120
       Setting.openai_json_mode = "none"
 
-      with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "0", "LLM_MAX_RESPONSE_TOKENS" => "0", "LLM_JSON_MODE" => "bogus") do
+      with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "0", "LLM_MAX_RESPONSE_TOKENS" => "0", "LLM_CONTEXT_WINDOW" => "0",
+                         "AI_RESPONSE_TIMEOUT" => "10", "LLM_JSON_MODE" => "bogus") do
         get settings_hosting_url
       end
 
       assert_response :success
       assert_select "input[name='setting[llm_max_items_per_call]'][disabled='disabled'][value='10']"
       assert_select "input[name='setting[llm_max_response_tokens]'][disabled='disabled'][value='256']"
+      assert_select "input[name='setting[llm_context_window]'][disabled='disabled'][value='4096']"
+      # Chat.response_timeout raises a positive env value below MIN_RESPONSE_TIMEOUT to that minimum.
+      assert_select "input[name='setting[ai_response_timeout]'][disabled='disabled'][value='#{Chat::MIN_RESPONSE_TIMEOUT.to_i}']"
       assert_select "select[name='setting[openai_json_mode]'][disabled='disabled'] option[selected][value='none']"
     end
   ensure
-    %i[llm_max_items_per_call llm_max_response_tokens openai_json_mode].each { |key| Setting.public_send("#{key}=", nil) }
+    %i[llm_max_items_per_call llm_max_response_tokens llm_context_window openai_json_mode].each { |key| Setting.public_send("#{key}=", nil) }
   end
 
   test "without env values, or with blank ones, AI fields stay editable and show the stored setting" do
