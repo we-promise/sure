@@ -394,6 +394,38 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the exchange-rate select shows the ENV provider over a saved setting" do
+    Setting.exchange_rate_provider = "twelve_data"
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select[name='setting[exchange_rate_provider]'] option[selected][value='yahoo_finance']"
+      end
+    end
+  ensure
+    Setting.where(var: "exchange_rate_provider").delete_all
+    Setting.clear_cache
+  end
+
+  test "the exchange-rate select shows the saved setting when the ENV variable is unset" do
+    Setting.exchange_rate_provider = "moex_public"
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select[name='setting[exchange_rate_provider]'] option[selected][value='moex_public']"
+      end
+    end
+  ensure
+    Setting.where(var: "exchange_rate_provider").delete_all
+    Setting.clear_cache
+  end
+
   test "an unknown exchange rate provider does not hide a configured security provider" do
     ExchangeRate.stubs(:provider).raises(Provider::Registry::Error, "Provider 'nope' not found")
     Security.stubs(:provider).returns(@provider)

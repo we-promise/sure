@@ -104,7 +104,7 @@ class Setting < RailsSettings::Base
   end
 
   # Provider selection
-  field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")
+  field :exchange_rate_provider, type: :string, default: -> { ENV["EXCHANGE_RATE_PROVIDER"].presence || "twelve_data" }
   field :securities_provider, type: :string, default: ENV.fetch("SECURITIES_PROVIDER", "twelve_data")
 
   # Multi-provider: comma-separated list of enabled securities providers

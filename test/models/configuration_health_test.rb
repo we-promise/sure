@@ -185,6 +185,19 @@ class ConfigurationHealthTest < ActiveSupport::TestCase
     end
   end
 
+  test "a blank exchange rate variable with no saved row checks Twelve Data" do
+    Setting.where(var: "exchange_rate_provider").delete_all
+    Setting.clear_cache
+
+    ClimateControl.modify("EXCHANGE_RATE_PROVIDER" => "") do
+      check = ConfigurationHealth.new.exchange_rates
+      assert_equal :twelve_data, check.providers.first.key
+    end
+  ensure
+    Setting.where(var: "exchange_rate_provider").delete_all
+    Setting.clear_cache
+  end
+
   test "local storage is configured without cloud credentials or filesystem access" do
     stub_storage("local", { service: "Disk", root: "/private/storage/root" })
     File.expects(:writable?).never

@@ -348,6 +348,37 @@ class SettingTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { Setting.reencrypt_secrets_from("") }
   end
 
+  test "the exchange-rate default reads the environment at read time" do
+    Setting.where(var: "exchange_rate_provider").delete_all
+    Setting.clear_cache
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "moex_public") do
+      assert_equal "moex_public", Setting.exchange_rate_provider
+    end
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "") do
+      assert_equal "twelve_data", Setting.exchange_rate_provider
+    end
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
+      assert_equal "twelve_data", Setting.exchange_rate_provider
+    end
+  ensure
+    Setting.where(var: "exchange_rate_provider").delete_all
+    Setting.clear_cache
+  end
+
+  test "a saved exchange-rate provider wins over the environment variable" do
+    Setting.exchange_rate_provider = "yahoo_finance"
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "moex_public") do
+      assert_equal "yahoo_finance", Setting.exchange_rate_provider
+    end
+  ensure
+    Setting.where(var: "exchange_rate_provider").delete_all
+    Setting.clear_cache
+  end
+
   private
 
     def old_setting_encryptor(secret_key_base)
