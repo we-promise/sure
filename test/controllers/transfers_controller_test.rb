@@ -678,6 +678,21 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert transfer.reload.pending?
   end
 
+  test "a request denied on either leg takes no row lock" do
+    # family_member: full_control on depository, read_only on credit_card
+    sign_in users(:family_member)
+    denied_inflow = transfers(:one)
+    denied_outflow = cross_owner_transfer(outflow_account: accounts(:credit_card), inflow_account: accounts(:depository))
+    Transfer.any_instance.expects(:with_edit_lock).never
+
+    [ denied_inflow, denied_outflow ].each do |transfer|
+      patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+      assert_redirected_to transactions_url
+      assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    end
+  end
+
   test "can add notes to transfer" do
     transfer = transfers(:one)
     assert_nil transfer.notes
@@ -1102,6 +1117,103 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       post mark_as_recurring_transfer_url(transfer)
     end
     assert_equal I18n.t("recurring_transactions.transfer_feature_disabled"), flash[:alert]
+  end
+
+  test "adding a fee to a transfer creates exactly one fee transaction" do
+    transfer = transfers(:one)
+
+    assert_difference -> { transfer.fee_transactions.count }, 1 do
+      patch transfer_url(transfer), params: { transfer: { source_fee_amount: 5 } }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal "Transfer updated", flash[:notice]
+    assert_equal 5, transfer.reload.derived_source_fee_amount
+  end
+
+  test "an edit of a transfer gone by its lock writes nothing and says it was removed" do
+    transfer = transfers(:one)
+    # Gone by the time its row lock is taken, as when Auto Match displaces a
+    # pending guess while the drawer is open.
+    Transfer.any_instance.stubs(:lock!).raises(ActiveRecord::RecordNotFound)
+
+    writes = []
+    callback = ->(*, payload) { writes << payload[:sql] if payload[:sql].match?(/\A\s*(INSERT INTO|UPDATE|DELETE FROM) "(transactions|entries|transfers)"/) }
+    assert_no_difference -> { Transaction.count } do
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        patch transfer_url(transfer), params: { transfer: { source_fee_amount: 5, notes: "Bank fee" } }
+      end
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transfers.update.removed"), flash[:alert]
+    assert_empty writes, "nothing may be written before the lock is taken"
+    assert_nil transfer.reload.notes
+  end
+
+  test "a deadlock during a transfer edit rolls it back and asks to try again" do
+    transfer = transfers(:one)
+    TransfersController.any_instance.stubs(:update_transfer_details).raises(ActiveRecord::Deadlocked)
+
+    assert_no_difference -> { Transaction.count } do
+      patch transfer_url(transfer), params: { transfer: { source_fee_amount: 5, notes: "Bank fee" } }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transfers.update.busy"), flash[:alert]
+    assert_equal 0, transfer.reload.derived_source_fee_amount
+  end
+
+  test "rejecting a transfer gone by its lock writes nothing and says it was removed" do
+    transfer = transfers(:one)
+    Transfer.any_instance.stubs(:lock!).raises(ActiveRecord::RecordNotFound)
+
+    assert_no_difference -> { RejectedTransfer.count } do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transfers.update.removed"), flash[:alert]
+    assert Transfer.exists?(transfer.id)
+  end
+
+  test "a deadlock while rejecting a transfer rolls it back and asks to try again" do
+    transfer = transfers(:one)
+    Transfer.any_instance.stubs(:reject!).raises(ActiveRecord::Deadlocked)
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transfers.update.busy"), flash[:alert]
+    assert Transfer.exists?(transfer.id)
+  end
+
+  test "a record missing inside a transfer edit is not reported as removed" do
+    transfer = transfers(:one)
+    TransfersController.any_instance.stubs(:update_transfer_details).raises(ActiveRecord::RecordNotFound)
+
+    patch transfer_url(transfer), params: { transfer: { notes: "Rent" } }
+
+    assert_response :not_found
+    assert_nil flash[:alert]
+  end
+
+  test "a transfer update locks the transfer before writing any transaction" do
+    transfer = transfers(:one)
+
+    statements = []
+    callback = ->(*, payload) { statements << payload[:sql] }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      patch transfer_url(transfer), params: { transfer: { source_fee_amount: 5 } }
+    end
+    assert_redirected_to transactions_url
+
+    lock_at = statements.index { |sql| sql.match?(/FROM "transfers".*FOR UPDATE/m) }
+    first_write_at = statements.index { |sql| sql.match?(/\A\s*(INSERT INTO|UPDATE) "transactions"/) }
+
+    assert lock_at, "expected the transfer to be selected FOR UPDATE"
+    assert first_write_at, "expected the fee to write a transaction"
+    assert_operator lock_at, :<, first_write_at, "the transfer lock must come before the first write to transactions"
   end
 
   private

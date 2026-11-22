@@ -21,7 +21,16 @@ class Transfer < ApplicationRecord
   # without a transfer.
   before_destroy :release_transactions
 
+  # Raised by with_edit_lock when the transfer was deleted before its row lock
+  # was taken, as when Auto Match displaces a pending guess.
+  class Removed < StandardError; end
+
   class << self
+    # How long an edit waits for any row lock before giving up.
+    def edit_lock_timeout
+      "5s"
+    end
+
     # The outflow leg's kind for a transfer into this account. Transfer::Creator,
     # Family::DataImporter, auto-matching, rules and manual matches all call
     # it (the inflow leg is always funds_movement, see kind_for_leg).
@@ -174,6 +183,28 @@ class Transfer < ApplicationRecord
     return false unless to_account
 
     !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(kind_for_leg(outflow_transaction))
+  end
+
+  # Runs the block in a transaction holding this transfer's row lock, taken and
+  # reloaded before the block runs. Auto Match locks a pending guess the same
+  # way before displacing it, so an edit can't write a fee or leg against a
+  # transfer that is being deleted. Every lock wait in the transaction is
+  # bounded by edit_lock_timeout, and raises ActiveRecord::LockWaitTimeout
+  # past it, so a long Auto Match run can't hold the request. The timeout is
+  # SET LOCAL, so it lasts until the outermost transaction ends; call this
+  # outside any open transaction.
+  def with_edit_lock
+    Transfer.transaction do
+      Transfer.connection.select_value(
+        Transfer.sanitize_sql_array([ "SELECT set_config('lock_timeout', ?, true)", Transfer.edit_lock_timeout ])
+      )
+      begin
+        lock!
+      rescue ActiveRecord::RecordNotFound
+        raise Removed
+      end
+      yield
+    end
   end
 
   def reject!

@@ -56,4 +56,6 @@ en:
       category: Category
       uncategorized: Uncategorized
     update:
+      busy: This transfer is being updated elsewhere, so nothing was saved. Please try again.
+      removed: This transfer was replaced or removed, so your changes weren't saved.
       success: Transfer updated
