@@ -64,10 +64,10 @@ nl:
     new:
       new_transaction: "Nieuwe transactie"
     transaction_category:
-      set_on_outflow: "De categorie hoort bij de uitgaande kant van deze overboeking en kan alleen daar worden gewijzigd"
+      set_on_counterpart: "De categorie hoort bij de andere kant van deze overboeking en kan alleen daar worden gewijzigd"
     show:
-      category_set_on_hidden_outflow: "Dit is de inkomende kant van een overboeking. De categorie hoort bij de uitgaande kant, op een account waartoe u geen toegang hebt, en kan alleen daar worden gewijzigd."
-      category_set_on_outflow: "Dit is de inkomende kant van een overboeking. De categorie hoort bij de uitgaande kant en kan alleen daar worden gewijzigd, zodat budgetten haar maar één keer meetellen."
+      category_set_on_hidden_counterpart: "De categorie hoort bij de andere kant van deze overboeking, op een account waartoe u geen toegang hebt, en kan alleen daar worden gewijzigd."
+      category_set_on_counterpart: "De categorie hoort bij de andere kant van deze overboeking en kan alleen daar worden gewijzigd."
       keep_both: "Nee, beide behouden"
       loan_payment: "Leningbetaling"
       mark_recurring: "Markeren als terugkerend"

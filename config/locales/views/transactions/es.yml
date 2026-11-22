@@ -68,10 +68,10 @@ es:
     new:
       new_transaction: Nueva transacción
     transaction_category:
-      set_on_outflow: La categoría pertenece al lado de salida de esta transferencia y solo se puede cambiar allí
+      set_on_counterpart: La categoría pertenece al otro lado de esta transferencia y solo se puede cambiar allí
     show:
-      category_set_on_hidden_outflow: Este es el lado de entrada de una transferencia. Su categoría pertenece al lado de salida, en una cuenta a la que no tienes acceso, y solo se puede cambiar allí.
-      category_set_on_outflow: Este es el lado de entrada de una transferencia. Su categoría pertenece al lado de salida y solo se puede cambiar allí, para que los presupuestos la cuenten una sola vez.
+      category_set_on_hidden_counterpart: La categoría pertenece al otro lado de esta transferencia, en una cuenta a la que no tienes acceso, y solo se puede cambiar allí.
+      category_set_on_counterpart: La categoría pertenece al otro lado de esta transferencia y solo se puede cambiar allí.
       keep_both: No, mantener ambas
       loan_payment: Pago de préstamo
       mark_recurring: Marcar como recurrente
