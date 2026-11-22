@@ -220,6 +220,15 @@ class InvestmentStatement
   HOLDINGS_SORT_KEYS = %w[value weight return day_change name].freeze
   HOLDINGS_SORT_DIRECTIONS = %w[asc desc].freeze
 
+  # The [sort, dir] #holdings_table_rows actually applies, so a caller can
+  # show the table's headers the order its rows are in.
+  def self.holdings_sort(sort, dir)
+    [
+      HOLDINGS_SORT_KEYS.include?(sort.to_s) ? sort.to_s : "value",
+      HOLDINGS_SORT_DIRECTIONS.include?(dir.to_s) ? dir.to_s : "desc"
+    ]
+  end
+
   def holdings_table_rows(sort: "value", dir: "desc")
     rolled_up = holdings_rolled_up_by_security
     return [] if rolled_up.empty?
@@ -738,9 +747,12 @@ class InvestmentStatement
     # accounts that hold it, in family currency.
     HoldingsTableRow = Data.define(
       :security, :positions, :accounts_count, :qty, :avg_cost, :amount, :weight,
-      :unrealized, :day_change, :missing_cost_basis
+      :unrealized, :day_change, :day_change_positions, :missing_cost_basis
     ) do
       def ticker = security.ticker
+      # The Day change sums only the positions with a previous snapshot, while
+      # the row's value sums them all.
+      def day_change_partial? = day_change.present? && day_change_positions < positions.size
       def name = security.name.presence || ticker
       def amount_money = amount
     end
@@ -792,13 +804,13 @@ class InvestmentStatement
         weight: total.zero? ? 0 : (value / total * 100).round(2),
         unrealized: unrealized,
         day_change: day_change,
+        day_change_positions: day_changes.size,
         missing_cost_basis: missing_cost_basis
       )
     end
 
     def sort_holdings_table_rows(rows, sort:, dir:)
-      sort = HOLDINGS_SORT_KEYS.include?(sort.to_s) ? sort.to_s : "value"
-      dir = HOLDINGS_SORT_DIRECTIONS.include?(dir.to_s) ? dir.to_s : "desc"
+      sort, dir = self.class.holdings_sort(sort, dir)
 
       # Rows without the sorted figure go last whichever direction is asked.
       # Ties break by name, then security id, in both directions, so rows with

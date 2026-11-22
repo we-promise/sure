@@ -84,6 +84,22 @@ class QifImportTest < ActiveSupport::TestCase
     ^
   QIF
 
+  # Lexware FinanzManager and other German exports name the entry "Eröffnungssaldo".
+  QIF_WITH_GERMAN_OPENING_BALANCE = <<~QIF
+    !Type:Bank
+    D1/ 1'20
+    U500.00
+    T500.00
+    PEröffnungssaldo
+    L[Girokonto]
+    ^
+    D3/ 1'20
+    U100.00
+    T100.00
+    PFirst Deposit
+    ^
+  QIF
+
   # A minimal investment QIF with two securities, trades, a dividend, and a cash transfer.
   SAMPLE_INVST_QIF = <<~QIF
     !Type:Security
@@ -319,6 +335,108 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal "Bank", QifParser.account_type(qif)
   end
 
+  # Lexware FinanzManager exports some accounts with the non-standard type "Oth T".
+  QIF_WITH_UNKNOWN_ACCOUNT_TYPE = <<~QIF
+    !Type:Cat
+    NFood
+    DFood expenses
+    ^
+    !Type:Oth T
+    D1/ 1'20
+    T500.00
+    POpening Balance
+    L[Tagesgeld]
+    ^
+    D3/ 1'20
+    T-25.00
+    PGrocery Store
+    LFood
+    ^
+  QIF
+
+  test "account_type reads an unknown account type as Bank" do
+    assert_equal "Bank", QifParser.account_type(QIF_WITH_UNKNOWN_ACCOUNT_TYPE)
+  end
+
+  test "account_type ignores Class and Memorized sections" do
+    qif = "!Type:Class\nNBusiness\n^\n!Type:Memorized\nKC\nPRent\n^\n!Type:CCard\nD1/1'24\nT-10.00\nPTest\n^\n"
+    assert_equal "CCard", QifParser.account_type(qif)
+    assert_empty QifParser.unknown_account_types(qif)
+  end
+
+  test "account_type matches standard account types regardless of case" do
+    qif = "!Type:ccard\nD1/1'24\nT-10.00\nPTest\n^\n"
+
+    assert_equal "CCard", QifParser.account_type(qif)
+    assert_empty QifParser.unknown_account_types(qif)
+    assert_equal [ "CCard" ], QifParser.parse(qif).map(&:account_type)
+  end
+
+  test "account metadata types are matched like section types" do
+    qif = <<~QIF
+      !Account
+      NBrokerage
+      Tinvst
+      ^
+      !Type:invst
+      D1/2'24
+      NBuy
+      YACME
+      I10.00
+      Q2
+      T20.00
+      ^
+      !Account
+      NTagesgeld
+      TOth T
+      ^
+      !Type:Oth T
+      D1/3'24
+      T-5.00
+      PKiosk
+      ^
+    QIF
+
+    assert_equal [ "Invst", nil ], QifParser.parse_accounts(qif).map(&:account_type)
+    assert_equal [ "Invst" ], QifParser.parse_investment_transactions(qif).map(&:account_type)
+    assert_equal [ [ "Kiosk", "Bank" ] ], QifParser.parse(qif).map { |t| [ t.payee, t.account_type ] }
+    assert_equal [ "Oth T" ], QifParser.unknown_account_types(qif)
+  end
+
+  test "an unknown account metadata type leaves the section type in place" do
+    qif = <<~QIF
+      !Account
+      NVisa
+      TOth T
+      ^
+      !Type:CCard
+      D1/3'24
+      T-5.00
+      PKiosk
+      ^
+    QIF
+
+    assert_equal [ "CCard" ], QifParser.parse(qif).map(&:account_type)
+    assert_empty QifParser.unknown_account_types(qif)
+  end
+
+  test "unknown_account_types lists each non-standard account type once" do
+    qif = QIF_WITH_UNKNOWN_ACCOUNT_TYPE + "!Type:Oth T\nD4/1'20\nT-5.00\nPKiosk\n^\n!Type:Bank\nD5/1'20\nT-1.00\nPBakery\n^\n"
+
+    assert_equal [ "Oth T" ], QifParser.unknown_account_types(qif)
+    assert_empty QifParser.unknown_account_types(SAMPLE_QIF)
+    assert_empty QifParser.unknown_account_types(nil)
+  end
+
+  test "parse reads the transactions of an unknown account type like a bank account" do
+    transactions = QifParser.parse(QIF_WITH_UNKNOWN_ACCOUNT_TYPE)
+
+    assert_equal [ "Grocery Store" ], transactions.map(&:payee)
+    assert_equal [ "Bank" ], transactions.map(&:account_type)
+    assert_equal BigDecimal("500"), QifParser.parse_opening_balance(QIF_WITH_UNKNOWN_ACCOUNT_TYPE)[:amount]
+    assert_equal [ "1/1/2020", "3/1/2020" ], QifParser.extract_raw_dates(QIF_WITH_UNKNOWN_ACCOUNT_TYPE)
+  end
+
   test "parse_accounts extracts QIF account metadata" do
     accounts = QifParser.parse_accounts(QIF_WITH_ACCOUNTS)
 
@@ -433,6 +551,26 @@ class QifImportTest < ActiveSupport::TestCase
   test "parse_opening_balance returns nil for blank content" do
     assert_nil QifParser.parse_opening_balance(nil)
     assert_nil QifParser.parse_opening_balance("")
+  end
+
+  test "parse skips an Eröffnungssaldo transaction" do
+    transactions = QifParser.parse(QIF_WITH_GERMAN_OPENING_BALANCE)
+
+    assert_equal [ "First Deposit" ], transactions.map(&:payee)
+  end
+
+  test "parse_opening_balance reads an Eröffnungssaldo entry" do
+    ob = QifParser.parse_opening_balance(QIF_WITH_GERMAN_OPENING_BALANCE)
+
+    assert_equal Date.new(2020, 1, 1), ob[:date]
+    assert_equal BigDecimal("500"), ob[:amount]
+  end
+
+  test "parse_opening_balance reads an Eröffnungssaldo entry from a Windows-1252 file" do
+    content = QIF_WITH_GERMAN_OPENING_BALANCE.encode("Windows-1252").b
+
+    assert_equal BigDecimal("500"), QifParser.parse_opening_balance(content)[:amount]
+    assert_equal [ "First Deposit" ], QifParser.parse(content).map(&:payee)
   end
 
   # ── QifParser: split transactions ──────────────────────────────────────────
@@ -571,6 +709,29 @@ class QifImportTest < ActiveSupport::TestCase
   test "qif_account_type returns CCard for credit card QIF" do
     @import.update!(raw_file_str: SAMPLE_QIF)
     assert_equal "CCard", @import.qif_account_type
+  end
+
+  test "an unknown account type is imported like a bank account" do
+    @import.update!(raw_file_str: QIF_WITH_UNKNOWN_ACCOUNT_TYPE)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_equal "Bank", @import.qif_account_type
+    assert_equal [ "Oth T" ], @import.unknown_qif_account_types
+    assert_not_empty @import.valid_date_formats_with_preview
+    assert_equal [ "Grocery Store" ], @import.rows.map(&:name)
+    assert_equal [ "Food" ], @import.row_categories
+
+    @import.import!
+
+    manager = Account::OpeningBalanceManager.new(@account)
+    assert_equal Date.new(2020, 1, 1), manager.opening_date
+    assert_equal BigDecimal("500"), manager.opening_balance
+  end
+
+  test "unknown_qif_account_types is empty for standard QIF files" do
+    @import.update!(raw_file_str: SAMPLE_QIF)
+    assert_empty @import.unknown_qif_account_types
   end
 
   test "row_categories excludes blank categories" do
@@ -722,6 +883,34 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal [ "KEEP" ], train.entryable.tags.map(&:name)
   end
 
+  test "import! applies a tag repeated on a split line once" do
+    qif = <<~QIF
+      !Type:Bank
+      D1/ 1'24
+      U-100.00
+      T-100.00
+      PRepeated Tag Store
+      L--Split--
+      SFood/KEEP:KEEP
+      $-60.00
+      EGroceries
+      STravel
+      $-40.00
+      ETrain
+      ^
+    QIF
+
+    @import.update!(raw_file_str: qif)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    @import.import!
+
+    parent = @account.entries.find_by!(name: "Repeated Tag Store")
+    groceries = parent.child_entries.find_by!(name: "Groceries")
+    assert_equal [ "KEEP" ], groceries.entryable.taggings.map { |tagging| tagging.tag.name }
+  end
+
   test "import! skips split creation when split line totals do not match parent" do
     @import.update!(raw_file_str: QIF_WITH_ROUNDING_SPLIT_MISMATCH)
     @import.generate_rows_from_csv
@@ -831,6 +1020,22 @@ class QifImportTest < ActiveSupport::TestCase
     assert manager.has_opening_anchor?
     assert_equal Date.new(2020, 1, 1), manager.opening_date
     assert_equal BigDecimal("500"),    manager.opening_balance
+  end
+
+  test "import! sets opening anchor from an Eröffnungssaldo entry" do
+    @import.update!(raw_file_str: QIF_WITH_GERMAN_OPENING_BALANCE)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_equal 1, @import.rows.count
+    refute @import.rows.exists?(name: "Eröffnungssaldo")
+
+    @import.import!
+
+    manager = Account::OpeningBalanceManager.new(@account)
+    assert manager.has_opening_anchor?
+    assert_equal Date.new(2020, 1, 1), manager.opening_date
+    assert_equal BigDecimal("500"), manager.opening_balance
   end
 
   test "import! creates declared account that only has an opening balance" do
@@ -1465,5 +1670,189 @@ class QifImportTest < ActiveSupport::TestCase
     formats = @import.valid_date_formats_with_preview
 
     assert_empty formats
+  end
+
+  # ── Declared date order (!Option:MDY / !Option:DMY) ─────────────────────────
+
+  MDY_DOT_QIF = <<~QIF
+    !Option:MDY
+    !Type:CCard
+    D6.12.26
+    U69.99
+    T69.99
+    PFirst Purchase
+    ^
+    D6.5.26
+    U169.99
+    T169.99
+    PSecond Purchase
+    ^
+  QIF
+
+  DOT_QIF_WITHOUT_OPTION = <<~QIF
+    !Type:Bank
+    D6.12.20
+    T-10.00
+    PFirst Store
+    ^
+    D6.5.20
+    T-20.00
+    PSecond Store
+    ^
+  QIF
+
+  test "date_order reads the declared date order" do
+    assert_equal "MDY", QifParser.date_order(MDY_DOT_QIF)
+    assert_equal "DMY", QifParser.date_order("!option:dmy\r\n!Type:Bank\r\n")
+    assert_nil QifParser.date_order(DOT_QIF_WITHOUT_OPTION)
+    assert_nil QifParser.date_order(nil)
+  end
+
+  test "date_order reads the declared date order behind a UTF-8 byte order mark" do
+    assert_equal "MDY", QifParser.date_order("\uFEFF" + MDY_DOT_QIF)
+    assert_equal "MDY", QifParser.date_order(("\xEF\xBB\xBF" + MDY_DOT_QIF).b)
+  end
+
+  test "date_order reads the declared date order with CR-only line endings" do
+    assert_equal "MDY", QifParser.date_order(MDY_DOT_QIF.gsub("\n", "\r"))
+  end
+
+  test "generate_rows_from_csv reads month-first dotted dates with CR-only line endings" do
+    @import.update!(raw_file_str: MDY_DOT_QIF.gsub("\n", "\r"))
+    @import.generate_rows_from_csv
+
+    assert_equal "%m.%d.%Y", @import.reload.qif_date_format
+    assert_equal "2026-06-12", @import.rows.find_by(name: "First Purchase").date
+  end
+
+  test "generate_rows_from_csv reads month-first dotted dates when the file declares MDY" do
+    @import.update!(raw_file_str: MDY_DOT_QIF)
+    @import.generate_rows_from_csv
+
+    assert_equal "%m.%d.%Y", @import.reload.qif_date_format
+    assert_equal "2026-06-12", @import.rows.find_by(name: "First Purchase").date
+    assert_equal "2026-06-05", @import.rows.find_by(name: "Second Purchase").date
+  end
+
+  test "generate_rows_from_csv reads day-first dates when the file declares DMY" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Option:DMY
+      !Type:Bank
+      D04-06-2020
+      T-10.00
+      PFirst Store
+      ^
+      D01-10-2020
+      T-20.00
+      PSecond Store
+      ^
+    QIF
+    @import.generate_rows_from_csv
+
+    assert_equal "%d-%m-%Y", @import.reload.qif_date_format
+    assert_equal "2020-06-04", @import.rows.find_by(name: "First Store").date
+  end
+
+  test "generate_rows_from_csv keeps day-first dotted dates when no order is declared" do
+    @import.update!(raw_file_str: DOT_QIF_WITHOUT_OPTION)
+    @import.generate_rows_from_csv
+
+    assert_equal "%d.%m.%Y", @import.reload.qif_date_format
+    assert_equal "2020-12-06", @import.rows.find_by(name: "First Store").date
+  end
+
+  test "generate_rows_from_csv detects month-first dotted dates without a declared order" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Type:Bank
+      D7.10.20
+      T-10.00
+      PFirst Store
+      ^
+      D7.25.20
+      T-20.00
+      PSecond Store
+      ^
+    QIF
+    @import.generate_rows_from_csv
+
+    assert_equal "%m.%d.%Y", @import.reload.qif_date_format
+    assert_equal 2, @import.rows.count
+  end
+
+  test "generate_rows_from_csv keeps year-first dates when the file declares an order" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Option:MDY
+      !Type:Bank
+      D2020-06-04
+      T-10.00
+      PFirst Store
+      ^
+    QIF
+    @import.generate_rows_from_csv
+
+    assert_equal "%Y-%m-%d", @import.reload.qif_date_format
+  end
+
+  test "generate_rows_from_csv falls back to all formats when the declared order does not fit the dates" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Option:MDY
+      !Type:Bank
+      D29.03.2021
+      T-10.00
+      PFirst Store
+      ^
+    QIF
+    @import.generate_rows_from_csv
+
+    assert_equal "%d.%m.%Y", @import.reload.qif_date_format
+    assert_equal "2021-03-29", @import.rows.find_by(name: "First Store").date
+  end
+
+  test "generate_rows_from_csv checks dates in every section against the declared order" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Option:MDY
+      !Type:Bank
+      D04.06.2020
+      T-10.00
+      PFirst Store
+      ^
+      !Type:Bank
+      D29.03.2021
+      T-20.00
+      PSecond Store
+      ^
+    QIF
+    @import.generate_rows_from_csv
+
+    assert_equal "%d.%m.%Y", @import.reload.qif_date_format
+    assert_equal "2020-06-04", @import.rows.find_by(name: "First Store").date
+    assert_equal "2021-03-29", @import.rows.find_by(name: "Second Store").date
+  end
+
+  test "extract_raw_dates reads every transaction section" do
+    content = <<~QIF
+      !Type:Bank
+      D04.06.2020
+      ^
+      !Type:Cat
+      NFood
+      DFood expenses
+      ^
+      !Type:Bank
+      D29.03.2021
+      ^
+    QIF
+
+    assert_equal %w[04.06.2020 29.03.2021], QifParser.extract_raw_dates(content)
+  end
+
+  test "valid_date_formats_with_preview offers month-first dotted dates" do
+    @import.update!(raw_file_str: MDY_DOT_QIF)
+    formats = @import.valid_date_formats_with_preview
+
+    mdy = formats.find { |f| f[:format] == "%m.%d.%Y" }
+    assert_equal "MM.DD.YYYY", mdy[:label]
+    assert_equal "2026-06-12", mdy[:preview]
+    assert_includes formats.map { |f| f[:format] }, "%d.%m.%Y"
   end
 end

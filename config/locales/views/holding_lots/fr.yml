@@ -1,0 +1,9 @@
+---
+fr:
+  holding_lots:
+    provider_cost: 'Votre fournisseur indique le coût de cette position : le coût de ses lots ne peut donc pas être défini.'
+    update:
+      success: Coût du lot mis à jour.
+      error: Saisissez le coût total du lot, supérieur ou égal à zéro.
+    unlock:
+      success: Coût manuel effacé.
