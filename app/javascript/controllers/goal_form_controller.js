@@ -37,6 +37,8 @@ export default class extends Controller {
     requireAccount: { type: Boolean, default: true },
   };
 
+  #pluralRules;
+
   connect() {
     // Capture the default avatar contents (the "target" icon SVG) so we
     // can restore it when the user clears the name field after typing.
@@ -221,7 +223,8 @@ export default class extends Controller {
 
   #accountLabel(count) {
     const translations = this.suggestedAccountsValue || {};
-    const category = new Intl.PluralRules(this.localeValue || undefined).select(count);
+    this.#pluralRules ||= new Intl.PluralRules(this.localeValue || undefined);
+    const category = this.#pluralRules.select(count);
     const template = translations[category] || translations.other || "%{count}";
     return template.replace("%{count}", count);
   }
