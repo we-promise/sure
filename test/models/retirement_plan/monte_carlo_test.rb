@@ -23,6 +23,19 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
     )
   end
 
+  # 10,000.10 due this year and 20,000.20 next, at no return, retiring after
+  # the end age: the deterministic simulation and the Monte Carlo of one plan.
+  def one_offs_plan(current_assets:)
+    overrides = {
+      current_assets: current_assets, annual_contribution: 0, expected_annual_return: 0, inflation_rate: 0,
+      streams: [ Stream.new(kind: "one_off", annual_amount: BigDecimal("10000.10"), start_year: AS_OF.year),
+                 Stream.new(kind: "one_off", annual_amount: BigDecimal("20000.20"), start_year: AS_OF.year + 1) ]
+    }
+
+    [ RetirementPlan::Simulation.new(**inputs(**overrides), retirement_year: 2100),
+      monte_carlo(volatility: 0, retirement_year: 2100, **overrides) ]
+  end
+
   test "with no volatility every path is the deterministic projection, to the cent" do
     deterministic = RetirementPlan::Simulation.new(**inputs, retirement_year: 2036)
     mc = monte_carlo(volatility: 0)
@@ -32,6 +45,23 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
       assert_equal expected, mc.percentiles.fetch(p).map { |v| v.to_d.round(2) }, "p#{p}"
     end
     assert_equal (deterministic.survives? ? 1.0 : 0.0), mc.success_rate
+  end
+
+  # Float replay of cent amounts: 30,000.30 less 10,000.10 is
+  # 20,000.199999999997, a hair short of the 20,000.20 due next year. The
+  # Simulation, in BigDecimal, meets both; so must every path.
+  test "with no volatility a plan funded to the cent lasts, as the simulation says" do
+    sim, mc = one_offs_plan(current_assets: BigDecimal("30000.30"))
+
+    assert sim.survives?
+    assert_equal 1.0, mc.success_rate
+  end
+
+  test "with no volatility a plan a cent short runs out on every path" do
+    sim, mc = one_offs_plan(current_assets: BigDecimal("30000.29"))
+
+    assert_not sim.survives?
+    assert_equal 0.0, mc.success_rate
   end
 
   test "the same seed gives the same result, and a different seed a different one" do

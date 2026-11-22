@@ -157,7 +157,9 @@ class RetirementPlan::MonteCarlo
         path_values = [] if keep_values
 
         flows.each_with_index do |(contribution, withdrawal), t|
-          if withdrawal > value
+          # Half a cent of slack for the Float replay: an exact-to-the-cent
+          # plan the Simulation meets must not fail here on rounding.
+          if withdrawal > value + 0.005
             lasted = false
             value = 0.0
           else
