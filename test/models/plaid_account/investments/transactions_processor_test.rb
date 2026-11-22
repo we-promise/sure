@@ -370,19 +370,28 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal [ :income, :income ], [ long_term, short_term ].map { |e| classify(e) }
   end
 
-  test "a capitalised cash type is routed as a cash transaction" do
-    row = cash_row("div_type_case_1", "dividend", "Dividend AAPL").merge("type" => "Cash")
+  # Plaid documents its types in lowercase. A "Cash" row was always stored as
+  # a trade, and moving it to the cash path would collide with that entry.
+  test "a Cash-typed row already stored as a trade re-imports as the same trade" do
+    row = trade_row("cash_type_case_1", "Cash", "dividend")
+    @plaid_account.current_account.entries.create!(
+      name: row["name"], date: row["date"], amount: 12.5, currency: "USD", external_id: row["investment_transaction_id"], source: "plaid",
+      entryable: Trade.new(security: securities(:aapl), qty: 0.1, price: 125, currency: "USD")
+    )
 
-    assert_difference -> { Trade.count } => 0, -> { Transaction.count } => 1 do
-      entry = process_plaid_transaction(row)
-      assert_equal "Dividend", entry.transaction.investment_activity_label
+    assert_no_difference [ "Trade.count", "Transaction.count" ] do
+      assert_equal "Trade", process_plaid_transaction(row).entryable_type
     end
   end
 
-  test "a capitalised sell type still makes the quantity negative" do
-    row = trade_row("sell_case_1", "Sell", "sell").merge("quantity" => 0.1, "amount" => 12.5)
+  test "only a lowercase cash type is routed as a cash transaction" do
+    assert_difference -> { Trade.count } => 0, -> { Transaction.count } => 1 do
+      process_plaid_transaction(cash_row("cash_type_case_2", "dividend", "Dividend AAPL"))
+    end
 
-    assert_equal BigDecimal("-0.1"), process_plaid_transaction(row).trade.qty
+    assert_difference -> { Trade.count } => 1, -> { Transaction.count } => 0 do
+      process_plaid_transaction(trade_row("cash_type_case_3", "Cash", "dividend"))
+    end
   end
 
   test "a dividend and its reversal net to zero income" do

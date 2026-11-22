@@ -71,7 +71,7 @@ class PlaidAccount::Investments::TransactionsProcessor
     end
 
     def cash_transaction?(transaction)
-      %w[cash fee transfer contribution withdrawal].include?(transaction["type"]&.downcase)
+      %w[cash fee transfer contribution withdrawal].include?(transaction["type"])
     end
 
     def find_or_create_trade_entry(transaction)
@@ -145,11 +145,10 @@ class PlaidAccount::Investments::TransactionsProcessor
     def derived_qty(transaction)
       reported_qty = transaction["quantity"]
       abs_qty = reported_qty.abs
-      plaid_type = transaction["type"]&.downcase
 
-      if plaid_type == "sell" || transaction["amount"] < 0
+      if transaction["type"] == "sell" || transaction["amount"] < 0
         -abs_qty
-      elsif plaid_type == "buy" || transaction["amount"] > 0
+      elsif transaction["type"] == "buy" || transaction["amount"] > 0
         abs_qty
       else
         reported_qty
