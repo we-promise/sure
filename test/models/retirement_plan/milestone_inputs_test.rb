@@ -71,4 +71,21 @@ class RetirementPlan::MilestoneInputsTest < ActiveSupport::TestCase
 
     assert_empty @plan.milestones(as_of: AS_OF)
   end
+
+  test "a simulation handed in gives no milestones once the plan cannot be simulated" do
+    drawn = @plan.simulation(as_of: AS_OF)
+    @plan.birth_year = nil
+
+    assert_empty @plan.milestones(as_of: AS_OF, simulation: drawn)
+  end
+
+  test "a FIRE plan with no retirement date keeps the milestones of the simulation handed in" do
+    drawn = @plan.simulation(as_of: AS_OF, retirement_year: 2040)
+    @plan.update!(mode: "fire", retirement_date: nil)
+
+    milestones = @plan.milestones(as_of: AS_OF, simulation: drawn)
+
+    assert_equal %w[fi_25 fi_50 fi_75 fi_100], milestones.map(&:key)
+    assert find(milestones, "fi_25").reached_already
+  end
 end

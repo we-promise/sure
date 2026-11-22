@@ -125,7 +125,7 @@ class RetirementPlan < ApplicationRecord
   # the date blank and relies on the solver gets the four FI milestones and
   # no Coast FI; the page should say why rather than show nothing.
   def milestones(as_of:, simulation: self.simulation(as_of: as_of))
-    return [] if simulation.nil?
+    return [] if simulation.nil? || !plannable?(as_of)
 
     RetirementPlan::Milestones.new(
       rows: simulation.rows, current_assets: simulation.current_assets,
