@@ -813,14 +813,14 @@ class TransactionsController < ApplicationController
     end
 
     # Filters entry_params based on the user's permission on the account.
-    # read_write users can only annotate (category, tags, notes, merchant).
+    # read_write users can only annotate (category, tags, notes, merchant, location).
     # read_only users cannot update anything.
     def permitted_entry_params
       permitted = case entry_permission
       when :owner, :full_control
         entry_params
       when :read_write
-        # Annotate only: category, tags, merchant, notes
+        # Annotate only: category, tags, merchant, notes, location
         ep = entry_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES)
         if entry_params[:entryable_attributes].present?
           ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES)
