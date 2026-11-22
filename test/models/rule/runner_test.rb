@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Rule::RunnerTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:empty)
@@ -188,6 +188,28 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal @dining, @whole_foods.reload.category
   end
 
+  test "an AI job that finishes before the runner records the run still finishes it" do
+    use_ai_routes
+    stub_ai(:categorize, returns: { categorizations: [ { transaction_id: @whole_foods.id, category_name: @groceries.name } ] })
+    rule = ai_rule("AI", "Whole Foods", "auto_categorize")
+
+    runs = perform_enqueued_jobs(only: Ai::GenerationJob) { Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run }
+
+    assert_equal [ "success", 0, 0 ], runs.last.reload.values_at(:status, :pending_jobs_count, :transactions_awaiting_ai)
+    assert runs.last.finished?
+  end
+
+  test "a run whose second AI action can't be queued still waits for the first action's job" do
+    use_ai_routes
+    rule = ai_rule("AI", "Whole Foods", "auto_categorize", "auto_detect_merchants")
+    Ai::GenerationJob.stubs(:perform_later).returns(true).then.returns(false)
+
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.last.reload
+
+    assert_equal [ "failed", 1, 1 ], run.values_at(:status, :pending_jobs_count, :transactions_awaiting_ai)
+    assert_not run.finished?, "the first action's job is still queued"
+  end
+
   test "a rule above that cannot be matched does not stop the applied rule" do
     broken = create_rule("Broken", "Whole Foods", category: @groceries)
     broken.conditions.first.update!(condition_type: "transaction_notes")
@@ -338,6 +360,14 @@ class Rule::RunnerTest < ActiveSupport::TestCase
   end
 
   private
+    def ai_rule(name, match, *action_types)
+      @family.rules.create!(
+        name:, resource_type: "transaction", active: true,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: match) ],
+        actions: action_types.map { Rule::Action.new(action_type: _1) }
+      )
+    end
+
     def run_active_rules
       Rule::Runner.new(@family, rules: @family.rules.where(active: true), execution_type: "scheduled").run
     end

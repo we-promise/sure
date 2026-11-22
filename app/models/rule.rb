@@ -295,7 +295,6 @@ class Rule < ApplicationRecord
   def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [])
     total_modified = 0
     changed_now = 0
-    total_async_jobs = 0
     has_async = false
 
     actions.each do |action|
@@ -307,7 +306,6 @@ class Rule < ApplicationRecord
 
       if result.is_a?(Hash) && result[:async]
         has_async = true
-        total_async_jobs += result[:jobs_count] || 0
         total_modified += result[:modified_count] || 0
       elsif result.is_a?(Integer)
         total_modified += result
@@ -319,7 +317,7 @@ class Rule < ApplicationRecord
     end
 
     if has_async
-      { modified_count: total_modified, changed_now_count: changed_now, async: true, jobs_count: total_async_jobs }
+      { modified_count: total_modified, changed_now_count: changed_now, async: true }
     else
       total_modified
     end

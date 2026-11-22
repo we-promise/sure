@@ -250,7 +250,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
   test "a rule run counts its transactions down per batch and completes once" do
     use_ai_model_settings(batch_size: 2)
     ids = 5.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: 5, executed_at: Time.current)
     rule_run.await_ai!(5)
     stub_ai(:detect_merchants) do |request|
@@ -271,7 +271,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
 
   test "a deadlock while completing is retried in place, so the run's other AI action is still awaited" do
     ids = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 2,
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: 2, executed_at: Time.current)
     rule_run.await_ai!(2)   # this action's transactions
     rule_run.await_ai!(2)   # another AI action on the same run, not run yet
@@ -299,7 +299,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
 
   test "a batch whose progress can't be recorded is rolled back, so its retry counts every change" do
     txn = create_transaction(account: @account, name: "McDonalds").transaction
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: 1, executed_at: Time.current)
     rule_run.await_ai!(1)
     stub_ai(:detect_merchants, returns: { merchants: [ { transaction_id: txn.id, business_name: "McDonalds", business_url: "mcdonalds.com" } ] })
@@ -315,7 +315,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
 
   test "a batch whose transaction rolls back is released when the job gives up, so the run can finish" do
     txn = create_transaction(account: @account, name: "Chipotle burrito").transaction
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: 1, executed_at: Time.current)
     rule_run.await_ai!(1)
     detector = Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ], rule_run:)

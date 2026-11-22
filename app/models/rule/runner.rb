@@ -154,8 +154,9 @@ class Rule::Runner
 
     def run_counts(result, queued:, rule:)
       if result.is_a?(Hash) && result[:async]
-        # The async jobs report the modified count back via RuleRun#complete_job!
-        { status: "pending", transactions_processed: result[:modified_count] || 0, pending_jobs_count: result[:jobs_count] || 0 }
+        # The run stays as created, pending, unless a job has already finished it: each AI action
+        # counted its job (RuleRun#await_ai!), and the jobs report back via RuleRun#complete_job!.
+        { transactions_processed: result[:modified_count] || 0 }
       elsif result.is_a?(Integer)
         { status: "success", transactions_processed: queued, transactions_modified: result }
       else

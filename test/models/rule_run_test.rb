@@ -17,7 +17,7 @@ class RuleRunTest < ActiveSupport::TestCase
   end
 
   test "a failed AI accounting save still lets the run release its count and record the failure" do
-    rule_run = create_rule_run(pending_jobs_count: 1)
+    rule_run = create_rule_run(pending_jobs_count: 0)
     rule_run.await_ai!(3)
     rule_run.reload
 
@@ -29,7 +29,7 @@ class RuleRunTest < ActiveSupport::TestCase
   end
 
   test "a deadlock in the AI accounting save stays a deadlock, so the batch is retried" do
-    rule_run = create_rule_run(pending_jobs_count: 1)
+    rule_run = create_rule_run(pending_jobs_count: 0)
     rule_run.await_ai!(3)
     rule_run.reload
     # Postgres aborts the transaction on a deadlock; any query after it fails until rollback.
@@ -50,6 +50,9 @@ class RuleRunTest < ActiveSupport::TestCase
     assert_not rule_run.reload.finished?, "the AI job is still queued"
 
     rule_run.ai_handled!(handled: 5)
+    assert_not rule_run.reload.finished?, "the job hasn't reported back"
+
+    rule_run.complete_job!
     assert rule_run.reload.finished?
   end
 

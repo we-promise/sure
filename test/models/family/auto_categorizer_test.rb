@@ -96,7 +96,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     @family.update!(categorization_confidence_threshold: 0.7)
     category = @family.categories.create!(name: "Coffee")
     sure, unsure = 2.times.map { |i| create_transaction(account: @account, name: "Coffee #{i}").transaction.id }
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: 2, executed_at: Time.current)
     rule_run.await_ai!(2)
     stub_ai(:categorize) { { sure => { category: [ category.name, 0.9 ] }, unsure => { category: [ category.name, 0.3 ] } } }
@@ -476,7 +476,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
 
   private
     def ai_rule_run(count)
-      RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+      RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                       transactions_queued: count, executed_at: Time.current).tap { _1.await_ai!(count) }
     end
 
