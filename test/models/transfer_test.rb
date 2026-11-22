@@ -437,6 +437,17 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal 5, transfer.total_fee
   end
 
+  test "cryptocurrency transfer amounts keep more than four decimal places" do
+    transfer = create_transfer(
+      from_account: accounts(:crypto),
+      to_account: accounts(:depository),
+      amount: BigDecimal("0.00012345"),
+      currency: "BTC"
+    )
+
+    assert_equal BigDecimal("0.00012345"), transfer.reload.amount
+  end
+
   private
     def create_pending_transfer(from:, to:)
       outflow_entry = create_transaction(date: Date.current, account: from, amount: 500)

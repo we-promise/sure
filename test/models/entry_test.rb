@@ -657,6 +657,16 @@ class EntryTest < ActiveSupport::TestCase
       account.entries.excluding_balance_updates.pluck(:id).sort
   end
 
+  test "cryptocurrency transaction amounts keep more than four decimal places" do
+    entry = create_transaction(
+      account: accounts(:crypto),
+      currency: "BTC",
+      amount: BigDecimal("0.12345678")
+    )
+
+    assert_equal BigDecimal("0.12345678"), entry.reload.amount
+  end
+
   private
     def create_pending(account, date:, amount:)
       create_transaction(

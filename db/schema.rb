@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_22_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -95,7 +95,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.integer "account_providers_count", default: 0, null: false
     t.uuid "accountable_id"
     t.string "accountable_type"
-    t.decimal "balance", precision: 19, scale: 4
+    t.decimal "balance", precision: 34, scale: 18
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
     t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.string "cost_basis_method", default: "average", null: false
@@ -694,7 +694,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
 
   create_table "entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
-    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.decimal "amount", precision: 34, scale: 18, null: false
     t.datetime "created_at", null: false
     t.string "currency"
     t.date "date"
@@ -2903,7 +2903,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
   end
 
   create_table "transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.decimal "amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "amount", precision: 34, scale: 18, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.uuid "inflow_transaction_id", null: false
     t.text "notes"

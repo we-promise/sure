@@ -1562,6 +1562,13 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "account balances keep more than four decimal places" do
+    account = accounts(:crypto)
+    account.update!(balance: BigDecimal("2.34567891"))
+
+    assert_equal BigDecimal("2.34567891"), account.reload.balance
+  end
+
   private
     def create_loan_with_start_date(start_date, opening_balance_date)
       Account.create_and_sync(
