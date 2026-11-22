@@ -421,6 +421,13 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal [ "Other", "standard" ], [ entry.transaction.investment_activity_label, entry.transaction.kind ]
   end
 
+  test "a cash row with an unmapped subtype and a 401k name keeps Other" do
+    @plaid_account.current_account.update_columns(accountable_type: "Investment", accountable_id: Investment.create!.id)
+    entry = process_plaid_transaction(cash_row("cash_distribution_1", "distribution", "401k distribution"))
+
+    assert_equal [ "Other", "standard" ], [ entry.transaction.investment_activity_label, entry.transaction.kind ]
+  end
+
   private
 
     def cash_row(id, subtype, name)
