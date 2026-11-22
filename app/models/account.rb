@@ -9,6 +9,7 @@ class Account < ApplicationRecord
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
+  validates :ownership_percentage, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
@@ -991,6 +992,53 @@ class Account < ApplicationRecord
 
   def shared?
     account_shares.any?
+  end
+
+  # SQL twin of #ownership_percentage_for, for queries over the accounts table
+  # (the chart series and the sidebar sparkline key). +viewer_sql+ is a SQL
+  # expression for the viewer's uuid (a quoted literal or a cast bind); NULL
+  # means no viewer, who sees the whole account. Keep in step with
+  # #ownership_percentage_for; OwnershipParityTest pins them to the same figure.
+  def self.viewer_percentage_sql(viewer_sql)
+    <<~SQL.squish
+      CASE
+        WHEN #{viewer_sql} IS NULL THEN 100
+        WHEN accounts.owner_id = #{viewer_sql} THEN accounts.ownership_percentage
+        ELSE COALESCE(
+          (SELECT s.ownership_percentage FROM account_shares s
+           WHERE s.account_id = accounts.id AND s.user_id = #{viewer_sql}),
+          100
+        )
+      END
+    SQL
+  end
+
+  # Percentage (0-100) of this account that +user+ counts towards their own net
+  # worth. The owner's share lives on the account; co-owners' shares live on
+  # their AccountShare. Anyone else (or no user) sees the full account.
+  def ownership_percentage_for(user)
+    return BigDecimal("100") if user.nil?
+    return ownership_percentage if owned_by?(user)
+
+    share = if account_shares.loaded?
+      account_shares.find { |s| s.user_id == user.id }
+    else
+      account_shares.find_by(user: user)
+    end
+
+    share ? share.ownership_percentage : BigDecimal("100")
+  end
+
+  def ownership_fraction_for(user)
+    ownership_percentage_for(user) / 100
+  end
+
+  def owned_balance_for(user)
+    balance * ownership_fraction_for(user)
+  end
+
+  def owned_balance_money_for(user)
+    Money.new(owned_balance_for(user), currency)
   end
 
   def permission_for(user)

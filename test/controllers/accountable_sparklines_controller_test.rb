@@ -137,6 +137,78 @@ class AccountableSparklinesControllerTest < ActionDispatch::IntegrationTest
     assert_includes requested_account_ids, accounts(:connected).id
   end
 
+  test "group sparkline is built for the viewer so shares scale it" do
+    member = users(:family_member)
+    sign_in member
+    Rails.cache.clear
+
+    requested_user = nil
+    Balance::ChartSeriesBuilder.expects(:new).with do |args|
+      requested_user = args[:user]
+    end.returns(stub(balance_series: empty_series))
+
+    get accountable_sparkline_url("depository")
+
+    assert_response :success
+    assert_equal member, requested_user
+  end
+
+  test "group sparkline cache is not shared between viewers with different percentages" do
+    member = users(:family_member)
+    accounts(:depository).update!(ownership_percentage: 60)
+    accounts(:depository).account_shares.find_by!(user: member).update!(ownership_percentage: 40)
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    get accountable_sparkline_url("depository")
+    assert_response :success
+
+    # Same accessible accounts, different share: must not reuse the owner's series.
+    sign_in member
+    requested_user = nil
+    Balance::ChartSeriesBuilder.expects(:new).with do |args|
+      requested_user = args[:user]
+    end.returns(stub(balance_series: empty_series))
+
+    get accountable_sparkline_url("depository")
+
+    assert_response :success
+    assert_equal member, requested_user, "member must not be served the owner's cached series"
+  end
+
+  test "group sparkline cache is invalidated when the viewer's percentage changes" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    get accountable_sparkline_url("depository")
+    assert_response :success
+
+    accounts(:depository).update!(ownership_percentage: 50)
+
+    Balance::ChartSeriesBuilder.expects(:new).returns(stub(balance_series: empty_series))
+
+    get accountable_sparkline_url("depository")
+
+    assert_response :success
+  end
+
+  test "group sparkline cache is invalidated when a co-owner's percentage changes" do
+    member = users(:family_member)
+    sign_in member
+    share = accounts(:depository).account_shares.find_by!(user: member)
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    get accountable_sparkline_url("depository")
+    assert_response :success
+
+    # Only the AccountShare row changes: accounts.updated_at stays put.
+    share.update!(ownership_percentage: 25)
+
+    Balance::ChartSeriesBuilder.expects(:new).returns(stub(balance_series: empty_series))
+
+    get accountable_sparkline_url("depository")
+
+    assert_response :success
+  end
+
   test "linked investment sparkline does not load full account records" do
     AccountProvider.create!(
       account: accounts(:investment),
@@ -150,7 +222,7 @@ class AccountableSparklinesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_match(/SELECT .*"accounts"\."id".*"account_providers"\."id" FROM "accounts"/, queries.join("\n"))
+    assert_match(/SELECT .*"accounts"\."id".*"account_providers"\."id", CASE .* FROM "accounts"/, queries.join("\n"))
     assert_empty queries.grep(/SELECT "accounts"\.\* FROM "accounts"/)
     assert_empty queries.grep(/SELECT 1 AS one FROM "accounts".*JOIN "account_providers"/)
     assert_empty queries.grep(/SELECT (DISTINCT )?"accounts"\."id" FROM "accounts" .*"accounts"\."accountable_type" =/)

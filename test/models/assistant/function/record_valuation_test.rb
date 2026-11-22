@@ -8,6 +8,11 @@ class Assistant::Function::RecordValuationTest < ActiveSupport::TestCase
     @source = "Appraisal report 2024-06-30 (grade: A)"
   end
 
+  test "description says the amount is the full account value, not the user's share" do
+    assert_match(/FULL value of the account/, @function.description)
+    assert_match(/Never enter the user's share/, @function.description)
+  end
+
   test "records a valuation and stores the citation on the entry" do
     result = nil
 

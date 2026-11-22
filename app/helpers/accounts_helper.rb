@@ -29,6 +29,15 @@ module AccountsHelper
     }
   end
 
+  # Short label ("60%") for the sidebar row of an account the viewer counts only
+  # in part. Nil at 100%, so fully owned accounts render exactly as before.
+  def ownership_badge_label(account)
+    percentage = account.ownership_percentage_for(Current.user)
+    return if percentage == 100
+
+    number_to_percentage(percentage, precision: 2, strip_insignificant_zeros: true)
+  end
+
   # Returns the account id segment from `/accounts/<id>(/...)?`, or nil.
   # Used as a cache-key component so the sidebar's active-link styling is
   # correct without busting the cache for every unrelated path change.
