@@ -315,6 +315,7 @@ class ReportsController < ApplicationController
         family.build_cache_key("reports_body", invalidate_on_data_updates: true),
         family.entries_version,
         family.tags_version,
+        family.holdings_version,
         ExchangeRate.updated_at_version,
         family.budgets.maximum(:updated_at)&.to_f,
         BudgetCategory.joins(:budget).where(budgets: { family_id: family.id }).maximum(:updated_at)&.to_f,

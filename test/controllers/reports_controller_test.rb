@@ -619,6 +619,17 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "editing a holding's cost basis marks the cached report stale" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        holdings(:one).set_manual_cost_basis!(80)
+        assert_enqueued_with(job: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      end
+    end
+  end
+
   test "each member gets their own cached body" do
     with_memory_cache do
       ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
