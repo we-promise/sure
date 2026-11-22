@@ -237,6 +237,8 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
     assert drivers_with_residual(BigDecimal("1"), currency: "JPY").reconciles?, "the boundary itself reconciles"
     refute drivers_with_residual(BigDecimal("1.5"), currency: "JPY").reconciles?
     refute drivers_with_residual(BigDecimal("0.3"), currency: "USD").reconciles?, "a cent is still the bound for USD"
+    assert drivers_with_residual(BigDecimal("0.05"), currency: "MGA").reconciles?, "MGA has one decimal, so its unit is 0.1"
+    refute drivers_with_residual(BigDecimal("0.15"), currency: "MGA").reconciles?
 
     assert drivers_with_residual(BigDecimal("0.004"), currency: "KWD").reconciles?
     refute drivers_with_residual(BigDecimal("0.015"), currency: "KWD").reconciles?
