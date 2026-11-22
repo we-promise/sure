@@ -235,9 +235,11 @@ class Security::Price::Importer
       # don't perpetually trip the "expected_count mismatch" re-sync. Query
       # directly rather than via db_prices (which stays at the full range to
       # preserve any user-entered rows pre-listing).
+      # Distinct dates: a day can hold a price in more than one currency, and
+      # a legacy blank-currency row must not count as a second day.
       persisted_count = Security::Price
         .where(security_id: security.id, date: clamped_start_date..end_date)
-        .count
+        .distinct.count(:date)
 
       persisted_count == expected_count
     end

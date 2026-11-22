@@ -346,6 +346,22 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a blank-currency row for a day does not force a re-fetch" do
+    Security::Price.delete_all
+    date = Date.current
+    Security::Price.create!(security: @security, date: date, price: 100, currency: "USD")
+    Security::Price.new(security: @security, date: date, price: 100, currency: "").save!(validate: false)
+
+    importer = Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: date,
+      end_date: date
+    )
+
+    assert importer.send(:all_prices_exist?)
+  end
+
   test "skips re-sync for pre-listing holding once first_provider_price_on is set" do
     # Previous sync already advanced the clamp and wrote all post-listing
     # prices. The next sync should see all_prices_exist? return true (because
