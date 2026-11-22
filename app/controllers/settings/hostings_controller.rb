@@ -112,19 +112,25 @@ class Settings::HostingsController < ApplicationController
       Setting.brand_fetch_high_res_logos = hosting_params[:brand_fetch_high_res_logos] == "1"
     end
 
-    update_encrypted_setting(:twelve_data_api_key)
+    market_data_settings_changed = update_encrypted_setting(:twelve_data_api_key)
 
     if hosting_params.key?(:exchange_rate_provider)
-      Setting.exchange_rate_provider = hosting_params[:exchange_rate_provider]
+      new_provider = hosting_params[:exchange_rate_provider]
+      market_data_settings_changed = true if Setting.exchange_rate_provider != new_provider
+      Setting.exchange_rate_provider = new_provider
     end
 
     if hosting_params.key?(:securities_provider)
-      Setting.securities_provider = hosting_params[:securities_provider]
+      new_provider = hosting_params[:securities_provider]
+      market_data_settings_changed = true if Setting.securities_provider != new_provider
+      Setting.securities_provider = new_provider
     end
 
     if hosting_params.key?(:securities_providers)
       new_providers = Array(hosting_params[:securities_providers]).reject(&:blank?) & Security.valid_price_providers
       old_providers = Setting.enabled_securities_providers
+
+      market_data_settings_changed = true if new_providers != old_providers
 
       Setting.securities_providers = new_providers.join(",")
 
@@ -149,15 +155,15 @@ class Settings::HostingsController < ApplicationController
       end
     end
 
-    update_encrypted_setting(:tiingo_api_key)
-    update_encrypted_setting(:eodhd_api_key)
-    update_encrypted_setting(:alpha_vantage_api_key)
-    update_encrypted_setting(:tinkoff_invest_api_key)
-    update_encrypted_setting(:mansa_api_key)
-    update_encrypted_setting(:rentcast_api_key)
-    update_encrypted_setting(:realie_api_key)
-    update_encrypted_setting(:chimnie_api_key)
-    update_encrypted_setting(:terrascoutx_api_key)
+    market_data_settings_changed |= update_encrypted_setting(:tiingo_api_key)
+    market_data_settings_changed |= update_encrypted_setting(:eodhd_api_key)
+    market_data_settings_changed |= update_encrypted_setting(:alpha_vantage_api_key)
+    market_data_settings_changed |= update_encrypted_setting(:tinkoff_invest_api_key)
+    market_data_settings_changed |= update_encrypted_setting(:mansa_api_key)
+    market_data_settings_changed |= update_encrypted_setting(:rentcast_api_key)
+    market_data_settings_changed |= update_encrypted_setting(:realie_api_key)
+    market_data_settings_changed |= update_encrypted_setting(:chimnie_api_key)
+    market_data_settings_changed |= update_encrypted_setting(:terrascoutx_api_key)
 
     if hosting_params.key?(:syncs_include_pending)
       Setting.syncs_include_pending = hosting_params[:syncs_include_pending] == "1"
@@ -316,6 +322,10 @@ class Settings::HostingsController < ApplicationController
     update_assistant_type
     update_categorization_provider
     update_categorization_tuning
+
+    # A provider becomes usable as soon as its key or selection is saved;
+    # without this, balances stay at the 1:1 fallback until the next sync.
+    Current.family.sync_later if market_data_settings_changed
 
     if reselect_external_agent
       redirect_to settings_hosting_path, alert: t("settings.hostings.assistant_settings.external_agent_reselect")
@@ -558,15 +568,17 @@ class Settings::HostingsController < ApplicationController
     end
 
     def update_encrypted_setting(param_key)
-      return unless hosting_params.key?(param_key)
+      return false unless hosting_params.key?(param_key)
       value = hosting_params[param_key].to_s.strip
 
       # "********" is the masked placeholder rendered for an existing key; it
       # means "leave the stored value untouched". A blank submission, however,
       # is an explicit request to clear the key, so persist nil in that case.
-      return if value == "********"
+      return false if value == "********"
 
+      previous = Setting.public_send(param_key)
       Setting.public_send(:"#{param_key}=", value.presence)
+      previous != value.presence
     end
 
     def current_user_timezone

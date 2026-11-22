@@ -519,6 +519,64 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "saving a market data api key starts a family sync" do
+    with_self_hosting do
+      assert_enqueued_with(job: SyncJob) do
+        patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+      end
+    end
+  end
+
+  test "saving an unchanged market data api key does not start a family sync" do
+    Setting.twelve_data_api_key = "1234567890"
+
+    with_self_hosting do
+      assert_no_enqueued_jobs only: SyncJob do
+        patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+      end
+    end
+  end
+
+  test "submitting the masked market data api key does not start a family sync" do
+    Setting.twelve_data_api_key = "1234567890"
+
+    with_self_hosting do
+      assert_no_enqueued_jobs only: SyncJob do
+        patch settings_hosting_url, params: { setting: { twelve_data_api_key: "********" } }
+      end
+    end
+  end
+
+  test "changing the exchange rate provider starts a family sync" do
+    original_provider = Setting.exchange_rate_provider
+
+    with_self_hosting do
+      assert_enqueued_with(job: SyncJob) do
+        patch settings_hosting_url, params: { setting: { exchange_rate_provider: "yahoo_finance" } }
+      end
+    end
+  ensure
+    Setting.exchange_rate_provider = original_provider
+  end
+
+  test "changing the securities providers starts a family sync" do
+    with_self_hosting do
+      assert_enqueued_with(job: SyncJob) do
+        patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data", "yahoo_finance" ] } }
+      end
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "saving an unrelated setting does not start a family sync" do
+    with_self_hosting do
+      assert_no_enqueued_jobs only: SyncJob do
+        patch settings_hosting_url, params: { setting: { openai_model: "gpt-4" } }
+      end
+    end
+  end
+
   test "can update onboarding state when self hosting is enabled" do
     sign_in users(:sure_support_staff)
 
