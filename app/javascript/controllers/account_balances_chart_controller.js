@@ -726,7 +726,9 @@ export default class extends Controller {
       .append("svg")
       .attr("width", width)
       .attr("height", height)
-      .attr("role", "img")
+      // A labelled group, not role="img": img makes its children
+      // presentational, which would hide the lane's buttons.
+      .attr("role", "group")
       .attr("aria-label", this.t("chart_aria_label"))
       .attr("class", "text-secondary");
     const uid = Math.random().toString(36).slice(2);

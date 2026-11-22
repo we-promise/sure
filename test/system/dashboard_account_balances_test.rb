@@ -45,6 +45,9 @@ class DashboardAccountBalancesTest < ApplicationSystemTestCase
     within "section[data-section-key='account_balances']" do
       dot = find("[data-account-balances-chart-target='chart'] [data-transaction-id='#{entry.id}'][role='button'][tabindex='0']", match: :first)
       assert_includes dot["aria-label"], "Keyboard bakery"
+      # role="img" would make the dots presentational (ARIA children-presentational); a group keeps them buttons.
+      assert_selector "[data-account-balances-chart-target='chart'] svg[role='group'][aria-label]", match: :first
+      assert_no_selector "[data-account-balances-chart-target='chart'] svg[role='img']"
       dot.send_keys(:enter)
     end
 
