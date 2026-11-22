@@ -151,6 +151,8 @@ class McpController < ApplicationController
       access_token = Doorkeeper::AccessToken.by_token(token)
       return false unless access_token&.accessible?
       return false unless access_token.scopes.include?(REQUIRED_SCOPE)
+      # The mobile app uses /api/v1 only, and Settings > MCP leaves its tokens out.
+      return false if MobileDevice.oauth_access_tokens.exists?(access_token.id)
 
       user = User.find_by(id: access_token.resource_owner_id)
       return false unless user&.active?

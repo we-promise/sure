@@ -73,6 +73,20 @@ class Settings::McpControllerTest < ActionDispatch::IntegrationTest
     assert_select "li", text: /Sure Mobile/, count: 0
   end
 
+  test "does not show a mobile app token refreshed without its device" do
+    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
+    Doorkeeper::AccessToken.create!(
+      application: MobileDevice.shared_oauth_application,
+      resource_owner_id: @user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    get settings_mcp_path
+    assert_response :success
+    assert_select "li", text: /Sure Mobile/, count: 0
+  end
+
   test "cannot revoke another user's token" do
     other_user = users(:family_member)
     app = Doorkeeper::Application.create!(

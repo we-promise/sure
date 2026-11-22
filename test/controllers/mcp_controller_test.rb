@@ -163,6 +163,61 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     inactive_user&.update!(active: true)
   end
 
+  test "rejects a token issued to the mobile app" do
+    token = issue_mobile_token(@user)
+
+    post "/mcp", params: jsonrpc_request("initialize").to_json,
+         headers: mcp_headers(token[:access_token])
+
+    assert_response :unauthorized
+  end
+
+  test "rejects a mobile app token refreshed through the OAuth token endpoint" do
+    token = issue_mobile_token(@user)
+
+    post "/oauth/token", params: {
+      grant_type: "refresh_token",
+      client_id: MobileDevice.shared_oauth_application.uid,
+      refresh_token: token[:refresh_token]
+    }
+
+    assert_response :success
+    refreshed = JSON.parse(response.body)["access_token"]
+    assert_nil Doorkeeper::AccessToken.by_token(refreshed).mobile_device_id,
+      "Doorkeeper's refresh grant does not carry mobile_device_id over"
+
+    post "/mcp", params: jsonrpc_request("initialize").to_json,
+         headers: mcp_headers(refreshed)
+
+    assert_response :unauthorized
+  end
+
+  test "rejects a Doorkeeper token revoked after its session started" do
+    app = Doorkeeper::Application.create!(
+      name: "Test MCP Client #{SecureRandom.hex(4)}",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: @user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    with_mcp_cache do
+      post "/mcp", params: jsonrpc_request("initialize").to_json, headers: mcp_headers(token.token)
+      assert_response :ok
+      session_id = response.headers["Mcp-Session-Id"]
+
+      token.revoke
+
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(token.token).merge("Mcp-Protocol-Version" => MCP_PROTOCOL_VERSION, "Mcp-Session-Id" => session_id)
+      assert_response :unauthorized
+    end
+  end
+
   test "env-var token still works as fallback" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("initialize").to_json,
@@ -893,6 +948,17 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def issue_mobile_token(user)
+      MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
+      device = MobileDevice.create!(
+        user: user,
+        device_id: "test-device-#{SecureRandom.hex(4)}",
+        device_name: "Test Phone",
+        device_type: "ios"
+      )
+      device.issue_token!
+    end
 
     def with_mcp_env(&block)
       with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
