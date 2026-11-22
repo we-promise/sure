@@ -103,7 +103,8 @@ class Provider::Plaid
         access_token: access_token,
         cursor: cursor,
         options: {
-          include_original_description: true
+          include_original_description: true,
+          days_requested: MAX_HISTORY_DAYS
         }
       )
 

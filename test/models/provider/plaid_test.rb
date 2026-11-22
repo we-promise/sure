@@ -157,6 +157,18 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     @plaid.refresh_transactions("access-token")
   end
 
+  test "requests the maximum transaction history on the first sync" do
+    response = Struct.new(:added, :modified, :removed, :has_more, :next_cursor)
+      .new([], [], [], false, "next-cursor")
+
+    @plaid.client.expects(:transactions_sync).with do |request|
+      request.is_a?(Plaid::TransactionsSyncRequest) &&
+        request.options[:days_requested] == Provider::Plaid::MAX_HISTORY_DAYS
+    end.returns(response)
+
+    @plaid.get_transactions("access-token")
+  end
+
   test "gets item investments" do
     VCR.use_cassette("plaid/get_item_investments") do
       access_token = get_access_token
