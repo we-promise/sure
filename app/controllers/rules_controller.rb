@@ -270,7 +270,7 @@ class RulesController < ApplicationController
 
     def rule_params
       params.require(:rule).permit(
-        :resource_type, :effective_date, :active, :name, :stop_processing,
+        :resource_type, :effective_date, :active, :name, :stop_processing, :apply_immediately,
         :rule_group_id, :new_rule_group_name,
         conditions_attributes: [
           :id, :condition_type, :operator, :value, :_destroy,

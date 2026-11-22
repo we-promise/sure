@@ -206,6 +206,44 @@ class QuestradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  test "complete_account_setup ignores hostless return_to and falls back to accounts" do
+    questrade_account = @questrade_item.questrade_accounts.create!(
+      name: "Margin (11111111)",
+      questrade_account_id: "11111111",
+      account_type: "Margin",
+      currency: "CAD",
+      current_balance: 3000
+    )
+
+    post complete_account_setup_questrade_item_url(@questrade_item), params: {
+      return_to: "///evil.com",
+      accounts: {
+        questrade_account.id.to_s => { account_type: "investment", balance: "3000" }
+      }
+    }
+
+    assert_redirected_to accounts_path
+  end
+
+  test "complete_account_setup keeps a routable same-site return_to" do
+    questrade_account = @questrade_item.questrade_accounts.create!(
+      name: "Margin (11111111)",
+      questrade_account_id: "11111111",
+      account_type: "Margin",
+      currency: "CAD",
+      current_balance: 3000
+    )
+
+    post complete_account_setup_questrade_item_url(@questrade_item), params: {
+      return_to: "/accounts?tab=manual",
+      accounts: {
+        questrade_account.id.to_s => { account_type: "investment", balance: "3000" }
+      }
+    }
+
+    assert_redirected_to "/accounts?tab=manual"
+  end
+
   test "complete_account_setup redirects with alert when no accounts provided" do
     post complete_account_setup_questrade_item_url(@questrade_item), params: { accounts: {} }
 

@@ -9,9 +9,10 @@ class Rule::Runner::Claims
     @stopped_ids = Set.new
   end
 
-  # The rule's matches without those a rule above stopped.
-  def unstopped_scope(rule)
-    Rule.excluding_transaction_ids(rule.matching_scope, stopped_ids)
+  # The rule's matches without those a rule above stopped. within_ids limits
+  # the matches to those transactions (see Rule#matching_scope).
+  def unstopped_scope(rule, within_ids: nil)
+    Rule.excluding_transaction_ids(rule.matching_scope(within_ids: within_ids), stopped_ids)
   end
 
   def record(rule, matched_ids)

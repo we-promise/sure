@@ -37,6 +37,15 @@ class IdentifyRecurringTransactionsJobTest < ActiveJob::TestCase
     IdentifyRecurringTransactionsJob.new.perform(@family.id, @scheduled_at)
   end
 
+  test "retries later when another pipeline run holds the family lock" do
+    Sync.for_family(@family).incomplete.find_each(&:destroy)
+    RecurringTransaction::Pipeline.stubs(:with_family_lock).returns(false)
+
+    assert_enqueued_with(job: IdentifyRecurringTransactionsJob, args: [ @family.id, @scheduled_at ]) do
+      IdentifyRecurringTransactionsJob.perform_now(@family.id, @scheduled_at)
+    end
+  end
+
   test "skips when family is missing" do
     RecurringTransaction::Identifier.any_instance.expects(:identify_recurring_patterns).never
 

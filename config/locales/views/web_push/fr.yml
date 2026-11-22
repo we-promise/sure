@@ -1,0 +1,37 @@
+---
+fr:
+  web_push:
+    title: Notifications du navigateur
+    description: Recevez les nouvelles analyses prioritaires sur ce navigateur ou cette application installée. Les notifications masquent les détails financiers sur votre écran de verrouillage.
+    enable: Activer cet appareil
+    disable: Désactiver cet appareil
+    test: Tester cet appareil
+    preview: Aperçu
+    session_notice: Les notifications s'arrêtent lorsque vous vous déconnectez ou lorsque votre session expire après 30 jours d'inactivité. Ouvrez Sure régulièrement pour garder votre session active.
+    ios_guidance: Sur iPhone ou iPad, ouvrez Sure dans Safari, choisissez Partager → Sur l'écran d'accueil, puis activez les notifications depuis l'application installée. Nécessite iOS ou iPadOS 16.4 ou version ultérieure.
+    notification:
+      body: Une nouvelle alerte financière est disponible. Ouvrez Sure pour la consulter.
+      test_body: Votre notification de test est bien arrivée. Ouvrez Sure pour continuer.
+    status:
+      checking: Vérification de cet appareil…
+      enabled: Les notifications sont activées pour cet appareil et cette session.
+      disabled: Les notifications sont désactivées pour cet appareil.
+      denied: Les notifications sont bloquées dans les paramètres du navigateur. Autorisez-les à cet endroit, puis réactivez cet appareil.
+      unsupported: Ce navigateur ne prend pas en charge les notifications. Utilisez un navigateur compatible ou une application installée, en HTTPS.
+      unconfigured: Les notifications du navigateur n'ont pas été configurées sur ce serveur.
+      queued: Test en file d'attente. En attente de son acceptation par le service push.
+      accepted: Accepté par le service push. Vérifiez la notification sur cet appareil ; l'acceptation ne garantit pas qu'elle a été affichée.
+      skipped: Test ignoré, car cette session ou l'accès aux fonctionnalités d'aperçu a changé, ou le test a expiré. Activez cet appareil et réessayez.
+      rejected: Le service push a rejeté ce test. Désactivez cet appareil, puis réactivez-le.
+      failed: Le test n'a pas pu être distribué. Réessayez plus tard.
+      enqueue_failed: Le test n'a pas pu être mis en file d'attente. Réessayez plus tard.
+      pending: Test en file d'attente ou en cours de nouvelle tentative. La distribution peut prendre un moment.
+      expired: Le test est toujours en file d'attente. Vérifiez les workers en arrière-plan ou relancez un test plus tard.
+    errors:
+      registration: Impossible d'enregistrer cet appareil. Essayez de le désactiver, puis de le réactiver.
+      preview: Activez les fonctionnalités d'aperçu avant d'utiliser les notifications du navigateur.
+      unconfigured: Les notifications du navigateur n'ont pas été configurées sur ce serveur.
+      rate_limited: Trop de demandes de notification. Patientez une minute, puis réessayez.
+      enqueue: Impossible de mettre la notification de test en file d'attente. Réessayez plus tard.
+      request: Impossible de mettre à jour les notifications du navigateur. Vérifiez votre connexion et réessayez.
+      permission: L'autorisation d'afficher des notifications n'a pas été accordée.
