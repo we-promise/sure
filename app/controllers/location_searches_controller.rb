@@ -8,4 +8,12 @@ class LocationSearchesController < ApplicationController
   rescue Geocoding::NominatimClient::RequestFailed, Net::OpenTimeout, Net::ReadTimeout
     render json: [], status: :service_unavailable
   end
+
+  def reverse
+    result = Geocoding::NominatimClient.new.reverse(params[:lat], params[:lng])
+
+    render json: result ? { lat: result.lat, lng: result.lng, display_name: result.display_name } : {}, status: result ? :ok : :not_found
+  rescue Geocoding::NominatimClient::RequestFailed, Net::OpenTimeout, Net::ReadTimeout
+    render json: {}, status: :service_unavailable
+  end
 end

@@ -645,7 +645,9 @@ Rails.application.routes.draw do
   end
 
   resource :map, only: :show, controller: "maps"
-  resources :location_searches, only: :index
+  resources :location_searches, only: :index do
+    get :reverse, on: :collection
+  end
 
   resources :bills, only: %i[index show] do
     # POST for the same reason recurring_transactions#identify is: detection

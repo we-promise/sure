@@ -47,4 +47,28 @@ class LocationSearchesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :service_unavailable
   end
+
+  test "reverse returns JSON for coordinates" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    Geocoding::NominatimClient.any_instance.stubs(:reverse).with("41.3851", "2.1734").returns(
+      Geocoding::NominatimClient::Result.new(lat: 41.3851, lng: 2.1734, display_name: "Barcelona, Spain")
+    )
+
+    get reverse_location_searches_url(lat: "41.3851", lng: "2.1734"), as: :json
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal "Barcelona, Spain", body["display_name"]
+    assert_equal 41.3851, body["lat"]
+    assert_equal 2.1734, body["lng"]
+  end
+
+  test "reverse returns a service-unavailable status when Nominatim fails" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    Geocoding::NominatimClient.any_instance.stubs(:reverse).raises(Geocoding::NominatimClient::RequestFailed)
+
+    get reverse_location_searches_url(lat: "41.3851", lng: "2.1734"), as: :json
+
+    assert_response :service_unavailable
+  end
 end
