@@ -75,10 +75,11 @@ module Enrichable
           self[attr_key.to_s]
         end
 
-        # Normalize arrays for comparison (sort them)
+        # Normalize arrays for comparison (sort them). Repeats are dropped
+        # because the setters that take arrays (tag_ids=) store each value once.
         if current_value.is_a?(Array) && attr_value.is_a?(Array)
           current_values[attr_key] = current_value
-          current_value.sort == attr_value.sort
+          current_value.uniq.sort == attr_value.uniq.sort
         else
           current_values[attr_key] = current_value
           current_value == attr_value

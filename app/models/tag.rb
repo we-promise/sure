@@ -62,28 +62,41 @@ class Tag < ApplicationRecord
   end
 
   def replace_and_destroy!(replacement)
-    transaction do
-      raise ActiveRecord::RecordInvalid, "Replacement tag cannot be the same as the tag being destroyed" if replacement == self
+    raise ActiveRecord::RecordInvalid, "Replacement tag cannot be the same as the tag being destroyed" if replacement == self
 
-      if replacement
-        # Skip objects that already carry the replacement: moving their row
-        # would tag them twice. Their old row goes with destroy! below. The
-        # type is compared the way index_taggings_unique keys it, with a
-        # missing type folded to '', so the two always agree.
-        taggings.where(<<~SQL, replacement.id).update_all(tag_id: replacement.id)
-          NOT EXISTS (
-            SELECT 1 FROM taggings carried
-            WHERE carried.tag_id = ?
-              AND COALESCE(carried.taggable_type, '') = COALESCE(taggings.taggable_type, '')
-              AND carried.taggable_id = taggings.taggable_id
-          )
-        SQL
-        # A loaded taggings association still lists the moved rows, and
-        # destroy! would delete them by id.
-        taggings.reset
+    retried = false
+    begin
+      # A savepoint, so a unique-index error leaves an enclosing transaction usable.
+      transaction(requires_new: true) do
+        move_taggings_to(replacement) if replacement
+        destroy!
       end
+    rescue ActiveRecord::RecordNotUnique => e
+      # A concurrent writer gave an object the replacement after the move's
+      # NOT EXISTS read. Retry once: the move then sees that row and skips it.
+      raise if retried || !e.message.include?("index_taggings_unique")
 
-      destroy!
+      retried = true
+      retry
     end
   end
+
+  private
+    # Skips objects that already carry the replacement: moving their row would
+    # tag them twice. Their old row goes with destroy!. The type is compared the
+    # way index_taggings_unique keys it, with a missing type folded to '', so the
+    # two always agree.
+    def move_taggings_to(replacement)
+      taggings.where(<<~SQL, replacement.id).update_all(tag_id: replacement.id)
+        NOT EXISTS (
+          SELECT 1 FROM taggings carried
+          WHERE carried.tag_id = ?
+            AND COALESCE(carried.taggable_type, '') = COALESCE(taggings.taggable_type, '')
+            AND carried.taggable_id = taggings.taggable_id
+        )
+      SQL
+      # A loaded taggings association still lists the moved rows, and destroy!
+      # would delete them by id.
+      taggings.reset
+    end
 end

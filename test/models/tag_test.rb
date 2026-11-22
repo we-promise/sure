@@ -19,6 +19,31 @@ class TagTest < ActiveSupport::TestCase
     assert_equal [ new_tag ], moved.reload.tags.to_a
   end
 
+  # A concurrent writer can give an object the replacement tag after the move's
+  # NOT EXISTS check reads, so the move hits the unique index. The merge must
+  # retry once, seeing the new row, rather than fail the request.
+  test "replace and destroy retries once when a concurrent write hits the unique index" do
+    old_tag = tags(:one)
+    new_tag = tags(:two)
+    moved = transactions(:transfer_out)
+    moved.taggings.create!(tag: old_tag)
+
+    conflict = ActiveRecord::RecordNotUnique.new(%(duplicate key value violates unique constraint "index_taggings_unique"))
+    calls = 0
+    old_tag.define_singleton_method(:move_taggings_to) do |replacement|
+      calls += 1
+      raise conflict if calls == 1
+      super(replacement)
+    end
+
+    assert_difference "Tag.count", -1 do
+      old_tag.replace_and_destroy!(new_tag)
+    end
+
+    assert_equal 2, calls
+    assert_equal [ new_tag ], moved.reload.tags.to_a
+  end
+
   # destroy! removes the taggings association it holds. If a caller loaded it
   # before the merge, that list still names the rows the merge just moved.
   test "replace and destroy keeps the moved rows when the source taggings were loaded first" do

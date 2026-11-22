@@ -206,4 +206,15 @@ class EnrichableTest < ActiveSupport::TestCase
     assert_equal "tag_ids", de.attribute_name
     assert_equal "rule", de.source
   end
+
+  # tag_ids= stores a repeated tag once, so a repeated id is not a change.
+  test "a repeated tag id the transaction already carries is not an enrichment" do
+    txn = transactions(:transfer_out)
+    tag = tags(:one)
+    txn.update!(tag_ids: [ tag.id ])
+
+    assert_no_difference "DataEnrichment.count" do
+      refute txn.enrich_attribute(:tag_ids, [ tag.id, tag.id ], source: "rule")
+    end
+  end
 end

@@ -34,11 +34,13 @@ class Transaction < ApplicationRecord
   # discard it silently instead of raising RecordNotFound.
   def tag_ids=(ids)
     id_type = Tag.type_for_attribute(:id)
-    super(Array(ids).uniq { |id| id_type.cast(id) || id })
+    wanted = Array(ids).uniq { |id| id_type.cast(id) || id }
+    retrying_tagging_conflict { super(wanted) }
   end
 
   def tags=(tags)
-    super(Array(tags).uniq)
+    wanted = Array(tags).uniq
+    retrying_tagging_conflict { super(wanted) }
   end
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
@@ -706,6 +708,25 @@ class Transaction < ApplicationRecord
   end
 
   private
+    # Another writer can tag this transaction between it loading its tags and
+    # saving, so the insert hits index_taggings_unique. Retry once with fresh
+    # tags, inside a savepoint so an enclosing transaction survives the error.
+    def retrying_tagging_conflict
+      return yield unless persisted?
+
+      retried = false
+      begin
+        self.class.transaction(requires_new: true) { yield }
+      rescue ActiveRecord::RecordNotUnique => e
+        raise if retried || !e.message.include?("index_taggings_unique")
+
+        retried = true
+        taggings.reset
+        tags.reset
+        retry
+      end
+    end
+
     # Moves the pending transaction's attachments (the attachment rows themselves, so the
     # blobs are not purged with the pending entry) and adds its tags to the posted one.
     def carry_over_user_additions(from:, to:)
