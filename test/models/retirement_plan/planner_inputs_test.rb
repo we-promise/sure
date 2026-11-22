@@ -145,6 +145,31 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     end
   end
 
+  # With no rate on the reference date, the loan's repayment cannot be
+  # converted. Marking the plan seeded would leave the loan out for good, so
+  # the seed stays open, and the next one adds that loan without seeding the
+  # living costs or the loan in dollars a second time.
+  test "a foreign loan without a rate leaves seeding open and seeds it once a rate exists" do
+    checking = own_account(amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
+    dollars = own_loan(balance: 45_000, term_months: 60)
+    euros = own_loan(balance: 45_000, term_months: 60, currency: "EUR")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    @plan.seed_streams!(as_of: AS_OF)
+
+    assert_nil @plan.reload.streams_seeded_on
+    assert_equal [ dollars ], @plan.streams.where(source: "seeded_loan").map(&:account)
+
+    ExchangeRate.unstub(:find_or_fetch_rate)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: AS_OF, rate: BigDecimal("1.1"))
+    @plan.seed_streams!(as_of: AS_OF)
+
+    assert_equal AS_OF, @plan.reload.streams_seeded_on
+    assert_equal 1, @plan.streams.where(source: "seeded_living_costs").count
+    assert_equal [ dollars, euros ].map(&:id).sort, @plan.streams.where(source: "seeded_loan").pluck(:account_id).sort
+  end
+
   # Two requests that each loaded the plan before either seeded: the second
   # must see the first's marker, not its own stale copy.
   test "two copies of a plan loaded before either seeds do not both seed" do
@@ -303,9 +328,9 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
       account
     end
 
-    def own_loan(balance:, term_months:)
+    def own_loan(balance:, term_months:, currency: "USD")
       Account.create!(
-        family: @family, owner: @member, name: "Loan #{SecureRandom.hex(3)}", currency: "USD", balance: balance,
+        family: @family, owner: @member, name: "Loan #{SecureRandom.hex(3)}", currency: currency, balance: balance,
         accountable: Loan.new(rate_type: "fixed", interest_rate: 6, term_months: term_months,
                               initial_balance: 60_000, start_date: AS_OF - 12.months)
       )
