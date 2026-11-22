@@ -324,6 +324,7 @@ class Security::Price::Importer
 
       # For partial range or clamped range, use the most recent data before fill_start_date
       cutoff_date = fill_start_date
+      currency = prev_price_currency || db_price_currency
 
       # First try provider prices (most recent before cutoff)
       provider_date, provider_price = provider_prices
@@ -340,6 +341,7 @@ class Security::Price::Importer
           stored_quote = Security::Price
             .where(security_id: security.id, carried_forward: false)
             .where("date < ? AND price > 0", cutoff_date)
+            .then { |q| currency.present? ? q.where(currency: currency) : q }
             .order(date: :desc)
             .first
           return stored_quote.price if stored_quote && stored_quote.date >= provider_date
@@ -352,7 +354,6 @@ class Security::Price::Importer
       # recent carried-forward one when there is no real one. Without any, the
       # caller would take the stored history for pre-listing and advance
       # first_provider_price_on past it.
-      currency = prev_price_currency || db_price_currency
       Security::Price
         .where(security_id: security.id)
         .where("date < ?", cutoff_date)

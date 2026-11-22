@@ -837,6 +837,17 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal 120, Security::Price.find_by!(security: @security, date: real + 2.days).price
   end
 
+  # A quote in another currency is no anchor for prices in the provider's.
+  test "a refetched tail does not anchor on a stored quote in another currency" do
+    Security::Price.delete_all
+
+    real = 9.days.ago.to_date
+    Security::Price.create!(security: @security, date: real, price: 90, currency: "EUR")
+    import_with([ [ real + 1.day, 120, true ] ], quotes: { real - 1.day => 100 }, start_date: real)
+
+    assert_equal [ 100, "USD" ], Security::Price.find_by!(security: @security, date: real + 1.day).then { |p| [ p.price, p.currency ] }
+  end
+
   # Beyond the refetch window the carried days stay as stored, so a provider
   # close among them is newer than the stored real quote and anchors the tail.
   test "a refetched tail anchors on a provider close newer than the stored real quote" do
