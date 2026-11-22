@@ -10,6 +10,7 @@ import {
   interpolate,
   monthFormatFor,
   parseDay,
+  pluralForm,
   stackRows,
 } from "utils/account_balances_chart";
 import {
@@ -49,6 +50,7 @@ export default class extends Controller {
     settings: Object,
     labels: Object,
     transactionsUrl: String,
+    locale: String,
     preferencesUrl: String,
   };
 
@@ -215,6 +217,18 @@ export default class extends Controller {
   }
 
   // --- data ---
+  // Plural forms come as a Rails plural hash; Intl.PluralRules picks the
+  // form for the user's locale (one/few/many/other), falling back to other.
+  tp(key, count, vars = {}) {
+    const forms = this.labels[key];
+    if (typeof forms !== "object" || forms === null)
+      return this.t(key, { count, ...vars });
+    return interpolate(pluralForm(forms, count, this.localeValue || "en"), {
+      count,
+      ...vars,
+    });
+  }
+
   t(key, vars) {
     return interpolate(this.labels[key] ?? key, vars);
   }
@@ -1314,7 +1328,7 @@ export default class extends Controller {
       (item) => item.account,
     );
     const kind = point.planned
-      ? ` · ${escapeHtml(this.t(point.items.length > 1 ? "upcoming_bills" : "upcoming_bill"))}`
+      ? ` · ${escapeHtml(this.tp("upcoming_bills", point.items.length))}`
       : "";
     tip.innerHTML = `<div class="${CHART_TOOLTIP_CONTEXT_CLASSES}">${this.isoLabel(point.date)}${kind}</div>
       <div class="space-y-1.5">${byAccount
@@ -1350,13 +1364,8 @@ export default class extends Controller {
     const largest = d3
       .sort(items, (item) => -Math.abs(item.amount))
       .slice(0, 3);
-    const countText =
-      count === 1
-        ? this.t("transactions_one")
-        : this.t("transactions_other", { count });
-    const billsText = bills
-      ? ` ${bills === 1 ? this.t("bills_suffix_one") : this.t("bills_suffix_other", { count: bills })}`
-      : "";
+    const countText = this.tp("transactions", count);
+    const billsText = bills ? ` ${this.tp("bills_suffix", bills)}` : "";
     const range =
       first === last
         ? this.isoLabel(first)

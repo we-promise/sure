@@ -35,6 +35,13 @@ export function currencyAffixes(format, unit) {
   return [before.replace("%u", unit), (after || "").replace("%u", unit)]
 }
 
+// The form of a Rails plural hash ({ one:, few:, many:, other: }) that the
+// locale's plural rules pick for `count`, falling back to `other` when a
+// translation lacks that form.
+export function pluralForm(forms, count, locale = "en") {
+  return forms[new Intl.PluralRules(locale).select(count)] ?? forms.other
+}
+
 // Fills "%{name}" placeholders in a translated string.
 export function interpolate(template, vars = {}) {
   return String(template).replace(/%\{(\w+)\}/g, (match, key) => (key in vars ? String(vars[key]) : match))

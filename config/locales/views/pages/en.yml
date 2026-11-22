@@ -64,6 +64,7 @@ en:
       account_balances:
         title: Account balances
         forecast_hint:
+          zero: "Forecast = today's balance, moved by transactions already recorded with a future date. Add bills to project rent, salary or subscriptions. Accounts with neither stay flat."
           one: "Forecast = today's balance, moved by the %{count} active bill on its account and by transactions already recorded with a future date. Accounts with neither stay flat."
           other: "Forecast = today's balance, moved by the %{count} active bills on their accounts and by transactions already recorded with a future date. Accounts with neither stay flat."
         unassigned: Bills without an account
@@ -107,16 +108,19 @@ en:
         list_hidden: "%{hidden} of %{count} hidden"
         list_expand: "Expand %{name}"
         list_collapse: "Collapse %{name}"
-        upcoming_bill: upcoming bill
-        upcoming_bills: upcoming bills
+        upcoming_bills:
+          one: upcoming bill
+          other: upcoming bills
         planned_bill: planned bill
         click_open: Click to open
         click_zoom: Click to zoom in
         more_items: "+ %{count} more (total of all %{total_count}: %{amount})"
-        transactions_one: 1 transaction
-        transactions_other: "%{count} transactions"
-        bills_suffix_one: (1 upcoming bill)
-        bills_suffix_other: "(%{count} upcoming bills)"
+        transactions:
+          one: "%{count} transaction"
+          other: "%{count} transactions"
+        bills_suffix:
+          one: "(%{count} upcoming bill)"
+          other: "(%{count} upcoming bills)"
         older_not_loaded: "Transactions before %{date} not loaded, zoom in to load them"
         older_loading: Loading older transactions…
         older_failed: "Couldn't load transactions before %{date}; zoom again to retry"

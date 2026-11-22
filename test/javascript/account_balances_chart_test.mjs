@@ -10,6 +10,7 @@ import {
   interpolate,
   monthFormatFor,
   parseDay,
+  pluralForm,
   stackRows,
 } from "../../app/javascript/utils/account_balances_chart.mjs"
 
@@ -44,6 +45,21 @@ describe("currencyAffixes", () => {
     assert.deepEqual(currencyAffixes("%u%n", "$"), ["$", ""])
     assert.deepEqual(currencyAffixes("%u %n", "CHF"), ["CHF ", ""])
     assert.deepEqual(currencyAffixes("%n %u", "€"), ["", " €"])
+  })
+})
+
+describe("pluralForm", () => {
+  const forms = { one: "one", few: "few", many: "many", other: "other" }
+
+  it("picks the locale's form, including the extra forms of Slavic languages", () => {
+    assert.equal(pluralForm(forms, 1, "en"), "one")
+    assert.equal(pluralForm(forms, 5, "en"), "other")
+    assert.equal(pluralForm(forms, 3, "pl"), "few")
+    assert.equal(pluralForm(forms, 5, "pl"), "many")
+  })
+
+  it("falls back to other when a translation lacks the form", () => {
+    assert.equal(pluralForm({ one: "one", other: "other" }, 3, "pl"), "other")
   })
 })
 
