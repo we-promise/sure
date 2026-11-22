@@ -203,14 +203,19 @@ class PageCache
       def evict_to_fit
         forget(PageCacheEntry.where(last_used_at: ...Setting.page_cache_ttl.ago))
 
-        excess = total_bytes - max_bytes
-        return if excess <= 0
+        # A page renewed or replaced since it was chosen is skipped, so choose
+        # again from what remains until the cache fits or nothing is left to drop.
+        tried = []
+        while (excess = total_bytes - max_bytes).positive?
+          freed = 0
+          chosen = PageCacheEntry.where.not(id: tried).order(:last_used_at).pluck(:id, :page_key, :bytes, :last_used_at).take_while do |_, _, bytes, _|
+            (freed < excess).tap { freed += bytes }
+          end
+          break if chosen.empty?
 
-        freed = 0
-        doomed = PageCacheEntry.order(:last_used_at).pluck(:id, :bytes).take_while do |_, bytes|
-          (freed < excess).tap { freed += bytes }
+          forget_rows(chosen)
+          tried.concat(chosen.map(&:first))
         end
-        forget(PageCacheEntry.where(id: doomed.map(&:first)))
       end
 
       def forget(entries)

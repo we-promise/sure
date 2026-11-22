@@ -149,6 +149,35 @@ class PageCacheTest < ActiveSupport::TestCase
     end
   end
 
+  test "eviction chooses another page when the one it chose was renewed meanwhile" do
+    PageCache.write("page/a", SecureRandom.alphanumeric(20_000), version: "v1", family: @family, user: @user)
+    travel 1.minute do
+      PageCache.write("page/b", SecureRandom.alphanumeric(20_000), version: "v1", family: @family, user: @user)
+    end
+    PageCache.stubs(:max_bytes).returns(PageCache.total_bytes - 1)
+
+    renewing = Module.new do
+      attr_accessor :renew_on_lock
+
+      def with_page_lock(key, &block)
+        PageCacheEntry.where(page_key: renew_on_lock).update_all(last_used_at: 1.hour.from_now) if key == renew_on_lock
+        super
+      end
+    end
+    PageCache.singleton_class.prepend(renewing)
+    PageCache.renew_on_lock = "page/a"
+
+    begin
+      PageCache.send(:evict_to_fit)
+    ensure
+      PageCache.renew_on_lock = nil
+    end
+
+    assert_equal %w[page/a], PageCacheEntry.pluck(:page_key)
+    assert_operator PageCache.total_bytes, :<=, PageCache.max_bytes
+    assert_nil Rails.cache.read("page/b")
+  end
+
   test "a page the cache store refuses is served but not kept" do
     Rails.cache.stubs(:write).returns(false)
 
