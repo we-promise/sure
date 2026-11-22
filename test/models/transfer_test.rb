@@ -247,6 +247,39 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
   end
 
+  test "reject! keeps transfer kinds a pending transfer brought with it, even when the family does not confirm matches first" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.outflow_transaction.update!(kind: "funds_movement")
+    transfer.inflow_transaction.update!(kind: "funds_movement")
+    assert_not transfer.kinds_applied?
+
+    transfer.reject!
+
+    assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+    assert_equal "funds_movement", transfer.inflow_transaction.reload.kind
+  end
+
+  test "reject! takes off the Investment Contributions category a pending match gave the outflow" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+    transfer.apply_kinds!
+    assert_equal families(:dylan_family).investment_contributions_category, transfer.outflow_transaction.reload.category
+
+    transfer.reject!
+
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+    assert_nil transfer.outflow_transaction.category
+  end
+
+  test "kinds_applied? follows what the match did, not the family's current setting" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    assert_not transfer.kinds_applied?
+
+    transfer.apply_kinds!
+    families(:dylan_family).update!(require_transfer_match_confirmation: true)
+
+    assert transfer.reload.kinds_applied?
+  end
+
   test "reject! resets the transfer kinds of a confirmed transfer" do
     transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
     transfer.confirm!

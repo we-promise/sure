@@ -1,5 +1,5 @@
 <%# locals: (id:, param:, label:, description:, checked:, submit_value:) %>
-<div class="bg-container rounded-xl shadow-border-xs p-4">
+<%= render DS::Card.new do %>
   <div class="flex items-center justify-between">
     <div>
       <p class="text-sm font-medium text-primary"><%= label %></p>
@@ -24,4 +24,4 @@
       <%= toggle %>
     <% end %>
   </div>
-</div>
+<% end %>

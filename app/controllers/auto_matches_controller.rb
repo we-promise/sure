@@ -108,12 +108,12 @@ class AutoMatchesController < ApplicationController
     # include_rejected: false), which would surprise a user who re-enables
     # the toggle later expecting the same pairs to resurface.
     def cleanup_pending_auto_matches!
-      # Only clean up genuine auto-match suggestions -- legs that carry
-      # nothing but what the match gave them (Transfer#match_kinds_only?). A
-      # pending transfer imported with other kinds (Family::DataImporter)
-      # isn't an auto-match suggestion, so the toggle leaves it in place.
+      # Only clean up genuine auto-match suggestions (Transfer#match_suggestion?).
+      # A pending transfer imported with kinds of its own (Family::DataImporter)
+      # isn't one, even when those kinds equal the ones a match would give, so
+      # the toggle leaves it in place.
       Current.family.pending_transfer_matches.find_each do |transfer|
-        transfer.destroy! if transfer.match_kinds_only?
+        transfer.destroy! if transfer.match_suggestion?
       end
     end
 

@@ -53,7 +53,7 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
   end
 
   test "unmatches a pending auto-match and resets the kinds it applied" do
-    @transfer.update!(status: "pending")
+    @transfer.update!(status: "pending", match_kinds_applied: true)
 
     result = @function.call("transaction_id" => @transfer.outflow_transaction_id)
 

@@ -222,6 +222,19 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "funds_movement", imported_inflow.transaction.reload.kind
   end
 
+  test "update_settings disabling preserves an imported pending transfer whose kinds equal the ones a match gives" do
+    outflow = create_transaction(date: Date.current, account: accounts(:depository), amount: 700, kind: "funds_movement")
+    inflow = create_transaction(date: Date.current, account: accounts(:connected), amount: -700, kind: "funds_movement")
+    imported_transfer = Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction, notes: "Imported")
+    assert_not imported_transfer.match_suggestion?
+
+    patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+
+    assert Transfer.exists?(imported_transfer.id)
+    assert_equal "funds_movement", outflow.transaction.reload.kind
+    assert_equal "funds_movement", inflow.transaction.reload.kind
+  end
+
   test "update_settings disabling destroys pending auto-matches that carry transfer kinds and resets those kinds" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)

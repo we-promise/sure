@@ -164,6 +164,20 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select match, text: /#{Regexp.escape(accounts(:investment).name)}/, count: 0
   end
 
+  test "index keeps a pending match row with transfer kinds on its entry when the viewer cannot see the other side" do
+    outflow = create_transaction(account: accounts(:depository), name: "Private kinds outflow", amount: 330, date: Date.current)
+    inflow = create_transaction(account: accounts(:investment), name: "Private kinds inflow", amount: -330, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    transfer.apply_kinds!
+    sign_in users(:family_member)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(outflow)} a[href='#{transfer_path(transfer)}']", count: 0
+    assert_select "##{dom_id(outflow)} a[href='#{entry_path(outflow)}']", minimum: 1
+  end
+
   test "index gives a pending match on a transfer row no second link to the transfer" do
     outflow = create_transaction(account: accounts(:depository), name: "Moved match outflow", amount: 320, date: Date.current, kind: "funds_movement")
     inflow = create_transaction(account: accounts(:credit_card), name: "Moved match inflow", amount: -320, date: Date.current)

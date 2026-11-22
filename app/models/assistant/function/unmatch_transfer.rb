@@ -4,8 +4,8 @@
 # transactions, confirmed or pending, so a wrong match can be undone (e.g. a
 # card payment paired with the account that funded it rather than the one that
 # paid it). Both transactions stay in the ledger and lose the transfer's
-# kinds, becoming standard transactions again (a pending match in a family
-# that confirms matches first never changed their kinds, so those stay; see
+# kinds, becoming standard transactions again (a pending match whose kinds
+# the match did not set never changed them, so those stay; see
 # Transfer#kinds_applied?). Balances don't change.
 #
 # By default it rejects the pairing (Transfer#reject!, the Reject button), so

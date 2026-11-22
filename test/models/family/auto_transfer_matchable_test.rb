@@ -67,6 +67,23 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_nil outflow_entry.entryable.category
   end
 
+  test "auto-matched transfers leave a leg's own kind alone while pending" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500, kind: "one_time")
+    inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow_entry.entryable_id)
+    assert transfer.pending?
+    assert_not transfer.kinds_applied?
+    assert_equal "one_time", outflow_entry.reload.entryable.kind
+    assert_equal "standard", inflow_entry.reload.entryable.kind
+
+    transfer.reject!
+
+    assert_equal "one_time", outflow_entry.reload.entryable.kind
+  end
+
   test "requiring confirmation returns pending matches to their own kinds" do
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500)

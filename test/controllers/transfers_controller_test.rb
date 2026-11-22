@@ -764,9 +764,8 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "rejecting a pending match redraws only the rows the user can see" do
-    # The legs carry transfer kinds of their own, which only a family that
-    # confirms matches first keeps on rejecting.
-    families(:dylan_family).update!(require_transfer_match_confirmation: true)
+    # The legs carry transfer kinds of their own, not ones the match gave
+    # them, so rejecting keeps them (Transfer#kinds_applied?).
     transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
 
     patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream
@@ -878,9 +877,8 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "rows redrawn on an account page keep the account view's signed amounts" do
-    # The legs carry transfer kinds of their own, which only a family that
-    # confirms matches first keeps on rejecting.
-    families(:dylan_family).update!(require_transfer_match_confirmation: true)
+    # The legs carry transfer kinds of their own, not ones the match gave
+    # them, so rejecting keeps them (Transfer#kinds_applied?).
     transfer = transfers(:one)
     transfer.outflow_transaction.update_columns(kind: "funds_movement")
 

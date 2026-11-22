@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require Rails.root.join("db/migrate/20261119100100_restore_kinds_of_pending_transfer_matches")
+require Rails.root.join("db/migrate/20261122100200_restore_kinds_of_pending_transfer_matches")
 
 class RestoreKindsOfPendingTransferMatchesMigrationTest < ActiveSupport::TestCase
   include EntriesTestHelper

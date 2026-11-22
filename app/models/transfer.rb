@@ -185,20 +185,24 @@ class Transfer < ApplicationRecord
 
   # Whether the legs carry this transfer's kinds, the kinds budgets and
   # reports use to leave transfers out of income and spending. A confirmed
-  # transfer always does. A pending auto-match does too, unless the family
-  # asked to confirm matches first (Family#require_transfer_match_confirmation),
-  # in which case the legs keep their own kinds until #confirm!.
+  # transfer always does. A pending one does only when the match gave them
+  # (#apply_kinds!, recorded in match_kinds_applied); otherwise the legs keep
+  # their own kinds until #confirm!.
   def kinds_applied?
-    return true if confirmed?
-
-    family = to_account&.family || from_account&.family
-    !family&.require_transfer_match_confirmation?
+    confirmed? || match_kinds_applied?
   end
 
   # Whether removing this transfer returns a leg to the standard kind (see
   # #release_transactions), moving it back into income and spending.
   def releasing_resets_kinds?
     kinds_applied? && [ inflow_transaction, outflow_transaction ].compact.any?(&:transfer?)
+  end
+
+  # A pending transfer the auto-matcher suggested rather than one imported
+  # with kinds of its own: either the match gave the legs their kinds, or the
+  # legs are still both standard.
+  def match_suggestion?
+    pending? && (match_kinds_applied? || standard_legs?)
   end
 
   def confirm!
@@ -211,7 +215,8 @@ class Transfer < ApplicationRecord
   # Gives both legs their transfer kinds: the outflow by the destination
   # account (matching Transfer::Creator), the inflow funds_movement, and an
   # uncategorized contribution into an investment account the Investment
-  # Contributions category.
+  # Contributions category. A pending transfer records that the match set
+  # them, so unlinking it later takes them off again.
   def apply_kinds!
     outflow_kind = Transfer.kind_for_account(to_account, from_account: from_account)
     outflow_attrs = { kind: outflow_kind }
@@ -224,6 +229,7 @@ class Transfer < ApplicationRecord
     Transfer.transaction do
       inflow_transaction.update!(kind: "funds_movement")
       outflow_transaction.update!(outflow_attrs)
+      update!(match_kinds_applied: true) if pending? && !match_kinds_applied?
     end
 
     # The legs just stopped being ordinary transactions, so a bill suggestion
@@ -235,31 +241,29 @@ class Transfer < ApplicationRecord
     ActiveRecord.after_all_transactions_commit { RecurringTransaction.identify_patterns_for(family) }
   end
 
-  # Whether each leg carries either its standard kind or the kind
-  # #apply_kinds! gives it: nothing but what an auto-match left behind. A
-  # pending transfer imported with other kinds is not a plain suggestion.
-  def match_kinds_only?
+  # Whether the match may give the legs its kinds: each leg is standard or
+  # already a transfer of some kind (a provider marks many), so applying
+  # them overwrites no kind the user chose to count it differently (one_time).
+  def match_may_set_kinds?
     [ inflow_transaction, outflow_transaction ].all? do |transaction|
-      transaction.kind == "standard" || transaction.kind == kind_for_leg(transaction)
+      transaction.standard? || transaction.transfer?
     end
   end
 
-  # Returns legs with a transfer kind to standard, the inverse of #apply_kinds!
-  # for a pending match whose family starts confirming matches first. The
-  # Investment Contributions category #apply_kinds! gave the outflow goes too;
-  # any other category stays.
+  # Whether both legs are still at the standard kind, as a match the user
+  # must confirm first leaves them.
+  def standard_legs?
+    [ inflow_transaction, outflow_transaction ].all? { |transaction| transaction.kind == "standard" }
+  end
+
+  # The inverse of #apply_kinds! for a pending match whose family starts
+  # confirming matches first: legs with a transfer kind go back to standard.
   def reset_kinds!
     Transfer.transaction do
       [ inflow_transaction, outflow_transaction ].each do |transaction|
-        next unless transaction.transfer?
-
-        attrs = { kind: "standard" }
-        if transaction.kind == "investment_contribution" && transaction.category &&
-            Category.all_investment_contributions_names.include?(transaction.category.name)
-          attrs[:category] = nil
-        end
-        transaction.update!(attrs)
+        transaction.update!(standard_kind_attributes(transaction)) if transaction.transfer?
       end
+      update!(match_kinds_applied: false)
     end
   end
 
@@ -293,6 +297,17 @@ class Transfer < ApplicationRecord
         contribution_by_default?
     end
 
+    # The standard kind for a leg, and no Investment Contributions category
+    # where #apply_kinds! gave it one; any other category stays.
+    def standard_kind_attributes(transaction)
+      attrs = { kind: "standard" }
+      if transaction.kind == "investment_contribution" && transaction.category &&
+          Category.all_investment_contributions_names.include?(transaction.category.name)
+        attrs[:category] = nil
+      end
+      attrs
+    end
+
     # Gives each surviving transaction back its standalone state. When the
     # transfer goes because one leg is being deleted (dependent: :destroy on
     # Transaction), that leg is skipped.
@@ -303,11 +318,10 @@ class Transfer < ApplicationRecord
         next if transaction.nil? || key == deleted_leg_key
         next unless Transaction.exists?(transaction.id)
         begin
-          # A pending match the family confirms first never changed the kind
-          # (see #kinds_applied?), so a transfer kind on its transactions
-          # predates the match and stays.
+          # A pending transfer whose kinds the match did not set (see
+          # #kinds_applied?) leaves them alone: they predate the match.
           if transaction.transfer? && kinds_applied?
-            transaction.update!(kind: "standard")
+            transaction.update!(match_kinds_applied? ? standard_kind_attributes(transaction) : { kind: "standard" })
             # A kind locked by update_investment_contribution! belonged to this transfer.
             transaction.unlock_attr!(:kind) if transaction.locked?(:kind)
           end

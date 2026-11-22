@@ -4,7 +4,7 @@ pt-PT:
     title: Correspondências automáticas
     settings:
       enable_label: Ativar correspondência automática
-      enable_description: Deteta e sugere automaticamente correspondências de transferências entre contas em cada sincronização. As sugestões só são aplicadas depois de as confirmares abaixo.
+      enable_description: Deteta e sugere automaticamente correspondências de transferências entre contas em cada sincronização.
       admin_only: Apenas administradores podem alterar esta definição.
     update_settings:
       settings_updated: Definições de correspondência automática atualizadas

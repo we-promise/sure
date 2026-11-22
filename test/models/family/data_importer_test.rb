@@ -2244,6 +2244,47 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "funds_movement", transfer.outflow_transaction.kind
   end
 
+  test "imports a pending transfer with kinds of its own as is, so unlinking it keeps them" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" } },
+      { type: "Account", data: { id: "savings", name: "Savings", balance: "2500", currency: "USD", accountable_type: "Depository" } },
+      { type: "Transaction", data: { id: "pending-outflow", account_id: "checking", date: "2024-01-15", amount: "100.00", name: "Pending outflow", currency: "USD", kind: "funds_movement" } },
+      { type: "Transaction", data: { id: "pending-inflow", account_id: "savings", date: "2024-01-15", amount: "-100.00", name: "Pending inflow", currency: "USD", kind: "funds_movement" } },
+      { type: "Transfer", data: { id: "transfer-1", inflow_transaction_id: "pending-inflow", outflow_transaction_id: "pending-outflow", status: "pending" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    transfer = Transfer.joins(inflow_transaction: :entry).find_by!(entries: { name: "Pending inflow" })
+    assert transfer.pending?
+    assert_not transfer.match_kinds_applied?
+
+    transfer.reject!
+
+    assert_equal "funds_movement", transfer.inflow_transaction.reload.kind
+    assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+  end
+
+  test "imports a pending match whose kinds the export says the match gave" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" } },
+      { type: "Account", data: { id: "savings", name: "Savings", balance: "2500", currency: "USD", accountable_type: "Depository" } },
+      { type: "Transaction", data: { id: "pending-outflow", account_id: "checking", date: "2024-01-15", amount: "100.00", name: "Pending outflow", currency: "USD", kind: "funds_movement" } },
+      { type: "Transaction", data: { id: "pending-inflow", account_id: "savings", date: "2024-01-15", amount: "-100.00", name: "Pending inflow", currency: "USD", kind: "funds_movement" } },
+      { type: "Transfer", data: { id: "transfer-1", inflow_transaction_id: "pending-inflow", outflow_transaction_id: "pending-outflow", status: "pending", match_kinds_applied: true } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    transfer = Transfer.joins(inflow_transaction: :entry).find_by!(entries: { name: "Pending inflow" })
+    assert transfer.match_kinds_applied?
+
+    transfer.reject!
+
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+  end
+
   test "imports a pending transfer without applying transfer kinds when the family confirms matches first" do
     @family.update!(require_transfer_match_confirmation: true)
     ndjson = build_ndjson([

@@ -163,8 +163,10 @@ module Family::AutoTransferMatchable
         if transfer.previously_new_record?
           # A new match stays pending. Its legs take the transfer kinds right
           # away, so budgets and reports leave it out of income and spending,
-          # unless the family confirms matches first (Transfer#kinds_applied?).
-          transfer.apply_kinds! unless require_transfer_match_confirmation?
+          # unless the family confirms matches first or the user gave a leg a
+          # kind of their own (Transfer#match_may_set_kinds?), which the match
+          # must not overwrite before the user confirms it.
+          transfer.apply_kinds! if !require_transfer_match_confirmation? && transfer.match_may_set_kinds?
           created_transfers << transfer
         end
         used_transaction_ids << match.inflow_transaction_id
@@ -177,16 +179,25 @@ module Family::AutoTransferMatchable
 
   # Switches whether pending auto-matches wait for the user's confirmation
   # before their legs take transfer kinds, and brings the pending matches in
-  # line: they lose their transfer kinds when confirmation becomes required,
-  # and take them when it no longer is.
+  # line: those the match gave kinds lose them when confirmation becomes
+  # required, and those still at the standard kind take them when it no
+  # longer is. A pending transfer imported with kinds of its own keeps them.
   def update_transfer_match_confirmation!(required)
     Family.transaction do
       update!(require_transfer_match_confirmation: required)
 
       pending_transfer_matches.find_each do |transfer|
-        next unless transfer.match_kinds_only?
+        # Locked and re-read, so a match confirmed since the batch was loaded
+        # keeps its kinds.
+        transfer.with_lock do
+          next unless transfer.pending?
 
-        required ? transfer.reset_kinds! : transfer.apply_kinds!
+          if required
+            transfer.reset_kinds! if transfer.match_kinds_applied?
+          elsif transfer.standard_legs?
+            transfer.apply_kinds!
+          end
+        end
       end
     end
   end

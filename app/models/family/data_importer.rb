@@ -1131,13 +1131,23 @@ class Family::DataImporter
           apply_transfer_transaction_kinds!(transfer)
           # Restores a user's explicit choice over the destination's default kind.
           transfer.update_investment_contribution!(truthy?(data["investment_contribution"])) unless data["investment_contribution"].nil?
-        elsif transfer.kinds_applied? && transfer.match_kinds_only?
+        elsif imported_match_kinds?(transfer, data)
           # A pending match takes its kinds as an auto-match would, unless the
-          # family confirms matches first (Transfer#kinds_applied?).
+          # family confirms matches first.
           transfer.apply_kinds!
         end
         increment_summary("Transfer", transfer.previously_new_record? ? :created : :updated)
       end
+    end
+
+    # Whether an imported pending transfer is a match whose kinds the match
+    # gives: the export says the match set them, or (an export without that
+    # flag) both legs are still standard. A pending transfer imported with
+    # kinds of its own keeps them, so unlinking it later leaves them too.
+    def imported_match_kinds?(transfer, data)
+      return false if @family.require_transfer_match_confirmation? || !transfer.match_may_set_kinds?
+
+      data.key?("match_kinds_applied") ? truthy?(data["match_kinds_applied"]) : transfer.standard_legs?
     end
 
     def apply_transfer_transaction_kinds!(transfer)
