@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_20_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2889,6 +2889,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.string "kind", default: "standard", null: false
     t.jsonb "locked_attributes", default: {}
     t.uuid "merchant_id"
+    t.virtual "pending", type: :boolean, as: "((COALESCE(((extra -> 'akahu'::text) ->> 'pending'::text), ''::text) <> ALL (ARRAY['0'::text, 'f'::text, 'F'::text, 'false'::text, 'FALSE'::text, 'off'::text, 'OFF'::text, ''::text])) OR (COALESCE(((extra -> 'enable_banking'::text) ->> 'pending'::text), ''::text) <> ALL (ARRAY['0'::text, 'f'::text, 'F'::text, 'false'::text, 'FALSE'::text, 'off'::text, 'OFF'::text, ''::text])) OR (COALESCE(((extra -> 'financekit'::text) ->> 'pending'::text), ''::text) <> ALL (ARRAY['0'::text, 'f'::text, 'F'::text, 'false'::text, 'FALSE'::text, 'off'::text, 'OFF'::text, ''::text])) OR (COALESCE(((extra -> 'lunchflow'::text) ->> 'pending'::text), ''::text) <> ALL (ARRAY['0'::text, 'f'::text, 'F'::text, 'false'::text, 'FALSE'::text, 'off'::text, 'OFF'::text, ''::text])) OR (COALESCE(((extra -> 'mercury'::text) ->> 'pending'::text), ''::text) <> ALL (ARRAY['0'::text, 'f'::text, 'F'::text, 'false'::text, 'FALSE'::text, 'off'::text, 'OFF'::text, ''::text])) OR (COALESCE(((extra -> 'monobank'::text) ->> 'pending'::text), ''::text) <> ALL (ARRAY['0'::text, 'f'::text, 'F'::text, 'false'::text, 'FALSE'::text, 'off'::text, 'OFF'::text, ''::text])) OR (COALESCE(((extra -> 'plaid'::text) ->> 'pending'::text), ''::text) <> ALL (ARRAY['0'::text, 'f'::text, 'F'::text, 'false'::text, 'FALSE'::text, 'off'::text, 'OFF'::text, ''::text])) OR (COALESCE(((extra -> 'redbark'::text) ->> 'pending'::text), ''::text) <> ALL (ARRAY['0'::text, 'f'::text, 'F'::text, 'false'::text, 'FALSE'::text, 'off'::text, 'OFF'::text, ''::text])) OR (COALESCE(((extra -> 'simplefin'::text) ->> 'pending'::text), ''::text) <> ALL (ARRAY['0'::text, 'f'::text, 'F'::text, 'false'::text, 'FALSE'::text, 'off'::text, 'OFF'::text, ''::text])) OR (COALESCE(((extra -> 'up'::text) ->> 'pending'::text), ''::text) <> ALL (ARRAY['0'::text, 'f'::text, 'F'::text, 'false'::text, 'FALSE'::text, 'off'::text, 'OFF'::text, ''::text])))", stored: true
     t.string "provider_entry_reference"
     t.uuid "transfer_id"
     t.datetime "updated_at", null: false

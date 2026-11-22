@@ -49,6 +49,7 @@ class IncomeStatement::DailyExpenseTotals
     # accept aliases there.
     def query_sql_body
       <<~SQL
+        WITH #{fx_rates_cte_sql(@transactions_scope)}
         SELECT day, #{category_column_sql("category_id")}total FROM (
           SELECT
             ae.date as day,
@@ -58,6 +59,7 @@ class IncomeStatement::DailyExpenseTotals
           FROM (#{@transactions_scope.to_sql}) at
           #{entries_join_sql("at")}
           #{accounts_join_sql}
+          #{fx_rates_join_sql}
           WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
             #{investment_activity_label_sql("at")}
             AND ae.excluded = false

@@ -147,10 +147,12 @@ class Transaction < ApplicationRecord
   PENDING_FLAG_FALSE_VALUES = (ActiveModel::Type::Boolean::FALSE_VALUES.grep(String) + [ "" ]).uniq.freeze
   PENDING_FLAG_TYPE = ActiveModel::Type::Boolean.new.freeze
 
-  # PENDING_FLAG_FALSE_VALUES as a list of SQL string literals. Built from the
-  # constant alone, so class loading needs no database connection, and shared by
-  # pending_sql and PENDING_CHECK_SQL so the two cannot quote the values
-  # differently.
+  # PENDING_FLAG_FALSE_VALUES as a list of SQL string literals, built from the
+  # constant alone so class loading needs no database connection. Only the
+  # provider-subset form of pending_sql uses it: the all-provider form and
+  # PENDING_CHECK_SQL read transactions.pending, whose expression the
+  # AddPendingToTransactions migration wrote out. Changing the false values or
+  # PENDING_PROVIDERS therefore needs a migration that redefines that column.
   PENDING_FLAG_FALSE_VALUES_SQL = PENDING_FLAG_FALSE_VALUES.map { |value| "'#{value.gsub("'", "''")}'" }.join(", ").freeze
 
   # Canonical reusable SQL form of the pending? decision. Callers that inspect
@@ -169,30 +171,34 @@ class Transaction < ApplicationRecord
   # A JSON number 0.0 renders as '0.0' and is pending here; #pending? agrees,
   # because FALSE_VALUES is a Set keyed by eql? and 0.0 is not eql? to 0. The
   # parity test carries the case.
+  #
+  # For every provider it reads the stored `pending` column, which holds this
+  # same rule (see the AddPendingToTransactions migration) and, unlike the
+  # expression, has planner statistics. A subset of providers still uses the
+  # expression.
   def self.pending_sql(table_alias = "transactions", providers: PENDING_PROVIDERS)
     quoted_table = connection.quote_table_name(table_alias)
     selected_providers = Array(providers).map(&:to_s).uniq & PENDING_PROVIDERS
     return "FALSE" if selected_providers.empty?
+    return "#{quoted_table}.pending" if selected_providers.sort == PENDING_PROVIDERS.sort
 
-    selected_providers
+    pending_expression_sql(quoted_table, selected_providers)
+  end
+
+  # The rule itself, over `extra`, for the given providers.
+  def self.pending_expression_sql(quoted_table, providers)
+    providers
       .map do |provider|
         "COALESCE(#{quoted_table}.extra -> #{connection.quote(provider)} ->> #{connection.quote("pending")}, #{connection.quote("")}) NOT IN (#{PENDING_FLAG_FALSE_VALUES_SQL})"
       end
       .join(" OR ")
       .then { |predicate| "(#{predicate})" }
   end
+  private_class_method :pending_expression_sql
 
-  # Fixed-alias fragment for correlated SQL. Build from model constants without
-  # borrowing a database connection during class loading.
-  PENDING_CHECK_SQL = begin
-    PENDING_PROVIDERS
-      .map do |provider|
-        "COALESCE(t.extra -> '#{provider}' ->> 'pending', '') NOT IN (#{PENDING_FLAG_FALSE_VALUES_SQL})"
-      end
-      .join(" OR ")
-      .then { |predicate| "(#{predicate})" }
-      .freeze
-  end
+  # Fixed-alias fragment for correlated SQL over `transactions t`, for every
+  # provider.
+  PENDING_CHECK_SQL = "t.pending".freeze
 
   # The negation of pending_sql, for queries that must leave pending rows out.
   def self.not_pending_sql(table_alias = "transactions", providers: PENDING_PROVIDERS)

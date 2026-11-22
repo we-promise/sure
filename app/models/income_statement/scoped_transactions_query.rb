@@ -27,9 +27,48 @@ module IncomeStatement::ScopedTransactionsQuery
     # in COALESCE so a group with nothing convertible reads 0; the stats leave
     # it NULL, so a period with nothing convertible is skipped by the median
     # and average rather than counted as a period with no spending.
+    #
+    # The rate comes from the fx_rates CTE (fx_rates_cte_sql), joined by
+    # fx_rates_join_sql, which every query using this must include.
     def converted_amount_sql(t)
-      rate = ExchangeRate.rate_sql(from: "ae.currency", to: ":target_currency", on: "ae.date")
+      rate = "CASE WHEN ae.currency = :target_currency THEN 1 ELSE fxr.rate END"
       "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * #{rate}) ELSE ae.amount * #{rate} END"
+    end
+
+    # One rate per (currency, date) for the entries a query converts, by
+    # ExchangeRate.rate_sql's rule, so each pair is looked up once rather than
+    # once per entry. transactions_scope: the query's own transactions, for
+    # exactly their pairs; it must join `entries` unaliased, since the pairs
+    # read entries.currency and entries.date. Without it, every entry of the
+    # family, which covers any query over the family's transactions.
+    def fx_rates_cte_sql(transactions_scope = nil)
+      if transactions_scope && !joins_entries?(transactions_scope)
+        raise ArgumentError, "transactions_scope must join entries to collect its exchange rate pairs"
+      end
+
+      pairs = if transactions_scope
+        transactions_scope.unscope(:select, :order)
+                          .where.not(entries: { currency: @family.currency })
+                          .select("entries.currency AS currency, entries.date AS date")
+                          .distinct
+                          .to_sql
+      else
+        <<~SQL.squish
+          SELECT DISTINCT fx_e.currency, fx_e.date
+          FROM entries fx_e JOIN accounts fx_a ON fx_a.id = fx_e.account_id
+          WHERE fx_a.family_id = :family_id AND fx_e.currency <> :target_currency
+        SQL
+      end
+
+      "fx_rates AS MATERIALIZED (#{ExchangeRate.rates_by_pair_sql(pairs_sql: pairs, to: ":target_currency")})"
+    end
+
+    def fx_rates_join_sql
+      "LEFT JOIN fx_rates fxr ON fxr.currency = ae.currency AND fxr.date = ae.date"
+    end
+
+    def joins_entries?(relation)
+      relation.arel.join_sources.any? { |join| join.left.respond_to?(:name) && join.left.name.to_s == "entries" }
     end
 
     def entries_join_sql(t)

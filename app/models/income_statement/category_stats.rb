@@ -39,7 +39,8 @@ class IncomeStatement::CategoryStats
 
     def query_sql
       <<~SQL
-        WITH period_totals AS (
+        WITH #{fx_rates_cte_sql},
+        period_totals AS (
           SELECT
             c.id as category_id,
             date_trunc(:interval, ae.date) as period,
@@ -48,6 +49,7 @@ class IncomeStatement::CategoryStats
           FROM transactions t
           #{entries_join_sql("t")}
           #{accounts_join_sql}
+          #{fx_rates_join_sql}
           LEFT JOIN categories c ON c.id = t.category_id
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
