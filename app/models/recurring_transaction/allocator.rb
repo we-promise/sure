@@ -22,6 +22,9 @@ class RecurringTransaction
     # holding the entry.
     class EntryExhaustedError < OverAllocationError; end
     class AlreadyAllocatedError < OverAllocationError; end
+    # The entry is one side of a split (the parent, or one of its children)
+    # and the other side already pays a bill. Both sides are the same money.
+    class SplitCounterpartAllocatedError < OverAllocationError; end
     class MissingRateError < StandardError; end
 
     # Postgres keeps single-key and two-key advisory locks in separate spaces,
@@ -42,24 +45,57 @@ class RecurringTransaction
       )
     end
 
+    # Keyed on the split root, so a split parent and its children share one
+    # lock: their counterpart checks then see each other's committed writes.
     def self.entry_lock_id(entry)
-      Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
+      Digest::MD5.hexdigest((entry.parent_entry_id || entry.id).to_s).to_i(16) % (2**31)
+    end
+
+    # Allocations that count toward an entry's capacity: everything except
+    # tombstones from ended series (a deleted or dismissed bill). Counting
+    # those would permanently consume the entry and block re-use on a new
+    # bill (see #3592). Defined once so the capacity checks stay in sync.
+    def self.active_allocations(allocations = RecurringAllocation.all)
+      allocations.joins(recurring_occurrence: :recurring_transaction)
+                 .where.not(recurring_transactions: { status: "ended" })
     end
 
     # What guard_entry_capacity! would leave of each entry for another bill,
     # for many entries in one query. Entries no bill uses yet are omitted.
     # Pass a narrower allocations scope to count only the bills a viewer can
     # see; the guard itself always counts every allocation.
+    #
+    # The query also reads the allocations of each entry's split counterparts
+    # (see Entry#split_counterparts): once one side of a split pays a bill, the
+    # other side has nothing left.
     def self.remaining_by_entry(entries, allocations: RecurringAllocation.all)
       by_id = entries.index_by(&:id)
+      scope = active_allocations(allocations).joins(:entry)
 
-      allocations.where(entry_id: by_id.keys).group(:entry_id).pluck(
-        :entry_id,
-        Arel.sql("SUM(COALESCE(source_amount, allocated_amount))"),
-        Arel.sql("BOOL_OR(source_amount IS NULL)")
-      ).to_h do |entry_id, used, unmeasurable|
-        [ entry_id, unmeasurable ? 0 : [ by_id[entry_id].amount.abs - used, 0 ].max ]
+      rows = scope.where(entry_id: by_id.keys + entries.filter_map(&:parent_entry_id))
+                  .or(scope.where(entries: { parent_entry_id: by_id.keys }))
+                  .group(:entry_id, "entries.parent_entry_id")
+                  .pluck(
+                    :entry_id,
+                    "entries.parent_entry_id",
+                    Arel.sql("SUM(COALESCE(source_amount, allocated_amount))"),
+                    Arel.sql("BOOL_OR(source_amount IS NULL)")
+                  )
+
+      paying_ids = rows.map(&:first).to_set
+      paying_parent_ids = rows.filter_map(&:second).to_set
+      spent_by_counterpart = entries.select do |entry|
+        paying_ids.include?(entry.parent_entry_id) || paying_parent_ids.include?(entry.id)
       end
+
+      remaining = rows.each_with_object({}) do |(entry_id, _parent_id, used, unmeasurable), result|
+        entry = by_id[entry_id]
+        next unless entry
+
+        result[entry_id] = unmeasurable ? 0 : [ entry.amount.abs - used, 0 ].max
+      end
+      spent_by_counterpart.each { |entry| remaining[entry.id] = 0 }
+      remaining
     end
 
     def initialize(occurrence)
@@ -101,6 +137,7 @@ class RecurringTransaction
           )
 
           learn_from_manual_attach!(allocation) if entry
+          allocation = promote_settlement!(allocation) if entry && amount.blank?
           refresh_close_state!
           allocation
         end
@@ -240,7 +277,7 @@ class RecurringTransaction
         total = confirmed.sum(&:allocated_amount)
 
         if confirmed.size == 1
-          tolerance = expected * (occurrence.recurring_transaction.amount_tolerance_pct / BigDecimal("100"))
+          tolerance = expected * (occurrence.recurring_transaction.effective_amount_tolerance_pct / BigDecimal("100"))
           return true if (confirmed.first.allocated_amount - expected).abs <= tolerance
         end
 
@@ -267,7 +304,12 @@ class RecurringTransaction
             # allocates nothing, never the occurrence's outstanding balance.
             capacity = entry_capacity(entry, entry_total)
             remaining = occurrence.remaining_amount
-            remaining.positive? ? [ capacity, remaining ].min : capacity
+
+            if settles_bill?(entry, entry_total)
+              capacity
+            else
+              remaining.positive? ? [ capacity, remaining ].min : capacity
+            end
           end
 
           [ allocated, allocated, entry.currency ]
@@ -300,15 +342,47 @@ class RecurringTransaction
         end
       end
 
-      # Allocations that count toward an entry's capacity: everything except
-      # tombstones from ended series (a deleted or dismissed bill). Counting
-      # those would permanently consume the entry and block re-use on a new
-      # bill (see #3592). Defined once so the capacity checks stay in sync.
+      # Actual-replaces-estimate: an entry that is the bill itself is recorded at
+      # its real amount instead of being capped at the estimate. It qualifies
+      # only when nothing has been paid against this occurrence or this entry
+      # yet, and its amount sits inside the same tolerance band the matcher uses.
+      # Partial payments and accumulations keep the capped behaviour.
+      def settles_bill?(entry, entry_total)
+        return false if occurrence.allocations.confirmed.exists?
+        return false if active_allocations_for(entry).exists?
+
+        within_settlement_band?(entry_total)
+      end
+
+      def within_settlement_band?(entry_total)
+        expected = occurrence.resolved_expected_amount
+        return false unless expected.positive?
+
+        tolerance = expected * (occurrence.recurring_transaction.effective_amount_tolerance_pct / BigDecimal("100"))
+        (entry_total - expected).abs <= tolerance
+      end
+
+      # A manual link can teach the band that covers it (learn_from_manual_attach!),
+      # but only after its own allocation was capped. When the band it just taught
+      # now covers this payment, and it is the only settlement of the bill and the
+      # only use of the entry, record the whole entry so the history shows what
+      # was actually paid. Explicit amounts are never changed.
+      def promote_settlement!(allocation)
+        entry = allocation.entry
+        return allocation unless entry.currency == occurrence.currency
+        return allocation unless occurrence.allocations.confirmed.count == 1
+        return allocation unless active_allocations_for(entry).count == 1
+
+        entry_total = entry.amount.abs
+        return allocation if allocation.allocated_amount == entry_total
+        return allocation unless within_settlement_band?(entry_total)
+
+        allocation.update!(allocated_amount: entry_total, source_amount: entry_total)
+        allocation
+      end
+
       def active_allocations_for(entry)
-        RecurringAllocation
-          .where(entry: entry)
-          .joins(recurring_occurrence: :recurring_transaction)
-          .where.not(recurring_transactions: { status: "ended" })
+        self.class.active_allocations.where(entry: entry)
       end
 
       # True once any allocation on this entry (excluding those from ended
@@ -354,12 +428,15 @@ class RecurringTransaction
         expected = occurrence.resolved_expected_amount
         if expected.positive? && occurrence.allocations.confirmed.count == 1 && close_worthy?
           deviation_pct = (entry.amount.abs - expected).abs / expected * 100
-          current = BigDecimal((hints["learned_tolerance_pct"] || 0).to_s)
+          current = BigDecimal(hints["learned_tolerance_pct"].to_s, exception: false)
+          current = BigDecimal("0") unless current&.finite?
 
           if deviation_pct > series.amount_tolerance_pct &&
              deviation_pct > current &&
              deviation_pct <= Matcher::MAX_LEARNED_TOLERANCE_PCT
-            hints["learned_tolerance_pct"] = deviation_pct.round(1).to_f
+            # Round up: a deviation of 7.55% stored as 7.5% would leave the
+            # very payment that taught it outside its own band.
+            hints["learned_tolerance_pct"] = ((deviation_pct * 10).ceil / BigDecimal(10)).to_f
           end
         end
 
@@ -383,6 +460,14 @@ class RecurringTransaction
       # than one. Allocations from ended series are excluded throughout so a
       # deleted bill never blocks re-use of the same entry on a replacement.
       def guard_entry_capacity!(entry, source_amount)
+        # A split parent and its children are the same money, so whichever
+        # side pays a bill first (a suggestion included) takes the other side
+        # out. Otherwise the parent could pay one bill and a child another,
+        # counting more than the bank charged.
+        if active_allocations_for(entry.split_counterparts).exists?
+          raise SplitCounterpartAllocatedError, I18n.t("recurring_transactions.allocator.split_counterpart_allocated")
+        end
+
         if source_amount.nil? || unmeasurable_entry?(entry)
           return if active_allocations_for(entry).none?
 

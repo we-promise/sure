@@ -1,7 +1,36 @@
 ---
 es:
+  recurring_transactions:
+    allocator:
+      missing_rate: no hay tipo de cambio de %{from} a %{to}; introduce un importe a mano
+      unmeasurable: esta transacción tiene una asignación que no se puede convertir a %{currency}, así que no se puede medir lo que queda de ella. Añade un tipo de cambio para %{date} o quita primero el pago existente
+      over_allocated: asignar %{amount} supera lo que queda de la transacción, %{capacity} %{currency}
+      entry_exhausted: el importe completo de esta transacción ya está aplicado a otros pagos pendientes
+      split_counterpart_allocated: esta transacción está dividida y el cargo original o una de sus partes ya paga un recibo
+      already_allocated: esta transacción ya está aplicada a este recibo
+      exceeds_remaining: "%{amount} supera los %{remaining} pendientes de este ciclo"
   activerecord:
+    attributes:
+      recurring_transaction:
+        payment_url: Enlace de pago
+        frequency_interval: Intervalo de repetición
     errors:
       models:
         recurring_transaction:
           merchant_or_name_required: Debe indicarse el comercio o el nombre
+          attributes:
+            payment_url:
+              invalid_scheme: debe ser una dirección http:// o https:// válida
+            anchor_date:
+              required_for_intervals: es obligatoria cuando una regla se repite cada 2 o más periodos
+            bill_type:
+              transfer_shape_mismatch: solo puede ser transferencia si hay una cuenta de destino
+            expected_amount_min:
+              greater_than_max: no puede ser mayor que el importe máximo previsto
+            account:
+              required_for_transfer: es obligatoria en una transferencia recurrente
+              wrong_family: debe pertenecer a esta familia
+            destination_account:
+              same_as_source: no puede ser la misma que la cuenta de origen
+              family_mismatch: debe pertenecer a la misma familia que la cuenta de origen
+              wrong_family: debe pertenecer a esta familia

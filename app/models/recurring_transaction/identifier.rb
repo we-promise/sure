@@ -4,10 +4,13 @@ class RecurringTransaction
   # them, lands unclaimed patterns as `suggested`, and offers candidate patterns
   # to the add-bill pickers.
   class Identifier
-    attr_reader :family
+    # Ids of the series the last identify_recurring_patterns run attributed
+    # ordinary charges to, by claiming or creating them.
+    attr_reader :family, :claimed_series_ids
 
     def initialize(family)
       @family = family
+      @claimed_series_ids = []
     end
 
     # Amounts within this percentage of a cluster's running mean belong to the
@@ -104,6 +107,7 @@ class RecurringTransaction
 
     # Identify and create/update recurring transactions for the family
     def identify_recurring_patterns
+      claimed_series_ids.clear
       three_months_ago = 3.months.ago.to_date
       recurring_patterns = collect_patterns(min_occurrences: 3)
 
@@ -133,6 +137,7 @@ class RecurringTransaction
 
         begin
           created = create_suggested_series(pattern, scoped: candidates.any?)
+          claimed_series_ids << created.id
           (existing_by_identity[identity] ||= []) << created
         rescue ActiveRecord::RecordNotUnique
           # Race: another process created the same identity between load and
@@ -365,6 +370,7 @@ class RecurringTransaction
       # PriceChangeDetector), and so is the due day once the user has pinned
       # the schedule.
       def update_claimed_series(recurring, pattern)
+        claimed_series_ids << recurring.id
         # A detected day shift lands before the date math, so the persisted
         # next_expected_date agrees with the regenerated occurrences instead
         # of keeping the old day for a cycle.
