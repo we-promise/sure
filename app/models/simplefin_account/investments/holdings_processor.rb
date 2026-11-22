@@ -239,15 +239,23 @@ class SimplefinAccount::Investments::HoldingsProcessor
       TOTAL_BASIS_INSTITUTIONS.any? { |needle| candidates.any? { |c| c.include?(needle) } }
     end
 
+    # A fund or trust whose ticker happens to match a crypto symbol (the
+    # Grayscale Ethereum Mini Trust ETF is "ETH") is an equity, not crypto.
+    FUND_DESCRIPTION = /\b(etf|etn|trust|fund|index|shares?)\b/i
+    CRYPTO_SYMBOLS = %w[BTC ETH SOL DOGE LTC BCH].freeze
+
     def resolve_security(symbol, description)
       # Normalize crypto tickers to a distinct namespace so they don't collide
-      # with equities. The linked account type is the discriminator: an
-      # Investment account can hold an ETF whose ticker matches a crypto
-      # symbol (e.g. ETH), which must stay in the equity namespace (#2856).
+      # with equities. The linked account type is the main discriminator; an
+      # Investment account can still hold crypto (a Coinbase/Kraken account
+      # inferred as Investment), so a known crypto symbol stays namespaced
+      # unless the description names a fund or trust (#2856).
       sym = symbol.to_s.upcase
       is_crypto_account = account&.accountable_type == "Crypto"
+      is_crypto_symbol = CRYPTO_SYMBOLS.include?(sym) && !description.to_s.match?(FUND_DESCRIPTION)
+      mentions_crypto = description.to_s.downcase.include?("crypto")
 
-      if !sym.include?(":") && is_crypto_account
+      if !sym.include?(":") && (is_crypto_account || is_crypto_symbol || mentions_crypto)
         sym = "CRYPTO:#{sym}"
       end
 

@@ -402,4 +402,18 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
 
     assert_equal "CRYPTO:ETH", resolved_symbol
   end
+
+  test "an investment account inferred for a crypto exchange still namespaces crypto (#2856)" do
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:simplefin_account).returns(stub(name: "Coinbase"))
+
+    resolved_symbol = nil
+    Security::Resolver.stubs(:new).with { |symbol| resolved_symbol = symbol; true }
+      .returns(stub(resolve: securities(:aapl)))
+
+    processor.send(:resolve_security, "BTC", "Bitcoin")
+
+    assert_equal "CRYPTO:BTC", resolved_symbol
+  end
 end
