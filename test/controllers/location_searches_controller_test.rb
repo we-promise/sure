@@ -13,4 +13,38 @@ class LocationSearchesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
     assert_match(/preview/i, flash[:alert])
   end
+
+  test "returns JSON suggestions for a query" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    Geocoding::NominatimClient.any_instance.stubs(:search).with("Malaga").returns(
+      [ Geocoding::NominatimClient::Result.new(lat: 36.72, lng: -4.42, display_name: "Malaga, Spain") ]
+    )
+
+    get location_searches_url(q: "Malaga"), as: :json
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal 1, body.length
+    assert_equal "Malaga, Spain", body.first["display_name"]
+    assert_equal 36.72, body.first["lat"]
+    assert_equal(-4.42, body.first["lng"])
+  end
+
+  test "returns an empty array for a blank query" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get location_searches_url(q: ""), as: :json
+
+    assert_response :success
+    assert_equal [], JSON.parse(response.body)
+  end
+
+  test "returns a service-unavailable status when Nominatim fails" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    Geocoding::NominatimClient.any_instance.stubs(:search).raises(Geocoding::NominatimClient::RequestFailed)
+
+    get location_searches_url(q: "Malaga"), as: :json
+
+    assert_response :service_unavailable
+  end
 end
