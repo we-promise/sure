@@ -71,6 +71,13 @@ class Security::PriceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.000002891"), price.reload.price
   end
 
+  test "stores holding prices below 0.0001 without rounding them to zero" do
+    holding = holdings(:one)
+    holding.update_column(:price, BigDecimal("0.000002891"))
+
+    assert_equal BigDecimal("0.000002891"), holding.reload.price
+  end
+
   test "returns nil if no price found in DB or from provider" do
     security = securities(:aapl)
     Security::Price.delete_all # Clear any existing prices
