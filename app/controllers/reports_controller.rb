@@ -288,11 +288,23 @@ class ReportsController < ApplicationController
         Date.current.beginning_of_year.to_date
       when :last_6_months
         (Date.current.end_of_month + 1.day - 6.months).beginning_of_month.to_date
+      when :all_time
+        earliest_report_activity_date || Date.current.beginning_of_month.to_date
       when :custom
         1.month.ago.to_date
       else
         Date.current.beginning_of_month.to_date
       end
+    end
+
+    # The first transaction or trade in the accounts this member's reports read
+    # (their finance accounts, as IncomeStatement uses), never a scheduled one.
+    # An older entry in an account they can't see must not start All time: its
+    # date would show in the label and the URLs built from it.
+    def earliest_report_activity_date
+      Entry.where(account_id: Current.user.finance_accounts.select(:id), entryable_type: %w[Transaction Trade])
+        .excluding_scheduled
+        .minimum(:date)
     end
 
     def default_end_date
@@ -301,9 +313,7 @@ class ReportsController < ApplicationController
         Date.current.end_of_month.to_date
       when :quarterly
         Date.current.end_of_quarter.to_date
-      when :ytd
-        Date.current
-      when :custom
+      when :ytd, :all_time, :custom
         Date.current
       else
         Date.current.end_of_month.to_date
@@ -333,9 +343,11 @@ class ReportsController < ApplicationController
       end
       net_savings = current_income - current_expenses
 
-      # Calculate percentage changes
-      income_change = calculate_percentage_change(previous_income, current_income)
-      expense_change = calculate_percentage_change(previous_expenses, current_expenses)
+      # Calculate percentage changes. All time has no period before it to compare with.
+      unless @period_type == :all_time
+        income_change = calculate_percentage_change(previous_income, current_income)
+        expense_change = calculate_percentage_change(previous_expenses, current_expenses)
+      end
 
       # Get budget performance for current period
       budget_percent = calculate_budget_performance

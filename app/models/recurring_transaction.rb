@@ -870,6 +870,18 @@ class RecurringTransaction < ApplicationRecord
     last_occurrence_date < staleness_threshold_date
   end
 
+  # True when this series matches transactions and every one of them is now a
+  # transfer leg. Detection skips transfer kinds (see Identifier), so a
+  # suggestion built from charges later confirmed as a transfer has nothing
+  # left that would detect it today. One ordinary match keeps it: detection
+  # still sees that charge and may refresh the series from it.
+  def matches_only_transfer_legs?
+    entryable_ids = matching_transactions.map(&:entryable_id)
+
+    entryable_ids.any? &&
+      Transaction.where(id: entryable_ids).where.not(kind: Transaction::TRANSFER_KINDS).none?
+  end
+
   # A cadence the user typed is intent; the dates charges land on are
   # observation. Detection keeps refreshing the latter but must not move a
   # schedule someone set by hand. `manual` cannot carry this: it is set at
