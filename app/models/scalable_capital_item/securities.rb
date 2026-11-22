@@ -50,6 +50,14 @@ class ScalableCapitalItem::Securities
           condition: ->(source) { pending_resolution?(source) }
         )
       end
+      if pending_resolution?(security)
+        security.with_lock do
+          next unless pending_resolution?(security)
+
+          security.update!(offline: false, offline_reason: nil, failed_fetch_count: 0, failed_fetch_at: nil,
+                           price_provider: security.price_provider.presence || listing.price_provider)
+        end
+      end
       security
     end
 

@@ -135,10 +135,11 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_predicate placeholder, :offline?
     assert_equal "resolution_pending", placeholder.offline_reason
 
-    # Exercise an exchange security already referenced elsewhere.
-    listing = Security.create!(ticker: "EUNL", name: "Example ETF", exchange_operating_mic: "XETR")
+    listing = Security.create!(ticker: "EUNL", name: "Example ETF", exchange_operating_mic: "XETR",
+                               offline: true, offline_reason: "resolution_pending", failed_fetch_count: 2, failed_fetch_at: 1.day.ago)
     listing.search_isin = isin
     listing.search_currency = "EUR"
+    listing.price_provider = "yahoo_finance"
     Security.expects(:search_provider)
       .with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([ listing ])
     travel 1.day
@@ -152,6 +153,34 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal [ listing.id ], broker.holdings.distinct.pluck(:security_id)
     assert_equal [ listing.id, listing.id ], broker.trades.pluck(:security_id)
     assert_not Security.exists?(placeholder.id)
+    refute_predicate listing.reload, :offline?
+    assert_nil listing.offline_reason
+    assert_equal 0, listing.failed_fetch_count
+    assert_nil listing.failed_fetch_at
+    assert_equal "yahoo_finance", listing.price_provider
+
+    Security.expects(:search_provider).never
+    travel 1.day
+    stub_snapshot
+    run_sync
+
+    assert_equal listing.id, @item.reload.security_ids.fetch(isin)
+    assert_equal 2, broker.trades.count
+  end
+
+  test "verified listings with an unrelated offline reason stay offline" do
+    isin = position.fetch("isin")
+    listing = Security.create!(ticker: "EUNL", exchange_operating_mic: "XETR",
+                               offline: true, offline_reason: "health_check_failed")
+    listing.search_isin = isin
+    Security.expects(:search_provider)
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([ listing ])
+    stub_snapshot
+    run_sync
+
+    assert_equal listing.id, @item.reload.security_ids.fetch(isin)
+    assert_predicate listing.reload, :offline?
+    assert_equal "health_check_failed", listing.offline_reason
   end
 
   test "retries a trade-only ISIN after its history window has passed" do
