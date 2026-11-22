@@ -13,6 +13,8 @@ fr:
       mileage_unit_miles: Miles
       model: Modèle
       model_placeholder: Camry
+      purchase_date: Date d'achat
+      purchase_price: Prix d'achat
       year: Année
       year_placeholder: '2023'
     new:

@@ -16,6 +16,24 @@ class WiseItem::SyncerTest < ActiveSupport::TestCase
     assert wise_item.reload.requires_update?
   end
 
+  test "a failed sync reaches Sentry once, without the safe error carrying it as its cause" do
+    wise_item = wise_items(:one)
+    error = StandardError.new("raw provider failure")
+    WiseItem.any_instance.stubs(:import_latest_wise_data).raises(error)
+    sync = Sync.create!(syncable: wise_item)
+    captured = []
+
+    Sentry.stub(:capture_exception, ->(exception, *) { captured << exception }) do
+      sync.perform
+    end
+
+    safe_errors = captured.grep(WiseItem::Syncer::SafeSyncError)
+    assert_equal 1, safe_errors.size
+    assert_nil safe_errors.first.cause
+    assert_equal 1, captured.flat_map { |exception| exception_chain(exception) }.count { |exception| exception.equal?(error) }
+    assert_equal I18n.t("wise_items.syncer.failed"), sync.reload.error
+  end
+
   # A failed fetch completed the sync with no error anywhere. It still
   # completes, but the error is in the sync stats the Wise card shows, and
   # processing is told the import was incomplete.
@@ -70,6 +88,15 @@ class WiseItem::SyncerTest < ActiveSupport::TestCase
   end
 
   private
+
+    def exception_chain(exception)
+      chain = []
+      while exception
+        chain << exception
+        exception = exception.cause
+      end
+      chain
+    end
 
     def linked_wise_item
       wise_item = wise_items(:one)

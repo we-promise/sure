@@ -95,6 +95,17 @@ ca:
     set_default:
       depository_only: Només els comptes d'efectiu i de targeta de crèdit es poden
         establir com a predeterminats.
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): per sota de zero des del %{date}, mínim %{qty}"
+        hint: "Probablement falta una compra o un traspàs. Afegeix-la o corregeix les operacions que han deixat la posició per sota de zero."
+        link: "Revisa les posicions"
+        message: "Algunes posicions han quedat per sota de zero"
+      sync_failed:
+        message: "L'última sincronització ha fallat"
+      sync_hint: "Les xifres poden estar desactualitzades. Torna a sincronitzar per posar-les al dia."
+      sync_stale:
+        message: "L'última sincronització no ha acabat"
     show:
       activity:
         amount: Import
