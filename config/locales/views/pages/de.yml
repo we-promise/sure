@@ -144,7 +144,7 @@ de:
       spending_trend:
         title: "Ausgabenverlauf"
         date_range: "%{start_date} bis %{end_date}"
-        date_range_short: "%{start_date} – %{end_day}., %{year}"
+        date_range_short: "%{start_date} – %{end_day}. %{year}"
         date_range_short_single: "%{date} %{year}"
         month_picker_aria_label: "Monat wählen"
         compare_picker_aria_label: "Vergleichsmonate wählen"
