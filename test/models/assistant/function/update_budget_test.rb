@@ -212,6 +212,15 @@ class Assistant::Function::UpdateBudgetTest < ActiveSupport::TestCase
     assert_equal "invalid_params", result[:error]
   end
 
+  test "rejects non-string month values" do
+    [ 1, [ "2026-05" ], [], {}, :may ].each do |raw|
+      result = @function.call("month" => raw, "budgeted_spending" => 1)
+
+      assert_equal false, result[:success], "Expected #{raw.inspect} to be rejected"
+      assert_equal "invalid_params", result[:error]
+    end
+  end
+
   test "rejects months outside the valid budget range" do
     far_future = (Date.current + 10.years).strftime("%Y-%m")
 
