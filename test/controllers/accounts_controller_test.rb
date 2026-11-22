@@ -1209,6 +1209,24 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(@account, :container)}", count: 0
   end
 
+  test "statements tab lists statements by period" do
+    statements = [ Date.new(2024, 2, 1), Date.new(2024, 4, 1), Date.new(2024, 3, 1) ].map do |month|
+      statement = AccountStatement.create_from_upload!(
+        family: @account.family,
+        account: @account,
+        file: uploaded_file(filename: "statement_#{month}.csv", content_type: "text/csv", content: "date,amount\n#{month},1\n")
+      )
+      statement.update!(period_start_on: month, period_end_on: month.end_of_month)
+      statement
+    end
+
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+    assert_equal statements.sort_by(&:period_end_on).reverse.map { |statement| dom_id(statement) },
+                 css_select("tr[id^='account_statement_']").map { |row| row["id"] }
+  end
+
   test "statements tab filters historical coverage by year" do
     account = Account.create!(
       family: @user.family,
