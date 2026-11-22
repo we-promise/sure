@@ -12,24 +12,36 @@
 # Inactive rules above are skipped because they don't run nightly either.
 # ignore_attribute_locks only applies to the requested rules.
 #
+# With transaction_ids every rule, including the active rules above, only
+# looks at those transactions ("apply immediately" after a manual or API
+# change). Rules that match none of them are skipped without a RuleRun, so
+# editing doesn't fill the history. In such a run the active rules above don't
+# send their emails: only rules marked "apply immediately" email right away,
+# the others keep emailing from the nightly run (emails claim no attribute,
+# so skipping them changes nothing for the rules below).
+#
 # One run per family at a time, guarded by a PostgreSQL advisory lock. A busy
 # lock raises LockBusy so the calling job can retry instead of dropping the run.
 class Rule::Runner
   LockBusy = Class.new(StandardError)
 
-  attr_reader :errors
+  # changed_now_count: transactions the run changed itself, without the ones
+  # handed to AI jobs, which report their own changes (RuleRun#complete_job!).
+  attr_reader :errors, :changed_now_count
 
   def self.advisory_lock_key(family_id)
     Digest::MD5.hexdigest("rule_runner:#{family_id}").to_i(16) % (2**62)
   end
 
-  def initialize(family, rules:, execution_type:, ignore_attribute_locks: false)
+  def initialize(family, rules:, execution_type:, ignore_attribute_locks: false, transaction_ids: nil)
     @family = family
+    @transaction_ids = transaction_ids&.map(&:to_s)
     @rule_ids = rules.map(&:id).to_set
     @execution_type = execution_type
     @ignore_attribute_locks = ignore_attribute_locks
     @claims = Claims.new
     @errors = []
+    @changed_now_count = 0
   end
 
   # Returns the RuleRun records created, one per executed rule.
@@ -44,7 +56,7 @@ class Rule::Runner
   end
 
   private
-    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claims
+    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claims, :transaction_ids
 
     def run_rules
       rule_runs = []
@@ -56,21 +68,28 @@ class Rule::Runner
         if remaining_ids.delete?(rule.id)
           rule_runs << execute(rule, ignore_attribute_locks: ignore_attribute_locks)
         elsif rule.active?
-          rule_runs << execute(rule, ignore_attribute_locks: false)
+          rule_runs << execute(rule, ignore_attribute_locks: false, skip_action_types: deferred_action_types)
         end
       end
 
-      rule_runs
+      rule_runs.compact
     end
 
-    def execute(rule, ignore_attribute_locks:)
+    def deferred_action_types
+      transaction_ids ? [ Rule::ActionExecutor::SendEmailNotification.key ] : []
+    end
+
+    def execute(rule, ignore_attribute_locks:, skip_action_types: [])
       executed_at = Time.current
       matched_ids = []
       rule_run = nil
 
       begin
-        scope = claims.unstopped_scope(rule)
+        scope = claims.unstopped_scope(rule, within_ids: transaction_ids)
         matched_ids = scope.pluck(:id)
+        return nil if transaction_ids && matched_ids.empty?
+        # Nothing left to run, but stop_processing still holds (see ensure).
+        return nil if skip_action_types.any? && rule.actions.all? { |action| skip_action_types.include?(action.action_type) }
 
         rule_run = RuleRun.create!(
           rule: rule,
@@ -92,10 +111,12 @@ class Rule::Runner
           ignore_attribute_locks: ignore_attribute_locks,
           rule_run: rule_run,
           scope: rule.scope_for_transaction_ids(matched_ids),
-          claimed_ids: claims.claimed_ids
+          claimed_ids: claims.claimed_ids,
+          skip_action_types: skip_action_types
         )
 
         rule_run.update!(**run_counts(result, queued: matched_ids.size, rule: rule))
+        @changed_now_count += changed_now(result)
       rescue => e
         rule_run = record_failure(rule, rule_run, e, executed_at: executed_at, queued: matched_ids.size)
       ensure
@@ -116,6 +137,16 @@ class Rule::Runner
       else
         Rails.logger.warn("Rule::Runner: Unexpected result type from rule.apply: #{result.class} for rule #{rule.id}")
         { status: "success" }
+      end
+    end
+
+    def changed_now(result)
+      if result.is_a?(Hash) && result[:async]
+        result[:changed_now_count] || 0
+      elsif result.is_a?(Integer)
+        result
+      else
+        0
       end
     end
 

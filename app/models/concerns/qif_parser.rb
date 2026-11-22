@@ -12,6 +12,9 @@
 #   !Type:CCard / !Type:Bank / !Type:Cash / !Type:Oth L  – transactions
 #   !Type:Invst    – investment transactions
 #
+# An optional "!Option:MDY" or "!Option:DMY" line declares whether numeric
+# dates put the month or the day first.
+#
 # Transaction field codes:
 #   D  date        M/ D'YY  or  MM/DD'YYYY
 #   T  amount      may include commas, e.g. "-1,234.56"
@@ -114,6 +117,17 @@ module QifParser
            .map(&:strip)
            .reject { |t| %w[Tag Cat Security Prices].include?(t) }
            .first
+  end
+
+  # Returns "MDY" or "DMY" when the file declares its date order with an
+  # "!Option:MDY" or "!Option:DMY" line, otherwise nil.
+  def self.date_order(content)
+    return nil if content.blank?
+
+    content = normalize_encoding(content)
+    content = normalize_line_endings(content).delete_prefix("\uFEFF")
+
+    content.match(/^!Option:(MDY|DMY)[ \t]*$/i)&.captures&.first&.upcase
   end
 
   # Parses all transactions from the file, excluding the Opening Balance entry.
@@ -542,7 +556,7 @@ module QifParser
     try_parse_date(date_str, date_format: date_format)
   end
 
-  # Extracts all raw date strings from D-fields in transaction sections only.
+  # Extracts all raw date strings from D-fields in every transaction section.
   # Skips metadata sections (Cat, Tag, Security) where D means "description".
   # Used by Import.detect_date_format to sample dates before parsing.
   def self.extract_raw_dates(content)
@@ -551,8 +565,7 @@ module QifParser
     content = normalize_encoding(content)
     content = normalize_line_endings(content)
 
-    transaction_sections = TRANSACTION_TYPES.filter_map { |type| extract_section(content, type) }
-    transaction_sections.flat_map { |section| section.scan(/^D(.+)$/i).flatten }
+    transaction_sections(content).flat_map { |section| section[:content].scan(/^D(.+)$/i).flatten }
                         .map { |d| normalize_qif_date(d) }
                         .compact
   end

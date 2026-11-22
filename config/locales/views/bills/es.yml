@@ -1,0 +1,317 @@
+---
+es:
+  bills:
+    row_overdue: Vencido
+    row_today: Hoy
+    detect:
+      found:
+        one: Se ha encontrado 1 posible recibo. Revísalo abajo.
+        other: Se han encontrado %{count} posibles recibos. Revísalos abajo.
+      none_found: No se han encontrado nuevos patrones recurrentes. Puedes añadir recibos a mano.
+      already_running: La detección ya está en marcha. Vuelve en un momento.
+    feed:
+      calendar_name: Recibos de Sure
+    ai_prompts:
+      due_before_paycheck: "¿Qué vence antes de mi próxima nómina?"
+      subscriptions_up: "¿Qué suscripciones han subido este año?"
+      monthly_subscriptions: "¿Cuánto pago al mes en suscripciones?"
+      safe_to_spend: "¿Cuánto puedo gastar sin problema en este periodo?"
+    smart_configurations:
+      show:
+        trigger: Configurar con IA
+        title: Sugerencias de IA para %{name}
+        intro: Marca los cambios que quieras aplicar. Los que no marques se quedan tal cual.
+        no_changes: Este recibo ya coincide con su historial de pagos. No hay nada que cambiar.
+        failed: No se ha podido analizar este recibo ahora. Su configuración no ha cambiado.
+        field_name: Nombre
+        field_amount: Importe
+        field_schedule: Calendario
+        field_category: Categoría
+        field_kind: Tipo
+        field_autopay: Domiciliado
+        uncategorized: Sin categoría
+        autopay_off: 'No'
+        autopay_on: Sí
+        apply: Aplicar seleccionados
+    detail:
+      current: Actual
+      next_payment: Próximo pago
+      around: hacia el %{date}
+      overview: Resumen
+      rules: Cómo se identifica este recibo
+      rule_named: "%{name}"
+      rule_amount_range: de %{min} a %{max}
+      rule_aliases: También coincide con %{names}
+      rule_detected: Coincide con transacciones llamadas %{name}
+      rule_learned_tolerance: Los importes dentro de un %{percent} del importe habitual coinciden con este recibo
+      history_title: Últimos 12 meses
+      history_aria: Pagos de los últimos doce meses
+      key_metrics: Por año
+      year: Año
+      spent_per_year: Gastado
+      avg_payment: Pago medio
+      average: Media pagada
+      range: "%{min} a %{max}"
+      annualized: Al año
+      ytd: Pagado este año
+      last_account: Última cuenta usada
+      upcoming: Próximamente
+      manual_payment: Pago manual
+      history: Historial
+      payment_count:
+        one: 1 pago
+        other: "%{count} pagos"
+      notes: Notas
+      trial_chip: La prueba termina el %{date}
+      renews_chip: Se renueva el %{date}
+      cancelled_chip: Cancelado el %{date}
+      price_changes: Cambios de precio
+      price_change_line: "%{from} → %{to}"
+    month_pulse:
+      bill_count:
+        one: 1 recibo
+        other: "%{count} recibos"
+      left_to_pay: por pagar
+      pulse_paid: pagado
+      pulse_overdue: vencido
+      pulse_next_seven: próximos 7 días
+      pulse_until: hasta el %{date}
+      pulse_bar_aria: "%{percent}% de los recibos de este mes pagados"
+      next_up: Lo próximo
+      view_calendar: Ver calendario
+      date_today: Hoy
+      date_tomorrow: Mañana
+      unconvertible:
+        one: 1 recibo no está incluido porque no hay tipo de cambio disponible
+        other: "%{count} recibos no están incluidos porque no hay tipo de cambio disponible"
+    summary:
+      remaining: "%{amount} pendiente"
+      paid_headline: "%{amount} pagado"
+    add_bill: Añadir recibo
+    manage: Ver
+    find_payment: Buscar pago
+    add_payment: Añadir pago
+    review_match: Revisar coincidencia
+    resolve: Resolver
+    manage_payments: Gestionar pagos
+    match:
+      same_merchant: Mismo comercio
+      name_matches: El nombre coincide
+      same_transfer: Transferencia a la misma cuenta
+      exact_amount: Importe exacto
+      amount_off: "%{amount} de diferencia"
+      due_date: Coincide con el vencimiento
+      days_before:
+        one: 1 día antes del vencimiento
+        other: "%{count} días antes del vencimiento"
+      days_after:
+        one: 1 día después del vencimiento
+        other: "%{count} días después del vencimiento"
+    attention:
+      paused: En pausa
+      needs_review: Coincidencia por revisar
+      partial: Parcial
+      amount_changed: El importe ha cambiado
+      overdue:
+        one: 1 día de retraso
+        other: "%{count} días de retraso"
+    paid_label: Pagado
+    paid_over_short: Pagado, de más
+    installment_progress: Pago %{done_plus_one} de %{total}
+    partial_progress: "%{paid} de %{expected} pagado"
+    cancelled_still_scheduled: Lo marcaste como cancelado el %{date}, pero sigue programado, así que seguirán apareciendo recibos futuros.
+    paid_over: Pagado %{paid}, más de lo previsto
+    remaining_label: pendiente
+    debt_payment: Pago de deuda
+    paid_from: desde %{account}
+    amount_range: entre %{min} y %{max}
+    possible_duplicate: Posible duplicado
+    due_label:
+      overdue:
+        one: Vencido hace 1 día, vencía el %{date}
+        other: Vencido hace %{count} días, vencía el %{date}
+      today: Vence hoy
+      settled: Vencía el %{date}
+      due_since: Vence el %{date}
+      snoozed: Pospuesto hasta el %{date}
+      upcoming:
+        one: Vence mañana, %{date}
+        other: Vence en %{count} días, %{date}
+    views:
+      aria_label: Vistas de recibos
+      overview: Resumen
+      calendar: Calendario
+      paycheck: Plan de ingresos
+      all: Todos los recibos
+    pay_period:
+      paycheck_on: Nómina del %{date}
+      before_next_paycheck: Antes de tu próxima nómina
+      due_before_date: "%{amount} vence antes del %{date}"
+    paycheck:
+      unconvertible:
+        one: 1 pago no está incluido porque no hay tipo de cambio disponible
+        other: "%{count} pagos no están incluidos porque no hay tipo de cambio disponible"
+      income_section_title: Calendario de ingresos
+      manage: Gestionar
+      add_income: Añadir ingreso
+      income_paused: En pausa, sin planificar
+      income_detected: Detectado automáticamente, no fija días de cobro
+      income_next_payday: 'próximo: %{date}'
+      income_source_count:
+        one: "%{count} fuente de ingresos"
+        other: "%{count} fuentes de ingresos"
+      next_on: 'Próximo: %{date}'
+      no_upcoming_income: No hay ingresos previstos a partir de aquí.
+      empty:
+        title: Indica tu calendario de ingresos
+        description: 'Añade tus ingresos para ver qué tiene que cubrir cada cobro. Las entradas detectadas nunca fijan tus días de cobro por sí solas: los fijas tú.'
+        action: Añadir ingreso
+      all_clear:
+        title: Nada que cubrir
+        description: No vence ningún recibo desde hoy hasta el %{date}, así que nada de ese tramo está comprometido.
+      safe_after_bills: Margen tras los recibos
+      short_after_bills: Falta dinero tras los recibos
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} fuentes de ingresos"
+      before_next_paycheck: Antes del %{date}
+      no_income_arriving: No entran ingresos
+      income_amount: "%{amount} de ingresos"
+      due_this_period: Vence en este periodo
+      reserved_ahead: Reservado por adelantado
+      safe_short: Margen
+      short_short: Falta
+      reserved_footer:
+        one: Reservado para 1 recibo posterior
+        other: Reservado para %{count} recibos posteriores
+      bills_this_period:
+        one: Recibos de este periodo · 1
+        other: Recibos de este periodo · %{count}
+      bills_before_payday:
+        one: Recibos antes de tu próximo cobro · 1
+        other: Recibos antes de tu próximo cobro · %{count}
+      of_total: de %{amount}
+      bridge_label: Antes de tu próxima nómina
+      bridge_amount: "· %{amount} por pagar"
+      bridge_split: Vence antes del %{date}, cubierto por los %{cash} de tus cuentas.
+      bridge_left: "%{amount} libres tras los recibos"
+      bridge_show_more:
+        one: Mostrar 1 más
+        other: Mostrar %{count} más
+      bridge_allocation_aria: De los %{cash} de tus cuentas, %{due} vencen antes de tu próxima nómina y quedan %{left}.
+      item_overdue: Vencido
+      shortfall_label: Falta dinero antes de tu próximo cobro
+      shortfall_amount: "· %{amount}"
+      shortfall_split: Vencen %{obligations} antes del %{date} y tus cuentas tienen %{cash}.
+      shortfall_largest: 'Mayor pago próximo:'
+      review_plan: Revisar plan
+      allocation_aria: De %{income} de ingresos, %{due} vencen ahora, %{reserved} quedan reservados para después y %{safe} puedes gastarlos sin problema.
+      allocation_aria_short: "%{income} de ingresos van a lo comprometido aquí y faltan %{short}."
+    reset_feed_token:
+      done: Enlace del calendario restablecido. Las apps de calendario que usen el enlace antiguo dejarán de actualizarse; vuelve a suscribirte con el nuevo.
+      confirm: "¿Restablecer el enlace del calendario? Todos los enlaces compartidos antes dejarán de funcionar."
+    calendar:
+      subscribe_ical: Suscribirse (iCal)
+      reset_feed: Restablecer enlace
+      previous_month: Mes anterior
+      next_month: Mes siguiente
+      today: Hoy
+      month_totals: "%{expected} previsto · %{paid} pagado"
+      empty_month: No vence ningún recibo este mes.
+    all:
+      search_placeholder: Buscar recibos
+      current_bills: Recibos actuales
+      dismissed_hidden_description: Los recibos descartados están ocultos.
+      status_filters:
+        overdue: Vencidos
+        due: Vencen pronto
+        partial: Pagados en parte
+        paid: Pagados
+        paused: En pausa
+        ended: Descartados
+      subscription_monthly: Al mes
+      subscription_annual: Al año
+      subscription_active: Activa
+      subscription_price_changes: Cambios de precio este año
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      any_type: Cualquier tipo
+      sort_due: Por próximo vencimiento
+      sort_name: Por nombre
+      sort_amount: Por importe
+      no_matches_title: No hay coincidencias
+      no_matches_description: Prueba a quitar un filtro o la búsqueda.
+      col_name: Nombre
+      col_amount: Importe
+      col_next: Próximo vencimiento
+      col_actions: Acciones
+      monthly_equivalent: "%{amount}/mes"
+      types:
+        bill: Recibo
+        subscription: Suscripción
+        installment: Pago a plazos
+        income: Ingreso
+        transfer: Transferencia
+        other: Otro
+    show:
+      edit: Editar recibo
+    index:
+      left_to_pay: por pagar
+      paid_so_far: Pagado hasta ahora
+      hero_past_due: "%{amount} vencido"
+      hero_next_seven: "%{amount} vence en los próximos 7 días"
+      add_bill: Nuevo recibo
+      add_income: Nuevo ingreso
+      review_with_ai: Revisar con IA
+      detected_review:
+        one: Hemos encontrado 1 pago recurrente en tus transacciones. Revísalo para que los totales coincidan con lo que pagas de verdad.
+        other: Hemos encontrado %{count} pagos recurrentes en tus transacciones. Revísalos para que los totales coincidan con lo que pagas de verdad.
+      detected_review_action: Revisarlos
+      notices_heading: Cambios
+      needs_review: Por revisar
+      notice_trial: La prueba de %{name} termina el %{date}
+      notice_renewal: "%{name} se renueva el %{date}"
+      notice_price: "%{name} ha cambiado de precio: %{from} → %{to} (%{percent})"
+      notices_routine:
+        one: 1 cambio menor
+        other: "%{count} cambios menores"
+      suggestion_line: "%{entry} parece un pago de %{bill}"
+      suggestion_unknown_entry: Una transacción
+      confidence: "%{percent}% de coincidencia"
+      accept: Aplicar
+      reject: No es este recibo
+      title: Recibos
+      summary_label: Vence este mes
+      summary_count:
+        one: 1 recibo por pagar
+        other: "%{count} recibos por pagar"
+      summary_needs_action:
+        one: 1 requiere tu acción
+        other: "%{count} requieren tu acción"
+      all_automatic: todos domiciliados
+      recurring_label: Compromiso recurrente
+      recurring_monthly: "%{amount} al mes"
+      recurring_annual: "%{amount} al año"
+      unconvertible:
+        one: 1 recibo no está incluido porque no hay tipo de cambio disponible
+        other: "%{count} recibos no están incluidos porque no hay tipo de cambio disponible"
+      overdue: Vencido
+      needs_attention: Requiere atención
+      attention_overdue_total: "%{amount} vencido"
+      this_month: Este mes
+      later: Después de este mes
+      paid_this_month: Pagado este mes
+      dormant: En pausa
+      kpi_remaining: Pendiente este mes
+      kpi_paid: Pagado este mes
+      kpi_next_seven: Vence en 7 días
+      kpi_past_due: Vencido
+      paid_count:
+        one: 1 recibo saldado
+        other: "%{count} recibos saldados"
+      needs_action_count:
+        one: 1 requiere tu acción
+        other: "%{count} requieren tu acción"
+      empty:
+        title: Aún no hay recibos
+        description: Los recibos son tus gastos recurrentes. Sure los encuentra automáticamente en tu historial de transacciones y puedes añadir a cada uno un enlace de pago para pagar directamente desde aquí.
+        action: Buscar transacciones recurrentes
+        no_history_description: Aún no hay transacciones. Conecta una cuenta o importa tu historial y Sure encontrará tus recibos automáticamente, o añade uno a mano.
