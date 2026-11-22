@@ -115,9 +115,9 @@ class Demo::FinancekitGeneratorTest < ActiveSupport::TestCase
       transaction.update!(category: family.categories.find_by!(name: "Shopping"),
         extra: transaction.extra.except("demo_financekit_activity_version"))
     end
-    # Ordered by id: without ORDER BY Postgres returns rows in physical order,
-    # which can differ between the two reads (CI saw the same rows reordered).
-    source_records = -> { FinancekitTransaction.where(financekit_account: item.financekit_accounts).order(:id).pluck(:id, :entry_id, :raw_payload) }
+    # In id order: without ORDER BY Postgres returns rows in whatever order it
+    # finds them, which an update can change, so the same set came back reordered.
+    source_records = -> { FinancekitTransaction.where(financekit_account_lineage: item.financekit_account_lineages).order(:id).pluck(:id, :entry_id, :raw_payload) }
     original_source_records = source_records.call
     balances = [ card.balance, cash.balance ]
 

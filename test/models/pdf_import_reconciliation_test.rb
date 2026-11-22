@@ -176,6 +176,49 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal "2007", @statement.account_last4_hint
   end
 
+  test "extract_transactions keeps the detected sign of a CR balance the AI repeats unsigned" do
+    detect_card_statement!(account: accounts(:credit_card))
+    stub_extracted_balances(opening: 1066.47, closing: 435.88)
+
+    @import.extract_transactions
+
+    assert_equal BigDecimal("-435.88"), @statement.reload.closing_balance
+    assert_equal BigDecimal("1066.47"), @statement.opening_balance
+  end
+
+  test "extract_transactions leaves an unlinked CR balance to be signed on linking" do
+    detect_card_statement!(account: nil)
+    stub_extracted_balances(opening: 1066.47, closing: -435.88)
+
+    @import.extract_transactions
+    @statement.reload.link_to_account!(@account)
+
+    assert_equal BigDecimal("435.88"), @statement.reload.closing_balance,
+                 "the AI's sign was kept over the CR marker on a depository account"
+  end
+
+  test "extract_transactions writes an AI balance over a hand edit of the same size" do
+    detect_card_statement!(account: accounts(:credit_card))
+    @statement.update!(closing_balance: 400)
+    stub_extracted_balances(opening: 1066.47, closing: -400.0)
+
+    @import.extract_transactions
+
+    assert_equal BigDecimal("-400"), @statement.reload.closing_balance
+  end
+
+  test "extract_transactions keeps a different AI balance through relinking" do
+    detect_card_statement!(account: accounts(:credit_card), text: :summary_table)
+    stub_extracted_balances(opening: 1066.47, closing: 400.0)
+
+    @import.extract_transactions
+    @statement.reload.unlink!
+    @statement.link_to_account!(@account)
+
+    assert_equal BigDecimal("400"), @statement.reload.closing_balance
+    assert_nil @statement.opening_balance, "the detected half of the table was kept"
+  end
+
   test "extract_transactions ignores inverted dates while syncing valid balances and hints" do
     use_ai_routes
     provider = mock("llm_provider")
@@ -624,6 +667,34 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   private
+
+    # Readings as MetadataDetector stores them for "Closing balance $435.88 CR",
+    # then a link so the statement works its balances out for `account`.
+    def detect_card_statement!(account:, text: :labels)
+      pair = {
+        "opening_balance" => { "amount" => "1066.47", "side" => nil, "currency" => "$" },
+        "closing_balance" => { "amount" => "435.88", "side" => "credit", "currency" => "$" }
+      }
+      readings = text == :summary_table ? { "summary_table" => pair.merge("adds_up_as" => [ "liability" ]) } : { "labels" => pair }
+      @statement.update_columns(
+        account_id: nil, opening_balance: 1066.47, closing_balance: 435.88,
+        sanitized_parser_output: { "pdf" => { "balance_readings" => readings } }
+      )
+      @statement.link_to_account!(account) if account
+    end
+
+    def stub_extracted_balances(opening:, closing:)
+      use_ai_routes
+      provider = mock("llm_provider")
+      Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+      provider.stubs(:extract_bank_statement).returns(
+        OpenStruct.new(
+          success?: true,
+          data: { opening_balance: opening, closing_balance: closing, transactions: [] }
+        )
+      )
+      @import.stubs(:pdf_file_content).returns("fake-pdf")
+    end
 
     def create_statement
       AccountStatement.create_from_upload!(
