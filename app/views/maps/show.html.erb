@@ -2,7 +2,7 @@
 
 <div class="flex items-center gap-2 mb-4">
   <h1 class="text-xl font-medium"><%= t(".title") %></h1>
-  <%= render DS::Pill.new(label: "Preview", size: :md) %>
+  <%= render DS::Pill.new(label: t("shared.preview"), size: :md) %>
 </div>
 
 <%= form_with url: map_path, method: :get, data: { controller: "auto-submit-form" }, class: "flex gap-2 mb-4" do |f| %>
