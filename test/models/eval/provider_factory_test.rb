@@ -42,4 +42,24 @@ class Eval::ProviderFactoryTest < ActiveSupport::TestCase
 
     assert_nil client.ai_config(:categorize).models.sole.context_window
   end
+
+  test "the chat provider gets OPENAI_EXTRA_HEADERS on the configured gateway only" do
+    headers = '{"X-Gateway-Key":"tenant-1","X-Session":"{session_id}"}'
+
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => headers, "OPENAI_URI_BASE" => "https://gateway.example.test/v1") do
+      gateway = Eval::ProviderFactory.build(provider: "openai", model: "qwen3", config: { access_token: "t" })
+      other = Eval::ProviderFactory.build(provider: "openai", model: "qwen3",
+                                          config: { uri_base: "https://other.example.test/v1", access_token: "t" })
+
+      assert_equal({ "X-Gateway-Key" => "tenant-1" }, chat_client(gateway).extra_headers)
+      assert_equal({ "X-Session" => "{session_id}" }, chat_provider(gateway).instance_variable_get(:@session_extra_headers))
+      assert_empty chat_client(other).extra_headers.to_h
+      assert_empty chat_provider(other).instance_variable_get(:@session_extra_headers)
+    end
+  end
+
+  private
+    def chat_provider(client) = client.send(:chat_provider)
+
+    def chat_client(client) = chat_provider(client).instance_variable_get(:@client)
 end

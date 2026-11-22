@@ -99,15 +99,15 @@ class Provider::Openai < Provider
   # @param uri_base [String, nil] custom endpoint base URL (OpenAI when nil)
   # @param model [String, nil] default model; required when uri_base is set
   # @return [void]
-  def initialize(access_token, uri_base: nil, model: nil)
+  # extra_headers: OPENAI_EXTRA_HEADERS unless the caller scopes them to another server.
+  def initialize(access_token, uri_base: nil, model: nil, extra_headers: self.class.extra_headers)
     client_options = { access_token: access_token }
     llm_uri_base = uri_base.presence
     llm_model = model.presence
     client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
     client_options[:request_timeout] = self.class.request_timeout
-    parsed_headers = self.class.extra_headers
-    @session_extra_headers = parsed_headers.select { |_, value| value.include?("{session_id}") }
-    static_headers = parsed_headers.except(*@session_extra_headers.keys)
+    @session_extra_headers = extra_headers.select { |_, value| value.include?("{session_id}") }
+    static_headers = extra_headers.except(*@session_extra_headers.keys)
     client_options[:extra_headers] = static_headers if static_headers.present?
 
     # The proxy and TLS settings come from Ai::Transport::Http, the one resolver every AI client
