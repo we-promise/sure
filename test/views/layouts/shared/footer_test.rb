@@ -35,6 +35,15 @@ class FooterTest < ActionDispatch::IntegrationTest
     assert_select "footer span", text: "•"
   end
 
+  test "labels the legal links in the request's locale" do
+    with_env_overrides("LEGAL_PRIVACY_URL" => "https://example.com/privacy", "LEGAL_TERMS_URL" => "https://example.com/terms") do
+      get new_session_path(locale: "nb")
+    end
+
+    assert_select "footer a[href='#{privacy_path}']", text: I18n.t("layouts.shared.footer.privacy_policy", locale: :nb)
+    assert_select "footer a[href='#{terms_path}']", text: I18n.t("layouts.shared.footer.terms_of_service", locale: :nb)
+  end
+
   test "links only the configured privacy page, without a separator" do
     with_env_overrides("LEGAL_PRIVACY_URL" => "https://example.com/privacy", "LEGAL_TERMS_URL" => nil) do
       get new_session_path

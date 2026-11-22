@@ -5,11 +5,11 @@
     <p>&copy; <%= Date.current.year %>, <%= brand_name %> <%= product_name %> (community fork of Maybe Finance)</p>
     <% if privacy_link || terms_link %>
       <div class="flex justify-center items-center gap-2">
-        <%= link_to "Privacy Policy", privacy_path, class: "text-secondary", target: "_blank" if privacy_link %>
+        <%= link_to t(".privacy_policy"), privacy_path, class: "text-secondary", target: "_blank" if privacy_link %>
         <% if privacy_link && terms_link %>
           <span>&bull;</span>
         <% end %>
-        <%= link_to "Terms of Service", terms_path, class: "text-secondary", target: "_blank" if terms_link %>
+        <%= link_to t(".terms_of_service"), terms_path, class: "text-secondary", target: "_blank" if terms_link %>
       </div>
     <% end %>
   </div>
