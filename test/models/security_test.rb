@@ -460,6 +460,17 @@ class SecurityTest < ActiveSupport::TestCase
     assert_nil msft.current_price_in("EUR", rates: rates)
   end
 
+  test "a quote from an earlier day is converted at that day's rate" do
+    security = securities(:aapl)
+    quote_date = 3.days.ago.to_date
+    security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: quote_date))
+    ExchangeRate.expects(:find_or_fetch_rate)
+      .with(from: "USD", to: "EUR", date: quote_date).once
+      .returns(ExchangeRate.new(rate: 0.9))
+
+    assert_equal Money.new(180, "EUR"), security.current_price_in("EUR")
+  end
+
   test "a quote already in the currency asked for needs no rate" do
     security = securities(:aapl)
     security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: Date.current))
