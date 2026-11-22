@@ -230,6 +230,16 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
                   "change->money-field#handleCurrencyChange change->transaction-form#onCurrencyChange"
   end
 
+  test "new transaction form shows the date in the family's format" do
+    @user.family.update!(date_format: "%d.%m.%Y")
+
+    get new_transaction_path
+
+    assert_response :success
+    assert_select "input[type=date][name='entry[date]'][value='#{Date.current.iso8601}']"
+    assert_select "[data-date-input-target=display]", text: Date.current.strftime("%d.%m.%Y")
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {

@@ -61,7 +61,7 @@
       <% end %>
     </div>
 
-    <%= f.date_field :date,
+    <%= f.formatted_date_field :date,
       label: t(".date"),
       required: true,
       min: Entry.min_supported_date,

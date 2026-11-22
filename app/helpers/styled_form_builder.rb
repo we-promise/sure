@@ -27,6 +27,39 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
   # Keep `form.text_area` styled after Rails 8 renamed the helper to `textarea`.
   alias_method :text_area, :textarea if method_defined?(:textarea)
 
+  # A native date input always displays in the browser's locale. Draw the
+  # family's format in a sibling span that covers the native text until focus.
+  def formatted_date_field(method, options = {})
+    form_options = options.slice(*BUILDER_OPTIONS, :required)
+    html_options = options.except(*BUILDER_OPTIONS)
+    value = html_options.delete(:value)
+    value = object.public_send(method) if value.nil? && object.respond_to?(method)
+    date = value.present? ? value.to_date : nil
+    format = Current.family&.date_format.presence || "%m/%d/%Y"
+
+    html_options[:value] = date&.iso8601
+    html_options[:class] = @template.class_names("form-field__input", "peer", html_options[:class])
+    html_options[:data] = (html_options[:data] || {}).merge(
+      date_input_target: "input",
+      action: [ html_options.dig(:data, :action), "input->date-input#render change->date-input#render" ].compact.join(" ")
+    )
+
+    build_field(method, form_options, html_options) do |merged_options|
+      @template.tag.div(
+        class: "relative",
+        data: { controller: "date-input", date_input_format_value: format }
+      ) do
+        ActionView::Helpers::FormBuilder.instance_method(:date_field).bind_call(self, method, merged_options) +
+          @template.tag.span(
+            date ? date.strftime(format) : "",
+            class: "absolute inset-y-0 left-0 right-8 flex items-center bg-container text-sm text-primary pointer-events-none peer-focus:opacity-0",
+            data: { date_input_target: "display" },
+            aria: { hidden: true }
+          )
+      end
+    end
+  end
+
   def radio_button(method, tag_value, options = {})
     merged_options = { class: "form-field__radio" }.merge(options)
     super(method, tag_value, merged_options)
