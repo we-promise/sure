@@ -30,6 +30,20 @@ class DashboardAccountBalancesTest < ApplicationSystemTestCase
     assert_eventually { @user.reload.account_balances_settings["hidden_account_ids"].include?(accounts(:credit_card).id) }
   end
 
+  test "a change made right before leaving the dashboard is still saved" do
+    sign_in @user
+
+    within "section[data-section-key='account_balances']" do
+      find("[data-list-toggle]", match: :first).click
+      find("[data-group='CreditCard'] [data-group-check]").click
+    end
+    # Leave at once, before the debounced save fires: removing the widget
+    # disconnects its controller the way a quick Turbo navigation does.
+    page.execute_script("document.querySelector('[data-controller=\"account-balances-chart\"]').remove()")
+
+    assert_eventually { @user.reload.account_balances_settings["hidden_account_ids"].include?(accounts(:credit_card).id) }
+  end
+
   test "opens full screen from the widget header" do
     sign_in @user
 

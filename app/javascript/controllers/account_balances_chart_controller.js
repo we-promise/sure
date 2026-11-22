@@ -105,7 +105,7 @@ export default class extends Controller {
 
   disconnect() {
     this.resizeObserver?.disconnect();
-    clearTimeout(this.saveTimer);
+    this.#flushSave({ keepalive: true });
   }
 
   // The dashboard section grabs Enter/Space/arrows for drag-reordering; keys
@@ -137,13 +137,23 @@ export default class extends Controller {
     this.draw();
   }
 
-  // Saved through the dashboard preferences endpoint, debounced.
+  // Saved through the dashboard preferences endpoint, debounced. A save
+  // still pending when the widget goes away (navigation) is flushed then.
   #save() {
     clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => {
-      const token = document.querySelector('meta[name="csrf-token"]')?.content;
-      fetch(this.preferencesUrlValue, {
+    this.savePending = true;
+    this.saveTimer = setTimeout(() => this.#flushSave(), SAVE_DELAY);
+  }
+
+  async #flushSave({ keepalive = false } = {}) {
+    clearTimeout(this.saveTimer);
+    if (!this.savePending) return;
+    this.savePending = false;
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    try {
+      const response = await fetch(this.preferencesUrlValue, {
         method: "PATCH",
+        keepalive,
         headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
         body: JSON.stringify({
           preferences: {
@@ -157,8 +167,16 @@ export default class extends Controller {
             },
           },
         }),
-      }).catch(() => {});
-    }, SAVE_DELAY);
+      });
+      if (!response.ok) {
+        console.error(
+          "[Account Balances] Failed to save settings:",
+          response.status,
+        );
+      }
+    } catch (error) {
+      console.error("[Account Balances] Network error saving settings:", error);
+    }
   }
 
   #syncSettings() {
