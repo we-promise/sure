@@ -135,7 +135,6 @@ class AccountStatement::TextMetadataParser
   # value carries only a "-" sign; currency is the token as printed ("$",
   # "EUR"); side is the CR/DR marker, if any.
   Amount = Data.define(:value, :currency, :side)
-  BALANCE_FIELDS = %w[opening_balance closing_balance].freeze
 
   def self.parse(text)
     new(text).parse
@@ -155,11 +154,11 @@ class AccountStatement::TextMetadataParser
     candidates << [ "labels", readings["labels"] ] if readings["labels"]
 
     candidates.each do |source, pair|
-      currencies = BALANCE_FIELDS.map { |field| resolve_currency(pair.dig(field, "currency"), currency) }
+      currencies = AccountStatement::BALANCE_FIELDS.map { |field| resolve_currency(pair.dig(field, "currency"), currency) }
       next unless currencies.uniq.size == 1 && currencies.first.present?
       next if currency.present? && currencies.first != currency.to_s.upcase
 
-      opening, closing = BALANCE_FIELDS.map do |field|
+      opening, closing = AccountStatement::BALANCE_FIELDS.map do |field|
         signed_amount(BigDecimal(pair.dig(field, "amount")), pair.dig(field, "side")&.to_sym, classification)
       end
       return Balances.new(opening_balance: opening, closing_balance: closing, currency: currencies.first, source: source)
@@ -300,7 +299,7 @@ class AccountStatement::TextMetadataParser
     end
 
     def reading(pair)
-      BALANCE_FIELDS.zip(pair).to_h do |field, amount|
+      AccountStatement::BALANCE_FIELDS.zip(pair).to_h do |field, amount|
         [ field, { "amount" => amount.value.to_s("F"), "side" => amount.side&.to_s, "currency" => amount.currency } ]
       end
     end
