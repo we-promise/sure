@@ -58,11 +58,15 @@ class DashboardAccountBalancesTest < ApplicationSystemTestCase
 
     within "section[data-section-key='account_balances']" do
       find("[data-list-toggle]", match: :first).click
-      find("[data-group='CreditCard'] [data-group-check]").click
+      assert_selector "[data-group='CreditCard'] [data-group-check]"
     end
-    # Leave at once, before the debounced save fires: removing the widget
-    # disconnects its controller the way a quick Turbo navigation does.
-    page.execute_script("document.querySelector('[data-controller=\"account-balances-chart\"]').remove()")
+    # Untick and leave in one browser step, so the debounced save cannot fire
+    # first: removing the widget disconnects its controller the way a quick
+    # Turbo navigation does.
+    page.execute_script(<<~JS)
+      document.querySelector("section[data-section-key='account_balances'] [data-group='CreditCard'] [data-group-check]").click();
+      document.querySelector('[data-controller="account-balances-chart"]').remove();
+    JS
 
     assert_eventually { @user.reload.account_balances_settings["hidden_account_ids"].include?(accounts(:credit_card).id) }
   end
