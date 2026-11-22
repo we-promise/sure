@@ -32,6 +32,7 @@ const SAVE_DELAY = 400;
 // shows the same chart as the widget.
 export default class extends Controller {
   static targets = [
+    "controls",
     "secondaryInk",
     "subduedInk",
     "chart",
@@ -251,6 +252,13 @@ export default class extends Controller {
     return interpolate(this.labels[key] ?? key, vars);
   }
 
+  // A design-system control rendered by the view into the controls template.
+  #control(name) {
+    return this.controlsTarget.content
+      .querySelector(`[data-control="${name}"]`)
+      .cloneNode(true);
+  }
+
   #icon(name) {
     return (
       this.iconsTarget.content.querySelector(`[data-icon="${name}"]`)
@@ -436,24 +444,7 @@ export default class extends Controller {
           <span class="font-medium">${escapeHtml(this.t("list_title"))}</span>
           <span>· ${escapeHtml(shown === accounts.length ? this.t("list_shown_all", { count: accounts.length }) : this.t("list_shown_some", { shown, count: accounts.length }))}</span>
         </button>
-        ${
-          this.listOpen
-            ? ["all", "cash", "none"]
-                .map(
-                  (preset) =>
-                    `<button type="button" class="text-xs px-2 py-0.5 rounded-full border border-secondary text-secondary hover:text-primary" data-preset="${preset}" data-focus-key="preset-${preset}">${escapeHtml(
-                      this.t(
-                        {
-                          all: "list_all",
-                          cash: "list_cash_only",
-                          none: "list_none",
-                        }[preset],
-                      ),
-                    )}</button>`,
-                )
-                .join("")
-            : ""
-        }
+        ${this.listOpen ? "<span data-presets-slot></span>" : ""}
       </div>`;
 
     if (!this.listOpen) {
@@ -542,6 +533,9 @@ export default class extends Controller {
       this.listOpen = !this.listOpen;
       this.#changed();
     });
+    el.querySelector("[data-presets-slot]")?.replaceWith(
+      this.#control("presets"),
+    );
     for (const preset of el.querySelectorAll("[data-preset]")) {
       preset.addEventListener("click", () =>
         this.#preset(preset.dataset.preset),
@@ -896,12 +890,12 @@ export default class extends Controller {
         domain[1] - domain[0] < 3 * DAY ? this.timeLabel : this.dayLabel;
       const end =
         format === this.dayLabel ? new Date(+domain[1] - 1) : domain[1];
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className =
-        "absolute top-1 left-14 z-10 inline-flex items-center gap-2 text-xs px-2.5 py-0.5 rounded-full bg-container border border-secondary text-secondary hover:text-primary";
-      chip.innerHTML = `<span>${format(domain[0])} – ${format(end)}</span><span class="font-medium">${escapeHtml(this.t("reset_zoom"))}</span>`;
-      chip.addEventListener("click", () => this.#resetZoom());
+      const chip = this.#control("zoom");
+      chip.querySelector("[data-zoom-range]").textContent =
+        `${format(domain[0])} – ${format(end)}`;
+      chip
+        .querySelector("[data-zoom-reset]")
+        .addEventListener("click", () => this.#resetZoom());
       el.append(chip);
     }
   }

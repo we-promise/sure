@@ -20,6 +20,13 @@ class DashboardAccountBalancesTest < ApplicationSystemTestCase
       assert_selector "[data-group='Depository']"
       assert_selector "[data-group='CreditCard']"
 
+      # The "Cash only" preset keeps cash and cards, drops the rest.
+      assert chart.has_css?("svg path[data-key='#{accounts(:investment).id}']", visible: :all)
+      click_on "Cash only"
+      assert chart.has_no_css?("svg path[data-key='#{accounts(:investment).id}']", visible: :all)
+      click_on "All"
+      assert chart.has_css?("svg path[data-key='#{accounts(:investment).id}']", visible: :all)
+
       # Unticking a group takes its accounts out of the chart.
       find("[data-group='CreditCard'] [data-group-check]").click
       assert chart.has_no_css?("svg path[data-key='#{accounts(:credit_card).id}']", visible: :all)
