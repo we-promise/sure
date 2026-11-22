@@ -113,7 +113,7 @@ class AccountStatement < ApplicationRecord
         source: :manual_upload,
         upload_status: :stored,
         review_status: account.present? ? :linked : :unmatched,
-        currency: account&.currency || family.currency
+        currency: account&.currency
       )
 
       statement.original_file.attach(
@@ -457,7 +457,12 @@ class AccountStatement < ApplicationRecord
       readings = pdf_output["balance_readings"]
       return if readings.blank?
 
-      balances = TextMetadataParser.balances_for(readings, classification: account&.classification, currency: statement_currency)
+      balances = TextMetadataParser.balances_for(
+        readings,
+        classification: account&.classification,
+        currency: currency.presence || account&.currency,
+        fallback_currency: family.currency
+      )
       @derived_balances = (BALANCE_FIELDS - edited_balances).to_h do |field|
         self[field] = balances&.public_send(field)
         [ field, self[field] ]

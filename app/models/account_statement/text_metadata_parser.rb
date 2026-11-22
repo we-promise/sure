@@ -120,17 +120,21 @@ class AccountStatement::TextMetadataParser
   # "liability", or nil when there is none) and a statement in `currency`:
   # the summary table when it adds up for that account (for either, with
   # none), otherwise the labelled balances, whichever first has both balances
-  # in `currency`. A marked balance is its absolute value, negative for CR on
-  # a liability or DR on an asset, unsigned with no account.
-  def self.balances_for(readings, classification:, currency:)
+  # in `currency`. A blank `currency` accepts the document's own currency;
+  # `fallback_currency` only interprets a bare "$". A marked balance is its
+  # absolute value, negative for CR on a liability or DR on an asset,
+  # unsigned with no account.
+  def self.balances_for(readings, classification:, currency:, fallback_currency: nil)
     readings = readings.to_h
     table = readings["summary_table"]
     candidates = []
     candidates << [ "summary_table", table ] if table && (classification.nil? || Array(table["adds_up_as"]).include?(classification))
     candidates << [ "labels", readings["labels"] ] if readings["labels"]
 
+    symbol_currency = currency.presence || fallback_currency
+
     candidates.each do |source, pair|
-      currencies = BALANCE_FIELDS.map { |field| resolve_currency(pair.dig(field, "currency"), currency) }
+      currencies = BALANCE_FIELDS.map { |field| resolve_currency(pair.dig(field, "currency"), symbol_currency) }
       next unless currencies.uniq.size == 1 && currencies.first.present?
       next if currency.present? && currencies.first != currency.to_s.upcase
 
