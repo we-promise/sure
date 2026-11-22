@@ -190,7 +190,9 @@ class Transfer < ApplicationRecord
   # way before displacing it, so an edit can't write a fee or leg against a
   # transfer that is being deleted. Every lock wait in the transaction is
   # bounded by edit_lock_timeout, and raises ActiveRecord::LockWaitTimeout
-  # past it, so a long Auto Match run can't hold the request.
+  # past it, so a long Auto Match run can't hold the request. The timeout is
+  # SET LOCAL, so it lasts until the outermost transaction ends; call this
+  # outside any open transaction.
   def with_edit_lock
     Transfer.transaction do
       Transfer.connection.select_value(

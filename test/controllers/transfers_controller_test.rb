@@ -678,6 +678,21 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert transfer.reload.pending?
   end
 
+  test "a request denied on either leg takes no row lock" do
+    # family_member: full_control on depository, read_only on credit_card
+    sign_in users(:family_member)
+    denied_inflow = transfers(:one)
+    denied_outflow = cross_owner_transfer(outflow_account: accounts(:credit_card), inflow_account: accounts(:depository))
+    Transfer.any_instance.expects(:with_edit_lock).never
+
+    [ denied_inflow, denied_outflow ].each do |transfer|
+      patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+      assert_redirected_to transactions_url
+      assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    end
+  end
+
   test "can add notes to transfer" do
     transfer = transfers(:one)
     assert_nil transfer.notes
@@ -1183,7 +1198,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_nil flash[:alert]
   end
 
-  test "a transfer update locks the transfer before reading its legs or writing any transaction" do
+  test "a transfer update locks the transfer before writing any transaction" do
     transfer = transfers(:one)
 
     statements = []
@@ -1194,13 +1209,10 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to transactions_url
 
     lock_at = statements.index { |sql| sql.match?(/FROM "transfers".*FOR UPDATE/m) }
-    first_leg_read_at = statements.index { |sql| sql.match?(/\A\s*SELECT "entries"\.\* FROM "entries"/) }
     first_write_at = statements.index { |sql| sql.match?(/\A\s*(INSERT INTO|UPDATE) "transactions"/) }
 
     assert lock_at, "expected the transfer to be selected FOR UPDATE"
-    assert first_leg_read_at, "expected the permission checks to read the legs' entries"
     assert first_write_at, "expected the fee to write a transaction"
-    assert_operator lock_at, :<, first_leg_read_at, "permissions must be checked against the legs read under the lock"
     assert_operator lock_at, :<, first_write_at, "the transfer lock must come before the first write to transactions"
   end
 

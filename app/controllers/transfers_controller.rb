@@ -93,18 +93,18 @@ class TransfersController < ApplicationController
   def update
     return reject_transfer if rejecting?
 
-    begin
-      updated = @transfer.with_edit_lock do
-        # Checked against the legs as reloaded under the lock.
-        next false unless require_account_permission!(@transfer.from_account, redirect_path: transactions_url)
-        # Confirming or rejecting rewrites the kind of both legs
-        next false unless require_account_permission!(@transfer.to_account, redirect_path: transactions_url)
+    outflow_account = @transfer.outflow_transaction.entry.account
+    inflow_account = @transfer.inflow_transaction.entry.account
+    return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
+    # Confirming or rejecting rewrites the kind of both legs
+    return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
+    begin
+      @transfer.with_edit_lock do
         update_transfer_status
         update_transfer_fees_and_amount
         update_transfer_details
         update_investment_contribution
-        true
       end
     rescue Transfer::Removed
       return redirect_after_unsaved_update(t(".removed"))
@@ -112,7 +112,6 @@ class TransfersController < ApplicationController
       Rails.logger.error("Failed to update transfer #{@transfer.id}: #{e.message}")
       return redirect_after_unsaved_update(t(".busy"))
     end
-    return unless updated
 
     @view_ctx = view_ctx_from_referer
     respond_to do |format|
