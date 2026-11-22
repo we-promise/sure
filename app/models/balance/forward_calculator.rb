@@ -70,7 +70,9 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     #   - No prior balance record exists in the DB, or
     #   - The prior balance has a non-zero non-cash component (e.g. investment holdings)
     #     because Holding::Materializer always does a full recalc, which could make the
-    #     persisted non-cash seed stale relative to freshly-computed holding prices.
+    #     persisted non-cash seed stale relative to freshly-computed holding prices, or
+    #   - The prior balance is marked holdings_valued_at_parity, because its cash may
+    #     carry a 1:1 valuation forward, and only a full run carries that mark with it.
     def resolve_starting_balances
       if @window_start_date.present?
         if multi_currency_account?
@@ -81,12 +83,12 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
 
         prior = prior_balance
 
-        if prior && (prior.end_non_cash_balance || 0).zero?
+        if prior && (prior.end_non_cash_balance || 0).zero? && !prior.holdings_valued_at_parity
           Rails.logger.info("Incremental sync from #{@window_start_date}, seeding from persisted balance on #{prior.date}")
           @fell_back = false
           return [ prior.end_cash_balance, prior.end_non_cash_balance ]
         elsif prior
-          Rails.logger.info("Prior balance has non-cash component, falling back to full recalculation")
+          Rails.logger.info("Prior balance has non-cash component or a parity mark, falling back to full recalculation")
         else
           Rails.logger.info("No persisted balance found for #{@window_start_date - 1}, falling back to full recalculation")
         end

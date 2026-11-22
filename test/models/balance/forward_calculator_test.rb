@@ -911,6 +911,50 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  # Cash taken from a 1:1 anchor stays wrong after the holding is sold, so a
+  # window seeded from that cash must carry the mark the full run gives it.
+  test "incremental sync keeps the parity mark carried in a seeded balance" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 4.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 1.day.ago.to_date, amount: -50 }
+      ]
+    )
+    security = Security.create!(ticker: "PARS", name: "Parity holding")
+    account.holdings.create!(security: security, date: 4.days.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD", price_at_parity: true)
+    account.holdings.create!(security: security, date: 3.days.ago.to_date, qty: 0, price: 100, amount: 0, currency: "USD", price_at_parity: true)
+    # Keep the rows above as the holdings calculator's output.
+    Holding::Materializer.any_instance.stubs(:materialize_holdings).returns(account.holdings.to_a)
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    full = account.balances.where(date: 2.days.ago.to_date..).order(:date).pluck(:holdings_valued_at_parity)
+    assert_equal [ true, true ], full
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    incremental = calculator.calculate
+
+    assert_equal full, incremental.select { |balance| balance.date >= 2.days.ago.to_date }.sort_by(&:date).map(&:holdings_valued_at_parity)
+    assert_not calculator.incremental?
+  end
+
+  test "incremental sync still seeds from an unmarked balance with no non-cash" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 4.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 1.day.ago.to_date, amount: -50 }
+      ]
+    )
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    assert_not account.balances.find_by!(date: 3.days.ago.to_date).holdings_valued_at_parity
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    result = calculator.calculate
+
+    assert calculator.incremental?
+    assert_equal [ 2.days.ago.to_date, 1.day.ago.to_date ], result.map(&:date).sort
+  end
+
   test "multi-currency account falls back to full recalc so late exchange rate imports are picked up" do
     # Step 1: Create account with a EUR entry and a stale exchange rate (1:1 EUR→USD).
     # This simulates an initial sync where an imprecise rate is available.
