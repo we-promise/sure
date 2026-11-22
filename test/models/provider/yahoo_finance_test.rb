@@ -979,6 +979,15 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert Provider::YahooFinance::USER_AGENTS.all? { |ua| ua.include?("Mozilla") }
   end
 
+  test "plain client uses a minimal user-agent to avoid cookie-less rate limits" do
+    assert_equal "Mozilla/5.0", @provider.send(:client).headers["User-Agent"]
+  end
+
+  test "authenticated client keeps a browser user-agent" do
+    user_agent = @provider.send(:authenticated_client, "A3=test").headers["User-Agent"]
+    assert_includes Provider::YahooFinance::USER_AGENTS, user_agent
+  end
+
   # ================================
   #       Throttling Tests
   # ================================

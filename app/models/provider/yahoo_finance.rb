@@ -52,6 +52,10 @@ class Provider::YahooFinance < Provider
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0"
   ].freeze
 
+  # Minimal User-Agent for unauthenticated requests. Yahoo rate-limits
+  # desktop-browser User-Agents that arrive without matching cookies.
+  MINIMAL_USER_AGENT = "Mozilla/5.0"
+
   def initialize
     # Yahoo Finance doesn't require an API key but we may want to add proxy support later
     @cache_prefix = "yahoo_finance"
@@ -983,9 +987,9 @@ class Provider::YahooFinance < Provider
         faraday.request :json
         faraday.response :raise_error
 
-        # Yahoo Finance requires common browser headers to avoid blocking
-        # Rotate user-agents to reduce rate limiting (based on yfinance PR #2277)
-        faraday.headers["User-Agent"] = random_user_agent
+        # The unauthenticated endpoints reject desktop-browser User-Agents that
+        # arrive without cookies, so send a minimal one here.
+        faraday.headers["User-Agent"] = MINIMAL_USER_AGENT
         faraday.headers["Accept"] = "application/json"
         faraday.headers["Accept-Language"] = "en-US,en;q=0.9"
         faraday.headers["Cache-Control"] = "no-cache"
