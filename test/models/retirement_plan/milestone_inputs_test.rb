@@ -56,6 +56,16 @@ class RetirementPlan::MilestoneInputsTest < ActiveSupport::TestCase
     @plan.milestones(as_of: AS_OF, simulation: drawn)
   end
 
+  # A simulation built before the balance moved still starts at 80,000. The
+  # milestones read that start, not today's 50,000, so the quarter it
+  # already clears stays reached on the path they are drawn against.
+  test "the milestones start from the assets of the simulation handed in" do
+    drawn = @plan.simulation(as_of: AS_OF)
+    Balance.joins(:account).where(accounts: { owner_id: @member.id }, date: AS_OF).update_all(balance: 50_000)
+
+    assert find(RetirementPlan.find(@plan.id).milestones(as_of: AS_OF, simulation: drawn), "fi_25").reached_already
+  end
+
   test "a plan that cannot be simulated has no milestones" do
     @plan.update!(birth_year: nil)
 
