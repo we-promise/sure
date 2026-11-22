@@ -37,6 +37,16 @@ class PlaidAccount::Investments::SecurityResolver
     response
   end
 
+  # Plaid can report a zero institution price for a holding while the security's
+  # close price is valid. Falls back to close price when the institution price is zero.
+  def effective_price(plaid_holding)
+    institution_price = parse_price(plaid_holding["institution_price"])
+    return institution_price unless institution_price&.zero?
+
+    close_price = parse_price(plaid_security(plaid_holding["security_id"])&.dig("close_price"))
+    close_price&.positive? ? close_price : institution_price
+  end
+
   private
     attr_reader :plaid_account, :security_cache
 
@@ -44,6 +54,19 @@ class PlaidAccount::Investments::SecurityResolver
 
     def securities
       plaid_account.raw_holdings_payload&.dig("securities") || []
+    end
+
+    def plaid_security(plaid_security_id)
+      securities.find { |s| s["security_id"] == plaid_security_id }
+    end
+
+    def parse_price(value)
+      return nil if value.nil?
+      return value if value.is_a?(BigDecimal)
+
+      BigDecimal(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
     end
 
     # Tries to find security, or returns the "proxy security" (common with options contracts that have underlying securities)

@@ -331,6 +331,83 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_not @plaid_account.current_account.holdings.exists?(security: securities(:msft))
   end
 
+  test "falls back to the security close price when institution price is zero" do
+    test_investments_payload = {
+      securities: [
+        {
+          "security_id" => "zero_price",
+          "ticker_symbol" => "AAPL",
+          "close_price" => 211.26
+        }
+      ],
+      holdings: [
+        {
+          "security_id" => "zero_price",
+          "quantity" => 10,
+          "institution_price" => 0,
+          "institution_value" => 0,
+          "iso_currency_code" => "USD",
+          "institution_price_as_of" => Date.current
+        }
+      ],
+      transactions: []
+    }
+
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "zero_price")
+                      .returns(OpenStruct.new(security: securities(:aapl), cash_equivalent?: false, brokerage_cash?: false))
+
+    processor = PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+
+    assert_difference "Holding.count", 1 do
+      processor.process
+    end
+
+    holding = @plaid_account.current_account.holdings.find_by!(security: securities(:aapl))
+    assert_equal BigDecimal("211.26"), holding.price
+    assert_equal BigDecimal("2112.6"), holding.amount
+  end
+
+  test "keeps a zero institution price when no positive close price is available" do
+    test_investments_payload = {
+      securities: [
+        {
+          "security_id" => "zero_price",
+          "ticker_symbol" => "AAPL",
+          "close_price" => 0
+        }
+      ],
+      holdings: [
+        {
+          "security_id" => "zero_price",
+          "quantity" => 10,
+          "institution_price" => 0,
+          "iso_currency_code" => "USD",
+          "institution_price_as_of" => Date.current
+        }
+      ],
+      transactions: []
+    }
+
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "zero_price")
+                      .returns(OpenStruct.new(security: securities(:aapl), cash_equivalent?: false, brokerage_cash?: false))
+
+    processor = PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+
+    assert_difference "Holding.count", 1 do
+      processor.process
+    end
+
+    holding = @plaid_account.current_account.holdings.find_by!(security: securities(:aapl))
+    assert_equal BigDecimal("0"), holding.price
+    assert_equal BigDecimal("0"), holding.amount
+  end
+
   test "uses account currency as fallback when Plaid omits iso_currency_code" do
     account = @plaid_account.current_account
 

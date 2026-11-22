@@ -80,4 +80,57 @@ class PlaidAccount::Investments::BalanceCalculatorTest < ActiveSupport::TestCase
     # We back this $3,000 from the $4,000 total to get $1,000 in cash balance.
     assert_equal 1000, balance_calculator.cash_balance
   end
+
+  test "values a zero-priced holding at its security close price when calculating cash" do
+    brokerage_cash_security_id = "plaid_brokerage_cash"
+    aapl_security_id = "plaid_aapl_security"
+
+    test_investments = {
+      transactions: [],
+      holdings: [
+        # $1,000 in brokerage cash
+        {
+          security_id: brokerage_cash_security_id,
+          institution_price: 1,
+          institution_value: 1000,
+          quantity: 1000
+        },
+        # 10 shares of AAPL reported at a zero institution price
+        {
+          security_id: aapl_security_id,
+          institution_price: 0,
+          institution_value: 0,
+          quantity: 10
+        }
+      ],
+      securities: [
+        {
+          security_id: brokerage_cash_security_id,
+          ticker_symbol: "CUR:USD",
+          is_cash_equivalent: true,
+          type: "cash",
+          close_price: 1
+        },
+        {
+          security_id: aapl_security_id,
+          ticker_symbol: "AAPL",
+          is_cash_equivalent: false,
+          type: "equity",
+          market_identifier_code: "XNAS",
+          close_price: 200
+        }
+      ]
+    }
+
+    @plaid_account.update!(raw_holdings_payload: test_investments)
+
+    security_resolver = PlaidAccount::Investments::SecurityResolver.new(@plaid_account)
+    balance_calculator = PlaidAccount::Investments::BalanceCalculator.new(@plaid_account, security_resolver: security_resolver)
+
+    assert_equal 4000, balance_calculator.balance
+
+    # The zero-priced AAPL holding is valued at its $200 close price, so
+    # holdings value is $2,000 and the remaining $2,000 is brokerage cash.
+    assert_equal 2000, balance_calculator.cash_balance
+  end
 end
