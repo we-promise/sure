@@ -1,0 +1,30 @@
+<%= turbo_frame_tag dom_id(@holding, :price_chart) do %>
+  <div class="px-3 py-2 space-y-2">
+    <div class="flex items-center justify-between gap-2">
+      <div>
+        <% if @series&.trend %>
+          <%= render partial: "shared/trend_change", locals: { trend: @series.trend, comparison_label: @comparison_label } %>
+        <% end %>
+      </div>
+      <%= render UI::PeriodPicker.new(
+            selected: @period,
+            url: holding_price_chart_path(@holding),
+            frame: dom_id(@holding, :price_chart),
+            history: false
+          ) %>
+    </div>
+
+    <div class="h-48">
+      <% if @series %>
+        <div id="<%= dom_id(@holding, :price_chart_line) %>"
+             class="w-full h-full"
+             data-controller="time-series-chart"
+             data-time-series-chart-data-value="<%= @series.to_json %>"></div>
+      <% else %>
+        <div class="w-full h-full flex items-center justify-center">
+          <p class="text-secondary text-sm"><%= t(".no_data") %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
