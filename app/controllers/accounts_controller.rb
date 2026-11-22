@@ -131,8 +131,9 @@ class AccountsController < ApplicationController
                                                                  extra_frequency: @extra_repayment.frequency)
       end
     end
+    @chart_card_requested = chart_card_requested?
     @loan_chart = loan_payoff_chart(@account, as_of: @as_of, period: @period, projection: @loan_projection,
-                                    extra_projection: @loan_extra_projection) if chart_card_requested?
+                                    extra_projection: @loan_extra_projection) if @chart_card_requested
 
     per_page = safe_per_page(stored_per_page_default)
     store_per_page!(per_page) if params[:per_page].present?

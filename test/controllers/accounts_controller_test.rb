@@ -1155,6 +1155,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", text: I18n.l(Date.current.prev_month.beginning_of_month, format: "%b %Y")
   end
 
+  # Paging the activity feed is a frame request for the entries frame only;
+  # Turbo throws the chart away, so its comparison line is not built for it.
+  test "an activity feed page leaves out the net contributions comparison" do
+    account = accounts(:investment)
+
+    get account_url(account, chart_view: "balance")
+    assert_select "[data-time-series-chart-comparison-value]", count: 1
+
+    get account_url(account, chart_view: "balance", page: 2), headers: { "Turbo-Frame" => dom_id(account, :entries) }
+    assert_response :success
+    assert_select "[data-time-series-chart-comparison-value]", count: 0
+  end
+
   test "statements tab lazy frame returns matching frame content" do
     frame_id = dom_id(@account, :statements_tab)
 

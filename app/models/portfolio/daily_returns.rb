@@ -20,21 +20,30 @@
 # so every local component (flows, market, revaluations) is converted at the
 # PREVIOUS day's rate and the fx term is the closing local balance times the
 # rate change. That identity is what lets Portfolio::Drivers report a genuine
-# `unexplained` residual instead of defining one away.
+# `unexplained` residual instead of defining one away. A journal in another
+# currency takes one step first: into the account's currency at the rate of
+# the row it is valued from, as the balance carried it, and only then from
+# the account's currency at the previous day's rate like everything else.
 class Portfolio::DailyReturns
   # One day. `r` is nil until #returns computes it, so a caller reading rows
   # directly cannot mistake a raw component for a return.
   Row = Data.define(
     :date, :value_open, :value_close, :external_flow, :composition_flow,
     :income, :fees, :market, :revaluations, :fx_effect,
-    :rate_missing, :suppressed, :unvalued_journal
+    :rate_missing, :suppressed, :unvalued_journal,
+    :contribution_rate_missing, :contribution_journal_unpriced
   ) do
     # unvalued_journal says WHY a day is suppressed when the reason is a
     # journal the series could not value, as opposed to a non-positive
     # denominator: its flow is missing while its value moved, which matters
     # to a reader that sums flows (a money-weighted return), not only to one
     # that chains returns. Defaults to false for a Row built by hand.
-    def initialize(unvalued_journal: false, **fields)
+    #
+    # The contribution_ flags narrow rate_missing and unvalued_journal to the
+    # deposits and withdrawals external_flow counts: a reader of net
+    # contributions is not short of anything when an internal move, a
+    # dividend or a fee could not be valued.
+    def initialize(unvalued_journal: false, contribution_rate_missing: false, contribution_journal_unpriced: false, **fields)
       super
     end
 
@@ -148,7 +157,9 @@ class Portfolio::DailyReturns
           # missing from the denominator while its value is present in the
           # close, so the day would read as return the portfolio did not earn.
           suppressed: !denominator.positive? || raw["journal_unpriced"] == true,
-          unvalued_journal: raw["journal_unpriced"] == true
+          unvalued_journal: raw["journal_unpriced"] == true,
+          contribution_rate_missing: raw["contribution_rate_missing"] == true,
+          contribution_journal_unpriced: raw["contribution_journal_unpriced"] == true
         )
       end
     end
@@ -185,6 +196,23 @@ class Portfolio::DailyReturns
 
   def any?
     rows.any?
+  end
+
+  # Income paid in the period by the security that paid it, in the family
+  # currency: { "security-uuid" => BigDecimal }. Only income that names a
+  # security is here (a Trade's column, or the `extra` keys
+  # Transaction#activity_security_id reads); the caller keeps the rest of the
+  # rows' income as an unattributed remainder. That only adds up if this reads
+  # the entries the rows do, so it shares their fragments rather than copying
+  # them: the flow classifier, #entry_fx_joins, and the date, active-until and
+  # split-parent predicates. An unconvertible entry drops out of both, and
+  # #rate_missing? reports it.
+  def income_by_security
+    return {} if account_ids.empty?
+
+    @income_by_security ||= ActiveRecord::Base.connection.select_all(
+      bind_and_splice(income_by_security_query)
+    ).to_a.reject { |raw| raw["security_id"].nil? }.to_h { |raw| [ raw["security_id"], decimal(raw["income"]) ] }
   end
 
   private
@@ -304,7 +332,10 @@ class Portfolio::DailyReturns
         departures_by_date AS (
           SELECT
             (sa.active_until_date + 1)::date AS date,
-            COALESCE(SUM(lb.end_balance * lb.flows_factor * er.rate), 0) AS departed_value
+            COALESCE(SUM(lb.end_balance * lb.flows_factor * er.rate), 0) AS departed_value,
+            -- composition_flow moves the net contributions line, so a value
+            -- carried out at no rate leaves that line short on this day.
+            BOOL_OR(lb.end_balance <> 0 AND sa.currency <> :target_currency AND er.rate IS NULL) AS departure_rate_missing
           FROM scoped_accounts sa
           LEFT JOIN LATERAL (
             SELECT b.end_balance, b.flows_factor
@@ -343,7 +374,8 @@ class Portfolio::DailyReturns
         arrivals_by_date AS (
           SELECT
             fb.date,
-            COALESCE(SUM(fb.start_balance * fb.flows_factor * ar.rate), 0) AS arrived_value
+            COALESCE(SUM(fb.start_balance * fb.flows_factor * ar.rate), 0) AS arrived_value,
+            BOOL_OR(fb.start_balance <> 0 AND sa.currency <> :target_currency AND ar.rate IS NULL) AS arrival_rate_missing
           FROM scoped_accounts sa
           JOIN LATERAL (
             SELECT b.date, b.start_balance, b.flows_factor
@@ -474,6 +506,15 @@ class Portfolio::DailyReturns
                               THEN -entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS income,
             COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'fee'
                               THEN  entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS fees,
+            -- A commission recorded on a buy or sell (`trades.fee`) and folded
+            -- into its entry amount, as the trade form, SnapTrade and IBKR write
+            -- it: amount = qty x price + fee. Balance::BaseCalculator books it
+            -- as a market loss, so the final SELECT moves it from `market` to
+            -- `fees`, converted as the trade's own amount is. An amount nearer
+            -- qty x price than qty x price + fee left the fee out, so the
+            -- balance never charged it and there is nothing to move.
+            COALESCE(SUM(CASE WHEN #{trade_commission_sql}
+                              THEN trades.fee * entry_fx.rate * fx.rate ELSE 0 END), 0) AS trade_fees,
             -- A missing rate applies to flows as it does to balances: a flow in a
             -- currency with no rate is flagged, never converted at parity. So is
             -- an internal entry, which is no flow: Balance::SyncCache drops an
@@ -482,7 +523,8 @@ class Portfolio::DailyReturns
             -- An entry with no class is pending, which SyncCache never applies,
             -- or a valuation, which is written in the account's own currency. A
             -- zero amount converts to zero at any rate, so it cannot be short of
-            -- one.
+            -- one -- unless it carries a commission, which is a fee to convert
+            -- even when a sale's proceeds cancel it to a zero amount.
             --
             -- A journal converts from the HOLDING's currency, not the entry's,
             -- so a missing rate there is invisible to the check above. Without
@@ -495,21 +537,14 @@ class Portfolio::DailyReturns
             -- because the predicate compares `trades` columns, and a trade
             -- with no label makes it NULL; NOT NULL is NULL, which would
             -- drop the row from this check rather than keep it.
-            COALESCE(BOOL_OR(((entry_fx.rate IS NULL OR fx.rate IS NULL)
-                              AND entries.amount <> 0
-                              AND NOT COALESCE((#{fragment(:journal_predicate)}), false)
-                              AND #{fragment(:flow_class_sql)} IS NOT NULL)
-                             OR (journal_fx.rate IS NULL
-                                 AND journal_holdings.price > 0
-                                 AND trades.qty <> 0
-                                 AND #{fragment(:journal_predicate)}
-                                 AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))
-                             OR (journal_prior_fx.rate IS NULL
-                                 AND journal_prior.currency IS NOT NULL
-                                 AND journal_prior.price > 0
-                                 AND #{journal_out_unpriced_sql}
-                                 AND #{fragment(:journal_predicate)}
-                                 AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))), false) AS flow_rate_missing,
+            -- Every journal leg, internal ones included: a move between two
+            -- selected accounts that cannot be converted leaves the day
+            -- unvalued like any other, so the ratios are withheld for it.
+            -- contribution_rate_missing below stays external-only.
+            COALESCE(BOOL_OR((#{entry_rate_missing_sql} AND #{fragment(:flow_class_sql)} IS NOT NULL)
+                             OR #{journal_rate_missing_sql}), false) AS flow_rate_missing,
+            COALESCE(BOOL_OR((#{entry_rate_missing_sql} OR #{journal_rate_missing_sql})
+                             AND #{external_flow_class_sql}), false) AS contribution_rate_missing,
             -- The journal suppression condition, and it keys on the PRICE rather
             -- than on the row. When Holding::PortfolioCache#load_prices finds no
             -- other price for a journal date -- an instance with no feed, a
@@ -546,14 +581,11 @@ class Portfolio::DailyReturns
             -- A quantity of 0 moves no units and has nothing to value, as the
             -- carried pass also reads it, so it never suppresses the day. A
             -- NULL quantity is unknown and does.
-            COALESCE(BOOL_OR(#{fragment(:journal_predicate)}
-                             AND (trades.qty IS NULL
-                                  OR (trades.qty <> 0
-                                      AND NOT COALESCE((journal_holdings.price > 0 AND journal_fx.rate IS NOT NULL)
-                                                       OR (#{journal_out_unpriced_sql}
-                                                           AND journal_holdings.qty = 0
-                                                           AND journal_prior.price IS NOT NULL
-                                                           AND (journal_prior.price = 0 OR journal_prior_fx.rate IS NOT NULL)), false)))), false) AS journal_unpriced
+            COALESCE(BOOL_OR(#{journal_unpriced_sql}), false) AS journal_unpriced,
+            -- Narrower than journal_unpriced: a partial journal out whose
+            -- leaving units are valued has a known contribution even though
+            -- the units that stayed are unpriced and still suppress the day.
+            COALESCE(BOOL_OR(#{journal_flow_unvalued_sql} AND #{external_flow_class_sql}), false) AS contribution_journal_unpriced
           FROM entries
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
           -- The same active-until window the balances use: a flow dated after
@@ -561,30 +593,7 @@ class Portfolio::DailyReturns
           -- denominator of a day that account is no longer part of.
           LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
           #{fragment(:flow_class_joins)}
-          -- Two steps, the same two the balance takes. First into the
-          -- ACCOUNT's currency on the entry's own date, preferring a rate the
-          -- entry carries itself, as Balance::SyncCache converts it before the
-          -- calculators apply it -- so the flow is the amount the balance
-          -- actually moved by. A stored rate is found the way SyncCache finds
-          -- it (see #entry_rate_lookup), so an entry the balance dropped for
-          -- want of a rate is NULL here too, and flagged.
-          LEFT JOIN LATERAL (
-            SELECT CASE
-              WHEN COALESCE(entries.currency, entry_accounts.currency) = entry_accounts.currency THEN 1::numeric
-              WHEN #{fragment(:entry_custom_rate)} IS NOT NULL
-                THEN CASE WHEN #{fragment(:entry_custom_rate)} > 0 THEN #{fragment(:entry_custom_rate)} END
-              ELSE #{entry_rate_lookup('entries.currency', 'entries.date', to: 'entry_accounts.currency')}
-            END AS rate
-          ) entry_fx ON TRUE
-          -- Then into the family's currency at the PREVIOUS day's rate,
-          -- because a start-of-day flow joins the opening capital, which is
-          -- itself valued at that rate. Mixing rates here is what would leave
-          -- a residual in `unexplained`. NULL at either step when the pair has
-          -- no rate: the amount then drops out of every sum and
-          -- flow_rate_missing says so.
-          LEFT JOIN LATERAL (
-            SELECT #{rate_lookup('entry_accounts.currency', 'entries.date - 1')} AS rate
-          ) fx ON TRUE
+          #{entry_fx_joins}
           -- The position this entry moved, on the day it moved, for valuing a
           -- journal. Absent for every non-trade entry and for a trade whose
           -- security the account holds no row for that date.
@@ -611,10 +620,12 @@ class Portfolio::DailyReturns
             LIMIT 1
           ) journal_holdings ON TRUE
           -- Converted from the HOLDING's currency, which is the one its price
-          -- is quoted in, and at the previous day's rate for the same reason
-          -- every other start-of-day flow is.
+          -- is quoted in, in the two steps the balance takes: into the
+          -- account's currency at the holding's date, as Balance::SyncCache
+          -- converts a holding, then on at the previous day's rate (`fx`) for
+          -- the same reason every other start-of-day flow is.
           LEFT JOIN LATERAL (
-            SELECT #{rate_lookup('journal_holdings.currency', 'entries.date - 1')} AS rate
+            SELECT #{entry_rate_lookup('journal_holdings.currency', 'entries.date', to: 'entry_accounts.currency')} * fx.rate AS rate
           ) journal_fx ON TRUE
           -- The account's last row for the security BEFORE the entry's date:
           -- the price the balance carried the position at going into the day.
@@ -632,7 +643,7 @@ class Portfolio::DailyReturns
             LIMIT 1
           ) journal_prior ON TRUE
           LEFT JOIN LATERAL (
-            SELECT #{rate_lookup('journal_prior.currency', 'entries.date - 1')} AS rate
+            SELECT #{entry_rate_lookup('journal_prior.currency', 'journal_prior.date', to: 'entry_accounts.currency')} * fx.rate AS rate
           ) journal_prior_fx ON TRUE
           -- The splits between that row and the journal, which the prior
           -- price predates and the journal's quantity does not.
@@ -649,7 +660,7 @@ class Portfolio::DailyReturns
             -- belongs in the denominator (the classifier is built with
             -- include_excluded). A split parent is the exception: SyncCache
             -- skips it and its children carry the amount.
-            AND NOT EXISTS (SELECT 1 FROM entries split_children WHERE split_children.parent_entry_id = entries.id)
+            AND #{not_split_parent_sql}
           GROUP BY entries.date
         ),
         -- A journal that could not be valued on its own date, carried to the
@@ -703,8 +714,8 @@ class Portfolio::DailyReturns
         -- rounded to the stored quantity scale.
         --
         -- Valued from the same holdings row the calculator read that day, in
-        -- its currency, at the previous day's rate like every start-of-day
-        -- flow.
+        -- its currency, converted in journal_fx's two steps from that row's
+        -- date.
         carried_journals AS (
           SELECT
             entries.account_id,
@@ -769,7 +780,8 @@ class Portfolio::DailyReturns
             LIMIT 1
           ) before_priced ON TRUE
           LEFT JOIN LATERAL (
-            SELECT #{rate_lookup('first_priced.currency', 'first_priced.date - 1')} AS rate
+            SELECT #{entry_rate_lookup('first_priced.currency', 'first_priced.date', to: 'entry_accounts.currency')}
+                   * #{rate_lookup('entry_accounts.currency', 'first_priced.date - 1')} AS rate
           ) carry_fx ON TRUE
           LEFT JOIN LATERAL (
             #{split_product_sql('entries.date')}
@@ -805,7 +817,14 @@ class Portfolio::DailyReturns
             COALESCE(SUM(per_row.carried_qty * per_row.price * per_row.rate), 0) AS carried_flow,
             BOOL_OR(per_row.rate IS NULL AND per_row.carried_qty > 0) AS carry_rate_missing,
             COALESCE(BOOL_OR(per_row.zero_qty > per_row.carried_qty
-                             OR (per_row.zero_qty IS NULL AND (per_row.netted OR per_row.qty_unknown))), false) AS carry_incomplete
+                             OR (per_row.zero_qty IS NULL AND (per_row.netted OR per_row.qty_unknown))), false) AS carry_incomplete,
+            -- The part of carry_incomplete that is the external journals' own
+            -- shortfall: a journal with no quantity (always external, since no
+            -- counterpart can match it) or a netted arrival, short either with
+            -- nothing to measure it by or by what the zero-priced row held.
+            COALESCE(BOOL_OR(per_row.qty_unknown
+                             OR (per_row.netted AND (per_row.zero_qty IS NULL
+                                                     OR per_row.zero_qty > per_row.carried_qty))), false) AS carry_contribution_incomplete
           FROM (
             SELECT
               cj.date,
@@ -828,10 +847,21 @@ class Portfolio::DailyReturns
           -- The journal is now an external flow, so it must stop being a
           -- market move. Same value, same row, taken out of the driver that
           -- double-counted it.
-          b.market - COALESCE(f.journal_flow, 0) - COALESCE(cj.carried_flow, 0) AS market,
+          -- A commission on a trade is a fee, not a market loss: added back
+          -- here and counted in `fees` below, so the identity is unchanged.
+          b.market - COALESCE(f.journal_flow, 0) - COALESCE(cj.carried_flow, 0) + COALESCE(f.trade_fees, 0) AS market,
           b.revaluations,
           b.fx_effect,
           (b.rate_missing OR COALESCE(f.flow_rate_missing, false) OR COALESCE(cj.carry_rate_missing, false)) AS rate_missing,
+          -- Only the deposits and withdrawals external_flow counts. A carry
+          -- settles external journals alone, so its missing rate is one; of
+          -- what else it repriced from zero, only the external journals' own
+          -- shortfall is. An account arriving or departing at no rate is one
+          -- too: its value is the composition_flow the line adds.
+          (COALESCE(f.contribution_rate_missing, false) OR COALESCE(cj.carry_rate_missing, false)
+           OR COALESCE(arr.arrival_rate_missing, false) OR COALESCE(dep.departure_rate_missing, false)) AS contribution_rate_missing,
+          (COALESCE(f.contribution_journal_unpriced, false)
+           OR COALESCE(cj.carry_contribution_incomplete, false)) AS contribution_journal_unpriced,
           COALESCE(arr.arrived_value, 0) AS arrived_value,
           COALESCE(dep.departed_value, 0) AS departed_value,
           -- A first priced day that repriced units other than an external
@@ -843,7 +873,7 @@ class Portfolio::DailyReturns
            OR COALESCE(cj.carry_rate_missing, false)) AS journal_unpriced,
           COALESCE(f.external_flow, 0) + COALESCE(cj.carried_flow, 0) AS external_flow,
           COALESCE(f.income, 0) AS income,
-          COALESCE(f.fees, 0) AS fees
+          COALESCE(f.fees, 0) + COALESCE(f.trade_fees, 0) AS fees
         FROM balances_by_date b
         LEFT JOIN flows_by_date f ON f.date = b.date
         LEFT JOIN carried_journals_by_date cj ON cj.date = b.date
@@ -851,6 +881,44 @@ class Portfolio::DailyReturns
         LEFT JOIN departures_by_date dep ON dep.date = b.date
         ORDER BY b.date
       SQL
+    end
+
+    # How a flow reaches the family currency, shared by every query that sums
+    # entries so they convert them identically (`entry_fx.rate * fx.rate`).
+    def entry_fx_joins
+      <<~SQL
+        -- Two steps, the same two the balance takes. First into the
+        -- ACCOUNT's currency on the entry's own date, preferring a rate the
+        -- entry carries itself, as Balance::SyncCache converts it before the
+        -- calculators apply it -- so the flow is the amount the balance
+        -- actually moved by. A stored rate is found the way SyncCache finds
+        -- it (see #entry_rate_lookup), so an entry the balance dropped for
+        -- want of a rate is NULL here too, and flagged.
+        LEFT JOIN LATERAL (
+          SELECT CASE
+            WHEN COALESCE(entries.currency, entry_accounts.currency) = entry_accounts.currency THEN 1::numeric
+            WHEN #{fragment(:entry_custom_rate)} IS NOT NULL
+              THEN CASE WHEN #{fragment(:entry_custom_rate)} > 0 THEN #{fragment(:entry_custom_rate)} END
+            ELSE #{entry_rate_lookup('entries.currency', 'entries.date', to: 'entry_accounts.currency')}
+          END AS rate
+        ) entry_fx ON TRUE
+        -- Then into the family's currency at the PREVIOUS day's rate,
+        -- because a start-of-day flow joins the opening capital, which is
+        -- itself valued at that rate. Mixing rates here is what would leave
+        -- a residual in `unexplained`. NULL at either step when the pair has
+        -- no rate: the amount then drops out of every sum and
+        -- flow_rate_missing says so.
+        LEFT JOIN LATERAL (
+          SELECT #{rate_lookup('entry_accounts.currency', 'entries.date - 1')} AS rate
+        ) fx ON TRUE
+      SQL
+    end
+
+    # Excluded entries count as flows (the balance still applied them); a
+    # split parent does not, because Balance::SyncCache skips it and its
+    # children carry the amount.
+    def not_split_parent_sql
+      "NOT EXISTS (SELECT 1 FROM entries split_children WHERE split_children.parent_entry_id = entries.id)"
     end
 
     # Carry the last known rate forward, then fall back to the earliest one
@@ -977,6 +1045,78 @@ class Portfolio::DailyReturns
       SQL
     end
 
+    # A buy's or sell's commission that its entry amount includes, as
+    # trade_fees sums it: amount = qty x price + fee, within half the fee. A
+    # trade with no quantity bought or sold nothing; the balance books its
+    # amount as cash, so there is no commission in `market` to move.
+    def trade_commission_sql
+      <<~SQL.squish
+        (entries.entryable_type = 'Trade'
+          AND #{fragment(:flow_class_sql)} = 'internal'
+          AND trades.fee > 0
+          AND trades.qty <> 0
+          AND trades.currency = entries.currency
+          AND ABS(entries.amount - (trades.qty * trades.price + trades.fee)) < trades.fee / 2)
+      SQL
+    end
+
+    # The conditions flow_rate_missing and journal_unpriced test, kept apart
+    # from the flow class so each column and its contribution_ twin narrow the
+    # same expression (see #query).
+    def entry_rate_missing_sql
+      <<~SQL.squish
+        ((entry_fx.rate IS NULL OR fx.rate IS NULL)
+          AND (entries.amount <> 0 OR #{trade_commission_sql})
+          AND NOT COALESCE((#{fragment(:journal_predicate)}), false))
+      SQL
+    end
+
+    def journal_rate_missing_sql
+      <<~SQL.squish
+        ((journal_fx.rate IS NULL
+           AND journal_holdings.price > 0
+           AND trades.qty <> 0
+           AND #{fragment(:journal_predicate)})
+         OR (journal_prior_fx.rate IS NULL
+           AND journal_prior.currency IS NOT NULL
+           AND journal_prior.price > 0
+           AND #{journal_out_unpriced_sql}
+           AND #{fragment(:journal_predicate)}))
+      SQL
+    end
+
+    def journal_unpriced_sql
+      <<~SQL.squish
+        (#{fragment(:journal_predicate)}
+          AND (trades.qty IS NULL
+               OR (trades.qty <> 0
+                   AND NOT COALESCE((journal_holdings.price > 0 AND journal_fx.rate IS NOT NULL)
+                                    OR (#{journal_out_unpriced_sql}
+                                        AND journal_holdings.qty = 0
+                                        AND journal_prior.price IS NOT NULL
+                                        AND (journal_prior.price = 0 OR journal_prior_fx.rate IS NOT NULL)), false))))
+      SQL
+    end
+
+    # The journal's own flow has no value: journal_unpriced_sql without its
+    # requirement that an outbound journal emptied the position, since the
+    # units that stayed do not change what left.
+    def journal_flow_unvalued_sql
+      <<~SQL.squish
+        (#{fragment(:journal_predicate)}
+          AND (trades.qty IS NULL
+               OR (trades.qty <> 0
+                   AND NOT COALESCE((journal_holdings.price > 0 AND journal_fx.rate IS NOT NULL)
+                                    OR (#{journal_out_unpriced_sql}
+                                        AND journal_prior.price IS NOT NULL
+                                        AND (journal_prior.price = 0 OR journal_prior_fx.rate IS NOT NULL)), false))))
+      SQL
+    end
+
+    def external_flow_class_sql
+      "#{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')"
+    end
+
     def journal_out_unpriced_sql
       "(trades.qty < 0 AND (journal_holdings.price IS NULL OR journal_holdings.price <= 0))"
     end
@@ -1001,5 +1141,42 @@ class Portfolio::DailyReturns
       "entries.entryable_type = 'Trade' " \
         "AND trades.investment_activity_label = '#{Portfolio::FlowClassifier::TRANSFER_LABEL}' " \
         "AND entries.amount = 0"
+    end
+
+    def income_by_security_query
+      <<~SQL
+        WITH account_windows AS (
+          SELECT
+            account_window.account_id::uuid AS account_id,
+            account_window.active_until_date::date AS active_until_date
+          FROM jsonb_each_text(CAST(:active_until_json AS jsonb))
+            AS account_window(account_id, active_until_date)
+        )
+        SELECT
+          COALESCE(
+            trades.security_id::text,
+            LOWER(NULLIF(transactions.extra->>'security_id', '')),
+            LOWER(NULLIF(transactions.extra->'security'->>'id', '')),
+            -- A split part carries neither the label nor `extra`; the
+            -- classifier reads the parent's label, and this its security.
+            LOWER(NULLIF(flow_parent_transactions.extra->>'security_id', '')),
+            LOWER(NULLIF(flow_parent_transactions.extra->'security'->>'id', ''))
+          ) AS security_id,
+          SUM(-entries.amount * entry_fx.rate * fx.rate) AS income
+        FROM entries
+        JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
+        LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
+        #{fragment(:flow_class_joins)}
+        #{entry_fx_joins}
+        WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
+          -- The flows' window, so a scheduled dividend is in neither.
+          AND entries.date BETWEEN :start_date AND LEAST(DATE :end_date, DATE :today)
+          AND (flow_windows.active_until_date IS NULL OR entries.date <= flow_windows.active_until_date)
+          AND #{not_split_parent_sql}
+          AND entry_fx.rate IS NOT NULL
+          AND fx.rate IS NOT NULL
+          AND #{fragment(:flow_class_sql)} = 'income'
+        GROUP BY 1
+      SQL
     end
 end

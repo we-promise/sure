@@ -29,9 +29,9 @@
 # (a split child without one reads its parent's); for an unlabelled
 # Transaction its `kind`; and for a transfer, whether the counterpart leg's
 # account is inside the scope and the leg posted the same day (each leg moves
-# its own balance on its own date). Direction for an external
-# flow comes from the Trade's quantity sign or the Transaction's amount sign
-# (negative amount = money in).
+# its own balance on its own date, and a pending one has not moved it yet).
+# Direction for an external flow comes from the Trade's quantity sign or the
+# Transaction's amount sign (negative amount = money in).
 #
 # What a caller must do with the answer:
 #
@@ -190,6 +190,8 @@ class Portfolio::FlowClassifier
           WHEN flow_transfers.inflow_transaction_id = transactions.id THEN flow_transfers.outflow_transaction_id
           ELSE flow_transfers.inflow_transaction_id
         END
+      LEFT JOIN transactions flow_counterpart_transactions
+        ON flow_counterpart_transactions.id = flow_counterpart_entries.entryable_id
     SQL
   end
 
@@ -275,7 +277,9 @@ class Portfolio::FlowClassifier
 
     # Internal only when the other leg is in scope AND posted the same day: a
     # transfer's legs can be days apart, and each moves its own balance on its
-    # own date, so across days each leg is a flow on its day.
+    # own date, so across days each leg is a flow on its day. A pending leg
+    # has not moved its balance at all (Balance::SyncCache leaves it out), so
+    # it is no counterpart until it posts.
     def transfer_resolution(entry, transaction)
       counterpart_account_id, counterpart_date = transfer_counterpart(transaction)
       if counterpart_account_id && counterpart_date == entry.date && in_scope_on?(counterpart_account_id, entry.date)
@@ -299,7 +303,14 @@ class Portfolio::FlowClassifier
       return nil unless transfer
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id
-      account_id, date = Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id, :date)
+      # One read of the other leg: its account and date from the entry, and its
+      # pending flag from the transaction, so the two can't disagree.
+      account_id, date, extra = Entry
+        .joins("JOIN transactions ON transactions.id = entries.entryable_id")
+        .where(entryable_type: "Transaction", entryable_id: counterpart_id)
+        .pick(:account_id, :date, "transactions.extra")
+      return nil if Transaction.pending_extra?(extra)
+
       [ account_id&.to_s, date ]
     end
 
@@ -376,6 +387,7 @@ class Portfolio::FlowClassifier
 
     def transfer_resolution_sql
       "CASE WHEN flow_counterpart_entries.date = entries.date AND #{in_scope_sql('flow_counterpart_entries.account_id')} " \
+        "AND #{Transaction.not_pending_sql('flow_counterpart_transactions')} " \
         "THEN 'internal' ELSE #{direction_sql} END"
     end
 
