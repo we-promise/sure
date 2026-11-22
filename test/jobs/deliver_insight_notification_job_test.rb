@@ -5,9 +5,9 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
     Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
     Apns::Client.stubs(:configured?).returns(true)
     @insight = insights(:cash_flow_warning)
-    user = @insight.family.users.first
-    user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
-    @subscription = user.push_subscriptions.create!(
+    @user = @insight.family.users.first
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    @subscription = @user.push_subscriptions.create!(
       token: "ab" * 32,
       environment: "sandbox",
       platform: "ios",
@@ -15,19 +15,41 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
     )
   end
 
-  test "a job queued before a device changed users cannot reach its replacement" do
-    @subscription.update!(device_key_digest: Digest::SHA256.hexdigest("cd" * 32))
-    old_id = @subscription.id
-    next_user = @insight.family.users.where.not(id: @subscription.user_id).first!
-    replacement = PushSubscription.register_for!(user: next_user, token: @subscription.token,
-      environment: "sandbox", platform: "ios", device_key: "cd" * 32)
-    Apns::Client.expects(:new).never
-    DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: old_id)
-    assert PushSubscription.exists?(replacement.id)
-    assert_not PushSubscription.exists?(old_id)
+  test "records one ledger row per subscription and replays never duplicate it" do
+    2.times { PushDelivery.record_for_insight!(@insight) }
+    assert_equal 1, PushDelivery.apns.where(subscription: @subscription, insight: @insight).count
   end
 
-  test "delivers a privacy-preserving insight notification" do
+  test "a material version records a fresh row without replaying the old one" do
+    first = record_delivery
+    @insight.increment!(:notification_version)
+    PushDelivery.record_for_insight!(@insight.reload)
+    assert_equal 2, PushDelivery.apns.where(insight: @insight).count
+
+    Apns::Client.expects(:new).never
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: first.id)
+    assert_equal "skipped", first.reload.status
+  end
+
+  test "records rows for opted-in users with recent devices only" do
+    opted_out = @insight.family.users.where.not(id: @user.id).first
+    opted_out.update!(preferences: opted_out.preferences.merge("preview_features_enabled" => false))
+    opted_out.push_subscriptions.create!(
+      token: "cd" * 32, environment: "sandbox", platform: "ios", last_registered_at: Time.current
+    )
+    stale = PushSubscription.create!(
+      user: @user, token: "ef" * 32, environment: "sandbox", platform: "ios",
+      last_registered_at: 91.days.ago
+    )
+
+    PushDelivery.record_for_insight!(@insight)
+
+    assert_equal [ @subscription.id ],
+      PushDelivery.apns.where(insight: @insight).pluck(:subscription_id)
+  end
+
+  test "delivers a privacy-preserving insight notification from the ledger" do
+    delivery = record_delivery
     response = stub(ok?: true)
     client = mock
     Apns::Client.expects(:new).with(environment: "sandbox").returns(client)
@@ -38,17 +60,14 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
       insight_id: @insight.id
     ).returns(response)
 
-    DeliverInsightNotificationJob.perform_now(
-      insight_id: @insight.id,
-      push_subscription_id: @subscription.id
-    )
-  end
+    assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
+      PushDelivery.enqueue_insight_deliveries(@insight)
+    end
+    clear_enqueued_jobs
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
 
-  test "does not push an insight whose account is no longer shared with everyone" do
-    @insight.update!(metadata: @insight.metadata.merge("account_id" => accounts(:connected).id))
-    Apns::Client.expects(:new).never
-
-    DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: @subscription.id)
+    assert_equal "accepted", delivery.reload.status
+    assert_equal 1, delivery.provider_attempts
   end
 
   test "does not push a household total computed from accounts someone can no longer open" do
@@ -60,6 +79,7 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
 
   test "localizes notifications using the family locale" do
     @insight.family.update!(locale: "de")
+    delivery = record_delivery
     response = stub(ok?: true)
     client = mock
     Apns::Client.stubs(:new).returns(client)
@@ -70,71 +90,222 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
       insight_id: @insight.id
     ).returns(response)
 
-    DeliverInsightNotificationJob.perform_now(
-      insight_id: @insight.id,
-      push_subscription_id: @subscription.id
-    )
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
   end
 
-  test "removes tokens rejected as unregistered" do
+  test "does not record or push an insight whose account is no longer shared with everyone" do
+    @insight.update!(metadata: @insight.metadata.merge("account_id" => accounts(:connected).id))
+    PushDelivery.record_for_insight!(@insight)
+    assert_empty PushDelivery.apns.where(insight: @insight)
+
+    Apns::Client.expects(:new).never
+    assert_no_enqueued_jobs do
+      PushDelivery.enqueue_insight_deliveries(@insight)
+    end
+  end
+
+  test "low priority and non-active insights are never recorded or enqueued" do
+    Apns::Client.expects(:new).never
+    [ { priority: "low" }, { status: "read" }, { status: "expired" }, { status: "acknowledged" } ].each do |attributes|
+      @insight.update!(attributes)
+      PushDelivery.record_for_insight!(@insight)
+      assert_no_enqueued_jobs do
+        PushDelivery.enqueue_insight_deliveries(@insight)
+      end
+      assert_empty PushDelivery.apns.where(insight: @insight)
+    end
+  end
+
+  test "eligibility changes after recording skip the send at claim time" do
+    delivery = record_delivery
+    @insight.mark_read!
+    Apns::Client.expects(:new).never
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
+    assert_equal "skipped", delivery.reload.status
+  end
+
+  test "a stale registration cannot claim a recorded delivery" do
+    delivery = record_delivery
+    @subscription.update!(last_registered_at: 91.days.ago)
+    Apns::Client.expects(:new).never
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
+    assert_equal "skipped", delivery.reload.status
+  end
+
+  test "a deactivated user cannot claim a recorded delivery" do
+    delivery = record_delivery
+    @subscription.user.update_column(:active, false)
+    Apns::Client.expects(:new).never
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
+    assert_equal "skipped", delivery.reload.status
+  end
+
+  test "preview opt out after recording prevents delivery at claim time" do
+    delivery = record_delivery
+    @user.update!(preferences: {})
+    Apns::Client.expects(:new).never
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
+    assert_equal "skipped", delivery.reload.status
+  end
+
+  test "a ledger row for a subscription that changed users cannot reach the replacement" do
+    delivery = record_delivery
+    @subscription.update!(device_key_digest: Digest::SHA256.hexdigest("cd" * 32))
+    next_user = @insight.family.users.where.not(id: @subscription.user_id).first!
+    replacement = PushSubscription.register_for!(user: next_user, token: @subscription.token,
+      environment: "sandbox", platform: "ios", device_key: "cd" * 32)
+    Apns::Client.expects(:new).never
+
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
+
+    assert PushSubscription.exists?(replacement.id)
+    assert_not PushSubscription.exists?(@subscription.id)
+    assert_not PushDelivery.exists?(delivery.id)
+  end
+
+  test "transient failures hand the attempt back to the ledger and stay pending" do
+    delivery = record_delivery
+    response = stub(ok?: false, status: "503", body: {})
+    Apns::Client.any_instance.stubs(:deliver).returns(response)
+
+    assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
+      DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
+    end
+    assert_equal "pending", delivery.reload.status
+    assert_equal 1, delivery.reload.provider_attempts
+  end
+
+  test "five transient attempts exhaust the ledger budget terminally" do
+    delivery = record_delivery
+    PushDelivery.enqueue_insight_deliveries(@insight)
+    clear_enqueued_jobs
+    response = stub(ok?: false, status: "500", body: {})
+    Apns::Client.any_instance.stubs(:deliver).returns(response)
+
+    assert_performed_jobs 5, only: DeliverInsightNotificationJob do
+      perform_enqueued_jobs only: DeliverInsightNotificationJob do
+        DeliverInsightNotificationJob.perform_later(push_delivery_id: delivery.id)
+      end
+    end
+    assert_equal "failed", delivery.reload.status
+
+    Apns::Client.expects(:new).never
+    assert_no_enqueued_jobs only: DeliverInsightNotificationJob do
+      RecoverPushDeliveriesJob.perform_now
+      PushDelivery.enqueue_insight_deliveries(@insight)
+      DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
+    end
+  end
+
+  test "a late accepted response cannot be replayed into a second push" do
+    delivery = record_delivery
+    response = stub(ok?: true)
+    Apns::Client.any_instance.expects(:deliver).once.returns(response)
+
+    2.times { DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id) }
+    assert_equal "accepted", delivery.reload.status
+    assert_equal 1, delivery.reload.provider_attempts
+  end
+
+  test "unregistered tokens are invalidated together with their ledger rows" do
+    delivery = record_delivery
+    sibling = PushDelivery.create!(subscription: @subscription, insight: @insight, insight_version: 2)
     response = stub(ok?: false, status: "410", body: { "reason" => "Unregistered" })
     Apns::Client.any_instance.stubs(:deliver).returns(response)
 
-    assert_difference "PushSubscription.count", -1 do
-      DeliverInsightNotificationJob.perform_now(
-        insight_id: @insight.id,
-        push_subscription_id: @subscription.id
-      )
-    end
+    # Called without perform_now's discard_on: the ledger, not a swallowed
+    # RecordNotFound, finishes the attempt.
+    DeliverInsightNotificationJob.new.perform(push_delivery_id: delivery.id)
+
+    assert_not PushSubscription.exists?(@subscription.id)
+    assert_not PushDelivery.exists?(delivery.id)
+    assert_not PushDelivery.exists?(sibling.id)
   end
 
-  test "does not send an insight to a device from another family" do
-    other_subscription = users(:empty).push_subscriptions.create!(
-      token: "cd" * 32,
-      environment: "sandbox",
-      platform: "ios",
-      last_registered_at: Time.current
-    )
-    Apns::Client.expects(:new).never
+  test "a device that registers again while APNs answers 410 keeps its subscription" do
+    delivery = record_delivery
+    Apns::Client.any_instance.stubs(:deliver).with do |**_arguments|
+      travel 1.second do
+        PushSubscription.find(@subscription.id).update!(last_registered_at: Time.current)
+      end
+      true
+    end.returns(stub(ok?: false, status: "410", body: {}))
 
-    DeliverInsightNotificationJob.perform_now(
-      insight_id: @insight.id,
-      push_subscription_id: other_subscription.id
-    )
+    DeliverInsightNotificationJob.new.perform(push_delivery_id: delivery.id)
+
+    assert PushSubscription.exists?(@subscription.id)
+    assert_equal "rejected", delivery.reload.status
   end
 
-  test "self hosted mode prevents enqueueing and execution of old jobs" do
+  test "self hosted mode records no apns rows and cannot execute a stale row" do
     Rails.application.config.stubs(:app_mode).returns("self_hosted".inquiry)
+    PushDelivery.record_for_insight!(@insight)
+    assert_empty PushDelivery.apns.where(insight: @insight)
     Apns::Client.expects(:new).never
     assert_no_enqueued_jobs do
-      DeliverInsightNotificationJob.enqueue_for(@insight)
-      DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: @subscription.id)
+      PushDelivery.enqueue_insight_deliveries(@insight)
+      stale_row = PushDelivery.create!(subscription: @subscription, insight: @insight,
+        insight_version: @insight.notification_version)
+      DeliverInsightNotificationJob.perform_now(push_delivery_id: stale_row.id)
+      assert_equal "pending", stale_row.reload.status
     end
   end
 
-  test "preview opt out after enqueueing prevents delivery" do
-    @subscription.user.update!(preferences: { "preview_features_enabled" => false })
+  test "a channel that cannot attempt releases the reservation without burning the budget" do
+    delivery = record_delivery
+    Apns::Client.stubs(:available?).returns(true, false)
     Apns::Client.expects(:new).never
-    DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: @subscription.id)
+
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
+
+    assert_equal "pending", delivery.reload.status
+    assert_equal 0, delivery.reload.provider_attempts
+    assert_nil delivery.reload.attempted_at
+    assert_nil delivery.reload.enqueued_at
   end
 
-  test "stale registrations and inactive users cannot receive insight pushes" do
-    @subscription.update!(last_registered_at: 91.days.ago)
-    Apns::Client.expects(:new).never
-    DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: @subscription.id)
-    @subscription.update!(last_registered_at: Time.current)
-    @subscription.user.update_column(:active, false)
-    DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: @subscription.id)
+  test "configuration failures record as failed rather than a provider rejection" do
+    delivery = record_delivery
+    Apns::Client.stubs(:new).raises(Apns::Client::ConfigurationError, "bad key")
+
+    DeliverInsightNotificationJob.perform_now(push_delivery_id: delivery.id)
+
+    assert_equal "failed", delivery.reload.status
+    assert_equal 1, delivery.reload.provider_attempts
   end
 
-  test "low priority and already read insights cannot enqueue or deliver" do
-    Apns::Client.expects(:new).never
-    [ { priority: "low" }, { priority: "high", status: "read" }, { status: "expired" }, { status: "acknowledged" } ].each do |attributes|
-      @insight.update!(attributes)
-      assert_no_enqueued_jobs do
-        DeliverInsightNotificationJob.enqueue_for(@insight)
-        DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: @subscription.id)
-      end
+  test "jobs queued before the ledger still deliver exactly once" do
+    response = stub(ok?: true)
+    client = mock
+    Apns::Client.expects(:new).with(environment: "sandbox").returns(client)
+    client.expects(:deliver).once.returns(response)
+
+    2.times do
+      DeliverInsightNotificationJob.perform_now(
+        insight_id: @insight.id, push_subscription_id: @subscription.id
+      )
     end
+
+    row = PushDelivery.apns.find_by!(subscription: @subscription, insight: @insight,
+      insight_version: @insight.notification_version)
+    assert_equal "accepted", row.reload.status
+    assert_equal 1, row.provider_attempts
   end
+
+  test "the budget warning opt in applies to APNs devices too" do
+    @insight.update!(insight_type: "budget_at_risk", priority: "medium")
+    PushDelivery.record_for_insight!(@insight)
+    assert_empty PushDelivery.apns.where(insight: @insight)
+
+    @user.update!(preferences: @user.preferences.merge("push_budget_warnings_enabled" => true))
+    PushDelivery.record_for_insight!(@insight)
+    assert_equal [ @subscription.id ], PushDelivery.apns.where(insight: @insight).pluck(:subscription_id)
+  end
+
+  private
+    def record_delivery
+      PushDelivery.record_for_insight!(@insight)
+      PushDelivery.apns.find_by!(subscription: @subscription, insight: @insight,
+        insight_version: @insight.notification_version)
+    end
 end
