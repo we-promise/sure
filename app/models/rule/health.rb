@@ -84,7 +84,7 @@ class Rule::Health
       active.each_with_index.flat_map do |rule, index|
         next [] if skipped.include?(rule.id)
 
-        active.first(index).filter_map { |other| overlap(rule, other) }
+        active.first(index).reject { |other| skipped.include?(other.id) }.filter_map { |other| overlap(rule, other) }
       end
     end
   end
@@ -212,9 +212,13 @@ class Rule::Health
       (duplicates + conflicts.map(&:rules)).any? { |group| group.include?(rule) && group.include?(other) }
     end
 
-    # Only when nothing else separates them: their other conditions are the same.
+    # Only when nothing else separates them: their other conditions are the
+    # same, and they don't require different merchants.
     def same_text?(rule, other)
       return false unless conditions_besides_text(rule) == conditions_besides_text(other)
+
+      merchant_ids, other_merchant_ids = merchant_ids(rule), merchant_ids(other)
+      return false if merchant_ids.any? && other_merchant_ids.any? && merchant_ids != other_merchant_ids
 
       texts(rule).any? { |text| texts(other).any? { |other_text| same_or_contained?(text, other_text) } }
     end
@@ -228,7 +232,18 @@ class Rule::Health
       return matches_text?(other_text, text, operator) if other_operator == "="
 
       text, other_text = text.downcase, other_text.downcase
-      text.include?(other_text) || other_text.include?(text)
+      if operator == "starts_with" && other_operator == "starts_with"
+        text.start_with?(other_text) || other_text.start_with?(text)
+      elsif operator == "ends_with" && other_operator == "ends_with"
+        text.end_with?(other_text) || other_text.end_with?(text)
+      else
+        text.include?(other_text) || other_text.include?(text)
+      end
+    end
+
+    def merchant_ids(rule)
+      leaf_conditions(rule).select { |condition| condition.condition_type == "transaction_merchant" && condition.operator == "=" }
+        .map { |condition| condition.value.to_s }.to_set
     end
 
     # Whether an exact value passes a contains, starts with or ends with
