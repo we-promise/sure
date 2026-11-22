@@ -32,15 +32,22 @@ module RuleRun::AiProgress
   end
 
   private
-    # This job's transactions: the ids its window examined, once it has read them.
-    attr_reader :family, :transaction_ids
+    attr_reader :family
 
-    # The ids this job sends: those of its window that `scope_for` keeps. Reading the window sets
-    # transaction_ids to every id it examined, so the ones dropped count as handled.
+    # This job's transactions: every id its window has examined, matching or not, so the ones
+    # dropped count as handled. Read live, so a window that raised partway still counts what it read.
+    def transaction_ids
+      return @transaction_ids unless @window
+
+      matching_transaction_ids unless @window.taken?
+      @window.examined_ids
+    end
+
+    # The ids this job sends: those of its window that `scope_for` keeps.
     def matching_transaction_ids
       @matching_transaction_ids ||=
         if @window
-          @window.take_matching { |chunk| scope_for(chunk).pluck(:id) }.tap { @transaction_ids = @window.examined_ids }
+          @window.take_matching { |chunk| scope_for(chunk).pluck(:id) }
         else
           scope_for(transaction_ids).pluck(:id)
         end

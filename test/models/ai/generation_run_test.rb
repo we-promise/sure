@@ -73,14 +73,25 @@ class Ai::GenerationRunTest < ActiveSupport::TestCase
     assert_equal [ run_args[:run_id] ], Ai::GenerationRun.pluck(:id)
   end
 
-  test "sweep deletes old runs and their items" do
-    old = start(@ids)
-    old.update_columns(created_at: 8.days.ago)
-    recent = start(@ids)
+  test "sweep deletes runs no job has touched in a week, however old the rest are" do
+    idle = start(@ids)
+    idle.update_columns(created_at: 8.days.ago, updated_at: 8.days.ago)
+    long_running = start(@ids)
+    long_running.update_columns(created_at: 30.days.ago, updated_at: 1.hour.ago)
 
     assert_equal 1, Ai::GenerationRun.sweep
-    assert_equal [ recent.id ], Ai::GenerationRun.pluck(:id)
-    assert_equal 0, Ai::GenerationRun::Item.where(run_id: old.id).count
+    assert_equal [ long_running.id ], Ai::GenerationRun.pluck(:id)
+    assert_equal 0, Ai::GenerationRun::Item.where(run_id: idle.id).count
+  end
+
+  test "a pending id whose query raises is still examined, so it's this job's to release" do
+    run = start(@ids)
+    window = run.window(cursor: 2, pending: @ids.first(2), size: 3)
+
+    assert_raises(ActiveRecord::StatementInvalid) { window.take_matching { raise ActiveRecord::StatementInvalid, "lost" } }
+
+    assert_equal @ids.first(2), window.examined_ids
+    assert_equal 12, window.examined_ids.size + window.outstanding, "every id is examined or outstanding"
   end
 
   test "a family's runs go with it" do

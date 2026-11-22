@@ -28,8 +28,9 @@ class Ai::GenerationRun::Window
 
     @taken = true
     if @pending.any?
-      matching = yield(@pending).to_set
+      # Examined before the query, so a query that raises still leaves them this job's to release.
       @examined_ids.concat(@pending)
+      matching = yield(@pending).to_set
       @matched_ids.concat(@pending.select { matching.include?(_1) })
     end
 
@@ -50,11 +51,13 @@ class Ai::GenerationRun::Window
     @matched_ids
   end
 
+  def taken? = @taken.present?
+
   # Every id in the table has been read. Pending ids aren't counted: the job checks the result for those.
   def exhausted? = @cursor >= run.item_count
 
   # Ids no job has examined yet, the ones a run that gives up here must release.
-  def outstanding = (@taken ? 0 : @pending.size) + [ run.item_count - @cursor, 0 ].max
+  def outstanding = (taken? ? 0 : @pending.size) + [ run.item_count - @cursor, 0 ].max
 
   private
     def full? = @matched_ids.size >= @size

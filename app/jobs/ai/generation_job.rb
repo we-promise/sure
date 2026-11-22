@@ -93,6 +93,7 @@ class Ai::GenerationJob < ApplicationJob
       klass = Ai::Requesters.fetch(arguments.first)
       args = arguments.second.to_h.symbolize_keys
       run = Ai::GenerationRun.find_by!(id: args.delete(:run_id), family_id: args[:family_id])
+      run.touch   # progress, which the sweep goes by
       @window = run.window(cursor: args.delete(:cursor), pending: args.delete(:pending),
                            size: Ai::Config.current.window_for(arguments.first))
       @requester = klass.from_ai_job(window: @window, **args)

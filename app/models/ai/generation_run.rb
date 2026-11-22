@@ -32,7 +32,8 @@ class Ai::GenerationRun < ApplicationRecord
     run&.destroy unless queued
   end
 
-  def self.sweep(older_than: 7.days) = where(created_at: ...older_than.ago).delete_all
+  # Runs no job has touched in a week: a run still making progress is kept however long it takes.
+  def self.sweep(idle_for: 7.days) = where(updated_at: ...idle_for.ago).delete_all
 
   # [position, item_id] pairs from `position` on, in order.
   def ids_from(position, limit) = items.where(position: position..).order(:position).limit(limit).pluck(:position, :item_id)

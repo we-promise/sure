@@ -459,6 +459,21 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal 0, Ai::GenerationRun.count
   end
 
+  test "a window whose query raises partway releases what it read as well as what's left" do
+    use_ai_model_settings(batch_size: 2)
+    txns = 6.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction }
+    rule_run = ai_rule_run(txns.size)
+    # The first chunk matches nothing, so the window reads on, and the next chunk's query fails.
+    Family::AutoCategorizer.any_instance.stubs(:scope_for).returns(Transaction.none).then.raises(Ai::Error::Unauthorized, "key revoked")
+
+    Ai::GenerationRun.enqueue(:categorize, family: @family, ids: txns.map(&:id), rule_run_id: rule_run.id)
+    ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys) until enqueued_jobs.empty?
+
+    assert_equal [ 0, 0, "failed" ], rule_run.reload.values_at(:transactions_awaiting_ai, :transactions_modified, :status)
+    entry = DebugLogEntry.where(category: "auto_categorization", message: "AI categorization failed").order(:created_at).last
+    assert_equal txns.first(2).map(&:id), entry.metadata["requested_transaction_ids"]
+  end
+
   private
     def ai_rule_run(count)
       RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,

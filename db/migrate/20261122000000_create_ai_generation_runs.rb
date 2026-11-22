@@ -9,7 +9,7 @@ class CreateAiGenerationRuns < ActiveRecord::Migration[8.1]
 
       t.timestamps
     end
-    add_index :ai_generation_runs, :created_at
+    add_index :ai_generation_runs, :updated_at
 
     # No foreign key on item_id: it names a transaction or a merchant, depending on the feature.
     create_table :ai_generation_run_items, primary_key: [ :run_id, :position ] do |t|
