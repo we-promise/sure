@@ -114,6 +114,41 @@ class RulesTest < ApplicationSystemTestCase
     end
   end
 
+  test "fixed split summary ignores an exact amount inside a removed group" do
+    rule = @user.family.rules.create!(
+      name: "Grouped fixed split",
+      resource_type: "transaction",
+      conditions: [
+        Rule::Condition.new(
+          condition_type: "compound", operator: "and",
+          sub_conditions: [ Rule::Condition.new(condition_type: "transaction_amount", operator: "=", value: "100") ]
+        )
+      ],
+      actions: [
+        Rule::Action.new(
+          action_type: "split_transaction",
+          value: {
+            splits: [
+              { type: "fixed", name: "A", share: "70" },
+              { type: "fixed", name: "B", share: "30" }
+            ]
+          }.to_json
+        )
+      ]
+    )
+
+    visit edit_rule_path(rule)
+
+    within "dialog" do
+      assert_selector "[data-rule--split-action-target='summary'].text-success", text: "100.00 / 100.00"
+
+      condition_group_row.find(:xpath, "./div/button").click
+
+      assert_no_selector "[data-rule--split-action-target='summary'].text-success"
+      assert_equal "100.00", find("[data-rule--split-action-target='summary']").text
+    end
+  end
+
   test "split rows save category, merchant and tags picked in the rule form" do
     merchant = @user.family.merchants.create!(name: "Split Landlord")
     rule = @user.family.rules.create!(
