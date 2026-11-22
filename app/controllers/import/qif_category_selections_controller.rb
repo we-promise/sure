@@ -25,6 +25,10 @@ class Import::QifCategorySelectionsController < ApplicationController
     if selection_params[:date_format].present? && selection_params[:date_format] != @import.qif_date_format
       offered_lists = [ @import.row_categories, @import.row_tags ]
 
+      # The rows are rebuilt from the file, so a selection saved for the old
+      # rows no longer applies; it would also hide split categories and tags
+      # that only appear with the new format.
+      @import.column_mappings = @import.column_mappings.except("qif_selected_categories", "qif_selected_tags")
       @import.qif_date_format = selection_params[:date_format]
       @import.update_column(:column_mappings, @import.column_mappings)
       @import.generate_rows_from_csv

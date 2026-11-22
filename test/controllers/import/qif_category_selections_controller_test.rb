@@ -102,6 +102,38 @@ class Import::QifCategorySelectionsControllerTest < ActionDispatch::IntegrationT
     assert_equal [ "Food", "Rent", "Utilities" ], QifImport.find(import.id).row_categories
   end
 
+  test "update offers new split categories after a format change on a revisited selection" do
+    import = qif_import_with(<<~QIF, date_format: "%d.%m.%Y")
+      !Type:Bank
+      D7.10.20
+      T-10.00
+      PGrocery Store
+      LFood
+      ^
+      D7.25.20
+      T-500.00
+      PLandlord
+      SRent
+      $-400.00
+      SUtilities
+      $-100.00
+      ^
+    QIF
+    put import_qif_category_selection_url(import), params: { date_format: "%d.%m.%Y", categories: [ "Food" ] }
+    assert_redirected_to import_clean_url(import)
+    assert_equal [ "Food" ], import.reload.column_mappings["qif_selected_categories"]
+
+    put import_qif_category_selection_url(import), params: { date_format: "%m.%d.%Y", categories: [ "Food" ] }
+
+    assert_redirected_to import_qif_category_selection_url(import)
+    assert_nil import.reload.column_mappings["qif_selected_categories"]
+    assert_equal [ "Food", "Rent", "Utilities" ], QifImport.find(import.id).row_categories
+
+    follow_redirect!
+
+    assert_select "input[name='categories[]'][value='Utilities'][checked]"
+  end
+
   test "update applies the selection when the new date format keeps the same categories and tags" do
     import = qif_import_with(<<~QIF, date_format: "%d.%m.%Y")
       !Type:Bank

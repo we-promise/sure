@@ -183,6 +183,7 @@ class QifImport < Import
       remove_instance_variable(:@parsed_transactions_with_splits) if defined?(@parsed_transactions_with_splits)
       remove_instance_variable(:@parsed_transaction_by_source_row_number) if defined?(@parsed_transaction_by_source_row_number)
       remove_instance_variable(:@has_split_transactions) if defined?(@has_split_transactions)
+      remove_instance_variable(:@split_categories) if defined?(@split_categories)
     end
 
     def parsed_transaction_by_source_row_number
