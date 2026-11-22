@@ -64,6 +64,36 @@ class Transactions::FiltersControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='q[ai_status][]'][value='current'][checked]", count: 0
   end
 
+  test "preserves the reconcile status filter checked state" do
+    @user.family.update!(manual_reconciliation: true)
+
+    get filters_transactions_url(q: { reconcile_status: [ "reconciled" ] }),
+        headers: { "Turbo-Frame" => "transaction-filters" }
+
+    assert_response :success
+    assert_select "input[name='q[reconcile_status][]'][value='reconciled'][checked]"
+    assert_select "input[name='q[reconcile_status][]'][value='cleared'][checked]", count: 0
+    assert_select "a[href=?][data-turbo-frame='_top']", transactions_path(clear_filters: true)
+  end
+
+  test "an unknown reconcile status checks no box" do
+    @user.family.update!(manual_reconciliation: true)
+
+    get filters_transactions_url(q: { reconcile_status: [ "bogus" ] }),
+        headers: { "Turbo-Frame" => "transaction-filters" }
+
+    assert_response :success
+    assert_select "input[name='q[reconcile_status][]'][checked]", count: 0
+  end
+
+  test "does not offer the reconcile filter when manual reconciliation is off" do
+    get filters_transactions_url, headers: { "Turbo-Frame" => "transaction-filters" }
+
+    assert_response :success
+    assert_select "input[name='q[reconcile_status][]']", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "reconcile_status_filter", count: 0
+  end
+
   test "clear filters navigates the whole page outside the lazy frame" do
     get filters_transactions_url(q: { attachment_status: [ "with" ] }),
         headers: { "Turbo-Frame" => "transaction-filters" }
