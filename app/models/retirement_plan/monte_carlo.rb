@@ -76,7 +76,9 @@ class RetirementPlan::MonteCarlo
   end
 
   # The same draws with each path's retirement-year returns reordered worst
-  # first: the same average return, the worst sequence.
+  # first: the same average return, the worst sequence. Worst first is not
+  # always worse when income tops spending in a retired year, so a path
+  # passes only if it lasts in its own order as well.
   def stress_success_rate
     run(simulation, worst_first: true)[:success_rate]
   end
@@ -150,29 +152,35 @@ class RetirementPlan::MonteCarlo
 
       draws.each do |z|
         growth = z.map { |zt| base * Math.exp(@sigma * zt) }
-        growth = growth[0...split] + growth[split..].sort if worst_first
-
-        value = sim.current_assets.to_f
-        lasted = true
-        path_values = [] if keep_values
-
-        flows.each_with_index do |(contribution, withdrawal), t|
-          # Half a cent of slack for the Float replay: an exact-to-the-cent
-          # plan the Simulation meets must not fail here on rounding.
-          if withdrawal > value + 0.005
-            lasted = false
-            value = 0.0
-          else
-            value -= withdrawal
-          end
-          value = value * growth[t] + contribution
-          path_values << value if keep_values
-        end
+        lasted, path_values = replay(sim.current_assets.to_f, flows, growth, keep_values:)
+        lasted &&= replay(sim.current_assets.to_f, flows, growth[0...split] + growth[split..].sort).first if worst_first
 
         survived += 1 if lasted
         values << path_values if keep_values
       end
 
       { success_rate: survived.fdiv(@paths), values: values }
+    end
+
+    # Whether one path lasts, and, when kept, its value at the end of each
+    # year.
+    def replay(value, flows, growth, keep_values: false)
+      lasted = true
+      path_values = [] if keep_values
+
+      flows.each_with_index do |(contribution, withdrawal), t|
+        # Half a cent of slack for the Float replay: an exact-to-the-cent
+        # plan the Simulation meets must not fail here on rounding.
+        if withdrawal > value + 0.005
+          lasted = false
+          value = 0.0
+        else
+          value -= withdrawal
+        end
+        value = value * growth[t] + contribution
+        path_values << value if keep_values
+      end
+
+      [ lasted, path_values ]
     end
 end

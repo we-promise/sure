@@ -164,6 +164,26 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
     assert_operator grid[0][2][:success_rate], :<, grid[4][2][:success_rate], "a higher return must help this tight plan"
   end
 
+  # Income above spending adds to the portfolio in a retired year, so a low
+  # early return is not always the worst order. 800 comes in at the end of
+  # this year and 800 goes out in two years' time. In the drawn order the
+  # 800 falls to 700 next year and the withdrawal cannot be met; sorted, it
+  # grows to 900 and lasts. The stress test must not pass a path its own
+  # order fails.
+  test "a path that fails in its own order fails the stress test too" do
+    mc = monte_carlo(
+      volatility: 1, paths: 1, retirement_year: AS_OF.year,
+      current_assets: 0, annual_contribution: 0, expected_annual_return: 0, inflation_rate: 0,
+      birth_year: 1956, end_age: 72,
+      streams: [ Stream.new(kind: "income", annual_amount: 800, start_year: 2026, end_year: 2026, indexed: false),
+                 Stream.new(kind: "expense", annual_amount: 800, start_year: 2028, end_year: 2028, indexed: false) ]
+    )
+    mc.stubs(:draws).returns([ [ 1.25, 0.875, 1.125 ].map { |factor| Math.log(factor) } ])
+
+    assert_equal 0.0, mc.success_rate
+    assert_equal 0.0, mc.stress_success_rate
+  end
+
   # Retired two years before the reference year: every modelled year is a
   # retirement year, so the stress run must reorder all of them. Skipping the
   # reorder left the stress rate equal to the ordinary one (0.614 both).
