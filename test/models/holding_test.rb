@@ -785,6 +785,70 @@ class HoldingTest < ActiveSupport::TestCase
     assert_nil unknown_existing.cost_basis, "the moved side's 40 is dropped"
   end
 
+  # cost_basis is per share. A locked 5 @ $80 merged with an unlocked 15 @ $40
+  # is 20 units: keeping $80 would misstate the 15 merged-in units, so the
+  # weighted $50 is the right figure. The user's lock stays on the merged row.
+  test "remap_security! merge onto a locked row blends the basis and keeps the lock" do
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+    existing_goog = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: "USD")
+    existing_goog.set_manual_cost_basis!(80)
+    @amzn.update_columns(cost_basis: 40, cost_basis_source: "calculated") # 15 units
+
+    @amzn.remap_security!(new_security)
+    existing_goog.reload
+
+    assert_equal 20, existing_goog.qty, "precondition: the rows did not merge"
+    assert_equal 50, existing_goog.cost_basis.to_d, "merged basis is not the weighted blend (80 x 5 + 40 x 15) / 20"
+    assert existing_goog.cost_basis_locked?, "the merge dropped the existing row's lock"
+    assert_equal "manual", existing_goog.cost_basis_source
+  end
+
+  # The mirror case: the row being MOVED carries the user's lock. It is
+  # destroyed after the merge, and its lock goes with it, so the merged row is
+  # left unlocked and the next sync replaces the blend.
+  test "remap_security! merge from a locked moved row blends the basis and keeps the lock" do
+    new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
+    existing_goog = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 15, price: 100, amount: 1500, currency: "USD",
+                                              cost_basis: 40, cost_basis_source: "calculated")
+    @amzn.update_columns(qty: 5, amount: 5 * @amzn.price)
+    @amzn.set_manual_cost_basis!(80)
+
+    @amzn.remap_security!(new_security)
+    existing_goog.reload
+
+    assert_equal 20, existing_goog.qty, "precondition: the rows did not merge"
+    assert_equal 50, existing_goog.cost_basis.to_d, "merged basis is not the weighted blend (80 x 5 + 40 x 15) / 20"
+    assert existing_goog.cost_basis_locked?, "the moved row's lock was lost in the merge"
+    assert_equal "manual", existing_goog.cost_basis_source
+  end
+
+  # What the lost lock costs the user: the remap controller re-materializes
+  # straight after the merge, and an unlocked merged row takes the
+  # trade-derived figure, so the user's $80 is gone from the blend.
+  test "the blended basis from a locked moved row survives the re-materialization after a remap" do
+    account = families(:empty).accounts.create!(name: "Remap", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    moved_security = create_security("MOVD", prices: [ { date: 1.day.ago.to_date, price: 100 }, { date: Date.current, price: 100 } ])
+    target_security = create_security("TRGT", prices: [ { date: 1.day.ago.to_date, price: 100 }, { date: Date.current, price: 100 } ])
+    create_trade(moved_security, account: account, qty: 5, price: 200, date: 1.day.ago.to_date)
+    create_trade(target_security, account: account, qty: 15, price: 40, date: 1.day.ago.to_date)
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    moved = account.holdings.find_by!(security: moved_security, date: Date.current)
+    moved.set_manual_cost_basis!(80)
+    moved.remap_security!(target_security)
+
+    merged = account.holdings.find_by!(security: target_security, date: Date.current)
+    assert_equal 50, merged.cost_basis.to_d, "precondition: the merge did not write the blend"
+
+    # As HoldingsController#remap_security does.
+    Balance::Materializer.new(Account.find(account.id), strategy: :forward, security_ids: [ target_security.id ]).materialize_balances
+    merged.reload
+
+    assert_equal 20, merged.qty
+    assert_equal 50, merged.cost_basis.to_d, "re-materialization replaced the blend with the trade-derived (200 x 5 + 40 x 15) / 20"
+    assert merged.cost_basis_locked?
+  end
+
   test "reset_security_to_provider! restores original security" do
     old_security = @amzn.security
     new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])

@@ -408,7 +408,8 @@ class Holding < ApplicationRecord
           merged_amount = existing.amount + holding.amount
 
           # Calculate weighted average cost basis if both holdings have cost_basis
-          merged_cost_basis = if existing.cost_basis.present? && holding.cost_basis.present? && merged_qty.positive?
+          blended_cost_basis = existing.cost_basis.present? && holding.cost_basis.present? && merged_qty.positive?
+          merged_cost_basis = if blended_cost_basis
             ((existing.cost_basis * existing.qty) + (holding.cost_basis * holding.qty)) / merged_qty
           else
             existing.cost_basis # Keep existing if we can't calculate weighted average
@@ -422,6 +423,14 @@ class Holding < ApplicationRecord
             price: merged_qty.positive? ? merged_amount / merged_qty : 0,
             cost_basis: merged_cost_basis
           }
+
+          # A user-set basis on either side survives the merge: the blend is
+          # what the merged units cost, and the lock keeps the next sync from
+          # replacing it.
+          if blended_cost_basis && (existing.cost_basis_locked? || holding.cost_basis_locked?)
+            merge_attrs[:cost_basis_locked] = true
+            merge_attrs[:cost_basis_source] = "manual"
+          end
           merge_attrs[:external_id] ||= holding.external_id if existing.external_id.blank? && holding.external_id.present?
           merge_attrs[:provider_security_id] ||= holding.provider_security_id || old_security.id if existing.provider_security_id.blank?
           merge_attrs[:account_provider_id] ||= holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
