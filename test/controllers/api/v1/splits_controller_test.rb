@@ -71,6 +71,21 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_includes categories, nil
   end
 
+  test "locks the category chosen for each child" do
+    category = @family.categories.first
+    params = { split: { splits: [
+      { name: "Categorised", amount: (@entry.amount / 2).to_s, category_id: category.id },
+      { name: "Plain",       amount: (@entry.amount / 2).to_s }
+    ] } }
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :created
+
+    children = @entry.reload.child_entries.includes(:entryable).index_by(&:name)
+    assert children["Categorised"].transaction.locked_attributes.key?("category_id")
+    refute children["Plain"].transaction.locked_attributes.key?("category_id")
+  end
+
   test "returns 422 when the children do not sum to the parent" do
     params = { split: { splits: [ { name: "Too small", amount: "1.00" } ] } }
 
@@ -141,6 +156,23 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal 3, @entry.reload.child_entries.count
     assert_equal @entry.amount, @entry.child_entries.sum(:amount)
+  end
+
+  test "update locks the category chosen for each child" do
+    post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+
+    category = @family.categories.first
+    params = { split: { splits: [
+      { name: "Categorised", amount: (@entry.amount / 2).to_s, category_id: category.id },
+      { name: "Plain",       amount: (@entry.amount / 2).to_s }
+    ] } }
+
+    patch api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :success
+
+    children = @entry.reload.child_entries.includes(:entryable).index_by(&:name)
+    assert children["Categorised"].transaction.locked_attributes.key?("category_id")
+    refute children["Plain"].transaction.locked_attributes.key?("category_id")
   end
 
   test "returns 404 updating a transaction that is not split" do

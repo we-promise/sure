@@ -348,6 +348,71 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tags(:three) ], part_one.entryable.tags
   end
 
+  test "create locks the category chosen for each part" do
+    post transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Groceries", amount: "-70", category_id: categories(:food_and_drink).id },
+          { name: "Household", amount: "-30", category_id: "" }
+        ]
+      }
+    }
+
+    children = @entry.reload.child_entries.includes(:entryable).index_by(&:name)
+    assert children["Groceries"].transaction.locked_attributes.key?("category_id")
+    refute children["Household"].transaction.locked_attributes.key?("category_id")
+  end
+
+  test "create keeps a part's category when a matching rule runs" do
+    family = @entry.account.family
+    gas = categories(:food_and_drink)
+    reimbursable = categories(:subcategory)
+    merchant = family.merchants.create!(name: "Gas Station", type: "FamilyMerchant")
+    @entry.transaction.update!(merchant: merchant, category: gas)
+
+    rule = family.rules.create!(
+      name: "Gas",
+      resource_type: "transaction",
+      active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: merchant.id) ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: gas.id) ]
+    )
+
+    post transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Fuel", amount: "-70", category_id: gas.id },
+          { name: "Reimbursable", amount: "-30", category_id: reimbursable.id }
+        ]
+      }
+    }
+
+    Rule::Runner.new(family, rules: [ rule ], execution_type: "scheduled").run
+
+    reimbursable_part = @entry.reload.child_entries.includes(:entryable).find { |c| c.name == "Reimbursable" }
+    assert_equal reimbursable, reimbursable_part.transaction.reload.category
+  end
+
+  test "update locks the category chosen for each part" do
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    patch transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Food", amount: "-60", category_id: categories(:food_and_drink).id },
+          { name: "Other", amount: "-40", category_id: "" }
+        ]
+      }
+    }
+
+    children = @entry.reload.child_entries.includes(:entryable).index_by(&:name)
+    assert children["Food"].transaction.locked_attributes.key?("category_id")
+    refute children["Other"].transaction.locked_attributes.key?("category_id")
+  end
+
   # Destroy from child tests
   test "destroy from child resolves to parent and unsplits" do
     @entry.split!([

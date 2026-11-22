@@ -322,6 +322,19 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert @entry.excluded?
   end
 
+  test "resplit! locks the fields a split sets when asked to" do
+    @entry.split!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+
+    assert @entry.resplit!([
+      { name: "C", amount: 30, category_id: categories(:food_and_drink).id },
+      { name: "D", amount: 70 }
+    ], lock_attributes: true)
+
+    children = @entry.reload.child_entries.includes(:entryable).index_by(&:name)
+    assert_equal %w[category_id], children["C"].transaction.locked_attributes.keys
+    assert_empty children["D"].transaction.locked_attributes
+  end
+
   test "resplit! does not resurrect a split another caller removed" do
     @entry.split!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
     stale = Entry.find(@entry.id)

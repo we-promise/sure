@@ -44,7 +44,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
 
     # Two concurrent POSTs can both clear the check above; split_once! locks
     # the parent and re-checks, so only one set of children is inserted.
-    raise NotSplittable unless @entry.split_once!(splits)
+    raise NotSplittable unless @entry.split_once!(splits, lock_attributes: true)
     @entry.sync_account_later
     @entry.reload
 
@@ -72,7 +72,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
 
     # The split_parent? test above runs before the lock, so a concurrent DELETE can unsplit in
     # between; resplit! re-checks under the lock instead of resurrecting the split.
-    raise NotSplit unless @entry.resplit!(splits)
+    raise NotSplit unless @entry.resplit!(splits, lock_attributes: true)
     @entry.sync_account_later
     @entry.reload
 
