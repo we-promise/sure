@@ -59,6 +59,8 @@
   <div class="relative w-full min-h-52 privacy-sensitive" style="height: var(--dash-widget-h, 18rem);"
        data-account-balances-chart-target="chart" draggable="false"></div>
 
+  <p class="text-xs text-destructive" role="status" hidden data-account-balances-chart-target="saveError"><%= t(".save_failed") %></p>
+
   <div class="text-sm privacy-sensitive" data-account-balances-chart-target="list" draggable="false"></div>
 
   <p class="flex items-start gap-1.5 text-xs text-secondary">

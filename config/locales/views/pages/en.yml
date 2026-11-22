@@ -78,6 +78,7 @@ en:
         hide_negative_unavailable: "Not available: the total of the selected accounts goes below zero on %{date}."
         show_transactions: Show transactions
         show_transactions_hint: Dots above the dates, one per day, or one per transaction when zoomed in far enough. Click a group to zoom in, a single transaction to open it. Hollow dots are upcoming bills.
+        save_failed: Couldn't save these settings. They will be sent again with your next change.
         transactions_loading: Loading transactions…
         transactions_error: Could not load transactions.
         chart_aria_label: Stacked account balances with forecast

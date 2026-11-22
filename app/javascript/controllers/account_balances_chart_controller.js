@@ -34,6 +34,7 @@ const SAVE_DELAY = 400;
 // shows the same chart as the widget.
 export default class extends Controller {
   static targets = [
+    "saveError",
     "controls",
     "secondaryInk",
     "subduedInk",
@@ -177,9 +178,19 @@ export default class extends Controller {
           response.status,
         );
       }
+      this.#saveFailed(!response.ok);
     } catch (error) {
       console.error("[Account Balances] Network error saving settings:", error);
+      this.#saveFailed(true);
     }
+  }
+
+  // A failed save stays pending, so the next change (or leaving the
+  // dashboard) sends the current settings again; until a save succeeds the
+  // widget says the settings are not saved.
+  #saveFailed(failed) {
+    if (failed) this.savePending = true;
+    for (const note of this.saveErrorTargets) note.hidden = !failed;
   }
 
   #syncSettings() {

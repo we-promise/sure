@@ -51,6 +51,33 @@ class DashboardAccountBalancesTest < ApplicationSystemTestCase
     assert_eventually { @user.reload.account_balances_settings["hidden_account_ids"].include?(accounts(:credit_card).id) }
   end
 
+  test "a rejected settings save says so and is retried with the next change" do
+    sign_in @user
+    page.execute_script(<<~JS)
+      window.realFetch = window.fetch;
+      window.fetch = (url, options) => options && options.method === "PATCH" && String(url).includes("/dashboard/preferences")
+        ? Promise.resolve(new Response("", { status: 422 }))
+        : window.realFetch(url, options);
+    JS
+
+    within "section[data-section-key='account_balances']" do
+      find("[data-list-toggle]", match: :first).click
+      find("[data-group='CreditCard'] [data-group-check]").click
+      assert_text "Couldn't save these settings"
+    end
+    assert_not_includes @user.reload.account_balances_settings["hidden_account_ids"], accounts(:credit_card).id
+
+    page.execute_script("window.fetch = window.realFetch")
+    within "section[data-section-key='account_balances']" do
+      find("[data-group='Depository'] [data-group-check]").click
+      assert_no_text "Couldn't save these settings"
+    end
+    assert_eventually do
+      hidden = @user.reload.account_balances_settings["hidden_account_ids"]
+      hidden.include?(accounts(:credit_card).id) && hidden.include?(accounts(:depository).id)
+    end
+  end
+
   test "opens full screen from the widget header" do
     sign_in @user
 
