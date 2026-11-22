@@ -868,6 +868,25 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/call create_goal does not link another member's private account" do
+    @user = users(:family_member)
+    hidden = accounts(:connected)
+
+    with_mcp_env do
+      assert_no_difference "GoalAccount.count" do
+        post "/mcp", params: jsonrpc_request("tools/call", {
+          name: "create_goal",
+          arguments: { name: "X", target_amount: 100, linked_account_names: [ hidden.name ], earmarks: { hidden.name => 50 } }
+        }).to_json, headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      result = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_equal "unknown_accounts", result["error"]
+      assert_not_includes result["available_accounts"].map { |a| a["name"] }, hidden.name
+    end
+  end
+
   # -- JSON-RPC id preservation --
 
   test "preserves request id in successful response" do
