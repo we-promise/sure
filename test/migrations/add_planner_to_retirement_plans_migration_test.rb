@@ -25,8 +25,8 @@ class AddPlannerToRetirementPlansMigrationTest < ActiveSupport::TestCase
     migrate(:up)
 
     assert_equal before, shape
-    assert_equal [ "integer", 90, false ], before[:plan_columns]["end_age"]
-    assert_equal [ "numeric(6,4)", BigDecimal("0.03"), false ], before[:plan_columns]["inflation_rate"]
+    assert_equal [ "integer", "90", false ], before[:plan_columns]["end_age"]
+    assert_equal [ "numeric(6,4)", "0.03", false ], before[:plan_columns]["inflation_rate"]
     assert_equal [ "character varying", "traditional", false ], before[:plan_columns]["mode"]
     assert_equal %w[traditional fire], before[:plan_constraints]["chk_retirement_plans_mode"]
     assert_equal %w[expense income one_off],
