@@ -6,6 +6,7 @@ import {
   clusterByDistance,
   columnSplit,
   currencyAffixes,
+  extendSignRuns,
   formatDay,
   interpolate,
   monthFormatFor,
@@ -130,6 +131,21 @@ describe("stackRows", () => {
     assert.equal(card[0].negative, true)
     assert.deepEqual([savings[0][0], savings[0][1]], [-30, 70])
     assert.deepEqual([checking[0][0], checking[0][1]], [70, 110], "the top edge is the total (100 + 40 - 30)")
+  })
+})
+
+describe("extendSignRuns", () => {
+  it("ends each run of one sign at the next row's date, so a one-day flip keeps its width", () => {
+    const day = (d) => parseDay(`2026-11-${d}`)
+    const rows = [20, 21, 22].map((d, i) => ({ date: day(d), values: { a: [50, -20, 50][i] } }))
+    const [points] = stackRows(rows, ["a"])
+    const extended = extendSignRuns(points)
+    const span = (negative) =>
+      extended.filter((p) => p.negative === negative).map((p) => formatDay(p.data.date))
+
+    assert.deepEqual(span(true), ["2026-11-21", "2026-11-22"], "the -20 day is drawn from the 21st to the 22nd")
+    assert.deepEqual(span(false), ["2026-11-20", "2026-11-21", "2026-11-22"], "the first +50 run reaches the 21st")
+    assert.equal(extended.at(-1), points.at(-1), "the last point is untouched")
   })
 })
 

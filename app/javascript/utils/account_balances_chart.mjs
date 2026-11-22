@@ -107,6 +107,22 @@ export function stackRows(rows, keys) {
   return series
 }
 
+// An area drawn with a `defined` filter per sign closes each run at its last
+// point, so with a step curve a run is one day short and a one-day run has
+// no width. Ends every run with a copy of its last point at the next row's
+// date (same sign), so each balance is drawn through the following date.
+export function extendSignRuns(points) {
+  const extended = []
+  points.forEach((point, i) => {
+    extended.push(point)
+    const next = points[i + 1]
+    if (next && next.negative !== point.negative) {
+      extended.push(Object.assign([...point], { data: { ...point.data, date: next.data.date }, negative: point.negative }))
+    }
+  })
+  return extended
+}
+
 // Greedy left-to-right clustering of points sorted by x: a point closer than
 // `minGap` px to the first point of the current cluster joins it.
 export function clusterByDistance(points, minGap) {

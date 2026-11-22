@@ -6,6 +6,7 @@ import {
   clusterByDistance,
   columnSplit,
   currencyAffixes,
+  extendSignRuns,
   formatDay,
   interpolate,
   monthFormatFor,
@@ -777,7 +778,7 @@ export default class extends Controller {
         .data(series)
         .join("path")
         .attr("data-key", (s) => s.key)
-        .attr("d", area(false))
+        .attr("d", (s) => area(false)(extendSignRuns(s)))
         .attr("fill", (s) => this.colors[s.key])
         .attr("fill-opacity", opacity)
         .attr("stroke", surface)
@@ -787,7 +788,7 @@ export default class extends Controller {
         .data(negatives)
         .join("path")
         .attr("data-key", (s) => s.key)
-        .attr("d", area(true))
+        .attr("d", (s) => area(true)(extendSignRuns(s)))
         .attr("fill", (s) => this.colors[s.key])
         .attr("fill-opacity", Math.min(1, opacity + 0.1))
         .attr("stroke", surface)
@@ -797,7 +798,7 @@ export default class extends Controller {
         .data(negatives)
         .join("path")
         .attr("data-key", (s) => s.key)
-        .attr("d", area(true))
+        .attr("d", (s) => area(true)(extendSignRuns(s)))
         .attr("fill", `url(#abc-hatch-${uid})`);
     };
     layers("abc-past", 0.9);
