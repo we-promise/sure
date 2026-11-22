@@ -692,4 +692,50 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 0, budget.remaining_expected_income
     assert_equal 0, budget.surplus_percent
   end
+
+  test "a household budget bootstrapped for a member reads only what that member can see" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    member = users(:family_member)
+    start_date = Date.current.beginning_of_month
+    assert_nil Current.user
+
+    bootstrap = ->(user) { Budget.find_or_bootstrap(family, start_date: start_date, user: user) }
+    figures = ->(budget) { { cash: budget.available_cash, spending: budget.actual_spending } }
+    admin_before = figures.(bootstrap.(admin))
+    member_before = figures.(bootstrap.(member))
+
+    private_account = Account.create!(
+      family: family,
+      owner: admin,
+      accountable: Depository.new,
+      name: "Admin private savings",
+      status: "active",
+      currency: "USD",
+      balance: 700
+    )
+    create_transaction(account: private_account, amount: 400, date: Date.current)
+
+    refute_includes family.accounts.accessible_by(member), private_account
+    refute_includes member.finance_accounts, private_account
+
+    admin_budget = bootstrap.(admin)
+    member_budget = bootstrap.(member)
+
+    assert_equal admin_budget.id, member_budget.id
+    assert_nil member_budget.user_id
+
+    private_entries = ->(budget) { budget.transactions.joins(:entry).where(entries: { account_id: private_account.id }).count }
+    assert_equal 1, private_entries.(admin_budget)
+    assert_equal 0, private_entries.(member_budget)
+
+    assert_includes admin_budget.cash_accounts, private_account
+    refute_includes member_budget.cash_accounts, private_account
+
+    assert_equal 700, admin_budget.available_cash - admin_before[:cash]
+    assert_equal 0, member_budget.available_cash - member_before[:cash]
+
+    assert_equal 400, admin_budget.actual_spending - admin_before[:spending]
+    assert_equal 0, member_budget.actual_spending - member_before[:spending]
+  end
 end
