@@ -123,12 +123,16 @@ class WorkerAiHealth
     # instant can race (read-modify-write on one cache key) and the loser's
     # result is dropped for that round. Acceptable here: this is an
     # operator-triggered, low-frequency action, not a hot path, and a
-    # dropped write just means running the check again.
+    # dropped write just means running the check again. So is a write Redis
+    # refuses: the job still has the open tabs reload.
     def record!(snapshot)
       results = recent.reject { |r| r.process_identity == snapshot.process_identity }
       results = [ snapshot, *results ].first(MAX_RESULTS)
       # Each write keeps the list for RETENTION; older entries drop by their checked_at.
       Ai::SharedState.write(STORE_KEY, results, expires_in: RETENTION)
+      snapshot
+    rescue RedisClient::Error => error
+      Rails.logger.warn("Worker AI health not recorded: #{error.class.name}")
       snapshot
     end
 

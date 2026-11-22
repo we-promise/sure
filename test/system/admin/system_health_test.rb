@@ -86,6 +86,25 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     end
   end
 
+  # The broadcast is a refresh, so a tab opened with a locale override reloads in that locale.
+  test "the worker's results keep the tab's locale override" do
+    AiHealth::Probe.any_instance.unstub(:llm, :function_calling, :pdf_text_extraction, :pdf_vision_processing, :openai_vector_store)
+    AiHealth::Probe.any_instance.stubs(:perform).returns(probe_result(:passing))
+
+    with_openai_access_token do
+      visit admin_system_health_path(tab: "ai", locale: "de")
+      assert_selector "turbo-frame#ai_status[src*='locale=de']"
+      assert_selector "[data-testid='function-calling-status']"
+
+      streams = capture_turbo_stream_broadcasts(Ai::ProbeJob::STREAM) { Ai::ProbeJob.perform_now }
+      page.execute_script("Turbo.renderStreamMessage(arguments[0])", streams.sole.to_html)
+
+      assert_text "Ein Worker hat die Prüfungen zuletzt"
+      assert_selector "turbo-frame#ai_status[src*='locale=de']"
+      assert_current_path admin_system_health_path(tab: "ai", locale: "de")
+    end
+  end
+
   test "hosted super admin enables the test button by registering an iOS device" do
     Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
     Apns::Client.stubs(:configured?).returns(true)

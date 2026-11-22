@@ -368,7 +368,8 @@ class AiHealth
           model: model,
           failure_code: result.failure_code,
           exception_class: error.class.name,
-          http_status: result.http_status
+          http_status: result.http_status,
+          process_identity: WorkerAiHealth.current_process_identity
         }.compact
 
         Rails.logger.error("#{message}: #{metadata.to_json}")

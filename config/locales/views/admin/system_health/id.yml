@@ -251,6 +251,7 @@ id:
           seconds: "%{seconds} dtk"
           no_queues: "Tidak ada antrean yang terdaftar. Worker mungkin tidak berjalan."
         ai:
+          worker_unhealthy_warning: "Pemeriksaan AI mungkin tidak dapat berjalan saat ini — worker latar belakang tampaknya tidak aktif atau antrean menumpuk. Pastikan worker Sidekiq Anda sedang berjalan."
           run_checks: Jalankan pemeriksaan lagi
           alerts:
             custom_openai:
@@ -400,6 +401,7 @@ id:
             request_failed: Permintaan layanan gagal
             unsupported_provider: Penyedia tidak mendukung pemeriksaan ini
           worker:
+            run_coverage_notice: "Setiap pemeriksaan memverifikasi tepat satu proses worker -- mana saja yang mengambilnya dari antrean. Dengan lebih dari satu replika worker, hasil lulus tidak memastikan setiap worker sehat; jalankan pemeriksaan lagi untuk mengambil sampel lain."
             empty:
               title: Belum ada worker yang melapor
             labels:

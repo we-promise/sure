@@ -103,8 +103,6 @@ es:
       push_notification:
         title: Notificación de prueba de Sure
         body: Esta es una notificación push de prueba para tu cuenta de Sure.
-      verify_worker_ai:
-        queued: Comprobación del worker en cola. Aparecerá abajo cuando un proceso worker la recoja, normalmente en unos segundos.
       optional_services:
         title: Servicios opcionales
         description: 'Integraciones opcionales del operador. Los servicios sin configurar son solo informativos. Estas comprobaciones solo revisan los ajustes: no prueban la conectividad, no envían eventos de prueba ni cambian el consentimiento de analítica. Despliega un servicio para ver cómo configurarlo.'
@@ -253,10 +251,8 @@ es:
           seconds: "%{seconds} s"
           no_queues: No hay colas registradas. Puede que el worker no esté en marcha.
         ai:
+          worker_unhealthy_warning: "Puede que las comprobaciones de la IA no se ejecuten ahora mismo: el worker en segundo plano parece estar caído o saturado. Comprueba que tu worker de Sidekiq está en marcha."
           run_checks: Volver a ejecutar las comprobaciones
-          last_checked: Comprobaciones en vivo completadas hace %{time_ago}. Los resultados se guardan en caché un rato.
-          not_checked_help: Abre directamente la URL de estado de IA o ejecuta las comprobaciones para verificar que el servicio responde.
-          loading: Ejecutando comprobaciones en vivo…
           alerts:
             custom_openai:
               title: La comprobación del vector store alojado ha fallado en este endpoint personalizado
@@ -408,13 +404,9 @@ es:
             request_failed: Ha fallado la petición al servicio
             unsupported_provider: El proveedor no admite esta comprobación
           worker:
-            title: Verificación del worker
-            description: Las comprobaciones anteriores se han ejecutado desde este proceso web. Casi todo el trabajo de IA (respuestas del asistente, procesamiento de PDF, embeddings, categorización automática y detección de comercios) se ejecuta en realidad en un proceso worker de Sidekiq, que puede tener otro acceso a la red, DNS, reglas de proxy o incluso otras credenciales cargadas. Pon en cola una comprobación para verificar la configuración y la conectividad del propio worker.
-            verify_button: Verificar la configuración del worker
-            coverage_notice: Cada comprobación verifica exactamente un proceso worker, el que la saque de la cola. Con más de una réplica de worker, un resultado correcto no confirma que todos estén bien; vuelve a poner la comprobación en cola para probar otro.
+            run_coverage_notice: "Cada comprobación verifica exactamente un proceso worker, el que la saque de la cola. Con más de una réplica de worker, un resultado correcto no confirma que todos estén bien; vuelve a ejecutar las comprobaciones para probar otro."
             empty:
               title: Ningún worker ha respondido todavía
-              description: Haz clic en "Verificar la configuración del worker" para poner en cola una comprobación asíncrona. El resultado aparecerá aquí cuando un proceso worker la recoja.
             labels:
               process: Proceso worker
               checked_at: Comprobado
