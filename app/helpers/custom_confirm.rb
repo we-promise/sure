@@ -3,18 +3,27 @@
 # so record names can be interpolated as they are.
 class CustomConfirm
   class << self
-    # `titleize` / `downcase` are English-shaped and stay applied to the record
-    # name so the English copy is unchanged; a locale that needs different
-    # casing can absorb it in its own string.
+    # A record's own name (email, tag, merchant) is shown as stored.
     def for_resource_deletion(resource_name, high_severity: false)
-      new(
-        destructive: true,
-        high_severity: high_severity,
-        title: I18n.t("shared.custom_confirm.resource_deletion_title", resource: resource_name.titleize),
-        body: I18n.t("shared.custom_confirm.resource_deletion_body", resource: resource_name.downcase),
-        btn_text: I18n.t("shared.custom_confirm.resource_deletion_btn_text", resource: resource_name.titleize)
-      )
+      deletion(resource_name, high_severity: high_severity)
     end
+
+    # An English noun literal ("rule", "all tags") keeps the titleized heading
+    # and downcased body.
+    def for_noun_deletion(noun, high_severity: false)
+      deletion(noun.titleize, high_severity: high_severity, body_resource: noun.downcase)
+    end
+
+    private
+      def deletion(resource, high_severity:, body_resource: resource)
+        new(
+          destructive: true,
+          high_severity: high_severity,
+          title: I18n.t("shared.custom_confirm.resource_deletion_title", resource: resource),
+          body: I18n.t("shared.custom_confirm.resource_deletion_body", resource: body_resource),
+          btn_text: I18n.t("shared.custom_confirm.resource_deletion_btn_text", resource: resource)
+        )
+      end
   end
 
   def initialize(title: default_title, body: default_body, btn_text: default_btn_text, destructive: false, high_severity: false)

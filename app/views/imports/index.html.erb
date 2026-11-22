@@ -105,7 +105,7 @@
                                   class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",
                                   aria: { label: t("imports.table.row.actions.delete") },
                                   data: {
-                                    turbo_confirm: CustomConfirm.for_resource_deletion("import")
+                                    turbo_confirm: CustomConfirm.for_noun_deletion("import")
                                   } do %>
                       <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
                     <% end %>
