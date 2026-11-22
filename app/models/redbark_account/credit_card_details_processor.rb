@@ -33,8 +33,9 @@ class RedbarkAccount::CreditCardDetailsProcessor
   # Logs a warning unless the same source and message were already logged for
   # `key` (a redbark_account_id, or a redbark_item_id for a whole batch) in
   # the last REFRESH_WINDOW, so a lasting problem is reported once, not every
-  # sync.
-  def self.warn_once(message, source:, family:, key:, **metadata)
+  # sync. `account_provider` ties a card's warning to its connection; it is
+  # not part of the dedupe key.
+  def self.warn_once(message, source:, family:, key:, account_provider: nil, **metadata)
     logged = DebugLogEntry.where(source: source, message: message)
                           .where(created_at: REFRESH_WINDOW.ago..)
                           .where("metadata @> ?", key.to_json)
@@ -47,6 +48,7 @@ class RedbarkAccount::CreditCardDetailsProcessor
       source: source,
       provider_key: "redbark",
       family: family,
+      account_provider: account_provider,
       metadata: metadata.merge(key)
     )
   end
@@ -163,7 +165,7 @@ class RedbarkAccount::CreditCardDetailsProcessor
     def warn_once(message, **metadata)
       self.class.warn_once(
         message, source: self.class.name, family: redbark_account.redbark_item&.family,
-        key: { redbark_account_id: redbark_account.id }, **metadata
+        key: { redbark_account_id: redbark_account.id }, account_provider: redbark_account.account_provider, **metadata
       )
     end
 
@@ -175,6 +177,7 @@ class RedbarkAccount::CreditCardDetailsProcessor
         source: self.class.name,
         provider_key: "redbark",
         family: redbark_account.redbark_item&.family,
+        account_provider: redbark_account.account_provider,
         metadata: metadata.merge(redbark_account_id: redbark_account.id)
       )
     end

@@ -90,6 +90,30 @@ class RedbarkAccount::CreditCardDetailsProcessorTest < ActiveSupport::TestCase
     assert_nil @card.reload.apr
   end
 
+  test "a conflicting-rate warning names the card's connection" do
+    detail lendingRates: [ purchase("0.1999"), purchase("0.0999") ]
+
+    assert_difference -> { DebugLogEntry.where(account_provider: @redbark_account.account_provider, account: @account).count }, 1 do
+      process
+    end
+    assert_equal [ "Redbark reported several purchase rates for a card; recording none" ], DebugLogEntry.where(account_provider: @redbark_account.account_provider).pluck(:message)
+  end
+
+  test "a refused write names the card's connection" do
+    detail lendingRates: [ purchase("0.1999") ]
+    @card.define_singleton_method(:valid?) do |*|
+      errors.add(:apr, "is refused")
+      false
+    end
+    RedbarkAccount.any_instance.stubs(:current_account).returns(@account)
+
+    assert_difference -> { DebugLogEntry.where(account_provider: @redbark_account.account_provider, account: @account).count }, 1 do
+      process
+    end
+    assert_equal [ "Redbark card detail refused by the model" ], DebugLogEntry.where(account_provider: @redbark_account.account_provider).pluck(:message)
+    assert_nil @card.reload.apr
+  end
+
   test "purchase rates that disagree are logged once across syncs" do
     detail lendingRates: [ purchase("0.1999"), purchase("0.0999") ]
 
