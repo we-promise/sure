@@ -360,6 +360,56 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal "yahoo_finance", @security.first_provider_price_source
   end
 
+  test "an import that starts after another provider's first date keeps it" do
+    # This provider's earliest price in a late window says nothing about where
+    # its history starts, so the date Yahoo found stays.
+    Security::Price.delete_all
+
+    first_on = Date.parse("2020-01-03")
+    @security.update!(first_provider_price_on: first_on, first_provider_price_source: "yahoo_finance")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: Date.parse("2026-11-20"), price: 50, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: Date.parse("2026-11-10"),
+      end_date: Date.parse("2026-11-20")
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal first_on, @security.first_provider_price_on
+    assert_equal "yahoo_finance", @security.first_provider_price_source
+  end
+
+  test "a capped import with no earlier price keeps another provider's first date" do
+    # The request reaches back past Yahoo's date, but the capped fetch does
+    # not, so its earliest price is the cap, not where the history starts.
+    Security::Price.delete_all
+
+    end_date = Date.parse("2020-06-15")
+    window_start = end_date - 10.days
+    @security.update!(first_provider_price_on: Date.parse("2020-01-03"), first_provider_price_source: "yahoo_finance")
+
+    @provider.stubs(:max_history_days).returns(10)
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: window_start, price: 50, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: Date.parse("2018-06-15"),
+      end_date: end_date
+    ).import_provider_prices
+
+    @security.reload
+    assert_equal Date.parse("2020-01-03"), @security.first_provider_price_on
+    assert_equal "yahoo_finance", @security.first_provider_price_source
+  end
+
   test "an import anchored on another provider's first date clears it" do
     Security::Price.delete_all
 

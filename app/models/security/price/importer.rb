@@ -145,9 +145,12 @@ class Security::Price::Importer
     # since that would silently hide older rows already in the DB.
     #
     # The date is stored with the provider that found it. A date another
-    # provider found (Yahoo standing in before a key was added) is replaced.
+    # provider found (Yahoo standing in before a key was added) is replaced
+    # only by a fetch that reaches back to it, as the clearing below requires.
     if advanced_first_price_on.present? &&
-       (provider_first_price_on.blank? || advanced_first_price_on < provider_first_price_on)
+       (provider_first_price_on.blank? || advanced_first_price_on < provider_first_price_on) &&
+       (!first_price_from_another_provider? ||
+        (provider_fetch_start_date <= start_date && start_date <= security.first_provider_price_on))
       security.update_columns(first_provider_price_on: advanced_first_price_on,
                               first_provider_price_source: provider_key)
     elsif advanced_first_price_on.nil? && fill_start_date <= start_date && first_price_from_another_provider? &&
