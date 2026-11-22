@@ -247,12 +247,13 @@ class Rule::Health
     end
 
     # Tags claim nothing, but a tag condition below still reads them. A
-    # transfer creates its counterpart on the target account.
+    # transfer creates its counterpart on the target account, and a split
+    # creates its children.
     def changed_fields(rule)
       rule.actions.flat_map do |action|
         case action.action_type
         when "set_transaction_tags" then [ :tags ]
-        when "set_as_transfer_or_payment" then claimed_attributes(action).to_a + [ :new_transactions ]
+        when "set_as_transfer_or_payment", "split_transaction" then claimed_attributes(action).to_a + [ :new_transactions ]
         else claimed_attributes(action).to_a
         end
       end
@@ -289,12 +290,14 @@ class Rule::Health
     end
 
     # Only when nothing else separates them: their other conditions are the
-    # same, and they don't require different merchants.
+    # same, they don't require different merchants, and the names they
+    # require can all hold at once.
     def same_text?(rule, other)
       return false unless conditions_besides_text(rule) == conditions_besides_text(other)
 
       merchant_ids, other_merchant_ids = merchant_ids(rule), merchant_ids(other)
       return false if merchant_ids.any? && other_merchant_ids.any? && merchant_ids != other_merchant_ids
+      return false if contradicting_names?(rule, other)
 
       texts(rule).any? { |text| texts(other).any? { |other_text| same_or_contained?(text, other_text) } }
     end
@@ -317,8 +320,34 @@ class Rule::Health
       end
     end
 
+    # Two different exact names, or two prefixes (or suffixes) neither of
+    # which extends the other.
+    def contradicting_names?(rule, other)
+      names = ->(r) { required_conditions(r).select { |condition| condition.condition_type == "transaction_name" } }
+      names.(rule).product(names.(other)).any? do |condition, other_condition|
+        next false unless condition.operator == other_condition.operator
+
+        text, other_text = [ condition, other_condition ].map { |c| c.value.to_s.gsub(/\s+/, " ").strip }
+        case condition.operator
+        when "=" then text != other_text
+        when "starts_with" then !text.downcase.start_with?(other_text.downcase) && !other_text.downcase.start_with?(text.downcase)
+        when "ends_with" then !text.downcase.end_with?(other_text.downcase) && !other_text.downcase.end_with?(text.downcase)
+        else false
+        end
+      end
+    end
+
+    # Conditions every match meets: those at the top level and in AND groups.
+    def required_conditions(rule)
+      rule.conditions.flat_map do |condition|
+        next [ condition ] unless condition.compound?
+
+        condition.operator == "and" ? condition.sub_conditions.to_a : []
+      end
+    end
+
     def merchant_ids(rule)
-      leaf_conditions(rule).select { |condition| condition.condition_type == "transaction_merchant" && condition.operator == "=" }
+      required_conditions(rule).select { |condition| condition.condition_type == "transaction_merchant" && condition.operator == "=" }
         .map { |condition| condition.value.to_s }.to_set
     end
 
