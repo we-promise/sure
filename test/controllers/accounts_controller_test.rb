@@ -556,6 +556,43 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show offers New activity for investment accounts" do
+    account = accounts(:investment)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "a[href=?]", new_trade_path(account_id: account.id), text: I18n.t("accounts.show.activity.new_activity")
+  end
+
+  test "show offers New activity for crypto exchange accounts" do
+    account = accounts(:crypto)
+    account.accountable.update!(subtype: "exchange")
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "a[href=?]", new_trade_path(account_id: account.id), text: I18n.t("accounts.show.activity.new_activity")
+  end
+
+  test "show offers no manual activity for crypto wallets" do
+    account = accounts(:crypto)
+    account.accountable.update!(subtype: "wallet")
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "a[href=?]", new_trade_path(account_id: account.id), count: 0
+    assert_select "a[href=?]", new_transaction_path(account_id: account.id), count: 0
+  end
+
+  test "show offers New transaction for non-investment accounts" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "a[href=?]", new_transaction_path(account_id: @account.id), text: I18n.t("accounts.show.activity.new_transaction")
+  end
+
   test "show lists positions that went below zero in the account status" do
     account = accounts(:investment)
     # An import that records a sale without its purchase, as a provider or CSV can.
