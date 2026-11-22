@@ -258,6 +258,109 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Dividend", entry.transaction.investment_activity_label
   end
 
+  test "tax correction debit is imported as an expense" do
+    import_event({
+      id: "evt_tax_correction_debit",
+      timestamp: "2026-01-15T10:00:00Z",
+      eventType: "SSP_TAX_CORRECTION",
+      category: "PAYMENT_RECEIVED",
+      detail: { amount: "0.74", signed_amount: "-0.74", currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_tax_correction_debit")
+    assert_equal BigDecimal("0.74"), entry.amount
+  end
+
+  test "tax correction credit is imported as income" do
+    import_event({
+      id: "evt_tax_correction_credit",
+      timestamp: "2026-01-15T10:00:00Z",
+      eventType: "SSP_TAX_CORRECTION",
+      category: "PAYMENT_RECEIVED",
+      detail: { amount: "0.74", signed_amount: "0.74", currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_tax_correction_credit")
+    assert_equal BigDecimal("-0.74"), entry.amount
+  end
+
+  test "tax correction invoice debit is imported as an expense" do
+    import_event({
+      id: "evt_tax_correction_invoice_debit",
+      timestamp: "2026-01-15T10:00:00Z",
+      eventType: "ssp_tax_correction_invoice",
+      detail: { amount: "1.20", signed_amount: "-1.20", currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_tax_correction_invoice_debit")
+    assert_equal BigDecimal("1.20"), entry.amount
+  end
+
+  test "tax refund debit is imported as an expense" do
+    import_event({
+      id: "evt_tax_refund_debit",
+      timestamp: "2026-01-15T10:00:00Z",
+      eventType: "TAX_REFUND",
+      category: "PAYMENT_RECEIVED",
+      detail: { amount: "3.50", signed_amount: "-3.50", currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_tax_refund_debit")
+    assert_equal BigDecimal("3.50"), entry.amount
+  end
+
+  test "corporate action cash debit (Vorabpauschale) is imported as an expense" do
+    import_event({
+      id: "evt_vorabpauschale",
+      timestamp: "2026-01-02T10:00:00Z",
+      eventType: "SSP_CORPORATE_ACTION_CASH",
+      category: "DIVIDEND",
+      detail: { amount: "12.34", signed_amount: "-12.34", currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_vorabpauschale")
+    assert_equal BigDecimal("12.34"), entry.amount
+  end
+
+  test "corporate action cash non-dividend debit is imported as an expense" do
+    import_event({
+      id: "evt_corporate_action_charge",
+      timestamp: "2026-01-02T10:00:00Z",
+      eventType: "SSP_CORPORATE_ACTION_CASH_NON_DIVIDEND",
+      category: "PAYMENT_RECEIVED",
+      detail: { amount: "5.00", signed_amount: "-5.00", currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_corporate_action_charge")
+    assert_equal BigDecimal("5.00"), entry.amount
+  end
+
+  test "other cash movements keep the category direction regardless of the signed amount" do
+    import_event({
+      id: "evt_deposit_signed_negative",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "INCOMING_TRANSFER",
+      category: "PAYMENT_RECEIVED",
+      detail: { amount: "500.00", signed_amount: "-500.00", currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_deposit_signed_negative")
+    assert_equal BigDecimal("-500.00"), entry.amount
+  end
+
+  test "allow-listed event types fall back to the category direction when the signed amount is zero" do
+    import_event({
+      id: "evt_tax_correction_zero",
+      timestamp: "2026-01-15T10:00:00Z",
+      eventType: "SSP_TAX_CORRECTION",
+      category: "PAYMENT_RECEIVED",
+      detail: { amount: "0.74", signed_amount: "0.00", currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_tax_correction_zero")
+    assert_equal BigDecimal("-0.74"), entry.amount
+  end
+
   test "order executions carry canonical activity labels under a non-English locale" do
     I18n.with_locale(:de) do
       import_event({

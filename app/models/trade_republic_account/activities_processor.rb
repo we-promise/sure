@@ -17,6 +17,15 @@ class TradeRepublicAccount::ActivitiesProcessor
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
   SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
   SETTLEMENT_AMOUNT_TOLERANCE = BigDecimal("0.01")
+  # Event types Trade Republic uses for both credits and debits, so the
+  # category cannot tell the direction. The signed provider amount decides it.
+  SIGNED_AMOUNT_DIRECTION_EVENT_TYPES = %w[
+    SSP_TAX_CORRECTION
+    ssp_tax_correction_invoice
+    TAX_REFUND
+    SSP_CORPORATE_ACTION_CASH
+    SSP_CORPORATE_ACTION_CASH_NON_DIVIDEND
+  ].freeze
   ACTIVITY_LABELS_BY_KEY = {
     "contribution" => "Contribution",
     "withdrawal" => "Withdrawal",
@@ -217,13 +226,13 @@ class TradeRepublicAccount::ActivitiesProcessor
 
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       when CATEGORY_DEPOSIT
-        import_labeled_cash_movement(event, detail, external_id, date, cash_label_key(event, default: "contribution"), sign: -1)
+        import_labeled_cash_movement(event, detail, external_id, date, cash_label_key(event, default: "contribution"), sign: cash_movement_sign(event, detail, -1))
       when CATEGORY_WITHDRAWAL
-        import_labeled_cash_movement(event, detail, external_id, date, cash_label_key(event, default: "withdrawal"), sign: 1)
+        import_labeled_cash_movement(event, detail, external_id, date, cash_label_key(event, default: "withdrawal"), sign: cash_movement_sign(event, detail, 1))
       when CATEGORY_INTEREST
-        import_labeled_cash_movement(event, detail, external_id, date, "interest", sign: -1)
+        import_labeled_cash_movement(event, detail, external_id, date, "interest", sign: cash_movement_sign(event, detail, -1))
       when CATEGORY_DIVIDEND
-        import_labeled_cash_movement(event, detail, external_id, date, "dividend", sign: -1)
+        import_labeled_cash_movement(event, detail, external_id, date, "dividend", sign: cash_movement_sign(event, detail, -1))
       end
     rescue => e
       @failed_count += 1
@@ -483,10 +492,11 @@ class TradeRepublicAccount::ActivitiesProcessor
       legacy_kind = legacy_cash_kinds[external_id]
       entry = import_adapter.import_transaction(
         external_id: external_id,
-        # The normalized category is the source of truth for direction. TR
-        # payloads use different signs across timeline topics, so forwarding
-        # `detail[:signed_amount]` would turn deposits into withdrawals (and
-        # vice versa) depending on which topic produced the event.
+        # The caller resolves the direction: the category for most types, the
+        # signed amount for the types TR books both ways. TR payloads use
+        # different signs across timeline topics, so forwarding
+        # `detail[:signed_amount]` here would turn deposits into withdrawals
+        # (and vice versa) depending on which topic produced the event.
         amount: sign * amount.abs,
         currency: detail[:currency].presence || currency,
         date: date,
@@ -682,6 +692,19 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       event[:category].to_s.presence ||
         Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES[event[:eventType].to_s].to_s
+    end
+
+    # For the event types above, a negative signed amount is a debit (expense,
+    # sign 1) and a positive one a credit (income, sign -1). Every other type
+    # keeps the category-based direction, because TR's signs are inconsistent
+    # across timeline topics.
+    def cash_movement_sign(event, detail, default_sign)
+      return default_sign unless SIGNED_AMOUNT_DIRECTION_EVENT_TYPES.include?(event[:eventType].to_s)
+
+      signed_amount = parse_decimal(detail[:signed_amount])
+      return default_sign if signed_amount.nil? || signed_amount.zero?
+
+      signed_amount.negative? ? 1 : -1
     end
 
     def cash_label_key(event, default:)
