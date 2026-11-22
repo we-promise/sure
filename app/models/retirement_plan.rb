@@ -62,6 +62,9 @@ class RetirementPlan < ApplicationRecord
   # they are money the user has to find every month.
   SAVING_KINDS = %w[investment_contribution].freeze
 
+  # `as_of` dates the balances and the planning years. The spending and income
+  # medians are always today's: IncomeStatement takes them over the history up
+  # to now, so call this with today's date rather than a past one.
   def projection(as_of:)
     RetirementPlan::Projection.new(
       as_of: as_of,
