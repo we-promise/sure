@@ -58,6 +58,17 @@ class Provider::EnvTuningTest < ActiveSupport::TestCase
     assert_match(/"xyz"/, changed)
   end
 
+  test "an invalid override is recorded once in the debug log" do
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      2.times { read(:env_positive_integer, "PROBE_MAX", "abc", 25) }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal [ "provider_sync_warning", "warn", "PROBE_MAX is invalid; using the default", Probe.name, "probe" ],
+      [ entry.category, entry.level, entry.message, entry.source, entry.provider_key ]
+    assert_equal({ "variable" => "PROBE_MAX", "value" => "abc", "default" => 25 }, entry.metadata)
+  end
+
   private
     def read(method, key, value, default)
       io = StringIO.new

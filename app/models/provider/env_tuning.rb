@@ -1,8 +1,8 @@
 # Reads a provider's tuning overrides (request caps, pacing intervals) from ENV. A blank
 # value is unset. A value that does not parse, or is out of range, is ignored: the default
-# applies, so a typo cannot refuse, stall or unpace every request, and a warning names the
-# variable once per process for each bad value, not on every request. ENV is read on every
-# call, so a corrected value takes effect without a restart.
+# applies, so a typo cannot refuse, stall or unpace every request, and a warning (in the log
+# and the debug log) names the variable once per process for each bad value, not on every
+# request. ENV is read on every call, so a corrected value takes effect without a restart.
 module Provider::EnvTuning
   WARNED = Concurrent::Set.new
 
@@ -32,6 +32,14 @@ module Provider::EnvTuning
 
       if WARNED.add?([ key, raw ])
         Rails.logger.warn("#{key} must be #{expected}, got #{raw.inspect}; using #{default}")
+        DebugLogEntry.capture(
+          category: "provider_sync_warning",
+          level: "warn",
+          message: "#{key} is invalid; using the default",
+          source: self.class.name,
+          provider: self,
+          metadata: { variable: key, value: raw, default: default }
+        )
       end
       default
     end
