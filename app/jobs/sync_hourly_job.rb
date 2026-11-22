@@ -1,6 +1,5 @@
 class SyncHourlyJob < ApplicationJob
   queue_as :scheduled
-  sidekiq_options lock: :until_executed, on_conflict: :log
 
   # Provider item classes that opt-in to hourly syncing
   HOURLY_SYNCABLES = [

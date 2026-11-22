@@ -40,7 +40,6 @@ gem "web-push", "~> 3.1", require: "web_push"
 gem "connection_pool", "~> 2.5" # pin to 2.x; 3.0 breaks sidekiq 8.x
 gem "sidekiq"
 gem "sidekiq-cron"
-gem "sidekiq-unique-jobs"
 
 # Monitoring
 gem "vernier"

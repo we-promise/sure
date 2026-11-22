@@ -1,6 +1,5 @@
 class SyncAllJob < ApplicationJob
   queue_as :scheduled
-  sidekiq_options lock: :until_executed, on_conflict: :log
 
   def perform
     Rails.logger.info("Starting sync for all families")

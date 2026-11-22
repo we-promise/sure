@@ -5,7 +5,6 @@ class DeliverTestPushNotificationJob < ApplicationJob
   # The request is already in the shared cache; no uncommitted database row is
   # needed by the worker. Surface enqueue failures while the request is handled.
   self.enqueue_after_transaction_commit = false
-  sidekiq_options lock: :until_executed, on_conflict: :log
 
   retry_on Apns::Client::TransientError, wait: :polynomially_longer, attempts: 5 do |job, _error|
     arguments = job.arguments.first.symbolize_keys
