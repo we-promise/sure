@@ -203,6 +203,15 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "legacy OpenAI PDF vision omits an unconfigured token limit" do
+    processor = vision_processor(model: "gpt-4.1", max_response_tokens: nil)
+    expect_vision_request(processor, model: "gpt-4.1") do |params|
+      !params.key?(:max_tokens) && !params.key?(:max_completion_tokens)
+    end
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
   test "legacy OpenAI PDF vision retains max_tokens" do
     processor = vision_processor(model: "gpt-4.1", max_response_tokens: 512)
     expect_vision_request(processor, model: "gpt-4.1") do |params|

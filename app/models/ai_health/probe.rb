@@ -21,7 +21,6 @@ class AiHealth
     # request": a retry, a payment, or a fixed credential clears them, so they
     # are never worth re-asking without the tools.
     TRANSIENT_HTTP_STATUSES = [ 401, 402, 403, 408, 429 ].freeze
-    PDF_MAX_RESPONSE_TOKENS = 512
 
     Result = Data.define(:status, :checked_at, :failure_code, :http_status) do
       def passing?
@@ -199,7 +198,7 @@ class AiHealth
                 model: model,
                 pdf_content: SyntheticPdf.bytes,
                 custom_provider: openai_compatible,
-                max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
+                max_response_tokens: pdf_response_tokens,
                 processing_mode: processing_mode
               ).process
             when :anthropic
@@ -304,6 +303,20 @@ class AiHealth
         status = http_status(error).to_i
 
         status.between?(400, 499) && !status.in?(TRANSIENT_HTTP_STATUSES)
+      end
+
+      # Reasoning models spend completion budget before answering, so a fixed
+      # cap can truncate the reply with `finish_reason: "length"` and no
+      # content. Send only an explicitly configured limit; otherwise leave the
+      # provider's own default in place.
+      def pdf_response_tokens
+        explicit = ENV["LLM_MAX_RESPONSE_TOKENS"].to_s.strip.to_i
+        return explicit if explicit.positive?
+
+        from_setting = Setting.llm_max_response_tokens.to_i
+        return from_setting if from_setting.positive?
+
+        nil
       end
 
       # The configured endpoint's static headers count too, so a changed gateway credential

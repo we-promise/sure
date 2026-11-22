@@ -305,6 +305,57 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_not_includes instructions, AiHealth::Probe::SyntheticPdf::INSTITUTION
   end
 
+  test "PDF vision probe sends no token cap when none is configured" do
+    captured = capture_pdf_vision_request do
+      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+        Setting.stubs(:llm_max_response_tokens).returns(nil)
+        assert @probe.pdf_vision_processing(
+          provider: :openai,
+          endpoint: "https://api.cloudflare.example.test/v1",
+          access_token: "token",
+          model: "vision-model",
+          openai_compatible: true
+        ).passing?
+      end
+    end
+
+    assert_not captured[:parameters].key?(:max_tokens)
+    assert_not captured[:parameters].key?(:max_completion_tokens)
+  end
+
+  test "PDF vision probe sends the configured environment token cap" do
+    captured = capture_pdf_vision_request do
+      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "2048") do
+        assert @probe.pdf_vision_processing(
+          provider: :openai,
+          endpoint: "https://api.cloudflare.example.test/v1",
+          access_token: "token",
+          model: "vision-model",
+          openai_compatible: true
+        ).passing?
+      end
+    end
+
+    assert_equal 2048, captured[:parameters][:max_tokens]
+  end
+
+  test "PDF vision probe sends the configured setting token cap" do
+    captured = capture_pdf_vision_request do
+      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+        Setting.stubs(:llm_max_response_tokens).returns(1024)
+        assert @probe.pdf_vision_processing(
+          provider: :openai,
+          endpoint: "https://api.cloudflare.example.test/v1",
+          access_token: "token",
+          model: "vision-model",
+          openai_compatible: true
+        ).passing?
+      end
+    end
+
+    assert_equal 1024, captured[:parameters][:max_tokens]
+  end
+
   test "PDF processing probes require the expected institution in the standard result fields" do
     response = {
       "choices" => [
@@ -754,6 +805,30 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   end
 
   private
+    def capture_pdf_vision_request
+      response = {
+        "choices" => [
+          {
+            "message" => {
+              "content" => {
+                document_type: "bank_statement",
+                summary: "A synthetic bank statement containing no customer data.",
+                extracted_data: { institution_name: AiHealth::Probe::SyntheticPdf::INSTITUTION }
+              }.to_json
+            }
+          }
+        ]
+      }
+      captured = nil
+      client = mock("openai_client")
+      client.expects(:chat).with { |params| captured = params; true }.returns(response)
+      Ai::Transport::Http.stubs(:openai_client).returns(client)
+      Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).once.returns([ "encoded-page" ])
+
+      yield
+      captured
+    end
+
     def stub_tools_request(endpoint)
       stub_request(:post, "#{endpoint}/chat/completions").with { |request| JSON.parse(request.body).key?("tools") }
     end
