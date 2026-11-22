@@ -390,6 +390,47 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
   end
 
 
+  # Today's cash is the anchor less today's holdings, so a holding at 1:1
+  # there skews every earlier day's cash until a reconciliation resets it.
+  test "cash derived from a 1:1 current anchor stays marked until a reconciliation resets it" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    account = create_account_with_ledger(
+      account: { type: Investment, balance: 1000, cash_balance: 900, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 1000 },
+        { type: "reconciliation", date: 2.days.ago.to_date, balance: 1000 }
+      ]
+    )
+    security = Security.create!(ticker: "EURC", name: "Euro holding")
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    parity = Balance::ReverseCalculator.new(account).calculate.to_h { |balance| [ balance.date, balance.holdings_valued_at_parity ] }
+
+    assert_equal true, parity[Date.current]
+    assert_equal true, parity[1.day.ago.to_date]
+    assert_equal false, parity[2.days.ago.to_date]
+  end
+
+  # The day after the opening anchor starts from the anchor but ends on cash
+  # carried back from today's, so today's 1:1 mark still holds there.
+  test "the opening boundary day keeps the mark of the cash carried back to it" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    account = create_account_with_ledger(
+      account: { type: Investment, balance: 1000, cash_balance: 900, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 1000 },
+        { type: "opening_anchor", date: 2.days.ago.to_date, balance: 1000 }
+      ]
+    )
+    security = Security.create!(ticker: "EURB", name: "Euro holding")
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    parity = Balance::ReverseCalculator.new(account).calculate.to_h { |balance| [ balance.date, balance.holdings_valued_at_parity ] }
+
+    assert_equal true, parity[1.day.ago.to_date]
+    assert_equal false, parity[2.days.ago.to_date]
+  end
+
   # Investment account balances are made of two components: cash and holdings.
   test "anchors on investment accounts calculate cash balance dynamically based on holdings value" do
     account = create_account_with_ledger(

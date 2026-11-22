@@ -52,7 +52,13 @@ class Holding::PortfolioCache
 
     begin
       converted_amount = price_money.exchange_to(account.currency, date: date).amount
-      @prices_at_parity.delete([ security_id, date, source ])
+      # A calculated row priced at 1:1 is stored in the account's currency, so
+      # its price converts here at no rate; the row's mark carries over.
+      if price_with_priority.at_parity
+        @prices_at_parity << [ security_id, date, source ]
+      else
+        @prices_at_parity.delete([ security_id, date, source ])
+      end
     rescue Money::ConversionError
       converted_amount = price.price
       @prices_at_parity << [ security_id, date, source ]
@@ -108,7 +114,11 @@ class Holding::PortfolioCache
   end
 
   private
-    PriceWithPriority = Data.define(:price, :priority, :source)
+    PriceWithPriority = Data.define(:price, :priority, :source, :at_parity) do
+      def initialize(price:, priority:, source:, at_parity: false)
+        super
+      end
+    end
 
     # Only splits the holdings can see: from the account's start date, when
     # its holdings begin, to today. A split announced for a future ex-date is
@@ -298,7 +308,8 @@ class Holding::PortfolioCache
                 date: holding.date
               ),
               priority: 3,
-              source: "holding"
+              source: "holding",
+              at_parity: holding.price_at_parity
             )
           end
         else

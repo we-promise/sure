@@ -142,11 +142,15 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
     end
 
     # Splits the opening anchor total into the calculator's persisted components.
+    # The boundary day's end cash still comes from the later anchor, so its
+    # 1:1 mark is kept alongside the opening anchor's.
     def opening_balance_components
+      end_cash_at_parity = @cash_at_parity
       opening_cash_balance = derive_cash_balance_on_date_from_total(
         total_balance: account.opening_anchor_balance,
         date: account.opening_anchor_date
       )
+      @cash_at_parity ||= end_cash_at_parity
 
       [ opening_cash_balance, account.opening_anchor_balance - opening_cash_balance ]
     end

@@ -71,7 +71,12 @@ class Balance::BaseCalculator
       sync_cache.get_holdings_value(date)
     end
 
+    # Cash taken from a total is the total less that day's holdings, so a
+    # holding valued at 1:1 there skews the cash too, and every day carried on
+    # from it, until the next total resets it (see #build_balance).
     def derive_cash_balance_on_date_from_total(total_balance:, date:)
+      @cash_at_parity = account.balance_type == :investment && sync_cache.holdings_valued_at_parity?(date)
+
       if account.balance_type == :investment
         total_balance - holdings_value_for_date(date)
       elsif account.balance_type == :cash
@@ -206,7 +211,7 @@ class Balance::BaseCalculator
         non_cash_adjustments: args[:non_cash_adjustments] || 0,
         net_market_flows: args[:net_market_flows] || 0,
         flows_factor: flows_factor,
-        holdings_valued_at_parity: account.balance_type == :investment && sync_cache.holdings_valued_at_parity?(date)
+        holdings_valued_at_parity: account.balance_type == :investment && (sync_cache.holdings_valued_at_parity?(date) || @cash_at_parity == true)
       )
     end
 end

@@ -566,6 +566,29 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal true, parity[1.day.ago.to_date]
   end
 
+  # Anchor cash is the total less the day's holdings, so a holding at 1:1
+  # there skews every later day's cash until a valuation resets it.
+  test "cash derived from a 1:1 anchor stays marked until a valuation resets it" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "reconciliation", date: 1.day.ago.to_date, balance: 1000 }
+      ]
+    )
+    security = Security.create!(ticker: "EURA", name: "Euro holding")
+    account.holdings.create!(security: security, date: 3.days.ago.to_date, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    parity = calculated.to_h { |balance| [ balance.date, balance.holdings_valued_at_parity ] }
+    assert_equal 900, calculated.find { |balance| balance.date == 2.days.ago.to_date }.cash_balance
+    assert_equal true, parity[3.days.ago.to_date]
+    assert_equal true, parity[2.days.ago.to_date]
+    assert_equal false, parity[1.day.ago.to_date]
+  end
+
   # Only an investment account's balance is built from its holdings, so a
   # holding row left on any other account marks nothing and is not read.
   test "a non-investment account is never marked, whatever holding rows it has" do
