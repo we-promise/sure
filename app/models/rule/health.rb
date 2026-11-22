@@ -89,14 +89,14 @@ class Rule::Health
       active.each_with_index.flat_map do |rule, index|
         next [] if skipped.include?(rule.id)
 
-        active.first(index).filter_map { |other| overlap(rule, other) }
+        active.first(index).reject { |other| skipped.include?(other.id) }.filter_map { |other| overlap(rule, other) }
       end
     end
   end
 
   def match_nothing
     dry_run
-    rules.select { |rule| matches_of(rule)&.empty? && !@uncertain.include?(rule.id) }
+    rules.select { |rule| rule.active? && matches_of(rule)&.empty? && !@uncertain.include?(rule.id) }
   end
 
   # Rules whose matches could not be read, e.g. a pattern that timed out.
@@ -240,13 +240,22 @@ class Rule::Health
       end
     end
 
+    # Every rule reads :new_transactions: whatever its conditions, it can
+    # match a transaction a rule above creates.
     def read_fields(rule)
-      leaf_conditions(rule).filter_map { |condition| CONDITION_FIELDS[condition.condition_type] }.to_set
+      leaf_conditions(rule).filter_map { |condition| CONDITION_FIELDS[condition.condition_type] }.to_set << :new_transactions
     end
 
-    # Tags claim nothing, but a tag condition below still reads them.
+    # Tags claim nothing, but a tag condition below still reads them. A
+    # transfer creates its counterpart on the target account.
     def changed_fields(rule)
-      rule.actions.flat_map { |action| action.action_type == "set_transaction_tags" ? [ :tags ] : claimed_attributes(action).to_a }
+      rule.actions.flat_map do |action|
+        case action.action_type
+        when "set_transaction_tags" then [ :tags ]
+        when "set_as_transfer_or_payment" then claimed_attributes(action).to_a + [ :new_transactions ]
+        else claimed_attributes(action).to_a
+        end
+      end
     end
 
     def shadow(rule, matched, unstopped, claims, claimed_by, stopped_by)
@@ -279,9 +288,13 @@ class Rule::Health
       (duplicates + conflicts.map(&:rules)).any? { |group| group.include?(rule) && group.include?(other) }
     end
 
-    # Only when nothing else separates them: their other conditions are the same.
+    # Only when nothing else separates them: their other conditions are the
+    # same, and they don't require different merchants.
     def same_text?(rule, other)
       return false unless conditions_besides_text(rule) == conditions_besides_text(other)
+
+      merchant_ids, other_merchant_ids = merchant_ids(rule), merchant_ids(other)
+      return false if merchant_ids.any? && other_merchant_ids.any? && merchant_ids != other_merchant_ids
 
       texts(rule).any? { |text| texts(other).any? { |other_text| same_or_contained?(text, other_text) } }
     end
@@ -295,7 +308,18 @@ class Rule::Health
       return matches_text?(other_text, text, operator) if other_operator == "="
 
       text, other_text = text.downcase, other_text.downcase
-      text.include?(other_text) || other_text.include?(text)
+      if operator == "starts_with" && other_operator == "starts_with"
+        text.start_with?(other_text) || other_text.start_with?(text)
+      elsif operator == "ends_with" && other_operator == "ends_with"
+        text.end_with?(other_text) || other_text.end_with?(text)
+      else
+        text.include?(other_text) || other_text.include?(text)
+      end
+    end
+
+    def merchant_ids(rule)
+      leaf_conditions(rule).select { |condition| condition.condition_type == "transaction_merchant" && condition.operator == "=" }
+        .map { |condition| condition.value.to_s }.to_set
     end
 
     # Whether an exact value passes a contains, starts with or ends with
@@ -389,26 +413,31 @@ class Rule::Health
         .sort_by(&:inspect)
     end
 
-    # Normalised the way Rule::ConditionFilter matches it: whitespace is
-    # collapsed in text, except in a pattern.
+    # Normalised the way each filter matches it. A pattern is compared as
+    # written. The JSON detail filters bind their value without collapsing
+    # whitespace: an additional detail strips only the ends of its key and
+    # value, and transaction details binds the value as typed. Other text has
+    # its whitespace collapsed.
     def condition_value(condition)
       return "" if Rule::ConditionFilter::VALUELESS_OPERATORS.include?(condition.operator)
 
       value = condition.value.to_s
       return value if condition.regex?
 
-      # The key before the first "=" is looked up exactly; only the value
-      # after it is compared as text.
-      if condition.condition_type == "transaction_additional_detail"
+      case condition.condition_type
+      when "transaction_additional_detail"
+        # The key before the first "=" is looked up exactly.
         key, separator, target = value.partition(Rule::ConditionFilter::TransactionAdditionalDetail::KEY_VALUE_SEPARATOR)
-        return [ key.strip, separator, text_value(condition, target) ].join
+        [ key.strip, separator, fold_case(condition, target.strip) ].join
+      when "transaction_details"
+        fold_case(condition, value)
+      else
+        value = value.gsub(/\s+/, " ").strip if condition.filter.type == "text"
+        fold_case(condition, value)
       end
-
-      text_value(condition, value)
     end
 
-    def text_value(condition, value)
-      value = value.gsub(/\s+/, " ").strip if condition.filter.type == "text"
+    def fold_case(condition, value)
       CASE_INSENSITIVE_OPERATORS.include?(condition.operator) ? value.downcase : value
     end
 

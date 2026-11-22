@@ -427,8 +427,8 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "turbo-frame#rule_health_report [data-rule-health-entry='duplicates']" do
-      assert_select "a[href='#{edit_rule_path(first)}']"
-      assert_select "a[href='#{edit_rule_path(second)}']"
+      assert_select "a.text-link[href='#{edit_rule_path(first)}'][data-turbo-frame='modal']"
+      assert_select "a.text-link[href='#{edit_rule_path(second)}'][data-turbo-frame='modal']"
     end
     assert_no_match other_family_rule.id, response.body
   end
