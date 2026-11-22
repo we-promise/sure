@@ -35,7 +35,8 @@ class AccountBalanceTransactionsController < ApplicationController
     end
 
     currency = Current.family.currency
-    render json: { items: entries.map { |entry| entry_json(entry, currency) }, covered_from: covered_from.iso8601, truncated: truncated }
+    rates = ExchangeRate::StoredRateTable.new(from: entries.map(&:currency), to: currency, dates: entries.map(&:date))
+    render json: { items: entries.map { |entry| entry_json(entry, rates) }, covered_from: covered_from.iso8601, truncated: truncated }
   end
 
   private
@@ -48,21 +49,13 @@ class AccountBalanceTransactionsController < ApplicationController
     end
 
     # amount: the change to the account as charted (Sure stores outflows as
-    # positive amounts), in the family currency, or nil when there is no
-    # usable rate (left out of totals, like the chart); display: in the
-    # entry's own currency.
-    def entry_json(entry, currency)
+    # positive amounts), in the family currency with stored rates only, or
+    # nil when there is no usable rate (left out of totals, like the chart);
+    # display: in the entry's own currency.
+    def entry_json(entry, rates)
       transaction = entry.entryable
       change = -entry.amount.to_d
-      converted = if entry.currency == currency
-        change
-      else
-        begin
-          Money.new(change, entry.currency).exchange_to(currency, date: entry.date).amount
-        rescue Money::ConversionError
-          nil
-        end
-      end
+      converted = rates.convert(change, from: entry.currency, date: entry.date)
 
       {
         id: entry.id,

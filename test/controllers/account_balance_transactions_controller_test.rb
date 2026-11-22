@@ -44,6 +44,22 @@ class AccountBalanceTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @range[:start_date], body["covered_from"]
   end
 
+  test "converts with the rate stored for each transaction's date, without asking the provider" do
+    yen = @admin.family.accounts.create!(name: "Yen savings", owner: @admin, currency: "JPY", balance: 0, accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 10.days.ago.to_date, rate: 0.006)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 3.days.ago.to_date, rate: 0.007)
+    early = create_transaction(account: yen, amount: 1_000, currency: "JPY", name: "Early", date: 5.days.ago.to_date)
+    late = create_transaction(account: yen, amount: 1_000, currency: "JPY", name: "Late", date: 1.day.ago.to_date)
+    ExchangeRate.expects(:find_or_fetch_rate).never
+
+    sign_in @admin
+    get dashboard_account_balance_transactions_path, params: @range
+
+    items = response.parsed_body["items"].index_by { |i| i["id"] }
+    assert_equal(-6.0, items[early.id]["amount"])
+    assert_equal(-7.0, items[late.id]["amount"])
+  end
+
   test "a transaction without a usable exchange rate has no converted amount, never a 1:1 one" do
     yen = @admin.family.accounts.create!(name: "Yen savings", owner: @admin, currency: "JPY", balance: 0, accountable: Depository.new)
     entry = create_transaction(account: yen, amount: 30_000, currency: "JPY", name: "Yen deposit", date: 1.day.ago.to_date)

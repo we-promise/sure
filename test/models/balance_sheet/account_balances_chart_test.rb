@@ -123,6 +123,17 @@ class BalanceSheet::AccountBalancesChartTest < ActiveSupport::TestCase
     assert_empty layer[:events], "bills and future transactions in the unconvertible currency are left out too"
   end
 
+  test "a foreign-currency bill converts with the stored rate, without asking the provider" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 2.days.ago.to_date, rate: 1.1)
+    bill(name: "Euro gym", account: @checking, amount: 100, currency: "EUR")
+    ExchangeRate.expects(:find_or_fetch_rate).never
+
+    events = series(chart_for(@admin, [ @checking ]).to_h, @checking)[:events].select { |e| e[:name] == "Euro gym" }
+
+    assert events.any?
+    assert events.all? { |e| e[:amount] == -110.0 }
+  end
+
   private
     def chart_for(user, accounts)
       BalanceSheet::AccountBalancesChart.new(@family, user: user, accounts: accounts, period: @period)

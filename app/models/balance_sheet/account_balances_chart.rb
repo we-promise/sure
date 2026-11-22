@@ -133,15 +133,17 @@ class BalanceSheet::AccountBalancesChart
       Accountable.from_type(type)&.display_name || type
     end
 
+    # Stored rates only (never the provider), looked up once per currency.
     # nil when there is no usable rate: like the history (see
     # Balance::ChartSeriesBuilder#balance_rate_sql) the amount is left out
     # rather than counted at 1.
     def to_family_currency(amount, from_currency)
       return amount if from_currency.blank? || from_currency == currency
 
-      Money.new(amount, from_currency).exchange_to(currency).amount
-    rescue Money::ConversionError
-      nil
+      @rates_by_currency ||= Hash.new do |rates, from|
+        rates[from] = ExchangeRate::StoredRateTable.new(from: [ from ], to: currency, dates: [ today ])
+      end
+      @rates_by_currency[from_currency].convert(amount, from: from_currency, date: today)
     end
 
     # Every account a bill names (source and, for transfers, destination)
