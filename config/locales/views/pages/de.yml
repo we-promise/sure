@@ -16,6 +16,15 @@ de:
       subtitle: "Hier siehst du, was in deinen Finanzen passiert."
       new: "Neu"
       toggle_section: "Sichtbarkeit des Bereichs umschalten"
+      customize:
+        start: "Anpassen"
+        done: "Fertig"
+        hide: "%{title} ausblenden"
+        hidden_title: "Ausgeblendete Widgets"
+        hidden_description: "Hol ein Widget zurück aufs Dashboard."
+        none_hidden: "Alle Widgets werden angezeigt. Blende eines über sein Augensymbol aus."
+        all_hidden_title: "Alle Widgets sind ausgeblendet"
+        all_hidden_description: "Passe das Dashboard an, um Widgets wieder einzublenden."
       net_worth_chart:
         data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar.
         title: Nettovermögen
@@ -37,12 +46,39 @@ de:
         no_liability: Noch keine Verbindlichkeiten
         value: Wert
         weight: Anteil
+        expand_all: "Alle aufklappen"
+        collapse_all: "Alle zuklappen"
       cashflow_preview:
+        opt_in_title: "Neues Diagramm anzeigen"
+        opt_in_description: "Vergleiche ein experimentelles Sankey-Diagramm mit dem Diagramm oben. Du kannst es jederzeit wieder ausschalten."
         node_labels:
           cash_flow: "Zahlungsfluss"
           surplus: "Überschuss"
           deficit: "Fehlbetrag"
+          invested: "Investiert"
+        title: "Neues Sankey-Diagramm"
+        preview: "Vorschau"
+        preview_tooltip: "Dieses Diagramm ersetzt die Darstellung oben, weil es eine neue gemeinsame API mit dem mobilen Swift-Client nutzt."
+        group_by_label: "Flüsse anzeigen nach"
+        group_by_category: "Kategorie"
+        group_by_account: "Konto"
+        feedback_prompt: "Vergleiche dieses Diagramm mit dem Original oben und sag uns, ob es außer in der Sortierung anders aussieht."
+        positive: "Sieht richtig aus"
+        negative: "Da stimmt etwas nicht"
+        feedback_title: "Feedback zum Cashflow-Diagramm"
+        feedback_loading: "Feedback-Formular wird geladen …"
+        feedback_unavailable: "Feedback ist gerade nicht möglich. Versuch es später noch einmal."
+        feedback_thanks: "Danke, dass du hilfst, das Diagramm zu verbessern!"
+        feedback_privacy: "Deine Antwort geht an PostHog. Beschreibe das Problem ohne Kontonummern, Salden oder andere private Finanzdaten."
+        feedback_submit: "Feedback senden"
+        sort_label: "Flüsse sortieren"
+        sort_auto: "Automatisch"
+        sort_ascending: "Kleinste zuerst"
+        sort_descending: "Größte zuerst"
       cashflow_sankey:
+        loading: "Cashflow wird geladen …"
+        load_error: "Der Cashflow konnte nicht geladen werden. Versuch es noch einmal."
+        retry: "Erneut versuchen"
         title: "Cashflow"
         no_data_title: "Keine Cashflow-Daten für diesen Zeitraum"
         no_data_description: "Füge Transaktionen hinzu, um Cashflow-Daten anzuzeigen, oder erweitere den Zeitraum."
@@ -58,6 +94,25 @@ de:
         categories: "Kategorien"
         value: "Wert"
         weight: "Gewicht"
+      cashflow_donut:
+        title: "Cashflow-Ringe"
+        date_range: "%{start_date} bis %{end_date}"
+        month_picker_aria_label: "Monat wählen"
+        filter_accounts: "Konten filtern (%{count})"
+        filter_accounts_all: "Alle Konten"
+        period_scope_hint: "Zeigt den Monat, den du hier wählst – unabhängig vom Zeitraum oben im Dashboard."
+        search_accounts: "Konten suchen"
+        apply: "Übernehmen"
+        no_data: "Kein Cashflow in diesem Monat"
+        spent: "Ausgegeben"
+        of_income: "von %{amount} Einnahmen"
+        left_amount: "%{amount} übrig"
+        over_amount: "%{amount} zu viel"
+        left: "Noch verfügbar"
+        over: "Über den Einnahmen"
+        inflows: "Einnahmen"
+        outflows: "Ausgaben"
+        weight: "Anteil"
       investment_summary:
         title: Investments
         total_return: "Gesamtrendite"
@@ -86,6 +141,23 @@ de:
         period_scope_hint: Zeigt die Monate, die du hier wählst – unabhängig vom Zeitraum oben im Dashboard.
         search_accounts: Konten suchen
         title: Geld rein / raus
+      spending_trend:
+        title: "Ausgabenverlauf"
+        date_range: "%{start_date} bis %{end_date}"
+        date_range_short: "%{start_date} – %{end_day}., %{year}"
+        date_range_short_single: "%{date} %{year}"
+        month_picker_aria_label: "Monat wählen"
+        compare_picker_aria_label: "Vergleichsmonate wählen"
+        compare_months:
+          one: "ggü. Vormonat"
+          other: "ggü. den letzten %{count} Monaten"
+        filter_categories: "Kategorien filtern (%{count})"
+        filter_categories_all: "Alle Kategorien"
+        search_categories: "Kategorien suchen"
+        apply: "Übernehmen"
+        period_scope_hint: "Zeigt den Monat, den du hier wählst – unabhängig vom Zeitraum oben im Dashboard."
+        no_data: "Keine Ausgaben in diesem Monat"
+        previous_comparison_days: "(1.–%{end_day}.)"
       sections_aria_label: Dashboard-Bereiche
       widget_size:
         auto: Auto
