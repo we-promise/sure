@@ -513,6 +513,51 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "monthly breakdown starts the first month at the custom start date" do
+    account = accounts(:depository)
+    create_transaction(account: account, date: Date.new(2021, 9, 10), name: "Before range income", amount: -1000)
+    create_transaction(account: account, date: Date.new(2021, 9, 10), name: "Before range expense", amount: 500)
+    create_transaction(account: account, date: Date.new(2021, 9, 20), name: "In range income", amount: -200)
+    create_transaction(account: account, date: Date.new(2021, 9, 20), name: "In range expense", amount: 100)
+    create_transaction(account: account, date: Date.new(2021, 10, 5), name: "October income", amount: -300)
+    create_transaction(account: account, date: Date.new(2021, 10, 5), name: "October expense", amount: 50)
+    create_transaction(account: account, date: Date.new(2021, 10, 20), name: "After range expense", amount: 60)
+
+    get reports_path(period_type: :custom, start_date: "2021-09-15", end_date: "2021-10-15")
+
+    assert_response :ok
+    assert_equal "$500.00", summary_value(I18n.t("reports.summary.total_income"))
+    assert_equal "$150.00", summary_value(I18n.t("reports.summary.total_expenses"))
+
+    rows = css_select("[data-section-key=trends_insights] tbody tr")
+    assert_equal 2, rows.length
+    assert_includes rows[0].text, "Sep 2021"
+    assert_includes rows[0].text, "$200.00"
+    assert_includes rows[0].text, "$100.00"
+    assert_includes rows[1].text, "Oct 2021"
+    assert_includes rows[1].text, "$300.00"
+    assert_includes rows[1].text, "$50.00"
+  end
+
+  test "monthly breakdown starts the first month at the custom start date with a tag filter" do
+    account = accounts(:depository)
+    tag = @family.tags.create!(name: "Range tag")
+    create_transaction(account: account, date: Date.new(2021, 9, 10), name: "Before range", amount: 500, tags: [ tag ])
+    create_transaction(account: account, date: Date.new(2021, 9, 20), name: "In range", amount: 100, tags: [ tag ])
+    create_transaction(account: account, date: Date.new(2021, 10, 5), name: "October", amount: 50, tags: [ tag ])
+
+    get reports_path(period_type: :custom, start_date: "2021-09-15", end_date: "2021-10-15",
+                     filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    rows = css_select("[data-section-key=trends_insights] tbody tr")
+    assert_equal 2, rows.length
+    assert_includes rows[0].text, "Sep 2021"
+    assert_includes rows[0].text, "$100.00"
+    assert_includes rows[1].text, "Oct 2021"
+    assert_includes rows[1].text, "$50.00"
+  end
+
   test "index handles invalid date parameters gracefully" do
     get reports_path(
       period_type: :custom,
