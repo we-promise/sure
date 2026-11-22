@@ -169,8 +169,8 @@ class McpController < ApplicationController
 
       user = User.find_by_email_with_legacy_fallback(ENV["MCP_USER_EMAIL"])
 
-      unless user
-        Rails.logger.warn "[MCP] MCP_USER_EMAIL does not match any user — check environment configuration"
+      unless user&.active?
+        Rails.logger.warn "[MCP] MCP_USER_EMAIL does not match an active user — check environment configuration"
         return false
       end
 

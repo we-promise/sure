@@ -183,6 +183,22 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "env-var token is rejected for a deactivated user" do
+    inactive_user = users(:family_member)
+    inactive_user.update!(active: false)
+
+    with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => inactive_user.email) do # pipelock:ignore
+      Rails.logger.expects(:warn).with(regexp_matches(/MCP_USER_EMAIL/)).once
+
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :unauthorized
+    end
+  ensure
+    inactive_user&.update!(active: true)
+  end
+
   test "returns 401 and warns when env-var token matches but MCP_USER_EMAIL finds no user" do
     with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => "nonexistent@example.com") do # pipelock:ignore
       Rails.logger.expects(:warn).with(regexp_matches(/MCP_USER_EMAIL/)).once
