@@ -179,6 +179,30 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[role=option][data-value='#{accounts(:connected).id}']", count: 0
   end
 
+  test "new trade form defaults the currency to the account currency" do
+    investment = accounts(:investment)
+    investment.update!(currency: "IDR")
+
+    get new_trade_url(account_id: investment.id, type: "buy")
+
+    assert_response :success
+    assert_select "select[name='model[currency]'] option[selected='selected'][value='IDR']", count: 2
+  end
+
+  test "new trade form falls back to the family currency without an account" do
+    @user.family.update!(currency: "IDR")
+
+    get new_trade_url(type: "buy")
+
+    assert_response :success
+    assert_select "select[name='model[currency]'] option[selected='selected'][value='IDR']", count: 2
+
+    get new_trade_url(type: "deposit")
+
+    assert_response :success
+    assert_select "select[name='model[currency]'] option[selected='selected'][value='IDR']", count: 1
+  end
+
   test "creates withdrawal entry" do
     to_account = accounts(:depository) # Account the withdrawal is going to
 
