@@ -43,6 +43,23 @@ class MonobankAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCa
     assert_equal localized, matcher.match(5411)&.name
   end
 
+  # A default category's persisted name can be in a locale that is neither the family's
+  # nor the default locale: bootstrap uses Current.user.locale, and the name survives a
+  # later locale change. The matcher must still recognise it.
+  test "matches a default category persisted in a Latin-script locale with diacritics" do
+    french = I18n.t("models.category.defaults.groceries", locale: :fr)
+    matcher = build_matcher([ french ], locale: "en")
+
+    assert_equal french, matcher.match(5411)&.name
+  end
+
+  test "matches a default category persisted in a non-Latin-script locale" do
+    ukrainian = I18n.t("models.category.defaults.groceries", locale: :uk)
+    matcher = build_matcher([ ukrainian ], locale: "en")
+
+    assert_equal ukrainian, matcher.match(5411)&.name
+  end
+
   test "ignores case, punctuation and the and conjunction" do
     matcher = build_matcher([ "gifts and donations" ])
 

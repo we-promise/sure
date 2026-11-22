@@ -62,6 +62,17 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
     assert_equal localized, matcher.match("FOOD_AND_DRINK")&.name
   end
 
+  # The family's locale is English, but the default was bootstrapped under a member's
+  # French locale (or persisted before the family changed locale), so its stored name is
+  # French. It must still be recognised.
+  test "matches a default category persisted in a different supported locale" do
+    french = I18n.t("models.category.defaults.food_and_drink", locale: :fr)
+    category = Struct.new(:id, :name).new(1, french)
+    matcher = RedbarkAccount::Transactions::CategoryMatcher.new([ category ], locale: "en")
+
+    assert_equal french, matcher.match("FOOD_AND_DRINK")&.name
+  end
+
   test "falls back to merchant_category_code when category is blank" do
     assert_equal "Groceries", @matcher.match(nil, 5411)&.name
     assert_equal "Travel", @matcher.match("", 7011)&.name

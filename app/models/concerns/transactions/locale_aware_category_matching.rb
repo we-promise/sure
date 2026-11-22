@@ -20,20 +20,15 @@ module Transactions::LocaleAwareCategoryMatching
       match_candidates(default_category_names(group[:key])) || match_candidates(group[:aliases])
     end
 
-    # Sure's own name for the default category behind this group, in the family's locale
-    # and in the default locale.
-    #
-    # NOTE: this is narrower than Category#any_locale_display_name_matches?, which checks
-    # every LanguagesHelper::SUPPORTED_LOCALES. Defaults bootstrapped under a member's
-    # non-family locale (CategoriesController#bootstrap uses Current.user.locale) can
-    # therefore be missed here. Tracked in #5097 so the fix lands for every provider
-    # matcher at once.
+    # Sure's own name for the default category behind this group, in every supported
+    # locale. A default's persisted name can be in any of them: CategoriesController#
+    # bootstrap creates defaults under Current.user.locale, and the name survives a later
+    # locale change. Matches Category#any_locale_display_name_matches?.
     def default_category_names(key)
       return [] if key.blank?
 
-      [ locale, I18n.default_locale ].compact.map(&:to_s).uniq.filter_map do |candidate_locale|
-        I18n.t("models.category.defaults.#{key}", locale: candidate_locale, default: nil)
-      end
+      @default_category_names ||= {}
+      @default_category_names[key] ||= Category.localized_names_for_key("models.category.defaults.#{key}")
     end
 
     def match_candidates(candidates)

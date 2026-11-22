@@ -298,6 +298,15 @@ class Category < ApplicationRecord
       i18n_key ? I18n.t(i18n_key, default: name) : name
     end
 
+    # Every supported locale's translation of a category i18n key, de-duplicated.
+    def localized_names_for_key(i18n_key)
+      return [] if i18n_key.blank?
+
+      LanguagesHelper::SUPPORTED_LOCALES.filter_map do |locale|
+        I18n.t(i18n_key, locale: locale, default: nil)
+      end.uniq
+    end
+
     private
       def default_category_translation_key_for(name)
         default_category_translation_keys_by_name[name.to_s]
@@ -402,10 +411,7 @@ class Category < ApplicationRecord
     i18n_key = self.class.send(:default_category_translation_key_for, name)
     return false unless i18n_key
 
-    LanguagesHelper::SUPPORTED_LOCALES.any? do |locale|
-      translated = I18n.t(i18n_key, locale: locale, default: nil)
-      translated.present? && normalized.casecmp?(translated)
-    end
+    self.class.localized_names_for_key(i18n_key).any? { |translated| normalized.casecmp?(translated) }
   end
 
   def display_name_with_parent
