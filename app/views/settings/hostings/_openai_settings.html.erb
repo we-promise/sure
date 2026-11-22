@@ -30,7 +30,7 @@
   <%= form.text_field :openai_uri_base,
                       label: t(".uri_base_label"),
                       placeholder: t(".uri_base_placeholder"),
-                      value: @openai_uri_base_input || Setting.openai_uri_base,
+                      value: ENV["OPENAI_URI_BASE"].presence || @openai_uri_base_input || Setting.openai_uri_base,
                       autocomplete: "off",
                       autocapitalize: "none",
                       spellcheck: "false",
@@ -42,7 +42,7 @@
   <%= form.text_field :openai_model,
                       label: t(".model_label"),
                       placeholder: t(".model_placeholder"),
-                      value: @openai_model_input || Setting.openai_model,
+                      value: ENV["OPENAI_MODEL"].presence || @openai_model_input || Setting.openai_model,
                       autocomplete: "off",
                       autocapitalize: "none",
                       spellcheck: "false",
@@ -65,7 +65,7 @@
                       [t(".json_mode_none"), "none"],
                       [t(".json_mode_json_object"), "json_object"]
                     ],
-                    Setting.openai_json_mode
+                    ENV["LLM_JSON_MODE"].presence_in(Provider::Openai::Concerns::JsonMode::VALID_JSON_MODES) || Setting.openai_json_mode
                   ),
                   { label: t(".json_mode_label") },
                   { disabled: ENV["LLM_JSON_MODE"].present?,
@@ -79,7 +79,7 @@
     <%= form.number_field :llm_context_window,
                           label: t(".context_window_label"),
                           placeholder: "2048",
-                          value: Setting.llm_context_window,
+                          value: ENV["LLM_CONTEXT_WINDOW"].present? ? Assistant::TokenBudget.context_window : Setting.llm_context_window,
                           min: 256,
                           disabled: ENV["LLM_CONTEXT_WINDOW"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
@@ -88,7 +88,7 @@
     <%= form.number_field :llm_max_response_tokens,
                           label: t(".max_response_tokens_label"),
                           placeholder: "512",
-                          value: Setting.llm_max_response_tokens,
+                          value: ENV["LLM_MAX_RESPONSE_TOKENS"].to_i.positive? ? ENV["LLM_MAX_RESPONSE_TOKENS"].to_i : Setting.llm_max_response_tokens,
                           min: 64,
                           disabled: ENV["LLM_MAX_RESPONSE_TOKENS"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
@@ -111,7 +111,7 @@
     <%= form.number_field :ai_response_timeout,
                           label: t(".ai_response_timeout_label"),
                           placeholder: Chat::DEFAULT_RESPONSE_TIMEOUT.to_i.to_s,
-                          value: Setting.ai_response_timeout,
+                          value: ENV["AI_RESPONSE_TIMEOUT"].present? ? Chat.response_timeout.to_i : Setting.ai_response_timeout,
                           min: Chat::MIN_RESPONSE_TIMEOUT.to_i,
                           disabled: ENV["AI_RESPONSE_TIMEOUT"].present?,
                           data: { "auto-submit-form-target": "auto" } %>

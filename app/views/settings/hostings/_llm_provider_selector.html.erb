@@ -64,7 +64,7 @@
     <%= form.number_field :llm_max_items_per_call,
                           label: t(".max_items_per_call_label"),
                           placeholder: "25",
-                          value: Setting.llm_max_items_per_call,
+                          value: ENV["LLM_MAX_ITEMS_PER_CALL"].present? ? Provider::LlmConcept.max_items_per_call : Setting.llm_max_items_per_call,
                           min: 1,
                           disabled: ENV["LLM_MAX_ITEMS_PER_CALL"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
