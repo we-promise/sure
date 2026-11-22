@@ -139,10 +139,23 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
     assert_empty milestones(fi_number: nil).all
   end
 
-  test "nothing in the milestones engine reads the clock, the database or the current request" do
-    # Comments are left out, so a note about the contract cannot trip it.
-    code = Rails.root.join("app/models/retirement_plan/milestones.rb").readlines.map { |line| line.sub(/#.*/, "") }.join
+  # The first year is an argument: two runs on different days, with no query
+  # and no request, must give the same milestones. The second day is after
+  # the 2046 retirement, where a clock read would drop Coast FI.
+  test "the milestones read neither the clock, the database nor the current request" do
+    Current.expects(:user).never
+    Current.expects(:family).never
 
-    assert_no_match(/Date\.(current|today)|Time\.(current|now|zone)|DateTime\.(current|now)|Current\.|ActiveRecord|\.where\(|\.find/, code)
+    runs = [ Date.new(2026, 3, 1), Date.new(2048, 9, 30) ].map do |today|
+      travel_to(today) do
+        figures = nil
+        assert_queries_count(0) do
+          figures = [ milestones.all, milestones(current_assets: 200_000).all, milestones(inflation_rate: BigDecimal("0.02")).all ]
+        end
+        figures
+      end
+    end
+
+    assert_equal runs.first, runs.last
   end
 end
