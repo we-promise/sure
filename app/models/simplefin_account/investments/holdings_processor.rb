@@ -184,9 +184,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
       simplefin_account.raw_holdings_payload || []
     end
 
-    # Returns the holding's currency only when it is a fiat ISO code. Crypto
-    # codes in config/currencies.yml (ETH, BTC, …) have no ISO numeric code,
-    # so a ticker in the currency field falls back to the account currency.
+    # Returns the holding's currency only when it is an ISO 4217 code (one
+    # with an ISO numeric code). Crypto codes in config/currencies.yml (ETH,
+    # BTC, …) have none, so a ticker in the currency field falls back to the
+    # account currency.
     def holding_currency(value)
       code = value.to_s.strip.upcase
       return nil unless code.match?(/\A[A-Z]{3}\z/)
