@@ -247,6 +247,25 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal 0, run.transactions_blocked
   end
 
+  test "an AI job that reports before the run records its own changes keeps them" do
+    # The job finishes inside rule.apply, before the runner writes its counts.
+    Family.any_instance.stubs(:auto_categorize_transactions_later).with do |_transactions, rule_run_id:|
+      RuleRun.find(rule_run_id).complete_job!(modified_count: 4)
+      true
+    end
+    extra = [ "Coffee shop", "Bookstore", "Toy outlet" ].map { |name| create_transaction(account: @account, name: name).transaction }
+    [ @whole_foods, extra.first, extra.second ].each { |transaction| transaction.tags << @tag_a }
+    rule = create_rule("Mixed", "o", tags: [ @tag_a ])
+    rule.actions.create!(action_type: "auto_categorize")
+
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first.reload
+
+    assert_equal 5, run.transactions_queued
+    assert_equal 4, run.job_transactions_modified
+    # The tag changed 2 and the job 4; the sum is capped at the 5 matched.
+    assert_equal 5, run.transactions_modified
+  end
+
   test "a rule with only an AI action records nothing modified until its job reports" do
     Family.any_instance.stubs(:auto_categorize_transactions_later)
     rule = @family.rules.create!(

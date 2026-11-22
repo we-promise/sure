@@ -140,7 +140,15 @@ class Rule::Runner
         )
 
         counts = run_counts(result, queued: matched_ids.size, rule: rule)
-        rule_run.update!(**counts)
+        if counts[:status] == "pending"
+          # An AI job may already have added its changes via RuleRun#complete_job!,
+          # so add to the stored count (with_lock reloads it) rather than overwrite it.
+          rule_run.with_lock do
+            rule_run.update!(**counts, transactions_modified: [ rule_run.transactions_modified + counts[:transactions_modified], matched_ids.size ].min)
+          end
+        else
+          rule_run.update!(**counts)
+        end
         @changed_now_count += counts[:transactions_modified]
       rescue => e
         rule_run = record_failure(rule, rule_run, e, executed_at: executed_at, queued: matched_ids.size)
