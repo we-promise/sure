@@ -6,14 +6,14 @@
 #
 # Where a family has both and they differ, the one for the provider this install calls is kept:
 # LLM_PROVIDER or the saved setting, unless that provider has no key and the other has, as
-# Provider::Registry.preferred_llm_provider falls back. The other is set aside under
-# ai_prompt_overrides["dropped"], which the prompts page shows until the family admin next saves.
+# Provider::Registry.preferred_llm_provider falls back. The other goes to a DebugLogEntry that
+# the prompts page shows until the family admin next saves.
 class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
   PAIRS = {
     "categorize_transactions" => %w[categorizer_openai categorizer_anthropic],
     "detect_merchants" => %w[merchant_openai merchant_anthropic]
   }.freeze
-  DROPPED_KEY = "dropped".freeze
+  DROPPED_CATEGORY = "ai_prompt_override_dropped".freeze
 
   class Family < ActiveRecord::Base
     self.table_name = "families"
@@ -24,7 +24,6 @@ class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
 
     Family.where("ai_prompt_overrides ?| array[:keys]", keys: PAIRS.values.flatten).find_each do |family|
       overrides = family.ai_prompt_overrides.to_h.dup
-      dropped = {}
 
       PAIRS.each do |key, (openai_key, anthropic_key)|
         openai, claude = overrides.delete(openai_key).presence, overrides.delete(anthropic_key).presence
@@ -32,9 +31,8 @@ class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
 
         kept, other = anthropic ? [ claude || openai, (openai if claude) ] : [ openai || claude, (claude if openai) ]
         overrides[key] = kept
-        dropped[key] = other if other && other != kept
+        record_dropped(family, key, other) if other && other != kept
       end
-      overrides[DROPPED_KEY] = dropped if dropped.any?
 
       family.update_columns(ai_prompt_overrides: overrides)
     end
@@ -42,7 +40,7 @@ class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
 
   def down
     Family.where("ai_prompt_overrides ?| array[:keys]", keys: PAIRS.keys).find_each do |family|
-      overrides = family.ai_prompt_overrides.to_h.except(DROPPED_KEY)
+      overrides = family.ai_prompt_overrides.to_h.dup
       PAIRS.each do |key, old_keys|
         text = overrides.delete(key)
         old_keys.each { overrides[_1] = text } if text
@@ -91,4 +89,13 @@ class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
 
     # As Setting.llm_provider: LLM_PROVIDER wins over the saved value.
     def llm_provider = ENV["LLM_PROVIDER"].presence || setting_value("llm_provider") || "openai"
+
+    def record_dropped(family, key, text)
+      execute ActiveRecord::Base.sanitize_sql([
+        "INSERT INTO debug_log_entries (id, category, level, message, source, family_id, metadata, created_at, updated_at) " \
+        "VALUES (gen_random_uuid(), ?, 'warn', ?, ?, ?, ?::jsonb, now(), now())",
+        DROPPED_CATEGORY, "A prompt override was dropped when the per-provider overrides merged", self.class.name,
+        family.id, { key:, text: }.to_json
+      ])
+    end
 end

@@ -53,6 +53,10 @@ class Eval::Dataset < ApplicationRecord
     end
   end
 
+  # What a recording of this dataset depends on: each sample's input and context, in the order the
+  # runner sends them. Expected answers aren't included, since the model never sees them.
+  def recording_digest = Digest::SHA256.hexdigest(samples.order(:id).pluck(:input_data, :context_data).to_json).first(12)
+
   # The same id for a dataset's nth sample on every import, so the ids sent to a model, the
   # batches and the train/test split match a recording (the recorded evals replay by them).
   def self.sample_id(dataset_name, index) = Digest::UUID.uuid_v5(Digest::UUID::URL_NAMESPACE, "sure:eval:#{dataset_name}:#{index}")

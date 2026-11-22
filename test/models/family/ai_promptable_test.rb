@@ -78,6 +78,15 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     assert_equal({ "chat_system" => "Be terse." }, @family.ai_prompt_overrides)
   end
 
+  test "clearing the set-aside overrides keeps a prompt another request saved meanwhile" do
+    @family.update!(ai_prompt_overrides: { "dropped" => { "categorize_transactions" => "Old prompt" } })
+    Family.find(@family.id).update!(ai_prompt_chat_system: "Saved elsewhere.")
+
+    @family.clear_dropped_ai_prompt_overrides
+
+    assert_equal({ "chat_system" => "Saved elsewhere." }, @family.reload.ai_prompt_overrides)
+  end
+
   test "a set-aside override must name a prompt key and be text" do
     @family.ai_prompt_overrides = { "dropped" => { "not_a_prompt" => "x" } }
     assert_not @family.valid?

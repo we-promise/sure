@@ -93,6 +93,19 @@ class Eval::DatasetTest < ActiveSupport::TestCase
     assert_includes first, Eval::Dataset.sample_id("categorization_golden_v1_light", 0)
   end
 
+  # The recorded evals name each cassette by this digest, so an edited input leaves no cassette to replay.
+  test "the recording digest follows the samples' inputs and contexts, not their expected answers" do
+    dataset = Eval::Dataset.import_from_yaml(Rails.root.join("db/eval_data/categorization_golden_v1_light.yml"))
+    digest = dataset.recording_digest
+    sample = dataset.samples.order(:id).first
+
+    sample.update!(expected_output: { "category_name" => "Something else" })
+    assert_equal digest, dataset.recording_digest
+
+    sample.update!(input_data: sample.input_data.merge("description" => "Edited"))
+    assert_not_equal digest, dataset.recording_digest
+  end
+
   test "statistics returns sample breakdown" do
     dataset = Eval::Dataset.create!(name: "stats_test", eval_type: "categorization")
 

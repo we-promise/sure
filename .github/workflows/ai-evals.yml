@@ -29,6 +29,8 @@ env:
   PLAID_CLIENT_ID: foo
   PLAID_SECRET: bar
   EVAL_RECORDED: "1"
+  # A missing cassette fails here rather than skipping, so the gate can't pass without replaying.
+  EVAL_REQUIRE_RECORDING: "1"
   # Recorded against Claude Haiku 5.5 through the Kilo gateway. Replay matches each request by
   # method and URL, so the URL and the batching settings must be the ones the cassettes were
   # recorded with. Replayed answers need no key; the client only needs one to build the endpoint.

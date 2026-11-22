@@ -343,17 +343,24 @@ namespace :evals do
   # EVAL_RECORDED=1: replay the model's answers from test/vcr_cassettes/ai/evals/ instead of
   # calling it (the free gate on every AI change: parsing, coercion and mapping, not prompt
   # quality, since a changed prompt was never shown to the model). With RECORD_CASSETTES=1 too,
-  # record them. A missing cassette skips the check, saying so.
+  # record them. The cassette's name carries the dataset's recording digest, so editing a sample's
+  # input or context leaves no cassette for it rather than replaying answers to the old version.
+  # A missing cassette skips the check, saying so; with EVAL_REQUIRE_RECORDING=1 (CI) it fails.
   def with_recorded_responses(dataset_name, model, &block)
     return block.call unless ENV["EVAL_RECORDED"] == "1"
 
     require "vcr"
     require "webmock"
-    name = "ai/evals/#{dataset_name}_#{model.parameterize}"
+    digest = Eval::Dataset.find_by!(name: dataset_name).recording_digest
+    name = "ai/evals/#{dataset_name}_#{model.parameterize}_#{digest}"
     recording = ENV["RECORD_CASSETTES"] == "1"
     path = Rails.root.join("test/vcr_cassettes/#{name}.yml")
     unless recording || path.exist?
-      puts "No recorded responses at #{path.relative_path_from(Rails.root)}; skipping. Record them with RECORD_CASSETTES=1."
+      message = "No recorded responses at #{path.relative_path_from(Rails.root)}. Record them with RECORD_CASSETTES=1; " \
+                "the dataset's inputs changed if an older cassette for it is there."
+      abort(message) if ENV["EVAL_REQUIRE_RECORDING"] == "1"
+
+      puts "#{message} Skipping."
       return nil
     end
 

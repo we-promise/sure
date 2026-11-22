@@ -95,8 +95,13 @@ module Family::AiPromptable
     ai_prompt_overrides.to_h.fetch(DROPPED_KEY, {}).map { |key, text| { key:, text: } }
   end
 
+  # Removes only that key, in the database, so a prompt another request saved meanwhile is kept.
   def clear_dropped_ai_prompt_overrides
-    update!(ai_prompt_overrides: ai_prompt_overrides.except(DROPPED_KEY)) if ai_prompt_overrides.key?(DROPPED_KEY)
+    return unless ai_prompt_overrides.key?(DROPPED_KEY)
+
+    self.class.where(id:).update_all([ "ai_prompt_overrides = ai_prompt_overrides - ?", DROPPED_KEY ])
+    self.ai_prompt_overrides = ai_prompt_overrides.except(DROPPED_KEY)
+    clear_attribute_changes([ :ai_prompt_overrides ])
   end
 
   private
