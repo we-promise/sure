@@ -171,7 +171,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
         config.openrouter_app_name = OPENROUTER_APP_NAME   # RubyLLM otherwise sends "RubyLLM"
         config.openrouter_app_url = OPENROUTER_APP_URL
       else
-        config.openai_api_key = endpoint.api_key.presence || "none"   # RubyLLM requires one; local servers ignore it
+        config.openai_api_key = endpoint.api_key.presence || Ai::Transport::Http::NO_KEY   # sent as no Authorization
         config.openai_api_base = ruby_llm_api_base
       end
     end

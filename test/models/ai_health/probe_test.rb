@@ -329,6 +329,21 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     assert result.passing?
     assert_requested request
+    assert_not_requested(:post, "http://ollama.example.test:11434/v1/embeddings") { _1.headers.key?("Authorization") }
+  end
+
+  test "embedding probe sends the embedding token as a bearer token" do
+    request = stub_request(:post, "http://ollama.example.test:11434/v1/embeddings")
+              .with(headers: { "Authorization" => "Bearer emb-token" })
+              .to_return(
+                status: 200, headers: { "Content-Type" => "application/json" },
+                body: { data: [ { embedding: [ 0.1, 0.2, 0.3 ] } ], model: "nomic-embed-text", usage: { prompt_tokens: 4, total_tokens: 4 } }.to_json
+              )
+
+    result = @probe.embedding(endpoint: "http://ollama.example.test:11434/v1", access_token: "emb-token", model: "nomic-embed-text", dimensions: 3)
+
+    assert result.passing?
+    assert_requested request
   end
 
   test "embedding probe posts to the base URL as given, as VectorStore::Embeddable does" do

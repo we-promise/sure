@@ -12,6 +12,8 @@ module Ai::Transport::Http
   OPENAI_BASE = "https://api.openai.com/v1".freeze
   OPENROUTER_BASE = "https://openrouter.ai/api/v1".freeze
   PROXY_VARIABLES = %w[HTTPS_PROXY https_proxy HTTP_PROXY http_proxy].freeze
+  # The key RubyLLM gets for an endpoint without one; ProxyNetHttp sends no Authorization for it.
+  NO_KEY = "sure-no-key".freeze
 
   class << self
     # The proxy URL for a request to `url`, or nil to go direct: HTTPS_PROXY, then HTTP_PROXY,
@@ -148,7 +150,15 @@ module Ai::Transport::Http
   # force a direct connection; an invalid proxy URL is warned about and skipped. TLS options go
   # through the context's config.ssl. RubyLLM's file downloads skip adapters and use
   # config.http_proxy, which is set from the same resolver.
+  #
+  # It also drops the Authorization header RubyLLM builds from NO_KEY, the stand-in for an endpoint
+  # without a key, since RubyLLM requires one: a server that checks the header rejects a fake one.
   class ProxyNetHttp < Faraday::Adapter::NetHttp
+    def call(env)
+      env.request_headers.delete("Authorization") if env.request_headers["Authorization"] == "Bearer #{NO_KEY}"
+      super
+    end
+
     def build_connection(env)
       proxy = Ai::Transport::Http.proxy_or_warn(env[:url].to_s)
       env[:request][:proxy] = proxy && Faraday::ProxyOptions.from(proxy)
