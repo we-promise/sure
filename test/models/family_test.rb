@@ -324,6 +324,38 @@ class FamilyTest < ActiveSupport::TestCase
     assert_not_equal k0, k2
   end
 
+  test "build_cache_key changes when exchange rates are updated" do
+    family = families(:empty)
+    before = family.build_cache_key("test_key", invalidate_on_data_updates: true)
+
+    ExchangeRate.create!(
+      from_currency: "JPY",
+      to_currency: family.currency,
+      date: Date.current,
+      rate: 0.0067
+    )
+
+    after = family.reload.build_cache_key("test_key", invalidate_on_data_updates: true)
+
+    assert_not_equal before, after
+  end
+
+  test "build_cache_key ignores exchange rates when data invalidation is off" do
+    family = families(:empty)
+    before = family.build_cache_key("test_key")
+
+    ExchangeRate.create!(
+      from_currency: "JPY",
+      to_currency: family.currency,
+      date: Date.current,
+      rate: 0.0067
+    )
+
+    after = family.reload.build_cache_key("test_key")
+
+    assert_equal before, after
+  end
+
   test "build_cache_key remains unchanged when nothing relevant has changed" do
     family = families(:dylan_family)
     key1 = family.build_cache_key("test_key", invalidate_on_data_updates: true)

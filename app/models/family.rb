@@ -716,13 +716,17 @@ class Family < ApplicationRecord
     # Our data sync process updates this timestamp whenever any family account successfully completes a data update.
     # By including it in the cache key, we can expire caches every time family account data changes.
     data_invalidation_key = invalidate_on_data_updates ? latest_sync_completed_at : nil
+    # A rate stored or updated later changes converted figures, so caches that
+    # hold family-currency totals must follow exchange-rate freshness too.
+    exchange_rate_version = invalidate_on_data_updates ? ExchangeRate.updated_at_version : nil
 
     [
       id,
       currency,
       key,
       data_invalidation_key,
-      accounts_status_version
+      accounts_status_version,
+      exchange_rate_version
     ].compact.join("_")
   end
 

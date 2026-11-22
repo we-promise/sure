@@ -71,6 +71,19 @@ class AccountsHelperTest < ActionView::TestCase
     end
   end
 
+  test "sidebar cache key changes when exchange rates are updated" do
+    before = sidebar_key
+
+    ExchangeRate.create!(
+      from_currency: "JPY",
+      to_currency: @family.currency,
+      date: Date.current,
+      rate: 0.0067
+    )
+
+    assert_not_equal before, sidebar_key
+  end
+
   test "sidebar cache key changes when a provider link is removed" do
     link = AccountProvider.create!(account: accounts(:depository), provider: plaid_accounts(:one))
     before = sidebar_key
