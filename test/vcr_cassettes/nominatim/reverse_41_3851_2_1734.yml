@@ -1,0 +1,60 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://nominatim.openstreetmap.org/reverse?format=json&lat=41.3851&lon=2.1734
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Sure (self-hosted personal finance app; https://github.com/we-promise/sure)
+      Host:
+      - nominatim.openstreetmap.org
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '835'
+      Content-Type:
+      - application/json; charset=utf-8
+      Server:
+      - gunicorn/asgi
+      X-Nominatim-Server:
+      - longma.openstreetmap.org
+      Accept-Ranges:
+      - bytes
+      Age:
+      - '0'
+      Date:
+      - Sun, 22 Nov 2026 20:22:06 GMT
+      Via:
+      - 1.1 varnish
+      X-Served-By:
+      - cache-bgy-lime1210022-BGY
+      X-Cache:
+      - MISS
+      X-Cache-Hits:
+      - '0'
+      X-Timer:
+      - S1795378926.344889,VS0,VE217
+      Vary:
+      - accept-language, Accept-Encoding
+      Strict-Transport-Security:
+      - max-age=300
+      Alt-Svc:
+      - h3=":443";ma=86400,h3-29=":443";ma=86400,h3-27=":443";ma=86400
+    body:
+      encoding: ASCII-8BIT
+      string: !binary |-
+        eyJwbGFjZV9pZCI6ODM0MTU2MTMsImxpY2VuY2UiOiJEYXRhIMKpIE9wZW5TdHJlZXRNYXAgY29udHJpYnV0b3JzLCBPRGJMIDEuMC4gaHR0cDovL29zbS5vcmcvY29weXJpZ2h0Iiwib3NtX3R5cGUiOiJub2RlIiwib3NtX2lkIjoxMTk1MzE1NzEyOCwibGF0IjoiNDEuMzg1MDA1NCIsImxvbiI6IjIuMTczNDMzNCIsImNsYXNzIjoicGxhY2UiLCJ0eXBlIjoiaG91c2UiLCJwbGFjZV9yYW5rIjozMCwiaW1wb3J0YW5jZSI6OC40MzU3MjEzNzAyNTU2MTZlLTA1LCJhZGRyZXNzdHlwZSI6InBsYWNlIiwibmFtZSI6IiIsImRpc3BsYXlfbmFtZSI6IjI4LTMyLCBDYXJyZXIgZGUgbGEgQ2FudWRhLCBTYW50YSBBbm5hLCBlbCBHw7J0aWMsIENpdXRhdCBWZWxsYSwgQmFyY2Vsb25hLCBCYXJjZWxvbsOocywgQmFyY2Vsb25hLCBDYXRhbHVueWEsIDA4MDAyLCBFc3Bhw7FhIiwiYWRkcmVzcyI6eyJob3VzZV9udW1iZXIiOiIyOC0zMiIsInJvYWQiOiJDYXJyZXIgZGUgbGEgQ2FudWRhIiwibmVpZ2hib3VyaG9vZCI6IlNhbnRhIEFubmEiLCJxdWFydGVyIjoiZWwgR8OydGljIiwic3VidXJiIjoiQ2l1dGF0IFZlbGxhIiwiY2l0eSI6IkJhcmNlbG9uYSIsImNvdW50eSI6IkJhcmNlbG9uw6hzIiwicHJvdmluY2UiOiJCYXJjZWxvbmEiLCJJU08zMTY2LTItbHZsNiI6IkVTLUIiLCJzdGF0ZSI6IkNhdGFsdW55YSIsIklTTzMxNjYtMi1sdmw0IjoiRVMtQ1QiLCJwb3N0Y29kZSI6IjA4MDAyIiwiY291bnRyeSI6IkVzcGHDsWEiLCJjb3VudHJ5X2NvZGUiOiJlcyJ9LCJib3VuZGluZ2JveCI6WyI0MS4zODQ5NTU0IiwiNDEuMzg1MDU1NCIsIjIuMTczMzgzNCIsIjIuMTczNDgzNCJdfQ==
+  recorded_at: Sun, 22 Nov 2026 20:22:06 GMT
+recorded_with: VCR 6.3.1
