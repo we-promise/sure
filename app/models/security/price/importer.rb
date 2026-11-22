@@ -326,12 +326,27 @@ class Security::Price::Importer
       cutoff_date = fill_start_date
 
       # First try provider prices (most recent before cutoff)
-      provider_price_value = provider_prices
+      provider_date, provider_price = provider_prices
         .select { |date, _| date < cutoff_date }
         .max_by { |date, _| date }
-        &.last&.price
+      provider_price_value = provider_price&.price
 
-      return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
+      if provider_price_value.present? && provider_price_value.to_f > 0
+        # A refetched carried row repeats the stored real quote before it,
+        # which the fill keeps over the provider's (user edits), so the tail
+        # anchors on that quote unless the provider has a later close. Every
+        # provisional row is carried forward.
+        if db_prices[cutoff_date]&.carried_forward
+          stored_quote = Security::Price
+            .where(security_id: security.id, carried_forward: false)
+            .where("date < ? AND price > 0", cutoff_date)
+            .order(date: :desc)
+            .first
+          return stored_quote.price if stored_quote && stored_quote.date >= provider_date
+        end
+
+        return provider_price_value
+      end
 
       # Fall back to the most recent real DB price before cutoff, or the most
       # recent carried-forward one when there is no real one. Without any, the

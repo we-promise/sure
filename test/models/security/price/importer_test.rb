@@ -816,6 +816,40 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal [ 120, 104 ], Security::Price.where(security: @security, date: [ real, tail ]).order(:date).map(&:price)
   end
 
+  # The fill starts at the carried day, after the real quote, so it never
+  # passes the day the provider contradicts.
+  test "a refetched tail anchors on the stored real quote, not a contradicting provider close" do
+    Security::Price.delete_all
+
+    real = 9.days.ago.to_date
+    import_with([ [ real, 120, false ], [ real + 1.day, 120, true ] ], quotes: { real => 100 })
+
+    assert_equal [ 120, 120 ], Security::Price.where(security: @security).order(:date).map(&:price)
+  end
+
+  # A stored zero is no quote: the fill would not carry it either.
+  test "a refetched tail does not anchor on a stored zero" do
+    Security::Price.delete_all
+
+    real = 10.days.ago.to_date
+    import_with([ [ real, 120, false ], [ real + 1.day, 0, false ], [ real + 2.days, 120, true ] ], quotes: { real => 100 })
+
+    assert_equal 120, Security::Price.find_by!(security: @security, date: real + 2.days).price
+  end
+
+  # Beyond the refetch window the carried days stay as stored, so a provider
+  # close among them is newer than the stored real quote and anchors the tail.
+  test "a refetched tail anchors on a provider close newer than the stored real quote" do
+    Security::Price.delete_all
+
+    real = 40.days.ago.to_date
+    rows = [ [ real, 120, false ] ] + (1..11).map { |day| [ real + day.days, 120, true ] }
+    import_with(rows, quotes: { 31.days.ago.to_date => 130 })
+
+    tail = Security::Price.where(security: @security, date: 30.days.ago.to_date..).order(:date)
+    assert_equal [ 130, 130 ], tail.map(&:price)
+  end
+
   # A first import whose start date holds only a carried price: no real quote
   # anchors the fill, and the stored history is not pre-listing.
   test "a first import fills from a carried price at its start date" do
