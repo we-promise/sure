@@ -273,6 +273,36 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     assert_nil security.development_status
   end
 
+  # Rows stored before an alias was mapped keep it until a remap, and the
+  # exchange is the same venue either way.
+  test "a legacy MIC alias confirms a hint as its canonical exchange does" do
+    security = Security.create!(ticker: "REG-ALIAS", exchange_operating_mic: "XETR", country_code: "DE", country_source: "user_hint")
+    security.update_column(:exchange_operating_mic, "GER")
+
+    assert_not security.reload.country_hint?
+    assert_equal "developed", security.development_status
+  end
+
+  # A fund's region never came from its listing country, so losing the
+  # exchange's confirmation takes nothing back.
+  test "a fund moved off the exchange that confirmed its hint keeps its region" do
+    fund = Security.create!(ticker: "REG-FUND-MOVED", exchange_operating_mic: "XNAS", country_code: "US", country_source: "user_hint",
+                            asset_class: "equity", asset_sub_class: "etf", region: "north_america")
+
+    fund.update!(exchange_operating_mic: "XLON")
+
+    assert fund.country_hint?
+    assert_equal "north_america", fund.reload.region
+  end
+
+  test "a region given with the exchange in the same save is kept on a hint row" do
+    security = Security.create!(ticker: "REG-SAME-SAVE", exchange_operating_mic: "XNAS", country_code: "GB",
+                                country_source: "user_hint", region: "europe")
+
+    assert security.country_hint?
+    assert_equal "europe", security.reload.region
+  end
+
   test "a region set by hand on a hint row survives other edits" do
     Security.expects(:search_provider).returns([])
     security = Security::Resolver.new("REG-HAND", exchange_operating_mic: "XNAS", country_code: "GB").resolve

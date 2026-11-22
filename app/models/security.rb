@@ -197,7 +197,7 @@ class Security < ApplicationRecord
   end
 
   def exchange_country
-    EXCHANGES.dig(exchange_operating_mic.to_s.upcase, "country")
+    EXCHANGES.dig(self.class.canonical_exchange_operating_mic(exchange_operating_mic), "country")
   end
 
   # Derived rather than stored: developed/emerging is a property of the country,
@@ -515,6 +515,13 @@ class Security < ApplicationRecord
     # would still be pending when the country changed again, then read as the
     # caller's own.
     def apply_default_region
+      # A fund's listing country says nothing about what it holds, so its
+      # region comes from the provider's breakdown of its holdings, or not at
+      # all. It does not follow a country correction either: a region that
+      # equals the old listing's may have come from the holdings, and nothing
+      # records which.
+      return if asset_sub_class.in?(%w[etf mutual_fund])
+
       # An offline security's `country_code` is not the instrument's listing
       # country. `Security::Resolver#offline_security` persists whatever the
       # caller passed, and the resolver's own ranking calls that value
@@ -525,18 +532,13 @@ class Security < ApplicationRecord
       # `match.country_code`, which is the listing country, and those do
       # classify. The hint stays on the row once it comes online (a health
       # check or a remap prices it), so `country_source` marks it too. A hint
-      # its new exchange no longer confirms takes back the region it gave.
+      # its new exchange no longer confirms takes back the region it gave,
+      # unless the same save sets the region.
       if country_hint?
-        self.region = nil if exchange_operating_mic_changed? && region == REGIONS.dig(country_code.to_s.upcase, "region")
+        self.region = nil if exchange_operating_mic_changed? && !region_changed? && region == REGIONS.dig(country_code.to_s.upcase, "region")
         return
       end
       return if offline?
-      # A fund's listing country says nothing about what it holds, so its
-      # region comes from the provider's breakdown of its holdings, or not at
-      # all. It does not follow a country correction either: a region that
-      # equals the old listing's may have come from the holdings, and nothing
-      # records which.
-      return if asset_sub_class.in?(%w[etf mutual_fund])
 
       derived = REGIONS.dig(country_code.to_s.upcase, "region")
 
