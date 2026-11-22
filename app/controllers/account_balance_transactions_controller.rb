@@ -59,6 +59,7 @@ class AccountBalanceTransactionsController < ApplicationController
 
       {
         id: entry.id,
+        url: transaction_path(entry),
         date: entry.date.iso8601,
         account_id: entry.account_id,
         name: entry.name,

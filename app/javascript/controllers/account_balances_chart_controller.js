@@ -1270,6 +1270,8 @@ export default class extends Controller {
           .style("fill", single && !single.planned ? surface : ink);
       }
       const zoomable = count > 1;
+      if (single && !zoomable && !single.planned)
+        g.attr("data-transaction-id", single.items[0].id);
       g.on("pointerenter", () => {
         guide.attr("x1", cluster.x).attr("x2", cluster.x).attr("opacity", 0.4);
         if (single)
@@ -1389,10 +1391,11 @@ export default class extends Controller {
     </div>`;
   }
 
+  // Opens like a row in the transactions list: in the drawer, over the dashboard.
   #openTransaction(item) {
     const dialog = this.element.querySelector("dialog");
     if (dialog?.open) dialog.close();
-    window.Turbo.visit(`/transactions/${item.id}`);
+    window.Turbo.visit(item.url, { frame: "drawer" });
   }
 }
 

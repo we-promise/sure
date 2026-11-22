@@ -39,6 +39,7 @@ class AccountBalanceTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes ids, hidden.id
     assert_equal body["items"].map { |item| item["date"] }, body["items"].map { |item| item["date"] }.sort.reverse
     assert_equal(-25.0, body["items"].find { |item| item["id"] == shared.id }["amount"], "an outflow is a negative change")
+    assert_equal transaction_path(shared), body["items"].find { |item| item["id"] == shared.id }["url"]
     assert_equal false, body["truncated"]
     assert_equal @range[:start_date], body["covered_from"]
   end

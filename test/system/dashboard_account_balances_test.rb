@@ -1,6 +1,8 @@
 require "application_system_test_case"
 
 class DashboardAccountBalancesTest < ApplicationSystemTestCase
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
   end
@@ -37,6 +39,22 @@ class DashboardAccountBalancesTest < ApplicationSystemTestCase
         assert_selector "[data-account-balances-chart-target='chart'] svg"
       end
     end
+  end
+
+  test "a single transaction in the lane opens in the drawer, keeping the dashboard" do
+    entry = create_transaction(account: accounts(:depository), amount: 42, name: "Lane bakery", date: 12.days.ago.to_date)
+    @user.update!(preferences: @user.preferences.merge("account_balances" => { "show_transactions" => true }))
+    sign_in @user
+
+    within "section[data-section-key='account_balances']" do
+      find("[data-account-balances-chart-target='chart'] [data-transaction-id='#{entry.id}']", match: :first).click
+    end
+
+    within "#drawer" do
+      assert_field with: "Lane bakery"
+    end
+    assert_current_path root_path
+    assert_selector "section[data-section-key='account_balances']", visible: :all
   end
 
   private
