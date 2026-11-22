@@ -70,7 +70,9 @@ en:
       overlaps:
         title: Overlaps
         entry_html: "%{rule} and %{other}, which runs first, both set the %{attributes}."
-        shared: "%{shared} of its %{count} matches are also matched by the rule above."
+        shared:
+          one: "%{count} of its %{total} matches is also matched by the rule above."
+          other: "%{count} of its %{total} matches are also matched by the rule above."
         same_text: Their conditions name the same or contained text.
       match_nothing:
         title: Match nothing today
