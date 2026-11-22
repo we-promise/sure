@@ -8,7 +8,7 @@ class Entry < ApplicationRecord
   # transfer matching never read them, so an edit limited to them doesn't need
   # an account sync. Reports and budgets pick such edits up through
   # Family#entries_cache_version, which the save itself bumps.
-  DESCRIPTIVE_ATTRIBUTES = %w[name notes updated_at].freeze
+  DESCRIPTIVE_ATTRIBUTES = %w[name notes updated_at location_lat location_lng location_name].freeze
   DESCRIPTIVE_TRANSACTION_ATTRIBUTES = %w[category_id merchant_id updated_at].freeze
 
   # Key in transactions.extra marking a stale pending the sync excluded on its own.
@@ -27,6 +27,17 @@ class Entry < ApplicationRecord
   # Mirrors chk_entries_reconciled_at_present_when_statement_set so a direct
   # assignment surfaces a validation error rather than a StatementInvalid.
   validates :reconciled_at, presence: true, if: -> { reconciled_by_statement_id.present? }
+
+  validates :location_lng, presence: { message: "can't be blank if location_lat is present" }, if: -> { location_lat.present? }
+  validates :location_lat, presence: { message: "can't be blank if location_lng is present" }, if: -> { location_lng.present? }
+  validates :location_lat, numericality: { greater_than_or_equal_to: -90, less_than_or_equal_to: 90 }, allow_nil: true
+  validates :location_lng, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }, allow_nil: true
+
+  scope :located, -> { where.not(location_lat: nil) }
+
+  def located?
+    location_lat.present? && location_lng.present?
+  end
 
   has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
   # Read side only, so a transaction can say which bills it paid. The foreign key
