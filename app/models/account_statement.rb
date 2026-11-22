@@ -397,6 +397,19 @@ class AccountStatement < ApplicationRecord
     detected.present? && amount.present? && detected.to_d.abs == amount.to_d.abs
   end
 
+  # Records the assigned balances in `fields` as edited, so they are never
+  # worked out again, unless the statement text gives the same figure in the
+  # statement's currency. Unlike note_edited_balances, a value equal to an
+  # earlier derivation still counts: the currency may have changed since.
+  def mark_balances_edited(fields)
+    readings = pdf_output["balance_readings"]
+    return if readings.blank?
+
+    derived = TextMetadataParser.balances_for(readings, classification: account&.classification, currency: statement_currency)
+    edited = fields.map(&:to_s).select { |field| derived&.public_send(field) != self[field] }
+    merge_pdf_output("edited_balances" => (edited_balances | edited)) if edited.any?
+  end
+
   private
 
     def reconciliation_check(key:, statement_amount:, ledger_amount:)

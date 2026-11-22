@@ -671,11 +671,13 @@ class PdfImport < Import
 
       return if updates.empty?
 
-      # An AI balance equal to the stored one is still the AI's figure, so the
-      # statement keeps it rather than reading it again in a new currency.
-      updates.slice(:opening_balance, :closing_balance).each_key { |field| account_statement.public_send("#{field}_will_change!") }
+      # An AI balance the statement text doesn't give in the target currency
+      # is the AI's from then on, even when it equals the stored balance, so
+      # the statement keeps it rather than reading it again in a new currency.
+      account_statement.assign_attributes(updates)
+      account_statement.mark_balances_edited(updates.slice(:opening_balance, :closing_balance).keys)
 
-      unless account_statement.update(updates)
+      unless account_statement.save
         DebugLogEntry.capture(
           category: "import",
           level: "warn",

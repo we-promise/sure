@@ -221,6 +221,35 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal BigDecimal("435.88"), @statement.closing_balance
   end
 
+  test "an AI balance in another currency is kept when the same statement was saved earlier in the job" do
+    detect_card_statement!(account: nil)
+    @statement.update_columns(currency: nil)
+    stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
+    period = { "statement_period_start" => @statement.period_start_on.to_s, "statement_period_end" => @statement.period_end_on.to_s }
+    PdfImport::AiProcessor.any_instance.stubs(:process).returns(OpenStruct.new(extracted_data: period))
+
+    # As ProcessPdfJob does: both calls save the import's one statement object,
+    # the first in the family's dollars, the second switching it to euros.
+    @import.process_with_ai
+    assert_equal BigDecimal("435.88"), @import.account_statement.closing_balance
+    @import.extract_transactions
+
+    @statement.reload
+    assert_equal "EUR", @statement.currency
+    assert_equal BigDecimal("1066.47"), @statement.opening_balance
+    assert_equal BigDecimal("435.88"), @statement.closing_balance
+  end
+
+  test "an AI balance keeps the hand edits already recorded on the statement" do
+    detect_card_statement!(account: accounts(:credit_card))
+    @statement.update!(opening_balance: 999)
+    stub_extracted_balances(opening: nil, closing: 400.0)
+
+    @import.extract_transactions
+
+    assert_equal %w[closing_balance opening_balance], @statement.reload.sanitized_parser_output.dig("pdf", "edited_balances").sort
+  end
+
   test "extract_transactions writes an AI balance over a hand edit of the same size" do
     detect_card_statement!(account: accounts(:credit_card))
     @statement.update!(closing_balance: 400)
@@ -432,7 +461,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "apply_statement_metadata_updates captures debug log entry when update fails validation" do
-    @statement.stubs(:update).returns(false)
+    @statement.stubs(:save).returns(false)
     @statement.errors.add(:base, "Simulated validation failure")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
