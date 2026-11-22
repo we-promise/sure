@@ -67,7 +67,7 @@ de:
         personal_budgets_hint: Eigene Budgets für jedes Familienmitglied aktivieren.
         budget_sharing_title: Budgets teilen
         budget_sharing_subtitle: Lass andere Mitglieder dein persönliches Budget ansehen oder bearbeiten
-        budget_sharing_no_members: Keine weiteren Mitglieder in deiner %{moniker}, mit denen du teilen kannst
+        budget_sharing_no_members: Es gibt keine weiteren Mitglieder, mit denen du teilen kannst
         budget_sharing_permission_label: "Zugriff für %{name}"
         budget_sharing_permissions:
           none: Kein Zugriff
