@@ -581,6 +581,34 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_nil statement.sanitized_parser_output.dig("pdf", "balances_source")
   end
 
+  test "reads a two-digit-year period from a statement pdf with a dateless filename" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: Rack::Test::UploadedFile.new(
+        file_fixture("account_statements/two_digit_year_period.pdf"),
+        "application/pdf",
+        true,
+        original_filename: "eStatement_XXXXXXXXXX630_20.pdf"
+      )
+    )
+
+    assert_equal Date.new(2021, 9, 3), statement.period_start_on
+    assert_equal Date.new(2021, 10, 1), statement.period_end_on
+  end
+
+  test "takes a printed two-digit-year period over a filename date" do
+    Pdf::TextExtractor.stubs(:pages).returns([ CARD_STATEMENT_TEXT.sub("12 Apr 2024 - 15 May 2024", "12 Apr 24 - 15 May 24") ])
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: accounts(:credit_card),
+      file: uploaded_file(filename: "card_2024-05.pdf", content_type: "application/pdf", content: "%PDF-1.4 card statement")
+    )
+
+    assert_equal Date.new(2024, 4, 12), statement.period_start_on
+    assert_equal Date.new(2024, 5, 15), statement.period_end_on
+  end
+
   CARD_STATEMENT_TEXT = <<~TEXT
     Statement period 12 Apr 2024 - 15 May 2024
     Opening balance $1,066.47

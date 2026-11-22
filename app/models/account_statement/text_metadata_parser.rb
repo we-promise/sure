@@ -57,6 +57,12 @@ class AccountStatement::TextMetadataParser
   DATE = Regexp.union(DATE_FORMATS.values.map { |format| Regexp.new(format.source.gsub(/\(\?<\w+>/, "(?:"), format.options) })
   RANGE_SEPARATOR = /\s*(?:[-–—]|\b(?:to|through|until|bis|al|au|tot|a|até|hasta)\b)\s*/i
   PERIOD_PATTERN = /(?<start>#{DATE})#{RANGE_SEPARATOR}(?<end>#{DATE})/
+  # "3 Sep 21 - 1 Oct 21". Read only when no four-digit-year period is found.
+  # The month must be a whole MONTHS token ("2 Marketing 21" is not a date),
+  # and any space counts, as PDF extractors may emit non-breaking ones.
+  TWO_DIGIT_YEAR_DATE = /(?<day>\d{1,2})#{ORDINAL}[[:space:]]+(?<month_name>[[:alpha:]]+)\.?[[:space:]]+(?<year>\d{2})(?!\d)/
+  TWO_DIGIT_YEAR = TWO_DIGIT_YEAR_DATE.source.gsub(/\(\?<\w+>/, "(?:")
+  TWO_DIGIT_YEAR_PERIOD = /(?<start>#{TWO_DIGIT_YEAR})[[:space:]]*[-–—][[:space:]]*(?<end>#{TWO_DIGIT_YEAR})/
   # Annual statements span a year; anything longer isn't one period.
   MAX_PERIOD_DAYS = 400
 
@@ -200,9 +206,14 @@ class AccountStatement::TextMetadataParser
     end
 
     def range_period
-      @text.to_enum(:scan, PERIOD_PATTERN).each do
+      first_period(PERIOD_PATTERN) { |raw| parse_date(raw) } ||
+        first_period(TWO_DIGIT_YEAR_PERIOD) { |raw| parse_two_digit_year_date(raw) }
+    end
+
+    def first_period(pattern)
+      @text.to_enum(:scan, pattern).each do
         match = Regexp.last_match
-        period = valid_period(parse_date(match[:start]), parse_date(match[:end]))
+        period = valid_period(yield(match[:start]), yield(match[:end]))
         return period if period
       end
       nil
@@ -239,6 +250,17 @@ class AccountStatement::TextMetadataParser
       rescue Date::Error
         next
       end
+      nil
+    end
+
+    def parse_two_digit_year_date(raw)
+      match = raw.match(/\A#{TWO_DIGIT_YEAR_DATE}\z/)
+      month = MONTHS[match[:month_name].downcase]
+      return nil unless month
+
+      date = Date.new(2000 + match[:year].to_i, month, match[:day].to_i)
+      date if AccountStatement::MetadataDetector.reasonable_date?(date)
+    rescue Date::Error
       nil
     end
 

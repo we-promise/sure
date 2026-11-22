@@ -397,6 +397,44 @@ class AccountStatement::TextMetadataParserTest < ActiveSupport::TestCase
     assert_equal BigDecimal("435.88"), card_balances(text, classification: "liability").closing_balance
   end
 
+  TWO_DIGIT_YEAR_TEXT = <<~TEXT
+    Period  3 Sep 21 - 1 Oct 21
+    OPENING BALANCE  $1,250.00
+    CLOSING BALANCE  $2,000.00
+  TEXT
+
+  def period_of(text)
+    result = AccountStatement::TextMetadataParser.parse(text)
+    result && [ result.period_start_on, result.period_end_on ]
+  end
+
+  test "reads a period printed with two-digit years" do
+    assert_equal [ Date.new(2021, 9, 3), Date.new(2021, 10, 1) ], period_of(TWO_DIGIT_YEAR_TEXT)
+  end
+
+  test "reads a two-digit-year period across a year end" do
+    assert_equal [ Date.new(2021, 12, 4), Date.new(2022, 1, 3) ], period_of("Period 4 Dec 21 - 3 Jan 22")
+  end
+
+  test "reads a two-digit-year period separated by Unicode spaces" do
+    text = "Period\u00A03\u00A0Sep\u00A021\u202F-\u202F1\u00A0Oct\u00A021"
+
+    assert_equal [ Date.new(2021, 9, 3), Date.new(2021, 10, 1) ], period_of(text)
+  end
+
+  test "prefers a four-digit-year period to an earlier two-digit one" do
+    text = "Previous period 3 Sep 21 - 1 Oct 21\nStatement period 1 Apr 2026 - 30 Apr 2026"
+
+    assert_equal [ Date.new(2026, 4, 1), Date.new(2026, 4, 30) ], period_of(text)
+  end
+
+  test "does not read numeric two-digit years, other words or times as a period" do
+    assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "03/09/21 - 01/10/21"))
+    assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "2 Marketing 21 - 5 Marketing 21"))
+    assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "1 Sep 20 - 1 Sep 2021"))
+    assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "11:28PM 14NOV - 11:30PM 15NOV $21.00"))
+  end
+
   test "ignores text without a period or balances" do
     assert_nil AccountStatement::TextMetadataParser.parse("Invoice 2026-04 total 1.234,56 EUR due 15.05.2026")
     assert_nil AccountStatement::TextMetadataParser.parse("")
