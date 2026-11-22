@@ -1,0 +1,17 @@
+<div data-controller="location-picker" data-location-picker-located-value="<%= located? %>">
+  <%= form.hidden_field :location_lat, value: entry.location_lat, data: { "location-picker-target": "lat" } %>
+  <%= form.hidden_field :location_lng, value: entry.location_lng, data: { "location-picker-target": "lng" } %>
+  <%= form.hidden_field :location_name, value: entry.location_name, data: { "location-picker-target": "name" } %>
+
+  <div data-location-picker-target="display" class="<%= "hidden" unless located? %>">
+    <span data-location-picker-target="displayText"><%= display_value %></span>
+    <%= helpers.icon("x", as_button: true, disabled: !can_annotate, data: { action: "location-picker#clear" }) %>
+  </div>
+
+  <div data-location-picker-target="search" class="<%= "hidden" if located? %>">
+    <%= tag.input type: "text", data: { location_picker_target: "searchInput", action: "input->location-picker#search" }, placeholder: t("ds.location_picker.search_placeholder"), disabled: !can_annotate %>
+    <ul data-location-picker-target="suggestions"></ul>
+  </div>
+
+  <div data-location-picker-target="confirmMap" class="hidden" style="height: 200px;"></div>
+</div>

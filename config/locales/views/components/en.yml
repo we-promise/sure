@@ -131,6 +131,8 @@ en:
     icon_picker:
       no_matching_icons: No matching icons
       search_placeholder: Search icons...
+    location_picker:
+      search_placeholder: "Search a place..."
   provider_sync_summary:
     title: Sync summary
     last_sync: "Last sync: %{time_ago} ago"
