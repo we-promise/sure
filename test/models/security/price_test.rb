@@ -61,6 +61,16 @@ class Security::PriceTest < ActiveSupport::TestCase
     assert_equal 300, existing_price.reload.price
   end
 
+  test "stores prices below 0.0001 without rounding them to zero" do
+    price = @security.prices.create!(
+      date: 5.days.ago.to_date,
+      price: BigDecimal("0.000002891"),
+      currency: "USD"
+    )
+
+    assert_equal BigDecimal("0.000002891"), price.reload.price
+  end
+
   test "returns nil if no price found in DB or from provider" do
     security = securities(:aapl)
     Security::Price.delete_all # Clear any existing prices
