@@ -15,6 +15,16 @@ class FooterTest < ActionDispatch::IntegrationTest
     assert_select "footer a", text: "Terms of Service", count: 0
   end
 
+  test "treats empty legal URLs as unset" do
+    with_env_overrides("LEGAL_PRIVACY_URL" => "", "LEGAL_TERMS_URL" => "") do
+      get new_session_path
+    end
+
+    assert_response :ok
+    assert_select "footer a", text: "Privacy Policy", count: 0
+    assert_select "footer a", text: "Terms of Service", count: 0
+  end
+
   test "links both legal pages when both URLs are configured" do
     with_env_overrides("LEGAL_PRIVACY_URL" => "https://example.com/privacy", "LEGAL_TERMS_URL" => "https://example.com/terms") do
       get new_session_path
@@ -46,12 +56,18 @@ class FooterTest < ActionDispatch::IntegrationTest
   end
 
   test "legal pages still render their placeholder when no URL is configured" do
-    get privacy_path
-    assert_response :ok
-    assert_includes response.body, I18n.t("pages.privacy.placeholder")
+    with_env_overrides("LEGAL_PRIVACY_URL" => nil, "LEGAL_TERMS_URL" => nil) do
+      Rails.application.reload_routes!
 
-    get terms_path
-    assert_response :ok
-    assert_includes response.body, I18n.t("pages.terms.placeholder")
+      get privacy_path
+      assert_response :ok
+      assert_includes response.body, I18n.t("pages.privacy.placeholder")
+
+      get terms_path
+      assert_response :ok
+      assert_includes response.body, I18n.t("pages.terms.placeholder")
+    end
+  ensure
+    Rails.application.reload_routes!
   end
 end

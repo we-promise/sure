@@ -1,5 +1,5 @@
-<% privacy_link = legal_page_url(:privacy).present? %>
-<% terms_link = legal_page_url(:terms).present? %>
+<% privacy_link = legal_page_url(:privacy) %>
+<% terms_link = legal_page_url(:terms) %>
 <footer class="p-6">
   <div class="space-y-2 text-center text-xs text-secondary">
     <p>&copy; <%= Date.current.year %>, <%= brand_name %> <%= product_name %> (community fork of Maybe Finance)</p>
