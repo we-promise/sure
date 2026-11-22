@@ -213,7 +213,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     # The processor logs simplefin_account.id per lot, so the stub has to
     # answer it as well as account_provider.
     processor.stubs(:simplefin_account).returns(
-      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, currency: "USD")
     )
 
     # A plain recorder rather than a mocha argument matcher, so the assertions
@@ -261,7 +261,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     processor.stubs(:resolve_security).returns(security)
     processor.stubs(:institution_reports_total_basis?).returns(false)
     processor.stubs(:simplefin_account).returns(
-      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, currency: "USD")
     )
 
     first_day = Date.current
@@ -299,7 +299,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     processor.stubs(:resolve_security).returns(security)
     processor.stubs(:institution_reports_total_basis?).returns(false)
     processor.stubs(:simplefin_account).returns(
-      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, currency: "USD")
     )
 
     recorder = Class.new do
@@ -328,5 +328,78 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
 
     # but the basis is unknown for the position as a whole, NOT $100/share
     assert_nil position[:cost_basis]
+  end
+
+  test "an investment holding uses the account currency when the provider reports a ticker as currency (#2856)" do
+    # Wealthfront reports the Grayscale Ethereum Mini Trust ETF with
+    # "currency" => "ETH". Storing that as the holding currency made
+    # Holding#amount_money raise Money::Currency::UnknownCurrencyError.
+    security = securities(:aapl)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+
+    processor.stubs(:holdings_data).returns([
+      {
+        "id" => "eth-etf",
+        "symbol" => "ETH",
+        "description" => "Grayscale Ethereum Mini Trust ETF",
+        "shares" => "10",
+        "market_value" => "230.57",
+        "currency" => "ETH"
+      }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
+    )
+
+    recorder = Class.new do
+      attr_reader :calls
+
+      def initialize = @calls = []
+
+      def import_holding(**kwargs)
+        @calls << kwargs
+        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
+              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
+                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
+      end
+    end.new
+
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size
+    assert_equal "USD", recorder.calls.first[:currency]
+  end
+
+  test "an investment account keeps an ETF ticker out of the crypto namespace (#2856)" do
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:simplefin_account).returns(stub(name: "Wealthfront"))
+
+    resolved_symbol = nil
+    Security::Resolver.stubs(:new).with { |symbol| resolved_symbol = symbol; true }
+      .returns(stub(resolve: securities(:aapl)))
+
+    processor.send(:resolve_security, "ETH", "Grayscale Ethereum Mini Trust ETF")
+
+    assert_equal "ETH", resolved_symbol
+  end
+
+  test "a crypto account still namespaces its tickers as crypto (#2856)" do
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:account).returns(accounts(:crypto))
+    processor.stubs(:simplefin_account).returns(stub(name: "Coinbase"))
+
+    resolved_symbol = nil
+    Security::Resolver.stubs(:new).with { |symbol| resolved_symbol = symbol; true }
+      .returns(stub(resolve: securities(:aapl)))
+
+    processor.send(:resolve_security, "ETH", "Ethereum")
+
+    assert_equal "CRYPTO:ETH", resolved_symbol
   end
 end

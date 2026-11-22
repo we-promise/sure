@@ -83,7 +83,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
         # Skip zero positions with no value to avoid invisible rows
         next if qty.to_d.zero? && computed_amount.to_d.zero?
 
-        currency = simplefin_holding["currency"].presence || "USD"
+        # SimpleFIN sometimes reports a ticker (e.g. "ETH" for the Grayscale
+        # Ethereum Mini Trust ETF) in the holding currency field. Value
+        # holdings in the account's valuation currency instead (#2856).
+        currency = simplefin_account.currency.presence || account&.currency.presence || "USD"
         position = positions[[ security.id, currency, holding_date ]] ||= {
           security: security,
           currency: currency,
@@ -237,13 +240,14 @@ class SimplefinAccount::Investments::HoldingsProcessor
     end
 
     def resolve_security(symbol, description)
-      # Normalize crypto tickers to a distinct namespace so they don't collide with equities
+      # Normalize crypto tickers to a distinct namespace so they don't collide
+      # with equities. The linked account type is the discriminator: an
+      # Investment account can hold an ETF whose ticker matches a crypto
+      # symbol (e.g. ETH), which must stay in the equity namespace (#2856).
       sym = symbol.to_s.upcase
-      is_crypto_account = account&.accountable_type == "Crypto" || simplefin_account.name.to_s.downcase.include?("crypto")
-      is_crypto_symbol  = %w[BTC ETH SOL DOGE LTC BCH].include?(sym)
-      mentions_crypto   = description.to_s.downcase.include?("crypto")
+      is_crypto_account = account&.accountable_type == "Crypto"
 
-      if !sym.include?(":") && (is_crypto_account || is_crypto_symbol || mentions_crypto)
+      if !sym.include?(":") && is_crypto_account
         sym = "CRYPTO:#{sym}"
       end
 
