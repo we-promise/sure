@@ -44,6 +44,21 @@ class AccountStatement::TextMetadataParser
     "nov" => 11,
     "dec" => 12, "dic" => 12, "dez" => 12, "déc" => 12
   }.freeze
+  # Full names in the same languages, for formats that match a month exactly.
+  FULL_MONTHS = [
+    %w[january gennaio januar janvier enero januari janeiro],
+    %w[february febbraio februar février fevrier febrero februari fevereiro],
+    %w[march marzo märz maerz mars maart março marco],
+    %w[april aprile avril abril],
+    %w[may maggio mai mayo mei maio],
+    %w[june giugno juni juin junio junho],
+    %w[july luglio juli juillet julio julho],
+    %w[august agosto août aout augustus],
+    %w[september settembre septembre septiembre setembro],
+    %w[october ottobre oktober octobre octubre outubro],
+    %w[november novembre noviembre novembro],
+    %w[december dicembre dezember décembre decembre diciembre dezembro]
+  ].each_with_index.flat_map { |names, index| names.map { |name| [ name, index + 1 ] } }.to_h.freeze
 
   ORDINAL = /(?:st|nd|rd|th)?/i
   MONTH_NAME = /[[:alpha:]]{3,10}/
@@ -55,14 +70,16 @@ class AccountStatement::TextMetadataParser
     month_name_day: /(?<month_name>#{MONTH_NAME})\.?\s+(?<day>\d{1,2})#{ORDINAL},?\s+(?<year>\d{4})/
   }.freeze
   DATE = Regexp.union(DATE_FORMATS.values.map { |format| Regexp.new(format.source.gsub(/\(\?<\w+>/, "(?:"), format.options) })
-  RANGE_SEPARATOR = /\s*(?:[-–—]|\b(?:to|through|until|bis|al|au|tot|a|até|hasta)\b)\s*/i
+  RANGE_WORD = /(?:[-–—]|\b(?:to|through|until|bis|al|au|tot|a|até|hasta)\b)/i
+  RANGE_SEPARATOR = /\s*#{RANGE_WORD}\s*/
   PERIOD_PATTERN = /(?<start>#{DATE})#{RANGE_SEPARATOR}(?<end>#{DATE})/
   # "3 Sep 21 - 1 Oct 21". Read only when no four-digit-year period is found.
-  # The month must be a whole MONTHS token ("2 Marketing 21" is not a date),
-  # and any space counts, as PDF extractors may emit non-breaking ones.
+  # The month must be a whole MONTHS or FULL_MONTHS token ("2 Marketing 21" is
+  # not a date), and any space counts, as PDF extractors may emit
+  # non-breaking ones.
   TWO_DIGIT_YEAR_DATE = /(?<day>\d{1,2})#{ORDINAL}[[:space:]]+(?<month_name>[[:alpha:]]+)\.?[[:space:]]+(?<year>\d{2})(?!\d)/
   TWO_DIGIT_YEAR = TWO_DIGIT_YEAR_DATE.source.gsub(/\(\?<\w+>/, "(?:")
-  TWO_DIGIT_YEAR_PERIOD = /(?<start>#{TWO_DIGIT_YEAR})[[:space:]]*[-–—][[:space:]]*(?<end>#{TWO_DIGIT_YEAR})/
+  TWO_DIGIT_YEAR_PERIOD = /(?<start>#{TWO_DIGIT_YEAR})[[:space:]]*#{RANGE_WORD}[[:space:]]*(?<end>#{TWO_DIGIT_YEAR})/
   # Annual statements span a year; anything longer isn't one period.
   MAX_PERIOD_DAYS = 400
 
@@ -255,7 +272,8 @@ class AccountStatement::TextMetadataParser
 
     def parse_two_digit_year_date(raw)
       match = raw.match(/\A#{TWO_DIGIT_YEAR_DATE}\z/)
-      month = MONTHS[match[:month_name].downcase]
+      token = match[:month_name].downcase
+      month = MONTHS[token] || FULL_MONTHS[token]
       return nil unless month
 
       date = Date.new(2000 + match[:year].to_i, month, match[:day].to_i)

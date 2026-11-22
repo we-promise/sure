@@ -422,6 +422,15 @@ class AccountStatement::TextMetadataParserTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2021, 9, 3), Date.new(2021, 10, 1) ], period_of(text)
   end
 
+  test "reads a two-digit-year period with full month names" do
+    assert_equal [ Date.new(2021, 4, 3), Date.new(2021, 5, 1) ], period_of("Period 3 April 21 - 1 May 21")
+    assert_equal [ Date.new(2021, 12, 4), Date.new(2022, 1, 3) ], period_of("Period 4 December 21 - 3 January 22")
+  end
+
+  test "reads a two-digit-year period separated by a word" do
+    assert_equal [ Date.new(2021, 9, 3), Date.new(2021, 10, 1) ], period_of("Period 3 Sep 21 to 1 Oct 21")
+  end
+
   test "prefers a four-digit-year period to an earlier two-digit one" do
     text = "Previous period 3 Sep 21 - 1 Oct 21\nStatement period 1 Apr 2026 - 30 Apr 2026"
 
@@ -431,6 +440,7 @@ class AccountStatement::TextMetadataParserTest < ActiveSupport::TestCase
   test "does not read numeric two-digit years, other words or times as a period" do
     assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "03/09/21 - 01/10/21"))
     assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "2 Marketing 21 - 5 Marketing 21"))
+    assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "2 Marketing 21 - 3 Marketing 21"))
     assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "1 Sep 20 - 1 Sep 2021"))
     assert_equal [ nil, nil ], period_of(TWO_DIGIT_YEAR_TEXT.sub("3 Sep 21 - 1 Oct 21", "11:28PM 14NOV - 11:30PM 15NOV $21.00"))
   end
