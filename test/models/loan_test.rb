@@ -96,6 +96,31 @@ class LoanTest < ActiveSupport::TestCase
     assert_not loan_account.loan.amortizable?
   end
 
+  # A loan that cannot be scheduled and one whose repayment genuinely rounds to
+  # zero sit on opposite sides of `amortizable?`. Callers tell them apart with
+  # `.present?`, so the first must stay nil and the second must stay a Money.
+  test "an uncomputable monthly payment is nil while a genuine zero payment is returned" do
+    uncomputable = Account.create! \
+      family: families(:dylan_family),
+      name: "Rateless Mortgage",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(subtype: "mortgage", interest_rate: nil, term_months: 360, rate_type: "fixed", start_date: Date.new(2024, 1, 1))
+    genuine_zero = Account.create! \
+      family: families(:dylan_family),
+      name: "Interest-free Loan",
+      balance: 1,
+      currency: "USD",
+      accountable: Loan.create!(subtype: "mortgage", interest_rate: 0, term_months: 1200, rate_type: "fixed", start_date: Date.new(2024, 1, 1))
+
+    assert_not uncomputable.loan.amortizable?, "premise: a loan with no rate cannot be scheduled"
+    assert genuine_zero.loan.amortizable?, "premise: a 0% loan with a term can be scheduled"
+
+    assert_nil uncomputable.loan.monthly_payment
+    assert_equal Money.new(0, "USD"), genuine_zero.loan.monthly_payment
+    assert genuine_zero.loan.monthly_payment.present?
+  end
+
   # Reversed in part by #104: a variable loan now has a schedule. It still has
   # no single monthly payment, because it does not have one -- quoting the
   # payment it opened with would present a stale figure as a current one.
