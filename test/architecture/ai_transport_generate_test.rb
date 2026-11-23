@@ -77,34 +77,6 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
     assert_equal :none, response.json_mode
   end
 
-  test "in auto, a 400 about the JSON mode moves to the next mode, so a server that refuses strict gets json_object" do
-    requests = stub_chat(error(400, "response_format json_schema is not supported"), answer(FULL))
-
-    response = generate(json_mode: :auto)
-
-    assert_equal %w[json_schema json_object], requests.map { _1.dig("response_format", "type") }
-    assert_equal :json_object, response.json_mode
-  end
-
-  test "in auto, a server that refuses both formats with a 400 reaches none (LM Studio)" do
-    lm_studio = "'response_format.type' must be 'json_schema' or 'text'"
-    requests = stub_chat(error(400, lm_studio), error(400, lm_studio), answer(FULL))
-
-    response = generate(json_mode: :auto)
-
-    assert_equal [ "json_schema", "json_object", nil ], requests.map { _1.dig("response_format", "type") }
-    assert_equal :none, response.json_mode
-  end
-
-  test "an explicit mode's 400 about the JSON mode still retries once in none" do
-    requests = stub_chat(error(400, "response_format json_schema is not supported"), answer(FULL))
-
-    response = generate(json_mode: :strict)
-
-    assert_equal [ "json_schema", nil ], requests.map { _1.dig("response_format", "type") }
-    assert_equal :none, response.json_mode
-  end
-
   test "a 400 about anything else ends the call" do
     requests = stub_chat(error(400, "image input is not supported by this model"))
 

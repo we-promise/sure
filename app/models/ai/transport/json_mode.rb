@@ -5,16 +5,12 @@
 #   moves on when the answer doesn't parse or, for batched features, when more than half the
 #   items came back blank or missing, keeping the reasoning effort. An explicit mode stays,
 #   apart from the 400 retry below.
-# - In `auto`, a 400 about the JSON mode moves to the next mode in the chain, so a server that
-#   refuses a strict schema still gets `json_object` before `none`, as main's bill setup and PDF
-#   extraction asked for it (LM Studio refuses both and reaches `none`).
-# - A 400 to a request that sent an effort is retried once in `none` mode without the effort, as
-#   main's 400 retries do since #3605: it can't tell the format from the effort. So is a 400 about
-#   the JSON mode in an explicit mode. Gemini refuses an effort it doesn't take with "Request
-#   contains an invalid argument", which names neither (seen live). A 400 about anything else (an
-#   attachment, a missing model) ends the call, after that one retry if an effort was sent: the
-#   next mode would resend the same request. OpenRouter's "reasoning is mandatory" isn't a
-#   JSON-mode rejection.
+# - A 400 about the JSON mode or the effort is retried once in `none` mode without the effort
+#   (#3605). So is any 400 to a request that sent an effort: Gemini refuses an effort it doesn't
+#   take with "Request contains an invalid argument", which names neither (seen live). A 400 about
+#   anything else (an attachment, a missing model) ends the call, after that one retry if an
+#   effort was sent: the next mode would resend the same request. OpenRouter's "reasoning is
+#   mandatory" isn't a JSON-mode rejection.
 # - No schema example is appended in `none` mode: the prompts for custom servers already show
 #   the shape.
 module Ai::Transport::JsonMode
@@ -45,11 +41,6 @@ module Ai::Transport::JsonMode
           text, tokens, finish_reason = attempt { complete_in_mode(request, mode, effort) }
         rescue Ai::Error::Refused => error
           raise unless rejection?(error, effort) && !retried && (mode != :none || effort)
-
-          if effort.nil? && request.json_mode == :auto && !last
-            index += 1
-            next
-          end
 
           retried = true
           effort = nil
