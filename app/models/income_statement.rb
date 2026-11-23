@@ -36,12 +36,34 @@ class IncomeStatement
     )
   end
 
-  def expense_totals(period: Period.current_month)
-    # Memoized per instance so callers that also invoke `net_category_totals`
+  # Income/expense sums per calendar month over the period, computed in a
+  # single query. Returns a hash of { Date (first of month) => { income:, expense: } }
+  # with BigDecimal sums. Used by the reports trends chart, which previously
+  # issued a totals query per month of the period.
+  def monthly_income_expense_totals(period:)
     key = period_cache_key(period)
+    @monthly_income_expense_totals ||= {}
+    @monthly_income_expense_totals[key] ||= begin
+      rows = monthly_totals_query(
+        transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
+        date_range: period.date_range
+      )
+
+      rows.group_by(&:month).transform_values do |month_rows|
+        {
+          income: month_rows.select { |r| r.classification == "income" }.sum { |r| r.total.to_d },
+          expense: month_rows.select { |r| r.classification == "expense" }.sum { |r| r.total.to_d }
+        }
+      end
+    end
+  end
+
+  def expense_totals(period: Period.current_month, tag_ids: nil)
+    # Memoized per instance so callers that also invoke `net_category_totals`
+    key = period_total_cache_key(period, tag_ids)
     @expense_totals_by_period ||= {}
     return @expense_totals_by_period[key] if @expense_totals_by_period.key?(key)
-    @expense_totals_by_period[key] = build_period_total(classification: "expense", period: period)
+    @expense_totals_by_period[key] = build_period_total(classification: "expense", period: period, tag_ids: tag_ids)
   end
 
   # The part of expense_totals that paid the family's bills: the same
@@ -66,11 +88,11 @@ class IncomeStatement
     @bill_expense_totals_by_period[key] = build_period_total(classification: "expense", period: period, rows: rows)
   end
 
-  def income_totals(period: Period.current_month)
-    key = period_cache_key(period)
+  def income_totals(period: Period.current_month, tag_ids: nil)
+    key = period_total_cache_key(period, tag_ids)
     @income_totals_by_period ||= {}
     return @income_totals_by_period[key] if @income_totals_by_period.key?(key)
-    @income_totals_by_period[key] = build_period_total(classification: "income", period: period)
+    @income_totals_by_period[key] = build_period_total(classification: "income", period: period, tag_ids: tag_ids)
   end
 
   # Money moved into investment accounts during the period, for a family that
@@ -231,8 +253,13 @@ class IncomeStatement
       [ period.start_date, period.end_date ]
     end
 
-    def build_period_total(classification:, period:, rows: totals_for_period(period))
+    def period_total_cache_key(period, tag_ids)
+      [ period_cache_key(period), Array(tag_ids).map(&:to_s).sort ]
+    end
+
+    def build_period_total(classification:, period:, rows: nil, tag_ids: nil)
       # Exclude pending transactions from budget calculations
+      rows ||= totals_for_period(period, tag_ids: tag_ids)
       totals = rows.select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
@@ -276,13 +303,14 @@ class IncomeStatement
       )
     end
 
-    def totals_for_period(period)
+    def totals_for_period(period, tag_ids: nil)
       @totals_for_period ||= {}
-      @totals_for_period[period_cache_key(period)] ||=
-        totals_query(
-          transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
-          date_range: period.date_range
-        )
+      key = period_total_cache_key(period, tag_ids)
+      @totals_for_period[key] ||= begin
+        scope = family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period)
+        scope = scope.with_any_tag(tag_ids) if tag_ids.present?
+        totals_query(transactions_scope: scope, date_range: period.date_range)
+      end
     end
 
     def unfiltered_daily_expense_series(period)
@@ -397,8 +425,16 @@ class IncomeStatement
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key, *freshness
+        "income_statement", "totals_query", Totals::CACHE_VERSION, ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key, *freshness
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
+    end
+
+    def monthly_totals_query(transactions_scope:, date_range:)
+      sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
+
+      Rails.cache.fetch([
+        "income_statement", "monthly_totals_query", Totals::CACHE_VERSION, ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key, family.accounts.maximum(:updated_at)&.to_i
+      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids, group_by_month: true).call }
     end
 
     def monetizable_currency

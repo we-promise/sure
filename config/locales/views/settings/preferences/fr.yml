@@ -29,6 +29,10 @@ fr:
         default_period: Période par défaut
         general_subtitle: Configurez vos préférences
         general_title: Général
+        transactions_title: Transactions
+        transactions_subtitle: Configurez le comportement des transactions
+        manual_reconciliation: Réconciliation manuelle
+        manual_reconciliation_hint: Affiche les commandes de réconciliation sur les comptes saisis manuellement. Les comptes synchronisés avec une banque utilisent plutôt la réconciliation par relevé.
         language: Langue
         language_auto: Langue du navigateur
         manage_currencies: Gérer les devises

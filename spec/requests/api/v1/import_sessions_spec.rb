@@ -6,9 +6,25 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
   let(:user) { users(:empty) }
   let(:family) { user.family }
 
-  let(:api_key) { api_keys(:active_key) }
-  let(:api_key_without_write_scope) { api_keys(:one) }
-  let(:api_key_without_read_scope) { api_keys(:expired_key) }
+  let(:api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(user: user, name: 'API Docs Key', key: key, scopes: %w[read_write], source: 'web')
+  end
+  let(:api_key_without_write_scope) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(user: user, name: 'Read Only Docs Key', key: key, scopes: %w[read], source: 'web')
+  end
+  let(:api_key_without_read_scope) do
+    key = ApiKey.generate_secure_key
+    ApiKey.new(
+      user: user,
+      name: 'No Read Docs Key',
+      key: key,
+      display_key: key,
+      scopes: %w[write],
+      source: 'web'
+    ).tap { |api_key| api_key.save!(validate: false) }
+  end
 
   let(:'X-Api-Key') { api_key.plain_key }
 
@@ -389,7 +405,8 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
             filename: 'entities.ndjson',
             content_type: 'application/x-ndjson'
           )
-          import_session.imports.update_all(rows_count: SureImport.max_row_count + 1)
+          # Publish recounts rows from the uploaded chunks, so lower the limit instead.
+          allow(SureImport).to receive(:max_row_count).and_return(0)
         end
 
         run_test!
