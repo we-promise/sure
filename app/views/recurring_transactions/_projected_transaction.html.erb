@@ -1,4 +1,4 @@
-<%# locals: (recurring_transaction:, due_on: recurring_transaction.next_expected_date) %>
+<%# locals: (recurring_transaction:, due_on: recurring_transaction.next_expected_date, amount: nil) %>
 
 <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4">
   <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
@@ -56,7 +56,7 @@
   </div>
 
   <div class="col-span-2 ml-auto text-right shrink-0">
-    <% display_amount = recurring_transaction.manual? && recurring_transaction.expected_amount_avg.present? ? recurring_transaction.expected_amount_avg : recurring_transaction.amount %>
+    <% display_amount = amount || (recurring_transaction.manual? && recurring_transaction.expected_amount_avg.present? ? recurring_transaction.expected_amount_avg : recurring_transaction.amount) %>
     <% if recurring_transaction.transfer? %>
       <%= content_tag :p, format_money(Money.new(display_amount.abs, recurring_transaction.currency)), class: [ "font-medium", "privacy-sensitive", "text-secondary" ] %>
     <% else %>

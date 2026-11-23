@@ -11,12 +11,16 @@ class RecurringTransaction::Forecast
   DEFAULT_DAYS = 10
   IGNORED_FILTERS = %w[tags status ai_status attachment_status reconcile_status].freeze
 
-  # The amount a projected row shows: the running average for a manual series
-  # that tracks one, otherwise the fixed amount. Filters and totals use it too.
+  # A series' expected amount: the running average for a manual series that
+  # tracks one, otherwise the fixed amount. The type filter uses it; the rest
+  # use each occurrence's amount, which defaults to it.
   EXPECTED_AMOUNT_SQL = "(CASE WHEN recurring_transactions.manual AND recurring_transactions.expected_amount_avg IS NOT NULL " \
                         "THEN recurring_transactions.expected_amount_avg ELSE recurring_transactions.amount END)".freeze
 
-  Occurrence = Data.define(:date, :series)
+  # amount is signed like the series (positive is an expense): the stored
+  # occurrence's expected amount when there is one, so a single bill's
+  # override shows, filters and totals as it does on the Bills page.
+  Occurrence = Data.define(:date, :series, :amount)
   Totals = Data.define(:count, :income_money, :expense_money) do
     def +(other)
       with(count: count + other.count, income_money: income_money + other.income_money,
@@ -43,17 +47,21 @@ class RecurringTransaction::Forecast
   #
   # Each date is one obligation, so two can share a day (a snoozed occurrence
   # landing on the next cycle's date) and dates are not deduplicated.
+  #
+  # The amount filter applies here rather than in SQL, since an occurrence's
+  # own expected amount can differ from its series'.
   def occurrences
     @occurrences ||= begin
       open = open_occurrences.group_by(&:recurring_transaction_id)
       stored_through = stored_horizons
       candidates.flat_map { |series|
-        dates = if stored_through.key?(series.id)
-          stored_dates(series, open.fetch(series.id, []), stored_through[series.id])
+        occurrences = if stored_through.key?(series.id)
+          stored_occurrences(series, open.fetch(series.id, []), stored_through[series.id])
         else
-          hinted_dates(series)
+          hinted_dates(series).map { |date| Occurrence.new(date:, series:, amount: expected_amount(series)) }
         end
-        dates.select { |date| date.between?(start_date, end_date) }.sort.map { |date| Occurrence.new(date:, series:) }
+        occurrences.select { |occurrence| occurrence.date.between?(start_date, end_date) && amount_matches?(occurrence.amount) }
+                   .sort_by(&:date)
       }.sort_by(&:date)
     end
   end
@@ -75,7 +83,7 @@ class RecurringTransaction::Forecast
         rate = rates[series.currency]
         next if series.transfer? || rate.nil?
 
-        amount = expected_amount(series) * rate
+        amount = occurrence.amount * rate
         amount.negative? ? income += amount.abs : expense += amount
       end
 
@@ -113,10 +121,19 @@ class RecurringTransaction::Forecast
 
     # Continuation compares original dates, since stored_through is one: a
     # stored cycle moved off the weekend can be due after it.
-    def stored_dates(series, open, stored_through)
+    def stored_occurrences(series, open, stored_through)
       beyond = series.schedule.occurrence_pairs_between(start_date, end_date)
                      .select { |pair| pair.original_due_on > stored_through }
-      open.map(&:effective_due_on) + beyond.map(&:due_on)
+      open.map { |stored| Occurrence.new(date: stored.effective_due_on, series:, amount: stored_amount(series, stored)) } +
+        beyond.map { |pair| Occurrence.new(date: pair.due_on, series:, amount: expected_amount(series)) }
+    end
+
+    # RecurringOccurrence#resolved_expected_amount is unsigned; the series
+    # gives the direction.
+    def stored_amount(series, stored)
+      default = expected_amount(series)
+      resolved = stored.resolved_expected_amount(series_amount: default)
+      default.negative? ? -resolved : resolved
     end
 
     def hinted_dates(series)
@@ -129,6 +146,7 @@ class RecurringTransaction::Forecast
       return [] if candidates.empty?
 
       RecurringOccurrence.open_status.where(recurring_transaction_id: candidates.map(&:id))
+        .includes(:recurring_transaction)
         .where("GREATEST(due_on, COALESCE(snoozed_until, due_on)) BETWEEN ? AND ?", start_date, end_date).to_a
     end
 
@@ -148,8 +166,7 @@ class RecurringTransaction::Forecast
       scope = filter_categories(scope)
       scope = filter_merchants(scope)
       scope = filter_types(scope)
-      scope = filter_search(scope)
-      filter_amount(scope)
+      filter_search(scope)
     end
 
     # As in Transaction::Search, the list shows only draft and active accounts
@@ -182,10 +199,21 @@ class RecurringTransaction::Forecast
       ids = named.pluck(:id) + family.categories.where(parent_id: named.select(:id)).pluck(:id)
 
       if filters[:categories].include?(Category::UNCATEGORIZED_FILTER_VALUE)
-        scope.where(category_id: ids).or(scope.where(category_id: nil))
+        scope.where(category_id: ids).or(scope.where(id: uncategorized_ids(scope)))
       else
         scope.where(category_id: ids)
       end
+    end
+
+    # As in Transaction::Search, Uncategorized leaves out the transfers with
+    # nothing to categorize (Transaction::UNCATEGORIZED_EXCLUDED_KINDS) but
+    # keeps loan payments and investment contributions. A series has no kind
+    # of its own, so it gets the one its transfer would be booked as.
+    def uncategorized_ids(scope)
+      scope.where(category_id: nil).includes(:account, :destination_account).reject { |series|
+        series.transfer? && series.account.present? &&
+          Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(Transfer.kind_for_account(series.destination_account, from_account: series.account))
+      }.map(&:id)
     end
 
     def filter_merchants(scope)
@@ -224,15 +252,15 @@ class RecurringTransaction::Forecast
       )
     end
 
-    def filter_amount(scope)
-      amount = filters[:amount]
-      return scope if amount.blank? || filters[:amount_operator].blank?
+    def amount_matches?(amount)
+      return true if filters[:amount].blank?
 
+      target = filters[:amount].to_d.abs
       case filters[:amount_operator]
-      when "equal" then scope.where("ABS(ABS(#{EXPECTED_AMOUNT_SQL}) - ?) <= 0.01", amount.to_f.abs)
-      when "less" then scope.where("ABS(#{EXPECTED_AMOUNT_SQL}) < ?", amount.to_f.abs)
-      when "greater" then scope.where("ABS(#{EXPECTED_AMOUNT_SQL}) > ?", amount.to_f.abs)
-      else scope
+      when "equal" then (amount.abs - target).abs <= 0.01
+      when "less" then amount.abs < target
+      when "greater" then amount.abs > target
+      else true
       end
     end
 
@@ -242,9 +270,9 @@ class RecurringTransaction::Forecast
 
     # Which series match does not depend on the window, so it is not in the key.
     def cache_key
-      applied = filters.except(*IGNORED_FILTERS, :start_date, :end_date).sort.to_h
+      applied = filters.except(*IGNORED_FILTERS, :start_date, :end_date, :amount, :amount_operator).sort.to_h
       [
-        "transactions_projected_recurring/v8", family.id, user.id, Date.current,
+        "transactions_projected_recurring/v9", family.id, user.id, Date.current,
         Digest::SHA256.hexdigest(applied.to_json), @cache_version
       ].join("/")
     end

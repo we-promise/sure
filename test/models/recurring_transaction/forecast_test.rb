@@ -113,6 +113,43 @@ class RecurringTransaction::ForecastTest < ActiveSupport::TestCase
     assert_not_includes forecast_with(amount: "100", amount_operator: "less").series, series
   end
 
+  test "uses an occurrence's own expected amount for the row, the amount filter and the totals" do
+    travel_to Date.new(2026, 8, 13) do
+      series = create_series(name: "Power", amount: 100, next_expected_date: Date.new(2026, 8, 20))
+      stored_occurrence(series, Date.new(2026, 8, 20)).update!(expected_amount: 150)
+
+      forecast = forecast_with(end_date: "2026-09-30")
+
+      assert_equal [ 150, 100 ], forecast.occurrences.map(&:amount)
+      assert_equal Money.new(250, @family.currency), forecast.totals.expense_money
+
+      greater = forecast_with(end_date: "2026-09-30", amount: "125", amount_operator: "greater")
+      assert_equal [ Date.new(2026, 8, 20) ], greater.occurrences.map(&:date)
+      assert_equal Money.new(150, @family.currency), greater.totals.expense_money
+    end
+  end
+
+  test "keeps an overridden income occurrence on the income side" do
+    travel_to Date.new(2026, 8, 13) do
+      salary = create_series(name: "Salary", amount: -4000, next_expected_date: Date.new(2026, 8, 20))
+      stored_occurrence(salary, Date.new(2026, 8, 20)).update!(expected_amount: 4500)
+
+      assert_equal Money.new(4500, @family.currency), forecast_with(end_date: "2026-08-31").totals.income_money
+    end
+  end
+
+  test "Uncategorized leaves out plain transfers and card payments, as the list does" do
+    due = 3.days.from_now.to_date
+    bill = create_series(name: "Bill", next_expected_date: due)
+    create_series(name: "Move", next_expected_date: due, destination_account: accounts(:connected))
+    create_series(name: "Card", next_expected_date: due, destination_account: accounts(:credit_card))
+    loan = create_series(name: "Mortgage", next_expected_date: due, destination_account: accounts(:loan))
+    invest = create_series(name: "Invest", next_expected_date: due, destination_account: accounts(:investment))
+    create_series(name: "Rebalance", next_expected_date: due, account: accounts(:investment), destination_account: accounts(:crypto))
+
+    assert_series [ bill, loan, invest ], categories: [ Category::UNCATEGORIZED_FILTER_VALUE ]
+  end
+
   test "applies the list's account, category, merchant, type, search and amount filters" do
     due = 3.days.from_now.to_date
     rent = create_series(name: "Rent", amount: 1500, next_expected_date: due, category: categories(:subcategory))

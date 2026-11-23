@@ -24,7 +24,7 @@
           </div>
           <div class="bg-container shadow-border-xs rounded-lg">
             <% occurrences.each do |occurrence| %>
-              <%= render "recurring_transactions/projected_transaction", recurring_transaction: occurrence.series, due_on: date %>
+              <%= render "recurring_transactions/projected_transaction", recurring_transaction: occurrence.series, due_on: date, amount: occurrence.amount %>
             <% end %>
           </div>
         </div>
