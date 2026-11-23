@@ -1,5 +1,5 @@
 require "test_helper"
-require Rails.root.join("db/migrate/20261122120100_link_family_documents_to_their_statements")
+require Rails.root.join("db/migrate/20261123220100_link_family_documents_to_their_statements")
 
 class LinkFamilyDocumentsToTheirStatementsMigrationTest < ActiveSupport::TestCase
   setup do
