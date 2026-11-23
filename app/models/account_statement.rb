@@ -47,7 +47,7 @@ class AccountStatement < ApplicationRecord
   before_validation :normalize_currency
   before_validation :sync_review_status
   before_validation :note_edited_balances
-  before_validation :derive_detected_balances, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_currency? }
+  before_validation :derive_detected_balances
 
   validates :filename, :content_type, :checksum, presence: true
   validates :byte_size, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: MAX_FILE_SIZE }
@@ -66,6 +66,18 @@ class AccountStatement < ApplicationRecord
   validate :original_file_constraints, if: -> { original_file.attached? }
 
   scope :ordered, -> { order(created_at: :desc) }
+  # Statements with a known period first, newest period first. A period
+  # counts as known only with both ends, as account_statement_period shows
+  # it; the rest follow in upload order, which also breaks ties.
+  scope :by_period, -> {
+    known = "account_statements.period_start_on IS NOT NULL AND account_statements.period_end_on IS NOT NULL"
+    order(
+      Arel.sql("CASE WHEN #{known} THEN 0 ELSE 1 END"),
+      Arel.sql("CASE WHEN #{known} THEN account_statements.period_end_on END DESC"),
+      Arel.sql("CASE WHEN #{known} THEN account_statements.period_start_on END DESC"),
+      created_at: :desc
+    )
+  }
   scope :with_account, -> { where.not(account_id: nil) }
   scope :unmatched, -> { where(account_id: nil).where(review_status: "unmatched") }
   # Rejecting a suggestion leaves the statement accountless, so it stays in the inbox where it can be found and deleted.
@@ -371,13 +383,31 @@ class AccountStatement < ApplicationRecord
   end
 
   # Whether `amount` is the figure the statement text already gave for this
-  # balance, whatever its sign: the detected value, signed for the account,
-  # then stands.
-  def detected_balance?(field, amount)
+  # balance in `currency`, whatever its sign, and the text marked it CR or DR:
+  # the detected value, signed for the account, then stands.
+  def detected_balance?(field, amount, currency: statement_currency)
     field = field.to_s
-    return false if pdf_output["balance_readings"].blank? || edited_balances.include?(field)
+    readings = pdf_output["balance_readings"]
+    return false if readings.blank? || edited_balances.include?(field)
 
-    self[field].present? && amount.present? && self[field].to_d.abs == amount.to_d.abs
+    balances = TextMetadataParser.balances_for(readings, classification: account&.classification, currency: currency)
+    return false if balances.nil? || readings.dig(balances.source, field, "side").blank?
+
+    detected = balances.public_send(field)
+    detected.present? && amount.present? && detected.to_d.abs == amount.to_d.abs
+  end
+
+  # Records the assigned balances in `fields` as edited, so they are never
+  # worked out again, unless the statement text gives the same figure in the
+  # statement's currency. Unlike note_edited_balances, a value equal to an
+  # earlier derivation still counts: the currency may have changed since.
+  def mark_balances_edited(fields)
+    readings = pdf_output["balance_readings"]
+    return if readings.blank?
+
+    derived = TextMetadataParser.balances_for(readings, classification: account&.classification, currency: statement_currency)
+    edited = fields.map(&:to_s).select { |field| derived&.public_send(field) != self[field] }
+    merge_pdf_output("edited_balances" => (edited_balances | edited)) if edited.any?
   end
 
   private
@@ -425,13 +455,18 @@ class AccountStatement < ApplicationRecord
 
     # A balance written by anyone but derive_detected_balances (the form, the
     # AI extraction) is theirs from then on and is never worked out again.
-    # What the derivation wrote is remembered, so a save that fails
-    # validation and is retried does not count it as an edit.
+    # A value equal to what the derivation wrote, or would write now, is not
+    # an edit, so a save that fails validation and is retried, in the same
+    # object or through the form, keeps its balances derived.
     def note_edited_balances
-      return if pdf_output["balance_readings"].blank?
+      readings = pdf_output["balance_readings"]
+      return if readings.blank?
 
+      derived = TextMetadataParser.balances_for(readings, classification: account&.classification, currency: statement_currency)
       edited = BALANCE_FIELDS.select do |field|
-        will_save_change_to_attribute?(field) && !(@derived_balances&.key?(field) && @derived_balances[field] == self[field])
+        will_save_change_to_attribute?(field) &&
+          !(@derived_balances&.key?(field) && @derived_balances[field] == self[field]) &&
+          derived&.public_send(field) != self[field]
       end
       merge_pdf_output("edited_balances" => (edited_balances | edited)) if edited.any?
     end
@@ -439,8 +474,9 @@ class AccountStatement < ApplicationRecord
     # The detected balances follow the account and the currency: their CR/DR
     # sign and whether the summary table adds up come from the account's
     # classification, and "$" is read in the statement's currency. So they are
-    # worked out from the stored readings on upload and on every link, unlink,
-    # relink and currency change. An edited balance is left as it is.
+    # worked out from the stored readings on every validation, which leaves an
+    # unedited balance as it was unless the account or currency changed. An
+    # edited balance is left as it is.
     def derive_detected_balances
       readings = pdf_output["balance_readings"]
       return if readings.blank?

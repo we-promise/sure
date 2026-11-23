@@ -84,6 +84,22 @@ class QifImportTest < ActiveSupport::TestCase
     ^
   QIF
 
+  # Lexware FinanzManager and other German exports name the entry "Eröffnungssaldo".
+  QIF_WITH_GERMAN_OPENING_BALANCE = <<~QIF
+    !Type:Bank
+    D1/ 1'20
+    U500.00
+    T500.00
+    PEröffnungssaldo
+    L[Girokonto]
+    ^
+    D3/ 1'20
+    U100.00
+    T100.00
+    PFirst Deposit
+    ^
+  QIF
+
   # A minimal investment QIF with two securities, trades, a dividend, and a cash transfer.
   SAMPLE_INVST_QIF = <<~QIF
     !Type:Security
@@ -537,6 +553,26 @@ class QifImportTest < ActiveSupport::TestCase
     assert_nil QifParser.parse_opening_balance("")
   end
 
+  test "parse skips an Eröffnungssaldo transaction" do
+    transactions = QifParser.parse(QIF_WITH_GERMAN_OPENING_BALANCE)
+
+    assert_equal [ "First Deposit" ], transactions.map(&:payee)
+  end
+
+  test "parse_opening_balance reads an Eröffnungssaldo entry" do
+    ob = QifParser.parse_opening_balance(QIF_WITH_GERMAN_OPENING_BALANCE)
+
+    assert_equal Date.new(2020, 1, 1), ob[:date]
+    assert_equal BigDecimal("500"), ob[:amount]
+  end
+
+  test "parse_opening_balance reads an Eröffnungssaldo entry from a Windows-1252 file" do
+    content = QIF_WITH_GERMAN_OPENING_BALANCE.encode("Windows-1252").b
+
+    assert_equal BigDecimal("500"), QifParser.parse_opening_balance(content)[:amount]
+    assert_equal [ "First Deposit" ], QifParser.parse(content).map(&:payee)
+  end
+
   # ── QifParser: split transactions ──────────────────────────────────────────
 
   test "parse flags split transactions" do
@@ -691,6 +727,28 @@ class QifImportTest < ActiveSupport::TestCase
     manager = Account::OpeningBalanceManager.new(@account)
     assert_equal Date.new(2020, 1, 1), manager.opening_date
     assert_equal BigDecimal("500"), manager.opening_balance
+  end
+
+  test "changing the date format resets the parsed split categories" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Type:Bank
+      D7.25.20
+      T-500.00
+      PLandlord
+      SRent
+      $-400.00
+      SUtilities
+      $-100.00
+      ^
+    QIF
+    @import.qif_date_format = "%d.%m.%Y"
+    assert_empty @import.split_categories
+    refute @import.has_split_transactions?
+
+    @import.qif_date_format = "%m.%d.%Y"
+
+    assert_equal [ "Rent", "Utilities" ], @import.split_categories
+    assert @import.has_split_transactions?
   end
 
   test "unknown_qif_account_types is empty for standard QIF files" do
@@ -984,6 +1042,22 @@ class QifImportTest < ActiveSupport::TestCase
     assert manager.has_opening_anchor?
     assert_equal Date.new(2020, 1, 1), manager.opening_date
     assert_equal BigDecimal("500"),    manager.opening_balance
+  end
+
+  test "import! sets opening anchor from an Eröffnungssaldo entry" do
+    @import.update!(raw_file_str: QIF_WITH_GERMAN_OPENING_BALANCE)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_equal 1, @import.rows.count
+    refute @import.rows.exists?(name: "Eröffnungssaldo")
+
+    @import.import!
+
+    manager = Account::OpeningBalanceManager.new(@account)
+    assert manager.has_opening_anchor?
+    assert_equal Date.new(2020, 1, 1), manager.opening_date
+    assert_equal BigDecimal("500"), manager.opening_balance
   end
 
   test "import! creates declared account that only has an opening balance" do

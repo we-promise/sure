@@ -581,6 +581,34 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_nil statement.sanitized_parser_output.dig("pdf", "balances_source")
   end
 
+  test "reads a two-digit-year period from a statement pdf with a dateless filename" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: Rack::Test::UploadedFile.new(
+        file_fixture("account_statements/two_digit_year_period.pdf"),
+        "application/pdf",
+        true,
+        original_filename: "eStatement_XXXXXXXXXX630_20.pdf"
+      )
+    )
+
+    assert_equal Date.new(2021, 9, 3), statement.period_start_on
+    assert_equal Date.new(2021, 10, 1), statement.period_end_on
+  end
+
+  test "takes a printed two-digit-year period over a filename date" do
+    Pdf::TextExtractor.stubs(:pages).returns([ CARD_STATEMENT_TEXT.sub("12 Apr 2024 - 15 May 2024", "12 Apr 24 - 15 May 24") ])
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: accounts(:credit_card),
+      file: uploaded_file(filename: "card_2024-05.pdf", content_type: "application/pdf", content: "%PDF-1.4 card statement")
+    )
+
+    assert_equal Date.new(2024, 4, 12), statement.period_start_on
+    assert_equal Date.new(2024, 5, 15), statement.period_end_on
+  end
+
   CARD_STATEMENT_TEXT = <<~TEXT
     Statement period 12 Apr 2024 - 15 May 2024
     Opening balance $1,066.47
@@ -771,6 +799,43 @@ class AccountStatementTest < ActiveSupport::TestCase
 
     assert_empty Array(statement.reload.sanitized_parser_output.dig("pdf", "edited_balances"))
     assert_equal BigDecimal("435.88"), statement.closing_balance
+  end
+
+  test "balances posted back from a failed save stay derived" do
+    @family.update!(currency: "EUR")
+    statement = upload_card_statement(account: nil)
+    assert_nil statement.closing_balance, "a dollar amount was read as euros"
+    statement.currency = "USD"
+    statement.period_end_on = statement.period_start_on - 1
+    assert_not statement.save
+    assert_equal BigDecimal("435.88"), statement.closing_balance
+
+    # The form re-renders the derived values, and the next request posts them
+    # back on a fresh record.
+    retried = AccountStatement.find(statement.id)
+    retried.update!(
+      currency: "USD",
+      period_end_on: retried.period_start_on + 30,
+      opening_balance: statement.opening_balance.to_s,
+      closing_balance: statement.closing_balance.to_s
+    )
+    retried.link_to_account!(accounts(:credit_card))
+
+    assert_equal BigDecimal("-435.88"), retried.reload.closing_balance
+    assert_empty Array(retried.sanitized_parser_output.dig("pdf", "edited_balances"))
+  end
+
+  test "a retry after an invalid currency re-derives the balances" do
+    statement = upload_card_statement(account: nil)
+    assert_equal "USD", statement.currency
+    statement.currency = "NOPE"
+    assert_not statement.save
+
+    statement.currency = "USD"
+    statement.save!
+
+    assert_equal BigDecimal("435.88"), statement.reload.closing_balance
+    assert_equal BigDecimal("1066.47"), statement.opening_balance
   end
 
   test "leaves statements without balance readings alone when linked" do
@@ -1131,6 +1196,30 @@ class AccountStatementTest < ActiveSupport::TestCase
     )
 
     assert_equal "covered", coverage.months.first.status
+  end
+
+  test "by_period lists the newest period first and statements without a period last" do
+    march = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 3, 1), period_end_on: Date.new(2024, 3, 31), content: "march")
+    unread = create_statement_with_period(account: @account, period_start_on: nil, period_end_on: nil, content: "unread")
+    january = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 1, 1), period_end_on: Date.new(2024, 1, 31), content: "january")
+    quarter = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 1, 1), period_end_on: Date.new(2024, 3, 31), content: "quarter")
+    january_again = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 1, 1), period_end_on: Date.new(2024, 1, 31), content: "january_again")
+    january.update_columns(created_at: 2.days.ago)
+    january_again.update_columns(created_at: 1.day.ago)
+
+    assert_equal [ march, quarter, january_again, january, unread ], @account.account_statements.by_period.to_a
+  end
+
+  test "by_period lists a statement with only one end of its period with the unknown periods, by upload" do
+    march = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 3, 1), period_end_on: Date.new(2024, 3, 31), content: "march")
+    unread = create_statement_with_period(account: @account, period_start_on: nil, period_end_on: nil, content: "unread")
+    end_only = create_statement_with_period(account: @account, period_start_on: nil, period_end_on: Date.new(2024, 4, 30), content: "end_only")
+    start_only = create_statement_with_period(account: @account, period_start_on: Date.new(2024, 5, 1), period_end_on: nil, content: "start_only")
+    unread.update_columns(created_at: 3.hours.ago)
+    end_only.update_columns(created_at: 2.hours.ago)
+    start_only.update_columns(created_at: 1.hour.ago)
+
+    assert_equal [ march, start_only, end_only, unread ], @account.account_statements.by_period.to_a
   end
 
   private
