@@ -4,22 +4,221 @@ nb:
     no_action: Ingen handling
     no_condition: Ingen betingelse
     recent_runs:
-      title: Siste Kjøringer
+      title: Siste kjøringer
       description: Se kjøringsloggen for reglene dine inkludert suksess/feil-status og transaksjonsantall.
-      unnamed_rule: Navnløs Regel
+      unnamed_rule: Regel uten navn
       columns:
         date_time: Dato/Tid
         execution_type: Type
         status: Status
         rule_name: Regelnavn
         transactions_counts:
-          queued: I Kø
+          queued: I kø
           processed: Behandlet
           modified: Endret
+          blocked: Blokkert
       execution_types:
         manual: Manuell
-        scheduled: Planlagt
+        scheduled: Automatisk
+        immediate: "Umiddelbart"
       statuses:
         pending: Ventende
         success: Vellykket
         failed: Mislyktes
+    rule:
+      edit: Rediger
+      re_apply_rule: Bruk regelen på nytt
+      delete: Slett
+      then: SÅ
+      and_more_conditions:
+        one: og %{count} betingelse til
+        other: og %{count} betingelser til
+      and_more_actions:
+        one: og %{count} handling til
+        other: og %{count} handlinger til
+      action_label_to: '%{label} til %{value}'
+      all_past_and_future: Alle tidligere og fremtidige %{resource}
+      on_or_after: '%{resource} fra og med %{date}'
+      stop_processing: "Stopp"
+      stop_processing_hint: "Regler lenger ned endrer ikke transaksjoner som denne regelen treffer."
+      apply_immediately: "Umiddelbart"
+      apply_immediately_hint: "Kjører også rett etter at en transaksjon er opprettet eller redigert manuelt, ved masseredigering, i Kategoriser, via API-et eller av assistenten, sammen med de aktive reglene over den."
+    form:
+      rule_name_label: Regelnavn (valgfritt)
+      rule_name_placeholder: Skriv inn et navn på regelen
+      add_condition: Legg til betingelse
+      add_condition_group: Legg til betingelsesgruppe
+      add_action: Legg til handling
+      all_past_and_future: Alle tidligere og fremtidige %{resource}
+      starting_from: Fra og med
+      then: SÅ
+      stop_processing_label: "Ikke kjør flere regler"
+      stop_processing_description: "Regler lenger ned i listen endrer ikke transaksjoner som denne regelen treffer."
+      apply_immediately_label: "Bruk umiddelbart på nye og endrede transaksjoner"
+      apply_immediately_description: "Kjører rett etter at en transaksjon er opprettet eller redigert manuelt, ved masseredigering, i Kategoriser, via API-et eller av assistenten, og fortsatt om natten."
+      group_label: "Gruppe (valgfritt)"
+      group_select_label: "Gruppe"
+      no_group: "Ingen gruppe"
+      new_group_label: "Eller ny gruppe"
+      new_group_placeholder: "Navn på ny gruppe"
+      group_hint: "Grupper ordner bare listen. En regel i en gruppe kjøres der gruppen står i listen."
+    index:
+      page_title: Regler
+      delete_all_rules: Slett alle regler
+      new_rule: Ny regel
+      ai_cost_warning: Regelhandlinger som bruker AI, koster penger. Filtrer så snevert som mulig for å unngå unødvendige kostnader.
+      rules_heading: Regler
+      no_rules_title: Ingen regler ennå
+      no_rules_description: Sett opp regler som utfører handlinger på transaksjonene og andre data hver gang kontoene synkroniseres.
+      order_hint: "Reglene kjøres ovenfra og ned, også reglene i grupper. Når en regel har satt et felt på en transaksjon, endrer ikke regler lenger ned det feltet. Tagger legges til av alle regler som treffer. Dra regler og grupper for å endre rekkefølgen."
+      new_group: "Ny gruppe"
+      reorder_group: "Flytt gruppen %{name}. Trykk Enter eller mellomrom for å ta tak i den, og bruk deretter piltastene for å flytte den."
+      filters:
+        no_matches: "Ingen regler samsvarer med søket eller filtrene."
+        drag_disabled: "Sortering er av mens et søk eller filter er aktivt. Tilbakestill dem for å endre rekkefølgen."
+      fold_rule: "Vis eller skjul regelen %{name}"
+      reorder_rule: "Flytt regelen %{name}. Trykk Enter eller mellomrom for å ta tak i den, og bruk deretter piltastene for å flytte den."
+    confirm:
+      title: Bekreft endringer
+      title_with_name: Bekreft endringer i «%{name}»
+      apply_notice_html: Du er i ferd med å bruke denne regelen på <span class="text-primary font-medium">%{count} %{resource}</span> som oppfyller regelens kriterier. Bekreft at du vil gjennomføre denne endringen.
+      ai_cost_title: Estimert AI-kostnad
+      ai_cost_with_estimate_html: 'Dette bruker AI til å kategorisere %{count} transaksjon(er). Estimert kostnad: <span class="font-semibold">~$%{cost}</span>'
+      ai_cost_no_estimate_html: Dette bruker AI til å kategorisere %{count} transaksjon(er).
+      cost_unavailable_model: Kostnadsestimat er ikke tilgjengelig for modellen «%{model}».
+      cost_unavailable_no_provider: Kostnadsestimat er ikke tilgjengelig (ingen LLM-leverandør er konfigurert).
+      cost_warning: Dette kan medføre kostnader. Sjekk de oppdaterte prisene hos modelleverandøren.
+      view_usage_history: Vis brukshistorikk
+      confirm_changes: Bekreft endringer
+      rules_above_notice:
+        one: "Den aktive regelen over denne kjøres først, så resultatet blir det samme som ved full kjøring."
+        other: "De %{count} aktive reglene over denne kjøres først, så resultatet blir det samme som ved full kjøring."
+    actions:
+      to_label: til
+      value_placeholder: Skriv inn en verdi
+      split:
+        type_fixed: "Fast beløp"
+        type_percentage: "Prosent"
+        type_label: "Type oppdeling"
+        add_split: "Legg til del"
+        name_placeholder: "Navn på delen"
+        share_label: "Beløp eller prosent for delen"
+        category_label: "Kategori for delen"
+        merchant_label: "Forhandler for delen"
+        tags_label: "Tagger for delen"
+        remove_split: "Fjern del"
+        hint: "Deler med fast beløp trekkes fra først, som eksakte beløp. Prosentdelene fordeler deretter det som er igjen. Hvis alle delene her har fast beløp, bør du også legge til en betingelse som treffer et eksakt transaksjonsbeløp (f.eks. Beløp = 42.00), siden alle transaksjonene som treffes, må ha samme totalbeløp for at de faste beløpene skal gå opp. En oppdelingsregel kan ikke ha andre handlinger."
+        fixed_summary_label: "fast"
+        summary:
+          one: "%{count} del"
+          other: "%{count} deler"
+    update:
+      success: Regelen ble oppdatert
+    destroy:
+      success: Regelen ble slettet
+    destroy_all:
+      success: Alle regler ble slettet
+    apply_all:
+      button: Bruk alle
+      confirm_title: Bruk alle regler
+      confirm_message: Du er i ferd med å bruke %{count} regler som påvirker %{transactions} unike transaksjoner. Bekreft at du vil fortsette.
+      confirm_button: Bekreft og bruk alle
+      success: Alle regler er satt i kø for kjøring
+      ai_cost_title: Estimert AI-kostnad
+      ai_cost_message: Dette bruker AI til å kategorisere opptil %{transactions} transaksjoner.
+      estimated_cost: 'Estimert kostnad: ~$%{cost}'
+      cost_unavailable_model: Kostnadsestimat er ikke tilgjengelig for modellen «%{model}».
+      cost_unavailable_no_provider: Kostnadsestimat er ikke tilgjengelig (ingen LLM-leverandør er konfigurert).
+      cost_warning: Dette kan medføre kostnader. Sjekk de oppdaterte prisene hos modelleverandøren.
+      view_usage: Vis brukshistorikk
+    clear_ai_cache:
+      button: Tilbakestill AI-hurtigbuffer
+      confirm_title: Tilbakestille AI-hurtigbufferen?
+      confirm_body: Er du sikker på at du vil tilbakestille AI-hurtigbufferen? Da kan AI-regler behandle alle transaksjoner på nytt. Dette kan gi ekstra API-kostnader.
+      confirm_button: Tilbakestill hurtigbuffer
+      success: AI-hurtigbufferen tømmes. Dette kan ta litt tid.
+    condition_filters:
+      transaction_type:
+        income: Inntekt
+        expense: Utgift
+        transfer: Overføring
+        equal_to: Er lik
+      operators:
+        contains: Inneholder
+        does_not_contain: Inneholder ikke
+        equal_to: Er lik
+        is_equal_to: Er lik
+        not_equal_to: Er ikke lik
+        is_empty: Er tom
+        is_not_empty: Er ikke tom
+        greater_than: Større enn
+        greater_or_equal_to: Større enn eller lik
+        less_than: Mindre enn
+        less_than_or_equal_to: Mindre enn eller lik
+        starts_with: "Begynner med"
+        ends_with: "Slutter med"
+        matches_regex: "Samsvarer med regex"
+      transaction_additional_detail:
+        label: "Tilleggsdetaljer (nøkkel=verdi)"
+    notification_baseline_timed_out: "Denne regelen er fortsatt av. Det tok for lang tid å sjekke hvilke transaksjoner den allerede treffer, og uten den sjekken ville den sendt e-post om alle sammen. Forenkle betingelsene, og slå den på igjen."
+    category_rule_cta:
+      close: "Lukk"
+      create_rule: "Opprett regel"
+      description: "Vil du alltid kategorisere lignende transaksjoner?"
+      not_today: "Ikke nå"
+      turn_off_suggestions: "Slå av regelforslag"
+      message: "Oppdatert til %{category_name}"
+    classifier_rules:
+      category_classifier: "Kategoriklassifiserer"
+      merchant_matcher: "Forhandlergjenkjenner"
+    filters:
+      search_label: "Søk i regler"
+      search_placeholder: "Søk i navn, betingelser og handlinger"
+      reset: "Tilbakestill"
+      button: "Filtrer"
+      done: "Ferdig"
+      active_label: "Aktive filtre"
+      remove: "Fjern filteret %{filter}"
+      status:
+        label: "Status"
+        all: "Alle statuser"
+        active: "Aktiv"
+        inactive: "Inaktiv"
+      action_type:
+        label: "Handling"
+        all: "Alle handlinger"
+      condition_type:
+        label: "Betingelse"
+        all: "Alle betingelser"
+      account:
+        label: "Konto"
+        all: "Alle kontoer"
+      group:
+        label: "Gruppe"
+        all: "Alle grupper"
+        none: "Ingen gruppe"
+    group:
+      rules_count:
+        one: "1 regel"
+        other: "%{count} regler"
+      inactive_count:
+        one: "1 inaktiv"
+        other: "%{count} inaktive"
+      empty: "Ingen regler i denne gruppen ennå. Velg gruppen i skjemaet for en regel."
+      activate_all: "Slå på alle regler"
+      deactivate_all: "Slå av alle regler"
+      rename: "Gi nytt navn"
+      delete: "Slett gruppe"
+      delete_confirm_title: "Vil du slette gruppen «%{name}»?"
+      delete_confirm_body: "Reglene blir stående der de er, uten gruppe. Ingen regler slettes."
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: og
+        match: oppfyll
+        all: alle
+        any: minst én
+        of_the_following_conditions: av følgende betingelser
+        add_condition: Legg til betingelse
+      condition:
+        value_placeholder: Skriv inn en verdi

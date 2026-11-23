@@ -3,7 +3,7 @@ nb:
   category:
     deletions:
       create:
-        success: Transaksjonskategori slettet vellykket
+        success: Transaksjonskategorien er slettet
       new:
         category: Kategori
         delete_and_leave_uncategorized: Slett "%{category_name}" og la være ukategorisert

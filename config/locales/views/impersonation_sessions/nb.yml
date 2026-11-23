@@ -13,3 +13,13 @@ nb:
       success: Forlot økt
     reject:
       success: Forespørsel avvist
+    super_admin_bar:
+      super_admin: Superadmin
+      jobs: Jobber
+      impersonating: Opptrer som
+      leave: Forlat
+      terminate: Avslutt
+      join_a_session: Bli med i en økt
+      join: Bli med
+      uuid_placeholder: UUID
+      request_impersonation: Be om å opptre som bruker
