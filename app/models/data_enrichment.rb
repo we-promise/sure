@@ -17,6 +17,7 @@ class DataEnrichment < ApplicationRecord
     monobank: "monobank",
     plaid: "plaid",
     questrade: "questrade",
+    recurring_bill: "recurring_bill",
     redbark: "redbark",
     rule: "rule",
     sharesight: "sharesight",
