@@ -1928,6 +1928,45 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "simplefin_first", receipt.reload.external_id
   end
 
+  test "a receipt dated ahead is not claimed as an upcoming payment" do
+    receipt = create_receipt_entry(date: Date.current + 2.days, amount: 61.37)
+    receipt.entryable.update!(extra: { "receipt" => { "status" => "needs_review" } })
+
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_receipt_ahead", amount: 61.37, currency: "USD",
+      date: Date.current, name: "CARD CORNER GROCER", source: "simplefin"
+    )
+
+    assert_equal receipt.id, entry.id
+    assert_equal Date.current + 2.days, entry.reload.date
+  end
+
+  test "a same-day bank charge does not merge into a receipt paid in cash" do
+    receipt = create_receipt_entry(date: Date.current, amount: 61.37)
+    receipt.entryable.update!(extra: { "receipt" => { "status" => "completed", "payment_method" => "cash" } })
+
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_cash_same_day", amount: 61.37, currency: "USD",
+      date: Date.current, name: "CARD OTHER SHOP", source: "simplefin"
+    )
+
+    assert_not_equal receipt.id, entry.id
+  end
+
+  test "a receipt that changed after it was picked is not claimed" do
+    receipt = create_receipt_entry(date: Date.current - 1.day, amount: 61.37)
+    stale = Entry.find(receipt.id)
+    receipt.update_columns(amount: 99.99)
+    @adapter.stubs(:find_receipt_transaction).returns(stale)
+
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_receipt_changed", amount: 61.37, currency: "USD",
+      date: Date.current, name: "CARD CORNER GROCER", source: "simplefin"
+    )
+
+    assert_not_equal receipt.id, entry.id
+  end
+
   test "a statement import row finds a receipt entry within its window" do
     receipt = create_receipt_entry(date: Date.current - 3.days, amount: 61.37)
 

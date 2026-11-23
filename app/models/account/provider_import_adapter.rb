@@ -128,7 +128,7 @@ class Account::ProviderImportAdapter
         # not to a receipt or manual entry of the same amount.
         linked_pending = pending_transaction_id.present? && account.entries.exists?(external_id: pending_transaction_id, source: source)
         scheduled = find_scheduled_transaction(date: date, amount: amount, currency: currency)
-        receipt = unclaimed(find_receipt_transaction(date: date, amount: amount, currency: currency)) unless scheduled || linked_pending
+        receipt = unclaimed(find_receipt_transaction(date: date, amount: amount, currency: currency), amount:, currency:) unless scheduled || linked_pending
         duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency) unless scheduled || receipt || linked_pending
 
         if scheduled
@@ -863,8 +863,10 @@ class Account::ProviderImportAdapter
                    .where(currency: currency)
                    .where(parent_entry_id: nil)
 
-    # A zero-amount receipt is a placeholder whose receipt was never read, not a payment.
+    # A zero-amount receipt is a placeholder whose receipt was never read, not a payment, and a
+    # receipt paid in cash is another expense than a bank charge of the same amount.
     query = query.where.not(entryable_id: Transaction.where("transactions.extra ? 'receipt'").select(:id)) if amount.to_d.zero?
+    query = query.where.not(entryable_id: Transaction.where("transactions.extra -> 'receipt' ->> 'payment_method' = 'cash'").select(:id))
 
     query = if date_window.to_i.zero?
       query.where(date: date)
@@ -907,7 +909,8 @@ class Account::ProviderImportAdapter
       .where(date: (date - date_window.days)..(date + date_window.days))
       .where("entries.created_at < entries.date")
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-      .where("transactions.extra -> 'receipt' ->> 'status' IS DISTINCT FROM 'processing'")
+      # Receipts carry the day of the purchase and are claimed by find_receipt_transaction.
+      .where.not("transactions.extra ? 'receipt'")
       .to_a
       .min_by { |entry| [ (entry.date - date).abs, entry.created_at ] }
   end
@@ -1193,12 +1196,15 @@ class Account::ProviderImportAdapter
 
   private
     # Locks a candidate for the rest of the import's transaction and drops it if another import
-    # claimed it since it was found.
-    def unclaimed(entry)
+    # claimed it, or it no longer matches, since it was found.
+    def unclaimed(entry, amount:, currency:)
       return unless entry
 
       entry.lock!
-      entry if entry.external_id.nil?
+      return unless entry.external_id.nil? && entry.amount == amount.to_d && entry.currency == currency
+      return if entry.excluded? && !entry.split_parent?
+
+      entry
     end
 
     # The latest earlier holding of the security the provider reports. A
