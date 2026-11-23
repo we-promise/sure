@@ -36,15 +36,18 @@ class PushDeliveryConcurrencyTest < ActiveSupport::TestCase
       errors << error
     end
     Timeout.timeout(10) { started.pop }
+    registrar_pid = Queue.new
     registrar = Thread.new do
-      ActiveRecord::Base.connection_pool.with_connection do
+      ActiveRecord::Base.connection_pool.with_connection do |connection|
+        registrar_pid << connection.select_value("SELECT pg_backend_pid()")
         replacement = WebPushSubscription.register_for!(user: User.find(user.id), session: Session.find(new_session.id), **attributes)
       end
     rescue => error
       errors << error
     end
 
-    assert registrar.join(3), "Registration must not wait for a provider response or take an inverse delivery lock"
+    assert_finishes_without_lock_wait registrar, Timeout.timeout(10) { registrar_pid.pop },
+      "Registration must not wait for a provider response or take an inverse delivery lock"
     release << true
     assert worker.join(10), "The late provider response must finish without deadlocking"
     assert errors.empty?, errors.empty? ? nil : errors.pop.full_message
@@ -92,4 +95,20 @@ class PushDeliveryConcurrencyTest < ActiveSupport::TestCase
     end
     session&.destroy!
   end
+
+  private
+    # The worker stays inside provider IO until `release`, so a registrar that
+    # depends on it cannot finish before then. Postgres reports a wait on the
+    # worker's locks as soon as it happens, whatever the machine's load; the
+    # deadline only keeps a registrar waiting in Ruby from hanging the suite.
+    def assert_finishes_without_lock_wait(thread, pid, message)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 10
+      until thread.join(0.01)
+        wait_event_type = ActiveRecord::Base.connection.select_value(
+          "SELECT wait_event_type FROM pg_stat_activity WHERE pid = #{Integer(pid)}"
+        )
+        flunk "#{message}: it is waiting on a database lock" if wait_event_type == "Lock"
+        flunk message if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+      end
+    end
 end

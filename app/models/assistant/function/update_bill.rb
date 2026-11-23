@@ -57,6 +57,8 @@ class Assistant::Function::UpdateBill < Assistant::Function
         autopay: { type: "boolean" },
         payment_url: { type: "string" },
         notes: { type: "string" },
+        bank_reference: { type: "string", description: "#{BANK_REFERENCE_DESCRIPTION} Empty string clears it." },
+        reference_only: { type: "boolean", description: REFERENCE_ONLY_DESCRIPTION },
         renews_on: { type: "string", description: "YYYY-MM-DD" },
         trial_ends_on: { type: "string", description: "YYYY-MM-DD" }
       }
@@ -94,7 +96,7 @@ class Assistant::Function::UpdateBill < Assistant::Function
   private
     def apply_simple_fields(series, params, changed)
       { "name" => :name, "autopay" => :autopay, "payment_url" => :payment_url,
-        "notes" => :notes, "renews_on" => :renews_on, "trial_ends_on" => :trial_ends_on }.each do |key, attribute|
+        "notes" => :notes, "bank_reference" => :bank_reference, "reference_only" => :reference_only, "renews_on" => :renews_on, "trial_ends_on" => :trial_ends_on }.each do |key, attribute|
         next unless params.key?(key)
 
         value = params[key]

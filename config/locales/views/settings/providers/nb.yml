@@ -2,6 +2,45 @@
 nb:
   settings:
     providers:
+      financekit:
+        app_store: "App Store"
+        coming_soon: "Kommer snart!"
+        description: "Administrer Apple Wallet-tilkoblinger i Sure-appen for iOS. Wallet-data synkroniseres mens appen er åpen. Automatisk synkronisering i bakgrunnen er ikke tilgjengelig ennå."
+        summary: "Wallet-synkronisering"
+        accounts: "Tilkoblede kontoer"
+        linked_accounts:
+          one: "%{count} tilkoblet konto"
+          other: "%{count} tilkoblede kontoer"
+        status:
+          active: "Synkronisering aktiv"
+          repair_required: "Må repareres – åpne Sure-appen for iOS"
+        last_accepted_at: "Sist godtatt av Sure"
+        last_imported_at: "Sist importert til husholdningen din"
+        not_yet: "Ikke ennå"
+      meta:
+        login_required: "Innlogging kreves"
+        login_expires_soon: "Innloggingen utløper om %{time} (%{at})"
+      taglines:
+        financekit: "Synkroniser (noen) FinanceKit-kontoer via Sure-appen for iOS."
+        up: "Synkroniser australske Up-bankkontoer med et personlig tilgangstoken."
+        truelayer: "Synkroniser britiske bankkontoer og kredittkort via TrueLayer open banking."
+        sharesight: "Synkroniser porteføljene du følger i Sharesight, via API-et deres."
+      coinbase_panel:
+        disconnect: "Koble fra"
+      binance_panel:
+        disconnect: "Koble fra"
+      enable_banking_panel:
+        keep_client_certificate_hint: "La stå tomt for å beholde den nåværende private nøkkelen"
+      lunchflow_panel:
+        sync_start_date_label: "Importer transaksjoner fra"
+        sync_start_date_help: "La stå tomt for å importere alt Lunch Flow har. Flytter du datoen tidligere, importeres den manglende perioden ved neste synkronisering. Flytter du den senere, påvirkes ikke transaksjoner som allerede er importert."
+      ibkr_panel:
+        add_connection: "Legg til Interactive Brokers-tilkobling"
+        connection_name_label: "Navn på tilkoblingen"
+        connection_name_placeholder: "f.eks. IBKR Irland, IBKR USA"
+        disconnect: "Koble fra"
+        disconnect_confirm_named: "Vil du koble fra %{name}?"
+        setup_accounts: "Sett opp kontoer"
       trade_republic_panel:
         encryption_warning:
           title: "Kryptering er ikke konfigurert"
@@ -39,7 +78,7 @@ nb:
         qr_success: "Pålogging godkjent. Sure oppdaterer tilbydersiden."
         qr_error: "QR-påloggingen kunne ikke startes. Prøv igjen."
         requires_update: "Logg inn på nytt for å fortsette synkroniseringen."
-        session_expires_in: "Påloggingen utløper om %{time} (%{at})."
+        session_expires_in: "Innloggingen utløper om %{time} (%{at})."
         pin_login: "PIN-pålogging"
         pin_cancel: "Avbryt PIN-pålogging"
         remove: "Fjern"
@@ -50,7 +89,7 @@ nb:
         sync: "Synkroniser"
         syncing: "Synkroniserer..."
         disconnect_confirm: "Koble fra Trade Republic? De synkroniserte kontoene dine blir manuelle kontoer."
-        disconnect_confirm_with_identifier: "Koble fra Trade Republic-tilkoblingen som slutter på %{last4}? De synkroniserte kontoene dine blir manuelle kontoer."
+        disconnect_confirm_with_identifier: "Vil du koble fra Trade Republic-tilkoblingen som slutter på %{last4}? De synkroniserte kontoene dine blir manuelle kontoer."
         identifier_phone: "Telefon"
         identifier_account: "Konto"
         status_configured_prefix: "Tilkoblet. Gå til fanen"
@@ -61,3 +100,19 @@ nb:
           other: "%{count} Trade Republic-kontoer oppdaget."
         status_configured_suffix: "for å administrere oppdagede kontoer."
         not_configured: "Ikke konfigurert."
+      sharesight_panel:
+        steps:
+          step_1: "Be Sharesight-kundestøtte om å aktivere API-tilgang. Det er tilgjengelig på betalte abonnementer."
+          step_2: "Åpne API-siden i kontoinnstillingene dine i Sharesight, og kopier klient-ID-en og klienthemmeligheten."
+          step_3: "Lim inn begge nedenfor og lagre. Sure finner deretter porteføljene dine, slik at du kan koble dem til."
+        client_id_label: "Klient-ID"
+        client_id_placeholder_new: "Lim inn klient-ID-en din fra Sharesight"
+        client_id_placeholder_existing: "La stå tomt for å beholde den nåværende klient-ID-en"
+        client_secret_label: "Klienthemmelighet"
+        client_secret_placeholder_new: "Lim inn klienthemmeligheten din fra Sharesight"
+        client_secret_placeholder_existing: "La stå tomt for å beholde den nåværende klienthemmeligheten"
+        save_configuration: "Lagre konfigurasjon"
+        update_configuration: "Oppdater konfigurasjon"
+        status_configured_prefix: "Konfigurert. Gå til fanen"
+        accounts_tab: "Kontoer"
+        status_configured_suffix: "for å koble til porteføljene dine."

@@ -63,5 +63,8 @@ GitHub checks and an up-to-date branch before requesting review.
 
 The [devcontainer configuration](../../.devcontainer/docker-compose.yml) includes
 Selenium Chromium and sets `SELENIUM_REMOTE_URL`; no local Chrome is needed there.
-Run `DISABLE_PARALLELIZATION=true bin/rails test:system`. Watch the browser at
+Run `DISABLE_PARALLELIZATION=true bin/rails test:system`. The browser runs
+headless, as in CI. To watch it, add `E2E_BROWSER=chrome` and open
 `http://localhost:7900` or `http://localhost:4444` (development password: `secret`).
+Keep such a run serial: headed sessions share the node's display, and one session's
+window interrupts hovers in another.

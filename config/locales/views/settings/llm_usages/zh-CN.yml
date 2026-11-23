@@ -11,6 +11,9 @@ zh-CN:
         total_calls: "调用总数"
         avg_cost_per_call: "平均每次调用费用"
         based_on_calls: "基于 %{with_cost} / %{total} 次带费用数据的调用"
+        requests_in_calls:
+          one: "%{count} 次请求（含重试）"
+          other: "%{count} 次请求（含重试）"
         total_tokens: Token 总数
         prompt: 提示词
         completion: 补全
@@ -18,12 +21,24 @@ zh-CN:
         cost_by_operation: 按操作统计费用
         cost_by_model: 按模型统计费用
         recent_usage: 最近用量
+        recent_usage_scope: 每次调用都会显示其全部请求（包括所选日期范围之外的请求），因此其合计可能与上方仅统计所选范围内请求的总计不同。
         col_date: 日期
         col_operation: 操作
         col_model: 模型
         col_tokens: Token
         col_cost: 费用
         failed: 失败
+        cancelled: 已取消
         no_usage_data: 所选时间段内未找到用量数据
         cost_estimates_title: 关于费用预估
         cost_estimates_description: "费用根据各提供商公布的定价估算，最近核实日期为 %{date}。实际费用可能不同。定价按每 100 万 token 计算，并随模型而异。自定义或自托管模型将显示为“N/A”，且不计入总费用。"
+      requests:
+        summary:
+          one: "%{count} 次请求"
+          other: "%{count} 次请求"
+        request: "请求 %{number}"
+        tokens: "%{prompt}/%{completion} tokens"
+        status:
+          succeeded: 成功
+          failed: 失败
+          cancelled: 已取消
