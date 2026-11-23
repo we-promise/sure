@@ -167,11 +167,14 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
                   .raises(Provider::Brex::BrexError.new("Access forbidden", :access_forbidden, http_status: 403))
     sync = Sync.create!(syncable: @brex_item)
 
-    sync.perform
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      sync.perform
+    end
 
     assert sync.reload.failed?, "expected the sync to fail, was #{sync.status}"
     assert_equal I18n.t("brex_items.syncer.credentials_invalid"), sync.error
     assert @brex_item.reload.requires_update?
+    assert_equal "BrexItem::Syncer", DebugLogEntry.where(provider_key: "brex").recent.first.source
   end
 
   private
