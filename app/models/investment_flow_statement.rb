@@ -25,9 +25,15 @@ class InvestmentFlowStatement
     # entry and its account itself, and the association's own copies of those
     # joins left the date filter on one copy only, so Postgres matched every
     # candidate transaction against every transaction entry of the family.
+    #
+    # Excluded and future-dated entries are left out as in the income
+    # statement. A split parent is kept, because its parts do not carry its
+    # activity label.
     base = Transaction
       .visible
       .excluding_pending
+      .merge(Entry.not_excluded_or_split_parent)
+      .merge(Entry.excluding_scheduled)
       .where(entries: { account_id: family.accounts.select(:id), date: period.date_range })
       .where(investment_activity_label: %w[Contribution Withdrawal])
 

@@ -41,6 +41,32 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_includes aggregate_queries.first, '"entries"."account_id" IN (SELECT DISTINCT "accounts"."id"'
   end
 
+  test "period totals leave out excluded and future-dated flows" do
+    period = Period.custom(start_date: Date.current - 5.days, end_date: Date.current + 5.days)
+
+    create_flow(label: "Contribution", amount: -100, date: Date.current)
+    create_flow(label: "Contribution", amount: -40, date: Date.current).update!(excluded: true)
+    create_flow(label: "Contribution", amount: -70, date: Date.current + 2.days)
+    create_flow(label: "Withdrawal", amount: 30, date: Date.current)
+    create_flow(label: "Withdrawal", amount: 15, date: Date.current).update!(excluded: true)
+    create_flow(label: "Withdrawal", amount: 25, date: Date.current + 2.days)
+
+    totals = InvestmentFlowStatement.new(@family).period_totals(period: period)
+
+    assert_equal Money.new(100, "USD"), totals.contributions
+    assert_equal Money.new(30, "USD"), totals.withdrawals
+  end
+
+  test "a split contribution still counts through its parent" do
+    period = Period.custom(start_date: Date.current, end_date: Date.current)
+    parent = create_flow(label: "Contribution", amount: -100, date: Date.current)
+
+    parent.split!([ { name: "Part 1", amount: -60 }, { name: "Part 2", amount: -40 } ])
+
+    assert parent.reload.excluded?
+    assert_equal Money.new(100, "USD"), InvestmentFlowStatement.new(@family).period_totals(period: period).contributions
+  end
+
   test "a matched provider contribution still counts once after resync" do
     family = families(:dylan_family)
     brokerage = Account::ProviderImportAdapter.new(accounts(:investment))
