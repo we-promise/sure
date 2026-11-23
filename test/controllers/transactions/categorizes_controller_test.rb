@@ -20,10 +20,14 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_match "categorized", flash[:notice]
   end
 
-  test "show renders wizard when uncategorized transactions exist" do
-    create_transaction(account: @account, name: "Starbucks")
+  test "show totals same-currency income by magnitude" do
+    @family.update!(currency: "GBP")
+    create_transaction(amount: -10, currency: "GBP")
+    create_transaction(amount: -15, currency: "GBP")
+
     get transactions_categorize_url
     assert_response :success
+    assert_select "#categorize_group_summary .privacy-sensitive", text: "£25.00"
   end
 
   test "group summary converts each entry on its date and refreshes after assignment" do
@@ -33,29 +37,19 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: second_date, rate: 1.3)
     ExchangeRate.create!(from_currency: "HUF", to_currency: "USD", date: first_date, rate: 0.003)
     usd = create_transaction(amount: 10, currency: "USD", date: second_date)
-    eur1 = create_transaction(amount: 10, currency: "EUR", date: first_date)
-    eur2 = create_transaction(amount: 10, currency: "EUR", date: second_date)
-    huf = create_transaction(amount: 1000, currency: "HUF", date: first_date)
+    create_transaction(amount: 10, currency: "EUR", date: first_date)
+    create_transaction(amount: 10, currency: "EUR", date: second_date)
+    create_transaction(amount: 1000, currency: "HUF", date: first_date)
 
     get transactions_categorize_url
     assert_response :success
     assert_select "#categorize_group_summary .privacy-sensitive", text: "$38.00"
 
     patch assign_entry_transactions_categorize_url, params: {
-      entry_id: usd.id, category_id: @category.id, all_entry_ids: [ usd.id, eur1.id, eur2.id, huf.id ]
+      entry_id: usd.id, category_id: @category.id, all_entry_ids: @account.entries.ids
     }
     assert_response :success
     assert_select "turbo-stream[action=replace][target=categorize_group_summary] .privacy-sensitive", text: "$28.00"
-  end
-
-  test "group summary adds same-currency income by magnitude" do
-    @family.update!(currency: "GBP")
-    create_transaction(amount: -10, currency: "GBP")
-    create_transaction(amount: -15, currency: "GBP")
-
-    get transactions_categorize_url
-    assert_response :success
-    assert_select "#categorize_group_summary .privacy-sensitive", text: "£25.00"
   end
 
   test "group summary shows when a missing rate prevents a complete total" do

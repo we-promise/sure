@@ -7,21 +7,16 @@ class Transaction::Grouper
     Transaction::Grouper::ByMerchantOrName
   end
 
-  # Use stored transaction-date rates so rendering a group never waits on a provider.
-  # A single missing rate makes the whole total unavailable.
+  # A missing transaction-date rate makes the whole group total unavailable.
   def self.total_in(entries, currency:)
-    foreign_currencies = entries.map(&:currency).uniq - [ currency ]
-    rates = ExchangeRate.where(from_currency: foreign_currencies, to_currency: currency, date: entries.map(&:date).uniq)
+    native, foreign = entries.partition { |entry| entry.currency == currency }
+    total = Money.new(native.sum { |entry| entry.amount.abs }, currency)
+    rates = ExchangeRate.where(to_currency: currency, from_currency: foreign.pluck(:currency).uniq, date: foreign.pluck(:date).uniq)
                         .index_by { |rate| [ rate.from_currency, rate.date ] }
 
-    entries.sum(Money.new(0, currency)) do |entry|
-      amount = entry.amount_money.abs
-      next amount if entry.currency == currency
-
-      rate = rates[[ entry.currency, entry.date ]]
-      return unless rate
-
-      amount.exchange_to(currency, date: entry.date, custom_rate: rate.rate)
+    foreign.sum(total) do |entry|
+      rate = rates.fetch([ entry.currency, entry.date ]) { return nil }
+      entry.amount_money.exchange_to(currency, custom_rate: rate.rate).abs
     end
   end
 
