@@ -41,7 +41,7 @@ es:
       available_description: El chat con IA puede responder preguntas financieras y ofrecer análisis basados en tus datos. Para usar esta función tendrás que activarla explícitamente.
       unavailable_description_html: Para usar el asistente de IA, necesitas definir la variable de entorno <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> o configurarla en los ajustes de autoalojamiento de tu instancia.
       enable_button: Activar chats con IA
-      disable_note: Desactívalo cuando quieras. Todos los datos enviados a nuestros proveedores de LLM se anonimizan.
+      disable_note: Desactívalo cuando quieras.
   assistant_messages:
     assistant_message:
       assistant_reasoning: Razonamiento del asistente

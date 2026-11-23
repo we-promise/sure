@@ -38,4 +38,17 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_equal "not_configured", result[:reason]
     assert result[:message].present?, "the refusal carries the reason worded for the user"
   end
+
+  test "sends nothing when the user has AI off" do
+    use_ai_routes
+    @user.update!(ai_enabled: false)
+    pdf_import = PdfImport.create!(family: @user.family, document_type: "bank_statement")
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:extract_bank_statement).never
+
+    result = @fn.call("pdf_import_id" => pdf_import.id, "account_id" => accounts(:depository).id)
+
+    assert_equal "user_disabled", result[:reason]
+  end
 end

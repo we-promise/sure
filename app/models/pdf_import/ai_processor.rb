@@ -1,8 +1,9 @@
 # The AI steps of a PDF import: reading the document, then extracting a statement's
 # transactions. PdfImport keeps the record, its state and its rows.
 class PdfImport::AiProcessor
-  def initialize(pdf_import)
+  def initialize(pdf_import, user:)
     @pdf_import = pdf_import
+    @user = user
   end
 
   def process
@@ -55,19 +56,19 @@ class PdfImport::AiProcessor
   end
 
   private
-    attr_reader :pdf_import
+    attr_reader :pdf_import, :user
 
-    # Asks the router whether a statement can be read, before the job calls a model. The
-    # message is the router's reason, worded for the family member who uploaded it.
+    # Asks the router whether a statement can be read for the user who asked, before the job
+    # calls a model. The message is the router's reason, worded for that user.
     def require_ai_for_extraction!
-      availability = Ai.availability(:extract_pdf, family: pdf_import.family)
-      raise Provider::Error, availability.message_for(nil) unless availability.available?
+      availability = Ai.availability(:extract_pdf, family: pdf_import.family, user:)
+      raise Provider::Error, availability.message_for(user) unless availability.available?
     end
 
     # The first provider in extract_pdf's route. Settings can clear the last key between the
     # availability check and this lookup, so a missing provider is the same refusal.
     def route_provider
       Provider::Registry.preferred_llm_provider or
-        raise Provider::Error, Ai::Availability.unavailable(:extract_pdf, :not_configured).message_for(nil)
+        raise Provider::Error, Ai::Availability.unavailable(:extract_pdf, :not_configured).message_for(user)
     end
 end

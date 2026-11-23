@@ -12,8 +12,7 @@ tr:
       available_description: Yapay zeka sohbeti finansal sorularınızı yanıtlayabilir
         ve verilerinize dayalı içgörüler sunabilir. Bu özelliği kullanmak için açıkça
         etkinleştirmeniz gerekir.
-      disable_note: İstediğiniz zaman devre dışı bırakabilirsiniz. LLM sağlayıcılarımıza
-        gönderilen tüm veriler anonimleştirilir.
+      disable_note: İstediğiniz zaman devre dışı bırakabilirsiniz.
       enable_button: Yapay Zeka Sohbetlerini Etkinleştir
       title: Yapay Zeka Sohbetlerini Etkinleştir
       unavailable_description_html: Yapay zeka asistanını kullanmak için <code class="bg-surface-inset

@@ -34,7 +34,7 @@ hu:
       available_description: "Az AI-csevegés pénzügyi kérdésekre tud válaszolni és az adataid alapján elemzéseket nyújtani. A funkció használatához explicit engedélyezés szükséges."
       unavailable_description_html: "Az AI-asszisztens használatához be kell állítanod az <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> környezeti változót, vagy konfigurálnod kell az önálló üzemeltetési beállításokban."
       enable_button: "AI-csevegések engedélyezése"
-      disable_note: "Bármikor letiltható. Az LLM-szolgáltatóknak küldött összes adat anonimizált."
+      disable_note: "Bármikor letiltható."
   assistant_messages:
     assistant_message:
       assistant_reasoning: "Asszisztens gondolkodása"

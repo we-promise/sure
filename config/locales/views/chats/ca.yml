@@ -12,8 +12,7 @@ ca:
       available_description: El xat amb IA pot respondre preguntes financeres i oferir-te
         anàlisis basades en les teves dades. Per utilitzar aquesta funcionalitat l'has
         d'activar explícitament.
-      disable_note: Desactiva-ho en qualsevol moment. Totes les dades enviades als
-        nostres proveïdors de LLM són anonimitzades.
+      disable_note: Desactiva-ho en qualsevol moment.
       enable_button: Activa els xats d'IA
       title: Activa els xats d'IA
       unavailable_description_html: Per utilitzar l'assistent d'IA, has d'establir

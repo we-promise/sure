@@ -70,7 +70,7 @@ flowchart LR
   R --> C["Ai::Config.current<br/>endpoints, models, routes"]
   C --> L["Ai::LegacyEnvConfig<br/>deprecated ENV + Setting"]
   R --> M["Ai::Routes::MATRIX<br/>lane, needs, consent, sends"]
-  R --> K["Ai::Consent<br/>the user's AI switch"]
+  R --> K["Ai::Consent<br/>the user's or the family's"]
   R -->|"Ai::Plan or Ai::Availability(reason)"| Caller
 ```
 
@@ -98,8 +98,10 @@ flowchart LR
 - **A new feature is a row in `Ai::Routes::MATRIX`**, with `sends:` keys described in
   `config/locales/models/ai/en.yml`, and its key is permanent once released. Regenerate the table
   below with `bin/rails ai:routes_doc`; `ai_routing_matrix_test` fails when it's stale.
-- **Consent:** chat and bills need the user's own AI switch (`users.ai_enabled`); nothing else
-  needs consent yet.
+- **Consent** is the level the matrix declares. A `user` feature needs the person's own AI switch
+  (`users.ai_enabled`); a `family` feature needs `Family#ai_consented?`, which until families
+  record consent means a family admin turned that switch on. A job asks for its feature with
+  `family:` and the user who started it, if any.
 - **An AI tool declares its feature** (`ai_feature :extract_pdf` on an `Assistant::Function`), so
   chat and MCP list it only while the feature is available.
 - **`Ai::Config` is built in each process from its own ENV**, so give the web and the worker

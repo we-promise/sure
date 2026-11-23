@@ -41,7 +41,7 @@ nl:
       available_description: "AI-chat kan financiële vragen beantwoorden en inzichten geven op basis van uw gegevens. Om deze functie te gebruiken, moet u deze uitdrukkelijk inschakelen."
       unavailable_description_html: "Om de AI-assistent te gebruiken, moet u de omgevingsvariabele <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> instellen of deze configureren in de zelfhostinginstellingen van uw instantie."
       enable_button: "AI-chats inschakelen"
-      disable_note: "Op elk moment uit te schakelen. Alle gegevens die naar onze LLM-providers worden verzonden, zijn geanonimiseerd."
+      disable_note: "Op elk moment uit te schakelen."
   assistant_messages:
     assistant_message:
       assistant_reasoning: "Redenering van de assistent"

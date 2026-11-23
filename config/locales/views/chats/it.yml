@@ -35,7 +35,7 @@ it:
       available_description: "La chat IA può rispondere a domande finanziarie e fornire analisi basate sui tuoi dati. Per usare questa funzione devi abilitarla esplicitamente."
       unavailable_description_html: "Per usare l'assistente IA, devi impostare la variabile d'ambiente <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> o configurarla nelle impostazioni di self-hosting della tua istanza."
       enable_button: "Abilita chat IA"
-      disable_note: "Disabilita in qualsiasi momento. Tutti i dati inviati ai provider LLM sono anonimizzati."
+      disable_note: "Disabilita in qualsiasi momento."
   assistant_messages:
     assistant_message:
       assistant_reasoning: "Ragionamento assistente"
