@@ -956,7 +956,7 @@ RSpec.configure do |config|
               id: { type: :string, format: :uuid },
               amount: { type: :string },
               currency: { type: :string },
-              other_account: { '$ref' => '#/components/schemas/Account', nullable: true }
+              other_account: { allOf: [ { '$ref' => '#/components/schemas/Account' } ], nullable: true }
             }
           },
           RecurringTransaction: {

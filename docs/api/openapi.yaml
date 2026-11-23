@@ -1718,7 +1718,8 @@ components:
         currency:
           type: string
         other_account:
-          "$ref": "#/components/schemas/Account"
+          allOf:
+          - "$ref": "#/components/schemas/Account"
           nullable: true
     RecurringTransaction:
       type: object
