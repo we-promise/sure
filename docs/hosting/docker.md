@@ -65,6 +65,8 @@ To do this, you should get our .env.example as a starting point:
 curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 ```
 
+Optional linked-account balance anchoring is documented separately; see [Linked-account balance anchoring](balance-anchors.md) before enabling `BALANCE_REUSE_EXPLAINED_ANCHOR`.
+
 #### Generate the app secret key
 
 The app requires an environment variable called `SECRET_KEY_BASE` to run.
@@ -724,7 +726,7 @@ Sure encrypts sensitive fields in the database, such as bank and provider creden
 > [!WARNING]
 > Encrypted data can only be read with the keys it was encrypted with. On an instance with data, don't change the three keys or `SECRET_KEY_BASE` except as described below, and keep `config/.env` (which backups include) private.
 
-Your own keys are recommended, because they don't depend on `SECRET_KEY_BASE`. If the boot log warns that `SECRET_KEY_BASE` is a value from an example compose file, the derived keys are public; see [Encryption key rotation](encryption.md).
+Your own keys are recommended, because they don't depend on `SECRET_KEY_BASE`. If the boot log warns that `SECRET_KEY_BASE` is a publicly known value, the derived keys are public; see [Encryption key rotation](encryption.md).
 
 ### Generate the keys
 

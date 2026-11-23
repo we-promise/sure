@@ -213,6 +213,47 @@ class IncomeStatementTest < ActiveSupport::TestCase
     IncomeStatement.new(@family).daily_expense_series(period: period, category_ids: [ @food_category.id ])
   end
 
+  test "upgrading skips serialized totals from before the month field was added" do
+    cache = ActiveSupport::Cache::MemoryStore.new(coder: Marshal)
+    Rails.stubs(:cache).returns(cache)
+    statement = IncomeStatement.new(@family)
+    date_range = Period.last_30_days.date_range
+    scope = @family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled)
+    legacy_key = [
+      "income_statement", "totals_query", "v2", ExchangeRate::CONVERSION_CACHE_VERSION,
+      @family.id, statement.user&.id, statement.send(:included_account_ids_hash),
+      Digest::MD5.hexdigest(scope.to_sql), date_range.begin, date_range.end,
+      *statement.send(:cache_freshness_key)
+    ]
+
+    # Serialize the actual pre-upgrade shape under its original constant name.
+    current_row = IncomeStatement::Totals.const_get(:TotalsRow)
+    begin
+      IncomeStatement::Totals.send(:remove_const, :TotalsRow)
+      legacy_row = IncomeStatement::Totals.const_set(:TotalsRow, Data.define(
+        :parent_category_id, :category_id, :classification, :total,
+        :transactions_count, :is_uncategorized_investment
+      ))
+      cache.write(legacy_key, [ legacy_row.new(
+        parent_category_id: nil, category_id: nil, classification: "expense",
+        total: 999, transactions_count: 1, is_uncategorized_investment: false
+      ) ])
+    ensure
+      IncomeStatement::Totals.send(:remove_const, :TotalsRow)
+      IncomeStatement::Totals.const_set(:TotalsRow, current_row)
+      IncomeStatement::Totals.private_constant :TotalsRow
+    end
+
+    assert_raises(TypeError) { cache.read(legacy_key) }
+
+    2.times do
+      totals = IncomeStatement.new(@family).totals(date_range: date_range)
+      assert_equal Money.new(1000, @family.currency), totals.income_money
+      assert_equal Money.new(900, @family.currency), totals.expense_money
+      assert_equal 4, totals.transactions_count
+    end
+  end
+
   test "calculates totals for transactions" do
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
@@ -230,6 +271,73 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.total
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @groceries_category.id }.total
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
+  end
+
+  test "monthly totals exclude scheduled entries until their date arrives" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    travel_to Date.current.beginning_of_month + 14.days do
+      create_transaction(account: @checking_account, amount: 100, date: Date.current)
+      create_transaction(account: @checking_account, amount: 250, date: Date.tomorrow)
+      period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+      month = Date.current.beginning_of_month
+      statement = IncomeStatement.new(@family)
+
+      assert_equal 100, statement.monthly_income_expense_totals(period: period).fetch(month)[:expense]
+      assert_equal statement.expense_totals(period: period).total,
+                   statement.monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    end
+  end
+
+  test "monthly totals refresh when the family currency changes" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    period = Period.current_month
+    month = Date.current.beginning_of_month
+
+    assert_equal 900, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    @family.update!(currency: "EUR")
+    assert_equal 810, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+  end
+
+  test "monthly totals refresh when an exchange rate changes" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @family.update!(currency: "EUR")
+    rate = ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    period = Period.current_month
+    month = Date.current.beginning_of_month
+
+    assert_equal 810, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    travel 1.second do
+      rate.update!(rate: 0.8)
+      assert_equal 720, IncomeStatement.new(@family).monthly_income_expense_totals(period: period).fetch(month)[:expense]
+    end
+  end
+
+  test "monthly income/expense totals match per-month period totals" do
+    # Spread entries over two months
+    create_transaction(account: @checking_account, amount: -500, category: @income_category, date: 40.days.ago.to_date)
+    create_transaction(account: @checking_account, amount: 250, category: @groceries_category, date: 40.days.ago.to_date)
+
+    income_statement = IncomeStatement.new(@family)
+    start_date = 60.days.ago.to_date.beginning_of_month
+    period = Period.custom(start_date: start_date, end_date: Date.current)
+
+    monthly = income_statement.monthly_income_expense_totals(period: period)
+
+    month = start_date
+    while month <= Date.current
+      month_end = [ month.end_of_month, Date.current ].min
+      expected_income = income_statement.income_totals(period: Period.custom(start_date: month, end_date: month_end)).total
+      expected_expense = income_statement.expense_totals(period: Period.custom(start_date: month, end_date: month_end)).total
+
+      actual = monthly[month] || { income: 0.to_d, expense: 0.to_d }
+      assert_equal expected_income.to_d, actual[:income].to_d, "income mismatch for #{month}"
+      assert_equal expected_expense.to_d, actual[:expense].to_d, "expense mismatch for #{month}"
+
+      month = month.next_month
+    end
   end
 
   test "orphaned categories still count as root category totals" do
@@ -280,6 +388,43 @@ class IncomeStatementTest < ActiveSupport::TestCase
     checking_only_totals = income_statement.totals_for(period, account_ids: [ @checking_account.id ])
     assert_equal Money.new(1000, @family.currency), checking_only_totals.income_money
     assert_equal Money.new(200, @family.currency), checking_only_totals.expense_money
+  end
+
+  test "totals_for limits totals to transactions carrying any of the tag ids" do
+    travel = @family.tags.create!(name: "Travel")
+    work = @family.tags.create!(name: "Work")
+    create_transaction(account: @checking_account, amount: 30, category: @food_category, tags: [ travel ])
+    create_transaction(account: @checking_account, amount: 50, category: @food_category, tags: [ work ])
+    create_transaction(account: @checking_account, amount: 20, category: @food_category, tags: [ travel, work ])
+    create_transaction(account: @checking_account, amount: -10, category: @income_category, tags: [ travel ])
+
+    totals = IncomeStatement.new(@family).totals_for(Period.last_30_days, tag_ids: [ travel.id, work.id ])
+
+    assert_equal Money.new(10, @family.currency), totals.income_money
+    assert_equal Money.new(30 + 50 + 20, @family.currency), totals.expense_money
+    assert_equal 4, totals.transactions_count
+  end
+
+  test "cached tagged totals follow tag changes that do not touch entries" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    period = Period.last_30_days
+    travel = @family.tags.create!(name: "Travel")
+    trip = @family.tags.create!(name: "Trip")
+    create_transaction(account: @checking_account, amount: 30, category: @food_category, tags: [ travel ])
+    toggled = create_transaction(account: @checking_account, amount: 50, category: @food_category).transaction
+    create_transaction(account: @checking_account, amount: 20, category: @food_category, tags: [ trip ])
+    expenses = -> { IncomeStatement.new(@family).totals_for(period, tag_ids: [ travel.id ]).expense_money }
+
+    assert_equal Money.new(30, @family.currency), expenses.call
+
+    toggled.toggle_tag!(travel)
+    assert_equal Money.new(80, @family.currency), expenses.call
+
+    trip.replace_and_destroy!(travel)
+    assert_equal Money.new(100, @family.currency), expenses.call
+
+    toggled.toggle_tag!(travel)
+    assert_equal Money.new(50, @family.currency), expenses.call
   end
 
   test "eligible_accounts excludes accounts not reflected in totals" do
@@ -1143,6 +1288,88 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 1, totals_query_calls
   end
 
+  test "bill_expense_totals counts only the spending that paid bills, rolled into parents" do
+    pay_bill(groceries_bill, date: Date.current)
+
+    totals = bill_totals
+
+    assert_equal 50, totals[@groceries_category.id]
+    assert_equal 50, totals[@food_category.id]
+    assert_equal 900 + 50, IncomeStatement.new(@family).expense_totals(period: Period.current_month)
+                                                       .category_totals.find { |ct| ct.category == @food_category }.total
+  end
+
+  test "bill_expense_totals counts a payment once however many occurrences it settles" do
+    bill = groceries_bill
+    entry = pay_bill(bill, date: Date.current)
+    expect_bill(bill, due_on: Date.current + 1.day, amount: 10).allocations.create!(
+      entry: entry, allocated_amount: 10, currency: "USD", source: "auto_matched"
+    )
+
+    assert_equal 50, bill_totals[@food_category.id]
+  end
+
+  # Totals are cached for the day and linking a payment doesn't touch its
+  # entry, so the cache has to notice the allocation itself.
+  test "bill_expense_totals follows payments linked and unlinked the same day" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    bill = groceries_bill
+    entry = pay_bill(bill, date: Date.current)
+    assert_equal 50, bill_totals[@food_category.id]
+
+    allocation = RecurringAllocation.find_by!(entry: entry)
+    allocation.destroy!
+    assert_equal 0, bill_totals[@food_category.id]
+
+    relinked = allocation.recurring_occurrence.allocations.create!(
+      entry: entry, allocated_amount: 50, currency: "USD", source: "auto_matched", state: "suggested"
+    )
+    assert_equal 0, bill_totals[@food_category.id]
+
+    relinked.update!(state: "confirmed", source: "user_confirmed")
+    assert_equal 50, bill_totals[@food_category.id]
+  end
+
+  # The Allocator lets an entry be matched again once its bill was deleted or
+  # dismissed; the tombstone must not count it a second time, or at all.
+  test "bill_expense_totals ignores payments of ended bills" do
+    bill = groceries_bill
+    pay_bill(bill, date: Date.current)
+    bill.update_columns(status: "ended")
+
+    assert_equal 0, bill_totals[@food_category.id]
+  end
+
+  # A split payment is excluded and its children count in its place: the
+  # expense parts in their own categories, the transfer part not at all.
+  test "bill_expense_totals counts the spending parts of a split payment" do
+    fees = @family.categories.create!(name: "Fees")
+    split_payment(pay_bill(groceries_bill, date: Date.current),
+                  { amount: 30, category: @groceries_category },
+                  { amount: 15, category: fees },
+                  { amount: 5, kind: "funds_movement" })
+
+    totals = bill_totals
+
+    assert_equal 30, totals[@groceries_category.id]
+    assert_equal 30, totals[@food_category.id]
+    assert_equal 15, totals[fees.id]
+    assert_equal 45, IncomeStatement.new(@family).bill_expense_totals(period: Period.current_month).total
+  end
+
+  # Mid-month, so the future-dated payment still falls inside the period.
+  test "bill_expense_totals leaves out what expense_totals leaves out" do
+    travel_to Date.current.beginning_of_month + 14.days do
+      pay_bill(groceries_bill, date: Date.current).update!(excluded: true)
+      pay_bill(create_bill(category: @groceries_category, amount: 60, name: "Future", account: @checking_account), date: Date.current + 1.day)
+      hidden = @family.accounts.create!(name: "Hidden", currency: @family.currency, balance: 0,
+                                        accountable: Depository.new, exclude_from_reports: true)
+      pay_bill(create_bill(category: @groceries_category, amount: 70, name: "Hidden", account: hidden), date: Date.current)
+
+      assert_equal 0, bill_totals[@food_category.id]
+    end
+  end
+
   private
     # Adds a 250 grocery expense whose pending flag is +flag+ and asserts every
     # figure is the one without it: totals (Transaction.excluding_pending), the
@@ -1161,5 +1388,14 @@ class IncomeStatementTest < ActiveSupport::TestCase
       assert_equal 900.0, income_statement.median_expense(interval: "month")
       assert_equal 900.0, income_statement.avg_expense(interval: "month")
       assert_equal 900.0, income_statement.median_expense(interval: "month", category: @groceries_category)
+    end
+
+    def groceries_bill
+      create_bill(category: @groceries_category, amount: 50, name: "Veg box", account: @checking_account)
+    end
+
+    def bill_totals
+      IncomeStatement.new(@family).bill_expense_totals(period: Period.current_month)
+                     .category_totals.to_h { |ct| [ ct.category.id, ct.total ] }
     end
 end

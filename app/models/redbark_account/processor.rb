@@ -18,18 +18,30 @@ class RedbarkAccount::Processor
 
     Rails.logger.info "RedbarkAccount::Processor - Processing account #{redbark_account.id} -> Sure account #{account.id}"
 
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     # Update account balance FIRST (before processing transactions/holdings/activities)
-    update_account_balance(account)
+    anchor_balance = update_account_balance(account)
 
     # Process transactions
     transactions_count = redbark_account.raw_transactions_payload&.size || 0
     Rails.logger.info "RedbarkAccount::Processor - Transactions payload has #{transactions_count} items"
 
+    transactions_ok = true
     if redbark_account.raw_transactions_payload.present?
       Rails.logger.info "RedbarkAccount::Processor - Processing transactions..."
-      RedbarkAccount::Transactions::Processor.new(redbark_account).process
+      transactions_ok = RedbarkAccount::Transactions::Processor.new(redbark_account).process[:success]
     else
       Rails.logger.warn "RedbarkAccount::Processor - No transactions payload to process"
+    end
+
+    if anchor_balance
+      account.set_current_balance(
+        anchor_balance,
+        date: date,
+        reuse_explained_anchor: transactions_ok
+      )
     end
 
     # A loan's rate, read from what the bank reported. After transactions, so a
@@ -81,8 +93,6 @@ class RedbarkAccount::Processor
       )
       account.save!
 
-      # Create or update the current balance anchor valuation for linked accounts
-      # This is critical for reverse sync to work correctly
-      account.set_current_balance(balance)
+      balance
     end
 end
