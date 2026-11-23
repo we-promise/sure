@@ -306,7 +306,11 @@ class AiTransportContractTest < ActiveSupport::TestCase
       "http://v1-proxy.lan:8080" => "http://v1-proxy.lan:8080/v1",
       "https://envoy.example.com/v13" => "https://envoy.example.com/v13",
       "https://gateway.example/api?tenant=a" => "https://gateway.example/api/v1?tenant=a",
-      "https://gateway.example/v1?tenant=a" => "https://gateway.example/v1?tenant=a"
+      "https://gateway.example/v1?tenant=a" => "https://gateway.example/v1?tenant=a",
+      "https://gateway.example/v1/?tenant=a" => "https://gateway.example/v1?tenant=a",
+      "https://gateway.example/api?tenant=a/" => "https://gateway.example/api/v1?tenant=a/",
+      "https://gateway.ai.cloudflare.com/v1/acct/gw/openai" => "https://gateway.ai.cloudflare.com/v1/acct/gw/openai",
+      "https://gateway.ai.cloudflare.com/v1/acct/gw/compat/" => "https://gateway.ai.cloudflare.com/v1/acct/gw/compat"
     }.each do |given, expected|
       assert_equal expected, Ai::Transport::Http.compatible_base(given), given.inspect
     end

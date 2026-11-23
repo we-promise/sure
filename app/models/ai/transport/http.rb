@@ -68,22 +68,24 @@ module Ai::Transport::Http
       nil
     end
 
-    # One base URL rule for every OpenAI-compatible server, the same as ruby-openai's, so an
-    # endpoint configured for ruby-openai keeps its URL: a URL whose path ends in the API's
-    # version (`/v1`, `/v1beta/openai`, Cloudflare's `/ai/v1`) is used as given; any other gets
-    # `/v1`. A version earlier in the path is the service's, not the API's: Cloudflare's
+    # One base URL rule for every OpenAI-compatible server, matching ruby-openai's, so an
+    # endpoint configured for ruby-openai keeps its URL. A path that ends in the API's version
+    # (`/v1`, `/v1beta/openai`, Cloudflare Workers AI's `/ai/v1`) or has a `/v1` segment
+    # (Cloudflare AI Gateway's `/v1/<account>/<gateway>/openai`) is used as given; any other gets
+    # `/v1`. Another version earlier in the path is the service's, not the API's: Workers AI's
     # `/client/v4/accounts/x/ai` still needs `/v1`. A "v1" in the host (`v1-proxy.lan`) is not a
-    # version. Agent URLs are stored whole, so a trailing `/chat/completions` goes.
+    # version. Agent URLs are stored whole, so a trailing `/chat/completions` goes. Only the path
+    # changes: a query stays as written.
     def compatible_base(base_url)
-      url = base_url.to_s.strip.chomp("/").delete_suffix("/chat/completions")
+      url = base_url.to_s.strip
       return OPENAI_BASE if url.blank?
 
       uri = URI.parse(url)
-      return url if uri.path.to_s.match?(%r{/v\d+[a-z0-9]*(/openai)?\z}i)
-
-      uri.path = "#{uri.path.chomp("/")}/v1"   # before any query, which stays as written
+      path = uri.path.to_s.sub(%r{/+\z}, "").delete_suffix("/chat/completions")
+      uri.path = path.match?(%r{/v\d+[a-z0-9]*(/openai)?\z|/v1/}i) ? path : "#{path}/v1"
       uri.to_s
     rescue URI::InvalidURIError
+      url = url.chomp("/").delete_suffix("/chat/completions")
       url.include?("v1") ? url : "#{url}/v1"
     end
 
