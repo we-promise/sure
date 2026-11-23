@@ -659,6 +659,39 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil entry.location_name
   end
 
+  test "update replaces the location turbo stream frame when setting a location" do
+    entry = entries(:transaction)
+
+    patch transaction_url(entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        location_lat: "41.3851",
+        location_lng: "2.1734",
+        location_name: "Barcelona, Spain"
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_turbo_stream action: "replace", target: dom_id(entry, :location)
+  end
+
+  test "update replaces the location turbo stream frame when clearing a location" do
+    entry = entries(:transaction)
+    entry.update!(location_lat: 41.3851, location_lng: 2.1734, location_name: "Barcelona, Spain")
+
+    patch transaction_url(entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        location_lat: "",
+        location_lng: "",
+        location_name: ""
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_turbo_stream action: "replace", target: dom_id(entry, :location)
+  end
+
   test "re-renders show with mark-recurring state when update fails validation" do
     family = families(:empty)
     sign_in users(:empty)

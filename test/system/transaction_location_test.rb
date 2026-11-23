@@ -9,7 +9,7 @@ class TransactionLocationTest < ApplicationSystemTestCase
     sign_in @user
   end
 
-  test "setting a location on a transaction via search and drag-confirm" do
+  test "setting a location via search and selecting a suggestion" do
     entry = create_transaction(account: accounts(:depository), name: "Travelodge Malaga", amount: 100)
 
     Geocoding::NominatimClient.any_instance.stubs(:search).returns(
@@ -23,12 +23,13 @@ class TransactionLocationTest < ApplicationSystemTestCase
     assert_text "Barcelona, Spain"
     find("li", text: "Barcelona, Spain").click
 
-    # requestSubmit() fires a Turbo Stream PATCH; Capybara's default_max_wait_time
-    # (5s, set in ApplicationSystemTestCase) already covers the round trip, so
-    # asserting on the resulting DOM state needs no custom wait of its own.
+    # The hidden class comes off synchronously (before the Turbo Stream PATCH
+    # fires), so this assertion alone doesn't prove the save completed — the
+    # wait_until below is what actually waits for the real round trip.
     assert_selector "[data-location-picker-target='display']:not(.hidden)"
 
-    entry.reload
+    wait_until { entry.reload.location_name == "Barcelona, Spain" }
+
     assert_equal "Barcelona, Spain", entry.location_name
     assert_equal 41.3851, entry.location_lat.to_f
     assert_equal 2.1734, entry.location_lng.to_f
