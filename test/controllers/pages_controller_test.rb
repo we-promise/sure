@@ -472,6 +472,18 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
   end
 
+  test "dashboard donut separates a letter currency symbol from the amount" do
+    @family.update!(currency: "RON")
+    account = @family.accounts.create!(name: "RON account", balance: 0, currency: "RON", accountable: Depository.new)
+    category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    create_transaction(account: account, name: "Shopping trip", amount: 1234.56, currency: "RON", category: category)
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#segment_#{category.id} [data-donut-chart-target='amount']", text: "Lei\u00A01,234.56"
+  end
+
   test "dashboard sankey shows investment contributions as invested when they are not spending" do
     @family.update!(investment_contributions_as_spending: false)
     category = @family.categories.create!(name: "Shopping", color: "#FF5733")
