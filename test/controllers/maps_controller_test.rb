@@ -91,4 +91,25 @@ class MapsControllerTest < ActionDispatch::IntegrationTest
     assert_match in_account.id, response.body
     assert_no_match in_other_account.id, response.body
   end
+
+  test "start_date and end_date params filter located entries to that range" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    account = accounts(:depository)
+    in_range = account.entries.create!(
+      name: "Travelodge Malaga", date: 10.days.ago.to_date, amount: 100, currency: "EUR",
+      location_lat: 36.72, location_lng: -4.42, location_name: "Malaga, Spain",
+      entryable: Transaction.new
+    )
+    out_of_range = account.entries.create!(
+      name: "Hotel Barcelona", date: 2.years.ago.to_date, amount: 150, currency: "EUR",
+      location_lat: 41.38, location_lng: 2.17, location_name: "Barcelona, Spain",
+      entryable: Transaction.new
+    )
+
+    get map_url(start_date: 30.days.ago.to_date, end_date: Date.current)
+
+    assert_match in_range.id, response.body
+    assert_no_match out_of_range.id, response.body
+  end
 end

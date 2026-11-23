@@ -5,51 +5,35 @@
   <%= render DS::Pill.new(label: t("shared.preview"), size: :md) %>
 </div>
 
-<%= form_with url: map_path, method: :get, data: { controller: "auto-submit-form" }, class: "flex gap-2 mb-4" do |f| %>
-  <%= render DS::Select.new(
-        form: f,
-        method: :account_id,
-        items: @accounts.map { |a| { value: a.id, label: a.name } },
-        selected: params[:account_id],
-        include_blank: t(".filters.all_accounts")
+<div class="flex items-center gap-2 mb-4">
+  <%= form_with url: map_path, method: :get, data: { controller: "auto-submit-form" } do |f| %>
+    <%= render DS::Select.new(
+          form: f,
+          method: :account_id,
+          items: @accounts.map { |a| { value: a.id, label: a.name } },
+          selected: params[:account_id],
+          include_blank: t(".filters.all_accounts")
+        ) %>
+  <% end %>
+  <%= render UI::PeriodPicker.new(
+        selected: @period,
+        url: map_path,
+        extra_params: { account_id: params[:account_id] }
       ) %>
-  <%= f.date_field :start_date,
-                   value: params[:start_date],
-                   data: { auto_submit_form_target: "auto" },
-                   autocomplete: "off",
-                   class: "px-3 py-1.5 border border-primary rounded-lg text-sm bg-container-inset text-primary" %>
-  <%= f.date_field :end_date,
-                   value: params[:end_date],
-                   data: { auto_submit_form_target: "auto" },
-                   autocomplete: "off",
-                   class: "px-3 py-1.5 border border-primary rounded-lg text-sm bg-container-inset text-primary" %>
-<% end %>
+</div>
 
 <% if @located_entries.empty? %>
   <%= render DS::EmptyState.new(icon: "map-pin", title: t(".empty.title"), description: t(".empty.description")) %>
 <% else %>
   <p class="text-secondary text-sm mb-2"><%= t(".located_count", count: @located_entries.size) %></p>
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div
-      data-controller="map"
-      data-map-points-value="<%= @map_data.to_json %>"
-      data-map-tile-url-value="<%= map_tile_url %>"
-      data-map-tile-attribution-value="<%= map_tile_attribution %>"
-      class="lg:col-span-2"
-      style="height: 70vh; border-radius: 0.75rem;"></div>
+  <div
+    class="grid grid-cols-1 lg:grid-cols-3 gap-4"
+    data-controller="map"
+    data-map-points-value="<%= @map_data.to_json %>"
+    data-map-tile-url-value="<%= map_tile_url %>"
+    data-map-tile-attribution-value="<%= map_tile_attribution %>">
+    <div data-map-target="container" class="lg:col-span-2" style="height: 70vh; border-radius: 0.75rem;"></div>
 
-    <ul class="flex flex-col gap-1 overflow-y-auto" style="height: 70vh;">
-      <% @map_data.each do |point| %>
-        <li>
-          <%= link_to point[:transaction_path], class: "flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-container-hover" do %>
-            <div class="min-w-0">
-              <p class="text-sm text-primary truncate"><%= point[:transaction_name] %></p>
-              <p class="text-xs text-secondary truncate"><%= point[:name] %> &middot; <%= point[:date] %></p>
-            </div>
-            <p class="text-sm text-primary whitespace-nowrap"><%= point[:amount] %></p>
-          <% end %>
-        </li>
-      <% end %>
-    </ul>
+    <ul data-map-target="list" class="flex flex-col gap-1 overflow-y-auto" style="height: 70vh;"></ul>
   </div>
 <% end %>

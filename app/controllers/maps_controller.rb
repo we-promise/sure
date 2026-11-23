@@ -1,4 +1,6 @@
 class MapsController < ApplicationController
+  include Periodable
+
   before_action :require_preview_features!
 
   def show
@@ -33,8 +35,6 @@ class MapsController < ApplicationController
         .merge(Account.accessible_by(Current.user))
 
       scope = scope.where(account_id: params[:account_id]) if params[:account_id].present?
-      scope = scope.where("entries.date >= ?", params[:start_date]) if params[:start_date].present?
-      scope = scope.where("entries.date <= ?", params[:end_date]) if params[:end_date].present?
-      scope
+      scope.where(entries: { date: @period.date_range })
     end
 end
