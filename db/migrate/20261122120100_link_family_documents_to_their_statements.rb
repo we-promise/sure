@@ -1,6 +1,8 @@
 # Documents ProcessPdfJob uploaded before they recorded their statement carry
 # only the document type it classified. Each is linked to the one statement of
-# its family with the same filename and size; the rest stay unlinked, and
+# its family with the same filename and size that a PdfImport had already
+# processed when the document was uploaded, so a PDF imported before statements
+# existed is never taken for a later statement. The rest stay unlinked, and
 # nobody finds them in a search (FamilyDocument.searchable_by).
 class LinkFamilyDocumentsToTheirStatements < ActiveRecord::Migration[8.1]
   def up
@@ -13,15 +15,15 @@ class LinkFamilyDocumentsToTheirStatements < ActiveRecord::Migration[8.1]
         JOIN account_statements AS statements
           ON statements.family_id = documents.family_id
          AND statements.filename = documents.filename
-        JOIN active_storage_attachments AS attachments
-          ON attachments.record_type = 'AccountStatement'
-         AND attachments.record_id = statements.id
-         AND attachments.name = 'original_file'
-        JOIN active_storage_blobs AS blobs
-          ON blobs.id = attachments.blob_id
-         AND blobs.byte_size = documents.file_size
+         AND statements.byte_size = documents.file_size
         WHERE documents.account_statement_id IS NULL
           AND documents.metadata ? 'type'
+          AND EXISTS (
+            SELECT 1 FROM imports
+            WHERE imports.type = 'PdfImport'
+              AND imports.account_statement_id = statements.id
+              AND imports.created_at <= documents.created_at
+          )
         GROUP BY documents.id
         HAVING COUNT(DISTINCT statements.id) = 1
       ) AS matches
