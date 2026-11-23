@@ -16,4 +16,12 @@ class ApplicationJob < ActiveJob::Base
   retry_on ActiveRecord::Deadlocked
   discard_on ActiveJob::DeserializationError
   queue_as :low_priority # default queue
+
+  # A callback rather than Sidekiq middleware, so it also runs under the test adapter and
+  # `perform_now`.
+  around_perform :run_in_ai_capsule
+
+  private
+    # A job on an AI queue may call a model.
+    def run_in_ai_capsule(&block) = Ai::Capsule.within(queue_name, &block)
 end

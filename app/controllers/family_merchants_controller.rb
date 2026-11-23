@@ -113,16 +113,13 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def enhance
-    cache_key = EnhanceProviderMerchantsJob.lock_key(Current.family)
-
-    already_running = !Rails.cache.write(cache_key, true, expires_in: EnhanceProviderMerchantsJob::LOCK_TTL, unless_exist: true)
-
-    if already_running
-      return redirect_to family_merchants_path, alert: t(".already_running")
+    if ProviderMerchant::Enhancer.enhance_later(Current.family)
+      redirect_to family_merchants_path, notice: t(".success")
+    else
+      redirect_to family_merchants_path, alert: t(".already_running")
     end
-
-    EnhanceProviderMerchantsJob.perform_later(Current.family)
-    redirect_to family_merchants_path, notice: t(".success")
+  rescue ActiveJob::EnqueueError
+    redirect_to family_merchants_path, alert: t(".enqueue_failed")
   end
 
   def merge

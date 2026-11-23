@@ -10,6 +10,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     # family-scoped assertions below keep using dylan_family.
     users(:family_admin).update!(role: :super_admin)
     sign_in users(:family_admin)
+    # The host's categorization variables would lock the settings these tests save.
+    @categorization_env = %w[CATEGORIZATION_CONFIDENCE_THRESHOLD CATEGORIZATION_SHADOW_RATE].to_h { [ _1, ENV.delete(_1) ] }
 
     @provider = mock
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(@provider)
@@ -31,10 +33,11 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   teardown do
+    @categorization_env&.each { |name, value| ENV[name] = value if value }
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key terrascoutx_api_key demo_family_refresh_enabled demo_family_refresh_family_id
-       market_data_sync_enabled market_data_sync_time market_data_sync_timezone].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model categorization_provider llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key terrascoutx_api_key demo_family_refresh_enabled demo_family_refresh_family_id
+       market_data_sync_enabled market_data_sync_time market_data_sync_timezone page_cache_days page_cache_max_mb page_cache_cooldown_minutes].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -159,6 +162,44 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       get settings_hosting_url
       assert_response :success
+    end
+  end
+
+  test "caps the Twelve Data usage bar at full width when usage exceeds the daily limit" do
+    @provider.stubs(:usage).returns(provider_success_response(
+      OpenStruct.new(used: 900, limit: 800, utilization: 112.5, plan: "free")
+    ))
+
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      bar = css_select("div.w-52.bg-surface-inset > div.bg-green-500").sole
+      assert_equal "width: 100%;", bar["style"]
+    end
+  end
+
+  test "keeps the Twelve Data usage bar at the utilization when usage is within the daily limit" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      bar = css_select("div.w-52.bg-surface-inset > div.bg-green-500").sole
+      assert_equal "width: 10%;", bar["style"]
+    end
+  end
+
+  test "keeps a sliver of the Twelve Data usage bar visible when nothing is used" do
+    @provider.stubs(:usage).returns(provider_success_response(
+      OpenStruct.new(used: 0, limit: 800, utilization: 0, plan: "free")
+    ))
+
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      bar = css_select("div.w-52.bg-surface-inset > div.bg-green-500").sole
+      assert_equal "width: 2%;", bar["style"]
     end
   end
 
@@ -601,6 +642,30 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # One choice for every family on the instance.
+  test "saves the instance's categorization provider when opted into preview features" do
+    # The host's CATEGORIZATION_PROVIDER would make the controller skip the write.
+    with_env_overrides("CATEGORIZATION_PROVIDER" => nil) do
+      with_self_hosting do
+        enable_preview_features!
+
+        patch settings_hosting_url, params: { setting: { categorization_provider: "jev" } }
+        assert_equal "jev", Setting.categorization_provider
+
+        patch settings_hosting_url, params: { setting: { categorization_provider: "something-else" } }
+        assert_equal "jev", Setting.categorization_provider
+      end
+    end
+  end
+
+  test "ignores the categorization provider from a user without preview features" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { categorization_provider: "jev" } }
+
+      assert_nil Setting.categorization_provider
+    end
+  end
+
   test "can update categorization tuning when opted into preview features" do
     with_self_hosting do
       enable_preview_features!
@@ -682,6 +747,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the jev panel warns when JEV_ENDPOINT is set to an endpoint RubyLLM can't reach" do
+    with_self_hosting do
+      users(:family_admin).update!(preferences: (users(:family_admin).preferences || {}).merge("preview_features_enabled" => true))
+      with_env_overrides("CATEGORIZATION_PROVIDER" => "jev", "JEV_API_KEY" => "env-jev-key",
+                         "JEV_ENDPOINT" => "https://gw.example.com/v1/jev") do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "p.text-warning", /not supported and is ignored/
+      end
+    end
+  end
+
   test "can update jev endpoint and model" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { jev_endpoint: "https://api.typesafe.ai/v1/systemone", jev_model: "jev-latest" } }
@@ -698,9 +776,9 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   # whoever manages it sees the endpoint without its credentials.
   test "the jev panel shows a member neither the endpoint field nor its credentials" do
     with_self_hosting do
-      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/systemone?api_key=qk-secret" # pipelock:ignore Credential in URL
       member = users(:family_member)
-      member.family.update!(categorization_provider: "jev")
+      Setting.categorization_provider = "jev"
       member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
       sign_in member
 
@@ -714,15 +792,15 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "the jev panel shows the instance settings manager the endpoint without its credentials" do
     with_self_hosting do
-      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/systemone?api_key=qk-secret" # pipelock:ignore Credential in URL
       admin = users(:family_admin)
-      admin.family.update!(categorization_provider: "jev")
+      Setting.categorization_provider = "jev"
       admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => true))
 
       get settings_hosting_url
 
       assert_response :success
-      assert_select "input[name='setting[jev_endpoint]'][value='https://gw.example.com/v1/jev']", 1
+      assert_select "input[name='setting[jev_endpoint]'][value='https://gw.example.com/v1/systemone']", 1
       assert_no_match(/gw-secret|qk-secret|gw-user/, response.body)
     end
   end
@@ -731,10 +809,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   # straight back. Saving it would silently strip the operator's credentials.
   test "submitting the redacted jev endpoint back keeps the stored one" do
     with_self_hosting do
-      stored = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      stored = "https://gw-user:gw-secret@gw.example.com/v1/systemone?api_key=qk-secret" # pipelock:ignore Credential in URL
       Setting.jev_endpoint = stored
 
-      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://gw.example.com/v1/jev" } }
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://gw.example.com/v1/systemone" } }
 
       assert_equal stored, Setting.jev_endpoint
     end
@@ -744,11 +822,11 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   # replaces a stored one that carries credentials.
   test "submitting a different jev endpoint replaces a stored one with credentials" do
     with_self_hosting do
-      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/systemone?api_key=qk-secret" # pipelock:ignore Credential in URL
 
-      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://other.example.com/v1/jev" } }
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://other.example.com/v1/systemone" } }
 
-      assert_equal "https://other.example.com/v1/jev", Setting.jev_endpoint
+      assert_equal "https://other.example.com/v1/systemone", Setting.jev_endpoint
     end
   end
 
@@ -764,18 +842,31 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "rejects a plaintext jev endpoint but allows loopback" do
+  # Section 7: https for cloud endpoints, http for a server on a private network.
+  test "accepts an http jev endpoint on a private network" do
     with_self_hosting do
       Setting.jev_endpoint = nil
 
-      patch settings_hosting_url, params: { setting: { jev_endpoint: "http://api.typesafe.ai/v1/systemone" } }
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "http://jev:8080/v1/systemone" } }
+
+      assert_equal "http://jev:8080/v1/systemone", Setting.jev_endpoint
+    end
+  end
+
+  # Sure's Jev transport speaks TypeSafe's dialect and OpenRouter's decisions dialect; other paths are refused.
+  test "rejects a neither-dialect jev endpoint, accepts the decisions one" do
+    with_self_hosting do
+      Setting.jev_endpoint = nil
+
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://gw.example.com/v1/jev" } }
 
       assert_response :unprocessable_entity
+      assert_match(%r{/v1/systemone}, flash[:alert])
       assert_nil Setting.jev_endpoint
 
-      patch settings_hosting_url, params: { setting: { jev_endpoint: "http://localhost:4000/v1/systemone" } }
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://openrouter.ai/api/alpha/decisions" } }
 
-      assert_equal "http://localhost:4000/v1/systemone", Setting.jev_endpoint
+      assert_equal "https://openrouter.ai/api/alpha/decisions", Setting.jev_endpoint
     end
   end
 
@@ -1345,6 +1436,86 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.openai_request_timeout = nil
     Setting.ai_response_timeout = nil
     Setting.ai_health_probe_timeout = nil
+  end
+
+  test "saves how long cached pages are kept, and a blank goes back to the default" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { page_cache_days: "30" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal 30, Setting.page_cache_days
+      assert_equal 30.days, Setting.page_cache_ttl
+
+      patch settings_hosting_url, params: { setting: { page_cache_days: "" } }
+
+      assert_nil Setting.page_cache_days
+      assert_equal Setting::PAGE_CACHE_DAYS_DEFAULT.days, Setting.page_cache_ttl
+    end
+  end
+
+  test "saves the page cache's size limit and rebuild cooldown" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250", page_cache_cooldown_minutes: "0" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal 250.megabytes, PageCache.max_bytes
+      assert_equal 0.minutes, Setting.page_cache_cooldown
+
+      patch settings_hosting_url, params: { setting: { page_cache_max_mb: "", page_cache_cooldown_minutes: "" } }
+
+      assert_equal Setting::PAGE_CACHE_MAX_MB_DEFAULT.megabytes, PageCache.max_bytes
+      assert_equal Setting::PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT.minutes, Setting.page_cache_cooldown
+    end
+  end
+
+  test "an environment value the cache ignores doesn't lock its setting" do
+    with_self_hosting do
+      with_env_overrides("PAGE_CACHE_MAX_MB" => "0") do
+        get settings_hosting_url
+        assert_select "input[name='setting[page_cache_max_mb]'][disabled]", count: 0
+
+        patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250" } }
+        assert_equal 250, Setting.page_cache_max_mb
+      end
+    end
+  end
+
+  test "a valid environment value locks its setting" do
+    with_self_hosting do
+      with_env_overrides("PAGE_CACHE_MAX_MB" => "300") do
+        get settings_hosting_url
+        assert_select "input[name='setting[page_cache_max_mb]'][disabled]"
+
+        patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250" } }
+        assert_not_equal 250, Setting.page_cache_max_mb
+        assert_equal 300.megabytes, PageCache.max_bytes
+      end
+    end
+  end
+
+  test "rejects a cache size or cooldown out of range" do
+    with_self_hosting do
+      { page_cache_max_mb: %w[0 100001], page_cache_cooldown_minutes: %w[-1 10081] }.each do |key, values|
+        values.each do |value|
+          patch settings_hosting_url, params: { setting: { key => value } }
+
+          assert_response :unprocessable_entity
+          assert_nil Setting.public_send(key)
+        end
+      end
+    end
+  end
+
+  test "rejects a cache length outside 1 to 365 days" do
+    with_self_hosting do
+      %w[0 366 soon].each do |value|
+        patch settings_hosting_url, params: { setting: { page_cache_days: value } }
+
+        assert_response :unprocessable_entity
+        assert_equal I18n.t("settings.hostings.update.invalid_page_cache_days", minimum: 1, maximum: 365), flash[:alert]
+        assert_nil Setting.page_cache_days
+      end
+    end
   end
 
   test "rejects llm budget below field minimum" do

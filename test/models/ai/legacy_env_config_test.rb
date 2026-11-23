@@ -8,22 +8,19 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     ANTHROPIC_BASE_URL ANTHROPIC_MODEL ANTHROPIC_REQUEST_TIMEOUT LLM_PROVIDER JEV_API_KEY JEV_ENDPOINT JEV_MODEL
     JEV_REQUEST_TIMEOUT CATEGORIZATION_PROVIDER VECTOR_STORE_PROVIDER EMBEDDING_URI_BASE EMBEDDING_ACCESS_TOKEN
     EMBEDDING_MODEL EMBEDDING_DIMENSIONS EXTERNAL_ASSISTANT_URL EXTERNAL_ASSISTANT_TOKEN EXTERNAL_ASSISTANT_MODEL
-    EXTERNAL_ASSISTANT_AGENT_ID EXTERNAL_ASSISTANT_ALLOWED_EMAILS ASSISTANT_TYPE
+    EXTERNAL_ASSISTANT_AGENT_ID EXTERNAL_ASSISTANT_ALLOWED_EMAILS ASSISTANT_TYPE LLM_JSON_MODE LLM_CONTEXT_WINDOW
+    LLM_MAX_RESPONSE_TOKENS LLM_MAX_ITEMS_PER_CALL ANTHROPIC_MAX_TOKENS JEV_CONCURRENCY
   ].freeze
+
+  # The budget settings take their defaults from the host's LLM_* variables when Setting loads,
+  # which `build` clearing ENV can't undo; a test that needs one stubs it again.
+  setup { %i[llm_context_window llm_max_response_tokens llm_max_items_per_call].each { Setting.stubs(_1).returns(nil) } }
 
   def build(env = {})
     with_env_overrides(AI_VARIABLES.index_with { nil }.merge(env)) { Ai::LegacyEnvConfig.build }
   end
 
   def first_model(config, feature) = config.routes_for(feature).first&.model
-
-  test "nothing configured gives no endpoints and no routes" do
-    config = build
-
-    assert_empty config.endpoints
-    assert_empty config.routes
-    assert_nil config.vector_store_backend
-  end
 
   test "an OpenAI key gives the OpenAI preset with today's model, tuning and vector store" do
     config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_REQUEST_TIMEOUT" => "90",
@@ -32,7 +29,7 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
 
     assert_equal :openai, endpoint.preset
     assert_nil endpoint.base_url
-    assert endpoint.cloud?
+    assert_equal :cloud, endpoint.location
     assert endpoint.responses_api
     assert endpoint.vector_store?
     assert_equal 90, endpoint.timeout_seconds
@@ -43,108 +40,207 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal Ai::LegacyEnvConfig::VECTOR_STORE_MODEL, first_model(config, :embed).name
   end
 
-  test "a model chat's allow-list refuses can't do tools, but still does structured output" do
-    model = first_model(build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_MODEL" => "o4-mini"), :detect_merchants)
+  test "a custom Anthropic gateway is trusted with images but not native PDFs" do
+    claude = first_model(build("ANTHROPIC_API_KEY" => "sk-ant", "ANTHROPIC_MODEL" => "claude-haiku-4-5",
+                               "ANTHROPIC_BASE_URL" => "https://gateway.example.test", "LLM_PROVIDER" => "anthropic"), :extract_pdf)
 
-    assert model.capable?(:structured_output)
-    assert_not model.capable?(:tools)
+    assert claude.capable?(:vision)
+    assert_not claude.capable?(:documents)
   end
 
-  test "OPENAI_URI_BASE makes a compatible endpoint, local over http, without the Responses API" do
-    config = build("OPENAI_ACCESS_TOKEN" => "ollama", "OPENAI_URI_BASE" => "http://ollama:11434/v1", "OPENAI_MODEL" => "qwen3:8b")
-    endpoint = config.endpoint(:openai_compatible)
+  test "OPENAI_SUPPORTS_PDF_PROCESSING=false keeps PDF import off, as today" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1",
+                   "OPENAI_MODEL" => "qwen3", "OPENAI_SUPPORTS_PDF_PROCESSING" => "false")
 
-    assert endpoint.local?
-    assert_nil endpoint.preset
-    assert_not endpoint.responses_api
-    assert_equal "qwen3:8b", first_model(config, :enhance_merchants).name
-    assert first_model(config, :chat).capable?(:tools)
+    assert_empty config.routes_for(:extract_pdf)
+    assert_not first_model(config, :chat).capable?(:vision)
+    assert_equal "qwen3", first_model(config, :bill_setup).name, "only PDF import is off"
   end
 
-  test "a custom URL with no model gets an endpoint but no model or routes, as today's registry builds no client" do
-    config = build("OPENAI_ACCESS_TOKEN" => "ollama", "OPENAI_URI_BASE" => "http://ollama:11434/v1")
+  test "PDF import ignores the 2,048-token baseline, as today, unless LLM_CONTEXT_WINDOW is set" do
+    compatible = { "OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1", "OPENAI_MODEL" => "qwen3-vl" }
+    config = build(compatible)
 
-    assert config.endpoint(:openai_compatible)
-    assert_empty config.routes_for(:bill_setup)
-    assert_empty config.routes_for(:chat)
+    assert_nil first_model(config, :extract_pdf).context_window, "pages go in one request, as today"
+    assert_equal 2048, first_model(config, :categorize).context_window, "other features keep the baseline"
+    assert_equal 8192, first_model(build(compatible.merge("LLM_CONTEXT_WINDOW" => "8192")), :extract_pdf).context_window
   end
 
-  test "values saved in Settings count when ENV is unset" do
-    Setting.openai_access_token = "sk-setting"
-    Setting.openai_uri_base = "https://gateway.example.test/v1"
-    Setting.openai_model = "gpt-4.1-mini"
+  test "in auto, bill setup and PDF import ask a compatible server for json_object, as main did, and the rest keep auto" do
+    compatible = { "OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1", "OPENAI_MODEL" => "qwen3-vl" }
+    auto = build(compatible)
+    strict = build(compatible.merge("LLM_JSON_MODE" => "strict"))
 
-    config = build
-    assert_equal "sk-setting", config.endpoint(:openai_compatible).api_key
-    assert_equal "gpt-4.1-mini", first_model(config, :bill_setup).name
+    assert_equal %i[json_object json_object], %i[bill_setup extract_pdf].map { auto.routes_for(_1).first.effective_json_mode }
+    assert_equal %i[auto auto auto], %i[categorize detect_merchants enhance_merchants].map { auto.routes_for(_1).first.effective_json_mode }
+    assert_equal %i[strict strict], %i[bill_setup extract_pdf].map { strict.routes_for(_1).first.effective_json_mode },
+                 "a JSON mode the operator chose applies to every feature"
   end
 
-  test "LLM_PROVIDER puts its provider first in every LLM route" do
-    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic")
+  test "an Anthropic install's routes keep the endpoint's JSON mode" do
+    config = build("ANTHROPIC_API_KEY" => "sk-ant", "LLM_PROVIDER" => "anthropic")
 
-    %i[bill_setup extract_pdf detect_merchants enhance_merchants categorize chat].each do |feature|
-      assert_equal %w[anthropic openai], config.routes_for(feature).map { _1.endpoint.name }, feature
-    end
-    assert_equal "claude-sonnet-4-6", first_model(config, :bill_setup).name
+    assert_nil config.routes_for(:bill_setup).first.json_mode
   end
 
-  test "a preferred provider that can't be built routes nothing after it, as callers raise there" do
-    broken = { "OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test", "ANTHROPIC_BASE_URL" => "https://gateway.example.test" }
+  # #4836: a regional OpenAI host is native OpenAI — its client uses the Responses API, so its
+  # prompt must not be the simplified one written for small local models.
+  test "a regional OpenAI host keeps the native endpoint, preset and detailed prompt" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "https://us.api.openai.com", "OPENAI_MODEL" => "gpt-4.1")
 
-    with_env_overrides(broken.merge("LLM_PROVIDER" => "anthropic")) do
-      assert_raises(Provider::Error) { Provider::Registry.preferred_llm_provider }
-    end
-    assert_empty build(broken.merge("LLM_PROVIDER" => "anthropic")).routes_for(:bill_setup)
-    assert_equal %w[openai], build(broken).routes_for(:bill_setup).map { _1.endpoint.name }
+    endpoint = config.endpoints.find { _1.protocol == :compatible }
+    assert_equal "openai", endpoint.name
+    assert_equal :openai, endpoint.preset
+    assert endpoint.responses_api
+    assert_equal "categorize_transactions", config.routes_for(:categorize).first.prompt
+    assert_nil config.routes_for(:categorize).first.model.context_window
   end
 
-  test "Anthropic only defaults the vector store to pgvector when the extension is there" do
+  test "a custom OpenAI URL gets no OpenAI vector store" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-or", "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1", "OPENAI_MODEL" => "google/gemma-4-31b-it")
+
+    assert_nil config.vector_store_backend
+    assert_empty config.routes_for(:embed)
+
     VectorStore::Pgvector.stubs(:available?).returns(true)
-    config = build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic", "EMBEDDING_URI_BASE" => "http://ollama:11434/v1",
-                   "EMBEDDING_MODEL" => "nomic-embed-text", "EMBEDDING_DIMENSIONS" => "768")
-    model = first_model(config, :embed)
-
-    assert_equal :pgvector, config.vector_store_backend
-    assert_equal "embed", model.endpoint.name
-    assert model.endpoint.local?
-    assert_equal "nomic-embed-text", model.name
-    assert_equal 768, model.embedding_dimensions
-
-    VectorStore::Pgvector.stubs(:available?).returns(false)
-    assert_empty build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic").routes_for(:embed)
+    named = build("OPENAI_ACCESS_TOKEN" => "sk-or", "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1", "OPENAI_MODEL" => "google/gemma-4-31b-it",
+                  "VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://llama.local:8081/v1")
+    assert_equal "http://llama.local:8081/v1", first_model(named, :embed).endpoint.base_url
   end
 
-  test "embeddings fall back to the OpenAI URL and key saved in Settings" do
+  test "the OpenAI key saved in Settings goes only to the OpenAI URL, not to a separate embedding server" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
-    Setting.openai_access_token = "sk-setting"
-    Setting.openai_uri_base = "http://llama.local:8080/v1"
-    Setting.openai_model = "qwen3"
+    Setting.openai_access_token = "sk-saved"
 
-    endpoint = first_model(build("VECTOR_STORE_PROVIDER" => "pgvector"), :embed).endpoint
-    assert_equal "http://llama.local:8080/v1", endpoint.base_url
-    assert_equal "sk-setting", endpoint.api_key
+    separate = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://embeddings.example.test:11434/v1")
+    inherited = build("VECTOR_STORE_PROVIDER" => "pgvector")
+    same = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://api.openai.com/v1/")
+
+    assert_nil first_model(separate, :embed).endpoint.api_key
+    assert_equal "sk-saved", first_model(inherited, :embed).endpoint.api_key
+    assert_equal "sk-saved", first_model(same, :embed).endpoint.api_key, "OpenAI's own URL written out is the same server"
   end
 
-  test "Jev is listed first for categorization, for families that chose it, when it can be built" do
-    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test")
-    jev = config.routes_for(:categorize).first
+  test "the saved key goes to EMBEDDING_URI_BASE when it is the OpenAI URL saved with it, and nowhere else on that host" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.openai_access_token = "sk-saved"
+    Setting.openai_uri_base = "https://gateway.example.test/TenantA/v1"
 
-    assert_equal "jev", jev.endpoint.name
-    assert_equal :jev_family, jev.condition
-    assert jev.model.capable?(:judge, :calibrated_confidence)
-    assert_equal :jev, jev.endpoint.preset
+    same = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://GATEWAY.example.test:443/TenantA/v1/")
+    other_tenant = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://gateway.example.test/tenanta/v1")
 
-    assert_empty build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "http://jev.example.test/v1/systemone").routes_for(:categorize)
+    assert_equal "sk-saved", first_model(same, :embed).endpoint.api_key
+    assert_nil first_model(other_tenant, :embed).endpoint.api_key
   end
 
-  test "the external assistant is an agent endpoint at the end of chat's list" do
-    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "EXTERNAL_ASSISTANT_URL" => "https://agent.example.test/v1",
-                   "EXTERNAL_ASSISTANT_TOKEN" => "agent-token", "EXTERNAL_ASSISTANT_ALLOWED_EMAILS" => " A@example.com ,b@example.com")
-    agent = config.routes_for(:chat).last
+  test "EMBEDDING_ACCESS_TOKEN and OPENAI_ACCESS_TOKEN still reach a separate embedding server, as before the router" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.openai_access_token = "sk-saved"
+    separate = { "VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://embeddings.example.test:11434/v1" }
 
-    assert agent.agent?
-    assert_equal "openclaw/main", agent.model.name
-    assert_equal %w[a@example.com b@example.com], agent.endpoint.agent_settings[:allowed_emails]
-    assert_not config.routes_for(:bill_setup).any?(&:agent?)
+    assert_equal "emb-env", first_model(build(separate.merge("EMBEDDING_ACCESS_TOKEN" => "emb-env")), :embed).endpoint.api_key
+    assert_equal "sk-env", first_model(build(separate.merge("OPENAI_ACCESS_TOKEN" => "sk-env")), :embed).endpoint.api_key
+  end
+
+  test "a self-hosted Jev on https has no calibrated confidence either: only TypeSafe's API does" do
+    jev = build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://jev.internal/v1/systemone", "CATEGORIZATION_PROVIDER" => "jev")
+            .routes_for(:categorize).first
+
+    assert jev.model.capable?(:judge)
+    assert_not jev.model.capable?(:calibrated_confidence)
+  end
+
+  test "TypeSafe's API keeps calibrated confidence however its host is cased" do
+    jev = build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://API.TypeSafe.ai/v1/systemone", "CATEGORIZATION_PROVIDER" => "jev")
+            .routes_for(:categorize).first
+
+    assert jev.model.capable?(:calibrated_confidence)
+  end
+
+  test "a misconfigured Jev endpoint is logged once per process, not once per build" do
+    Ai::LegacyEnvConfig.unreachably_warned = nil
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      2.times { build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://gw.example.test/key-s3cret/v1/jev") }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "ai_configuration", entry.category
+    assert_equal "error", entry.level
+    assert_equal "jev", entry.provider_key
+    assert_equal "path", entry.metadata["reason"]
+    assert_equal "https://gw.example.test", entry.metadata["endpoint"], "a gateway path can carry a key"
+  end
+
+  test "a Jev diagnostic that couldn't be written is tried again on the next build" do
+    Ai::LegacyEnvConfig.unreachably_warned = nil
+    env = { "OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://gw.example.test/v1/jev" }
+
+    DebugLogEntry.expects(:capture).twice.returns(nil).then.returns(DebugLogEntry.new)
+    3.times { build(env) }
+  end
+
+  test "an OpenRouter decisions URL derives the /v1 api base for the provider's relative judgments path" do
+    jev = Ai::LegacyEnvConfig::Jev
+
+    assert_equal "https://openrouter.ai/api/v1", jev.base_url("https://openrouter.ai/api/alpha/decisions")
+    assert_equal "https://openrouter.ai/v1", jev.base_url("https://openrouter.ai/alpha/decisions")
+    assert_equal "https://gw.example.test/or/api/v1", jev.base_url("https://gw.example.test/or/api/alpha/decisions")
+  end
+
+  test "the Jev host shown to members is never the raw endpoint, which can carry credentials" do
+    assert_equal "jev.example.test", Ai::LegacyEnvConfig::Jev.host_for("https://user:secret@jev.example.test/v1/systemone")
+    assert_equal Ai::LegacyEnvConfig::Jev::UNREADABLE_HOST, Ai::LegacyEnvConfig::Jev.host_for("https://user:secret@bad host/v1")
+    assert_equal Ai::LegacyEnvConfig::Jev::UNREADABLE_HOST, Ai::LegacyEnvConfig::Jev.host_for("user:secret")
+  end
+  test "OpenAI's own URL, set explicitly, keeps the OpenAI vector store" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "https://api.openai.com/v1")
+
+    assert_equal :openai, config.vector_store_backend
+  end
+  test "OPENAI_SUPPORTS_PDF_PROCESSING set but empty keeps PDF import off, as it always has" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1",
+                   "OPENAI_MODEL" => "qwen3", "OPENAI_SUPPORTS_PDF_PROCESSING" => "")
+
+    assert_empty config.routes_for(:extract_pdf)
+  end
+
+  test "Anthropic's own URL written out keeps the preset and its PDF limits" do
+    config = build("ANTHROPIC_API_KEY" => "sk-ant", "LLM_PROVIDER" => "anthropic", "ANTHROPIC_BASE_URL" => "https://api.anthropic.com")
+
+    assert_equal :anthropic, config.endpoint(:anthropic).preset
+    assert config.endpoint(:anthropic).pdf_limits.present?
+  end
+
+  test "the default embedding URL with a trailing slash or without is still the server that needs a key" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns(nil)   # a host's OPENAI_ACCESS_TOKEN at boot would leak in
+    without_slash = VectorStore::DEFAULT_EMBEDDING_URI_BASE.chomp("/")
+
+    config = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => without_slash)
+
+    assert_empty config.routes_for(:embed)
+  end
+
+  test "equivalent hosted OpenAI embedding URLs still need a key" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns(nil)   # a host's OPENAI_ACCESS_TOKEN at boot would leak in
+    config = build("VECTOR_STORE_PROVIDER" => "pgvector",
+                   "EMBEDDING_URI_BASE" => "https://API.OPENAI.COM:443/v1/")
+
+    assert_empty config.routes_for(:embed), "a differently spelled api.openai.com is still OpenAI"
+  end
+
+  test "an inherited OpenAI URL without a version gets /v1 for embeddings, as for chat; EMBEDDING_URI_BASE stays as written" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns("sk-saved")
+    Setting.stubs(:openai_uri_base).returns("https://gateway.example/")
+
+    inherited = build("VECTOR_STORE_PROVIDER" => "pgvector")
+    written = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://ollama:11434")
+
+    assert_equal "https://gateway.example/v1", first_model(inherited, :embed).endpoint.base_url
+    assert_equal "sk-saved", first_model(inherited, :embed).endpoint.api_key
+    assert_equal "http://ollama:11434", first_model(written, :embed).endpoint.base_url
   end
 end

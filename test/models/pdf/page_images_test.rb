@@ -1,0 +1,184 @@
+require "test_helper"
+
+# The hardened pdftoppm, ported from the spike's page_images_test with PDFs
+# built to misbehave and stand-in pdftoppm scripts.
+class Pdf::PageImagesTest < ActiveSupport::TestCase
+  test "a page-size bomb is refused before rendering" do
+    bomb = blank_pdf(pages: 1, size: [ 14_400, 14_400 ])   # 200 inches, PDF's largest page
+
+    error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(bomb) }
+    assert_equal :too_large, error.code
+    assert_match "page 1 would be 900 million pixels at 150 dpi", error.message
+  end
+
+  test "pdftoppm gets an empty environment: no keys or database URL" do
+    Dir.mktmpdir do |dir|
+      binary = fake_pdftoppm(dir, "env > #{dir}/env; exit 1")
+      ENV["SURE_SECRET_PROBE"] = "s3cret"
+
+      error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(statement("bac_ocr"), binary:) }
+
+      assert_equal :failed, error.code
+      environment = File.read(File.join(dir, "env"))
+      assert_no_match(/s3cret|DATABASE_URL|API_KEY|SECRET_KEY_BASE/, environment)
+      assert_operator environment.lines.size, :<=, 3, "only what sh sets itself"
+    ensure
+      ENV.delete("SURE_SECRET_PROBE")
+    end
+  end
+
+  test "a pdftoppm that hangs is killed, with its whole process group, after the timeout" do
+    Dir.mktmpdir do |dir|
+      pids = File.join(dir, "pids")
+      binary = fake_pdftoppm(dir, "sleep 60 & echo $! > #{pids}; echo $$ >> #{pids}; wait")
+
+      error, seconds = timed { assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(statement("bac_ocr"), binary:, timeout: 1) } }
+
+      assert_equal :timeout, error.code
+      assert_operator seconds, :<, 3
+      File.read(pids).split.map(&:to_i).each do |pid|
+        assert dead_within?(pid, 2), "process #{pid} survived"
+      end
+    end
+  end
+
+  test "a MediaBox stored as a reference is resolved before the size check" do
+    objects = [ "<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox 4 0 R >>", "[0 0 612 792]" ]
+    pdf = +"%PDF-1.4\n"
+    offsets = objects.each_with_index.map { |object, i| pdf.bytesize.tap { pdf << "#{i + 1} 0 obj\n#{object}\nendobj\n" } }
+    xref = pdf.bytesize
+    pdf << "xref\n0 #{objects.size + 1}\n0000000000 65535 f \n" << offsets.map { format("%010d 00000 n \n", _1) }.join
+    pdf << "trailer\n<< /Size #{objects.size + 1} /Root 1 0 R >>\nstartxref\n#{xref}\n%%EOF\n"
+
+    error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(pdf, binary: "no-such-pdftoppm") }
+    assert_equal :missing_binary, error.code, "the size check passed; only the missing binary stopped it"
+  end
+
+  test "a render that writes fewer pages than asked for fails instead of sending a partial batch" do
+    Dir.mktmpdir do |dir|
+      binary = fake_pdftoppm(dir, "exit 0")   # succeeds without writing a page
+
+      error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(statement("bac_ocr"), binary:) }
+
+      assert_equal :failed, error.code
+      assert_match "rendered 0 of 1 pages", error.message
+    end
+  end
+
+  test "a render interrupted from outside kills its process group too" do
+    Dir.mktmpdir do |dir|
+      pids = File.join(dir, "pids")
+      binary = fake_pdftoppm(dir, "sleep 60 & echo $! > #{pids}; echo $$ >> #{pids}; wait")
+
+      assert_raises(Timeout::Error) { Timeout.timeout(1) { Pdf::PageImages.render(statement("bac_ocr"), binary:, timeout: 30) } }
+
+      File.read(pids).split.map(&:to_i).each do |pid|
+        assert dead_within?(pid, 2), "process #{pid} survived the interruption"
+      end
+    end
+  end
+
+  test "a sparse list renders only those pages, as two runs" do
+    Dir.mktmpdir do |dir|
+      binary = recording_pdftoppm(dir)
+
+      pages = Pdf::PageImages.render(blank_pdf(pages: 5), pages: [ 4, 2 ], binary:)
+
+      assert_equal 2, pages.size
+      assert pages.all? { _1.start_with?("\x89PNG".b) }
+      assert_equal [ "-f 2 -l 2", "-f 4 -l 4" ], File.readlines(command_log(dir)).map { _1[/-f \d+ -l \d+/] }
+    end
+  end
+
+  test "an exclusive range stops before its last page" do
+    Dir.mktmpdir do |dir|
+      binary = recording_pdftoppm(dir)
+
+      pages = Pdf::PageImages.render(blank_pdf(pages: 5), pages: 2...4, binary:)
+
+      assert_equal 2, pages.size
+      assert_equal [ "-f 2 -l 3" ], File.readlines(command_log(dir)).map { _1[/-f \d+ -l \d+/] }
+    end
+  end
+
+  test "a render missing one of the asked-for pages fails instead of sending the others" do
+    Dir.mktmpdir do |dir|
+      one = png_file(dir)
+      binary = fake_pdftoppm(dir, "cp #{one} \"$9-1.png\"")
+
+      error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(blank_pdf(pages: 2), pages: 1..2, binary:) }
+
+      assert_equal :failed, error.code
+      assert_match "missing 2", error.message
+    end
+  end
+
+  test "a renderer that can't be started keeps a coded error" do
+    Process.stubs(:spawn).raises(Errno::EAGAIN, "resource temporarily unavailable")
+
+    error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(statement("bac_ocr"), binary: "/nonexistent/pdftoppm") }
+
+    assert_equal :failed, error.code
+    assert_match "could not start pdftoppm", error.message
+  end
+
+  private
+    def command_log(dir) = File.join(dir, "commands")
+
+    # A stand-in that writes a real-enough PNG for each page of its -f/-l run, and logs the run.
+    def recording_pdftoppm(dir)
+      one = png_file(dir)
+      fake_pdftoppm(dir, "echo \"$*\" >> #{command_log(dir)}; f=$5; l=$7; prefix=$9; while [ \"$f\" -le \"$l\" ]; do cp #{one} \"$prefix-$f.png\"; f=$((f + 1)); done")
+    end
+
+    def png_file(dir)
+      File.join(dir, "page.png").tap do |path|
+        png = Base64.decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==").dup
+        png[16, 8] = [ 32, 32 ].pack("NN")   # bytes 16-23 are IHDR's width and height
+        File.binwrite(path, png)
+      end
+    end
+
+    def statement(name) = file_fixture("statements/#{name}.pdf").binread
+
+    # A killed orphan stays a zombie until init reaps it, which can lag under a parallel run;
+    # a zombie runs nothing, so it counts as dead.
+    def dead_within?(pid, seconds)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + seconds
+      loop do
+        Process.kill(0, pid)
+        stat = "/proc/#{pid}/stat"
+        return true if File.exist?(stat) && File.read(stat).split(") ").last.to_s.start_with?("Z")
+        return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+
+        sleep 0.05
+      end
+    rescue Errno::ESRCH, Errno::ENOENT
+      true
+    end
+
+    def size(png) = png.byteslice(16, 8).unpack("NN")
+
+    def timed
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      [ yield, Process.clock_gettime(Process::CLOCK_MONOTONIC) - started ]
+    end
+
+    # A stand-in for pdftoppm: a shell script, given the same arguments.
+    def fake_pdftoppm(dir, body)
+      File.join(dir, "fake-pdftoppm").tap { File.write(_1, "#!/bin/sh\n#{body}\n"); File.chmod(0o755, _1) }
+    end
+
+    # A minimal valid PDF of blank pages, each `size` points.
+    def blank_pdf(pages:, size: [ 612, 792 ])
+      objects = [ "<< /Type /Catalog /Pages 2 0 R >>",
+                  "<< /Type /Pages /Kids [#{(0...pages).map { "#{3 + _1} 0 R" }.join(" ")}] /Count #{pages} >>" ] +
+                Array.new(pages) { "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 #{size.join(" ")}] >>" }
+      pdf = +"%PDF-1.4\n"
+      offsets = objects.each_with_index.map { |object, i| pdf.bytesize.tap { pdf << "#{i + 1} 0 obj\n#{object}\nendobj\n" } }
+      xref = pdf.bytesize
+      pdf << "xref\n0 #{objects.size + 1}\n0000000000 65535 f \n" << offsets.map { format("%010d 00000 n \n", _1) }.join
+      pdf << "trailer\n<< /Size #{objects.size + 1} /Root 1 0 R >>\nstartxref\n#{xref}\n%%EOF\n"
+    end
+end

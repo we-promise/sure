@@ -291,32 +291,32 @@ class Rule < ApplicationRecord
   # transactions alone ("top rule wins").
   #
   # With async (AI) actions, modified_count only counts what the other actions
-  # changed; the AI jobs report their own changes through RuleRun#complete_job!.
+  # changed; the AI jobs report their own changes through RuleRun#ai_handled!.
   def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [])
     total_modified = 0
-    total_async_jobs = 0
     has_async = false
 
-    actions.each do |action|
-      next if skip_action_types.include?(action.action_type)
+    Rule::ActionExecutor.queue_ai_jobs_after do
+      actions.each do |action|
+        next if skip_action_types.include?(action.action_type)
 
-      excluded_ids = action.claimed_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
-      action_scope = Rule.excluding_transaction_ids(scope, excluded_ids)
-      result = action.apply(action_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
+        excluded_ids = action.claimed_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
+        action_scope = Rule.excluding_transaction_ids(scope, excluded_ids)
+        result = action.apply(action_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
 
-      if result.is_a?(Hash) && result[:async]
-        has_async = true
-        total_async_jobs += result[:jobs_count] || 0
-      elsif result.is_a?(Integer)
-        total_modified += result
-      else
-        # Log unexpected result type but don't fail
-        Rails.logger.warn("Rule#apply: Unexpected result type from action #{action.id}: #{result.class} (value: #{result.inspect})")
+        if result.is_a?(Hash) && result[:async]
+          has_async = true
+        elsif result.is_a?(Integer)
+          total_modified += result
+        else
+          # Log unexpected result type but don't fail
+          Rails.logger.warn("Rule#apply: Unexpected result type from action #{action.id}: #{result.class} (value: #{result.inspect})")
+        end
       end
     end
 
     if has_async
-      { modified_count: total_modified, async: true, jobs_count: total_async_jobs }
+      { modified_count: total_modified, async: true }
     else
       total_modified
     end

@@ -148,6 +148,20 @@ class AiHealthTest < ActiveSupport::TestCase
     assert_equal :pgvector_probe_failed, health.vector_store_failure_kind
   end
 
+  test "the page's stored-only view reads every unchecked probe as not checked, never as failing" do
+    with_openai_endpoint(nil) do |health|
+      assert_equal :not_checked, health.llm_status
+      assert_equal :not_checked, health.function_calling_status
+      assert_nil health.last_checked_at
+    end
+  end
+
+  test "a pgvector store with an unchecked embedding probe is not checked" do
+    health = probed_pgvector_health(vector_store: result(:passing), embedding: AiHealth::Probe.not_checked)
+
+    assert_equal :not_checked, health.vector_store_status
+  end
+
   private
     def probed_health(llm:, function_calling:)
       AiHealth::Probe.any_instance.stubs(:llm).returns(result(llm))
@@ -214,7 +228,7 @@ class AiHealthTest < ActiveSupport::TestCase
           "VECTOR_STORE_PROVIDER" => "qdrant"
         )
       ) do
-        yield AiHealth.new(run_probes: false)
+        yield AiHealth.new
       end
     end
 end

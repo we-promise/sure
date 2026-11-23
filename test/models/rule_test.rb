@@ -198,7 +198,7 @@ class RuleTest < ActiveSupport::TestCase
   end
 
   test "apply with an AI action counts only the other actions' changes as modified" do
-    Family.any_instance.stubs(:auto_categorize_transactions_later)
+    Family.any_instance.stubs(:auto_categorize_transactions_later).returns(true)
     tag = @family.tags.create!(name: "Groceries tag")
     create_transaction(date: Date.current, account: @account, name: "Whole Foods 1").transaction.tags << tag
     create_transaction(date: Date.current, account: @account, name: "Whole Foods 2")
@@ -214,7 +214,7 @@ class RuleTest < ActiveSupport::TestCase
 
     result = rule.apply
 
-    assert_equal({ modified_count: 1, async: true, jobs_count: 1 }, result)
+    assert_equal({ modified_count: 1, async: true }, result)
   end
 
   test "split_transaction rule end to end" do

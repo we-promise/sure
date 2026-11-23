@@ -27,11 +27,9 @@ module Admin
       @health = SidekiqHealth.new
     end
 
-    # Each live probe can take up to AiHealth::Probe.timeout, so the page
-    # loads this into its AI tab through a lazy frame instead of waiting on
-    # the probes before it renders.
+    # The results Ai::ProbeJob stored: opening the tab makes no AI request.
     def ai_status
-      @ai_health = AiHealth.new(force_probes: params[:refresh_ai_health] == "1")
+      @ai_health = AiHealth.new
       @worker_ai_health_results = WorkerAiHealth.recent
       render layout: false
     end
@@ -42,12 +40,10 @@ module Admin
       render layout: false
     end
 
-    # Queues an asynchronous worker-side verification (see
-    # WorkerAiHealthCheckJob) and returns immediately -- the result appears
-    # in the AI status tab once whichever worker process dequeues it
-    # finishes, typically within a few seconds.
-    def verify_worker_ai
-      WorkerAiHealth.request_check!
+    # Returns at once: the job's results replace the AI tab when a worker
+    # has run them.
+    def run_ai_checks
+      Ai::ProbeJob.perform_later
       redirect_to admin_system_health_path(tab: "ai", locale: locale_from_param), notice: t(".queued")
     end
 

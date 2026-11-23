@@ -36,8 +36,9 @@ class Eval::Dataset < ApplicationRecord
 
       # Import samples
       samples_data = data["samples"] || []
-      samples_data.each do |sample_data|
+      samples_data.each_with_index do |sample_data, index|
         dataset.samples.create!(
+          id: sample_id(dataset.name, index),
           input_data: sample_data["input"],
           expected_output: sample_data["expected"],
           context_data: sample_data["context"] || shared_context,
@@ -51,6 +52,14 @@ class Eval::Dataset < ApplicationRecord
       dataset
     end
   end
+
+  # What a recording of this dataset depends on: each sample's input and context, in the order the
+  # runner sends them. Expected answers aren't included, since the model never sees them.
+  def recording_digest = Digest::SHA256.hexdigest(samples.order(:id).pluck(:input_data, :context_data).to_json).first(12)
+
+  # The same id for a dataset's nth sample on every import, so the ids sent to a model, the
+  # batches and the train/test split match a recording (the recorded evals replay by them).
+  def self.sample_id(dataset_name, index) = Digest::UUID.uuid_v5(Digest::UUID::URL_NAMESPACE, "sure:eval:#{dataset_name}:#{index}")
 
   # Export dataset to YAML format
   def export_to_yaml

@@ -57,13 +57,15 @@ class Family < ApplicationRecord
 
   has_many :tags, dependent: :destroy
   has_many :categories, dependent: :destroy
-  has_many :categorization_comparisons, dependent: :destroy
+  has_many :ai_comparisons, class_name: "Ai::Comparison", dependent: :delete_all
   has_many :merchants, dependent: :destroy, class_name: "FamilyMerchant"
 
   has_many :budgets, dependent: :destroy
   has_many :budget_categories, through: :budgets
 
   has_many :goals, dependent: :destroy
+
+  def categorization_comparisons = ai_comparisons.for_feature(:categorize)
 
   # Net inflow into every depository account linked to any primary-currency
   # goal, over the given window. Transfers between linked accounts net to zero
@@ -426,13 +428,7 @@ class Family < ApplicationRecord
   end
 
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
-    AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
-  end
-
-  # The LLM only: Bayes is its own rule (Category classifier), so what it
-  # categorized is no longer uncategorized here.
-  def auto_categorize_transactions(transaction_ids)
-    AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
+    Ai::GenerationRun.enqueue(:categorize, family: self, ids: transactions.pluck(:id), rule_run_id:)
   end
 
   # Runs Bayes over the uncategorized transactions in scope the user hasn't
@@ -527,11 +523,7 @@ class Family < ApplicationRecord
   end
 
   def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)
-    AutoDetectMerchantsJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
-  end
-
-  def auto_detect_transaction_merchants(transaction_ids)
-    AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
+    Ai::GenerationRun.enqueue(:detect_merchants, family: self, ids: transactions.pluck(:id), rule_run_id:)
   end
 
   # Memoized per user: the layout renders the account sidebar on every page
@@ -755,6 +747,15 @@ class Family < ApplicationRecord
     "#{tag_count}-#{tag_max_at&.to_f}-#{tagging_count}-#{tagging_max_at&.to_f}"
   end
 
+  # Editing a holding (its manual cost basis, or unlocking it) changes
+  # neither its account nor any entry, so caches whose results depend on
+  # holdings, such as the Reports body's gains, key on this too. The count
+  # catches a removed holding.
+  def holdings_version
+    count, max_at = holdings.pick(Arel.sql("count(*)"), Arel.sql('max("holdings"."updated_at")'))
+    "#{count}-#{max_at&.to_f}"
+  end
+
   # Used for invalidating caches keyed on recurring transactions (e.g. the
   # transactions index's projected recurring list). See #entries_version for
   # why .count is included alongside the timestamp.
@@ -923,7 +924,7 @@ class Family < ApplicationRecord
         Transaction.where(id: batch).update_all([ "locked_attributes = locked_attributes - ?, updated_at = ?", attribute, Time.current ])
         # Without the flag, a lock the user sets later counts as confirming it.
         DataEnrichment.where(enrichable_type: "Transaction", enrichable_id: batch, attribute_name: attribute, source: source)
-                      .update_all([ "metadata = metadata - ?", flag ])
+                      .drop_metadata_flag!(flag)
         Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
       end
       ids.size

@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Rule::ActionExecutor::AutoCategorizeTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:empty)
@@ -13,6 +13,22 @@ class Rule::ActionExecutor::AutoCategorizeTest < ActiveSupport::TestCase
       actions: [ Rule::Action.new(action_type: "auto_categorize") ]
     )
     @executor = Rule::ActionExecutor::AutoCategorize.new(@rule)
+  end
+
+  test "queues one job with every enrichable transaction; the job batches them" do
+    use_ai_routes
+    use_ai_model_settings(batch_size: 2)
+    ids = 3.times.map { |i| create_transaction(account: @account, name: "Coffee #{i}").transaction.id }
+
+    rule_run = RuleRun.create!(rule: @rule, execution_type: "manual", status: "pending", transactions_queued: 3, executed_at: Time.current)
+    assert_enqueued_jobs 1, only: Ai::GenerationJob do
+      @executor.execute(@account.transactions, rule_run:)
+    end
+
+    args = enqueued_jobs.last["arguments"].second
+    assert_equal [ 0, [] ], args.values_at("cursor", "pending")
+    assert_equal ids.sort, Ai::GenerationRun.find(args["run_id"]).items.pluck(:item_id).sort
+    assert_equal [ 1, 3 ], rule_run.reload.values_at(:pending_jobs_count, :transactions_awaiting_ai)
   end
 
   test "self-hosted label estimates against the resolved categorization model" do
@@ -78,5 +94,15 @@ class Rule::ActionExecutor::AutoCategorizeTest < ActiveSupport::TestCase
     assert_equal [ cached_transaction.id ], cache_entry.metadata["cached_transaction_ids"]
 
     assert_equal [ blocked_transaction.id ], blocked_entry.metadata["blocked_transaction_ids"]
+  end
+
+  test "a job that can't be queued stops the run waiting for it and its transactions" do
+    3.times { |i| create_transaction(account: @account, name: "Coffee #{i}") }
+    rule_run = RuleRun.create!(rule: @rule, execution_type: "manual", status: "pending", transactions_queued: 3, executed_at: Time.current)
+    Ai::GenerationJob.stubs(:perform_later).returns(false).then.raises(RedisClient::CannotConnectError)
+
+    assert_raises(ActiveJob::EnqueueError) { @executor.execute(@account.transactions, rule_run:) }
+    assert_raises(RedisClient::CannotConnectError) { @executor.execute(@account.transactions, rule_run:) }
+    assert_equal [ 0, 0 ], rule_run.reload.values_at(:pending_jobs_count, :transactions_awaiting_ai)
   end
 end

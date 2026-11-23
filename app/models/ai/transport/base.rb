@@ -1,5 +1,85 @@
-# The transport interface: health probes, with retries and one `.ai` event per call.
+# The transport interface: `probe` (AiHealth::Probe), `generate` (Ai::Generation), `judge`
+# (Ai::Judgement), `embed` (Ai::Embeddings) and `ocr` (PDF reading), with retries and one `.ai`
+# event per call. A call a transport doesn't implement raises NotImplementedError.
 class Ai::Transport::Base
+  # One structured-output request. `failed_ratio` (optional) takes the parsed JSON and returns
+  # the share of items the model left blank or missed, for `auto` JSON mode's fallback; nil
+  # means blanks are a normal answer (bill setup). `attachments` are Ai::Attachment files sent
+  # after the input: a PDF or page images.
+  Request = Data.define(:feature, :family, :model, :instructions, :input, :schema, :schema_name,
+                        :reasoning_effort, :json_mode, :failed_ratio, :attachments) do
+    def initialize(feature:, model:, instructions:, input:, schema:, schema_name:, family: nil,
+                   reasoning_effort: nil, json_mode: :auto, failed_ratio: nil, attachments: [])
+      super(feature: feature.to_sym, family:, model:, instructions:, input:, schema:, schema_name: schema_name.to_s,
+            reasoning_effort: reasoning_effort&.to_s, json_mode: json_mode.to_sym, failed_ratio:,
+            attachments: Array(attachments).freeze)
+    end
+
+    # What the `.ai` event records: never the family's data beyond what the prompt holds, and
+    # files by name and size only.
+    def to_event
+      { instructions:, input:, schema_name:, json_mode:, reasoning_effort:,
+        attachments: attachments.map(&:to_event).presence }.compact
+    end
+  end
+
+  # The parsed JSON (a Hash or an Array), the summed usage of every request the call made, why the
+  # model stopped (recorded on the `.ai` event), and the JSON mode that produced it.
+  Response = Data.define(:json, :usage, :finish_reason, :json_mode)
+
+  # One judgement request: the same questions about each state, keyed by the item's id. Jev takes
+  # one state per request, so the transport fans the states out. Questions are plain
+  # Hashes in RubyLLM's form ({ name => { type:, instructions:, options: } }), never blocks.
+  JudgeRequest = Data.define(:feature, :family, :model, :states, :questions) do
+    def initialize(feature:, model:, states:, questions:, family: nil)
+      super(feature: feature.to_sym, family:, model:, states: states.to_h, questions:)
+    end
+
+    # The `.ai` event records the questions asked, never the states (the family's transactions).
+    def to_event = { items: states.size, questions: questions.transform_values { _1.except(:options, :criteria, :levels) } }
+  end
+
+  # Each state's answers by question name (RubyLLM's Choice, Probability or Score), or nil when
+  # its answer was malformed, and the summed usage of every request.
+  JudgeResponse = Data.define(:answers, :usage) do
+    def to_event = answers.transform_values { _1&.transform_values(&:to_h) }
+  end
+
+  # One embedding request: a vector per text, in order.
+  EmbedRequest = Data.define(:feature, :family, :model, :texts) do
+    def initialize(feature:, model:, texts:, family: nil)
+      super(feature: feature.to_sym, family:, model:, texts: Array(texts))
+    end
+
+    # The `.ai` event records how many texts, never the texts (a family's documents).
+    def to_event = { items: texts.size }
+  end
+
+  EmbedResponse = Data.define(:vectors, :usage) do
+    def to_event = { vectors: vectors.size, dimensions: vectors.first&.size }
+  end
+
+  # One transcription request: page images, in order, to an `ocr` model.
+  OcrRequest = Data.define(:feature, :family, :model, :pages) do
+    def initialize(feature:, model:, pages:, family: nil)
+      super(feature: feature.to_sym, family:, model:, pages: Array(pages).freeze)
+    end
+
+    def to_event = { attachments: pages.map(&:to_event) }
+  end
+
+  # The transcription, one text per request page when the server reads pages one at a time, or
+  # one text for them all, the summed usage (only chat OCR reports tokens) and the answering
+  # attempt's finish reason.
+  OcrResponse = Data.define(:texts, :usage, :finish_reason) do
+    def initialize(texts:, usage:, finish_reason: nil) = super
+
+    def text = texts.join("\n\n")
+    def to_event = { texts: texts.size, characters: texts.sum(&:size) }
+  end
+
+  # `auto` moves on when more than this share of items came back blank or missing.
+  BLANK_RATIO_LIMIT = 0.5
   # Health checks a probe can make. Which one AiHealth runs for "is the model up" is the
   # endpoint's `probe_check`; tools and embedding are their own probes.
   PROBE_CHECKS = %i[models chat tools embedding].freeze
@@ -24,6 +104,60 @@ class Ai::Transport::Base
     @endpoint = endpoint
   end
 
+  # Sends one structured-output request and returns a Response, or raises an Ai::Error. The
+  # whole call, with its retries and JSON-mode fallbacks, has one time budget: the endpoint's
+  # timeout, so a slow model can't multiply it.
+  def generate(request)
+    check_attachments!(request.model, request.attachments)
+    Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family, budget: endpoint.timeout_seconds) do
+      instrument("generate", model: request.model, request: request.to_event) { run_generate(request) }
+    end
+  end
+
+  # Answers a JudgeRequest and returns a JudgeResponse, or raises an Ai::Error. The budget covers
+  # every round of the fan-out: the endpoint's timeout per round of `parallel_requests`.
+  def judge(request)
+    rounds = (request.states.size.to_f / parallel_requests).ceil.clamp(1, nil)
+    Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family,
+                         budget: endpoint.timeout_seconds * rounds) do
+      instrument("judge", model: request.model, request: request.to_event) { run_judge(request) }
+    end
+  end
+
+  # Whether this transport can transcribe at all: a route can name an OCR model on a transport
+  # that only judges or generates, and reaching `run_ocr` would raise NotImplementedError.
+  def ocr? = self.class.instance_method(:run_ocr).owner != Ai::Transport::Base
+
+  # Transcribes an OcrRequest's pages and returns an OcrResponse, or raises an Ai::Error. A
+  # local OCR model takes ~45 s a page on CPU, so the budget is the timeout per page.
+  def ocr(request)
+    raise Ai::Error::Refused, "#{self.class.name} doesn't transcribe pages" unless ocr?
+    raise Ai::Error::Refused, "#{request.model.name} isn't an OCR model" unless request.model.capable?(:ocr)
+    raise Ai::Error::Refused, "OCR reads page images" unless request.pages.all?(&:image?)
+
+    Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family,
+                         budget: endpoint.timeout_seconds * [ request.pages.size, 1 ].max) do
+      instrument("ocr", model: request.model, request: request.to_event) { run_ocr(request) }
+    end
+  end
+
+  # How many requests one call may have in flight.
+  def parallel_requests = endpoint.parallel_requests || 1
+
+  # Whether this transport can embed at all. A route can name an embedding model on a transport
+  # that only generates, so the call must refuse with an Ai::Error before reaching run_embed.
+  def embed? = self.class.instance_method(:run_embed).owner != Ai::Transport::Base
+
+  # Embeds an EmbedRequest's texts and returns an EmbedResponse, or raises an Ai::Error: one
+  # vector per text, each of the model's dimensions when it has them.
+  def embed(request)
+    raise Ai::Error::Refused, "#{self.class.name} doesn't embed" unless embed?
+
+    Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family, budget: endpoint.timeout_seconds) do
+      instrument("embed", model: request.model, request: request.to_event) { run_embed(request) }
+    end
+  end
+
   # Health probes reuse the production path, so they can't drift from it: the same client settings,
   # headers, timeout, proxy and error mapping. Returns what the check found, or raises an
   # Ai::Error:
@@ -41,6 +175,56 @@ class Ai::Transport::Base
 
   private
     def run_probe(model, check, timeout:) = raise(NotImplementedError)
+    def run_generate(request) = raise(NotImplementedError, "#{self.class.name} doesn't generate")
+    def run_judge(request) = raise(NotImplementedError, "#{self.class.name} doesn't judge")
+    def run_embed(request) = raise(NotImplementedError, "#{self.class.name} doesn't embed")
+    def run_ocr(request) = raise(NotImplementedError, "#{self.class.name} doesn't read pages")
+
+    # A flat vector for a single text, wrapped; one vector per input text; every component a
+    # finite number; the dimensions the model promised. Count them here too: RubyLLM's check
+    # misses a single-text request, and an extra vector would be stored against the wrong text.
+    def checked_vectors!(model, vectors, expected:)
+      vectors = Array(vectors)
+      vectors = [ vectors ] if vectors.first.is_a?(Numeric)
+      unless vectors.size == expected
+        raise Ai::Error::InvalidOutput, "expected #{expected} vectors, got #{vectors.size}"
+      end
+      unless vectors.all? { |vector| vector.is_a?(Array) && vector.all? { _1.is_a?(Numeric) && _1.finite? } }
+        raise Ai::Error::InvalidOutput, "the embedding has components that aren't finite numbers"
+      end
+
+      dimensions = model.embedding_dimensions
+      wrong = vectors.find { dimensions && _1.size != dimensions }
+      raise Ai::Error::InvalidOutput, "expected #{dimensions} dimensions, got #{wrong.size}" if wrong
+
+      vectors
+    end
+
+    # Tolerant parsing: fenced JSON (closed or not), prose
+    # around the object, or a bare array. Chat Completions content arrives with any think block
+    # already split out (split_think_tags); those are the only protocols Sure sends here.
+    # Returns a Hash or an Array, or nil when nothing parses.
+    def parse_json(text)
+      return if text.blank?
+
+      text = text.to_s
+      fenced = text.scan(/```(?:json)?\s*([\[{][\s\S]*?[\]}])\s*```/m).flatten.reverse
+      unclosed = text[/```(?:json)?\s*([\[{][\s\S]*[\]}])\s*\z/m, 1]
+      # The outer container first: `Here: [{...}]` is the array, not the object inside it.
+      outer = [ text[/\{[\s\S]*\}/m], text[/\[[\s\S]*\]/m] ].compact.sort_by { text.index(_1) }
+
+      [ text, *fenced, unclosed, *outer ].compact.each do |candidate|
+        parsed = JSON.parse(candidate)
+        return parsed if parsed.is_a?(Hash) || parsed.is_a?(Array)
+      rescue JSON::ParserError
+        next
+      end
+      nil
+    end
+
+    # RubyLLM's finish reasons for "stopped at the output limit": :length on the OpenAI
+    # protocols, :max_tokens on Anthropic's.
+    def cut_at_limit?(finish_reason) = %i[length max_tokens].include?(finish_reason&.to_sym)
 
     # Sure retries, not RubyLLM: RubyLLM has no hook before a retry, so only here can a spent
     # balance (OpenAI's 429 insufficient_quota) stop retrying and the attempt budget, wait
@@ -49,9 +233,9 @@ class Ai::Transport::Base
       tries = 0
       begin
         tries += 1
-        check_budget!
+        Ai::CallContext.check_budget!
         result = yield
-        check_budget!(after: true)
+        Ai::CallContext.check_budget!(after: true)
         result
       rescue *Ai::Error::RETRYABLE => error
         delay = retry_delay(tries)
@@ -61,14 +245,6 @@ class Ai::Transport::Base
         sleep(delay)
         retry
       end
-    end
-
-    # Requests RubyLLM doesn't send, such as the models list, aren't checked by its instrumenter.
-    # After an attempt too, so an answer that arrives late isn't taken as a pass.
-    def check_budget!(after: false)
-      return unless Ai::CallContext.current&.expired?
-
-      raise Ai::Error::Timeout, "the attempt's time budget was spent #{after ? "before the answer arrived" : "before the request was sent"}"
     end
 
     # A request's timeout, cut to what's left of the call's budget, so a retry can't outlast it.
@@ -81,21 +257,49 @@ class Ai::Transport::Base
 
     # One `.ai` event per call, carrying what subscribers need: the route, the
     # request (files by name and size, never their bytes), the output, usage and error class.
+    # `finish_reason` names the answering attempt's stop reason; the `usage.ruby_llm`
+    # events don't carry it, and the usage subscriber needs it for the row it writes.
     def instrument(name, model:, request:)
       call = Ai::CallContext.current
-      payload = { feature: call&.feature, call_id: call&.call_id,
+      payload = { feature: call&.feature, call_id: call&.call_id, correlation_id: call&.correlation_id,
                   family_id: call&.family_id, endpoint: endpoint.to_event, route: model.to_event, request:,
-                  scrub: scrubber }
+                  shadow: call&.shadow? || false, scrub: scrubber }
 
       ActiveSupport::Notifications.instrument("#{name}.ai", payload) do
         result = yield
-        payload[:output] = result
+        payload[:output] = case result
+        when Response then result.json
+        when JudgeResponse, EmbedResponse, OcrResponse then result.to_event
+        else result
+        end
+        payload[:usage] = result.usage if result.respond_to?(:usage)
+        if result.is_a?(Response)
+          payload[:json_mode] = result.json_mode
+        end
+        if result.is_a?(Response) || result.is_a?(OcrResponse)
+          payload[:finish_reason] = result.finish_reason&.to_s
+        end
         result
       rescue Ai::Error::Base => error
         payload[:error] = error.class.name
         payload[:error_message] = Ai::Instrumentation::Redactor.scrub(error.message, secrets: endpoint.secrets)
         payload[:http_status] = error.status
         raise
+      end
+    end
+
+    # Refused before sending, not after: llama.cpp answers an image it can't read with a 500,
+    # which would count as an outage, and RubyLLM sends a PDF
+    # as a file part to every compatible server, which most refuse. A PDF over the preset's
+    # inline limits would make RubyLLM upload it to the provider's Files API, which is off.
+    def check_attachments!(model, attachments)
+      attachments.each do |file|
+        unless model.capable?(file.capability)
+          raise Ai::Error::Refused, "#{model.name} can't read #{file.pdf? ? "a PDF" : "images"} (needs #{file.capability})"
+        end
+
+        limit = endpoint.pdf_limits&.dig(:bytes)
+        raise Ai::Error::Refused, "#{file.filename} is over #{endpoint.name}'s PDF limit" if file.pdf? && limit && file.bytes > limit
       end
     end
 

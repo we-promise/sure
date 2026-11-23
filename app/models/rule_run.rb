@@ -9,9 +9,11 @@ class RuleRun < ApplicationRecord
   validates :transactions_modified, numericality: { greater_than_or_equal_to: 0 }
   validates :job_transactions_modified, numericality: { greater_than_or_equal_to: 0 }
   validates :pending_jobs_count, numericality: { greater_than_or_equal_to: 0 }
+  validates :transactions_awaiting_ai, numericality: { greater_than_or_equal_to: 0 }
 
   scope :recent, -> { order(executed_at: :desc) }
   scope :for_rule, ->(rule) { where(rule: rule) }
+  scope :for_family, ->(family) { joins(:rule).where(rules: { family_id: family.id }) }
   scope :successful, -> { where(status: "success") }
   scope :failed, -> { where(status: "failed") }
   scope :pending, -> { where(status: "pending") }
@@ -28,12 +30,45 @@ class RuleRun < ApplicationRecord
     status == "failed"
   end
 
+  # A failure is recorded as soon as one job fails, so the run is finished only once no job is
+  # left to change its counts. A run that failed after queuing an AI job never counted that job,
+  # so its awaited transactions say it's still out.
+  def finished? = !pending? && pending_jobs_count.zero? && transactions_awaiting_ai.zero?
+
   # AI jobs still to report may yet change the transactions, so nothing is
   # blocked until the last one is done, even after another job failed.
   def transactions_blocked
     return 0 if pending_jobs_count.positive?
 
     [ transactions_processed - transactions_modified, 0 ].max
+  end
+
+  # Before an AI job is queued: one more job is pending and `count` more transactions wait for an
+  # answer. Atomic and ahead of the queue, so a job that finishes at once finds itself counted.
+  def await_ai!(count) = self.class.update_counters(id, pending_jobs_count: 1, transactions_awaiting_ai: count)
+
+  # The AI job await_ai! counted was never queued: neither it nor its transactions are waited for.
+  def release_ai_job!(count)
+    save_locked do
+      self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
+      self.transactions_awaiting_ai = [ transactions_awaiting_ai - count, 0 ].max
+    end
+  end
+
+  # An AI job is done with `handled` of its transactions (applied, skipped or given up on), and
+  # `modified` of them changed. Called per batch, so a client can watch the run count down.
+  # Capped as in complete_job!; job_transactions_modified keeps the AI's own changes.
+  def ai_handled!(handled:, modified: 0)
+    return if handled.zero? && modified.zero?
+
+    save_locked do
+      self.job_transactions_modified += modified
+      self.transactions_modified = [ transactions_modified + modified, transactions_queued ].min
+      self.transactions_awaiting_ai = [ transactions_awaiting_ai - handled, 0 ].max
+    end
+
+    # The last AI answer can be the last outstanding part of an immediate run.
+    offer_job_results if transactions_awaiting_ai.zero?
   end
 
   # Offers the result of an immediate run through the sync toast, like
@@ -60,7 +95,7 @@ class RuleRun < ApplicationRecord
   def complete_job!(modified_count: 0)
     drained = false
 
-    with_lock do
+    save_locked do
       drained = pending_jobs_count == 1
       self.job_transactions_modified += modified_count
       self.transactions_modified = [ transactions_modified + modified_count, transactions_queued ].min
@@ -68,8 +103,6 @@ class RuleRun < ApplicationRecord
 
       # Preserve a previously recorded failure while still draining pending jobs.
       self.status = "success" if pending_jobs_count <= 0 && !failed?
-
-      save!
     end
 
     # A Sidekiq retry of a job that failed before finds nothing left to
@@ -82,15 +115,13 @@ class RuleRun < ApplicationRecord
     drained = false
     current_error_message = "#{error.class}: #{error.message}"
 
-    with_lock do
+    save_locked do
       should_log = !failed?
       drained = pending_jobs_count == 1
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
       self.status = "failed"
       existing_error_messages = error_message.to_s.split("\n").reject(&:blank?)
       self.error_message = (existing_error_messages + [ current_error_message ]).uniq.join("\n")
-
-      save!
     end
 
     capture_failure_debug_log(error:, source:, transaction_ids:) if should_log
@@ -100,10 +131,27 @@ class RuleRun < ApplicationRecord
   end
 
   private
+    # Changes the run under its row lock and saves it. A failed save, or a save whose enclosing
+    # transaction rolled back, leaves its changes on the record, and Rails refuses to lock a record
+    # with unsaved changes, so they're discarded: the next update (often the failure's own) can
+    # still take the lock. In memory, not by reloading: after a deadlock the transaction is
+    # aborted, and a query would replace the retryable error. with_lock reloads the row anyway.
+    def save_locked
+      restore_attributes
+      with_lock do
+        yield
+        save!
+      end
+    rescue StandardError
+      restore_attributes
+      raise
+    end
+
     # The jobs of an immediate run with AI actions offer what they changed once
     # the last one is done; ApplyImmediateRulesJob offers the run's other changes.
+    # Awaited AI answers are part of that, so the toast waits for the run to finish.
     def offer_job_results
-      return unless execution_type == "immediate" && job_transactions_modified.positive?
+      return unless finished? && execution_type == "immediate" && job_transactions_modified.positive?
 
       self.class.offer_immediate_result(rule.family)
     end

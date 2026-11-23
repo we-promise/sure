@@ -8,7 +8,9 @@
       <div class="md:p-4">
         <%= render "chats/chat_nav", chat: @chat %>
 
-        <%= render "chats/worker_health_warning" %>
+        <% if Current.user.ai_enabled? %>
+          <%= render "shared/ai_worker_health_warning", message: t("chats.worker_unhealthy_warning") %>
+        <% end %>
 
         <% if show_demo_warning? %>
           <%= render "shared/demo_warning",

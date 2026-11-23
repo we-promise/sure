@@ -11,51 +11,22 @@ module Family::AiSettings
   # no-LLM-at-all switch; categorization still runs under `mcp_only`.
   ASSISTANT_TYPES = %w[builtin external mcp_only].freeze
 
-  # Which provider categorizes this family's transactions. Family-level rather
-  # than a global Setting because it decides whose transaction descriptions get
-  # sent to a third party — the same reason assistant_type lives here.
-  CATEGORIZATION_PROVIDERS = %w[llm jev].freeze
-
   included do
     validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
-    validates :categorization_provider, inclusion: { in: CATEGORIZATION_PROVIDERS }
     validates :categorization_confidence_threshold,
               numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
     validates :categorization_shadow_rate,
               numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
   end
 
-  # Single definition of the ENV-over-column precedence, so the resolver and the
-  # settings UI can never disagree about which provider is actually in force.
-  def effective_categorization_provider
-    ENV["CATEGORIZATION_PROVIDER"].presence || categorization_provider
-  end
-
-  # ENV-over-column precedence for the assistant, same shape as the provider
-  # above. Unknown ENV values pass through; callers treat them as builtin.
+  # ENV-over-column precedence for the assistant. Unknown ENV values pass through;
+  # callers treat them as builtin.
   def effective_assistant_type
     ENV["ASSISTANT_TYPE"].presence || assistant_type.presence || "builtin"
   end
 
   def assistant_enabled?
     effective_assistant_type != "mcp_only"
-  end
-
-  # The provider that will actually categorize this family's transactions,
-  # falling back to the LLM path when Jev is unselected or unconfigured.
-  # Credentials alone never select Jev; the family has to choose it, because
-  # this decides whose transaction descriptions reach a third party.
-  #
-  # The categorization run calls this; the router's `categorize` plan names the
-  # same provider first (Ai::LegacyEnvConfig).
-  # It writes nothing itself; a caller that runs categorization passes a block to
-  # hear why Jev could not be built.
-  def resolved_categorization_provider(&on_jev_error)
-    jev = configured_jev_provider(&on_jev_error) if effective_categorization_provider == "jev"
-
-    # Honors Setting.llm_provider (#2113); Provider::Anthropic gained
-    # auto_categorize in #1984, so either LLM provider can serve this.
-    jev || Provider::Registry.preferred_llm_provider
   end
 
   # Answers below this confidence are not applied. Zero applies everything and
@@ -74,30 +45,8 @@ module Family::AiSettings
     (ENV["CATEGORIZATION_SHADOW_RATE"].presence || categorization_shadow_rate).to_f.clamp(0.0, 1.0)
   end
 
-  # The provider to run alongside the one in use, for comparison. Symmetric —
-  # returns whichever of the two is not selected, so either can be trialled
-  # against the other without a second mechanism.
-  def shadow_categorization_provider(&on_jev_error)
-    if effective_categorization_provider == "jev"
-      Provider::Registry.preferred_llm_provider
-    else
-      configured_jev_provider(&on_jev_error)
-    end
-  end
-
   # An external assistant answers this family's chats, read from the assistant type.
   def chat_mode_external?
     effective_assistant_type == "external"
   end
-
-  private
-    # Returns Jev, or nil when it cannot be built. The registry constructs a fresh
-    # Provider::Jev per lookup and its constructor rejects a cleartext endpoint,
-    # which JEV_ENDPOINT can set without passing the settings form's check.
-    def configured_jev_provider
-      Provider::Registry.get_provider(:jev)
-    rescue Provider::Error => error
-      yield error if block_given?
-      nil
-    end
 end

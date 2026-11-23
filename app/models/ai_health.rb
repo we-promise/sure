@@ -22,15 +22,11 @@ class AiHealth
               :function_calling_probe, :pdf_text_extraction_probe,
               :pdf_vision_processing_probe, :vector_store_probe, :embedding_probe
 
-  # probe_cache lets a caller isolate where probe results are cached. The web
-  # admin page shares the default `Rails.cache`-backed probe cache so repeat
-  # page loads within the TTL don't re-hit providers; worker-originated
-  # verification (see WorkerAiHealthCheckJob) passes an isolated store so its
-  # results can never be served back to a web request, and vice versa (#3169).
-  def initialize(run_probes: true, force_probes: false, probe_cache: Rails.cache)
+  # Ai::ProbeJob runs the probes in a worker (`run_probes: true`) and stores
+  # the results; the admin page reads them and calls no model. A check with no
+  # stored result reads as not checked.
+  def initialize(run_probes: false)
     @run_probes = run_probes
-    @force_probes = force_probes
-    @probe_cache = probe_cache
     load_llm_status
     load_vector_store_status
     load_probes
@@ -60,7 +56,7 @@ class AiHealth
   # is only ever blamed for a refusal the service actually made.
   def function_calling_status
     return :unavailable unless llm_configured?
-    return :not_checked unless run_probes?
+    return :not_checked if function_calling_probe.not_checked?
     return :supported if function_calling_probe.passing?
     return :not_used if function_calling_probe.failure_code == :no_tool_call
     return :unsupported if function_calling_probe.failure_code == :tools_refused
@@ -99,10 +95,11 @@ class AiHealth
   def vector_store_status
     return :missing if vector_store_adapter.nil?
     return :scaffolded if vector_store_adapter == :qdrant
-    return :not_checked unless run_probes?
     return :failing if vector_store_probe.failing?
     return :not_configured unless vector_store_configured?
+    return :not_checked if vector_store_probe.not_checked?
     return :failing unless vector_store_probe.passing?
+    return :not_checked if vector_store_adapter == :pgvector && embedding_probe.not_checked?
     return :failing if vector_store_adapter == :pgvector && !embedding_probe.passing?
 
     :passing
@@ -127,6 +124,9 @@ class AiHealth
     vector_store_adapter == :openai && @openai_custom_endpoint
   end
 
+  # How long a probe result is kept before the page shows it as not checked.
+  def probe_cache_ttl = Probe.cache_ttl
+
   def last_checked_at
     [ llm_probe, function_calling_probe, pdf_text_extraction_probe, pdf_vision_processing_probe, vector_store_probe,
       embedding_probe ]
@@ -141,7 +141,7 @@ class AiHealth
       @selected_llm_provider = selected_provider_name(@selected_llm_protocol)
       @openai_credentials_configured = safely(false) { Provider::Openai.configured? }
       @anthropic_credentials_configured = safely(false) { Provider::Anthropic.configured? }
-      @llm_provider = safely(nil) { Provider::Registry.preferred_llm_provider }
+      @llm_provider = safely(nil) { Assistant.builtin_provider }
       @effective_llm_protocol = protocol_name(@llm_provider)
       @effective_llm_provider = effective_provider_name(@effective_llm_protocol)
 
@@ -152,11 +152,12 @@ class AiHealth
       @probe_request_timeout = probe_request_timeout_value
       @openai_uses_responses_endpoint = @effective_llm_protocol == :openai &&
         safely(false) { @llm_provider.supports_responses_endpoint? }
-      @pdf_processing_capable = safely(false) do
-        @llm_provider&.supports_pdf_processing?(model: llm_model)
-      end
-      @pdf_text_extraction_capable = @pdf_processing_capable && @effective_llm_protocol == :openai
-      @pdf_vision_processing_capable = @pdf_processing_capable
+      # What extract_pdf's first model can read: every model reads a text layer; images need
+      # vision, and Anthropic's check sends the PDF itself.
+      pdf_model = safely(nil) { Ai::Config.current.routes_for(:extract_pdf).map(&:model).find { _1.capable?(:structured_output) } }
+      @pdf_processing_capable = pdf_model.present?
+      @pdf_text_extraction_capable = @pdf_processing_capable
+      @pdf_vision_processing_capable = pdf_model.present? && pdf_model.capable?(:vision)
 
       @openai_endpoint = redact_endpoint(openai_uri_base.presence || OPENAI_DEFAULT_ENDPOINT)
       @llm_access_token = access_token(@effective_llm_protocol)
@@ -187,9 +188,8 @@ class AiHealth
       @pdf_vision_processing_probe = llm_configured? && @pdf_vision_processing_capable ? Probe.not_checked : Probe.not_configured
       @vector_store_probe = vector_store_adapter.present? ? Probe.not_checked : Probe.not_configured
       @embedding_probe = vector_store_adapter == :pgvector ? Probe.not_checked : Probe.not_configured
-      return unless run_probes?
 
-      probe = Probe.new(force: @force_probes, cache: @probe_cache)
+      probe = Probe.new(run: @run_probes)
       if llm_configured?
         @llm_probe = probe.llm(
           provider: @effective_llm_protocol,
@@ -209,8 +209,7 @@ class AiHealth
             provider: @effective_llm_protocol,
             endpoint: @llm_raw_endpoint,
             access_token: @llm_access_token,
-            model: llm_model,
-            openai_compatible: openai_compatible_endpoint?
+            model: llm_model
           )
         end
         if @pdf_vision_processing_capable
@@ -218,8 +217,7 @@ class AiHealth
             provider: @effective_llm_protocol,
             endpoint: @llm_raw_endpoint,
             access_token: @llm_access_token,
-            model: llm_model,
-            openai_compatible: @effective_llm_protocol == :openai && openai_compatible_endpoint?
+            model: llm_model
           )
         end
       end
@@ -241,16 +239,14 @@ class AiHealth
           dimensions: embedding_dimensions
         )
       end
-    end
 
-    def run_probes?
-      @run_probes
+      probe.store!
     end
 
     def pdf_probe_status(probe, capable:)
       return :unavailable unless llm_configured?
       return :unsupported unless capable
-      return :not_checked unless run_probes?
+      return :not_checked if probe.not_checked?
 
       probe.passing? ? :supported : :failing
     end

@@ -103,8 +103,6 @@ zh-CN:
       push_notification:
         title: "Sure 测试通知"
         body: "这是一条发送给您 Sure 账户的测试推送通知。"
-      verify_worker_ai:
-        queued: "Worker 检查已加入队列。当 Worker 进程领取任务后，结果将显示在下方，通常只需几秒钟。"
       optional_services:
         title: 可选服务
         description: "可选的运维集成。未配置的服务仅供参考。这些检查仅检查配置项，不会测试连通性、发送测试事件或更改分析同意设置。展开某项服务可查看配置详情。"
@@ -253,10 +251,8 @@ zh-CN:
           seconds: "%{seconds} 秒"
           no_queues: "未注册任何队列。Worker 可能未在运行。"
         ai:
+          worker_unhealthy_warning: "AI 检查目前可能无法运行 — 后台任务处理进程似乎已停止或发生积压。请检查您的 Sidekiq worker 是否正在运行。"
           run_checks: 重新运行检查
-          last_checked: "实时检查已于 %{time_ago}前完成。结果会短暂缓存。"
-          not_checked_help: 直接打开 AI 状态 URL 或运行检查以验证服务可用性。
-          loading: "正在运行实时检查…"
           alerts:
             custom_openai:
               title: 此自定义端点未通过托管向量存储检查
@@ -405,13 +401,9 @@ zh-CN:
             request_failed: 服务请求失败
             unsupported_provider: 该提供商不支持此项检查
           worker:
-            title: Worker 验证
-            description: 上述检查均从当前 Web 进程运行。大多数 AI 任务（助手回复、PDF 处理、嵌入生成、自动分类和商户识别）实际都在 Sidekiq Worker 进程中运行，其网络访问、DNS、代理规则甚至已加载的凭据可能与 Web 不同。请将检查加入队列以验证 Worker 自身的配置与连通性。
-            verify_button: 验证 Worker 配置
-            coverage_notice: 每次检查仅验证领取该任务的单个 Worker 进程。如果有多个 Worker 副本，单次通过并不代表所有 Worker 都健康；可再次将检查加入队列以抽样其他副本。
+            run_coverage_notice: "每次检查仅验证领取该任务的单个 Worker 进程。如果有多个 Worker 副本，单次通过并不代表所有 Worker 都健康；可再次运行检查以抽样其他副本。"
             empty:
               title: 尚无 Worker 回报检查结果
-              description: 点击“验证 Worker 配置”将异步检查加入队列。当 Worker 进程领取任务后，结果将显示在此处。
             labels:
               process: Worker 进程
               checked_at: 检查时间

@@ -36,7 +36,7 @@ class Eval::Runners::Base
     # scored over the full dataset is not comparable to one scored over the
     # residual. See Eval::Runners::SampleSplit.
     def samples
-      return eval_run.dataset.samples if split_role.blank?
+      return eval_run.dataset.samples.order(:id) if split_role.blank?
 
       sample_split.for_role(split_role)
     end

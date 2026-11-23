@@ -1,0 +1,22 @@
+AVAILABLE CATEGORIES: Coffee Shops, Salary
+
+TRANSACTIONS TO CATEGORIZE:
+- ID: txn_1, Amount: 12.5, Type: expense, Description: "STARBUCKS 1234 SEATTLE"
+- ID: txn_2, Amount: 2500, Type: income, Description: "ACME CORP PAYROLL"
+
+CATEGORIZATION GUIDELINES:
+- Prefer specific subcategories over general parent categories when confident
+- Food delivery services should be categorized based on the underlying merchant type
+- Square payments (SQ *) should be inferred from the merchant name after the prefix
+- Warehouse/club stores should be categorized based on their primary purpose
+- Return "null" for generic transactions (e.g., POS terminals, wire transfers, checks, ATM withdrawals)
+
+IMPORTANT:
+- Use EXACT category names from the list above
+- Return "null" (as a string) if you cannot confidently match a category
+- Match expense transactions only to expense categories
+- Match income transactions only to income categories
+- Do NOT include any explanation or reasoning - only output JSON
+
+Respond with ONLY this JSON (no markdown code blocks, no other text):
+{"categorizations": [{"transaction_id": "...", "category_name": "..."}]}

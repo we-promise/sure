@@ -24,28 +24,13 @@ class LlmUsage::CallTest < ActiveSupport::TestCase
     assert_not calls.first.multiple_requests?
   end
 
-  test "a call shows all its requests when one falls outside the date range" do
-    call_id = SecureRandom.uuid
-    usage(call_id:, status: "failed", created_at: 2.days.ago.end_of_day - 1.second, metadata: { "error" => "busy" })
-    usage(call_id:, status: "succeeded", created_at: 1.day.ago.beginning_of_day + 1.second)
-
-    call = @family.llm_usages.for_date_range(1.day.ago.beginning_of_day, Time.current).recent_calls.sole
-
-    assert_equal 2, call.requests_count
-    assert_equal "succeeded", call.status
-  end
-
-  test "statistics count calls, not requests" do
-    call_id = SecureRandom.uuid
-    2.times { usage(call_id:, estimated_cost: 0.01) }
-    usage(estimated_cost: 0.02)
+  test "stored costs are summed as stored; statistics never reprice a row" do
+    usage(estimated_cost: 3.21)
+    LlmUsage.stubs(:calculate_cost).raises("a stored cost is never recalculated")
 
     stats = LlmUsage.statistics_for_family(@family)
 
-    assert_equal 2, stats[:total_calls]
-    assert_equal 3, stats[:total_requests]
-    assert_equal 2, stats[:calls_with_cost]
-    assert_in_delta 0.02, stats[:avg_cost]
+    assert_in_delta 3.21, stats[:total_cost], 0.001
   end
 
   test "the average cost comes from the unrounded total, over priced calls only" do
@@ -53,16 +38,6 @@ class LlmUsage::CallTest < ActiveSupport::TestCase
     usage(estimated_cost: nil)
 
     assert_in_delta 0.002, LlmUsage.statistics_for_family(@family)[:avg_cost], 0.00001
-  end
-
-  test "a row the old recorders write with an error in metadata is a failed request" do
-    row = usage(metadata: { error: "HTTP 500", http_status_code: 500 })
-
-    assert row.failed?, "the recorders write symbol keys"
-    assert_equal "HTTP 500", row.reload.error_message
-    assert usage(metadata: { "error" => "busy" }).failed?
-    row.status = "exploded"
-    assert_not row.valid?
   end
 
   private

@@ -306,7 +306,7 @@ Rails.application.routes.draw do
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
   use_doorkeeper do |mapping|
-    mapping.controllers authorizations: "oauth/authorizations"
+    mapping.controllers authorizations: "oauth/authorizations", tokens: "oauth/tokens"
   end
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
@@ -574,6 +574,7 @@ Rails.application.routes.draw do
       put :revert
       put :apply_template
       post :cancel
+      post :reread
       get :summary
     end
 
@@ -853,7 +854,9 @@ Rails.application.routes.draw do
       resources :categories, only: [ :index, :show, :create ]
       resources :merchants, only: [ :index, :show, :create ]
       resources :rules, only: [ :index, :show ]
-      resources :rule_runs, only: [ :index, :show ]
+      resources :rule_runs, only: [ :index, :show ] do
+        resource :progress, only: :show, module: :rule_runs
+      end
       resources :securities, only: [ :index, :show ]
       resources :security_prices, only: [ :index, :show, :create ]
       resources :tags, only: [ :index, :show, :create, :update, :destroy ]
@@ -1123,7 +1126,7 @@ Rails.application.routes.draw do
     resource :system_health, only: :show, controller: "system_health" do
       get :ai_status
       get :hosted_usage
-      post :verify_worker_ai
+      post :run_ai_checks
       post :send_test_push
     end
   end

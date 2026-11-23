@@ -38,19 +38,15 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     end
   end
 
-  test "user can edit both provider prompts from one editor" do
+  test "categorization has one prompt, whichever provider runs it" do
     visit settings_ai_prompts_path
 
     all("summary", minimum: 3)[1].click
     editor = find("[data-controller='ai-prompt-editor']")
-    anthropic_default = @user.family.ai_prompt_default(:categorizer_anthropic)
 
     within editor do
-      fill_in "Prompt", with: "OpenAI prompt"
-      click_button "OpenAI"
-      find("[role='option']", text: "Anthropic").click
-      assert_equal anthropic_default, find("textarea").value
-      fill_in "Prompt", with: "Anthropic prompt"
+      assert_no_button "Anthropic"
+      fill_in "Categorization prompt", with: "My categorization prompt"
     end
 
     click_button "Save prompts"
@@ -62,10 +58,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     assert_no_selector "#ai-prompt-save-confirm-dialog"
 
     assert_text "AI prompts updated"
-
-    @user.family.reload
-    assert_equal "OpenAI prompt", @user.family.ai_prompt(:categorizer_openai)
-    assert_equal "Anthropic prompt", @user.family.ai_prompt(:categorizer_anthropic)
+    assert_equal "My categorization prompt", @user.family.reload.ai_prompt(:categorize_transactions)
   end
 
   test "saving custom prompt can be cancelled via save confirmation dialog" do
@@ -75,7 +68,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     editor = find("[data-controller='ai-prompt-editor']")
 
     within editor do
-      fill_in "Prompt", with: "Unsaved prompt"
+      fill_in "Categorization prompt", with: "Unsaved prompt"
     end
 
     click_button "Save prompts"
@@ -87,7 +80,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     assert_no_selector "#ai-prompt-save-confirm-dialog"
     assert_no_text "AI prompts updated"
 
-    assert_nil @user.family.reload.ai_prompt(:categorizer_openai)
+    assert_nil @user.family.reload.ai_prompt(:categorize_transactions)
   end
 
   test "saving custom prompt with dont show again remembers preference in subsequent saves" do
@@ -97,7 +90,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     editor = find("[data-controller='ai-prompt-editor']")
 
     within editor do
-      fill_in "Prompt", with: "First custom prompt"
+      fill_in "Categorization prompt", with: "First custom prompt"
     end
 
     click_button "Save prompts"
@@ -114,13 +107,13 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     all("summary", minimum: 3)[1].click
     editor = find("[data-controller='ai-prompt-editor']")
     within editor do
-      fill_in "Prompt", with: "Second custom prompt"
+      fill_in "Categorization prompt", with: "Second custom prompt"
     end
 
     click_button "Save prompts"
     assert_no_selector "#ai-prompt-save-confirm-dialog"
     assert_text "AI prompts updated"
-    assert_equal "Second custom prompt", @user.family.reload.ai_prompt(:categorizer_openai)
+    assert_equal "Second custom prompt", @user.family.reload.ai_prompt(:categorize_transactions)
   end
 
   test "resetting prompt confirms with custom modal and restores default text" do
@@ -128,10 +121,10 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
 
     all("summary", minimum: 3)[1].click
     editor = find("[data-controller='ai-prompt-editor']")
-    default_text = @user.family.ai_prompt_default(:categorizer_openai)
+    default_text = @user.family.ai_prompt_default(:categorize_transactions)
 
     within editor do
-      fill_in "Prompt", with: "Temporary custom prompt"
+      fill_in "Categorization prompt", with: "Temporary custom prompt"
       assert_text "Using your custom prompt"
       click_button "Reset to default"
     end
@@ -143,14 +136,14 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     assert_no_selector "#confirm-dialog"
 
     within editor do
-      assert_field "Prompt", with: default_text
+      assert_field "Categorization prompt", with: default_text
       assert_text "Using the built-in default"
       assert find_button("Reset to default", disabled: true)
     end
 
     # Re-edit and cancel via dialog close button; ensure prompt is not reset
     within editor do
-      fill_in "Prompt", with: "Another custom prompt"
+      fill_in "Categorization prompt", with: "Another custom prompt"
       click_button "Reset to default"
     end
 

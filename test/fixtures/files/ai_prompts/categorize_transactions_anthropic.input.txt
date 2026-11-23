@@ -1,0 +1,11 @@
+Here are the user's available categories in JSON:
+
+```json
+[{"id":"cat_1","name":"Coffee Shops","is_subcategory":true,"parent_id":"cat_0"},{"id":"cat_2","name":"Salary","is_subcategory":false,"parent_id":null}]
+```
+
+Auto-categorize the following transactions:
+
+```json
+[{"id":"txn_1","amount":12.5,"classification":"expense","description":"STARBUCKS 1234 SEATTLE","merchant":null},{"id":"txn_2","amount":2500,"classification":"income","description":"ACME CORP PAYROLL","merchant":"Acme"}]
+```

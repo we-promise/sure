@@ -25,7 +25,7 @@ The interactive chat where users ask questions about their finances. Routes thro
 
 ### 2. Auto-Categorization and Merchant Detection (background)
 
-Background jobs that classify transactions and detect merchants. These use the LLM provider selected by `LLM_PROVIDER` (OpenAI-compatible or native Anthropic; categorization uses Jev instead when it's selected), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
+Background jobs that classify transactions and detect merchants. These use the LLM provider selected by `LLM_PROVIDER` (OpenAI-compatible or native Anthropic; categorization uses [Jev](#jev-typesafe-for-categorization) instead when the instance chooses it), regardless of what the chat assistant uses. They rely on structured output with JSON schemas, not conversational chat.
 
 ### What this means in practice
 
@@ -49,14 +49,15 @@ AI work runs in the Sidekiq `worker`, in its own capsule ("lane"), so a slow mod
 | ai | `ai_high_priority`, then `ai_low_priority` (strict order) | `RAILS_AI_MAX_THREADS` (default `1`) | chat (`ai_high_priority`); auto-categorization, merchant detection and enhancement, PDF processing (`ai_low_priority`) |
 
 - `RAILS_MAX_THREADS` is the worker's total thread count, as before, and also sizes its database pool. It must be greater than `RAILS_AI_MAX_THREADS` (so at least `2` by default): a lane with 0 threads stops the worker from starting ("Concurrency of 0 is not supported"). Puma reads the same variable, so if you lower it for the web service to save memory, set the worker's separately.
-- **Strict order:** a waiting chat runs next, but it doesn't interrupt the AI job already running. Auto-categorization, merchant-detection and merchant-enhancement jobs make one LLM call each, of `LLM_MAX_ITEMS_PER_CALL` items (default `25`), or more if the batch doesn't fit the context window; PDF import and chat jobs can make several. With one AI thread, a PDF import or other `ai_low_priority` job waits behind earlier ones, and continuous chat use pauses background AI work.
+- **Strict order:** a waiting chat runs next, but it doesn't interrupt the AI job already running. Auto-categorization, merchant-detection and merchant-enhancement jobs run one batch each, of at most `LLM_MAX_ITEMS_PER_CALL` items (default `25`), fewer if the batch doesn't fit the context window, and enqueue the rest at the back of the queue, so a large run takes turns with other families' work; PDF import and chat jobs can make several calls. With one AI thread, a PDF import or other `ai_low_priority` job waits behind earlier ones, and continuous chat use pauses background AI work.
 - **Busy notice:** with one AI thread in a single worker process running the AI queues, while another AI job (a background job or another chat) is running, a chat's "Thinking" bubble says the system is busy until the chat's job starts. `AI_RESPONSE_TIMEOUT` includes that wait.
 - **Chat reservation:** with one AI thread, clicking into or typing in the chat box, and each finished reply, hold back new background AI jobs for 60 seconds, so the message runs next. This applies when a single worker process runs the AI queues; with several, a chat can run on one while another runs background jobs, so nothing is held. Back-to-back holds stop after 15 minutes and resume 60 seconds later, so background AI work gets a turn. When you click into or type in the chat box while background AI jobs wait, a bubble above it shows the countdown, or says one is still finishing. A job that is already running is not interrupted.
 - **One AI thread suits a model that serves one request at a time,** such as a local model on CPU: a chat turn's calls then run back to back, keeping the model's prompt cache warm. If your provider serves requests in parallel (hosted APIs, or a local server with several slots), raise `RAILS_AI_MAX_THREADS`, and `RAILS_MAX_THREADS` by the same amount so the default lane keeps its threads.
 - **The worker must load `config/sidekiq.yml`,** as `bundle exec sidekiq` does by default. A worker started with its own queue list (`sidekiq -q …`, a custom Helm `worker.command`) doesn't get the AI lane. If no worker polls `ai_high_priority` and `ai_low_priority`, **System health** (`/admin/system_health`) and the site-wide banner report "No worker is processing the AI queues", and the chat page warns that responses may not be delivered. Keep `-C config/sidekiq.yml`; adding `-q ai_high_priority -q ai_low_priority` also works, but AI jobs then share that worker's threads, and the chat reservation doesn't hold them, since a chat can usually take another thread.
 - **System health:** AI backlog doesn't count towards "queue backed up" (a large merchant-detection run can queue for hours), but "Oldest job age" still includes it. Check the queue table or `/sidekiq` to see which queue is waiting.
-- **Upgrading:** AI jobs moved from `high_priority` (chat), `medium_priority` and `scheduled` to the AI queues. Jobs already queued under the old names still run once, in the default lane.
-- **Large batches:** Sure doesn't limit `LLM_MAX_ITEMS_PER_CALL`. OpenAI-compatible providers split a batch that doesn't fit the context window; with the native Anthropic provider, raise `ANTHROPIC_MAX_TOKENS` (default `4096`) along with it, or replies are cut off.
+- **Upgrading:** AI jobs moved from `high_priority` (chat), `medium_priority` and `scheduled` to the AI queues. Chat jobs already queued under the old queue names still run once, in the default lane; the background AI jobs changed class too, so drain them first (see below).
+- **Large batches:** Sure doesn't limit `LLM_MAX_ITEMS_PER_CALL`. A batch is cut to fit the context window (`LLM_CONTEXT_WINDOW` minus the reply limit and the prompt itself), and a batch that still overflows, or whose answer stops at the reply limit, is halved and sent again. On OpenAI's own API and on Anthropic the window counts only when `LLM_CONTEXT_WINDOW` is set, so their batches are capped by `LLM_MAX_ITEMS_PER_CALL` alone; raise `ANTHROPIC_MAX_TOKENS` (default `4096`) with the batch size so fewer answers get cut.
+- **Upgrading:** every background AI feature now runs as `Ai::GenerationJob`, and the old job classes (`AutoCategorizeJob`, `AutoDetectMerchantsJob`, `EnhanceProviderMerchantsJob`) are gone. Before upgrading, let every queue that can hold one drain: `ai_high_priority` and `ai_low_priority`, and `medium_priority` and `scheduled` if you're upgrading from a version that queued AI work there, including their retries. A job still queued under an old class ends up in Sidekiq's dead set, and a rule run waiting on it stays pending.
 
 ## Quickstart: OpenAI Token
 
@@ -159,14 +160,9 @@ GPT-6.1 Sol and GPT-6 Sol use the native Responses API for assistant tools.
 Leave the custom Base URL setting empty when connecting directly to OpenAI.
 GPT-6.1 Sol does not support tool calling in Chat Completions, or the `none`
 and `minimal` reasoning efforts. See the [model documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
-Native GPT-6.1 Sol, GPT-6 Sol,
-`o1`, and `o3` PDF vision requests use `max_completion_tokens`, which includes
-reasoning and visible output, when an output limit is explicitly configured.
-Set `LLM_MAX_RESPONSE_TOKENS` to a positive value to bound each such request;
-the default 512-token context reserve is not sent as a provider limit.
-Text extraction keeps its existing request behavior. Custom endpoints retain
-their existing token parameters. Increase the LLM context budget for cloud
-reasoning models; the default 2048-token context is intended for small local models.
+Increase the LLM context budget for cloud reasoning models; the default 2048-token
+context is intended for small local models. PDF import is described in
+[PDF import](#pdf-import).
 
 ### Anthropic (native)
 
@@ -196,13 +192,13 @@ Or in the UI: **Settings** → **Self-Hosting** → **AI Provider** → **Anthro
 
 How it differs from the OpenAI-compatible provider:
 
-- **No token budget.** `LLM_CONTEXT_WINDOW` (default `2048`) does less here:
+- **The token budget only when you set it.** `LLM_CONTEXT_WINDOW` (default `2048`) does less here:
   - **Every provider:** below `4096`, the chat's system prompt lists accounts and categories only as counts, and the model fetches them with tools.
-  - **OpenAI-compatible:** it is also the budget, with `LLM_MAX_RESPONSE_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE`, for splitting auto-categorization and merchant batches, and for trimming chat history on Chat Completions endpoints (`LLM_MAX_HISTORY_TOKENS`). The native OpenAI Responses API keeps history on OpenAI's side, so nothing is trimmed there.
-  - **Native Anthropic:** only the system-prompt check applies. History is sent whole, batches aren't split, and `LLM_MAX_RESPONSE_TOKENS`, `LLM_MAX_HISTORY_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE` are ignored. Set `LLM_CONTEXT_WINDOW` by env (e.g. `200000`) so the prompt lists accounts and categories; its UI field is in the OpenAI panel.
-- **The reply limit is always sent.** A reply that needs more than `ANTHROPIC_MAX_TOKENS` is cut off, and on Claude 5 models the model's thinking counts toward it. Only bank statement extraction detects this (it logs a warning). Raise the limit if long answers or batch results come back incomplete.
-- **Batch size.** Auto-categorization, merchant detection and merchant enhancement send `LLM_MAX_ITEMS_PER_CALL` items per request (default `25`), with no splitting to fit the context window. Raise `ANTHROPIC_MAX_TOKENS` along with it, or replies are cut off (see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes)).
-- **Its own timeout.** `ANTHROPIC_REQUEST_TIMEOUT` replaces `OPENAI_REQUEST_TIMEOUT`. `AI_RESPONSE_TIMEOUT` still covers the whole chat turn. `OPENAI_EXTRA_HEADERS`, `LLM_JSON_MODE` and `OPENAI_SUPPORTS_*` don't apply.
+  - **OpenAI-compatible:** it is also the budget, with `LLM_MAX_RESPONSE_TOKENS`, for sizing auto-categorization, merchant and bill batches, and for trimming chat history on Chat Completions endpoints (`LLM_MAX_HISTORY_TOKENS`). The native OpenAI Responses API keeps history on OpenAI's side, so nothing is trimmed there.
+  - **Native Anthropic:** background batches are sized to the window only when `LLM_CONTEXT_WINDOW` is set by env or in the settings; the 2048 default doesn't apply, so batches keep their `LLM_MAX_ITEMS_PER_CALL` items. Chat history is sent whole. Set `LLM_CONTEXT_WINDOW` by env (e.g. `200000`) so the prompt lists accounts and categories; its UI field is in the OpenAI panel.
+- **The reply limit is always sent.** A reply that needs more than `ANTHROPIC_MAX_TOKENS` is cut off, and on Claude 5 models the model's thinking counts toward it. For background batches Sure splits the batch and asks again; elsewhere raise the limit if long answers come back incomplete.
+- **Structured output.** Background features ask for JSON through Anthropic's native structured output, with the same schema OpenAI's strict mode gets; `LLM_JSON_MODE` doesn't apply.
+- **Its own timeout.** `ANTHROPIC_REQUEST_TIMEOUT` replaces `OPENAI_REQUEST_TIMEOUT`. `AI_RESPONSE_TIMEOUT` still covers the whole chat turn. `OPENAI_EXTRA_HEADERS` and `OPENAI_SUPPORTS_*` don't apply.
 
 **Bedrock, Vertex and proxies:** `ANTHROPIC_BASE_URL` can point at any endpoint that speaks the Anthropic Messages API, such as a gateway in front of AWS Bedrock or Google Vertex AI. Set `ANTHROPIC_MODEL` to that endpoint's model ID (for Bedrock, e.g. `anthropic.claude-sonnet-4-5-20250929-v1:0`); the `claude` prefix check is skipped. Sure sends the key as an Anthropic API key (`x-api-key`) and doesn't sign AWS or Google requests itself.
 
@@ -259,6 +255,27 @@ OPENAI_MODEL=anthropic/claude-3.5-sonnet
 - `anthropic/claude-sonnet-4.5` - Excellent reasoning, good with financial data
 - `anthropic/claude-haiku-4.5` - Fast and cost-effective
 
+### Jev (TypeSafe) for categorization
+
+Jev is a decision model: it picks each transaction's category from your list and reports a calibrated confidence, instead of generating text. It only categorizes; chat, merchant detection and PDF import keep using the LLM provider.
+
+```bash
+JEV_API_KEY=...                                        # your TypeSafe key, or your OpenRouter key
+# JEV_ENDPOINT=https://api.typesafe.ai/v1/systemone   # the default; or https://openrouter.ai/api/alpha/decisions for Jev through OpenRouter
+# JEV_MODEL=jev-latest                                 # the default; ~typesafe/jev-latest through OpenRouter
+CATEGORIZATION_PROVIDER=jev                            # or choose it on the Self-Hosting page
+```
+
+- **One choice for the instance.** Since v0.7.7 the Jev choice applies to every family on the instance (it was per family before). On upgrade, an instance with one family keeps that family's choice; on an instance with several, every family goes back to the LLM provider until an admin chooses Jev again. Per-feature model lists come with the AI settings pages in a later release.
+- **Endpoints.** TypeSafe-style endpoints ending in `/v1/systemone` work, including a self-hosted server; Jev through OpenRouter (`https://openrouter.ai/api/alpha/decisions`) works with your OpenRouter key as `JEV_API_KEY` and `JEV_MODEL=~typesafe/jev-latest` (or a version, such as `typesafe/jev-1.14`). OpenRouter's free decisions model is `parallel/decisions-fast:free`, used in the live tests for that route. Anything else isn't supported: Sure leaves an unsupported endpoint out, logs a warning and categorizes with the LLM provider, and the settings form refuses one.
+- **Self-hosted servers.** An `http://` endpoint is treated as a server on your own network, on any host (not only localhost). Sure sends it one request at a time; set `JEV_CONCURRENCY` to send more.
+- **Confidence threshold.** Only answers from TypeSafe's Jev are held back by the threshold, since only its confidence has been checked: on its own API (`api.typesafe.ai`), or a model whose name contains `typesafe` elsewhere. Other decision models' answers, and a self-hosted server's, always apply.
+- **No failover.** When Jev is chosen and fails, the batch is never sent to the LLM provider instead. A timeout, rate limit or outage is retried later; a rejected key or spent credit ends the run, so start it again once the key or credit is fixed.
+- **At most 254 categories.** Jev picks from a list of at most 255 options, one of them "no category", so a family with more categories can't be categorized with Jev: its runs fail and say so.
+- **Concurrency and timeout.** Jev answers one transaction per request, so a batch runs as parallel requests: 8 at a time on TypeSafe's API (`JEV_CONCURRENCY`), each with `JEV_REQUEST_TIMEOUT` seconds (default 30).
+- **Usage.** Each Jev request is a row on the LLM Usage page, grouped per batch.
+- **Shadow comparison.** With a shadow rate above 0, a sample of categorization batches also runs on the provider you didn't choose, as a separate background job, and the Self-Hosting page shows how often the two agree. Its answers are never applied.
+
 ### Other Providers
 
 Any service offering an OpenAI-compatible API should work:
@@ -291,7 +308,7 @@ Behavior:
 - Values are stringified: nested JSON objects/arrays become Ruby inspect-style strings, not valid JSON. Header values must be plain strings.
 - User headers merge over the client's managed headers — setting `Authorization` here would override the access token.
 - Unset, blank, malformed, or non-object JSON is ignored with an error in the logs; chat keeps working. The raw value is never logged.
-- These headers are NOT sent to embedding, vector-store, or AI-health-probe calls — those build separate clients. A gateway requiring the header on those endpoints is not supported.
+- Static headers are sent on OpenAI vector-store calls and on configured OpenAI health probes (model list, chat and tool checks), which use the same client builder. Embedding calls still refuse a static-header endpoint: RubyLLM can't send headers there. A gateway that requires the header only on embeddings is not supported.
 - ENV-only: there is no settings-page equivalent. The value is re-read every time a provider client is built (nothing is cached), but updating the environment requires restarting the app.
 
 ## Local LLM Setup (Ollama)
@@ -1098,7 +1115,7 @@ health page. The mode follows the variables you already set:
 
 | You set | Mode | What leaves the server |
 |---|---|---|
-| `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | `content` | Prompts, outputs, token usage, the model and endpoint, and Sure's error class |
+| `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | `content` | Prompts, outputs, token usage, the model and endpoint, Sure's error class, and the job's correlation id as the Langfuse session |
 | Only `OTLP_ENDPOINT` (and `OTLP_HEADERS` for authentication) | `metadata` | Model, settings, finish reason, token counts and latency, as OpenTelemetry spans to any OTLP backend (Langfuse, Tempo, Jaeger, OpenObserve). No prompts, tool results or answers |
 | Both | `content`, with a warning in the log | As `content` |
 | Neither | off | Nothing |
@@ -1546,10 +1563,12 @@ everything volatile (date, currency, account roster, categories).
 
 A family admin can edit the prompts at **Settings → AI Prompts**. Overrides are
 stored per family, so one family's edits never affect another on the same
-deployment. Five prompts are editable: the chat system prompt, plus the
-transaction categorizer and merchant detector for each of OpenAI and Anthropic.
-Those last two are worded independently per provider, which is why each gets its
-own field.
+deployment. Four prompts are editable: the chat system prompt, the transaction
+categorizer, the merchant detector and the "Dig in with AI" message. The
+categorizer and merchant detector each have one override, whichever provider
+runs them. Upgrading from two per-provider overrides keeps the one for the
+provider in use; if the two differed, the page shows the other until you next
+save it.
 
 Each field opens with its built-in default instructions, or the family override
 if one was saved. Leaving a field blank falls back to the default, and clicking
@@ -1557,11 +1576,11 @@ if one was saved. Leaving a field blank falls back to the default, and clicking
 A status label and live character counter sit below each field, with an override
 cap of 20,000 characters per prompt.
 
-The categorizer and merchant detector ship two OpenAI variants: a terse one for
-smaller local models and a detailed one written for larger models. A single
-override replaces both, so on a deployment pointed at a custom endpoint
-(`OPENAI_URI_BASE` set) those fields open with the terse variant your models
-receive.
+The categorizer and merchant detector ship three built-in variants: a detailed
+one for OpenAI, a terse one for smaller models on a custom OpenAI-compatible
+endpoint (`OPENAI_URI_BASE` set), and Anthropic's own. An override replaces
+whichever one runs, and each field opens with the variant your models receive.
+The built-in prompts live in `app/prompts/`, one folder per variant.
 
 Overriding the chat prompt gives up some prompt caching. The static half is
 byte-stable so providers discount the repeated prefix; a family that overrides it
@@ -1587,9 +1606,13 @@ that way.
 
 That risk applies to every mode except a strict schema the endpoint honors:
 `none` applies no constraint, `json_object` guarantees JSON but not the shape,
-and `auto` (the default) retries in `none` mode once more than half the results
-come back empty. Native OpenAI (strict schema) and Anthropic (forced tool use)
-enforce the shape server-side.
+and `auto` (the default) tries `strict`, then `json_object`, then `none`, moving
+on when the answer doesn't parse or more than half the results come back empty.
+Native OpenAI (strict schema) and Anthropic (native structured output) enforce
+the shape server-side. In `auto`, bill setup and PDF import ask an
+OpenAI-compatible server for `json_object`, then no format if it answers 400,
+as they did before; set `LLM_JSON_MODE=strict` to give them the strict schema
+too. Any other `LLM_JSON_MODE` applies to every feature.
 
 #### In code (the default every family starts from)
 
@@ -1630,7 +1653,94 @@ These are defined in `app/models/assistant/function/`. Preview tools
 (Statement Vault, `get_valuations`, `get_insights`) are listed in
 [mcp.md](mcp.md#preview-tools).
 
+### PDF import
+
+Sure reads an uploaded PDF in one of four ways, then checks what the model returned:
+
+| Way | When | Sent to the provider |
+|---|---|---|
+| **PDF** | The model reads PDFs natively (Anthropic, OpenAI's own API) and the file is within the provider's inline limit: at most 100 pages, and 32 MiB on OpenAI or 23.25 MiB (24,379,392 bytes) on Anthropic, whose 32 MB request limit must also hold the file's base64 encoding | The PDF file itself |
+| **Text** | The PDF has a text layer | The text layer, a batch of pages at a time |
+| **Images** | The model reads images (OpenAI's vision models, Anthropic, and any custom OpenAI-compatible server) | Each page as a 150 dpi image at high detail |
+| **OCR** | An OCR model is set up (from the next config release; see below) | Each page as an image to the OCR model, then its transcription to the text model |
+
+- **PDF import runs only on a model with PDF support, as before:** OpenAI's vision models,
+  Claude, and a custom OpenAI-compatible server unless `OPENAI_SUPPORTS_PDF_PROCESSING=false`,
+  which turns PDF import off.
+- **Auto, the default, tries them in that order**, skipping a way the model can't do. A scan
+  with no text layer is never sent as empty text. The next statement for the same account and
+  model starts from the way that last passed.
+- **"Read as"** on the upload form, and on the chat tool, picks one way. A way the model can't do
+  is greyed out with the reason. An import can be **read again** another way before anything is
+  published.
+- **Pages are batched, not capped at five.** Transaction extraction can batch pages across a long
+  statement once the document has been classified as a statement, so a long statement costs more
+  requests, and a scan costs more image tokens than it did at the old low detail. Classification
+  reads at most three batches before giving up, so a document it doesn't recognize as a statement
+  may not have every page read.
+- **Checks.** Every statement extraction is checked without knowing the answer: the opening
+  balance plus every row makes the closing balance (using the balances printed in the text when
+  they're found, or those the model reported for an image-only scan). Amount and date checks run
+  only when source text is available — a text layer or an OCR transcription — so every amount
+  appears in that text and most dates match the date printed next to their amount. When Auto's
+  extraction fails, it tries the next way. If none passes, the best one is kept and flagged: the
+  import shows which checks failed, and publishing asks for confirmation. The date check is a
+  heuristic tuned on two statements.
+- **Pages are rendered by `pdftoppm`** (poppler-utils, in the Docker image) in a child process
+  with an empty environment, a 30-second timeout, CPU and memory limits, and a page range; a page
+  over 25 million pixels is refused. A missing `pdftoppm` shows as such on the AI status page.
+- **OpenAI-compatible servers never get the PDF file itself**: llama.cpp and Gemini's compatible
+  API refuse it, and OpenRouter charges to parse it.
+
+**OCR.** OCR models (a local model such as Unlimited-OCR-2 on llama.cpp, read through chat with
+its own prompt, or Mistral and Cohere's OCR services) are supported in the code, but there is no
+setting for them yet: they become configurable with the AI settings tables. Until then "Read as:
+OCR" is greyed out, and a scan is read as images on a vision model. Cohere's OCR (`parse-v5.0`,
+one page image per request) has been tested live; Mistral's hasn't. A llama.cpp OCR model needs
+`--special` so its table tags reach Sure.
+
 ### Vector Store (Document Search)
+
+**Since the AI plumbing's documents release:**
+
+- When the backend asks Sure to embed, embeddings go through the same HTTP stack as every other
+  AI call (proxy, retries, usage rows on the usage page under `embed` and `search_documents`).
+  That's pgvector, whose column size comes from `EMBEDDING_DIMENSIONS`, as before. OpenAI's own
+  vector store embeds the files and the query on its side, so don't expect a `search_documents`
+  embedding usage row from that backend.
+- Searches drop matches scoring under 0.3, the default threshold, on OpenAI's vector store and
+  on pgvector. It's a score cutoff, not a guarantee: in the example measured on OpenAI's store it
+  removed the other statements a question about one statement used to get as context, but a
+  passage from another document can still score above it. **The threshold is calibrated on OpenAI's store** (a relevant hit scored 0.84, wrong ones
+  0.14–0.17). pgvector's scores depend on the embedding model: in testing, unrelated text scored
+  0.47 on Gemini's `gemini-embedding-001` and 0.77 on `granite-embedding-small-english-r2`, so
+  0.3 rarely filters there. **From a later release the threshold is a setting per embedding
+  model**, for both stores, with 0.3 as the default.
+- **Embedding dimensions must still match the chunks table.** Sure doesn't ask the model for a
+  size (some models refuse it). A model that returns a different size fails clearly
+  (`expected 1024 dimensions, got 3072` in the debug log) and nothing is stored. Resolving a
+  model whose size doesn't match the database comes in a later release; until then, see
+  [Troubleshooting pgvector and embeddings](#troubleshooting-pgvector-and-embeddings) below.
+- **A custom OpenAI-compatible server (`OPENAI_URI_BASE` with a token) no longer gets OpenAI's
+  vector store by default.** If your proxy serves OpenAI's Files and Vector Stores APIs and you use
+  document search through it, set `VECTOR_STORE_PROVIDER=openai` when you upgrade. Without it,
+  uploads aren't indexed, searches find nothing, and deleting a family can't delete its store.
+- **OpenAI vector store:** documents show *processing* until OpenAI has indexed them, and
+  *unreadable* when the index is empty (a scan: OpenAI's file search reads text layers only).
+  Removing a document deletes its file from OpenAI's Files API; if that fails, the local row and
+  the store attachment are kept, so retrying the removal can find and delete the file. Deleting a
+  family removes its store on a best-effort basis: the adapter keeps the store and its attachments
+  when any file deletion fails, but the family's store id is gone, so there is no later retry.
+  **Files left behind by a family deletion, or documents removed before this release, can't be
+  traced to a row and stay in your OpenAI account**: check the cleanup warnings, then list them in
+  OpenAI's dashboard (Storage → Files, purpose `assistants`). Delete only files you can confirm
+  nothing uses any more: an unfamiliar name doesn't make a file an orphan, as it may belong to a
+  current Sure document or another app. When you can't tell, leave it.
+- New statements uploaded directly to the vault are indexed for search only if the uploader's AI
+  switch is on (checked again when the indexing job runs). Indexing triggered by an explicit PDF
+  import doesn't depend on that switch, and jobs queued before this check was added have no
+  uploader to recheck.
+
 
 Sure's AI assistant can search documents that have been uploaded to a family's vault. Under the hood, documents are indexed in a **vector store** so the assistant can retrieve relevant passages when answering questions (Retrieval-Augmented Generation).
 
@@ -1652,7 +1762,7 @@ Sure's AI assistant can search documents that have been uploaded to a family's v
 
 ##### OpenAI (Default)
 
-No extra configuration is needed. If you already have `OPENAI_ACCESS_TOKEN` set for the AI assistant, document search works automatically. OpenAI manages chunking, embedding, and retrieval.
+No extra configuration is needed. If you already have `OPENAI_ACCESS_TOKEN` set for the AI assistant, document search works automatically. OpenAI manages chunking, embedding, and retrieval. With a custom `OPENAI_URI_BASE`, set `VECTOR_STORE_PROVIDER=openai` too, and only if that server serves OpenAI's Files and Vector Stores APIs.
 
 ```bash
 # Already set for AI chat - document search uses the same token
@@ -1676,12 +1786,17 @@ VECTOR_STORE_PROVIDER=pgvector
 EMBEDDING_MODEL=mxbai-embed-large         # Default: mxbai-embed-large
 EMBEDDING_DIMENSIONS=1024                 # Default: 1024 (must match your model)
 EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to the OpenAI API Base URL (ENV or Settings) if not set
-EMBEDDING_ACCESS_TOKEN=                   # Falls back to the OpenAI Access Token (ENV or Settings) if not set
+EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN, or to the token saved in Settings for the OpenAI URL
 ```
 
 The fallbacks include values saved in **Settings** → **Self-Hosting**. Before this release they
 read only `OPENAI_URI_BASE` and `OPENAI_ACCESS_TOKEN` from the environment, so an install that set
-its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key.
+its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key. The
+access token saved in Settings is sent only to the OpenAI URL it was saved with: a separate
+`EMBEDDING_URI_BASE` that needs a key needs `EMBEDDING_ACCESS_TOKEN`. `OPENAI_ACCESS_TOKEN` set in
+the environment still goes to a separate `EMBEDDING_URI_BASE` when `EMBEDDING_ACCESS_TOKEN` is
+empty, as it did before this release. An inherited OpenAI URL without a version, such as
+`https://gateway.example`, gets `/v1` as it does for chat.
 
 Sure enables the `vector` extension when it first provisions the chunks table,
 provided the database user has permission. If the AI status page reports that
@@ -1762,8 +1877,8 @@ volumes:
 #### Verifying the Configuration
 
 Super admins can open **System health → AI status** at
-`/admin/system_health?tab=ai`. Opening that URL runs bounded, non-destructive
-live checks against the effective configuration:
+`/admin/system_health?tab=ai`. The tab shows the results of bounded,
+non-destructive live checks against the effective configuration:
 
 - OpenAI-compatible and Anthropic providers must return the configured model
   from their models API.
@@ -1778,60 +1893,57 @@ live checks against the effective configuration:
   returned vector must match `EMBEDDING_DIMENSIONS`. The test vector is not
   stored.
 
+The checks run in a Sidekiq worker, where AI work runs, never in the web
+request: opening the tab makes no AI request. **Run checks again** queues them
+(`Ai::ProbeJob`, on the AI capsule's low-priority queue), and the tab reloads
+with the results when the worker finishes. A click while a run is queued
+queues another; running the checks twice is harmless. So the checks need a
+worker running the AI capsule (`RAILS_AI_MAX_THREADS` of at least 1); with
+none, the tab says the worker appears to be down. The automatic reload needs
+Action Cable on Redis; in development, reload the tab to see the results.
+
 When `OPENAI_URI_BASE` points outside OpenAI's hosted API, the page labels the
 selected provider **OpenAI-compatible** and identifies a known effective
 provider from the endpoint (for example Ollama, OpenRouter, Together, Kilo, or
 Cloudflare Workers AI/AI Gateway). Unrecognized services are shown as **Custom
 endpoint**.
 
-Results are cached for 60 seconds by default. **Run checks again** bypasses the
-cache. Set `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request
-timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Five
-seconds is too short for a model running on CPU, such as llama.cpp without a GPU:
-the function-calling check can take 20 seconds there and shows as a timeout, so
-set `AI_HEALTH_PROBE_TIMEOUT=60` or more. Failed
-checks are written as system-wide entries in **Settings → Debug logs** and to
+Each result shows how long ago it was checked, and is kept for 60 seconds by
+default from the end of the run; after that the tab shows it as not checked until the checks run again.
+Set `AI_HEALTH_PROBE_CACHE_TTL` to keep results longer, and
+`AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request timeout.
+Five seconds is too short for a model running on CPU, such as llama.cpp without
+a GPU: the function-calling check can take 20 seconds there and shows as a
+timeout, so set `AI_HEALTH_PROBE_TIMEOUT=60` or more. The PDF checks give the
+model the same output limit an import does (`LLM_MAX_RESPONSE_TOKENS`, or
+`ANTHROPIC_MAX_TOKENS`), so a reasoning model has room to answer. Failed checks
+are written as system-wide entries in **Settings → Debug logs** and to
 `Rails.logger`; endpoints are redacted and credentials are never included.
 
-#### Verifying Worker Configuration
+The results are kept in Sidekiq's Redis, which the web and worker processes
+share on every install, so the tab shows them however `Rails.cache` is set up.
 
-The checks above all run from the `web` process. Most AI work — assistant
-responses, PDF processing, embeddings, auto-categorization, and merchant
-detection — actually executes in a Sidekiq `worker` process, which can differ
-from `web` in network access, DNS, proxy rules, or even which credentials it
-loaded, especially in Kubernetes deployments using workload-specific overrides
-or a Secret updated without a pod restart. A passing web check does not prove
-a worker can reach the same provider.
+#### Which Worker Ran the Checks
 
-Click **Verify worker configuration** on the AI status tab to queue an
-asynchronous check (`WorkerAiHealthCheckJob`). It runs the same live probes
-from inside whichever worker process dequeues it, and the tab lists the
-result: that worker's process identity, when it checked, whether its
-effective configuration matches what `web` resolved, and probe outcomes.
+A worker can differ from `web` in network access, DNS, proxy rules, or even
+which credentials it loaded, especially in Kubernetes deployments using
+workload-specific overrides or a Secret updated without a pod restart. Each
+run of the checks records the worker process that ran them, and the tab lists
+it: its process identity, when it checked, whether its effective
+configuration matches what `web` resolved, and the probe outcomes. A
+configuration that differs from `web` also means the tab's results, which are
+looked up by `web`'s configuration, show as not checked.
 
 A few things this does and doesn't prove:
 
-- **One check verifies one worker.** Sidekiq doesn't broadcast a job to every
+- **One run checks one worker.** Sidekiq doesn't broadcast a job to every
   process, so a passing result confirms the process named on it is healthy —
-  not your whole fleet. With multiple worker replicas, queue the check again
+  not your whole fleet. With multiple worker replicas, run the checks again
   to sample another; only the 5 most recently checked-in distinct processes
   are kept (`WorkerAiHealth::MAX_RESULTS`) — a 6th eviction can push out an
   older entry before its own `WorkerAiHealth::RETENTION` (15 minutes) is up —
   and a result older than `WorkerAiHealth::STALE_AFTER` displays as **Stale**
   rather than pass/fail.
-- **Worker checks never reuse a web-cached result, or vice versa.** The web
-  page's probes are cached briefly (see above) so repeat page loads don't
-  re-hit providers; the worker job deliberately bypasses that shared cache so
-  its result always reflects a live call from its own network context, and
-  never leaves an entry a web request could read back as if it had checked
-  itself.
-- **In local development, the web and worker results won't show up together.**
-  `bin/dev` runs `web` and `worker` as separate OS processes, and
-  `config/environments/development.rb` uses a process-local `:memory_store` /
-  `:null_store` cache there (production uses a shared Redis store). A worker
-  check queued locally writes to the worker process's own in-memory cache, so
-  the web page's "Verify worker configuration" button can appear to do
-  nothing — it isn't a bug, there's just no result for it to read back.
 - **Which settings need a restart depends on how they're set.** Provider,
   model, and API-key settings changed in **Settings → Self-Hosting** are
   stored in the database and take effect automatically for the next request

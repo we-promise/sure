@@ -4,6 +4,7 @@ pl:
     system_health:
       show:
         ai:
+          worker_unhealthy_warning: "Testy AI mogą się teraz nie uruchomić: worker w tle wygląda na wyłączony albo zapchany. Sprawdź, czy Twój worker Sidekiq działa."
           adapters:
             openai: Hostowany magazyn wektorowy OpenAI
             pgvector: pgvector
@@ -158,15 +159,12 @@ pl:
             probe_request_timeout: Limit czasu testu kondycji
             selected_provider: Wybrany dostawca
             storage_probe: Test magazynu pgvector
-          last_checked: Testy na żywo zakończono %{time_ago} temu. Wyniki są krótko
-            przechowywane w pamięci podręcznej.
           llm:
             description: Testy na żywo weryfikują skonfigurowany model, a następnie
               osobno sprawdzają wyodrębnianie tekstu i przetwarzanie wizyjne/natywne
               na jednostronicowym syntetycznym PDF bez danych klienta. Wartości poświadczeń
               nigdy nie są wyświetlane.
             title: Przetwarzanie LLM i PDF
-          loading: "Trwają testy na żywo…"
           local_setup:
             description: Uruchom LLM przez lokalny endpoint kompatybilny z OpenAI,
               przechowuj wektory dokumentów w pgvector i skieruj ustawienia embeddingów
@@ -174,8 +172,6 @@ pl:
               zawierać rozszerzenie vector, a wymiary embeddingu muszą pasować do
               wybranego modelu.
             title: Zalecana konfiguracja lokalna
-          not_checked_help: Otwórz bezpośrednio URL statusu AI albo uruchom testy,
-            aby zweryfikować dostępność usługi.
           pdf_statuses:
             failing: Test syntetycznego PDF nie powiódł się
             not_checked: Nie sprawdzono
@@ -223,23 +219,11 @@ pl:
               go.
             title: Magazyn wektorowy i wyszukiwanie dokumentów
           worker:
+            run_coverage_notice: "Każdy test sprawdza dokładnie jeden proces workera — ten, który go pobierze z kolejki. Przy więcej niż jednej replice workera pozytywny wynik nie potwierdza, że wszystkie workery działają poprawnie — uruchom testy ponownie, żeby sprawdzić kolejny."
             configuration_statuses:
               match: Zgodne z web
               mismatch: Różni się od web
-            coverage_notice: Każdy test sprawdza dokładnie jeden proces workera —
-              ten, który go pobierze z kolejki. Przy więcej niż jednej replice workera
-              pozytywny wynik nie potwierdza, że wszystkie workery działają poprawnie
-              — uruchom test ponownie, żeby sprawdzić kolejny.
-            description: Powyższe testy uruchomiono z tego procesu web. Większość
-              pracy AI — odpowiedzi asystenta, przetwarzanie PDF, embeddingi, automatyczna
-              kategoryzacja i wykrywanie sprzedawcy — działa w rzeczywistości w procesie
-              workera Sidekiq, który może różnić się dostępem do sieci, DNS, regułami
-              proxy, a nawet wczytanymi poświadczeniami. Uruchom test, żeby zweryfikować
-              własną konfigurację i łączność workera.
             empty:
-              description: Kliknij „Zweryfikuj konfigurację workera”, aby dodać do
-                kolejki asynchroniczny test. Wynik pojawi się tutaj, gdy proces workera
-                go podejmie.
               title: Żaden worker jeszcze się nie zgłosił
             labels:
               checked_at: Sprawdzono
@@ -263,8 +247,6 @@ pl:
               failing: Niepowodzenie
               passing: Powodzenie
               stale: Nieaktualne
-            title: Weryfikacja workera
-            verify_button: Zweryfikuj konfigurację workera
         alert:
           title: Zadania w tle nie działają
         counters_section_description: Zagregowane liczniki Sidekiq ze wszystkich kolejek.
@@ -298,6 +280,3 @@ pl:
           seconds: "%{seconds}s"
           time_ago: "%{time_ago} temu"
           unhealthy: Zdegradowany
-      verify_worker_ai:
-        queued: Test workera dodano do kolejki. Pojawi się poniżej, gdy proces workera
-          go podejmie, zwykle w ciągu kilku sekund.

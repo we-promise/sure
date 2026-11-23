@@ -13,6 +13,8 @@
         <p class="text-sm text-secondary"><%= t("imports.pdf_import.ready_for_review_description", count: import.rows_count) %></p>
       </div>
 
+      <%= render "imports/pdf_review_flag", import: %>
+
       <div class="bg-container border border-primary rounded-xl p-4 space-y-4">
         <% if import.account_statement.present? %>
           <div class="space-y-2">
@@ -83,7 +85,10 @@
                 href: publish_import_path(import),
                 method: :post,
                 variant: :primary,
-                full_width: true
+                full_width: true,
+                confirm: (CustomConfirm.new(title: t("imports.pdf_import.review_flag.confirm_title"),
+                                            body: t("imports.pdf_import.review_flag.confirm_body"),
+                                            btn_text: t("imports.pdf_import.review_flag.confirm_button")) if import.extraction_flagged?)
               ) %>
           <%= render DS::Link.new(text: t("imports.pdf_import.review_transactions"), href: import_clean_path(import), variant: "secondary", full_width: true) %>
         <% elsif import.account.present? %>
@@ -94,6 +99,8 @@
         <%= render DS::Link.new(text: t("imports.pdf_import.view_summary"), href: summary_import_path(import), variant: "secondary", full_width: true, frame: :modal) %>
         <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "secondary", full_width: true) %>
       </div>
+
+      <%= render "imports/pdf_reread", import: %>
 
     <% elsif import.importing? || import.pending? %>
       <div class="mx-auto bg-gray-tint-5 h-8 w-8 rounded-full flex items-center justify-center">
@@ -134,10 +141,14 @@
             ) %>
       </div>
 
+      <%= render "imports/pdf_reread", import: %>
+
     <% elsif import.complete? && import.ai_processed? %>
       <div class="mx-auto bg-success/10 h-8 w-8 rounded-full flex items-center justify-center">
         <%= icon "check", class: "text-success" %>
       </div>
+
+      <%= render "imports/pdf_review_flag", import: %>
 
       <div class="text-center space-y-2">
         <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.complete_title") %></h1>
@@ -190,6 +201,8 @@
               full_width: true
             ) %>
       </div>
+
+      <%= render "imports/pdf_reread", import: %>
 
     <% else %>
       <div class="text-center space-y-2">

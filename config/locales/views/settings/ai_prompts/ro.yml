@@ -4,9 +4,7 @@ ro:
     ai_prompts:
       show:
         page_title: Prompturi AI
-        openai_label: OpenAI
         disable_ai: Dezactivează Asistentul AI
-        prompt_instructions: Instrucțiuni pentru prompturi
         main_system_prompt:
           title: Promptul principal de sistem
           subtitle: Instrucțiuni de bază care definesc modul în care asistentul AI se comportă în toate conversațiile de chat

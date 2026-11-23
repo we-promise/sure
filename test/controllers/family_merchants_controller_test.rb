@@ -191,17 +191,30 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
   test "enhance enqueues job and redirects" do
     use_ai_routes
 
-    assert_enqueued_with(job: EnhanceProviderMerchantsJob) do
+    assert_enqueued_jobs 1, only: Ai::GenerationJob do
       post enhance_family_merchants_path
     end
+    feature, args = ActiveJob::Arguments.deserialize(enqueued_jobs.last["arguments"])
+    assert_equal :enhance_merchants, feature
+    assert_equal @user.family.id, Ai::GenerationRun.find(args[:run_id]).family_id
 
     assert_redirected_to family_merchants_path
+  end
+
+  test "enhance that can't be queued says so instead of failing" do
+    use_ai_routes
+    Ai::GenerationJob.stubs(:perform_later).returns(false)
+
+    post enhance_family_merchants_path
+
+    assert_redirected_to family_merchants_path
+    assert_equal I18n.t("family_merchants.enhance.enqueue_failed"), flash[:alert]
   end
 
   test "enhance is refused with the reason when no model can enhance merchants" do
     use_no_ai
 
-    assert_no_enqueued_jobs(only: EnhanceProviderMerchantsJob) do
+    assert_no_enqueued_jobs(only: Ai::GenerationJob) do
       post enhance_family_merchants_path
     end
 

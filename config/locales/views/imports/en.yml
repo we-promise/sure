@@ -24,6 +24,15 @@ en:
         split_warning_title: Split transactions detected
         split_warning_description: "This QIF file contains split transactions. Review the detected split categories and tags below before importing."
         split_badge: split
+        selection_list_changed_title: Categories and tags have changed
+        selection_list_changed_description: "With the new date format, the file contains different categories or tags. Review the selection below; all entries are selected again."
+        unknown_account_type_name: "“%{type}”"
+        unknown_account_type_title:
+          one: Unknown account type
+          other: Unknown account types
+        unknown_account_type_description:
+          one: "This QIF file contains the account type %{types}, which %{product_name} doesn't recognize. Its transactions will be imported like a bank account."
+          other: "This QIF file contains the account types %{types}, which %{product_name} doesn't recognize. Their transactions will be imported like a bank account."
         empty_state_primary: No categories or tags were found in this QIF file.
         empty_state_secondary: All transactions will be imported without categories or tags.
         submit: Continue to review
@@ -362,6 +371,8 @@ en:
       invalid_account: "Account not found."
     publish:
       started: "Your import has started in the background."
+      enqueue_failed: "The import couldn't be queued. Nothing was published — please try again."
+      already_claimed: "This import is already being processed. Check it again in a moment."
       max_rows_exceeded: "Your import exceeds the maximum row count of %{max}."
       guest_new_categories_or_tags: "Guests can't create categories or tags. Map them to existing ones or leave them empty."
     revert:
@@ -593,6 +604,7 @@ en:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
       interrupted: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."
       presumed_lost: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
+      blank_dates: "Enter a date for every row before publishing."
     document_types:
       bank_statement: Bank Statement
       credit_card_statement: Credit Card Statement
@@ -621,8 +633,53 @@ en:
       unknown_state_description: This import is in an unexpected state. Please return to imports.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Processing failed: %{error}"
+      account_errors:
+        no_credit: The AI provider account has no credit remaining.
+        unauthorized: The AI provider rejected its API key.
+        rate_limited: The AI provider is rate limiting its account.
+        model_missing: The AI provider does not have the configured model.
       errors:
-        provider_no_pdf_support: AI provider does not support PDF processing
+        unavailable:
+          default: No model set up on this instance can read this PDF.
+          not_configured: PDF import needs an AI provider. Ask your administrator to set one up.
+          capability_missing: The AI model set up on this instance can't read documents.
+          no_text_layer: This PDF is a scan with no text, so it can't be read as text. Read it as Auto, Images or OCR if a model set up here can read scanned pages.
+          needs_documents: The AI model set up here can't read a PDF file itself. Read it as text or images instead.
+          needs_vision: The AI model set up here can't read page images. Read it as text instead.
+          needs_ocr_route: No OCR model is set up on this instance.
+          too_large: This PDF is over what the AI provider accepts as one file. Read it as text or images instead.
+          unreadable: This file couldn't be opened as a PDF.
+      read_as:
+        label: Read PDFs as
+        options:
+          auto: Auto
+          pdf: PDF
+          images: Images
+          ocr: OCR
+          text: Text
+        unavailable: "%{option} (%{reason})"
+        reasons:
+          needs_documents: needs a model that reads PDFs
+          needs_vision: needs a vision model
+          needs_ocr_route: needs an OCR model
+      reread:
+        label: Read again as
+        submit: Read again
+        success: Reading the statement again.
+        enqueue_failed: "The reread couldn't be queued, so the current reading was kept. Please try again."
+        not_allowed: This import can't be read again once its transactions are published.
+      review_flag:
+        title: Check these transactions before publishing
+        description: The statement was read as %{way}, and the extraction failed these checks, so some rows may be wrong or missing.
+        checks:
+          balances: The statement's opening and closing balances weren't found, so the transactions couldn't be checked against them.
+          reconciles: The opening balance plus every transaction doesn't make the closing balance.
+          amounts_in_source: Some amounts don't appear in the statement's text.
+          dates_anchored: Many dates don't match the dates printed next to their amounts.
+          complete: Some pages couldn't be read, so transactions may be missing.
+        confirm_title: Publish transactions that failed their checks?
+        confirm_body: Some rows may be wrong or missing. Review them first, or read the statement again another way.
+        confirm_button: Publish anyway
       ready_for_review_title: Ready for Review
       ready_for_review_description:
         one: "%{count} transaction from your statement isn't in this account yet. Review and publish it to add it."

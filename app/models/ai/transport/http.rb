@@ -12,13 +12,15 @@ module Ai::Transport::Http
   OPENAI_BASE = "https://api.openai.com/v1".freeze
   OPENROUTER_BASE = "https://openrouter.ai/api/v1".freeze
   PROXY_VARIABLES = %w[HTTPS_PROXY https_proxy HTTP_PROXY http_proxy].freeze
+  # The key RubyLLM gets for an endpoint without one; ProxyNetHttp sends no Authorization for it.
+  NO_KEY = "sure-no-key".freeze
 
   class << self
     # The proxy URL for a request to `url`, or nil to go direct: HTTPS_PROXY, then HTTP_PROXY,
     # whatever the target's scheme, so a setup that sets only one still covers every call.
     # Loopback is never proxied, as Ruby's own lookup does; NO_PROXY matches a host exactly as
     # written, so `127.0.0.1` doesn't cover `localhost`, and `*` means every host, as curl reads it.
-    # A leading dot is dropped, as curl and the external assistant's old matcher do, so
+    # A leading dot is dropped, as curl does, so
     # `.agents.example.com` covers `agents.example.com` itself as well as its subdomains.
     def proxy_for(url, env: ENV)
       uri = parse(url)
@@ -49,31 +51,62 @@ module Ai::Transport::Http
 
     # The proxy for Net::HTTP.new, which takes host, port, user and password.
     def net_http_proxy(url, env: ENV)
-      proxy = proxy_for(url, env:)
+      proxy = proxy_or_warn(url, env:)
       URI(proxy) if proxy
+    end
+
+    # The resolved proxy, or nil when it isn't a valid URL: an operator's typo is warned about
+    # and treated as direct, not crashed on mid-call.
+    def proxy_or_warn(url, env: ENV)
+      proxy = proxy_for(url, env:)
+      return if proxy.nil?
+
+      URI.parse(proxy)
+      proxy
     rescue URI::InvalidURIError
       Rails.logger.warn("[Ai::Transport::Http] Invalid proxy URL ignored")
       nil
     end
 
-    # One base URL rule for every OpenAI-compatible server, the same as ruby-openai's, so an
-    # endpoint configured for ruby-openai keeps its URL: a URL that contains "v1" is used as given
-    # (`/v1`, Gemini's `/v1beta/openai`, Cloudflare's `/ai/v1`); any other gets `/v1`. Agent
-    # URLs are stored whole, so a trailing `/chat/completions` goes.
+    # One base URL rule for every OpenAI-compatible server, matching ruby-openai's, so an
+    # endpoint configured for ruby-openai keeps its URL. A path that ends in the API's version
+    # (`/v1`, `/v1beta/openai`, Cloudflare Workers AI's `/ai/v1`) or has a `/v1` segment
+    # (Cloudflare AI Gateway's `/v1/<account>/<gateway>/openai`) is used as given; any other gets
+    # `/v1`. Another version earlier in the path is the service's, not the API's: Workers AI's
+    # `/client/v4/accounts/x/ai` still needs `/v1`. A "v1" in the host (`v1-proxy.lan`) is not a
+    # version. Agent URLs are stored whole, so a trailing `/chat/completions` goes. Only the path
+    # changes: a query stays as written.
     def compatible_base(base_url)
-      url = base_url.to_s.strip.chomp("/").delete_suffix("/chat/completions")
+      url = base_url.to_s.strip
       return OPENAI_BASE if url.blank?
 
+      uri = URI.parse(url)
+      path = uri.path.to_s.sub(%r{/+\z}, "").delete_suffix("/chat/completions")
+      uri.path = path.match?(%r{/v\d+[a-z0-9]*(/openai)?\z|/v1/}i) ? path : "#{path}/v1"
+      uri.to_s
+    rescue URI::InvalidURIError
+      url = url.chomp("/").delete_suffix("/chat/completions")
       url.include?("v1") ? url : "#{url}/v1"
+    end
+
+    # The base URL an endpoint's ruby-openai client uses, with the default filled in.
+    def openai_base(endpoint) = compatible_base(endpoint.base_url.presence || (OPENROUTER_BASE if endpoint.preset == :openrouter))
+
+    # Whether two URLs name the same server and path. Scheme and host ignore case and a trailing
+    # slash doesn't count, but the path keeps its case: `/TeamA/v1` and `/teama/v1` differ.
+    def same_url?(a, b)
+      left, right = [ a, b ].map { parse(_1.to_s.strip.chomp("/")) }
+      return false unless left&.host && right&.host
+
+      [ left, right ].map { [ _1.scheme.downcase, _1.host.downcase, _1.port, _1.path ] }.uniq.one?
     end
 
     # Headers sent on every request. Values holding `{session_id}` are filled per chat request
     # by Provider::Openai, so they're left out here.
     def headers(endpoint) = endpoint.extra_headers.reject { |_, value| value.to_s.include?("{session_id}") }
 
-    # The ruby-openai client for an endpoint: vector stores, the PDF probes and model listing
-    # stay on ruby-openai (RubyLLM has no vector store calls).
-    # Its base follows compatible_base, as RubyLLM's does, so the models list and the chat calls
+    # The ruby-openai client for an endpoint, for what RubyLLM doesn't do: vector stores and the
+    # models list. Its base follows compatible_base, as RubyLLM's does, so the models list and the chat calls
     # it checks reach the same server; an OpenRouter endpoint without a URL is OpenRouter's.
     def openai_client(endpoint, timeout: endpoint.timeout_seconds)
       base = endpoint.base_url.presence || (OPENROUTER_BASE if endpoint.preset == :openrouter)
@@ -85,28 +118,16 @@ module Ai::Transport::Http
       ::OpenAI::Client.new(**options, &faraday_options(base || OPENAI_BASE))
     end
 
-    # The anthropic gem's client, for the Anthropic PDF probe, as PDF import uses it. It takes no
-    # proxy or TLS options, so it ignores HTTPS_PROXY and SSL_VERIFY=false, as PDF import does
-    # until it moves onto RubyLLM.
-    def anthropic_client(endpoint, timeout: endpoint.timeout_seconds)
-      options = { api_key: endpoint.api_key.to_s, max_retries: 0, timeout: }
-      options[:base_url] = endpoint.base_url if endpoint.base_url.present?
-      ::Anthropic::Client.new(**options)
-    end
-
     # A plain Faraday connection for a request no client library makes (Anthropic's model lookup),
     # with the resolved proxy and TLS options.
     def faraday(url, timeout:)
       Faraday.new(request: { timeout:, open_timeout: timeout }, &faraday_options(url))
     end
 
-    # The Faraday adapter for RubyLLM's contexts, which take no TLS options of their own.
-    def ruby_llm_adapter = TlsNetHttp
-
     # A Faraday block for a client built elsewhere (ruby-openai): the resolved proxy, which
     # also stops Faraday's own ENV lookup when the resolver says direct, and TLS options.
     def faraday_options(url)
-      proxy = proxy_for(url)
+      proxy = proxy_or_warn(url)
       ssl = faraday_ssl_options
 
       lambda do |faraday|
@@ -130,17 +151,21 @@ module Ai::Transport::Http
       end
   end
 
-  # Net::HTTP with Sure's TLS settings (SSL_VERIFY, SSL_CA_FILE) and Sure's proxy decision on
-  # every request. RubyLLM 2.1.1 builds its own Faraday connections and takes only an adapter,
-  # so this is how a self-hosted server with its own certificate is reached by RubyLLM as by every
-  # other client. RubyLLM sets a proxy only when given one; without this, a request
-  # Ai::Transport::Http.proxy_for sends direct would fall back to Faraday's own ENV lookup, which
-  # ignores the port in a NO_PROXY entry such as `10.0.0.5:8080`.
-  class TlsNetHttp < Faraday::Adapter::NetHttp
+  # Net::HTTP with Sure's proxy decision on every request RubyLLM sends, since its config can't
+  # force a direct connection; an invalid proxy URL is warned about and skipped. TLS options go
+  # through the context's config.ssl. RubyLLM's file downloads skip adapters and use
+  # config.http_proxy, which is set from the same resolver.
+  #
+  # It also drops the Authorization header RubyLLM builds from NO_KEY, the stand-in for an endpoint
+  # without a key, since RubyLLM requires one: a server that checks the header rejects a fake one.
+  class ProxyNetHttp < Faraday::Adapter::NetHttp
+    def call(env)
+      env.request_headers.delete("Authorization") if env.request_headers["Authorization"] == "Bearer #{NO_KEY}"
+      super
+    end
+
     def build_connection(env)
-      ssl = Ai::Transport::Http.faraday_ssl_options
-      env[:ssl] = env[:ssl] ? env[:ssl].merge(ssl) : Faraday::SSLOptions.from(ssl) if ssl.present?
-      proxy = Ai::Transport::Http.proxy_for(env[:url].to_s)
+      proxy = Ai::Transport::Http.proxy_or_warn(env[:url].to_s)
       env[:request][:proxy] = proxy && Faraday::ProxyOptions.from(proxy)
       super
     end

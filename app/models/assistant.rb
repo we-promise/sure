@@ -19,6 +19,7 @@ module Assistant
     Function::ListAccountStatements,
     Function::GetAccountStatement,
     Function::GetStatementCoverage,
+    Function::GetDocumentText,
     Function::RecordValuation,
     Function::GetValuations,
     Function::GetInsights,
@@ -52,6 +53,16 @@ module Assistant
   ].freeze
 
   class << self
+    # The first LLM provider chat can use, or nil: what "Dig in with AI" and the bills
+    # AI review check before offering a chat. Every other feature asks the router.
+    def builtin_provider
+      Provider::Registry.llm_provider_order.each do |name|
+        provider = Provider::Registry.get_provider(name)
+        return provider if provider
+      end
+      nil
+    end
+
     def for_chat(chat)
       implementation_for(chat).for_chat(chat)
     end

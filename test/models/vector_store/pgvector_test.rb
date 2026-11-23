@@ -6,6 +6,7 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
     # Schema provisioning is exercised by its own tests below; the operation
     # tests stub it out so their mock connections only see the op's SQL.
     @adapter.stubs(:ensure_schema!)
+    @adapter.stubs(:column_dimensions).returns(nil)   # the dimension check has its own test below
   end
 
   test "create_store returns a UUID" do
@@ -35,16 +36,18 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
 
     @adapter.expects(:extract_text).with(file_content, filename).returns("Hello world")
     @adapter.expects(:chunk_text).with("Hello world").returns([ "Hello world" ])
-    @adapter.expects(:embed_batch).with([ "Hello world" ]).returns([ [ 0.1, 0.2, 0.3 ] ])
+    family = families(:dylan_family)
+    Ai::Embeddings.expects(:index).with([ "Hello world" ], family:).returns([ [ 0.1, 0.2, 0.3 ] ])
 
     mock_conn = mock("connection")
     mock_conn.expects(:transaction).yields
     mock_conn.expects(:exec_insert).once
     @adapter.stubs(:connection).returns(mock_conn)
 
-    response = @adapter.upload_file(store_id: store_id, file_content: file_content, filename: filename)
+    response = @adapter.upload_file(store_id: store_id, file_content: file_content, filename: filename, family:)
     assert response.success?
     assert_match(/\A[0-9a-f-]{36}\z/, response.data[:file_id])
+    assert_equal "ready", response.data[:status]
   end
 
   test "upload_file fails when text extraction returns nil" do
@@ -67,7 +70,7 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
   test "upload_file inserts multiple chunks in a transaction" do
     @adapter.expects(:extract_text).returns("chunk1\n\nchunk2")
     @adapter.expects(:chunk_text).returns([ "chunk1", "chunk2" ])
-    @adapter.expects(:embed_batch).returns([ [ 0.1 ], [ 0.2 ] ])
+    Ai::Embeddings.expects(:index).returns([ [ 0.1 ], [ 0.2 ] ])
 
     mock_conn = mock("connection")
     mock_conn.expects(:transaction).yields
@@ -94,7 +97,8 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
 
   test "search embeds query and returns scored results" do
     query_vector = [ 0.1, 0.2, 0.3 ]
-    @adapter.expects(:embed).with("income").returns(query_vector)
+    family = families(:dylan_family)
+    Ai::Embeddings.expects(:query).with("income", family:, user: nil).returns(query_vector)
 
     mock_result = [
       { "content" => "Total income: $85,000", "filename" => "tax_return.pdf", "file_id" => "file-xyz", "score" => 0.95 }
@@ -104,7 +108,7 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
     mock_conn.expects(:exec_query).returns(mock_result)
     @adapter.stubs(:connection).returns(mock_conn)
 
-    response = @adapter.search(store_id: "store-123", query: "income", max_results: 5)
+    response = @adapter.search(store_id: "store-123", query: "income", max_results: 5, family:)
     assert response.success?
     assert_equal 1, response.data.size
     assert_equal "Total income: $85,000", response.data.first[:content]
@@ -113,8 +117,40 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
     assert_equal "file-xyz", response.data.first[:file_id]
   end
 
+  test "search drops chunks under the similarity floor" do
+    Ai::Embeddings.stubs(:query).returns([ 0.1 ])
+    mock_conn = mock("connection")
+    mock_conn.expects(:exec_query).returns([ { "content" => "rent", "filename" => "a.pdf", "file_id" => "f1", "score" => 0.84 },
+                                             { "content" => "payroll", "filename" => "b.pdf", "file_id" => "f2", "score" => 0.14 } ])
+    @adapter.stubs(:connection).returns(mock_conn)
+
+    response = @adapter.search(store_id: "store-123", query: "monthly rent")
+
+    assert_equal [ "rent" ], response.data.map { _1[:content] }
+  end
+
+  test "an embedding the route can't make fails the search, not the caller" do
+    unavailable = Ai::Error::Unavailable.new(:not_configured)
+    Ai::Embeddings.expects(:query).raises(unavailable)
+
+    response = @adapter.search(store_id: "store-123", query: "rent")
+
+    assert_not response.success?
+    assert_includes response.error.message, unavailable.message
+  end
+
+  test "a vector the chunks table can't hold is unusable, naming both sizes" do
+    @adapter.stubs(:column_dimensions).returns(3)
+    Ai::Embeddings.expects(:query).returns([ 0.1, 0.2, 0.3, 0.4 ])
+
+    response = @adapter.search(store_id: "store-123", query: "rent")
+
+    assert_not response.success?
+    assert_includes response.error.message, "expected 3 dimensions, got 4"
+  end
+
   test "search returns empty array when no results" do
-    @adapter.expects(:embed).returns([ 0.1 ])
+    Ai::Embeddings.expects(:query).returns([ 0.1 ])
 
     mock_conn = mock("connection")
     mock_conn.expects(:exec_query).returns([])

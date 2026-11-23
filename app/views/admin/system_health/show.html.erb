@@ -21,16 +21,10 @@
   <% end %>
 
   <% tabs.with_panel(tab_id: "ai") do %>
-    <%# Loads when the tab is first shown. The buttons inside navigate the page,
-        so their flash shows. A redirect back to this URL is a morphing refresh,
-        and `refresh: :morph` makes it reload the frame instead of morphing the
-        status back into the placeholder. A `?locale=` override only applies to
-        the request that carries it, so the src passes a valid one on. %>
-    <%= turbo_frame_tag "ai_status",
-          src: ai_status_admin_system_health_path(refresh_ai_health: params[:refresh_ai_health].presence_in(%w[1]), locale: locale_from_param),
-          loading: :lazy, target: "_top", refresh: :morph do %>
-      <%= render "entries/loading", message: t(".ai.loading") %>
-    <% end %>
+    <%= turbo_stream_from Ai::ProbeJob::STREAM %>
+    <%# A `?locale=` override only applies to the request that carries it, so the
+        src passes a valid one on. %>
+    <%= render "ai_status_frame", src: ai_status_admin_system_health_path(locale: locale_from_param) %>
   <% end %>
 
   <% tabs.with_panel(tab_id: "configuration") do %>

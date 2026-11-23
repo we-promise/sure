@@ -57,4 +57,44 @@ class AiRoutingMatrixTest < ActiveSupport::TestCase
 
     assert_includes guide, Ai::Routes.doc_table, "regenerate it: bin/rails ai:routes_doc"
   end
+
+  # Every generation declares a feature in the table and has its own test file; every
+  # requester declares the key Ai::Requesters lists it under.
+  test "every generation declares a routed feature and has a test file" do
+    generations = Rails.root.glob("app/models/ai/generations/*.rb").map { "Ai::Generations::#{_1.basename(".rb").to_s.camelize}".constantize }
+
+    assert_not_empty generations
+    generations.each do |generation|
+      assert_includes MATRIX.keys, generation.feature_key, "#{generation} declares an unknown feature"
+      assert Ai::Prompt.exists?(generation.prompt_key), "#{generation} names a missing prompt folder"
+      test_file = Rails.root.join("test/models/ai/generations/#{generation.name.demodulize.underscore}_test.rb")
+      assert test_file.exist?, "add #{test_file.relative_path_from(Rails.root)}"
+    end
+  end
+
+  # A judgement answers its generation's feature on a judge model, in the same shape,
+  # so it declares the same feature, and the generation names it.
+  test "every judgement declares its generation's feature and has a test file" do
+    judgements = Rails.root.glob("app/models/ai/judgements/*.rb").map { "Ai::Judgements::#{_1.basename(".rb").to_s.camelize}".constantize }
+    generations = Rails.root.glob("app/models/ai/generations/*.rb").map { "Ai::Generations::#{_1.basename(".rb").to_s.camelize}".constantize }
+
+    assert_not_empty judgements
+    judgements.each do |judgement|
+      generation = generations.find { _1.judgement_class == judgement }
+      assert generation, "no generation declares judged_by #{judgement}"
+      assert_equal generation.feature_key, judgement.feature_key, judgement.name
+      assert MATRIX.fetch(judgement.feature_key)[:needs].is_a?(Hash), "#{judgement.feature_key} needs a judgement set of needs"
+      test_file = Rails.root.join("test/models/ai/judgements/#{judgement.name.demodulize.underscore}_test.rb")
+      assert test_file.exist?, "add #{test_file.relative_path_from(Rails.root)}"
+    end
+  end
+
+  test "every requester declares the feature it's listed under" do
+    Ai::Requesters::CLASSES.each do |feature, class_name|
+      klass = class_name.constantize
+      assert klass.include?(Ai::Requester), "#{class_name} should include Ai::Requester"
+      assert_equal feature, klass.ai_feature, class_name
+      assert klass.respond_to?(:from_ai_job), "#{class_name} should define .from_ai_job"
+    end
+  end
 end

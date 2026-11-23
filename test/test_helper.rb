@@ -32,6 +32,8 @@ require Rails.root.join("test/support/family_lock_test_helper").to_s
 require Rails.root.join("test/support/secret_key_base_rotation_helper").to_s
 require Rails.root.join("test/support/ai_test_helper").to_s
 require Rails.root.join("test/support/ai_legacy_setups").to_s
+require Rails.root.join("test/support/ai_test_generation").to_s
+require Rails.root.join("test/support/ai_e2e_helper").to_s
 
 VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"
@@ -51,7 +53,8 @@ VCR.configure do |config|
   rescue URI::InvalidURIError
     false
   end
-  config.default_cassette_options = { erb: true }
+  # A missing cassette fails the test instead of recording live requests.
+  config.default_cassette_options = { erb: true, record: :none }
   config.filter_sensitive_data("<OPENAI_ACCESS_TOKEN>") { ENV["OPENAI_ACCESS_TOKEN"] }
   config.filter_sensitive_data("<OPENAI_ORGANIZATION_ID>") { ENV["OPENAI_ORGANIZATION_ID"] }
   config.filter_sensitive_data("<STRIPE_SECRET_KEY>") { ENV["STRIPE_SECRET_KEY"] }

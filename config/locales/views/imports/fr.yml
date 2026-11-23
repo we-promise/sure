@@ -62,6 +62,39 @@ fr:
         name_optional: Nom (facultatif)
         select_format: Sélectionnez un format
         tags_optional: Balises (facultatif)
+      monarch:
+        title: Vérifiez chaque compte Monarch
+        description: Choisissez la destination de chaque compte, son type et ce qu'il faut importer.
+        help_title: Fonctionnement de chaque choix
+        help_account: Importez dans un nouveau compte, nommé comme vous le souhaitez, ou dans l'un de vos comptes manuels. Un compte existant conserve son nom, son type et ses propres écritures, et son solde d'ouverture est déplacé au début de l'historique Monarch s'il se trouve dans cette période. Son statut suit le statut que vous choisissez. Les comptes qui contiennent des titres ou des transactions boursières ne peuvent pas servir de destination.
+        help_closed: Passez le statut à Fermé pour les comptes que vous avez clôturés. Leur solde tombe à zéro le lendemain de leur dernier solde Monarch et ils sont masqués des soldes actuels, mais restent dans l'historique de votre patrimoine net. Les comptes marqués inactifs n'ont eu aucune activité au cours des %{days} derniers jours, ce qui ne signifie pas toujours qu'ils sont clôturés.
+        help_transactions: Désactivez les transactions pour n'importer que l'historique des soldes d'un compte.
+        help_balance: 'Le solde du jour part du dernier solde Monarch. Modifiez-le s''il n''est plus à jour : il est alors enregistré comme solde du jour. Saisissez les montants dus sur les cartes et les prêts en nombres positifs.'
+        table_label: Comptes Monarch
+        import_column: Importer
+        account_column: Nom du compte
+        destination_column: Importer dans
+        type_column: Type
+        status_column: Statut
+        status_open: Ouvert
+        status_closed: Fermé
+        toggle_all_label: "%{column} pour tous les comptes"
+        transactions_column: Transactions
+        balance_column: Solde du jour
+        import_label: Importer %{name}
+        destination_label: Où importer %{name}
+        name_label: Nom dans Sure pour %{name}
+        monarch_name: 'Dans Monarch : %{name}'
+        type_label: Type de %{name}
+        status_label: "%{name} est ouvert"
+        transactions_label: Importer les transactions de %{name}
+        balance_label: Solde du jour pour %{name}
+        new_account: Nouveau compte
+        inactive: Inactif
+        last_activity: Dernière activité le %{date}
+        no_activity: Aucune activité
+        no_transactions: Aucun
+        submit: Vérifier l'import
       rule_import:
         description: Configurez votre importation de règles. Les règles seront créées ou mises à jour en fonction des données CSV.
         process_button: Traiter les règles
@@ -127,6 +160,7 @@ fr:
         treat_as_html: Traitez "<span class="font-medium">%{value}</span>" comme
       update:
         success: Importation configurée avec succès.
+        monarch_success: Choix des comptes enregistrés.
       ynab_import:
         account_label: Compte (facultatif)
         amount_notice: Les montants sont détectés automatiquement à partir des colonnes Débit (Outflow) et Crédit (Inflow).
@@ -194,6 +228,8 @@ fr:
       handle_qif_upload:
         qif_account_required: Sélectionnez un compte pour l'import QIF
         qif_uploaded: Fichier QIF téléversé avec succès.
+      sample_csv:
+        unavailable: Aucun exemple de CSV n'est disponible pour ce type d'import.
       show:
         account_optional_label: Compte (facultatif)
         browse: Parcourir
@@ -209,6 +245,19 @@ fr:
         instructions_3: Vous pouvez nommer vos colonnes comme vous le souhaitez. Vous les associerez à un stade ultérieur.
         instructions_4: Les colonnes marquées avec une étoile (*) sont des données requises.
         instructions_5: Pas de virgules, pas de symboles monétaires et pas de parenthèses dans les nombres.
+        monarch_balances_label: Export des soldes
+        monarch_description: Importez vos comptes, vos transactions et l'historique de vos soldes depuis Monarch.
+        monarch_export_help_html: Monarch explique chaque téléchargement dans %{link}.
+        monarch_export_help_link: son article d'aide
+        monarch_export_settings_link: Settings → Data
+        monarch_export_step_download: Téléchargez vos transactions et l'historique des soldes de vos comptes, chacun sous forme de fichier CSV.
+        monarch_export_step_settings_html: Connectez-vous à Monarch sur le web et ouvrez %{link}.
+        monarch_export_step_upload: Choisissez les fichiers ci-dessous.
+        monarch_export_title: Téléchargez vos données depuis Monarch
+        monarch_title: Téléversez vos exports Monarch
+        monarch_transactions_hint: Ne fournissez pas l'export des transactions pour n'importer que l'historique des soldes.
+        monarch_transactions_label: Export des transactions
+        monarch_upload_button: Téléverser les exports
         multi_account_import: Importation multi-comptes
         paste_csv_placeholder: Collez le contenu de votre fichier CSV ici
         qif_account_label: Compte
@@ -234,6 +283,9 @@ fr:
         upload_button: Téléverser le NDJSON
       update:
         qif_uploaded: Fichier QIF téléchargé avec succès.
+        qif_account_required: Sélectionnez un compte pour l'import QIF
+        monarch_uploaded: Exports Monarch téléversés.
+        monarch_balances_required: Choisissez l'export des soldes Monarch.
   imports:
     apply_template:
       no_template_found: Aucun modèle trouvé, veuillez configurer manuellement votre importation.
@@ -260,6 +312,7 @@ fr:
       qty: Quantité
       tags: Balises
       ticker: Ticker
+    configuration_locked: 'Les données de cet import sont déjà dans Sure : ses fichiers et ses choix ne peuvent donc plus changer. Réessayez pour le terminer, ou supprimez-le pour recommencer.'
     create:
       csv_uploaded: CSV téléversé avec succès.
       document_provider_not_configured: Aucun magasin de vecteurs n'est configuré pour les téléversements de documents.
@@ -340,6 +393,7 @@ fr:
       import_file_description: Analyse par IA pour les PDF et téléversement de fichiers avec recherche
       import_merchants: Importer des commerçants
       import_mint: Importer depuis Mint
+      import_monarch: Importer depuis Monarch
       import_portfolio: Importer les investissements
       import_qif: Importer depuis Quicken (QIF)
       import_rules: Importer les règles
@@ -369,8 +423,6 @@ fr:
       delete_import: Supprimer l'importation
       document_type_label: Type de document
       email_sent_notice: Un e-mail vous a été envoyé avec les prochaines étapes.
-      errors:
-        provider_no_pdf_support: Le fournisseur d'IA ne prend pas en charge le traitement des PDF
       failed_description: Nous n'avons pas pu traiter votre document PDF. Veuillez réessayer ou contacter le support.
       failed_title: Traitement échoué
       no_accounts: Aucun compte disponible. Veuillez d'abord créer un compte.
@@ -414,6 +466,26 @@ fr:
         one: '1 référence de marchand dans ce fichier renvoie à un marchand qui n''y figure pas. Cela peut arriver avec un export réalisé avant que les marchands attribués par les fournisseurs soient inclus dans les exports Sure. Vous pouvez tout de même publier cet import : l''enregistrement concerné sera simplement importé sans marchand, et vous pourrez l''ajouter ensuite.'
         other: "%{count} références de marchand dans ce fichier renvoient à des marchands qui n'y figurent pas. Cela peut arriver avec un export réalisé avant que les marchands attribués par les fournisseurs soient inclus dans les exports Sure. Vous pouvez tout de même publier cet import : les enregistrements concernés seront simplement importés sans marchand, et vous pourrez les ajouter ensuite."
       missing_merchant_warning_title: Certains marchands sont absents de cet export
+      monarch_conflicts_description:
+        one: Sur %{count} jour, un compte dans lequel vous importez a déjà une mise à jour de solde différente de celle de Monarch. Votre valeur existante est conservée.
+        other: Sur %{count} jours, des comptes dans lesquels vous importez ont déjà des mises à jour de solde différentes de celles de Monarch. Vos valeurs existantes sont conservées.
+      monarch_conflicts_title: Certains soldes existants diffèrent de ceux de Monarch
+      monarch_duplicates_description:
+        one: "%{count} transaction Monarch figure déjà dans le compte de destination, issue d'un import précédent ou avec la même date et le même montant : elle est donc ignorée."
+        other: "%{count} transactions Monarch figurent déjà dans les comptes de destination, issues d'un import précédent ou avec la même date et le même montant : elles sont donc ignorées."
+      monarch_duplicates_title: Les transactions déjà présentes dans Sure sont ignorées
+      monarch_existing_names_description: Vous avez déjà des comptes nommés %{names}. La publication crée de nouveaux comptes à côté d'eux. Pour importer plutôt dans l'un d'eux, choisissez-le à l'étape Comptes.
+      monarch_existing_names_title: Des comptes portant ces noms existent déjà
+      monarch_kept_description: L'annulation de l'import n'a pas restauré le solde d'ouverture de %{names}, car il a été modifié après l'import. Vérifiez-le avant d'importer à nouveau.
+      monarch_kept_title: Certains soldes d'ouverture ont été laissés tels que vous les avez modifiés
+      monarch_opening_description:
+        one: Le solde d'ouverture de %{count} compte existant est déplacé au début de son historique Monarch. L'annulation de l'import le remet en place.
+        other: Les soldes d'ouverture de %{count} comptes existants sont déplacés au début de leur historique Monarch. L'annulation de l'import les remet en place.
+      monarch_opening_title: Des soldes d'ouverture vont être déplacés
+      monarch_overlap_description:
+        one: "%{count} transaction existante se situe dans l'historique Monarch d'un compte dans lequel vous importez et ne correspond à aucune transaction Monarch. Elle est conservée et compte dans le solde."
+        other: "%{count} transactions existantes se situent dans l'historique Monarch de comptes dans lesquels vous importez et ne correspondent à aucune transaction Monarch. Elles sont conservées et comptent dans le solde."
+      monarch_overlap_title: Transactions existantes sur la même période
       provider_merchant_diff_description:
         one: 1 marchand de ce fichier existe déjà avec des informations différentes. Le marchand existant sera conservé et les valeurs de ce fichier ne seront pas appliquées.
         other: "%{count} marchands de ce fichier existent déjà avec des informations différentes. Les marchands existants seront conservés et les valeurs de ce fichier ne seront pas appliquées."
@@ -446,6 +518,7 @@ fr:
       finalize_mappings: Veuillez finaliser vos correspondances avant de continuer.
       finalize_upload: Veuillez finaliser le téléversement de votre fichier.
     steps:
+      accounts: Comptes
       clean: Nettoyer
       configure: Configurer
       confirm: Confirmer
@@ -526,6 +599,7 @@ fr:
       document_import: Import de document
       merchant_import: Importation de commerçants
       mint_import: Import Mint
+      monarch_import: Import Monarch
       pdf_import: Import PDF
       qif_import: Import QIF
       rule_import: Import de règles

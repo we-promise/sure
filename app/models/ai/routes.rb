@@ -11,7 +11,10 @@ module Ai::Routes
                          sends: %i[chat_messages looked_up_financial_data stored_document_text] },
     bill_setup:        { lane: :interactive, needs: %i[structured_output],      consent: :user,
                          sends: %i[transaction_dates transaction_amounts transaction_names category_names bill_configuration] },
-    extract_pdf:       { lane: :prompt,      needs: %i[structured_output],      consent: :user,   # vision, documents, ocr: per way of reading
+    # A route entry reads (a model with structured output; vision or documents per way of reading)
+    # or transcribes (an OCR model, read before the text model extracts).
+    # An OCR model alone can't extract (`requires`): it only transcribes for the model that reads.
+    extract_pdf:       { lane: :prompt,      needs: { generation: %i[structured_output], ocr: %i[ocr] }, requires: :generation, consent: :user,
                          sends: %i[uploaded_document] },
     embed:             { lane: :prompt,      needs: %i[embedding],              consent: :user,
                          sends: %i[depends_on_vector_store] },
@@ -26,11 +29,19 @@ module Ai::Routes
                          sends: %i[merchant_names] }
   }.freeze
 
+  # Each lane's queue, on the two AI queues: interactive work on the high-priority one, with chat.
+  QUEUES = { interactive: "ai_high_priority", prompt: "ai_low_priority", background: "ai_low_priority" }.freeze
+
   module_function
 
   def features = MATRIX.keys
 
   def fetch(feature) = MATRIX.fetch(feature.to_sym)
+
+  def queue_for(feature) = QUEUES.fetch(fetch(feature)[:lane])
+
+  # The queues the worker's `ai` capsule polls, and only it (Ai::Capsule).
+  def ai_queues = QUEUES.values.uniq
 
   # The feature whose route and needs this one uses: a shadow's primary, or search's `embed`.
   def source_of(feature) = fetch(feature).values_at(:shadow_of, :route_of).compact.first || feature.to_sym

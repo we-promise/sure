@@ -114,6 +114,81 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal "not-a-number", row.amount
   end
 
+  test "clearing a reading releases only the reconciliation marks it wrote" do
+    first = create_transaction(account: @account, date: @date, amount: 50, name: "First coffee")
+    second = create_transaction(account: @account, date: @date, amount: 12, name: "Second book")
+    other_import = PdfImport.create!(family: @family, account: @account, account_statement: @statement,
+                                     date_format: @family.date_format, status: :pending)
+
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "First") ] })
+    @import.generate_rows_from_extracted_data
+    other_import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -12, name: "Second") ] })
+    other_import.generate_rows_from_extracted_data
+
+    assert first.reload.statement_reconciled?
+    assert second.reload.statement_reconciled?
+
+    @import.clear_reading!
+
+    assert_not first.reload.statement_reconciled?, "the discarded reading's mark is released"
+    assert second.reload.statement_reconciled?, "another import's mark on the same statement stays"
+
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "First") ] })
+    @import.generate_rows_from_extracted_data
+    assert first.reload.statement_reconciled?, "the replacement reading writes its own mark"
+  end
+
+  test "clearing one of two overlapping readings hands the shared mark to the other" do
+    existing = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+    other_import = PdfImport.create!(family: @family, account: @account, account_statement: @statement,
+                                     date_format: @family.date_format, status: :pending)
+    row = extracted(date: @date, amount: -50, name: "Coffee Shop")
+
+    @import.update!(extracted_data: { "transactions" => [ row ] })
+    @import.generate_rows_from_extracted_data
+    other_import.update!(extracted_data: { "transactions" => [ row ] })
+    other_import.generate_rows_from_extracted_data
+
+    assert_equal other_import.id, existing.reload.reconciled_by_import_id
+    assert_equal [ existing.id.to_s ], @import.extraction_dependencies
+    assert_equal [ existing.id.to_s ], other_import.extraction_dependencies
+
+    other_import.clear_reading!
+
+    existing.reload
+    assert existing.statement_reconciled?, "the surviving reading still needs this entry"
+    assert_equal @import.id, existing.reconciled_by_import_id
+  end
+
+  test "clearing a reading releases legacy statement-only marks but keeps other imports' marks" do
+    legacy = create_transaction(account: @account, date: @date, amount: 7, name: "Legacy mark")
+    elsewhere = create_transaction(account: @account, date: @date, amount: 9, name: "Other statement mark")
+    other_entry = create_transaction(account: @account, date: @date, amount: 12.34, name: "Unique Second")
+    other_statement = create_statement(filename: "other-statement.pdf", content: file_fixture("imports/sample_bank_statement.pdf").binread + "\n%other")
+    other_import = PdfImport.create!(family: @family, account: @account, account_statement: @statement,
+                                     date_format: @family.date_format, status: :pending)
+
+    legacy.update_columns(reconciled_at: Time.current, reconciled_by_statement_id: @statement.id,
+                          reconciled_by_import_id: nil)
+    elsewhere.update_columns(reconciled_at: Time.current, reconciled_by_statement_id: other_statement.id,
+                             reconciled_by_import_id: nil)
+
+    other_entry.update_columns(reconciled_at: Time.current, reconciled_by_statement_id: @statement.id,
+                               reconciled_by_import_id: other_import.id)
+    other_import.update_column(:extracted_data, {
+      "transactions" => [], PdfImport::RECONCILED_IDS_KEY => [ other_entry.id ]
+    })
+
+    assert other_entry.statement_reconciled?
+
+    @import.clear_reading!
+
+    assert_not legacy.reload.statement_reconciled?, "a NULL-owner mark on this statement is released"
+    assert_nil legacy.reconciled_by_statement_id
+    assert elsewhere.reload.statement_reconciled?, "a legacy mark on another statement stays"
+    assert other_entry.reload.statement_reconciled?, "another import's owned mark stays"
+  end
+
   test "reassigning the account re-judges the rows and releases the old reconciliation" do
     other = @family.accounts.create!(
       name: "Second Checking", balance: 0, currency: "USD", accountable: Depository.new
@@ -130,14 +205,31 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal 1, @import.reload.rows_count, "nothing on the new account matches, so it is offered"
   end
 
+  test "reassigning the account keeps a mark another import owns and hands over a shared one" do
+    other_account = @family.accounts.create!(name: "Second Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    shared = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+    theirs = create_transaction(account: @account, date: @date, amount: 9.99, name: "Theirs alone")
+    other_import = PdfImport.create!(family: @family, account: @account, account_statement: @statement,
+                                     date_format: @family.date_format, status: :pending)
+    row = extracted(date: @date, amount: -50, name: "Coffee Shop")
+    @import.update!(extracted_data: { "transactions" => [ row ] })
+    @import.generate_rows_from_extracted_data
+    other_import.update!(extracted_data: { "transactions" => [ row ] })
+    other_import.generate_rows_from_extracted_data
+    shared.update_columns(reconciled_by_import_id: @import.id)   # this import owns the shared mark
+    theirs.update_columns(reconciled_at: Time.current, reconciled_by_statement_id: @statement.id,
+                          reconciled_by_import_id: other_import.id)
+
+    @import.assign_account!(other_account)
+
+    assert_equal other_import.id, shared.reload.reconciled_by_import_id, "the other reading still needs it"
+    assert_equal other_import.id, theirs.reload.reconciled_by_import_id, "never this import's to release"
+  end
+
   test "extract_transactions stores string keys so rows can actually be generated" do
     use_ai_routes
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(success?: true, data: { transactions: [ { date: @date.to_s, amount: "-5.0", name: "Coffee" } ] })
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: { transactions: [ { date: @date.to_s, amount: "-5.0", description: "Coffee" } ] })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     @import.extract_transactions
 
@@ -148,22 +240,15 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   test "extract_transactions syncs period and balances to statement_backed import" do
     use_ai_routes
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-10-09", end_date: "2026-11-06" },
-          opening_balance: 325.0,
-          closing_balance: 3176.22,
-          bank_name: "American Express",
-          account_number: "2007",
-          transactions: [ { date: "2026-10-15", amount: "-10.0", name: "Lunch" } ]
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-10-09", end_date: "2026-11-06" },
+      opening_balance: 325.0,
+      closing_balance: 3176.22,
+      bank_name: "American Express",
+      account_number: "2007",
+      transactions: [ { date: "2026-10-15", amount: "-10.0", description: "Lunch" } ]
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     @import.extract_transactions
 
@@ -176,24 +261,120 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal "2007", @statement.account_last4_hint
   end
 
+  test "extract_transactions keeps the detected sign of a CR balance the AI repeats unsigned" do
+    detect_card_statement!(account: accounts(:credit_card))
+    stub_extracted_balances(opening: 1066.47, closing: 435.88)
+
+    @import.extract_transactions
+
+    assert_equal BigDecimal("-435.88"), @statement.reload.closing_balance
+    assert_equal BigDecimal("1066.47"), @statement.opening_balance
+  end
+
+  test "extract_transactions leaves an unlinked CR balance to be signed on linking" do
+    detect_card_statement!(account: nil)
+    stub_extracted_balances(opening: 1066.47, closing: -435.88)
+
+    @import.extract_transactions
+    @statement.reload.link_to_account!(@account)
+
+    assert_equal BigDecimal("435.88"), @statement.reload.closing_balance,
+                 "the AI's sign was kept over the CR marker on a depository account"
+  end
+
+  test "an AI sign correction still applies to a balance printed without a CR/DR marker" do
+    # "Closing balance ($435.88)": the text reads 435.88, with no marker.
+    detect_card_statement!(account: @account, closing_side: nil)
+    stub_extracted_balances(opening: 1066.47, closing: -435.88)
+
+    @import.extract_transactions
+
+    assert_equal BigDecimal("-435.88"), @statement.reload.closing_balance
+  end
+
+  test "an AI balance in a currency the text can't resolve is kept" do
+    detect_card_statement!(account: nil)
+    @statement.update_columns(currency: nil)
+    assert_equal "USD", @statement.reload.statement_currency
+    stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
+
+    @import.extract_transactions
+
+    @statement.reload
+    assert_equal "EUR", @statement.currency
+    assert_equal BigDecimal("1066.47"), @statement.opening_balance
+    assert_equal BigDecimal("435.88"), @statement.closing_balance
+  end
+
+  test "an AI balance in another currency is kept when the same statement was saved earlier in the job" do
+    detect_card_statement!(account: nil)
+    @statement.update_columns(currency: nil)
+    stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
+    reading = { institution_name: nil, statement_period_start: @statement.period_start_on.to_s, statement_period_end: @statement.period_end_on.to_s,
+                transaction_count: nil, opening_balance: nil, closing_balance: nil, currency: nil, account_holder: nil }
+    stub_ai(:extract_pdf) do |request|
+      if request.schema_name == "document_analysis"
+        { document_type: "bank_statement", summary: nil, extracted_data: reading }
+      else
+        { opening_balance: 1066.47, closing_balance: 435.88, currency: "EUR", transactions: [] }
+      end
+    end
+
+    # As ProcessPdfJob does: both calls save the import's one statement object,
+    # the first in the family's dollars, the second switching it to euros.
+    @import.process_with_ai
+    assert_equal BigDecimal("435.88"), @import.account_statement.closing_balance
+    @import.extract_transactions
+
+    @statement.reload
+    assert_equal "EUR", @statement.currency
+    assert_equal BigDecimal("1066.47"), @statement.opening_balance
+    assert_equal BigDecimal("435.88"), @statement.closing_balance
+  end
+
+  test "an AI balance keeps the hand edits already recorded on the statement" do
+    detect_card_statement!(account: accounts(:credit_card))
+    @statement.update!(opening_balance: 999)
+    stub_extracted_balances(opening: nil, closing: 400.0)
+
+    @import.extract_transactions
+
+    assert_equal %w[closing_balance opening_balance], @statement.reload.sanitized_parser_output.dig("pdf", "edited_balances").sort
+  end
+
+  test "extract_transactions writes an AI balance over a hand edit of the same size" do
+    detect_card_statement!(account: accounts(:credit_card))
+    @statement.update!(closing_balance: 400)
+    stub_extracted_balances(opening: 1066.47, closing: -400.0)
+
+    @import.extract_transactions
+
+    assert_equal BigDecimal("-400"), @statement.reload.closing_balance
+  end
+
+  test "extract_transactions keeps a different AI balance through relinking" do
+    detect_card_statement!(account: accounts(:credit_card), text: :summary_table)
+    stub_extracted_balances(opening: 1066.47, closing: 400.0)
+
+    @import.extract_transactions
+    @statement.reload.unlink!
+    @statement.link_to_account!(@account)
+
+    assert_equal BigDecimal("400"), @statement.reload.closing_balance
+    assert_nil @statement.opening_balance, "the detected half of the table was kept"
+  end
+
   test "extract_transactions ignores inverted dates while syncing valid balances and hints" do
     use_ai_routes
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-11-06", end_date: "2026-10-09" },
-          opening_balance: 100.0,
-          closing_balance: 200.0,
-          bank_name: "Chase",
-          account_number: "1234",
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-11-06", end_date: "2026-10-09" },
+      opening_balance: 100.0,
+      closing_balance: 200.0,
+      bank_name: "Chase",
+      account_number: "1234",
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
     initial_start = @statement.period_start_on
     initial_end = @statement.period_end_on
 
@@ -212,28 +393,23 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   test "extract_transactions handles unparseable date independently without dropping balances" do
     use_ai_routes
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-02-30", end_date: "2026-11-06" },
-          opening_balance: 50.0,
-          closing_balance: 150.0,
-          bank_name: "Wells Fargo",
-          account_number: "5678",
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-02-30", end_date: "2026-11-06" },
+      opening_balance: 50.0,
+      closing_balance: 150.0,
+      bank_name: "Wells Fargo",
+      account_number: "5678",
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
+    initial_start = @statement.period_start_on
 
-    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
-      @import.extract_transactions
-    end
+    # ExtractBankStatement drops a date it can't parse, so only the valid end date reaches the statement.
+    @import.extract_transactions
 
     @statement.reload
+    assert_equal initial_start, @statement.period_start_on
+    assert_equal Date.parse("2026-11-06"), @statement.period_end_on
     assert_equal 50.0, @statement.opening_balance
     assert_equal 150.0, @statement.closing_balance
     assert_equal "Wells Fargo", @statement.institution_name_hint
@@ -242,20 +418,13 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   test "extract_transactions rejects dates outside Import.reasonable_date_range" do
     use_ai_routes
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "1950-01-01", end_date: "2026-11-06" },
-          opening_balance: 50.0,
-          closing_balance: 150.0,
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "1950-01-01", end_date: "2026-11-06" },
+      opening_balance: 50.0,
+      closing_balance: 150.0,
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
       @import.extract_transactions
@@ -266,21 +435,14 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     use_ai_routes
     @statement.update!(currency: "USD", opening_balance: 10.0)
 
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
-          opening_balance: 50.0,
-          closing_balance: 150.0,
-          currency: "EUR",
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+      opening_balance: 50.0,
+      closing_balance: 150.0,
+      currency: "EUR",
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
       @import.extract_transactions
@@ -295,20 +457,13 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     use_ai_routes
     @statement.update!(currency: "USD", opening_balance: 10.0, sanitized_parser_output: { "extracted_currency" => "EUR" })
 
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
-          opening_balance: 50.0,
-          closing_balance: 150.0,
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+      opening_balance: 50.0,
+      closing_balance: 150.0,
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
       @import.extract_transactions
@@ -340,22 +495,15 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     use_ai_routes
     @statement.update!(institution_name_hint: "Existing Bank", account_last4_hint: "9999")
 
-    provider = mock("llm_provider")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.stubs(:extract_bank_statement).returns(
-      OpenStruct.new(
-        success?: true,
-        data: {
-          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
-          opening_balance: 10.0,
-          closing_balance: 20.0,
-          bank_name: "New Bank",
-          account_number: "1111",
-          transactions: []
-        }
-      )
-    )
-    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    stub_ai(:extract_pdf, returns: {
+      statement_period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+      opening_balance: 10.0,
+      closing_balance: 20.0,
+      bank_name: "New Bank",
+      account_number: "1111",
+      transactions: []
+    })
+    @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
 
     @import.extract_transactions
 
@@ -365,7 +513,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "apply_statement_metadata_updates captures debug log entry when update fails validation" do
-    @statement.stubs(:update).returns(false)
+    @statement.stubs(:save).returns(false)
     @statement.errors.add(:base, "Simulated validation failure")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
@@ -396,6 +544,32 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_difference -> { @account.entries.count }, 1 do
       @import.import!
     end
+  end
+
+  test "a publish whose every row matched a synced entry is complete once the ledger commits" do
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")   # a sync lands before publishing
+    @import.update_columns(status: "importing", updated_at: 2.hours.ago)
+
+    assert_no_difference -> { @account.entries.count } do
+      @import.import!
+    end
+
+    # The worker stops here: the import is already complete, so recovery doesn't reopen it.
+    assert @import.reload.complete?
+    assert_not @import.force_fail!
+  end
+
+  test "an error after the ledger commits doesn't turn a completed publish into a failed one" do
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    @import.update_columns(status: "importing")
+    Family.any_instance.stubs(:sync_later).raises(StandardError, "queue down")
+
+    @import.publish
+
+    assert @import.reload.complete?, "a retry of a failed import would publish the rows again"
   end
 
   test "assigning an account that reconciles every row completes the import" do
@@ -625,14 +799,35 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   private
 
-    def create_statement
+    # Readings as MetadataDetector stores them for "Closing balance $435.88 CR",
+    # then a link so the statement works its balances out for `account`.
+    def detect_card_statement!(account:, text: :labels, closing_side: "credit")
+      pair = {
+        "opening_balance" => { "amount" => "1066.47", "side" => nil, "currency" => "$" },
+        "closing_balance" => { "amount" => "435.88", "side" => closing_side, "currency" => "$" }
+      }
+      readings = text == :summary_table ? { "summary_table" => pair.merge("adds_up_as" => [ "liability" ]) } : { "labels" => pair }
+      @statement.update_columns(
+        account_id: nil, opening_balance: 1066.47, closing_balance: 435.88,
+        sanitized_parser_output: { "pdf" => { "balance_readings" => readings } }
+      )
+      @statement.link_to_account!(account) if account
+    end
+
+    def stub_extracted_balances(opening:, closing:, currency: nil)
+      use_ai_routes
+      stub_ai(:extract_pdf, returns: { opening_balance: opening, closing_balance: closing, currency: currency, transactions: [] })
+      @import.stubs(:pdf_file_content).returns("%PDF-1.4 fake")
+    end
+
+    def create_statement(filename: "statement.pdf", content: file_fixture("imports/sample_bank_statement.pdf").binread)
       AccountStatement.create_from_upload!(
         family: @family,
         account: @account,
         file: uploaded_file(
-          filename: "statement.pdf",
+          filename: filename,
           content_type: "application/pdf",
-          content: file_fixture("imports/sample_bank_statement.pdf").binread
+          content: content
         )
       )
     end

@@ -11,24 +11,18 @@ class Ai::Instrumentation::UsageSubscriber
     case event.name
     when "usage.ruby_llm" then record_request(event.payload)
     when "request.ruby_llm" then record_request_error(event.payload)
-    else record_error(event.payload)
+    else record_call_end(event.payload)
     end
   rescue StandardError => error
     Rails.logger.error("[Ai::Instrumentation::UsageSubscriber] #{error.class}: #{error.message}")
   end
 
   private
-    # RubyLLM 2.1.1 keeps the usage owner and workflow in Thread.current, so a request from a thread
-    # started inside a call has neither (2.2 moves them to fiber storage, RubyLLM #1327). Sure's
-    # own call context is in fiber storage, which threads inherit, so it fills the gap.
+    # The owner and the call's identity, as RubyLLM carried them into the event: both live in
+    # fiber storage, which Jev's pool threads inherit, so the payload is complete even from a
+    # fan-out thread.
     def owner_and_call(payload)
-      call = (payload[:workflow_metadata] || {}).to_h.stringify_keys
-      return [ payload[:owner], call ] if call["call_id"].present?
-
-      context = Ai::CallContext.current
-      return [ payload[:owner], call ] if context.nil?
-
-      [ payload[:owner] || (Family.find_by(id: context.family_id) if context.family_id), context.metadata.stringify_keys ]
+      [ payload[:owner], (payload[:workflow_metadata] || {}).to_h.stringify_keys ]
     end
 
     def record_request(payload)
@@ -55,6 +49,8 @@ class Ai::Instrumentation::UsageSubscriber
         estimated_cost: cost(tokens, model),
         metadata: {
           route: { endpoint: call["endpoint"], model: },
+          correlation_id: call["correlation_id"],
+          shadow: (true if call["shadow"] == "true"),
           tokens_unknown: (true unless tokens.known?)
         }.compact
       )
@@ -83,6 +79,23 @@ class Ai::Instrumentation::UsageSubscriber
     end
 
     def unexplained_failures(call_id) = LlmUsage.where(call_id:, status: "failed").where("NOT (metadata ? 'error')")
+
+    # The `.ai` event ends a call. `usage.ruby_llm` rows come from the HTTP requests,
+    # so only the event knows how the answering attempt stopped; the error attach follows.
+    def record_call_end(payload)
+      attach_finish_reason(payload)
+      record_error(payload)
+    end
+
+    # The answering request of the call: its newest succeeded row. A call whose
+    # every request failed has none, which is what the nil says.
+    def attach_finish_reason(payload)
+      call_id = payload[:call_id]
+      return if call_id.blank? || payload[:finish_reason].blank?
+
+      LlmUsage.where(call_id:, status: "succeeded").order(created_at: :desc, id: :desc).limit(1)
+              .update_all(finish_reason: payload[:finish_reason])
+    end
 
     def record_error(payload)
       return if payload[:error].blank? || payload[:call_id].blank? || payload[:family_id].blank?

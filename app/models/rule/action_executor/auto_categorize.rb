@@ -52,21 +52,9 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
       return 0
     end
 
-    batch_size = Provider::LlmConcept.max_items_per_call
-    jobs_count = 0
-    enrichable_count = enrichable_transactions.count
-
-    enrichable_transactions.in_batches(of: batch_size).each_with_index do |transactions, idx|
-      Rails.logger.info("Scheduling auto-categorization for batch #{idx + 1} of #{enrichable_count}")
+    enqueue_ai_job(enrichable_transactions, rule_run:) do |transactions|
       rule.family.auto_categorize_transactions_later(transactions, rule_run_id: rule_run&.id)
-      jobs_count += 1
     end
-
-    # The jobs report what they changed via rule_run.complete_job!
-    {
-      async: true,
-      jobs_count: jobs_count
-    }
   end
 
   private

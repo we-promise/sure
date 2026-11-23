@@ -82,8 +82,8 @@ fr:
         confidence_threshold_label: Confiance minimale (0–1)
         data_retention_direct: Les libellés et montants des transactions ainsi que les noms de vos catégories sont envoyés à TypeSafe pour être catégorisés. Consultez sa politique de conservation avant d'activer cette option sur des données réelles.
         data_retention_heading: Partage des données
-        data_retention_proxied: Les libellés et montants des transactions ainsi que les noms de vos catégories sont envoyés à %{host}, qui les transmet à TypeSafe. Consultez les politiques de conservation des deux fournisseurs avant d'activer cette option sur des données réelles.
-        description: Choisissez le fournisseur qui catégorise les transactions. Il est distinct du fournisseur d'IA ci-dessus, qui gère la discussion et le traitement des PDF.
+        data_retention_proxied: Les libellés et montants des transactions ainsi que les noms de vos catégories sont envoyés à %{host}. Que ces données soient transmises plus loin, et à qui, dépend de l'opérateur ; consultez sa politique de conservation avant d'activer cette option sur des données réelles.
+        description: Choisissez le fournisseur qui catégorise les transactions pour toutes les familles de cette instance. Il est distinct du fournisseur d'IA ci-dessus, qui gère la discussion et le traitement des PDF.
         env_notice: Défini sur %{type} via les variables d'environnement.
         jev_configured: Clé API Jev configurée.
         jev_not_configured: Jev est sélectionné mais aucune clé API n'est configurée. La catégorisation continue d'utiliser le fournisseur d'IA tant que vous n'en ajoutez pas une ci-dessous.
@@ -93,6 +93,7 @@ fr:
         provider_label: Fournisseur de catégorisation
         provider_llm: Fournisseur d'IA (OpenAI ou Anthropic)
         shadow_rate_env_notice: Verrouillé par la variable d'environnement CATEGORIZATION_SHADOW_RATE.
+        unsupported_env_endpoint: Cet endpoint Jev n'est pas pris en charge et est ignoré (il doit se terminer par /v1/systemone ou /alpha/decisions). La catégorisation continue d'utiliser le fournisseur d'IA jusqu'à ce que vous le corrigiez.
         shadow_rate_help: Exécute le fournisseur que vous n'avez PAS sélectionné en parallèle de celui que vous avez choisi, et enregistre leurs désaccords sans modifier aucune catégorie. Cela double les coûts d'API de chaque catégorisation échantillonnée. Indiquez 0 pour désactiver.
         shadow_rate_label: Taux de comparaison en arrière-plan (0–1)
         title: Catégorisation des transactions
@@ -157,7 +158,7 @@ fr:
         endpoint_label: Endpoint (Optionnel)
         endpoint_placeholder: https://api.typesafe.ai/v1/systemone (par défaut)
         env_configured_message: Configuré avec succès via les variables d'environnement.
-        model_help: Utilise TypeSafe directement par défaut. Pour passer par OpenRouter, définissez l'endpoint sur https://openrouter.ai/api/alpha/decisions et le modèle sur ~typesafe/jev-latest.
+        model_help: Utilise TypeSafe directement par défaut. Un serveur auto-hébergé fonctionne aussi si son URL se termine par /v1/systemone. Jev via OpenRouter fonctionne à https://openrouter.ai/api/alpha/decisions, avec votre clé OpenRouter comme JEV_API_KEY.
         model_label: Modèle (Optionnel)
         model_placeholder: jev-latest (par défaut)
       llm_provider_selector:
@@ -261,6 +262,10 @@ fr:
         placeholder: Saisissez ici votre clé d'API RentCast
         title: RentCast
         usage: "%{used} sur %{limit} requêtes mensuelles utilisées"
+      reset_market_data:
+        market_data_reset: Réinitialisation des données de marché mise en file d'attente. Les taux et les cours seront réimportés, puis tous les comptes seront synchronisés.
+        market_data_reset_already_queued: Une réinitialisation des données de marché est déjà en file d'attente ou en cours.
+        market_data_reset_failed: La réinitialisation des données de marché n'a pas pu être mise en file d'attente. Rien n'a été supprimé ; veuillez réessayer.
       show:
         ai_assistant: Assistant IA
         clear_cache: Effacer le cache de données
@@ -270,6 +275,9 @@ fr:
           body: "Êtes-vous sûr(e) de vouloir effacer le cache de données ? Les soldes et les positions des comptes de votre famille seront recalculés, et les taux de change et les cours des titres qu'ils utilisent seront rechargés. Seuls les soldes et les positions de votre famille sont supprimés ; les taux de change et les cours des titres sont partagés avec les autres familles de cette instance et sont aussi mis à jour pour elles. Cette action ne peut pas être annulée."
           body_without_provider: "Êtes-vous sûr(e) de vouloir effacer le cache de données ? Les soldes et les positions des comptes de votre famille seront recalculés. Aucun fournisseur de taux de change ou de cours des titres n'est configuré, les taux de change et les cours enregistrés sont donc conservés. Cette action ne peut pas être annulée."
           title: Effacer le cache de données ?
+        confirm_reset_market_data:
+          title: Réinitialiser les données de marché de toutes les familles ?
+          body: Cette action supprime les taux de change et les cours des titres que vos fournisseurs peuvent recharger, pour toutes les familles de cette instance, puis les réimporte. Jusqu'à la fin de l'import, les montants en devises étrangères peuvent apparaître non convertis. Cette action est irréversible.
         danger_zone: Zone dangereuse
         demo_refresh: Actualisation des données de démo
         financial_data_providers: Fournisseurs de données financières
@@ -277,6 +285,8 @@ fr:
         instance_settings_restricted: 'Les identifiants des fournisseurs, la connexion IA partagée et les paramètres de synchronisation s''appliquent à toutes les familles de cette instance : seul un super administrateur peut donc les modifier. L''assistant utilisé par votre famille reste défini par famille. Une personne ayant accès au serveur peut promouvoir un utilisateur super administrateur ; le guide d''auto-hébergement Docker donne la commande dans ses notes de mise à niveau.'
         invites: Codes d'invitation
         property_valuation_providers: Fournisseurs de valorisation immobilière
+        reset_market_data: Réinitialiser les données de marché de toutes les familles
+        reset_market_data_warning: Supprime les taux de change et les cours des titres que vos fournisseurs peuvent recharger, les réimporte, puis synchronise tous les comptes. Les totaux en devises étrangères peuvent apparaître non convertis jusqu'à la fin de l'import.
         sync_settings: Paramètres de synchronisation
         title: Auto-hébergement
       sync_auto_sync_scheduler!:
@@ -293,6 +303,13 @@ fr:
         market_data_sync_label: Activer l'import quotidien des données de marché
         market_data_sync_time_description: Indiquez l'heure à laquelle l'import quotidien des cours doit s'exécuter, par exemple peu après la clôture de votre place boursière principale.
         market_data_sync_time_label: Heure d'import des données de marché (HH:MM)
+      terrascoutx_settings:
+        title: TerraScoutX
+        description: 'Saisissez votre clé API TerraScoutX pour rechercher les caractéristiques et la valeur des biens situés aux États-Unis lors de l''ajout d''un bien. La valeur est celle fixée par l''évaluateur du comté (county assessor) dans le dernier rôle d''imposition dont dispose TerraScoutX, et non une estimation automatisée du marché : elle est donc en retard sur le marché et peut lui être nettement inférieure dans les États qui plafonnent les évaluations, comme la Californie. La couverture varie selon les comtés. Les clés sont gratuites et limitées à 2 000 requêtes API par mois, partagées entre les recherches de biens et les actualisations quotidiennes des estimations. Si votre clé en autorise davantage, relevez le plafond avec la variable d''environnement TERRASCOUTX_MAX_REQUESTS_PER_MONTH.'
+        env_configured_message: Configuré avec succès via la variable d'environnement TERRASCOUTX_API_KEY.
+        label: Clé API
+        placeholder: Saisissez ici votre clé API TerraScoutX
+        usage: "%{used} sur %{limit} requêtes mensuelles utilisées"
       tiingo_settings:
         description: Saisissez le token API fourni par Tiingo. Le forfait gratuit supporte 50 symboles uniques par heure avec plus de 30 ans de données historiques.
         env_configured_message: Configuré avec succès via la variable d'environnement TIINGO_API_KEY.
@@ -336,11 +353,12 @@ fr:
         invalid_anthropic_base_url: L'URL de base d'Anthropic doit être une URL http(s).
         invalid_categorization_rate: "%{field} doit être un nombre compris entre 0 et 1."
         invalid_demo_family: La famille sélectionnée doit être propriétaire de l'e-mail de démo configuré.
-        invalid_jev_endpoint: L'endpoint Jev doit être une URL https. Le http simple n'est accepté que pour localhost.
+        invalid_jev_endpoint: L'endpoint Jev doit être une URL http ou https. N'utilisez le http que pour un serveur sur votre propre réseau.
         invalid_llm_budget: "%{field} doit être un nombre entier ≥ %{minimum}."
         invalid_onboarding_state: État d'intégration invalide
         invalid_sync_time: Format d'heure de synchronisation invalide. Veuillez utiliser le format HH:MM (ex. 02:30).
         scheduler_sync_failed: Paramètres enregistrés, mais la mise à jour du planning de synchronisation a échoué. Veuillez réessayer ou vérifier les journaux du serveur.
+        unsupported_jev_endpoint: L'endpoint Jev doit être une URL http ou https qui se termine par /v1/systemone (TypeSafe, ou un serveur parlant son protocole) ou par /alpha/decisions (Jev via OpenRouter).
         select_demo_family: Sélectionnez d'abord une famille de démo jetable.
         success: Paramètres mis à jour
       yahoo_finance_settings:

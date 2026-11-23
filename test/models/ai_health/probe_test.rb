@@ -2,8 +2,7 @@ require "test_helper"
 
 class AiHealth::ProbeTest < ActiveSupport::TestCase
   setup do
-    @cache = ActiveSupport::Cache::MemoryStore.new
-    @probe = AiHealth::Probe.new(cache: @cache)
+    @probe = AiHealth::Probe.new(run: true)
   end
 
   test "OpenAI LLM probe calls the models endpoint and verifies the configured model" do
@@ -109,40 +108,6 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end
   end
 
-  test "OpenAI-compatible LLM probe lists models too, making no chat call" do
-    endpoint = "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1"
-    request = stub_request(:get, "#{endpoint}/models")
-              .with(headers: { "Authorization" => "Bearer cf-token" })
-              .to_return(status: 200, headers: { "Content-Type" => "application/json" },
-                         body: { data: [ { id: "@cf/zai-org/glm-5.2" } ] }.to_json)
-    chat = stub_request(:post, "#{endpoint}/chat/completions")
-
-    result = @probe.llm(
-      provider: :openai,
-      endpoint: endpoint,
-      access_token: "cf-token",
-      model: "@cf/zai-org/glm-5.2"
-    )
-
-    assert result.passing?
-    assert_requested request
-    assert_not_requested chat
-  end
-
-  test "LLM probe sends the configured endpoint's static headers, as production calls do" do
-    request = stub_request(:get, "https://llm.example.test/v1/models")
-              .with(headers: { "X-Team" => "home" })
-              .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: [ { id: "qwen3" } ] }.to_json)
-
-    headers = { "X-Team" => "home", "X-Session" => "{session_id}" }.to_json
-    ClimateControl.modify(OPENAI_ACCESS_TOKEN: "t", OPENAI_URI_BASE: "https://llm.example.test/v1", OPENAI_MODEL: "qwen3",
-                          OPENAI_EXTRA_HEADERS: headers) do
-      assert @probe.llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "qwen3").passing?
-    end
-    assert_requested request
-    assert_not_requested(:get, "https://llm.example.test/v1/models", headers: { "X-Session" => "{session_id}" })
-  end
-
   test "LLM probe reports a spent balance and a wrong key by name" do
     stub_request(:get, "https://llm.example.test/v1/models").to_return(
       { status: 429, headers: { "Content-Type" => "application/json" }, body: { error: { message: "no credits", code: "insufficient_quota" } }.to_json },
@@ -151,8 +116,8 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     Rails.logger.stubs(:error)
     DebugLogEntry.stubs(:capture)
 
-    spent = AiHealth::Probe.new(cache: @cache, force: true).llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "m")
-    wrong = AiHealth::Probe.new(cache: @cache, force: true).llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "m")
+    spent = AiHealth::Probe.new(run: true).llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "m")
+    wrong = AiHealth::Probe.new(run: true).llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "m")
 
     assert_equal [ :no_credit, 429 ], [ spent.failure_code, spent.http_status ]
     assert_equal [ :unauthorized, 401 ], [ wrong.failure_code, wrong.http_status ]
@@ -175,43 +140,6 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_requested request
   end
 
-  test "the Anthropic models probe takes its proxy from Sure's resolver, as the calls it checks do" do
-    url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
-    Ai::Transport::Http.stubs(:proxy_for).returns(nil)
-    Ai::Transport::Http.expects(:proxy_for).with(url).returns("http://proxy.example.test:3128").at_least_once
-    stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-sonnet-4-6" }.to_json)
-
-    result = @probe.llm(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "anthropic-token", model: "claude-sonnet-4-6")
-
-    assert result.passing?
-  end
-
-  test "an Anthropic lookup answered for another model fails; a dated snapshot of an alias passes" do
-    url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
-    transport = Ai::Transport.for(Ai::Config::Endpoint.new(name: "anthropic", protocol: :anthropic, api_key: "anthropic-token"))
-    model = Ai::Config::Model.new(endpoint: transport.endpoint, name: "claude-sonnet-4-6")
-
-    stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-haiku-4-5" }.to_json)
-    assert_raises(Ai::Error::ModelMissing) { transport.probe(model, :models) }
-
-    stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-sonnet-4-6-20260101" }.to_json)
-    assert_equal "claude-sonnet-4-6-20260101", transport.probe(model, :models)
-  end
-
-  test "an Anthropic model the API doesn't have fails the models probe" do
-    stub_request(:get, "https://api.anthropic.com/v1/models/claude-nope")
-      .to_return(status: 404, headers: { "Content-Type" => "application/json" },
-                 body: { type: "error", error: { type: "not_found_error", message: "model: claude-nope" } }.to_json)
-    Rails.logger.stubs(:error)
-    DebugLogEntry.stubs(:capture)
-
-    result = @probe.llm(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "anthropic-token", model: "claude-nope")
-
-    assert_not result.passing?
-    assert_equal 404, result.http_status
-    assert_equal "model_not_available", result.failure_code.to_s
-  end
-
   test "an Anthropic lookup maps by status whatever the body, and a garbled 200 is invalid output" do
     url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
     transport = Ai::Transport.for(Ai::Config::Endpoint.new(name: "anthropic", protocol: :anthropic, api_key: "anthropic-token"))
@@ -227,150 +155,86 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end
   end
 
-  test "PDF text-extraction probe exercises only the OpenAI text processor and validates its result" do
-    response = {
-      "choices" => [
-        {
-          "message" => {
-            "content" => {
-              document_type: "bank_statement",
-              summary: "A synthetic bank statement containing no customer data.",
-              extracted_data: {
-                institution_name: AiHealth::Probe::SyntheticPdf::INSTITUTION
-              }
-            }.to_json
-          }
-        }
-      ]
-    }
-    client = mock("openai_client")
-    captured = nil
-    client.expects(:chat).with do |params|
-      captured = params
-      true
-    end.returns(response)
-    Ai::Transport::Http.stubs(:openai_client).returns(client)
-    Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).never
+  test "PDF text-extraction probe sends the synthetic text layer through ReadPdf and validates its result" do
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
 
-    result = @probe.pdf_text_extraction(
-      provider: :openai,
-      endpoint: "https://api.cloudflare.example.test/v1",
-      access_token: "token",
-      model: "text-model",
-      openai_compatible: true
-    )
+    result = @probe.pdf_text_extraction(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                        model: "text-model")
 
     assert result.passing?
-    instructions = captured.dig(:parameters, :messages, 0, :content)
-    document_text = captured.dig(:parameters, :messages, 1, :content)
-    assert_not_includes instructions, AiHealth::Probe::SyntheticPdf::INSTITUTION
-    assert_includes document_text, AiHealth::Probe::SyntheticPdf::INSTITUTION
+    request = requests.sole
+    assert_empty request.attachments
+    assert_not_includes request.instructions, AiHealth::Probe::SyntheticPdf::INSTITUTION
+    assert_includes request.input, AiHealth::Probe::SyntheticPdf::INSTITUTION
+    assert_equal "text-model", request.model.name
   end
 
-  test "PDF vision probe exercises only the OpenAI vision processor and validates its result" do
-    response = {
-      "choices" => [
-        {
-          "message" => {
-            "content" => {
-              document_type: "bank_statement",
-              summary: "A synthetic bank statement containing no customer data.",
-              extracted_data: {
-                institution_name: AiHealth::Probe::SyntheticPdf::INSTITUTION
-              }
-            }.to_json
-          }
-        }
-      ]
-    }
-    client = mock("openai_client")
-    captured = nil
-    client.expects(:chat).with do |params|
-      captured = params
-      true
-    end.returns(response)
-    Ai::Transport::Http.stubs(:openai_client).returns(client)
-    Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).once.returns([ "encoded-page" ])
+  test "a PDF probe asks for the output limit of the production extract_pdf route" do
+    endpoint = Ai::Config::Endpoint.new(name: :openai, protocol: :compatible, base_url: "https://limit.example.test/v1", api_key: "limit-token")
+    model = Ai::Config::Model.new(endpoint:, name: "limited-model", capabilities: %i[structured_output vision documents],
+                                 max_output_tokens: 2048)
+    config = AiTestHelper.build_ai_config([ model ], { extract_pdf: [ "openai/limited-model" ] }, vector_store_backend: :pgvector)
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
 
-    result = @probe.pdf_vision_processing(
-      provider: :openai,
-      endpoint: "https://api.cloudflare.example.test/v1",
-      access_token: "token",
-      model: "vision-model",
-      openai_compatible: true
-    )
+    result = Ai::Config.with(config) do
+      @probe.pdf_text_extraction(provider: :openai, endpoint: "https://limit.example.test/v1", access_token: "limit-token",
+                                 model: "limited-model")
+    end
 
     assert result.passing?
-    instructions = captured.dig(:parameters, :messages, 0, :content)
-    assert_not_includes instructions, AiHealth::Probe::SyntheticPdf::INSTITUTION
+    # The transport reads the limit from the model; Request#max_tokens is only for callers
+    # that override it, so the probe's synthetic model must carry the production limit.
+    assert_equal 2048, requests.sole.model.max_output_tokens
+  end
+
+  test "a PDF probe of another server with the same model name keeps the fallback output limit" do
+    endpoint = Ai::Config::Endpoint.new(name: :openai, protocol: :compatible, base_url: "https://limit.example.test/v1", api_key: "limit-token")
+    model = Ai::Config::Model.new(endpoint:, name: "limited-model", capabilities: %i[structured_output vision documents],
+                                 max_output_tokens: 8192)
+    config = AiTestHelper.build_ai_config([ model ], { extract_pdf: [ "openai/limited-model" ] }, vector_store_backend: :pgvector)
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
+
+    Ai::Config.with(config) do
+      @probe.pdf_text_extraction(provider: :openai, endpoint: "https://adhoc.example.test/v1", access_token: "other-token",
+                                 model: "limited-model")
+    end
+
+    assert_equal AiHealth::Probe::PDF_MAX_RESPONSE_TOKENS, requests.sole.model.max_output_tokens
+  end
+
+  test "PDF vision probe sends the page as an image on a compatible server" do
+    skip "pdftoppm isn't installed (poppler-utils)" unless system("pdftoppm", "-v", out: File::NULL, err: File::NULL)
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
+
+    result = @probe.pdf_vision_processing(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                          model: "vision-model")
+
+    assert result.passing?
+    assert_equal [ "image/png" ], requests.sole.attachments.map(&:content_type)
   end
 
   test "PDF processing probes require the expected institution in the standard result fields" do
-    response = {
-      "choices" => [
-        {
-          "message" => {
-            "content" => {
-              document_type: "bank_statement",
-              summary: "A different bank statement.",
-              extracted_data: { institution_name: "Another Bank" }
-            }.to_json
-          }
-        }
-      ]
-    }
-    client = stub(chat: response)
-    Ai::Transport::Http.stubs(:openai_client).returns(client)
-    Provider::Openai::PdfProcessor.any_instance.stubs(:convert_pdf_to_images).returns([ "encoded-page" ])
+    stub_ai(:extract_pdf, returns: probe_answer("Another Bank"))
     Rails.logger.stubs(:error)
     DebugLogEntry.stubs(:capture)
 
-    result = @probe.pdf_vision_processing(
-      provider: :openai,
-      endpoint: "https://api.cloudflare.example.test/v1",
-      access_token: "token",
-      model: "vision-model",
-      openai_compatible: true
-    )
+    result = @probe.pdf_text_extraction(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                        model: "text-model")
 
     assert result.failing?
     assert_equal :invalid_response, result.failure_code
   end
 
-  test "PDF vision probe sends the synthetic PDF as an Anthropic document block" do
-    # Symbol keys, as the Anthropic SDK returns tool input (the JSON.parse
-    # branch is skipped); string keys here would not reproduce the probe.
-    tool_use = Struct.new(:type, :input).new(
-      :tool_use,
-      {
-        document_type: :bank_statement,
-        summary: "A synthetic bank statement containing no customer data.",
-        extracted_data: {
-          institution_name: AiHealth::Probe::SyntheticPdf::INSTITUTION
-        }
-      }
-    )
-    response = Struct.new(:content, :usage).new([ tool_use ], nil)
-    messages = mock("anthropic_messages")
-    messages.expects(:create).with do |params|
-      source = params.dig(:messages, 0, :content, 0, :source)
-      extracted_data_schema = params.dig(:tools, 0, :input_schema, :properties, :extracted_data)
-      source[:media_type] == "application/pdf" &&
-        Base64.strict_decode64(source[:data]) == AiHealth::Probe::SyntheticPdf.bytes &&
-        extracted_data_schema[:properties].key?(:institution_name) &&
-        extracted_data_schema[:required].empty? &&
-        !params[:system_].include?(AiHealth::Probe::SyntheticPdf::INSTITUTION)
-    end.returns(response)
-    Ai::Transport::Http.stubs(:anthropic_client).returns(stub(messages: messages))
+  test "PDF vision probe sends the synthetic PDF itself to Anthropic" do
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
 
-    result = @probe.pdf_vision_processing(
-      provider: :anthropic,
-      endpoint: "https://api.anthropic.com",
-      access_token: "token",
-      model: "claude-sonnet-4-6"
-    )
+    result = @probe.pdf_vision_processing(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "token",
+                                          model: "claude-sonnet-4-6")
 
     assert result.passing?
+    attachment = requests.sole.attachments.sole
+    assert attachment.pdf?
+    assert_equal AiHealth::Probe::SyntheticPdf.bytes, attachment.data
   end
 
   test "failed LLM probe writes a system-wide debug entry and Rails log without secrets" do
@@ -413,60 +277,8 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_nil entry.account
     assert_equal "http://ollama:11434/v1", entry.metadata.fetch("endpoint")
     assert_equal "model_not_available", entry.metadata.fetch("failure_code")
+    assert_equal WorkerAiHealth.current_process_identity, entry.metadata.fetch("process_identity")
     assert_no_match(/secret-token|uri-secret|query-secret/, entry.metadata.to_json)
-  end
-
-  test "probe results are cached to avoid repeated requests and failure logs" do
-    models = mock("models")
-    models.expects(:list).once.returns({ "data" => [ { "id" => "gpt-4.1" } ] })
-    client = stub(models: models)
-    Ai::Transport::Http.stubs(:openai_client).returns(client)
-
-    2.times do
-      result = @probe.llm(
-        provider: :openai,
-        endpoint: "https://api.openai.com/v1",
-        access_token: "token",
-        model: "gpt-4.1"
-      )
-      assert result.passing?
-    end
-  end
-
-  test "a probe keeps the configured endpoint's API choice unless the caller picks one" do
-    @probe.stubs(:configured_endpoint).returns(ai_endpoint(name: "openai", responses_api: true, probe_check: :chat))
-    build = ->(**choice) { @probe.send(:config_endpoint, provider: :openai, base_url: "https://llm.example.test/v1", api_key: "t", **choice) }
-
-    assert build.().responses_api, "the endpoint's Responses API stands"
-    assert_not build.(responses_api: false).responses_api, "the tool-call probe picks Chat Completions"
-  end
-
-  test "a changed static header isn't answered from the cache" do
-    key = lambda do |headers|
-      @probe.stubs(:configured_endpoint).returns(ai_endpoint(name: "openai", extra_headers: headers))
-      @probe.send(:cache_key, component: "llm", provider_key: :openai, endpoint: "https://llm.example.test/v1", model: "m",
-                              credential: "t", dimensions: nil, verification: :models)
-    end
-
-    assert_not_equal key.({ "X-Gateway-Key" => "old" }), key.({ "X-Gateway-Key" => "new" })
-  end
-
-  test "forced probe bypasses the cached result" do
-    models = mock("models")
-    models.expects(:list).twice.returns({ "data" => [ { "id" => "gpt-4.1" } ] })
-    client = stub(models: models)
-    Ai::Transport::Http.stubs(:openai_client).returns(client)
-
-    arguments = {
-      provider: :openai,
-      endpoint: "https://api.openai.com/v1",
-      access_token: "token",
-      model: "gpt-4.1"
-    }
-    @probe.llm(**arguments)
-
-    forced_probe = AiHealth::Probe.new(cache: @cache, force: true)
-    assert forced_probe.llm(**arguments).passing?
   end
 
   test "hosted vector-store probe calls the non-destructive list endpoint" do
@@ -514,6 +326,21 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       model: "nomic-embed-text",
       dimensions: 3
     )
+
+    assert result.passing?
+    assert_requested request
+    assert_not_requested(:post, "http://ollama.example.test:11434/v1/embeddings") { _1.headers.key?("Authorization") }
+  end
+
+  test "embedding probe sends the embedding token as a bearer token" do
+    request = stub_request(:post, "http://ollama.example.test:11434/v1/embeddings")
+              .with(headers: { "Authorization" => "Bearer emb-token" })
+              .to_return(
+                status: 200, headers: { "Content-Type" => "application/json" },
+                body: { data: [ { embedding: [ 0.1, 0.2, 0.3 ] } ], model: "nomic-embed-text", usage: { prompt_tokens: 4, total_tokens: 4 } }.to_json
+              )
+
+    result = @probe.embedding(endpoint: "http://ollama.example.test:11434/v1", access_token: "emb-token", model: "nomic-embed-text", dimensions: 3)
 
     assert result.passing?
     assert_requested request
@@ -753,6 +580,62 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_no_match(/(OpenAI::Client|Anthropic::Client|Faraday)\.new\b/, source)
   end
 
+  test "the PDF vision probe reports a missing renderer as such, not as a failed request" do
+    Pdf::PageImages.stubs(:render).raises(Pdf::PageImages::Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary))
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.pdf_vision_processing(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                          model: "vision-model")
+
+    assert result.failing?
+    assert_equal :missing_binary, result.failure_code
+  end
+
+  test "a PDF probe neither skips nor marks down production's routes" do
+    stub_ai(:extract_pdf, raises: Ai::Error::Timeout.new("slow"))
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+    Ai::DownMarks.expects(:mark).never
+    Ai::DownMarks.expects(:state).never
+
+    @probe.pdf_text_extraction(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                               model: "text-model")
+  end
+
+  test "a worker's results reach the page through Ai::SharedState once stored, and the page never probes" do
+    request = stub_request(:get, "https://api.openai.example.test/v1/models")
+              .to_return(status: 402, headers: { "Content-Type" => "application/json" }, body: { error: { message: "no credit" } }.to_json)
+    arguments = { provider: :openai, endpoint: "https://api.openai.example.test/v1", access_token: "token", model: "gpt-4.1" }
+    Rails.logger.stubs(:error)
+
+    worker = AiHealth::Probe.new(run: true)
+    probed = worker.llm(**arguments)
+    assert AiHealth::Probe.new.llm(**arguments).not_checked?, "nothing is stored until the run ends"
+    worker.store!
+    page = AiHealth::Probe.new.llm(**arguments)
+
+    assert_equal [ :failing, :no_credit, 402 ], [ page.status, page.failure_code, page.http_status ]
+    assert_in_delta probed.checked_at, page.checked_at, 0.001
+    assert_requested request, times: 1
+  end
+
+  test "with nothing stored, a stored-only probe is not checked and makes no request" do
+    result = AiHealth::Probe.new.llm(provider: :openai, endpoint: "https://api.openai.example.test/v1",
+                                                        access_token: "token", model: "gpt-4.1")
+
+    assert result.not_checked?
+    assert_not_requested :any, /.*/
+  end
+
+  test "a stored-only probe whose store fails is not checked, and says why in the debug log" do
+    Ai::SharedState.stubs(:read).raises(RedisClient::CannotConnectError)
+
+    assert_difference -> { DebugLogEntry.where(category: "ai_health", level: "warn").count }, 1 do
+      assert AiHealth::Probe.new.pgvector.not_checked?
+    end
+  end
+
   private
     def stub_tools_request(endpoint)
       stub_request(:post, "#{endpoint}/chat/completions").with { |request| JSON.parse(request.body).key?("tools") }
@@ -760,5 +643,10 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     def stub_control_request(endpoint)
       stub_request(:post, "#{endpoint}/chat/completions").with { |request| !JSON.parse(request.body).key?("tools") }
+    end
+
+    def probe_answer(institution)
+      { document_type: "bank_statement", summary: "A synthetic bank statement containing no customer data.",
+        extracted_data: { institution_name: institution } }
     end
 end

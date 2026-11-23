@@ -5,6 +5,17 @@ require 'rails_helper'
 RSpec.configure do |config|
   config.openapi_root = Rails.root.join('docs', 'api').to_s
   reset_count_keys = Family::FinancialDataReset::STATUS_COUNT_KEYS.map(&:to_s)
+  budget_owner_schema = {
+    type: :object,
+    nullable: true,
+    description: 'Null for the household budget. For a personal budget, the family member it belongs to: ' \
+                 'the caller, or a member who shared their budget with the caller.',
+    required: %w[id name],
+    properties: {
+      id: { type: :string, format: :uuid },
+      name: { type: :string }
+    }
+  }
 
   config.openapi_specs = {
     'openapi.yaml' => {
@@ -489,12 +500,13 @@ RSpec.configure do |config|
           },
           BudgetSummary: {
             type: :object,
-            required: %w[id start_date end_date name currency initialized current created_at updated_at],
+            required: %w[id start_date end_date name owner currency initialized current created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               start_date: { type: :string, format: :date },
               end_date: { type: :string, format: :date },
               name: { type: :string },
+              owner: budget_owner_schema,
               currency: { type: :string },
               initialized: { type: :boolean },
               current: { type: :boolean },
@@ -510,12 +522,13 @@ RSpec.configure do |config|
           },
           Budget: {
             type: :object,
-            required: %w[id start_date end_date name currency initialized current created_at updated_at],
+            required: %w[id start_date end_date name owner currency initialized current created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               start_date: { type: :string, format: :date },
               end_date: { type: :string, format: :date },
               name: { type: :string },
+              owner: budget_owner_schema,
               currency: { type: :string },
               initialized: { type: :boolean },
               current: { type: :boolean },
@@ -912,6 +925,26 @@ RSpec.configure do |config|
             required: %w[data],
             properties: {
               data: { '$ref' => '#/components/schemas/RuleRun' }
+            }
+          },
+          RuleRunProgress: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: {
+                type: :object,
+                required: %w[rule_run_id status transactions_queued transactions_awaiting_ai transactions_modified finished updated_at],
+                properties: {
+                  rule_run_id: { type: :string, format: :uuid },
+                  status: { type: :string, enum: %w[pending success failed] },
+                  transactions_queued: { type: :integer, minimum: 0 },
+                  transactions_awaiting_ai: { type: :integer, minimum: 0,
+                                              description: 'Transactions still waiting for an AI answer; counts down to 0 as batches are applied' },
+                  transactions_modified: { type: :integer, minimum: 0 },
+                  finished: { type: :boolean, description: 'True once the run is no longer pending and none of its jobs is still running; a failed run with a job still running is not finished yet' },
+                  updated_at: { type: :string, format: :'date-time' }
+                }
+              }
             }
           },
           RuleRunCollection: {

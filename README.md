@@ -1,3 +1,70 @@
+Multi-part series branch https://github.com/we-promise/sure/tree/refactor/ai-plumbing
+
+---
+
+### Plan
+
+- https://github.com/we-promise/sure/pull/4440 plan documents.
+
+---
+
+### Milestone 1 - December 2026
+
+- https://github.com/we-promise/sure/pull/4773 2a. Transports and instrumentation.
+- https://github.com/we-promise/sure/pull/4774 2b. Routing and consent.
+- https://github.com/we-promise/sure/pull/4775 2c. Generations.
+- https://github.com/we-promise/sure/pull/5209 CI: refuse provider HTTP outside live tests. 
+- https://github.com/we-promise/sure/pull/4765 2d. Jev and shadow runs. 
+- https://github.com/we-promise/sure/pull/3422 bridge the statement vault to search and let tools read a file. 
+- https://github.com/we-promise/sure/pull/4771 2e. PDF import and document search. merged on branch
+- https://github.com/we-promise/sure/pull/4892 2f. ruby_llm 2.2.3, Jev via OpenRouter, review fixes.
+- https://github.com/we-promise/sure/stack/5504 stack
+  - https://github.com/we-promise/sure/pull/5501 3a. Capsule, shared state and probes off the web thread.
+  - https://github.com/we-promise/sure/pull/5502 Tidying 3a and dead code from 2a-2f; review fixes.
+  - https://github.com/we-promise/sure/pull/5503 Trimming tests to a few comprehensive AI tests per layer.
+  - https://github.com/we-promise/sure/pull/5521 Windowing: fixing 2c's O(N²) runs, a #5077 performance bug
+  - https://github.com/we-promise/sure/pull/5550 2c follow-up: recorded evals that run, set-aside prompt overrides on the family
+  - https://github.com/we-promise/sure/pull/5608 Fix #5077 follow-ups: credentials, rule-run accounting, JSON mode, eval errors
+
+Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work deferred from these PRs.
+
+---
+
+### Waiting on Milestone 1
+
+---
+
+- https://github.com/we-promise/sure/pull/4425 Propose a transaction split from an attached receipt.
+
+---
+
+- 3b Bill suggestions and stopping AI work.
+- 3c Documents and MCP tools.
+- 3d Enforcement.
+
+---
+
+- 4 Sequencer.
+
+---
+
+- 6 Chat.
+
+---
+
+- 7 Configuration in the database.
+
+---
+
+- 8 Health and settings pages.
+
+---
+
+- 9 Allowed endpoints, own keys and the member switch.
+
+---
+
+
 [![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/we-promise/sure)
 [![View performance data on Skylight](https://badges.skylight.io/typical/s6PEZSKwcklL.svg)](https://oss.skylight.io/app/applications/s6PEZSKwcklL)
 [![Dosu](https://raw.githubusercontent.com/dosu-ai/assets/main/dosu-badge.svg)](https://app.dosu.dev/a72bdcfd-15f5-4edc-bd85-ea0daa6c3adc/ask)

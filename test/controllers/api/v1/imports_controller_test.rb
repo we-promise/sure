@@ -1341,6 +1341,34 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "importing", json_response["data"]["status"]
   end
 
+  test "returns the saved import when auto-publish cannot be enqueued" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    ImportJob.stubs(:perform_later).raises(StandardError, "queue offline")
+
+    assert_difference("Import.count") do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: @account.id,
+             date_format: "%Y-%m-%d",
+             publish: "true"
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :internal_server_error
+    json_response = JSON.parse(response.body)
+    assert_equal "publish_failed", json_response["error"]
+    assert_match(/could not be queued/, json_response["message"])
+
+    import = Import.find(json_response["import_id"])
+    assert_equal 1, import.rows.count, "the saved rows are still available on retry"
+    assert_equal "pending", import.status
+  end
+
   test "should not create import for account in another family" do
     other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en")
     other_depository = Depository.create!(subtype: "checking")

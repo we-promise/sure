@@ -1,7 +1,18 @@
 class PdfImport < Import
   has_one_attached :pdf_file, dependent: :purge_later
 
+  # "Read as", per upload: Auto, or one way of reading the PDF.
+  READ_AS = Ai::PdfReading::READ_AS.map(&:to_s).freeze
+  # Reconciliation dependencies ride in extracted_data: a statement's own reading, not a new
+  # schema, owns the list of existing entries it decided were already recorded. A later import
+  # on the same statement can claim the same entry, so clearing one reading must hand that mark
+  # back to another reading that still needs it.
+  RECONCILED_IDS_KEY = "_reconciled_entry_ids".freeze
+  # What ReadPdf says the document is.
+  Analysis = Data.define(:summary, :document_type, :extracted_data)
+
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
+  validates :read_as, inclusion: { in: READ_AS }, allow_nil: true
   validate :account_statement_matches_import
 
   class << self
@@ -38,12 +49,9 @@ class PdfImport < Import
 
         previous_status = pdf_import.status
         if previous_status == "reverting"
-          pdf_import.update!(status: :revert_failed, error: Import.interrupted_error_message)
-        elsif pdf_import.data_committed?
-          pdf_import.update!(status: :complete, error: nil)
-          needs_sync = true
+          pdf_import.update!(status: :revert_failed, error: Import.interrupted_error_message, reread_token: nil)
         else
-          pdf_import.update!(status: :pending)
+          needs_sync = pdf_import.recover_lost_claim!
         end
 
         DebugLogEntry.capture(
@@ -60,44 +68,94 @@ class PdfImport < Import
       family.sync_later if needs_sync
     end
 
-    def create_from_upload!(family:, file:, user:)
+    def create_from_upload!(family:, file:, user:, read_as: nil)
       statement = AccountStatement.create_from_prepared_upload!(
         family: family,
         account: nil,
         prepared_upload: AccountStatement.prepare_upload!(file)
       )
 
-      create_from_statement!(statement: statement)
+      create_from_statement!(statement: statement, read_as:)
     rescue AccountStatement::DuplicateUploadError => e
       raise unless e.statement.manageable_by?(user)
 
-      create_from_statement!(statement: e.statement)
+      create_from_statement!(statement: e.statement, read_as:)
     end
 
-    def create_from_statement!(statement:)
+    def create_from_statement!(statement:, read_as: nil)
+      read_as = read_as.presence_in(PdfImport::READ_AS)
       reusable_import = statement.latest_reusable_pdf_import
-      return reusable_import if reusable_import &&
-                                reusable_import.account_id == statement.account_id &&
-                                reusable_import.date_format == statement.family.date_format
+      if reusable_import && reusable_import.account_id == statement.account_id &&
+         reusable_import.date_format == statement.family.date_format
+        # Under its lock, and only while unclaimed: a job already reading it keeps its way.
+        reusable_import.with_lock { reusable_import.update!(read_as:) if reusable_import.pending? && !reusable_import.ai_processed? } if read_as
+        return reusable_import
+      end
 
-      create!(family: statement.family, account: statement.account, account_statement: statement, date_format: statement.family.date_format, status: :pending)
+      create!(family: statement.family, account: statement.account, account_statement: statement, date_format: statement.family.date_format,
+              status: :pending, read_as:)
+    end
+
+    # Where Auto starts: the way the last extraction for this account and model that passed, or
+    # that had nothing another way could fix (a statement without balances), used.
+    # Keyed by the model Auto started from (`tuned_model`), not the one that answered: when a
+    # fallback answered, the next upload still starts from the same primary. Readings from before
+    # the key was stored fall back to their answering model.
+    def last_passing_way(account:, model:)
+      return if account.nil? || model.blank?
+
+      where(account:).where.not(read_with: nil)
+        .where("extraction_checks ->> 'tuned_model' = :model OR (extraction_checks ->> 'tuned_model' IS NULL AND read_model = :model)",
+               model:)
+        .where("extraction_checks ->> 'passed' = 'true' OR extraction_checks ->> 'settled' = 'true'")
+        .order(updated_at: :desc).pick(:read_with)
+    end
+
+    # Why no model could read a PDF, from Ai::Error::Unavailable's reason.
+    def unavailable_message(reason)
+      I18n.t("imports.pdf_import.errors.unavailable.#{reason}", default: I18n.t("imports.pdf_import.errors.unavailable.default"))
     end
   end
 
   # A PdfImport's importing status is a processing claim (AI extraction or
-  # publish). Release a lost claim back to pending so the user can re-trigger
+  # publish). Release a lost claim (release_lost_claim!) so the user can re-trigger
   # processing, mirroring ProcessPdfJob's own reclaim; lost reverts keep the
   # base revert_failed behavior.
   def force_fail!(error_message = Import.lost_error_message)
     return super if reverting?
 
-    with_lock do
+    needs_sync = with_lock do
       return false unless presumed_lost?
 
-      update!(status: :pending)
+      recover_lost_claim!(error_message)
     end
+    family.sync_later if needs_sync
 
     true
+  end
+
+  # Under the row lock. A publish whose ledger transaction committed finishes as complete (true:
+  # the family needs a sync); publishing again would insert its rows twice. Otherwise the claim
+  # is released.
+  def recover_lost_claim!(error_message = Import.lost_error_message)
+    if data_committed?
+      update!(status: :complete, error: nil, reread_token: nil)
+    else
+      release_lost_claim!(error_message)
+      false
+    end
+  end
+
+  # A lost claim goes back to pending so the user can start it again, except a reading that had
+  # already written something (a reread that cleared the previous reading, or an initial reading
+  # that classified the document): pending with no rows shows "processing" with nothing to press,
+  # so it fails instead, which offers "Read again".
+  def release_lost_claim!(error_message = Import.lost_error_message)
+    if rows_count.zero? && (reread_token.present? || ai_processed?)
+      update!(status: :failed, error: error_message, reread_token: nil)
+    else
+      update!(status: :pending, reread_token: nil)
+    end
   end
 
   def import!
@@ -142,13 +200,18 @@ class PdfImport < Import
             # Set by id rather than association so activerecord-import writes the
             # column directly on the recursive insert.
             reconciled_at: reconciled_at,
-            reconciled_by_statement_id: account_statement&.id
+            reconciled_by_statement_id: account_statement&.id,
+            reconciled_by_import_id: id
           )
         )
       end
 
       Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
       reconcile_entries!(reconciled_now, at: reconciled_at)
+      # Complete in the ledger's own transaction: a publish whose rows all matched existing
+      # entries creates none, so recovery couldn't otherwise tell it committed and would publish
+      # it again.
+      update!(status: :complete, error: nil)
     end
   end
 
@@ -196,39 +259,156 @@ class PdfImport < Import
     statement_backed? || pdf_file.attached?
   end
 
+  # ReadPdf has answered: every reading stores a document type, and the summary is optional prose.
   def ai_processed?
-    ai_summary.present?
+    document_type.present?
   end
 
   def process_with_ai_later
-    return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing) }
+    # Clearing the token is part of taking the claim: a reread job delayed in
+    # the queue must not find its old attempt still owning this processing run.
+    return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing, reread_token: nil) }
 
-    begin
+    queued = begin
       ProcessPdfJob.perform_later(self)
-      true
     rescue StandardError => e
-      Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name} - #{e.message}")
-      reload.with_lock { update!(status: :pending) }
+      Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name}")
       false
+    end
+    return true if queued
+
+    # perform_later can also return false without raising. A reread that claimed the import in the
+    # meantime holds a token, and its claim isn't this attempt's to release.
+    with_lock { update!(status: :pending) if importing? && reread_token.nil? }
+    false
+  end
+
+  # What the document is (Ai::Generations::ReadPdf), read the way the upload asked for.
+  def process_with_ai(reread_token: nil)
+    outcome = pdf_reading.read(read_as: requested_way)
+    analysis = Analysis.new(summary: outcome.value[:summary], document_type: outcome.value[:document_type] || "other",
+                            extracted_data: outcome.value[:extracted_data])
+    return unless with_claim(reread_token) { update!(ai_summary: analysis.summary, document_type: analysis.document_type) }
+    return unless with_claim(reread_token) { sync_statement_metadata_from_process_result(analysis); true }
+
+    analysis
+  end
+
+  # The statement's rows (Ai::Generations::ExtractBankStatement), read the way the upload asked
+  # for, or by Auto starting from the way that last passed for this account and model. A failing
+  # extraction is kept and flagged for review, never dropped.
+  def extract_transactions(reread_token: nil)
+    return unless statement_with_transactions?
+
+    reading = pdf_reading
+    outcome = reading.extract(read_as: requested_way, start: self.class.last_passing_way(account:, model: reading.model&.name))
+    # String keys: every reader here digs with strings, and jsonb keeps the hash as assigned
+    # until the record is reloaded.
+    data = Ai::Generations::ExtractBankStatement.statement(outcome.value).deep_stringify_keys
+    return unless with_claim(reread_token) do
+      update!(extracted_data: data, read_with: outcome.way.to_s, read_model: outcome.model,
+              extraction_checks: (outcome.checks&.to_h || {}).merge(attempts: outcome.attempts, tuned_model: reading.model&.name)
+                                                             .deep_stringify_keys)
+    end
+    return unless with_claim(reread_token) { sync_statement_metadata_from_extracted_data(data); true }
+
+    data
+  end
+
+  # The checks a kept extraction failed, for the review flag.
+  def failed_checks
+    return [] unless extraction_flagged?
+
+    Ai::Generations::ExtractBankStatement::Checks.from_h(extraction_checks).failed.map(&:to_s)
+  end
+
+  def extraction_flagged? = extraction_checks.present? && extraction_checks["passed"] == false
+
+  # "Read again as…" is offered before anything is published: while the rows wait for review,
+  # after a failure, or when a flagged reading finished without rows.
+  def rereadable?
+    !entries.exists? && (pending? || failed? || (complete? && extraction_flagged?))
+  end
+
+  # "Read again as…": a badly read statement, read another way without changing the config. The
+  # import is claimed under its row lock with an attempt-specific token, as publishing claims it,
+  # and the previous reading stays until ProcessPdfJob starts (#clear_reading!), so a job that
+  # can't be queued loses nothing.
+  def reread!(read_as)
+    read_as = read_as.to_s
+    raise ArgumentError, "unknown way #{read_as}" unless READ_AS.include?(read_as)
+    return false unless pdf_uploaded?
+    begin
+      return false if read_as != "auto" && !pdf_reading.usable?(read_as)   # this file can't be read that way
+    rescue Ai::Error::Unavailable   # the last route was removed after the form was shown
+      return false
+    end
+
+    previous = nil
+    token = with_lock do
+      next false unless rereadable?
+
+      previous = { status:, read_as: self.read_as }
+      attempt = SecureRandom.uuid
+      update!(read_as:, status: :importing, reread_token: attempt)
+      attempt
+    end
+    return false unless token
+
+    queued = begin
+      ProcessPdfJob.perform_later(self, reread: true, reread_token: token)
+    rescue StandardError => e
+      Rails.logger.error("Failed to enqueue PDF reread for import #{id}: #{e.class.name}")
+      false
+    end
+    return true if queued
+
+    # Restore only while this attempt still owns the claim. A job that has
+    # started reading owns the import now; its way must not change underneath it.
+    with_lock do
+      update!(status: previous[:status], read_as: previous[:read_as], reread_token: nil) if importing? && reread_token == token
+    end
+    :enqueue_failed
+  end
+
+  # Runs a write only while this attempt still owns the import. A long OCR read can outlive the
+  # claim's recovery window; once another reread takes over, the stale job must leave the new
+  # attempt's data and token alone. A blank token is a direct read/publish on an unclaimed import.
+  def with_claim(token)
+    with_lock do
+      next false if token.blank? && reread_token.present?
+      next false if token.present? && !(importing? && reread_token == token)
+
+      yield
     end
   end
 
-  # Reads the PDF with the first model in extract_pdf's route and records its summary and type.
-  def process_with_ai
-    ai_processor.process.tap { sync_statement_metadata_from_process_result(_1) }
+  # When a reread's job starts and still holds its own claim: the previous
+  # reading goes, rows and all. A delayed job from an earlier attempt returns
+  # false, leaving a newer reread or a publish intact. The token is kept so a retry after this
+  # cleanup still owns the import; it is released when the job reaches a terminal status.
+  def clear_reading!(reread_token: nil)
+    with_lock do
+      return false if reread_token.present? && !(importing? && self.reread_token == reread_token)
+
+      release_reconciliations!(account_id)
+      rows.delete_all
+      self.class.reset_counters(id, :rows)
+      update!(ai_summary: nil, document_type: nil, extracted_data: nil, extraction_checks: nil, read_with: nil, read_model: nil,
+              error: nil)
+      true
+    end
   end
 
-  # Extracts a statement's transactions into extracted_data. Nil for other document types.
-  def extract_transactions
-    ai_processor.extract_transactions&.tap { sync_statement_metadata_from_extracted_data(_1) }
-  end
+  # One reader per record, so a job's ReadPdf and extraction share one download and text layer.
+  def pdf_reading = @pdf_reading ||= Ai::PdfReading.new(content: pdf_file_content, filename: pdf_filename, family:)
 
   def bank_statement?
     document_type == "bank_statement"
   end
 
   def statement_with_transactions?
-    document_type.in?(%w[bank_statement credit_card_statement])
+    document_type.in?(Ai::PdfReading::STATEMENT_TYPES)
   end
 
   def has_extracted_transactions?
@@ -300,6 +480,8 @@ class PdfImport < Import
     Entry.reconciled_by_statement(account_statement)
   end
 
+  def extraction_dependencies = Array(extracted_data&.dig(RECONCILED_IDS_KEY)).map(&:to_s)
+
   # The half of reconciled_entries this import did not create -- transactions the
   # account already held when the statement arrived. Everything this import
   # creates is born reconciled too, so the two have to be told apart before
@@ -341,10 +523,13 @@ class PdfImport < Import
     already_recorded_count.positive?
   end
 
+  # The reading that queued the email goes with it: a reread before it's delivered would otherwise
+  # change what it says.
   def send_next_steps_email(user)
     PdfImportMailer.with(
       user: user,
-      pdf_import: self
+      pdf_import: self,
+      reading: { document_type:, summary: ai_summary, failed_checks: }
     ).next_steps.deliver_later
   end
 
@@ -410,8 +595,29 @@ class PdfImport < Import
     base
   end
 
+  # A reread can replace rows that had categories with rows that have none. mapping_steps then
+  # has no category step, so the superclass leaves the old mapping behind and publishing creates
+  # an obsolete category. Drop mappings whose key no longer occurs in the rows.
+  def sync_mappings
+    super
+    keys = rows.where.not(category: [ nil, "" ]).distinct.pluck(:category)
+    mappings.where(type: Import::CategoryMapping.name).where.not(key: keys).destroy_all
+  end
+
   private
-    def ai_processor = PdfImport::AiProcessor.new(self)
+    def requested_way = read_as.presence&.to_sym || :auto
+
+    # A shared entry can be owned by only one import at a time. Another reading on the same
+    # statement and account that recorded the same entry as its dependency still needs the mark,
+    # so clearing this reading reassigns ownership to it rather than dropping the evidence.
+    def surviving_owners_for(entry_ids, account_scope_id)
+      return {} if entry_ids.empty?
+
+      wanted = entry_ids.map(&:to_s)
+      self.class.where(account_id: account_scope_id, account_statement_id:).where.not(id:).find_each.each_with_object({}) do |other, owners|
+        (other.extraction_dependencies & wanted).each { owners[_1] ||= other.id }
+      end
+    end
 
     # A statement's posting date routinely differs by a day or two from the date
     # a provider recorded for the same transaction, so matching allows a small
@@ -479,11 +685,17 @@ class PdfImport < Import
     def reconcile_entries!(entries, at: Time.current)
       return if entries.blank?
 
-      Entry.where(id: entries.map(&:id)).update_all(
+      ids = entries.map { _1.id.to_s }
+      Entry.where(id: ids).update_all(
         reconciled_at: at,
         reconciled_by_statement_id: account_statement&.id,
+        reconciled_by_import_id: id,
         updated_at: at
       )
+      data = extracted_data.to_h
+      recorded = Array(data[RECONCILED_IDS_KEY])
+      data[RECONCILED_IDS_KEY] = (recorded + ids).uniq
+      update_column(:extracted_data, data)
     end
 
     # Regeneration can empty the row set (everything now matches) or refill it
@@ -499,19 +711,27 @@ class PdfImport < Import
       update!(status: target) unless status.to_s == target
     end
 
-    # Scoped to the account being moved away from. A statement is evidence for
-    # exactly one account at a time, but it can back more than one import, so an
-    # unscoped release would clear reconciliations another account still relies
-    # on. Nothing is reconciled while no account is assigned, so a blank scope
-    # has nothing to release.
+    # Releases the marks this import wrote on one account's entries. Another import on the same
+    # statement may rely on a mark too: a mark another reading still depends on is handed to it, a
+    # mark this import solely supported is cleared, and so are older statement-only marks from
+    # before owner ids existed. A mark another import owns is never this import's to release, and
+    # every write re-checks the owner, so a mark another import took meanwhile is left alone. A NULL
+    # statement id matches nothing.
     def release_reconciliations!(account_scope_id)
-      return if account_statement.blank? || account_scope_id.blank?
+      return if account_scope_id.blank?
 
-      Entry.reconciled_by_statement(account_statement).where(account_id: account_scope_id).update_all(
-        reconciled_at: nil,
-        reconciled_by_statement_id: nil,
-        updated_at: Time.current
-      )
+      now = Time.current
+      owned = Entry.where(account_id: account_scope_id, reconciled_by_import_id: id)
+      survivors = surviving_owners_for(owned.pluck(:id), account_scope_id)
+      survivors.each do |entry_id, owner_id|
+        owned.where(id: entry_id).update_all(reconciled_by_import_id: owner_id, updated_at: now)
+      end
+      owned.where.not(id: survivors.keys)
+           .update_all(reconciled_at: nil, reconciled_by_statement_id: nil, reconciled_by_import_id: nil, updated_at: now)
+      return unless (statement_id = account_statement&.id)
+
+      Entry.where(account_id: account_scope_id, reconciled_by_import_id: nil, reconciled_by_statement_id: statement_id)
+           .update_all(reconciled_at: nil, reconciled_by_statement_id: nil, updated_at: now)
     end
 
     # Reverting a statement import unwinds its evidence as well as its rows. The
@@ -612,13 +832,14 @@ class PdfImport < Import
       end
 
       # Only sync balances when currency is compatible with the statement's currency,
-      # matching AccountStatement::MetadataDetector#detect_from_pdf behavior.
+      # as AccountStatement does for the balances it reads from the statement text.
       target_currency = updates[:currency] || account_statement.statement_currency
       currency_compatible = currency.blank? || target_currency.blank? || currency.to_s.casecmp?(target_currency)
 
       if currency_compatible
-        updates[:opening_balance] = opening_balance if opening_balance.present?
-        updates[:closing_balance] = closing_balance if closing_balance.present?
+        # The statement text's own figure keeps its account-derived sign.
+        updates[:opening_balance] = opening_balance if opening_balance.present? && !account_statement.detected_balance?(:opening_balance, opening_balance, currency: target_currency)
+        updates[:closing_balance] = closing_balance if closing_balance.present? && !account_statement.detected_balance?(:closing_balance, closing_balance, currency: target_currency)
       else
         DebugLogEntry.capture(
           category: "import",
@@ -670,7 +891,13 @@ class PdfImport < Import
 
       return if updates.empty?
 
-      unless account_statement.update(updates)
+      # An AI balance the statement text doesn't give in the target currency
+      # is the AI's from then on, even when it equals the stored balance, so
+      # the statement keeps it rather than reading it again in a new currency.
+      account_statement.assign_attributes(updates)
+      account_statement.mark_balances_edited(updates.slice(:opening_balance, :closing_balance).keys)
+
+      unless account_statement.save
         DebugLogEntry.capture(
           category: "import",
           level: "warn",

@@ -70,7 +70,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
   test "bills page shell is localized in German" do
     @user.update!(locale: "de")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    Assistant.stubs(:builtin_provider).returns(Object.new)
     use_ai_routes
 
     get bills_url
@@ -331,6 +331,29 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # The payment drawer's ring takes the same tone.
     get recurring_occurrence_url(occurrence)
     assert_no_match "var(--color-destructive)", response.body
+  end
+
+  test "the drawer says which payment note identifies the bill, only when one is set" do
+    bill = create_bill(name: "Strom", amount: 80)
+    get_bill_history(bill)
+    assert_select "p.text-xs.text-secondary", text: /#{Regexp.escape(I18n.t("bills.detail.rule_reference", reference: "VN 4711"))}/, count: 0
+
+    bill.update!(bank_reference: "VN 4711")
+    get_bill_history(bill)
+
+    assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_reference", reference: "VN 4711"), count: 1
+  end
+
+  test "a reference-only bill's drawer shows the reference line and no name pill or name rules" do
+    bill = create_bill(name: "Strom", amount: 80)
+    bill.update!(matcher_hints: { "name_aliases" => [ "EXAMPLE" ] })
+    bill.update!(bank_reference: "VN 4711", reference_only: true)
+
+    get_bill_history(bill)
+
+    assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_reference_only", reference: "VN 4711"), count: 1
+    assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_aliases", names: "EXAMPLE"), count: 0
+    assert_select "span", text: "Strom", count: 0
   end
 
   test "the drawer names the detected bill only when it differs from the bill's name" do
@@ -1219,7 +1242,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # chat that can only say so. The review button proves AI is available, so
   # the missing chips can't pass for want of AI.
   test "the paycheck view offers its AI chips only with a plan" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    Assistant.stubs(:builtin_provider).returns(Object.new)
     use_ai_routes
     chips = %w[due_before_paycheck safe_to_spend].map { |key| ERB::Util.html_escape(I18n.t("bills.ai_prompts.#{key}")) }
 
@@ -1930,7 +1953,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a page without bill rows shows the empty state, not the month pulse or the AI prompts" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    Assistant.stubs(:builtin_provider).returns(Object.new)
     use_ai_routes
 
     get bills_url
@@ -2591,7 +2614,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # Dormant rows don't feed the pulse, so a page of paused bills would show
   # a card of zeros and chips asking about bills nobody is paying.
   test "a page of only paused bills shows the dormant section without the month pulse or the AI prompts" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    Assistant.stubs(:builtin_provider).returns(Object.new)
     use_ai_routes
     overdue_day = 5.days.ago.to_date
     bill = create_bill(name: "Paused gym", amount: 40,
@@ -2649,7 +2672,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   test "AI chips and the review button need both consent and a provider" do
     # The chips only render over bill rows.
     create_bill(name: "Power Co", amount: 80)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    Assistant.stubs(:builtin_provider).returns(Object.new)
     use_ai_routes
     get bills_url
     assert_response :success
@@ -2670,7 +2693,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     # Consent without a configured provider is a button to a dead chat.
     @user.update!(ai_enabled: true)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    Assistant.stubs(:builtin_provider).returns(nil)
     use_no_ai
     get bills_url
     assert_response :success
@@ -2681,15 +2704,14 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   test "the bill drawer offers smart configure only when AI is available" do
     bill = create_bill(name: "Power Co", amount: 80)
 
-    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
-
+    # The router decides, never the chat provider: each request has the opposite of the other.
+    Assistant.stubs(:builtin_provider).returns(nil)
     use_ai_routes
     get_bill_drawer(bill)
     assert_response :success
     assert_match smart_configuration_bill_path(bill), response.body
 
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
-
+    Assistant.stubs(:builtin_provider).returns(Object.new)
     use_no_ai
     get_bill_drawer(bill)
     assert_response :success
@@ -2787,9 +2809,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       response.body
   end
 
-  # Ending a bill leaves its scheduled occurrences behind, and the matcher
-  # scores every scheduled occurrence, so it can still suggest a payment for a
-  # bill the user deleted. The queue asks only about bills the page lists.
+  # Ending a bill leaves its scheduled occurrences behind with any suggestion
+  # made before, so it can still suggest a payment for a bill the user deleted. The queue asks only about bills the page lists.
   test "a suggestion against an ended bill stays out of the payment review queue" do
     due = Date.current - 3
     bill = declare_bill(name: "OLD GYM", amount: 40, due: due)

@@ -3,10 +3,11 @@ require "test_helper"
 class SidekiqConfigTest < ActiveSupport::TestCase
   AI_JOBS = {
     AssistantResponseJob => "ai_high_priority",
-    AutoDetectMerchantsJob => "ai_low_priority",
-    AutoCategorizeJob => "ai_low_priority",
-    EnhanceProviderMerchantsJob => "ai_low_priority",
-    ProcessPdfJob => "ai_low_priority"
+    ProcessPdfJob => "ai_low_priority",
+    IndexAccountStatementJob => "ai_low_priority",
+    VectorStore::IndexStatusJob => "ai_low_priority",
+    VectorStore::RequeueIndexPollsJob => "ai_low_priority",
+    Ai::ProbeJob => Ai::Routes::QUEUES.fetch(:background)
   }.freeze
 
   test "the ai capsule serves the AI queues in strict order, apart from the default capsule" do
@@ -21,8 +22,16 @@ class SidekiqConfigTest < ActiveSupport::TestCase
   end
 
   test "AI jobs run on the ai capsule's queues, which SidekiqHealth knows" do
-    AI_JOBS.each { |job, queue| assert_equal queue, job.queue_name, job.name }
+    AI_JOBS.each { |job, queue| assert_equal queue, job.new.queue_name, job.name }
     assert_equal sidekiq_config.dig(:capsules, :ai, :queues), SidekiqHealth::AI_QUEUES
+  end
+
+  # Ai::Capsule trusts the queue name: a job on these queues runs only in an AI capsule.
+  test "the AI capsules poll exactly the AI queues, and the default capsule none of them" do
+    config = sidekiq_config
+
+    assert_equal Ai::Routes.ai_queues.sort, config[:capsules].values.flat_map { _1[:queues] }.uniq.sort
+    assert_empty config[:queues].map(&:first) & Ai::Routes.ai_queues
   end
 
   private

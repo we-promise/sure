@@ -140,8 +140,8 @@ class Rule::Runner
         )
 
         counts = run_counts(result, queued: matched_ids.size, rule: rule)
-        if counts[:status] == "pending"
-          # An AI job may already have added its changes via RuleRun#complete_job!,
+        if async?(result)
+          # An AI job may already have added its changes via RuleRun#ai_handled!,
           # so add to the stored count (with_lock reloads it) rather than overwrite it.
           rule_run.with_lock do
             rule_run.update!(**counts, transactions_modified: [ rule_run.transactions_modified + counts[:transactions_modified], matched_ids.size ].min)
@@ -161,13 +161,17 @@ class Rule::Runner
       rule_run
     end
 
+    def async?(result) = result.is_a?(Hash) && result[:async]
+
     # transactions_modified is what the run changed itself, without the AI
     # jobs. Rule#apply counts per action, so a transaction two actions change
     # counts twice; the cap keeps it within the matched transactions.
     def run_counts(result, queued:, rule:)
-      if result.is_a?(Hash) && result[:async]
-        # The AI jobs add their own changes via RuleRun#complete_job!
-        { status: "pending", transactions_processed: queued, transactions_modified: [ result[:modified_count] || 0, queued ].min, pending_jobs_count: result[:jobs_count] || 0 }
+      if async?(result)
+        # The run stays as created, pending, unless its jobs have already finished it: each AI action
+        # counted its job (RuleRun#await_ai!) before any was queued (Rule#apply), and the jobs add
+        # their own changes via RuleRun#ai_handled!.
+        { transactions_processed: queued, transactions_modified: [ result[:modified_count] || 0, queued ].min }
       elsif result.is_a?(Integer)
         { status: "success", transactions_processed: queued, transactions_modified: [ result, queued ].min }
       else

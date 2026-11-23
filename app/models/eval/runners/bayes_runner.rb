@@ -1,6 +1,5 @@
-# Evaluates Family::BayesCategorizer — the free, local, first stage of the
-# categorization cascade that Family#auto_categorize_transactions runs before
-# any paid provider sees a transaction.
+# Evaluates Family::BayesCategorizer — the free, local stage of the categorization
+# cascade, a rule that runs before any paid provider sees a transaction.
 #
 # Bayes is trained per-family on that family's own categorized history, so
 # unlike a provider it cannot simply be handed a batch. This materializes a

@@ -154,7 +154,7 @@ en:
       categorization_provider_selector:
         title: Transaction Categorization
         preview_pill: Preview
-        description: Choose which provider categorizes transactions. This is separate from the AI provider above, which handles chat and PDF processing.
+        description: Choose which provider categorizes transactions for every family on this instance. This is separate from the AI provider above, which handles chat and PDF processing.
         env_notice: "Set to %{type} through environment variables."
         provider_label: Categorization provider
         provider_llm: AI provider (OpenAI or Anthropic)
@@ -164,13 +164,14 @@ en:
         jev_not_configured: Jev is selected but has no API key configured. Categorization keeps using the AI provider until you add one below.
         data_retention_heading: Data sharing
         data_retention_direct: Transaction descriptions, amounts and your category names are sent to TypeSafe to be categorized. Review their retention policy before enabling this on real data.
-        data_retention_proxied: Transaction descriptions, amounts and your category names are sent to %{host}, which forwards them to TypeSafe. Review both providers' retention policies before enabling this on real data.
+        data_retention_proxied: Transaction descriptions, amounts and your category names are sent to %{host}. Whether it forwards them onward, and to whom, depends on whoever runs it — review that operator's retention policy before enabling this on real data.
         confidence_threshold_label: Minimum confidence (0–1)
         confidence_threshold_help: Below this confidence the category is not applied and the transaction is left uncategorized, so a later run can try again. Nothing is discarded. Set to 0 to apply every answer.
         confidence_threshold_env_notice: Locked by the CATEGORIZATION_CONFIDENCE_THRESHOLD environment variable.
         shadow_rate_label: Shadow comparison rate (0–1)
         shadow_rate_help: Runs the provider you did NOT select alongside the one you did, recording where they disagree without changing any category. This doubles the API spend on every categorization run it samples. Set to 0 to turn it off.
         shadow_rate_env_notice: Locked by the CATEGORIZATION_SHADOW_RATE environment variable.
+        unsupported_env_endpoint: This Jev endpoint is not supported and is ignored (it must end in /v1/systemone or /alpha/decisions). Categorization keeps using the AI provider until you fix it.
       categorization_shadow_results:
         shadow_results_heading: Shadow comparison
         shadow_results_empty: No comparisons recorded yet. Set a shadow comparison rate above 0 and run categorization to collect some.
@@ -188,7 +189,7 @@ en:
         endpoint_placeholder: "https://api.typesafe.ai/v1/systemone (default)"
         model_label: Model (Optional)
         model_placeholder: "jev-latest (default)"
-        model_help: Defaults to TypeSafe directly. To reach Jev through OpenRouter instead, set the endpoint to https://openrouter.ai/api/alpha/decisions and the model to ~typesafe/jev-latest.
+        model_help: Defaults to TypeSafe directly. A self-hosted server works too if its URL ends in /v1/systemone. Jev through OpenRouter works at https://openrouter.ai/api/alpha/decisions, with your OpenRouter key and the model ~typesafe/jev-latest.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -338,9 +339,13 @@ en:
         invalid_onboarding_state: Invalid onboarding state
         invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
+        invalid_page_cache_days: "Days to keep cached pages must be a whole number from %{minimum} to %{maximum}."
+        invalid_page_cache_max_mb: "Max cache size must be a whole number of megabytes from %{minimum} to %{maximum}."
+        invalid_page_cache_cooldown_minutes: "Minutes between rebuilds must be a whole number from %{minimum} to %{maximum}."
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
         anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
-        invalid_jev_endpoint: Jev Endpoint must be an https URL. Plain http is accepted only for localhost.
+        invalid_jev_endpoint: Jev Endpoint must be an http or https URL. Use http only for a server on your own network.
+        unsupported_jev_endpoint: Jev endpoint must be an http(s) URL ending in /v1/systemone (TypeSafe, or a server speaking its protocol) or /alpha/decisions (Jev through OpenRouter).
         invalid_categorization_rate: "%{field} must be a number between 0 and 1."
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:
@@ -367,6 +372,12 @@ en:
         market_data_sync_description: When enabled, security prices are imported automatically once a day (Monday-Friday) at the specified time.
         market_data_sync_time_label: Market data import time (HH:MM)
         market_data_sync_time_description: Specify the time of day when the daily security price import should run — e.g. shortly after your primary exchange closes.
+        page_cache_days_label: Keep cached pages for (days)
+        page_cache_days_description: "Reports are built ahead of time after each sync and kept for this many days if nobody opens them. Default: %{default_days}. PAGE_CACHE_DAYS overrides this field."
+        page_cache_cooldown_minutes_label: Rebuild cached pages at most every (minutes)
+        page_cache_cooldown_minutes_description: "When the data behind a cached page changes, the page you had is still shown while a new one is built in the background, at most once in this many minutes. Refresh on the page rebuilds it straight away. 0 rebuilds after every change. Default: %{default_minutes}. PAGE_CACHE_COOLDOWN_MINUTES overrides this field."
+        page_cache_max_mb_label: Max cache size (MB)
+        page_cache_max_mb_description: "The most cached pages may take together. When a new page would go over it, the pages opened longest ago are dropped first; a page bigger than the whole limit is shown but not kept. Using %{used} of %{limit}. Default: %{default_mb}. PAGE_CACHE_MAX_MB overrides this field."
         include_pending_label: Include pending transactions
         include_pending_description: When enabled, pending (uncleared) transactions will be imported and automatically reconciled when they post. Disable if your bank provides unreliable pending data.
         env_configured_message: This setting is disabled because a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove it to enable this setting.

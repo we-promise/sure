@@ -1,0 +1,7 @@
+<%# locals: (message:) %>
+<%# Warns when the background worker that runs AI work is down or backed up,
+    for pages that wait on it. Self-hosted only — managed instances run their
+    own workers. %>
+<% if Rails.application.config.app_mode.self_hosted? && !BackgroundJobHealth.healthy? %>
+  <%= render DS::Alert.new(variant: "warning", message: message, live: :polite) %>
+<% end %>

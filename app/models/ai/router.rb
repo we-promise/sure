@@ -14,7 +14,7 @@ class Ai::Router
     feature = feature.to_sym
     spec = Ai::Routes.fetch(feature)
     listed = @config.routes_for(spec[:route_of] || feature)
-                    .select { |route| route.agent? == agent_chat?(feature) && route.serves_user?(@user) && route.serves?(@family) }
+                    .select { |route| route.agent? == agent_chat?(feature) && route.serves_user?(@user) }
     return Ai::Availability.unavailable(feature, :not_configured) if listed.empty?   # first: nothing to consent to
 
     if (reason = Ai::Consent.denial(feature, user: @user))
@@ -23,6 +23,9 @@ class Ai::Router
 
     capable = listed.select { |route| route.agent? || route.model_capable?(Ai::Routes.needs_for(feature)) }
     return Ai::Availability.unavailable(feature, :capability_missing) if capable.empty?
+    if (part = spec[:requires]) && capable.none? { _1.model_capable?(Ai::Routes.needs_for(feature)[part]) }
+      return Ai::Availability.unavailable(feature, :capability_missing)
+    end
 
     Ai::Plan.new(feature:, lane: spec[:lane], routes: capable)
   end

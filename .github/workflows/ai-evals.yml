@@ -1,0 +1,95 @@
+name: AI evals (recorded)
+
+# The free gate on every AI change: the eval datasets run
+# against recorded model answers, which catches parsing, coercion and mapping regressions. A
+# changed prompt can't be judged this way, since the model never saw it; the `ai-live` label
+# runs the live evals for that.
+on:
+  pull_request:
+    paths:
+      - "app/prompts/**"
+      - "app/models/ai/generations/**"
+      - "app/models/ai/generation.rb"
+      - "app/models/ai/schema.rb"
+      - "app/models/ai/transport/**"
+      - "config/ai/**"
+      - "test/vcr_cassettes/ai/evals/**"
+      - "app/models/eval/**"
+      - "lib/tasks/evals.rake"
+      - "db/eval_data/**"
+      - ".github/workflows/ai-evals.yml"
+
+permissions:
+  contents: read
+
+env:
+  RAILS_ENV: test
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432 # pipelock:ignore
+  REDIS_URL: redis://localhost:6379
+  PLAID_CLIENT_ID: foo
+  PLAID_SECRET: bar
+  EVAL_RECORDED: "1"
+  # A missing cassette fails here rather than skipping, so the gate can't pass without replaying.
+  EVAL_REQUIRE_RECORDING: "1"
+  # Recorded against Claude Haiku 5.5 through the Kilo gateway. Replay matches each request by
+  # method and URL, so the URL and the batching settings must be the ones the cassettes were
+  # recorded with. Replayed answers need no key; the client only needs one to build the endpoint.
+  EVAL_MODEL: anthropic/claude-haiku-5.5
+  OPENAI_MODEL: anthropic/claude-haiku-5.5
+  OPENAI_URI_BASE: https://api.kilo.ai/api/gateway
+  LLM_CONTEXT_WINDOW: "32000"
+  OPENAI_ACCESS_TOKEN: recorded
+
+jobs:
+  recorded_evals:
+    name: Recorded evals
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:7.2
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    strategy:
+      fail-fast: false
+      matrix:
+        dataset: [ categorization_golden_v1_light, merchant_detection_golden_v1 ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@f9c4492e86def3e644ab32a0ef185eda5b0c20d0 # v1.342.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Prepare database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Import the dataset
+        env:
+          DATASET: ${{ matrix.dataset }}
+        run: bundle exec rake "evals:import_dataset[db/eval_data/${DATASET}.yml]"
+
+      - name: Run the evals against recorded answers
+        env:
+          EVAL_DATASET: ${{ matrix.dataset }}
+        run: bundle exec rake evals:ci_regression

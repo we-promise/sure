@@ -214,23 +214,24 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
         assert_response :success
         assert_select "button[role='tab'][aria-selected='true']", text: label
         assert_select "turbo-frame#ai_status[loading='lazy'][src='#{ai_status_admin_system_health_path}']",
-          text: "Running live checks…"
+          text: "Loading the latest check results…"
       end
     end
   end
 
-  test "the lazy frame keeps the page's refresh and locale override" do
+  test "the lazy frame keeps the page's locale override, and the AI tab listens for the checks' results" do
     sign_in users(:sure_support_staff)
 
-    get admin_system_health_url(tab: "ai", refresh_ai_health: "1", locale: "de")
+    get admin_system_health_url(tab: "ai", locale: "de")
 
-    assert_select "turbo-frame#ai_status[src='#{ai_status_admin_system_health_path(refresh_ai_health: "1", locale: "de")}']"
+    assert_select "turbo-frame#ai_status[src='#{ai_status_admin_system_health_path(locale: "de")}']"
+    assert_select "turbo-cable-stream-source[signed-stream-name=?]", Turbo::StreamsChannel.signed_stream_name(Ai::ProbeJob::STREAM)
   end
 
-  test "the lazy frame drops a refresh or locale it can't use" do
+  test "the lazy frame drops a locale it can't use" do
     sign_in users(:sure_support_staff)
 
-    [ { refresh_ai_health: "0", locale: "xx" }, { refresh_ai_health: { "x" => "1" }, locale: { "x" => "de" } } ].each do |query|
+    [ { locale: "xx" }, { locale: { "x" => "de" } } ].each do |query|
       get admin_system_health_url(tab: "ai", **query)
 
       assert_response :success
@@ -240,16 +241,43 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   # The redirect's morph reloads the frame from its old src, so an override
   # dropped on the way would leave the page and the frame in two languages.
-  test "a locale override survives the worker check round trip" do
+  test "a locale override survives the checks' round trip" do
     sign_in users(:sure_support_staff)
 
     with_ai_environment do
       get ai_status_admin_system_health_url(locale: "de")
     end
-    assert_select "form[action=?]", verify_worker_ai_admin_system_health_path(locale: "de")
+    assert_select "form[action=?]", run_ai_checks_admin_system_health_path(locale: "de")
 
-    post verify_worker_ai_admin_system_health_url(locale: "de")
+    post run_ai_checks_admin_system_health_url(locale: "de")
     assert_redirected_to admin_system_health_path(tab: "ai", locale: "de")
+  end
+
+  test "opening the AI tab makes no AI request: it shows what the worker stored" do
+    sign_in users(:sure_support_staff)
+    %i[llm function_calling pdf_text_extraction pdf_vision_processing openai_vector_store].each { AiHealth::Probe.any_instance.unstub(_1) }
+
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      get ai_status_admin_system_health_url
+    end
+
+    assert_response :success
+    assert_select "[data-testid='function-calling-status']", text: /Not checked/
+    assert_match(/Run the checks to verify service liveness/, response.body)
+    assert_not_requested :any, /.*/
+  end
+
+  test "each stored result shows its age, and the tab says how long results are kept" do
+    sign_in users(:sure_support_staff)
+    AiHealth::Probe.any_instance.stubs(:function_calling).returns(probe_result(:passing).with(checked_at: 3.minutes.ago))
+
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai", "AI_HEALTH_PROBE_CACHE_TTL" => "300") do
+      get ai_status_admin_system_health_url
+    end
+
+    assert_select "[data-testid='function-calling-status']", text: /checked 3 minutes ago/
+    assert_select "[data-testid='probe-cache-ttl']", text: "300s"
+    assert_match(/A worker last ran the checks/, response.body)
   end
 
   test "AI status warns when a custom OpenAI endpoint is paired with the hosted vector store" do
@@ -266,7 +294,10 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
         password: "uri-secret",
         query: "api_key=query-secret"
       ),
-      "OPENAI_MODEL" => "qwen3:8b"
+      "OPENAI_MODEL" => "qwen3:8b",
+      # A custom endpoint gets no vector store until VECTOR_STORE_PROVIDER
+      # names one; opting into OpenAI's keeps the pairing warning exercised.
+      "VECTOR_STORE_PROVIDER" => "openai"
     ) do
       AiHealth::Probe.any_instance.stubs(:openai_vector_store).returns(
         probe_result(:failing, failure_code: :request_failed, http_status: 404)
@@ -588,25 +619,23 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_match(/Worker verification/, response.body)
+    assert_match(/Worker that ran the checks/, response.body)
     assert_match(/No worker has checked in yet/, response.body)
   end
 
   test "AI status renders a worker result and flags it matching the web configuration" do
     sign_in users(:sure_support_staff)
 
-    with_memory_cache do
-      with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
-        WorkerAiHealth.record!(worker_snapshot(
-          process_identity: "worker-1:123",
-          effective_provider: :openai,
-          llm_model: "gpt-4.1",
-          llm_endpoint: "https://api.openai.com/v1",
-          vector_store_adapter: :openai
-        ))
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      WorkerAiHealth.record!(worker_snapshot(
+        process_identity: "worker-1:123",
+        effective_provider: :openai,
+        llm_model: "gpt-4.1",
+        llm_endpoint: "https://api.openai.com/v1",
+        vector_store_adapter: :openai
+      ))
 
-        get ai_status_admin_system_health_url
-      end
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -618,17 +647,15 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
   test "AI status flags a worker result whose configuration differs from the web process" do
     sign_in users(:sure_support_staff)
 
-    with_memory_cache do
-      with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
-        WorkerAiHealth.record!(worker_snapshot(
-          process_identity: "worker-1:123",
-          effective_provider: :openai,
-          llm_model: "a-different-model-than-web-resolves",
-          llm_endpoint: "https://api.openai.com/v1"
-        ))
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      WorkerAiHealth.record!(worker_snapshot(
+        process_identity: "worker-1:123",
+        effective_provider: :openai,
+        llm_model: "a-different-model-than-web-resolves",
+        llm_endpoint: "https://api.openai.com/v1"
+      ))
 
-        get ai_status_admin_system_health_url
-      end
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -638,16 +665,14 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
   test "AI status shows a failing worker result with its failure reason" do
     sign_in users(:sure_support_staff)
 
-    with_memory_cache do
-      with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
-        WorkerAiHealth.record!(worker_snapshot(
-          process_identity: "worker-1:123",
-          llm_status: :failing,
-          failure_codes: [ :model_not_available ]
-        ))
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      WorkerAiHealth.record!(worker_snapshot(
+        process_identity: "worker-1:123",
+        llm_status: :failing,
+        failure_codes: [ :model_not_available ]
+      ))
 
-        get ai_status_admin_system_health_url
-      end
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -681,11 +706,9 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     end
 
     sign_in users(:sure_support_staff)
-    with_memory_cache do
-      with_ai_environment do
-        WorkerAiHealth.record!(worker_snapshot(llm_status: :failing, failure_codes: reasons.keys))
-        get ai_status_admin_system_health_url(locale: :de)
-      end
+    with_ai_environment do
+      WorkerAiHealth.record!(worker_snapshot(llm_status: :failing, failure_codes: reasons.keys))
+      get ai_status_admin_system_health_url(locale: :de)
     end
 
     assert_response :success
@@ -696,54 +719,46 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
   test "AI status shows a stale worker result as stale rather than passing" do
     sign_in users(:sure_support_staff)
 
-    with_memory_cache do
-      with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
-        WorkerAiHealth.record!(worker_snapshot(
-          process_identity: "worker-1:123",
-          checked_at: (WorkerAiHealth::STALE_AFTER + 1.minute).ago
-        ))
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      WorkerAiHealth.record!(worker_snapshot(
+        process_identity: "worker-1:123",
+        checked_at: (WorkerAiHealth::STALE_AFTER + 1.minute).ago
+      ))
 
-        get ai_status_admin_system_health_url
-      end
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
     assert_match(/Stale/, response.body)
   end
 
-  test "verify_worker_ai queues an asynchronous worker check and redirects to the AI tab" do
+  test "running the checks queues them in a worker and returns at once" do
     sign_in users(:sure_support_staff)
+    AiHealth.expects(:new).never
 
-    assert_enqueued_with(job: WorkerAiHealthCheckJob) do
-      post verify_worker_ai_admin_system_health_url
+    assert_enqueued_with(job: Ai::ProbeJob, queue: Ai::Routes::QUEUES.fetch(:background)) do
+      post run_ai_checks_admin_system_health_url
     end
 
     assert_redirected_to admin_system_health_path(tab: "ai")
     follow_redirect!
-    assert_match(/Worker check queued/, response.body)
+    assert_match(/AI checks queued/, response.body)
   end
 
-  test "non super admin cannot queue a worker check" do
-    sign_in users(:family_admin)
+  test "only super admins can queue the checks" do
+    assert_no_enqueued_jobs only: Ai::ProbeJob do
+      post run_ai_checks_admin_system_health_url
+      assert_redirected_to new_session_path
 
-    assert_no_enqueued_jobs only: WorkerAiHealthCheckJob do
-      post verify_worker_ai_admin_system_health_url
+      sign_in users(:family_admin)
+      post run_ai_checks_admin_system_health_url
+      assert_redirected_to root_path
     end
-
-    assert_redirected_to root_path
-  end
-
-  test "unauthenticated user cannot queue a worker check" do
-    assert_no_enqueued_jobs only: WorkerAiHealthCheckJob do
-      post verify_worker_ai_admin_system_health_url
-    end
-
-    assert_redirected_to new_session_path
   end
 
   test "German worker verification copy is present without fallback" do
     keys = %w[
-      title description verify_button coverage_notice empty.title empty.description
+      ran_by_title ran_by_description run_coverage_notice empty.title empty.run_description
       labels.process labels.checked_at labels.configuration
       configuration_statuses.match configuration_statuses.mismatch
       statuses.passing statuses.failing statuses.stale
@@ -752,7 +767,10 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     keys.each do |key|
       assert_kind_of String, I18n.t("admin.system_health.show.ai.worker.#{key}", locale: :de, fallback: false, raise: true)
     end
-    assert_kind_of String, I18n.t("admin.system_health.verify_worker_ai.queued", locale: :de, fallback: false, raise: true)
+    assert_kind_of String, I18n.t("admin.system_health.run_ai_checks.queued", locale: :de, fallback: false, raise: true)
+    %w[run_checks last_checked_in_worker run_checks_help loading_results checked_ago worker_unhealthy_warning labels.probe_cache_ttl].each do |key|
+      assert_kind_of String, I18n.t("admin.system_health.show.ai.#{key}", locale: :de, fallback: false, raise: true)
+    end
   end
 
   test "German super admin sees worker verification guidance and queued notice" do
@@ -760,25 +778,23 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
 
-    with_memory_cache do
-      with_ai_environment do
-        get ai_status_admin_system_health_url
-        assert_response :success
-        assert_select "h2", text: "Worker-Verifikation"
-        assert_select "button", text: "Worker-Konfiguration prüfen"
-        assert_match(/Bisher hat kein Worker ein Prüfergebnis gemeldet/, response.body)
-        assert_match(/Jede Prüfung erfasst genau einen Worker-Prozess/, response.body)
-        assert_match(/Welche Einstellungen erfordern einen Neustart\?/, response.body)
-        assert_match(/kein Neustart erforderlich/, response.body)
-        assert_match(/sowohl der Web- als auch der Worker-Dienst/, response.body)
+    with_ai_environment do
+      get ai_status_admin_system_health_url
+      assert_response :success
+      assert_select "h2", text: "Worker, der die Prüfungen ausgeführt hat"
+      assert_select "button", text: "Prüfungen erneut ausführen"
+      assert_match(/Bisher hat kein Worker ein Prüfergebnis gemeldet/, response.body)
+      assert_match(/Jeder Lauf erfasst genau einen Worker-Prozess/, response.body)
+      assert_match(/Welche Einstellungen erfordern einen Neustart\?/, response.body)
+      assert_match(/kein Neustart erforderlich/, response.body)
+      assert_match(/sowohl der Web- als auch der Worker-Dienst/, response.body)
 
-        assert_enqueued_with(job: WorkerAiHealthCheckJob) do
-          post verify_worker_ai_admin_system_health_url
-        end
-        assert_redirected_to admin_system_health_path(tab: "ai")
-        follow_redirect!
-        assert_match(/Die Worker-Prüfung wurde in die Warteschlange gestellt/, response.body)
+      assert_enqueued_with(job: Ai::ProbeJob) do
+        post run_ai_checks_admin_system_health_url
       end
+      assert_redirected_to admin_system_health_path(tab: "ai")
+      follow_redirect!
+      assert_match(/KI-Prüfungen in die Warteschlange gestellt/, response.body)
     end
   end
 
@@ -786,35 +802,24 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     users(:sure_support_staff).update!(locale: "de")
     sign_in users(:sure_support_staff)
 
-    with_memory_cache do
-      with_ai_environment("OPENAI_ACCESS_TOKEN" => "synthetic-token") do
-        [
-          [ {}, "Erfolgreich", "Entspricht dem Web-Prozess" ],
-          [ { llm_status: :failing, llm_model: "different-model" }, "Fehlgeschlagen", "Weicht vom Web-Prozess ab" ],
-          [ { checked_at: (WorkerAiHealth::STALE_AFTER + 1.minute).ago }, "Veraltet", "Entspricht dem Web-Prozess" ]
-        ].each do |overrides, status, configuration|
-          WorkerAiHealth.record!(worker_snapshot(**{ vector_store_adapter: :openai, vector_store_status: :passing }.merge(overrides)))
-          get ai_status_admin_system_health_url
-          assert_response :success
-          assert_select "[data-testid='worker-ai-health-result']" do
-            assert_select "[data-testid='worker-process-identity']", text: "worker:1"
-            assert_select "p", text: /Geprüft vor/
-            assert_select "span", text: status
-            assert_select "span", text: configuration
-          end
-          assert_no_match(/synthetic-token/, response.body)
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "synthetic-token") do
+      [
+        [ {}, "Erfolgreich", "Entspricht dem Web-Prozess" ],
+        [ { llm_status: :failing, llm_model: "different-model" }, "Fehlgeschlagen", "Weicht vom Web-Prozess ab" ],
+        [ { checked_at: (WorkerAiHealth::STALE_AFTER + 1.minute).ago }, "Veraltet", "Entspricht dem Web-Prozess" ]
+      ].each do |overrides, status, configuration|
+        WorkerAiHealth.record!(worker_snapshot(**{ vector_store_adapter: :openai, vector_store_status: :passing }.merge(overrides)))
+        get ai_status_admin_system_health_url
+        assert_response :success
+        assert_select "[data-testid='worker-ai-health-result']" do
+          assert_select "[data-testid='worker-process-identity']", text: "worker:1"
+          assert_select "p", text: /Geprüft vor/
+          assert_select "span", text: status
+          assert_select "span", text: configuration
         end
+        assert_no_match(/synthetic-token/, response.body)
       end
     end
-  end
-
-  test "German family admin cannot queue worker verification" do
-    users(:family_admin).update!(locale: "de")
-    sign_in users(:family_admin)
-    assert_no_enqueued_jobs only: WorkerAiHealthCheckJob do
-      post verify_worker_ai_admin_system_health_url
-    end
-    assert_redirected_to root_path
   end
 
   test "configuration tab reports missing email and provider configuration without secrets or probes" do
@@ -1001,18 +1006,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
-    # Stubs Rails.cache with an in-process MemoryStore for the duration of
-    # the block. Test env normally runs a NullStore (see config/environments/test.rb),
-    # under which WorkerAiHealth.record!/.recent (both cache: Rails.cache by
-    # default) would silently no-op -- fine for controller tests that don't
-    # care about worker results, but these need the round trip to actually work.
-    def with_memory_cache
-      Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-      yield
-    ensure
-      Rails.unstub(:cache)
-    end
-
     def worker_snapshot(overrides = {})
       WorkerAiHealth::Snapshot.new(
         **{
