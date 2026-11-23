@@ -47,6 +47,8 @@
                         class: "hover:underline" %>
             </div>
 
+            <%= render DS::Pill.new(label: t(".pending"), tone: :warning, marker: false) if trade.pending? %>
+
             <% if entry.scheduled? %>
               <div class="flex items-center gap-1 flex-shrink-0">
                 <%= render DS::Pill.new(
@@ -77,9 +79,13 @@
           <% end %>
         <% end %>
 
-        <%= content_tag :p,
-                    format_money(-entry.amount_money),
-                    class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
+        <% if entry.amount.zero? && trade.qty.nonzero? && trade.internal_movement? %>
+          <p class="privacy-sensitive"><%= t(".quantity_change", qty: format_quantity_change(trade.qty), ticker: trade.security.ticker) %></p>
+        <% else %>
+          <%= content_tag :p,
+                      format_money(-entry.amount_money),
+                      class: ["privacy-sensitive", "text-success": entry.amount.negative?] %>
+        <% end %>
       </div>
     </div>
   <% end %>

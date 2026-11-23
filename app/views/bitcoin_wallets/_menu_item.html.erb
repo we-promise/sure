@@ -1,0 +1,8 @@
+<%# locals: (menu:, account:, permission:) %>
+<% if bitcoin_wallet_management_allowed?(account, permission) %>
+  <% if account.bitcoin_wallet_account %>
+    <% menu.with_item(variant: "link", text: t("bitcoin_wallets.manage"), href: account_bitcoin_wallet_path(account), icon: "bitcoin", data: { turbo_frame: :modal }) %>
+  <% elsif account.unlinked? %>
+    <% menu.with_item(variant: "link", text: t("bitcoin_wallets.connect_action"), href: new_account_bitcoin_wallet_path(account), icon: "bitcoin", data: { turbo_frame: :modal }) %>
+  <% end %>
+<% end %>

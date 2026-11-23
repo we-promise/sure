@@ -15,7 +15,7 @@ class AccountsController < ApplicationController
           .listable_manual
           .where(id: @accessible_account_ids)
           .with_attached_logo
-          .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
+          .includes(:accountable, :account_providers, :plaid_account, :simplefin_account, :bitcoin_wallet_account)
           .order(:name)
     @financekit_accounts = Current.family.accounts
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
@@ -40,7 +40,9 @@ class AccountsController < ApplicationController
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
     @onchain_wallet_items = visible_provider_items(
-      family.onchain_wallet_items.ordered.includes(:accounts, onchain_wallet_accounts: { account_provider: :account })
+      family.onchain_wallet_items.ordered.includes(:accounts,
+        bitcoin_wallet_accounts: [ :account, :account_provider ],
+        onchain_wallet_accounts: { account_provider: :account })
     )
     @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
     @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
@@ -384,6 +386,9 @@ class AccountsController < ApplicationController
       redirect_to account_path(@account), alert: t("accounts.select_provider.already_linked")
       return
     end
+    if @account.bitcoin_wallet_account || @account.accounting_start_date
+      return redirect_to account_path(@account), alert: t("accounts.select_provider.no_providers")
+    end
 
     account_type_name = @account.accountable_type
 
@@ -462,6 +467,10 @@ class AccountsController < ApplicationController
     end
 
     def ensure_linked_account
+      if @account.linked_to?("BitcoinWalletAccount")
+        return redirect_to account_bitcoin_wallet_path(@account), status: :see_other
+      end
+
       return if @account.linked?
 
       redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
@@ -538,7 +547,11 @@ class AccountsController < ApplicationController
       items.select do |item|
         next true if Current.user.admin?
 
-        account_ids = item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
+        account_ids = if item.is_a?(OnchainWalletItem)
+          item.accounts_visible_to(nil).map(&:id)
+        else
+          item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
+        end
 
         # Ownership shows a member their own connection, importantly including
         # one just created that has not synced any accounts yet. It must not

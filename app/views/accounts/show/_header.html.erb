@@ -15,6 +15,13 @@
             <% if account.tax_treatment.present? %>
               <%= render partial: "accounts/tax_treatment_badge", locals: { account: account } %>
             <% end %>
+            <% if account.crypto? && bitcoin_wallet_management_allowed?(account, account.permission_for(Current.user)) &&
+                  (bitcoin_wallet = account.bitcoin_wallet_account)&.account_provider %>
+              <%= link_to account_bitcoin_wallet_path(account), data: { turbo_frame: :modal } do %>
+                <%= render DS::Pill.new(label: t("bitcoin_wallets.header_badge"), tone: :success, marker: false, icon: "bitcoin",
+                      title: bitcoin_wallet.last_synced_at && t("bitcoin_wallets.read_ago", time: time_ago_in_words(bitcoin_wallet.last_synced_at))) %>
+              <% end %>
+            <% end %>
             <% if account.draft? %>
               <%= render DS::Link.new(
                   text: t(".complete_setup"),
