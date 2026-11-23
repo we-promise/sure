@@ -534,6 +534,8 @@ ingress:
       secretName: finance-tls
 ```
 
+To refuse requests for any other `Host`, set `ALLOWED_HOSTS` under `rails.extraEnv` to every ingress host. The probes call `/up`, which the check skips. With Pipelock enabled, MCP requests reach the app under the chart's service name, the release fullname (`sure` for a release named `sure`) or the host in `pipelock.mcpProxy.upstream`, so list that name too or every MCP call through Pipelock gets a 403. `ALLOWED_ORIGINS` and the rest are described in [Restricting who can reach your instance](../../docs/hosting/docker.md#restricting-who-can-reach-your-instance).
+
 ## Boot-required secrets
 
 The Rails initializer for Active Record Encryption loads on boot. To prevent boot crashes, ensure the following environment variables are present for ALL workloads (web, worker, migrate job/initContainer, CronJobs, and the SimpleFin backfill job):
