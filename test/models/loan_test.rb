@@ -96,29 +96,30 @@ class LoanTest < ActiveSupport::TestCase
     assert_not loan_account.loan.amortizable?
   end
 
-  # A loan that cannot be scheduled and one whose repayment genuinely rounds to
-  # zero sit on opposite sides of `amortizable?`. Callers tell them apart with
-  # `.present?`, so the first must stay nil and the second must stay a Money.
-  test "an uncomputable monthly payment is nil while a genuine zero payment is returned" do
-    uncomputable = Account.create! \
+  # A fixed loan with no rate cannot be scheduled and has no payment, while one
+  # whose payment rounds to zero still has one. Callers tell them apart with
+  # `.present?`. A non-positive balance or term returns Money 0 by design, as
+  # the test above pins.
+  test "a fixed loan with no rate has no monthly payment while one rounding to zero does" do
+    rateless = Account.create! \
       family: families(:dylan_family),
       name: "Rateless Mortgage",
       balance: 500000,
       currency: "USD",
       accountable: Loan.create!(subtype: "mortgage", interest_rate: nil, term_months: 360, rate_type: "fixed", start_date: Date.new(2024, 1, 1))
-    genuine_zero = Account.create! \
+    rounds_to_zero = Account.create! \
       family: families(:dylan_family),
       name: "Interest-free Loan",
       balance: 1,
       currency: "USD",
       accountable: Loan.create!(subtype: "mortgage", interest_rate: 0, term_months: 1200, rate_type: "fixed", start_date: Date.new(2024, 1, 1))
 
-    assert_not uncomputable.loan.amortizable?, "premise: a loan with no rate cannot be scheduled"
-    assert genuine_zero.loan.amortizable?, "premise: a 0% loan with a term can be scheduled"
+    assert_not rateless.loan.amortizable?, "premise: a loan with no rate cannot be scheduled"
+    assert rounds_to_zero.loan.amortizable?, "premise: a 0% loan with a term can be scheduled"
 
-    assert_nil uncomputable.loan.monthly_payment
-    assert_equal Money.new(0, "USD"), genuine_zero.loan.monthly_payment
-    assert genuine_zero.loan.monthly_payment.present?
+    assert_nil rateless.loan.monthly_payment
+    assert_equal Money.new(0, "USD"), rounds_to_zero.loan.monthly_payment
+    assert rounds_to_zero.loan.monthly_payment.present?
   end
 
   # Reversed in part by #104: a variable loan now has a schedule. It still has
