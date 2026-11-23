@@ -1,79 +1,72 @@
 # frozen_string_literal: true
 
-# UpdateTransfer — changes how a confirmed transfer counts, as the transfer
-# drawer does. Today that is one switch: whether a transfer from a cash account
-# into an investment or crypto account is an investment contribution (counted
-# as spending in budgets and reports, the default) or a plain transfer (e.g.
-# a brokerage or crypto account used only to convert currency). See
-# Transfer#update_investment_contribution!, which locks the choice against
-# provider syncs.
 class Assistant::Function::UpdateTransfer < Assistant::Function
   include Assistant::Function::TransferSupport
 
+  TRUTHY_INPUTS = [ true, "true", "t", "1", 1 ].freeze
+  FALSY_INPUTS = [ false, "false", "f", "0", 0 ].freeze
+
   class << self
-    def name
-      "update_transfer"
-    end
+    def name = "update_transfer"
 
     def description
       <<~INSTRUCTIONS
-        Changes how a confirmed transfer between two of the user's accounts
-        counts in budgets and reports.
+        Updates a transfer between two writable accounts. Pass exactly one
+        selector: id or transfer_id from get_transfers, or transaction_id from
+        get_transactions.
 
-        investment_contribution: a transfer from a cash account into an
-        investment or crypto account counts as spending by default (an
-        investment contribution). Pass false to make it a plain transfer that
-        budgets and reports ignore, e.g. when the brokerage or crypto account is
-        only used to convert money into another currency; pass true to count it
-        as spending again. The choice survives
-        account syncs. Other transfers have no such switch.
-
-        Pass the id of either transaction in the transfer (get_transactions
-        marks them is_transfer), or the transfer_id. Both accounts must be
-        writable. Pass dry_run: true to see the effect first.
+        amount, date, notes, and exchange_rate edit the transfer itself.
+        investment_contribution switches a confirmed transfer into an Investment
+        or Crypto account between spending and a plain transfer. dry_run is
+        supported for that switch only.
       INSTRUCTIONS
     end
   end
 
-  def strict_mode?
-    false
-  end
+  def strict_mode? = false
 
   def params_schema
     build_schema(
       properties: {
-        transaction_id: {
-          type: "string",
-          description: "ID of either transaction in the transfer, from get_transactions. Omit when passing transfer_id."
-        },
-        transfer_id: {
-          type: "string",
-          description: "Transfer ID. Omit when passing transaction_id."
-        },
-        investment_contribution: {
-          type: "boolean",
-          description: "true counts a transfer into an investment or crypto account as spending; false makes it a plain transfer."
-        },
-        dry_run: {
-          type: "boolean",
-          description: "Describe the change without making it. Defaults to false."
-        }
+        id: { type: "string", description: "Transfer ID from get_transfers; alias of transfer_id" },
+        transfer_id: { type: "string", description: "Transfer ID from get_transfers" },
+        transaction_id: { type: "string", description: "ID of either transaction in the transfer, from get_transactions" },
+        amount: { type: "number", exclusiveMinimum: 0, description: "New positive source amount" },
+        date: { type: "string", format: "date", description: "New YYYY-MM-DD date" },
+        notes: { type: [ "string", "null" ], description: "New notes, or null to clear" },
+        exchange_rate: { type: "number", exclusiveMinimum: 0, description: "Optional custom exchange rate for a new amount" },
+        investment_contribution: { type: "boolean", description: "true counts the transfer as spending; false makes it a plain transfer" },
+        dry_run: { type: "boolean", description: "Preview an investment_contribution switch without changing it" }
       }
     )
   end
 
   def call(params = {})
-    enabled = parse_boolean(params["investment_contribution"])
-    return error("invalid_arguments", "Pass investment_contribution: true or false.") if enabled.nil?
+    changed_fields = params.keys & %w[amount date notes exchange_rate investment_contribution]
+    return error("invalid_arguments", "Provide at least one field to update.") if changed_fields.empty?
 
-    transfer = lookup_transfer(params)
+    transfer = lookup_requested_transfer(params)
     return transfer if transfer.is_a?(Hash)
 
-    unless transfer.investment_contribution_switchable?
+    requested_amount = positive_decimal(params["amount"], "amount") if params.key?("amount")
+    requested_date = Date.iso8601(params["date"].to_s) if params.key?("date")
+    requested_rate = positive_decimal(params["exchange_rate"], "exchange_rate") if params.key?("exchange_rate")
+    financial_change = changed_fields.intersect?(%w[amount date exchange_rate])
+
+    enabled = parse_boolean(params["investment_contribution"]) if params.key?("investment_contribution")
+    if params.key?("investment_contribution") && enabled.nil?
+      return error("invalid_arguments", "Pass investment_contribution: true or false.")
+    end
+    if params.key?("investment_contribution") && !transfer.investment_contribution_switchable?
       return error("not_switchable", "Only a confirmed transfer from a cash account into an investment or crypto account can be switched between an investment contribution and a plain transfer.")
     end
 
-    if ActiveModel::Type::Boolean.new.cast(params["dry_run"])
+    dry_run = parse_boolean(params["dry_run"]) if params.key?("dry_run")
+    return error("invalid_arguments", "Pass dry_run: true or false.") if params.key?("dry_run") && dry_run.nil?
+
+    if dry_run
+      return error("invalid_arguments", "dry_run is supported only for investment_contribution.") unless changed_fields == [ "investment_contribution" ]
+
       return {
         success: true,
         dry_run: true,
@@ -82,32 +75,116 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
       }
     end
 
-    # Lock, then re-find within the writable scope, so write access lost since
-    # the lookup is caught.
+    switch_failed = false
     updated = Transfer.uncached do
       Transfer.transaction do
+        current = scoped_transfers.find_by(id: transfer.id)
+        next nil unless current
+
+        accounts = [ current.from_account, current.to_account ].compact
+        Account::MutationAccess.lock!(accounts:, user:, level: Account::MutationAccess::WRITE)
         locked = scoped_transfers.lock.find_by(id: transfer.id)
         next nil unless locked
+        locked.lock!
 
-        locked.update_investment_contribution!(enabled) ? locked : nil
+        if financial_change
+          principal_entries = [ locked.outflow_transaction.entry, locked.inflow_transaction.entry ]
+          fee_entries = params.key?("date") ? locked.fee_transactions.includes(:entry).map(&:entry) : []
+          (principal_entries + fee_entries).compact.uniq.sort_by(&:id).each(&:lock!)
+
+          outflow_entry, inflow_entry = principal_entries
+          original_amount = outflow_entry.amount.abs
+          amount = requested_amount || original_amount
+          date = requested_date || locked.date
+          converted = converted_amount(locked, amount, original_amount, date, requested_rate)
+
+          outflow_entry.update!(amount:, date:)
+          inflow_entry.update!(amount: -converted, date:)
+          mark_financial_edit!(outflow_entry)
+          mark_financial_edit!(inflow_entry)
+
+          fee_entries.each do |entry|
+            entry.update!(date:)
+            mark_financial_edit!(entry)
+          end
+
+          locked.amount = amount
+        end
+
+        locked.notes = params["notes"] if params.key?("notes")
+        locked.save! if locked.changed?
+        if params.key?("investment_contribution") && !locked.update_investment_contribution!(enabled)
+          switch_failed = true
+          raise ActiveRecord::Rollback
+        end
+
+        locked
       end
     end
+    return error("not_updated", "Could not update the transfer; it may have changed. Reload and try again.") if switch_failed
     return error("not_found", "The transfer was unlinked, or you can no longer write to its accounts.") unless updated
 
-    { success: true, transfer: serialize_transfer(updated), message: "#{updated.name} is now #{describe(enabled)}." }
+    updated.sync_account_later if financial_change
+    updated.reload
+    {
+      success: true,
+      transfer: serialize_transfer(updated),
+      message: params.key?("investment_contribution") ? "#{updated.name} is now #{describe(enabled)}." : "Transfer updated."
+    }
+  rescue Account::MutationAccess::Denied
+    error("not_found", "Writable transfer not found.")
+  rescue Date::Error, ArgumentError, Money::ConversionError => e
+    error("invalid_parameters", e.message)
+  rescue ActiveRecord::RecordInvalid => e
+    error("validation_failed", e.record.errors.full_messages.join("; "))
   end
 
   private
-    # The tool caller does not enforce params_schema, and
-    # ActiveModel::Type::Boolean reads every unrecognized string (e.g. "no")
-    # as true, which would turn on the contribution the caller meant to turn off.
-    TRUTHY_INPUTS = [ true, "true", "t", "1", 1 ].freeze
-    FALSY_INPUTS = [ false, "false", "f", "0", 0 ].freeze
+    def lookup_requested_transfer(params)
+      selectors = %w[id transfer_id transaction_id].select { |key| params[key].present? }
+      return error("invalid_arguments", "Pass exactly one of id, transfer_id, or transaction_id.") unless selectors.one?
+
+      selector = selectors.first
+      transfer = if selector == "transaction_id"
+        find_transfer_for_transaction(params[selector])
+      else
+        find_transfer(params[selector])
+      end
+      transfer || not_found(params[selector])
+    end
+
+    def not_found(reference)
+      error("not_found", "No transfer for '#{reference}' between accounts you can write to.")
+    end
 
     def parse_boolean(value)
       normalized = value.is_a?(String) ? value.strip.downcase : value
       return true if TRUTHY_INPUTS.include?(normalized)
       false if FALSY_INPUTS.include?(normalized)
+    end
+
+    def converted_amount(transfer, amount, original_amount, date, exchange_rate)
+      return amount if transfer.from_account.currency == transfer.to_account.currency
+
+      if exchange_rate
+        return Money.new(amount, transfer.from_account.currency)
+          .exchange_to(transfer.to_account.currency, date:, custom_rate: exchange_rate).amount
+      end
+
+      original_destination_amount = transfer.inflow_transaction.entry.amount.abs
+      amount == original_amount ? original_destination_amount : original_destination_amount * amount / original_amount
+    end
+
+    def positive_decimal(value, name)
+      amount = BigDecimal(value.to_s)
+      raise ArgumentError, "#{name} must be a finite number greater than 0." unless amount.finite? && amount.positive?
+
+      amount
+    end
+
+    def mark_financial_edit!(entry)
+      entry.lock_saved_attributes!
+      entry.mark_user_modified!
     end
 
     def describe(enabled)
@@ -120,6 +197,9 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
         id: transfer.id,
         name: transfer.name,
         status: transfer.status,
+        amount: transfer.amount,
+        date: transfer.date,
+        notes: transfer.notes,
         investment_contribution: transfer.investment_contribution?,
         outflow: {
           id: outflow.id,

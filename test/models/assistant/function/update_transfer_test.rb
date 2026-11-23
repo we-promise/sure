@@ -34,6 +34,32 @@ class Assistant::Function::UpdateTransferTest < ActiveSupport::TestCase
     assert_equal "investment_contribution", @transfer.outflow_transaction.reload.kind
   end
 
+  test "updates transfer fields and contribution treatment through one path" do
+    result = @function.call(
+      "id" => @transfer.id,
+      "notes" => "Brokerage conversion",
+      "investment_contribution" => false
+    )
+
+    assert result[:success]
+    assert_equal "Brokerage conversion", @transfer.reload.notes
+    assert_equal "funds_movement", @transfer.outflow_transaction.reload.kind
+  end
+
+  test "rolls back other edits when contribution treatment cannot be changed" do
+    Transfer.any_instance.stubs(:update_investment_contribution!).returns(false)
+
+    result = @function.call(
+      "id" => @transfer.id,
+      "notes" => "must roll back",
+      "investment_contribution" => false
+    )
+
+    assert_not result[:success]
+    assert_equal "not_updated", result[:error]
+    assert_nil @transfer.reload.notes
+  end
+
   test "dry run describes the change without making it" do
     result = @function.call("transfer_id" => @transfer.id, "investment_contribution" => false, "dry_run" => true)
 
@@ -57,6 +83,16 @@ class Assistant::Function::UpdateTransferTest < ActiveSupport::TestCase
 
     result = Assistant::Function::UpdateTransfer.new(users(:family_member))
       .call("transfer_id" => @transfer.id, "investment_contribution" => false)
+
+    assert_not result[:success]
+    assert_equal "not_found", result[:error]
+    assert_equal "investment_contribution", @transfer.outflow_transaction.reload.kind
+  end
+
+  test "does not update a transfer through a disabled account" do
+    @transfer.inflow_transaction.reload.entry.account.update!(status: "disabled")
+
+    result = @function.call("transfer_id" => @transfer.id, "investment_contribution" => false)
 
     assert_not result[:success]
     assert_equal "not_found", result[:error]

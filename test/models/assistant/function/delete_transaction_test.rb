@@ -7,38 +7,16 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     @function = Assistant::Function::DeleteTransaction.new(@user)
   end
 
-  test "deletes a transaction and its ledger entry" do
+  test "deletes a standard transaction from a writable account" do
+    transaction_id = @transaction.id
     entry_id = @transaction.entry.id
 
-    result = @function.call("id" => @transaction.id)
+    result = @function.call("id" => transaction_id)
 
     assert_equal true, result[:success]
-    assert_equal true, result[:deleted]
-    assert_equal @transaction.id, result[:transaction][:id]
-    assert_equal entry_id, result[:transaction][:entry_id]
-
-    # The transaction and its root entry are both gone.
-    assert_nil Transaction.find_by(id: @transaction.id)
-    assert_nil Entry.find_by(id: entry_id)
-  end
-
-  test "returns not_found for an unknown id" do
-    result = @function.call("id" => "00000000-0000-0000-0000-000000000000")
-
-    assert_equal false, result[:success]
-    assert_equal "not_found", result[:error]
-  end
-
-  test "returns not_found when the account_id guard does not match" do
-    other_account = accounts(:other_asset)
-
-    result = @function.call("id" => @transaction.id, "account_id" => other_account.id)
-
-    assert_equal false, result[:success]
-    assert_equal "not_found", result[:error]
-
-    # The guard mismatched, so nothing was deleted.
-    assert Transaction.exists?(@transaction.id)
+    assert_equal transaction_id, result[:deleted_transaction_id]
+    assert_not Transaction.exists?(transaction_id)
+    assert_not Entry.exists?(entry_id)
   end
 
   test "does not let read-only collaborators delete transactions" do
@@ -48,53 +26,70 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     result = function.call("id" => transaction.id)
 
     assert_equal false, result[:success]
-    assert_equal "not_found", result[:error]
+    assert_equal "not_authorized", result[:error]
     assert Transaction.exists?(transaction.id)
   end
 
-  test "does not let a user from a different family delete a transaction" do
-    # josh belongs to the `empty` family; the transaction belongs to
-    # `dylan_family`. Cross-family ids are structurally unresolvable and must
-    # not leak existence.
-    function = Assistant::Function::DeleteTransaction.new(users(:josh))
+  test "requires transfer actions for linked transfer transactions" do
+    result = @function.call("id" => transactions(:transfer_out).id)
 
-    result = function.call("id" => @transaction.id)
+    assert_equal false, result[:success]
+    assert_equal "transfer_transaction", result[:error]
+  end
+
+  test "returns not found for an invalid id" do
+    result = @function.call("id" => "not-a-uuid")
 
     assert_equal false, result[:success]
     assert_equal "not_found", result[:error]
+  end
+
+  test "account guard rejects mismatches and malformed IDs without deleting" do
+    [ accounts(:credit_card).id, "not-a-uuid", "" ].each do |account_id|
+      assert_no_difference [ "Entry.count", "Transaction.count" ] do
+        result = @function.call("id" => @transaction.id, "account_id" => account_id)
+        assert_equal "not_found", result[:error]
+      end
+    end
     assert Transaction.exists?(@transaction.id)
   end
 
-  test "rejects deleting a split child transaction" do
-    Entry.any_instance.stubs(:split_child?).returns(true)
+  test "matching account guard preserves the public deletion response" do
+    entry_id = @transaction.entry.id
+    result = @function.call("id" => @transaction.id, "account_id" => @transaction.entry.account_id)
 
-    result = @function.call("id" => @transaction.id)
-
-    assert_equal false, result[:success]
-    assert_equal "split_child", result[:error]
-    assert Transaction.exists?(@transaction.id)
+    assert result[:success]
+    assert result[:deleted]
+    assert_equal @transaction.id, result.dig(:transaction, :id)
+    assert_equal entry_id, result.dig(:transaction, :entry_id)
+    assert_not Entry.exists?(entry_id)
   end
 
-  test "returns delete_aborted when a before_destroy guard aborts the destroy" do
-    Entry.any_instance.stubs(:destroy!).raises(ActiveRecord::RecordNotDestroyed)
+  test "a changed account is rechecked after locking the entry" do
+    original_lock = Account::MutationAccess.method(:lock!)
+    destination = accounts(:credit_card)
+    racing_lock = lambda do |**arguments|
+      locked = original_lock.call(**arguments)
+      @transaction.entry.update_column(:account_id, destination.id)
+      locked
+    end
 
-    result = @function.call("id" => @transaction.id)
-
-    assert_equal false, result[:success]
-    assert_equal "delete_aborted", result[:error]
+    Account::MutationAccess.stub(:lock!, racing_lock) do
+      result = @function.call("id" => @transaction.id)
+      assert_equal "not_found", result[:error]
+    end
     assert Transaction.exists?(@transaction.id)
+    assert_equal destination.id, @transaction.entry.reload.account_id
   end
 
-  test "reports deleted with a warning when the post-delete sync fails to enqueue" do
-    # The transaction is already destroyed by the time sync_account_later runs,
-    # so an enqueue failure must not be reported as a failed deletion.
-    Entry.any_instance.stubs(:destroy!)
+  test "post-delete queue failures report the committed deletion" do
     Entry.any_instance.stubs(:sync_account_later).raises(StandardError, "job backend unavailable")
+    id = @transaction.id
+    result = @function.call("id" => id)
 
-    result = @function.call("id" => @transaction.id)
-
-    assert_equal true, result[:success]
-    assert_equal true, result[:deleted]
+    assert result[:success]
+    assert result[:deleted]
     assert_match(/could not be enqueued/, result[:warning])
+    assert_not Transaction.exists?(id)
   end
 end

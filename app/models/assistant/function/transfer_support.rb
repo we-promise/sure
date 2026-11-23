@@ -5,7 +5,7 @@
 module Assistant::Function::TransferSupport
   private
     def writable_transactions
-      family.transactions.joins(entry: :account).merge(Account.writable_by(user))
+      family.transactions.joins(entry: :account).merge(Account.visible.writable_by(user))
     end
 
     def scoped_transfers

@@ -8,7 +8,7 @@ ru:
         dashboard_two_column_description: Отображение виджетов панели в две колонки
           на больших экранах. Если выключено, виджеты располагаются в одну колонку.
         dashboard_two_column_title: Двухколоночный макет
-        disable_modal_click_outside_description: Запретить закрытие модальных окон при 
+        disable_modal_click_outside_description: Запретить закрытие модальных окон при
           клике вне их. Полезно, чтобы не потерять несохранённые изменения.
         disable_modal_click_outside_title: Не закрывать модальные окна при клике вне их
         modals_subtitle: Настройка поведения модальных окон

@@ -25,7 +25,7 @@ class Transfer::Creator
     end
   end
 
-  def create
+  def create(sync: true)
     raise ArgumentError, "source_fee_amount must be non-negative" if source_fee_amount.negative?
     raise ArgumentError, "destination_fee_amount must be non-negative" if destination_fee_amount.negative?
 
@@ -63,7 +63,7 @@ class Transfer::Creator
       apply_tags!(transfer) if tag_ids.any?
     end
 
-    transfer.sync_account_later
+    transfer.sync_account_later if sync
 
     # After commit, including a caller's own transaction, so a reconcile
     # error can never roll back the transfer. Only the inflow can resolve a
