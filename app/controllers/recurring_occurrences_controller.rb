@@ -150,7 +150,6 @@ class RecurringOccurrencesController < ApplicationController
       # joined, and naming it keeps the raw transactions join above out of
       # Rails' eager-load machinery.
       eligible = candidate_scope
-        .not_excluded_or_split_parent
         .where.not(id: RecurringMatchRejection.where(recurring_transaction: series).select(:entry_id))
         .preload(:entryable)
       scope = eligible.where(date: candidate_window).limit(RANKED_SCAN_LIMIT)
