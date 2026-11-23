@@ -204,6 +204,36 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "tells the household budget from personal budgets of the same month" do
+    @family.update!(personal_budgets: true)
+    member = users(:family_member)
+    BudgetShare.create!(owner: member, viewer: @user, permission: "read_only")
+    month = { start_date: @budget.start_date, end_date: @budget.end_date, currency: "USD" }
+    own_budget = @family.budgets.create!(user: @user, **month)
+    shared_budget = @family.budgets.create!(user: member, **month)
+
+    get api_v1_budgets_url,
+        params: { start_date: @budget.start_date.to_s, end_date: @budget.end_date.to_s },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    owners = JSON.parse(response.body)["budgets"].to_h { |budget| [ budget["id"], budget["owner"] ] }
+    assert_equal 3, owners.size
+    assert_nil owners.fetch(@budget.id)
+    assert_equal({ "id" => @user.id, "name" => @user.display_name }, owners.fetch(own_budget.id))
+    assert_equal({ "id" => member.id, "name" => member.display_name }, owners.fetch(shared_budget.id))
+
+    get api_v1_budget_url(shared_budget.id), headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal({ "id" => member.id, "name" => member.display_name }, JSON.parse(response.body)["owner"])
+
+    get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert response_data.key?("owner")
+    assert_nil response_data["owner"]
+  end
+
   test "requires authentication" do
     get api_v1_budgets_url
 
