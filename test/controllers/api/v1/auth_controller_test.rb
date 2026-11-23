@@ -732,6 +732,34 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert initial_token.reload.revoked?
   end
 
+  test "should not refresh an expired token after signing in again on the device" do
+    expired = expired_device_token(users(:family_admin))
+    sign_in_on_device(users(:family_admin))
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/refresh", params: { refresh_token: expired.plaintext_refresh_token, device: @device_info }
+    end
+
+    assert_response :unauthorized
+    assert_equal "Invalid refresh token", JSON.parse(response.body)["error"]
+  end
+
+  test "oauth token endpoint should not refresh an expired token after signing in again on the device" do
+    expired = expired_device_token(users(:family_admin))
+    sign_in_on_device(users(:family_admin))
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/oauth/token", params: {
+        grant_type: "refresh_token",
+        refresh_token: expired.plaintext_refresh_token,
+        client_id: @shared_app.uid
+      }
+    end
+
+    assert_response :bad_request
+    assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+  end
+
   test "should not refresh with invalid refresh token" do
     assert_no_difference("Doorkeeper::AccessToken.count") do
       post "/api/v1/auth/refresh", params: {
@@ -1482,4 +1510,23 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [], JSON.parse(response.body)["providers"]
   end
+
+  private
+
+    def expired_device_token(user)
+      Doorkeeper::AccessToken.create!( # pipelock:ignore
+        application: @shared_app,
+        resource_owner_id: user.id,
+        mobile_device_id: user.mobile_devices.create!(@device_info).id,
+        expires_in: 1.hour.to_i,
+        scopes: "read_write",
+        use_refresh_token: true,
+        created_at: 2.hours.ago
+      )
+    end
+
+    def sign_in_on_device(user)
+      post "/api/v1/auth/login", params: { email: user.email, password: user_password_test, device: @device_info }
+      assert_response :success
+    end
 end

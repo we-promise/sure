@@ -63,16 +63,16 @@ class MobileDevice < ApplicationRecord
     update_column(:last_seen_at, Time.current)
   end
 
-  def active_tokens
+  # Includes expired tokens: their refresh token works until it is revoked.
+  def unrevoked_tokens
     Doorkeeper::AccessToken
       .where(mobile_device_id: id)
       .where(resource_owner_id: user_id)
       .where(revoked_at: nil)
-      .where("expires_in IS NULL OR created_at + expires_in * interval '1 second' > ?", Time.current)
   end
 
   def revoke_all_tokens!
-    active_tokens.update_all(revoked_at: Time.current)
+    unrevoked_tokens.update_all(revoked_at: Time.current)
   end
 
   # Issues a fresh Doorkeeper access token for this device, revoking any
