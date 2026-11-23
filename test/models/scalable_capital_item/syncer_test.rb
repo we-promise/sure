@@ -394,6 +394,57 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal(-2.75.to_d, replayed.amount)
   end
 
+  test "a one-sided cash correction detaches an invalid transfer without removing its entries or fee" do
+    stub_snapshot
+    run_sync
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    savings = @item.scalable_capital_accounts.savings.sole.account
+    inflow = cash.entries.find_by!(external_id: "cash-transfer-in")
+    outflow = savings.entries.find_by!(external_id: "cash-transfer-out")
+    @family.auto_match_transfers!(account: savings)
+    transfer = outflow.transaction.transfer
+    transfer.confirm! if transfer.pending?
+    fee = cash.entries.create!(entryable: Transaction.new(transfer_id: transfer.id), date: inflow.date,
+                               amount: 1, currency: "EUR", name: "Separate transfer fee")
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_history(cash_event("cash-transfer-in", "CASH_TRANSFER_IN", amount: "25", at: 1.hour.ago))
+    run_sync
+
+    assert_equal(-25.to_d, inflow.reload.amount)
+    assert_equal 20.to_d, outflow.reload.amount
+    assert_not Transfer.exists?(transfer.id)
+    assert_nil inflow.transaction.transfer
+    assert_nil outflow.transaction.transfer
+    assert_equal 1.to_d, fee.reload.amount
+    assert_nil fee.transaction.transfer_id
+  end
+
+  test "matching cash corrections across feeds retain the original valid transfer" do
+    stub_snapshot
+    run_sync
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    savings = @item.scalable_capital_accounts.savings.sole.account
+    inflow = cash.entries.find_by!(external_id: "cash-transfer-in")
+    outflow = savings.entries.find_by!(external_id: "cash-transfer-out")
+    @family.auto_match_transfers!(account: savings)
+    transfer = outflow.transaction.transfer
+    transfer.confirm! if transfer.pending?
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_history(cash_event("cash-transfer-in", "CASH_TRANSFER_IN", amount: "25", at: 1.hour.ago))
+    stub_savings_history(cash_event("cash-transfer-out", "CASH_TRANSFER_OUT", amount: "25", at: 1.hour.ago))
+    run_sync
+
+    assert_equal(-25.to_d, inflow.reload.amount)
+    assert_equal 25.to_d, outflow.reload.amount
+    assert_equal transfer, inflow.transaction.transfer
+    assert_equal transfer, outflow.transaction.transfer
+    assert_predicate transfer.reload, :valid?
+  end
+
   test "zero cash corrections update existing provider entries without creating new ones" do
     stub_snapshot
     stub_broker_history(
@@ -730,11 +781,16 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
       @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "98")))
       @client.stubs(:overnight).with(@item.reload.savings_id).returns(savings({ "balance" => savings_balance }))
       @client.stubs(:broker_transactions).with("portfolio", all_of(has_key(:since), has_key(:before))).yields(broker({}), broker_events)
+      stub_savings_history(
+        cash_event("interest", "INTEREST", amount: "1.25"),
+        cash_event("cash-transfer-out", "CASH_TRANSFER_OUT", amount: "20"),
+        id: savings_history_id
+      )
+    end
+
+    def stub_savings_history(*events, id: "savings")
       @client.stubs(:overnight_transactions).with("savings", all_of(has_key(:since), has_key(:before)))
-        .yields(savings({}, id: savings_history_id), [
-          cash_event("interest", "INTEREST", amount: "1.25"),
-          cash_event("cash-transfer-out", "CASH_TRANSFER_OUT", amount: "20")
-        ])
+        .yields(savings({}, id: id), events)
     end
 
     def stub_broker_trades(*events)

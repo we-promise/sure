@@ -90,18 +90,20 @@ class ScalableCapitalItem::Syncer
 
       securities.resolve_pending! if adapters[:brokerage]
 
-      snapshots.each do |snapshot|
+      cash_transaction_ids = snapshots.each_with_object([]) do |snapshot, ids|
         adapter = adapters[snapshot.fetch(:kind)]
         next unless adapter
 
         snapshot.fetch(:entries).each do |entry|
           if entry.key?(:isin)
             import_trade(adapter, adapters[:cash], securities, entry)
-          else
-            import_transaction(adapter, entry)
+          elsif (imported = import_transaction(adapter, entry))
+            ids << imported.entryable_id
           end
         end
       end
+
+      revalidate_cash_transfers(cash_transaction_ids)
 
       snapshots.each do |snapshot|
         adapter = adapters[snapshot.fetch(:kind)]
@@ -180,9 +182,22 @@ class ScalableCapitalItem::Syncer
     end
 
     def import_transaction(adapter, entry)
-      return apply_zero_amount(adapter, entry.fetch(:external_id)) if entry.fetch(:amount).zero?
+      if entry.fetch(:amount).zero?
+        apply_zero_amount(adapter, entry.fetch(:external_id))
+        return
+      end
 
       adapter.import_transaction(**entry, source: SOURCE, currency: CURRENCY, allow_heuristic_matching: false)
+    end
+
+    def revalidate_cash_transfers(transaction_ids)
+      return if transaction_ids.empty?
+
+      # A transfer's other leg can arrive in a later feed in the same sync.
+      transfers = Transfer.where(inflow_transaction_id: transaction_ids)
+        .or(Transfer.where(outflow_transaction_id: transaction_ids))
+        .includes(inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account })
+      transfers.lock.find_each { |transfer| detach_transfer(transfer) unless transfer.valid? }
     end
 
     def apply_zero_amount(adapter, external_id)
