@@ -70,6 +70,21 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "%{count} comptes", translations["other"]
   end
 
+  test "the suggested-pace hint pluralizes with the locale that supplied the translation" do
+    # "vi" has no goals translation, so the hash falls back to English and the
+    # plural category must be selected with "en", not "vi".
+    @user.update!(locale: "vi")
+
+    get new_goal_url
+
+    assert_response :success
+    form = css_select("[data-controller~='goal-form']").first
+    assert_equal "en", form["data-goal-form-locale-value"]
+
+    translations = JSON.parse(form["data-goal-form-suggested-accounts-value"])
+    assert_equal "1 account", translations["one"]
+  end
+
   test "the target amount field keeps its own action alongside the paste handler" do
     get new_goal_url
 
