@@ -41,6 +41,22 @@ class ReceiptScan::EvaluationTest < ActiveSupport::TestCase
     assert_equal "boom", report["results"].first["error"]
   end
 
+  test "a failed extraction counts against the nip it was expected to read" do
+    provider = stub(supports_receipt_extraction?: true)
+    provider.stubs(:extract_receipt).returns(
+      Provider::Response.new(success?: true, data: build_receipt_extraction(currency: "USD"), error: nil),
+      Provider::Response.new(success?: false, data: nil, error: Provider::Error.new("boom"))
+    )
+    write_pair("a", merchant: "Corner Grocer", date: "2026-11-14", total: "50.00", currency: "USD", nip: "5260250274")
+    FileUtils.rm(@dir.join("b.jpg"))
+    write_pair("c", total: "12.99", currency: "PLN", nip: "5260250274")
+
+    report = ReceiptScan::Evaluation.new(dir: @dir, family: @family, provider:).run
+
+    assert_equal 0.0, report["accuracy"]["nip"]
+    assert_equal false, report["results"].last["scores"]["nip"]
+  end
+
   private
     def write_pair(name, **expected)
       FileUtils.cp(file_fixture("receipts/rotated.jpg"), @dir.join("#{name}.jpg"))

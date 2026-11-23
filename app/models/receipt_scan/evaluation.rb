@@ -60,7 +60,9 @@ class ReceiptScan::Evaluation
       latency = (clock.call - started).round(2)
 
       unless response.success?
-        return { "name" => name, "error" => response.error&.message, "scores" => {}, "flags" => [], "latency_seconds" => latency }
+        # Wrong on every field it was expected to read.
+        scores = FIELDS.select { expected[_1].present? }.index_with(false)
+        return { "name" => name, "error" => response.error&.message, "scores" => scores, "flags" => [], "latency_seconds" => latency }
       end
 
       extraction = response.data
@@ -89,7 +91,7 @@ class ReceiptScan::Evaluation
     # Share of receipts with an expected value for the field that got it right; a failed
     # extraction counts as wrong.
     def accuracy(results, field)
-      graded = results.select { _1["scores"].key?(field) || (_1["error"] && field != "nip") }
+      graded = results.select { _1["scores"].key?(field) }
       ratio(graded.count { _1["scores"][field] }, graded.size)
     end
 

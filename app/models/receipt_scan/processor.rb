@@ -106,8 +106,6 @@ class ReceiptScan::Processor
       )
     end
 
-    attr_reader :placeholder
-
     # The transaction this receipt ends up on: the bank's, when exactly one bank entry is this
     # payment, otherwise the placeholder.
     def resolve_transaction
