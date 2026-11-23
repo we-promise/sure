@@ -1,0 +1,227 @@
+---
+nb:
+  indexa_capital_items:
+    sync_status:
+      no_accounts: Fant ingen kontoer
+      synced:
+        one: '%{count} konto synkronisert'
+        other: '%{count} kontoer synkronisert'
+      synced_with_setup: '%{linked} synkronisert, %{unlinked} må konfigureres'
+    institution_summary:
+      none: Ingen institusjoner tilkoblet
+      count:
+        one: '%{count} institusjon'
+        other: '%{count} institusjoner'
+    errors:
+      provider_not_configured: IndexaCapital-leverandøren er ikke konfigurert
+    sync:
+      status:
+        importing: Importerer kontoer fra IndexaCapital …
+        processing: Behandler beholdninger og aktiviteter …
+        calculating: Beregner saldoer …
+        importing_data: Importerer kontodata …
+        checking_setup: Kontrollerer kontokonfigurasjonen …
+        needs_setup: 'Kontoer som må konfigureres: %{count} …'
+      success: Synkronisering startet
+    panel:
+      setup_instructions: 'Oppsettinstruksjoner:'
+      step_1: Gå til Indexa Capital-oversikten din for å opprette et API-token med kun lesetilgang
+      step_2: Lim inn API-tokenet nedenfor og klikk på Lagre
+      step_3: Når tilkoblingen er opprettet, går du til Kontoer-fanen for å sette opp nye kontoer
+      field_descriptions: 'Feltbeskrivelser:'
+      optional: (valgfritt)
+      required: (obligatorisk)
+      optional_with_default: (valgfritt, standard er %{default_value})
+      alternative_auth: Eller logg inn med brukernavn og passord i stedet …
+      save_button: Lagre konfigurasjon
+      update_button: Oppdater konfigurasjon
+      fields:
+        api_token:
+          label: API-token
+          description: API-tokenet ditt med kun lesetilgang fra Indexa Capital-oversikten
+          placeholder_new: Lim inn API-tokenet her
+          placeholder_update: Skriv inn et nytt API-token for å oppdatere
+        username:
+          label: Brukernavn
+          description: Brukernavnet eller e-postadressen din hos Indexa Capital
+          placeholder_new: Lim inn brukernavnet her
+          placeholder_update: Skriv inn et nytt brukernavn for å oppdatere
+        document:
+          label: ID-nummer
+          description: Nummeret på ID-dokumentet ditt hos Indexa Capital
+          placeholder_new: Lim inn ID-nummeret her
+          placeholder_update: Skriv inn et nytt ID-nummer for å oppdatere
+        password:
+          label: Passord
+          description: Passordet ditt hos Indexa Capital
+          placeholder_new: Lim inn passordet her
+          placeholder_update: Skriv inn et nytt passord for å oppdatere
+    create:
+      success: IndexaCapital-tilkoblingen er opprettet
+    update:
+      success: IndexaCapital-tilkoblingen er oppdatert
+    destroy:
+      success: IndexaCapital-tilkoblingen er fjernet
+    index:
+      title: IndexaCapital-tilkoblinger
+    loading:
+      loading_message: Laster inn IndexaCapital-kontoer …
+      loading_title: Laster inn
+    link_accounts:
+      all_already_linked:
+        one: Den valgte kontoen (%{names}) er allerede koblet til
+        other: 'Alle de %{count} valgte kontoene er allerede koblet til: %{names}'
+      api_error: 'API-feil: %{message}'
+      invalid_account_names:
+        one: Kan ikke koble til en konto uten navn
+        other: Kan ikke koble til %{count} kontoer uten navn
+      link_failed: Kunne ikke koble til kontoene
+      no_accounts_selected: Velg minst én konto
+      no_api_key: Fant ikke IndexaCapital-legitimasjon. Konfigurer den i leverandørinnstillingene.
+      partial_invalid: Koblet til %{created_count} konto(er), %{already_linked_count} var allerede koblet til, %{invalid_count} konto(er) hadde ugyldige navn
+      partial_success: 'Koblet til %{created_count} konto(er). %{already_linked_count} konto(er) var allerede koblet til: %{already_linked_names}'
+      success:
+        one: Koblet til %{count} konto
+        other: Koblet til %{count} kontoer
+    indexa_capital_item:
+      accounts_need_setup: Kontoer må konfigureres
+      delete: Slett tilkobling
+      deletion_in_progress: sletting pågår …
+      error: Feil
+      more_accounts_available:
+        one: '%{count} konto til er tilgjengelig'
+        other: '%{count} kontoer til er tilgjengelige'
+      no_accounts_description: Denne tilkoblingen har ingen tilknyttede kontoer ennå.
+      no_accounts_title: Ingen kontoer
+      provider_name: IndexaCapital
+      requires_update: Tilkoblingen må oppdateres
+      setup_action: Sett opp nye kontoer
+      setup_description: '%{linked} av %{total} kontoer er koblet til. Velg kontotyper for de nylig importerte IndexaCapital-kontoene dine.'
+      setup_needed: Nye kontoer er klare til å settes opp
+      status: Synkronisert for %{timestamp} siden – %{summary}
+      status_never: Aldri synkronisert
+      syncing: Synkroniserer …
+      total: Totalt
+      unlinked: Ikke koblet til
+      update_credentials: Oppdater legitimasjon
+    select_accounts:
+      accounts_selected: kontoer valgt
+      api_error: 'API-feil: %{message}'
+      cancel: Avbryt
+      configure_name_in_provider: Kan ikke importere – angi et kontonavn i IndexaCapital
+      description: Velg kontoene du vil koble til %{product_name}-kontoen din.
+      link_accounts: Koble til valgte kontoer
+      no_accounts_found: Fant ingen kontoer. Kontroller IndexaCapital-legitimasjonen din.
+      no_api_key: IndexaCapital-legitimasjon er ikke konfigurert. Konfigurer den i Innstillinger.
+      no_credentials_configured: Konfigurer IndexaCapital-legitimasjonen din i leverandørinnstillingene først.
+      no_name_placeholder: (Uten navn)
+      title: Velg IndexaCapital-kontoer
+    select_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      all_accounts_already_linked: Alle IndexaCapital-kontoer er allerede koblet til
+      api_error: 'API-feil: %{message}'
+      balance_label: 'Saldo:'
+      cancel: Avbryt
+      cancel_button: Avbryt
+      configure_name_in_provider: Kan ikke importere – angi et kontonavn i IndexaCapital
+      connect_hint: Koble til en IndexaCapital-konto for å aktivere automatisk synkronisering.
+      description: Velg en IndexaCapital-konto som skal kobles til denne kontoen. Transaksjoner synkroniseres, og duplikater fjernes automatisk.
+      header: Koble til IndexaCapital
+      link_account: Koble til konto
+      link_button: Koble til denne kontoen
+      linking_to: 'Kobler til:'
+      no_account_specified: Ingen konto er angitt
+      no_accounts: Fant ingen IndexaCapital-kontoer som ikke er koblet til.
+      no_accounts_found: Fant ingen IndexaCapital-kontoer. Kontroller legitimasjonen din.
+      no_api_key: IndexaCapital-legitimasjon er ikke konfigurert. Konfigurer den i Innstillinger.
+      no_credentials_configured: Konfigurer IndexaCapital-legitimasjonen din i leverandørinnstillingene først.
+      no_name_placeholder: (Uten navn)
+      settings_link: Gå til leverandørinnstillinger
+      subtitle: Velg en IndexaCapital-konto
+      title: Koble %{account_name} til IndexaCapital
+    link_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      api_error: 'API-feil: %{message}'
+      invalid_account_name: Kan ikke koble til en konto uten navn
+      provider_account_already_linked: Denne IndexaCapital-kontoen er allerede koblet til en annen konto
+      provider_account_not_found: Fant ikke IndexaCapital-kontoen
+      missing_parameters: Obligatoriske parametere mangler
+      no_api_key: Fant ikke IndexaCapital-legitimasjon. Konfigurer den i leverandørinnstillingene.
+      success: '%{account_name} er koblet til IndexaCapital'
+    setup_accounts:
+      account_type_label: 'Kontotype:'
+      accounts_count:
+        one: '%{count} konto tilgjengelig'
+        other: '%{count} kontoer tilgjengelige'
+      all_accounts_linked: Alle IndexaCapital-kontoene dine er allerede satt opp.
+      api_error: 'API-feil: %{message}'
+      creating: Oppretter kontoer …
+      fetch_failed: Kunne ikke hente kontoer
+      import_selected: Importer valgte kontoer
+      instructions: Velg kontoene du vil importere fra IndexaCapital. Du kan velge flere kontoer.
+      no_accounts: Fant ingen kontoer som ikke er koblet til, i denne IndexaCapital-tilkoblingen.
+      no_accounts_to_setup: Ingen kontoer å sette opp
+      no_api_key: IndexaCapital-legitimasjon er ikke konfigurert. Kontroller tilkoblingsinnstillingene.
+      select_all: Velg alle
+      account_types:
+        skip: Hopp over denne kontoen
+        depository: Bruks- eller sparekonto
+        credit_card: Kredittkort
+        investment: Investeringskonto
+        crypto: Kryptovalutakonto
+        loan: Lån eller boliglån
+        other_asset: Annen eiendel
+      subtype_labels:
+        depository: 'Kontoundertype:'
+        credit_card: ''
+        investment: 'Investeringstype:'
+        crypto: ''
+        loan: 'Lånetype:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredittkort settes automatisk opp som kredittkortkontoer.
+        other_asset: Ingen flere valg er nødvendige for andre eiendeler.
+        crypto: Kryptovalutakontoer settes opp for å følge beholdninger og transaksjoner.
+      subtypes:
+        depository:
+          checking: Brukskonto
+          savings: Sparekonto
+          hsa: Health Savings Account (HSA)
+          cd: Tidsinnskudd
+          money_market: Pengemarkedskonto
+        investment:
+          brokerage: Meglerkonto
+          pension: Pensjon
+          retirement: Pensjonssparing
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: Thrift Savings Plan
+          529_plan: 529-plan
+          hsa: Health Savings Account (HSA)
+          mutual_fund: Verdipapirfond
+          ira: Tradisjonell IRA
+          roth_ira: Roth IRA
+          angel: Engleinvestering
+        loan:
+          mortgage: Boliglån
+          student: Studielån
+          auto: Billån
+          other: Annet lån
+      balance: Saldo
+      cancel: Avbryt
+      choose_account_type: 'Velg riktig kontotype for hver IndexaCapital-konto:'
+      create_accounts: Opprett kontoer
+      creating_accounts: Oppretter kontoer …
+      historical_data_range: 'Periode for historiske data:'
+      subtitle: Velg riktige kontotyper for de importerte kontoene dine
+      sync_start_date_help: Velg hvor langt tilbake du vil synkronisere transaksjonshistorikken.
+      sync_start_date_label: 'Synkroniser transaksjoner fra:'
+      title: Sett opp IndexaCapital-kontoene dine
+    complete_account_setup:
+      all_skipped: Alle kontoer ble hoppet over. Ingen kontoer ble opprettet.
+      creation_failed: 'Kunne ikke opprette kontoer: %{error}'
+      no_accounts: Ingen kontoer å sette opp.
+      success: Opprettet %{count} konto(er).
+    preload_accounts:
+      no_credentials_configured: Konfigurer IndexaCapital-legitimasjonen din i leverandørinnstillingene først.

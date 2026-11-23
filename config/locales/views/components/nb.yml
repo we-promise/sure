@@ -1,0 +1,169 @@
+---
+nb:
+  UI:
+    period_picker:
+      aria_label: 'Tidsperiode: %{period}'
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Vis/skjul avmerkingsbokser
+      balance_reconciliation:
+        labels:
+          adjustments: Justeringer
+          buys: Kjøp
+          change_in_brokerage_cash: Endring i kontantbeholdning
+          change_in_holdings_market: Endring i beholdninger (markedsbevegelser)
+          change_in_holdings_trades: Endring i beholdninger (kjøp/salg)
+          charges: Kjøp på kortet
+          end_balance: Beregnet sluttsaldo
+          end_principal: Beregnet sluttrestgjeld
+          end_value: Beregnet sluttverdi
+          final_balance: Endelig saldo
+          final_principal: Endelig restgjeld
+          final_value: Endelig verdi
+          market_changes: Markedsendringer
+          net_cash_flow: Netto kontantstrøm
+          net_principal_change: Netto endring i restgjeld
+          net_value_change: Netto verdiendring
+          payments: Innbetalinger
+          sells: Salg
+          start_balance: Startsaldo
+          start_principal: Restgjeld ved start
+          start_value: Startverdi
+        tooltips:
+          adjustments: Manuelle avstemminger eller andre justeringer
+          adjustments_asset: Manuelle verdijusteringer eller takseringer
+          buys: Kjøp av krypto i løpet av dagen
+          change_in_brokerage_cash: Netto endring i kontanter fra innskudd, uttak og handler
+          change_in_holdings_market: Endring i beholdningsverdi som følge av markedsbevegelser
+          change_in_holdings_trades: Effekt på beholdninger av kjøp og salg av verdipapirer
+          charges: Nye kjøp belastet kortet i løpet av dagen
+          end_balance: Beregnet saldo etter alle transaksjoner
+          end_balance_investment: Beregnet saldo etter all aktivitet
+          end_principal: Beregnet restgjeld etter alle transaksjoner
+          end_value: Beregnet verdi etter alle endringer
+          final_balance: Endelig kontosaldo for dagen
+          final_balance_credit: Endelig skyldig beløp for dagen
+          final_balance_crypto: Endelig verdi av kryptobeholdningene for dagen
+          final_balance_investment: Endelig porteføljeverdi for dagen
+          final_principal: Endelig restgjeld for dagen
+          final_value: Endelig verdi av eiendelen for dagen
+          market_changes: Verdiendringer som følge av markedsbevegelser
+          net_cash_flow: Netto endring i saldo fra alle transaksjoner i løpet av dagen
+          net_principal_change: Avdrag og nye lån i løpet av dagen
+          net_value_change: Alle verdiendringer, inkludert forbedringer og verdifall
+          payments: Innbetalinger til kortet i løpet av dagen
+          sells: Salg av krypto i løpet av dagen
+          start_balance: Kontosaldo ved starten av dagen
+          start_balance_credit: Skyldig beløp ved starten av dagen
+          start_balance_crypto: Verdi av kryptobeholdningene ved starten av dagen
+          start_balance_investment: Total porteføljeverdi ved starten av dagen
+          start_principal: Restgjeld ved starten av dagen
+          start_value: Verdi av eiendelen ved starten av dagen
+      chart:
+        no_data_available: Ingen data tilgjengelig
+        title:
+          balance: Saldo
+          cash_value: Kontantbeholdning
+          debt_balance: Gjeld
+          estimated_property_value: Estimert boligverdi
+          estimated_vehicle_value: Estimert kjøretøyverdi
+          holdings_value: Verdi av beholdninger
+          remaining_principal_balance: Gjenværende restgjeld
+          total_account_value: Total kontoverdi
+          total_gains: Total avkastning
+        views:
+          cash: Kontanter
+          gains: Avkastning / ROI
+          holdings: Beholdninger
+          total_value: Total verdi
+        vs_available_history: mot tilgjengelig historikk
+      activity_date:
+        balance_tooltip: Saldo ved dagens slutt, etter alle transaksjoner og justeringer
+        no_balance_data: Ingen saldodata tilgjengelig for denne datoen
+  ds:
+    alert:
+      variants:
+        info: Informasjon
+        success: Vellykket
+        warning: Advarsel
+        error: Feil
+        destructive: Feil
+    pill:
+      aria_label: '%{label}'
+      default_label: Forhåndsversjon
+    dialog:
+      close: Lukk
+    popover:
+      avatar_default_label: Åpne meny
+    tooltip:
+      trigger_label: Mer informasjon
+    link:
+      opens_in_new_tab: (åpnes i ny fane)
+    icon_picker:
+      no_matching_icons: Ingen samsvarende ikoner
+      search_placeholder: Søk etter ikoner...
+  provider_sync_summary:
+    title: Synkroniseringssammendrag
+    last_sync: 'Siste synkronisering: for %{time_ago} siden'
+    accounts:
+      title: Kontoer
+      total: 'Totalt: %{count}'
+      linked: 'Tilkoblet: %{count}'
+      unlinked: 'Ikke tilkoblet: %{count}'
+      institutions: 'Institusjoner: %{count}'
+    transactions:
+      title: Transaksjoner
+      seen: 'Mottatt: %{count}'
+      imported: 'Importert: %{count}'
+      updated: 'Oppdatert: %{count}'
+      skipped: 'Hoppet over: %{count}'
+      fetching: Henter fra megleren...
+      protected:
+        one: '%{count} post beskyttet (ikke overskrevet)'
+        other: '%{count} poster beskyttet (ikke overskrevet)'
+      view_protected: Se beskyttede oppføringer
+    skip_reasons:
+      excluded: Ekskludert
+      user_modified: Endret av bruker
+      import_locked: CSV-import
+      protected: Beskyttet
+    holdings:
+      title: Beholdninger
+      found: 'Funnet: %{count}'
+      processed: 'Behandlet: %{count}'
+    trades:
+      title: Handler
+      imported: 'Importert: %{count}'
+      skipped: 'Hoppet over: %{count}'
+      fetching: Henter aktiviteter fra megleren...
+    health:
+      title: Tilstand
+      view_error_details: Se feildetaljer
+      rate_limited: Forespørselsgrense nådd (%{time_ago})
+      recently: nylig
+      errors: 'Feil: %{count}'
+      pending_reconciled:
+        one: '%{count} duplisert reservert transaksjon avstemt'
+        other: '%{count} dupliserte reserverte transaksjoner avstemt'
+      view_reconciled: Se avstemte transaksjoner
+      duplicate_suggestions:
+        one: '%{count} mulig duplikat må gjennomgås'
+        other: '%{count} mulige duplikater må gjennomgås'
+      view_duplicate_suggestions: Se foreslåtte duplikater
+      stale_pending:
+        one: '%{count} utdatert reservert transaksjon (utelatt fra budsjetter)'
+        other: '%{count} utdaterte reserverte transaksjoner (utelatt fra budsjetter)'
+      view_stale_pending: Se berørte kontoer
+      stale_pending_count:
+        one: '%{count} transaksjon'
+        other: '%{count} transaksjoner'
+      stale_unmatched:
+        one: '%{count} reservert transaksjon må gjennomgås manuelt'
+        other: '%{count} reserverte transaksjoner må gjennomgås manuelt'
+      view_stale_unmatched: Se transaksjoner som må gjennomgås
+      stale_unmatched_count:
+        one: '%{count} transaksjon'
+        other: '%{count} transaksjoner'
+      data_warnings: 'Dataadvarsler: %{count}'
+      notices: 'Merknader: %{count}'
+      view_data_quality: Se detaljer om datakvalitet

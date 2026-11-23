@@ -1,0 +1,6 @@
+---
+nb:
+  sure_import:
+    preflight:
+      missing_reference: Linje %{line} %{type} refererer til manglende %{field} %{value}.
+      skipped_missing_reference: Linje %{line} %{type} refererer til manglende %{field} %{value}. Den blir hoppet over under importen.

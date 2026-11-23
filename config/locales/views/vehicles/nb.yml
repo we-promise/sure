@@ -13,6 +13,8 @@ nb:
       model_placeholder: DMC-12
       year: År
       year_placeholder: '1985'
+      mileage_unit_kilometers: Kilometer
+      mileage_unit_miles: Engelske mil
     new:
       title: Skriv inn kjøretøydetaljer
     overview:
@@ -23,3 +25,13 @@ nb:
       trend: Trend
       unknown: Ukjent
       year: År
+    tabs:
+      overview:
+        current_price: Gjeldende pris
+        make_model: Merke og modell
+        mileage: Kilometerstand
+        purchase_price: Kjøpspris
+        trend: Trend
+        unknown: Ukjent
+        year: År
+        edit_account_details: Rediger kontodetaljer

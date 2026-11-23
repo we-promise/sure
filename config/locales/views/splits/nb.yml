@@ -1,0 +1,47 @@
+---
+nb:
+  splits:
+    new:
+      title: Del opp transaksjon
+      description: Del opp denne transaksjonen i flere oppføringer med ulike kategorier og beløp.
+      submit: Del opp transaksjon
+      cancel: Avbryt
+      add_row: Legg til del
+      remove_row: Fjern
+      remaining: Gjenstår å fordele
+      amounts_must_match: Summen av delene må være lik det opprinnelige transaksjonsbeløpet.
+      name_label: Navn
+      name_placeholder: Navn på del
+      amount_label: Beløp
+      category_label: Kategori
+      uncategorized: (ukategorisert)
+      original_name: 'Navn:'
+      original_date: 'Dato:'
+      original_amount: Beløp
+      split_number: Del %{number}
+    create:
+      success: Transaksjonen ble delt opp
+      not_splittable: Denne transaksjonen kan ikke deles opp.
+    destroy:
+      success: Oppdelingen av transaksjonen ble angret
+    show:
+      title: Oppdelte oppføringer
+      description: Denne transaksjonen er delt opp i følgende oppføringer.
+      button_title: Del opp transaksjon
+      button_description: Del opp denne transaksjonen i flere oppføringer med ulike kategorier og beløp.
+      button: Del opp
+      unsplit_title: Angre oppdeling av transaksjon
+      unsplit_button: Angre oppdeling
+      unsplit_confirm: Dette fjerner alle oppdelte oppføringer og gjenoppretter den opprinnelige transaksjonen.
+    edit:
+      title: Rediger oppdeling
+      description: Endre de oppdelte oppføringene for denne transaksjonen.
+      submit: Oppdater oppdeling
+      not_split: Denne transaksjonen er ikke delt opp.
+    update:
+      success: Oppdelingen ble oppdatert
+    child:
+      title: Del av oppdeling
+      description: Denne oppføringen er en del av en oppdelt transaksjon.
+      edit_split: Rediger oppdeling
+      unsplit: Angre oppdeling

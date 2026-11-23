@@ -8,11 +8,30 @@ nb:
       scope_descriptions:
         read_accounts: "Vis kontoer"
         read_transactions: "Vis transaksjoner"
-        read_balances: "Vis balanser"
+        read_balances: "Vis saldoer"
         write_transactions: "Opprett transaksjoner"
     api_keys:
       show:
         title: "Administrasjon av API-nøkkel"
+        newly_created:
+          page_title: API-nøkkel opprettet
+          heading: API-nøkkelen er opprettet!
+          key_ready: Den nye API-nøkkelen «%{name}» er opprettet og klar til bruk.
+          your_api_key: Din API-nøkkel
+          copy_store_securely: Kopier nøkkelen og oppbevar den trygt. Du trenger den for å autentisere API-forespørslene dine.
+          copy_api_key: Kopier API-nøkkel
+          how_to_use: Slik bruker du API-nøkkelen
+          continue: Fortsett til innstillinger for API-nøkler
+        current_api_key:
+          title: Din API-nøkkel
+          permissions: Tillatelser
+          copy_api_key: Kopier API-nøkkel
+          copy_store_securely: Kopier nøkkelen og oppbevar den trygt. Du trenger den for å autentisere API-forespørslene dine.
+          usage_instructions_title: Slik bruker du API-nøkkelen
+          usage_instructions: 'Legg ved API-nøkkelen i X-Api-Key-headeren når du sender forespørsler til %{product_name}-API-et:'
+          back_to_keys: Tilbake til API-nøkler
+          revoke_key: Tilbakekall nøkkel
+          revoke_confirmation: Er du sikker på at du vil tilbakekalle denne API-nøkkelen? Handlingen kan ikke angres, og alle applikasjoner som bruker nøkkelen, slutter umiddelbart å fungere.
       no_api_key:
         title: "Opprett din API-nøkkel"
         description: "Få programmatisk tilgang til dine %{product_name}-data med en sikker API-nøkkel."
@@ -45,22 +64,31 @@ nb:
         create_new_key: "Opprett ny API-nøkkel"
         description: "Konfigurer din nye API-nøkkel med et beskrivende navn og passende tillatelser."
         name_label: "API-nøkkelnavn"
-        name_placeholder: "f.eks., Produksjonsapp, Analyse dashboard"
+        name_placeholder: "f.eks. Budsjettappen min, Porteføljesporing"
         name_help: "Velg et beskrivende navn for å hjelpe deg med å identifisere denne nøkkelens formål."
         permissions_label: "Tillatelser"
-        permissions_help: "Velg tillatelsene din API-nøkkel trenger. Du kan alltid opprette en ny nøkkel med andre tillatelser."
+        permissions_help: "Velg hvilke tillatelser denne API-nøkkelen skal ha:"
         scope_details:
-          read_accounts: "Vis kontoinformasjon, balanser og konto-nivå data"
+          read_accounts: "Vis kontoinformasjon, saldoer og data på kontonivå"
           read_transactions: "Vis transaksjonsdata, kategorier og transaksjonsdetaljer"
-          read_balances: "Vis historiske balancedata og kontoverditrend"
-          write_transactions: "Opprett og oppdater transaksjonsregistre (kommer snart)"
+          read_balances: "Vis historiske saldodata og utvikling i kontoverdi"
+          write_transactions: "Opprett og oppdater transaksjoner (kommer snart)"
         security_warning_title: "Viktig sikkerhetsvarsel"
         security_warning: "Din API-nøkkel vil bare vises én gang etter opprettelse. Lagre den sikkert og del den aldri offentlig. Hvis du mister den, må du opprette en ny."
         create_key: "Opprett API-nøkkel"
         cancel: "Avbryt"
+        create_new_api_key: Opprett ny API-nøkkel
+        subtitle: Generer en ny API-nøkkel for programmatisk tilgang til Sure-dataene dine.
+        name_help_text: Velg et beskrivende navn, slik at du kjenner igjen nøkkelen senere.
+        scope_read_only: Kun lesing
+        scope_read_only_description: Se kontoer, transaksjoner og saldoer
+        scope_read_write: Lesing/skriving
+        scope_read_write_description: Se dataene dine og opprett nye transaksjoner
+        security_warning_body: API-nøkkelen vises bare én gang etter at den er opprettet. Sørg for å kopiere den og oppbevare den trygt. Alle som har tilgang til nøkkelen, kan få tilgang til dataene dine i tråd med tillatelsene du velger.
+        save_api_key: Lagre API-nøkkel
       created:
         title: "API-nøkkel opprettet"
-        success_title: "API-nøkkel opprettet vellykket"
+        success_title: "API-nøkkelen er opprettet"
         success_description: "Din nye API-nøkkel er klar til bruk. Sørg for å kopiere den nå siden du ikke vil kunne se den igjen."
         your_api_key: "Din API-nøkkel"
         key_name: "Navn"
@@ -73,3 +101,25 @@ nb:
         usage_instructions: "Bruk din API-nøkkel ved å inkludere den i X-Api-Key-headeren:"
         copy_key: "Kopier API-nøkkel"
         continue: "Fortsett til innstillinger for API-nøkkel"
+      create:
+        success: API-nøkkelen din er opprettet
+      destroy:
+        revoked_successfully: API-nøkkelen er tilbakekalt
+        revoke_failed: Kunne ikke tilbakekalle API-nøkkelen
+      shared:
+        active: Aktiv
+        created_ago: Opprettet for %{time} siden
+        last_used_ago: Sist brukt for %{time} siden
+        never_used: Aldri brukt
+        scope_read_only: Kun lesing
+        scope_read_write: Lesing/skriving
+      index:
+        title: API-nøkler
+        subtitle: Administrer API-nøkler for programmatisk tilgang til dataene dine.
+        new_key: Ny API-nøkkel
+        empty_heading: Ingen API-nøkler ennå
+        empty_description: Opprett en API-nøkkel for å få programmatisk tilgang til dataene dine.
+        revoke_key: Tilbakekall
+        revoke_confirmation: Er du sikker på at du vil tilbakekalle «%{name}»? Alle applikasjoner som bruker denne nøkkelen, slutter umiddelbart å fungere.
+      key_reveal:
+        copied: Kopiert!

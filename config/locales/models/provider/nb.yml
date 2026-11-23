@@ -1,0 +1,17 @@
+---
+nb:
+  providers:
+    property_valuation:
+      not_configured: Denne leverandøren av eiendomsdata er ikke konfigurert.
+      missing_fields: Oppgi et navn og en fullstendig amerikansk adresse (gate, by, delstat og ZIP-kode).
+      preview_expired: Forhåndsvisningen av denne eiendommen har utløpt – slå opp adressen på nytt.
+    rentcast:
+      errors:
+        no_valuation: RentCast returnerte ikke et verdiestimat for denne adressen.
+        not_found: RentCast fant ingen eiendom som samsvarer med denne adressen.
+    realie:
+      errors:
+        no_property: Realie returnerte ingen eiendom for denne adressen.
+        no_valuation: Realie returnerte ingen verdivurdering for denne eiendommen.
+        not_found: Realie fant ingen eiendom som samsvarer med denne adressen.
+        location_mismatch: Realie fant en eiendom i en annen by eller med en annen ZIP-kode. Dobbeltsjekk adressen.
