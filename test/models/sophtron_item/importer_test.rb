@@ -302,8 +302,12 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
 
     result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
 
-    assert result[:success]
+    # Cached rows are imported, but the sync must fail so last_synced_at does
+    # not advance past the last fresh fetch.
+    assert_not result[:success]
+    assert_equal "Sophtron refresh requires MFA", result[:error]
     assert_equal 1, result[:transactions_imported]
+    assert_equal 1, result[:transactions_failed]
     assert_equal "requires_update", @item.reload.status
     assert_equal "refresh-job", @item.current_job_id
     assert_equal [ "existing-tx", "tx-1" ], sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }

@@ -138,15 +138,17 @@ class SophtronItem::Importer
     # Step 3: Fetch transactions only for linked accounts with active status
     transactions_imported = 0
     transactions_failed = 0
+    transactions_error = nil
 
     linked_accounts = sophtron_item.automatic_sync_sophtron_accounts
     linked_accounts.each do |sophtron_account|
       begin
         result = fetch_and_store_transactions(sophtron_account)
-        if result[:success]
-          transactions_imported += result[:transactions_count]
-        else
+        # Cached rows are stored even when the refresh failed, so count them.
+        transactions_imported += result[:transactions_count].to_i
+        unless result[:success]
           transactions_failed += 1
+          transactions_error ||= result[:error]
           break if result[:requires_update]
         end
       rescue => e
@@ -160,6 +162,7 @@ class SophtronItem::Importer
 
     {
       success: accounts_failed == 0 && transactions_failed == 0,
+      error: transactions_error,
       accounts_updated: accounts_updated,
       accounts_created: accounts_created,
       accounts_failed: accounts_failed,
@@ -372,10 +375,20 @@ class SophtronItem::Importer
     def merge_refresh_result(result, refresh_result)
       return result if refresh_result.blank?
 
-      result.merge(
+      merged = result.merge(
         refresh_pending: refresh_result[:refresh_pending],
         requires_update: result[:requires_update] || refresh_result[:requires_update]
       ).compact
+
+      # A failed refresh (e.g. MFA) still imports the cached rows, but the sync
+      # must not complete: last_synced_at would advance past the last fresh
+      # fetch and the next incremental window would skip the blocked period.
+      if refresh_result[:success] == false
+        merged[:success] = false
+        merged[:error] ||= refresh_result[:error]
+      end
+
+      merged
     end
 
     def refresh_account_before_transaction_fetch(sophtron_account)
