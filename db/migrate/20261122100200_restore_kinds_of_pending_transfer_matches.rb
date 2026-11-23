@@ -4,7 +4,8 @@
 # matches first (require_transfer_match_confirmation, off by default), so give
 # them back to every pending match whose legs are still both standard
 # (Transfer#standard_legs?). A pending transfer with kinds of its own predates
-# the match's kinds, so it keeps them.
+# the match's kinds, and a leg whose kind the user locked keeps it
+# (Transfer#match_may_set_kinds?).
 class RestoreKindsOfPendingTransferMatches < ActiveRecord::Migration[8.1]
   def up
     Family.reset_column_information
@@ -12,7 +13,7 @@ class RestoreKindsOfPendingTransferMatches < ActiveRecord::Migration[8.1]
 
     Family.where(require_transfer_match_confirmation: false).find_each do |family|
       family.pending_transfer_matches.find_each do |transfer|
-        transfer.apply_kinds! if transfer.standard_legs?
+        transfer.apply_kinds! if transfer.standard_legs? && transfer.match_may_set_kinds?
       end
     end
   end

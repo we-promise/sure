@@ -1142,6 +1142,10 @@ class Family::DataImporter
           # The legs arrived with the kinds the match gave them in the exporting
           # family, but this family confirms matches first.
           transfer.reset_kinds!
+        elsif data.key?("match_kinds_applied") && !truthy?(data["match_kinds_applied"]) && transfer.match_kinds_applied?
+          # The export says the match did not set these kinds, so unlinking the
+          # transfer later must leave them.
+          transfer.update!(match_kinds_applied: false)
         end
         increment_summary("Transfer", created ? :created : :updated)
       end

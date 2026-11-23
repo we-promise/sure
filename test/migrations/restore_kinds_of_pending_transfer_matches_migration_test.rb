@@ -39,6 +39,16 @@ class RestoreKindsOfPendingTransferMatchesMigrationTest < ActiveSupport::TestCas
     assert_equal "standard", transfer.inflow_transaction.reload.kind
   end
 
+  test "leaves a pair whose kind the user locked alone" do
+    transfer = pending_transfer(to: accounts(:credit_card))
+    transfer.outflow_transaction.lock_attr!(:kind)
+
+    run_migration
+
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
   test "can be run again" do
     transfer = pending_transfer(to: accounts(:credit_card))
 
