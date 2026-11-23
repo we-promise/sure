@@ -389,6 +389,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_select "p", text: I18n.t("bills.detail.no_payment"), count: 1
       assert_select "a[href='#{recurring_occurrence_path(historical)}']"
+      assert_includes response.body, "$80.00"
 
       get recurring_occurrence_url(historical)
       assert_response :success

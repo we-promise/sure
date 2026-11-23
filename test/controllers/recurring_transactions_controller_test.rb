@@ -620,7 +620,6 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert bill, "the bill must be created"
     assert_equal started, bill.started_on
     assert bill.active?
-    assert bill.started_on_past?
     assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ bill.id ])
   end
 
@@ -665,6 +664,24 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_equal 3.months.ago.to_date, @recurring_transaction.reload.started_on
+  end
+
+  test "clearing started_on enqueues and removes open history" do
+    @recurring_transaction.update_column(:started_on, 2.months.ago.to_date)
+    historical = @recurring_transaction.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+
+    patch recurring_transaction_url(@recurring_transaction), params: {
+      recurring_transaction: { started_on: "" }
+    }
+
+    assert_nil @recurring_transaction.reload.started_on
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ @recurring_transaction.id ])
+
+    perform_enqueued_jobs(only: BackfillRecurringHistoryJob)
+    assert_not RecurringOccurrence.exists?(historical.id)
   end
 
   test "an unreadable started_on is refused instead of silently clearing the field" do

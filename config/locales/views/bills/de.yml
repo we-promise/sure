@@ -1,12 +1,15 @@
 ---
 de:
   bills:
+    detail:
+      no_payment: "Keine Zahlung verknüpft"
     due_label:
       overdue:
         one: Seit 1 Tag überfällig · fällig am %{date}
         other: Seit %{count} Tagen überfällig · fällig am %{date}
       today: Heute fällig
       settled: War am %{date} fällig
+      historical: "War am %{date} fällig"
       due_since: Fällig am %{date}
       snoozed: Verschoben bis %{date}
       upcoming:

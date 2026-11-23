@@ -58,6 +58,7 @@ ru:
       last_account: Последний использованный счёт
       upcoming: Предстоящие
       manual_payment: Оплата вручную
+      no_payment: "Платёж не привязан"
       history: История
       payment_count:
         one: '%{count} оплата'
@@ -145,6 +146,7 @@ ru:
         other: Просрочено на %{count} дня, срок был %{date}
       today: Оплатить сегодня
       settled: Срок был %{date}
+      historical: "Было к оплате %{date}"
       due_since: Срок оплаты %{date}
       snoozed: Отложено до %{date}
       upcoming:

@@ -459,7 +459,6 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     )
 
     assert_operator series.recurring_occurrences.count, :>, 0, "the create after_commit ran"
-    assert series.started_on_past?
     assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id ])
   end
 
@@ -468,6 +467,19 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     assert_not recurring.valid?
     assert_includes recurring.errors[:started_on], "cannot be later than the next due date"
+  end
+
+  test "a persisted edit also cannot start after the next due date" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Dated", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current + 5,
+      status: "active", manual: true
+    )
+
+    series.started_on = Date.current + 10
+    assert_not series.valid?
+    assert_includes series.errors[:started_on], "cannot be later than the next due date"
   end
 
   test "started_on cannot precede an installment plan's anchor" do
@@ -540,6 +552,30 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     series.trim_unallocated_history_before_started_on!
 
     assert_not RecurringOccurrence.exists?(old.id)
+    assert RecurringOccurrence.exists?(paid.id), "a recorded payment keeps its month"
+  end
+
+  test "clearing started_on removes open history but keeps recorded payments" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Rent", amount: 100, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    open = series.recurring_occurrences.create!(
+      family: @family, original_due_on: 4.months.ago.to_date, due_on: 4.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+    paid = series.recurring_occurrences.create!(
+      family: @family, original_due_on: 3.months.ago.to_date, due_on: 3.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+    paid.allocations.create!(allocated_amount: 100, currency: "USD", source: "user_created")
+
+    series.update_column(:started_on, nil)
+    series.trim_unallocated_history_before_started_on!
+
+    assert_not RecurringOccurrence.exists?(open.id)
     assert RecurringOccurrence.exists?(paid.id), "a recorded payment keeps its month"
   end
 

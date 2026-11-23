@@ -6,6 +6,7 @@ es:
     already_allocated: Esa transacción ya está aplicada a este recibo
     split_counterpart_allocated: Esa transacción está dividida y el cargo original o una de sus partes ya paga un recibo
     entry_exhausted: El importe completo de esa transacción ya está aplicado a otros pagos pendientes
+    entry_not_eligible: "Esta transacción no se puede aplicar a esta factura"
     invalid: No se ha podido registrar el pago
     create:
       success: Pago aplicado

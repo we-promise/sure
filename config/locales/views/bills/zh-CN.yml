@@ -57,6 +57,7 @@ zh-CN:
       last_account: 上次使用的账户
       upcoming: 即将到来
       manual_payment: 手动付款
+      no_payment: "未关联付款"
       history: 历史记录
       payment_count:
         one: "1 笔付款"
@@ -132,6 +133,7 @@ zh-CN:
         other: "已逾期 %{count} 天，原到期日为 %{date}"
       today: "今日到期"
       settled: "已于 %{date} 到期"
+      historical: "应于 %{date} 到期"
       due_since: "到期日 %{date}"
       snoozed: "推迟至 %{date}"
       upcoming:

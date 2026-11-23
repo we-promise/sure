@@ -443,11 +443,7 @@ class BillsController < ApplicationController
       materialize_for_calendar(@grid_end) if @grid_end > today + 89
 
       occurrences = Current.family.recurring_occurrences
-                           .where(recurring_transaction_id: payable_series_ids)
-                           # Historical open months are not due; historical
-                           # settled cycles still belong in the month they were
-                           # paid.
-                           .where("historical = FALSE OR status <> 'scheduled'")
+                           .where(recurring_transaction_id: payable_series_ids, historical: false)
                            .due_between(@grid_start, @grid_end)
                            .includes(recurring_transaction: { merchant: { logo_attachment: :blob } })
                            .to_a

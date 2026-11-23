@@ -4,6 +4,7 @@ ca:
     over_allocation: Això assignaria més que l'import de la transacció
     missing_rate: No hi ha cap tipus de canvi disponible; introdueix l'import explícitament
     already_allocated: Aquesta transacció ja està aplicada a aquesta factura
+    entry_not_eligible: "Aquesta transacció no es pot aplicar a aquesta factura"
     invalid: No s'ha pogut registrar el pagament
     create:
       success: Pagament aplicat

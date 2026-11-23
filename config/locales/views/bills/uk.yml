@@ -58,6 +58,7 @@ uk:
       last_account: Останній використаний рахунок
       upcoming: Найближчі
       manual_payment: Оплата вручну
+      no_payment: "Платіж не прив'язано"
       history: Історія
       payment_count:
         one: '%{count} оплата'
@@ -145,6 +146,7 @@ uk:
         other: Прострочено на %{count} дня, строк був %{date}
       today: Строк сьогодні
       settled: Строк був %{date}
+      historical: "Було до сплати %{date}"
       due_since: 'Строк: %{date}'
       snoozed: Відкладено до %{date}
       upcoming:

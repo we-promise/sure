@@ -57,6 +57,7 @@ es:
       last_account: Última cuenta usada
       upcoming: Próximamente
       manual_payment: Pago manual
+      no_payment: "Ningún pago vinculado"
       history: Historial
       payment_count:
         one: 1 pago
@@ -132,6 +133,7 @@ es:
         other: Vencido hace %{count} días, vencía el %{date}
       today: Vence hoy
       settled: Vencía el %{date}
+      historical: "Vencía el %{date}"
       due_since: Vence el %{date}
       snoozed: Pospuesto hasta el %{date}
       upcoming:

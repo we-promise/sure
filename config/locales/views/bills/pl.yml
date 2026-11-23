@@ -77,6 +77,7 @@ pl:
       key_metrics: Rocznie
       last_account: Ostatnio użyte konto
       manual_payment: Płatność ręczna
+      no_payment: "Brak powiązanej płatności"
       next_payment: Następna płatność
       notes: Notatki
       overview: Przegląd
@@ -117,6 +118,7 @@ pl:
         one: Zaległe od 1 dnia, termin upłynął %{date}
         other: Zaległe od %{count} dni, termin upłynął %{date}
       settled: Termin upłynął %{date}
+      historical: "Było wymagalne %{date}"
       snoozed: Odłożone do %{date}
       today: Termin dziś
       upcoming:

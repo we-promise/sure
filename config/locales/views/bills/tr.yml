@@ -56,6 +56,7 @@ tr:
       last_account: Son kullanılan hesap
       upcoming: Yaklaşanlar
       manual_payment: Manuel ödeme
+      no_payment: "Bağlı ödeme yok"
       history: Geçmiş
       payment_count:
         one: '%{count} ödeme'
@@ -129,6 +130,7 @@ tr:
         other: '%{count} gün gecikmiş, son ödeme tarihi %{date} idi'
       today: Son ödeme bugün
       settled: Son ödeme tarihi %{date} idi
+      historical: "%{date} tarihinde ödenmesi gerekiyordu"
       due_since: Son ödeme %{date}
       snoozed: '%{date} tarihine kadar ertelendi'
       upcoming:

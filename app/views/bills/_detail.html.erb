@@ -183,9 +183,10 @@
                 <% end %>
               </p>
             </div>
+            <% unpaid_historical = occurrence.historical? && occurrence.scheduled? && payments.empty? %>
             <span class="flex items-center gap-1.5 shrink-0">
-              <span class="text-sm privacy-sensitive <%= payments.any? ? "text-primary" : "text-secondary" %>">
-                <%= format_money(payments.any? ? occurrence.confirmed_allocated_money : occurrence.resolved_expected_amount_money) %>
+              <span class="text-sm privacy-sensitive <%= unpaid_historical ? "text-secondary" : "text-primary" %>">
+                <%= format_money(unpaid_historical ? occurrence.resolved_expected_amount_money : occurrence.confirmed_allocated_money) %>
               </span>
               <%= icon("chevron-right", size: "sm", class: "text-subdued") %>
             </span>

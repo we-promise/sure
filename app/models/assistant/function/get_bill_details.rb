@@ -11,9 +11,9 @@ class Assistant::Function::GetBillDetails < Assistant::Function
 
     def description
       <<~INSTRUCTIONS
-        Get one bill's complete story: full configuration, every open occurrence, the last
-        #{HISTORY_LIMIT} settled occurrences with their payments, upcoming due dates, price-change
-        history, and cost analytics.
+        Get one bill's complete story: full configuration, every current open occurrence, the
+        last #{HISTORY_LIMIT} cycles (settled and backdated) with their payments, upcoming due
+        dates, price-change history, and cost analytics.
 
         Analytics are computed from confirmed payments on settled occurrences only, never
         from estimates, and are null when nothing has been paid yet. The one figure that is
@@ -21,7 +21,7 @@ class Assistant::Function::GetBillDetails < Assistant::Function
         bill times its cadence, while annualized_cost follows what has actually been paid.
         Where they disagree, annualized_cost is what the bill is costing.
 
-        history is capped at the last #{HISTORY_LIMIT} settled cycles and price_changes at
+        history is capped at the last #{HISTORY_LIMIT} cycles and price_changes at
         #{PRICE_CHANGE_LOOKBACK_MONTHS} months. history_window and price_change_window report
         the real totals, so do not sum the rows and present the result as a lifetime figure.
 
@@ -46,8 +46,8 @@ class Assistant::Function::GetBillDetails < Assistant::Function
     return error if error
 
     open_occurrences = series.recurring_occurrences.current_open.order(:due_on).to_a
-    closed = series.recurring_occurrences.closed
-    history = closed.order(due_on: :desc).limit(HISTORY_LIMIT).includes(allocations: :entry).to_a
+    history_scope = series.recurring_occurrences.history
+    history = history_scope.order(due_on: :desc).limit(HISTORY_LIMIT).includes(allocations: :entry).to_a
     preload_allocation_sums(open_occurrences + history)
 
     changes = price_changes(series)
@@ -57,7 +57,7 @@ class Assistant::Function::GetBillDetails < Assistant::Function
       analytics: analytics(series),
       open_occurrences: open_occurrences.map { |occurrence| serialize_occurrence(occurrence) },
       history: history.map { |occurrence| serialize_history_row(occurrence) },
-      history_window: truncation(history.size, closed.count),
+      history_window: truncation(history.size, history_scope.count),
       upcoming_due_dates: series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3).map(&:iso8601),
       price_changes: changes,
       price_change_window: { months: PRICE_CHANGE_LOOKBACK_MONTHS, count: changes.size }

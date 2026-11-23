@@ -11,10 +11,19 @@ class BackfillRecurringHistoryJob < ApplicationJob
 
   def perform(series_id)
     series = RecurringTransaction.find_by(id: series_id)
+    return unless series
 
-    # Dismissed, paused or deleted while this waited: the user has said what
-    # they think of the bill, and a backfill would write payments onto it.
-    return unless series&.active?
+    # Dismissed, paused or deleted while this waited: a backfill would write
+    # payments onto it. Clearing or moving its start date still has to remove
+    # generated open history, so that part runs without touching payments.
+    unless series.active?
+      acquired = RecurringTransaction::Pipeline.with_family_lock(series.family_id) do
+        series.trim_unallocated_history_before_started_on!
+      end
+      raise FamilyLockHeld unless acquired
+
+      return
+    end
 
     raise FamilyLockHeld unless series.reconstruct_history!
   end

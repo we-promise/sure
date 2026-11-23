@@ -53,6 +53,21 @@ class Assistant::Function::GetBillDetailsTest < ActiveSupport::TestCase
     assert_equal "user_confirmed", payment[:source]
   end
 
+  test "history includes backdated open cycles so they can be linked" do
+    series = create_series(name: "CITY WATER", amount: 80)
+    due = 2.months.ago.to_date
+    series.recurring_occurrences.create!(
+      family: @family, original_due_on: due, due_on: due, currency: "USD",
+      status: "scheduled", historical: true, expected_amount: 80
+    )
+
+    result = call_tool(series.id)
+
+    row = result[:history].find { |candidate| candidate[:due_on] == due.iso8601 }
+    assert row, "the assistant must see an unpaid backdated cycle"
+    assert_equal "scheduled", row[:status]
+  end
+
   test "price changes serialize with the percent" do
     series = create_series(name: "Stream Co", amount: 12)
     series.recurring_price_changes.create!(

@@ -311,19 +311,18 @@ class RecurringTransaction < ApplicationRecord
     schedule.cycle_for(Date.current)&.begin
   end
 
-  # Moving started_on later should not leave generated months the user has
-  # explicitly excluded. Rows with a real payment stay put, and so does a
-  # closed row the user acted on; an unallocated open historical row is safe
-  # to remove because it represented no money.
+  # Moving started_on later, or clearing it, should not leave generated open
+  # months the user has explicitly excluded. Rows with a real payment stay put,
+  # and so does a closed row the user acted on; an open historical row with no
+  # confirmed payment is safe to remove because it represented no money.
   def trim_unallocated_history_before_started_on!
-    return if started_on.blank?
+    scope = recurring_occurrences
+            .where(historical: true)
+            .open_status
+            .where.not(id: RecurringAllocation.confirmed.select(:recurring_occurrence_id))
+    scope = scope.where("due_on < ?", started_on) if started_on.present?
 
-    recurring_occurrences
-      .where(historical: true)
-      .open_status
-      .where("due_on < ?", started_on)
-      .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
-      .delete_all
+    scope.delete_all
   end
 
   # Read from the saved change rather than the current status: update_bill
@@ -339,23 +338,21 @@ class RecurringTransaction < ApplicationRecord
   def should_reconstruct_history?
     return true if activated_from_suggestion?
 
-    started_on.present? && saved_change_to_status? && active?
+    saved_change_to_status? && active? && (started_on.present? || saved_change_to_started_on?)
   end
 
-  # A create or a start-date edit asks for history. An activation from
-  # suggested or paused has its own path, which must not enqueue a second job.
+  # A create with a start date, or any edit of the start date, asks for the
+  # history pass. Clearing it or moving it forward still needs the pass so the
+  # generated open history outside the new bound can be reconciled. An
+  # activation has its own path, which must not enqueue a second job.
   def should_backfill_history?
-    return false unless started_on_past?
+    return false if saved_change_to_status?
 
-    saved_change_to_id? || (saved_change_to_started_on? && !saved_change_to_status?)
+    saved_change_to_started_on? || (saved_change_to_id? && started_on.present?)
   end
 
   def backfill_history_from_started_on
     BackfillRecurringHistoryJob.perform_later(id)
-  end
-
-  def started_on_past?
-    active? && started_on.present? && started_on < Date.current
   end
 
   # Skipping under a held lock used to leave the bill without history for
@@ -492,7 +489,7 @@ class RecurringTransaction < ApplicationRecord
     # the schedule, and a data import validates before its recurrence rules
     # have landed. Caching an empty rule set there turns the restored bill
     # monthly.
-    if new_record? && next_expected_date.present? && started_on > next_expected_date
+    if next_expected_date.present? && started_on > next_expected_date
       errors.add(:started_on, :after_next_due)
     end
 

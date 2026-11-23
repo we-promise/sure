@@ -35,6 +35,8 @@ class RecurringTransaction
       # A declared history keeps its historical rows available to that pass.
       Matcher.new(family).run_backfill!
 
+      # Existing non-historical past rows are real debt, not backfilled
+      # history; they are deliberately not promoted here.
       keep_history ? 0 : prune_uncovered_past!
     end
 

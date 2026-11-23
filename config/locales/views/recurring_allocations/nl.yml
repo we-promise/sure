@@ -5,6 +5,7 @@ nl:
     missing_rate: "Geen wisselkoers beschikbaar; voer het bedrag expliciet in"
     already_allocated: "Die transactie is al aan deze vaste last toegewezen"
     entry_exhausted: "Het volledige bedrag van die transactie is al toegewezen aan andere te betalen posten"
+    entry_not_eligible: "Deze transactie kan niet aan deze rekening worden gekoppeld"
     invalid: "De betaling kon niet worden geregistreerd"
     create:
       success: "Betaling toegepast"

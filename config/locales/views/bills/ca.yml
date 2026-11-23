@@ -56,6 +56,7 @@ ca:
       last_account: Últim compte utilitzat
       upcoming: Properament
       manual_payment: Pagament manual
+      no_payment: "Cap pagament vinculat"
       history: Historial
       payment_count:
         one: '%{count} pagament'
@@ -129,6 +130,7 @@ ca:
         other: Vençuda fa %{count} dies, vencia el %{date}
       today: Venç avui
       settled: Vencia el %{date}
+      historical: "Vencia el %{date}"
       due_since: Venç el %{date}
       snoozed: Ajornada fins al %{date}
       upcoming:

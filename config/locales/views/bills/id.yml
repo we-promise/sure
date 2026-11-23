@@ -57,6 +57,7 @@ id:
       last_account: Rekening terakhir yang digunakan
       upcoming: Mendatang
       manual_payment: Pembayaran manual
+      no_payment: "Belum ada pembayaran tertaut"
       history: Riwayat
       payment_count:
         one: "1 pembayaran"
@@ -132,6 +133,7 @@ id:
         other: "Lewat jatuh tempo %{count} hari, seharusnya %{date}"
       today: "Jatuh tempo hari ini"
       settled: "Jatuh tempo pada %{date}"
+      historical: "Jatuh tempo %{date}"
       due_since: "Jatuh tempo pada %{date}"
       snoozed: "Ditunda hingga %{date}"
       upcoming:
