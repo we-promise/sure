@@ -1245,9 +1245,13 @@ end
 
 - **Reasoning effort.** `Compatible` sends the route entry's `reasoning_effort` as
   `reasoning: { effort: }` on the Responses API and `reasoning_effort` on chat completions, and
-  leaves it out when unset. When a request with `response_format` or an effort gets a 400, the
-  JSON-mode fallback retries once without both (as #3605 does); a retry after unusable output
-  keeps the effort. Probes never send it. `Anthropic` ignores it for now.
+  leaves it out when unset. When a request that sent an effort gets a 400, the JSON-mode fallback
+  retries once without both the effort and `response_format`, as `main`'s 400 retries do since
+  #3605, since it can't tell which was refused; so does a 400 about the JSON mode in an explicit
+  mode. In `auto` without an effort, a 400 about the JSON mode moves to the next mode in the
+  chain, as the table says (call by @josh-sanders, 2026-11-23, after @luis-ibanez's review found
+  bill setup and PDF extraction losing `json_object`). A retry after unusable output keeps the
+  effort. Probes never send it. `Anthropic` ignores it for now.
 - **Each attempt has a time budget**, as well as the turn. The `auto` chain multiplies a slow
   model's time: on CPU, three attempts at one statement took 26 minutes (spike, WeVisOne).
 - **Attachments.** `Request#attachments` carries files: page images or a PDF (section 8.1). A
