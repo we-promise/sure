@@ -336,6 +336,35 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", text: I18n.t("invitations.accept_choice.existing_account_hint")
   end
 
+  test "accepting an invitation offers SSO when local signup is disabled" do
+    AuthConfig.stubs(:local_signup_enabled?).returns(false)
+    AuthConfig.stubs(:sso_providers).returns([
+      {
+        id: "openid_connect",
+        name: "openid_connect",
+        label: "Sign in with OpenID Connect",
+        strategy: "openid_connect"
+      }
+    ])
+
+    get accept_invitation_url(@invitation.token)
+
+    assert_response :success
+    assert_select "form[action='/auth/openid_connect'] button", text: /Sign in with OpenID Connect/i
+    assert_select "a[href=?]", new_registration_path(invitation: @invitation.token), count: 0
+  end
+
+  test "accepting an invitation warns when local signup is disabled and no SSO provider is configured" do
+    AuthConfig.stubs(:local_signup_enabled?).returns(false)
+    AuthConfig.stubs(:sso_providers).returns([])
+
+    get accept_invitation_url(@invitation.token)
+
+    assert_response :success
+    assert_select "p", text: /#{Regexp.escape(I18n.t("sessions.new.no_auth_methods_enabled"))}/
+    assert_select "a[href=?]", new_registration_path(invitation: @invitation.token), count: 0
+  end
+
   test "accept page looks the same when the invited email already has an account" do
     # Dialogs get random element ids on every render.
     page = -> { response.body.gsub(/dialog-title-\h+/, "") }

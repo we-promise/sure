@@ -84,32 +84,8 @@
 <% providers = AuthConfig.sso_providers %>
 
 <% if providers.any? %>
-  <div class="mt-6 space-y-3">
-    <% providers.each do |provider| %>
-      <% provider_id = provider[:id].to_s %>
-      <% provider_name = provider[:name].to_s %>
-      <% is_google = provider_id == "google" || provider[:strategy].to_s == "google_oauth2" %>
-      <% default_label = is_google ? t(".google_auth_connect") : t(".#{provider_id}", default: provider[:name].to_s.titleize) %>
-
-      <%#
-        SSO buttons use the design-system outline button so they stay consistent
-        with each other and read as secondary to the primary email "Log in" CTA.
-        Google keeps its official multi-color "G" mark + "Sign in with Google"
-        wording (brand-compliant) via the custom-icon asset, so no bespoke CSS.
-      %>
-      <%= render DS::Button.new(
-            href: "/auth/#{provider_name}",
-            method: :post,
-            variant: :outline,
-            size: :md,
-            full_width: true,
-            icon: is_google ? "google-icon" : provider[:icon].presence,
-            icon_custom: is_google,
-            text: provider[:label].presence || default_label,
-            class: "gap-2",
-            form: { data: { turbo: false } }
-          ) %>
-    <% end %>
+  <div class="mt-6">
+    <%= render "shared/sso_buttons", providers: providers %>
   </div>
 <% elsif !AuthConfig.local_login_form_visible? %>
   <div class="mt-6">

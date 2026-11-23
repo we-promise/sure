@@ -13,13 +13,24 @@
 <div class="space-y-4">
   <%# The page looks the same whether or not the email has an account, since
       household admins can open pending invitation links. %>
-  <%= render DS::Link.new(
-    text: t(".create_account"),
-    href: new_registration_path(invitation: @invitation.token),
-    variant: "outline",
-    size: "lg",
-    full_width: true
-  ) %>
+  <% if AuthConfig.local_signup_enabled? %>
+    <%= render DS::Link.new(
+      text: t(".create_account"),
+      href: new_registration_path(invitation: @invitation.token),
+      variant: "outline",
+      size: "lg",
+      full_width: true
+    ) %>
+  <% else %>
+    <%# Local signup is off, so the form this page used to link to would be
+        refused. SSO matches the pending invitation by email. %>
+    <% providers = AuthConfig.sso_providers %>
+    <% if providers.any? %>
+      <%= render "shared/sso_buttons", providers: providers %>
+    <% else %>
+      <%= render DS::Alert.new(message: t("sessions.new.no_auth_methods_enabled"), variant: :warning) %>
+    <% end %>
+  <% end %>
 
   <p class="text-secondary text-sm text-center"><%= t(".existing_account_hint") %></p>
 </div>
