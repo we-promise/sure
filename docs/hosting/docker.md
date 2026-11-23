@@ -239,6 +239,15 @@ LEGAL_PRIVACY_URL="https://example.com/privacy"
 LEGAL_TERMS_URL="https://example.com/terms"
 ```
 
+`compose.example.yml` passes both to the app through its `x-rails-env` anchor. If your `compose.yml` was copied before they were added, add them there yourself:
+
+```yaml
+x-rails-env: &rails_env
+  # ...existing keys...
+  LEGAL_PRIVACY_URL: ${LEGAL_PRIVACY_URL:-}
+  LEGAL_TERMS_URL: ${LEGAL_TERMS_URL:-}
+```
+
 `/privacy` and `/terms` then redirect to these URLs. Each footer link appears only when its URL is set, so an instance without them shows neither link. Restart the app after changing them; the redirects are read at boot.
 
 #### Binding to IPv6 (optional)
