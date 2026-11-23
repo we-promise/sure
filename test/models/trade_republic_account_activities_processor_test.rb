@@ -963,6 +963,27 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 0, incomplete_execution_logs.count
   end
 
+  test "an older generic diagnostic for a securities transfer does not suppress the warning with the reason" do
+    event = {
+      id: "evt_old_generic", timestamp: "2023-11-23T09:00:00.000+0000", eventType: "ACCOUNT_TRANSFER_INCOMING",
+      title: "Fund", subtitle: "Securities transfer", status: "EXECUTED", detail: nil
+    }
+    DebugLogEntry.capture(
+      category: "sync", level: "info",
+      message: "TradeRepublicAccount::ActivitiesProcessor - Skipping unsupported timeline event (no guessed mapping)",
+      source: "trade_republic", family: @tr_account.trade_republic_item.family, provider_key: "trade_republic",
+      metadata: { event_id: "evt_old_generic", event_type: "ACCOUNT_TRANSFER_INCOMING", status: "EXECUTED" }
+    )
+    @tr_account.update!(raw_timeline_payload: [ event ])
+
+    assert_difference -> { DebugLogEntry.where(level: "warn").where("message LIKE ?", "%add it manually%").count }, 1 do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    end
+    assert_no_difference "DebugLogEntry.count" do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    end
+  end
+
   test "an older securities transfer is not imported even if a copy carries an order execution category" do
     import_event({
       id: "evt_old_cat", timestamp: "2023-11-23T09:00:00.000+0000", eventType: "ACCOUNT_TRANSFER_INCOMING", category: "orderExecution",

@@ -1108,11 +1108,13 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     # A known unsupported event stays in the timeline, so every sync sees it
-    # again; it is logged once.
+    # again; it is logged once. An older generic entry (written before the
+    # event had a reason) has no reason, so it does not count.
     def unsupported_event_logged?(event)
       DebugLogEntry
         .where(source: "trade_republic", family_id: @trade_republic_account.trade_republic_item.family_id)
-        .where("metadata ->> 'event_id' = ? AND metadata ->> 'event_type' = ?", event[:id].to_s, event[:eventType].to_s)
+        .where("metadata ->> 'event_id' = ? AND metadata ->> 'event_type' = ? " \
+          "AND metadata ->> 'reason' IS NOT NULL", event[:id].to_s, event[:eventType].to_s)
         .exists?
     end
 
