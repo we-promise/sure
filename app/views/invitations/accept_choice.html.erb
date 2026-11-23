@@ -24,12 +24,9 @@
   <% else %>
     <%# Local signup is off, so the form this page used to link to would be
         refused. SSO matches the pending invitation by email. %>
-    <% providers = AuthConfig.sso_providers %>
-    <% if providers.any? %>
-      <%= render "shared/sso_buttons", providers: providers %>
-    <% else %>
-      <%= render DS::Alert.new(message: t("sessions.new.no_auth_methods_enabled"), variant: :warning) %>
-    <% end %>
+    <%= render "shared/sso_buttons",
+          providers: AuthConfig.sso_providers,
+          empty_message: t("sessions.new.no_auth_methods_enabled") %>
   <% end %>
 
   <p class="text-secondary text-sm text-center"><%= t(".existing_account_hint") %></p>

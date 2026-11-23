@@ -83,12 +83,10 @@
 
 <% providers = AuthConfig.sso_providers %>
 
-<% if providers.any? %>
+<% if providers.any? || !AuthConfig.local_login_form_visible? %>
   <div class="mt-6">
-    <%= render "shared/sso_buttons", providers: providers %>
-  </div>
-<% elsif !AuthConfig.local_login_form_visible? %>
-  <div class="mt-6">
-    <%= render DS::Alert.new(message: t(".no_auth_methods_enabled"), variant: :warning) %>
+    <%= render "shared/sso_buttons",
+          providers: providers,
+          empty_message: (t(".no_auth_methods_enabled") unless AuthConfig.local_login_form_visible?) %>
   </div>
 <% end %>
