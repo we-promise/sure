@@ -1,4 +1,5 @@
 class Import::ConfigurationsController < ApplicationController
+  include ViewableImports
   include ImportGuestGuardable
 
   layout "imports"
@@ -40,7 +41,7 @@ class Import::ConfigurationsController < ApplicationController
 
   private
     def set_import
-      @import = Current.family.imports.find(params[:import_id])
+      @import = viewable_imports.find(params[:import_id])
     end
 
     # Existing accounts a Monarch account can go into: the manual ones this

@@ -1,4 +1,5 @@
 class Import::UploadsController < ApplicationController
+  include ViewableImports
   include ImportGuestGuardable
 
   layout "imports"
@@ -103,7 +104,7 @@ class Import::UploadsController < ApplicationController
     end
 
     def set_import
-      @import = Current.family.imports.find(params[:import_id])
+      @import = viewable_imports.find(params[:import_id])
     end
 
     def handle_qif_upload

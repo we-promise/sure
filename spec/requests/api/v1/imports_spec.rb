@@ -86,7 +86,7 @@ RSpec.describe 'API V1 Imports', type: :request do
 
   path '/api/v1/imports' do
     get 'List imports' do
-      description 'List all imports for the user\'s family with pagination and filtering.'
+      description 'List the family\'s imports the user can view, with pagination and filtering. An import made from an account statement is as private as that statement, so it is left out for users who cannot view the statement.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -140,8 +140,9 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: Import::TYPES - %w[MonarchImport],
-            description: 'Import type (defaults to TransactionImport). MonarchImport imports are created in the web app; requesting one here returns 422 unsupported_type.'
+            enum: Import.api_creatable_types,
+            description: 'Import type (defaults to TransactionImport when omitted). MonarchImport is created in the web app and ' \
+                         'the API refuses it with 422 unsupported_type. Any other type outside this list returns 422 invalid_import_type.'
           },
           account_id: {
             type: :string,
@@ -271,7 +272,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '422', 'validation error, or publish rejected (not_publishable, max_row_count_exceeded, preflight_failed); a rejected import is kept pending and its import_id returned' do
+      response '422', 'validation error, invalid_import_type, unsupported_type (MonarchImport), or publish rejected (not_publishable, max_row_count_exceeded, preflight_failed); a rejected import is kept pending and its import_id returned' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
           { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }
@@ -320,7 +321,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'Retrieve an import' do
-      description 'Retrieve detailed information about a specific import, including configuration, row statistics, and SureImport readback verification when available.'
+      description 'Retrieve detailed information about a specific import, including configuration, row statistics, and SureImport readback verification when available. An import made from an account statement the user cannot view returns 404.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -333,7 +334,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '404', 'import not found' do
+      response '404', 'import not found, or made from a statement the user cannot view' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
@@ -347,7 +348,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'List import row diagnostics' do
-      description 'List sanitized import rows with validation errors and mapping resolution state.'
+      description 'List sanitized import rows with validation errors and mapping resolution state. An import made from an account statement the user cannot view returns 404.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -380,7 +381,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '404', 'import not found' do
+      response '404', 'import not found, or made from a statement the user cannot view' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }

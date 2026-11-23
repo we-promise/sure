@@ -1,4 +1,5 @@
 class Import::MappingsController < ApplicationController
+  include ViewableImports
   include ImportGuestGuardable
 
   before_action :set_import
@@ -22,7 +23,7 @@ class Import::MappingsController < ApplicationController
     end
 
     def set_import
-      @import = Current.family.imports.find(params[:import_id])
+      @import = viewable_imports.find(params[:import_id])
     end
 
     # The mapping row already declares what it maps to, so neither the target

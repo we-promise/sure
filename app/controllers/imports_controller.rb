@@ -1,4 +1,5 @@
 class ImportsController < ApplicationController
+  include ViewableImports
   include SettingsHelper
   include ImportGuestGuardable
 
@@ -76,7 +77,7 @@ class ImportsController < ApplicationController
 
   def index
     # An import session's chunks are managed through the API that made them.
-    @pagy, @imports = pagy(Current.family.imports.where(type: Import::TYPES, import_session_id: nil).ordered, limit: safe_per_page)
+    @pagy, @imports = pagy(viewable_imports.where(type: Import::TYPES, import_session_id: nil).ordered, limit: safe_per_page)
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.imports"), imports_path ]
@@ -87,7 +88,7 @@ class ImportsController < ApplicationController
   end
 
   def new
-    @pending_import = Current.family.imports.where(import_session_id: nil).ordered.pending.first
+    @pending_import = viewable_imports.where(import_session_id: nil).ordered.pending.first
     @document_upload_extensions = document_upload_supported_extensions
   end
 
@@ -197,8 +198,7 @@ class ImportsController < ApplicationController
 
   private
     def set_import
-      @import = Current.family.imports.includes(:account, :account_statement).find(params[:id])
-      raise ActiveRecord::RecordNotFound unless @import.viewable_by?(Current.user)
+      @import = viewable_imports.includes(:account, :account_statement).find(params[:id])
     end
 
     def import_params

@@ -5,14 +5,11 @@ class AccountStatementsController < ApplicationController
   before_action :ensure_statement_manager!, only: %i[index create update destroy link unlink reject]
 
   def index
-    accessible_account_ids = Current.user.accessible_accounts.select(:id)
     account_statements = Current.family.account_statements
       .with_attached_original_file
       .includes(:account, :suggested_account)
-    visible_storage_scope = Current.family.account_statements
-      .where(account_id: nil)
-      .or(Current.family.account_statements.where(account_id: accessible_account_ids))
-    linked_statement_scope = account_statements.with_account.where(account_id: accessible_account_ids).by_period
+    visible_storage_scope = Current.family.account_statements.viewable_by(Current.user)
+    linked_statement_scope = account_statements.viewable_by(Current.user).with_account.by_period
 
     @unmatched_pagy, @unmatched_statements = pagy(account_statements.inbox.ordered, limit: safe_per_page, page_param: :unmatched_page)
     @linked_pagy, @linked_statements = pagy(linked_statement_scope, limit: safe_per_page, page_param: :linked_page)

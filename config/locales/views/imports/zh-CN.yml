@@ -26,6 +26,15 @@ zh-CN:
         split_badge: 拆分
         empty_state_primary: 此 QIF 文件中未找到任何分类或标签。
         empty_state_secondary: 所有交易都将以无分类或无标签的形式导入。
+        selection_list_changed_title: 分类和标签已变化
+        selection_list_changed_description: 使用新的日期格式后，文件中包含的分类或标签有所不同。请检查下方选择；所有条目均已重新勾选。
+        unknown_account_type_name: "“%{type}”"
+        unknown_account_type_title:
+          one: 未知账户类型
+          other: 未知账户类型
+        unknown_account_type_description:
+          one: "此 QIF 文件包含 %{product_name} 无法识别的账户类型 %{types}。其交易将按银行账户导入。"
+          other: "此 QIF 文件包含 %{product_name} 无法识别的账户类型 %{types}。它们的交易将按银行账户导入。"
         submit: 继续审核
     cleans:
       show:
@@ -225,6 +234,8 @@ zh-CN:
         tag_mapping_description: 将导入文件中的所有标签分配到 %{product_name} 中现有的标签。您也可以添加新标签，或将其保留为未分类。
         tag_mapping_title: 分配您的标签
     uploads:
+      sample_csv:
+        unavailable: 此导入类型没有可用的示例 CSV。
       handle_qif_upload:
         qif_uploaded: QIF 文件上传成功。
         qif_account_required: 请为 QIF 导入选择一个账户

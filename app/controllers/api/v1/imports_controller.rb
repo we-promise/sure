@@ -11,8 +11,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
   before_action :set_import, only: [ :rows ]
 
   def index
-    family = current_resource_owner.family
-    imports_query = family.imports.ordered
+    imports_query = import_scope.ordered
 
     # Apply filters
     if params[:status].present?
@@ -66,18 +65,23 @@ class Api::V1::ImportsController < Api::V1::BaseController
     family = current_resource_owner.family
 
     # 1. Determine type and validate
-    type = params[:type].to_s
-    type = "TransactionImport" unless Import::TYPES.include?(type)
-    return create_sure_import(family) if type == "SureImport"
+    type = params[:type].to_s.presence || "TransactionImport"
+    unless Import::TYPES.include?(type)
+      return render json: {
+        error: "invalid_import_type",
+        message: "type must be one of: #{Import.api_creatable_types.join(', ')}"
+      }, status: :unprocessable_entity
+    end
 
     # A Monarch import combines two exports and per-account choices, which
     # only the web import flow collects.
-    if type == "MonarchImport"
+    unless type.constantize.api_creatable?
       return render json: {
         error: "unsupported_type",
         message: "Monarch imports need per-account choices that only the web app collects. Use the import flow in the web app."
       }, status: :unprocessable_entity
     end
+    return create_sure_import(family) if type == "SureImport"
 
     # 2. Build the import object with permitted config attributes
     @import = family.imports.build(import_config_params.merge(type: type))
@@ -215,7 +219,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
     end
 
     def import_scope
-      current_resource_owner.family.imports
+      current_resource_owner.family.imports.viewable_by(current_resource_owner)
     end
 
     # The import is kept: only the publish is refused, as in the web.
