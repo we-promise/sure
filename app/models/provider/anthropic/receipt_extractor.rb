@@ -44,14 +44,16 @@ class Provider::Anthropic::ReceiptExtractor
       tool_choice: Provider::Anthropic.structured_output_tool_choice(model, TOOL_NAME)
     )
 
-    result = build_result(extract_tool_input(response))
+    # The answer is billed even when its input can't be parsed, so its tokens are recorded first.
     record_usage(model, response.usage, operation: OPERATION, metadata: { files: files.size, bytes: total_bytes })
+    usage_recorded = true
+    result = build_result(extract_tool_input(response))
 
     span&.end(output: result.to_h, usage: usage_hash(response.usage))
     result
   rescue => e
     span&.end(output: { error: e.message }, level: "ERROR")
-    record_usage_error(model, operation: OPERATION, error: e, metadata: { files: files&.size })
+    record_usage_error(model, operation: OPERATION, error: e, metadata: { files: files&.size }) unless usage_recorded
     raise
   end
 

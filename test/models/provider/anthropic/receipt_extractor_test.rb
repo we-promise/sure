@@ -78,6 +78,15 @@ class Provider::Anthropic::ReceiptExtractorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a completed answer whose input can't be parsed still records its tokens" do
+    client = stub_client(build_response(input: "{not json"))
+
+    assert_difference -> { @family.llm_usages.where(operation: "extract_receipt").count }, 1 do
+      assert_raises(JSON::ParserError) { extractor(client, files: [ @jpeg ]).extract }
+    end
+    assert_equal 1500, @family.llm_usages.where(operation: "extract_receipt").last.prompt_tokens
+  end
+
   test "unparseable total and date become nil" do
     client = stub_client(build_response(input: receipt_input.merge("total" => "abc", "date" => "14.11.2026")))
 
