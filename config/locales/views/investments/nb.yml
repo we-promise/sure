@@ -16,6 +16,8 @@ nb:
       total: Porteføljeverdi
       total_value_tooltip: Den totale porteføljeverdien er summen av kontantbeholdningen
         (tilgjengelig for handel) og gjeldende markedsverdi av beholdningene dine.
+      projected: "Forventet saldo"
+      scheduled: "Planlagt"
     subtypes:
       brokerage:
         short: Meglerkonto
@@ -191,3 +193,6 @@ nb:
       other:
         short: Annet
         long: Annen investering
+      epf:
+        short: "EPF"
+        long: "Employees' Provident Fund"

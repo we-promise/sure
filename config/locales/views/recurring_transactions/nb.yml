@@ -19,6 +19,8 @@ nb:
       semiannual: Hver 6. måned
       annual: Årlig
       custom: Egendefinert plan
+      once: "Én gang"
+      interval: "Egendefinert intervall"
     frequency:
       monthly: Månedlig (%{day})
       weekly: Hver %{weekday}
@@ -29,6 +31,11 @@ nb:
       annual: Årlig (%{month}, %{day})
       custom: Egendefinert plan
       last_day: siste dag
+      once: "Én gang"
+      once_on: "Én gang, %{date}"
+      every_n_weeks: "Hver %{interval}. uke på %{weekday}"
+      every_n_months: "Hver %{interval}. måned (%{day})"
+      every_n_years: "Hvert %{interval}. år (%{month}, %{day})"
     identify_patterns: Finn mønstre
     cleanup_stale: Rydd opp i utdaterte
     actions:
@@ -55,6 +62,20 @@ nb:
       pick_different: Start fra en annen transaksjon
       smart_fill: Fyll ut med AI
       smart_fill_applied: AI foreslo disse verdiene ut fra betalingshistorikken. Se over før du lagrer.
+      covered_title: "Denne transaksjonen hører allerede til en regning"
+      covered_body: "%{name} følger allerede denne betalingen, så en ny regning ville telt den to ganger."
+      covered_open: "Åpne regningen"
+      covered_suggested_title: "Sure har allerede foreslått en regning for denne betalingen"
+      covered_suggested_body: "%{name} venter blant forslagene dine. Bekreft den for å begynne å følge den, så en ny regning ikke teller denne betalingen to ganger. Betalinger som samsvarer, kobles automatisk, og du kan koble denne fra regningen."
+      covered_confirm: "Bekreft regning"
+      covered_create_anyway: "Opprett en egen regning likevel"
+      covered_income_title: "Denne innbetalingen hører allerede til en inntekt"
+      covered_income_body: "%{name} følger allerede denne innbetalingen, så hvis du legger den til igjen, telles den to ganger."
+      covered_income_open: "Åpne inntekten"
+      covered_income_suggested_title: "Sure har allerede foreslått denne inntekten"
+      covered_income_suggested_body: "%{name} venter blant forslagene dine. Legg den til for å begynne å følge den, så denne innbetalingen ikke telles to ganger. Innbetalinger som samsvarer, kobles automatisk, og du kan koble denne fra inntekten."
+      covered_income_confirm: "Legg til inntekt"
+      covered_income_create_anyway: "Legg til en egen inntekt likevel"
     smart_fills:
       create:
         failed: Kunne ikke analysere betalingshistorikken akkurat nå. Skjemaet beholdt transaksjonens egne verdier.
@@ -75,6 +96,8 @@ nb:
       amount_invalid: Skriv inn beløpet som et vanlig tall
       account_invalid: Velg en konto du kan legge til regninger på, eller la feltet stå tomt
       already_exists: Denne regningen finnes allerede
+      amount_too_precise: "Bruk maks 4 desimaler"
+      category_invalid: "Velg en av kategoriene dine, eller la feltet stå tomt"
     edit:
       trigger_label: Rediger regning
       title: Rediger %{name}
@@ -127,11 +150,25 @@ nb:
       frequency_second_day_label: Og dag
       frequency_weekday_label: Ukedag
       frequency_month_label: Måned
+      bank_reference_label: "Bankreferanse"
+      bank_reference_placeholder: "Kontrakt- eller kundenummer"
+      reference_only_label: "Samsvar bare på referanse"
+      reference_only_hint: "Ignorer navnet på regningen og betalingsmottakeren. Bare betalinger der meldingen inneholder referansen, samsvarer. Krever en bankreferanse."
+      bank_reference_hint: "En fast tekst fra betalingsmeldingen (Verwendungszweck). Betalinger på denne kontoen der meldingen inneholder den, knyttes til denne regningen uansett beløp eller dato, med mindre betalingen har en annen forhandler enn en regning som er bundet til en forhandler. Bruk noe særpreget, minst 3 tegn."
+      once_on_label: "Forfaller"
+      income_once_on_label: "Dato"
+      once_hint: "Forfaller én gang, på denne datoen, og gjentas ikke. Merk transaksjonen som engangs for å holde den utenfor gjennomsnittene dine."
+      income_once_hint: "Kommer én gang, på denne datoen, og gjentas ikke. Merk transaksjonen som engangs for å holde den utenfor gjennomsnittene dine."
+      once_new_hint: "Forfaller én gang, på datoen over, og gjentas ikke. Merk transaksjonen som engangs for å holde den utenfor gjennomsnittene dine."
+      income_once_new_hint: "Kommer én gang, på datoen over, og gjentas ikke. Merk transaksjonen som engangs for å holde den utenfor gjennomsnittene dine."
+      frequency_interval_label: "Gjentas hver"
+      frequency_interval_unit_label: "Enhet"
     update:
       success: Regningen er oppdatert
       success_with_siblings:
         one: Regningen er oppdatert, og betalingslenken ble kopiert til %{count} annen regning
         other: Regningen er oppdatert, og betalingslenken ble kopiert til %{count} andre regninger
+      once_date_locked: "Denne betalingen er allerede registrert, så datoen kan ikke flyttes."
     manage:
       title: Regningene dine finner du på Regninger-siden
       description: Legg til, rediger, sett på pause og betal alt derfra. Denne siden styrer gjenkjenningen.
@@ -194,3 +231,13 @@ nb:
     transfer_already_exists: Det finnes allerede en fast overføring for dette kontoparet
     transfer_creation_failed: Kunne ikke opprette den faste overføringen. Sjekk overføringsdetaljene og prøv igjen.
     transfer_feature_disabled: Faste transaksjoner er deaktivert for denne husholdningen
+    frequency_interval_units:
+      weekly: "uker"
+      monthly: "måneder"
+      yearly: "år"
+    already_covered: "Denne transaksjonen samsvarer allerede med en fast transaksjon"
+    suggested_income:
+      title: "Mulig ny inntekt"
+      confirm: "Legg til inntekt"
+      dismiss: "Ikke inntekt"
+    confirmed_income: "Inntekten er lagt til i de faste transaksjonene dine"

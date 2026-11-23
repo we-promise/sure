@@ -39,6 +39,9 @@ nb:
           paused:
             one: '%{count} satt på pause'
             other: '%{count} satt på pause'
+          pace_unknown:
+            one: "1 med ukjent tempo"
+            other: "%{count} med ukjent tempo"
         on_track_sub_all_good: Alle aktive mål er i rute
         on_track_all_caught_up: Alt er à jour
       goals_section:
@@ -116,6 +119,8 @@ nb:
         transaction_already_claimed: Det uttaket er allerede tilordnet.
         transaction_not_found: Det uttaket er ikke lenger tilgjengelig for tilordning.
         no_linked_account: Dette målet har ingen finansieringskonto igjen.
+        missing_exchange_rate: "Det finnes ingen valutakurs for valutaen på denne kontoen ennå, så dette forbruket kan ikke registreres."
+      goal_currency_hint: "Skriv inn beløpet i %{currency}. For en konto i en annen valuta regnes det om til dagens kurs før det trekkes fra øremerkingen på kontoen."
     unattributed_outflows:
       heading: Penger gikk ut fra disse kontoene
       body: Hvis noe av dette ble brukt på %{goal}, marker det, så teller det ikke lenger mot målet.
@@ -142,6 +147,8 @@ nb:
         empty:
           heading: Ingen finansieringskontoer tilknyttet ennå
           body: Rediger målet for å knytte til bankkontoene du sparer på.
+        converted: "≈ %{amount}"
+        rate_unavailable: "Ingen valutakurs ennå, så denne kontoen er ikke tatt med."
       notes: Notater
       funding_last_30d: siste 30 d
       funding_last_90d: siste 90 d
@@ -151,6 +158,7 @@ nb:
         behind_covered: ventende spareløfter dekker gapet
         on_track: når målet rundt %{date}
         no_target_date: angi en måldato for å beregne når du er i mål
+        pace_unknown: "kan ikke måle tempo ut fra disse kontoene ennå. Det krever en saldooppdatering det siste året og ett års saldohistorikk"
       pending_pledge:
         title:
           zero: 'Venter: %{amount} til %{account} · utløper i dag'
@@ -177,6 +185,12 @@ nb:
         market_value: Markedsverdi %{amount}
         aria_label: Målet er %{percent}% fullført. %{amount} av %{target} spart.
         aria_label_with_used: Målet er %{percent}% fullført. %{amount} av %{target}, inkludert %{used} som allerede er brukt.
+        basis:
+          balance: "Teller det kontoene er verdt i dag"
+          contributions: "Teller bare det du har satt inn"
+        basis_at_completion:
+          balance: "Talte det kontoene var verdt da målet ble fullført"
+          contributions: "Talte bare det du hadde satt inn da målet ble fullført"
       projection:
         heading: Prognose
         legend_saved: Spart
@@ -193,6 +207,7 @@ nb:
         tooltip_projected: 'Beregnet: %{amount}'
         tooltip_saved: 'Spart: %{amount}'
         tooltip_target_relation: '%{percent}% av målet på %{target}'
+        pace_unknown: "Det er ikke nok historikk på disse kontoene til å måle tempo ennå, så det finnes ingen prognose."
       catch_up:
         title: Spar %{amount}/md. mer for å ta igjen
         body: Nåværende tempo %{avg}/md. · %{required}/md. kreves for å nå målet.
@@ -253,6 +268,7 @@ nb:
       no_target_date: Uten frist
       paused: På pause
       archived: Arkivert
+      pace_unknown: "Ukjent tempo"
     empty_state:
       heading: Ingen mål ennå
       body: Sett et mål, knytt til kontoene du sparer på, og se fremgangen vokse.
@@ -293,6 +309,9 @@ nb:
       footer_last_days:
         one: Siste spareløfte bekreftet for %{count} dag siden
         other: Siste spareløfte bekreftet for %{count} dager siden
+      partial_total: "Noen saldoer er ikke tatt med (ingen valutakurs ennå)"
+      pace_unknown_with_target: "Ukjent tempo · mål %{target}/md."
+      pace_unknown: "Ukjent tempo"
     form:
       target_modes:
         fixed: Et fast beløp
@@ -317,6 +336,7 @@ nb:
         prorata: Målene dine på denne kontoen utgjør {total} mot en saldo på {balance} – de vil utvikle seg forholdsmessig.
         whole_balance: Denne kontoen finansierer det som er igjen etter de andre øremerkingene.
         whole_balance_alone: Dette målet bruker hele saldoen på denne kontoen.
+        converted: "Denne øremerkingen ≈ {amount}."
       fields:
         target_mode: Hvordan målsaldoen settes
         target_months: Måneder med utgifter
@@ -336,6 +356,8 @@ nb:
         whole_balance: "Tomt: hele saldoen"
         earmark_for: Øremerk beløp for %{account}
         earmark_hint: La beløpet stå tomt for å bruke hele saldoen på kontoen.
+        progress_basis: "Hva som teller mot dette målet"
+        currency_conversion_hint: "Kontoene kan ha ulike valutaer. Totalene regnes om til %{currency}, mens øremerkingene beholder valutaen til hver konto."
       subtypes:
         checking: Brukskonto
         savings: Sparekonto
@@ -343,3 +365,17 @@ nb:
         cd: Tidsinnskudd
         money_market: Pengemarked
         other: Annet
+      progress_basis_locked: "Fremdriften for dette målet ble låst da det ble fullført. Gjenåpne eller gjenopprett målet for å endre hva som teller med."
+      progress_bases:
+        balance:
+          label: "Det kontoene er verdt i dag"
+          hint: "Markedsverdi. Gevinst og tap på investeringer teller med."
+        contributions:
+          label: "Bare det jeg har satt inn"
+          hint: "Netto innskudd. Gevinst og tap i markedet holdes utenfor."
+    currency_warning:
+      title: "Noen saldoer er ikke tatt med"
+      body:
+        one: "Det finnes ingen valutakurs for %{from} → %{to} ennå, så saldoer i %{from} er holdt utenfor denne totalen."
+        other: "Det finnes ingen valutakurser fra %{from} til %{to} ennå, så disse saldoene er holdt utenfor denne totalen."
+      settings_link: "Innstillinger for valutakursleverandør"

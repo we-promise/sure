@@ -45,6 +45,7 @@ nb:
       earmarked: Allerede satt av til mål
       free: Helt fritt
       goals_link: Se mål
+      currency_warning: "Saldoer i %{currencies} er ikke tatt med fordi det ennå ikke finnes noen valutakurs til %{currency}."
     show:
       categories:
         amount: Beløp

@@ -13,6 +13,7 @@ nb:
         bills: Regninger
         plan: Plan
         goals: Mål
+        portfolio: "Portefølje"
       insights: Innsikt
       resize_left_sidebar: Endre størrelse på kontosidepanelet
       resize_right_sidebar: Endre størrelse på assistentpanelet
@@ -36,6 +37,7 @@ nb:
         download_complete: Nedlastingen er fullført
         download_failed: Nedlastingen mislyktes. Prøv igjen.
         download_location: Filen ligger i mappen Nedlastinger.
+        order_save_failed: "Kunne ikke bekrefte at den nye rekkefølgen ble lagret. Sjekk tilkoblingen og last inn siden på nytt for å se den lagrede rekkefølgen."
     trial:
       open_demo: Åpen demo
       data_deleted_in_days: Data slettes om %{days} dager

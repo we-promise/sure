@@ -4,6 +4,7 @@ nb:
     create:
       failure: Kunne ikke sende invitasjon
       success: Invitasjonen er sendt
+      own_email: "Du kan ikke invitere deg selv."
     destroy:
       failure: Det oppsto et problem med å fjerne invitasjonen.
       not_authorized: Du er ikke autorisert til å administrere invitasjoner.
@@ -23,3 +24,28 @@ nb:
       joined_household: Du er nå med i husholdningen.
       message: '%{inviter} har invitert deg til å bli med som %{role}.'
       title: Bli med i %{family}
+      existing_account_hint: "Har du allerede en konto? Eksisterende kontoer kan ikke bli med i en annen husholdning via en invitasjon."
+    bulk_create:
+      download: "Last ned rapport"
+      errors:
+        email_not_queued: "Invitasjonen er lagret, men e-posten kunne ikke legges i kø. Fjern invitasjonen og prøv igjen."
+        processing_failed: "Invitasjonen kunne ikke behandles. Sjekk om det finnes en ventende invitasjon før du prøver igjen."
+      invalid_role: "Masseinvitasjoner kan bare sendes til medlemmer og gjester."
+      invite_more: "Inviter flere"
+      no_emails: "Skriv inn minst én e-postadresse."
+      status:
+        invalid: "Kunne ikke invitere"
+        link_only: "Klar til deling"
+        sent: "Invitasjon sendt"
+      summary: "%{sent} sendt, %{link_only} klare til deling, %{invalid} mislyktes."
+      title: "Resultat av invitasjoner"
+      too_many: "Du kan invitere opptil %{max} personer om gangen. Send til færre."
+    bulk_new:
+      emails_label: "E-postadresser"
+      emails_placeholder: "Skriv inn e-postadresser atskilt med komma eller linjeskift"
+      role_guest: "Gjest"
+      role_label: "Rolle"
+      role_member: "Medlem"
+      submit: "Send invitasjoner"
+      subtitle: "Inviter flere personer til %{moniker}-kontoen din i %{product_name}"
+      title: "Inviter flere personer"

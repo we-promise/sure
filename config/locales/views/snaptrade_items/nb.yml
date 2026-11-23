@@ -136,6 +136,9 @@ nb:
         other: '%{count} kontoer til kan settes opp'
       no_accounts_title: Fant ingen kontoer
       no_accounts_description: Koble til en megler for å importere investeringskontoene dine.
+    personal_key:
+      success: "SnapTrade Personal API-nøkkel er lagret. Synkroniserer kontoene dine..."
+      missing_fields: "Skriv inn både klient-ID og consumer key for SnapTrade."
   providers:
     snaptrade:
       name: SnapTrade
@@ -176,6 +179,13 @@ nb:
       delete_connection_body: Dette fjerner tilkoblingen til %{brokerage} permanent fra SnapTrade. Alle kontoer fra denne megleren blir koblet fra. Du må koble til på nytt for å synkronisere disse kontoene igjen.
       delete_connection_confirm: Slett tilkobling
       manage_at_snaptrade: Administrer tilkoblinger hos SnapTrade
+      personal_key_title: "SnapTrade Personal API-nøkkel"
+      personal_key_description_html: "Bruk den gratis Personal-nøkkelen for dine egne meglerkontoer. Opprett den på <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">dashboard.snaptrade.com</a>, og lim inn klient-ID-en og consumer key her."
+      personal_key_client_id_label: "Klient-ID"
+      personal_key_consumer_key_label: "Consumer key"
+      personal_key_save_button: "Lagre nøkkel"
+      oauth_alternative: "Kjører du Sure for andre? Registrer heller en SnapTrade OAuth-app:"
+      oauth_status_personal_key: "Synkroniserer med SnapTrade Personal API-nøkkelen din. Hvis du autoriserer med OAuth, bytter denne tilkoblingen til OAuth."
   snaptrade_item:
     sync_status:
       no_accounts: Ingen kontoer funnet

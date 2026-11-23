@@ -34,3 +34,6 @@ nb:
       pending_marker: venter
       runway: rekker %{months} md. · %{pace}/md.
       all_goals: Alle mål
+      currency_warning:
+        one: "%{count} mål utelater saldoer i %{currencies} (ingen valutakurs ennå)."
+        other: "%{count} mål utelater saldoer i %{currencies} (ingen valutakurs ennå)."

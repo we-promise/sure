@@ -40,6 +40,9 @@ nb:
       snooze_week: Utsett en uke
       reopen: Åpne på nytt
       view_bill: "Se regningen"
+      amount_left: "%{amount} igjen"
+      used_up: "Allerede brukt"
+      used_up_hint: "Andre regninger bruker allerede hele beløpet i denne transaksjonen."
     mark_paid:
       success: Regningen er merket som betalt
     skip:

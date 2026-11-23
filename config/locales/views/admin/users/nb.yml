@@ -97,6 +97,7 @@ nb:
         password_missing_number: Passordet må inneholde minst ett tall.
         password_missing_special: Passordet må inneholde minst ett spesialtegn.
         last_super_admin_error: Kan ikke nedgradere den siste superadministratoren i systemet.
+        password_disabled: "Passord kan ikke angis, fordi brukere bare kan logge inn med SSO."
       destroy:
         success: Brukerens tilgang er tilbakekalt, og permanent sletting er planlagt.
         failure: Kunne ikke fjerne brukeren.

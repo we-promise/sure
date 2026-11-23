@@ -218,6 +218,7 @@ nb:
       sync_start_date_help: Velg hvor langt tilbake du vil synkronisere transaksjonshistorikken.
       sync_start_date_label: 'Synkroniser transaksjoner fra:'
       title: Sett opp IndexaCapital-kontoene dine
+      skip_notice: "Kontoer som ikke er huket av, hoppes over. Sure slutter å hente dem til du kobler dem til en konto."
     complete_account_setup:
       all_skipped: Alle kontoer ble hoppet over. Ingen kontoer ble opprettet.
       creation_failed: 'Kunne ikke opprette kontoer: %{error}'

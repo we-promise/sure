@@ -9,6 +9,7 @@ nb:
           cash_flow: "Kontantstrøm"
           surplus: "Overskudd"
           deficit: "Underskudd"
+          invested: "Investert"
         title: Nytt Sankey-diagram
         preview: Forhåndsversjon
         preview_tooltip: Dette vil erstatte visualiseringen over, siden det bruker et nytt delt API med mobilklienten i Swift.
@@ -21,6 +22,15 @@ nb:
         feedback_thanks: Takk for at du hjelper oss med å forbedre diagrammet!
         feedback_privacy: Svaret ditt sendes til PostHog. Beskriv problemet uten kontonumre, saldoer eller andre private økonomiske opplysninger.
         feedback_submit: Send tilbakemelding
+        opt_in_title: "Vis det nye diagrammet"
+        opt_in_description: "Sammenlign et eksperimentelt Sankey-diagram med diagrammet ovenfor. Du kan slå dette av når som helst."
+        group_by_label: "Vis flyt etter"
+        group_by_category: "Kategori"
+        group_by_account: "Konto"
+        sort_label: "Sorter flyt"
+        sort_auto: "Automatisk"
+        sort_ascending: "Minst først"
+        sort_descending: "Størst først"
       net_worth_chart:
         data_not_available: Data ikke tilgjengelig for den valgte perioden
         title: Nettoformue
@@ -115,6 +125,42 @@ nb:
         period_scope_hint: Viser måneden du velger her – uavhengig av dashbordets tidsperiode øverst.
         no_data: Ingen forbruksdata for denne måneden
         previous_comparison_days: (1–%{end_day})
+        compare_picker_aria_label: "Velg måneder å sammenligne"
+        compare_months:
+          one: "mot forrige måned"
+          other: "mot de siste %{count} månedene"
+        filter_categories: "Filtrer kategorier (%{count})"
+        filter_categories_all: "Alle kategorier"
+        search_categories: "Søk etter kategorier"
+        apply: "Bruk"
+      customize:
+        start: "Tilpass"
+        done: "Ferdig"
+        hide: "Skjul %{title}"
+        hidden_title: "Skjulte moduler"
+        hidden_description: "Legg en modul tilbake på oversikten."
+        none_hidden: "Alle moduler vises. Skjul en med øyeknappen."
+        all_hidden_title: "Alle moduler er skjult"
+        all_hidden_description: "Tilpass oversikten for å legge til moduler igjen."
+      cashflow_donut:
+        title: "Kontantstrømringer"
+        date_range: "%{start_date} til %{end_date}"
+        month_picker_aria_label: "Velg måned"
+        filter_accounts: "Filtrer kontoer (%{count})"
+        filter_accounts_all: "Alle kontoer"
+        period_scope_hint: "Viser måneden du velger her – uavhengig av perioden for oversikten øverst."
+        search_accounts: "Søk etter kontoer"
+        apply: "Bruk"
+        no_data: "Ingen kontantstrøm denne måneden"
+        spent: "Brukt"
+        of_income: "av %{amount} i inntekt"
+        left_amount: "%{amount} igjen"
+        over_amount: "%{amount} over"
+        left: "Igjen å bruke"
+        over: "Over inntekten"
+        inflows: "Inn"
+        outflows: "Ut"
+        weight: "Vekt"
     feedback:
       title: Tilbakemelding
       heading: Gi tilbakemelding

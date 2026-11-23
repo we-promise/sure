@@ -7,6 +7,39 @@ nb:
           min_actions: må ha minst én handling
           duplicate_actions: Regelen kan ikke ha dupliserte handlinger %{types}
           nested_conditions: Sammensatte betingelser kan ikke nøstes
+          split_not_alone: "En oppdelingsregel kan ikke ha andre handlinger"
+        "rule/action":
+          attributes:
+            value:
+              invalid_config: "må være en gyldig oppdelingskonfigurasjon"
+              invalid_split_count: "må ha mellom %{min} og %{max} deler"
+              split_name_required: "del #%{index} mangler navn"
+              split_name_too_long: "navnet på del #%{index} er for langt (maks 255 tegn)"
+              split_name_invalid: "navnet på del #%{index} inneholder ugyldige tegn"
+              split_type_invalid: "typen for del #%{index} må være fast beløp eller prosent"
+              split_share_invalid: "andelen for del #%{index} må være et positivt tall"
+              split_category_invalid: "kategorien for del #%{index} tilhører ikke denne husholdningen"
+              split_merchant_invalid: "forhandleren for del #%{index} tilhører ikke denne husholdningen"
+              split_tags_invalid: "del #%{index} har en tagg som ikke tilhører denne husholdningen"
+              percentages_must_total_100: "prosentene må summere seg til 100 (summen er %{total})"
+              fixed_requires_exact_amount_condition: "oppdeling med faste beløp krever en regelbetingelse som treffer et eksakt transaksjonsbeløp (f.eks. Beløp = 42.00), ellers kan ikke andelene alltid summere seg til totalbeløpet for hver transaksjon som treffer"
+              fixed_shares_must_equal_condition_amount: "andelene må summere seg til %{amount}, det eksakte beløpet som kreves av betingelsen i denne regelen"
+        "rule/condition":
+          attributes:
+            value:
+              regex_invalid: "er ikke et gyldig regulært uttrykk"
+              regex_too_complex: "er for komplekst til å kjøres trygt"
+              regex_too_long: "er for langt (maks %{count} tegn)"
+              regex_backreference: "kan ikke bruke tilbakereferanser (\\1 til \\9)"
+    attributes:
+      rule:
+        new_rule_group_name: "Ny gruppe"
+        rule_group: "Gruppe"
   rule:
     conditions:
       unsupported_label: Støttes ikke (%{type})
+    actions:
+      set_transaction_merchant:
+        not_accessible: "Forhandler på en konto du ikke har tilgang til"
+        unassigned: "%{name} (ikke lenger tilordnet)"
+        unavailable: "Forhandleren er ikke lenger tilgjengelig"

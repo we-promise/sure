@@ -92,6 +92,7 @@ nb:
         rows_to_skip_label: Hopp over de første n radene
       update:
         success: Importen er konfigurert.
+        monarch_success: "Kontovalgene er lagret."
       account_import:
         leave_empty: La stå tomt
         default: Standard
@@ -140,6 +141,39 @@ nb:
         description: Konfigurer regelimporten. Regler opprettes eller oppdateres basert på CSV-dataene.
         process_button: Behandle regler
         process_help: Klikk på knappen nedenfor for å behandle CSV-filen og lage regelrader.
+      monarch:
+        title: "Gå gjennom hver Monarch-konto"
+        description: "Velg hvor hver konto skal, hvilken type den er og hva som skal tas med."
+        help_title: "Slik fungerer valgene"
+        help_account: "Importer til en ny konto med navnet du vil, eller til en av de manuelle kontoene dine. En eksisterende konto beholder navn, type og egne oppføringer, og den inngående saldoen flyttes til starten av Monarch-historikken hvis den faller innenfor den. Statusen følger valget i Status. Kontoer med beholdninger eller handler kan ikke importeres til."
+        help_closed: "Sett Status til Lukket for kontoer du har avsluttet. Saldoen settes til null dagen etter den siste Monarch-saldoen, og kontoene skjules fra gjeldende saldoer, men blir værende i historikken for nettoformue. Kontoer merket som inaktive har ikke hatt aktivitet de siste %{days} dagene, men det betyr ikke alltid at de er avsluttet."
+        help_transactions: "Slå av transaksjoner for å bare importere saldohistorikken til en konto."
+        help_balance: "Saldo i dag starter på den siste saldoen fra Monarch. Endre den hvis den er utdatert, så registreres den som dagens saldo. Skriv skyldige beløp på kort og lån som positive tall."
+        table_label: "Monarch-kontoer"
+        import_column: "Importer"
+        account_column: "Kontonavn"
+        destination_column: "Importer til"
+        type_column: "Type"
+        status_column: "Status"
+        status_open: "Åpen"
+        status_closed: "Lukket"
+        toggle_all_label: "%{column} for alle kontoer"
+        transactions_column: "Transaksjoner"
+        balance_column: "Saldo i dag"
+        import_label: "Importer %{name}"
+        destination_label: "Hvor %{name} skal importeres"
+        name_label: "Navn i Sure for %{name}"
+        monarch_name: "I Monarch: %{name}"
+        type_label: "Type for %{name}"
+        status_label: "%{name} er åpen"
+        transactions_label: "Importer transaksjonene for %{name}"
+        balance_label: "Saldo i dag for %{name}"
+        new_account: "Ny konto"
+        inactive: "Inaktiv"
+        last_activity: "Siste aktivitet %{date}"
+        no_activity: "Ingen aktivitet"
+        no_transactions: "Ingen"
+        submit: "Se gjennom importen"
     confirms:
       mappings:
         create_account: Opprett konto
@@ -206,11 +240,27 @@ nb:
         qif_submit: Last opp QIF
         browse: Bla gjennom
         csv_file_prompt: for å legge til CSV-filen her
+        monarch_title: "Last opp eksportene fra Monarch"
+        monarch_description: "Ta med kontoene, transaksjonene og saldohistorikken din fra Monarch."
+        monarch_export_title: "Last ned dataene dine fra Monarch"
+        monarch_export_step_settings_html: "Logg inn på Monarch på nettet og åpne %{link}."
+        monarch_export_settings_link: "Settings → Data"
+        monarch_export_step_download: "Last ned transaksjonene og saldohistorikken for kontoene dine, hver som en CSV-fil."
+        monarch_export_step_upload: "Velg filene nedenfor."
+        monarch_export_help_html: "Monarch forklarer hver nedlasting i %{link}."
+        monarch_export_help_link: "hjelpeartikkelen sin"
+        monarch_balances_label: "Saldoeksport"
+        monarch_transactions_label: "Transaksjonseksport"
+        monarch_transactions_hint: "Utelat transaksjonseksporten for å bare importere saldohistorikk."
+        monarch_upload_button: "Last opp eksporter"
       handle_qif_upload:
         qif_uploaded: QIF-filen er lastet opp.
         qif_account_required: Velg en konto for QIF-importen
       update:
         qif_uploaded: QIF-filen er lastet opp.
+        qif_account_required: "Velg en konto for QIF-importen"
+        monarch_uploaded: "Monarch-eksportene er lastet opp."
+        monarch_balances_required: "Velg saldoeksporten fra Monarch."
       sure_import:
         title: Importer fra eksport
         description: Last opp all.ndjson-filen fra dataeksporten din for å gjenopprette kontoer, transaksjoner, kategorier og mer.
@@ -221,6 +271,8 @@ nb:
         upload_button: Last opp NDJSON
         hint_html: Last opp <strong>all.ndjson</strong>-filen fra ZIP-filen med dataeksporten din
         ndjson_invalid: Må være gyldig NDJSON med minst én post
+      sample_csv:
+        unavailable: "Det finnes ingen eksempel-CSV for denne importtypen."
     qif_category_selections:
       update:
         success: Kategorier og tagger er lagret.
@@ -247,6 +299,15 @@ nb:
         empty_state_primary: Fant ingen kategorier eller tagger i denne QIF-filen.
         empty_state_secondary: Alle transaksjoner blir importert uten kategorier eller tagger.
         submit: Fortsett til gjennomgang
+        selection_list_changed_title: "Kategorier og tagger er endret"
+        selection_list_changed_description: "Med det nye datoformatet inneholder filen andre kategorier eller tagger. Se over utvalget nedenfor. Alle oppføringene er valgt på nytt."
+        unknown_account_type_name: "«%{type}»"
+        unknown_account_type_title:
+          one: "Ukjent kontotype"
+          other: "Ukjente kontotyper"
+        unknown_account_type_description:
+          one: "Denne QIF-filen inneholder kontotypen %{types}, som %{product_name} ikke gjenkjenner. Transaksjonene importeres som for en bankkonto."
+          other: "Denne QIF-filen inneholder kontotypene %{types}, som %{product_name} ikke gjenkjenner. Transaksjonene importeres som for en bankkonto."
   imports:
     index:
       title: Importer
@@ -311,6 +372,7 @@ nb:
       import_file: Importer dokument
       import_file_description: AI-drevet analyse av PDF-er og opplasting av søkbare filer
       requires_account: Importer kontoer først for å låse opp dette valget.
+      import_monarch: "Importer fra Monarch"
     ready:
       description: Her er en oppsummering av de nye elementene som vil bli lagt til kontoen din
         når du publiserer denne importen.
@@ -320,6 +382,48 @@ nb:
       empty_summary: Vi fant ingen poster som kan importeres i denne filen. Den kan være tom, eller linjene samsvarer ikke med det forventede eksportformatet (hver linje skal være et JSON-objekt med nøklene «type» og «data», med typer denne importen støtter).
       publish_import: Publiser import
       back_to_imports: Tilbake til importer
+      monarch_existing_names_title: "Det finnes allerede kontoer med disse navnene"
+      monarch_existing_names_description: "Du har allerede kontoer som heter %{names}. Når du publiserer, opprettes nye kontoer ved siden av dem. Hvis du vil importere til en av dem i stedet, velger du den i Kontoer-steget."
+      monarch_conflicts_title: "Noen eksisterende saldoer avviker fra Monarch"
+      monarch_conflicts_description:
+        one: "På %{count} dag har en konto du importerer til, allerede en saldooppdatering som avviker fra Monarch. Den eksisterende verdien beholdes."
+        other: "På %{count} dager har kontoer du importerer til, allerede saldooppdateringer som avviker fra Monarch. De eksisterende verdiene beholdes."
+      monarch_overlap_title: "Eksisterende transaksjoner i samme periode"
+      monarch_overlap_description:
+        one: "%{count} eksisterende transaksjon faller innenfor Monarch-historikken til en konto du importerer til, og samsvarer ikke med noen Monarch-transaksjon. Den beholdes og regnes med i saldoen."
+        other: "%{count} eksisterende transaksjoner faller innenfor Monarch-historikken til kontoer du importerer til, og samsvarer ikke med noen Monarch-transaksjon. De beholdes og regnes med i saldoen."
+      monarch_duplicates_title: "Transaksjoner som allerede finnes i Sure, hoppes over"
+      monarch_duplicates_description:
+        one: "%{count} Monarch-transaksjon finnes allerede på kontoen den skal til, fra en tidligere import eller med samme dato og beløp, så den hoppes over."
+        other: "%{count} Monarch-transaksjoner finnes allerede på kontoene de skal til, fra en tidligere import eller med samme dato og beløp, så de hoppes over."
+      monarch_kept_title: "Noen inngående saldoer ble beholdt slik du redigerte dem"
+      monarch_kept_description: "Da importen ble tilbakeført, ble ikke den inngående saldoen for %{names} gjenopprettet, fordi den ble endret etter importen. Sjekk den før du importerer på nytt."
+      monarch_opening_title: "Inngående saldoer flyttes"
+      monarch_opening_description:
+        one: "Den inngående saldoen for %{count} eksisterende konto flyttes til starten av Monarch-historikken. Tilbakefører du importen, settes den tilbake."
+        other: "Den inngående saldoen for %{count} eksisterende kontoer flyttes til starten av Monarch-historikken deres. Tilbakefører du importen, settes de tilbake."
+      missing_merchant_warning_title: "Noen forhandlere mangler i denne eksporten"
+      missing_merchant_warning_description:
+        one: "%{count} forhandlerreferanse i denne filen peker til en forhandler som ikke er med. Dette kan skje med en eksport tatt før forhandlere tildelt av leverandøren ble tatt med i Sure-eksporter. Du kan likevel publisere importen. Oppføringen det gjelder, importeres bare uten forhandler, og du kan legge den til etterpå."
+        other: "%{count} forhandlerreferanser i denne filen peker til forhandlere som ikke er med. Dette kan skje med en eksport tatt før forhandlere tildelt av leverandøren ble tatt med i Sure-eksporter. Du kan likevel publisere importen. Oppføringene det gjelder, importeres bare uten forhandler, og du kan legge dem til etterpå."
+      skipped_recurring_description:
+        one: "%{count} fast transaksjon mangler navn og forhandler, så den hoppes over. Automatisk oppdagede faste transaksjoner bygges opp igjen etter importen."
+        other: "%{count} faste transaksjoner mangler navn og forhandler, så de hoppes over. Automatisk oppdagede faste transaksjoner bygges opp igjen etter importen."
+      reused_taxonomy_notice_title: "Noen kategorier, tagger eller forhandlere finnes allerede"
+      reused_taxonomy_notice_description:
+        one: "%{count} kategori, tagg eller forhandler i denne filen finnes allerede i kontoen din (for eksempel fra standardkategoriene ved oppstart). Den gjenbrukes og oppdateres med dataene fra filen i stedet for å bli opprettet på nytt."
+        other: "%{count} kategorier, tagger eller forhandlere i denne filen finnes allerede i kontoen din (for eksempel fra standardkategoriene ved oppstart). De gjenbrukes og oppdateres med dataene fra filen i stedet for å bli opprettet på nytt."
+      provider_merchant_diff_title: "Noen forhandlere finnes allerede med andre detaljer"
+      provider_merchant_diff_description:
+        one: "%{count} forhandler i denne filen finnes allerede med andre detaljer. Den eksisterende forhandleren beholdes, og verdiene fra filen tas ikke i bruk."
+        other: "%{count} forhandlere i denne filen finnes allerede med andre detaljer. De eksisterende forhandlerne beholdes, og verdiene fra filen tas ikke i bruk."
+      provider_merchant_diff_summary: "Vis forskjeller"
+      provider_merchant_diff_none: "ingen"
+      provider_merchant_diff_fields:
+        website_url: "Nettsted"
+        name: "Navn"
+        provider_merchant_id: "Leverandør-ID"
+      provider_merchant_diff_row: "%{field}: beholder %{kept}, filen har %{imported}"
     mapping_labels:
       account_type: Kontotype
       account: Konto
@@ -381,6 +485,7 @@ nb:
     publish:
       started: Importen har startet i bakgrunnen.
       max_rows_exceeded: Importen overskrider maksimalt antall rader på %{max}.
+      guest_new_categories_or_tags: "Gjester kan ikke opprette kategorier eller tagger. Koble dem til eksisterende eller la dem stå tomme."
     revert:
       started: Importen tilbakeføres i bakgrunnen.
     cancel:
@@ -438,6 +543,7 @@ nb:
       pdf_import: PDF-import
       document_import: Dokumentimport
       sure_import: Sure-import
+      monarch_import: "Monarch-import"
     steps:
       upload: Last opp
       configure: Konfigurer
@@ -447,6 +553,7 @@ nb:
       select: Velg
       label: Trinn %{step}
       progress: Trinn %{step} av %{total}
+      accounts: "Kontoer"
     empty:
       message: Fant ingen importer.
     create:
@@ -464,6 +571,7 @@ nb:
       document_upload_failed: Vi kunne ikke laste opp dokumentet til vektorlageret. Prøv igjen.
       invalid_ndjson_file_type: Ugyldig filtype eller format. Last opp en gyldig eksportfil av typen .ndjson eller .json.
       document_provider_not_configured: Det er ikke konfigurert noe vektorlager for opplasting av dokumenter.
+      missing_upload: "Vi mottok ikke filen din. Prøv å laste den opp igjen."
     show:
       finalize_upload: Fullfør opplastingen av filen.
       finalize_mappings: Fullfør tilordningene før du fortsetter.
@@ -528,3 +636,4 @@ nb:
         other: Alle transaksjonene på denne kontoutskriften fantes allerede på kontoen din. Alle %{count} ble koblet og merket som avstemt – ingenting måtte importeres.
       select_account_to_continue: Velg en konto ovenfor for å fortsette.
       unknown_document_type: Ukjent
+    configuration_locked: "Dataene fra denne importen er allerede i Sure, så filene og valgene kan ikke endres. Prøv igjen for å fullføre den, eller slett den for å starte på nytt."

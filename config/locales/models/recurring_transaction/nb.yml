@@ -6,10 +6,15 @@ nb:
       unmeasurable: denne transaksjonen har en fordeling som ikke kan konverteres til %{currency}, så det som gjenstår av den kan ikke beregnes. Legg til en valutakurs for %{date} eller fjern den eksisterende betalingen først
       over_allocated: å fordele %{amount} overstiger transaksjonens gjenstående %{capacity} %{currency}
       exceeds_remaining: '%{amount} overstiger de gjenstående %{remaining} i denne perioden'
+      entry_exhausted: "hele beløpet for denne transaksjonen er allerede brukt på andre forfalte betalinger"
+      split_counterpart_allocated: "denne transaksjonen er delt opp, og den opprinnelige belastningen eller en av delene er allerede knyttet til en regning"
+      already_allocated: "denne transaksjonen er allerede knyttet til denne regningen"
   activerecord:
     attributes:
       recurring_transaction:
         payment_url: Betalingslenke
+        bank_reference: "Bankreferanse"
+        frequency_interval: "Gjentakelsesintervall"
     errors:
       models:
         recurring_transaction:
@@ -30,3 +35,5 @@ nb:
               same_as_source: kan ikke være den samme som fra-kontoen
               family_mismatch: må tilhøre samme husholdning som fra-kontoen
               wrong_family: må tilhøre denne husholdningen
+            bank_reference:
+              needs_account_and_expense: "fungerer bare på en utgiftsregning med konto, fordi den matches mot betalingene på den kontoen"

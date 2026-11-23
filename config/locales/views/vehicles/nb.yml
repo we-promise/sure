@@ -15,6 +15,8 @@ nb:
       year_placeholder: '1985'
       mileage_unit_kilometers: Kilometer
       mileage_unit_miles: Engelske mil
+      purchase_date: "Kjøpsdato"
+      purchase_price: "Kjøpspris"
     new:
       title: Skriv inn kjøretøydetaljer
     overview:

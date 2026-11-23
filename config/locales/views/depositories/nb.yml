@@ -24,3 +24,6 @@ nb:
       savings:
         long: Sparekonto
         short: Sparekonto
+      cash:
+        long: "Kontanter"
+        short: "Kontanter"

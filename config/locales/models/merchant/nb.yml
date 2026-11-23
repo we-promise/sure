@@ -3,3 +3,11 @@ nb:
   models:
     merchant:
       no_merchant: Ingen forhandler
+  activerecord:
+    errors:
+      models:
+        family_merchant:
+          attributes:
+            logo:
+              invalid_content_type: "må være et JPEG-, PNG- eller WebP-bilde"
+              invalid_file_size: "filstørrelsen må være under %{max_megabytes} MB"

@@ -38,6 +38,10 @@ nb:
       unavailable_description_html: For å bruke AI-assistenten må du angi miljøvariabelen <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> eller konfigurere den i innstillingene for selvhosting på instansen din.
       enable_button: Aktiver AI-chatter
       disable_note: Kan deaktiveres når som helst. Alle data som sendes til LLM-leverandørene våre, anonymiseres.
+    ai_busy: "Gjør bare ferdig en bakgrunnsoppgave, så tar jeg tak i meldingen din med en gang."
+    reservation:
+      ready_html: "Jeg har satt noen bakgrunnsoppgaver på vent, så jeg kan ta tak i meldingen din med en gang. De sniker seg inn igjen om %{countdown} s, så bare skriv videre!"
+      busy: "Gjør bare ferdig en bakgrunnsoppgave, så er jeg helt din. Bare skriv videre!"
   assistant_messages:
     assistant_message:
       assistant_reasoning: Assistentens resonnement

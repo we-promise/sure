@@ -40,6 +40,7 @@ nb:
           failed: Mislyktes; sjekk feilsøkingsloggene for push
           enqueue_failed: Kunne ikke legges i kø; sjekk Sidekiq
           expired: Utløpt uten endelig resultat
+        results_label: "Testresultater"
       push_notification:
         title: Testvarsel fra Sure
         body: Dette er et test-push-varsel for Sure-kontoen din.
@@ -50,6 +51,8 @@ nb:
         tabs:
           background_jobs: "Jobber"
           ai: "AI"
+          hosted_usage: "Bruk"
+          configuration: "Konfigurasjon"
         alert:
           title: Bakgrunnsjobbene kjører ikke
         status_section_title: Sidekiq-status
@@ -228,6 +231,9 @@ nb:
             timeout: Tjenesten svarte ikke innen tidsavbruddet for sjekken
             request_failed: Forespørselen til tjenesten mislyktes
             unsupported_provider: Leverandøren støtter ikke denne sjekken
+            no_credit: "Tjenesten avviste forespørselen fordi saldoen på nøkkelen er brukt opp"
+            unauthorized: "Tjenesten avviste API-nøkkelen"
+            unreachable: "Tjenesten kunne ikke nås"
           worker:
             title: Verifisering av worker
             description: Sjekkene ovenfor ble kjørt fra denne webprosessen. Det meste av AI-arbeidet -- assistentsvar, PDF-behandling, embeddinger, automatisk kategorisering og gjenkjenning av forhandlere -- kjører faktisk i en Sidekiq-worker-prosess, som kan ha annen nettverkstilgang, DNS, andre proxy-regler eller til og med annen innlastet legitimasjon. Legg en sjekk i kø for å verifisere workerens egen konfigurasjon og tilkobling.
@@ -254,3 +260,176 @@ nb:
           local_setup:
             title: Anbefalt lokalt oppsett
             description: Kjør LLM-en gjennom ditt lokale OpenAI-kompatible endepunkt, lagre dokumentvektorer i pgvector, og pek embedding-innstillingene mot et OpenAI-kompatibelt embedding-endepunkt. PostgreSQL-imaget må inkludere vector-utvidelsen, og embedding-dimensjonene må samsvare med den valgte modellen.
+          loading: "Kjører sanntidssjekker…"
+      hosted_usage:
+        loading: "Laster inn bruk av hostet tjeneste…"
+        title: "Bruk av hostet tjeneste"
+        snapshot: "Skrivebeskyttet øyeblikksbilde av databasen per %{time}"
+        summary:
+          trial_households_count: "Husholdninger i prøveperiode (siste 30 dager)"
+          trial_members_count: "Nåværende medlemskontoer i prøveperiode"
+          trials_expiring_soon_count: "Prøveperioder som utløper innen 7 dager"
+          cleanup_eligible_count: "Husholdninger som kvalifiserer for opprydding"
+          active_supporter_households_count: "Aktive supporterhusholdninger (lokalt)"
+          supporter_subscription_count: "Abonnementsrader koblet til Stripe"
+        summary_help: "Prøvetallene omfatter abonnementer registrert de siste 30 dagene. Tallene for utløpende prøveperioder, opprydding og supportere omfatter alle gjeldende rader som samsvarer, uten tabellgrensene."
+        limitations_title: "Hva disse tallene kan fortelle oss"
+        limitations: "De nåværende tabellene beholder ikke full historikk over prøveperioder, betalinger eller øktaktivitet. Opprettelse av abonnementer kan skyldes importer. Medlemskontoer er ikke bekreftet som unike personer. Denne visningen endrer ingen husholdnings- eller abonnementsdata. Når den delte demoen tilbakestilles, fjernes gamle husholdninger og økter, så besøkshistorikken kan ikke gjenskapes."
+        trials:
+          title: "Nylige husholdninger i prøveperiode"
+          description: "Abonnementer registrert siden %{date} som fortsatt har en sluttdato for prøveperioden, inkludert konverterte prøveperioder. Viser opptil %{limit} husholdninger."
+          sessions_help: "Økter er lagrede påloggingsposter for aktiverte brukere, ikke brukere som er pålogget nå eller besøk. Utlogging sletter en post. Siste opprettelsestidspunkt er ikke det samme som sist sett."
+          empty: "Ingen husholdninger i prøveperiode er registrert i dette tidsrommet"
+        cleanup:
+          title: "Kvalifisering for opprydding"
+          description: "Samsvarer med det eksisterende omfanget for opprydding: et abonnement på pause eller i prøveperiode som ble avsluttet for mer enn 14 dager siden, eller ingen abonnement og en husholdning som er eldre enn 45 + 14 dager. Viser opptil %{limit} husholdninger."
+          eligibility_help: "Nylige pålogginger hindrer ikke treff. At en husholdning kvalifiserer, betyr ikke at den blir slettet; 90 dager er oppbevaringstiden for arkivet, ikke terskelen for opprydding av prøveperioder."
+          disabled: "Planlagt opprydding av prøveperioder er deaktivert utenfor administrert modus. Dette er bare treff på omfanget."
+          empty: "Ingen husholdninger samsvarer med omfanget for opprydding"
+          reasons:
+            expired_trial_grace_elapsed: "Prøveperioden er avsluttet; 14 dagers karenstid er over"
+            no_subscription_grace_elapsed: "Ingen abonnement; 45 + 14 dager er gått"
+        supporters:
+          title: "Lokal supporterstatus"
+          description: "Gjeldende lokale abonnementsrader med kunde- og abonnements-ID-er i Stripe-format; det syntetiske demoabonnementet er utelatt. Statusene bekrefter ikke mottatte betalinger eller datoer for første betaling. Det sendes ingen forespørsel til Stripe."
+          empty: "Ingen abonnementsrader koblet til Stripe"
+        columns:
+          household: "Husholdnings-ID"
+          recorded_at: "Abonnement registrert"
+          trial_ends_at: "Prøveperioden slutter"
+          status: "Nåværende status"
+          members: "Medlemskontoer"
+          retained_sessions: "Lagrede påloggingsøkter"
+          recent_sessions: "Lagrede økter opprettet siste 30 dager"
+          latest_session: "Siste lagrede pålogging"
+          cleanup_eligible: "Kvalifiserer for opprydding"
+          cleanup_reason: "Årsak"
+          subscription_rows: "Abonnementsrader"
+        statuses:
+          unknown: "Ukjent"
+          incomplete: "Ufullstendig"
+          incomplete_expired: "Ufullstendig, utløpt"
+          trialing: "I prøveperiode"
+          active: "Aktiv"
+          past_due: "Forfalt"
+          canceled: "Kansellert"
+          unpaid: "Ubetalt"
+          paused: "Satt på pause"
+          no_subscription: "Ingen abonnement"
+        not_recorded: "Ikke registrert"
+        eligible: "Kvalifiserer"
+        not_eligible: "Kvalifiserer ikke"
+        synthetic_demo: "Syntetisk demo"
+      optional_services:
+        title: "Valgfrie tjenester"
+        description: "Valgfrie integrasjoner for operatøren. Tjenester som ikke er konfigurert, vises bare til informasjon. Disse sjekkene ser bare på innstillingene; de tester ikke tilkoblingen, sender ikke testhendelser og endrer ikke samtykke til analyse. Utvid en tjeneste for å se detaljer om oppsettet."
+        missing_settings: "Manglende innstillinger: %{settings}"
+        statuses:
+          configured: "Konfigurert"
+          not_configured: "Ikke konfigurert"
+          incomplete: "Ufullstendig konfigurasjon"
+          disabled: "Deaktivert i denne prosessen"
+          not_checked: "Ikke bekreftet"
+        notes:
+          environment_disabled: "Den innlastede integrasjonen er deaktivert for dette Rails-miljøet."
+          explicitly_disabled: "SKYLIGHT_ENABLED deaktiverer instrumenteringen eksplisitt."
+          self_hosted_checkout_disabled: "Betaling av abonnement og faktureringsportalen er deaktivert i selvhostet modus. Stripe-webhooks kan fortsatt konfigureres; pris-ID-er for betaling trengs ikke her."
+          browser_analytics_disabled: "Nettleseranalyse er deaktivert for dette miljøet. Dette deaktiverer ikke serverklienten, som konfigureres separat."
+          shared_feedback_configured: "Tilbakemeldinger i selvhostet modus har et eget, medfølgende prosjekt og aktiveres av sin egen konfigurasjon. Det krever ikke en POSTHOG_KEY fra operatøren. Reservasjon i nettleseren og tilgjengeligheten til SDK-et sjekkes ikke."
+          shared_feedback_disabled: "Det separate prosjektet for tilbakemeldinger i selvhostet modus er deaktivert av innstillingen for tilbakemeldinger eller av miljøinnstillingen. Dette deaktiverer ikke analyse som eies av operatøren."
+          production_only: "Med applikasjonens nåværende konfigurasjon brukes denne integrasjonen bare i produksjon."
+        services:
+          langfuse:
+            title: "Langfuse"
+            description: "Valgfri AI-sporing og evalueringsrapportering. Denne sjekken sender ingen sporinger eller evalueringsforespørsler."
+            guidance: "Sett LANGFUSE_PUBLIC_KEY og LANGFUSE_SECRET_KEY sammen. LANGFUSE_HOST er valgfri. Start de berørte tjenestene på nytt etter at du har endret disse innstillingene."
+          sentry:
+            title: "Sentry"
+            description: "Valgfri rapportering av feil og ytelse. Den nåværende initialiseringen aktiverer rapportering bare i produksjon."
+            guidance: "Sett SENTRY_DSN og start de berørte tjenestene på nytt. Dette sjekker den innlastede SDK-konfigurasjonen uten å fange opp en feil eller sende en hendelse."
+          skylight:
+            title: "Skylight"
+            description: "Valgfri ytelsesinstrumentering av applikasjonen. At konfigurasjonen finnes, bekrefter ikke at agenten kjører eller rapporterer."
+            guidance: "Sett SKYLIGHT_AUTHENTICATION og sørg for at Skylight lastes inn i riktig Rails-miljø. SKYLIGHT_ENABLED=false deaktiverer instrumenteringen; flagget alene laster ikke inn gemmen. Start på nytt etter endringer."
+          stripe:
+            title: "Stripe"
+            description: "Valgfri abonnementsfakturering og betalings-webhooks. Denne sjekken oppretter ingen Stripe-klient, validerer ikke legitimasjon og gjør ingen betalingsforespørsler."
+            guidance: "Sett STRIPE_SECRET_KEY og STRIPE_WEBHOOK_SECRET sammen. Betaling av abonnement i administrert modus krever også STRIPE_MONTHLY_PRICE_ID og STRIPE_ANNUAL_PRICE_ID."
+          posthog:
+            title: "PostHog"
+            description: "Valgfri analyse som eies av operatøren, med konfigurasjonen som ble lastet inn ved oppstart. Konfigurert betyr ikke at en bruker har samtykket til analyse."
+            guidance: "Sett POSTHOG_KEY og en POSTHOG_HOST som ikke er tom, eller la verten være usatt for å bruke standardverdien. Nettleseranalyse krever produksjon, eller POSTHOG_DEVELOPMENT_ENABLED i utvikling. POSTHOG_FEEDBACK_ENABLED styrer de separate tilbakemeldingene i selvhostet modus, ikke analysen til operatøren."
+          logtail:
+            title: "Logtail"
+            description: "Valgfri videresending av produksjonslogger. Når den ikke er konfigurert, fortsetter applikasjonen å logge til standard utdata."
+            guidance: "Sett LOGTAIL_API_KEY og LOGTAIL_INGESTING_HOST sammen, og start de berørte tjenestene på nytt. Denne sjekken sender ingen testlogg."
+      configuration:
+        description: "Konfigurasjon som er synlig for denne webprosessen. Disse sjekkene sender ikke e-post, kontakter ikke leverandører og laster ikke opp eller ned filer. Konfigurert betyr at innstillingene finnes, ikke at levering, leverandørtilgang eller lagringstilgang er bekreftet."
+        statuses:
+          configured: "Konfigurert"
+          not_configured: "Ikke konfigurert"
+          incomplete: "Ufullstendig konfigurasjon"
+          disabled: "Deaktivert"
+          not_checked: "Ikke bekreftet"
+        settings_needed: "Innstillinger du bør se over"
+        unknown_provider: "Ukjent leverandørvalg"
+        provider_statuses:
+          configured: "Konfigurert"
+          not_configured: "API-nøkkel mangler"
+          invalid: "Ugyldig valg"
+        configure_providers: "Åpne innstillinger for selvhosting"
+        storage_backend: "Valgt lagring: %{backend}"
+        storage_backends:
+          local: "Lokal disk"
+          test: "Testdisk"
+          amazon: "Amazon S3"
+          cloudflare: "Cloudflare R2"
+          generic_s3: "S3-kompatibel lagring"
+          google: "Google Cloud Storage"
+          other: "Egendefinert eller ukjent lagringsløsning"
+        checks:
+          smtp:
+            title: "E-post (SMTP)"
+            statuses:
+              configured: "SMTP-innstillingene finnes."
+              not_configured: "SMTP er ikke konfigurert. Tilbakestilling av passord, invitasjoner og andre e-poster fra systemet kan ikke sendes via SMTP."
+              incomplete: "Noen e-postinnstillinger mangler eller er ufullstendige. E-poster fra systemet, eller lenkene i dem, fungerer kanskje ikke."
+              disabled: "E-postlevering er deaktivert i den kjørende mailer-konfigurasjonen."
+              not_checked: "Denne prosessen bruker en annen leveringsmetode enn SMTP, for eksempel forhåndsvisning i utvikling. SMTP-levering vurderes ikke."
+            guidance: "SMTP kan ikke konfigureres i administratorgrensesnittet. Sett miljøvariablene for e-post for både web- og worker-tjenesten, og start deretter begge på nytt. SMTP_USERNAME og SMTP_PASSWORD kan begge utelates for et relé uten autentisering."
+            issues:
+              address: "SMTP_ADDRESS"
+              port: "SMTP_PORT (et tall fra 1 til 65535)"
+              sender: "EMAIL_SENDER (erstatt standardavsenderen sender@sure.local)"
+              app_domain: "APP_DOMAIN (brukes i lenker i e-poster)"
+              authentication: "SMTP_USERNAME og SMTP_PASSWORD (angi begge eller ingen av dem)"
+          securities:
+            title: "Markedspriser"
+            statuses:
+              configured: "Alle aktiverte leverandører av markedspriser er konfigurert."
+              not_configured: "De aktiverte leverandørene av markedspriser mangler API-nøkler. Automatisk søk etter verdipapirer og prisoppslag er ikke tilgjengelig via disse leverandørene."
+              incomplete: "Minst én aktivert leverandør av markedspriser mangler konfigurasjon eller har et ugyldig valg. Verdipapirer som er tilordnet den leverandøren, får kanskje ikke prisoppdateringer."
+              disabled: "Ingen leverandør av markedspriser er aktivert. Automatisk søk etter verdipapirer og prisoppslag er ikke tilgjengelig."
+            guidance: "Velg leverandører og legg til eventuelle API-nøkler som kreves, i innstillingene for selvhosting, eller konfigurer dem i distribusjonsmiljøet. Overstyringer i miljøet har forrang. Offentlige leverandører trenger ikke API-nøkkel."
+          exchange_rates:
+            title: "Valutakurser"
+            statuses:
+              configured: "Den valgte valutakursleverandøren er konfigurert."
+              not_configured: "Ingen brukbar valutakursleverandør er konfigurert. Automatisk valutaomregning kan være utilgjengelig når en lagret kurs mangler."
+            guidance: "Velg en valutakursleverandør og legg til API-nøkkelen i innstillingene for selvhosting hvis det kreves, eller konfigurer den i distribusjonsmiljøet. EXCHANGE_RATE_PROVIDER og miljøoverstyringer for leverandørenes API-nøkler har forrang."
+            issues:
+              invalid_provider: "Den valgte valutakursleverandøren gjenkjennes ikke. Automatiske kursoppslag mislykkes til en støttet leverandør er valgt."
+          storage:
+            title: "Filopplasting og lagring"
+            statuses:
+              configured: "Lagringsinnstillingene finnes; lokal disk trenger ingen skylegitimasjon."
+              not_configured: "Den valgte lagringsløsningen har ingen tilhørende konfigurasjon. Filopplasting kan være utilgjengelig."
+              incomplete: "Nødvendige lagringsinnstillinger mangler eller er ufullstendige. Opplasting eller henting av filer fungerer kanskje ikke."
+              not_checked: "Denne lagringsløsningen bruker ekstern oppdagelse av legitimasjon eller en egendefinert konfigurasjon. Tilgangen kan ikke fastslås ut fra disse innstillingene alene."
+            guidance: "Se over ACTIVE_STORAGE_SERVICE og distribusjonsinnstillingene for den valgte lagringsløsningen. Lokal disk krever vedvarende lagring som deles av web- og worker-tjenesten. Bytte av lagringsløsning flytter ikke eksisterende filer; planlegg eventuell migrering separat."
+            issues:
+              root: "Rotmappe for lokal lagring"
+              bucket: "Lagringsbøtte"
+              region: "Lagringsregion"
+              credentials: "Tilgangsnøkkel og hemmelig nøkkel for lagring (angi begge, eller bruk ekstern oppdagelse av legitimasjon)"
+              endpoint: "Lagringsendepunkt (og CLOUDFLARE_ACCOUNT_ID for R2)"

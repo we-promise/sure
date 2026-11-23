@@ -65,6 +65,11 @@ nb:
       cancelled_chip: Sagt opp %{date}
       price_changes: Prisendringer
       price_change_line: '%{from} → %{to}'
+      overview: "Oversikt"
+      once_kind_hint: "Merk transaksjonen som engangsbetaling for å holde den utenfor gjennomsnittene dine."
+      rule_reference: "Betalinger med «%{reference}» i meldingen knyttes til denne regningen, uansett beløp eller dato"
+      rule_reference_only: "Bare betalinger med «%{reference}» i meldingen knyttes til denne regningen, uansett beløp eller dato"
+      rule_detected: "Knyttes til transaksjoner med navnet %{name}"
     month_pulse:
       bill_count:
         one: '%{count} regning'
@@ -80,6 +85,8 @@ nb:
       unconvertible:
         one: '%{count} regning er ikke tatt med fordi valutakurs mangler'
         other: '%{count} regninger er ikke tatt med fordi valutakurs mangler'
+      pulse_until: "til %{date}"
+      view_calendar: "Vis kalender"
     summary:
       remaining: '%{amount} gjenstår'
       paid_headline: '%{amount} betalt'
@@ -102,6 +109,8 @@ nb:
       days_after:
         one: '%{count} dag etter forfall'
         other: '%{count} dager etter forfall'
+      same_transfer: "Overføring til samme konto"
+      reference: "Betalingsmeldingen inneholder «%{reference}»"
     attention:
       needs_review: Treffet må gjennomgås
       partial: "Delvis betalt"
@@ -109,6 +118,7 @@ nb:
       overdue:
         one: '%{count} dag over forfall'
         other: '%{count} dager over forfall'
+      paused: "Satt på pause"
     paid_label: Betalt
     paid_over_short: Betalt, for mye
     installment_progress: Avdrag %{done_plus_one} av %{total}
@@ -194,6 +204,12 @@ nb:
       review_plan: Se gjennom planen
       allocation_aria: Av %{income} i inntekt forfaller %{due} nå, %{reserved} er satt av til senere, og %{safe} kan trygt brukes.
       allocation_aria_short: '%{income} i inntekt går til det som er bundet opp her, og det trengs %{short} til.'
+      bridge_left: "%{amount} igjen etter regninger"
+      bridge_show_more:
+        one: "Vis 1 til"
+        other: "Vis %{count} til"
+      bridge_allocation_aria: "Av %{cash} på kontoene dine forfaller %{due} før neste lønningsdag, og %{left} er igjen."
+      item_overdue: "Forfalt"
     reset_feed_token:
       done: Kalenderlenken er tilbakestilt. Kalenderapper som bruker den gamle lenken, slutter å oppdateres; abonner på nytt med den nye.
       confirm: Vil du tilbakestille kalenderlenken? Alle lenker som er delt tidligere, slutter å fungere.
@@ -238,6 +254,7 @@ nb:
         income: Inntekt
         transfer: Overføring
         other: Annet
+      dismissed_hidden_description: "Avviste regninger er skjult."
     show:
       edit: Rediger regning
     index:

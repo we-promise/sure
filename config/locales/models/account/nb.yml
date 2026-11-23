@@ -9,6 +9,13 @@ nb:
         family_id: "%{moniker}"
         name: Navn
         subtype: Undertype
+        logo: "Logo"
+      depository:
+        subtype: "Kontotype"
+      investment:
+        subtype: "Investeringstype"
+      loan:
+        subtype: "Lånetype"
     models:
       account: Konto
       account/credit: Kredittkort
@@ -19,6 +26,13 @@ nb:
       account/other_liability: Annen gjeld
       account/property: Eiendom
       account/vehicle: Kjøretøy
+    errors:
+      models:
+        account:
+          attributes:
+            logo:
+              invalid_content_type: "må være et PNG-, JPEG-, GIF-, WebP- eller ICO-bilde"
+              too_large: "må være mindre enn %{max_size} MB"
   account_order:
     balance_asc:
       label: Saldo (lav til høy)
@@ -32,3 +46,6 @@ nb:
     name_desc:
       label: Navn (Å–A)
       label_short: Navn ↓
+    manual:
+      label: "Manuell (dra for å endre rekkefølge)"
+      label_short: "Manuell"

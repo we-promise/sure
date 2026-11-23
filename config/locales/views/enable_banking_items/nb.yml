@@ -74,6 +74,24 @@ nb:
       create_accounts: Opprett kontoer
       creating_accounts: Oppretter kontoer...
       cancel: Avbryt
+      skip_notice: "Sure husker kontoer du hopper over, og slutter å importere dem til du kobler dem til en konto."
+      account_types:
+        skip: "Hopp over denne kontoen"
+        depository: "Brukskonto eller sparekonto"
+        credit_card: "Kredittkort"
+        investment: "Investeringskonto"
+        loan: "Lån eller boliglån"
+        other_asset: "Annen eiendel"
+      subtype_labels:
+        depository: "Kontoundertype:"
+        investment: "Investeringstype:"
+        loan: "Lånetype:"
+      subtype_messages:
+        credit_card: "Kredittkort settes automatisk opp som kredittkortkontoer."
+        other_asset: "Andre eiendeler settes opp som generelle eiendeler."
+      psd2_savings_notice: "Merk: Enkelte regulerte franske sparekontoer (Livret A, PEL, LEP, LDDS) kan ha begrenset eller ingen tilgang via Open Banking (PSD2). Hvis en sparekonto mangler, kan du legge den til manuelt."
+      select_subtype: "Velg undertype"
+      select_type: "Velg type"
     new:
       link_enable_banking_title: Koble til Enable Banking
       session_expired: Samtykket har utløpt – ny autorisering kreves

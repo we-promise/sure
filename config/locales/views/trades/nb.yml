@@ -65,8 +65,14 @@ nb:
       no_category: Ingen kategori
       sell: Salg
       type_label: Type
+      lot_label: "Solgt fra parti"
+      lot_oldest_first: "Eldste først"
+      lot_option: "%{date} · %{qty} til %{price}"
     api_errors:
       activity_label_must_match_type: investment_activity_label må være %{label} når type er %{type}
       invalid_activity_label: Ugyldig etikett for investeringsaktivitet
       invalid_type: Ugyldig type
       supported_types: 'type må være en av: %{types}'
+    trade:
+      scheduled: "Planlagt"
+      scheduled_tooltip: "Datert frem i tid – påvirker ikke saldoen før da"

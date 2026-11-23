@@ -46,6 +46,16 @@ nb:
       exclude_from_reports: Utelat fra alle rapporter
       enable_category_matcher_label: Aktiver automatisk kategorisering
       enable_category_matcher_hint: Når dette er aktivert, brukes leverandørens foreslåtte kategori på importerte transaksjoner. Deaktiver for å la nye transaksjoner være ukategoriserte.
+      institution_domain_hint: "Brukes til å finne ikonet til institusjonen."
+      institution_domain_missing_logo_key_hint: "Brukes til å finne ikonet til institusjonen. Brandfetch-logoer er ikke tilgjengelige fordi ingen Brandfetch-klient-ID er konfigurert."
+      institution_domain_settings_link: "Legg til en under innstillingene for selvhosting"
+      logo_label: "Ikon"
+      logo_hint: "Eller last opp ditt eget PNG-, JPEG-, GIF-, WebP- eller ICO-bilde på opptil 1 MB. Det erstatter Brandfetch-logoen."
+      cost_basis_method_label: "Metode for anskaffelseskost"
+      cost_basis_method_hint: "Hvordan et salg knyttes til aksjene det kom fra. Hvis du endrer dette, beregnes tidligere realiserte gevinster og gjennomsnittlig kostnad for det du eier, på nytt. Ved salg av aksjer med ukjent kostnad vises gevinsten som ukjent."
+      cost_basis_methods:
+        average: "Gjennomsnittlig kostnad"
+        fifo: "Først inn, først ut (FIFO)"
     index:
       accounts: Kontoer
       manual_accounts:
@@ -53,6 +63,9 @@ nb:
       new_account: Ny konto
       sync: Synkroniser alle
       cancel_sync: Avbryt synkronisering
+      financekit_accounts:
+        title: "Apple Wallet"
+        description: "Administrer Apple Wallet-tilkoblinger og synkronisering i Sure-appen for iOS."
     new:
       import_accounts: Importer kontoer
       method_selector:
@@ -116,6 +129,13 @@ nb:
         statements: Kontoutskrifter
         exclude_from_reports: Utelat fra alle rapporter
         include_in_reports: Ta med i rapporter
+        reconcile_all:
+          cleared: "Merk alle som bekreftet"
+          confirm_accept: "Merk alle som %{status}"
+          confirm_body: "Dette endrer avstemmingsstatusen for alle transaksjonene på denne kontoen. Opplastede kontoutskrifter forblir uendret."
+          confirm_title: "Vil du merke alle transaksjonene som %{status}?"
+          reconciled: "Merk alle som avstemt"
+          unreconciled: "Merk alle som ikke avstemt"
       limited_fx_history_warning: Historikk for valutakurser er bare tilgjengelig fra og med %{date}. Transaksjoner før denne datoen bruker omtrentlige valutaomregninger – dette kan skje når valutakursleverandøren bare tilbyr et begrenset historisk tidsrom.
       tabs:
         activity: Aktivitet
@@ -123,10 +143,12 @@ nb:
         overview: Oversikt
         schedule: Nedbetalingsplan
         statements: Kontoutskrifter
+        extra_repayments: "Ekstra innbetalinger"
       header:
         complete_setup: Fullfør oppsett
     update:
       success: "%{type} konto oppdatert"
+      logo_not_applied: "Kontoen ble lagret, men det valgte ikonet kunne ikke lastes ned. Prøv igjen, eller last opp ditt eget."
     not_authorized: Du har ikke tilgang til å administrere denne kontoen
     set_default:
       depository_only: Bare bankkontoer og kredittkort kan angis som standard.
@@ -146,6 +168,12 @@ nb:
       new_account_group: Legg til %{account_group}
       expand_all: Utvid alle
       collapse_all: Skjul alle
+      reorder_account: "Flytt %{account}"
+      reorder_hint: "Dra for å endre rekkefølgen. Med tastaturet trykker du Enter og deretter piltastene."
+      sort_mode:
+        start: "Sorter kontoer"
+        hint: "Dra kontoene etter håndtaket for å endre rekkefølgen."
+        done: "Ferdig"
     types:
       depository: Bankkonto
       investment: Investering
@@ -193,6 +221,7 @@ nb:
       warning_transactions_kept: Alle eksisterende transaksjoner og saldoer beholdes
       warning_can_delete: Etter frakoblingen kan du slette kontoen om nødvendig
       confirm_button: Bekreft og koble fra
+      warning_wallet_connection: "Alle kontoene i denne Apple Wallet-tilkoblingen blir koblet fra. Transaksjonene og saldoene deres beholdes. Du kan koble til på nytt via Sure-appen for iOS med et nytt Wallet-oppsett."
     unlink:
       success: Kontoen er koblet fra. Den er nå en manuell konto.
       not_linked: Kontoen er ikke koblet til en leverandør
@@ -203,6 +232,50 @@ nb:
       description: Velg hvilken leverandør du vil bruke for å koble til %{account_name}
       already_linked: Kontoen er allerede koblet til en leverandør
       no_providers: Ingen leverandører er konfigurert ennå
+    reconciliation_indicator:
+      matched: "Alle transaksjoner er avstemt"
+      needs_attention: "Transaksjoner må avstemmes"
+    reconcile_all:
+      success:
+        one: "%{count} transaksjon merket som %{status}."
+        other: "%{count} transaksjoner merket som %{status}."
+      invalid_status: "Velg en gyldig avstemmingsstatus."
+      not_manual_account: "Masseavstemming er bare tilgjengelig for manuelt registrerte kontoer."
+    scheduled_balance_tooltip:
+      description: "Saldoen din når alle planlagte transaksjoner er bokført"
+      current: "Nåværende saldo"
+      scheduled: "Planlagt"
+      projected: "Forventet saldo"
+    logo_caption:
+      appstore: "Fra App Store"
+      brandfetch: "Fra Brandfetch"
+      duckduckgo: "Fra DuckDuckGo"
+      google: "Fra Google"
+      googleplay: "Fra Google Play"
+      none: "Ingen ikon ennå"
+      rustore: "Fra RuStore"
+      uploaded: "Lastet opp av deg"
+      yandex: "Fra Yandex"
+    logo_field:
+      current: "nåværende"
+      domain_needed: "Skriv inn domenet til institusjonen, for eksempel tbank.ru, for å velge et ikon."
+      empty: "Fant ingen ikoner for dette domenet. Last opp ditt eget nedenfor."
+      pick: "Velg ikon"
+      pending: "Tas i bruk når du lagrer"
+      remove: "Fjern"
+      removal: "Fjernes når du lagrer. Det automatiske ikonet kommer tilbake."
+      searching: "Søker…"
+    logo_options:
+      size: "%{size} px"
+      sources:
+        appstore: "App Store"
+        brandfetch: "Brandfetch"
+        duckduckgo: "DuckDuckGo"
+        google: "Google"
+        googleplay: "Google Play"
+        rustore: "RuStore"
+        yandex: "Yandex"
+      stored: "Lagret ikon"
   email_confirmations:
     new:
       invalid_token: Ugyldig eller utløpt bekreftelseslenke.

@@ -18,6 +18,7 @@ nb:
             base:
               at_least_one_linked_account_required: Velg minst én konto som skal finansiere dette målet.
               whole_account_conflict_on_restore: 'Kan ikke gjenopprette dette målet: «%{account_name}» er nå helt øremerket for «%{goal_name}». Angi et beløp på ett av dem først.'
+              missing_exchange_rate: "Det finnes ingen valutakurs ennå for en av kontoene i dette målet, så det kan ikke fullføres."
             target_mode:
               months_requires_maintained: Bare en buffer du vedlikeholder kan ha et mål angitt i måneder med utgifter.
             target_months:
@@ -33,3 +34,5 @@ nb:
               below_consumed: Kan ikke sette et mål lavere enn det dette målet allerede har registrert som brukt.
             currency:
               locked_after_linked: Kan ikke endre valuta etter at målet er knyttet til kontoer.
+            progress_basis:
+              locked_once_completed: "Gjenåpne eller gjenopprett dette målet før du endrer hva som teller mot det."

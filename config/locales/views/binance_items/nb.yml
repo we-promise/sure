@@ -20,6 +20,7 @@ nb:
       import_selected: Importer valgte
       cancel: Avbryt
       creating: Importerer...
+      historical_import: "Historisk import"
     complete_account_setup:
       invalid_sync_start_date: Startdatoen for synkronisering må være en gyldig dato tilbake i tid.
       success:
@@ -63,6 +64,10 @@ nb:
       errors:
         only_manual: Bare manuelle kontoer kan kobles til Binance
         invalid_binance_account: Ugyldig Binance-konto
+    select_accounts:
+      connection_unavailable: "Den Binance-tilkoblingen er ikke tilgjengelig. Velg en i leverandørinnstillingene."
+      no_credentials_configured: "Koble til Binance i leverandørinnstillingene før du legger til kontoene."
+      select_connection: "Velg en Binance-tilkobling i leverandørinnstillingene."
   binance_item:
     syncer:
       checking_credentials: Kontrollerer legitimasjon...

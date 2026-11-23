@@ -102,3 +102,15 @@ nb:
       save: Lagre
       overwrite_confirm_title: Vil du overskrive anskaffelseskosten?
       overwrite_confirm_body: Dette erstatter den nåværende anskaffelseskosten på %{current}.
+      per_share_label: "Per aksje"
+    lots:
+      title: "Partier"
+      opening: "Eid før første handel"
+      unknown: "Ukjent per enhet"
+      per_unit: "%{amount} per enhet"
+      total_cost_label: "Totalt betalt for dette partiet"
+      total_cost_hint: "Hva hele partiet kostet da du kjøpte det. Sletter du handelen, fjernes partiet og kostnaden du har angitt."
+      save: "Lagre"
+      unlock: "Fjern den manuelle kostnaden"
+      provider_cost_hint: "Leverandøren din oppgir kostnaden for denne posisjonen, så kostnaden for partiene kan ikke angis."
+      provider_cost_clear_hint: "En kostnad du har angitt tidligere, kan fortsatt fjernes."

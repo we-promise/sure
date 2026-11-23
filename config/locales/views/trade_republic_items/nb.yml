@@ -82,6 +82,7 @@ nb:
         account_type_cash: Kontantkonto
         account_summary: "%{account_type} • Saldo: %{balance}"
         account_id: 'Konto-ID: %{account_id}'
+        account_type_crypto: "Kryptokonto"
       link_existing:
         description: Eller koble den oppdagede Trade Republic-kontoen til en eksisterende manuell investeringskonto.
         manual_account_option: "%{name} (%{balance})"

@@ -5,6 +5,8 @@ nb:
       name: Interactive Brokers
       connection_description: Koble til en Interactive Brokers Flex Web Service-rapport
       institution_name: Interactive Brokers
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "Koble til kontoer fra Flex Query-en %{name}"
   ibkr_items:
     defaults:
       name: Interactive Brokers

@@ -242,3 +242,5 @@ nb:
   oauth:
     registration:
       invalid_redirect_uris: redirect_uris må bruke https, loopback-http eller et URI-skjema for en innebygd app
+      invalid_client_name: "client_name kan ikke inneholde toveis kontrolltegn"
+      reserved_client_name: "client_name er reservert for førstepartsapper"

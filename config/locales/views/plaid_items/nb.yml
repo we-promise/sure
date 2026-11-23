@@ -3,6 +3,9 @@ nb:
   plaid_items:
     create:
       success: Kontoen ble koblet til. Vent mens kontoene synkroniseres.
+      already_connected: "Du har allerede en tilkobling til denne institusjonen, så denne ble ikke lagt til."
+      exchange_failed: "Vi kunne ikke legge til denne tilkoblingen. Prøv igjen, og sjekk serverloggene hvis problemet vedvarer."
+      token_expired: "Denne tilkoblingen utløp før den ble lagt til. Koble til institusjonen på nytt."
     destroy:
       success: Kontoer planlagt for sletting.
     plaid_item:
@@ -39,3 +42,45 @@ nb:
       invalid_account: Ugyldig Plaid-konto valgt
       already_linked: Denne Plaid-kontoen er allerede koblet til
       success: Kontoen ble koblet til Plaid
+    auto_link_opener:
+      create_failed: "Vi fikk ikke bekreftet at denne tilkoblingen ble lagt til. Last inn siden på nytt for å sjekke før du prøver igjen."
+    duplicate_warning:
+      close: "Lukk"
+      confirm: "Bekreft denne tilkoblingen"
+      connected_by: "Koblet til av %{name}"
+      eu_no_add_accounts: "Plaid støtter ikke å legge til kontoer i en eksisterende EU-tilkobling. Hvis du vil endre hvilke kontoer som er tilkoblet, fjerner du denne og legger den til på nytt."
+      linked_on: "Koblet til %{date}"
+      manage_connection: "Gå til kontoer"
+      mask: "****%{mask}"
+      no_accounts: "Ingen kontoer er synkronisert fra denne tilkoblingen ennå."
+      overlap:
+        all_connected:
+          one: "Kontoen du prøvde å legge til, er allerede tilkoblet, så å legge den til på nytt ville bare lage et duplikat."
+          other: "Alle de %{count} kontoene du prøvde å legge til, er allerede tilkoblet, så å legge dem til på nytt ville bare lage duplikater."
+        different_login: "Hvis du vil koble til en annen pålogging hos %{institution}, velger du Ny konto igjen og logger inn med den påloggingen via Plaid."
+        more_accounts: "Hvis du vil legge til flere kontoer i denne tilkoblingen, lukker du dette og velger Legg til kontoer på tilkoblingen til %{institution}."
+        others_connected:
+          one: "Sure har allerede denne kontoen via tilkoblingen til %{name}, så å legge til din ville bare lage et duplikat."
+          other: "Sure har allerede disse kontoene via tilkoblingen til %{name}, så å legge til din ville bare lage duplikater."
+        others_connected_several:
+          one: "Sure har allerede denne kontoen via andre medlemmers tilkoblinger, så å legge til din ville bare lage et duplikat."
+          other: "Sure har allerede disse kontoene via andre medlemmers tilkoblinger, så å legge til din ville bare lage duplikater."
+        none_connected: "Ingen av kontoene du prøvde å legge til, er tilkoblet ennå, så dette er sannsynligvis en annen pålogging. Å legge den til teller bare som enda en Plaid-tilkobling."
+        some_connected:
+          connected:
+            one: "Den andre er allerede tilkoblet, så å legge til denne tilkoblingen ville duplisere den og telle som enda en Plaid-tilkobling."
+            other: "De %{count} andre er allerede tilkoblet, så å legge til denne tilkoblingen ville duplisere dem og telle som enda en Plaid-tilkobling."
+          unconnected:
+            one: "Én konto du prøvde å legge til, er ikke tilkoblet ennå:"
+            other: "%{count} kontoer du prøvde å legge til, er ikke tilkoblet ennå:"
+        unknown:
+          one: "Disse kontoene kan ikke sjekkes mot den eksisterende tilkoblingen din. Hvis det er de samme kontoene, vil denne tilkoblingen duplisere dem og telle som enda en Plaid-tilkobling."
+          other: "Disse kontoene kan ikke sjekkes mot de eksisterende tilkoblingene dine. Hvis det er de samme kontoene, vil denne tilkoblingen duplisere dem og telle som enda en Plaid-tilkobling."
+      title:
+        one: "Du har allerede en tilkobling til denne institusjonen"
+        other: "Du har allerede %{count} tilkoblinger til denne institusjonen"
+      title_all_connected: "Du har allerede opprettet denne tilkoblingen"
+      title_others_connected:
+        one: "Denne kontoen er allerede tilkoblet"
+        other: "Disse kontoene er allerede tilkoblet"
+      update_existing: "Oppdater eksisterende tilkobling"

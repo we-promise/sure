@@ -90,6 +90,7 @@ nb:
       token_label: Token
       token_placeholder: Lim inn token her
       update_connection: Oppdater tilkobling
+      disconnect: "Koble fra"
     provider_connection:
       default_description: Koble til banken din via Mercury
       default_name: Mercury

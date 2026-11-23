@@ -36,6 +36,7 @@ nb:
       files_hint: PDF, CSV eller XLSX. Maks %{max_size} MB per fil.
       files_label: Kontoutskriftsfiler
       inbox_upload: Last opp
+      period_hint: "Sure leser perioden fra PDF-en når den er oppgitt der, eller fra en dato i filnavnet (f.eks. 2026-04). Du kan også angi den på kontoutskriften."
     index:
       account_label: Konto
       confidence: '%{confidence} samsvar'

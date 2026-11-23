@@ -30,6 +30,11 @@ nb:
       create_merchant: Opprett
       create_merchant_error: Kunne ikke opprette forhandler
       merchant_search_placeholder: Søk etter eller opprett forhandler
+      create_as_subcategory: "Legg til som underkategori …"
+      choose_parent: "Opprett «%{name}» under:"
+      back_to_categories: "Tilbake"
+      no_matching_categories: "Ingen samsvarende kategorier"
+      tags_save_error: "Taggene kunne ikke lagres. Endre dem igjen for å prøve på nytt, eller last inn siden på nytt."
     new:
       new_transaction: Ny transaksjon
     show:
@@ -89,6 +94,27 @@ nb:
       transfer_or_debt_payment: Overføring eller nedbetaling av gjeld?
       open_matcher: Åpne kobling
       convert: Konverter
+      category_set_on_hidden_outflow: "Dette er den innkommende siden av en overføring. Kategorien hører til den utgående siden, på en konto du ikke har tilgang til, og kan bare endres der."
+      category_set_on_outflow: "Dette er den innkommende siden av en overføring. Kategorien hører til den utgående siden og kan bare endres der, slik at budsjettene bare teller den én gang."
+      original_description: "Opprinnelig beskrivelse"
+      payment_channel: "Betalingskanal"
+      transaction_code: "Transaksjonskode"
+      plaid_payment_meta_label: "Betalingsinformasjon · %{name}"
+      plaid_counterparty_label: "Motpart %{index}"
+      provider_extra_fields:
+        by_order_of: "På vegne av"
+        confidence_level: "Konfidensnivå"
+        entity_id: "Enhets-ID"
+        logo_url: "Logo-URL"
+        name: "Navn"
+        payee: "Mottaker"
+        payer: "Betaler"
+        phone_number: "Telefonnummer"
+        ppd_id: "PPD-ID"
+        reason: "Årsak"
+        reference_number: "Referansenummer"
+        type: "Type"
+        website: "Nettsted"
     header:
       edit_categories: Rediger kategorier
       edit_imports: Rediger importer
@@ -107,6 +133,12 @@ nb:
       split: Oppdelt
       split_tooltip: Denne transaksjonen er delt opp i flere oppføringer
       split_child_tooltip: Del av en oppdelt transaksjon
+      scheduled: "Planlagt"
+      scheduled_tooltip: "Datert frem i tid – påvirker ikke saldoen før da"
+      transfer_hint: "Overføring?"
+      transfer_hint_dismiss: "Ikke en overføring"
+      transfer_hint_tooltip: "En samsvarende transaksjon på en annen konto ser ut som den andre siden av en overføring – klikk for å koble dem"
+      view_merchant: "Vis forhandler"
     index:
       transaction: transaksjon
       transactions: transaksjoner
@@ -137,6 +169,11 @@ nb:
           transfer: Overføring
           confirmed: Bokført
           pending: Reservert
+          balance_updates: "Synkroniserte saldoer"
+          ai_current: "AI"
+          ai_history: "AI-historikk"
+          attachment_with: "Med vedlegg"
+          attachment_without: "Uten vedlegg"
         type_filter:
           expense: Utgift
           income: Inntekt
@@ -155,6 +192,19 @@ nb:
         status_filter:
           confirmed: Bokført
           pending: Reservert
+        balance_updates_filter:
+          always_shown: "Vises alltid, som angitt i"
+          hint: "Gjelder bare denne visningen. Slå dem på i"
+          preferences_link: "Preferanser"
+          show: "Vis synkroniserte saldooppdateringer"
+        attachment_filter:
+          with: "Med vedlegg"
+          without: "Uten vedlegg"
+        ai_filter:
+          current: "AI"
+          current_description: "Kategorien er fortsatt den som ble tildelt automatisk (AI eller Bayes)."
+          history: "AI-historikk"
+          history_description: "Ble kategorisert automatisk, men kategorien er endret siden."
       menu:
         account_filter: Konto
         amount_filter: Beløp
@@ -167,6 +217,8 @@ nb:
         tag_filter: Tagg
         type_filter: Type
         status_filter: Status
+        loading: "Laster inn filtre..."
+        reconcile_status_filter: "Avstemming"
       search:
         equal_to: lik
         greater_than: større enn
@@ -193,11 +245,16 @@ nb:
         save: Lagre
         tags_label: Tagger
         transactions_section: Transaksjoner
+        no_change: "(ingen endring)"
+        reconciled_status_hint: "Gjelder bare manuelt registrerte kontoer (uten banksynkronisering)."
+        reconciled_status_label: "Avstemmingsstatus"
+        transfer_fields_hint: "For overføringer endres ikke dato og forhandler. Kategorien gjelder bare utgående overføringer som tillater det."
     unknown_name: Ukjent transaksjon
     selection_bar:
       duplicate: Dupliser
       edit: Rediger
       selected: valgt
+      reconcile: "Avstem"
     create:
       created: Transaksjon opprettet
     update:
@@ -231,6 +288,8 @@ nb:
       payment_confirmed: Betalingen er bekreftet
       reject_match: Avvis kobling
       transfer_confirmed: Overføringen er bekreftet
+      auto_matched_tooltip_html: "%{amount} på %{account} den %{date}. Klikk for å se gjennom."
+      auto_matched_tooltip_hidden: "En transaksjon på en konto du ikke kan se."
     merge_duplicate:
       success: Transaksjonene ble slått sammen
       failure: Kunne ikke slå sammen transaksjonene
@@ -250,6 +309,9 @@ nb:
       expenses: Utgifter
       inflow: Inn
       outflow: Ut
+      scheduled_count:
+        one: "inkludert %{count} planlagt"
+        other: "inkludert %{count} planlagte"
     categorizes:
       show:
         exit: Avslutt
@@ -299,6 +361,11 @@ nb:
         category: Kategori
         tag: Tagg
         merchant: Forhandler
+        balance_updates: "Saldoer"
+        reconcile_status: "Avstemming"
+        reconcile_status_hint: "Bare manuelle kontoer er inkludert."
+        ai: "AI"
+        attachment: "Vedlegg"
     convert_to_trade:
       title: Konverter til verdipapirhandel
       description: Konverter denne transaksjonen til en handel med verdipapirdetaljer
@@ -359,3 +426,18 @@ nb:
         other: Filer (%{count})
       browse_to_add: Bla gjennom for å legge til filer
       max_reached: Maksimalt antall filer er nådd (%{count}/%{max}). Slett en eksisterende fil for å laste opp en ny.
+    transaction_category:
+      set_on_outflow: "Kategorien hører til den utgående siden av denne overføringen og kan bare endres der"
+    reconcile:
+      success: "Merket som %{status}"
+      failure: "Kunne ikke oppdatere avstemmingsstatus"
+      unavailable: "Avstemming er ikke aktivert for denne husholdningen"
+      not_manual_account: "Avstemmingsstatus gjelder bare manuelt registrerte kontoer (uten banksynkronisering)"
+      statuses:
+        unreconciled: "Ikke avstemt"
+        cleared: "Bekreftet"
+        reconciled: "Avstemt"
+      badge:
+        unreconciled_tooltip: "Ikke sjekket mot en kontoutskrift ennå. Klikk for å merke som bekreftet."
+        cleared_tooltip: "Bekreftet på en kontoutskrift, men ikke ferdig avstemt. Klikk for å merke som avstemt."
+        reconciled_tooltip: "Perioden på kontoutskriften er ferdig avstemt. Klikk for å tilbakestille til ikke avstemt."

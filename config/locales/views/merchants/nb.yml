@@ -13,6 +13,9 @@ nb:
       name_placeholder: Forhandlernavn
       website_placeholder: Nettsted (f.eks. starbucks.com)
       website_hint: Oppgi forhandlerens nettsted for å vise logoen automatisk
+      logo_label: "Logo"
+      logo_hint: "Overstyrer logoen fra nettstedet. JPEG, PNG eller WebP, opptil %{max_megabytes} MB."
+      remove_logo_label: "Fjern opplastet logo"
     index:
       empty: Ingen forhandlere ennå
       new: Ny forhandler
@@ -80,3 +83,12 @@ nb:
     enhance:
       success: Forbedring av leverandørforhandlere har startet. Forhandlerne forbedres og duplikater slås sammen om kort tid.
       already_running: Forbedringen pågår allerede. Vent til den er ferdig.
+  merchants:
+    show:
+      average_transaction: "Gjennomsnittlig transaksjon"
+      edit: "Rediger forhandler"
+      first_transaction: "Første transaksjon"
+      last_transaction: "Siste transaksjon"
+      summary: "Sammendrag"
+      total_spending: "Totalt forbruk"
+      total_transactions: "Antall transaksjoner"

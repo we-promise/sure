@@ -31,6 +31,9 @@ nb:
       new: Ny kategori
       delete_all: Slett alle
       merge: Slå sammen kategorier
+      lock_categories: "Lås oppretting av kategorier"
+      locked_message: "Oppretting av kategorier er låst. Importer og banksynkroniseringer kan fortsatt legge til kategorier."
+      unlock_categories: "Lås opp oppretting av kategorier"
     new:
       new_category: Ny kategori
     update:
@@ -57,6 +60,10 @@ nb:
       transfer: Overføring
       payment: Innbetaling
       trade: Handel
+    locked: "Kategoriene er låst. Lås dem opp for å legge til en ny kategori."
+    toggle_lock:
+      locked: "Kategoriene er låst"
+      unlocked: "Kategoriene er låst opp"
   category:
     dropdowns:
       show:

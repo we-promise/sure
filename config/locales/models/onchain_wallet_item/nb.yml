@@ -10,6 +10,8 @@ nb:
       optimism: Optimism
       polygon: Polygon
       solana: Solana
+      cosmos: "Cosmos Hub"
+      polkadot: "Polkadot"
     institution_name: Egenforvaltede lommebøker
   onchain_wallet_item:
     movement:

@@ -1,0 +1,36 @@
+---
+nb:
+  portfolios:
+    empty_state:
+      add_account: "Legg til en investeringskonto"
+      description: "Megler-, pensjons- og kryptokontoer som du tar med i økonomien og rapportene dine, vises her med saldo."
+      title: "Ingen investeringskontoer å vise"
+    holdings:
+      columns:
+        account: "Konto"
+        accounts: "Kontoer"
+        avg_cost: "Snittkost"
+        cost_basis_per_share: "Anskaffelseskost per aksje"
+        day_change: "Dag"
+        qty: "Antall"
+        security: "Verdipapir"
+        unrealized: "Urealisert gevinst/tap"
+        value: "Verdi"
+        weight: "Andel"
+      day_change_partial: "%{covered} av %{total} posisjoner"
+      label: "Beholdninger"
+      missing_cost_basis: "Ingen anskaffelseskost"
+      missing_cost_basis_hint: "Minst én posisjon har ukjent anskaffelseskost. Gjennomsnittlig kostnad og avkastning gjelder bare posisjonene som har en."
+      no_cost_basis: "ingen anskaffelseskost"
+      open_position: "Åpne"
+      position_missing_cost_basis_hint: "Denne posisjonen har ukjent anskaffelseskost, så den har ingen gjennomsnittlig kostnad og holdes utenfor avkastningen i raden."
+      positions_caption: "Posisjoner i %{ticker} per konto"
+      toggle_positions: "Vis posisjoner i %{ticker}"
+    sections:
+      accounts: "Kontoer"
+      holdings: "Beholdninger"
+    show:
+      section_aria: "Seksjonen %{title}. Trykk Enter eller mellomrom for å ta tak i den og endre rekkefølgen, og bruk deretter piltastene for å flytte den."
+      sections_aria: "Porteføljeseksjoner"
+      subtitle: "Hva du eier på tvers av investeringskontoene dine, og hva hver konto er verdt."
+      title: "Portefølje"

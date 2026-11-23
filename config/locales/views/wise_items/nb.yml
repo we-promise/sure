@@ -43,6 +43,7 @@ nb:
     entries:
       default_name: Wise-transaksjon
       fee_name: Wise-gebyr
+      refund_name: "Refusjon fra Wise"
     activities:
       jar_deposit: Overføring til Jar
       jar_withdrawal: Overføring fra Jar
@@ -90,6 +91,9 @@ nb:
       account_sync_failed:
         one: Synkronisering av %{count} Wise-konto kunne ikke planlegges.
         other: Synkronisering av %{count} Wise-kontoer kunne ikke planlegges.
+      fetch_failed:
+        one: "%{count} forespørsel til Wise mislyktes. Neste synkronisering prøver den på nytt."
+        other: "%{count} forespørsler til Wise mislyktes. Neste synkronisering prøver dem på nytt."
     provider_connection:
       default_name: Wise
       default_description: Koble til Wise-flervalutakontoen din
@@ -145,6 +149,7 @@ nb:
       no_accounts_found: Fant ingen ukoblede Wise-saldoer.
       link_account: Koble til saldo
       cancel: Avbryt
+      not_found: "Fant ikke kontoen eller Wise-saldoen."
     link_accounts:
       not_found: Fant ikke Wise-saldoen.
       success: Wise-saldoen ble koblet til kontoen.
@@ -153,6 +158,9 @@ nb:
       not_found: Fant ikke kontoen eller Wise-saldoen.
       success: '%{account_name} ble koblet til Wise'
       failed: Kunne ikke koble til kontoen. Prøv igjen.
+      account_already_linked: "Denne kontoen er allerede koblet til en leverandør."
+      unsupported_account_type: "Wise-saldoer kan bare kobles til kontantkontoer."
+      currency_mismatch: "Denne Wise-saldoen er i %{balance_currency}, men kontoen er i %{account_currency}. Velg en saldo i kontoens valuta."
     complete_account_setup:
       not_found: Fant ikke Wise-saldoen.
       success: Kontoen ble opprettet og koblet til.

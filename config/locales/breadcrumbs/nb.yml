@@ -92,3 +92,5 @@ nb:
     users: Brukere
     valuations: Saldooppdateringer
     vehicles: Kjøretøy
+    classifier: "Klassifiserer"
+    portfolio: "Portefølje"

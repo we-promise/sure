@@ -103,6 +103,7 @@ nb:
         continue: "Fortsett til innstillinger for API-nøkkel"
       create:
         success: API-nøkkelen din er opprettet
+        creation_failed: "Kunne ikke opprette API-nøkkelen. Prøv igjen."
       destroy:
         revoked_successfully: API-nøkkelen er tilbakekalt
         revoke_failed: Kunne ikke tilbakekalle API-nøkkelen

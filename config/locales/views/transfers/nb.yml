@@ -50,5 +50,8 @@ nb:
       destination_fee: Gebyr på mottakerkonto
       category: Kategori
       uncategorized: Ukategorisert
+      investment_contribution_subtitle: "Tell denne overføringen som forbruk i budsjetter og rapporter. Slå det av når megler- eller kryptokontoen bare veksler pengene til en annen valuta."
+      investment_contribution_title: "Innskudd til investering"
+      transaction: "Transaksjon"
     update:
       success: Overføring oppdatert

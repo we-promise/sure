@@ -38,6 +38,8 @@ nb:
       appearance_label: Utseende
       bank_sync_label: Banksynkronisering
       debug_label: Feilsøking
+      auto_matches_label: "Automatiske koblinger"
+      classifier_label: "Klassifiserer"
     settings_nav_link_large:
       next: Neste
       previous: Tilbake
@@ -698,6 +700,11 @@ nb:
     budget_shares:
       update:
         success: Innstillingene for budsjettdeling ble oppdatert
+    settings_search:
+      aria_label: "Søk i innstillinger"
+      no_results: "Ingen innstillinger samsvarer med søket."
+      placeholder: "Søk i innstillinger"
+      results_label: "Innstillinger som samsvarer"
   views:
     settings:
       payments:

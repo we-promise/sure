@@ -65,6 +65,10 @@ nb:
       errors:
         only_manual: Bare manuelle kontoer kan kobles til Coinbase
         invalid_coinbase_account: Ugyldig Coinbase-konto
+    select_accounts:
+      connection_unavailable: "Den Coinbase-tilkoblingen er ikke tilgjengelig. Velg en i leverandørinnstillingene."
+      no_credentials_configured: "Koble til Coinbase i leverandørinnstillingene før du legger til lommebøkene."
+      select_connection: "Velg en Coinbase-tilkobling i leverandørinnstillingene."
   coinbase_item:
     syncer:
       checking_credentials: Kontrollerer legitimasjon...

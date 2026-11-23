@@ -19,6 +19,9 @@ nb:
       original_date: 'Dato:'
       original_amount: Beløp
       split_number: Del %{number}
+      merchant_label: "Forhandler"
+      no_merchant: "(transaksjonens forhandler)"
+      tags_label: "Tagger"
     create:
       success: Transaksjonen ble delt opp
       not_splittable: Denne transaksjonen kan ikke deles opp.

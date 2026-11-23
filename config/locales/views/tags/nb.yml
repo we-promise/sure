@@ -24,3 +24,8 @@ nb:
       updated: Taggen er oppdatert
     destroy_all:
       all_deleted: Alle tagger er slettet
+    menu:
+      label: "Rediger tagger"
+    summary:
+      add: "Legg til tagger"
+      title: "Tagger: %{names}"
