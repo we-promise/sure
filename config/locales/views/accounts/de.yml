@@ -73,6 +73,17 @@ de:
         next: Weiter
         previous: Zurück
         select: Auswählen
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): ab %{date} unter null, niedrigster Stand %{qty}"
+        hint: Vermutlich fehlt ein Kauf oder ein Übertrag. Lege ihn an oder korrigiere die Trades, die den Bestand unter null gebracht haben.
+        link: "Positionen prüfen"
+        message: Bestände unter null
+      sync_failed:
+        message: "Die letzte Synchronisierung ist fehlgeschlagen"
+      sync_hint: "Die Zahlen hier sind möglicherweise veraltet. Synchronisiere erneut, um sie zu aktualisieren."
+      sync_stale:
+        message: "Die letzte Synchronisierung wurde nicht abgeschlossen"
     show:
       activity:
         amount: Betrag
@@ -160,12 +171,6 @@ de:
       eu: Europa
       generic: Generisch
       in: Indien
-    liquidity:
-      levels:
-        immediate: Sofort verfügbar
-        short_term: Kurzfristig verfügbar
-        locked: Gebunden bis Datum
-        long_term: Langfristig gebunden
     tax_treatments:
       taxable: Versteuerbar
       tax_deferred: Steuerlich aufgeschoben

@@ -61,7 +61,7 @@ class Transfer < ApplicationRecord
       return false unless bound_savings_account?(destination, date)
       return true if source.nil?
 
-      source.available_on?(date || source.liquidity_today) && !savings_account?(source)
+      source.available_now?(date || source.liquidity_today) && !savings_account?(source)
     end
 
     # Whether money leaving this account was already saved: an investment or
@@ -76,7 +76,7 @@ class Transfer < ApplicationRecord
 
     private
       def bound_savings_account?(account, date)
-        account.depository? && !account.available_on?(date || account.liquidity_today)
+        account.depository? && !account.available_now?(date || account.liquidity_today)
       end
   end
 
