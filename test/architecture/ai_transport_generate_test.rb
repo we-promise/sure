@@ -77,6 +77,16 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
     assert_equal :none, response.json_mode
   end
 
+  test "json_object sends no schema, and a 400 about it retries once in none, as main's bill setup did" do
+    requests = stub_chat(error(400, "response_format json_object is not supported"), answer(FULL))
+
+    response = generate(json_mode: :json_object)
+
+    assert_equal [ "json_object", nil ], requests.map { _1.dig("response_format", "type") }
+    assert_nil requests.first.dig("response_format", "json_schema")
+    assert_equal :none, response.json_mode
+  end
+
   test "a 400 about anything else ends the call" do
     requests = stub_chat(error(400, "image input is not supported by this model"))
 

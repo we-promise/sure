@@ -66,6 +66,23 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal 8192, first_model(build(compatible.merge("LLM_CONTEXT_WINDOW" => "8192")), :extract_pdf).context_window
   end
 
+  test "in auto, bill setup and PDF import ask a compatible server for json_object, as main did, and the rest keep auto" do
+    compatible = { "OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1", "OPENAI_MODEL" => "qwen3-vl" }
+    auto = build(compatible)
+    strict = build(compatible.merge("LLM_JSON_MODE" => "strict"))
+
+    assert_equal %i[json_object json_object], %i[bill_setup extract_pdf].map { auto.routes_for(_1).first.effective_json_mode }
+    assert_equal %i[auto auto auto], %i[categorize detect_merchants enhance_merchants].map { auto.routes_for(_1).first.effective_json_mode }
+    assert_equal %i[strict strict], %i[bill_setup extract_pdf].map { strict.routes_for(_1).first.effective_json_mode },
+                 "a JSON mode the operator chose applies to every feature"
+  end
+
+  test "an Anthropic install's routes keep the endpoint's JSON mode" do
+    config = build("ANTHROPIC_API_KEY" => "sk-ant", "LLM_PROVIDER" => "anthropic")
+
+    assert_nil config.routes_for(:bill_setup).first.json_mode
+  end
+
   # #4836: a regional OpenAI host is native OpenAI — its client uses the Responses API, so its
   # prompt must not be the simplified one written for small local models.
   test "a regional OpenAI host keeps the native endpoint, preset and detailed prompt" do

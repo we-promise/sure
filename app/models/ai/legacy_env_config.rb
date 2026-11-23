@@ -25,6 +25,10 @@ class Ai::LegacyEnvConfig
     enhance_merchants: "enhance_merchants", bill_setup: "bill_setup"
   }.freeze
   SIMPLE_PROMPTS = %i[categorize detect_merchants enhance_merchants].freeze   # bill setup has one OpenAI prompt
+  # main asked an OpenAI-compatible server for `json_object`, with no schema, for these two, and for
+  # a strict schema elsewhere. In `auto` their route entries keep that: json_object, then none on
+  # a 400. PR 7's tables carry it as each entry's JSON mode, which an admin can change.
+  JSON_OBJECT_FEATURES = %i[bill_setup extract_pdf].freeze
   JSON_MODES = Ai::Config::Endpoint::JSON_MODES.map(&:to_s).freeze
   ANTHROPIC_MAX_TOKENS = 4096
   EMBEDDING_TIMEOUT = 120
@@ -299,7 +303,13 @@ class Ai::LegacyEnvConfig
     end
 
     def route_list(feature, models)
-      models.map { |model| Ai::Route.new(feature:, model:, prompt: self.class.prompt_for(feature, model.endpoint)) }
+      models.map do |model|
+        Ai::Route.new(feature:, model:, prompt: self.class.prompt_for(feature, model.endpoint), json_mode: json_mode_for(feature, model.endpoint))
+      end
+    end
+
+    def json_mode_for(feature, endpoint)
+      :json_object if JSON_OBJECT_FEATURES.include?(feature) && endpoint.protocol == :compatible && endpoint.json_mode == :auto
     end
 
     def openai_uri_base = self.class.openai_uri_base

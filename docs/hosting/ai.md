@@ -1609,8 +1609,10 @@ That risk applies to every mode except a strict schema the endpoint honors:
 and `auto` (the default) tries `strict`, then `json_object`, then `none`, moving
 on when the answer doesn't parse or more than half the results come back empty.
 Native OpenAI (strict schema) and Anthropic (native structured output) enforce
-the shape server-side. Bill setup follows `LLM_JSON_MODE` too, but blanks are a
-normal answer there, so `auto` moves on only when the answer doesn't parse.
+the shape server-side. In `auto`, bill setup and PDF import ask an
+OpenAI-compatible server for `json_object`, then no format if it answers 400,
+as they did before; set `LLM_JSON_MODE=strict` to give them the strict schema
+too. Any other `LLM_JSON_MODE` applies to every feature.
 
 #### In code (the default every family starts from)
 
