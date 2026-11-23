@@ -44,13 +44,17 @@ fr:
         merchant_prompt: Sélectionnez un commerçant
         name_label: Nom
         name_placeholder: Entrez un nom qui sera appliqué aux transactions sélectionnées
+        no_change: "(aucun changement)"
         none: "(aucun)"
         notes_label: Remarques
         notes_placeholder: Saisissez une note qui sera appliquée aux transactions sélectionnées
         overview: Aperçu
+        reconciled_status_hint: S'applique uniquement aux comptes saisis manuellement (sans synchronisation bancaire).
+        reconciled_status_label: Statut de réconciliation
         save: Enregistrer
         tags_label: Balises
         transactions_section: Opérations
+        transfer_fields_hint: Pour les transferts, la date et le marchand restent inchangés. La catégorie ne s'applique qu'aux sorties de transfert qui l'acceptent.
     categorizes:
       create:
         categorized:
@@ -162,6 +166,7 @@ fr:
       submit: Ajouter la transaction
       tag_search_placeholder: Rechercher ou créer une étiquette
       tags_label: Étiquettes
+      tags_save_error: Les étiquettes n'ont pas pu être enregistrées. Modifiez-les à nouveau pour réessayer, ou rechargez la page.
       transfer: Virement
       no_matching_categories: Aucune catégorie correspondante
     header:
@@ -208,6 +213,19 @@ fr:
       review_recommended_short: Vérif
     potential_duplicate_description: Cette transaction en attente peut être identique à la transaction validée ci-dessous. Si c'est le cas, fusionnez-les pour éviter le double comptage.
     potential_duplicate_title: Doublon possible détecté
+    reconcile:
+      success: Statut passé à « %{status} »
+      failure: Impossible de mettre à jour le statut de réconciliation
+      unavailable: La réconciliation n'est pas activée pour cette famille
+      not_manual_account: Le statut de réconciliation ne s'applique qu'aux comptes saisis manuellement (sans synchronisation bancaire)
+      statuses:
+        unreconciled: Non réconciliée
+        cleared: Pointée
+        reconciled: Réconciliée
+      badge:
+        unreconciled_tooltip: Pas encore vérifiée par rapport à un relevé. Cliquez pour la marquer comme pointée.
+        cleared_tooltip: Confirmée sur un relevé, pas encore entièrement réconciliée. Cliquez pour la marquer comme réconciliée.
+        reconciled_tooltip: Période du relevé entièrement réconciliée. Cliquez pour revenir à non réconciliée.
     search:
       filters:
         balance_updates: Soldes
@@ -219,6 +237,8 @@ fr:
         date: Date
         merchant: Marchand
         status: Statut
+        reconcile_status: Réconciliation
+        reconcile_status_hint: Seuls les comptes manuels sont inclus.
         tag: Étiquette
         type: Type
     searches:
@@ -284,7 +304,9 @@ fr:
         category_filter: Catégorie
         clear_filters: Effacer les filtres
         date_filter: Date
+        loading: Chargement des filtres...
         merchant_filter: Marchand
+        reconcile_status_filter: Réconciliation
         status_filter: Statut
         tag_filter: Étiquette
         type_filter: Type
@@ -295,6 +317,7 @@ fr:
     selection_bar:
       duplicate: Dupliquer
       edit: Modifier
+      reconcile: Réconcilier
       selected: sélectionné
     show:
       account_label: Compte
@@ -403,11 +426,17 @@ fr:
       split: Fractionner
       split_child_tooltip: Partie d'une transaction fractionnée
       split_tooltip: Cette transaction a été fractionnée en plusieurs entrées
+      transfer_hint: Transfert ?
+      transfer_hint_dismiss: Pas un transfert
+      transfer_hint_tooltip: 'Une transaction correspondante sur un autre compte semble être l''autre côté d''un transfert : cliquez pour les rapprocher'
+      view_merchant: Voir le marchand
     transaction_category:
       set_on_outflow: La catégorie appartient au côté sortant de ce transfert et ne peut être modifiée que là
     transfer_match:
       auto_matched: Correspondance automatique
       auto_matched_short: C/A
+      auto_matched_tooltip_hidden: Une transaction sur un compte auquel vous n'avez pas accès.
+      auto_matched_tooltip_html: "%{amount} sur %{account} le %{date}. Cliquez pour vérifier."
       confirm_match: Confirmer la correspondance
       payment_confirmed: Le paiement est confirmé
       reject_match: Rejeter la correspondance

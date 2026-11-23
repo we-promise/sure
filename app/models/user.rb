@@ -28,6 +28,7 @@ class User < ApplicationRecord
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
   has_many :push_subscriptions, dependent: :destroy
+  has_many :web_push_subscriptions, dependent: :destroy
   has_many :webauthn_credentials, dependent: :destroy
   has_many :mobile_devices, dependent: :destroy
   has_many :invitations, foreign_key: :inviter_id, dependent: :destroy
@@ -314,6 +315,14 @@ class User < ApplicationRecord
 
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
   after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
+  # Runs inside the update's transaction, so the user row stays locked until
+  # commit. Every endpoint that issues a token from an existing credential
+  # (/api/v1/auth/refresh and Oauth::TokensController) takes the same lock
+  # first, so none can mint a token this sweep misses. The sweep after commit
+  # catches grants issued without that lock, such as an authorization code
+  # created by /oauth/authorize while the change was in flight.
+  after_update :revoke_oauth_access, if: :saved_change_to_password_digest?
+  after_update_commit :revoke_oauth_access, if: :saved_change_to_password_digest?
 
   def deactivate
     return true unless active?
@@ -396,18 +405,27 @@ class User < ApplicationRecord
   # can never be confused with an unrelated persistence failure.
   class InactiveError < StandardError; end
 
+  # Raised by #with_active_lock! when the password changed between the
+  # caller's password check and the locked issuance step. The new password's
+  # revocation sweep has already run by then, so issuing would hand out a
+  # session or token for the old password that nothing revokes.
+  class StaleCredentialsError < StandardError; end
+
   # The one locked primitive for the actual authorization boundary: asserts
   # this user is eligible for new session/token issuance *right now*, under
   # a row lock, immediately before minting. Callers may additionally check
   # #active? earlier for a fast, friendly rejection (skip an MFA/device
   # round trip) — that's a UX optimization only, never a substitute for
   # this check, however "obviously" already-checked the user seems.
-  def with_active_lock!
+  # Pass the #password_fingerprint taken when the password was checked to
+  # also reject issuance after a concurrent password change.
+  def with_active_lock!(password_fingerprint: nil)
     lock_acquired = false
 
     with_lock do
       lock_acquired = true
       raise InactiveError unless active?
+      raise StaleCredentialsError if password_fingerprint && password_fingerprint != self.password_fingerprint
       yield self
     end
   rescue ActiveRecord::RecordNotFound
@@ -543,6 +561,26 @@ class User < ApplicationRecord
         "and #{keys_revoked} API key(s) for deactivated user_id=#{id}"
       )
     end
+  end
+
+  # A new password must lock out whoever signed in to the mobile app or an
+  # OAuth client with the old one: their access and refresh tokens would
+  # otherwise stay valid for up to 30 days and keep renewing. API keys are
+  # created deliberately for integrations and do not depend on the password,
+  # so they stay.
+  def revoke_oauth_access
+    tokens_revoked, grants_revoked = revoke_oauth_tokens!
+
+    if tokens_revoked > 0 || grants_revoked > 0
+      Rails.logger.info(
+        "[AUTH] Revoked #{tokens_revoked} access token(s) and #{grants_revoked} authorization grant(s) " \
+        "after password change for user_id=#{id}"
+      )
+    end
+  end
+
+  def password_fingerprint
+    Digest::SHA256.hexdigest(password_digest.to_s)
   end
 
   def purge
@@ -941,6 +979,10 @@ class User < ApplicationRecord
   # Returns whether clicking outside a modal is prevented from closing it.
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
+  end
+
+  def push_budget_warnings_enabled?
+    preferences&.dig("push_budget_warnings_enabled") == true
   end
 
   def preview_features_enabled?

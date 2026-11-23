@@ -102,6 +102,44 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal Date.new(2029, 8, 31), card.expiration_date
   end
 
+  test "round trips vehicle details through full export" do
+    source_family = Family.create!(name: "Source Vehicle Family", currency: "EUR", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Round Trip Car",
+      balance: 18_500,
+      currency: "EUR",
+      accountable: Vehicle.new(subtype: "car", make: "Toyota", model: "Camry", year: 2024, mileage_value: 15_000, mileage_unit: "km")
+    )
+
+    Family::DataImporter.new(@family, full_export_ndjson(source_family)).import!
+
+    vehicle = @family.accounts.find_by!(name: "Round Trip Car").accountable
+    assert_equal "car", vehicle.subtype
+    assert_equal "Toyota", vehicle.make
+    assert_equal "Camry", vehicle.model
+    assert_equal 2024, vehicle.year
+    assert_equal 15_000, vehicle.mileage_value
+    assert_equal "km", vehicle.mileage_unit
+  end
+
+  test "imports vehicles from an export without their details or with null details" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-car", name: "Old Car", balance: "5000", currency: "USD", accountable_type: "Vehicle", accountable: { subtype: "car" } } },
+      { type: "Account", data: { id: "null-car", name: "Null Car", balance: "5000", currency: "USD", accountable_type: "Vehicle",
+                                 accountable: { subtype: "car", make: nil, model: nil, year: nil, mileage_value: nil, mileage_unit: nil } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    [ "Old Car", "Null Car" ].each do |name|
+      vehicle = @family.accounts.find_by!(name: name).accountable
+      assert_nil vehicle.make
+      assert_nil vehicle.year
+      assert_nil vehicle.mileage_value
+      assert_equal "mi", vehicle.mileage_unit
+    end
+  end
+
   test "imports loans and credit cards from an export without their details" do
     ndjson = build_ndjson([
       { type: "Account", data: { id: "old-loan", name: "Old Loan", balance: "1000", currency: "USD", subtype: "auto", accountable_type: "Loan", accountable: { subtype: "auto" } } },
@@ -120,6 +158,30 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     card = @family.accounts.find_by!(name: "Old Card").accountable
     assert_nil card.apr
     assert_nil card.due_day
+  end
+
+  test "keeps the nested accountable subtype when the account has no top-level subtype" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "a1", name: "Nested", balance: "0", currency: "USD", accountable_type: "Depository", accountable: { subtype: "savings" } } },
+      { type: "Account", data: { id: "a2", name: "Both", balance: "0", currency: "USD", accountable_type: "Depository", subtype: "savings", accountable: { subtype: "checking" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal "savings", @family.accounts.find_by!(name: "Nested").accountable.subtype
+    assert_equal "checking", @family.accounts.find_by!(name: "Both").accountable.subtype
+  end
+
+  test "does not store a blank nested accountable subtype" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "a1", name: "Blank Nested", balance: "0", currency: "USD", accountable_type: "Depository", accountable: { subtype: "" } } },
+      { type: "Account", data: { id: "a2", name: "Blank Nested With Top Level", balance: "0", currency: "USD", subtype: "savings", accountable_type: "Depository", accountable: { subtype: "" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_nil @family.accounts.find_by!(name: "Blank Nested").accountable.subtype
+    assert_equal "savings", @family.accounts.find_by!(name: "Blank Nested With Top Level").accountable.subtype
   end
 
   test "imports a loan whose detail columns are null in the export" do
@@ -1219,6 +1281,41 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal [ "Parent tag" ], inherited_child.transaction.tags.map(&:name)
     assert_nil explicit_empty_child.transaction.merchant
     assert_empty explicit_empty_child.transaction.tags
+  end
+
+  # An export taken while a transaction carried a tag twice lists the tag id
+  # twice, and the import must not fail on the unique index because of it.
+  test "imports a repeated tag id once" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" } },
+      { type: "Tag", data: { id: "tag-1", name: "Repeated" } },
+      {
+        type: "Transaction",
+        data: {
+          id: "plain", account_id: "checking", date: "2024-01-15", amount: "10.00",
+          name: "Plain", currency: "USD", tag_ids: [ "tag-1", "tag-1" ]
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "split-parent", account_id: "checking", date: "2024-01-15", amount: "30.00",
+          name: "Split parent", currency: "USD", tag_ids: [ "tag-1", "tag-1" ],
+          split_lines: [
+            { id: "inherits", amount: "10.00", name: "Inherits" },
+            { id: "explicit", amount: "20.00", name: "Explicit", tag_ids: [ "tag-1", "tag-1" ] }
+          ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    tag = @family.tags.find_by!(name: "Repeated")
+    [ "Plain", "Inherits", "Explicit" ].each do |name|
+      transaction = @family.entries.find_by!(name: name).transaction
+      assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id), "#{name} should carry the tag once"
+    end
   end
 
   test "session transaction reimport only replaces current family taggings" do
@@ -2327,6 +2424,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           budget_id: "budget-1",
           category_id: "cat-groceries",
           budgeted_spending: "500.00",
+          rollover_enabled: true,
           currency: "USD"
         }
       }
@@ -2340,6 +2438,79 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not_nil budget_category
     assert_equal "Groceries", budget_category.category.name
     assert_equal 500.0, budget_category.budgeted_spending.to_f
+    assert budget_category.rollover_enabled?
+  end
+
+  test "imports a budget_category with only its required fields" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    budget_category = @family.budgets.first.budget_categories.first
+    assert_equal 0, budget_category.budgeted_spending
+    assert_not budget_category.rollover_enabled?
+  end
+
+  test "keeps the stored amount and rollover of a budget category when a later line omits them" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", rollover_enabled: true } },
+      { type: "BudgetCategory", data: { id: "bc-2", budget_id: "budget-1", category_id: "cat-groceries" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    budget_category = @family.budgets.first.budget_categories.first
+    assert_equal 500, budget_category.budgeted_spending
+    assert budget_category.rollover_enabled?
+  end
+
+  test "treats a blank rollover_enabled as absent" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", rollover_enabled: true } },
+      { type: "BudgetCategory", data: { id: "bc-2", budget_id: "budget-1", category_id: "cat-groceries", rollover_enabled: "" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert @family.budgets.first.budget_categories.first.rollover_enabled?
+  end
+
+  test "recomputes the carried-over amount of restored rollover budgets" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", budgeted_spending: "500.00", expected_income: "1000.00", currency: "USD" } },
+      { type: "Budget", data: { id: "budget-2", start_date: "2024-02-01", end_date: "2024-02-29", budgeted_spending: "500.00", expected_income: "1000.00", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", rollover_enabled: true } },
+      { type: "BudgetCategory", data: { id: "bc-2", budget_id: "budget-2", category_id: "cat-groceries", budgeted_spending: "500.00", rollover_enabled: true } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    february = @family.budgets.find_by!(start_date: Date.new(2024, 2, 1))
+    assert_equal 500, february.budget_categories.first.rolled_over_amount
+  end
+
+  test "keeps the import when recomputing rollover amounts fails, and logs it" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", budgeted_spending: "500.00", expected_income: "1000.00", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", rollover_enabled: true } }
+    ])
+    Budget::RolloverCalculator.any_instance.stubs(:recompute!).raises(StandardError, "boom")
+
+    assert_difference -> { DebugLogEntry.where(family: @family, category: "import").count }, 1 do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
+
+    assert @family.budgets.first.budget_categories.first.rollover_enabled?
   end
 
   test "reuses an untouched default budget for the same period" do
@@ -2436,7 +2607,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
   test "imports rules in their exported run order after existing rules" do
     existing = @family.rules.create!(resource_type: "transaction",
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
-    rule_record = ->(name, position, stop_processing) do
+    rule_record = ->(name, position, stop_processing, apply_immediately) do
       {
         type: "Rule",
         version: 1,
@@ -2446,12 +2617,13 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           active: true,
           position: position,
           stop_processing: stop_processing,
+          apply_immediately: apply_immediately,
           conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
           actions: [ { action_type: "exclude_transaction" } ]
         }
       }
     end
-    ndjson = build_ndjson([ rule_record.call("Second", 2, false), rule_record.call("First", 1, true) ])
+    ndjson = build_ndjson([ rule_record.call("Second", 2, false, true), rule_record.call("First", 1, true, false) ])
 
     Family::DataImporter.new(@family, ndjson).import!
 
@@ -2459,6 +2631,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       @family.rules.ordered.pluck(:id).last(3)
     assert @family.rules.find_by(name: "First").stop_processing
     assert_not @family.rules.find_by(name: "Second").stop_processing
+    assert_not @family.rules.find_by(name: "First").apply_immediately
+    assert @family.rules.find_by(name: "Second").apply_immediately
   end
 
   test "imports rule groups by name and keeps each group in one block" do
@@ -2953,6 +3127,31 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal [ "set_transaction_name" ], rule.actions.map(&:action_type)
     assert_equal [ "other-old" ], other_rule.reload.conditions.map(&:value)
     assert_equal [ "auto_categorize" ], other_rule.actions.map(&:action_type)
+  end
+
+  test "session rule reimport keeps apply immediately when the export predates it" do
+    rule = @family.rules.create!(name: "Immediate Rule", resource_type: "transaction", active: true, apply_immediately: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.source_mappings.create!(family: @family, source_type: "Rule", source_id: "rule-1", target: rule)
+
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          id: "rule-1",
+          name: "Immediate Rule",
+          resource_type: "transaction",
+          active: true,
+          actions: [ { action_type: "exclude_transaction" } ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert rule.reload.apply_immediately
   end
 
   test "imports rules from normalized operand value refs" do

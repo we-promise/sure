@@ -9,6 +9,7 @@ fr:
         first_name: Prénom
         last_name: Nom
         password: Mot de passe
+        password_challenge: Mot de passe actuel
         password_confirmation: Confirmation du mot de passe
     errors:
       models:

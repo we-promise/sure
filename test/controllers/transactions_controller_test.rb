@@ -77,6 +77,36 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/für die am .* fällige Rechnung/, response.body)
   end
 
+  test "the drawer lists only the active bill a payment paid, not an ended twin's allocation" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    due = Date.current.beginning_of_month + 8
+    series_for = lambda do |name, status|
+      series = @user.family.recurring_transactions.create!(
+        account: accounts(:depository), name: name, amount: 2000,
+        currency: "USD", expected_day_of_month: 9, status: status, manual: true,
+        bill_type: "bill", last_occurrence_date: Date.current,
+        next_expected_date: Date.current
+      )
+      series.recurring_occurrences.destroy_all
+      series.recurring_occurrences.create!(
+        family: @user.family, original_due_on: due, due_on: due,
+        currency: "USD", expected_amount: 2000, status: "scheduled"
+      )
+    end
+    ended = series_for.call("Ended Twin", "ended")
+    active = series_for.call("Active Twin", "active")
+    [ ended, active ].each do |occurrence|
+      occurrence.allocations.create!(entry: @entry, allocated_amount: 2000, currency: "USD",
+                                     source: "auto_matched", state: "confirmed")
+    end
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match "Active Twin", response.body
+    assert_no_match "Ended Twin", response.body
+  end
+
   # The dialog route is GET only. Rendered as a button_to, "Create a bill"
   # POSTed to it and the modal frame showed "Content Missing".
   test "create a bill opens the prefilled dialog with a GET" do
@@ -795,6 +825,39 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tag.id ], child.reload.entryable.tag_ids
   end
 
+  test "split child drawer lets the user change category and merchant but not the name" do
+    parent = create_transaction(account: accounts(:depository), amount: 100)
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.first
+
+    get transaction_url(child), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "[data-category-select-disabled-value='false']", count: 1
+    assert_select "[data-merchant-select-disabled-value='false']", count: 1
+    assert_select "input[name='entry[name]'][disabled]", count: 1
+  end
+
+  test "category and merchant changed on a split child are kept and locked" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, merchant: merchants(:amazon))
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.find_by(name: "Part 1")
+    sibling = parent.child_entries.find_by(name: "Part 2")
+
+    patch transaction_url(child), params: {
+      entry: { entryable_attributes: { id: child.entryable_id, category_id: categories(:food_and_drink).id, merchant_id: merchants(:netflix).id } }
+    }
+
+    assert_response :redirect
+    transaction = child.reload.entryable
+    assert_equal categories(:food_and_drink), transaction.category
+    assert_equal merchants(:netflix), transaction.merchant
+    assert transaction.locked?(:category_id)
+    assert transaction.locked?(:merchant_id)
+    assert_equal merchants(:amazon), parent.reload.entryable.merchant
+    assert_equal merchants(:amazon), sibling.reload.entryable.merchant
+  end
+
   test "can update tags through tag-only endpoint" do
     patch tags_transaction_url(@entry, format: :json), params: {
       tag_ids: [ tags(:one).id, tags(:two).id ]
@@ -825,6 +888,41 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_empty @entry.reload.entryable.tag_ids
+    assert @entry.entryable.locked?(:tag_ids)
+  end
+
+  test "tag-only endpoint replaces a bare tag set under the row lock" do
+    other_family_tag = users(:empty).family.tags.create!(name: "Other family")
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ], locked_attributes: {})
+
+    assert_queries_match(/FROM "transactions" WHERE .* FOR UPDATE/) do
+      patch tags_transaction_url(@entry, format: :json), params: {
+        tag_ids: [ tags(:two).id, other_family_tag.id ]
+      }, as: :json
+    end
+
+    assert_response :success
+    assert_equal [ tags(:two).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint keeps tags added since the drawer last saved" do
+    other_family_tag = users(:empty).family.tags.create!(name: "Other family")
+    rule_tag = @user.family.tags.create!(name: "Added by a rule")
+    @entry.entryable.update!(tag_ids: [ tags(:one).id, rule_tag.id ], locked_attributes: {})
+
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: [ tags(:one).id, tags(:two).id, other_family_tag.id ],
+      previous_tag_ids: [ tags(:one).id ]
+    }, as: :json
+
+    assert_response :success
+    assert_equal [ tags(:one).id, tags(:two).id, rule_tag.id ].sort, @entry.reload.entryable.tag_ids.sort
+
+    patch tags_transaction_url(@entry, format: :json), params: {
+      tag_ids: [], previous_tag_ids: [ tags(:one).id, tags(:two).id ]
+    }, as: :json
+
+    assert_equal [ rule_tag.id ], @entry.reload.entryable.tag_ids
     assert @entry.entryable.locked?(:tag_ids)
   end
 
@@ -2525,6 +2623,95 @@ end
     assert_match I18n.t("transactions.show.category_set_on_outflow"), response.body
   end
 
+  test "creating a transaction runs rules set to apply immediately" do
+    create_immediate_rule
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id, name: "New transaction", date: Date.current,
+        currency: "USD", amount: 100, nature: "outflow", entryable_type: "Transaction",
+        entryable_attributes: { category_id: "" }
+      }
+    }
+
+    created_entry = Entry.order(:created_at).last
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ created_entry.entryable_id ] } ])
+  end
+
+  test "changing a transaction runs rules set to apply immediately" do
+    create_immediate_rule
+
+    patch transaction_url(@entry), params: { entry: { name: "Renamed" } }
+
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ] } ])
+  end
+
+  test "changing a transaction queues nothing without immediate rules" do
+    patch transaction_url(@entry), params: { entry: { name: "Renamed" } }
+
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "an update that changes nothing runs no immediate rules" do
+    create_immediate_rule
+
+    patch transaction_url(@entry), params: { entry: { name: @entry.name, notes: @entry.notes } }
+
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "an update reduced to nothing by the account permission runs no immediate rules" do
+    create_immediate_rule
+    read_only_entry = entries(:transfer_in) # credit card, shared read_only with family_member
+    sign_in users(:family_member)
+
+    patch transaction_url(read_only_entry), params: { entry: { name: "Renamed" } }
+
+    assert_not_equal "Renamed", read_only_entry.reload.name
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "setting the same tags again runs no immediate rules" do
+    create_immediate_rule
+    @entry.transaction.update!(tag_ids: [ tags(:one).id ])
+
+    patch tags_transaction_url(@entry, format: :json), params: { tag_ids: [ tags(:one).id ] }
+
+    assert_response :success
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "toggling a tag runs immediate rules" do
+    create_immediate_rule
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
+
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ] } ])
+  end
+
+  # A rule can change these fields while the drawer is open. Sharing a form
+  # with another field would send the drawer's stale value back on the next
+  # save of that field, undoing the rule's result and locking it.
+  test "the drawer sends each field that rules can set in a form of its own" do
+    rule_fields = %w[entry[name] entry[excluded] entry[entryable_attributes][category_id] entry[entryable_attributes][merchant_id] entry[entryable_attributes][tag_ids][]]
+    form_meta = %w[authenticity_token _method grouped entry[entryable_attributes][id]]
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+    assert_response :success
+
+    seen = css_select("form[action='#{transaction_path(@entry)}']").filter_map do |form|
+      names = form.css("input[name], select[name], textarea[name]").reject { |field| field["disabled"] }.map { |field| field["name"] }.uniq - form_meta
+      next if (names & rule_fields).empty?
+
+      assert_equal 1, names.size, "#{names.inspect} share one form"
+      names.first
+    end
+
+    assert_equal rule_fields.sort, seen.sort
+    # Leaving the name field untouched must not send its stale value either.
+    assert_select "input[name='entry[name]'][data-autosubmit-trigger-event=change]"
+  end
+
   test "does not offer guests to create a rule through a transaction update" do
     category = categories(:income)
     @entry.update!(name: "AMZN Mktp UK")
@@ -2548,6 +2735,14 @@ end
   end
 
   private
+    def create_immediate_rule
+      @user.family.rules.create!(
+        name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Renamed") ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id) ]
+      )
+    end
+
     # The Allocator's two-key advisory lock on this entry, held by this session.
     def entry_lock_held?(entry)
       ActiveRecord::Base.connection.select_value(ActiveRecord::Base.sanitize_sql_array([ <<~SQL, RecurringTransaction::Allocator::ENTRY_LOCK_NAMESPACE, RecurringTransaction::Allocator.entry_lock_id(entry) ]))
