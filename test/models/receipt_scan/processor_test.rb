@@ -84,6 +84,15 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
     assert_equal "storage down", scan.error
   end
 
+  test "rejects an uploader who lost write access to the account" do
+    member = users(:family_member)
+    Account.stubs(:writable_by).with(member).returns(Account.none)
+
+    assert_raises(ReceiptScan::InvalidUpload) do
+      ReceiptScan.create_from_upload!(family: @family, user: member, account: @account, uploads: [ uploaded("rotated.jpg", "image/jpeg") ])
+    end
+  end
+
   test "rejects txt" do
     assert_raises(ReceiptScan::InvalidUpload) do
       ReceiptScan.create_from_upload!(family: @family, user: @user, account: @account,

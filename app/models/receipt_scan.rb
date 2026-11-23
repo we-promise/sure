@@ -54,6 +54,9 @@ class ReceiptScan < ApplicationRecord
           # locked first, in the order User#transfer_to_family! takes them.
           user.lock!
           account.lock!
+          # Access is checked again under the locks: a member removed from the account since the
+          # caller checked can't add to it.
+          raise InvalidUpload, I18n.t("receipt_scans.errors.account_not_writable") unless Account.writable_by(user).exists?(account.id)
           scan = create!(family:, user:, account:)
           normalized.each { |file| scan.files.attach(**file) }
 
