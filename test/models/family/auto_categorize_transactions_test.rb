@@ -87,12 +87,11 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
   end
 
   test "the LLM is not asked about excluded transactions" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(@llm_provider)
+    use_ai_routes
     excluded = create_transaction(account: @account, name: "House deposit", excluded: true).transaction
+    Ai::Generations::CategorizeTransactions.expects(:new).never
 
-    @llm_provider.expects(:auto_categorize).never
-
-    assert_equal 0, @family.auto_categorize_transactions([ excluded.id ])
+    perform_enqueued_jobs { @family.auto_categorize_transactions_later(@family.transactions.where(id: excluded.id)) }
     assert_nil excluded.reload.category
   end
 

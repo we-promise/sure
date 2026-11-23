@@ -55,7 +55,7 @@ class Family::AutoCategorizer
     ActiveRecord::Base.transaction do
       live_category_ids = locked_category_ids(decisions)
       # Locked until the batch commits, so a user's edit lands before the lock check or after the batch.
-      scope.where(id: decisions.map { _1[:transaction_id] }).lock.each do |transaction|
+      scope.where(id: decisions.map { _1[:transaction_id] }).lock("FOR UPDATE OF transactions").each do |transaction|
         decision = decisions.find { _1[:transaction_id] == transaction.id }
         category_id = categories_input.find { |c| c[:name] == decision&.dig(:category_name) }&.dig(:id)
         next unless live_category_ids.include?(category_id)
