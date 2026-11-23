@@ -200,12 +200,11 @@ class PdfImport < Import
     ai_summary.present?
   end
 
-  # `user` is who asked for it: reading a statement needs their own AI consent.
-  def process_with_ai_later(user:)
+  def process_with_ai_later
     return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing) }
 
     begin
-      ProcessPdfJob.perform_later(self, user:)
+      ProcessPdfJob.perform_later(self)
       true
     rescue StandardError => e
       Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name} - #{e.message}")
@@ -215,13 +214,13 @@ class PdfImport < Import
   end
 
   # Reads the PDF with the first model in extract_pdf's route and records its summary and type.
-  def process_with_ai(user:)
-    ai_processor(user).process.tap { sync_statement_metadata_from_process_result(_1) }
+  def process_with_ai
+    ai_processor.process.tap { sync_statement_metadata_from_process_result(_1) }
   end
 
   # Extracts a statement's transactions into extracted_data. Nil for other document types.
-  def extract_transactions(user:)
-    ai_processor(user).extract_transactions&.tap { sync_statement_metadata_from_extracted_data(_1) }
+  def extract_transactions
+    ai_processor.extract_transactions&.tap { sync_statement_metadata_from_extracted_data(_1) }
   end
 
   def bank_statement?
@@ -412,7 +411,7 @@ class PdfImport < Import
   end
 
   private
-    def ai_processor(user) = PdfImport::AiProcessor.new(self, user:)
+    def ai_processor = PdfImport::AiProcessor.new(self)
 
     # A statement's posting date routinely differs by a day or two from the date
     # a provider recorded for the same transaction, so matching allows a small

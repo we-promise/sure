@@ -8,7 +8,6 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   setup do
     @account = accounts(:depository)
     @family = @account.family
-    @uploader = users(:family_admin)
     @statement = create_statement
     @import = PdfImport.create_from_statement!(statement: @statement)
     @import.update!(document_type: "bank_statement")
@@ -140,7 +139,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     )
     @import.stubs(:pdf_file_content).returns("fake-pdf")
 
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
 
     # Without deep_stringify_keys this reads back empty and no rows are built.
     assert_equal 1, @import.extracted_transactions.size
@@ -166,7 +165,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     )
     @import.stubs(:pdf_file_content).returns("fake-pdf")
 
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
 
     @statement.reload
     assert_equal Date.parse("2026-10-09"), @statement.period_start_on
@@ -181,7 +180,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     detect_card_statement!(account: accounts(:credit_card))
     stub_extracted_balances(opening: 1066.47, closing: 435.88)
 
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
 
     assert_equal BigDecimal("-435.88"), @statement.reload.closing_balance
     assert_equal BigDecimal("1066.47"), @statement.opening_balance
@@ -191,7 +190,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     detect_card_statement!(account: nil)
     stub_extracted_balances(opening: 1066.47, closing: -435.88)
 
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
     @statement.reload.link_to_account!(@account)
 
     assert_equal BigDecimal("435.88"), @statement.reload.closing_balance,
@@ -203,7 +202,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     detect_card_statement!(account: @account, closing_side: nil)
     stub_extracted_balances(opening: 1066.47, closing: -435.88)
 
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
 
     assert_equal BigDecimal("-435.88"), @statement.reload.closing_balance
   end
@@ -214,7 +213,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal "USD", @statement.reload.statement_currency
     stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
 
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
 
     @statement.reload
     assert_equal "EUR", @statement.currency
@@ -231,9 +230,9 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
     # As ProcessPdfJob does: both calls save the import's one statement object,
     # the first in the family's dollars, the second switching it to euros.
-    @import.process_with_ai(user: @uploader)
+    @import.process_with_ai
     assert_equal BigDecimal("435.88"), @import.account_statement.closing_balance
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
 
     @statement.reload
     assert_equal "EUR", @statement.currency
@@ -246,7 +245,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     @statement.update!(opening_balance: 999)
     stub_extracted_balances(opening: nil, closing: 400.0)
 
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
 
     assert_equal %w[closing_balance opening_balance], @statement.reload.sanitized_parser_output.dig("pdf", "edited_balances").sort
   end
@@ -256,7 +255,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     @statement.update!(closing_balance: 400)
     stub_extracted_balances(opening: 1066.47, closing: -400.0)
 
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
 
     assert_equal BigDecimal("-400"), @statement.reload.closing_balance
   end
@@ -265,7 +264,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     detect_card_statement!(account: accounts(:credit_card), text: :summary_table)
     stub_extracted_balances(opening: 1066.47, closing: 400.0)
 
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
     @statement.reload.unlink!
     @statement.link_to_account!(@account)
 
@@ -295,7 +294,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     initial_end = @statement.period_end_on
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
-      @import.extract_transactions(user: @uploader)
+      @import.extract_transactions
     end
 
     @statement.reload
@@ -327,7 +326,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     @import.stubs(:pdf_file_content).returns("fake-pdf")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
-      @import.extract_transactions(user: @uploader)
+      @import.extract_transactions
     end
 
     @statement.reload
@@ -355,7 +354,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     @import.stubs(:pdf_file_content).returns("fake-pdf")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
-      @import.extract_transactions(user: @uploader)
+      @import.extract_transactions
     end
   end
 
@@ -380,7 +379,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     @import.stubs(:pdf_file_content).returns("fake-pdf")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
-      @import.extract_transactions(user: @uploader)
+      @import.extract_transactions
     end
 
     @statement.reload
@@ -408,7 +407,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     @import.stubs(:pdf_file_content).returns("fake-pdf")
 
     assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
-      @import.extract_transactions(user: @uploader)
+      @import.extract_transactions
     end
 
     @statement.reload
@@ -454,7 +453,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     )
     @import.stubs(:pdf_file_content).returns("fake-pdf")
 
-    @import.extract_transactions(user: @uploader)
+    @import.extract_transactions
 
     @statement.reload
     assert_equal "Existing Bank", @statement.institution_name_hint

@@ -5,7 +5,6 @@ class PdfImportTest < ActiveSupport::TestCase
 
   setup do
     @import = imports(:pdf)
-    @uploader = users(:family_admin)
     @processed_import = imports(:pdf_processed)
     @import_with_rows = imports(:pdf_with_rows)
   end
@@ -14,18 +13,18 @@ class PdfImportTest < ActiveSupport::TestCase
     use_ai_routes(extract_pdf: %w[embed/nomic-embed-text])
     Provider::Registry.expects(:preferred_llm_provider).never
 
-    error = assert_raises(Provider::Error) { @import.process_with_ai(user: @uploader) }
+    error = assert_raises(Provider::Error) { @import.process_with_ai }
 
-    assert_equal Ai::Availability.unavailable(:extract_pdf, :capability_missing).message_for(@uploader), error.message
+    assert_equal Ai::Availability.unavailable(:extract_pdf, :capability_missing).message_for(nil), error.message
   end
 
   test "a key cleared after the availability check is the same refusal, not a NoMethodError" do
     Ai.stubs(:availability).returns(Ai::Availability.available(:extract_pdf))
     Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
 
-    error = assert_raises(Provider::Error) { @import.process_with_ai(user: @uploader) }
+    error = assert_raises(Provider::Error) { @import.process_with_ai }
 
-    assert_equal Ai::Availability.unavailable(:extract_pdf, :not_configured).message_for(@uploader), error.message
+    assert_equal Ai::Availability.unavailable(:extract_pdf, :not_configured).message_for(nil), error.message
   end
 
   test "pdf_uploaded? returns false when no file attached" do
@@ -108,8 +107,8 @@ class PdfImportTest < ActiveSupport::TestCase
   test "process_with_ai_later enqueues ProcessPdfJob" do
     import = PdfImport.create_from_statement!(statement: create_pdf_statement)
 
-    assert_enqueued_with job: ProcessPdfJob, args: [ import, { user: @uploader } ] do
-      assert import.process_with_ai_later(user: @uploader)
+    assert_enqueued_with job: ProcessPdfJob, args: [ import ] do
+      assert import.process_with_ai_later
     end
 
     assert_equal "importing", import.reload.status
@@ -119,8 +118,8 @@ class PdfImportTest < ActiveSupport::TestCase
     import = PdfImport.create_from_statement!(statement: create_pdf_statement)
 
     assert_enqueued_jobs 1, only: ProcessPdfJob do
-      assert import.process_with_ai_later(user: @uploader)
-      assert_not import.reload.process_with_ai_later(user: @uploader)
+      assert import.process_with_ai_later
+      assert_not import.reload.process_with_ai_later
     end
 
     assert_equal "importing", import.reload.status
@@ -128,7 +127,7 @@ class PdfImportTest < ActiveSupport::TestCase
 
   test "process_with_ai_later does not claim import without pdf content" do
     assert_no_enqueued_jobs only: ProcessPdfJob do
-      assert_not @import.process_with_ai_later(user: @uploader)
+      assert_not @import.process_with_ai_later
     end
 
     assert_equal "pending", @import.reload.status
@@ -138,7 +137,7 @@ class PdfImportTest < ActiveSupport::TestCase
     import = PdfImport.create_from_statement!(statement: create_pdf_statement)
     ProcessPdfJob.stubs(:perform_later).raises(StandardError, "queue offline")
 
-    assert_not import.process_with_ai_later(user: @uploader)
+    assert_not import.process_with_ai_later
     assert_equal "pending", import.reload.status
   end
 

@@ -26,18 +26,25 @@ class Ai::RouterTest < ActiveSupport::TestCase
     assert_nil Ai.plan(:categorize, family: @family)
   end
 
-  test "every user-level feature needs the person's own AI switch" do
+  test "chat, bills and document search need the person's own AI switch" do
     use_ai_routes
-    user_features = Ai::Routes.features.select { Ai::Routes.fetch(_1)[:consent] == :user }
-    assert_equal %i[chat bill_setup extract_pdf embed search_documents], user_features
-
-    user_features.each { assert Ai.available?(_1, family: @family, user: @user), _1 }
+    assert_equal %i[chat bill_setup extract_pdf embed search_documents],
+                 Ai::Routes.features.select { Ai::Routes.fetch(_1)[:consent] == :user }
 
     @user.update!(ai_enabled: false)
-    user_features.each do |feature|
+    %i[chat bill_setup embed search_documents].each do |feature|
       assert_equal :user_disabled, Ai.availability(feature, family: @family, user: @user).reason, feature
-      assert_equal :user_disabled, Ai.availability(feature, family: @family).reason, feature
     end
+    assert_equal :user_disabled, Ai.availability(:bill_setup, family: @family).reason
+  end
+
+  test "uploading a PDF for import is the request: reading it and its search copy need no switch" do
+    use_ai_routes
+    @user.update!(ai_enabled: false)
+
+    assert Ai.available?(:extract_pdf, family: @family, user: @user)
+    assert Ai.available?(:extract_pdf, family: @family)
+    assert Ai.available?(:embed, family: @family)
   end
 
   test "family-level features need a family admin who turned AI on" do
@@ -65,7 +72,7 @@ class Ai::RouterTest < ActiveSupport::TestCase
     users(:family_member).update!(role: "admin", ai_enabled: true)
 
     assert Ai.available?(:categorize, family: @family)
-    assert_equal :user_disabled, Ai.availability(:extract_pdf, family: @family, user: @user).reason
+    assert_equal :user_disabled, Ai.availability(:search_documents, family: @family, user: @user).reason
   end
 
   test "the switch is the column, not whether chat works" do

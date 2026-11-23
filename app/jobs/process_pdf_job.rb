@@ -5,8 +5,7 @@ class ProcessPdfJob < ApplicationJob
     Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}, error_class=#{err.class.name})")
   end
 
-  # `user` asked for the import; jobs queued before it was passed have none, and AI then refuses.
-  def perform(pdf_import, user: nil)
+  def perform(pdf_import)
     return unless pdf_import.is_a?(PdfImport)
     return reset_processing_claim(pdf_import) unless pdf_import.pdf_uploaded?
     return if pdf_import.status.in?(%w[complete failed])
@@ -15,14 +14,14 @@ class ProcessPdfJob < ApplicationJob
     pdf_import.update!(status: :importing)
 
     begin
-      process_result = pdf_import.process_with_ai(user:)
+      process_result = pdf_import.process_with_ai
       document_type = resolve_document_type(pdf_import, process_result)
-      upload_to_vector_store(pdf_import, document_type:, user:)
+      upload_to_vector_store(pdf_import, document_type: document_type)
 
       # For statements with transactions (bank/credit card), extract and generate import rows
       if statement_with_transactions?(document_type)
         Rails.logger.info("ProcessPdfJob: Extracting transactions for #{document_type} import #{pdf_import.id}")
-        pdf_import.extract_transactions(user:)
+        pdf_import.extract_transactions
         Rails.logger.info("ProcessPdfJob: Extracted #{pdf_import.extracted_transactions.size} transactions")
 
         pdf_import.generate_rows_from_extracted_data
@@ -66,8 +65,8 @@ class ProcessPdfJob < ApplicationJob
       end
     end
 
-    def upload_to_vector_store(pdf_import, document_type:, user:)
-      return unless Ai.available?(:embed, family: pdf_import.family, user:)
+    def upload_to_vector_store(pdf_import, document_type:)
+      return unless Ai.available?(:embed, family: pdf_import.family)
 
       file_content = pdf_import.pdf_file_content
 

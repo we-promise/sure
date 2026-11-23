@@ -41,7 +41,7 @@ en:
       available_description: "AI chat can answer financial questions and provide insights based on your data. To use this feature you'll need to explicitly enable it."
       unavailable_description_html: "To use the AI assistant, you need to set the <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> environment variable or configure it in the Self-Hosting settings of your instance."
       enable_button: "Enable AI Chats"
-      disable_note: "Disable anytime. This turns on AI for chat, bills, PDF import and document search, which send your messages, transactions and documents to this instance's AI provider as they are."
+      disable_note: "Disable anytime. This turns on AI for chat, bills and document search, which send your messages, transactions and documents to this instance's AI provider as they are."
       family_note: "As a family admin, it also turns on AI categorization and merchant detection for your family, which send transaction names, amounts and merchant names."
   assistant_messages:
     assistant_message:

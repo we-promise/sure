@@ -100,8 +100,9 @@ flowchart LR
   below with `bin/rails ai:routes_doc`; `ai_routing_matrix_test` fails when it's stale.
 - **Consent** is the level the matrix declares. A `user` feature needs the person's own AI switch
   (`users.ai_enabled`); a `family` feature needs `Family#ai_consented?`, which until families
-  record consent means a family admin turned that switch on. A job asks for its feature with
-  `family:` and the user who started it, if any.
+  record consent means a family admin turned that switch on. Uploading a PDF for import is itself
+  the request, so `extract_pdf`, and `embed` asked with no user (the upload's search copy), need
+  no switch.
 - **An AI tool declares its feature** (`ai_feature :extract_pdf` on an `Assistant::Function`), so
   chat and MCP list it only while the feature is available.
 - **`Ai::Config` is built in each process from its own ENV**, so give the web and the worker

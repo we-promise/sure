@@ -486,14 +486,6 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Ai::Availability.unavailable(:embed, :user_disabled).message_for(@user), flash[:alert]
   end
 
-  test "a PDF upload hands its uploader to the job, which asks for that user's consent" do
-    import_file = file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf")
-
-    post imports_url, params: { import: { import_file: } }
-
-    assert_enqueued_with job: ProcessPdfJob, args: [ PdfImport.order(:created_at).last, { user: @user } ]
-  end
-
   test "a document upload says no store is configured when the embed route is set but the store can't be built" do
     VectorStore::Registry.stubs(:adapter).returns(nil)
     use_ai_routes

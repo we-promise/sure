@@ -6,14 +6,13 @@ class ProcessPdfJobTest < ActiveJob::TestCase
   setup do
     @import = imports(:pdf)
     @family = @import.family
-    @uploader = users(:family_admin)
     use_ai_routes
   end
 
   test "skips non-PdfImport imports" do
     transaction_import = imports(:transaction)
 
-    ProcessPdfJob.perform_now(transaction_import, user: @uploader)
+    ProcessPdfJob.perform_now(transaction_import)
 
     assert_equal "pending", transaction_import.reload.status
   end
@@ -22,7 +21,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_not @import.pdf_uploaded?
     @import.update_columns(status: "importing", updated_at: 31.minutes.ago)
 
-    ProcessPdfJob.perform_now(@import, user: @uploader)
+    ProcessPdfJob.perform_now(@import)
 
     assert_equal "pending", @import.reload.status
   end
@@ -31,7 +30,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_not @import.pdf_uploaded?
     @import.update!(status: :importing)
 
-    ProcessPdfJob.perform_now(@import, user: @uploader)
+    ProcessPdfJob.perform_now(@import)
 
     assert_equal "importing", @import.reload.status
   end
@@ -39,7 +38,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
   test "skips if already processed" do
     processed_import = imports(:pdf_processed)
 
-    ProcessPdfJob.perform_now(processed_import, user: @uploader)
+    ProcessPdfJob.perform_now(processed_import)
 
     # Should not change status since already complete
     assert_equal "complete", processed_import.reload.status
@@ -52,7 +51,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     processed_import.update_columns(status: "importing", updated_at: 31.minutes.ago)
     processed_import.expects(:process_with_ai).never
 
-    ProcessPdfJob.perform_now(processed_import, user: @uploader)
+    ProcessPdfJob.perform_now(processed_import)
 
     assert_equal "pending", processed_import.reload.status
   end
@@ -63,7 +62,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     processed_import.update!(status: :importing, document_type: "financial_document")
     processed_import.expects(:process_with_ai).never
 
-    ProcessPdfJob.perform_now(processed_import, user: @uploader)
+    ProcessPdfJob.perform_now(processed_import)
 
     assert_equal "importing", processed_import.reload.status
   end
@@ -83,7 +82,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
       true
     end.returns(family_documents(:tax_return))
 
-    ProcessPdfJob.perform_now(@import, user: @uploader)
+    ProcessPdfJob.perform_now(@import)
 
     assert_equal "complete", @import.reload.status
   end
@@ -95,23 +94,9 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     @import.stubs(:send_next_steps_email)
     @family.expects(:upload_document).never
 
-    ProcessPdfJob.perform_now(@import, user: @uploader)
+    ProcessPdfJob.perform_now(@import)
 
     assert_equal "complete", @import.reload.status
-  end
-
-  test "sends nothing when the user who uploaded it has AI off" do
-    attach_pdf!(@import)
-    @uploader.update!(ai_enabled: false)
-    provider = mock
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.expects(:process_pdf).never
-    @family.expects(:upload_document).never
-
-    ProcessPdfJob.perform_now(@import, user: @uploader)
-
-    assert_equal "failed", @import.reload.status
-    assert_includes @import.error, Ai::Availability.unavailable(:extract_pdf, :user_disabled).message_for(@uploader)
   end
 
   test "uploads bank statement PDF to vector store with classified type metadata" do
@@ -142,7 +127,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
       true
     end.returns(family_documents(:tax_return))
 
-    ProcessPdfJob.perform_now(@import, user: @uploader)
+    ProcessPdfJob.perform_now(@import)
 
     assert_equal "complete", @import.reload.status
   end
@@ -152,7 +137,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     @import.expects(:process_with_ai).once.raises(Provider::Error, "Could not convert PDF to images")
 
     assert_nothing_raised do
-      ProcessPdfJob.perform_now(@import, user: @uploader)
+      ProcessPdfJob.perform_now(@import)
     end
 
     assert_equal "failed", @import.reload.status
@@ -164,7 +149,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     @import.update!(status: :failed)
     @import.expects(:process_with_ai).never
 
-    ProcessPdfJob.perform_now(@import, user: @uploader)
+    ProcessPdfJob.perform_now(@import)
 
     assert_equal "failed", @import.reload.status
   end
