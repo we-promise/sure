@@ -1,7 +1,7 @@
 <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: t(".title")) %>
   <% dialog.with_body do %>
-    <div class="flex gap-4">
+    <div class="flex flex-col md:flex-row gap-4">
       <%= render "properties/form_tabs", account: @account, active_tab: "value" %>
 
       <!-- Right content area with form -->

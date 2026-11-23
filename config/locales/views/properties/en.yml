@@ -80,6 +80,8 @@ en:
       save: "Save"
       next: "Next"
     overview_fields:
+      notes_label: "Notes"
+      notes_placeholder: "Registry or cadastral number, deed reference, notary, etc."
       name_label: "Name"
       name_placeholder: "Vacation home"
       subtype_prompt: "Select type"
@@ -142,5 +144,6 @@ en:
         long: Agricultural Land
     form_tabs:
       address: Address
+      aria_label: Property details
       overview: Overview
       value: Value
