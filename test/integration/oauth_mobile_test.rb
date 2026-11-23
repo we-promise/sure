@@ -96,7 +96,7 @@ class OauthMobileTest < ActionDispatch::IntegrationTest
     device.issue_token!
 
     assert chain.map(&:reload).all?(&:revoked?)
-    assert_equal 1, device.active_tokens.count
+    assert_equal 1, device.unrevoked_tokens.count
   end
 
   test "a refreshed token of another OAuth client gets no device" do

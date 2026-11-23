@@ -90,7 +90,7 @@ class MobileDeviceTest < ActiveSupport::TestCase
   test "a token that replaces a device token takes its device, and its revocation" do
     device = MobileDevice.create!(user: users(:family_admin), device_id: "device-#{SecureRandom.hex(4)}", device_name: "Test Phone", device_type: "ios")
     device.issue_token!
-    previous = device.active_tokens.sole
+    previous = device.unrevoked_tokens.sole
 
     replacement = -> do
       Doorkeeper::AccessToken.create!(

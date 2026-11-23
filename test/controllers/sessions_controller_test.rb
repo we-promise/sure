@@ -730,7 +730,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     device = @user.mobile_devices.find_by(device_id: "flutter-device-003")
-    assert device.active_tokens.any?, "Expected device to have active tokens via shared app"
+    assert device.unrevoked_tokens.any?, "Expected device to have unrevoked tokens via shared app"
   end
 
   test "mobile SSO revokes previous tokens for existing device" do

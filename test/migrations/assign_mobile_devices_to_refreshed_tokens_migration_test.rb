@@ -32,7 +32,7 @@ class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCas
 
     assert root.reload.revoked?
     assert orphan.reload.revoked?
-    assert_not_includes @device.active_tokens, orphan
+    assert_not_includes @device.unrevoked_tokens, orphan
   end
 
   test "revokes a mobile client token whose device cannot be recovered" do
