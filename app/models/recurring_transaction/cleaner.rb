@@ -28,6 +28,7 @@ class RecurringTransaction
         # Double-check if there are any recent matching transactions
         threshold = recurring_transaction.staleness_threshold_date
         recent_matches = recurring_transaction.matching_transactions.select { |entry| entry.date >= threshold }
+        recent_matches = unclaimed_by_other_series(recurring_transaction, recent_matches) if recurring_transaction.transfer?
 
         if recent_matches.empty?
           recurring_transaction.mark_inactive!
@@ -90,6 +91,22 @@ class RecurringTransaction
               .suggested
               .where(manual: false, destination_account_id: nil)
               .where.not(id: claimed_ids)
+      end
+
+      # Same-amount transfer series between the same accounts sit within each
+      # other's posting tolerance, so one transfer can fit several. Once the
+      # Matcher has confirmed it as another series' payment it is not evidence
+      # that this one is still running.
+      def unclaimed_by_other_series(series, entries)
+        return entries if entries.empty?
+
+        claimed_entry_ids = RecurringAllocation.confirmed
+          .joins(:recurring_occurrence)
+          .where(entry_id: entries.map(&:id))
+          .where.not(recurring_occurrences: { recurring_transaction_id: series.id })
+          .pluck(:entry_id)
+
+        entries.reject { |entry| claimed_entry_ids.include?(entry.id) }
       end
   end
 end
