@@ -1033,6 +1033,21 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Beta paused", response.body
   end
 
+  # Every row reads its schedule (monthly_equivalent_amount -> Schedule.for),
+  # so the rules have to be preloaded rather than fetched once per bill.
+  test "the all view loads recurrence rules in one query regardless of bill count" do
+    3.times { |i| create_bill(name: "Rules bill #{i}", amount: 10 + i) }
+
+    rule_queries = []
+    callback = ->(*, payload) { rule_queries << payload[:sql] if payload[:sql].include?('FROM "recurrence_rules"') }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get bills_url(view: "all")
+    end
+
+    assert_response :success
+    assert_operator rule_queries.size, :<=, 1
+  end
+
   # A removed detected bill stays as an ended tombstone so detection does not
   # recreate it. It is not a current bill, so the default list hides it and the
   # Dismissed filter is the way to find it.
