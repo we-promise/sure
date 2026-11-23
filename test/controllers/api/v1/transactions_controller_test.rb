@@ -1929,6 +1929,146 @@ end
     assert_equal false, row["excluded"]
   end
 
+  test "show exposes the activity label and the safe provider fields, not the raw extra" do
+    security = Security.create!(ticker: "WHT#{SecureRandom.hex(2).upcase}", name: "Withholding Security", country_code: "US")
+    entry = create_transaction(
+      account: @account,
+      amount: 1.5,
+      name: "Withholding Tax for WHT",
+      currency: "EUR",
+      source: "ibkr",
+      external_id: "ibkr_cash_#{SecureRandom.hex(4)}",
+      entryable: Transaction.new(
+        investment_activity_label: "Dividend",
+        extra: {
+          "exchange_rate" => 0.9215,
+          "security_id" => security.id,
+          "ibkr" => { "type" => "Withholding Tax", "conid" => "CONID-SECRET-1", "account_id" => "U7654321" }
+        }
+      )
+    )
+
+    get api_v1_transaction_url(entry.entryable), headers: api_headers(@read_only_api_key)
+    assert_response :success
+
+    body = JSON.parse(response.body)
+    assert_equal "Dividend", body["investment_activity_label"]
+    assert_equal "Withholding Tax", body["provider_type"]
+    assert_equal security.id, body["security_id"]
+    assert_equal 0.9215, body["exchange_rate"]
+    assert_equal "EUR", body["amount_currency"]
+    assert_not body.key?("extra")
+    assert_not_includes response.body, "CONID-SECRET-1"
+    assert_not_includes response.body, "U7654321"
+  end
+
+  test "index returns null tax fields for a plain transaction and ignores a provider payload that is not a hash" do
+    entry = create_transaction(
+      account: @account,
+      name: "Plain row",
+      source: "plaid",
+      entryable: Transaction.new
+    )
+    # Written past validation, as a provider writing extra directly might.
+    entry.entryable.update_column(:extra, { "plaid" => "raw-string-payload", "security" => "raw-string-security", "exchange_rate" => "not-a-number" })
+
+    get api_v1_transactions_url, params: { account_id: @account.id, per_page: 100 }, headers: api_headers(@read_only_api_key)
+    assert_response :success
+
+    txn_json = JSON.parse(response.body)["transactions"].find { |txn| txn["id"] == entry.entryable.id }
+    assert txn_json
+    %w[investment_activity_label provider_type security_id exchange_rate].each do |field|
+      assert txn_json.key?(field), "expected #{field} in the response"
+      assert_nil txn_json[field], "expected #{field} to be null"
+    end
+    assert_not_includes response.body, "raw-string-payload"
+    assert_not_includes response.body, "raw-string-security"
+  end
+
+  test "show and index return null tax fields instead of failing when extra is not a hash" do
+    entry = create_transaction(account: @account, name: "Malformed extra row", source: "ibkr", currency: "EUR", entryable: Transaction.new)
+    transaction = entry.entryable
+
+    [ [ 1, 2 ], "raw-string-extra" ].each do |malformed|
+      # Written past the model, as a provider or a migration writing SQL might.
+      transaction.update_column(:extra, malformed)
+
+      get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+      assert_response :success, "show failed for extra = #{malformed.inspect}"
+      body = JSON.parse(response.body)
+
+      get api_v1_transactions_url, params: { account_id: @account.id, per_page: 100 }, headers: api_headers(@read_only_api_key)
+      assert_response :success, "index failed for extra = #{malformed.inspect}"
+      txn_json = JSON.parse(response.body)["transactions"].find { |row| row["id"] == transaction.id }
+      assert txn_json
+
+      [ body, txn_json ].each do |json|
+        %w[provider_type security_id exchange_rate].each do |field|
+          assert json.key?(field), "expected #{field} in the response"
+          assert_nil json[field], "expected #{field} to be null for extra = #{malformed.inspect}"
+        end
+      end
+    end
+  end
+
+  test "security_id is only a uuid string, never other data stored under the key" do
+    entry = create_transaction(account: @account, name: "Odd security id", currency: "EUR", entryable: Transaction.new)
+    transaction = entry.entryable
+
+    [ { "account_number" => "U9999999" }, 12345, "not-a-uuid", [ "U9999999" ] ].each do |stored|
+      transaction.update_column(:extra, { "security_id" => stored })
+
+      get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+      assert_response :success
+      assert_nil JSON.parse(response.body)["security_id"], "expected null for security_id = #{stored.inspect}"
+      assert_not_includes response.body, "U9999999"
+    end
+  end
+
+  # A stored decimal can be positive and finite yet become 0.0 or Infinity
+  # as a Float, which is what the response carries.
+  test "exchange rate is null when the stored value does not fit a Float" do
+    entry = create_transaction(account: @account, name: "Float range row", currency: "EUR", entryable: Transaction.new)
+    transaction = entry.entryable
+
+    [ "1e-400", "1e400" ].each do |stored|
+      transaction.update_column(:extra, { "exchange_rate" => stored })
+      get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+      assert_response :success
+      assert_nil JSON.parse(response.body)["exchange_rate"], stored
+      assert_nil transaction.reload.numeric_exchange_rate, stored
+    end
+  end
+
+  test "exchange rate compares currency codes regardless of case" do
+    entry = create_transaction(account: @account, name: "Lower case row", currency: "EUR", entryable: Transaction.new)
+    entry.update_column(:currency, @account.currency.downcase)
+    entry.entryable.update_column(:extra, { "exchange_rate" => 1.1 })
+
+    get api_v1_transaction_url(entry.entryable), headers: api_headers(@read_only_api_key)
+    assert_response :success
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+  end
+
+  test "exchange rate is read the way the app converts it and only where it applies" do
+    entry = create_transaction(account: @account, name: "Rate row", currency: "EUR", entryable: Transaction.new)
+    transaction = entry.entryable
+
+    # Float() would read "0x10" as 16; the app's to_d reads it as 0 and
+    # refuses to convert with it.
+    transaction.update_column(:extra, { "exchange_rate" => "0x10" })
+    get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+    assert_response :success
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+
+    # A row in the account's own currency is never converted, so a stored rate
+    # on it is not exposed.
+    entry.update_column(:currency, @account.currency)
+    transaction.update_column(:extra, { "exchange_rate" => 1.085 })
+    get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+  end
+
   private
 
     def foreign_category
