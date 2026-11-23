@@ -26,5 +26,9 @@ class MapPageTest < ApplicationSystemTestCase
 
     marker.click
     assert_link "Travelodge Malaga", href: transaction_path(Entry.find_by(location_name: "Malaga, Spain"))
+
+    within "main" do
+      assert_link "Travelodge Malaga", href: transaction_path(Entry.find_by(location_name: "Malaga, Spain")), count: 2
+    end
   end
 end

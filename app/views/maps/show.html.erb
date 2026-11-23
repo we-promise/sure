@@ -29,10 +29,27 @@
   <%= render DS::EmptyState.new(icon: "map-pin", title: t(".empty.title"), description: t(".empty.description")) %>
 <% else %>
   <p class="text-secondary text-sm mb-2"><%= t(".located_count", count: @located_entries.size) %></p>
-  <div
-    data-controller="map"
-    data-map-points-value="<%= @map_data.to_json %>"
-    data-map-tile-url-value="<%= map_tile_url %>"
-    data-map-tile-attribution-value="<%= map_tile_attribution %>"
-    style="height: 70vh; border-radius: 0.75rem;"></div>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div
+      data-controller="map"
+      data-map-points-value="<%= @map_data.to_json %>"
+      data-map-tile-url-value="<%= map_tile_url %>"
+      data-map-tile-attribution-value="<%= map_tile_attribution %>"
+      class="lg:col-span-2"
+      style="height: 70vh; border-radius: 0.75rem;"></div>
+
+    <ul class="flex flex-col gap-1 overflow-y-auto" style="height: 70vh;">
+      <% @map_data.each do |point| %>
+        <li>
+          <%= link_to point[:transaction_path], class: "flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-container-hover" do %>
+            <div class="min-w-0">
+              <p class="text-sm text-primary truncate"><%= point[:transaction_name] %></p>
+              <p class="text-xs text-secondary truncate"><%= point[:name] %> &middot; <%= point[:date] %></p>
+            </div>
+            <p class="text-sm text-primary whitespace-nowrap"><%= point[:amount] %></p>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
 <% end %>
