@@ -45,6 +45,7 @@ class Ai::RouterTest < ActiveSupport::TestCase
     assert Ai.available?(:extract_pdf, family: @family, user: @user)
     assert Ai.available?(:extract_pdf, family: @family)
     assert Ai.available?(:embed, family: @family)
+    assert_equal :user_disabled, Ai.availability(:search_documents, family: @family).reason
   end
 
   test "family-level features need a family admin who turned AI on" do

@@ -2,7 +2,7 @@
 # needs the person's own AI switch, `users.ai_enabled`. A `:family` feature sends the household's
 # data without anyone starting it, so it needs the family's consent (Family#ai_consented?).
 #
-# Uploading a PDF for import is itself the request for AI (PR 2b), so reading it needs no switch,
+# Uploading a PDF for import is itself the request for AI, so reading it needs no switch,
 # and neither does the search copy a job makes of that upload (`embed` with no user).
 module Ai::Consent
   ASKED_BY_UPLOAD = %i[extract_pdf].freeze
@@ -17,7 +17,7 @@ module Ai::Consent
 
   def self.switch_on?(feature, user)
     return true if ASKED_BY_UPLOAD.include?(feature)
-    return true if user.nil? && Ai::Routes.consent_key(feature) == :embed
+    return true if user.nil? && feature == :embed
 
     user&.ai_enabled
   end
