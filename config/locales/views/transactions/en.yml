@@ -104,6 +104,7 @@ en:
       uncategorized: Uncategorized
     show:
       receipt: Receipt
+      purchase: Purchase
       category_set_on_hidden_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side, on an account you cannot access, and can only be changed there."
       category_set_on_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side and can only be changed there, so budgets count it once."
       keep_both: No, keep both

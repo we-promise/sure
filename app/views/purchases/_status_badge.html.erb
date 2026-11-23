@@ -1,0 +1,5 @@
+<%# locals: (purchase:) %>
+<% tone = { "matched" => :success, "awaiting_payment" => :info, "needs_matching" => :warning, "unmatched" => :warning,
+            "rejected" => :error, "failed" => :error, "processing" => :info }.fetch(purchase.status, :neutral) %>
+<%= render DS::Pill.new(label: t("purchases.statuses.#{purchase.status}"), tone: tone, size: :sm, marker: false,
+                        icon: ("check" if purchase.matched?)) %>

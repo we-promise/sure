@@ -424,6 +424,10 @@ Rails.application.routes.draw do
 
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
+    resource :purchase_inbox, only: %i[show update] do
+      post :test_connection
+    end
+    resources :purchase_inbox_routes, only: %i[create destroy]
     resource :preferences, only: %i[show update]
     resource :budget_shares, only: :update
     resource :appearance, only: %i[show update]

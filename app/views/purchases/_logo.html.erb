@@ -1,0 +1,14 @@
+<%# locals: (purchase:, size: "md") %>
+<% url = purchase_logo_url(purchase) %>
+<%# The ProviderLogo recipe: the shop's initial sits under the image, and a logo the browser
+    can't load removes itself to reveal it. %>
+<%= tag.span class: class_names("relative block shrink-0", size == "lg" ? "size-12" : "size-9") do %>
+  <%= render DS::FilledIcon.new(variant: :text, text: purchase.merchant.presence || "?", size: "lg", rounded: true, class_name: "absolute inset-0 w-full! h-full!") %>
+  <% if url %>
+    <%= image_tag url,
+          class: "absolute inset-0 w-full h-full rounded-full object-contain bg-container border border-secondary",
+          alt: "",
+          loading: "lazy",
+          onerror: ProviderLogo::REMOVE_ON_ERROR %>
+  <% end %>
+<% end %>

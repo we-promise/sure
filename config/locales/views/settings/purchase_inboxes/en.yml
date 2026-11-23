@@ -1,0 +1,67 @@
+---
+en:
+  settings:
+    purchase_inboxes:
+      not_authorized: You don't have permission to change the order mailbox.
+      show:
+        title: Order mailbox
+        connection_title: Mailbox
+        connection_subtitle: Forward order confirmation emails to this mailbox to record them as purchases.
+        routes_title: Who sends to it
+        routes_subtitle: An address someone forwards from by hand, or the plus address their mail filter forwards shop emails to.
+        rejected_title: Recently rejected emails
+        rejected_subtitle: Emails the mailbox received but didn't accept. Mail providers' confirmation codes show up here too.
+      connection_form:
+        last_polled: "Last checked %{time} ago."
+        never_polled: Not checked yet.
+        last_error: "Last check failed: %{error}"
+        enabled: Read the mailbox
+        enabled_hint: Checks for new emails every five minutes.
+        host: IMAP server
+        port: Port
+        ssl: Use SSL
+        username: Mailbox address
+        password: Password
+        password_stored: Stored; leave blank to keep it
+        password_placeholder: An app password for this mailbox
+        folder: Folder to read
+        processed_folder: Move read emails to
+        shop_domains: Shops for automatic forwarding
+        shop_domains_hint: Domains whose emails are accepted at a user's plus address, separated by commas. Subdomains are included.
+        require_sender_auth: Verify senders
+        require_sender_auth_hint: Accept an email only if your mail server confirmed its sender's domain (DMARC or DKIM).
+        authserv_id: Trusted mail server
+        authserv_id_hint: "The name your mail server writes in Authentication-Results, e.g. mx.google.com. Test the connection to see the names on the latest email. Verification is only as good as this server: it must write its own Authentication-Results above any it received and drop received ones that use its name, and set Delivered-To on delivery (Gmail and Microsoft 365 do). Don't rely on it with a server that doesn't."
+        save: Save
+        test_connection: Test connection
+      routes:
+        kinds:
+          sender: Forwards by hand from
+          tag: Automatic forwarding address
+        user: User
+        kind: Type
+        value: Address or tag
+        value_placeholder: you@example.com, or leave blank for a tag
+        add_hint: For automatic forwarding, leave the tag blank to get a hard-to-guess one.
+        add: Add
+        remove: Remove
+        remove_confirm: Remove this address?
+      rejected:
+        empty: No rejected emails.
+        reasons:
+          unknown_sender: Sender not set up
+          sender_not_authenticated: Sender couldn't be verified
+          preview_required: The user hasn't turned on preview features
+      update:
+        saved: Order mailbox settings saved.
+        incomplete: Fill in the server, address, password and trusted mail server before turning the mailbox on.
+      test_connection:
+        success:
+          one: "Connected. %{count} email in the folder. Mail servers on the latest email: %{hosts}."
+          other: "Connected. %{count} emails in the folder. Mail servers on the latest email: %{hosts}."
+        failure: "Couldn't connect: %{error}"
+    purchase_inbox_routes:
+      create:
+        added: Address added.
+      destroy:
+        removed: Address removed.

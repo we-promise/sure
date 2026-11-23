@@ -1,0 +1,10 @@
+<%# locals: (summary:) %>
+<div data-testid="purchases-summary" class="flex flex-wrap gap-3">
+  <% purchase_summary_tiles(summary).each do |tile| %>
+    <%= render DS::Card.new(class: "flex-1 basis-40 min-w-0") do %>
+      <p class="text-xs text-secondary"><%= tile[:label] %></p>
+      <p class="mt-1 text-xl font-medium truncate <%= tile[:value_class] %>"><%= tile[:value] %></p>
+      <p class="mt-0.5 text-xs text-secondary"><%= tile[:caption] %></p>
+    <% end %>
+  <% end %>
+</div>

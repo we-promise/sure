@@ -49,6 +49,12 @@
       <% end %>
     <% end %>
     <%= render "entries/protection_indicator", entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) %>
+    <% purchase = @entry.transaction.purchase %>
+    <% if purchase && preview_features_enabled? && Purchase.visible_to(Current.user).exists?(purchase.id) %>
+      <% dialog.with_section(title: t(".purchase"), open: true) do %>
+        <%= render "transactions/purchase", purchase: purchase %>
+      <% end %>
+    <% end %>
     <% if @entry.transaction.from_receipt? %>
       <% dialog.with_section(title: t(".receipt"), open: true) do %>
         <%= render "transactions/receipt", receipt: @entry.transaction.extra["receipt"] %>

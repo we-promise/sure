@@ -1,0 +1,11 @@
+<%# locals: (purchase:) %>
+<div class="space-y-2">
+  <div class="flex items-center justify-between gap-3 text-sm">
+    <span class="text-primary truncate">
+      <%= purchase.merchant.presence || t("purchases.unknown_merchant") %>
+      <% if purchase.order_number.present? %><span class="text-secondary">&middot; <%= purchase.order_number %></span><% end %>
+    </span>
+    <%= render DS::Link.new(text: t("transactions.purchase.view"), href: purchase_path(purchase), variant: :default, class: "text-sm shrink-0", data: { turbo_frame: "_top" }) %>
+  </div>
+  <%= render "purchases/items", purchase: purchase %>
+</div>

@@ -1,0 +1,37 @@
+<%# locals: (users:, config:) %>
+<% local_part, domain = config.username.to_s.downcase.split("@", 2) %>
+<div class="space-y-4">
+  <% users.each do |user| %>
+    <% routes = user.purchase_inbox_routes.sort_by(&:created_at) %>
+    <% next if routes.empty? %>
+    <div class="rounded-lg shadow-border-xs bg-container p-4 space-y-2">
+      <p class="text-sm font-medium text-primary"><%= user.display_name %></p>
+      <% routes.each do |route| %>
+        <div class="flex items-center justify-between gap-3 text-sm">
+          <div class="min-w-0">
+            <p class="text-secondary"><%= t(".kinds.#{route.kind}") %></p>
+            <p class="text-primary truncate">
+              <% if route.tag? && domain.present? %>
+                <%= "#{local_part}+#{route.value}@#{domain}" %>
+              <% else %>
+                <%= route.value %>
+              <% end %>
+            </p>
+          </div>
+          <%= render DS::Button.new(text: t(".remove"), href: settings_purchase_inbox_route_path(route), method: :delete,
+                                    variant: :ghost, size: :sm, data: { turbo_confirm: t(".remove_confirm") }) %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= styled_form_with url: settings_purchase_inbox_routes_path, scope: :purchase_inbox_route, class: "space-y-3" do |form| %>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <%= form.collection_select :user_id, users, :id, :display_name, { label: t(".user") } %>
+      <%= form.select :kind, PurchaseInboxRoute.kinds.keys.map { [ t(".kinds.#{_1}"), _1 ] }, { label: t(".kind") } %>
+      <%= form.text_field :value, label: t(".value"), placeholder: t(".value_placeholder") %>
+    </div>
+    <p class="text-sm text-secondary"><%= t(".add_hint") %></p>
+    <%= form.submit t(".add") %>
+  <% end %>
+</div>

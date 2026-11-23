@@ -59,6 +59,21 @@ pl:
     - października
     - listopada
     - grudnia
+    # Month names on their own (a heading, not part of a date) are nominative in Polish.
+    standalone_month_names:
+    -
+    - Styczeń
+    - Luty
+    - Marzec
+    - Kwiecień
+    - Maj
+    - Czerwiec
+    - Lipiec
+    - Sierpień
+    - Wrzesień
+    - Październik
+    - Listopad
+    - Grudzień
     order:
     - :day
     - :month

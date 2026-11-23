@@ -1,0 +1,69 @@
+---
+pl:
+  settings:
+    purchase_inboxes:
+      not_authorized: Nie masz uprawnień do zmiany skrzynki zamówień.
+      show:
+        title: Skrzynka zamówień
+        connection_title: Skrzynka
+        connection_subtitle: Przekazuj na tę skrzynkę maile z potwierdzeniem zamówienia, aby zapisać je jako zakupy.
+        routes_title: Kto na nią wysyła
+        routes_subtitle: Adres, z którego ktoś przekazuje maile ręcznie, albo adres z plusem, na który jego filtr poczty przekazuje maile ze sklepów.
+        rejected_title: Ostatnio odrzucone maile
+        rejected_subtitle: Maile, które skrzynka otrzymała, ale ich nie przyjęła. Pojawiają się tu też kody potwierdzające od dostawców poczty.
+      connection_form:
+        last_polled: "Ostatnio sprawdzono %{time} temu."
+        never_polled: Jeszcze nie sprawdzono.
+        last_error: "Ostatnie sprawdzenie nie powiodło się: %{error}"
+        enabled: Czytaj skrzynkę
+        enabled_hint: Sprawdza nowe maile co pięć minut.
+        host: Serwer IMAP
+        port: Port
+        ssl: Użyj SSL
+        username: Adres skrzynki
+        password: Hasło
+        password_stored: Zapisane; zostaw puste, aby je zachować
+        password_placeholder: Hasło aplikacji dla tej skrzynki
+        folder: Folder do czytania
+        processed_folder: Przenoś przeczytane maile do
+        shop_domains: Sklepy do automatycznego przekazywania
+        shop_domains_hint: Domeny, z których maile są przyjmowane na adres z plusem użytkownika, oddzielone przecinkami. Obejmuje też subdomeny.
+        require_sender_auth: Weryfikuj nadawców
+        require_sender_auth_hint: Przyjmuj mail tylko wtedy, gdy Twój serwer poczty potwierdził domenę nadawcy (DMARC lub DKIM).
+        authserv_id: Zaufany serwer poczty
+        authserv_id_hint: "Nazwa, którą Twój serwer poczty wpisuje w Authentication-Results, np. mx.google.com. Przetestuj połączenie, aby zobaczyć nazwy z ostatniego maila. Weryfikacja jest tak pewna jak ten serwer: musi on dopisywać własny Authentication-Results nad otrzymanymi, usuwać otrzymane z jego nazwą i ustawiać Delivered-To przy doręczeniu (Gmail i Microsoft 365 to robią). Nie polegaj na niej z serwerem, który tego nie robi."
+        save: Zapisz
+        test_connection: Testuj połączenie
+      routes:
+        kinds:
+          sender: Przekazuje ręcznie z
+          tag: Adres automatycznego przekazywania
+        user: Użytkownik
+        kind: Typ
+        value: Adres lub tag
+        value_placeholder: ty@example.com albo zostaw puste dla tagu
+        add_hint: Przy automatycznym przekazywaniu zostaw tag pusty, aby dostać trudny do odgadnięcia.
+        add: Dodaj
+        remove: Usuń
+        remove_confirm: Usunąć ten adres?
+      rejected:
+        empty: Brak odrzuconych maili.
+        reasons:
+          unknown_sender: Nadawca nie jest skonfigurowany
+          sender_not_authenticated: Nie udało się zweryfikować nadawcy
+          preview_required: Użytkownik nie włączył funkcji testowych
+      update:
+        saved: Zapisano ustawienia skrzynki zamówień.
+        incomplete: Uzupełnij serwer, adres, hasło i zaufany serwer poczty przed włączeniem skrzynki.
+      test_connection:
+        success:
+          one: "Połączono. W folderze jest %{count} mail. Serwery poczty z ostatniego maila: %{hosts}."
+          few: "Połączono. W folderze są %{count} maile. Serwery poczty z ostatniego maila: %{hosts}."
+          many: "Połączono. W folderze jest %{count} maili. Serwery poczty z ostatniego maila: %{hosts}."
+          other: "Połączono. W folderze jest %{count} maila. Serwery poczty z ostatniego maila: %{hosts}."
+        failure: "Nie udało się połączyć: %{error}"
+    purchase_inbox_routes:
+      create:
+        added: Dodano adres.
+      destroy:
+        removed: Usunięto adres.

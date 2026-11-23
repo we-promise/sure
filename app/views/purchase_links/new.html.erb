@@ -1,0 +1,29 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle", total: purchase_amount(@purchase, @purchase.total))) %>
+  <% dialog.with_body do %>
+    <div class="space-y-3">
+      <% if @candidates.any? %>
+        <p class="text-xs font-medium text-secondary"><%= t(".candidates") %></p>
+        <div class="rounded-lg shadow-border-xs divide-y divide-subdued">
+          <% @candidates.each do |entry| %>
+            <%= render "purchase_links/entry_row", purchase: @purchase, entry: entry %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%= form_with url: new_purchase_link_path(@purchase), method: :get, data: { turbo_frame: :modal } do %>
+        <%= render DS::SearchInput.new(name: "q", value: @query, placeholder: t(".search_placeholder"), autofocus: true) %>
+      <% end %>
+
+      <% if @entries.any? %>
+        <div class="max-h-80 overflow-y-auto rounded-lg shadow-border-xs divide-y divide-subdued">
+          <% @entries.each do |entry| %>
+            <%= render "purchase_links/entry_row", purchase: @purchase, entry: entry %>
+          <% end %>
+        </div>
+      <% elsif @query.present? %>
+        <p class="text-sm text-secondary"><%= t(".no_results", query: @query) %></p>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

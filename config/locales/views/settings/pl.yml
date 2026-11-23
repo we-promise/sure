@@ -32,6 +32,7 @@ pl:
       rules_label: Reguły
       security_label: Bezpieczeństwo
       self_hosting_label: Hosting własny
+      purchase_inbox_label: Skrzynka zamówień
       sso_providers_label: Dostawcy SSO
       statement_vault_label: Magazyn wyciągów
       system_health_label: Stan systemu

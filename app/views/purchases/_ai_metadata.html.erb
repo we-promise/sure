@@ -1,0 +1,13 @@
+<%# locals: (purchase:) %>
+<% if purchase.ai_metadata.present? %>
+  <%= render DS::Disclosure.new(title: t("purchases.ai_metadata.title")) do %>
+    <div class="space-y-2 text-xs text-secondary">
+      <p>
+        <%= t("purchases.ai_metadata.summary",
+              model: purchase.ai_metadata["model"].presence || "—",
+              version: purchase.ai_metadata["prompt_version"].presence || "—") %>
+      </p>
+      <pre class="whitespace-pre-wrap break-words bg-surface-inset rounded-lg p-3 max-h-96 overflow-auto"><%= JSON.pretty_generate(purchase.ai_metadata) %></pre>
+    </div>
+  <% end %>
+<% end %>

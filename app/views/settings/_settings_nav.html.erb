@@ -36,6 +36,7 @@ nav_sections = [
         { label: t(".debug_label", default: "Debug"), path: settings_debug_path, icon: "bug", if: Current.user&.super_admin? },
         { label: t(".background_jobs_label"), path: settings_background_jobs_path, icon: "list-checks", if: Current.user&.super_admin? },
         { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", searchable: true, if: self_hosted? },
+        { label: t(".purchase_inbox_label"), path: settings_purchase_inbox_path, icon: "inbox", if: self_hosted? && preview_features_enabled? && Current.user&.manages_instance_settings? },
         { label: t(".imports_label"), path: imports_path, icon: "download" },
         { label: t(".exports_label"), path: family_exports_path, icon: "upload" },
         { label: t(".sso_providers_label"), path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },

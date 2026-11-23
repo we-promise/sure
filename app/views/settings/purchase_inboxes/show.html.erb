@@ -1,0 +1,13 @@
+<%= content_for :page_title, t(".title") %>
+
+<%= settings_section title: t(".connection_title"), subtitle: t(".connection_subtitle") do %>
+  <%= render "settings/purchase_inboxes/connection_form", config: @config %>
+<% end %>
+
+<%= settings_section title: t(".routes_title"), subtitle: t(".routes_subtitle") do %>
+  <%= render "settings/purchase_inboxes/routes", users: @users, config: @config %>
+<% end %>
+
+<%= settings_section title: t(".rejected_title"), subtitle: t(".rejected_subtitle") do %>
+  <%= render "settings/purchase_inboxes/rejected", rejections: @rejections %>
+<% end %>
