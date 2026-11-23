@@ -313,6 +313,34 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ "existing-tx", "tx-1" ], sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }
   end
 
+  test "merges the stored snapshot under a lock when the poller wrote first" do
+    account = accounts(:depository)
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Checking",
+      currency: "USD",
+      balance: 100,
+      raw_transactions_payload: [ { id: "existing-tx" } ]
+    )
+    AccountProvider.create!(account: account, provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:get_account_transactions).with("acct-1", start_date: anything).returns({
+      transactions: [ { id: "tx-1" }.with_indifferent_access ],
+      total: 1
+    })
+
+    # The refresh poller stores its row after this instance loaded.
+    SophtronAccount.find(sophtron_account.id).update!(raw_transactions_payload: [ { id: "poller-tx" } ])
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider)
+                                   .import_transactions_after_refresh(sophtron_account)
+
+    assert result[:success], result.inspect
+    assert_equal [ "poller-tx", "tx-1" ],
+      sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }
+  end
+
   test "refresh job still running imports stored transactions and enqueues poll job" do
     account = accounts(:depository)
     sophtron_account = @item.sophtron_accounts.create!(
