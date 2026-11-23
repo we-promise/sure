@@ -88,14 +88,16 @@ class MintImport < Import
     CSV.parse(template, headers: true)
   end
 
+  # The Transaction Type column carries the direction, so the amount is read as
+  # a magnitude whatever its sign.
   def signed_csv_amount(csv_row)
-    amount = csv_row[amount_col_label]
+    amount = sanitize_number(csv_row[amount_col_label]).to_d.abs
     type = csv_row["Transaction Type"]
 
     if type == "credit"
-      amount.to_d
+      amount
     else
-      amount.to_d * -1
+      amount * -1
     end
   end
 
