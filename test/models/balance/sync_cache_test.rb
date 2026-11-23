@@ -24,6 +24,17 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal 80, cache.cash_entry_total(Date.current)
   end
 
+  test "a superseded valuation cannot hide an active valuation on the same day" do
+    date = Date.current
+    superseded = Entry.new(date: date, entryable: Valuation.new(superseded_at: Time.current))
+    cash_anchor = Entry.new(date: date, entryable: Valuation.new(kind: :cash_anchor))
+    active = Entry.new(date: date, entryable: Valuation.new)
+    cache = Balance::SyncCache.new(@account)
+    cache.stubs(:converted_entries).returns([ superseded, cash_anchor, active ])
+
+    assert_equal active, cache.get_valuation(date)
+  end
+
   test "uses custom exchange rate from transaction extra field when present" do
     # Create a transaction with EUR currency and custom exchange rate
     _entry = @account.entries.create!(

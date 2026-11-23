@@ -542,6 +542,9 @@ class Family::DataExporter
             currency: holding.currency,
             cost_basis: holding.cost_basis,
             cost_basis_source: holding.cost_basis_source,
+            materialized: holding.materialized,
+            superseded: holding.superseded,
+            cost_basis_inherited: holding.cost_basis_inherited,
             cost_basis_locked: holding.cost_basis_locked,
             security_locked: holding.security_locked
           }
@@ -561,6 +564,8 @@ class Family::DataExporter
             currency: entry.currency,
             name: entry.name,
             kind: entry.entryable.kind,
+            cash_entry_total: entry.entryable.cash_entry_total,
+            superseded_at: entry.entryable.superseded_at,
             created_at: entry.created_at,
             updated_at: entry.updated_at
           }

@@ -121,7 +121,7 @@ module Account::Anchorable
     with_lock do
       date = Date.current
       calculator = Balance::ForwardCalculator.new(self)
-      cash = calculator.calculate.select { |balance| balance.date <= date }.last&.cash_balance || 0
+      cash = calculator.calculate(as_of: date).last.cash_balance
       entry = entries.valuations.find_by(date: date, entryable_id: Valuation.cash_anchor.select(:id)) ||
         entries.new(date: date, entryable: Valuation.new(kind: :cash_anchor))
       entry.assign_attributes(amount: cash, currency: currency, name: I18n.t("valuations.cash_anchor", locale: family.locale))

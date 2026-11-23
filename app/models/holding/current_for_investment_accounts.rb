@@ -37,6 +37,7 @@ class Holding::CurrentForInvestmentAccounts
       WHERE holdings.account_id IN (:account_ids)
         AND accounts.id IN (:account_ids)
         AND holdings.date <= :today
+        AND NOT holdings.superseded
         AND (
           holdings.account_id IN (#{ANCHORED_ACCOUNT_IDS_SQL})
           OR (

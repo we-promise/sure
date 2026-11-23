@@ -49,6 +49,25 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes holding_ids, @private_holding.id
   end
 
+  test "lists only the active calculation while retaining direct access to a superseded row" do
+    superseded = @holding.dup
+    superseded.update!(currency: "EUR", materialized: true, superseded: true)
+
+    get api_v1_holdings_url,
+        params: { account_id: @account.id, security_id: @holding.security_id, date: @holding.date.iso8601 },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal [ @holding.id ], payload["holdings"].map { |holding| holding["id"] }
+    assert_equal 1, payload["pagination"]["total_count"]
+
+    get api_v1_holding_url(superseded), headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal superseded.id, JSON.parse(response.body)["id"]
+  end
+
   test "account_ids filter cannot reach inaccessible accounts" do
     get api_v1_holdings_url,
         params: { account_ids: [ @private_account.id ] },

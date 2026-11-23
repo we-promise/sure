@@ -1346,6 +1346,7 @@ class Family::DataImporter
 
         holding_date = Date.parse(data["date"].to_s)
         holding_currency = data["currency"] || account.currency
+        materialized = truthy?(data["materialized"]) || false
         holding_attributes = {
           qty: data["qty"].to_d,
           price: data["price"].to_d,
@@ -1353,7 +1354,9 @@ class Family::DataImporter
           currency: holding_currency,
           cost_basis: data["cost_basis"]&.to_d,
           cost_basis_source: importable_cost_basis_source(data["cost_basis_source"]),
-          materialized: false,
+          materialized: materialized,
+          superseded: materialized && (truthy?(data["superseded"]) || false),
+          cost_basis_inherited: materialized && (truthy?(data["cost_basis_inherited"]) || false),
           cost_basis_locked: truthy?(data["cost_basis_locked"]) || false,
           security_locked: truthy?(data["security_locked"]) || false
         }
@@ -1381,6 +1384,7 @@ class Family::DataImporter
         created = valuation.blank?
         valuation ||= Valuation.new
         valuation.kind = valuation_kind_for(data["kind"])
+        valuation.cash_entry_total = data["cash_entry_total"] if data.key?("cash_entry_total")
 
         entry ||= Entry.new(entryable: valuation)
         entry.assign_attributes(
@@ -1396,6 +1400,8 @@ class Family::DataImporter
         end
 
         entry.save!
+        # Entry monetary edits reactivate a valuation; restore its recorded precedence after saving.
+        valuation.update!(superseded_at: data["superseded_at"]) if data.key?("superseded_at")
         @created_entry_ids << entry.id if created
         increment_summary("Valuation", created ? :created : :updated)
       end
@@ -1933,15 +1939,18 @@ class Family::DataImporter
     end
 
     def upsert_imported_holding!(account, security, date, currency, attributes)
-      holding = account.holdings.find_or_initialize_by(security: security, date: date, currency: currency)
+      scope = account.holdings.where(security: security, date: date, currency: currency).lock
+      holding = scope.first_or_initialize
       created = holding.new_record?
+      return false if !created && attributes[:materialized] && !holding.materialized?
+
       holding.assign_attributes(attributes)
 
       begin
         Holding.transaction(requires_new: true) { holding.save! }
       rescue ActiveRecord::RecordNotUnique
-        existing = account.holdings.find_by!(security: security, date: date, currency: currency)
-        existing.update!(attributes)
+        existing = scope.first!
+        existing.update!(attributes) unless attributes[:materialized] && !existing.materialized?
         created = false
       end
 

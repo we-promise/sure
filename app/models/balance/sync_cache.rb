@@ -31,11 +31,10 @@ class Balance::SyncCache
 
   # Return an authoritative total valuation, excluding cash-only and superseded anchors.
   def get_valuation(date)
-    valuation = entries_by_date[date]&.find { |e| e.valuation? && !e.entryable.cash_anchor? }
     cash_anchor = get_cash_anchor(date)
-    return if valuation && cash_anchor && valuation.entryable.superseded_at?
-
-    valuation
+    entries_by_date[date]&.find do |entry|
+      entry.valuation? && !entry.entryable.cash_anchor? && !(cash_anchor && entry.entryable.superseded_at?)
+    end
   end
 
   # Cash-only anchors are distinct from valuations of the entire account.
@@ -55,11 +54,6 @@ class Balance::SyncCache
 
   def get_entries(date)
     entries_by_date[date]&.select { |e| e.transaction? || e.trade? } || []
-  end
-
-  # Every entry converted to the account currency, in date order.
-  def entries
-    converted_entries
   end
 
   # One replay per loan per cache, so a calculator that asks twice does not
@@ -88,8 +82,7 @@ class Balance::SyncCache
       @holdings_value_by_date ||= begin
         missing_rate_pairs = []
 
-        holdings = account.holdings
-        holdings = holdings.preferred_on_date if account.accounting_start_date
+        holdings = account.accounting_start_date ? account.holdings.preferred_on_date : account.holdings.where(superseded: false)
         totals = holdings.each_with_object(Hash.new(0)) do |h, acc|
           begin
             converted = Money.new(h.amount, h.currency).exchange_to(account.currency, date: h.date).amount

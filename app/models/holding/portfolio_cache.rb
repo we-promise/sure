@@ -83,6 +83,10 @@ class Holding::PortfolioCache
     @security_cache.map { |_, v| v[:security] }
   end
 
+  def get_holdings(security_id)
+    holdings_by_security_id[security_id]
+  end
+
   # The ratio of the split a security goes ex on this date, or nil when it
   # has none. Nil, not 1, so a caller can leave an unsplit position untouched.
   def get_split_ratio(security_id, date)
@@ -165,9 +169,10 @@ class Holding::PortfolioCache
         scope = account.holdings
         # Rebuild anchored prices from observations so a corrected split can change them.
         if @carry_forward_prices
+          scope = scope.where(security_id: @security_ids) if @security_ids
           scope.where(materialized: false).preferred_on_date.to_a
         else
-          scope.chronological.to_a
+          scope.where(superseded: false).chronological.to_a
         end
       end
     end

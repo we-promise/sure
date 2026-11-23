@@ -15,11 +15,20 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
   end
 
   # Rebuild daily balances from dated total valuations, cash anchors and ledger flows.
-  def calculate
+  def calculate(as_of: nil)
     Rails.logger.tagged("Balance::ForwardCalculator") do
-      start_cash_balance, start_non_cash_balance = resolve_starting_balances
+      if as_of
+        # An anchor replays the cached ledger through its own date. Any opening
+        # valuation establishes the starting balance when the replay reaches it.
+        start_date = [ sync_cache.entries.first&.date, as_of ].compact.min
+        end_date = as_of
+        start_cash_balance = start_non_cash_balance = 0
+      else
+        start_cash_balance, start_non_cash_balance = resolve_starting_balances
+        start_date, end_date = calc_start_date, calc_end_date
+      end
 
-      calc_start_date.upto(calc_end_date).map do |date|
+      start_date.upto(end_date).map do |date|
         valuation = sync_cache.get_valuation(date)
 
         if valuation
@@ -29,7 +38,8 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
           )
           end_non_cash_balance = valuation.amount - end_cash_balance
         elsif (cash_anchor = sync_cache.get_cash_anchor(date))
-          end_cash_balance = cash_anchor.amount + cash_anchor.entryable.cash_entry_total.to_d - sync_cache.cash_entry_total(date)
+          ledger_delta = cash_anchor.entryable.cash_entry_total.to_d - sync_cache.cash_entry_total(date)
+          end_cash_balance = cash_anchor.amount + ledger_delta * flows_factor
           end_non_cash_balance = holdings_value_for_date(date)
         else
           end_cash_balance = derive_end_cash_balance(start_cash_balance: start_cash_balance, date: date)
@@ -152,7 +162,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
       # Scheduled entries and future holdings only enter the calculation once
       # their dates arrive.
       last_entry = account.entries.excluding_pending.where(date: ..Date.current).maximum(:date)
-      last_holding = account.holdings.through_today.maximum(:date)
+      last_holding = account.holdings.through_today.where(superseded: false).maximum(:date)
       [ last_entry, last_holding ].compact.max || Date.current
     end
 

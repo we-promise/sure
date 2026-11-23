@@ -37,6 +37,18 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "an unconvertible quote falls back to the last snapshot in its own currency" do
+    security = Security.create!(ticker: "SNFX", name: "Snapshot FX")
+    @account.holdings.create!(security: security, date: Date.current.prev_day, qty: 3, price: 100, amount: 300, currency: "USD")
+    Security::Price.create!(security: security, date: Date.current, price: 80, currency: "EUR")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    @account.create_cash_anchor!
+
+    holding = Holding::ForwardCalculator.new(@account, window_start_date: Date.current).calculate.sole
+    assert_equal 300, holding.amount
+    assert_equal "USD", holding.currency
+  end
+
   test "holding generation respects user timezone and last generated date is current user date" do
     # Simulate user in EST timezone
     Time.use_zone("America/New_York") do

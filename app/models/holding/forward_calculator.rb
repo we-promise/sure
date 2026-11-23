@@ -64,15 +64,17 @@ class Holding::ForwardCalculator
         use_holdings: @carry_holdings, carry_forward_prices: @carry_holdings)
     end
 
-    # A snapshot supplies the position until the journal records its first share movement.
+    # An observation supplies its own day's position. Between observations,
+    # carry their quantities only until the journal first moves shares.
     def snapshot_for(security_id, date)
-      @snapshots ||= begin
-        scope = account.holdings.where(materialized: false)
-        scope = scope.where(security_id: @security_ids) if @security_ids
-        scope.preferred_on_date.to_a.group_by(&:security_id)
-      end
-      snapshots = @snapshots[security_id]
+      snapshots = portfolio_cache.get_holdings(security_id)
       return unless snapshots
+
+      index = snapshots.bsearch_index { |holding| holding.date > date } || snapshots.length
+      return if index.zero?
+
+      snapshot = snapshots[index - 1]
+      return snapshot if snapshot.date == date
 
       @first_trade_dates ||= portfolio_cache.get_trades.each_with_object({}) do |entry, dates|
         next if entry.entryable.qty.zero?
@@ -82,20 +84,18 @@ class Holding::ForwardCalculator
       first_trade_date = @first_trade_dates[security_id]
       return if first_trade_date && first_trade_date <= date
 
-      index = snapshots.bsearch_index { |holding| holding.date > date } || snapshots.length
-      snapshots[index - 1] if index.positive?
+      snapshot
     end
 
     def build_snapshot_holding(snapshot, date)
       security_id = snapshot.security_id
-      price = portfolio_cache.get_price(security_id, date, currency: snapshot.currency)
-      return unless price
-
       split_factor = portfolio_cache.split_factor_between(security_id, snapshot.date, date)
+      price = portfolio_cache.get_price(security_id, date, currency: snapshot.currency)&.price ||
+        Security::Split.unscale(snapshot.price, split_factor)
       qty = Security::Split.scale(snapshot.qty, split_factor)
       basis = Security::Split.unscale(snapshot.cost_basis, split_factor) if snapshot.cost_basis
       Holding::HoldingData.new(account_id: account.id, security_id: security_id, date: date,
-        qty: qty, price: price.price, currency: price.currency, amount: qty * price.price, cost_basis: basis, snapshot: snapshot)
+        qty: qty, price: price, currency: snapshot.currency, amount: qty * price, cost_basis: basis, snapshot: snapshot)
     end
 
     def empty_portfolio

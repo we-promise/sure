@@ -863,12 +863,11 @@ class Account < ApplicationRecord
         .where.not(qty: 0)
         .order(amount: :desc)
     else
-      holdings
-        .where(currency: currency)
+      visible_holdings = holdings.where(superseded: false, currency: currency)
+      visible_holdings
         .where.not(qty: 0)
         .where(
-          id: holdings.through_today.select("DISTINCT ON (security_id) id")
-                      .where(currency: currency)
+          id: visible_holdings.through_today.select("DISTINCT ON (security_id) id")
                       .order(:security_id, date: :desc)
         )
         .order(amount: :desc)

@@ -370,6 +370,7 @@ class InvestmentStatement
             WHERE holdings.account_id = current_holdings.account_id
               AND holdings.security_id = current_holdings.security_id
               AND holdings.currency = current_holdings.currency
+              AND NOT holdings.superseded
               AND holdings.date < current_holdings.date
             ORDER BY holdings.date DESC
             LIMIT 1

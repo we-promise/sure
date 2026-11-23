@@ -63,7 +63,9 @@ before calculating balance history. For a cash-anchored account, one position
 per security and date feeds both balances and portfolio reports. If currencies
 overlap, prefer the provider snapshot, then another observation, then a
 calculated row. Within the same source rank prefer the account currency, then
-sort by currency code. A zero in the chosen row closes the position.
+sort by currency code. A zero in the chosen row closes the position. When a
+rebuild changes the currency of a calculated position, its previous row is
+superseded so its stored cost override can be restored if that currency returns.
 
 Entry delegates to one of the three [Entryable types](../../app/models/entryable.rb),
 with a date, amount and currency:
