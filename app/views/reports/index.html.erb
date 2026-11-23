@@ -159,31 +159,18 @@
         </div>
       </div>
     <% end %>
+
+    <%# When the report was built. A stale one is being rebuilt in the
+        background; Refresh rebuilds it now, while the member waits. %>
+    <div class="flex items-center gap-2 text-xs text-secondary" data-testid="report-built-at">
+      <span><%= t("reports.index.built_at", time: time_ago_in_words(@report_built_at)) %></span>
+      <% if @report_stale %>
+        <span>· <%= t("reports.index.updating") %></span>
+      <% end %>
+      <span aria-hidden="true">·</span>
+      <%= render DS::Link.new(text: t("reports.index.refresh"), href: reports_path(request.query_parameters.merge(refresh: 1))) %>
+    </div>
   </div>
 <% end %>
 
-<div class="w-full space-y-6 lg:pb-6">
-  <%= render "shared/exchange_rate_notes", family: Current.family %>
-
-  <% if Current.family.transactions.any? %>
-    <%# Summary Dashboard - Always visible, not collapsible %>
-    <section class="@container">
-      <%= render partial: "reports/summary_dashboard", locals: {
-        metrics: @summary_metrics,
-        period_type: @period_type
-      } %>
-    </section>
-
-    <%# Collapsible & Reorderable Sections %>
-    <%= render "shared/reorderable_sections",
-          sections: @reports_sections,
-          namespace: "reports",
-          url: update_preferences_reports_path,
-          i18n_scope: "reports.index" %>
-  <% else %>
-    <%# Empty State %>
-    <section>
-      <%= render partial: "reports/empty_state" %>
-    </section>
-  <% end %>
-</div>
+<%= render "reports/body", report: @report, sections: @reports_sections %>

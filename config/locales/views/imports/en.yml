@@ -24,6 +24,8 @@ en:
         split_warning_title: Split transactions detected
         split_warning_description: "This QIF file contains split transactions. Review the detected split categories and tags below before importing."
         split_badge: split
+        selection_list_changed_title: Categories and tags have changed
+        selection_list_changed_description: "With the new date format, the file contains different categories or tags. Review the selection below; all entries are selected again."
         unknown_account_type_name: "“%{type}”"
         unknown_account_type_title:
           one: Unknown account type
