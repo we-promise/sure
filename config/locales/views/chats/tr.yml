@@ -12,7 +12,8 @@ tr:
       available_description: Yapay zeka sohbeti finansal sorularınızı yanıtlayabilir
         ve verilerinize dayalı içgörüler sunabilir. Bu özelliği kullanmak için açıkça
         etkinleştirmeniz gerekir.
-      disable_note: İstediğiniz zaman devre dışı bırakabilirsiniz.
+      disable_note: "İstediğiniz zaman devre dışı bırakabilirsiniz. Bu, sohbet, faturalar ve belge araması için yapay zekayı açar; bunlar mesajlarınızı, işlemlerinizi ve belgelerinizi olduğu gibi bu örneğin yapay zeka sağlayıcısına gönderir."
+      family_note: "Aile yöneticisi olarak bu, aileniz için yapay zeka ile kategorilendirmeyi ve satıcı tespitini de açar; bunlar işlem adlarını, tutarlarını ve satıcı adlarını gönderir."
       enable_button: Yapay Zeka Sohbetlerini Etkinleştir
       title: Yapay Zeka Sohbetlerini Etkinleştir
       unavailable_description_html: Yapay zeka asistanını kullanmak için <code class="bg-surface-inset

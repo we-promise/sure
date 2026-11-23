@@ -35,7 +35,8 @@ it:
       available_description: "La chat IA può rispondere a domande finanziarie e fornire analisi basate sui tuoi dati. Per usare questa funzione devi abilitarla esplicitamente."
       unavailable_description_html: "Per usare l'assistente IA, devi impostare la variabile d'ambiente <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> o configurarla nelle impostazioni di self-hosting della tua istanza."
       enable_button: "Abilita chat IA"
-      disable_note: "Disabilita in qualsiasi momento."
+      disable_note: "Disabilita in qualsiasi momento. Attiva l'IA per chat, bollette e ricerca nei documenti, che inviano i tuoi messaggi, transazioni e documenti così come sono al fornitore di IA di questa istanza."
+      family_note: "Come amministratore della famiglia, attiva anche la categorizzazione con IA e il rilevamento degli esercenti per la tua famiglia, che inviano nomi, importi ed esercenti delle transazioni."
   assistant_messages:
     assistant_message:
       assistant_reasoning: "Ragionamento assistente"

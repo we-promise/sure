@@ -12,7 +12,8 @@ pl:
       available_description: Czat AI może odpowiadać na pytania finansowe i dostarczać
         spostrzeżeń na podstawie Twoich danych. Aby z niego korzystać, musisz wyraźnie
         go włączyć.
-      disable_note: Możesz wyłączyć w każdej chwili.
+      disable_note: "Możesz wyłączyć w każdej chwili. Włącza to AI dla czatu, rachunków i wyszukiwania w dokumentach, które wysyłają Twoje wiadomości, transakcje i dokumenty w niezmienionej postaci do dostawcy AI tej instancji."
+      family_note: "Jako administrator rodziny włączasz też kategoryzację AI i wykrywanie sprzedawców dla swojej rodziny, które wysyłają nazwy, kwoty i sprzedawców transakcji."
       enable_button: Włącz czaty AI
       title: Włącz czaty AI
       unavailable_description_html: Aby korzystać z asystenta AI, musisz ustawić zmienną
