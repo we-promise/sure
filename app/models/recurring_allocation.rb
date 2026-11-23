@@ -22,8 +22,25 @@ class RecurringAllocation < ApplicationRecord
   validates :allocated_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
   validate :currency_matches_occurrence
+  validate :entry_is_not_refund
 
-  scope :confirmed, -> { where(state: :confirmed) }
+  # A confirmed allocation on a refund is no longer a payment, even if a row
+  # survives a classification that raced with allocation creation. Exclude
+  # those rows from every paid total; unallocate_entry! reads the raw state to
+  # remove them.
+  scope :confirmed, -> {
+    where(state: :confirmed).where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1
+        FROM entries AS refund_entries
+        INNER JOIN transactions AS refund_transactions
+          ON refund_transactions.id = refund_entries.entryable_id
+         AND refund_entries.entryable_type = 'Transaction'
+        WHERE refund_entries.id = recurring_allocations.entry_id
+          AND refund_transactions.kind = 'refund'
+      )
+    SQL
+  }
   scope :suggested, -> { where(state: :suggested) }
 
   before_validation :default_paid_on
@@ -41,6 +58,13 @@ class RecurringAllocation < ApplicationRecord
   }
 
   private
+    def entry_is_not_refund
+      return unless entry&.transaction?
+      return unless Transaction.where(id: entry.entryable_id, kind: "refund").exists?
+
+      errors.add(:entry, :refund_not_allowed)
+    end
+
     def currency_matches_occurrence
       return if recurring_occurrence.nil? || currency == recurring_occurrence.currency
 

@@ -25,6 +25,88 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     @allocator = Allocator.new(@occurrence)
   end
 
+  test "refunds cannot settle recurring income through direct allocation" do
+    @rent.update!(amount: -2000, bill_type: "income")
+    entry = entry_for(-2000)
+    entry.transaction.reload.mark_as_refund!
+
+    assert_no_difference "RecurringAllocation.count" do
+      assert_raises(ActiveRecord::RecordInvalid) { @allocator.allocate!(entry: entry) }
+    end
+  end
+
+  test "a suggested payment reclassified as a refund cannot be confirmed" do
+    @rent.update!(amount: -2000, bill_type: "income")
+    entry = entry_for(-2000)
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.7, signals: {})
+    entry.transaction.reload.mark_as_refund!
+
+    assert_raises(ActiveRecord::RecordInvalid) { @allocator.confirm_suggestion!(allocation) }
+    assert_equal "suggested", allocation.reload.state
+  end
+
+  test "reclassifying a confirmed payment as a refund removes its allocation and reopens the occurrence" do
+    @rent.update!(amount: -2000, bill_type: "income")
+    entry = entry_for(-2000)
+    allocation = @allocator.allocate!(entry: entry)
+
+    assert_equal "confirmed", allocation.reload.state
+    assert_equal 2000, @occurrence.reload.confirmed_allocated
+    assert @occurrence.paid?
+
+    entry.transaction.reload.mark_as_refund!
+
+    assert_not RecurringAllocation.exists?(allocation.id)
+    assert_equal 0, @occurrence.reload.confirmed_allocated
+    assert @occurrence.scheduled?, "removing the only confirmed payment must reopen an auto-closed occurrence"
+  end
+
+  test "a direct kind change to refund also detaches a confirmed allocation" do
+    @rent.update!(amount: -2000, bill_type: "income")
+    entry = entry_for(-2000)
+    allocation = @allocator.allocate!(entry: entry)
+
+    entry.transaction.update!(kind: "refund")
+
+    assert_not RecurringAllocation.exists?(allocation.id)
+    assert_equal 0, @occurrence.reload.confirmed_allocated
+    assert @occurrence.scheduled?
+  end
+
+  test "a confirmed allocation that survives on a refund is excluded from paid totals" do
+    @rent.update!(amount: -2000, bill_type: "income")
+    entry = entry_for(-2000)
+    allocation = @allocator.allocate!(entry: entry)
+
+    # Bypass the callback to model a row left by an older build or a race.
+    entry.transaction.update_column(:kind, "refund")
+
+    assert RecurringAllocation.exists?(allocation.id)
+    assert_equal 0, @occurrence.reload.confirmed_allocated
+    assert_equal 0, @occurrence.allocations.confirmed.sum(:allocated_amount)
+  end
+
+  test "reclassifying removes confirmed allocations across multiple occurrences" do
+    @rent.update!(amount: -2000, bill_type: "income")
+    @occurrence.update!(expected_amount: 1000)
+    second = free_occurrence
+    second.update!(expected_amount: 1000)
+    entry = entry_for(-2000)
+
+    @allocator.allocate!(amount: 1000, entry: entry)
+    Allocator.new(second).allocate!(amount: 1000, entry: entry)
+
+    assert @occurrence.reload.paid?
+    assert second.reload.paid?
+
+    entry.transaction.reload.mark_as_refund!
+
+    assert_equal 0, @occurrence.reload.confirmed_allocated
+    assert_equal 0, second.reload.confirmed_allocated
+    assert @occurrence.scheduled?
+    assert second.scheduled?
+  end
+
   test "a currency mismatch reads as a sentence, not a missing translation" do
     allocation = RecurringAllocation.new(
       recurring_occurrence: @occurrence, state: :confirmed, source: :user_confirmed,

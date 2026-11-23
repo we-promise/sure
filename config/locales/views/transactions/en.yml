@@ -58,6 +58,14 @@ en:
       create_merchant_error: Could not create merchant
       merchant_search_placeholder: Search or create merchant
       no_matching_categories: No matching categories
+      refund_hint: This credit reduces spending instead of counting as income.
+      refund_label: This income is a refund
+      refund_purchase_hint: When the purchase has a category, linking uses it so the refund nets against the same spending. The most recent purchases are listed; older ones can be linked from the transaction page.
+      refund_purchase_invalid: The selected purchase cannot be refunded
+      refund_purchase_label: Original purchase (optional)
+      refund_purchase_none: No linked purchase
+      refund_purchase_not_found: The selected purchase could not be found
+      refund_requires_income: Refunds must be added as income
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags

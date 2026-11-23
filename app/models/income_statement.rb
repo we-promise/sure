@@ -95,6 +95,18 @@ class IncomeStatement
     @income_totals_by_period[key] = build_period_total(classification: "income", period: period, tag_ids: tag_ids)
   end
 
+  def refund_totals(period: Period.current_month, tag_ids: nil)
+    key = [ period_cache_key(period), tag_ids ]
+    @refund_totals_by_period ||= {}
+    return @refund_totals_by_period[key] if @refund_totals_by_period.key?(key)
+
+    scope = family.transactions.refund.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period)
+    scope = scope.with_any_tag(tag_ids) if tag_ids.present?
+    rows = totals_query(transactions_scope: scope, date_range: period.date_range)
+      .map { |row| row.with(total: -row.total) }
+    @refund_totals_by_period[key] = build_period_total(classification: "expense", period: period, rows: rows)
+  end
+
   # Money moved into investment accounts during the period, for a family that
   # does not count it as spending. Zero for everyone else: their
   # contributions are already part of expense_totals.
@@ -124,6 +136,7 @@ class IncomeStatement
 
     expense_by_cat = expense.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
     income_by_cat = income.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
+    refunds_by_cat = refund_totals(period: period).category_totals.index_by { |ct| cat_key.call(ct) }
 
     all_keys = (expense_by_cat.keys + income_by_cat.keys).uniq
     raw_expense_categories = []
@@ -134,21 +147,21 @@ class IncomeStatement
       inc_ct = income_by_cat[cat]
       exp_total = exp_ct&.total || 0
       inc_total = inc_ct&.total || 0
-      net = exp_total - inc_total
+      refund = refunds_by_cat[cat]&.total || 0
+      legacy_net = exp_total + refund - inc_total
+      net_expense = [ legacy_net, 0 ].max - refund
       category = exp_ct&.category || inc_ct&.category
 
-      if net > 0
-        raw_expense_categories << { category: category, total: net }
-      elsif net < 0
-        raw_income_categories << { category: category, total: net.abs }
-      end
+      raw_expense_categories << { category: category, total: net_expense } unless net_expense.zero?
+      raw_income_categories << { category: category, total: -legacy_net } if legacy_net.negative?
     end
 
     total_net_expense = raw_expense_categories.sum { |r| r[:total] }
     total_net_income = raw_income_categories.sum { |r| r[:total] }
 
+    positive_expense = raw_expense_categories.sum { |r| [ r[:total], 0 ].max }
     net_expense_categories = raw_expense_categories.map do |r|
-      weight = total_net_expense.zero? ? 0 : (r[:total].to_f / total_net_expense) * 100
+      weight = positive_expense.zero? ? 0 : ([ r[:total], 0 ].max.to_f / positive_expense) * 100
       CategoryTotal.new(category: r[:category], total: r[:total], currency: family.currency, weight: weight)
     end
 
@@ -285,7 +298,7 @@ class IncomeStatement
 
         category_total = parent_category_total + children_totals
 
-        weight = (category_total.zero? ? 0 : category_total.to_f / classification_total) * 100
+        weight = (category_total.zero? || classification_total.zero? ? 0 : category_total.to_f / classification_total) * 100
 
         CategoryTotal.new(
           category: category,
@@ -315,7 +328,7 @@ class IncomeStatement
 
     def unfiltered_daily_expense_series(period)
       Rails.cache.fetch([
-        "income_statement", "daily_expense_series", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id,
+        "income_statement", "daily_expense_series", "v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id,
         included_account_ids_hash, period.start_date, period.end_date,
         *cache_freshness_key
       ]) do
@@ -335,7 +348,7 @@ class IncomeStatement
     def daily_expense_by_category(period)
       @daily_expense_by_category ||= {}
       @daily_expense_by_category[period_cache_key(period)] ||= Rails.cache.fetch([
-        "income_statement", "daily_expense_by_category", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id,
+        "income_statement", "daily_expense_by_category", "v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id,
         included_account_ids_hash, period.start_date, period.end_date,
         *cache_freshness_key
       ]) do
@@ -366,14 +379,14 @@ class IncomeStatement
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
+        "income_statement", "family_stats", "v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
       ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", CategoryStats::CACHE_VERSION, ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
+        "income_statement", "category_stats", "v2", CategoryStats::CACHE_VERSION, ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
       ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 

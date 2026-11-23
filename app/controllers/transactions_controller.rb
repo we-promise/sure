@@ -5,6 +5,9 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
+  before_action :reject_refund_conversion, only: %i[convert_to_trade create_trade_from_transaction mark_as_recurring]
+  before_action :reject_generic_refund_transition, only: %i[create update]
+  before_action :require_refund_preview_features, only: :create
 
   helper_method :new_transaction_idempotency_key
 
@@ -119,10 +122,13 @@ class TransactionsController < ApplicationController
   end
 
   def create
+    @refund_requested = refund_requested?
+    @refund_of_entry_id = refund_param(:refund_of_entry_id).presence
+
     account = Current.user.accessible_accounts.find_by(id: params.dig(:entry, :account_id))
 
     if account.nil?
-      @entry = Current.family.entries.new(entry_params)
+      @entry = Current.family.entries.new(entry_params_with_idempotency_key(nil))
       @entry.valid?
       clear_stale_auto_generated_name!(@entry)
       set_new_transaction_form_options
@@ -146,15 +152,37 @@ class TransactionsController < ApplicationController
 
     @entry = account.entries.new(entry_params_with_idempotency_key(idempotency_key))
 
-    if @entry.save
-      @entry.sync_account_later
+    unless valid_refund_request?
+      set_new_transaction_form_options
+      render :new, status: :unprocessable_entity
+      return
+    end
+
+    created = false
+
+    Entry.transaction do
+      unless @entry.save
+        raise ActiveRecord::Rollback
+      end
+
+      if @refund_requested && !classify_refund!
+        raise ActiveRecord::Rollback
+      end
+
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.apply_immediate_rules_later
 
+      created = true
+    end
+
+    if created
+      @entry.apply_immediate_rules_later
+      # Enqueue only after the entry (and its refund classification) commit.
+      @entry.sync_account_later
       respond_with_created_entry(@entry)
     else
+      @entry = rebuild_failed_new_entry(account, idempotency_key)
       clear_stale_auto_generated_name!(@entry)
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
@@ -174,74 +202,103 @@ class TransactionsController < ApplicationController
 
   def update
     rule_input = @entry.rule_input_snapshot
+    refund_blocked = false
+    updated = false
 
-    if @entry.update(permitted_entry_params)
-      sync_needed = @entry.saved_changes_affect_balances?
-      transaction = @entry.transaction
-      transaction.record_category_usage!
-
-      if needs_rule_notification?(transaction)
-        flash[:cta] = {
-          type: "category_rule",
-          category_id: transaction.category_id,
-          category_name: transaction.category.name,
-          merchant_name: @entry.name
-        }
-      end
-
-      @entry.lock_saved_attributes!
-      @entry.mark_user_modified!
-      @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.sync_account_later if sync_needed
-      @entry.apply_immediate_rules_later(changed_from: rule_input)
-
-      notes_changed = @entry.saved_change_to_notes?
-
-      # Reload to ensure fresh state for turbo stream rendering
+    # Refund classification locks this transaction row before changing its
+    # kind. Take the same lock, re-read the entry while holding it, and keep it
+    # through the save so a classification committed after #set_entry cannot
+    # be overwritten by a stale generic kind update.
+    @entry.transaction.with_lock do
       @entry.reload
-
-      assign_mark_recurring_state
-
-      respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
-        format.turbo_stream do
-          in_split_group = helpers.in_split_group?(@entry, params[:grouped])
-          # The row draws the "Transfer?" hint, and its cache key records
-          # whether it applies, so the hint is worked out as the list does.
-          @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates([ @entry.transaction ], user: Current.user)
-          render turbo_stream: [
-            turbo_stream.replace(
-              dom_id(@entry, :header),
-              partial: "transactions/header",
-              locals: { entry: @entry }
-            ),
-            turbo_stream.replace(
-              dom_id(@entry, :protection),
-              partial: "entries/protection_indicator",
-              locals: { entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) }
-            ),
-            (turbo_stream.replace(
-              dom_id(@entry, :notes),
-              partial: "transactions/notes",
-              locals: { entry: @entry, can_annotate: can_annotate_entry? }
-            ) if params[:entry]&.key?(:notes) && notes_changed),
-            (turbo_stream.replace(
-              dom_id(@entry, :mark_recurring),
-              partial: "transactions/mark_recurring",
-              locals: { entry: @entry }
-            ) if can_edit_entry? && !@entry.split_child?),
-            turbo_stream.replace(
-              dom_id(@entry),
-              partial: "entries/entry",
-              locals: { entry: @entry, in_split_group: in_split_group }
-            ),
-            *flash_notification_stream_items
-          ].compact
-        end
+      if generic_refund_transition?
+        refund_blocked = true
+        next
       end
-    else
+
+      updated = @entry.update(permitted_entry_params)
+    end
+
+    if refund_blocked
+      redirect_back_or_to transaction_path(@entry),
+        alert: t("activerecord.errors.messages.invalid_refund"), status: :see_other
+      return
+    end
+
+    unless updated
       assign_mark_recurring_state
       render :show, status: :unprocessable_entity
+      return
+    end
+
+    sync_needed = @entry.saved_changes_affect_balances?
+    transaction = @entry.transaction
+    transaction.record_category_usage!
+
+    if needs_rule_notification?(transaction)
+      flash[:cta] = {
+        type: "category_rule",
+        category_id: transaction.category_id,
+        category_name: transaction.category.name,
+        merchant_name: @entry.name
+      }
+    end
+
+    @entry.lock_saved_attributes!
+    @entry.mark_user_modified!
+    @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+    @entry.sync_account_later if sync_needed
+    @entry.apply_immediate_rules_later(changed_from: rule_input)
+
+    notes_changed = @entry.saved_change_to_notes?
+
+    # Reload to ensure fresh state for turbo stream rendering
+    @entry.reload
+    refund_details = helpers.purchase_refund_details(@entry.transaction)
+
+    assign_mark_recurring_state
+
+    respond_to do |format|
+      format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
+      format.turbo_stream do
+        in_split_group = helpers.in_split_group?(@entry, params[:grouped])
+        # The row draws the "Transfer?" hint, and its cache key records
+        # whether it applies, so the hint is worked out as the list does.
+        @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates([ @entry.transaction ], user: Current.user)
+        render turbo_stream: [
+          turbo_stream.replace(
+            dom_id(@entry, :header),
+            partial: "transactions/header",
+            locals: { entry: @entry }
+          ),
+          turbo_stream.replace(
+            dom_id(@entry, :protection),
+            partial: "entries/protection_indicator",
+            locals: { entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) }
+          ),
+          (turbo_stream.replace(
+            dom_id(@entry, :refund_details),
+            partial: "transactions/refund_details",
+            locals: { details: refund_details, entry: @entry }
+          ) if refund_details),
+          (turbo_stream.replace(
+            dom_id(@entry, :notes),
+            partial: "transactions/notes",
+            locals: { entry: @entry, can_annotate: can_annotate_entry? }
+          ) if params[:entry]&.key?(:notes) && notes_changed),
+          (turbo_stream.replace(
+            dom_id(@entry, :mark_recurring),
+            partial: "transactions/mark_recurring",
+            locals: { entry: @entry }
+          ) if can_edit_entry? && !@entry.split_child?),
+          turbo_stream.replace(
+            dom_id(@entry),
+            partial: "entries/entry",
+            locals: { entry: @entry, in_split_group: in_split_group }
+          ),
+          *flash_notification_stream_items
+        ].compact
+      end
     end
   end
 
@@ -377,9 +434,15 @@ class TransactionsController < ApplicationController
     activity_label = params[:investment_activity_label].presence
     # Serialize replacements on the source, including requests already in flight.
     ActiveRecord::Base.transaction do
+      # Match the lock order used by refund linking and entry validation.
+      @transaction.lock!
       # Entry#transaction is its delegated transaction record, so use an
       # explicit DB transaction rather than ActiveRecord's instance with_lock.
       @entry.lock!
+      if @transaction.refund? || @transaction.refund_linked?
+        redirect_back_or_to transactions_path, alert: t("activerecord.errors.messages.refund_links_present")
+        next
+      end
       if @entry.excluded?
         flash[:alert] = t("transactions.convert_to_trade.errors.already_converted")
         redirect_back_or_to transactions_path
@@ -506,8 +569,14 @@ class TransactionsController < ApplicationController
       # the add-bill form take, so neither can slip in between them.
       blocked = nil
       Entry.transaction do
+        # Refund classification locks the transaction row before changing kind.
+        # Take that lock first, then the entry lock the Allocator and this check
+        # share, and re-read while both are held so a classification committed
+        # after this request loaded the transaction cannot slip past the guard.
+        transaction.lock!
         RecurringTransaction::Allocator.lock_entry!(transaction.entry)
         blocked = mark_recurring_blocked_message(transaction)
+        blocked ||= t("activerecord.errors.messages.refund_links_present") if transaction.refund?
         RecurringTransaction.create_from_transaction(transaction) unless blocked
       end
 
@@ -588,6 +657,37 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def reject_generic_refund_transition
+      return unless generic_refund_transition?
+
+      # Refund transitions must use the dedicated commands, which enforce
+      # eligibility, preserve the previous kind and maintain enrichment locks.
+      destination = @entry ? transaction_path(@entry) : transactions_path
+      redirect_back_or_to destination, alert: t("activerecord.errors.messages.invalid_refund"), status: :see_other
+    end
+
+    def generic_refund_transition?
+      attributes = params[:entry]
+      return false unless attributes.is_a?(ActionController::Parameters)
+
+      attributes = attributes[:entryable_attributes]
+      return false unless attributes.is_a?(ActionController::Parameters)
+      return false unless attributes.key?(:kind)
+
+      kind = attributes[:kind]
+      current = @entry.transaction if @entry&.transaction?
+      return false if kind == current&.kind
+
+      kind == "refund" || current&.refund?
+    end
+
+    def reject_refund_conversion
+      transaction = accessible_transactions.find(params[:id])
+      return unless transaction.refund? || (action_name != "mark_as_recurring" && transaction.refund_linked?)
+
+      redirect_back_or_to transactions_path, alert: t("activerecord.errors.messages.refund_links_present")
+    end
+
     def uncategorized_count_cache_key
       "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
@@ -678,12 +778,20 @@ class TransactionsController < ApplicationController
     end
 
     def entry_params
-      entry_params = params.require(:entry).permit(
-        :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
-        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
+      entry_params = params.expect(
+        entry: [
+          :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
+          :refund, :refund_of_entry_id,
+          { entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ] }
+        ]
       )
 
       nature = entry_params.delete(:nature)
+      # Refund classification is a command, not a persisted attribute. The
+      # dedicated endpoints (or #create for a new income entry) own the
+      # transition; updates silently ignore it rather than writing `kind`.
+      entry_params.delete(:refund)
+      entry_params.delete(:refund_of_entry_id)
 
       entry_params.delete(:amount) if entry_params[:amount].blank?
       entry_params.delete(:date) if entry_params[:date].blank?
@@ -697,18 +805,113 @@ class TransactionsController < ApplicationController
     end
 
     def entry_params_with_idempotency_key(idempotency_key)
-      return entry_params unless idempotency_key
+      attributes = entry_params
+      # Create never updates an existing entryable. Drop any submitted nested
+      # id so a crafted create cannot adopt (and then update) another
+      # transaction in the family.
+      if attributes[:entryable_attributes].is_a?(ActionController::Parameters)
+        attributes[:entryable_attributes] = attributes[:entryable_attributes].except(:id)
+      end
+
+      return attributes unless idempotency_key
 
       # A dedicated column, deliberately not external_id/source: those are
       # provider-linkage fields (Entry#linked? = external_id.present?), and
       # reusing them here would make a manual entry look provider-synced -
       # disabling its date/nature/amount/currency fields in the editor, and
       # hiding it from future provider dedup matching.
-      entry_params.merge(idempotency_key: idempotency_key)
+      attributes.merge(idempotency_key: idempotency_key)
     end
 
     def find_duplicate_manual_entry(account, idempotency_key)
       account.entries.find_by(idempotency_key: idempotency_key)
+    end
+
+    # Refunds are a preview feature. The checkbox is hidden for users without
+    # preview access, so this only fires for a tampered or stale submission -
+    # which must not silently become ordinary income.
+    def require_refund_preview_features
+      return unless refund_requested?
+
+      require_preview_features!
+    end
+
+    def refund_requested?
+      ActiveModel::Type::Boolean.new.cast(refund_param(:refund)) == true
+    end
+
+    def refund_param(key)
+      entry = params[:entry]
+      entry[key] if entry.is_a?(ActionController::Parameters)
+    end
+
+    # Resolve the optional purchase before creating anything, so an
+    # inaccessible or stale selection re-renders the form with an error
+    # instead of creating an entry we would immediately roll back.
+    def valid_refund_request?
+      return true unless @refund_requested
+
+      unless @entry.transaction?
+        @entry.errors.add(:base, t("transactions.form.refund_requires_income"))
+        return false
+      end
+
+      if @entry.amount.present? && !@entry.amount.negative?
+        @entry.errors.add(:base, t("transactions.form.refund_requires_income"))
+        return false
+      end
+
+      return true if @refund_of_entry_id.blank?
+
+      # Purchase IDs are UUIDs too. Reject a malformed value here so it never
+      # reaches PostgreSQL's uuid cast (which would raise StatementInvalid).
+      unless @refund_of_entry_id.is_a?(String) && @refund_of_entry_id.match?(UUID_FORMAT)
+        @entry.errors.add(:base, t("transactions.form.refund_purchase_not_found"))
+        return false
+      end
+
+      @refund_purchase = Current.accessible_entries
+        .where(entryable_type: "Transaction")
+        .find_by(id: @refund_of_entry_id)
+        &.transaction
+
+      if @refund_purchase.nil?
+        @entry.errors.add(:base, t("transactions.form.refund_purchase_not_found"))
+        return false
+      end
+
+      unless @refund_purchase.refundable_purchase?
+        @entry.errors.add(:base, t("transactions.form.refund_purchase_invalid"))
+        return false
+      end
+
+      true
+    end
+
+    def classify_refund!
+      @entry.transaction.mark_as_refund!(purchase: @refund_purchase)
+      true
+    rescue ActiveRecord::RecordInvalid => error
+      error.record.errors.full_messages.each { |message| @entry.errors.add(:base, message) }
+      false
+    rescue ActiveRecord::RecordNotFound
+      # The purchase can disappear between the pre-check and the lock.
+      @entry.errors.add(:base, t("transactions.form.refund_purchase_not_found"))
+      false
+    end
+
+    # A save that is rolled back leaves the in-memory entry looking persisted.
+    # Rebuild from the submitted params so the re-rendered form is a POST for a
+    # new record, with no _method or nested ids pointing at rolled-back rows.
+    def rebuild_failed_new_entry(account, idempotency_key)
+      failed_errors = @entry.errors.to_hash
+      attributes = entry_params_with_idempotency_key(idempotency_key)
+
+      account.entries.new(attributes).tap do |entry|
+        failed_errors.each do |attribute, messages|
+          messages.each { |message| entry.errors.add(attribute, message) }
+        end
+      end
     end
 
     # The hidden "entry[idempotency_key]" field is rendered fresh (a random
@@ -771,6 +974,30 @@ class TransactionsController < ApplicationController
       @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
       @merchants = Current.family.available_merchants_for(Current.user).with_attached_logo.alphabetically.to_a
       @tags = Current.family.tags.alphabetically.to_a
+      @refund_requested = refund_requested?
+      @refund_of_entry_id = refund_param(:refund_of_entry_id).presence
+      # Loaded for both tabs because the Expense/Income switch is client-side:
+      # revealing the refund block must not require another round trip.
+      @refund_purchases = if preview_features_enabled?
+        purchases = Transaction::RefundablePurchases.new(entries: Current.accessible_entries).call
+        # A selected purchase can fall outside the recent window on a
+        # re-render; keep it visible so the form still shows what will link.
+        prepend_selected_refund_purchase!(purchases)
+        purchases
+      else
+        []
+      end
+    end
+
+    def prepend_selected_refund_purchase!(purchases)
+      return unless @refund_of_entry_id.is_a?(String) && @refund_of_entry_id.match?(UUID_FORMAT)
+      return if purchases.any? { |purchase| purchase.id == @refund_of_entry_id }
+
+      selected = Current.accessible_entries
+        .preload(:account, :entryable)
+        .where(entryable_type: "Transaction")
+        .find_by(id: @refund_of_entry_id)
+      purchases.unshift(selected) if selected
     end
 
     # Autocomplete suggestions for the name field, only queried when the

@@ -199,6 +199,7 @@ class ReportsController < ApplicationController
       @income_statement = Current.family.income_statement(user: Current.user)
       @current_income_totals = @income_statement.income_totals(period: @period)
       @current_expense_totals = @income_statement.expense_totals(period: @period)
+      @current_refund_totals = @income_statement.refund_totals(period: @period, tag_ids: filter_tags.map(&:id))
 
       @previous_income_totals = @income_statement.income_totals(period: @previous_period)
       @previous_expense_totals = @income_statement.expense_totals(period: @previous_period)
@@ -655,6 +656,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .merge(Entry.excluding_scheduled)
         .where.not(kind: excluded_kinds)
         .includes(entry: :account, category: :parent)
       transactions = exclude_tax_advantaged_accounts(transactions)
@@ -760,9 +762,11 @@ class ReportsController < ApplicationController
         # No money moved (e.g. a 0.00 card authorisation): neither income nor expense
         next if entry.amount.zero?
 
-        type = entry.amount > 0 ? "expense" : "income"
+        type = entry.transaction? && entry.transaction.refund? ? "expense" : (entry.amount > 0 ? "expense" : "income")
         converted_amount = convert.call(entry)
         next if converted_amount.nil?
+
+        converted_amount = -converted_amount if entry.transaction? && entry.transaction.refund?
 
         if category.nil?
           # Uncategorized or Other Investments (for trades)
@@ -1190,6 +1194,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
+        .merge(Entry.excluding_scheduled)
         .where.not(kind: Current.family.analytics_excluded_kinds)
         .includes(entry: :account, category: [])
       transactions = exclude_tax_advantaged_accounts(transactions)
@@ -1205,7 +1210,7 @@ class ReportsController < ApplicationController
       transactions.each do |transaction|
         entry = transaction.entry
         next if entry.amount.zero? # neither income nor expense
-        is_expense = entry.amount > 0
+        is_expense = entry.amount > 0 || transaction.refund?
         type = is_expense ? "expense" : "income"
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
@@ -1213,6 +1218,8 @@ class ReportsController < ApplicationController
         # Convert to family currency, leaving out what has no rate
         converted_amount = convert.call(entry)
         next if converted_amount.nil?
+
+        converted_amount = -converted_amount if transaction.refund?
 
         key = [ category_name, type ]
         breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }

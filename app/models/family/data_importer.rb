@@ -32,6 +32,7 @@ class Family::DataImporter
   end
 
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant ProviderMerchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
+  PENDING_REFUND_LINK_KEY = "sure_import_refund_of".freeze
   PROPERTY_DETAIL_ATTRIBUTES = %w[year_built area_value area_unit].freeze
   PROPERTY_ADDRESS_ATTRIBUTES = %w[line1 line2 locality region county postal_code country].freeze
   VEHICLE_DETAIL_ATTRIBUTES = %w[make model year mileage_value mileage_unit].freeze
@@ -112,11 +113,15 @@ class Family::DataImporter
     account_targets.each { |source_id, account| @id_mappings[:accounts][source_id] = account.id }
     @security_cache = {}
     @pending_replacements = {}
+    @refund_links = {}
     @created_account_ids = []
     @created_entry_ids = []
     @rollover_user_ids = Set.new
+    @skipped_refund_occurrence_ids = Set.new
     @summary = Hash.new { |hash, key| hash[key] = empty_summary_bucket }
   end
+
+  attr_reader :skipped_refund_occurrence_ids
 
   def import!
     records = parse_ndjson
@@ -132,7 +137,13 @@ class Family::DataImporter
       import_merchants(records["Merchant"] || [])
       import_provider_merchants(records["ProviderMerchant"] || [])
       import_recurring_transactions(records["RecurringTransaction"] || [])
+      # A replay can unlink a refund whose purchase is also being split. Clear
+      # the old link before any split runs, then restore the archived links
+      # after every transaction exists; otherwise Entry#split! sees a link
+      # this same import is about to remove and rolls the whole import back.
+      detach_replayed_refund_links(records["Transaction"] || [])
       import_transactions(records["Transaction"] || [])
+      restore_refund_links
       # Bills: rules and occurrences need their series, allocations and the
       # rest also need transactions, so all of it replays here.
       import_recurrence_rules(records["RecurrenceRule"] || [])
@@ -153,6 +164,73 @@ class Family::DataImporter
     recompute_rollover_chains
 
     { account_ids: @created_account_ids, entry_ids: @created_entry_ids, summary: compact_summary }
+  end
+
+  # Session chunks import one at a time, so a refund can arrive before the
+  # purchase it references. restore_refund_links defers those links; resolve
+  # them once every chunk has run.
+  def self.resolve_pending_refund_links!(family, import_session:)
+    return unless import_session
+
+    family.transactions
+      .where("transactions.extra -> ? ->> 'session_id' = ?", PENDING_REFUND_LINK_KEY, import_session.id.to_s)
+      .find_each do |refund|
+        marker = refund.extra[PENDING_REFUND_LINK_KEY]
+        next unless marker.is_a?(Hash) && marker["source_id"].present?
+
+        source_purchase_id = marker["source_id"]
+        mapping = import_session.source_mappings.find_by(
+          source_type: "Transaction", source_id: source_purchase_id
+        )
+        target_id = mapping&.target_id
+
+        Transaction.transaction do
+          # Lock both rows in id order, matching refund linking and splitting.
+          Transaction.where(id: [ refund.id, target_id ].compact).order(:id).lock.load
+          purchase = Transaction.find_by(id: target_id)
+          unless purchase
+            raise MissingReferenceError.new(
+              record_type: "Transaction", source_type: "Transaction", source_id: source_purchase_id
+            )
+          end
+
+          locked_refund = Transaction.find(refund.id)
+          locked_refund.update!(
+            refund_of: purchase,
+            extra: locked_refund.extra.except(PENDING_REFUND_LINK_KEY)
+          )
+        end
+      end
+  end
+
+  # Allocation records can arrive before their transaction or occurrence in a
+  # later session chunk. Replay them after every chunk is mapped, then reopen
+  # any occurrence whose only payment was a refund allocation skipped here.
+  def self.resolve_deferred_recurring_allocations!(family, import_session:)
+    return unless import_session
+
+    skipped_occurrence_ids = Set.new
+    import_session.imports.find_each do |import|
+      records = []
+      import.send(:ndjson_blob_string).each_line do |line|
+        record = JSON.parse(line)
+        records << record if record["type"] == "RecurringAllocation"
+      rescue JSON::ParserError
+        next
+      end
+      next if records.empty?
+
+      importer = new(family, "", import_session: import_session, import: import)
+      importer.send(:import_recurring_allocations, records, deferred: true)
+      skipped_occurrence_ids.merge(importer.skipped_refund_occurrence_ids)
+    end
+
+    skipped_occurrence_ids.each do |occurrence_id|
+      occurrence = RecurringOccurrence.find_by(id: occurrence_id)
+      next unless occurrence
+
+      RecurringTransaction::Allocator.new(occurrence).refresh_close_state!
+    end
   end
 
   private
@@ -809,7 +887,7 @@ class Family::DataImporter
       end
     end
 
-    def import_recurring_allocations(records)
+    def import_recurring_allocations(records, deferred: false)
       records.each do |record|
         data = record["data"]
         # Session imports arrive in chunks, each through a fresh importer. An
@@ -825,6 +903,28 @@ class Family::DataImporter
         end
 
         entry_id = imported_entry_id(data["transaction_id"], "RecurringAllocation")
+        # Session chunks import one at a time. An allocation can arrive before
+        # its transaction; defer it instead of turning it into an entry-less
+        # manual payment. A second pass retries after every mapping exists.
+        if data["transaction_id"].present? && entry_id.blank? && @import_session
+          if deferred
+            raise MissingReferenceError.new(
+              record_type: "RecurringAllocation", source_type: "Transaction", source_id: data["transaction_id"]
+            )
+          end
+
+          increment_summary("RecurringAllocation", :skipped)
+          next
+        end
+
+        # A refund is not a bill or income payment. Older archives may still
+        # carry an allocation for one; skipping it keeps the rest of a valid
+        # restore from rolling back on the allocation invariant.
+        if entry_id && Entry.find_by(id: entry_id)&.transaction&.refund?
+          @skipped_refund_occurrence_ids << occurrence.id
+          increment_summary("RecurringAllocation", :skipped)
+          next
+        end
         paid_on = parse_import_date(data["paid_on"])
         amount = data["allocated_amount"].to_d
 
@@ -1010,6 +1110,7 @@ class Family::DataImporter
         # that system recognise the transaction, kept out of external_id so
         # provider sync can still claim the entry.
         transaction.extra = transaction.extra.merge(data["extra"]) if data["extra"].is_a?(Hash)
+        transaction.extra = transaction.extra.merge("refund" => data["refund"]) if data["refund"].is_a?(Hash)
 
         entry ||= Entry.new(entryable: transaction)
         entry.assign_attributes(
@@ -1029,9 +1130,22 @@ class Family::DataImporter
         # overwrites, as the CSV importer does.
         entry.import_locked = true if truthy?(data["import_locked"])
 
+        # A replay can explicitly unlink a refund while restoring a standard
+        # kind. Clear the old association before validation; the recorded link
+        # is applied by restore_refund_links after all transactions exist.
+        had_refund_link = transaction.refund_of_id.present?
+        if data.key?("refund_of_id")
+          transaction.refund_of = nil
+          transaction.extra = transaction.extra.except(PENDING_REFUND_LINK_KEY) if data["refund_of_id"].blank?
+        end
+
         entry.save!
+        lock_imported_refund!(transaction)
 
         map_source!(:transactions, old_id, transaction)
+        if data.key?("refund_of_id") && (data["refund_of_id"].present? || had_refund_link)
+          @refund_links[transaction.id] = data["refund_of_id"]
+        end
         split_rows = importable_split_rows(data)
 
         if split_rows.any?
@@ -1050,6 +1164,97 @@ class Family::DataImporter
       end
     end
 
+    # An imported refund keeps its classification through later provider syncs,
+    # the same way a user-marked refund does.
+    def lock_imported_refund!(transaction)
+      return unless transaction.refund?
+
+      transaction.lock_attr!(:kind) unless transaction.locked?(:kind)
+      return if transaction.refund_of_id.blank? || transaction.locked?(:refund_of_id)
+
+      transaction.lock_attr!(:refund_of_id)
+    end
+
+    # Clear links this replay is about to replace before any purchase is split.
+    # A refund row that still points at the purchase would otherwise make
+    # Entry#split! reject the split, even when the archive unlinks it later.
+    def detach_replayed_refund_links(records)
+      records.each do |record|
+        data = record["data"]
+        next unless data.is_a?(Hash)
+
+        account_id = mapped_id(:accounts, data["account_id"], record_type: "Transaction", required: false)
+        next if account_id.blank?
+        account = @family.accounts.find(account_id)
+
+        [ data, *raw_split_rows(data) ].each do |row|
+          detach_replayed_refund_link(account, row)
+        end
+      end
+    end
+
+    def detach_replayed_refund_link(account, data)
+      return unless data.is_a?(Hash) && data.key?("refund_of_id") && data["id"].present?
+
+      # Split children are not stored with an external_id, so prefer the
+      # persisted source mapping that points at the imported transaction.
+      transaction_id = mapped_id(:transactions, data["id"], record_type: "Transaction", required: false)
+      transaction = if transaction_id.present?
+        Transaction.find_by(id: transaction_id)
+      else
+        session_imported_entry(account, "Transaction", data["id"])&.entryable
+      end
+      return unless transaction.is_a?(Transaction) && transaction.refund_of_id.present?
+
+      # The archived link is restored by restore_refund_links once every
+      # transaction exists, so only the stale current link is cleared here.
+      transaction.update!(refund_of: nil)
+    end
+
+    # Purchases can follow refunds in the archive, including nested split lines.
+    # Resolve references only after all transaction IDs have been mapped.
+    def restore_refund_links
+      @refund_links.each_slice(500) do |batch|
+        links = batch.map do |transaction_id, source_purchase_id|
+          purchase_id = if source_purchase_id.present?
+            mapped_id(:transactions, source_purchase_id, record_type: "Transaction", required: !@import_session)
+          end
+          [ transaction_id, source_purchase_id, purchase_id ]
+        end
+        # Keep family scoping and find's missing-record checks while sharing
+        # purchases and their validation associations across links in the batch.
+        ids = links.flat_map { |transaction_id, _, purchase_id| [ transaction_id, purchase_id ] }.compact.uniq
+        records = @family.transactions.includes(entry: :account).find(ids).index_by(&:id)
+        links.each do |transaction_id, source_purchase_id, purchase_id|
+          transaction = records.fetch(transaction_id)
+          if purchase_id
+            if transaction.refund_of_id != purchase_id
+              transaction.update!(
+                refund_of: records.fetch(purchase_id),
+                extra: transaction.extra.except(PENDING_REFUND_LINK_KEY)
+              )
+            elsif transaction.extra&.key?(PENDING_REFUND_LINK_KEY)
+              transaction.update!(extra: transaction.extra.except(PENDING_REFUND_LINK_KEY))
+            end
+          elsif source_purchase_id.present? && @import_session
+            # Session chunks can arrive in any order; the session resolves
+            # this once every chunk has been imported. The session id keeps an
+            # abandoned import from affecting a later, unrelated session.
+            transaction.update!(
+              extra: transaction.extra.merge(
+                PENDING_REFUND_LINK_KEY => {
+                  "session_id" => @import_session.id,
+                  "source_id" => source_purchase_id
+                }
+              )
+            )
+          elsif transaction.extra&.key?(PENDING_REFUND_LINK_KEY)
+            transaction.update!(extra: transaction.extra.except(PENDING_REFUND_LINK_KEY))
+          end
+        end
+      end
+    end
+
     def mapped_tag_ids(old_tag_ids, record_type:)
       Array(old_tag_ids).map do |old_tag_id|
         mapped_id(:tags, old_tag_id, record_type: record_type)
@@ -1057,10 +1262,7 @@ class Family::DataImporter
     end
 
     def importable_split_rows(data)
-      rows = data["split_lines"].presence || data["splitLines"].presence || data["splits"].presence
-      Array(rows).filter_map do |row|
-        next unless row.is_a?(Hash)
-
+      raw_split_rows(data).filter_map do |row|
         amount = row["amount"] || row["amount_money"] || row["amount_decimal"]
         next if amount.blank?
 
@@ -1078,9 +1280,16 @@ class Family::DataImporter
           excluded: boolean_import_value(row, "excluded", default: false),
           tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
-          kind: row["kind"]
+          kind: row["kind"],
+          refund_of_id: row["refund_of_id"],
+          refund: row["refund"]
         }
       end
+    end
+
+    def raw_split_rows(data)
+      rows = data["split_lines"].presence || data["splitLines"].presence || data["splits"].presence
+      Array(rows).select { |row| row.is_a?(Hash) }
     end
 
     def import_split_lines!(entry, split_rows, fallback_tag_ids:)
@@ -1097,10 +1306,15 @@ class Family::DataImporter
 
       children.zip(split_rows).each do |child_entry, row|
         transaction = child_entry.entryable
-        transaction.update!(
+        transaction_attributes = {
           merchant_id: row[:merchant_id_provided] ? row[:merchant_id] : transaction.merchant_id,
           kind: row[:kind].presence || transaction.kind
-        )
+        }
+        if row[:refund].is_a?(Hash)
+          transaction_attributes[:extra] = transaction.extra.merge("refund" => row[:refund])
+        end
+        transaction.update!(transaction_attributes)
+        lock_imported_refund!(transaction)
         child_entry.update!(notes: row[:notes]) if row[:notes].present?
 
         tag_ids = row[:tag_ids_provided] ? row[:tag_ids] : fallback_tag_ids
@@ -1109,6 +1323,7 @@ class Family::DataImporter
         end
 
         map_source!(:transactions, row[:old_id], transaction) if row[:old_id].present?
+        @refund_links[transaction.id] = row[:refund_of_id] if row[:refund_of_id].present?
         @created_entry_ids << child_entry.id
       end
     end

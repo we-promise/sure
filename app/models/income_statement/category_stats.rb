@@ -44,7 +44,7 @@ class IncomeStatement::CategoryStats
             c.id as category_id,
             date_trunc(:interval, ae.date) as period,
             #{classification_sql("t")} as classification,
-            SUM(#{converted_amount_sql("t")}) as total
+            SUM(#{reported_amount_sql("t")}) as total
           FROM transactions t
           #{entries_join_sql("t")}
           #{accounts_join_sql}
@@ -77,20 +77,20 @@ class IncomeStatement::CategoryStats
         SELECT
           category_id,
           classification,
-          ABS(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total)) as median,
+          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total) as median,
           -- Average over every period from start_p to end_p, at most 12
           -- periods, so periods without spending count as zero. The unfinished
           -- current period counts only once it has spending. Periods with
           -- nothing convertible are left out of the count, and a category with
           -- no measurable period has no average.
           CASE WHEN MAX(start_p) IS NOT NULL THEN
-            ABS(COALESCE(SUM(total) FILTER (WHERE period > end_p - CAST('12 ' || :interval AS interval)), 0) / NULLIF((
+            COALESCE(SUM(total) FILTER (WHERE period > end_p - CAST('12 ' || :interval AS interval)), 0) / NULLIF((
               SELECT COUNT(*) FROM generate_series(GREATEST(MAX(start_p), MAX(end_p) - CAST('11 ' || :interval AS interval)),
                 MAX(end_p), CAST('1 ' || :interval AS interval))
             ) - COUNT(*) FILTER (
               WHERE total IS NULL AND period > start_p AND period <= end_p
                 AND period > end_p - CAST('12 ' || :interval AS interval)
-            ), 0))
+            ), 0)
           END as avg
         FROM windowed
         GROUP BY category_id, classification;

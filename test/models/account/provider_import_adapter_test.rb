@@ -86,6 +86,138 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
                  "a repayment on a Loan account must stay loan_payment, not the provider's funds_movement"
   end
 
+  test "an unlocked refund classification is still not overwritten by the provider kind" do
+    entry = @account.entries.create!(
+      external_id: "plaid_unlocked_refund", source: "plaid", name: "Return",
+      date: Date.current, amount: -100, currency: "USD", entryable: Transaction.new(kind: "refund")
+    )
+
+    @adapter.import_transaction(
+      external_id: entry.external_id, source: "plaid", amount: -100,
+      currency: "USD", date: Date.current, name: "Return", kind: "funds_movement"
+    )
+
+    assert entry.transaction.reload.refund?, "a legacy or imported refund must not be replaced by a provider hint"
+  end
+
+  test "a refund committed while waiting for the transaction lock protects entry fields" do
+    entry = @account.entries.create!(
+      external_id: "plaid_refund_protection", source: "plaid", name: "Original name",
+      date: Date.current, amount: -100, currency: "USD", entryable: Transaction.new
+    )
+
+    adapter_class = Class.new(Account::ProviderImportAdapter) do
+      private
+        def lock_imported_transaction!(record)
+          unless @classified_refund
+            @classified_refund = true
+            Transaction.find(record.entryable_id).mark_as_refund!
+          end
+          super
+        end
+    end
+
+    adapter_class.new(@account).import_transaction(
+      external_id: entry.external_id, source: "plaid", amount: -100,
+      currency: "USD", date: Date.current, name: "Provider name", kind: "funds_movement"
+    )
+
+    entry.reload
+    assert entry.transaction.refund?
+    assert entry.user_modified?
+    assert_equal "Original name", entry.name, "a classification committed during the import must protect the entry fields"
+  end
+
+  test "a refund classified while the import waits for the row lock is not overwritten" do
+    entry = @account.entries.create!(
+      external_id: "plaid_refund_reload", source: "plaid", name: "Return",
+      date: Date.current, amount: -100, currency: "USD", entryable: Transaction.new
+    )
+
+    # Classify just before the adapter takes the transaction lock, so the lock
+    # reload is what makes the committed refund visible to the kind guard.
+    adapter_class = Class.new(Account::ProviderImportAdapter) do
+      private
+        def lock_imported_transaction!(record)
+          unless @classified_refund
+            @classified_refund = true
+            Transaction.find(record.entryable_id).mark_as_refund!
+          end
+          super
+        end
+    end
+
+    adapter_class.new(@account).import_transaction(
+      external_id: entry.external_id, source: "plaid", amount: -100,
+      currency: "USD", date: Date.current, name: "Return", kind: "funds_movement"
+    )
+
+    transaction = entry.reload.transaction
+    assert transaction.refund?, "a committed refund classification must not be replaced by the provider kind"
+    assert transaction.locked?(:kind)
+  end
+
+  %w[refund funds_movement].each do |locked_kind|
+    test "a detected contribution does not categorize a locked #{locked_kind}" do
+      investment_account = accounts(:investment)
+      entry = investment_account.entries.create!(
+        external_id: "plaid_locked_#{locked_kind}", source: "plaid",
+        name: "Employer contribution", date: Date.current, amount: -100, currency: "USD",
+        entryable: Transaction.new(kind: locked_kind)
+      )
+      entry.transaction.lock_attr!(:kind)
+
+      Account::ProviderImportAdapter.new(investment_account).import_transaction(
+        external_id: entry.external_id, source: "plaid",
+        name: "Employer contribution", date: Date.current, amount: -100, currency: "USD"
+      )
+
+      transaction = entry.reload.transaction
+      assert_equal locked_kind, transaction.kind
+      assert_nil transaction.category_id,
+        "the detected label must not assign an investment category to a different final kind"
+    end
+  end
+
+  test "a detected contribution categorizes a locked investment contribution" do
+    investment_account = accounts(:investment)
+    contribution_category = investment_account.family.investment_contributions_category
+    entry = investment_account.entries.create!(
+      external_id: "plaid_locked_investment_contribution", source: "plaid",
+      name: "Employer contribution", date: Date.current, amount: -100, currency: "USD",
+      entryable: Transaction.new(kind: "investment_contribution")
+    )
+    entry.transaction.lock_attr!(:kind)
+
+    Account::ProviderImportAdapter.new(investment_account).import_transaction(
+      external_id: entry.external_id, source: "plaid",
+      name: "Employer contribution", date: Date.current, amount: -100, currency: "USD"
+    )
+
+    transaction = entry.reload.transaction
+    assert_equal "investment_contribution", transaction.kind
+    assert_equal contribution_category.id, transaction.category_id
+  end
+
+  test "a detected contribution respects a locked empty category" do
+    investment_account = accounts(:investment)
+    entry = investment_account.entries.create!(
+      external_id: "plaid_locked_empty_contribution_category", source: "plaid",
+      name: "Employer contribution", date: Date.current, amount: -100, currency: "USD",
+      entryable: Transaction.new
+    )
+    entry.transaction.lock_attr!(:category_id)
+
+    Account::ProviderImportAdapter.new(investment_account).import_transaction(
+      external_id: entry.external_id, source: "plaid",
+      name: "Employer contribution", date: Date.current, amount: -100, currency: "USD"
+    )
+
+    transaction = entry.reload.transaction
+    assert_equal "investment_contribution", transaction.kind
+    assert_nil transaction.category_id, "a deliberate Uncategorized choice must survive sync"
+  end
+
   test "re-importing a matched loan payment leg keeps the kinds its transfer set" do
     loan_adapter = Account::ProviderImportAdapter.new(accounts(:loan))
 

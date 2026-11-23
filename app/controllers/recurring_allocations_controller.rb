@@ -43,6 +43,8 @@ class RecurringAllocationsController < ApplicationController
     RecurringTransaction::Allocator.new(occurrence).confirm_suggestion!(allocation)
 
     redirect_with_return notice: t(".success")
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_with_return alert: allocation_error_message(e)
   end
 
   def reject
@@ -86,8 +88,9 @@ class RecurringAllocationsController < ApplicationController
 
     # Queue actions come from the Bills page and should land back there. The
     # same-host referer check lives in RecurringFeatureGuardable#safe_return_path.
-    def redirect_with_return(notice:)
-      flash[:notice] = notice
+    def redirect_with_return(notice: nil, alert: nil)
+      flash[:notice] = notice if notice
+      flash[:alert] = alert if alert
       target = safe_return_path(fallback: bills_path)
 
       respond_to do |format|

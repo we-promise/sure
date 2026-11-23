@@ -3,6 +3,8 @@
 class Api::V1::BaseController < ApplicationController
   include Doorkeeper::Rails::Helpers
 
+  helper_method :current_resource_owner
+
   InvalidFilterError = Class.new(StandardError)
 
   class << self

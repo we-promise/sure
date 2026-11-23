@@ -66,7 +66,19 @@ class Transaction::Search
     # works whether `query`'s own model is Transaction or (via EntrySearch) Entry.
     def apply_type_filter(query, types)
       return query unless types.present?
-      return query if types.sort == [ "expense", "income", "transfer" ]
+      return query.where.not(transactions: { kind: "refund" }) if types.sort == [ "expense", "income", "transfer" ]
+
+      if types.include?("refund")
+        scopes = types.uniq.filter_map do |type|
+          case type
+          when "transfer" then query.where(transactions: { kind: Transaction::TRANSFER_KINDS })
+          when "refund" then query.where(transactions: { kind: "refund" })
+          when "expense" then query.where("entries.amount >= 0").where.not(transactions: { kind: Transaction::TRANSFER_KINDS + [ "refund" ] })
+          when "income" then query.where("entries.amount < 0").where.not(transactions: { kind: Transaction::TRANSFER_KINDS + [ "refund" ] })
+          end
+        end
+        return scopes.reduce { |combined, scope| combined.or(scope) } || query
+      end
 
       case types.sort
       when [ "transfer" ]
@@ -74,13 +86,13 @@ class Transaction::Search
       when [ "expense" ]
         query.where("entries.amount >= 0").where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
       when [ "income" ]
-        query.where("entries.amount < 0").where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+        query.where("entries.amount < 0").where.not(transactions: { kind: Transaction::TRANSFER_KINDS + [ "refund" ] })
       when [ "expense", "transfer" ]
         query.where("entries.amount >= 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
       when [ "income", "transfer" ]
-        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+        query.where("(entries.amount < 0 OR transactions.kind IN (?)) AND transactions.kind != 'refund'", Transaction::TRANSFER_KINDS)
       when [ "expense", "income" ]
-        query.where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+        query.where.not(transactions: { kind: Transaction::TRANSFER_KINDS + [ "refund" ] })
       else
         query
       end
@@ -230,13 +242,11 @@ class Transaction::Search
   # Compute totals for the specific search, excluding tax-advantaged accounts
   def totals
     @totals ||= begin
-      # v3: bumped because the Uncategorized filter's exclusion set changed
-      # (see #2592) -- without a version bump, a totals entry cached under
-      # the old logic would keep being served (same cache_key_base) after
-      # deploy, disagreeing with the (uncached) transactions_scope list
-      # until entries_cache_version next changes for that family.
-      # v4: Totals gained excluded_scheduled_count.
-      Rails.cache.fetch("transaction_search_totals/v4/#{ExchangeRate::CONVERSION_CACHE_VERSION}/#{cache_key_base}") do
+      # Bump the version whenever Totals members or aggregation semantics change.
+      # v5 adds refund_money and excluded_scheduled_count; refunds net against
+      # expenses. v4 payloads from either older branch have incompatible Data
+      # layouts and may survive deployment.
+      Rails.cache.fetch("transaction_search_totals/v5/#{ExchangeRate::CONVERSION_CACHE_VERSION}/#{cache_key_base}") do
         scope = transactions_scope
         excluded_scheduled_count = 0
 
@@ -270,11 +280,11 @@ class Transaction::Search
         result = scope
                   .select(
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as expense_total",
+                      "COALESCE(SUM(CASE WHEN (entries.amount >= 0 OR transactions.kind = 'refund') AND transactions.kind NOT IN (?) THEN entries.amount * #{rate} ELSE 0 END), 0) as expense_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as income_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind != 'refund' AND transactions.kind NOT IN (?) THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as income_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
@@ -285,6 +295,7 @@ class Transaction::Search
                       "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind IN (?) THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as transfer_outflow_total",
                       Transaction::TRANSFER_KINDS
                     ]),
+                    "COALESCE(SUM(CASE WHEN transactions.kind = 'refund' THEN -entries.amount * #{rate} ELSE 0 END), 0) as refund_total",
                     "COUNT(entries.id) as transactions_count"
                   )
                   .take
@@ -294,6 +305,7 @@ class Transaction::Search
           excluded_scheduled_count: excluded_scheduled_count,
           income_money: Money.new((result&.income_total || 0), family.currency),
           expense_money: Money.new((result&.expense_total || 0), family.currency),
+          refund_money: Money.new((result&.refund_total || 0), family.currency),
           transfer_inflow_money: Money.new((result&.transfer_inflow_total || 0), family.currency),
           transfer_outflow_money: Money.new((result&.transfer_outflow_total || 0), family.currency)
         )
@@ -316,7 +328,7 @@ class Transaction::Search
   end
 
   private
-    Totals = Data.define(:count, :excluded_scheduled_count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+    Totals = Data.define(:count, :excluded_scheduled_count, :income_money, :expense_money, :refund_money, :transfer_inflow_money, :transfer_outflow_money)
 
     def look_ahead?
       return true if end_date.present?
@@ -334,7 +346,6 @@ class Transaction::Search
         query
       end
     end
-
 
     # Filter by automatic-categorization provenance. Uses EXISTS so a
     # transaction with both an ai and a bayes enrichment row can't be
