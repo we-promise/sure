@@ -2,6 +2,7 @@ require "test_helper"
 
 class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include PreviewTokenTestHelper
 
   setup do
     @user = users(:family_admin)
@@ -99,6 +100,60 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     assert Transaction.exists?(@transaction.id)
 
     assert_equal true, @function.call("id" => @transaction.id, "preview_token" => result[:preview_token])[:deleted]
+  end
+
+  test "refuses a token once the transaction changed after the token was checked" do
+    token = @function.call("id" => @transaction.id)[:preview_token]
+    change_after_token_check(@function) { @transaction.entry.update!(amount: @transaction.entry.amount + 100) }
+
+    result = @function.call("id" => @transaction.id, "preview_token" => token)
+
+    assert_equal "preview_stale", result[:error]
+    assert Transaction.exists?(@transaction.id)
+  end
+
+  test "a split parent's preview lists its children, and a token is refused once it was split again" do
+    entry = create_transaction(amount: 100, name: "Grocery Store", account: accounts(:depository))
+    children = entry.split!([ { name: "Food", amount: 70, category_id: nil }, { name: "Home", amount: 30, category_id: nil } ])
+    params = { "id" => entry.transaction.id }
+
+    preview = @function.call(params)
+    assert_equal children.map(&:id), preview[:preview][:split_children].map { |child| child[:entry_id] }
+    assert_equal %w[70.0 30.0], preview[:preview][:split_children].map { |child| child[:amount] }
+
+    entry.reload.resplit!([ { name: "Food", amount: 60, category_id: nil }, { name: "Home", amount: 40, category_id: nil } ])
+    result = @function.call(params.merge("preview_token" => preview[:preview_token]))
+
+    assert_equal "preview_stale", result[:error]
+    assert_equal %w[60.0 40.0], result[:preview][:split_children].map { |child| child[:amount] }
+    assert Entry.exists?(entry.id)
+    assert_equal true, delete_with_preview(@function, params)[:deleted]
+  end
+
+  test "a transfer leg's preview shows the transfer and the fees it deletes, and a fee added since refuses the token" do
+    transfer = create_transfer(from_account: accounts(:depository), to_account: accounts(:investment), amount: 100)
+    fee = create_transaction(account: accounts(:depository), name: "Transfer fee", amount: 2).entryable
+    transfer.fee_transactions << fee
+    params = { "id" => transfer.outflow_transaction.id }
+
+    preview = @function.call(params)
+    assert_equal transfer.id, preview[:preview][:transfer][:id]
+    assert_equal transfer.inflow_transaction.id, preview[:preview][:transfer][:counterpart][:id]
+    assert_equal [ fee.id ], preview[:preview][:transfer][:deleted_fee_transactions].map { |t| t[:id] }
+
+    transfer.fee_transactions << create_transaction(account: accounts(:depository), name: "Late fee", amount: 3).entryable
+    result = @function.call(params.merge("preview_token" => preview[:preview_token]))
+
+    assert_equal "preview_stale", result[:error]
+    assert_equal 2, result[:preview][:transfer][:deleted_fee_transactions].size
+    assert Transfer.exists?(transfer.id)
+  end
+
+  test "a transaction outside splits and transfers previews neither" do
+    preview = @function.call("id" => @transaction.id)[:preview]
+
+    refute preview.key?(:split_children)
+    refute preview.key?(:transfer)
   end
 
   test "returns not_found for an unknown id" do

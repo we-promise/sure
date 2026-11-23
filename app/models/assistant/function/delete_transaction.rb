@@ -85,11 +85,11 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
 
   # Tool entry point. Resolves a writable transaction and, without a valid
   # preview_token, returns the preview instead of deleting. With one, destroys
-  # its root ledger entry (cascading to the transaction), enqueues the
-  # post-delete account sync (best-effort), and returns
-  # { success: true, deleted: true, transaction: } (with an optional :warning
-  # if the sync could not be enqueued). Errors: not_found, split_child,
-  # preview_required, preview_stale, delete_aborted.
+  # its root ledger entry (cascading to the transaction, a split's children and
+  # a transfer with its fees), enqueues the post-delete account sync
+  # (best-effort), and returns { success: true, deleted: true, transaction: }
+  # (with an optional :warning if the sync could not be enqueued). Errors:
+  # not_found, split_child, preview_required, preview_stale, delete_aborted.
   def call(params = {})
     transaction = find_transaction(params["id"], params["account_id"])
     return error("not_found", "No transaction with id '#{params["id"]}' in an account you can write to.") unless transaction
@@ -97,49 +97,46 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     entry = transaction.entry
     return error("split_child", "Split child transactions cannot be deleted individually. Delete the split parent instead.") if entry.split_child?
 
-    # The snapshot is both the preview and the deleted record in the response,
-    # taken before destruction so the response never reads destroyed
-    # associations or triggers lazy loads on a deleted record.
-    snapshot = serialize(transaction, entry)
-
-    confirm_with_preview(params, transaction, snapshot) { destroy_entry(entry, snapshot) }
+    # The preview is both what the user confirms and the deleted record in the
+    # response, taken before destruction so the response never reads destroyed
+    # associations. The locks follow Entry#with_split_lock, so a resplit can't
+    # change the children between the check and the destroy.
+    result = confirm_with_preview(params, transaction, -> { preview(transaction, entry) }, lock: [ transaction, entry ]) do |snapshot|
+      destroy_entry(entry, snapshot)
+    end
+    result[:deleted] ? sync_after_delete(entry, result) : result
   end
 
   private
     def destroy_entry(entry, snapshot)
-      # 1) Destroy. Entry is the delegated_type root record; destroy! cascades
-      #    to the Transaction child (delegated_type ... dependent: :destroy) and
-      #    wraps itself in a transaction (atomic: fully destroyed or it raises).
-      #    This is the exact record the native destroy action destroys.
-      begin
-        entry.destroy!
-      rescue ActiveRecord::RecordNotDestroyed
-        # A before_destroy guard aborted the destroy (e.g. a split child that
-        # slipped past the pre-check, or another constraint). `throw :abort` in
-        # a before_destroy makes destroy! raise RecordNotDestroyed — the record
-        # was NOT deleted.
-        return error("delete_aborted", "Deletion was aborted by a record constraint; the transaction was not deleted.")
-      end
+      # Entry is the delegated_type root record; destroy! cascades to the
+      # Transaction child (delegated_type ... dependent: :destroy). This is the
+      # exact record the native destroy action destroys.
+      entry.destroy!
 
-      # 2) Recalculate the account balance/sync window. This is best-effort: the
-      #    transaction is ALREADY deleted at this point, so a failure here must
-      #    NOT be reported as a failed deletion. sync_account_later is
-      #    destroyed?-safe (reads the still-loaded in-memory account).
-      sync_warning = nil
-      begin
-        entry.sync_account_later
-      rescue StandardError => e
-        sync_warning = "Transaction deleted, but the post-delete account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync."
-      end
-
-      response = {
+      {
         success: true,
         deleted: true,
         transaction: snapshot,
         message: "Deleted #{snapshot[:name]} (#{snapshot[:amount_formatted]} on #{snapshot[:date]})."
       }
-      response[:warning] = sync_warning if sync_warning
-      response
+    rescue ActiveRecord::RecordNotDestroyed
+      # A before_destroy guard aborted the destroy (e.g. a split child that
+      # slipped past the pre-check, or another constraint). `throw :abort` in
+      # a before_destroy makes destroy! raise RecordNotDestroyed — the record
+      # was NOT deleted.
+      error("delete_aborted", "Deletion was aborted by a record constraint; the transaction was not deleted.")
+    end
+
+    # Recalculates the account balance/sync window after the delete commits.
+    # Best-effort: the transaction is ALREADY deleted, so a failure here must
+    # NOT be reported as a failed deletion. sync_account_later is
+    # destroyed?-safe (reads the still-loaded in-memory account).
+    def sync_after_delete(entry, result)
+      entry.sync_account_later
+      result
+    rescue StandardError => e
+      result.merge(warning: "Transaction deleted, but the post-delete account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync.")
     end
 
     # Resolve a Transaction by id, scoped to accounts the user can WRITE to
@@ -165,9 +162,30 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       query.find_by(id: id)
     end
 
+    # What deleting the transaction removes: the transaction itself, a split's
+    # children and, for a transfer leg, the transfer and its fee transactions
+    # (the other leg stays and becomes a standard transaction).
+    def preview(transaction, entry)
+      snapshot = serialize(transaction, entry)
+
+      children = entry.child_entries.in_split_order.to_a
+      snapshot[:split_children] = children.map { |child| serialize_brief(child) } if children.any?
+
+      if (transfer = transaction.transfer)
+        counterpart = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction : transfer.inflow_transaction
+        snapshot[:transfer] = {
+          id: transfer.id,
+          status: transfer.status,
+          counterpart: serialize_brief(counterpart.entry),
+          deleted_fee_transactions: transfer.fee_transactions.order(:id).map { |fee| serialize_brief(fee.entry) }
+        }
+      end
+
+      snapshot
+    end
+
     # Shape a Transaction (and its root entry) into the result hash returned to
-    # the caller. Called BEFORE destruction so the response carries a complete
-    # snapshot of what was deleted.
+    # the caller.
     def serialize(transaction, entry)
       {
         id: transaction.id,
@@ -180,6 +198,18 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         currency: entry.currency,
         account: entry.account.name,
         type: entry.classification
+      }
+    end
+
+    def serialize_brief(entry)
+      {
+        id: entry.entryable_id,
+        entry_id: entry.id,
+        account: entry.account.name,
+        name: entry.name,
+        date: entry.date,
+        amount: entry.amount.to_s,
+        currency: entry.currency
       }
     end
 

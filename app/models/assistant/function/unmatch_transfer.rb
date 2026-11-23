@@ -87,41 +87,39 @@ class Assistant::Function::UnmatchTransfer < Assistant::Function
     # Only an explicit false skips the rejection; null counts as omitted.
     reject = params["reject"].nil? || ActiveModel::Type::Boolean.new.cast(params["reject"])
 
-    preview = { reject: reject, transfer: serialize_transfer(transfer) }
-    confirm_with_preview(params, transfer, preview, done_key: :unmatched) { unmatch(transfer, reject) }
+    # The confirmation locks the transfer and rebuilds this preview before it
+    # unlinks, so a fee attached since the preview refuses the token.
+    preview = -> { { reject: reject, transfer: serialize_transfer(transfer) } }
+    result = confirm_with_preview(params, transfer, preview, done_key: :unmatched) do |confirmed|
+      unmatch(transfer, reject, confirmed[:transfer])
+    end
+    result[:unmatched] ? report_unmatch(result) : result
   end
 
   private
-    def unmatch(transfer, reject)
-      # Lock, then re-find within the writable scope: two concurrent calls can't
-      # both act on the transfer, a fee attached meanwhile is reported, and
-      # write access lost since the lookup is caught.
-      snapshot = accounts = nil
-      unmatched = Transfer.uncached do
-        Transfer.transaction do
-          locked = scoped_transfers.lock.find_by(id: transfer.id)
-          next false unless locked
+    # Runs under the transfer's lock. Re-finds it within the writable scope, so
+    # write access lost since the lookup is caught.
+    def unmatch(transfer, reject, snapshot)
+      locked = scoped_transfers.find_by(id: transfer.id)
+      return error("not_found", "The transfer was already unlinked, or you can no longer write to its accounts.") unless locked
 
-          snapshot = serialize_transfer(locked)
-          accounts = ([ locked.from_account, locked.to_account ] + locked.fee_transactions.map { |t| t.entry.account }).compact.uniq
-          reject ? locked.reject! : locked.destroy!
-          true
-        end
-      end
-      return error("not_found", "The transfer was already unlinked, or you can no longer write to its accounts.") unless unmatched
+      accounts = ([ locked.from_account, locked.to_account ] + locked.fee_transactions.map { |t| t.entry.account }).compact.uniq
+      reject ? locked.reject! : locked.destroy!
+      { success: true, unmatched: true, rejected: reject, transfer: snapshot, accounts: accounts }
+    end
+
+    def report_unmatch(result)
+      snapshot = result[:transfer]
+      accounts = result.delete(:accounts)
 
       # A pending match never changed the kinds, so report what they are now.
       kinds = Transaction.where(id: [ snapshot[:outflow][:id], snapshot[:inflow][:id] ]).pluck(:id, :kind).to_h
       snapshot[:outflow][:kind_after] = kinds[snapshot[:outflow][:id]]
       snapshot[:inflow][:kind_after] = kinds[snapshot[:inflow][:id]]
 
-      response = {
-        success: true,
-        unmatched: true,
-        rejected: reject,
-        transfer: snapshot,
+      response = result.merge(
         message: "Unlinked #{snapshot[:name]}. Outflow kind is now #{snapshot[:outflow][:kind_after]}, inflow kind #{snapshot[:inflow][:kind_after]}."
-      }
+      )
 
       # Best-effort: the unlink has already committed.
       if snapshot[:deleted_fee_transactions].any?
@@ -142,7 +140,7 @@ class Assistant::Function::UnmatchTransfer < Assistant::Function
         status: transfer.status,
         outflow: serialize_transaction(transfer.outflow_transaction),
         inflow: serialize_transaction(transfer.inflow_transaction),
-        deleted_fee_transactions: transfer.fee_transactions.map { |t| serialize_transaction(t) }
+        deleted_fee_transactions: transfer.fee_transactions.order(:id).map { |t| serialize_transaction(t) }
       }
     end
 

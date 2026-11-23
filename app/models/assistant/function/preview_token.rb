@@ -33,17 +33,18 @@ module Assistant::Function::PreviewToken
 
     # Without a preview_token, returns the preview and a token and changes
     # nothing (done_key, the result's success flag, is false). With a token
-    # issued for this target and this exact preview, it yields, and the block
-    # makes the change.
-    def confirm_with_preview(params, target, preview, done_key: :deleted)
-      state = Digest::SHA256.hexdigest(preview.to_json)
-
+    # issued for this target and this exact preview, it locks +lock+ (the rows
+    # whose writers would change the preview, in their lock order), rebuilds the
+    # preview and yields it inside that transaction, so the block acts on the
+    # state the user was shown. +preview+ builds it from the current records.
+    def confirm_with_preview(params, target, preview, lock: [ target ], done_key: :deleted)
       if params["preview_token"].blank?
+        current = preview.call
         return {
           success: true,
           done_key => false,
-          preview: preview,
-          preview_token: issue_preview_token(target, state),
+          preview: current,
+          preview_token: issue_preview_token(target, preview_digest(current)),
           message: "Nothing was changed. Show the user this preview; only if they confirm, call #{name} again with this preview_token (it expires after #{PREVIEW_TOKEN_TTL.inspect})."
         }
       end
@@ -57,17 +58,33 @@ module Assistant::Function::PreviewToken
         }
       end
 
-      unless token["state"] == state
-        return {
-          success: false,
-          error: "preview_stale",
-          preview: preview,
-          preview_token: issue_preview_token(target, state),
-          message: "What the call would change is different since that preview. Nothing was changed; show the user this preview and, if they confirm, retry with its preview_token."
-        }
-      end
+      # Uncached: the request's query cache may hold reads from before the lock.
+      ApplicationRecord.uncached do
+        ApplicationRecord.transaction do
+          lock.each(&:lock!)
+          current = preview.call
 
-      yield
+          next stale_preview(target, current) unless token["state"] == preview_digest(current)
+
+          yield current
+        end
+      end
+    rescue ActiveRecord::RecordNotFound
+      { success: false, error: "not_found", message: "It no longer exists. Nothing was changed." }
+    end
+
+    def stale_preview(target, preview)
+      {
+        success: false,
+        error: "preview_stale",
+        preview: preview,
+        preview_token: issue_preview_token(target, preview_digest(preview)),
+        message: "What the call would change is different since that preview. Nothing was changed; show the user this preview and, if they confirm, retry with its preview_token."
+      }
+    end
+
+    def preview_digest(preview)
+      Digest::SHA256.hexdigest(preview.to_json)
     end
 
     def preview_token_purpose

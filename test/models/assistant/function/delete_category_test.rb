@@ -2,6 +2,7 @@ require "test_helper"
 
 class Assistant::Function::DeleteCategoryTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include PreviewTokenTestHelper
 
   setup do
     @user = users(:family_admin)
@@ -76,6 +77,31 @@ class Assistant::Function::DeleteCategoryTest < ActiveSupport::TestCase
 
     assert_equal "preview_stale", result[:error]
     assert_equal @category.transactions.count, result[:preview][:transaction_count]
+    assert Category.exists?(@category.id)
+  end
+
+  test "refuses a token once the category gained transactions after the token was checked" do
+    token = @fn.call("id" => @category.id)[:preview_token]
+    change_after_token_check(@fn) { create_transaction(name: "Late arrival", category: @category) }
+
+    result = @fn.call("id" => @category.id, "preview_token" => token)
+
+    assert_equal "preview_stale", result[:error]
+    assert Category.exists?(@category.id)
+  end
+
+  test "previews the recurring bills it leaves uncategorized, and a bill added since refuses the token" do
+    recurring_transactions(:netflix_subscription).update!(category: @category)
+    token = @fn.call("id" => @category.id, "replacement_id" => categories(:income).id).then do |result|
+      assert_equal [ recurring_transactions(:netflix_subscription).id ], result[:preview][:uncategorized_bills].map { |bill| bill[:id] }
+      result[:preview_token]
+    end
+
+    recurring_transactions(:inactive_subscription).update!(category: @category)
+    result = @fn.call("id" => @category.id, "replacement_id" => categories(:income).id, "preview_token" => token)
+
+    assert_equal "preview_stale", result[:error]
+    assert_equal 2, result[:preview][:uncategorized_bills].size
     assert Category.exists?(@category.id)
   end
 

@@ -2,6 +2,7 @@ require "test_helper"
 
 class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include PreviewTokenTestHelper
 
   setup do
     @user = users(:family_admin)
@@ -125,6 +126,19 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     assert_equal "preview_stale", result[:error]
     assert_equal 1, result[:preview][:transfer][:deleted_fee_transactions].size
 
+    assert Transfer.exists?(@transfer.id)
+  end
+
+  test "refuses a token when a fee is attached after the token was checked" do
+    token = @function.call("transfer_id" => @transfer.id)[:preview_token]
+    change_after_token_check(@function) do
+      @transfer.fee_transactions << create_transaction(account: accounts(:depository), name: "Late fee", amount: 3).entryable
+    end
+
+    result = @function.call("transfer_id" => @transfer.id, "preview_token" => token)
+
+    assert_equal "preview_stale", result[:error]
+    assert_equal 1, result[:preview][:transfer][:deleted_fee_transactions].size
     assert Transfer.exists?(@transfer.id)
   end
 

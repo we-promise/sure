@@ -68,7 +68,7 @@ class Assistant::Function::DeleteCategory < Assistant::Function
       return error("invalid_replacement", "A category cannot replace itself.") if replacement == category
     end
 
-    confirm_with_preview(params, category, preview(category, replacement)) do
+    confirm_with_preview(params, category, -> { preview(category, replacement) }) do
       name = category.name_with_parent
       category.replace_and_destroy!(replacement)
 
@@ -86,7 +86,10 @@ class Assistant::Function::DeleteCategory < Assistant::Function
         transaction_count: category.transactions.count,
         replacement: replacement && { id: replacement.id, name: replacement.name_with_parent },
         subcategories: category.subcategories.order(:name).pluck(:name),
-        budget_allocations: category.budget_categories.count
+        budget_allocations: category.budget_categories.count,
+        # The recurring_transactions foreign key nullifies their category, even
+        # with a replacement.
+        uncategorized_bills: RecurringTransaction.where(category_id: category.id).includes(:merchant).order(:id).map { |bill| { id: bill.id, name: bill.display_name } }
       }
     end
 
