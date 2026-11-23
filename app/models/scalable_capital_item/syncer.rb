@@ -135,18 +135,24 @@ class ScalableCapitalItem::Syncer
     end
 
     def import_trade(adapter, cash_adapter, securities, entry)
-      existing = adapter.account.entries.find_by(external_id: entry.fetch(:external_id), source: SOURCE)
-      return if existing&.protected_from_sync?
+      external_id = entry.fetch(:external_id)
+      settlement_id = "settlement:#{external_id}"
+      trade_entry = Entry.where(account_id: adapter.account.id, external_id: external_id)
+      account_ids = [ adapter.account.id, cash_adapter&.account&.id ].compact
+      settlement_entries = Entry.transactions.where(account_id: account_ids, external_id: settlement_id)
+
+      # Check the trade and both settlement legs before updating any of them.
+      existing = trade_entry.or(settlement_entries).where(source: SOURCE).order(:id).lock
+      return if existing.any? { |record| cash_amount_protected?(record) }
 
       security = securities.resolve(entry.fetch(:isin), entry[:security_name])
       trade = adapter.import_trade(**entry.except(:isin, :security_name), security: security, source: SOURCE, currency: CURRENCY)
-      import_settlement(adapter, cash_adapter, trade)
+      import_settlement(adapter, cash_adapter, trade, settlement_id)
     end
 
-    def import_settlement(broker_adapter, cash_adapter, trade)
+    def import_settlement(broker_adapter, cash_adapter, trade, id)
       # The trade moves Sure investment cash. Its opposite leg keeps portfolio
       # cash at zero even if the user deliberately unlinked the cash account.
-      id = "settlement:#{trade.external_id}"
       if trade.amount.zero?
         [ broker_adapter, cash_adapter ].compact.each { |adapter| apply_zero_amount(adapter, id) }
         return
@@ -179,7 +185,7 @@ class ScalableCapitalItem::Syncer
       return unless entry
 
       entry.lock!
-      return if entry.protected_from_sync? || entry.locked?(:amount) || entry.locked?(:currency) || entry.amount.zero?
+      return if cash_amount_protected?(entry) || entry.amount.zero?
 
       transaction = entry.transaction
       if (transfer = transaction.transfer_as_inflow || transaction.transfer_as_outflow)
@@ -189,6 +195,10 @@ class ScalableCapitalItem::Syncer
         transfer.destroy!
       end
       entry.update!(amount: 0)
+    end
+
+    def cash_amount_protected?(entry)
+      entry.protected_from_sync? || entry.locked?(:amount) || entry.locked?(:currency)
     end
 
     def import_holdings(adapter, provider, date, positions, securities)

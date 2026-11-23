@@ -459,6 +459,36 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal cash_leg.id, cash.entries.where(external_id: "settlement:sell").sole.id
   end
 
+  test "zero and nonzero replays preserve each trade with a protected settlement leg" do
+    stub_snapshot
+    run_sync
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    sale = brokerage.entries.trades.find_by!(external_id: "sell")
+    buy = brokerage.entries.trades.find_by!(external_id: "buy")
+    sale_broker_leg = brokerage.entries.find_by!(external_id: "settlement:sell")
+    sale_cash_leg = cash.entries.find_by!(external_id: "settlement:sell")
+    buy_broker_leg = brokerage.entries.find_by!(external_id: "settlement:buy")
+    buy_cash_leg = cash.entries.find_by!(external_id: "settlement:buy")
+    sale_transfer = sale_broker_leg.transaction.transfer
+    buy_transfer = buy_broker_leg.transaction.transfer
+    sale_broker_leg.lock_attr!(:amount)
+    buy_cash_leg.update!(user_modified: true)
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "SELL", at: 1.hour.ago), cash_event("buy", "BUY", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "0")))
+    @client.stubs(:trade).with("portfolio", "buy").returns(broker(trade("buy", "BUY", "2.5", "120", "305")))
+    run_sync
+
+    assert_equal [ -98.to_d, 98.to_d, -98.to_d ], [ sale, sale_broker_leg, sale_cash_leg ].map { |entry| entry.reload.amount }
+    assert_equal [ 301.to_d, -301.to_d, 301.to_d ], [ buy, buy_broker_leg, buy_cash_leg ].map { |entry| entry.reload.amount }
+    assert_equal sale_transfer, sale_cash_leg.transaction.transfer
+    assert_equal buy_transfer, buy_broker_leg.transaction.transfer
+    assert_equal Time.current, @item.reload.broker_synced_through
+  end
+
   test "an unreadable timestamp on a supported event preserves checkpoints for a retry" do
     stub_snapshot
     run_sync
