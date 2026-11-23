@@ -148,6 +148,9 @@ else
   json.receipt nil
 end
 
+# The purchase (order email or receipt) this transaction paid for, or null.
+json.purchase_id transaction.purchase&.id
+
 json.attachments transaction.attachments do |attachment|
   json.id attachment.id
   json.filename attachment.filename.to_s

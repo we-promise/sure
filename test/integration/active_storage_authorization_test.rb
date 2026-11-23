@@ -508,6 +508,40 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "only the purchase's owner can fetch its original email" do
+    purchase = purchases(:allegro_matched)
+    purchase.original_email.attach(io: StringIO.new("From: a@b.c\r\n\r\nhome address"), filename: "order.eml", content_type: "message/rfc822")
+
+    sign_in users(:family_member)
+    get rails_blob_path(purchase.original_email)
+    assert_response :not_found
+
+    sign_in users(:family_admin)
+    get rails_blob_path(purchase.original_email)
+    assert_response :redirect
+  end
+
+  test "a purchase's receipt files follow its owner and the linked account's sharing" do
+    purchase = purchases(:allegro_awaiting)
+    purchase.receipt_files.attach(io: StringIO.new("jpeg"), filename: "receipt.jpg", content_type: "image/jpeg")
+    purchase.original_email.attach(io: StringIO.new("From: a@b.c\r\n\r\nhome address"), filename: "order.eml", content_type: "message/rfc822")
+
+    sign_in users(:family_member)
+    get rails_blob_path(purchase.receipt_files.first)
+    assert_response :not_found
+
+    shared_entry = accounts(:credit_card).entries.create!(name: "Allegro", date: Date.current, amount: 249.99, currency: "USD", entryable: Transaction.new)
+    purchase.update!(linked_transaction: shared_entry.entryable, status: :matched)
+    get rails_blob_path(purchase.receipt_files.first)
+    assert_response :redirect
+    get rails_blob_path(purchase.original_email)
+    assert_response :not_found
+
+    sign_in users(:family_admin)
+    get rails_blob_path(purchase.receipt_files.first)
+    assert_response :redirect
+  end
+
   test "every attachment is either access-checked or intentionally public" do
     # Logos and avatars are not sensitive. Archived exports have no owning family;
     # ArchivedExportsController releases them by download token.

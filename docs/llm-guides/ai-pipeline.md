@@ -120,6 +120,7 @@ flowchart LR
 | `bill_setup` | interactive | structured_output | Bills (user) | Transaction dates; Transaction amounts; Transaction names; Your category names; The bill's current settings |
 | `extract_pdf` | prompt | generation: structured_output; ocr: ocr | PDF import (user) | The document you upload |
 | `extract_receipt` | prompt | structured_output | Receipt scanning (user) | The receipt photos and files you upload; Your category names |
+| `extract_purchase` | background | structured_output | Order emails (user) | The text and attached photos and PDFs of order emails you forward; Your category names |
 | `embed` | prompt | embedding | Documents (user) | Your uploaded documents, as whole files to a vector store or as text chunks to an embedding model |
 | `search_documents` | interactive | embedding | Documents (user) | Your search text |
 | `categorize` | background | generation: structured_output; judgement: judge | Categories (family) | Transaction names; Transaction amounts; Categories your bank suggests; Your category names |

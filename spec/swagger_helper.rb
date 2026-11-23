@@ -1112,6 +1112,8 @@ RSpec.configure do |config|
               },
               transfer: { '$ref' => '#/components/schemas/Transfer', nullable: true },
               receipt: { '$ref' => '#/components/schemas/TransactionReceipt' },
+              purchase_id: { type: :string, format: :uuid, nullable: true,
+                             description: 'The purchase (forwarded order email or scanned receipt) this transaction paid for.' },
               attachments: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/TransactionAttachment' }

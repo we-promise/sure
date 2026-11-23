@@ -45,6 +45,7 @@ class ReceiptScan::Processor
     return 0 unless scan
 
     @extraction = ReceiptScan::Extraction.from_ai(result.value)
+    @route = result.route
     # Amounts are kept to the currency's decimals, so the split parts can add up to the total.
     @extraction = extraction.with(total: extraction.total.round(precision)) if extraction.total
 
@@ -129,6 +130,21 @@ class ReceiptScan::Processor
 
       scan.update!(status: :completed) if scan.processing?
       write_receipt_extra(transaction)
+      record_purchase
+    end
+
+    # What read the receipt is kept with the purchase, so results can be compared after a model or
+    # prompt change.
+    def record_purchase
+      metadata = {
+        "endpoint" => @route&.model&.endpoint&.name,
+        "model" => @route&.model&.name,
+        "prompt" => @route&.prompt.presence || Ai::Generations::ExtractReceipt.prompt_key,
+        "extracted_at" => Time.current.iso8601,
+        "raw_output" => extraction.to_h.as_json,
+        "validation" => problems
+      }
+      Purchase::FromReceiptScan.sync!(scan.reload, extraction_hash: metadata["raw_output"], ai_metadata: metadata)
     end
 
     # Only a scan still processing fails: another run may have finished it meanwhile. The
@@ -245,7 +261,7 @@ class ReceiptScan::Processor
       return if extraction.total.nil? || entry.amount != extraction.total
       return if entry.entryable.category_set_by_user?
 
-      groups = ReceiptScan::CategoryAllocator.new(extraction, categories: family.categories, precision:).groups
+      groups = Purchase::CategoryAllocator.new(total: extraction.total, items: extraction.line_items, categories: family.categories, precision:).groups
       if groups.one?
         entry.entryable.update!(category: groups.first[:category]) if groups.first[:category]
       elsif groups.many? && entry.entryable.pending?

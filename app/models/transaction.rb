@@ -17,6 +17,8 @@ class Transaction < ApplicationRecord
 
   # A receipt goes with its transaction, files and all.
   has_one :receipt_scan, foreign_key: :transaction_id, dependent: :destroy, inverse_of: :linked_transaction
+  has_one :purchase, foreign_key: :transaction_id, inverse_of: :linked_transaction
+  before_destroy :release_purchase
 
   # Attachment validation constants
   MAX_ATTACHMENTS_PER_TRANSACTION = 10
@@ -858,6 +860,10 @@ class Transaction < ApplicationRecord
   end
 
   private
+    def release_purchase
+      purchase&.release_transaction!
+    end
+
     # Moves the pending transaction's attachments (the attachment rows themselves, so the
     # blobs are not purged with the pending entry) and adds its tags to the posted one.
     def carry_over_user_additions(from:, to:)
@@ -872,6 +878,7 @@ class Transaction < ApplicationRecord
       to.tags << new_tags if new_tags.any?
 
       carry_over_receipt(from:, to:)
+      carry_over_purchase(from:, to:)
     end
 
     # A receipt read onto the pending transaction moves with its scan, unless the posted one
@@ -881,6 +888,15 @@ class Transaction < ApplicationRecord
 
       to.update!(extra: to.extra.merge("receipt" => from.extra["receipt"]))
       ReceiptScan.where(transaction_id: from.id).update_all(transaction_id: to.id, updated_at: Time.current)
+    end
+
+    # The purchase paid by the pending transaction is paid by its booking. If the booking already
+    # has a purchase, that one stays and the pending's is released with the pending entry.
+    def carry_over_purchase(from:, to:)
+      return if Purchase.exists?(transaction_id: to.id)
+
+      Purchase.where(transaction_id: from.id).update_all(transaction_id: to.id, updated_at: Time.current)
+      from.association(:purchase).reset
     end
 
     def attachment_count_after_merge(from:, to:)

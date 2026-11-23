@@ -1,6 +1,6 @@
 require "test_helper"
 
-class ReceiptScan::CategoryAllocatorTest < ActiveSupport::TestCase
+class Purchase::CategoryAllocatorTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
     @food = categories(:food_and_drink)
@@ -40,10 +40,7 @@ class ReceiptScan::CategoryAllocatorTest < ActiveSupport::TestCase
 
   test "the rounding correction never leaves a negative group" do
     categories = Array.new(5) { |i| @family.categories.create!(name: "Cat #{i}", color: "#000000") }
-    groups = ReceiptScan::CategoryAllocator.new(
-      build_receipt_extraction(total: BigDecimal("0.03"), line_items: categories.map { item(_1.name, "0.01", _1.name) }),
-      categories: @family.categories
-    ).groups
+    groups = allocate(total: "0.03", items: categories.map { item(_1.name, "0.01", _1.name) })
 
     assert groups.all? { _1[:amount] >= 0 }, groups.map { _1[:amount] }.inspect
     assert_equal BigDecimal("0.03"), groups.sum { _1[:amount] }
@@ -98,6 +95,22 @@ class ReceiptScan::CategoryAllocatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("3.34"), groups.first[:amount]
   end
 
+  test "shipping in the total is spread across groups proportionally" do
+    groups = allocate(total: "110.00", items: [
+      item("Book", "60.00", "Food & Drink"),
+      item("Pan", "40.00", "Household")
+    ])
+
+    assert_equal [ [ @food, BigDecimal("66.00") ], [ @household, BigDecimal("44.00") ] ], summary(groups)
+    assert_equal BigDecimal("110.00"), groups.sum { _1[:amount] }
+  end
+
+  test "items without a discount key" do
+    groups = allocate(total: "10.00", items: [ { "name" => "Pen", "amount" => "10.00", "category_name" => "Household" } ])
+
+    assert_equal [ [ @household, BigDecimal("10.00") ] ], summary(groups)
+  end
+
   test "no line items" do
     groups = allocate(total: "12.50", items: [])
 
@@ -125,8 +138,7 @@ class ReceiptScan::CategoryAllocatorTest < ActiveSupport::TestCase
     end
 
     def allocate(total:, items:, precision: 2)
-      extraction = build_receipt_extraction(total: BigDecimal(total), line_items: items)
-      ReceiptScan::CategoryAllocator.new(extraction, categories: @family.categories, precision:).groups
+      Purchase::CategoryAllocator.new(total: BigDecimal(total), items:, categories: @family.categories, precision:).groups
     end
 
     def summary(groups)

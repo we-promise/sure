@@ -546,7 +546,7 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
   test "an error after extraction marks the scan failed instead of raising" do
     scan = upload("rotated.jpg", "image/jpeg")
     stub_extraction(line_items: [ item("Cheese", "50.00", "Food & Drink") ])
-    ReceiptScan::CategoryAllocator.any_instance.stubs(:groups).raises(StandardError, "boom")
+    Purchase::CategoryAllocator.any_instance.stubs(:groups).raises(StandardError, "boom")
 
     assert_difference -> { DebugLogEntry.count }, 1 do
       assert_nothing_raised { process(scan) }
@@ -574,12 +574,58 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
     scan = upload("rotated.jpg", "image/jpeg")
     placeholder = scan.linked_transaction
     stub_extraction(line_items: [ item("Cheese", "50.00", "Food & Drink") ])
-    ReceiptScan::CategoryAllocator.any_instance.stubs(:groups).raises(StandardError, "boom")
+    Purchase::CategoryAllocator.any_instance.stubs(:groups).raises(StandardError, "boom")
 
     assert_nothing_raised { process(scan) }
 
     assert scan.reload.failed?
     assert_equal placeholder, scan.linked_transaction
+  end
+
+  test "a processed receipt becomes a matched purchase with its items" do
+    scan = upload("rotated.jpg", "image/jpeg")
+    stub_extraction(line_items: [ item("Cheese", "30.00", "Food & Drink"), item("Soap", "20.00", "Household") ])
+
+    process(scan)
+
+    purchase = scan.reload.purchase
+    assert_equal "receipt", purchase.source
+    assert_equal "matched", purchase.status
+    assert_equal scan.linked_transaction, purchase.linked_transaction
+    assert_equal [ "Cheese", "Soap" ], purchase.items.map(&:name)
+    assert_equal [ @food, @household ], purchase.items.map(&:category)
+    assert_equal BigDecimal("50.00"), purchase.total
+    assert_equal "Corner Grocer", purchase.merchant
+    assert_equal @date, purchase.ordered_on
+    assert_equal "claude-test", purchase.ai_metadata["model"]
+    assert_equal Provider::Anthropic::ReceiptExtractor::PROMPT_VERSION, purchase.ai_metadata["prompt_version"]
+    assert_equal "Corner Grocer", purchase.ai_metadata.dig("raw_output", "merchant")
+    assert_equal purchase.ai_metadata, scan.extraction
+  end
+
+  test "a receipt merged into a bank transaction links its purchase there" do
+    bank = Entry.create!(account: @account, name: "CARD CORNER GROCER", date: @date, currency: "USD",
+                         amount: BigDecimal("50.00"), entryable: Transaction.new)
+    scan = upload("rotated.jpg", "image/jpeg")
+    stub_extraction(line_items: [ item("Cheese", "50.00", "Food & Drink") ])
+
+    process(scan)
+
+    assert_equal bank.entryable, scan.reload.purchase.linked_transaction
+  end
+
+  test "a receipt merged into a transaction an order email already paid still completes" do
+    bank = Entry.create!(account: @account, name: "CARD CORNER GROCER", date: @date, currency: "USD",
+                         amount: BigDecimal("50.00"), entryable: Transaction.new)
+    purchases(:allegro_awaiting).update!(linked_transaction: bank.entryable, status: :matched)
+    scan = upload("rotated.jpg", "image/jpeg")
+    stub_extraction(line_items: [ item("Cheese", "50.00", "Food & Drink") ])
+
+    process(scan)
+
+    assert scan.reload.completed?
+    assert_equal bank.entryable, scan.linked_transaction
+    assert_equal "unmatched", scan.purchase.status
   end
 
   test "an unreadable currency keeps the account currency" do

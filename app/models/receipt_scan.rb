@@ -13,6 +13,7 @@ class ReceiptScan < ApplicationRecord
   belongs_to :user, optional: true
   # Not `:transaction`: that name would shadow ActiveRecord::Base#transaction.
   belongs_to :linked_transaction, class_name: "Transaction", foreign_key: :transaction_id, optional: true
+  has_one :purchase, dependent: :nullify
 
   # The same files are the transaction's attachments. A blob is deleted once neither holds it:
   # see purge_unshared_files.

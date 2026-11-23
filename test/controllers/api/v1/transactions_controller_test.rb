@@ -1950,6 +1950,26 @@ end
     assert attachment["url"].present?
   end
 
+  test "transaction JSON names the linked purchase" do
+    Purchase.where(transaction_id: @transaction.id).delete_all
+    purchase = Purchase.create!(family: @family, user: @user, source: :email, status: :matched, linked_transaction: @transaction)
+
+    get api_v1_transaction_url(@transaction), headers: api_headers(@read_only_api_key)
+
+    assert_response :success
+    assert_equal purchase.id, JSON.parse(response.body)["purchase_id"]
+  end
+
+  test "transaction JSON has a null purchase_id without a purchase" do
+    Purchase.where(transaction_id: @transaction.id).delete_all
+
+    get api_v1_transaction_url(@transaction), headers: api_headers(@read_only_api_key)
+
+    body = JSON.parse(response.body)
+    assert body.key?("purchase_id")
+    assert_nil body["purchase_id"]
+  end
+
   test "transaction JSON has null receipt and empty attachments by default" do
     get api_v1_transaction_url(@transaction), headers: api_headers(@read_only_api_key)
 

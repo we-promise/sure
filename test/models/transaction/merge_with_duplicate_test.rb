@@ -64,6 +64,28 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_equal posted_tx, scan.reload.linked_transaction
   end
 
+  test "a purchase linked to the pending transaction moves to the posted one" do
+    purchase = purchases(:allegro_awaiting)
+    purchase.update!(linked_transaction: @pending_entry.transaction, status: :matched)
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal @posted_entry.transaction, purchase.reload.linked_transaction
+    assert purchase.matched?
+  end
+
+  test "a purchase already on the posted transaction keeps it" do
+    kept = purchases(:allegro_awaiting)
+    kept.update!(linked_transaction: @posted_entry.transaction, status: :matched)
+    moved = purchases(:allegro_matched)
+    moved.update!(linked_transaction: @pending_entry.transaction, status: :matched)
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal @posted_entry.transaction, kept.reload.linked_transaction
+    assert_nil moved.reload.linked_transaction
+  end
+
   test "a receipt already on the posted transaction is kept" do
     pending_tx = @pending_entry.transaction
     pending_tx.update!(extra: pending_tx.extra.merge("receipt" => { "merchant" => "Pending receipt" }))

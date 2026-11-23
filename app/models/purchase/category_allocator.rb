@@ -1,23 +1,27 @@
-# Groups a receipt's line items by the category the model assigned them, into amounts that add
-# up exactly to the receipt total, ready to become the parts of a split transaction.
-class ReceiptScan::CategoryAllocator
-  # Groups smaller than this share of the total, in size, join the largest group, so a carrier bag doesn't
+# Groups a purchase's line items (from a receipt or an order email) by the category the model
+# assigned them, into amounts that add up exactly to the total, ready to become the parts of a
+# split transaction. Whatever the total holds beyond the items (shipping, a basket discount) is
+# spread across the groups in proportion to their items.
+class Purchase::CategoryAllocator
+  # Groups smaller than this share of the total join the largest group, so a carrier bag doesn't
   # become its own split.
   FOLD_SHARE = BigDecimal("0.05")
 
-  # precision: the currency's decimal places, which the parts are rounded to.
-  def initialize(extraction, categories:, precision: 2)
-    @extraction = extraction
+  # @param items [Array<Hash>] string keys "name", "amount", optional "discount", "category_name"
+  # @param precision [Integer] the currency's decimal places, which the parts are rounded to
+  def initialize(total:, items:, categories:, precision: 2)
+    @total = total
+    @items = Array(items)
     @precision = precision
     @categories_by_name = categories.index_by { |category| category.name.downcase }
   end
 
   # @return [Array<Hash>] { category: Category|nil, amount: BigDecimal, item_names: [String] },
-  #   largest first, amounts summing to the receipt total
+  #   largest first, amounts summing to the total
   def groups
     return [] if total.nil?
 
-    nets = extraction.line_items.map { |item| [ item, decimal(item["amount"]) - decimal(item["discount"]) ] }
+    nets = items.map { |item| [ item, decimal(item["amount"]) - decimal(item["discount"]) ] }
     items_total = nets.sum { |_, net| net }
     # Items are scaled to the total, so a refund read with positive lines still splits.
     return [ group(nil, total, []) ] if items_total.zero?
@@ -31,11 +35,7 @@ class ReceiptScan::CategoryAllocator
   end
 
   private
-    attr_reader :extraction, :categories_by_name, :precision
-
-    def total
-      extraction.total
-    end
+    attr_reader :total, :items, :categories_by_name, :precision
 
     def category_for(name)
       categories_by_name[name.to_s.downcase] if name.present?
