@@ -161,7 +161,12 @@ class ScalableCapitalItem::Syncer
       name = I18n.t("scalable_capital_items.accounts.settlement", name: trade.name)
       leg = { external_id: id, date: trade.date, name: name, kind: "funds_movement" }
       broker_leg = import_transaction(broker_adapter, leg.merge(amount: -trade.amount))
-      return unless cash_adapter && broker_leg
+      return unless broker_leg
+
+      unless cash_adapter
+        detach_unbalanced_settlement(broker_leg)
+        return
+      end
 
       cash_leg = import_transaction(cash_adapter, leg.merge(amount: trade.amount))
       return unless cash_leg
@@ -188,13 +193,26 @@ class ScalableCapitalItem::Syncer
       return if cash_amount_protected?(entry) || entry.amount.zero?
 
       transaction = entry.transaction
-      if (transfer = transaction.transfer_as_inflow || transaction.transfer_as_outflow)
-        # A zero leg cannot belong to a transfer. Keep separately recorded fees.
-        transfer.fee_transactions.update_all(transfer_id: nil)
-        transfer.fee_transactions.reset
-        transfer.destroy!
-      end
+      transfer = transaction.transfer_as_inflow || transaction.transfer_as_outflow
+      detach_transfer(transfer) if transfer
       entry.update!(amount: 0)
+    end
+
+    def detach_unbalanced_settlement(broker_leg)
+      transaction = broker_leg.transaction
+      transfer = transaction.transfer
+      # The cash account may have been unlinked after these legs were paired.
+      return if !transfer || transfer.reload.valid?
+
+      detach_transfer(transfer)
+      transaction.reload.update!(kind: "funds_movement")
+    end
+
+    def detach_transfer(transfer)
+      # Keep separately recorded fees when the pairing is removed.
+      transfer.fee_transactions.update_all(transfer_id: nil)
+      transfer.fee_transactions.reset
+      transfer.destroy!
     end
 
     def cash_amount_protected?(entry)

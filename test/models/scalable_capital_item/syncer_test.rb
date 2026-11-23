@@ -489,6 +489,44 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal Time.current, @item.reload.broker_synced_through
   end
 
+  test "a settlement correction detaches an unbalanced transfer to an unlinked cash account" do
+    stub_snapshot
+    run_sync
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    cash_source = @item.scalable_capital_accounts.cash.sole
+    cash = cash_source.account
+    broker_leg = brokerage.entries.find_by!(external_id: "settlement:sell")
+    cash_leg = cash.entries.find_by!(external_id: "settlement:sell")
+    transfer = broker_leg.transaction.transfer
+    cash_date = cash_leg.date
+    fee = cash.entries.create!(entryable: Transaction.new(transfer_id: transfer.id), date: cash_date,
+                               amount: 1, currency: "EUR", name: "Separate transfer fee")
+    cash_source.account_provider.destroy!
+    assert_predicate cash.reload, :manual?
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "SELL", at: 1.hour.ago))
+    run_sync
+    assert_predicate transfer.reload, :valid?
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "SELL", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "90")))
+    run_sync
+
+    assert_equal(-90.to_d, brokerage.entries.trades.find_by!(external_id: "sell").amount)
+    assert_equal 90.to_d, broker_leg.reload.amount
+    assert_equal "funds_movement", broker_leg.transaction.kind
+    refute Transfer.exists?(transfer.id)
+    assert_equal(-98.to_d, cash_leg.reload.amount)
+    assert_equal cash_date, cash_leg.date
+    assert_nil fee.reload.transaction.transfer_id
+    assert_equal 1.to_d, fee.amount
+    assert_nil cash_source.reload.account
+  end
+
   test "an unreadable timestamp on a supported event preserves checkpoints for a retry" do
     stub_snapshot
     run_sync
