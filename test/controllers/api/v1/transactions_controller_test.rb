@@ -1928,6 +1928,36 @@ end
     assert_nil JSON.parse(response.body)["exchange_rate"]
   end
 
+  test "transaction JSON includes receipt and attachments" do
+    @transaction.update!(extra: { "receipt" => {
+      "scan_id" => "abc", "status" => "needs_review", "merchant" => "Corner Grocer",
+      "review_reasons" => [ { "reason" => "items_total_mismatch" } ],
+      "line_items" => [ { "name" => "Cheese", "amount" => "30.00", "category_name" => "Food & Drink" } ]
+    } })
+    @transaction.attachments.attach(io: file_fixture("receipts/rotated.jpg").open, filename: "r.jpg", content_type: "image/jpeg")
+
+    get api_v1_transaction_url(@transaction), headers: api_headers(@read_only_api_key)
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal "needs_review", body.dig("receipt", "status")
+    assert_equal "Corner Grocer", body.dig("receipt", "merchant")
+    assert_equal [ "items_total_mismatch" ], body.dig("receipt", "review_reasons").map { _1["reason"] }
+    assert_equal "Cheese", body.dig("receipt", "line_items", 0, "name")
+    attachment = body["attachments"].first
+    assert_equal "r.jpg", attachment["filename"]
+    assert_equal "image/jpeg", attachment["content_type"]
+    assert attachment["url"].present?
+  end
+
+  test "transaction JSON has null receipt and empty attachments by default" do
+    get api_v1_transaction_url(@transaction), headers: api_headers(@read_only_api_key)
+
+    body = JSON.parse(response.body)
+    assert_nil body["receipt"]
+    assert_equal [], body["attachments"]
+  end
+
   private
 
     def foreign_category
