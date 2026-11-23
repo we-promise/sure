@@ -30,7 +30,10 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     @tr_account.reload
   end
 
-  teardown { Account.reset_column_information }
+  teardown do
+    Account.reset_column_information
+    TradeRepublicItem.reset_column_information
+  end
 
   test "rescales holdings before the account logo selection column exists" do
     holding = create_snapshot(BOND_ISIN, Date.current, qty: "2677.95", price: "84.04", cost_basis: "0.93")
@@ -47,6 +50,24 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     assert_equal BigDecimal("0.8404"), holding.reload.price
     assert_equal BigDecimal("2250.5492"), holding.amount
     assert_equal "0.8404", @tr_account.reload.raw_positions_payload.first["price"]
+  end
+
+  test "schedules the sync before later Trade Republic item columns exist" do
+    holding = create_snapshot(BOND_ISIN, Date.current, qty: "2677.95", price: "84.04", cost_basis: "0.93")
+
+    # Upgrades from before these migrations run this one first. PostgreSQL
+    # restores the columns when the test transaction rolls back.
+    connection = TradeRepublicItem.connection
+    %i[timeline_cursors device_id session_expires_at].each do |column|
+      connection.remove_column(:trade_republic_items, column)
+    end
+    TradeRepublicItem.reset_column_information
+
+    assert_difference -> { Sync.where(syncable: @item).count }, 1 do
+      run_migration
+    end
+
+    assert_equal BigDecimal("0.8404"), holding.reload.price
   end
 
   test "rescales bond snapshots stored at percent of par" do

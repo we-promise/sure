@@ -101,8 +101,17 @@ class RescaleTradeRepublicBondHoldingPrices < ActiveRecord::Migration[8.1]
       changed
     end
 
+    # TradeRepublicItem.syncable reads session_expires_at, which a later
+    # migration adds, so an upgrade that runs this first stops here. Pick the
+    # items with the columns this migration can rely on; an item whose session
+    # has already expired just fails that one sync and asks for a login.
     def schedule_syncs(item_ids)
-      TradeRepublicItem.syncable.where(id: item_ids).find_each do |item|
+      return if item_ids.empty?
+
+      TradeRepublicItem.reset_column_information
+      TradeRepublicItem.where(id: item_ids, scheduled_for_deletion: false, status: "good", pending_login_state: nil)
+        .where.not(session_blob: [ nil, "" ])
+        .find_each do |item|
         item.sync_later
       rescue => e
         say "Could not schedule a sync for Trade Republic item #{item.id} (#{e.message}); it refreshes on its next sync"
