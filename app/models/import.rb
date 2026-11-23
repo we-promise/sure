@@ -407,7 +407,9 @@ class Import < ApplicationRecord
   def revert
     Import.transaction do
       accounts.destroy_all
-      entries.destroy_all
+      # Split parts carry the import too (Entry#split! copies it), but may
+      # only be destroyed through their parent, which takes them along.
+      entries.where(parent_entry_id: nil).destroy_all
       revert_derived_state!
     end
 
