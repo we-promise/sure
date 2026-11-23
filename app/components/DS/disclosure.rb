@@ -3,7 +3,7 @@ class DS::Disclosure < DesignSystemComponent
 
   VARIANTS = %i[default card card_inset inline bare].freeze
 
-  attr_reader :title, :align, :open, :variant, :summary_class_override, :summary_aria_label, :body_class, :opts
+  attr_reader :title, :align, :open, :variant, :summary_class_override, :summary_aria_label, :summary_data, :body_class, :opts
 
   # `:default` — bg-surface summary, no chrome on the `<details>`. Use
   # for inline expanders that sit inside a parent card (the summary
@@ -37,13 +37,14 @@ class DS::Disclosure < DesignSystemComponent
   # `body_class:` styles the wrapper around the disclosure body (ignored for
   # `:bare`, which renders no wrapper). Defaults to `mt-2` (the standard gap
   # below the summary). Pass `nil`/`""` to drop it on non-bare variants.
-  def initialize(title: nil, align: "right", open: false, variant: :default, summary_class: nil, summary_aria_label: nil, body_class: "mt-2", **opts)
+  def initialize(title: nil, align: "right", open: false, variant: :default, summary_class: nil, summary_aria_label: nil, summary_data: {}, body_class: "mt-2", **opts)
     @title = title
     @align = align.to_sym
     @open = open
     @variant = variant&.to_sym
     @summary_class_override = summary_class
     @summary_aria_label = summary_aria_label
+    @summary_data = summary_data
     @body_class = body_class
     @opts = opts
 

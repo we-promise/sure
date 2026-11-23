@@ -90,6 +90,13 @@ class Import < ApplicationRecord
 
   scope :ordered, -> { order(created_at: :desc) }
   scope :ordered_by_sequence, -> { order(:sequence, :created_at) }
+  # The imports +user+ may view. A statement-backed import is as private as its
+  # statement; any other import is visible to the whole family.
+  scope :viewable_by, ->(user) {
+    family_imports = where(family_id: user.family_id)
+    family_imports.where(account_statement_id: nil)
+      .or(family_imports.where(account_statement_id: AccountStatement.viewable_by(user).select(:id)))
+  }
 
   enum :status, {
     pending: "pending",
@@ -346,7 +353,9 @@ class Import < ApplicationRecord
   def revert
     Import.transaction do
       accounts.destroy_all
-      entries.destroy_all
+      # Split parts carry the import too (Entry#split! copies it), but may
+      # only be destroyed through their parent, which takes them along.
+      entries.where(parent_entry_id: nil).destroy_all
       revert_derived_state!
     end
 
@@ -500,6 +509,11 @@ class Import < ApplicationRecord
 
   def family_config?
     FAMILY_CONFIG_TYPES.include?(type)
+  end
+
+  # The viewable_by scope's rule for a single import.
+  def viewable_by?(user)
+    user.present? && self.class.viewable_by(user).exists?(id)
   end
 
   # Guests may view family configuration but not change it, so they may only

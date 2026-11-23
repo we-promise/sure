@@ -86,7 +86,7 @@ RSpec.describe 'API V1 Imports', type: :request do
 
   path '/api/v1/imports' do
     get 'List imports' do
-      description 'List all imports for the user\'s family with pagination and filtering.'
+      description 'List the family\'s imports the user can view, with pagination and filtering. An import made from an account statement is as private as that statement, so it is left out for users who cannot view the statement.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -321,7 +321,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'Retrieve an import' do
-      description 'Retrieve detailed information about a specific import, including configuration, row statistics, and SureImport readback verification when available.'
+      description 'Retrieve detailed information about a specific import, including configuration, row statistics, and SureImport readback verification when available. An import made from an account statement the user cannot view returns 404.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -334,7 +334,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '404', 'import not found' do
+      response '404', 'import not found, or made from a statement the user cannot view' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
@@ -348,7 +348,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'List import row diagnostics' do
-      description 'List sanitized import rows with validation errors and mapping resolution state.'
+      description 'List sanitized import rows with validation errors and mapping resolution state. An import made from an account statement the user cannot view returns 404.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -381,7 +381,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '404', 'import not found' do
+      response '404', 'import not found, or made from a statement the user cannot view' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }

@@ -729,6 +729,28 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal BigDecimal("500"), manager.opening_balance
   end
 
+  test "changing the date format resets the parsed split categories" do
+    @import.update!(raw_file_str: <<~QIF)
+      !Type:Bank
+      D7.25.20
+      T-500.00
+      PLandlord
+      SRent
+      $-400.00
+      SUtilities
+      $-100.00
+      ^
+    QIF
+    @import.qif_date_format = "%d.%m.%Y"
+    assert_empty @import.split_categories
+    refute @import.has_split_transactions?
+
+    @import.qif_date_format = "%m.%d.%Y"
+
+    assert_equal [ "Rent", "Utilities" ], @import.split_categories
+    assert @import.has_split_transactions?
+  end
+
   test "unknown_qif_account_types is empty for standard QIF files" do
     @import.update!(raw_file_str: SAMPLE_QIF)
     assert_empty @import.unknown_qif_account_types
@@ -828,6 +850,23 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal "Supplies", supplies.notes
     assert_equal @import, supplies.import
     assert supplies.import_locked?
+  end
+
+  test "revert removes split transactions imported into an existing account" do
+    @import.update!(raw_file_str: QIF_WITH_SPLITS)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_difference "Entry.count", 4 do
+      @import.import!
+    end
+
+    assert_difference "Entry.count", -4 do
+      @import.revert
+    end
+
+    assert @import.reload.pending?, @import.error
+    assert_empty @import.entries
   end
 
   test "import! creates split children from QIF split lines with detected non-default date format" do

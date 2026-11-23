@@ -1,4 +1,5 @@
 class Import::QifCategorySelectionsController < ApplicationController
+  include ViewableImports
   include ImportGuestGuardable
 
   layout "imports"
@@ -17,14 +18,29 @@ class Import::QifCategorySelectionsController < ApplicationController
     @split_categories      = @import.split_categories
     @has_split_transactions = @import.has_split_transactions?
     @unknown_account_types  = @import.unknown_qif_account_types
+    @selection_list_changed = flash[:qif_selection_list_changed].present?
   end
 
   def update
     # If the user changed the date format, re-generate rows with the new format.
     if selection_params[:date_format].present? && selection_params[:date_format] != @import.qif_date_format
+      offered_lists = [ @import.row_categories, @import.row_tags ]
+
+      # The rows are rebuilt from the file, so a selection saved for the old
+      # rows no longer applies; it would also hide split categories and tags
+      # that only appear with the new format.
+      @import.column_mappings = @import.column_mappings.except("qif_selected_categories", "qif_selected_tags")
       @import.qif_date_format = selection_params[:date_format]
       @import.update_column(:column_mappings, @import.column_mappings)
       @import.generate_rows_from_csv
+
+      # The form only listed what the rows held with the old format. If the
+      # lists differ now, show them again so the user can choose from all
+      # categories and tags before anything is cleared.
+      if [ @import.row_categories, @import.row_tags ] != offered_lists
+        flash[:qif_selection_list_changed] = true
+        redirect_to import_qif_category_selection_path(@import) and return
+      end
     end
 
     all_categories = @import.row_categories
@@ -67,7 +83,7 @@ class Import::QifCategorySelectionsController < ApplicationController
   private
 
     def set_import
-      @import = Current.family.imports.find(params[:import_id])
+      @import = viewable_imports.find(params[:import_id])
 
       unless @import.is_a?(QifImport)
         redirect_to imports_path and return

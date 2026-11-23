@@ -21,6 +21,13 @@ class Assistant::Function::GetBillDetailsTest < ActiveSupport::TestCase
     assert_equal "$100.00", result[:analytics][:paid_this_year]
   end
 
+  test "the bank reference that identifies payments is part of the bill" do
+    series = create_series(name: "Strom", amount: 80)
+    series.update!(bank_reference: "VN 4711")
+
+    assert_equal "VN 4711", call_tool(series.id)[:bill][:bank_reference]
+  end
+
   test "analytics are null before anything was paid" do
     series = create_series(name: "Fresh bill", amount: 50)
 

@@ -1081,7 +1081,9 @@ class Demo::Generator
         currency: to_account.currency,
         date: date
       )
-      Transfer.create!(inflow_transaction: inflow.entryable, outflow_transaction: outflow.entryable)
+      # Confirmed, as Transfer::Creator makes a transfer the user records: a
+      # pending one is an auto-match suggestion, which reports leave unlinked.
+      Transfer.create!(inflow_transaction: inflow.entryable, outflow_transaction: outflow.entryable, status: "confirmed")
     end
 
     def load_securities!
