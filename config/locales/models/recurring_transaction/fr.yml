@@ -32,4 +32,5 @@ fr:
       exceeds_remaining: "%{amount} dépasse les %{remaining} restants sur ce cycle"
       missing_rate: aucun taux de change de %{from} vers %{to} ; saisissez un montant explicitement
       over_allocated: affecter %{amount} dépasse les %{capacity} %{currency} restants sur la transaction
+      split_counterpart_allocated: cette transaction est divisée, et la dépense d'origine ou l'une de ses parties est déjà affectée à une facture
       unmeasurable: "cette transaction porte une affectation qui ne peut pas être convertie en %{currency} : il est donc impossible de mesurer ce qu'il en reste. Ajoutez un taux de change pour le %{date} ou supprimez d'abord le paiement existant"
