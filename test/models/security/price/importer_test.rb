@@ -837,6 +837,38 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal 120, Security::Price.find_by!(security: @security, date: real + 2.days).price
   end
 
+  # The import starts on the carried day itself, so the fill starts at its
+  # requested start date.
+  test "an import starting on a carried day anchors on the stored real quote before it" do
+    Security::Price.delete_all
+
+    real = 9.days.ago.to_date
+    Security::Price.create!(security: @security, date: real, price: 120, currency: "USD")
+    import_with([ [ real + 1.day, 120, true ] ], quotes: { real => 100 })
+
+    assert_equal 120, Security::Price.find_by!(security: @security, date: real + 1.day).price
+  end
+
+  test "an import starting on a carried day takes the provider's quote for that day" do
+    Security::Price.delete_all
+
+    real = 9.days.ago.to_date
+    Security::Price.create!(security: @security, date: real, price: 120, currency: "USD")
+    import_with([ [ real + 1.day, 120, true ] ], quotes: { real => 100, real + 1.day => 104 })
+
+    assert_equal [ 104, false ], Security::Price.find_by!(security: @security, date: real + 1.day).then { |p| [ p.price, p.carried_forward ] }
+  end
+
+  # A stored zero is no quote, so the carried price before it is still the tail.
+  test "a stored zero does not settle the carried price before it" do
+    Security::Price.delete_all
+
+    real = 20.days.ago.to_date
+    import_with([ [ real, 120, false ], [ real + 1.day, 120, true ], [ real + 2.days, 0, false ] ], quotes: { real + 1.day => 125 })
+
+    assert_equal [ 125, false ], Security::Price.find_by!(security: @security, date: real + 1.day).then { |p| [ p.price, p.carried_forward ] }
+  end
+
   # A quote in another currency is no anchor for prices in the provider's.
   test "a refetched tail does not anchor on a stored quote in another currency" do
     Security::Price.delete_all

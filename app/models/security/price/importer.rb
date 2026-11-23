@@ -257,7 +257,7 @@ class Security::Price::Importer
     # the market keeps) and is not asked for again.
     def refetchable_dates
       @refetchable_dates ||= begin
-        last_quote_on = Security::Price.where(security_id: security.id, carried_forward: false).maximum(:date)
+        last_quote_on = Security::Price.where(security_id: security.id, carried_forward: false).where("price > 0").maximum(:date)
         tail_from = [ last_quote_on&.next_day, CARRIED_FORWARD_REFETCH_DAYS.days.ago.to_date ].compact.max
 
         Security::Price
@@ -312,12 +312,14 @@ class Security::Price::Importer
     def start_price_value
       # When processing full range (first sync), use original behavior
       if fill_start_date == start_date
-        provider_price_value = provider_prices.select { |date, _| date <= start_date }
-                                              .max_by { |date, _| date }
-                                              &.last&.price
+        provider_date, provider_price = provider_prices.select { |date, _| date <= start_date }
+                                                       .max_by { |date, _| date }
+        provider_price_value = provider_price&.price
         db_price_value = db_prices[start_date]&.price
 
-        return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
+        if provider_price_value.present? && provider_price_value.to_f > 0
+          return stored_quote_anchor(start_date, provider_date) || provider_price_value
+        end
         return db_price_value if db_price_value.present? && db_price_value.to_f > 0
         return nil
       end
@@ -333,21 +335,7 @@ class Security::Price::Importer
       provider_price_value = provider_price&.price
 
       if provider_price_value.present? && provider_price_value.to_f > 0
-        # A refetched carried row repeats the stored real quote before it,
-        # which the fill keeps over the provider's (user edits), so the tail
-        # anchors on that quote unless the provider has a later close. Every
-        # provisional row is carried forward.
-        if db_prices[cutoff_date]&.carried_forward
-          stored_quote = Security::Price
-            .where(security_id: security.id, carried_forward: false)
-            .where("date < ? AND price > 0", cutoff_date)
-            .then { |q| currency.present? ? q.where(currency: currency) : q }
-            .order(date: :desc)
-            .first
-          return stored_quote.price if stored_quote && stored_quote.date >= provider_date
-        end
-
-        return provider_price_value
+        return stored_quote_anchor(cutoff_date, provider_date) || provider_price_value
       end
 
       # Fall back to the most recent real DB price before cutoff, or the most
@@ -362,6 +350,23 @@ class Security::Price::Importer
         .order(carried_forward: :asc, date: :desc)
         .limit(1)
         .pick(:price)
+    end
+
+    # A refetched carried row repeats the stored real quote before it, which
+    # the fill keeps over the provider's (user edits), so the tail anchors on
+    # that quote unless the provider has a later close. Every
+    # provisional row is carried forward.
+    def stored_quote_anchor(date, provider_date)
+      return unless db_prices[date]&.carried_forward
+
+      currency = prev_price_currency || db_price_currency
+      stored_quote = Security::Price
+        .where(security_id: security.id, carried_forward: false)
+        .where("date < ? AND price > 0", date)
+        .then { |q| currency.present? ? q.where(currency: currency) : q }
+        .order(date: :desc)
+        .first
+      stored_quote.price if stored_quote && stored_quote.date >= provider_date
     end
 
     def determine_provisional_status(date:, has_provider_price:, used_locf:, existing_provisional:)
