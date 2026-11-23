@@ -31,8 +31,9 @@ class Valuation < ApplicationRecord
 
     # A reconciliation on a linked account was left by a sync, not typed in,
     # so it isn't called "manual" there.
-    key = reconciliation? && entry.account.linked? ? name.synced_translation_key : name.translation_key
-    translation_key = "valuations.names.#{key}"
+    return synced_name(name.synced_translation_key, entry.account) if reconciliation? && entry.account.linked?
+
+    translation_key = "valuations.names.#{name.translation_key}"
     if opening_anchor? &&
         !I18n.exists?(translation_key, I18n.locale, fallback: false) &&
         I18n.exists?("valuations.show.opening_balance", I18n.locale, fallback: false)
@@ -41,4 +42,17 @@ class Valuation < ApplicationRecord
 
     I18n.t(translation_key)
   end
+
+  private
+    # Names the provider ("Value synced from SnapTrade") where this locale has
+    # that wording, else the plain synced name rather than an English fallback.
+    def synced_name(key, account)
+      with_provider = "valuations.names.#{key}_from"
+      provider = account.provider_display_name
+      if provider && I18n.exists?(with_provider, I18n.locale, fallback: false)
+        I18n.t(with_provider, provider: provider)
+      else
+        I18n.t("valuations.names.#{key}")
+      end
+    end
 end

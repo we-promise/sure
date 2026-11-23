@@ -69,6 +69,12 @@ module Account::Linkable
     nil
   end
 
+  # The provider's name as people know it ("SnapTrade", not "snaptrade").
+  def provider_display_name
+    name = provider_name
+    I18n.t("providers.names.#{name}", default: name.titleize) if name.present?
+  end
+
   # Check if account is linked to a specific provider
   def linked_to?(provider_type)
     account_providers.exists?(provider_type: provider_type)

@@ -14,8 +14,11 @@ en:
       original_principal: Original principal
       original_purchase_price: Original purchase price
       synced_balance: Synced balance
+      synced_balance_from: "Balance synced from %{provider}"
       synced_principal: Synced principal
+      synced_principal_from: "Principal synced from %{provider}"
       synced_value: Synced value
+      synced_value_from: "Value synced from %{provider}"
     confirmation_contents:
       this_will: "This will %{action_verb} the account value on"
       to_colon: "to:"
