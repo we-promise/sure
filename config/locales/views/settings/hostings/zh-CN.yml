@@ -302,6 +302,7 @@ zh-CN:
         env_configured_message: 已通过 CHIMNIE_API_KEY 环境变量成功配置。
         label: API 密钥
         placeholder: 在此输入您的 Chimnie API 密钥
+        usage: "本月已使用 %{used} / %{limit} 次请求"
       terrascoutx_settings:
         title: TerraScoutX
         description: 输入您的 TerraScoutX API 密钥，以便在添加房产时查询美国房产详情和估值。该估值为 TerraScoutX 所持最新税册中的县评估官评估价，而非自动市场估价，因此会滞后于市场行情，且在加州等对评估价设限的州可能明显低于市价。覆盖范围因县而异。密钥免费且每月限 2,000 次 API 请求，由房产查询和每日估值刷新共享。如果您的密钥额度更高，可通过 TERRASCOUTX_MAX_REQUESTS_PER_MONTH 环境变量提高上限。
