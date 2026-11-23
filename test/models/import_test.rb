@@ -313,4 +313,20 @@ class ImportTest < ActiveSupport::TestCase
 
     assert_equal [ "'+44 Taxis", "+44 Taxis" ], csv["name"]
   end
+
+  test "an import is viewable by the family unless its statement is private" do
+    member = users(:family_member)
+    assert TransactionImport.create!(family: member.family).viewable_by?(member)
+
+    statement = AccountStatement.create_from_upload!(
+      family: member.family,
+      account: accounts(:investment),
+      file: uploaded_file(filename: "statement.pdf", content_type: "application/pdf",
+                          content: file_fixture("imports/sample_bank_statement.pdf").binread)
+    )
+    pdf_import = PdfImport.create_from_statement!(statement: statement)
+
+    assert pdf_import.viewable_by?(users(:family_admin))
+    assert_not pdf_import.viewable_by?(member)
+  end
 end

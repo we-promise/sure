@@ -1,0 +1,253 @@
+---
+id:
+  indexa_capital_items:
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "Tidak ada rekening ditemukan"
+      synced:
+        one: "%{count} rekening disinkronkan"
+        other: "%{count} rekening disinkronkan"
+      synced_with_setup: "%{linked} disinkronkan, %{unlinked} perlu pengaturan"
+    institution_summary:
+      none: "Tidak ada institusi terhubung"
+      count:
+        one: "%{count} institusi"
+        other: "%{count} institusi"
+    errors:
+      provider_not_configured: "Penyedia IndexaCapital belum dikonfigurasi"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Mengimpor rekening dari IndexaCapital..."
+        processing: "Memproses kepemilikan dan aktivitas..."
+        calculating: "Menghitung saldo..."
+        importing_data: "Mengimpor data rekening..."
+        checking_setup: "Memeriksa konfigurasi rekening..."
+        needs_setup: "%{count} rekening perlu pengaturan..."
+      success: "Sinkronisasi dimulai"
+
+    # Panel (settings view)
+    panel:
+      setup_instructions: "Petunjuk pengaturan:"
+      step_1: "Kunjungi dasbor Indexa Capital Anda untuk membuat token API hanya-baca"
+      step_2: "Tempelkan token API Anda di bawah ini lalu klik Simpan"
+      step_3: "Setelah koneksi berhasil, buka tab Rekening untuk mengatur rekening baru"
+      field_descriptions: "Deskripsi kolom:"
+      optional: "(Opsional)"
+      required: "(wajib)"
+      optional_with_default: "(opsional, default ke %{default_value})"
+      alternative_auth: "Atau gunakan autentikasi nama pengguna/kata sandi sebagai gantinya..."
+      save_button: "Simpan Konfigurasi"
+      update_button: "Perbarui Konfigurasi"
+      fields:
+        api_token:
+          label: "Token API"
+          description: "Token API hanya-baca Anda dari dasbor Indexa Capital"
+          placeholder_new: "Tempel token API Anda di sini"
+          placeholder_update: "Masukkan token API baru untuk memperbarui"
+        username:
+          label: "Nama Pengguna"
+          description: "Nama pengguna/email Indexa Capital Anda"
+          placeholder_new: "Tempel nama pengguna di sini"
+          placeholder_update: "Masukkan nama pengguna baru untuk memperbarui"
+        document:
+          label: "ID Dokumen"
+          description: "Dokumen/ID Indexa Capital Anda"
+          placeholder_new: "Tempel ID dokumen di sini"
+          placeholder_update: "Masukkan ID dokumen baru untuk memperbarui"
+        password:
+          label: "Kata Sandi"
+          description: "Kata sandi Indexa Capital Anda"
+          placeholder_new: "Tempel kata sandi di sini"
+          placeholder_update: "Masukkan kata sandi baru untuk memperbarui"
+
+    # CRUD success messages
+    create:
+      success: "Koneksi IndexaCapital berhasil dibuat"
+    update:
+      success: "Koneksi IndexaCapital diperbarui"
+    destroy:
+      success: "Koneksi IndexaCapital dihapus"
+    index:
+      title: "Koneksi IndexaCapital"
+
+    # Loading states
+    loading:
+      loading_message: "Memuat rekening IndexaCapital..."
+      loading_title: "Memuat"
+
+    # Account linking
+    link_accounts:
+      all_already_linked:
+        one: "Rekening yang dipilih (%{names}) sudah tertaut"
+        other: "Semua %{count} rekening yang dipilih sudah tertaut: %{names}"
+      api_error: "Kesalahan API: %{message}"
+      invalid_account_names:
+        one: "Tidak dapat menautkan rekening dengan nama kosong"
+        other: "Tidak dapat menautkan %{count} rekening dengan nama kosong"
+      link_failed: "Gagal menautkan rekening"
+      no_accounts_selected: "Silakan pilih setidaknya satu rekening"
+      no_api_key: "Kredensial IndexaCapital tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia."
+      partial_invalid: "Berhasil menautkan %{created_count} rekening, %{already_linked_count} sudah tertaut, %{invalid_count} rekening memiliki nama tidak valid"
+      partial_success: "Berhasil menautkan %{created_count} rekening. %{already_linked_count} rekening sudah tertaut: %{already_linked_names}"
+      success:
+        one: "Berhasil menautkan %{count} rekening"
+        other: "Berhasil menautkan %{count} rekening"
+
+    # Provider item display (used in _item partial)
+    indexa_capital_item:
+      accounts_need_setup: "Rekening perlu pengaturan"
+      delete: "Hapus koneksi"
+      deletion_in_progress: "penghapusan sedang berlangsung..."
+      error: "Kesalahan"
+      more_accounts_available:
+        one: "%{count} rekening lagi tersedia"
+        other: "%{count} rekening lagi tersedia"
+      no_accounts_description: "Koneksi ini belum memiliki rekening tertaut."
+      no_accounts_title: "Tidak ada rekening"
+      provider_name: "IndexaCapital"
+      requires_update: "Koneksi perlu diperbarui"
+      setup_action: "Atur Rekening Baru"
+      setup_description: "%{linked} dari %{total} rekening tertaut. Pilih jenis rekening untuk rekening IndexaCapital yang baru diimpor."
+      setup_needed: "Rekening baru siap diatur"
+      status: "Disinkronkan %{timestamp} lalu — %{summary}"
+      status_never: "Belum pernah disinkronkan"
+      syncing: "Menyinkronkan..."
+      total: "Total"
+      unlinked: "Belum tertaut"
+      update_credentials: "Perbarui kredensial"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "rekening dipilih"
+      api_error: "Kesalahan API: %{message}"
+      cancel: "Batal"
+      configure_name_in_provider: "Tidak dapat mengimpor - silakan konfigurasikan nama rekening di IndexaCapital"
+      description: "Pilih rekening yang ingin Anda tautkan ke akun %{product_name} Anda."
+      link_accounts: "Tautkan rekening yang dipilih"
+      no_accounts_found: "Tidak ada rekening ditemukan. Silakan periksa kredensial IndexaCapital Anda."
+      no_api_key: "Kredensial IndexaCapital belum dikonfigurasi. Silakan konfigurasikan di Pengaturan."
+      no_credentials_configured: "Silakan konfigurasikan kredensial IndexaCapital Anda terlebih dahulu di Pengaturan Penyedia."
+      no_name_placeholder: "(Tanpa nama)"
+      title: "Pilih Rekening IndexaCapital"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "Rekening ini sudah ditautkan ke penyedia lain"
+      all_accounts_already_linked: "Semua rekening IndexaCapital sudah tertaut"
+      api_error: "Kesalahan API: %{message}"
+      balance_label: "Saldo:"
+      cancel: "Batal"
+      cancel_button: "Batal"
+      configure_name_in_provider: "Tidak dapat mengimpor - silakan konfigurasikan nama rekening di IndexaCapital"
+      connect_hint: "Hubungkan rekening IndexaCapital untuk mengaktifkan sinkronisasi otomatis."
+      description: "Pilih rekening IndexaCapital untuk ditautkan dengan rekening ini. Transaksi akan disinkronkan dan dideduplikasi secara otomatis."
+      header: "Tautkan dengan IndexaCapital"
+      link_account: "Tautkan rekening"
+      link_button: "Tautkan rekening ini"
+      linking_to: "Menautkan ke:"
+      no_account_specified: "Tidak ada rekening yang ditentukan"
+      no_accounts: "Tidak ada rekening IndexaCapital yang belum tertaut ditemukan."
+      no_accounts_found: "Tidak ada rekening IndexaCapital ditemukan. Silakan periksa kredensial Anda."
+      no_api_key: "Kredensial IndexaCapital belum dikonfigurasi. Silakan konfigurasikan di Pengaturan."
+      no_credentials_configured: "Silakan konfigurasikan kredensial IndexaCapital Anda terlebih dahulu di Pengaturan Penyedia."
+      no_name_placeholder: "(Tanpa nama)"
+      settings_link: "Buka Pengaturan Penyedia"
+      subtitle: "Pilih rekening IndexaCapital"
+      title: "Tautkan %{account_name} dengan IndexaCapital"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "Rekening ini sudah ditautkan ke penyedia lain"
+      api_error: "Kesalahan API: %{message}"
+      invalid_account_name: "Tidak dapat menautkan rekening dengan nama kosong"
+      provider_account_already_linked: "Rekening IndexaCapital ini sudah ditautkan ke rekening lain"
+      provider_account_not_found: "Rekening IndexaCapital tidak ditemukan"
+      missing_parameters: "Parameter yang diperlukan tidak lengkap"
+      no_api_key: "Kredensial IndexaCapital tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia."
+      success: "Berhasil menautkan %{account_name} dengan IndexaCapital"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Jenis Rekening:"
+      accounts_count:
+        one: "%{count} rekening tersedia"
+        other: "%{count} rekening tersedia"
+      all_accounts_linked: "Semua rekening IndexaCapital Anda telah diatur."
+      api_error: "Kesalahan API: %{message}"
+      creating: "Membuat rekening..."
+      fetch_failed: "Gagal Mengambil Rekening"
+      import_selected: "Impor rekening yang dipilih"
+      instructions: "Pilih rekening yang ingin Anda impor dari IndexaCapital. Anda dapat memilih beberapa rekening."
+      skip_notice: "Rekening yang tidak dicentang akan dilewati: Sure berhenti mengambil datanya sampai Anda menautkannya ke sebuah rekening."
+      no_accounts: "Tidak ada rekening yang belum tertaut ditemukan dari koneksi IndexaCapital ini."
+      no_accounts_to_setup: "Tidak Ada Rekening untuk Diatur"
+      no_api_key: "Kredensial IndexaCapital belum dikonfigurasi. Silakan periksa pengaturan koneksi Anda."
+      select_all: "Pilih semua"
+      account_types:
+        skip: "Lewati rekening ini"
+        depository: "Rekening Giro atau Tabungan"
+        credit_card: "Kartu Kredit"
+        investment: "Rekening Investasi"
+        crypto: "Rekening Mata Uang Kripto"
+        loan: "Pinjaman atau KPR"
+        other_asset: "Aset Lainnya"
+      subtype_labels:
+        depository: "Subjenis Rekening:"
+        credit_card: ""
+        investment: "Jenis Investasi:"
+        crypto: ""
+        loan: "Jenis Pinjaman:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kartu kredit akan diatur secara otomatis sebagai rekening kartu kredit."
+        other_asset: "Tidak ada opsi tambahan yang diperlukan untuk Aset Lainnya."
+        crypto: "Rekening mata uang kripto akan diatur untuk melacak kepemilikan dan transaksi."
+      subtypes:
+        depository:
+          checking: "Giro"
+          savings: "Tabungan"
+          hsa: "Rekening Tabungan Kesehatan (HSA)"
+          cd: "Sertifikat Deposito (CD)"
+          money_market: "Pasar Uang"
+        investment:
+          brokerage: "Pialang"
+          pension: "Pensiun"
+          retirement: "Dana Pensiun"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "Thrift Savings Plan"
+          "529_plan": "Paket 529"
+          hsa: "Rekening Tabungan Kesehatan (HSA)"
+          mutual_fund: "Reksa Dana"
+          ira: "IRA Tradisional"
+          roth_ira: "Roth IRA"
+          angel: "Angel"
+        loan:
+          mortgage: "KPR"
+          student: "Pinjaman Pelajar"
+          auto: "Pinjaman Kendaraan"
+          other: "Pinjaman Lainnya"
+      balance: "Saldo"
+      cancel: "Batal"
+      choose_account_type: "Pilih jenis rekening yang tepat untuk setiap rekening IndexaCapital:"
+      create_accounts: "Buat Rekening"
+      creating_accounts: "Membuat Rekening..."
+      historical_data_range: "Rentang Data Historis:"
+      subtitle: "Pilih jenis rekening yang tepat untuk rekening yang Anda impor"
+      sync_start_date_help: "Pilih seberapa jauh ke belakang Anda ingin menyinkronkan riwayat transaksi."
+      sync_start_date_label: "Mulai menyinkronkan transaksi dari:"
+      title: "Atur Rekening IndexaCapital Anda"
+
+    # Complete account setup
+    complete_account_setup:
+      all_skipped: "Semua rekening dilewati. Tidak ada rekening yang dibuat."
+      creation_failed: "Gagal membuat rekening: %{error}"
+      no_accounts: "Tidak ada rekening untuk diatur."
+      success: "Berhasil membuat %{count} rekening."
+
+    # Preload accounts
+    preload_accounts:
+      no_credentials_configured: "Silakan konfigurasikan kredensial IndexaCapital Anda terlebih dahulu di Pengaturan Penyedia."

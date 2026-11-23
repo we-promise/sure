@@ -1,6 +1,7 @@
 ---
 zh-CN:
   mfa:
+    demo_family_restricted: 共享演示家庭已禁用双重认证注册，以确保所有人都能正常访问演示环境。
     local_password_required: 双重认证需要本地密码。您的密码由您的身份提供商管理。
     backup_codes:
       backup_codes_description: 每个代码只能使用一次。请妥善保管这些代码。
@@ -39,6 +40,7 @@ zh-CN:
       page_title: 验证双重认证
       title: 双重认证
       verify_button: 验证
+      verifying: 验证中...
       webauthn_button: 使用通行密钥或安全密钥
       webauthn_unsupported: 此浏览器不支持通行密钥或安全密钥。
     verify_code:
