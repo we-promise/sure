@@ -988,7 +988,7 @@ host_run() {
   {
     echo "POSTGRES_HOST=${SURE_HOST_DB:-$(env_of DB_HOST)}"
     [ -z "${SURE_RECOVER:-}" ] || echo "SURE_RECOVER=${SURE_RECOVER}"
-    echo "POSTGRES_PORT=$(env_of DB_PORT)"
+    echo "POSTGRES_PORT=${SURE_HOST_PORT:-$(env_of DB_PORT)}"
     echo "POSTGRES_USER=$(env_of POSTGRES_USER)"
     echo "POSTGRES_PASSWORD=$(env_of POSTGRES_PASSWORD)"
     echo "POSTGRES_DB=$(env_of POSTGRES_DB)"
@@ -1141,10 +1141,6 @@ cmd_upgrade_postgres() {
   if [ "$db_host" != db ]; then
     die "the app connects to the database at '${db_host:-unknown}', not the 'db' service, and upgrade-postgres only upgrades the 'db' service's own data. Nothing was changed."
   fi
-  # The temporary old server listens on the same port as the db service.
-  db_port=$(env_of DB_PORT)
-  db_port=${db_port:-5432}
-  case "$db_port" in *[!0-9]*) die "cannot use DB_PORT '${db_port}'; it must be a number. Nothing was changed." ;; esac
   project=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$cid")
   running_image=$(docker inspect -f '{{.Image}}' "$cid")
 
@@ -1324,7 +1320,8 @@ then fix what made the earlier run fail and run upgrade-postgres again, or, to s
   log "  2. set the PostgreSQL ${old_major} data aside in ${volume}/${aside} (kept until you delete it)"
   log "  3. start PostgreSQL ${target_major} and restore the backup"
   log "Sure is unavailable while this runs. Only the database ${db_name} is carried over:"
-  log "other databases and extra roles on this server would be left behind."
+  log "other databases and extra roles on this server would be left behind. The command"
+  log "stops if it finds other data, but that check is a backstop: you know your server."
   if [ "$assume_yes" != true ]; then
     [ -t 0 ] || die "refusing to upgrade without a TTY; pass --yes"
     printf 'Is this PostgreSQL server used only for Sure, and do you want to continue? Type "yes": '
@@ -1349,8 +1346,10 @@ then fix what made the earlier run fail and run upgrade-postgres again, or, to s
   # /var/lib/postgresql/data, from 18: /var/lib/postgresql). Mounted inside
   # one of them, Docker would add a mount point folder to our volume, and
   # PostgreSQL 18 refuses to start beside a stray data/ folder.
+  # It is reached only on its own network, so it always listens on 5432,
+  # whatever port the db service or the old postgresql.conf uses.
   docker run -d --rm --name "$old_server" --network "$upgrade_net" --network-alias pg-upgrade-old \
-    -v "${volume}:/sure-pgdata" -e "PGDATA=/sure-pgdata${old_rel}" -e "PGPORT=${db_port}" "$old_image" >/dev/null
+    -v "${volume}:/sure-pgdata" -e "PGDATA=/sure-pgdata${old_rel}" "$old_image" -p 5432 >/dev/null
   tries=0
   until docker exec "$old_server" pg_isready -q -U "$db_user" -d "$db_name" 2>/dev/null; do
     tries=$((tries + 1))
@@ -1363,7 +1362,7 @@ then fix what made the earlier run fail and run upgrade-postgres again, or, to s
   refuse_other_databases "$old_server" die_stopped
 
   backup_status=0
-  SURE_HOST_IMAGE=$backup_image SURE_HOST_NETWORK=$upgrade_net SURE_HOST_DB=pg-upgrade-old \
+  SURE_HOST_IMAGE=$backup_image SURE_HOST_NETWORK=$upgrade_net SURE_HOST_DB=pg-upgrade-old SURE_HOST_PORT=5432 \
     host_run create --pre-upgrade || backup_status=$?
   [ "$backup_status" -eq 0 ] || die_stopped "the backup failed."
   # The bundle create reports, never one found by looking in the folder.
@@ -1404,6 +1403,19 @@ then fix what made the earlier run fail and run upgrade-postgres again, or, to s
     upgrade_rollback_help
     exit 1
   fi
+  # A new server first runs a temporary one without TCP to set itself up, and
+  # the healthcheck can pass on that one. Wait for the port the app uses.
+  db_port=$(env_of DB_PORT)
+  tries=0
+  until docker exec "$new_db" pg_isready -q -h 127.0.0.1 -p "${db_port:-5432}" 2>/dev/null; do
+    tries=$((tries + 1))
+    if [ "$tries" -ge 30 ]; then
+      warn "PostgreSQL ${target_major} does not accept connections on port ${db_port:-5432}; check: docker compose logs db"
+      upgrade_rollback_help
+      exit 1
+    fi
+    sleep 2
+  done
 
   restore_status=0
   # The uploaded files are in place already; only the database moves.

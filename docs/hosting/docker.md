@@ -723,7 +723,16 @@ If it fails or is interrupted before step 2, your data is unchanged but Sure sta
 
 If the restore succeeds but Sure itself does not start, the upgrade is complete: the database is on PostgreSQL 18 and running the command again does nothing. It prints the startup error; fix that and run `docker compose up -d`, or go back as described [below](#going-back-to-postgresql-16).
 
-Only Sure's database is carried over. If the server holds other databases, the command refuses and changes nothing; move those yourself (for example with `pg_dumpall` while still on the old version) or give Sure its own database server. `--yes` skips the confirmation for scripts, and `--old-image` names the image that ran the old version if it can't be worked out (it handles `postgres` and `pgvector/pgvector` images).
+The command supports the setup from `compose.example.yml`:
+
+- services named `db` and `web`, with the app connecting to `db` (`DB_HOST=db`);
+- a `postgres` or `pgvector/pgvector` image;
+- a database server used only for Sure;
+- data where those images keep it: at the root of the volume, in `data/` under it, or in `<version>/docker`.
+
+For anything else it stops before Sure is stopped and says why; use [Upgrading by hand](#upgrading-by-hand) then.
+
+Only Sure's database is carried over. If the server holds other databases, the command refuses and changes nothing; move those yourself (for example with `pg_dumpall` while still on the old version) or give Sure its own database server. That check is a backstop, not a guarantee: it cannot see everything someone may have added to a server. `--yes` skips the confirmation for scripts, and `--old-image` names the image that ran the old version if it can't be worked out (it handles `postgres` and `pgvector/pgvector` images).
 
 It needs a Sure version whose image ships the PostgreSQL 18 tools. If yours is older, the command says so; set `SURE_IMAGE_TAG` to a newer release first.
 
@@ -744,6 +753,8 @@ docker run --rm -v <volume>:/v alpine sh -c 'rm -rf /v/18 && mv /v/pg16-old/* /v
 docker compose up -d
 ```
 
+This is for the usual case, where the old data was at the root of the volume. If yours was in `data/` or `16/docker`, move `pg16-old` back to that path instead.
+
 > [!WARNING]
 > Change the image and the mount together. PostgreSQL 16 with the new mount, or PostgreSQL 18 with the old one, finds no database where it looks and starts an empty one.
 
@@ -753,8 +764,13 @@ docker compose up -d
 
 ```bash
 # Still on PostgreSQL 16. The file holds your data, so only you can read it, and it only
-# appears once the dump has succeeded. If this command fails, stop here.
+# appears once the dump has succeeded.
 (umask 077 && rm -f all-databases.sql all-databases.sql.partial && docker compose exec -T db pg_dumpall -U <POSTGRES_USER> > all-databases.sql.partial && mv all-databases.sql.partial all-databases.sql)
+```
+
+Continue only if that succeeded and `all-databases.sql` exists:
+
+```bash
 docker compose down
 # Change the db image and mount in compose.yml, and move the old data aside as upgrade-postgres does, or use a new volume.
 docker compose up -d db

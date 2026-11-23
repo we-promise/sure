@@ -1,0 +1,51 @@
+name: Backup and upgrade scripts
+
+# End-to-end tests for bin/sure-backup (restore, upgrade-postgres) and the
+# PostgreSQL version check in the compose example, against real PostgreSQL 16
+# and 18 containers. Only runs when those files change.
+on:
+  pull_request:
+    paths:
+      - bin/sure-backup
+      - bin/db-version-check.sh
+      - compose.example.yml
+      - compose.example.ai.yml
+      - test/shell/**
+      - .github/workflows/backup-e2e.yml
+  push:
+    branches: [main]
+    paths:
+      - bin/sure-backup
+      - bin/db-version-check.sh
+      - compose.example.yml
+      - compose.example.ai.yml
+      - test/shell/**
+      - .github/workflows/backup-e2e.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backup_e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: shellcheck
+        run: shellcheck -s sh --severity=warning bin/sure-backup bin/db-version-check.sh test/shell/sure_backup_e2e.sh
+
+      - name: Compose examples are valid
+        run: |
+          for f in compose.example.yml compose.example.ai.yml; do
+            SECRET_KEY_BASE=x OPENAI_ACCESS_TOKEN=x docker compose -f "$f" config -q
+          done
+
+      - name: End-to-end tests
+        run: sh test/shell/sure_backup_e2e.sh
