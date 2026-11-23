@@ -23,9 +23,8 @@ class ReceiptScan::CategoryAllocator
       group(category, rows.sum { |_, net| net * total / items_total }.round(2), rows.map { |item, _| item["name"] })
     end
 
-    grouped = fold_small(grouped.sort_by { -_1[:amount] })
-    grouped.first[:amount] += total - grouped.sum { _1[:amount] }
-    grouped
+    grouped = fold_small(grouped.sort_by { -_1[:amount].abs })
+    settle_rounding(grouped)
   end
 
   private
@@ -45,6 +44,28 @@ class ReceiptScan::CategoryAllocator
         next false if candidate[:amount] >= FOLD_SHARE * total
 
         largest[:amount] += candidate[:amount]
+        largest[:item_names] += candidate[:item_names]
+        true
+      end
+      [ largest, *kept ]
+    end
+
+    # Rounding each group to cents can leave the sum a few cents off the total. A shortfall goes
+    # to the largest group; an excess comes off the largest groups a cent at a time, so no group
+    # crosses zero. A group left at zero joins the largest.
+    def settle_rounding(groups)
+      cent = total.negative? ? BigDecimal("-0.01") : BigDecimal("0.01")
+      missing = ((total - groups.sum { _1[:amount] }) / cent).round
+      if missing >= 0
+        groups.first[:amount] += cent * missing
+      else
+        (-missing).times { groups.max_by { _1[:amount].abs }[:amount] -= cent }
+      end
+
+      largest, *rest = groups.sort_by { -_1[:amount].abs }
+      kept = rest.reject do |candidate|
+        next false if candidate[:amount].nonzero?
+
         largest[:item_names] += candidate[:item_names]
         true
       end

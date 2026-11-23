@@ -18,6 +18,17 @@ class ReceiptScan::CategoryAllocatorTest < ActiveSupport::TestCase
     assert_equal [ "Cheese", "Bread" ], groups.first[:item_names]
   end
 
+  test "the rounding correction never leaves a negative group" do
+    categories = Array.new(5) { |i| @family.categories.create!(name: "Cat #{i}", color: "#000000") }
+    groups = ReceiptScan::CategoryAllocator.new(
+      build_receipt_extraction(total: BigDecimal("0.03"), line_items: categories.map { item(_1.name, "0.01", _1.name) }),
+      categories: @family.categories
+    ).groups
+
+    assert groups.all? { _1[:amount] >= 0 }, groups.map { _1[:amount] }.inspect
+    assert_equal BigDecimal("0.03"), groups.sum { _1[:amount] }
+  end
+
   test "folds small groups into the largest" do
     groups = allocate(total: "100.00", items: [
       item("Groceries", "99.01", "Food & Drink"),
