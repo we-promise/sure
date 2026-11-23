@@ -2952,7 +2952,12 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    `Provider::Anthropic`, `Chat.default_model`, `Assistant::Provided#get_model_provider` and the
    `Assistant::*` classes listed in section 8.4, and empties the agreement test's allowlist. Adds
    the conversation bounds and chat mode tests, and the replay prefix test ported from #5078
-   (section 8.4).
+   (section 8.4). Ports #5711's Retry and failed-reply tests (`assistant_test.rb`,
+   `chat_test.rb`, the API retry test) to the persisted chat. A reply that fails after running
+   tools keeps them in the history, so neither Retry nor the next message runs them again. Retry
+   answers the last prompt after a failed or missing reply. The API retry endpoint returns the
+   new reply. #5711's `tool_calls.provider_response_id` (the Responses API continuing from the
+   response that asked for the tools) moves to the gem's tables or is dropped there on purpose.
 
    **Before building the driver, PR 6 re-runs the chat-storage spike on its own base (2.2.2 or
    later)** with `bin/rails test test/spike`, adding the raising-tool case for crmne/ruby_llm#1664
