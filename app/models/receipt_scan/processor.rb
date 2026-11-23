@@ -19,7 +19,7 @@ class ReceiptScan::Processor
     @placeholder = scan.linked_transaction
     return record_failure(StandardError.new("The receipt's transaction was deleted")) unless placeholder
 
-    unless Ai.availability(:extract_receipt, family:, user: scan.user).available? && provider
+    unless ReceiptScan.extraction_available?(family:, user: scan.user)
       return scan.with_lock do
         next unless scan.processing?
 

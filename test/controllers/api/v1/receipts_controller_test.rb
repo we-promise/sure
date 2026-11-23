@@ -12,7 +12,7 @@ class Api::V1::ReceiptsControllerTest < ActionDispatch::IntegrationTest
     @admin.api_keys.active.destroy_all
     @api_key = create_api_key(@admin, "read_write")
     @read_only_api_key = create_api_key(@admin, "read")
-    Ai.stubs(:availability).returns(Ai::Availability.available(:extract_receipt))
+    use_ai_routes
     Provider::Registry.stubs(:preferred_llm_provider).returns(stub(supports_receipt_extraction?: true))
   end
 

@@ -10,7 +10,7 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
     @food = categories(:food_and_drink)
     @household = @family.categories.create!(name: "Household", color: "#000000")
     @date = Date.current - 2.days
-    Ai.stubs(:availability).returns(Ai::Availability.available(:extract_receipt))
+    use_ai_routes
   end
 
   test "creates placeholder and enqueues job" do
@@ -242,7 +242,6 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
   end
 
   test "ai unavailable flags needs review" do
-    Ai.unstub(:availability)
     use_no_ai
     scan = upload("rotated.jpg", "image/jpeg")
 

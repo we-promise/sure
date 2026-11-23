@@ -28,10 +28,12 @@ class ReceiptScan < ApplicationRecord
   InvalidUpload = Class.new(StandardError)
 
   class << self
-    # Whether receipts can be read for this family and user: the AI route allows it and a
-    # preferred provider can read images (only Anthropic so far).
+    # Whether receipts can be read for this family and user: the AI route allows it, its model
+    # can read images, and the preferred provider reads receipts (only Anthropic so far). A
+    # custom endpoint declares what its model can do in the AI configuration.
     def extraction_available?(family:, user:)
-      Ai.available?(:extract_receipt, family:, user:) && extraction_provider.present?
+      model = Ai.plan(:extract_receipt, family:, user:)&.model
+      model.present? && model.capable?(:vision) && extraction_provider.present?
     end
 
     # The preferred LLM provider, as other AI features use, when it can read receipts. Never
