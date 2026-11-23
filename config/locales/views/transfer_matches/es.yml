@@ -2,6 +2,7 @@
 es:
   transfer_matches:
     create:
+      already_matched: "Una de las transacciones ya forma parte de otra transferencia."
       success: Transferencia creada
     new:
       header:

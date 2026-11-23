@@ -2,6 +2,7 @@
 de:
   transfer_matches:
     create:
+      already_matched: "Eine der Buchungen gehört bereits zu einer anderen Übertragung."
       success: Übertragung erstellt
     new:
       header:

@@ -2,6 +2,7 @@
 tr:
   transfer_matches:
     create:
+      already_matched: "Bu işlemlerden biri zaten başka bir transferin parçası."
       success: Transfer oluşturuldu
     matching_fields:
       create_new_transaction: Yeni işlem oluştur
