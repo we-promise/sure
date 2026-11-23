@@ -112,6 +112,7 @@ fr:
         seront synchronisées automatiquement.
       link_account: Lier le solde
       no_accounts_found: Aucun solde Wise non lié trouvé.
+      not_found: Compte ou solde Wise introuvable.
       title: Lier %{account_name} avec Wise
     select_profiles:
       already_connected_label: Déjà connecté

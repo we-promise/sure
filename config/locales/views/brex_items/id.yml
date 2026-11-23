@@ -1,0 +1,274 @@
+---
+id:
+  brex_items:
+    default_connection_name: Koneksi Brex
+    account_metadata:
+      provider: Brex
+      separator: " • "
+    kinds:
+      cash: Kas
+      card: Kartu
+    statuses:
+      ACTIVE: Aktif
+      active: Aktif
+      CLOSED: Ditutup
+      closed: Ditutup
+      frozen: Dibekukan
+      FROZEN: Dibekukan
+    create:
+      success: Koneksi Brex berhasil dibuat
+    default_card_name: Kartu Brex
+    default_cash_name: "Brex Cash %{id}"
+    destroy:
+      success: Koneksi Brex dihapus
+    index:
+      title: Koneksi Brex
+    institution_summary:
+      none: Tidak ada institusi terhubung
+      one: "%{name}"
+      count:
+        one: "%{count} institusi"
+        other: "%{count} institusi"
+    sync_status:
+      no_accounts: Tidak ada rekening ditemukan
+      all_synced:
+        one: "%{count} rekening disinkronkan"
+        other: "%{count} rekening disinkronkan"
+      partial_setup: "%{synced} disinkronkan, %{pending} perlu pengaturan"
+    api_error:
+      common_issues: "Masalah umum:"
+      expired_credentials: Buat token API baru dari Brex.
+      expired_credentials_label: "Kredensial kedaluwarsa:"
+      heading: Tidak dapat terhubung ke Brex
+      invalid_token: Periksa token API Anda di Pengaturan Penyedia.
+      invalid_token_label: "Token API tidak valid:"
+      network: Periksa koneksi internet Anda.
+      network_label: "Masalah jaringan:"
+      permissions: Pastikan token Anda memiliki cakupan rekening dan transaksi hanya-baca yang diperlukan.
+      permissions_label: "Izin tidak mencukupi:"
+      service: API Brex mungkin sedang tidak tersedia sementara.
+      service_label: "Layanan terganggu:"
+      settings_link: Periksa Pengaturan Penyedia
+      title: Kesalahan Koneksi Brex
+    errors:
+      unexpected_error: Terjadi kesalahan yang tidak terduga. Silakan coba lagi nanti.
+    entries:
+      default_name: Transaksi Brex
+    loading:
+      loading_message: Memuat rekening Brex...
+      loading_title: Memuat
+    link_accounts:
+      all_already_linked:
+        one: "Rekening yang dipilih (%{names}) sudah tertaut"
+        other: "Semua %{count} rekening yang dipilih sudah tertaut: %{names}"
+      api_error: "Kesalahan API: %{message}"
+      invalid_account_names:
+        one: "Tidak dapat menautkan rekening dengan nama kosong"
+        other: "Tidak dapat menautkan %{count} rekening dengan nama kosong"
+      invalid_account_type: Jenis rekening Brex tidak didukung
+      link_failed: Gagal menautkan rekening
+      no_accounts_selected: Silakan pilih setidaknya satu rekening
+      no_api_token: Token API Brex tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia.
+      partial_invalid: "Berhasil menautkan %{created_count} rekening, %{already_linked_count} rekening sudah tertaut, %{invalid_count} rekening memiliki nama tidak valid"
+      partial_success: "Berhasil menautkan %{created_count} rekening. %{already_linked_count} rekening sudah tertaut: %{already_linked_names}"
+      select_connection: Pilih koneksi Brex sebelum menautkan rekening.
+      success:
+        one: "Berhasil menautkan %{count} rekening"
+        other: "Berhasil menautkan %{count} rekening"
+    brex_item:
+      accounts_need_setup: Rekening perlu pengaturan
+      delete: Hapus koneksi
+      deletion_in_progress: penghapusan sedang berlangsung...
+      error: Kesalahan
+      no_accounts_description: Koneksi ini belum memiliki rekening tertaut.
+      no_accounts_title: Tidak ada rekening
+      setup_action: Atur Rekening Baru
+      setup_description: "%{linked} dari %{total} rekening tertaut. Pilih jenis rekening untuk rekening Brex yang baru diimpor."
+      setup_needed: Rekening baru siap diatur
+      status: "Disinkronkan %{timestamp} lalu"
+      status_never: Belum pernah disinkronkan
+      status_with_summary: "Terakhir disinkronkan %{timestamp} lalu - %{summary}"
+      syncing: Menyinkronkan...
+      total: Total
+      unlinked: Belum tertaut
+    provider_panel:
+      add_connection: Tambah koneksi Brex
+      base_url_label: URL Dasar (opsional)
+      base_url_placeholder: https://api.brex.com
+      connection_name_label: Nama koneksi
+      connection_name_placeholder: Giro bisnis
+      default_connection_name: Koneksi Brex
+      disconnect: Putuskan koneksi
+      disconnect_label: "Putuskan koneksi %{name}"
+      disconnect_confirm: "Putuskan koneksi %{name}?"
+      encryption_warning:
+        title: Enkripsi database belum dikonfigurasi
+        message: Konfigurasikan kunci enkripsi Active Record sebelum menambahkan token Brex di produksi. Tanpa kunci enkripsi, Sure menyimpan kredensial dan snapshot penyedia Brex sebagai teks biasa seperti catatan penyedia lainnya.
+      instructions:
+        copy_token_html: "Salin token dan tambahkan sebagai koneksi bernama di bawah ini. Sure menyimpan token hanya untuk menyinkronkan keluarga ini."
+        create_token: "Buat token API dengan cakupan hanya-baca berikut: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly"
+        open_tokens: Buka pengaturan pengembang/token API Brex untuk perusahaan yang ingin Anda hubungkan
+        sign_in_html: "Kunjungi %{link} dan masuk ke akun yang ingin Anda hubungkan"
+      keep_token_placeholder: Kosongkan untuk mempertahankan token saat ini
+      sandbox_note_html: "Gunakan koneksi bernama terpisah untuk setiap perusahaan/token API Brex yang ingin Anda sinkronkan. Biarkan URL Dasar kosong untuk produksi. Staging terbatas pada pengujian yang disetujui Brex dan tidak berfungsi dengan token pelanggan."
+      setup_accounts: Atur rekening
+      sync: Sinkronkan
+      token_label: Token
+      token_placeholder: Tempel token di sini
+      update_connection: Perbarui koneksi
+    provider_connection:
+      default_description: Hubungkan ke akun Brex Anda
+      default_name: Brex
+      description: "Hubungkan menggunakan %{name}"
+      name: "Brex - %{name}"
+    select_accounts:
+      accounts_selected: rekening dipilih
+      api_error: "Kesalahan API: %{message}"
+      cancel: Batal
+      configure_name_in_brex: Tidak dapat mengimpor - silakan konfigurasikan nama rekening di Brex
+      description: Pilih rekening yang ingin Anda tautkan ke akun %{product_name} Anda.
+      link_accounts: Tautkan rekening yang dipilih
+      no_accounts_found: Tidak ada rekening ditemukan. Silakan periksa konfigurasi token API Anda.
+      no_api_token: Token API Brex tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia.
+      no_credentials_configured: Silakan konfigurasikan token API Brex Anda terlebih dahulu di Pengaturan Penyedia.
+      no_name_placeholder: "(Tanpa nama)"
+      select_connection: Pilih koneksi Brex di Pengaturan Penyedia.
+      title: Pilih Rekening Brex
+      unexpected_error: Terjadi kesalahan yang tidak terduga. Silakan coba lagi nanti.
+    select_existing_account:
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain
+      all_accounts_already_linked: Semua rekening Brex sudah tertaut
+      api_error: "Kesalahan API: %{message}"
+      cancel: Batal
+      configure_name_in_brex: Tidak dapat mengimpor - silakan konfigurasikan nama rekening di Brex
+      description: Pilih rekening Brex untuk ditautkan dengan rekening ini. Transaksi akan disinkronkan dan dideduplikasi secara otomatis.
+      link_account: Tautkan rekening
+      no_account_specified: Tidak ada rekening yang ditentukan
+      no_accounts_found: Tidak ada rekening Brex ditemukan. Silakan periksa konfigurasi token API Anda.
+      no_api_token: Token API Brex tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia.
+      no_credentials_configured: Silakan konfigurasikan token API Brex Anda terlebih dahulu di Pengaturan Penyedia.
+      no_name_placeholder: "(Tanpa nama)"
+      select_connection: Pilih koneksi Brex di Pengaturan Penyedia.
+      title: "Tautkan %{account_name} dengan Brex"
+      unexpected_error: Terjadi kesalahan yang tidak terduga. Silakan coba lagi nanti.
+    setup_required:
+      description: Sebelum dapat menautkan rekening Brex, Anda perlu mengonfigurasi token API Brex Anda.
+      heading: Token API Belum Dikonfigurasi
+      settings_link: Buka Pengaturan Penyedia
+      setup_steps: "Langkah pengaturan:"
+      steps:
+        enter_token: Masukkan token API Brex Anda
+        find_section_html: "Temukan bagian <strong>Brex</strong>"
+        open_settings_html: "Buka <strong>Pengaturan > Penyedia</strong>"
+        return_to_link: Kembali ke sini untuk menautkan rekening Anda
+      title: Pengaturan Brex Diperlukan
+    subtype_select:
+      placeholder:
+        subtype: Pilih subjenis
+        type: Pilih jenis
+    link_existing_account:
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain
+      api_error: "Kesalahan API: %{message}"
+      invalid_account_name: Tidak dapat menautkan rekening dengan nama kosong
+      missing_parameters: Parameter yang diperlukan tidak lengkap
+      no_account_specified: Tidak ada rekening yang ditentukan
+      no_api_token: Token API Brex tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia.
+      provider_account_already_linked: Rekening Brex ini sudah ditautkan ke rekening lain
+      provider_account_not_found: Rekening Brex tidak ditemukan
+      select_connection: Pilih koneksi Brex sebelum menautkan rekening.
+      success: "Berhasil menautkan %{account_name} dengan Brex"
+    setup_accounts:
+      account_type_label: "Jenis Rekening:"
+      all_accounts_linked: "Semua rekening Brex Anda telah diatur."
+      api_error: "Kesalahan API: %{message}"
+      fetch_failed: "Gagal Mengambil Rekening"
+      no_accounts_to_setup: "Tidak Ada Rekening untuk Diatur"
+      no_api_token: Token API Brex tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia.
+      account_types:
+        skip: Lewati rekening ini
+        depository: Rekening Giro atau Tabungan
+        credit_card: Kartu Kredit
+        investment: Rekening Investasi
+        loan: Pinjaman atau KPR
+        other_asset: Aset Lainnya
+      subtype_labels:
+        depository: "Subjenis Rekening:"
+        credit_card: ""
+        investment: "Jenis Investasi:"
+        loan: "Jenis Pinjaman:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kartu kredit akan diatur secara otomatis sebagai rekening kartu kredit."
+        other_asset: "Tidak ada opsi tambahan yang diperlukan untuk Aset Lainnya."
+      subtypes:
+        depository:
+          checking: Giro
+          savings: Tabungan
+          hsa: Rekening Tabungan Kesehatan (HSA)
+          cd: Sertifikat Deposito (CD)
+          money_market: Pasar Uang
+        investment:
+          brokerage: Pialang
+          pension: Pensiun
+          retirement: Dana Pensiun
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "Paket 529"
+          hsa: Rekening Tabungan Kesehatan (HSA)
+          mutual_fund: Reksa Dana
+          ira: IRA Tradisional
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: KPR
+          student: Pinjaman Pelajar
+          auto: Pinjaman Kendaraan
+          other: Pinjaman Lainnya
+      balance: Saldo
+      cancel: Batal
+      choose_account_type: "Pilih jenis rekening yang tepat untuk setiap rekening Brex:"
+      create_accounts: Buat Rekening
+      creating_accounts: Membuat Rekening...
+      historical_data_range: "Rentang Data Historis:"
+      subtitle: Pilih jenis rekening yang tepat untuk rekening yang Anda impor
+      sync_start_date_help: Pilih seberapa jauh ke belakang Anda ingin menyinkronkan riwayat transaksi. Tersedia riwayat maksimal 3 tahun.
+      sync_start_date_label: "Mulai menyinkronkan transaksi dari:"
+      title: Atur Rekening Brex Anda
+    complete_account_setup:
+      all_skipped: "Semua rekening dilewati. Tidak ada rekening yang dibuat."
+      creation_failed: "Gagal membuat rekening: %{error}"
+      creation_failed_count: "Gagal membuat %{count} rekening."
+      no_accounts: "Tidak ada rekening untuk diatur."
+      partial_skipped: "Berhasil membuat %{created_count} rekening; %{skipped_count} rekening dilewati."
+      partial_success: "Berhasil membuat %{created_count} rekening, tetapi %{failed_count} rekening gagal."
+      success: "Berhasil membuat %{count} rekening."
+      unexpected_error: Terjadi kesalahan yang tidak terduga.
+    sync:
+      success: Sinkronisasi dimulai
+    syncer:
+      account_processing_failed:
+        one: "%{count} rekening Brex gagal saat diproses."
+        other: "%{count} rekening Brex gagal saat diproses."
+      account_sync_failed:
+        one: "%{count} sinkronisasi rekening Brex tidak dapat dijadwalkan."
+        other: "%{count} sinkronisasi rekening Brex tidak dapat dijadwalkan."
+      accounts_need_setup:
+        one: "%{count} rekening perlu pengaturan..."
+        other: "%{count} rekening perlu pengaturan..."
+      accounts_failed:
+        one: "%{count} rekening Brex gagal diimpor."
+        other: "%{count} rekening Brex gagal diimpor."
+      calculating_balances: Menghitung saldo...
+      checking_account_configuration: Memeriksa konfigurasi rekening...
+      credentials_invalid: Token API Brex tidak valid atau izin rekening tidak mencukupi
+      failed: Sinkronisasi gagal. Silakan coba lagi atau hubungi dukungan.
+      import_failed: Impor Brex gagal.
+      importing_accounts: Mengimpor rekening dari Brex...
+      processing_transactions: Memproses transaksi...
+      transactions_failed:
+        one: "%{count} rekening Brex mengalami kegagalan impor transaksi."
+        other: "%{count} rekening Brex mengalami kegagalan impor transaksi."
+    update:
+      success: Koneksi Brex diperbarui

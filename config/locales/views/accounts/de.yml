@@ -74,6 +74,17 @@ de:
         next: Weiter
         previous: Zurück
         select: Auswählen
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): ab %{date} unter null, niedrigster Stand %{qty}"
+        hint: Vermutlich fehlt ein Kauf oder ein Übertrag. Lege ihn an oder korrigiere die Trades, die den Bestand unter null gebracht haben.
+        link: "Positionen prüfen"
+        message: Bestände unter null
+      sync_failed:
+        message: "Die letzte Synchronisierung ist fehlgeschlagen"
+      sync_hint: "Die Zahlen hier sind möglicherweise veraltet. Synchronisiere erneut, um sie zu aktualisieren."
+      sync_stale:
+        message: "Die letzte Synchronisierung wurde nicht abgeschlossen"
     show:
       activity:
         amount: Betrag

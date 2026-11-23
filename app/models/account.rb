@@ -849,10 +849,14 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
-    if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
-      holdings
-        .where.not(account_provider_id: nil)
-        .where(date: provider_snapshot_date)
+    if holdings.where.not(account_provider_id: nil).exists?
+      closed_provider_ids = account_providers.where(provider_type: "SimplefinAccount").includes(:provider).filter_map do |link|
+        link.id if link.provider.raw_holdings_payload == []
+      end
+
+      eligible_holdings = holdings.where.not(account_provider_id: [ nil, *closed_provider_ids ])
+      eligible_holdings
+        .where(date: eligible_holdings.maximum(:date))
         .where.not(qty: 0)
         .order(amount: :desc)
     else
@@ -927,12 +931,12 @@ class Account < ApplicationRecord
 
   # Securities whose calculated position dropped below zero on some day, for
   # example after a sale without its purchase or after deleting a purchase.
-  # The holdings tab shows them instead of hiding the gap.
+  # The account status (Account::HealthStatus) shows them instead of hiding the gap.
   # Linked accounts are left out entirely: their provider's holdings are the
   # truth, so a negative quantity there (reported, or carried back by the
   # reverse calculator) is a short position, not missing data.
   def negative_positions
-    return [] if linked?
+    return [] if linked? || balance_type != :investment
 
     rows = holdings
       .joins(:security)
