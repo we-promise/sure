@@ -1,0 +1,14 @@
+---
+fr:
+  activerecord:
+    attributes:
+      account/accountable:
+        purchase_date: Date d'achat
+      vehicle:
+        purchase_date: Date d'achat
+    errors:
+      models:
+        vehicle:
+          attributes:
+            purchase_date:
+              must_precede_entries: doit être antérieure à la plus ancienne écriture du compte
