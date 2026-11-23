@@ -90,10 +90,14 @@ class Budget < ApplicationRecord
 
     # The budget find_or_bootstrap would return, if it already exists, read
     # without writing a budget, budget line or rollover: for pages that only
-    # read one, like Reports.
+    # read one, like Reports. Read as `user`, as find_or_bootstrap does, so a
+    # household budget never falls back to every account when Current.user is
+    # unset (the assistant runs in a job).
     def find_existing(family, start_date:, user: nil)
       budget_start, budget_end = period_for(start_date, family: family)
-      family.budgets.find_by(start_date: budget_start, end_date: budget_end, user: owner_for(family, user: user, household: false))
+      family.budgets
+        .find_by(start_date: budget_start, end_date: budget_end, user: owner_for(family, user: user, household: false))
+        &.tap { |budget| budget.current_user = user }
     end
 
     private

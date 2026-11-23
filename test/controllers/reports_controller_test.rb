@@ -862,6 +862,15 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_select "p", text: "#{expected}%"
+
+    # Built by RebuildReportJob/WarmReportsCacheJob, outside a request.
+    with_memory_cache do
+      assert ReportsController.warm_body_cache(user: member, query: { period_type: :monthly })
+      ReportsController.any_instance.expects(:setup_report_data).never
+      get reports_path(period_type: :monthly)
+
+      assert_select "p", text: "#{expected}%"
+    end
   end
 
   test "index shows nothing used when this month has no budget" do

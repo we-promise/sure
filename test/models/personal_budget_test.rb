@@ -123,6 +123,13 @@ class PersonalBudgetTest < ActiveSupport::TestCase
     end
   end
 
+  test "find_existing reads the budget as the given user, like find_or_bootstrap" do
+    @family.update!(personal_budgets: false)
+    Budget.find_or_bootstrap(@family, start_date: @date, user: @user1)
+
+    assert_equal @user2, Budget.find_existing(@family, start_date: @date, user: @user2).current_user
+  end
+
   test "household and personal budgets coexist when household: true is explicitly requested" do
     @family.update!(personal_budgets: true)
 
