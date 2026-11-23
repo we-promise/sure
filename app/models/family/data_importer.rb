@@ -1353,6 +1353,7 @@ class Family::DataImporter
           currency: holding_currency,
           cost_basis: data["cost_basis"]&.to_d,
           cost_basis_source: importable_cost_basis_source(data["cost_basis_source"]),
+          materialized: false,
           cost_basis_locked: truthy?(data["cost_basis_locked"]) || false,
           security_locked: truthy?(data["security_locked"]) || false
         }
