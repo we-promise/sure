@@ -107,7 +107,9 @@ class Purchase::MatchPendingJobTest < ActiveJob::TestCase
     other = Purchase.create!(family: @purchase.family, user: @purchase.user, source: :email, status: :awaiting_payment,
                              ordered_on: @ordered_on, total: BigDecimal("12.00"), currency: "USD")
     payment(date: @ordered_on, amount: BigDecimal("12.00"))
-    Purchase::Matcher.any_instance.stubs(:result).raises(StandardError, "boom").then.returns(Purchase::Matcher::Result.new(kind: :none, entries: []))
+    # Fails for the first purchase it checks; the second must still be checked.
+    Purchase::Matcher.any_instance.expects(:result).twice
+      .raises(StandardError, "boom").then.returns(Purchase::Matcher::Result.new(kind: :none, entries: []))
 
     assert_nothing_raised { perform }
     assert DebugLogEntry.exists?(source: "Purchase::MatchPendingJob")
