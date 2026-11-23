@@ -5,8 +5,30 @@ zh-CN:
       add_account: 添加投资账户
       description: 您计入财务与报表中的券商、退休和加密货币账户及其余额会在此列出。
       title: 暂无可显示的投资账户
+    holdings:
+      columns:
+        account: 账户
+        accounts: 账户
+        avg_cost: 平均成本
+        cost_basis_per_share: 每股成本基础
+        day_change: 当日涨跌
+        qty: 数量
+        security: 证券
+        unrealized: 未实现盈亏
+        value: 市值
+        weight: 占比
+      day_change_partial: "涵盖 %{covered} / %{total} 个持仓"
+      label: 持仓
+      missing_cost_basis: 无成本基础
+      missing_cost_basis_hint: 至少有一个持仓缺少已知成本基础。平均成本和回报仅涵盖有成本基础的持仓。
+      no_cost_basis: 无成本基础
+      open_position: 打开
+      position_missing_cost_basis_hint: 此持仓缺少已知成本基础，因此没有平均成本，且未计入该行的回报。
+      positions_caption: "按账户列出的 %{ticker} 持仓"
+      toggle_positions: "显示 %{ticker} 的持仓"
     sections:
       accounts: 账户
+      holdings: 持仓
     show:
       section_aria: "%{title} 分区。按 Enter 或空格键抓取以重新排序，然后使用方向键移动。"
       sections_aria: 投资组合分区

@@ -128,7 +128,10 @@ class RecurringTransaction
           .includes(:entryable)
           .find { |entry| repair_identity?(series, entry) }
 
-        allocation.update!(entry: replacement) if replacement
+        next unless replacement
+
+        allocation.update!(entry: replacement)
+        Allocator.new(allocation.recurring_occurrence).categorize_reattached!(allocation)
       end
     end
 
