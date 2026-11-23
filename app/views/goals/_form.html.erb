@@ -6,7 +6,9 @@
      came back empty and picking "Reserve to maintain" never hid the date. %>
 <%# The plural hash can come from a fallback locale (e.g. "vi" -> "en"), and
     Intl.PluralRules must use the locale that supplied it. %>
-<% accounts_locale = I18n.fallbacks[I18n.locale].find { |locale| I18n.t("goals.goal_card.accounts", locale: locale, default: nil, fallback: false) } || I18n.default_locale %>
+<% accounts_locale = I18n.fallbacks[I18n.locale]
+     .select { |locale| I18n.available_locales.include?(locale) }
+     .find { |locale| I18n.t("goals.goal_card.accounts", locale: locale, default: nil, fallback: false) } || I18n.default_locale %>
 <div data-controller="goal-form goal-kind"
      data-goal-form-currency-value="<%= goal.currency.presence || Current.family.primary_currency_code %>"
      data-goal-form-locale-value="<%= accounts_locale %>"

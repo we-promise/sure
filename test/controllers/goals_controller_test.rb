@@ -85,6 +85,17 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "1 account", translations["one"]
   end
 
+  test "the suggested-pace hint skips fallback parents that are not available locales" do
+    # "pt-BR" falls back through "pt", which is not an available locale.
+    @user.update!(locale: "pt-BR")
+
+    get new_goal_url
+
+    assert_response :success
+    form = css_select("[data-controller~='goal-form']").first
+    assert_equal "en", form["data-goal-form-locale-value"]
+  end
+
   test "the target amount field keeps its own action alongside the paste handler" do
     get new_goal_url
 
