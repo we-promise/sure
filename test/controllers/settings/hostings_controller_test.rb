@@ -19,6 +19,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:chimnie).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:terrascoutx).returns(nil)
     @provider.stubs(:usage).returns(provider_success_response(
       OpenStruct.new(
         used: 10,
@@ -32,8 +33,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id
-       market_data_sync_enabled market_data_sync_time market_data_sync_timezone].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key terrascoutx_api_key demo_family_refresh_enabled demo_family_refresh_family_id
+       market_data_sync_enabled market_data_sync_time market_data_sync_timezone page_cache_days page_cache_max_mb page_cache_cooldown_minutes].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -158,6 +159,44 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       get settings_hosting_url
       assert_response :success
+    end
+  end
+
+  test "caps the Twelve Data usage bar at full width when usage exceeds the daily limit" do
+    @provider.stubs(:usage).returns(provider_success_response(
+      OpenStruct.new(used: 900, limit: 800, utilization: 112.5, plan: "free")
+    ))
+
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      bar = css_select("div.w-52.bg-surface-inset > div.bg-green-500").sole
+      assert_equal "width: 100%;", bar["style"]
+    end
+  end
+
+  test "keeps the Twelve Data usage bar at the utilization when usage is within the daily limit" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      bar = css_select("div.w-52.bg-surface-inset > div.bg-green-500").sole
+      assert_equal "width: 10%;", bar["style"]
+    end
+  end
+
+  test "keeps a sliver of the Twelve Data usage bar visible when nothing is used" do
+    @provider.stubs(:usage).returns(provider_success_response(
+      OpenStruct.new(used: 0, limit: 800, utilization: 0, plan: "free")
+    ))
+
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      bar = css_select("div.w-52.bg-surface-inset > div.bg-green-500").sole
+      assert_equal "width: 2%;", bar["style"]
     end
   end
 
@@ -323,6 +362,55 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { chimnie_api_key: "chimnie-token" } }
 
       assert_equal "chimnie-token", Setting.chimnie_api_key
+    end
+  end
+
+  test "clear cache texts promise reloaded market data only when a provider is configured" do
+    with_self_hosting do
+      ExchangeRate.stubs(:provider).returns(@provider)
+      get settings_hosting_url
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+
+      ExchangeRate.stubs(:provider).returns(nil)
+      Security.stubs(:provider).returns(nil)
+      get settings_hosting_url
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning_without_provider"))
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.confirm_clear_cache.body_without_provider"))
+      assert_not_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+    end
+  end
+
+  test "shows the clear cache text without provider when no exchange rate provider is set" do
+    Setting.stubs(:exchange_rate_provider).returns(nil)
+    Security.stubs(:provider).returns(nil)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning_without_provider"))
+      end
+    end
+  end
+
+  test "an unknown exchange rate provider does not hide a configured security provider" do
+    ExchangeRate.stubs(:provider).raises(Provider::Registry::Error, "Provider 'nope' not found")
+    Security.stubs(:provider).returns(@provider)
+
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+    end
+  end
+
+  test "can update terrascoutx api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { terrascoutx_api_key: "terrascoutx-token" } }
+
+      assert_equal "terrascoutx-token", Setting.terrascoutx_api_key
     end
   end
 
@@ -878,6 +966,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     exchange_rate = exchange_rates(:one)
     security_price = holding.security.prices.first
     account_balance = account.balances.create!(date: Date.current, balance: 1000, currency: "USD")
+    Family::MarketDataRefresher.any_instance.expects(:refresh)
 
     with_self_hosting do
       perform_enqueued_jobs(only: DataCacheClearJob) do
@@ -888,8 +977,9 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_hosting_url
     assert_equal I18n.t("settings.hostings.clear_cache.cache_cleared"), flash[:notice]
 
-    assert_not ExchangeRate.exists?(exchange_rate.id)
-    assert_not Security::Price.exists?(security_price.id)
+    # Market data is shared with other families, so it is refreshed rather than deleted
+    assert ExchangeRate.exists?(exchange_rate.id)
+    assert Security::Price.exists?(security_price.id)
     assert_not Holding.exists?(holding.id)
     assert_not Balance.exists?(account_balance.id)
   end
@@ -1293,6 +1383,86 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.openai_request_timeout = nil
     Setting.ai_response_timeout = nil
     Setting.ai_health_probe_timeout = nil
+  end
+
+  test "saves how long cached pages are kept, and a blank goes back to the default" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { page_cache_days: "30" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal 30, Setting.page_cache_days
+      assert_equal 30.days, Setting.page_cache_ttl
+
+      patch settings_hosting_url, params: { setting: { page_cache_days: "" } }
+
+      assert_nil Setting.page_cache_days
+      assert_equal Setting::PAGE_CACHE_DAYS_DEFAULT.days, Setting.page_cache_ttl
+    end
+  end
+
+  test "saves the page cache's size limit and rebuild cooldown" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250", page_cache_cooldown_minutes: "0" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal 250.megabytes, PageCache.max_bytes
+      assert_equal 0.minutes, Setting.page_cache_cooldown
+
+      patch settings_hosting_url, params: { setting: { page_cache_max_mb: "", page_cache_cooldown_minutes: "" } }
+
+      assert_equal Setting::PAGE_CACHE_MAX_MB_DEFAULT.megabytes, PageCache.max_bytes
+      assert_equal Setting::PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT.minutes, Setting.page_cache_cooldown
+    end
+  end
+
+  test "an environment value the cache ignores doesn't lock its setting" do
+    with_self_hosting do
+      with_env_overrides("PAGE_CACHE_MAX_MB" => "0") do
+        get settings_hosting_url
+        assert_select "input[name='setting[page_cache_max_mb]'][disabled]", count: 0
+
+        patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250" } }
+        assert_equal 250, Setting.page_cache_max_mb
+      end
+    end
+  end
+
+  test "a valid environment value locks its setting" do
+    with_self_hosting do
+      with_env_overrides("PAGE_CACHE_MAX_MB" => "300") do
+        get settings_hosting_url
+        assert_select "input[name='setting[page_cache_max_mb]'][disabled]"
+
+        patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250" } }
+        assert_not_equal 250, Setting.page_cache_max_mb
+        assert_equal 300.megabytes, PageCache.max_bytes
+      end
+    end
+  end
+
+  test "rejects a cache size or cooldown out of range" do
+    with_self_hosting do
+      { page_cache_max_mb: %w[0 100001], page_cache_cooldown_minutes: %w[-1 10081] }.each do |key, values|
+        values.each do |value|
+          patch settings_hosting_url, params: { setting: { key => value } }
+
+          assert_response :unprocessable_entity
+          assert_nil Setting.public_send(key)
+        end
+      end
+    end
+  end
+
+  test "rejects a cache length outside 1 to 365 days" do
+    with_self_hosting do
+      %w[0 366 soon].each do |value|
+        patch settings_hosting_url, params: { setting: { page_cache_days: value } }
+
+        assert_response :unprocessable_entity
+        assert_equal I18n.t("settings.hostings.update.invalid_page_cache_days", minimum: 1, maximum: 365), flash[:alert]
+        assert_nil Setting.page_cache_days
+      end
+    end
   end
 
   test "rejects llm budget below field minimum" do

@@ -252,8 +252,8 @@ class MonarchImport < Import
       targets = included_target_mappings.to_h { |mapping| [ MonarchImport::Converter.source_id(mapping.key), mapping.target ] }
       imported = Family::DataImporter.new(family, ndjson(result.records), import: self, account_targets: targets).import!
 
-      Account.where(id: imported[:accounts].map(&:id)).update_all(import_id: id)
-      Entry.where(id: imported[:entries].map(&:id)).update_all(import_id: id)
+      Account.where(id: imported[:account_ids]).update_all(import_id: id)
+      Entry.where(id: imported[:entry_ids]).update_all(import_id: id)
       update!(summary: summary.merge("records" => imported[:summary]))
     end
   end

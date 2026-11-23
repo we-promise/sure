@@ -32,6 +32,13 @@ sync_hourly:
   queue: "scheduled"
   description: "Syncs provider items that opt-in to hourly syncing"
 
+recover_push_deliveries:
+  cron: "*/15 * * * *" # PushDelivery::CLAIM_TIMEOUT
+  class: "RecoverPushDeliveriesJob"
+  active_job: true
+  queue: "scheduled"
+  description: "Re-enqueues push deliveries whose enqueue failed or whose claim was abandoned"
+
 sync_scheduled_items:
   cron: "*/15 * * * *" # SyncSchedule::TICK
   class: "SyncScheduledItemsJob"
@@ -87,6 +94,14 @@ generate_recurring_occurrences:
   active_job: true
   queue: "scheduled"
   description: "Materializes the rolling window of recurring-transaction occurrences for every family"
+
+
+weekly_cleanup:
+  cron: "0 7 * * 1" # Mondays at 7:00 AM UTC, after the nightly jobs
+  class: "WeeklyCleanupJob"
+  active_job: true
+  queue: "scheduled"
+  description: "Opens a proactive weekly cleanup chat for each admin of preview-enabled families"
 
 generate_insights:
   cron: "0 6 * * *" # daily at 6:00 AM UTC, after the nightly cleanup jobs

@@ -1,0 +1,9 @@
+---
+fr:
+  activerecord:
+    errors:
+      models:
+        mercury_item:
+          attributes:
+            base_url:
+              official_hosts_only: doit être vide, https://api.mercury.com/api/v1 ou https://api-sandbox.mercury.com/api/v1

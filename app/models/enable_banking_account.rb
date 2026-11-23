@@ -5,6 +5,9 @@ class EnableBankingAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
+    # Not deterministic: the IBAN is never looked up by value, so equal IBANs
+    # need not share a ciphertext.
+    encrypts :iban
   end
 
   belongs_to :enable_banking_item

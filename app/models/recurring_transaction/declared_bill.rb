@@ -49,6 +49,8 @@ class RecurringTransaction
         payment_url: attrs[:payment_url],
         autopay: ActiveModel::Type::Boolean.new.cast(attrs[:autopay]) || false,
         notes: attrs[:notes],
+        bank_reference: (attrs[:bank_reference] unless is_income),
+        reference_only: (attrs[:reference_only] unless is_income),
         status: "active",
         manual: true,
         occurrence_count: 0
@@ -103,7 +105,8 @@ class RecurringTransaction
         weekday: due.wday,
         month_of_year: due.month,
         interval: attrs[:frequency_interval],
-        interval_unit: attrs[:frequency_interval_unit]
+        interval_unit: attrs[:frequency_interval_unit],
+        once_on: due
       )
 
       recurring
