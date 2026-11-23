@@ -31,7 +31,7 @@
     <%# Period Navigation Tabs %>
     <div class="flex flex-wrap items-center justify-between gap-4">
       <%= render DS::SegmentedControl.new(aria_label: t("reports.index.period_aria", default: "Report period"), class: "max-w-full overflow-x-auto no-scrollbar") do |sc| %>
-        <% %i[monthly quarterly ytd last_6_months last_12_months custom].each do |ptype| %>
+        <% %i[monthly quarterly ytd last_6_months last_12_months all_time custom].each do |ptype| %>
           <% sc.with_segment(t("reports.index.periods.#{ptype}"),
                active: @period_type == ptype,
                href: report_view_path(period_type: ptype, start_date: nil, end_date: nil),
@@ -106,6 +106,14 @@
       <% end %>
     <% end %>
 
+    <% if @period_type == :all_time %>
+      <p class="text-primary font-medium text-lg lg:text-base mb-4">
+        <%= t("reports.index.period_label.all_time",
+              start: I18n.l(@start_date, format: :short_month_year),
+              end: I18n.l(@end_date, format: :short_month_year)) %>
+      </p>
+    <% end %>
+
     <%# Period Display %>
     <% if @nav %>
       <div class="flex items-center gap-1 mb-4">
@@ -165,31 +173,18 @@
         </div>
       </div>
     <% end %>
+
+    <%# When the report was built. A stale one is being rebuilt in the
+        background; Refresh rebuilds it now, while the member waits. %>
+    <div class="flex items-center gap-2 text-xs text-secondary" data-testid="report-built-at">
+      <span><%= t("reports.index.built_at", time: time_ago_in_words(@report_built_at)) %></span>
+      <% if @report_stale %>
+        <span>· <%= t("reports.index.updating") %></span>
+      <% end %>
+      <span aria-hidden="true">·</span>
+      <%= render DS::Link.new(text: t("reports.index.refresh"), href: reports_path(request.query_parameters.merge(refresh: 1))) %>
+    </div>
   </div>
 <% end %>
 
-<div class="w-full space-y-6 lg:pb-6">
-  <%= render "shared/exchange_rate_notes", family: Current.family %>
-
-  <% if Current.family.transactions.any? %>
-    <%# Summary Dashboard - Always visible, not collapsible %>
-    <section class="@container">
-      <%= render partial: "reports/summary_dashboard", locals: {
-        metrics: @summary_metrics,
-        period_type: @period_type
-      } %>
-    </section>
-
-    <%# Collapsible & Reorderable Sections %>
-    <%= render "shared/reorderable_sections",
-          sections: @reports_sections,
-          namespace: "reports",
-          url: update_preferences_reports_path,
-          i18n_scope: "reports.index" %>
-  <% else %>
-    <%# Empty State %>
-    <section>
-      <%= render partial: "reports/empty_state" %>
-    </section>
-  <% end %>
-</div>
+<%= render "reports/body", report: @report, sections: @reports_sections %>

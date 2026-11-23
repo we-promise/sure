@@ -28,6 +28,7 @@ class User < ApplicationRecord
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
   has_many :push_subscriptions, dependent: :destroy
+  has_many :web_push_subscriptions, dependent: :destroy
   has_many :webauthn_credentials, dependent: :destroy
   has_many :mobile_devices, dependent: :destroy
   has_many :invitations, foreign_key: :inviter_id, dependent: :destroy
@@ -314,12 +315,12 @@ class User < ApplicationRecord
 
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
   after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
-  # Runs inside the update's transaction: the user row stays locked until commit,
-  # so a concurrent /api/v1/auth/refresh (which takes the same lock) cannot mint
-  # a token the revocation misses. Doorkeeper's own /oauth/token refresh locks
-  # only the old token, so a refresh already holding it can still commit a new
-  # token the in-transaction sweep does not see; the second sweep after commit
-  # revokes it, and any later refresh finds the old token revoked.
+  # Runs inside the update's transaction, so the user row stays locked until
+  # commit. Every endpoint that issues a token from an existing credential
+  # (/api/v1/auth/refresh and Oauth::TokensController) takes the same lock
+  # first, so none can mint a token this sweep misses. The sweep after commit
+  # catches grants issued without that lock, such as an authorization code
+  # created by /oauth/authorize while the change was in flight.
   after_update :revoke_oauth_access, if: :saved_change_to_password_digest?
   after_update_commit :revoke_oauth_access, if: :saved_change_to_password_digest?
 
@@ -978,6 +979,10 @@ class User < ApplicationRecord
   # Returns whether clicking outside a modal is prevented from closing it.
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
+  end
+
+  def push_budget_warnings_enabled?
+    preferences&.dig("push_budget_warnings_enabled") == true
   end
 
   def preview_features_enabled?

@@ -161,7 +161,12 @@
         <%= render DS::Table.new(rows: trends_data, inset: true, label: t("reports.trends.monthly_breakdown"), row_class: ->(_trend) { "text-secondary" }) do |table| %>
           <% table.with_column(t("reports.trends.month")) do |trend| %>
             <span class="<%= class_names("flex items-center gap-2", "font-medium" => trend[:is_current_month]) %>">
-              <%= trend[:month] %>
+              <%= render DS::Link.new(
+                variant: :default,
+                text: trend[:month],
+                href: reports_path(period_type: :monthly, start_date: trend[:calendar_month], end_date: trend[:calendar_month].end_of_month, **reports_filter_params),
+                frame: :_top
+              ) %>
               <% if trend[:is_current_month] %>
                 <span class="text-xs text-subdued">(<%= t("reports.trends.current") %>)</span>
               <% end %>

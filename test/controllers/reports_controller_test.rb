@@ -379,6 +379,345 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "a body warmed outside a request is what the page serves" do
+    with_memory_cache do
+      assert ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      assert_not ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd }), "already warm"
+
+      ReportsController.any_instance.expects(:setup_report_data).never
+      get reports_path(period_type: :ytd)
+
+      assert_response :ok
+      assert_select "[data-sortable-list-target=item]"
+    end
+  end
+
+  test "a built body is kept for as many days as the page cache setting says" do
+    with_env_overrides PAGE_CACHE_DAYS: nil do
+      Setting.stubs(:page_cache_days).returns(30)
+      store = ActiveSupport::Cache::MemoryStore.new
+      Rails.stubs(:cache).returns(store)
+      store.stubs(:write).returns(true)
+      store.expects(:write).with(regexp_matches(/\Areports_body\//), anything, expires_in: 30.days).returns(true)
+
+      assert ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+    end
+  end
+
+  test "after the data changes, the old build is served while a rebuild is queued" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/, count: 0
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        @family.entries.first.touch
+        ReportsController.any_instance.expects(:render_report_body).never
+
+        assert_enqueued_with(job: RebuildReportJob, args: [ @user, { period_type: "ytd" }, "en" ]) do
+          get reports_path(period_type: :ytd)
+        end
+        assert_response :ok
+        assert_select "[data-sortable-list-target=item]"
+        assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/
+
+        assert_no_enqueued_jobs(only: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      end
+    end
+  end
+
+  test "a stale build is not rebuilt again within the cooldown" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      @family.entries.first.touch
+
+      assert_no_enqueued_jobs(only: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/
+    end
+  end
+
+  test "refresh rebuilds the report straight away and drops itself from the URL" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      @family.entries.first.touch
+
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd, refresh: 1)
+      assert_redirected_to reports_path(period_type: :ytd)
+
+      follow_redirect!
+      assert_select "#rebuilt"
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/, count: 0
+    end
+  end
+
+  test "refresh shows a report too big to keep as built, without building it again" do
+    with_memory_cache do
+      PageCache.stubs(:max_bytes).returns(0)
+
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd, refresh: 1)
+
+      assert_response :ok
+      assert_select "#rebuilt"
+    end
+  end
+
+  test "a default period keeps its cached build from one day to the next" do
+    with_memory_cache do
+      get reports_path(period_type: :all_time)
+
+      travel 1.day do
+        ReportsController.any_instance.expects(:render_report_body).never
+        get reports_path(period_type: :all_time)
+
+        assert_response :ok
+        assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/
+      end
+    end
+  end
+
+  test "arranging the sections reorders the cached report rather than rebuilding it" do
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      @user.update!(preferences: (@user.preferences || {}).merge(
+        "reports_section_order" => %w[transactions_breakdown trends_insights],
+        "reports_collapsed_sections" => { "trends_insights" => true }
+      ))
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path(period_type: :ytd)
+
+      keys = css_select("[data-sortable-list-target=item]").map { |node| node["data-section-key"] }
+      assert_equal %w[transactions_breakdown trends_insights], keys.first(2)
+      assert_select "section[data-section-key=trends_insights] details:not([open])"
+    end
+  end
+
+  test "warming several members builds each one's report from their own accounts" do
+    member = users(:family_member)
+    @family.accounts.create!(name: "Admin only", balance: 0, currency: "USD", accountable: Depository.new, owner: @user)
+    assert_not_equal @user.accessible_accounts.pluck(:id).sort, member.accessible_accounts.pluck(:id).sort
+
+    seen = {}
+    ReportsController.any_instance.stubs(:render_report_body).with do
+      seen[Current.user.id] = Current.accessible_accounts.map(&:id).sort
+      true
+    end.returns({ notes: "", has_transactions: false, summary: "", sections: [] })
+
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      ReportsController.warm_body_cache(user: member, query: { period_type: :ytd })
+    end
+
+    assert_equal @user.accessible_accounts.pluck(:id).sort, seen[@user.id]
+    assert_equal member.accessible_accounts.pluck(:id).sort, seen[member.id]
+  end
+
+  test "losing access to an account is never answered with a report built before" do
+    member = users(:family_member)
+    sign_in member
+
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      assert_response :ok
+
+      account_shares(:depository_shared_with_member).destroy!
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd)
+
+      assert_select "#rebuilt"
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/, count: 0
+    end
+  end
+
+  test "each sort and filter of the breakdown is its own cached report" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+
+      ReportsController.any_instance.expects(:render_report_body).twice
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd, sort_by: "count", sort_direction: "asc")
+      assert_select "#rebuilt"
+      get reports_path(period_type: :ytd, filter_account_id: accounts(:depository).id)
+      assert_select "#rebuilt"
+    end
+  end
+
+  test "a background rebuild repeats the page's sort and filters" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd, sort_by: "count", filter_account_id: accounts(:depository).id)
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        @family.entries.first.touch
+        assert_enqueued_with(job: RebuildReportJob,
+          args: [ @user, { filter_account_id: accounts(:depository).id, period_type: "ytd", sort_by: "count" }, "en" ]) do
+          get reports_path(period_type: :ytd, sort_by: "count", filter_account_id: accounts(:depository).id)
+        end
+      end
+    end
+  end
+
+  test "a report warmed in the background is in the member's own language" do
+    @user.update!(locale: "de")
+
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path(period_type: :ytd)
+      assert_response :ok
+    end
+  end
+
+  test "a stale build in the language the page asked for is rebuilt in that language" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd, locale: "de")
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        @family.entries.first.touch
+        assert_enqueued_with(job: RebuildReportJob, args: [ @user, { period_type: "ytd" }, "de" ]) do
+          get reports_path(period_type: :ytd, locale: "de")
+        end
+        perform_enqueued_jobs(only: RebuildReportJob)
+
+        ReportsController.any_instance.expects(:render_report_body).never
+        get reports_path(period_type: :ytd, locale: "de")
+        assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating", locale: :de)}/, count: 0
+      end
+    end
+  end
+
+  test "the plain Reports page is served from the build warmed for this month" do
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :monthly })
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path
+      assert_response :ok
+    end
+  end
+
+  test "changing whether investment contributions count as spending builds the report again" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      @family.update!(investment_contributions_as_spending: !@family.investment_contributions_as_spending)
+
+      ReportsController.any_instance.expects(:render_report_body).once.returns({ notes: "", has_transactions: false, summary: "", sections: [] })
+      get reports_path(period_type: :ytd)
+    end
+  end
+
+  test "assigning a tag marks the cached report stale" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        transactions(:one).update!(tag_ids: [ tags(:one).id ])
+        assert_enqueued_with(job: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      end
+    end
+  end
+
+  test "a new month's report is built, not served from last month's" do
+    with_memory_cache do
+      travel_to Date.new(2026, 11, 30).noon do
+        get reports_path
+      end
+
+      travel_to Date.new(2026, 12, 1).noon do
+        ReportsController.any_instance.expects(:render_report_body).once.returns({ notes: "", has_transactions: false, summary: "", sections: [] })
+        get reports_path
+      end
+    end
+  end
+
+  test "year to date keeps its build from one day to the next, though it ends today" do
+    with_memory_cache do
+      travel_to Date.new(2026, 11, 20).noon do
+        get reports_path(period_type: :ytd)
+      end
+
+      travel_to Date.new(2026, 11, 21).noon do
+        ReportsController.any_instance.expects(:render_report_body).never
+        get reports_path(period_type: :ytd)
+        assert_response :ok
+      end
+    end
+  end
+
+  test "editing a holding's cost basis marks the cached report stale" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        holdings(:one).set_manual_cost_basis!(80)
+        assert_enqueued_with(job: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      end
+    end
+  end
+
+  test "each member gets their own cached body" do
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      other = @family.users.where.not(id: @user.id).first
+      assert other, "fixtures need a second member"
+
+      assert ReportsController.warm_body_cache(user: other, query: { period_type: :ytd })
+    end
+  end
+
+  test "all time runs from the member's first transaction or trade to today" do
+    first = @family.earliest_activity_date
+    assert first, "fixtures need a transaction or trade"
+
+    get reports_path(period_type: :all_time)
+
+    assert_response :ok
+    assert_select "a[aria-current]", text: I18n.t("reports.index.periods.all_time")
+    assert_includes @response.body, I18n.t("reports.index.period_label.all_time",
+      start: I18n.l(first, format: :short_month_year), end: I18n.l(Date.current, format: :short_month_year))
+    assert_includes @response.body, first.strftime("%b %Y")
+    assert_not_includes @response.body, (first - 1.month).strftime("%b %Y")
+  end
+
+  test "all time doesn't start at activity in an account the member can't see" do
+    member = users(:family_member)
+    hidden = @family.accounts.create!(name: "Admin's old account", balance: 0, currency: "USD",
+      accountable: Depository.new, owner: @user)
+    hidden.entries.create!(date: Date.new(2001, 2, 3), name: "Old", amount: 10, currency: "USD", entryable: Transaction.new)
+    assert_not member.finance_accounts.include?(hidden), "the member must not see the account"
+
+    sign_in member
+    get reports_path(period_type: :all_time)
+
+    assert_response :ok
+    assert_not_includes @response.body, "2001-02-03"
+    assert_not_includes @response.body, I18n.l(Date.new(2001, 2, 3), format: :short_month_year)
+  end
+
+  test "all time ignores scheduled entries after today" do
+    @family.entries.where(entryable_type: %w[Transaction Trade]).delete_all
+    account = @family.accounts.first
+    account.entries.create!(date: 1.month.from_now.to_date, name: "Scheduled", amount: 10, currency: "USD", entryable: Transaction.new)
+
+    get reports_path(period_type: :all_time)
+
+    assert_response :ok
+    assert_nil flash[:alert]
+    assert_includes @response.body, I18n.t("reports.index.period_label.all_time",
+      start: I18n.l(Date.current.beginning_of_month, format: :short_month_year), end: I18n.l(Date.current, format: :short_month_year))
+  end
+
+  test "all time has no previous period to compare with" do
+    get reports_path(period_type: :all_time)
+
+    assert_response :ok
+    assert_not_includes @response.body, I18n.t("reports.summary.vs_previous")
+  end
+
   test "index with last 6 months period" do
     get reports_path(period_type: :last_6_months)
     assert_response :ok
@@ -505,6 +844,18 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: I18n.t("reports.trends.title")
     assert_select "thead" do
       assert_select "th", text: I18n.t("reports.trends.month")
+    end
+  end
+
+  test "monthly breakdown month names link to that month's report with the selected tags" do
+    tag = @family.tags.create!(name: "Breakdown tag")
+
+    get reports_path(period_type: :custom, start_date: Date.new(2024, 1, 15), end_date: Date.new(2024, 3, 12), filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    [ Date.new(2024, 1, 1), Date.new(2024, 2, 1), Date.new(2024, 3, 1) ].each do |month|
+      href = reports_path(period_type: :monthly, start_date: month, end_date: month.end_of_month, filter_tag_ids: [ tag.id ])
+      assert_select "[data-section-key=trends_insights] a[href=?][data-turbo-frame=_top]", href, text: month.strftime("%b %Y")
     end
   end
 
@@ -1158,10 +1509,15 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     )
     assert_response :ok
 
-    prev_start = 1.month.ago.to_date.beginning_of_month - 1.month
-    next_start = 1.month.ago.to_date.beginning_of_month + 1.month
-    assert_select "a[href*=?]", "start_date=#{prev_start}", count: 0
-    assert_select "a[href*=?]", "start_date=#{next_start}", count: 0
+    assert_select "a[aria-label=?]", I18n.t("reports.index.previous_period"), count: 0
+    assert_select "a[aria-label=?]", I18n.t("reports.index.next_period"), count: 0
+  end
+
+  test "monthly period shows previous period navigation" do
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "a[aria-label=?]", I18n.t("reports.index.previous_period"), count: 1
   end
 
   test "ytd period navigation shows previous year link" do
@@ -2027,6 +2383,11 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def with_memory_cache
+      Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+      yield
+    end
+
     def biggest_expenses_reports_path(**params)
       reports_path(period_type: :custom, start_date: BIGGEST_MONTH, end_date: BIGGEST_MONTH.end_of_month, **params)
     end
