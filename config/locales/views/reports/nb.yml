@@ -219,7 +219,7 @@ nb:
       step1: Gå til Innstillinger → API-nøkler
       step2: Opprett en ny API-nøkkel med tilgangen «Kun lesing»
       step3: Kopier API-nøkkelen
-      step4: "Legg den til i denne URL-en slik: &api_key=DIN_NØKKEL"
+      step4: "Legg den til i denne URL-en som parameteren api_key, med nøkkelen din som verdi."
       example: Eksempel
       then_use: Bruk deretter hele URL-en med =IMPORTDATA() i Google Sheets.
       go_to_api_keys: Gå til API-nøkler

@@ -156,7 +156,7 @@ nb:
         high_res_description: Når dette er aktivert, hentes logoer i 120x120-oppløsning i stedet for 40x40. Det gir skarpere bilder på skjermer med høy DPI.
       llm_provider_selector:
         title: AI-leverandør
-        description: Velg hvilken LLM som driver AI-chatten. Batchoperasjoner (kategorisering av transaksjoner, forhandlergjenkjenning og PDF-behandling) bruker foreløpig alltid OpenAI.
+        description: "Velg hvilken LLM som driver AI-chatten, forhandlergjenkjenning og PDF-behandling. Kategorisering av transaksjoner konfigureres separat nedenfor."
         env_configured_message: Konfigurert via miljøvariabelen LLM_PROVIDER.
         provider_label: Aktiv LLM-leverandør
         provider_openai: OpenAI
