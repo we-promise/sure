@@ -107,7 +107,6 @@ class Rule::Runner
       executed_at = Time.current
       matched_ids = []
       rule_run = nil
-      held = false
 
       begin
         scope = unstopped_scope(rule)
@@ -124,12 +123,9 @@ class Rule::Runner
           transactions_queued: matched_ids.size,
           transactions_processed: 0,
           transactions_modified: 0,
-          # The runner's hold: an AI job that finishes before the rule's next AI action has counted
-          # its own can't finish the run. Released once every action has run.
-          pending_jobs_count: 1,
+          pending_jobs_count: 0,
           executed_at: executed_at
         )
-        held = true
 
         # Every action works on the transactions matched now, not on a scope
         # that re-checks the conditions: otherwise an action that changes a
@@ -143,13 +139,10 @@ class Rule::Runner
           skip_action_types: skip_action_types
         )
 
-        rule_run.update!(**run_counts(result, queued: matched_ids.size, rule: rule))   # zero jobs if synchronous
-        rule_run.complete_job! if async?(result)   # the hold: the run finishes now if its AI jobs already have
-        held = false
+        rule_run.update!(**run_counts(result, queued: matched_ids.size, rule: rule))
         @changed_now_count += changed_now(result)
       rescue => e
         rule_run = record_failure(rule, rule_run, e, executed_at: executed_at, queued: matched_ids.size)
-        release_hold(rule_run) if held
       ensure
         # Claims hold even when the rule failed halfway, so a rule further down
         # never overwrites what this rule may already have set.
@@ -161,24 +154,17 @@ class Rule::Runner
 
     def async?(result) = result.is_a?(Hash) && result[:async]
 
-    # A failed rule still lets go of its run; a failure here is logged, so it doesn't replace the
-    # rule's own error.
-    def release_hold(rule_run)
-      rule_run&.complete_job!
-    rescue => e
-      Rails.logger.error("Rule::Runner: couldn't release the hold on RuleRun #{rule_run.id}: #{e.class}: #{e.message}")
-    end
-
     def run_counts(result, queued:, rule:)
       if async?(result)
-        # The run stays pending until the runner's hold and every AI job are released: each AI
-        # action counted its job (RuleRun#await_ai!), and the jobs report back via RuleRun#complete_job!.
+        # The run stays as created, pending, unless its jobs have already finished it: each AI action
+        # counted its job (RuleRun#await_ai!) before any was queued (Rule#apply), and the jobs report
+        # back via RuleRun#complete_job!.
         { transactions_processed: result[:modified_count] || 0 }
       elsif result.is_a?(Integer)
-        { status: "success", transactions_processed: queued, transactions_modified: result, pending_jobs_count: 0 }
+        { status: "success", transactions_processed: queued, transactions_modified: result }
       else
         Rails.logger.warn("Rule::Runner: Unexpected result type from rule.apply: #{result.class} for rule #{rule.id}")
-        { status: "success", pending_jobs_count: 0 }
+        { status: "success" }
       end
     end
 

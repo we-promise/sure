@@ -212,7 +212,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
 
     run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.last.reload
 
-    assert_equal [ "pending", 1 ], seen.first, "the runner's hold kept the run open"
+    assert_equal [ "pending", 1 ], seen.first, "the second action counted its job before the first was queued"
     assert_equal [ "pending", 1 ], run.values_at(:status, :pending_jobs_count), "the second job is still out"
     assert_not run.finished?
 
@@ -229,6 +229,31 @@ class Rule::RunnerTest < ActiveSupport::TestCase
 
     assert_equal [ "failed", 1, 1 ], run.values_at(:status, :pending_jobs_count, :transactions_awaiting_ai)
     assert_not run.finished?, "the first action's job is still queued"
+  end
+
+  test "an action that raises after an AI action still queues the AI job the rule counted" do
+    use_ai_routes
+    rule = ai_rule("AI", "Whole Foods", "auto_categorize")
+    rule.actions.create!(action_type: "set_transaction_category", value: @groceries.id)
+    Rule::ActionExecutor::SetTransactionCategory.any_instance.stubs(:execute).raises(StandardError, "boom")
+
+    run = nil
+    assert_enqueued_jobs 1, only: Ai::GenerationJob do
+      run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.last.reload
+    end
+
+    assert_equal [ "failed", 1, 1 ], run.values_at(:status, :pending_jobs_count, :transactions_awaiting_ai)
+  end
+
+  test "when the first counted AI job can't be queued, the ones after it give their counts back too" do
+    use_ai_routes
+    rule = ai_rule("AI", "Whole Foods", "auto_categorize", "auto_detect_merchants")
+    Ai::GenerationJob.stubs(:perform_later).returns(false)
+
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.last.reload
+
+    assert_equal [ "failed", 0, 0 ], run.values_at(:status, :pending_jobs_count, :transactions_awaiting_ai)
+    assert run.finished?
   end
 
   test "a rule above that cannot be matched does not stop the applied rule" do
@@ -273,7 +298,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     runs = runner.run
 
     assert_equal "failed", runs.first.status
-    assert runs.first.reload.finished?, "the failed rule let go of the runner's hold"
+    assert runs.first.reload.finished?
     assert_equal top, runs.first.rule
     assert_equal "Renamed", @other.reload.entry.name
     assert_equal [ "boom" ], runner.errors.map(&:message)
