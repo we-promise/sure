@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_22_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1204,12 +1204,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.uuid "account_provider_id"
     t.decimal "amount", precision: 19, scale: 4, null: false
     t.decimal "cost_basis", precision: 19, scale: 4
+    t.boolean "cost_basis_inherited", default: false, null: false
     t.boolean "cost_basis_locked", default: false, null: false
     t.string "cost_basis_source"
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.date "date", null: false
     t.string "external_id"
+    t.boolean "materialized", default: false, null: false
     t.decimal "price", precision: 19, scale: 4, null: false
     t.uuid "provider_security_id"
     t.decimal "qty", precision: 34, scale: 18, null: false
@@ -3067,9 +3069,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
   end
 
   create_table "valuations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "cash_entry_total", precision: 19, scale: 4
     t.datetime "created_at", null: false
     t.string "kind", default: "reconciliation", null: false
     t.jsonb "locked_attributes", default: {}
+    t.datetime "superseded_at"
     t.datetime "updated_at", null: false
   end
 

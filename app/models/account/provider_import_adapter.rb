@@ -566,7 +566,8 @@ class Account::ProviderImportAdapter
         price: price,
         amount: amount,
         account_provider_id: account_provider_id,
-        external_id: external_id
+        external_id: external_id,
+        materialized: false
       }
 
       # Only update security if not locked by user
@@ -621,7 +622,8 @@ class Account::ProviderImportAdapter
             updates = {
               qty: quantity,
               price: price,
-              amount: amount
+              amount: amount,
+              materialized: false
             }
 
             # Reconcile cost_basis to respect priority hierarchy
