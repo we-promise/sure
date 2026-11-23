@@ -956,7 +956,6 @@ class Entry < ApplicationRecord
           # Update standard attributes
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
-            attrs.delete(:date) if entry.split_child?
             attrs.delete(:entryable_attributes) unless entry.transaction?
             # reconciled_status is a manual-accounts-only concept — synced accounts
             # already have duplicate-matching + statement-level reconciliation.
@@ -983,6 +982,26 @@ class Entry < ApplicationRecord
               end
             end
 
+            note_date_move = lambda do |moved|
+              window_start = moved.saved_change_to_date.compact.min
+              sync_windows[moved.account] = [ sync_windows[moved.account], window_start ].compact.min
+              rescheduled_ids << moved.id
+            end
+
+            # Split parts must keep their parent's date, so a new date moves the
+            # parent and every part with it, parent first.
+            if entry.split_child? && attrs[:date].present?
+              parent = entry.parent_entry
+              [ parent, *parent.child_entries.where.not(id: entry.id) ].each do |part|
+                part.update!(date: attrs[:date])
+                next unless part.saved_change_to_date?
+
+                part.lock_saved_attributes!
+                part.mark_user_modified!
+                note_date_move.call(part)
+              end
+            end
+
             if attrs.present?
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
               attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
@@ -991,11 +1010,7 @@ class Entry < ApplicationRecord
               changed = true
               lockable_change = attrs.except(:reconciled_status).present?
 
-              if entry.saved_change_to_date?
-                window_start = entry.saved_change_to_date.compact.min
-                sync_windows[entry.account] = [ sync_windows[entry.account], window_start ].compact.min
-                rescheduled_ids << entry.id
-              end
+              note_date_move.call(entry) if entry.saved_change_to_date?
             end
           end
 
