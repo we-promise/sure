@@ -65,8 +65,15 @@ class Family::BayesCategorizer
   def classify(transaction)
     category_id, confidence = probabilities(transaction).max_by { |_, probability| probability }
     return nil if category_id.nil? || confidence < settings.threshold
+    return nil unless pickable?(category_id)
 
     [ category_id, confidence ]
+  end
+
+  # Whether the category has enough training transactions to be picked
+  # (settings.min_category_examples); the evaluation applies the same rule.
+  def pickable?(category_id)
+    class_models.dig(category_id, :docs).to_i >= settings.min_category_examples
   end
 
   # { category_id => softmax score } over every trained category; empty when

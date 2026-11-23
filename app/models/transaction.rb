@@ -105,6 +105,26 @@ class Transaction < ApplicationRecord
     extra&.dig("exchange_rate")
   end
 
+  # The stored exchange rate as a number, read the way Money#exchange_to reads
+  # it (to_d), or nil when the app would not use it: none is stored, it is not
+  # a positive number that survives the conversion to Float, or the row is
+  # already in the account's currency. The API and the data export read this,
+  # so a malformed value written straight into extra, or an extra that is not
+  # a hash, cannot break them.
+  def numeric_exchange_rate
+    return nil unless extra.is_a?(Hash)
+
+    value = extra["exchange_rate"]
+    return nil unless value.is_a?(Numeric) || value.is_a?(String)
+
+    entry_currency = entry&.currency.to_s.upcase
+    account_currency = entry&.account&.currency.to_s.upcase
+    return nil if entry_currency.blank? || account_currency.blank? || entry_currency == account_currency
+
+    rate = value.to_d.to_f
+    rate if rate.finite? && rate.positive?
+  end
+
   def exchange_rate=(value)
     if value.blank?
       self.extra = (extra || {}).merge("exchange_rate" => nil, "exchange_rate_invalid" => false)
@@ -564,7 +584,31 @@ class Transaction < ApplicationRecord
   end
 
   def activity_security_id
-    extra&.dig("security_id").presence || extra&.dig("security", "id").presence
+    return nil unless extra.is_a?(Hash)
+
+    nested_security = extra["security"]
+    extra["security_id"].presence || (nested_security["id"].presence if nested_security.is_a?(Hash))
+  end
+
+  UUID_FORMAT = /\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/
+
+  # activity_security_id as the API and the data export emit it: a uuid
+  # string, or nil when extra holds anything else under the key.
+  def serializable_security_id
+    id = activity_security_id
+    id if id.is_a?(String) && id.match?(UUID_FORMAT)
+  end
+
+  # The provider's own type for this row, such as IBKR's "Withholding Tax",
+  # read from extra[<entry source>]["type"] where importers keep it. Only this
+  # string is exposed; the rest of the provider payload stays internal.
+  def provider_type
+    source = entry&.source
+    return nil if source.blank? || !extra.is_a?(Hash)
+
+    payload = extra[source]
+    type = payload["type"] if payload.is_a?(Hash)
+    type.presence if type.is_a?(String)
   end
 
   def activity_security

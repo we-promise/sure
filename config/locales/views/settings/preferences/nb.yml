@@ -18,3 +18,14 @@ nb:
         theme_system: System
         theme_title: Tema
         timezone: Tidssone
+        show_balance_updates: "Synkroniserte saldooppdateringer"
+        show_balance_updates_hint: "Vis alltid de daglige saldoene som banksynkroniseringen registrerer, i aktiviteten for tilkoblede kontoer"
+        transactions_title: "Transaksjoner"
+        transactions_subtitle: "Angi hvordan transaksjoner skal fungere"
+        manual_reconciliation: "Manuell avstemming"
+        manual_reconciliation_hint: "Vis avstemmingskontroller på manuelt registrerte kontoer. Kontoer med banksynkronisering bruker avstemming mot kontoutskrift i stedet."
+        default_account_order_hint: "Med Manuell drar du kontoene i sidepanelet for å bestemme rekkefølgen."
+        rule_suggestions: "Forslag til regler"
+        rule_suggestions_hint: "Foreslå å opprette en regel når du endrer kategorien på en transaksjon"
+        investment_contributions_as_spending: "Tell investeringer som forbruk"
+        investment_contributions_as_spending_hint: "Penger som flyttes til investeringskontoer, telles som forbruk i budsjetter, rapporter og kontantstrømdiagrammet. Slå av for å vise dem som investert i stedet."

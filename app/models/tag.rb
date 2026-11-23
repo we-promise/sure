@@ -81,6 +81,8 @@ class Tag < ApplicationRecord
         # A loaded taggings association still lists the moved rows, and
         # destroy! would delete them by id.
         taggings.reset
+        # Properties counting this tag's transactions as costs follow them.
+        Property.where(cost_tag_id: id).update_all cost_tag_id: replacement.id
       end
 
       destroy!

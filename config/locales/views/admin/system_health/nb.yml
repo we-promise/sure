@@ -1,0 +1,435 @@
+---
+nb:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: Send test-push-varsel
+        queueing: Legger i kø…
+        title: Push-varsler
+        requested_at: Siste test forespurt %{time}
+        result_help: At APNs godtar varselet, bekrefter ikke at det er levert til enheten din. Oppdater for å se resultatene fra workeren. Resultatene lagres i 24 timer.
+        device: Enhet %{number}
+        pending: Venter
+        refresh: Oppdater resultater
+        columns:
+          device: Enhet
+          environment: APNs-miljø
+          status: Resultat
+          checked_at: Sist oppdatert
+        environments:
+          sandbox: Sandbox
+          production: Produksjon
+        messages:
+          enqueue_failed: Testen kunne ikke legges i kø. Sjekk Sidekiq og oppdater resultatene nedenfor.
+          ready: Send et testvarsel til de aktiverte iOS-enhetene som er registrert på kontoen din.
+          queued: Testvarselet er lagt i kø. Oppdater resultatene nedenfor for å se statusen.
+          hosted_only: Push-varsler er bare tilgjengelige i hostet modus.
+          ineligible: Bare en aktiv superadministrator kan sende et testvarsel.
+          no_devices: Slå på push-varsler i Sure-appen for iOS for denne kontoen for å sende en test.
+          disabled: Levering av push-varsler er deaktivert av operatøren.
+          not_configured: APNs-legitimasjon er ikke konfigurert.
+          cooldown: Vent 30 sekunder før du sender en ny test.
+          storage_unavailable: Testforespørselen kunne ikke lagres. Sjekk konfigurasjonen av den delte hurtigbufferen.
+        statuses:
+          queued: I kø
+          accepted: Godtatt av APNs
+          skipped: 'Hoppet over: ikke lenger kvalifisert'
+          rejected: Avvist av APNs; sjekk feilsøkingsloggene for push
+          unregistered: Enhetsregistreringen er ikke lenger gyldig
+          retrying: Prøver på nytt etter en midlertidig feil
+          failed: Mislyktes; sjekk feilsøkingsloggene for push
+          enqueue_failed: Kunne ikke legges i kø; sjekk Sidekiq
+          expired: Utløpt uten endelig resultat
+        results_label: "Testresultater"
+      push_notification:
+        title: Testvarsel fra Sure
+        body: Dette er et test-push-varsel for Sure-kontoen din.
+      verify_worker_ai:
+        queued: Worker-sjekken er lagt i kø. Den vises nedenfor når en worker-prosess plukker den opp, vanligvis innen noen få sekunder.
+      show:
+        title: Systemstatus
+        tabs:
+          background_jobs: "Jobber"
+          ai: "AI"
+          hosted_usage: "Bruk"
+          configuration: "Konfigurasjon"
+        alert:
+          title: Bakgrunnsjobbene kjører ikke
+        status_section_title: Sidekiq-status
+        status_section_description: Nåværende tilstand for bakgrunnsworkeren som står for synkroniseringer, saldoer og beregning av nettoformue.
+        counters_section_title: Jobbtellere
+        counters_section_description: Samlede Sidekiq-tellere på tvers av alle køer.
+        queues_section_title: Køer
+        queues_section_description: Dybde og alder på eldste jobb per kø. Ventetid er antall sekunder den eldste jobben har ventet.
+        labels:
+          status: Status
+          processes: Worker-prosesser
+          last_heartbeat: Siste livstegn
+          max_queue_latency: Alder på eldste jobb
+          enqueued: I kø
+          retries: Nye forsøk
+          failed: Mislyktes
+          processed_total: Behandlet totalt
+          queue: Kø
+          size: Størrelse
+          latency: Ventetid
+        values:
+          healthy: I orden
+          unhealthy: Redusert
+          time_ago: for %{time_ago} siden
+          never: Aldri
+          seconds: '%{seconds} s'
+          no_queues: Ingen køer er registrert. Workeren kjører kanskje ikke.
+        ai:
+          run_checks: Kjør sjekkene på nytt
+          last_checked: Sanntidssjekkene ble fullført for %{time_ago} siden. Resultatene mellomlagres en kort stund.
+          not_checked_help: Åpne URL-en for AI-status direkte, eller kjør sjekkene for å bekrefte at tjenestene svarer.
+          alerts:
+            custom_openai:
+              title: Sjekken av hostet vektorlager mislyktes for dette egendefinerte endepunktet
+              message: Det konfigurerte endepunktet besto ikke /v1/vector_stores-sanntidssjekken. De fleste lokale og OpenAI-kompatible endepunkter implementerer ikke det API-et. Chat og PDF-behandling kan fortsatt fungere; bruk pgvector med et eget embedding-endepunkt for et vanlig lokalt oppsett. Feilen ble registrert i Innstillinger → Feilsøking og Rails.logger.
+            function_calling_unsupported:
+              title: Modellen støtter ikke funksjonskall
+              message: Endepunktet besvarte en vanlig chatforespørsel, men avviste den samme forespørselen med tools-parameteren. AI-assistenten leser kontoer, transaksjoner og beholdninger gjennom funksjonskall, så chatten vil fortsette å feile – ofte med en lite hjelpsom 404 – helt til du bruker en modell som støtter verktøy. Velg en modell der leverandøren dokumenterer støtte for funksjonskall. Feilen ble registrert i Innstillinger → Feilsøking og Rails.logger.
+            function_calling_not_used:
+              title: Modellen svarte uten å kalle verktøyet den ble bedt om å kalle
+              message: Endepunktet godtok tools-parameteren, men modellen svarte med tekst i stedet for å kalle helsesjekkverktøyet. AI-assistenten kan ikke lese økonomiske data uten verktøykall, så chatten kan svare med ingenting eller med oppdiktede tall. Velg helst en modell der leverandøren dokumenterer støtte for funksjonskall.
+            llm_probe_failed:
+              title: Sanntidssjekken av LLM mislyktes
+              message: Sure kunne ikke bekrefte både det konfigurerte endepunktet og modellen. Feilen ble registrert i Innstillinger → Feilsøking og Rails.logger.
+            llm_model_not_available:
+              title: Den konfigurerte AI-modellen er ikke tilgjengelig
+              message: "Endepunktet svarte, men listet ikke opp eller leverte den konfigurerte modellen. Velg en aktiv modell for den valgte leverandøren, og kjør sjekkene på nytt. For Gemini via et OpenAI-kompatibelt oversettelseslag bruker du en modell som støttes i dag, for eksempel gemini-3.8-flash."
+            pdf_text_extraction_failed:
+              title: Sjekken av tekstuttrekk fra syntetisk PDF mislyktes
+              message: Sure kunne ikke fullføre tekstbanen, som trekker ut innebygd PDF-tekst lokalt og sender den til den konfigurerte modellen. Ingen kundedata ble sendt. Feilen ble registrert i Innstillinger → Feilsøking og Rails.logger.
+            pdf_vision_processing_failed:
+              title: Sjekken av syntetisk PDF med bilde-/native behandling mislyktes
+              message: Sure kunne ikke fullføre PDF-banen for bilde eller native dokument gjennom den konfigurerte modellen. Ingen kundedata ble sendt. Feilen ble registrert i Innstillinger → Feilsøking og Rails.logger.
+            vector_probe_failed:
+              title: Sanntidssjekken av dokumentsøk mislyktes
+              message: Sure kunne ikke bekrefte det valgte vektorlageret og alle nødvendige embedding-tjenester. Feilen ble registrert i Innstillinger → Feilsøking og Rails.logger.
+            pgvector_extension_not_enabled:
+              title: Vektorutvidelsen i PostgreSQL er ikke aktivert
+              message: pgvector-adapteren er valgt, men PostgreSQL har ikke aktivert vector-utvidelsen for denne databasen. Bruk et PostgreSQL-image som inkluderer pgvector, aktiver deretter utvidelsen som databaseeier eller superbruker, og kjør migreringene på nytt med VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: Tabellen vector_store_chunks mangler
+              message: pgvector-utvidelsen er aktivert, men chunks-tabellen ble ikke funnet. Sjekk migreringsstatusen, og kjør deretter vektorlager-migreringen på nytt med VECTOR_STORE_PROVIDER=pgvector slik at Sure kan opprette vector_store_chunks.
+            pgvector_probe_failed:
+              title: Lagringssjekken for pgvector mislyktes
+              message: Sure kunne ikke gjøre spørringer mot chunks-tabellen i pgvector. Sjekk tillatelsene i PostgreSQL, vector-utvidelsen og migreringen for vector_store_chunks. Feilen ble registrert i Innstillinger → Feilsøking og Rails.logger.
+            embedding_dimensions_mismatch:
+              title: Embedding-dimensjonene samsvarer ikke
+              message: Embedding-endepunktet returnerte en vektor med en lengde som ikke samsvarer med EMBEDDING_DIMENSIONS. Sett EMBEDDING_MODEL og EMBEDDING_DIMENSIONS til modellens dokumenterte vektorstørrelse, start Sure på nytt slik at miljøet blir gjeldende, og endre eller gjenopprett deretter embedding-kolonnen/-tabellen i pgvector og lag nye embeddinger av dokumentene hvis eksisterende data brukte en annen størrelse.
+            embedding_probe_timeout:
+              title: Sanntidssjekken av embedding fikk tidsavbrudd
+              message: Embedding-endepunktet svarte ikke innen AI_HEALTH_PROBE_TIMEOUT. Øk denne tidsgrensen for helsesjekken hvis leverandøren er treg, og start deretter Sure på nytt slik at miljøet blir gjeldende i alle prosesser. Hvis vanlige AI-chatkall også får tidsavbrudd, øker du OPENAI_REQUEST_TIMEOUT separat.
+            embedding_probe_failed:
+              title: Sanntidssjekken av embedding mislyktes
+              message: Sure kunne ikke lage en kort test-embedding gjennom det konfigurerte endepunktet og modellen. Sjekk EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN og loggene til embedding-leverandøren. Feilen ble registrert i Innstillinger → Feilsøking og Rails.logger.
+            qdrant:
+              title: Støtte for Qdrant er ikke implementert ennå
+              message: Qdrant-adapteren finnes bare som et skjelett, og opplasting og søk i dokumenter mislykkes foreløpig. Velg OpenAI eller pgvector for dokumentsøk.
+            missing_vector_store:
+              title: Ingen vektorlager er konfigurert
+              message: Opplastede dokumenter kan ikke indekseres eller søkes i før en vektorlager-adapter og kravene til den er konfigurert.
+            unavailable_vector_store:
+              title: Det valgte vektorlageret er ikke tilgjengelig
+              message: Sjekk kravene til adapteren nedenfor. For pgvector må databasen ha vector-utvidelsen eller en eksisterende vector_store_chunks-tabell.
+          llm:
+            title: LLM og PDF-behandling
+            description: Sanntidssjekkene bekrefter den konfigurerte modellen, ber den om ett enkelt funksjonskall slik assistenten gjør, og tester deretter tekstuttrekk og bilde-/native behandling hver for seg med en syntetisk PDF på én side uten kundedata. Verdier for legitimasjon vises aldri.
+          vector_store:
+            title: Vektorlager og dokumentsøk
+            description: Sanntidssjekken gjør en spørring mot API-et for hostet vektorlager, eller tester pgvector-tabellen og lager én kort embedding uten å lagre den.
+          labels:
+            selected_provider: Valgt leverandør
+            effective_provider: Faktisk leverandør
+            model: Modell
+            endpoint: Endepunkt
+            function_calling: Funksjonskall (verktøy)
+            pdf_text_extraction: Bane for PDF-tekstuttrekk
+            pdf_vision_processing: Bane for PDF-bilde/native
+            llm_request_timeout: Tidsavbrudd for LLM-forespørsler
+            probe_request_timeout: Tidsavbrudd for helsesjekk
+            openai_credentials: OpenAI-legitimasjon
+            openai_compatible_credentials: Legitimasjon for OpenAI-kompatibelt API
+            anthropic_credentials: Anthropic-legitimasjon
+            adapter: Adapter
+            adapter_available: Adapter tilgjengelig
+            pgvector_extension: Vektorutvidelse i PostgreSQL
+            pgvector_table: Tabell for vektor-chunks
+            embedding_model: Embedding-modell
+            embedding_endpoint: Embedding-endepunkt
+            embedding_dimensions: Embedding-dimensjoner
+            function_calling_failure_reason: Årsak til feil i funksjonskall
+            pdf_text_extraction_failure_reason: Årsak til feil i tekstuttrekk
+            pdf_vision_processing_failure_reason: Årsak til feil i bilde/native
+            storage_probe: Lagringssjekk for pgvector
+            embedding_probe: Sjekk av embedding-endepunkt
+            failure_reason: Årsak til feil
+          providers:
+            openai: OpenAI
+            openai_compatible: OpenAI-kompatibel
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Egendefinert endepunkt
+          adapters:
+            openai: Hostet vektorlager fra OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Konfigurert
+            not_configured: Ikke konfigurert
+            fallback: (reserve)
+            not_set: Ikke angitt
+            "yes": Ja
+            "no": Nei
+            enabled: Aktivert
+            available_not_enabled: Tilgjengelig, ikke aktivert
+            not_available: Ikke tilgjengelig
+            available: Tilgjengelig
+            not_found: Ikke funnet
+          function_calling_statuses:
+            supported: Verktøykall i sanntid lyktes
+            unsupported: Støttes ikke av faktisk leverandør/modell
+            not_used: Verktøy godtatt, men modellen kalte ingen
+            failing: Sanntidssjekken mislyktes
+            not_checked: Ikke sjekket
+            unavailable: Utilgjengelig til en LLM-leverandør er konfigurert
+          pdf_statuses:
+            supported: Sjekk med syntetisk PDF bestått
+            failing: Sjekk med syntetisk PDF mislyktes
+            unsupported: Deaktivert eller støttes ikke av faktisk leverandør/modell
+            not_checked: Ikke sjekket
+            unavailable: Utilgjengelig til en LLM-leverandør er konfigurert
+          probe_statuses:
+            passing: Sanntidssjekken bestått
+            failing: Sanntidssjekken mislyktes
+            not_checked: Ikke sjekket
+            not_configured: Ikke konfigurert
+          vector_statuses:
+            passing: Sanntidssjekkene bestått
+            failing: Sanntidssjekken mislyktes
+            not_checked: Ikke sjekket
+            not_configured: Ikke konfigurert
+            scaffolded: Kun skjelett
+            missing: Ikke konfigurert
+          failure_codes:
+            model_not_available: Leverandøren returnerte ikke den konfigurerte modellen
+            no_tool_call: Modellen svarte uten å kalle helsesjekkverktøyet
+            tools_refused: Tjenesten besvarte den samme forespørselen uten verktøy, men avviste den med verktøy
+            invalid_response: Tjenesten returnerte et uventet svar
+            dimensions_mismatch: Dimensjonene til embedding-vektoren samsvarer ikke med de konfigurerte dimensjonene
+            extension_not_enabled: Vektorutvidelsen i PostgreSQL er ikke aktivert
+            table_not_found: Tabellen vector_store_chunks ble ikke funnet
+            render_missing_binary: pdftoppm-rendereren (poppler-utils) er ikke tilgjengelig i denne containeren
+            timeout: Tjenesten svarte ikke innen tidsavbruddet for sjekken
+            request_failed: Forespørselen til tjenesten mislyktes
+            unsupported_provider: Leverandøren støtter ikke denne sjekken
+            no_credit: "Tjenesten avviste forespørselen fordi saldoen på nøkkelen er brukt opp"
+            unauthorized: "Tjenesten avviste API-nøkkelen"
+            unreachable: "Tjenesten kunne ikke nås"
+          worker:
+            title: Verifisering av worker
+            description: Sjekkene ovenfor ble kjørt fra denne webprosessen. Det meste av AI-arbeidet -- assistentsvar, PDF-behandling, embeddinger, automatisk kategorisering og gjenkjenning av forhandlere -- kjører faktisk i en Sidekiq-worker-prosess, som kan ha annen nettverkstilgang, DNS, andre proxy-regler eller til og med annen innlastet legitimasjon. Legg en sjekk i kø for å verifisere workerens egen konfigurasjon og tilkobling.
+            verify_button: Verifiser worker-konfigurasjon
+            coverage_notice: Hver sjekk verifiserer nøyaktig én worker-prosess -- den som henter den fra køen. Med mer enn én worker-replika bekrefter ikke et bestått resultat at alle workere er friske; legg sjekken i kø på nytt for å teste en annen.
+            empty:
+              title: Ingen worker har rapportert inn ennå
+              description: Klikk «Verifiser worker-konfigurasjon» for å legge en asynkron sjekk i kø. Resultatet vises her når en worker-prosess plukker den opp.
+            labels:
+              process: Worker-prosess
+              checked_at: Sjekket
+              configuration: Konfigurasjon
+            configuration_statuses:
+              match: Samsvarer med web
+              mismatch: Avviker fra web
+            statuses:
+              passing: Bestått
+              failing: Feiler
+              stale: Utdatert
+            settings_origin:
+              title: Hvilke innstillinger krever omstart?
+              database_backed: Innstillinger for leverandør, modell og API-nøkkel som endres under Innstillinger → Selvhosting, lagres i databasen. rails-settings-cached ugyldiggjør den delte hurtigbufferen ved skriving, så både web og worker henter den nye verdien ved neste forespørsel eller jobb i kø -- ingen omstart nødvendig.
+              env_backed: Embedding-konfigurasjonen, og alle verdier som bare er satt via en miljøvariabel, låses når hver container starter. Rails kan ikke endre miljøet til en annen container, så endringer her krever at både web- og worker-tjenestene startes eller opprettes på nytt -- og deploy-verktøy som bare starter én av dem på nytt (delvis utrulling, en oppdatert Secret uten omstart av pod) vil ikke fange opp endringen.
+          local_setup:
+            title: Anbefalt lokalt oppsett
+            description: Kjør LLM-en gjennom ditt lokale OpenAI-kompatible endepunkt, lagre dokumentvektorer i pgvector, og pek embedding-innstillingene mot et OpenAI-kompatibelt embedding-endepunkt. PostgreSQL-imaget må inkludere vector-utvidelsen, og embedding-dimensjonene må samsvare med den valgte modellen.
+          loading: "Kjører sanntidssjekker…"
+      hosted_usage:
+        loading: "Laster inn bruk av hostet tjeneste…"
+        title: "Bruk av hostet tjeneste"
+        snapshot: "Skrivebeskyttet øyeblikksbilde av databasen per %{time}"
+        summary:
+          trial_households_count: "Husholdninger i prøveperiode (siste 30 dager)"
+          trial_members_count: "Nåværende medlemskontoer i prøveperiode"
+          trials_expiring_soon_count: "Prøveperioder som utløper innen 7 dager"
+          cleanup_eligible_count: "Husholdninger som kvalifiserer for opprydding"
+          active_supporter_households_count: "Aktive supporterhusholdninger (lokalt)"
+          supporter_subscription_count: "Abonnementsrader koblet til Stripe"
+        summary_help: "Prøvetallene omfatter abonnementer registrert de siste 30 dagene. Tallene for utløpende prøveperioder, opprydding og supportere omfatter alle gjeldende rader som samsvarer, uten tabellgrensene."
+        limitations_title: "Hva disse tallene kan fortelle oss"
+        limitations: "De nåværende tabellene beholder ikke full historikk over prøveperioder, betalinger eller øktaktivitet. Opprettelse av abonnementer kan skyldes importer. Medlemskontoer er ikke bekreftet som unike personer. Denne visningen endrer ingen husholdnings- eller abonnementsdata. Når den delte demoen tilbakestilles, fjernes gamle husholdninger og økter, så besøkshistorikken kan ikke gjenskapes."
+        trials:
+          title: "Nylige husholdninger i prøveperiode"
+          description: "Abonnementer registrert siden %{date} som fortsatt har en sluttdato for prøveperioden, inkludert konverterte prøveperioder. Viser opptil %{limit} husholdninger."
+          sessions_help: "Økter er lagrede påloggingsposter for aktiverte brukere, ikke brukere som er pålogget nå eller besøk. Utlogging sletter en post. Siste opprettelsestidspunkt er ikke det samme som sist sett."
+          empty: "Ingen husholdninger i prøveperiode er registrert i dette tidsrommet"
+        cleanup:
+          title: "Kvalifisering for opprydding"
+          description: "Samsvarer med det eksisterende omfanget for opprydding: et abonnement på pause eller i prøveperiode som ble avsluttet for mer enn 14 dager siden, eller ingen abonnement og en husholdning som er eldre enn 45 + 14 dager. Viser opptil %{limit} husholdninger."
+          eligibility_help: "Nylige pålogginger hindrer ikke treff. At en husholdning kvalifiserer, betyr ikke at den blir slettet; 90 dager er oppbevaringstiden for arkivet, ikke terskelen for opprydding av prøveperioder."
+          disabled: "Planlagt opprydding av prøveperioder er deaktivert utenfor administrert modus. Dette er bare treff på omfanget."
+          empty: "Ingen husholdninger samsvarer med omfanget for opprydding"
+          reasons:
+            expired_trial_grace_elapsed: "Prøveperioden er avsluttet; 14 dagers karenstid er over"
+            no_subscription_grace_elapsed: "Ingen abonnement; 45 + 14 dager er gått"
+        supporters:
+          title: "Lokal supporterstatus"
+          description: "Gjeldende lokale abonnementsrader med kunde- og abonnements-ID-er i Stripe-format; det syntetiske demoabonnementet er utelatt. Statusene bekrefter ikke mottatte betalinger eller datoer for første betaling. Det sendes ingen forespørsel til Stripe."
+          empty: "Ingen abonnementsrader koblet til Stripe"
+        columns:
+          household: "Husholdnings-ID"
+          recorded_at: "Abonnement registrert"
+          trial_ends_at: "Prøveperioden slutter"
+          status: "Nåværende status"
+          members: "Medlemskontoer"
+          retained_sessions: "Lagrede påloggingsøkter"
+          recent_sessions: "Lagrede økter opprettet siste 30 dager"
+          latest_session: "Siste lagrede pålogging"
+          cleanup_eligible: "Kvalifiserer for opprydding"
+          cleanup_reason: "Årsak"
+          subscription_rows: "Abonnementsrader"
+        statuses:
+          unknown: "Ukjent"
+          incomplete: "Ufullstendig"
+          incomplete_expired: "Ufullstendig, utløpt"
+          trialing: "I prøveperiode"
+          active: "Aktiv"
+          past_due: "Forfalt"
+          canceled: "Kansellert"
+          unpaid: "Ubetalt"
+          paused: "På pause"
+          no_subscription: "Ingen abonnement"
+        not_recorded: "Ikke registrert"
+        eligible: "Kvalifiserer"
+        not_eligible: "Kvalifiserer ikke"
+        synthetic_demo: "Syntetisk demo"
+      optional_services:
+        title: "Valgfrie tjenester"
+        description: "Valgfrie integrasjoner for operatøren. Tjenester som ikke er konfigurert, vises bare til informasjon. Disse sjekkene ser bare på innstillingene; de tester ikke tilkoblingen, sender ikke testhendelser og endrer ikke samtykke til analyse. Utvid en tjeneste for å se detaljer om oppsettet."
+        missing_settings: "Manglende innstillinger: %{settings}"
+        statuses:
+          configured: "Konfigurert"
+          not_configured: "Ikke konfigurert"
+          incomplete: "Ufullstendig konfigurasjon"
+          disabled: "Deaktivert i denne prosessen"
+          not_checked: "Ikke bekreftet"
+        notes:
+          environment_disabled: "Den innlastede integrasjonen er deaktivert for dette Rails-miljøet."
+          explicitly_disabled: "SKYLIGHT_ENABLED deaktiverer instrumenteringen eksplisitt."
+          self_hosted_checkout_disabled: "Betaling av abonnement og faktureringsportalen er deaktivert i selvhostet modus. Stripe-webhooks kan fortsatt konfigureres; pris-ID-er for betaling trengs ikke her."
+          browser_analytics_disabled: "Nettleseranalyse er deaktivert for dette miljøet. Dette deaktiverer ikke serverklienten, som konfigureres separat."
+          shared_feedback_configured: "Tilbakemeldinger i selvhostet modus har et eget, medfølgende prosjekt og aktiveres av sin egen konfigurasjon. Det krever ikke en POSTHOG_KEY fra operatøren. Reservasjon i nettleseren og tilgjengeligheten til SDK-et sjekkes ikke."
+          shared_feedback_disabled: "Det separate prosjektet for tilbakemeldinger i selvhostet modus er deaktivert av innstillingen for tilbakemeldinger eller av miljøinnstillingen. Dette deaktiverer ikke analyse som eies av operatøren."
+          production_only: "Med applikasjonens nåværende konfigurasjon brukes denne integrasjonen bare i produksjon."
+        services:
+          langfuse:
+            title: "Langfuse"
+            description: "Valgfri AI-sporing og evalueringsrapportering. Denne sjekken sender ingen sporinger eller evalueringsforespørsler."
+            guidance: "Sett LANGFUSE_PUBLIC_KEY og LANGFUSE_SECRET_KEY sammen. LANGFUSE_HOST er valgfri. Start de berørte tjenestene på nytt etter at du har endret disse innstillingene."
+          sentry:
+            title: "Sentry"
+            description: "Valgfri rapportering av feil og ytelse. Den nåværende initialiseringen aktiverer rapportering bare i produksjon."
+            guidance: "Sett SENTRY_DSN og start de berørte tjenestene på nytt. Dette sjekker den innlastede SDK-konfigurasjonen uten å fange opp en feil eller sende en hendelse."
+          skylight:
+            title: "Skylight"
+            description: "Valgfri ytelsesinstrumentering av applikasjonen. At konfigurasjonen finnes, bekrefter ikke at agenten kjører eller rapporterer."
+            guidance: "Sett SKYLIGHT_AUTHENTICATION og sørg for at Skylight lastes inn i riktig Rails-miljø. SKYLIGHT_ENABLED=false deaktiverer instrumenteringen; flagget alene laster ikke inn gemmen. Start på nytt etter endringer."
+          stripe:
+            title: "Stripe"
+            description: "Valgfri abonnementsfakturering og betalings-webhooks. Denne sjekken oppretter ingen Stripe-klient, validerer ikke legitimasjon og gjør ingen betalingsforespørsler."
+            guidance: "Sett STRIPE_SECRET_KEY og STRIPE_WEBHOOK_SECRET sammen. Betaling av abonnement i administrert modus krever også STRIPE_MONTHLY_PRICE_ID og STRIPE_ANNUAL_PRICE_ID."
+          posthog:
+            title: "PostHog"
+            description: "Valgfri analyse som eies av operatøren, med konfigurasjonen som ble lastet inn ved oppstart. Konfigurert betyr ikke at en bruker har samtykket til analyse."
+            guidance: "Sett POSTHOG_KEY og en POSTHOG_HOST som ikke er tom, eller la verten være usatt for å bruke standardverdien. Nettleseranalyse krever produksjon, eller POSTHOG_DEVELOPMENT_ENABLED i utvikling. POSTHOG_FEEDBACK_ENABLED styrer de separate tilbakemeldingene i selvhostet modus, ikke analysen til operatøren."
+          logtail:
+            title: "Logtail"
+            description: "Valgfri videresending av produksjonslogger. Når den ikke er konfigurert, fortsetter applikasjonen å logge til standard utdata."
+            guidance: "Sett LOGTAIL_API_KEY og LOGTAIL_INGESTING_HOST sammen, og start de berørte tjenestene på nytt. Denne sjekken sender ingen testlogg."
+      configuration:
+        description: "Konfigurasjon som er synlig for denne webprosessen. Disse sjekkene sender ikke e-post, kontakter ikke leverandører og laster ikke opp eller ned filer. Konfigurert betyr at innstillingene finnes, ikke at levering, leverandørtilgang eller lagringstilgang er bekreftet."
+        statuses:
+          configured: "Konfigurert"
+          not_configured: "Ikke konfigurert"
+          incomplete: "Ufullstendig konfigurasjon"
+          disabled: "Deaktivert"
+          not_checked: "Ikke bekreftet"
+        settings_needed: "Innstillinger du bør se over"
+        unknown_provider: "Ukjent leverandørvalg"
+        provider_statuses:
+          configured: "Konfigurert"
+          not_configured: "API-nøkkel mangler"
+          invalid: "Ugyldig valg"
+        configure_providers: "Åpne innstillinger for selvhosting"
+        storage_backend: "Valgt lagring: %{backend}"
+        storage_backends:
+          local: "Lokal disk"
+          test: "Testdisk"
+          amazon: "Amazon S3"
+          cloudflare: "Cloudflare R2"
+          generic_s3: "S3-kompatibel lagring"
+          google: "Google Cloud Storage"
+          other: "Egendefinert eller ukjent lagringsløsning"
+        checks:
+          smtp:
+            title: "E-post (SMTP)"
+            statuses:
+              configured: "SMTP-innstillingene finnes."
+              not_configured: "SMTP er ikke konfigurert. Tilbakestilling av passord, invitasjoner og andre e-poster fra systemet kan ikke sendes via SMTP."
+              incomplete: "Noen e-postinnstillinger mangler eller er ufullstendige. E-poster fra systemet, eller lenkene i dem, fungerer kanskje ikke."
+              disabled: "E-postlevering er deaktivert i den kjørende mailer-konfigurasjonen."
+              not_checked: "Denne prosessen bruker en annen leveringsmetode enn SMTP, for eksempel forhåndsvisning i utvikling. SMTP-levering vurderes ikke."
+            guidance: "SMTP kan ikke konfigureres i administratorgrensesnittet. Sett miljøvariablene for e-post for både web- og worker-tjenesten, og start deretter begge på nytt. SMTP_USERNAME og SMTP_PASSWORD kan begge utelates for et relé uten autentisering."
+            issues:
+              address: "SMTP_ADDRESS"
+              port: "SMTP_PORT (et tall fra 1 til 65535)"
+              sender: "EMAIL_SENDER (erstatt standardavsenderen sender@sure.local)"
+              app_domain: "APP_DOMAIN (brukes i lenker i e-poster)"
+              authentication: "SMTP_USERNAME og SMTP_PASSWORD (angi begge eller ingen av dem)"
+          securities:
+            title: "Markedspriser"
+            statuses:
+              configured: "Alle aktiverte leverandører av markedspriser er konfigurert."
+              not_configured: "De aktiverte leverandørene av markedspriser mangler API-nøkler. Automatisk søk etter verdipapirer og prisoppslag er ikke tilgjengelig via disse leverandørene."
+              incomplete: "Minst én aktivert leverandør av markedspriser mangler konfigurasjon eller har et ugyldig valg. Verdipapirer som er tilordnet den leverandøren, får kanskje ikke prisoppdateringer."
+              disabled: "Ingen leverandør av markedspriser er aktivert. Automatisk søk etter verdipapirer og prisoppslag er ikke tilgjengelig."
+            guidance: "Velg leverandører og legg til eventuelle API-nøkler som kreves, i innstillingene for selvhosting, eller konfigurer dem i distribusjonsmiljøet. Overstyringer i miljøet har forrang. Offentlige leverandører trenger ikke API-nøkkel."
+          exchange_rates:
+            title: "Valutakurser"
+            statuses:
+              configured: "Den valgte valutakursleverandøren er konfigurert."
+              not_configured: "Ingen brukbar valutakursleverandør er konfigurert. Automatisk valutaomregning kan være utilgjengelig når en lagret kurs mangler."
+            guidance: "Velg en valutakursleverandør og legg til API-nøkkelen i innstillingene for selvhosting hvis det kreves, eller konfigurer den i distribusjonsmiljøet. EXCHANGE_RATE_PROVIDER og miljøoverstyringer for leverandørenes API-nøkler har forrang."
+            issues:
+              invalid_provider: "Den valgte valutakursleverandøren gjenkjennes ikke. Automatiske kursoppslag mislykkes til en støttet leverandør er valgt."
+          storage:
+            title: "Filopplasting og lagring"
+            statuses:
+              configured: "Lagringsinnstillingene finnes; lokal disk trenger ingen skylegitimasjon."
+              not_configured: "Den valgte lagringsløsningen har ingen tilhørende konfigurasjon. Filopplasting kan være utilgjengelig."
+              incomplete: "Nødvendige lagringsinnstillinger mangler eller er ufullstendige. Opplasting eller henting av filer fungerer kanskje ikke."
+              not_checked: "Denne lagringsløsningen bruker ekstern oppdagelse av legitimasjon eller en egendefinert konfigurasjon. Tilgangen kan ikke fastslås ut fra disse innstillingene alene."
+            guidance: "Se over ACTIVE_STORAGE_SERVICE og distribusjonsinnstillingene for den valgte lagringsløsningen. Lokal disk krever vedvarende lagring som deles av web- og worker-tjenesten. Bytte av lagringsløsning flytter ikke eksisterende filer; planlegg eventuell migrering separat."
+            issues:
+              root: "Rotmappe for lokal lagring"
+              bucket: "Lagringsbøtte"
+              region: "Lagringsregion"
+              credentials: "Tilgangsnøkkel og hemmelig nøkkel for lagring (angi begge, eller bruk ekstern oppdagelse av legitimasjon)"
+              endpoint: "Lagringsendepunkt (og CLOUDFLARE_ACCOUNT_ID for R2)"

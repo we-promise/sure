@@ -210,10 +210,10 @@ export default class extends Controller {
   // runs.
   #amount() {
     if (!this.hasAmountInputTarget) return Number.NaN;
-    const result = evaluateAmountExpression(this.amountInputTarget.value);
+    const precision = precisionFromStep(this.amountInputTarget.step);
+    const result = evaluateAmountExpression(this.amountInputTarget.value, { precision });
     if (result === null) return Number.NaN;
 
-    const precision = precisionFromStep(this.amountInputTarget.step);
     return precision === null ? result : Number(result.toFixed(precision));
   }
 

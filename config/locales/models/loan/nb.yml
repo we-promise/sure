@@ -1,0 +1,8 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Rader for renteendring må ha både en gjeldende dato og en rente.
+          rate_change_before_origination: En renteendring kan ikke gjelde fra før lånet ble utbetalt.
