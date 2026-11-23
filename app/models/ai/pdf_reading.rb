@@ -385,9 +385,18 @@ class Ai::PdfReading
       parsed.find { _1.size == 2 } || parsed.find(&:present?) || {}
     end
 
+    # The figures as printed, from the summary table or else the labels, as the parser's
+    # balances_for picks them, but with no currency required: the checks compare amounts. Both
+    # must carry the same currency mark, or none. A CR or DR marker stays unsigned, as for a
+    # statement with no account.
     def parsed_balances(text)
-      parsed = AccountStatement::TextMetadataParser.parse(text)
-      { opening_balance: parsed&.opening_balance, closing_balance: parsed&.closing_balance }.compact
+      readings = AccountStatement::TextMetadataParser.parse(text)&.balance_readings.to_h
+      pair = readings.values_at("summary_table", "labels").compact.find do |candidate|
+        AccountStatement::BALANCE_FIELDS.map { candidate.dig(_1, "currency") }.uniq.size == 1
+      end
+      return {} unless pair
+
+      AccountStatement::BALANCE_FIELDS.to_h { |field| [ field.to_sym, pair.dig(field, "amount")&.then { BigDecimal(_1) } ] }.compact
     rescue StandardError
       {}
     end
