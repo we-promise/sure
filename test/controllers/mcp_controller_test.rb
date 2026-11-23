@@ -8,6 +8,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
     @token = "test-mcp-token-#{SecureRandom.hex(8)}"
+    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
   end
 
   # -- Authentication --
@@ -970,7 +971,6 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   private
 
     def issue_mobile_token(user)
-      MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
       device = MobileDevice.create!(
         user: user,
         device_id: "test-device-#{SecureRandom.hex(4)}",
