@@ -1239,19 +1239,21 @@ end
 | Transport | `generate` strategy |
 |---|---|
 | `Compatible` with `responses_api` | `responses.create` + `text.format = json_schema, strict: true` |
-| `Compatible` without it | chat completions with the route's `json_mode` (the entry's override, otherwise the endpoint's) (`strict` → `json_object` → `none`). `auto` falls back when the null ratio exceeds 50% or a 400 about the JSON mode comes back; a 400 about anything else (an unsupported attachment, a missing model) ends the chain, since the next mode would resend the same request. Tolerant parsing (`<think>`, fenced JSON); a schema example is appended in `none` mode. |
+| `Compatible` without it | chat completions with the route's `json_mode` (the entry's override, otherwise the endpoint's) (`strict` → `json_object` → `none`). `auto` moves along the chain when the answer doesn't parse or the null ratio exceeds 50%; a 400 about the JSON mode retries once in `none` (below); a 400 about anything else (an unsupported attachment, a missing model) ends the chain, since the next mode would resend the same request. Tolerant parsing (`<think>`, fenced JSON); a schema example is appended in `none` mode. |
 | `Anthropic` | RubyLLM's `with_schema`, which sends Anthropic's native structured output (`output_config`), so both transports make the same call (call by @josh-sanders during development of PR #4440, gated on a live check with a funded key). If a current Claude model refuses it, the fallback is today's: one tool whose `input_schema` is the schema, forced, or `auto` with one reminder retry for models that reject a forced tool (#4513). |
 | `Jev` | doesn't implement `generate`; implements `judge` |
 
 - **Reasoning effort.** `Compatible` sends the route entry's `reasoning_effort` as
   `reasoning: { effort: }` on the Responses API and `reasoning_effort` on chat completions, and
-  leaves it out when unset. When a request that sent an effort gets a 400, the JSON-mode fallback
-  retries once without both the effort and `response_format`, as `main`'s 400 retries do since
-  #3605, since it can't tell which was refused; so does a 400 about the JSON mode in an explicit
-  mode. In `auto` without an effort, a 400 about the JSON mode moves to the next mode in the
-  chain, as the table says (call by @josh-sanders, 2026-11-23, after @luis-ibanez's review found
-  bill setup and PDF extraction losing `json_object`). A retry after unusable output keeps the
-  effort. Probes never send it. `Anthropic` ignores it for now.
+  leaves it out when unset. When a request with `response_format` or an effort gets a 400, the
+  JSON-mode fallback retries once without both, as `main`'s 400 retries do (#3605 made them drop
+  the effort as well); a retry after unusable output keeps the effort.
+- **JSON mode per feature on the deprecated ENV.** `main` asked an OpenAI-compatible server for
+  `json_object`, with no schema, for bill setup and PDF extraction, and for a strict schema
+  elsewhere. In `auto`, `Ai::LegacyEnvConfig` keeps that by setting those two features' route
+  entries to `json_object`; PR 7a's tables carry it as each entry's JSON mode, which an admin can
+  change in 7b (call by @josh-sanders, 2026-11-23, after @luis-ibanez's review found them losing
+  `json_object` on servers that refuse strict schemas). Probes never send it. `Anthropic` ignores it for now.
 - **Each attempt has a time budget**, as well as the turn. The `auto` chain multiplies a slow
   model's time: on CPU, three attempts at one statement took 26 minutes (spike, WeVisOne).
 - **Attachments.** `Request#attachments` carries files: page images or a PDF (section 8.1). A
