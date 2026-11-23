@@ -39,6 +39,7 @@ en:
       around: "around %{date}"
       overview: Overview
       rules: How this bill is matched
+      once_kind_hint: Mark the transaction as one-time to keep it out of your averages.
       rule_named: "%{name}"
       rule_amount_range: "from %{min} to %{max}"
       rule_aliases: "Also matches %{names}"

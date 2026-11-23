@@ -127,7 +127,7 @@ class BalanceSheet::LiquidityOverview
     end
 
     def available_rows
-      @available_rows ||= asset_rows.select { |row| row.available_on?(date) }
+      @available_rows ||= asset_rows.select { |row| row.available_now?(date) }
     end
 
     def bound_rows

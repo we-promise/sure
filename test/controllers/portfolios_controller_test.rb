@@ -43,12 +43,14 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal "last_30_days", @user.reload.default_period
   end
 
-  test "renders the hub and the accounts section" do
+  # The fixture family holds AAPL in accounts(:investment), so both sections
+  # have something to show.
+  test "renders the hub with its holdings and accounts sections" do
     get portfolio_path
 
     assert_response :success
     assert_select "h1", text: I18n.t("portfolios.show.title")
-    assert_equal %w[accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[holdings accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
     assert_select "header + div[role=list]"
   end
 
@@ -116,6 +118,21 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[accounts], @user.preferences["portfolio_section_order"]
     assert_equal({ "accounts" => true }, @user.preferences["portfolio_collapsed_sections"],
       "an unknown key must not be written into the user's preferences")
+  end
+
+  test "stores the holdings section in the saved order and collapsed set" do
+    patch update_preferences_portfolio_path,
+      params: { preferences: { portfolio_section_order: %w[accounts holdings], portfolio_collapsed_sections: { holdings: true } } },
+      as: :json
+
+    assert_response :ok
+    @user.reload
+    assert_equal %w[accounts holdings], @user.preferences["portfolio_section_order"]
+    assert_equal({ "holdings" => true }, @user.preferences["portfolio_collapsed_sections"])
+
+    get portfolio_path
+    assert_equal %w[accounts holdings], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_select "[data-section-key=holdings][data-reports-section-collapsed-value=?]", "true"
   end
 
   test "a preferences body that is not an object is refused and writes nothing" do
@@ -288,6 +305,167 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/yet/i, I18n.t("portfolios.empty_state.title"))
   end
 
+  test "holdings table renders one row per security with its per-account positions" do
+    second = create_second_aapl_account(qty: 20, price: 215)
+    statement = InvestmentStatement.new(@family, user: @user)
+    row = statement.holdings_table_rows.find { |r| r.ticker == "AAPL" }
+    assert_equal 2, row.positions.size, "fixture must hold AAPL in two accounts"
+
+    get portfolio_path
+    assert_response :success
+
+    assert_select "#portfolio-holdings tr[data-portfolio-holding='AAPL']", count: 1
+    assert_select "#portfolio-holdings tr[data-portfolio-holding='AAPL'] [data-portfolio-value]", text: ApplicationController.helpers.format_money(row.amount_money)
+    toggle = css_select("#portfolio-holdings tr[data-portfolio-holding='AAPL'] button[aria-expanded='false'][aria-controls]").first
+    assert toggle, "the summary row must carry a collapsed toggle"
+    detail = css_select("#portfolio-holdings tr##{toggle["aria-controls"]}[hidden]").first
+    assert detail, "the toggle must point at the hidden detail row"
+    positions = css_select(detail, "[data-portfolio-positions='AAPL'] a[href^='/holdings/']")
+    assert_equal 2, positions.size
+    assert_includes positions.map { |a| a["href"] }, holding_path(second.holdings.first)
+  end
+
+  test "holdings table sorts through links that flip the active column's direction" do
+    zzz = Security.create!(ticker: "ZZZ", name: "Zeta")
+    Holding.create!(account: accounts(:investment), security: zzz, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+
+    get portfolio_path(sort: "name", dir: "asc")
+    assert_response :success
+
+    assert_equal %w[AAPL ZZZ], css_select("#portfolio-holdings tr[data-portfolio-holding]").map { |n| n["data-portfolio-holding"] }
+    assert_select "#portfolio-holdings th[aria-sort='ascending'] a[href=?]", "#{portfolio_path}?dir=desc&sort=name"
+    assert_select "#portfolio-holdings th a[href=?]", "#{portfolio_path}?dir=desc&sort=value"
+    assert_select "#portfolio-holdings th[aria-sort]", count: 1
+
+    get portfolio_path(sort: "value", dir: "asc")
+    assert_equal %w[ZZZ AAPL], css_select("#portfolio-holdings tr[data-portfolio-holding]").map { |n| n["data-portfolio-holding"] }
+    assert_select "#portfolio-holdings th[aria-sort='ascending'] a[href=?]", "#{portfolio_path}?dir=desc&sort=value"
+  end
+
+  # Anything outside the statement's whitelists falls back to the default
+  # sort, value descending, and never reaches a link.
+  test "holdings sort params are whitelisted before they reach the sort links" do
+    get portfolio_path(sort: "drop table", dir: "sideways")
+    assert_response :success
+
+    assert_select "#portfolio-holdings th[aria-sort='descending'] a[href=?]", "#{portfolio_path}?dir=asc&sort=value"
+    assert_select "#portfolio-holdings th[aria-sort]", count: 1
+    assert_select "#portfolio-holdings a[href*=?]", "drop", count: 0
+    assert_select "#portfolio-holdings a[href*=?]", "sideways", count: 0
+  end
+
+  test "holdings table flags a row whose position has no cost basis" do
+    priced = Security.create!(ticker: "BASIS", name: "With basis")
+    Holding.create!(account: accounts(:investment), security: priced, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+    # Neither a stored basis nor a buy trade to compute one from, so
+    # Holding#avg_cost is nil and the row is flagged. AAPL is deliberately
+    # not the example: it has a fixture trade, so its basis is computable
+    # even though nothing is stored on the holding.
+    unknown = Security.create!(ticker: "NOBASIS", name: "Without basis")
+    Holding.create!(account: accounts(:investment), security: unknown, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    # One security, a known basis in one account and none in another: the row
+    # warns, yet still shows the average cost of the position that has one.
+    partial = Security.create!(ticker: "PARTIAL", name: "Partly known basis")
+    second_broker = accounts(:investment).family.accounts.create!(name: "Second broker", balance: 10, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    Holding.create!(account: accounts(:investment), security: partial, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+    Holding.create!(account: second_broker, security: partial, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+
+    get portfolio_path
+    assert_response :success
+
+    row_hint = I18n.t("portfolios.holdings.missing_cost_basis_hint")
+    position_hint = I18n.t("portfolios.holdings.position_missing_cost_basis_hint")
+    eight = Regexp.escape(ApplicationController.helpers.format_money(Money.new(8, "USD")))
+
+    assert_select "tr[data-portfolio-holding='NOBASIS']", text: /#{I18n.t("portfolios.holdings.missing_cost_basis")}/
+    assert_select "tr[data-portfolio-holding='NOBASIS'] span[title=?]", row_hint
+    assert_select "[data-portfolio-positions='NOBASIS'] span[title=?]", position_hint, text: "—"
+    assert_select "tr[data-portfolio-holding='AAPL']", text: /#{I18n.t("portfolios.holdings.missing_cost_basis")}/, count: 0,
+      message: "AAPL's basis is computable from its trade, so the row must not warn"
+    assert_select "tr[data-portfolio-holding='BASIS']", text: /#{I18n.t("portfolios.holdings.missing_cost_basis")}/, count: 0
+    assert_select "tr[data-portfolio-holding='BASIS']", text: /#{eight}/
+
+    assert_select "tr[data-portfolio-holding='PARTIAL'] span[title=?]", row_hint
+    assert_select "tr[data-portfolio-holding='PARTIAL']", text: /#{eight}/,
+      message: "a partly known basis still shows the average cost the row hint describes"
+    assert_select "[data-portfolio-positions='PARTIAL'] span[title=?]", position_hint, count: 1
+    # AAPL stores no basis but has a buy trade, so its position shows the
+    # computed average cost rather than the missing-basis dash.
+    aapl_cost = statement_avg_cost("AAPL")
+    assert_select "[data-portfolio-positions='AAPL'] span[title=?]", position_hint, count: 0
+    assert_select "[data-portfolio-positions='AAPL'] td", text: ApplicationController.helpers.format_money(aapl_cost)
+  end
+
+  test "holdings table renders its figures with design-system parts in the page's locale" do
+    second = create_second_aapl_account(qty: 20, price: 215)
+    statement = InvestmentStatement.new(@family, user: @user)
+    row = statement.holdings_table_rows.find { |r| r.ticker == "AAPL" }
+    assert row.unrealized, "precondition: AAPL has a return to show"
+
+    get portfolio_path(locale: "de")
+    assert_response :success
+
+    aapl = "#portfolio-holdings tr[data-portfolio-holding='AAPL']"
+    # DS::ProgressRing: a decorative svg the adjacent percentage labels, not
+    # the legacy partial's hard-coded gray track.
+    assert_select "#{aapl} svg[aria-hidden='true'] circle", minimum: 2
+    assert_select "#{aapl} circle.text-gray-300", count: 0
+    expected = I18n.with_locale(:de) { ApplicationController.helpers.number_to_percentage(row.unrealized.percent, precision: 1) }
+    assert_select "#{aapl} [data-trend-percent]", text: "(#{expected})"
+    assert_match ",", expected, "precondition: German writes a decimal comma"
+    assert_select "#{aapl} p.wrap-anywhere", text: row.name
+    assert_select "[data-portfolio-positions='AAPL'] th", text: I18n.t("portfolios.holdings.columns.cost_basis_per_share", locale: :de)
+    assert second
+  end
+
+  # The row's warning badge explains itself on hover only through its title,
+  # so the explanation is also visible text in the row's details.
+  test "a row without a full cost basis explains it in its details as visible text" do
+    unknown = Security.create!(ticker: "NOBASIS", name: "Without basis")
+    Holding.create!(account: accounts(:investment), security: unknown, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+
+    get portfolio_path
+    assert_response :success
+
+    toggle = css_select("#portfolio-holdings tr[data-portfolio-holding='NOBASIS'] button[aria-controls]").first
+    assert_select "tr##{toggle["aria-controls"]} p", text: I18n.t("portfolios.holdings.missing_cost_basis_hint")
+  end
+
+  test "a day change that covers only some positions says how many" do
+    security = Security.create!(ticker: "HALF", name: "Half covered")
+    second_broker = @family.accounts.create!(name: "Second broker", balance: 900, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    Holding.create!(account: accounts(:investment), security: security, date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD")
+    Holding.create!(account: accounts(:investment), security: security, date: Date.current, qty: 1, price: 120, amount: 120, currency: "USD")
+    Holding.create!(account: second_broker, security: security, date: Date.current, qty: 9, price: 100, amount: 900, currency: "USD")
+
+    get portfolio_path
+    assert_response :success
+
+    assert_select "tr[data-portfolio-holding='HALF'] [data-day-change-partial]",
+      text: I18n.t("portfolios.holdings.day_change_partial", covered: 1, total: 2)
+    assert_select "tr[data-portfolio-holding='AAPL'] [data-day-change-partial]", count: 0
+  end
+
+  test "the page's query count is bounded and does not grow with holdings" do
+    build_portfolio(accounts: 10, securities: 6)
+    baseline = capture_sql_queries { get portfolio_path }
+    assert_response :success
+
+    # Measured: 42 queries for this page (layout included) with the holdings
+    # and accounts sections, 10 accounts and 60 holdings, none of them per
+    # holding. The ceiling is that figure plus a little headroom, not a
+    # guess; the assertion below is the one that matters.
+    assert_operator baseline.size, :<=, PORTFOLIO_QUERY_CEILING, "GET /portfolio issued #{baseline.size} queries"
+
+    build_portfolio(accounts: 10, securities: 2, existing_accounts: @family.accounts.where("name LIKE 'Bulk %'").to_a)
+    grown = capture_sql_queries { get portfolio_path }
+    assert_response :success
+
+    assert_equal baseline.size, grown.size, "adding 20 holdings changed the query count:\n#{(grown - baseline).join("\n")}"
+  end
+
+  PORTFOLIO_QUERY_CEILING = 50
+
   private
     def enable_preview(user)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
@@ -307,5 +485,38 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
 
     def provider_queries(&block)
       capture_sql_queries(&block).count { |sql| sql.include?(%(FROM "lunchflow_accounts")) }
+    end
+
+    def statement_avg_cost(ticker)
+      row = InvestmentStatement.new(@family, user: @user).holdings_table_rows.find { |r| r.ticker == ticker }
+      assert_nil row.positions.sole.cost_basis, "the premise: #{ticker} stores no cost basis"
+      row.positions.sole.avg_cost
+    end
+
+    def create_second_aapl_account(qty:, price:)
+      account = @family.accounts.create!(owner: @user, name: "Second Brokerage", balance: qty * price, cash_balance: 0, currency: "USD", accountable: Investment.new)
+      Holding.create!(account: account, security: securities(:aapl), date: Date.current, qty: qty, price: price, amount: qty * price, currency: "USD")
+      account
+    end
+
+    # `accounts` investment accounts each holding `securities` securities,
+    # with a previous-day snapshot per position so day change has work to do.
+    # Every other security has no stored cost basis, the shape a synced
+    # brokerage produces, so a view that reached for Holding#avg_cost (and
+    # its per-holding trades query) would show up in the count.
+    def build_portfolio(accounts:, securities:, existing_accounts: nil)
+      accounts = existing_accounts || Array.new(accounts) do |i|
+        @family.accounts.create!(owner: @user, name: "Bulk #{i}", balance: 1000 * securities, cash_balance: 50, currency: "USD", accountable: Investment.new)
+      end
+      securities = Array.new(securities) do |i|
+        Security.create!(ticker: "B#{SecureRandom.hex(3).upcase}#{i}", name: "Bulk security #{i}")
+      end
+      accounts.each do |account|
+        securities.each_with_index do |security, index|
+          basis = index.even? ? { cost_basis: 90, cost_basis_locked: true } : {}
+          Holding.create!(account: account, security: security, date: 1.day.ago.to_date, qty: 10, price: 95, amount: 950, currency: "USD", **basis)
+          Holding.create!(account: account, security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD", **basis)
+        end
+      end
     end
 end

@@ -50,6 +50,7 @@ es:
       bill_not_covered: Recibos
       loan_payment_change: Cuota del préstamo
       bank_fees: Comisiones
+      fixed_commitments_ratio: Compromisos fijos
     meta:
       next_n_days:
         one: Próximo día
@@ -69,6 +70,7 @@ es:
       on_pace: al ritmo previsto
       of_budget: del presupuesto
       need_attention: requieren atención
+      of_income: de tus ingresos
       days_overdue:
         one: "%{count} día de retraso"
         other: "%{count} días de retraso"
@@ -92,6 +94,7 @@ es:
       bill_not_covered: Ir a la cuenta
       loan_payment_change: Ver préstamo
       bank_fees: Ver comisiones
+      fixed_commitments_ratio: Revisar transacciones recurrentes
     titles:
       account_release:
         upcoming: "%{account} se libera pronto"
@@ -119,6 +122,9 @@ es:
         up: La cuota de %{account} va a subir
         down: La cuota de %{account} va a bajar
       bank_fees: Comisiones en %{account}
+      fixed_commitments_ratio:
+        up: Tus compromisos fijos pesan más en tus ingresos
+        over_half: Tus compromisos fijos ya se llevan la mitad o más de tus ingresos
     templates:
       account_release:
         upcoming: "%{balance} en %{account} estará disponible el %{date}."
@@ -149,3 +155,10 @@ es:
       bank_fees:
         recurring: "%{account} acumula %{amount} en comisiones en los últimos %{days} días."
         new: "%{account} acumula %{amount} en comisiones en los últimos %{days} días, y ninguna en los %{days} días anteriores."
+      fixed_commitments_ratio: "Tus compromisos recurrentes, %{commitments} al mes, se llevan el %{current_ratio}% de tus ingresos mensuales habituales (%{income}), frente al %{previous_ratio}% de hace seis meses. %{explanation}"
+    fixed_commitments_ratio:
+      contributors: "Lo que más ha cambiado: %{list}."
+      contributor:
+        new: "%{name} (pago nuevo, %{amount} al mes)"
+        raised: "%{name} (%{amount} más al mes)"
+      income_fell: Tus ingresos mensuales habituales han bajado de %{previous_income} a %{current_income}.

@@ -433,7 +433,7 @@ RSpec.configure do |config|
           },
           AccountDetail: {
             type: :object,
-            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status created_at updated_at],
+            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status exclude_from_reports created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
@@ -453,6 +453,7 @@ RSpec.configure do |config|
               available_on: { type: :string, format: :date, nullable: true, description: 'Release date of a locked account' },
               available_now: { type: :boolean, description: 'Whether the money counts as available today (assets only)' },
               status: { type: :string, enum: %w[active draft disabled pending_deletion] },
+              exclude_from_reports: { type: :boolean, readOnly: true, description: 'Whether this account is excluded from financial reports' },
               institution_name: { type: :string, nullable: true },
               institution_domain: { type: :string, nullable: true },
               created_at: { type: :string, format: :'date-time' },
@@ -832,7 +833,7 @@ RSpec.configure do |config|
           },
           Rule: {
             type: :object,
-            required: %w[id resource_type active position stop_processing conditions actions created_at updated_at],
+            required: %w[id resource_type active position stop_processing apply_immediately conditions actions created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string, nullable: true },
@@ -841,6 +842,7 @@ RSpec.configure do |config|
               effective_date: { type: :string, format: :date, nullable: true },
               position: { type: :integer, description: 'Run order within the family; rules run from the lowest position up and the top rule wins per attribute' },
               stop_processing: { type: :boolean, description: 'When true, rules further down do not change transactions this rule matches' },
+              apply_immediately: { type: :boolean, description: 'When true, the rule also runs right after a transaction is created or edited by hand, in a bulk edit, in Categorize, via the API or by the assistant (splits, transfers and conversions to trades wait for the nightly run); otherwise it only runs on the nightly and sync runs' },
               conditions: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/RuleCondition' }
@@ -889,7 +891,7 @@ RSpec.configure do |config|
               id: { type: :string, format: :uuid },
               rule_id: { type: :string, format: :uuid },
               rule_name: { type: :string, nullable: true },
-              execution_type: { type: :string, enum: %w[manual scheduled] },
+              execution_type: { type: :string, enum: %w[manual scheduled immediate] },
               status: { type: :string, enum: %w[pending success failed] },
               transactions_queued: { type: :integer, minimum: 0 },
               transactions_processed: { type: :integer, minimum: 0 },
@@ -1182,27 +1184,6 @@ RSpec.configure do |config|
             required: %w[message],
             properties: {
               message: { type: :string }
-            }
-          },
-          TransactionResponse: {
-            type: :object,
-            required: %w[id date amount currency name entryable_type account],
-            properties: {
-              id: { type: :string, format: :uuid },
-              date: { type: :string, format: :date },
-              amount: { type: :string },
-              currency: { type: :string },
-              name: { type: :string },
-              entryable_type: { type: :string },
-              account: {
-                type: :object,
-                required: %w[id name account_type],
-                properties: {
-                  id: { type: :string, format: :uuid },
-                  name: { type: :string },
-                  account_type: { type: :string, nullable: true }
-                }
-              }
             }
           },
           ImportConfiguration: {
@@ -1759,6 +1740,7 @@ RSpec.configure do |config|
               qty: { type: :string },
               price: { type: :string },
               investment_activity_label: { type: :string, nullable: true },
+              lot_source_trade_id: { type: :string, format: :uuid, nullable: true, description: 'For a sale, the trade whose lot it names to sell from first. It applies only while the account sells by FIFO; an account that sells by average keeps it but sells from the pooled average.' },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {
                 type: :object,
@@ -1814,8 +1796,27 @@ RSpec.configure do |config|
                 }
               },
               avg_cost: { type: :string, nullable: true },
+              lots: {
+                type: :array,
+                nullable: true,
+                description: "The position's open lots, the opening lot first and then by acquisition. Present only on the position's latest row, while its lots add up to the holding; null otherwise.",
+                items: { '$ref' => '#/components/schemas/HoldingLot' }
+              },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          HoldingLot: {
+            type: :object,
+            required: %w[id opening qty manual_cost],
+            properties: {
+              id: { type: :string, format: :uuid },
+              opening: { type: :boolean, description: 'Units held before the first imported trade' },
+              acquired_on: { type: :string, format: :date, nullable: true, description: 'Null for the opening lot' },
+              qty: { type: :string, description: 'Units of the lot still held' },
+              unit_cost: { type: :string, nullable: true, description: 'Formatted cost per unit; null when unknown' },
+              manual_cost: { type: :boolean, description: 'Whether the cost was set by the user' },
+              trade_id: { type: :string, format: :uuid, nullable: true, description: 'The trade that acquired the lot; null for the opening lot' }
             }
           },
           HoldingCollection: {

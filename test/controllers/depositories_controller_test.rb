@@ -9,6 +9,15 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
+  # The select sits on the account form, not inside `fields_for :accountable`,
+  # so `label: true` would read Account's attribute name. The form passes the
+  # Depository one instead.
+  test "the account type select is labelled from the locale" do
+    get new_depository_url
+    assert_response :success
+    assert_select "label[for=account_subtype]", text: "Account type"
+  end
+
   # The provider link's visibility and the controller's gate are two
   # expressions of one rule, and they disagreed. ConnectorAuthorizable requires
   # `member_connectable? && Current.user&.member?`; the selector asked only
@@ -70,6 +79,45 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
 
     created = Account.order(:created_at).last
     assert_redirected_to account_path(created) # not the external URL
+  end
+
+  test "an edit saved through Turbo returns to the page it was opened on with a refresh" do
+    patch depository_path(@account),
+      params: { account: { name: "Renamed", accountable_type: "Depository" } },
+      headers: { "Accept" => "text/vnd.turbo-stream.html", "Referer" => account_url(@account, tab: "activity") },
+      as: :turbo_stream
+
+    assert_response :success
+    assert_equal "Renamed", @account.reload.name
+    assert_match %(<turbo-stream action="redirect" target="#{account_url(@account, tab: "activity")}">), response.body
+    assert_equal I18n.t("accounts.update.success", type: "Depository"), flash[:notice]
+  end
+
+  test "an edit saved through Turbo ignores a referer from another host" do
+    patch depository_path(@account),
+      params: { account: { name: "Renamed", accountable_type: "Depository" } },
+      headers: { "Accept" => "text/vnd.turbo-stream.html", "Referer" => "https://evil.example/phish" },
+      as: :turbo_stream
+
+    assert_match %(target="#{account_path(@account)}"), response.body
+  end
+
+  test "an edit that fails through Turbo re-renders the form" do
+    patch depository_path(@account),
+      params: { account: { name: "", accountable_type: "Depository" } },
+      headers: { "Accept" => "text/vnd.turbo-stream.html, text/html" }
+
+    assert_response :unprocessable_entity
+    assert_select "form[action='#{depository_path(@account)}']:not([data-turbo='false'])"
+    assert_not_equal "", @account.reload.name
+  end
+
+  test "the edit form submits through Turbo; the new-account form posts the page" do
+    get edit_depository_path(@account)
+    assert_select "form[action='#{depository_path(@account)}']:not([data-turbo='false'])"
+
+    get new_depository_path
+    assert_select "form[data-turbo='false']"
   end
 
   test "update persists enable_category_matcher through the shared update action" do

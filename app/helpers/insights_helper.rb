@@ -14,7 +14,8 @@ module InsightsHelper
     "account_release" => "calendar-clock",
     "bill_not_covered" => "calendar-x",
     "loan_payment_change" => "landmark",
-    "bank_fees" => "receipt"
+    "bank_fees" => "receipt",
+    "fixed_commitments_ratio" => "scale"
   }.freeze
 
   def insight_icon_key(insight)
@@ -93,6 +94,8 @@ module InsightsHelper
       facts["new_payment"] && [ facts["new_payment"], facts["effective_on"] ]
     when "bank_fees"
       facts["amount"] && [ facts["amount"], t("insights.figures.fee_charges", count: facts["count"].to_i) ]
+    when "fixed_commitments_ratio"
+      facts["current_ratio"] && [ "#{facts["current_ratio"]}%", t("insights.figures.of_income") ]
     end
   end
 
@@ -122,8 +125,8 @@ module InsightsHelper
                                      start_date: insight.period_start.to_s, end_date: insight.period_end.to_s }) }
     when "subscription_audit"
       { text: t("insights.actions.subscription_audit"), href: recurring_transactions_path }
-    when "cash_flow_warning"
-      { text: t("insights.actions.cash_flow_warning"), href: recurring_transactions_path }
+    when "cash_flow_warning", "fixed_commitments_ratio"
+      { text: t("insights.actions.#{insight.insight_type}"), href: recurring_transactions_path }
     when "savings_rate_change"
       return nil unless insight.period_start && insight.period_end
       { text: t("insights.actions.savings_rate_change"),
@@ -215,7 +218,7 @@ module InsightsHelper
       :negative
     when "loan_payment_change"
       metadata["new_payment"].to_f < metadata["previous_payment"].to_f ? :positive : :warning
-    when "budget_at_risk", "maintained_goal_depleted", "bank_fees"
+    when "budget_at_risk", "maintained_goal_depleted", "bank_fees", "fixed_commitments_ratio"
       # Warning, not negative: the reserve is short, not overdrawn, and red is
       # reserved here for money actually going the wrong side of zero.
       :warning

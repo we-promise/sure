@@ -15,8 +15,9 @@ json.account_type account.accountable_type&.underscore
 json.subtype account.subtype
 json.liquidity account.liquidity
 json.available_on account.available_on&.iso8601
-json.available_now account.available_on?
+json.available_now account.available_now?
 json.status account.status
+json.exclude_from_reports account.exclude_from_reports?
 json.institution_name account.institution_name
 json.institution_domain account.institution_domain
 json.created_at account.created_at.iso8601

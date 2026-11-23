@@ -619,7 +619,7 @@ class Goal < ApplicationRecord
   def unavailable_linked_accounts(date = Account.liquidity_today_for(family))
     return [] unless maintained?
 
-    linked_accounts.reject { |account| account.available_on?(date) }
+    linked_accounts.reject { |account| account.available_now?(date) }
   end
 
   def months_of_expenses_target?

@@ -11,6 +11,10 @@
 class AddLiquidityToAccounts < ActiveRecord::Migration[8.1]
   LEVELS = %w[immediate short_term locked long_term].freeze
 
+  DEPOSITORY_SHORT_TERM_SUBTYPES = %w[money_market notice_savings].freeze
+  DEPOSITORY_LOCKED_SUBTYPES = %w[cd building_savings].freeze
+  DEPOSITORY_LONG_TERM_SUBTYPES = %w[hsa].freeze
+
   INVESTMENT_LOCKED_SUBTYPES = %w[fd rd nsc kvp vl].freeze
 
   # Investment subtypes whose tax treatment is not :taxable at the time of
@@ -19,7 +23,7 @@ class AddLiquidityToAccounts < ActiveRecord::Migration[8.1]
     401k roth_401k 403b 457b tsp ira roth_ira sep_ira simple_ira 529_plan hsa
     isa lisa sipp workplace_pension_uk tfsa rrsp fhsa rdsp resp dpsp prpp lira
     rrif lif lrif prif rlif super smsf assurance_vie pea pillar_3a riester nps
-    apy life_insurance ppf ssy infrastructure_bond tax_free_bond sgb pension
+    apy epf life_insurance ppf ssy infrastructure_bond tax_free_bond sgb pension
     retirement ruerup bav
   ].freeze
 
@@ -55,21 +59,21 @@ class AddLiquidityToAccounts < ActiveRecord::Migration[8.1]
         UPDATE accounts SET liquidity = 'locked'
         FROM depositories
         WHERE accounts.accountable_type = 'Depository' AND depositories.id = accounts.accountable_id
-          AND depositories.subtype IN ('cd', 'building_savings')
+          AND depositories.subtype IN (#{quoted(DEPOSITORY_LOCKED_SUBTYPES)})
       SQL
 
       execute <<~SQL.squish
         UPDATE accounts SET liquidity = 'short_term'
         FROM depositories
         WHERE accounts.accountable_type = 'Depository' AND depositories.id = accounts.accountable_id
-          AND depositories.subtype IN ('money_market', 'notice_savings')
+          AND depositories.subtype IN (#{quoted(DEPOSITORY_SHORT_TERM_SUBTYPES)})
       SQL
 
       execute <<~SQL.squish
         UPDATE accounts SET liquidity = 'long_term'
         FROM depositories
         WHERE accounts.accountable_type = 'Depository' AND depositories.id = accounts.accountable_id
-          AND depositories.subtype = 'hsa'
+          AND depositories.subtype IN (#{quoted(DEPOSITORY_LONG_TERM_SUBTYPES)})
       SQL
 
       execute <<~SQL.squish

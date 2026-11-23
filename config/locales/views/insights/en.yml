@@ -50,6 +50,7 @@ en:
       bill_not_covered: Bills
       loan_payment_change: Loan payment
       bank_fees: Fees
+      fixed_commitments_ratio: Fixed commitments
     meta:
       next_n_days:
         one: Next day
@@ -69,6 +70,7 @@ en:
       on_pace: on pace
       of_budget: of budget
       need_attention: need attention
+      of_income: of income
       days_overdue:
         one: "%{count} day overdue"
         other: "%{count} days overdue"
@@ -92,6 +94,7 @@ en:
       bill_not_covered: Go to account
       loan_payment_change: View loan
       bank_fees: View fees
+      fixed_commitments_ratio: Review recurring transactions
     titles:
       account_release:
         upcoming: "%{account} is released soon"
@@ -119,6 +122,9 @@ en:
         up: "%{account} payment is going up"
         down: "%{account} payment is going down"
       bank_fees: Fees on %{account}
+      fixed_commitments_ratio:
+        up: Fixed commitments are taking more of your income
+        over_half: Fixed commitments now take half your income or more
     templates:
       account_release:
         upcoming: "%{balance} on %{account} becomes available on %{date}."
@@ -149,3 +155,10 @@ en:
       bank_fees:
         recurring: "%{account} had %{amount} in fees over the last %{days} days."
         new: "%{account} had %{amount} in fees over the last %{days} days, after none in the %{days} days before."
+      fixed_commitments_ratio: "Recurring commitments of %{commitments} a month take %{current_ratio}% of your typical monthly income of %{income}, up from %{previous_ratio}% six months ago. %{explanation}"
+    fixed_commitments_ratio:
+      contributors: "Main changes: %{list}."
+      contributor:
+        new: "%{name} (new, %{amount} a month)"
+        raised: "%{name} (%{amount} a month more)"
+      income_fell: Your typical monthly income fell from %{previous_income} to %{current_income}.
