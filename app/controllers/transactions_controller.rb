@@ -226,6 +226,11 @@ class TransactionsController < ApplicationController
               locals: { entry: @entry, can_annotate: can_annotate_entry? }
             ) if params[:entry]&.key?(:notes) && notes_changed),
             (turbo_stream.replace(
+              dom_id(@entry, :location),
+              partial: "transactions/location",
+              locals: { entry: @entry, can_annotate: can_annotate_entry? }
+            ) if params[:entry]&.key?(:location_lat)),
+            (turbo_stream.replace(
               dom_id(@entry, :mark_recurring),
               partial: "transactions/mark_recurring",
               locals: { entry: @entry }
